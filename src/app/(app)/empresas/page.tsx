@@ -5,9 +5,9 @@ import { CompanyStatus } from "@/generated/prisma/enums";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
   PROSPECT: "Prospecto",
-  ACTIVE: "Ativo",
+  ACTIVE:   "Ativo",
   INACTIVE: "Inativo",
-  CHURNED: "Cancelado",
+  CHURNED:  "Cancelado",
 };
 
 const STATUS_STYLE: Record<CompanyStatus, string> = {
@@ -16,6 +16,12 @@ const STATUS_STYLE: Record<CompanyStatus, string> = {
   INACTIVE: "bg-surface-2 text-fg-muted border-border",
   CHURNED:  "bg-danger/10 text-danger border-danger/25",
 };
+
+const FILTER_TABS: { value: CompanyStatus; label: string }[] = [
+  { value: "ACTIVE",   label: "Ativo" },
+  { value: "INACTIVE", label: "Inativo" },
+  { value: "CHURNED",  label: "Cancelado" },
+];
 
 const PER_PAGE = 20;
 
@@ -99,24 +105,22 @@ export default async function EmpresasPage({
 
         {/* Status tabs */}
         <div className="flex items-center gap-1">
-          {([undefined, ...Object.values(CompanyStatus)] as (CompanyStatus | undefined)[]).map(
-            (s) => {
-              const isActive = s === statusFilter;
-              return (
-                <Link
-                  key={s ?? "all"}
-                  href={buildUrl({ status: s, page: "1" })}
-                  className={`inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
-                    isActive
-                      ? "bg-surface-2 text-fg border border-border-strong"
-                      : "text-fg-muted hover:text-fg hover:bg-surface-2"
-                  }`}
-                >
-                  {s ? STATUS_LABEL[s] : "Todos"}
-                </Link>
-              );
-            }
-          )}
+          {FILTER_TABS.map((tab) => {
+            const isActive = tab.value === statusFilter;
+            return (
+              <Link
+                key={tab.value}
+                href={buildUrl({ status: tab.value, page: "1" })}
+                className={`inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
+                  isActive
+                    ? "bg-surface-2 text-fg border border-border-strong"
+                    : "text-fg-muted hover:text-fg hover:bg-surface-2"
+                }`}
+              >
+                {tab.label}
+              </Link>
+            );
+          })}
         </div>
       </div>
 
@@ -137,6 +141,7 @@ export default async function EmpresasPage({
                 <th className="text-left px-4 py-2.5 font-medium text-fg-muted">Status</th>
                 <th className="text-left px-4 py-2.5 font-medium text-fg-muted">E-mail</th>
                 <th className="text-left px-4 py-2.5 font-medium text-fg-muted">Criada em</th>
+                <th className="px-4 py-2.5" />
               </tr>
             </thead>
             <tbody>
@@ -166,6 +171,14 @@ export default async function EmpresasPage({
                   <td className="px-4 py-2.5 text-fg-muted">{c.email ?? "—"}</td>
                   <td className="px-4 py-2.5 text-fg-muted tnum">
                     {c.createdAt.toLocaleDateString("pt-BR")}
+                  </td>
+                  <td className="px-4 py-2.5 text-right">
+                    <Link
+                      href={`/empresas/${c.id}/editar`}
+                      className="text-[12px] text-fg-muted hover:text-fg transition-colors"
+                    >
+                      Editar
+                    </Link>
                   </td>
                 </tr>
               ))}

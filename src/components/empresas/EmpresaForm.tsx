@@ -6,7 +6,6 @@ import type { EmpresaState } from "@/app/(app)/empresas/actions";
 import { CompanyStatus } from "@/generated/prisma/enums";
 
 const STATUS_OPTIONS: { value: CompanyStatus; label: string }[] = [
-  { value: "PROSPECT", label: "Prospecto" },
   { value: "ACTIVE",   label: "Ativo" },
   { value: "INACTIVE", label: "Inativo" },
   { value: "CHURNED",  label: "Cancelado" },
@@ -147,7 +146,7 @@ export function EmpresaForm({ action, cancelHref, defaultValues }: Props) {
             <select
               id="status"
               name="status"
-              defaultValue={defaultValues?.status ?? "PROSPECT"}
+              defaultValue={defaultValues?.status ?? "ACTIVE"}
               className={INPUT}
             >
               {STATUS_OPTIONS.map((o) => (

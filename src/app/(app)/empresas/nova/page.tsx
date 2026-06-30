@@ -4,7 +4,7 @@ import { criarEmpresa } from "../actions";
 
 export default function NovaEmpresaPage() {
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
         <Link
           href="/empresas"
