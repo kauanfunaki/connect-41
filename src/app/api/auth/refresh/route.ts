@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 import { verifyRefresh, signAccess, signRefresh } from "@/lib/auth/jwt";
 import crypto from "crypto";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   const raw = req.cookies.get("refresh_token")?.value;
@@ -16,6 +18,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Refresh token inválido ou expirado" }, { status: 401 });
   }
 
+  const prisma = getPrisma();
   const tokenHash = crypto.createHash("sha256").update(raw).digest("hex");
   const stored = await prisma.refreshToken.findUnique({ where: { id: payload.jti } });
 
@@ -32,7 +35,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Usuário não encontrado" }, { status: 401 });
   }
 
-  // Rotaciona o refresh token (revoga o antigo, emite novo)
   await prisma.refreshToken.update({
     where: { id: payload.jti },
     data: { revokedAt: new Date() },

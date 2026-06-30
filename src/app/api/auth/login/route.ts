@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/auth/password";
 import { signAccess, signRefresh } from "@/lib/auth/jwt";
 import crypto from "crypto";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   let body: { email?: string; password?: string };
@@ -17,12 +19,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "email e password são obrigatórios" }, { status: 400 });
   }
 
+  const prisma = getPrisma();
   const user = await prisma.user.findFirst({
     where: { email: email.toLowerCase().trim(), active: true },
     include: { sectors: true },
   });
 
-  // tempo constante para evitar user enumeration
   const valid = user ? await verifyPassword(password, user.passwordHash) : false;
   if (!user || !valid) {
     return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 });
@@ -36,12 +38,10 @@ export async function POST(req: NextRequest) {
     sectors,
   });
 
-  // Cria refresh token e persiste o hash
   const jti = crypto.randomUUID();
   const rawRefresh = signRefresh({ sub: user.id, jti });
   const tokenHash = crypto.createHash("sha256").update(rawRefresh).digest("hex");
-  const ttlDays = parseInt(process.env["JWT_REFRESH_TTL"] ?? "7d");
-  const expiresAt = new Date(Date.now() + (isNaN(ttlDays) ? 7 : ttlDays) * 86_400_000);
+  const expiresAt = new Date(Date.now() + 7 * 86_400_000);
 
   await prisma.refreshToken.create({
     data: { id: jti, userId: user.id, tokenHash, expiresAt },

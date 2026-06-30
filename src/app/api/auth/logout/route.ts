@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 import { verifyRefresh } from "@/lib/auth/jwt";
 import crypto from "crypto";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   const raw = req.cookies.get("refresh_token")?.value;
@@ -10,6 +12,7 @@ export async function POST(req: NextRequest) {
     try {
       const payload = verifyRefresh(raw);
       const tokenHash = crypto.createHash("sha256").update(raw).digest("hex");
+      const prisma = getPrisma();
       const stored = await prisma.refreshToken.findUnique({ where: { id: payload.jti } });
       if (stored && stored.tokenHash === tokenHash && !stored.revokedAt) {
         await prisma.refreshToken.update({
