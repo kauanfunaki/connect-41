@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAccess } from "@/lib/auth/jwt";
+import { jwtVerify } from "jose";
+import type { AccessTokenPayload } from "@/lib/auth/types";
 
-// jsonwebtoken usa crypto do Node.js — não funciona no Edge Runtime padrão.
-// Este export diz ao Next.js para compilar o middleware no Node.js runtime.
-export const runtime = "nodejs";
+// jose usa Web Crypto API — funciona no Edge Runtime (ao contrário de jsonwebtoken).
+async function verifyAccessEdge(token: string): Promise<AccessTokenPayload> {
+  const secret = new TextEncoder().encode(process.env.JWT_ACCESS_SECRET ?? "");
+  const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
+  return payload as unknown as AccessTokenPayload;
+}
 
 const PUBLIC_PATHS = [
   "/login",
@@ -14,14 +18,13 @@ const PUBLIC_PATHS = [
   "/api/health",
 ];
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }
 
-  // Aceita token via cookie (navegação browser) ou Authorization header (chamadas API)
   const cookieToken = req.cookies.get("access_token")?.value;
   const authHeader = req.headers.get("authorization");
   const headerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
@@ -35,7 +38,7 @@ export function middleware(req: NextRequest) {
   }
 
   try {
-    const payload = verifyAccess(token);
+    const payload = await verifyAccessEdge(token);
     const headers = new Headers(req.headers);
     headers.set("x-user-id", payload.sub);
     headers.set("x-tenant-id", payload.tenantId);
@@ -46,7 +49,6 @@ export function middleware(req: NextRequest) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Token inválido ou expirado" }, { status: 401 });
     }
-    // Cookie expirado — limpa e redireciona
     const res = NextResponse.redirect(new URL("/login", req.url));
     res.cookies.delete("access_token");
     return res;
