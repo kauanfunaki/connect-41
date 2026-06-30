@@ -57,10 +57,20 @@ export async function POST(req: NextRequest) {
     sectors,
   });
 
+  const isProduction = process.env.NODE_ENV === "production";
   const res = NextResponse.json({ accessToken });
+
+  res.cookies.set("access_token", accessToken, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: "strict",
+    path: "/",
+    maxAge: 60 * 15,
+  });
+
   res.cookies.set("refresh_token", newRaw, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isProduction,
     sameSite: "strict",
     path: "/api/auth",
     maxAge: 60 * 60 * 24 * 7,

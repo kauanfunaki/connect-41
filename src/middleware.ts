@@ -5,7 +5,8 @@ const PUBLIC_PATHS = [
   "/login",
   "/api/auth/login",
   "/api/auth/refresh",
-  // recursos estáticos são excluídos pelo matcher abaixo
+  "/api/auth/logout",
+  "/api/health",
 ];
 
 export function middleware(req: NextRequest) {
@@ -15,8 +16,11 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Aceita token via cookie (navegação browser) ou Authorization header (chamadas API)
+  const cookieToken = req.cookies.get("access_token")?.value;
   const authHeader = req.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  const headerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  const token = cookieToken ?? headerToken;
 
   if (!token) {
     if (pathname.startsWith("/api/")) {
@@ -37,13 +41,15 @@ export function middleware(req: NextRequest) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Token inválido ou expirado" }, { status: 401 });
     }
-    return NextResponse.redirect(new URL("/login", req.url));
+    // Cookie expirado — limpa e redireciona
+    const res = NextResponse.redirect(new URL("/login", req.url));
+    res.cookies.delete("access_token");
+    return res;
   }
 }
 
 export const config = {
   matcher: [
-    // Exclui _next/static, _next/image, favicon, arquivos com extensão
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

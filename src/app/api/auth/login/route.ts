@@ -48,6 +48,8 @@ export async function POST(req: NextRequest) {
       data: { id: jti, userId: user.id, tokenHash, expiresAt },
     });
 
+    const isProduction = process.env.NODE_ENV === "production";
+
     const res = NextResponse.json({
       accessToken,
       user: {
@@ -60,9 +62,18 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // access_token em cookie httpOnly para que o middleware de navegação consiga ler
+    res.cookies.set("access_token", accessToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: "strict",
+      path: "/",
+      maxAge: 60 * 15, // 15 minutos (igual ao JWT_ACCESS_TTL)
+    });
+
     res.cookies.set("refresh_token", rawRefresh, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isProduction,
       sameSite: "strict",
       path: "/api/auth",
       maxAge: 60 * 60 * 24 * 7,

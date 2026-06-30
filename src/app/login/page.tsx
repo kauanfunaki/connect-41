@@ -32,8 +32,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Salva o access token e redireciona
-      sessionStorage.setItem("access_token", data.accessToken);
+      // access_token já está no cookie httpOnly — basta redirecionar
       router.push("/");
     } catch {
       setError("Erro de conexão. Tente novamente.");
