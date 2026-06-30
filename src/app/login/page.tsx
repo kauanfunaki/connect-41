@@ -32,8 +32,8 @@ export default function LoginPage() {
         return;
       }
 
-      // access_token já está no cookie httpOnly — basta redirecionar
-      router.push("/");
+      // Navegação completa para garantir que o cookie já está disponível no browser
+      window.location.href = "/";
     } catch {
       setError("Erro de conexão. Tente novamente.");
     } finally {
