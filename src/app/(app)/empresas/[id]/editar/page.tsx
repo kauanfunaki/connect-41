@@ -50,14 +50,26 @@ export default async function EditarEmpresaPage({
           action={atualizarEmpresa}
           cancelHref={`/empresas/${id}`}
           defaultValues={{
-            id:      company.id,
-            name:    company.name,
-            cnpj:    company.cnpj    ?? undefined,
-            email:   company.email   ?? undefined,
-            phone:   company.phone   ?? undefined,
-            address: company.address ?? undefined,
-            status:  company.status,
-            source:  company.source  ?? undefined,
+            id,
+            name:                  company.name,
+            tradeName:             company.tradeName             ?? undefined,
+            cnpj:                  company.cnpj                 ?? undefined,
+            taxRegime:             company.taxRegime             ?? undefined,
+            zipCode:               company.zipCode               ?? undefined,
+            addressStreet:         company.addressStreet         ?? undefined,
+            addressNumber:         company.addressNumber         ?? undefined,
+            addressComplement:     company.addressComplement     ?? undefined,
+            neighborhood:          company.neighborhood          ?? undefined,
+            city:                  company.city                  ?? undefined,
+            stateCode:             company.stateCode             ?? undefined,
+            stateRegistration:     company.stateRegistration     ?? undefined,
+            municipalRegistration: company.municipalRegistration ?? undefined,
+            nire:                  company.nire                  ?? undefined,
+            email:                 company.email                 ?? undefined,
+            phone:                 company.phone                 ?? undefined,
+            website:               company.website               ?? undefined,
+            status:                company.status,
+            source:                company.source                ?? undefined,
           }}
         />
       </div>

@@ -42,6 +42,17 @@ export default async function EmpresaPage({
 
   const deleteAction = excluirEmpresa.bind(null, id);
 
+  const fullAddress = [
+    company.addressStreet,
+    company.addressNumber,
+    company.addressComplement,
+    company.neighborhood,
+    company.city,
+    company.stateCode,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       {/* Breadcrumb */}
@@ -69,8 +80,11 @@ export default async function EmpresaPage({
               {STATUS_LABEL[company.status]}
             </span>
           </div>
+          {company.tradeName && (
+            <p className="text-[14px] text-fg-secondary">{company.tradeName}</p>
+          )}
           {company.cnpj && (
-            <p className="text-[13px] text-fg-muted tnum">{company.cnpj}</p>
+            <p className="text-[13px] text-fg-muted tnum mt-0.5">{company.cnpj}</p>
           )}
         </div>
 
@@ -85,14 +99,62 @@ export default async function EmpresaPage({
         </div>
       </div>
 
-      {/* Info grid */}
+      {/* Identificação */}
       <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-        <h2 className="text-[13px] font-medium text-fg mb-4">Informações</h2>
+        <h2 className="text-[13px] font-medium text-fg mb-4">Identificação</h2>
         <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-          <InfoRow label="E-mail"   value={company.email}   />
-          <InfoRow label="Telefone" value={company.phone}   />
-          <InfoRow label="Endereço" value={company.address} />
-          <InfoRow label="Origem"   value={company.source}  />
+          <InfoRow label="Razão Social"      value={company.name} />
+          <InfoRow label="Nome Fantasia"     value={company.tradeName} />
+          <InfoRow label="CNPJ"              value={company.cnpj} mono />
+          <InfoRow label="Regime Tributário" value={company.taxRegime} />
+        </div>
+      </div>
+
+      {/* Endereço */}
+      {fullAddress && (
+        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+          <h2 className="text-[13px] font-medium text-fg mb-4">Endereço</h2>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+            <InfoRow label="Logradouro" value={[company.addressStreet, company.addressNumber].filter(Boolean).join(", ")} />
+            <InfoRow label="Complemento" value={company.addressComplement} />
+            <InfoRow label="Bairro"      value={company.neighborhood} />
+            <InfoRow label="Cidade / UF" value={[company.city, company.stateCode].filter(Boolean).join(" — ")} />
+            <InfoRow label="CEP"         value={company.zipCode} mono />
+          </div>
+        </div>
+      )}
+
+      {/* Contato */}
+      <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+        <h2 className="text-[13px] font-medium text-fg mb-4">Contato</h2>
+        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+          <InfoRow label="E-mail"   value={company.email} />
+          <InfoRow label="Telefone" value={company.phone} />
+          <InfoRow
+            label="Website"
+            value={company.website}
+            href={company.website ?? undefined}
+          />
+        </div>
+      </div>
+
+      {/* Dados Fiscais */}
+      {(company.stateRegistration || company.municipalRegistration || company.nire) && (
+        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+          <h2 className="text-[13px] font-medium text-fg mb-4">Dados Fiscais</h2>
+          <div className="grid grid-cols-3 gap-x-8 gap-y-3">
+            <InfoRow label="Inscrição Estadual"   value={company.stateRegistration} mono />
+            <InfoRow label="Inscrição Municipal"  value={company.municipalRegistration} mono />
+            <InfoRow label="NIRE"                 value={company.nire} mono />
+          </div>
+        </div>
+      )}
+
+      {/* CRM */}
+      <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+        <h2 className="text-[13px] font-medium text-fg mb-4">CRM</h2>
+        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+          <InfoRow label="Origem" value={company.source} />
           <InfoRow
             label="Criada em"
             value={company.createdAt.toLocaleDateString("pt-BR", {
@@ -159,14 +221,29 @@ export default async function EmpresaPage({
 function InfoRow({
   label,
   value,
+  mono,
+  href,
 }: {
   label: string;
   value: string | null | undefined;
+  mono?: boolean;
+  href?: string;
 }) {
   return (
     <div>
       <p className="text-[11px] text-fg-muted mb-0.5">{label}</p>
-      <p className="text-[13px] text-fg">{value ?? "—"}</p>
+      {href ? (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`text-[13px] text-brand hover:underline ${mono ? "tnum" : ""}`}
+        >
+          {value ?? "—"}
+        </a>
+      ) : (
+        <p className={`text-[13px] text-fg ${mono ? "tnum" : ""}`}>{value ?? "—"}</p>
+      )}
     </div>
   );
 }
