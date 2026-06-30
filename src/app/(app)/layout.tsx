@@ -1,34 +1,7 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import { LogoutButton } from "@/components/shell/LogoutButton";
-
-const SECTOR_LABELS: Record<string, string> = {
-  tech: "Tech",
-  dprh: "DP / RH",
-  recrutamento: "Recrutamento",
-  societario: "Societário",
-  financeiro: "Financeiro",
-  fiscal: "Fiscal",
-  contabil: "Contábil",
-  bpo: "BPO",
-  comercial: "Comercial",
-  corretora: "Corretora",
-  gestao: "Gestão",
-};
-
-const SECTOR_COLORS: Record<string, string> = {
-  tech: "#2E6FB8",
-  dprh: "#7C5CBF",
-  recrutamento: "#1E8E5A",
-  societario: "#C8860D",
-  financeiro: "#0E9384",
-  fiscal: "#C5374B",
-  contabil: "#4F46E5",
-  bpo: "#B7791F",
-  comercial: "#E15A2B",
-  corretora: "#0891B2",
-  gestao: "#586577",
-};
+import { SECTOR_LABELS, SECTOR_COLORS } from "@/lib/sectors";
 
 const ROLE_LABEL: Record<string, string> = {
   SUPER_ADMIN: "Super Admin",
@@ -73,6 +46,7 @@ export default async function AppLayout({
           <NavItem href="/" icon="⊞" label="Início" />
           <NavItem href="/empresas" icon="🏢" label="Empresas" />
           <NavItem href="/pessoas" icon="👤" label="Pessoas" />
+          <NavItem href="/pipelines" icon="📋" label="Pipelines" />
 
           {sectors.length > 0 && (
             <>
