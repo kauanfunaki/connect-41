@@ -1,0 +1,66 @@
+import { headers } from "next/headers";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { getPrisma } from "@/lib/prisma";
+import { EmpresaForm } from "@/components/empresas/EmpresaForm";
+import { atualizarEmpresa } from "../../actions";
+
+export default async function EditarEmpresaPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const h = await headers();
+  const tenantId = h.get("x-tenant-id")!;
+
+  const prisma = getPrisma();
+  const company = await prisma.company.findFirst({
+    where: { id, tenantId },
+  });
+
+  if (!company) notFound();
+
+  return (
+    <div className="p-6 max-w-2xl mx-auto">
+      <div className="flex items-center gap-2 mb-6">
+        <Link
+          href="/empresas"
+          className="text-[13px] text-fg-muted hover:text-fg transition-colors"
+        >
+          Empresas
+        </Link>
+        <span className="text-fg-muted">/</span>
+        <Link
+          href={`/empresas/${id}`}
+          className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate max-w-[200px]"
+        >
+          {company.name}
+        </Link>
+        <span className="text-fg-muted">/</span>
+        <span className="text-[13px] text-fg">Editar</span>
+      </div>
+
+      <h1 className="text-[20px] font-semibold text-fg tracking-[-0.01em] mb-6">
+        Editar Empresa
+      </h1>
+
+      <div className="bg-surface border border-border rounded-lg p-6">
+        <EmpresaForm
+          action={atualizarEmpresa}
+          cancelHref={`/empresas/${id}`}
+          defaultValues={{
+            id:      company.id,
+            name:    company.name,
+            cnpj:    company.cnpj    ?? undefined,
+            email:   company.email   ?? undefined,
+            phone:   company.phone   ?? undefined,
+            address: company.address ?? undefined,
+            status:  company.status,
+            source:  company.source  ?? undefined,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
