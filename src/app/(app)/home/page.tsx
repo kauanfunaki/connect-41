@@ -9,7 +9,7 @@ export default async function HomePage() {
   const isAdmin = role === "SUPER_ADMIN" || role === "ADMIN";
 
   return (
-    <div className="p-6 max-w-5xl">
+    <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6">
         <h1 className="text-[20px] font-semibold text-fg tracking-[-0.01em]">
           Início
