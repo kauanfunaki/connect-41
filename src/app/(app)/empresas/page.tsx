@@ -4,7 +4,7 @@ import { getPrisma } from "@/lib/prisma";
 import { CompanyStatus } from "@/generated/prisma/enums";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
-  PROSPECT: "Prospect",
+  PROSPECT: "Prospecto",
   ACTIVE: "Ativo",
   INACTIVE: "Inativo",
   CHURNED: "Cancelado",
@@ -106,7 +106,7 @@ export default async function EmpresasPage({
                 <Link
                   key={s ?? "all"}
                   href={buildUrl({ status: s, page: "1" })}
-                  className={`h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
+                  className={`inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
                     isActive
                       ? "bg-surface-2 text-fg border border-border-strong"
                       : "text-fg-muted hover:text-fg hover:bg-surface-2"

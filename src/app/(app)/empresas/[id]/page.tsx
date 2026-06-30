@@ -7,7 +7,7 @@ import { excluirEmpresa } from "../actions";
 import { DeleteButton } from "@/components/empresas/DeleteButton";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
-  PROSPECT: "Prospect",
+  PROSPECT: "Prospecto",
   ACTIVE:   "Ativo",
   INACTIVE: "Inativo",
   CHURNED:  "Cancelado",

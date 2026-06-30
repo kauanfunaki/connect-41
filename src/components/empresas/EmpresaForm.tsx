@@ -6,7 +6,7 @@ import type { EmpresaState } from "@/app/(app)/empresas/actions";
 import { CompanyStatus } from "@/generated/prisma/enums";
 
 const STATUS_OPTIONS: { value: CompanyStatus; label: string }[] = [
-  { value: "PROSPECT", label: "Prospect" },
+  { value: "PROSPECT", label: "Prospecto" },
   { value: "ACTIVE",   label: "Ativo" },
   { value: "INACTIVE", label: "Inativo" },
   { value: "CHURNED",  label: "Cancelado" },
@@ -102,6 +102,9 @@ export function EmpresaForm({ action, cancelHref, defaultValues }: Props) {
             type="tel"
             defaultValue={defaultValues?.phone ?? ""}
             placeholder="(41) 99999-9999"
+            pattern="[\d\s()\-+]{8,20}"
+            maxLength={20}
+            title="Informe um número de telefone válido (ex: (41) 99999-9999)"
             className={INPUT}
           />
         </Field>
