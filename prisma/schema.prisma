@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -10,4 +5,368 @@ generator client {
 
 datasource db {
   provider = "mysql"
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  SUPER_ADMIN  // acesso a todos os tenants (suporte 41 Tech)
+  ADMIN        // todo o tenant: setores, usuários, config
+  SECTOR_ADMIN // seu(s) setor(es): CRUD + handoffs
+  SECTOR_USER  // seu(s) setor(es): leitura + atividades
+  READONLY     // todos os setores, somente leitura (Diretoria)
+}
+
+enum CompanyStatus {
+  PROSPECT
+  ACTIVE
+  INACTIVE
+  CHURNED
+}
+
+enum ServiceStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  CANCELLED
+}
+
+enum PersonType {
+  CANDIDATO
+  COLABORADOR
+}
+
+enum EntityType {
+  COMPANY
+  PERSON
+}
+
+enum ActivityType {
+  NOTE
+  STATUS_CHANGE
+  DOCUMENT
+  HANDOFF
+  MENTION
+}
+
+enum HandoffStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  DATE
+  SELECT
+  BOOLEAN
+  TEXTAREA
+}
+
+enum PipelineEntityType {
+  COMPANY
+  PERSON
+}
+
+// ─── Tenancy + Auth ──────────────────────────────────────────────────────────
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String   @db.VarChar(120)
+  cnpj      String?  @unique @db.VarChar(18)
+  slug      String   @unique @db.VarChar(60)
+  plan      String   @default("starter") @db.VarChar(40)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users          User[]
+  companies      Company[]
+  people         Person[]
+  pipelines      Pipeline[]
+  pipelineItems  PipelineItem[]
+  activities     Activity[]
+  handoffs       Handoff[]
+  notifications  Notification[]
+  customFields   CustomField[]
+  customValues   CustomValue[]
+
+  @@map("tenants")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  tenantId     String
+  name         String   @db.VarChar(120)
+  email        String   @db.VarChar(120)
+  passwordHash String   @db.VarChar(255)
+  role         UserRole @default(SECTOR_USER)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  sectors       UserSector[]
+  pipelineItems PipelineItem[] @relation("AssignedItems")
+  activities    Activity[]
+  handoffs      Handoff[]
+  notifications Notification[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@map("users")
+}
+
+// Quais setores um usuário pode acessar
+model UserSector {
+  userId      String
+  sectorCode  String @db.VarChar(40)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, sectorCode])
+  @@map("user_sectors")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @db.VarChar(255)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ─── Entidades Centrais ───────────────────────────────────────────────────────
+
+model Company {
+  id                String        @id @default(uuid())
+  tenantId          String
+  name              String        @db.VarChar(180)
+  cnpj              String?       @db.VarChar(18)
+  email             String?       @db.VarChar(120)
+  phone             String?       @db.VarChar(30)
+  address           String?       @db.VarChar(255)
+  status            CompanyStatus @default(PROSPECT)
+  source            String?       @db.VarChar(80)
+  responsibleUserId String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  tenant   Tenant  @relation(fields: [tenantId], references: [id])
+
+  services  CompanyService[]
+  people    Person[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@map("companies")
+}
+
+// Qual serviço (setor) uma empresa contratou
+model CompanyService {
+  id         String        @id @default(uuid())
+  companyId  String
+  tenantId   String
+  sectorCode String        @db.VarChar(40)
+  startDate  DateTime?
+  endDate    DateTime?
+  status     ServiceStatus @default(ACTIVE)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, sectorCode])
+  @@index([tenantId, sectorCode])
+  @@map("company_services")
+}
+
+model Person {
+  id             String     @id @default(uuid())
+  tenantId       String
+  name           String     @db.VarChar(180)
+  cpf            String?    @db.VarChar(14)
+  email          String?    @db.VarChar(120)
+  phone          String?    @db.VarChar(30)
+  birthDate      DateTime?
+  type           PersonType @default(CANDIDATO)
+  currentCompanyId String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+  currentCompany Company? @relation(fields: [currentCompanyId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, type])
+  @@map("people")
+}
+
+// ─── Motor genérico de Pipeline ───────────────────────────────────────────────
+
+model Pipeline {
+  id         String             @id @default(uuid())
+  tenantId   String
+  sectorCode String             @db.VarChar(40)
+  name       String             @db.VarChar(120)
+  entityType PipelineEntityType
+  active     Boolean            @default(true)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  tenant Tenant          @relation(fields: [tenantId], references: [id])
+  stages PipelineStage[]
+  items  PipelineItem[]
+
+  @@index([tenantId, sectorCode])
+  @@map("pipelines")
+}
+
+model PipelineStage {
+  id         String   @id @default(uuid())
+  pipelineId String
+  name       String   @db.VarChar(80)
+  order      Int
+  color      String?  @db.VarChar(7)  // hex, ex: #1A5FA8
+  isTerminal Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  pipeline Pipeline       @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  items    PipelineItem[]
+
+  @@unique([pipelineId, order])
+  @@map("pipeline_stages")
+}
+
+model PipelineItem {
+  id             String             @id @default(uuid())
+  tenantId       String
+  pipelineId     String
+  stageId        String
+  entityType     PipelineEntityType
+  entityId       String             // Company.id ou Person.id (referência por string, sem FK Prisma — relação polimórfica)
+  assignedUserId String?
+  priority       Int                @default(0)
+  dueDate        DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  pipeline     Pipeline      @relation(fields: [pipelineId], references: [id])
+  stage        PipelineStage @relation(fields: [stageId], references: [id])
+  assignedUser User?         @relation("AssignedItems", fields: [assignedUserId], references: [id])
+  activities   Activity[]
+
+  @@index([tenantId, pipelineId])
+  @@index([tenantId, entityType, entityId])
+  @@map("pipeline_items")
+}
+
+// ─── Atividades (timeline) ────────────────────────────────────────────────────
+
+model Activity {
+  id             String       @id @default(uuid())
+  tenantId       String
+  pipelineItemId String
+  userId         String
+  type           ActivityType
+  content        String?      @db.Text
+  metadata       Json?        // dados extras (ex: stageFrom, stageTo no STATUS_CHANGE)
+  createdAt      DateTime     @default(now())
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  pipelineItem PipelineItem @relation(fields: [pipelineItemId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@index([tenantId, pipelineItemId])
+  @@map("activities")
+}
+
+// ─── Configuração flexível (preenchida pós-discovery) ─────────────────────────
+
+model CustomField {
+  id         String          @id @default(uuid())
+  tenantId   String
+  sectorCode String          @db.VarChar(40)
+  entityType EntityType
+  key        String          @db.VarChar(80)
+  label      String          @db.VarChar(120)
+  fieldType  CustomFieldType
+  options    Json?           // para SELECT: array de strings
+  required   Boolean         @default(false)
+  order      Int             @default(0)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  tenant Tenant       @relation(fields: [tenantId], references: [id])
+  values CustomValue[]
+
+  @@unique([tenantId, sectorCode, entityType, key])
+  @@index([tenantId, sectorCode])
+  @@map("custom_fields")
+}
+
+model CustomValue {
+  id            String   @id @default(uuid())
+  tenantId      String
+  customFieldId String
+  entityId      String   // Company.id ou Person.id
+  value         String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  customField CustomField @relation(fields: [customFieldId], references: [id], onDelete: Cascade)
+
+  @@unique([customFieldId, entityId])
+  @@index([tenantId, entityId])
+  @@map("custom_values")
+}
+
+// ─── Cross-setor ──────────────────────────────────────────────────────────────
+
+model Handoff {
+  id          String        @id @default(uuid())
+  tenantId    String
+  fromSector  String        @db.VarChar(40)
+  toSector    String        @db.VarChar(40)
+  entityType  EntityType
+  entityId    String
+  requestedBy String
+  message     String?       @db.Text
+  status      HandoffStatus @default(PENDING)
+  resolvedAt  DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id])
+  requester User   @relation(fields: [requestedBy], references: [id])
+
+  @@index([tenantId, toSector, status])
+  @@index([tenantId, entityType, entityId])
+  @@map("handoffs")
+}
+
+model Notification {
+  id         String     @id @default(uuid())
+  tenantId   String
+  userId     String
+  type       String     @db.VarChar(60)  // ex: HANDOFF_RECEIVED, MENTION, STAGE_OVERDUE
+  entityType EntityType?
+  entityId   String?
+  message    String     @db.VarChar(255)
+  read       Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId, read])
+  @@map("notifications")
 }
