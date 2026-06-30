@@ -6,8 +6,16 @@ import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
+function getOrigin(req: NextRequest): string {
+  // Reverse proxies (EasyPanel/Nginx) injetam x-forwarded-* com a URL pública.
+  // req.nextUrl.origin resolve para o endereço interno do container (0.0.0.0).
+  const proto = req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol.replace(":", "");
+  const host  = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? req.nextUrl.host;
+  return `${proto}://${host}`;
+}
+
 export async function POST(req: NextRequest) {
-  const base = req.nextUrl.origin;
+  const base = getOrigin(req);
 
   try {
     const form = await req.formData();
