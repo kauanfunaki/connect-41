@@ -6,24 +6,26 @@ import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
-function getOrigin(req: NextRequest): string {
-  // Reverse proxies (EasyPanel/Nginx) injetam x-forwarded-* com a URL pública.
-  // req.nextUrl.origin resolve para o endereço interno do container (0.0.0.0).
-  const proto = req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol.replace(":", "");
-  const host  = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? req.nextUrl.host;
-  return `${proto}://${host}`;
+function htmlRedirect(to: string): NextResponse {
+  // Responde com HTML que redireciona no browser — evita qualquer
+  // problema de URL interna do container (0.0.0.0, host errado, etc.)
+  return new NextResponse(
+    `<!DOCTYPE html><html><head>
+      <meta http-equiv="refresh" content="0;url=${to}">
+      <script>window.location.replace(${JSON.stringify(to)})</script>
+    </head><body></body></html>`,
+    { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } }
+  );
 }
 
 export async function POST(req: NextRequest) {
-  const base = getOrigin(req);
-
   try {
     const form = await req.formData();
     const email = (form.get("email") as string | null)?.toLowerCase().trim();
     const password = form.get("password") as string | null;
 
     if (!email || !password) {
-      return NextResponse.redirect(`${base}/login?error=preencha-os-campos`, { status: 303 });
+      return htmlRedirect("/login?error=preencha-os-campos");
     }
 
     const prisma = getPrisma();
@@ -34,7 +36,7 @@ export async function POST(req: NextRequest) {
 
     const valid = user ? await verifyPassword(password, user.passwordHash) : false;
     if (!user || !valid) {
-      return NextResponse.redirect(`${base}/login?error=credenciais-invalidas`, { status: 303 });
+      return htmlRedirect("/login?error=credenciais-invalidas");
     }
 
     const sectors = user.sectors.map((s: { sectorCode: string }) => s.sectorCode);
@@ -50,9 +52,9 @@ export async function POST(req: NextRequest) {
 
     const isProduction = process.env.NODE_ENV === "production";
 
-    // 303 HTTP real — browser segue o redirect com os cookies já aplicados
-    const res = NextResponse.redirect(`${base}/`, { status: 303 });
-
+    // Cookie setado na mesma resposta que entrega o HTML de redirect.
+    // O browser processa Set-Cookie antes de executar o meta-refresh.
+    const res = htmlRedirect("/");
     res.cookies.set("access_token", accessToken, {
       httpOnly: true,
       secure: isProduction,
@@ -60,7 +62,6 @@ export async function POST(req: NextRequest) {
       path: "/",
       maxAge: 60 * 15,
     });
-
     res.cookies.set("refresh_token", rawRefresh, {
       httpOnly: true,
       secure: isProduction,
@@ -72,6 +73,6 @@ export async function POST(req: NextRequest) {
     return res;
   } catch (err) {
     console.error("[POST /api/auth/login-form]", err);
-    return NextResponse.redirect(`${base}/login?error=erro-interno`, { status: 303 });
+    return htmlRedirect("/login?error=erro-interno");
   }
 }
