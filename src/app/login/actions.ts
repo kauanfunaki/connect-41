@@ -66,5 +66,5 @@ export async function loginAction(
     return { error: "Erro interno. Tente novamente." };
   }
 
-  redirect("/");
+  redirect("/home");
 }

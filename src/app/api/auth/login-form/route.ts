@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/auth/password";
 import { signAccess, signRefresh } from "@/lib/auth/jwt";
@@ -7,7 +7,7 @@ import crypto from "crypto";
 export const dynamic = "force-dynamic";
 
 function htmlRedirect(to: string): NextResponse {
-  // Responde com HTML que redireciona no browser — evita qualquer
+  // Responde com HTML que redireciona no browser â€” evita qualquer
   // problema de URL interna do container (0.0.0.0, host errado, etc.)
   return new NextResponse(
     `<!DOCTYPE html><html><head>
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
 
     // Cookie setado na mesma resposta que entrega o HTML de redirect.
     // O browser processa Set-Cookie antes de executar o meta-refresh.
-    const res = htmlRedirect("/");
+    const res = htmlRedirect("/home");
     res.cookies.set("access_token", accessToken, {
       httpOnly: true,
       secure: isProduction,
