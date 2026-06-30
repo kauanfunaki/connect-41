@@ -1,4 +1,4 @@
-﻿-- CreateTable
+-- CreateTable
 CREATE TABLE `tenants` (
     `id` VARCHAR(191) NOT NULL,
     `name` VARCHAR(120) NOT NULL,
