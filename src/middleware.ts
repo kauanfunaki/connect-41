@@ -4,6 +4,7 @@ import { verifyAccess } from "@/lib/auth/jwt";
 const PUBLIC_PATHS = [
   "/login",
   "/api/auth/login",
+  "/api/auth/login-form",
   "/api/auth/refresh",
   "/api/auth/logout",
   "/api/health",

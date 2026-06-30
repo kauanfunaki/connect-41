@@ -1,10 +1,20 @@
-"use client";
+// Server Component — lê o erro da query string e renderiza o form HTML puro.
+// O form faz POST direto para /api/auth/login-form que retorna um 303 HTTP real,
+// garantindo que o cookie esteja no browser antes do redirect para /.
 
-import { useActionState } from "react";
-import { loginAction } from "./actions";
+const ERRORS: Record<string, string> = {
+  "credenciais-invalidas": "E-mail ou senha incorretos.",
+  "preencha-os-campos":    "Preencha e-mail e senha.",
+  "erro-interno":          "Erro interno. Tente novamente.",
+};
 
-export default function LoginPage() {
-  const [state, formAction, isPending] = useActionState(loginAction, null);
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
+  const errorMsg = error ? (ERRORS[error] ?? "Erro ao autenticar.") : null;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-canvas px-4">
@@ -19,15 +29,21 @@ export default function LoginPage() {
             >
               41
             </span>
-            <span className="text-fg font-semibold text-[15px] tracking-[-0.01em]">Connect 41</span>
+            <span className="text-fg font-semibold text-[15px] tracking-[-0.01em]">
+              Connect 41
+            </span>
           </div>
           <p className="text-fg-muted text-[13px] mt-3">
             Acesse sua conta para continuar
           </p>
         </div>
 
-        {/* Formulário via Server Action */}
-        <form action={formAction} className="bg-surface border border-border rounded-lg p-6 space-y-4">
+        {/* Form HTML puro → POST /api/auth/login-form → 303 para / */}
+        <form
+          method="POST"
+          action="/api/auth/login-form"
+          className="bg-surface border border-border rounded-lg p-6 space-y-4"
+        >
           <div className="space-y-1.5">
             <label htmlFor="email" className="block text-[13px] font-medium text-fg">
               E-mail
@@ -58,18 +74,17 @@ export default function LoginPage() {
             />
           </div>
 
-          {state?.error && (
+          {errorMsg && (
             <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
-              {state.error}
+              {errorMsg}
             </p>
           )}
 
           <button
             type="submit"
-            disabled={isPending}
-            className="w-full h-9 rounded-md bg-brand text-on-brand text-[14px] font-medium hover:bg-brand-hover active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-100 mt-1"
+            className="w-full h-9 rounded-md bg-brand text-on-brand text-[14px] font-medium hover:bg-brand-hover active:scale-[0.99] transition-all duration-100 mt-1"
           >
-            {isPending ? "Entrando…" : "Entrar"}
+            Entrar
           </button>
         </form>
 
