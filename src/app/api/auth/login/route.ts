@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
     res.cookies.set("access_token", accessToken, {
       httpOnly: true,
       secure: isProduction,
-      sameSite: "strict",
+      sameSite: "lax",
       path: "/",
       maxAge: 60 * 15, // 15 minutos (igual ao JWT_ACCESS_TTL)
     });
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     res.cookies.set("refresh_token", rawRefresh, {
       httpOnly: true,
       secure: isProduction,
-      sameSite: "strict",
+      sameSite: "lax",
       path: "/api/auth",
       maxAge: 60 * 60 * 24 * 7,
     });

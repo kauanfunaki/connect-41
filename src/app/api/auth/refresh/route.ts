@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
   res.cookies.set("access_token", accessToken, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: "strict",
+    sameSite: "lax",
     path: "/",
     maxAge: 60 * 15,
   });
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
   res.cookies.set("refresh_token", newRaw, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: "strict",
+    sameSite: "lax",
     path: "/api/auth",
     maxAge: 60 * 60 * 24 * 7,
   });
