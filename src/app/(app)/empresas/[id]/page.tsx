@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { CompanyStatus } from "@/generated/prisma/enums";
 import { excluirEmpresa } from "../actions";
+import { DeleteButton } from "@/components/empresas/DeleteButton";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
   PROSPECT: "Prospect",
@@ -80,19 +81,7 @@ export default async function EmpresaPage({
           >
             Editar
           </Link>
-          <form action={deleteAction}>
-            <button
-              type="submit"
-              className="h-8 px-3 rounded-md border border-danger/30 text-[12px] font-medium text-danger hover:bg-danger/8 transition-colors"
-              onClick={(e) => {
-                if (!confirm(`Excluir "${company.name}"? Esta ação não pode ser desfeita.`)) {
-                  e.preventDefault();
-                }
-              }}
-            >
-              Excluir
-            </button>
-          </form>
+          <DeleteButton action={deleteAction} nome={company.name} />
         </div>
       </div>
 
