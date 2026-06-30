@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAccess } from "@/lib/auth/jwt";
 
+// jsonwebtoken usa crypto do Node.js — não funciona no Edge Runtime padrão.
+// Este export diz ao Next.js para compilar o middleware no Node.js runtime.
+export const runtime = "nodejs";
+
 const PUBLIC_PATHS = [
   "/login",
   "/api/auth/login",
