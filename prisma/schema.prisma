@@ -91,8 +91,30 @@ model Tenant {
   notifications  Notification[]
   customFields   CustomField[]
   customValues   CustomValue[]
+  sectors        Sector[]
 
   @@map("tenants")
+}
+
+// Setor/cargo cadastrável — referenciado por código (string livre, sem FK) em
+// UserSector, CompanyService, Pipeline, Handoff. O código não muda após criado
+// pois já pode estar espalhado nesses registros; label/cor/ordem são editáveis.
+model Sector {
+  id        String   @id @default(uuid())
+  tenantId  String
+  code      String   @db.VarChar(40)
+  label     String   @db.VarChar(80)
+  color     String   @default("#586577") @db.VarChar(7)
+  active    Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("sectors")
 }
 
 model User {

@@ -4,7 +4,6 @@ import { useActionState } from "react";
 import Link from "next/link";
 import type { UsuarioState } from "@/app/(app)/admin/usuarios/actions";
 import type { UserRole } from "@/generated/prisma/enums";
-import { SECTOR_OPTIONS } from "@/lib/sectors";
 
 export type UsuarioDefaultValues = {
   id?: string;
@@ -19,11 +18,12 @@ type Props = {
   action: (prev: UsuarioState, form: FormData) => Promise<UsuarioState>;
   cancelHref: string;
   roleOptions: { value: UserRole; label: string }[];
+  sectorOptions: { value: string; label: string }[];
   defaultValues?: UsuarioDefaultValues;
   isSelf?: boolean;
 };
 
-export function UsuarioForm({ action, cancelHref, roleOptions, defaultValues, isSelf }: Props) {
+export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, defaultValues, isSelf }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const isEdit = Boolean(defaultValues?.id);
   const selectedSectors = new Set(defaultValues?.sectors ?? []);
@@ -133,7 +133,7 @@ export function UsuarioForm({ action, cancelHref, roleOptions, defaultValues, is
       <div className="space-y-2">
         <p className="text-[12px] font-medium text-fg">Setores</p>
         <div className="grid grid-cols-3 gap-2">
-          {SECTOR_OPTIONS.map((s) => (
+          {sectorOptions.map((s) => (
             <label
               key={s.value}
               className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-border text-[12px] text-fg-secondary hover:bg-surface-2 transition-colors cursor-pointer"

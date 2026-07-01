@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { getPrisma } from "@/lib/prisma";
-import { SECTOR_LABELS, SECTOR_COLORS } from "@/lib/sectors";
+import { getSectorMaps } from "@/lib/sectors";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPipelineWhere } from "@/lib/auth/scope";
 
 export default async function PipelinesPage() {
   const ctx = await getAuthContext();
   const canCreate = canWrite(ctx.role);
+  const { labels: sectorLabels, colors: sectorColors } = await getSectorMaps(ctx.tenantId);
 
   const prisma = getPrisma();
   const pipelines = await prisma.pipeline.findMany({
@@ -50,10 +51,10 @@ export default async function PipelinesPage() {
               <div className="flex items-center gap-2 mb-3">
                 <span
                   className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ background: SECTOR_COLORS[sectorCode] ?? "#586577" }}
+                  style={{ background: sectorColors[sectorCode] ?? "#586577" }}
                 />
                 <h2 className="text-[13px] font-medium text-fg">
-                  {SECTOR_LABELS[sectorCode] ?? sectorCode}
+                  {sectorLabels[sectorCode] ?? sectorCode}
                 </h2>
               </div>
               <div className="grid grid-cols-3 gap-3">

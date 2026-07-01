@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import { LogoutButton } from "@/components/shell/LogoutButton";
-import { SECTOR_LABELS, SECTOR_COLORS } from "@/lib/sectors";
+import { getSectorMaps } from "@/lib/sectors";
 import { ROLE_LABELS } from "@/lib/roles";
 
 export default async function AppLayout({
@@ -11,9 +11,11 @@ export default async function AppLayout({
 }) {
   const h = await headers();
   const role = h.get("x-user-role") ?? "";
+  const tenantId = h.get("x-tenant-id") ?? "";
   const sectorsRaw = h.get("x-user-sectors") ?? "";
   const sectors = sectorsRaw ? sectorsRaw.split(",").filter(Boolean) : [];
   const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
+  const { labels: sectorLabels, colors: sectorColors } = await getSectorMaps(tenantId);
 
   return (
     <div className="flex h-screen overflow-hidden bg-canvas">
@@ -52,8 +54,8 @@ export default async function AppLayout({
                 <SectorNavItem
                   key={s}
                   href={`/setor/${s}`}
-                  label={SECTOR_LABELS[s] ?? s}
-                  color={SECTOR_COLORS[s] ?? "#586577"}
+                  label={sectorLabels[s] ?? s}
+                  color={sectorColors[s] ?? "#586577"}
                 />
               ))}
             </>
@@ -65,6 +67,7 @@ export default async function AppLayout({
                 Administração
               </p>
               <NavItem href="/admin/usuarios" icon="🔐" label="Usuários" />
+              <NavItem href="/admin/setores" icon="🏷️" label="Setores" />
               <NavItem href="/admin/tenant" icon="🏛️" label="Empresa (Tenant)" />
             </>
           )}

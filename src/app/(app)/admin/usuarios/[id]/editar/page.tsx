@@ -5,6 +5,7 @@ import { UsuarioForm } from "@/components/admin/UsuarioForm";
 import { atualizarUsuario } from "../../actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { assignableRoles, ROLE_OPTIONS } from "@/lib/roles";
+import { getSectorMaps } from "@/lib/sectors";
 
 export default async function EditarUsuarioPage({
   params,
@@ -27,6 +28,7 @@ export default async function EditarUsuarioPage({
   const isSelf = user.id === ctx.userId;
   const allowed = assignableRoles(ctx.role);
   const roleOptions = ROLE_OPTIONS.filter((r) => allowed.includes(r.value) || r.value === user.role);
+  const { options: sectorOptions } = await getSectorMaps(ctx.tenantId);
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
@@ -47,6 +49,7 @@ export default async function EditarUsuarioPage({
           action={atualizarUsuario}
           cancelHref="/admin/usuarios"
           roleOptions={roleOptions}
+          sectorOptions={sectorOptions}
           isSelf={isSelf}
           defaultValues={{
             id: user.id,

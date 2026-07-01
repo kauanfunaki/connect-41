@@ -3,16 +3,18 @@ import { notFound } from "next/navigation";
 import { PipelineForm } from "@/components/pipelines/PipelineForm";
 import { criarPipeline } from "../actions";
 import { getAuthContext, canWrite, isFullWrite } from "@/lib/auth/context";
-import { SECTOR_OPTIONS } from "@/lib/sectors";
+import { getSectorMaps } from "@/lib/sectors";
 
 export default async function NovoPipelinePage() {
   const ctx = await getAuthContext();
   if (!canWrite(ctx.role)) notFound();
 
+  const { options: allSectorOptions } = await getSectorMaps(ctx.tenantId);
+
   // SECTOR_ADMIN só pode criar pipeline nos próprios setores; ADMIN/SUPER_ADMIN em qualquer um.
   const sectorOptions = isFullWrite(ctx.role)
-    ? SECTOR_OPTIONS
-    : SECTOR_OPTIONS.filter((s) => ctx.sectors.includes(s.value));
+    ? allSectorOptions
+    : allSectorOptions.filter((s) => ctx.sectors.includes(s.value));
 
   return (
     <div className="p-6 max-w-3xl mx-auto">

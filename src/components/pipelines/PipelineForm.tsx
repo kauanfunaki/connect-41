@@ -3,7 +3,6 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { PipelineState } from "@/app/(app)/pipelines/actions";
-import { SECTOR_OPTIONS } from "@/lib/sectors";
 
 const DEFAULT_COLORS = ["#586577", "#2E6FB8", "#C8860D", "#1E8E5A", "#C5374B"];
 
@@ -11,10 +10,10 @@ type Stage = { name: string; color: string };
 
 type Props = {
   action: (prev: PipelineState, form: FormData) => Promise<PipelineState>;
-  sectorOptions?: { value: string; label: string }[];
+  sectorOptions: { value: string; label: string }[];
 };
 
-export function PipelineForm({ action, sectorOptions = SECTOR_OPTIONS }: Props) {
+export function PipelineForm({ action, sectorOptions }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const [stages, setStages] = useState<Stage[]>([
     { name: "", color: DEFAULT_COLORS[0] },

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { ROLE_LABELS } from "@/lib/roles";
-import { SECTOR_LABELS, SECTOR_COLORS } from "@/lib/sectors";
+import { getSectorMaps } from "@/lib/sectors";
 import { ToggleActiveButton } from "@/components/admin/ToggleActiveButton";
 import { alternarAtivoUsuario } from "./actions";
 
@@ -11,6 +11,7 @@ export default async function UsuariosPage() {
   const ctx = await getAuthContext();
   if (!isFullWrite(ctx.role)) notFound();
 
+  const { labels: sectorLabels, colors: sectorColors } = await getSectorMaps(ctx.tenantId);
   const prisma = getPrisma();
   const users = await prisma.user.findMany({
     where: { tenantId: ctx.tenantId },
@@ -84,9 +85,9 @@ export default async function UsuariosPage() {
                             >
                               <span
                                 className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                                style={{ background: SECTOR_COLORS[s.sectorCode] ?? "#586577" }}
+                                style={{ background: sectorColors[s.sectorCode] ?? "#586577" }}
                               />
-                              {SECTOR_LABELS[s.sectorCode] ?? s.sectorCode}
+                              {sectorLabels[s.sectorCode] ?? s.sectorCode}
                             </span>
                           ))
                         )}

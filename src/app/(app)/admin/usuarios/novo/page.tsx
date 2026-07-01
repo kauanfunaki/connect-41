@@ -4,6 +4,7 @@ import { UsuarioForm } from "@/components/admin/UsuarioForm";
 import { criarUsuario } from "../actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { assignableRoles, ROLE_OPTIONS } from "@/lib/roles";
+import { getSectorMaps } from "@/lib/sectors";
 
 export default async function NovoUsuarioPage() {
   const ctx = await getAuthContext();
@@ -11,6 +12,7 @@ export default async function NovoUsuarioPage() {
 
   const allowed = assignableRoles(ctx.role);
   const roleOptions = ROLE_OPTIONS.filter((r) => allowed.includes(r.value));
+  const { options: sectorOptions } = await getSectorMaps(ctx.tenantId);
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
@@ -25,7 +27,12 @@ export default async function NovoUsuarioPage() {
       <h1 className="text-[20px] font-semibold text-fg tracking-[-0.01em] mb-6">Novo Usuário</h1>
 
       <div className="bg-surface border border-border rounded-lg p-6">
-        <UsuarioForm action={criarUsuario} cancelHref="/admin/usuarios" roleOptions={roleOptions} />
+        <UsuarioForm
+          action={criarUsuario}
+          cancelHref="/admin/usuarios"
+          roleOptions={roleOptions}
+          sectorOptions={sectorOptions}
+        />
       </div>
     </div>
   );

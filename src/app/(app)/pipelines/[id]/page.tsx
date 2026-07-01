@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { SECTOR_LABELS } from "@/lib/sectors";
+import { getSectorMaps } from "@/lib/sectors";
 import { KanbanBoard } from "@/components/pipelines/KanbanBoard";
 import { moverItem } from "../actions";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
@@ -27,6 +27,7 @@ export default async function PipelinePage({
   if (!pipeline) notFound();
 
   const canAddItem = canManageSector(ctx, pipeline.sectorCode);
+  const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
 
   // Resolve nomes das entidades (Company ou Person) referenciadas pelos itens
   const entityIds = pipeline.items.map((i) => i.entityId);
@@ -70,7 +71,7 @@ export default async function PipelinePage({
         <div>
           <h1 className="text-[20px] font-semibold text-fg tracking-[-0.01em]">{pipeline.name}</h1>
           <p className="text-[13px] text-fg-muted mt-0.5">
-            {SECTOR_LABELS[pipeline.sectorCode] ?? pipeline.sectorCode} ·{" "}
+            {sectorLabels[pipeline.sectorCode] ?? pipeline.sectorCode} ·{" "}
             {pipeline.entityType === "COMPANY" ? "Empresas" : "Pessoas"}
           </p>
         </div>

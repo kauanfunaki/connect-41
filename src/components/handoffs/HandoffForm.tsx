@@ -1,34 +1,80 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { HandoffState } from "@/app/(app)/handoffs/actions";
 import type { EntityType } from "@/generated/prisma/enums";
-import { SECTOR_OPTIONS } from "@/lib/sectors";
+
+type EntityOption = { id: string; name: string };
+
+type FixedEntity = { entityType: EntityType; entityId: string; entityName: string };
 
 type Props = {
   action: (prev: HandoffState, form: FormData) => Promise<HandoffState>;
-  entityType: EntityType;
-  entityId: string;
-  entityName: string;
   fromSectorOptions: { value: string; label: string }[];
+  toSectorOptions: { value: string; label: string }[];
   cancelHref: string;
+  fixedEntity?: FixedEntity;
+  companies?: EntityOption[];
+  people?: EntityOption[];
 };
 
 export function HandoffForm({
   action,
-  entityType,
-  entityId,
-  entityName,
   fromSectorOptions,
+  toSectorOptions,
   cancelHref,
+  fixedEntity,
+  companies = [],
+  people = [],
 }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
+  const [entityType, setEntityType] = useState<EntityType>(fixedEntity?.entityType ?? "COMPANY");
+  const entityOptions = entityType === "COMPANY" ? companies : people;
 
   return (
     <form action={formAction} className="space-y-6">
-      <input type="hidden" name="entityType" value={entityType} />
-      <input type="hidden" name="entityId" value={entityId} />
+      {fixedEntity ? (
+        <>
+          <input type="hidden" name="entityType" value={fixedEntity.entityType} />
+          <input type="hidden" name="entityId" value={fixedEntity.entityId} />
+          <div>
+            <p className="text-[11px] text-fg-muted mb-0.5">
+              {fixedEntity.entityType === "COMPANY" ? "Empresa" : "Pessoa"}
+            </p>
+            <p className="text-[14px] text-fg font-medium">{fixedEntity.entityName}</p>
+          </div>
+        </>
+      ) : (
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Tipo *" htmlFor="entityType">
+            <select
+              id="entityType"
+              name="entityType"
+              required
+              value={entityType}
+              onChange={(e) => setEntityType(e.target.value as EntityType)}
+              className={INPUT}
+            >
+              <option value="COMPANY">Empresa</option>
+              <option value="PERSON">Pessoa</option>
+            </select>
+          </Field>
+          <Field label={entityType === "COMPANY" ? "Empresa *" : "Pessoa *"} htmlFor="entityId">
+            <select id="entityId" name="entityId" required defaultValue="" className={INPUT}>
+              <option value="" disabled>Selecionar…</option>
+              {entityOptions.map((e) => (
+                <option key={e.id} value={e.id}>{e.name}</option>
+              ))}
+            </select>
+            {entityOptions.length === 0 && (
+              <p className="text-[11px] text-fg-muted mt-1">
+                Nenhuma {entityType === "COMPANY" ? "empresa" : "pessoa"} disponível no seu escopo.
+              </p>
+            )}
+          </Field>
+        </div>
+      )}
 
       {state?.error && (
         <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
@@ -36,26 +82,19 @@ export function HandoffForm({
         </p>
       )}
 
-      <div>
-        <p className="text-[11px] text-fg-muted mb-0.5">
-          {entityType === "COMPANY" ? "Empresa" : "Pessoa"}
-        </p>
-        <p className="text-[14px] text-fg font-medium">{entityName}</p>
-      </div>
-
       <div className="grid grid-cols-2 gap-4">
         <Field label="Setor de origem *" htmlFor="fromSector">
-          <select id="fromSector" name="fromSector" required className={INPUT}>
-            <option value="">Selecionar…</option>
+          <select id="fromSector" name="fromSector" required defaultValue="" className={INPUT}>
+            <option value="" disabled>Selecionar…</option>
             {fromSectorOptions.map((s) => (
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
           </select>
         </Field>
         <Field label="Setor de destino *" htmlFor="toSector">
-          <select id="toSector" name="toSector" required className={INPUT}>
-            <option value="">Selecionar…</option>
-            {SECTOR_OPTIONS.map((s) => (
+          <select id="toSector" name="toSector" required defaultValue="" className={INPUT}>
+            <option value="" disabled>Selecionar…</option>
+            {toSectorOptions.map((s) => (
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
           </select>

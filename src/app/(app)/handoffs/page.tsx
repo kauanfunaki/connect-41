@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getPrisma } from "@/lib/prisma";
-import { SECTOR_LABELS, SECTOR_COLORS } from "@/lib/sectors";
-import { getAuthContext, canManageSector } from "@/lib/auth/context";
+import { getSectorMaps } from "@/lib/sectors";
+import { getAuthContext, canManageSector, isFullWrite } from "@/lib/auth/context";
 import { scopedHandoffWhere } from "@/lib/auth/scope";
 import { HandoffActions } from "@/components/handoffs/HandoffActions";
 import { aceitarHandoff, rejeitarHandoff } from "./actions";
@@ -32,6 +32,8 @@ export default async function HandoffsPage({
 }) {
   const { status } = await searchParams;
   const ctx = await getAuthContext();
+  const canCreate = isFullWrite(ctx.role) || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.length > 0);
+  const { labels: sectorLabels, colors: sectorColors } = await getSectorMaps(ctx.tenantId);
 
   const statusFilter =
     status && ["PENDING", "ACCEPTED", "REJECTED"].includes(status) ? (status as HandoffStatus) : "PENDING";
@@ -73,6 +75,14 @@ export default async function HandoffsPage({
             Transferências de acompanhamento entre setores
           </p>
         </div>
+        {canCreate && (
+          <Link
+            href="/handoffs/novo"
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+          >
+            + Novo Handoff
+          </Link>
+        )}
       </div>
 
       <div className="flex items-center gap-1 mb-4">
@@ -126,9 +136,9 @@ export default async function HandoffsPage({
                       </div>
 
                       <div className="flex items-center gap-1.5 text-[12px] text-fg-muted mb-1">
-                        <SectorChip code={h.fromSector} />
+                        <SectorChip code={h.fromSector} labels={sectorLabels} colors={sectorColors} />
                         <span>→</span>
-                        <SectorChip code={h.toSector} />
+                        <SectorChip code={h.toSector} labels={sectorLabels} colors={sectorColors} />
                       </div>
 
                       {h.message && <p className="text-[13px] text-fg-secondary mb-1">{h.message}</p>}
@@ -153,14 +163,22 @@ export default async function HandoffsPage({
   );
 }
 
-function SectorChip({ code }: { code: string }) {
+function SectorChip({
+  code,
+  labels,
+  colors,
+}: {
+  code: string;
+  labels: Record<string, string>;
+  colors: Record<string, string>;
+}) {
   return (
     <span className="inline-flex items-center gap-1">
       <span
         className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-        style={{ background: SECTOR_COLORS[code] ?? "#586577" }}
+        style={{ background: colors[code] ?? "#586577" }}
       />
-      {SECTOR_LABELS[code] ?? code}
+      {labels[code] ?? code}
     </span>
   );
 }
