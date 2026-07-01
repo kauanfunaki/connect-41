@@ -41,6 +41,7 @@ export default async function AppLayout({
           <NavItem href="/empresas" icon="🏢" label="Empresas" />
           <NavItem href="/pessoas" icon="👤" label="Pessoas" />
           <NavItem href="/pipelines" icon="📋" label="Pipelines" />
+          <NavItem href="/handoffs" icon="🔁" label="Handoffs" />
 
           {sectors.length > 0 && (
             <>
