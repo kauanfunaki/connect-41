@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import type { SetorState } from "@/app/(app)/admin/setores/actions";
-import { SECTOR_COLOR_PALETTE } from "@/lib/sectors";
+import { SECTOR_COLOR_PALETTE } from "@/lib/sector-constants";
 
 export type SetorDefaultValues = {
   id?: string;
