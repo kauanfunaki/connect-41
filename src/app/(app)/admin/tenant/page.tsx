@@ -14,7 +14,7 @@ export default async function TenantPage() {
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
-      <h1 className="text-[20px] font-semibold text-fg tracking-[-0.01em] mb-1">
+      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-1">
         Empresa (Tenant)
       </h1>
       <p className="text-[13px] text-fg-muted mb-6">

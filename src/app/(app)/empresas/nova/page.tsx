@@ -21,7 +21,7 @@ export default async function NovaEmpresaPage() {
         <span className="text-[13px] text-fg">Nova Empresa</span>
       </div>
 
-      <h1 className="text-[20px] font-semibold text-fg tracking-[-0.01em] mb-6">
+      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">
         Nova Empresa
       </h1>
 

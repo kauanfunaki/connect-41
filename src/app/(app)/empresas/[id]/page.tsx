@@ -77,7 +77,7 @@ export default async function EmpresaPage({
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-[22px] font-semibold text-fg tracking-[-0.01em]">
+            <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">
               {company.name}
             </h1>
             <span
@@ -119,7 +119,7 @@ export default async function EmpresaPage({
 
       {/* Identificação */}
       <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-        <h2 className="text-[13px] font-medium text-fg mb-4">Identificação</h2>
+        <h2 className="text-[14px] font-semibold text-fg mb-4">Identificação</h2>
         <div className="grid grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="Razão Social"      value={company.name} />
           <InfoRow label="Nome Fantasia"     value={company.tradeName} />
@@ -131,7 +131,7 @@ export default async function EmpresaPage({
       {/* Endereço */}
       {fullAddress && (
         <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-          <h2 className="text-[13px] font-medium text-fg mb-4">Endereço</h2>
+          <h2 className="text-[14px] font-semibold text-fg mb-4">Endereço</h2>
           <div className="grid grid-cols-2 gap-x-8 gap-y-3">
             <InfoRow label="Logradouro" value={[company.addressStreet, company.addressNumber].filter(Boolean).join(", ")} />
             <InfoRow label="Complemento" value={company.addressComplement} />
@@ -144,7 +144,7 @@ export default async function EmpresaPage({
 
       {/* Contato */}
       <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-        <h2 className="text-[13px] font-medium text-fg mb-4">Contato</h2>
+        <h2 className="text-[14px] font-semibold text-fg mb-4">Contato</h2>
         <div className="grid grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="E-mail"   value={company.email} />
           <InfoRow label="Telefone" value={company.phone} />
@@ -159,7 +159,7 @@ export default async function EmpresaPage({
       {/* Dados Fiscais */}
       {(company.stateRegistration || company.municipalRegistration || company.nire) && (
         <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-          <h2 className="text-[13px] font-medium text-fg mb-4">Dados Fiscais</h2>
+          <h2 className="text-[14px] font-semibold text-fg mb-4">Dados Fiscais</h2>
           <div className="grid grid-cols-3 gap-x-8 gap-y-3">
             <InfoRow label="Inscrição Estadual"   value={company.stateRegistration} mono />
             <InfoRow label="Inscrição Municipal"  value={company.municipalRegistration} mono />
@@ -170,7 +170,7 @@ export default async function EmpresaPage({
 
       {/* CRM */}
       <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-        <h2 className="text-[13px] font-medium text-fg mb-4">CRM</h2>
+        <h2 className="text-[14px] font-semibold text-fg mb-4">CRM</h2>
         <div className="grid grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="Origem" value={company.source} />
           <InfoRow
@@ -191,7 +191,7 @@ export default async function EmpresaPage({
       {/* Serviços contratados */}
       <div className="bg-surface border border-border rounded-lg p-5 mb-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[13px] font-medium text-fg">Serviços contratados</h2>
+          <h2 className="text-[14px] font-semibold text-fg">Serviços contratados</h2>
         </div>
         {company.services.length === 0 ? (
           <p className="text-[13px] text-fg-muted">Nenhum serviço cadastrado.</p>
@@ -213,7 +213,7 @@ export default async function EmpresaPage({
       {/* Campos Adicionais (setoriais) */}
       {customFields.length > 0 && (
         <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-          <h2 className="text-[13px] font-medium text-fg mb-4">Campos Adicionais</h2>
+          <h2 className="text-[14px] font-semibold text-fg mb-4">Campos Adicionais</h2>
           <div className="grid grid-cols-2 gap-x-8 gap-y-3">
             {customFields.map((f) => (
               <InfoRow
@@ -229,7 +229,7 @@ export default async function EmpresaPage({
       {/* Pessoas vinculadas */}
       {company.people.length > 0 && (
         <div className="bg-surface border border-border rounded-lg p-5">
-          <h2 className="text-[13px] font-medium text-fg mb-3">
+          <h2 className="text-[14px] font-semibold text-fg mb-3">
             Pessoas ({company.people.length})
           </h2>
           <div className="space-y-1">
@@ -265,7 +265,7 @@ function InfoRow({
 }) {
   return (
     <div>
-      <p className="text-[11px] text-fg-muted mb-0.5">{label}</p>
+      <p className="text-[10px] text-fg-muted mb-0.5">{label}</p>
       {href ? (
         <a
           href={href}

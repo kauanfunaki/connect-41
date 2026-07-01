@@ -70,7 +70,7 @@ export default async function HandoffsPage({
     <div className="p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-[20px] font-semibold text-fg tracking-[-0.01em]">Handoffs</h1>
+          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Handoffs</h1>
           <p className="text-[13px] text-fg-muted mt-0.5">
             Transferências de acompanhamento entre setores
           </p>

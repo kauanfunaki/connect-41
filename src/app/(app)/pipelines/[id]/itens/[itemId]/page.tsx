@@ -72,7 +72,7 @@ export default async function PipelineItemPage({
 
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-[22px] font-semibold text-fg tracking-[-0.01em] mb-1">
+          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-1">
             {entity?.name ?? "(removido)"}
           </h1>
           {entity && (
@@ -89,7 +89,7 @@ export default async function PipelineItemPage({
 
       {/* Estágio */}
       <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-        <h2 className="text-[13px] font-medium text-fg mb-3">Estágio</h2>
+        <h2 className="text-[14px] font-semibold text-fg mb-3">Estágio</h2>
         {canAct ? (
           <MoveStageSelect
             itemId={itemId}
@@ -106,7 +106,7 @@ export default async function PipelineItemPage({
 
       {/* Timeline */}
       <div className="bg-surface border border-border rounded-lg p-5">
-        <h2 className="text-[13px] font-medium text-fg mb-3">Atividades</h2>
+        <h2 className="text-[14px] font-semibold text-fg mb-3">Atividades</h2>
 
         {canAct && (
           <div className="mb-4">

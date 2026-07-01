@@ -69,7 +69,7 @@ export default async function PipelinePage({
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-[20px] font-semibold text-fg tracking-[-0.01em]">{pipeline.name}</h1>
+          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">{pipeline.name}</h1>
           <p className="text-[13px] text-fg-muted mt-0.5">
             {sectorLabels[pipeline.sectorCode] ?? pipeline.sectorCode} ·{" "}
             {pipeline.entityType === "COMPANY" ? "Empresas" : "Pessoas"}

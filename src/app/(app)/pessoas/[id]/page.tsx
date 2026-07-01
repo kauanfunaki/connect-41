@@ -56,7 +56,7 @@ export default async function PessoaPage({
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-[22px] font-semibold text-fg tracking-[-0.01em]">
+            <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">
               {person.name}
             </h1>
             <span
@@ -95,7 +95,7 @@ export default async function PessoaPage({
 
       {/* Identificação */}
       <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-        <h2 className="text-[13px] font-medium text-fg mb-4">Identificação</h2>
+        <h2 className="text-[14px] font-semibold text-fg mb-4">Identificação</h2>
         <div className="grid grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="Nome"               value={person.name} />
           <InfoRow label="Tipo"               value={TYPE_LABEL[person.type]} />
@@ -115,7 +115,7 @@ export default async function PessoaPage({
 
       {/* Contato */}
       <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-        <h2 className="text-[13px] font-medium text-fg mb-4">Contato</h2>
+        <h2 className="text-[14px] font-semibold text-fg mb-4">Contato</h2>
         <div className="grid grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="E-mail"   value={person.email} />
           <InfoRow label="Telefone" value={person.phone} />
@@ -124,11 +124,11 @@ export default async function PessoaPage({
 
       {/* Vínculo */}
       <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-        <h2 className="text-[13px] font-medium text-fg mb-4">Vínculo</h2>
+        <h2 className="text-[14px] font-semibold text-fg mb-4">Vínculo</h2>
         <div className="grid grid-cols-2 gap-x-8 gap-y-3">
           {person.currentCompany ? (
             <div>
-              <p className="text-[11px] text-fg-muted mb-0.5">Empresa atual</p>
+              <p className="text-[10px] text-fg-muted mb-0.5">Empresa atual</p>
               <Link
                 href={`/empresas/${person.currentCompany.id}`}
                 className="text-[13px] text-brand hover:underline"
@@ -151,7 +151,7 @@ export default async function PessoaPage({
       {/* Campos Adicionais (setoriais) */}
       {customFields.length > 0 && (
         <div className="bg-surface border border-border rounded-lg p-5">
-          <h2 className="text-[13px] font-medium text-fg mb-4">Campos Adicionais</h2>
+          <h2 className="text-[14px] font-semibold text-fg mb-4">Campos Adicionais</h2>
           <div className="grid grid-cols-2 gap-x-8 gap-y-3">
             {customFields.map((f) => (
               <InfoRow
@@ -178,7 +178,7 @@ function InfoRow({
 }) {
   return (
     <div>
-      <p className="text-[11px] text-fg-muted mb-0.5">{label}</p>
+      <p className="text-[10px] text-fg-muted mb-0.5">{label}</p>
       <p className={`text-[13px] text-fg ${mono ? "tnum" : ""}`}>{value ?? "—"}</p>
     </div>
   );

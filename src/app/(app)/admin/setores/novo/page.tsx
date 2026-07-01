@@ -18,7 +18,7 @@ export default async function NovoSetorPage() {
         <span className="text-[13px] text-fg">Novo Setor</span>
       </div>
 
-      <h1 className="text-[20px] font-semibold text-fg tracking-[-0.01em] mb-6">Novo Setor</h1>
+      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Novo Setor</h1>
 
       <div className="bg-surface border border-border rounded-lg p-6">
         <SetorForm action={criarSetor} cancelHref="/admin/setores" />

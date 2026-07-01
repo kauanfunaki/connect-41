@@ -25,7 +25,7 @@ export default async function PipelinesPage() {
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-[20px] font-semibold text-fg tracking-[-0.01em]">Pipelines</h1>
+          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Pipelines</h1>
           <p className="text-[13px] text-fg-muted mt-0.5">
             {pipelines.length} pipeline{pipelines.length !== 1 ? "s" : ""} configurado{pipelines.length !== 1 ? "s" : ""}
           </p>
@@ -53,7 +53,7 @@ export default async function PipelinesPage() {
                   className="w-2 h-2 rounded-full flex-shrink-0"
                   style={{ background: sectorColors[sectorCode] ?? "#586577" }}
                 />
-                <h2 className="text-[13px] font-medium text-fg">
+                <h2 className="text-[15px] font-medium text-fg">
                   {sectorLabels[sectorCode] ?? sectorCode}
                 </h2>
               </div>

@@ -40,7 +40,7 @@ export default async function EditarUsuarioPage({
         <span className="text-[13px] text-fg">Editar</span>
       </div>
 
-      <h1 className="text-[20px] font-semibold text-fg tracking-[-0.01em] mb-6">
+      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">
         Editar Usuário
       </h1>
 

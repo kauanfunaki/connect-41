@@ -42,7 +42,7 @@ export default async function CamposPage() {
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-[20px] font-semibold text-fg tracking-[-0.01em]">Campos Customizados</h1>
+          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Campos Customizados</h1>
           <p className="text-[13px] text-fg-muted mt-0.5">
             {fields.length} campo{fields.length !== 1 ? "s" : ""} configurado{fields.length !== 1 ? "s" : ""}
           </p>
@@ -65,7 +65,7 @@ export default async function CamposPage() {
             const [sectorCode, entityType] = key.split("::");
             return (
               <div key={key}>
-                <h2 className="text-[13px] font-medium text-fg mb-2">
+                <h2 className="text-[15px] font-medium text-fg mb-2">
                   {sectorLabels[sectorCode] ?? sectorCode} ·{" "}
                   {entityType === "COMPANY" ? "Empresas" : "Pessoas"}
                 </h2>

@@ -34,7 +34,7 @@ export function CustomFieldsSection({ fields }: { fields: CustomFieldInput[] }) 
 function CustomFieldInputControl({ field }: { field: CustomFieldInput }) {
   const name = `custom_${field.id}`;
   const inputClass =
-    "w-full h-9 px-3 rounded-md border border-border bg-canvas text-[13px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";
+    "w-full h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";
 
   switch (field.fieldType) {
     case "TEXTAREA":

@@ -25,7 +25,7 @@ export default async function NovoCampoPage() {
         <span className="text-[13px] text-fg">Novo Campo</span>
       </div>
 
-      <h1 className="text-[20px] font-semibold text-fg tracking-[-0.01em] mb-6">Novo Campo</h1>
+      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Novo Campo</h1>
 
       <div className="bg-surface border border-border rounded-lg p-6">
         <CampoForm action={criarCampo} cancelHref="/admin/campos" sectorOptions={sectorOptions} />

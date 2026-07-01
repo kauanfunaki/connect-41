@@ -18,7 +18,7 @@ export default async function HomePage() {
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-[20px] font-semibold text-fg tracking-[-0.01em]">
+        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">
           Início
         </h1>
         <p className="text-[13px] text-fg-muted mt-0.5">

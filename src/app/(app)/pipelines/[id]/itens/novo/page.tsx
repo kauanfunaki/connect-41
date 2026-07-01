@@ -49,7 +49,7 @@ export default async function NovoItemPage({
         <span className="text-[13px] text-fg">Novo Item</span>
       </div>
 
-      <h1 className="text-[20px] font-semibold text-fg tracking-[-0.01em] mb-6">
+      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">
         Adicionar {pipeline.entityType === "COMPANY" ? "Empresa" : "Pessoa"} ao Pipeline
       </h1>
 

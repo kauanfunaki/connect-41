@@ -13,7 +13,7 @@ export default async function SetoresPage() {
     <div className="p-6 max-w-3xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-[20px] font-semibold text-fg tracking-[-0.01em]">Setores</h1>
+          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Setores</h1>
           <p className="text-[13px] text-fg-muted mt-0.5">
             {sectors.length} setor{sectors.length !== 1 ? "es" : ""} cadastrado{sectors.length !== 1 ? "s" : ""}
           </p>

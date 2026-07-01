@@ -26,7 +26,7 @@ export default async function NovoPipelinePage() {
         <span className="text-[13px] text-fg">Novo Pipeline</span>
       </div>
 
-      <h1 className="text-[20px] font-semibold text-fg tracking-[-0.01em] mb-6">Novo Pipeline</h1>
+      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Novo Pipeline</h1>
 
       <div className="bg-surface border border-border rounded-lg p-6">
         <PipelineForm action={criarPipeline} sectorOptions={sectorOptions} />

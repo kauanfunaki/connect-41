@@ -23,7 +23,7 @@ export default async function UsuariosPage() {
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-[20px] font-semibold text-fg tracking-[-0.01em]">Usuários</h1>
+          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Usuários</h1>
           <p className="text-[13px] text-fg-muted mt-0.5">
             {users.length} usuário{users.length !== 1 ? "s" : ""} cadastrado{users.length !== 1 ? "s" : ""}
           </p>
@@ -45,11 +45,11 @@ export default async function UsuariosPage() {
           <table className="w-full text-[13px]">
             <thead>
               <tr className="border-b border-border bg-surface-2">
-                <th className="text-left px-4 py-2.5 font-medium text-fg-muted">Nome</th>
-                <th className="text-left px-4 py-2.5 font-medium text-fg-muted">E-mail</th>
-                <th className="text-left px-4 py-2.5 font-medium text-fg-muted">Papel</th>
-                <th className="text-left px-4 py-2.5 font-medium text-fg-muted">Setores</th>
-                <th className="text-left px-4 py-2.5 font-medium text-fg-muted">Status</th>
+                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Nome</th>
+                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">E-mail</th>
+                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Papel</th>
+                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Setores</th>
+                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Status</th>
                 <th className="px-4 py-2.5" />
               </tr>
             </thead>

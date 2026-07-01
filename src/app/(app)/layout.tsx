@@ -94,7 +94,7 @@ export default async function AppLayout({
             <p className="text-[12px] font-medium text-fg truncate">
               {ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role}
             </p>
-            <p className="text-[11px] text-fg-muted">
+            <p className="text-[10px] text-fg-muted">
               {sectors.length} setor{sectors.length !== 1 ? "es" : ""}
             </p>
           </div>
@@ -108,7 +108,7 @@ export default async function AppLayout({
         <header className="h-12 flex-shrink-0 flex items-center justify-between border-b border-border bg-surface px-6">
           <span className="text-[13px] text-fg-muted">Connect 41 · CRM</span>
           <div className="flex items-center gap-3">
-            <span className="text-[12px] text-fg-muted">
+            <span className="text-[10px] text-fg-muted">
               {new Date().toLocaleDateString("pt-BR", {
                 weekday: "long",
                 day: "2-digit",
@@ -142,7 +142,7 @@ function NavItem({
   return (
     <Link
       href={href}
-      className="flex items-center gap-2.5 px-2 py-1.5 rounded-md text-[13px] text-fg-secondary hover:bg-surface-2 hover:text-fg transition-colors"
+      className="flex items-center gap-2.5 px-2 py-1.5 rounded-md text-[12px] font-medium text-fg-secondary hover:bg-surface-2 hover:text-fg transition-colors"
     >
       <span className="text-[14px] leading-none">{icon}</span>
       {label}
@@ -162,7 +162,7 @@ function SectorNavItem({
   return (
     <Link
       href={href}
-      className="flex items-center gap-2.5 px-2 py-1.5 rounded-md text-[13px] text-fg-secondary hover:bg-surface-2 hover:text-fg transition-colors"
+      className="flex items-center gap-2.5 px-2 py-1.5 rounded-md text-[11px] text-fg-secondary hover:bg-surface-2 hover:text-fg transition-colors"
     >
       <span
         className="w-2 h-2 rounded-full flex-shrink-0"

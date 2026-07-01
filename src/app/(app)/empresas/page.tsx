@@ -74,7 +74,7 @@ export default async function EmpresasPage({
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-[20px] font-semibold text-fg tracking-[-0.01em]">
+          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">
             Empresas
           </h1>
           <p className="text-[13px] text-fg-muted mt-0.5">
@@ -139,11 +139,11 @@ export default async function EmpresasPage({
           <table className="w-full text-[13px]">
             <thead>
               <tr className="border-b border-border bg-surface-2">
-                <th className="text-left px-4 py-2.5 font-medium text-fg-muted">Nome</th>
-                <th className="text-left px-4 py-2.5 font-medium text-fg-muted">CNPJ</th>
-                <th className="text-left px-4 py-2.5 font-medium text-fg-muted">Status</th>
-                <th className="text-left px-4 py-2.5 font-medium text-fg-muted">E-mail</th>
-                <th className="text-left px-4 py-2.5 font-medium text-fg-muted">Criada em</th>
+                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Nome</th>
+                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">CNPJ</th>
+                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Status</th>
+                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">E-mail</th>
+                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Criada em</th>
                 <th className="px-4 py-2.5" />
               </tr>
             </thead>
