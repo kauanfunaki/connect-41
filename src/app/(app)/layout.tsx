@@ -6,6 +6,7 @@ import { getSectorMaps } from "@/lib/sectors";
 import { ROLE_LABELS } from "@/lib/roles";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getPrisma } from "@/lib/prisma";
+import { getSectorsWithEnabledModules } from "@/lib/modules";
 
 export default async function AppLayout({
   children,
@@ -17,6 +18,8 @@ export default async function AppLayout({
   const isAdmin = isFullWrite(role);
   const canManageFields = isAdmin || (role === "SECTOR_ADMIN" && sectors.length > 0);
   const { labels: sectorLabels, colors: sectorColors } = await getSectorMaps(tenantId);
+  const sectorsWithModules = await getSectorsWithEnabledModules(tenantId);
+  const visibleSectors = sectors.filter((s) => sectorsWithModules.has(s));
 
   const unreadCount = ctx.userId
     ? await getPrisma().notification.count({ where: { tenantId, userId: ctx.userId, read: false } })
@@ -50,12 +53,12 @@ export default async function AppLayout({
           <NavItem href="/pipelines" icon="📋" label="Pipelines" />
           <NavItem href="/handoffs" icon="🔁" label="Handoffs" />
 
-          {sectors.length > 0 && (
+          {visibleSectors.length > 0 && (
             <>
               <p className="px-2 pt-4 pb-1.5 text-[11px] font-medium text-fg-muted uppercase tracking-wider">
                 Meus Setores
               </p>
-              {sectors.map((s) => (
+              {visibleSectors.map((s) => (
                 <SectorNavItem
                   key={s}
                   href={`/setor/${s}`}
@@ -73,6 +76,7 @@ export default async function AppLayout({
               </p>
               <NavItem href="/admin/usuarios" icon="🔐" label="Usuários" />
               <NavItem href="/admin/setores" icon="🏷️" label="Setores" />
+              <NavItem href="/admin/modulos" icon="🧱" label="Módulos" />
               <NavItem href="/admin/tenant" icon="🏛️" label="Empresa (Tenant)" />
             </>
           )}

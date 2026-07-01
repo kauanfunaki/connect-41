@@ -92,6 +92,7 @@ model Tenant {
   customFields   CustomField[]
   customValues   CustomValue[]
   sectors        Sector[]
+  tenantModules  TenantModule[]
 
   @@map("tenants")
 }
@@ -115,6 +116,27 @@ model Sector {
   @@unique([tenantId, code])
   @@index([tenantId])
   @@map("sectors")
+}
+
+// Estado de ativação de um módulo (Recrutamento, RH/DP...) por tenant. O catálogo
+// de módulos disponíveis vive em código (src/lib/modules.ts) — só nasce um módulo
+// novo quando a tela dele existe de verdade. Esta tabela só guarda o "ligado" ou
+// "desligado" de cada módulo do catálogo para cada cliente (preparação para
+// comercialização: cliente A pode ter Recrutamento, cliente B pode não ter).
+// Ausência de linha = usa o `defaultEnabled` do catálogo.
+model TenantModule {
+  id         String   @id @default(uuid())
+  tenantId   String
+  moduleCode String   @db.VarChar(60)
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, moduleCode])
+  @@index([tenantId])
+  @@map("tenant_modules")
 }
 
 model User {
