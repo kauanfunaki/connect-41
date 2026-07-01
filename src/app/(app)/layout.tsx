@@ -2,14 +2,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { LogoutButton } from "@/components/shell/LogoutButton";
 import { SECTOR_LABELS, SECTOR_COLORS } from "@/lib/sectors";
-
-const ROLE_LABEL: Record<string, string> = {
-  SUPER_ADMIN: "Super Admin",
-  ADMIN: "Administrador",
-  SECTOR_ADMIN: "Gestor de Setor",
-  SECTOR_USER: "Colaborador",
-  READONLY: "Somente Leitura",
-};
+import { ROLE_LABELS } from "@/lib/roles";
 
 export default async function AppLayout({
   children,
@@ -20,6 +13,7 @@ export default async function AppLayout({
   const role = h.get("x-user-role") ?? "";
   const sectorsRaw = h.get("x-user-sectors") ?? "";
   const sectors = sectorsRaw ? sectorsRaw.split(",").filter(Boolean) : [];
+  const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
 
   return (
     <div className="flex h-screen overflow-hidden bg-canvas">
@@ -63,13 +57,23 @@ export default async function AppLayout({
               ))}
             </>
           )}
+
+          {isAdmin && (
+            <>
+              <p className="px-2 pt-4 pb-1.5 text-[11px] font-medium text-fg-muted uppercase tracking-wider">
+                Administração
+              </p>
+              <NavItem href="/admin/usuarios" icon="🔐" label="Usuários" />
+              <NavItem href="/admin/tenant" icon="🏛️" label="Empresa (Tenant)" />
+            </>
+          )}
         </nav>
 
         {/* Footer: role + logout */}
         <div className="border-t border-border px-4 py-3 flex items-center justify-between gap-2 flex-shrink-0">
           <div className="min-w-0">
             <p className="text-[12px] font-medium text-fg truncate">
-              {ROLE_LABEL[role] ?? role}
+              {ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role}
             </p>
             <p className="text-[11px] text-fg-muted">
               {sectors.length} setor{sectors.length !== 1 ? "es" : ""}
