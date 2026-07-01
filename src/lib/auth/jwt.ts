@@ -7,15 +7,15 @@ function env(key: string): string {
   return v;
 }
 
-export function signAccess(payload: AccessTokenPayload): string {
+export function signAccess(payload: AccessTokenPayload, ttl?: string): string {
   return jwt.sign(payload, env("JWT_ACCESS_SECRET"), {
-    expiresIn: (process.env["JWT_ACCESS_TTL"] ?? "15m") as jwt.SignOptions["expiresIn"],
+    expiresIn: (ttl ?? process.env["JWT_ACCESS_TTL"] ?? "15m") as jwt.SignOptions["expiresIn"],
   });
 }
 
-export function signRefresh(payload: RefreshTokenPayload): string {
+export function signRefresh(payload: RefreshTokenPayload, ttl?: string): string {
   return jwt.sign(payload, env("JWT_REFRESH_SECRET"), {
-    expiresIn: (process.env["JWT_REFRESH_TTL"] ?? "7d") as jwt.SignOptions["expiresIn"],
+    expiresIn: (ttl ?? process.env["JWT_REFRESH_TTL"] ?? "7d") as jwt.SignOptions["expiresIn"],
   });
 }
 

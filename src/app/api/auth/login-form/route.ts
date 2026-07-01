@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
     const form = await req.formData();
     const email = (form.get("email") as string | null)?.toLowerCase().trim();
     const password = form.get("password") as string | null;
+    const remember = form.get("remember") === "on";
 
     if (!email || !password) {
       return htmlRedirect("/login?error=preencha-os-campos");
@@ -40,14 +41,23 @@ export async function POST(req: NextRequest) {
     }
 
     const sectors = user.sectors.map((s: { sectorCode: string }) => s.sectorCode);
-    const accessToken = signAccess({ sub: user.id, tenantId: user.tenantId, role: user.role, sectors });
+
+    // "Lembrar de mim" estende a sessão inteira (access + refresh) para 30 dias.
+    // Sem auto-refresh silencioso no cliente hoje, o access_token é o que
+    // efetivamente controla por quanto tempo o usuário fica logado.
+    const accessTtl = remember ? "30d" : undefined;
+    const refreshTtl = remember ? "30d" : undefined;
+    const accessMaxAge = remember ? 60 * 60 * 24 * 30 : 60 * 15;
+    const refreshMaxAge = remember ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 7;
+
+    const accessToken = signAccess({ sub: user.id, tenantId: user.tenantId, role: user.role, sectors }, accessTtl);
 
     const jti = crypto.randomUUID();
-    const rawRefresh = signRefresh({ sub: user.id, jti });
+    const rawRefresh = signRefresh({ sub: user.id, jti }, refreshTtl);
     const tokenHash = crypto.createHash("sha256").update(rawRefresh).digest("hex");
 
     await prisma.refreshToken.create({
-      data: { id: jti, userId: user.id, tokenHash, expiresAt: new Date(Date.now() + 7 * 86_400_000) },
+      data: { id: jti, userId: user.id, tokenHash, expiresAt: new Date(Date.now() + refreshMaxAge * 1000) },
     });
 
     const isProduction = process.env.NODE_ENV === "production";
@@ -60,14 +70,14 @@ export async function POST(req: NextRequest) {
       secure: isProduction,
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 15,
+      maxAge: accessMaxAge,
     });
     res.cookies.set("refresh_token", rawRefresh, {
       httpOnly: true,
       secure: isProduction,
       sameSite: "lax",
       path: "/api/auth",
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: refreshMaxAge,
     });
 
     return res;
