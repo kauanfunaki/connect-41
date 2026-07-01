@@ -5,6 +5,7 @@ import { PessoaForm } from "@/components/pessoas/PessoaForm";
 import { atualizarPessoa } from "../../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
+import { getPersonSectors, getApplicableCustomFields } from "@/lib/customFields";
 
 export default async function EditarPessoaPage({
   params,
@@ -26,6 +27,9 @@ export default async function EditarPessoaPage({
   ]);
 
   if (!person) notFound();
+
+  const personSectors = await getPersonSectors(ctx.tenantId, id);
+  const customFields = await getApplicableCustomFields(ctx, "PERSON", id, personSectors);
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -51,6 +55,7 @@ export default async function EditarPessoaPage({
           action={atualizarPessoa}
           cancelHref={`/pessoas/${id}`}
           companies={companies}
+          customFields={customFields}
           defaultValues={{
             id,
             name:             person.name,

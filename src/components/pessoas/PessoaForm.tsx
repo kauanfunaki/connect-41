@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import type { PessoaState } from "@/app/(app)/pessoas/actions";
 import { PersonType } from "@/generated/prisma/enums";
+import { CustomFieldsSection, type CustomFieldInput } from "@/components/shared/CustomFieldsSection";
 
 const TYPE_OPTIONS: { value: PersonType; label: string }[] = [
   { value: "CANDIDATO",    label: "Candidato" },
@@ -28,9 +29,10 @@ type Props = {
   cancelHref: string;
   defaultValues?: PessoaDefaultValues;
   companies: CompanyOption[];
+  customFields?: CustomFieldInput[];
 };
 
-export function PessoaForm({ action, cancelHref, defaultValues, companies }: Props) {
+export function PessoaForm({ action, cancelHref, defaultValues, companies, customFields = [] }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
 
   return (
@@ -144,6 +146,9 @@ export function PessoaForm({ action, cancelHref, defaultValues, companies }: Pro
           </Field>
         </div>
       </Section>
+
+      {/* Campos Adicionais (setoriais) */}
+      <CustomFieldsSection fields={customFields} />
 
       {/* Actions */}
       <div className="flex items-center gap-3 pt-2">

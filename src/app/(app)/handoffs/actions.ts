@@ -6,6 +6,8 @@ import { getPrisma } from "@/lib/prisma";
 import type { EntityType } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
+import { getSectorMaps } from "@/lib/sectors";
+import { notifySector, notifyUser } from "@/lib/notifications";
 
 export type HandoffState = { error: string } | null;
 
@@ -56,6 +58,15 @@ export async function criarHandoff(
     return { error: "Erro ao solicitar handoff. Tente novamente." };
   }
 
+  const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
+  await notifySector(toSector, {
+    tenantId: ctx.tenantId,
+    type: "HANDOFF_RECEIVED",
+    message: `Novo handoff de ${sectorLabels[fromSector] ?? fromSector} para "${entity.name}"`,
+    entityType,
+    entityId,
+  });
+
   revalidatePath("/handoffs");
   redirect("/handoffs");
 }
@@ -79,6 +90,15 @@ export async function aceitarHandoff(id: string): Promise<void> {
     return;
   }
 
+  const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
+  await notifyUser(handoff.requestedBy, {
+    tenantId: ctx.tenantId,
+    type: "HANDOFF_ACCEPTED",
+    message: `${sectorLabels[handoff.toSector] ?? handoff.toSector} aceitou seu handoff`,
+    entityType: handoff.entityType,
+    entityId: handoff.entityId,
+  });
+
   revalidatePath("/handoffs");
 }
 
@@ -100,6 +120,15 @@ export async function rejeitarHandoff(id: string): Promise<void> {
     console.error("[rejeitarHandoff]", err);
     return;
   }
+
+  const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
+  await notifyUser(handoff.requestedBy, {
+    tenantId: ctx.tenantId,
+    type: "HANDOFF_REJECTED",
+    message: `${sectorLabels[handoff.toSector] ?? handoff.toSector} rejeitou seu handoff`,
+    entityType: handoff.entityType,
+    entityId: handoff.entityId,
+  });
 
   revalidatePath("/handoffs");
 }

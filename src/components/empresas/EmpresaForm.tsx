@@ -4,6 +4,7 @@ import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
 import type { EmpresaState } from "@/app/(app)/empresas/actions";
 import { CompanyStatus } from "@/generated/prisma/enums";
+import { CustomFieldsSection, type CustomFieldInput } from "@/components/shared/CustomFieldsSection";
 
 const STATUS_OPTIONS: { value: CompanyStatus; label: string }[] = [
   { value: "ACTIVE",   label: "Ativo" },
@@ -47,9 +48,10 @@ type Props = {
   action: (prev: EmpresaState, form: FormData) => Promise<EmpresaState>;
   cancelHref: string;
   defaultValues?: EmpresaDefaultValues;
+  customFields?: CustomFieldInput[];
 };
 
-export function EmpresaForm({ action, cancelHref, defaultValues }: Props) {
+export function EmpresaForm({ action, cancelHref, defaultValues, customFields = [] }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const [fetching, setFetching] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -382,6 +384,9 @@ export function EmpresaForm({ action, cancelHref, defaultValues }: Props) {
           </Field>
         </div>
       </Section>
+
+      {/* Campos Adicionais (setoriais) */}
+      <CustomFieldsSection fields={customFields} />
 
       {/* Actions */}
       <div className="flex items-center gap-3 pt-2">

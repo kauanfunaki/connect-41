@@ -1,12 +1,19 @@
-import { headers } from "next/headers";
+import Link from "next/link";
+import { getPrisma } from "@/lib/prisma";
+import { getAuthContext } from "@/lib/auth/context";
+import { scopedCompanyWhere, scopedPersonWhere, scopedPipelineWhere, scopedHandoffWhere } from "@/lib/auth/scope";
+import { ROLE_LABELS } from "@/lib/roles";
 
 export default async function HomePage() {
-  const h = await headers();
-  const role = h.get("x-user-role") ?? "";
-  const sectorsRaw = h.get("x-user-sectors") ?? "";
-  const sectors = sectorsRaw ? sectorsRaw.split(",").filter(Boolean) : [];
+  const ctx = await getAuthContext();
 
-  const isAdmin = role === "SUPER_ADMIN" || role === "ADMIN";
+  const prisma = getPrisma();
+  const [companyCount, personCount, pipelineCount, pendingHandoffs] = await Promise.all([
+    prisma.company.count({ where: await scopedCompanyWhere(ctx) }),
+    prisma.person.count({ where: await scopedPersonWhere(ctx) }),
+    prisma.pipeline.count({ where: scopedPipelineWhere(ctx) }),
+    prisma.handoff.count({ where: { ...scopedHandoffWhere(ctx), status: "PENDING" } }),
+  ]);
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -19,60 +26,52 @@ export default async function HomePage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <StatCard label="Empresas cadastradas" value="—" note="em breve" />
-        <StatCard label="Pessoas cadastradas" value="—" note="em breve" />
-        <StatCard label="Pipelines ativos" value="—" note="em breve" />
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+        <StatCard href="/empresas" label="Empresas" value={companyCount} />
+        <StatCard href="/pessoas" label="Pessoas" value={personCount} />
+        <StatCard href="/pipelines" label="Pipelines ativos" value={pipelineCount} />
+        <StatCard
+          href="/handoffs?status=PENDING"
+          label="Handoffs pendentes"
+          value={pendingHandoffs}
+          highlight={pendingHandoffs > 0}
+        />
       </div>
 
-      <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+      <div className="bg-surface border border-border rounded-lg p-5">
         <p className="text-[13px] font-medium text-fg mb-1">
-          Plataforma em configuração
+          {ROLE_LABELS[ctx.role]}
         </p>
         <p className="text-[13px] text-fg-muted leading-relaxed">
-          A fundação técnica está operando: autenticação multi-tenant, RBAC e
-          modelo de dados do núcleo estão ativos. Os módulos de Empresas,
-          Pessoas e Pipelines serão habilitados nas próximas etapas.
+          {ctx.sectors.length > 0
+            ? `Você tem acesso a ${ctx.sectors.length} setor${ctx.sectors.length !== 1 ? "es" : ""}.`
+            : "Você tem acesso a todos os setores do tenant."}
         </p>
       </div>
-
-      {isAdmin && sectors.length > 0 && (
-        <div className="bg-surface border border-border rounded-lg p-5">
-          <p className="text-[13px] font-medium text-fg mb-3">
-            Setores com acesso
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {sectors.map((s) => (
-              <span
-                key={s}
-                className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium bg-surface-2 text-fg-secondary border border-border"
-              >
-                {s}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
 function StatCard({
+  href,
   label,
   value,
-  note,
+  highlight,
 }: {
+  href: string;
   label: string;
-  value: string;
-  note: string;
+  value: number;
+  highlight?: boolean;
 }) {
   return (
-    <div className="bg-surface border border-border rounded-lg px-4 py-4">
+    <Link
+      href={href}
+      className="bg-surface border border-border rounded-lg px-4 py-4 hover:border-border-strong transition-colors block"
+    >
       <p className="text-[12px] text-fg-muted mb-1">{label}</p>
-      <p className="text-[24px] font-semibold text-fg tnum leading-none mb-1">
+      <p className={`text-[24px] font-semibold tnum leading-none mb-1 ${highlight ? "text-warning" : "text-fg"}`}>
         {value}
       </p>
-      <p className="text-[11px] text-fg-muted">{note}</p>
-    </div>
+    </Link>
   );
 }

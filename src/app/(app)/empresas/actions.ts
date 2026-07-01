@@ -6,6 +6,7 @@ import { getPrisma } from "@/lib/prisma";
 import { CompanyStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
+import { getCompanySectors, getApplicableCustomFields, saveCustomFieldValues } from "@/lib/customFields";
 
 export type EmpresaState = { error: string } | null;
 
@@ -88,6 +89,10 @@ export async function atualizarEmpresa(
     console.error("[atualizarEmpresa]", err);
     return { error: "Erro ao atualizar empresa." };
   }
+
+  const companySectors = await getCompanySectors(ctx.tenantId, id);
+  const applicableFields = await getApplicableCustomFields(ctx, "COMPANY", id, companySectors);
+  await saveCustomFieldValues(ctx.tenantId, id, applicableFields, form);
 
   revalidatePath(`/empresas/${id}`);
   redirect(`/empresas/${id}`);

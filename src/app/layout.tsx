@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -21,15 +22,18 @@ export const metadata: Metadata = {
   description: "CRM interno multi-setor da 41 Tech",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const theme = cookieStore.get("theme")?.value === "dark" ? "dark" : "light";
+
   return (
     <html
       lang="pt-BR"
-      data-theme="light"
+      data-theme={theme}
       className={`${plexSans.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-canvas text-fg font-sans">

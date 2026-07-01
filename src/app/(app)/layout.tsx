@@ -1,21 +1,26 @@
-import { headers } from "next/headers";
 import Link from "next/link";
 import { LogoutButton } from "@/components/shell/LogoutButton";
+import { ThemeToggle } from "@/components/shell/ThemeToggle";
+import { NotificationBell } from "@/components/shell/NotificationBell";
 import { getSectorMaps } from "@/lib/sectors";
 import { ROLE_LABELS } from "@/lib/roles";
+import { getAuthContext, isFullWrite } from "@/lib/auth/context";
+import { getPrisma } from "@/lib/prisma";
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const h = await headers();
-  const role = h.get("x-user-role") ?? "";
-  const tenantId = h.get("x-tenant-id") ?? "";
-  const sectorsRaw = h.get("x-user-sectors") ?? "";
-  const sectors = sectorsRaw ? sectorsRaw.split(",").filter(Boolean) : [];
-  const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
+  const ctx = await getAuthContext();
+  const { role, sectors, tenantId } = ctx;
+  const isAdmin = isFullWrite(role);
+  const canManageFields = isAdmin || (role === "SECTOR_ADMIN" && sectors.length > 0);
   const { labels: sectorLabels, colors: sectorColors } = await getSectorMaps(tenantId);
+
+  const unreadCount = ctx.userId
+    ? await getPrisma().notification.count({ where: { tenantId, userId: ctx.userId, read: false } })
+    : 0;
 
   return (
     <div className="flex h-screen overflow-hidden bg-canvas">
@@ -71,6 +76,16 @@ export default async function AppLayout({
               <NavItem href="/admin/tenant" icon="🏛️" label="Empresa (Tenant)" />
             </>
           )}
+
+          {!isAdmin && canManageFields && (
+            <>
+              <p className="px-2 pt-4 pb-1.5 text-[11px] font-medium text-fg-muted uppercase tracking-wider">
+                Administração
+              </p>
+              <NavItem href="/admin/campos" icon="🧩" label="Campos Customizados" />
+            </>
+          )}
+          {isAdmin && <NavItem href="/admin/campos" icon="🧩" label="Campos Customizados" />}
         </nav>
 
         {/* Footer: role + logout */}
@@ -92,14 +107,18 @@ export default async function AppLayout({
         {/* Topbar */}
         <header className="h-12 flex-shrink-0 flex items-center justify-between border-b border-border bg-surface px-6">
           <span className="text-[13px] text-fg-muted">Connect 41 · CRM</span>
-          <span className="text-[12px] text-fg-muted">
-            {new Date().toLocaleDateString("pt-BR", {
-              weekday: "long",
-              day: "2-digit",
-              month: "long",
-              year: "numeric",
-            })}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-[12px] text-fg-muted">
+              {new Date().toLocaleDateString("pt-BR", {
+                weekday: "long",
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              })}
+            </span>
+            <NotificationBell unreadCount={unreadCount} />
+            <ThemeToggle />
+          </div>
         </header>
 
         {/* Page content */}

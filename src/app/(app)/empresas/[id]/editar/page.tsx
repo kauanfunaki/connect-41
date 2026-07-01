@@ -5,6 +5,7 @@ import { EmpresaForm } from "@/components/empresas/EmpresaForm";
 import { atualizarEmpresa } from "../../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
+import { getCompanySectors, getApplicableCustomFields } from "@/lib/customFields";
 
 export default async function EditarEmpresaPage({
   params,
@@ -21,6 +22,9 @@ export default async function EditarEmpresaPage({
   });
 
   if (!company) notFound();
+
+  const companySectors = await getCompanySectors(ctx.tenantId, id);
+  const customFields = await getApplicableCustomFields(ctx, "COMPANY", id, companySectors);
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -50,6 +54,7 @@ export default async function EditarEmpresaPage({
         <EmpresaForm
           action={atualizarEmpresa}
           cancelHref={`/empresas/${id}`}
+          customFields={customFields}
           defaultValues={{
             id,
             name:                  company.name,

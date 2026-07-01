@@ -6,6 +6,7 @@ import { excluirPessoa } from "../actions";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
 import { getAuthContext, canWrite, isFullWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
+import { getPersonSectors, getApplicableCustomFields } from "@/lib/customFields";
 
 const TYPE_LABEL: Record<PersonType, string> = {
   CANDIDATO:   "Candidato",
@@ -36,6 +37,9 @@ export default async function PessoaPage({
   if (!person) notFound();
 
   const deleteAction = excluirPessoa.bind(null, id);
+
+  const personSectors = await getPersonSectors(ctx.tenantId, id);
+  const customFields = await getApplicableCustomFields(ctx, "PERSON", id, personSectors);
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -143,6 +147,22 @@ export default async function PessoaPage({
           />
         </div>
       </div>
+
+      {/* Campos Adicionais (setoriais) */}
+      {customFields.length > 0 && (
+        <div className="bg-surface border border-border rounded-lg p-5">
+          <h2 className="text-[13px] font-medium text-fg mb-4">Campos Adicionais</h2>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+            {customFields.map((f) => (
+              <InfoRow
+                key={f.id}
+                label={f.label}
+                value={f.fieldType === "BOOLEAN" ? (f.value === "true" ? "Sim" : "Não") : f.value}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { getPrisma } from "@/lib/prisma";
 import { PersonType } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
+import { getPersonSectors, getApplicableCustomFields, saveCustomFieldValues } from "@/lib/customFields";
 
 export type PessoaState = { error: string } | null;
 
@@ -77,6 +78,10 @@ export async function atualizarPessoa(
     console.error("[atualizarPessoa]", err);
     return { error: "Erro ao atualizar pessoa." };
   }
+
+  const personSectors = await getPersonSectors(ctx.tenantId, id);
+  const applicableFields = await getApplicableCustomFields(ctx, "PERSON", id, personSectors);
+  await saveCustomFieldValues(ctx.tenantId, id, applicableFields, form);
 
   revalidatePath(`/pessoas/${id}`);
   redirect(`/pessoas/${id}`);

@@ -6,6 +6,7 @@ import { excluirEmpresa } from "../actions";
 import { DeleteButton } from "@/components/empresas/DeleteButton";
 import { getAuthContext, canWrite, isFullWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
+import { getCompanySectors, getApplicableCustomFields } from "@/lib/customFields";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
   PROSPECT: "Prospecto",
@@ -43,6 +44,9 @@ export default async function EmpresaPage({
   if (!company) notFound();
 
   const deleteAction = excluirEmpresa.bind(null, id);
+
+  const companySectors = await getCompanySectors(ctx.tenantId, id);
+  const customFields = await getApplicableCustomFields(ctx, "COMPANY", id, companySectors);
 
   const fullAddress = [
     company.addressStreet,
@@ -205,6 +209,22 @@ export default async function EmpresaPage({
           </div>
         )}
       </div>
+
+      {/* Campos Adicionais (setoriais) */}
+      {customFields.length > 0 && (
+        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+          <h2 className="text-[13px] font-medium text-fg mb-4">Campos Adicionais</h2>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+            {customFields.map((f) => (
+              <InfoRow
+                key={f.id}
+                label={f.label}
+                value={f.fieldType === "BOOLEAN" ? (f.value === "true" ? "Sim" : "Não") : f.value}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Pessoas vinculadas */}
       {company.people.length > 0 && (
