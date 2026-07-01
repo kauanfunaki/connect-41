@@ -1,7 +1,8 @@
-import { headers } from "next/headers";
 import Link from "next/link";
 import { getPrisma } from "@/lib/prisma";
 import { PersonType } from "@/generated/prisma/enums";
+import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { scopedPersonWhere } from "@/lib/auth/scope";
 
 const TYPE_LABEL: Record<PersonType, string> = {
   CANDIDATO:   "Candidato",
@@ -26,8 +27,8 @@ export default async function PessoasPage({
   searchParams: Promise<{ search?: string; type?: string; page?: string }>;
 }) {
   const { search, type, page } = await searchParams;
-  const h = await headers();
-  const tenantId = h.get("x-tenant-id")!;
+  const ctx = await getAuthContext();
+  const canCreate = canWrite(ctx.role);
 
   const prisma = getPrisma();
   const pageNum = Math.max(1, parseInt(page ?? "1"));
@@ -37,7 +38,7 @@ export default async function PessoasPage({
       : undefined;
 
   const where = {
-    tenantId,
+    ...(await scopedPersonWhere(ctx)),
     ...(search ? { name: { contains: search } } : {}),
     ...(typeFilter ? { type: typeFilter } : {}),
   };
@@ -74,12 +75,14 @@ export default async function PessoasPage({
             {total} pessoa{total !== 1 ? "s" : ""} cadastrada{total !== 1 ? "s" : ""}
           </p>
         </div>
-        <Link
-          href="/pessoas/nova"
-          className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
-        >
-          + Nova Pessoa
-        </Link>
+        {canCreate && (
+          <Link
+            href="/pessoas/nova"
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+          >
+            + Nova Pessoa
+          </Link>
+        )}
       </div>
 
       {/* Filters */}
@@ -174,12 +177,14 @@ export default async function PessoasPage({
                     {p.createdAt.toLocaleDateString("pt-BR")}
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    <Link
-                      href={`/pessoas/${p.id}/editar`}
-                      className="text-[12px] text-fg-muted hover:text-fg transition-colors"
-                    >
-                      Editar
-                    </Link>
+                    {canCreate && (
+                      <Link
+                        href={`/pessoas/${p.id}/editar`}
+                        className="text-[12px] text-fg-muted hover:text-fg transition-colors"
+                      >
+                        Editar
+                      </Link>
+                    )}
                   </td>
                 </tr>
               ))}

@@ -1,26 +1,20 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { PipelineEntityType, ActivityType } from "@/generated/prisma/enums";
+import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
+import { scopedPipelineWhere } from "@/lib/auth/scope";
 
 export type PipelineState = { error: string } | null;
-
-async function getCtx() {
-  const h = await headers();
-  return {
-    tenantId: h.get("x-tenant-id"),
-    userId: h.get("x-user-id"),
-  };
-}
 
 export async function criarPipeline(
   _prev: PipelineState,
   form: FormData
 ): Promise<PipelineState> {
-  const { tenantId } = await getCtx();
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
   if (!tenantId) return { error: "Não autenticado" };
 
   const name = (form.get("name") as string)?.trim();
@@ -29,6 +23,9 @@ export async function criarPipeline(
 
   if (!name) return { error: "Nome do pipeline é obrigatório" };
   if (!sectorCode) return { error: "Setor é obrigatório" };
+  if (!canManageSector(ctx, sectorCode)) {
+    return { error: "Sem permissão para criar pipeline neste setor." };
+  }
 
   const stageNames = form.getAll("stageName") as string[];
   const stageColors = form.getAll("stageColor") as string[];
@@ -71,7 +68,8 @@ export async function criarItem(
   _prev: PipelineState,
   form: FormData
 ): Promise<PipelineState> {
-  const { tenantId } = await getCtx();
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
   if (!tenantId) return { error: "Não autenticado" };
 
   const pipelineId = form.get("pipelineId") as string;
@@ -83,6 +81,12 @@ export async function criarItem(
   if (!entityId) return { error: "Selecione uma empresa ou pessoa" };
 
   const prisma = getPrisma();
+
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, ...scopedPipelineWhere(ctx) } });
+  if (!pipeline) return { error: "Pipeline não encontrado ou fora do seu escopo." };
+  if (!canManageSector(ctx, pipeline.sectorCode)) {
+    return { error: "Sem permissão para adicionar itens neste setor." };
+  }
 
   try {
     const firstStage = await prisma.pipelineStage.findFirst({
@@ -115,7 +119,8 @@ export async function moverItem(
   itemId: string,
   newStageId: string
 ): Promise<void> {
-  const { tenantId, userId } = await getCtx();
+  const ctx = await getAuthContext();
+  const { tenantId, userId } = ctx;
   if (!tenantId || !userId) return;
 
   const prisma = getPrisma();
@@ -123,6 +128,9 @@ export async function moverItem(
   try {
     const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId } });
     if (!item) return;
+
+    const pipeline = await prisma.pipeline.findFirst({ where: { id: item.pipelineId } });
+    if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
 
     const [fromStage, toStage] = await Promise.all([
       prisma.pipelineStage.findUnique({ where: { id: item.stageId } }),
@@ -158,13 +166,19 @@ export async function adicionarNota(
   _prev: PipelineState,
   form: FormData
 ): Promise<PipelineState> {
-  const { tenantId, userId } = await getCtx();
+  const ctx = await getAuthContext();
+  const { tenantId, userId } = ctx;
   if (!tenantId || !userId) return { error: "Não autenticado" };
 
   const content = (form.get("content") as string)?.trim();
   if (!content) return { error: "Escreva uma nota" };
 
   const prisma = getPrisma();
+
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) {
+    return { error: "Sem permissão para registrar atividade neste setor." };
+  }
 
   try {
     await prisma.activity.create({
@@ -186,10 +200,15 @@ export async function adicionarNota(
 }
 
 export async function excluirItem(pipelineId: string, itemId: string): Promise<void> {
-  const { tenantId } = await getCtx();
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
   if (!tenantId) return;
 
   const prisma = getPrisma();
+
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline || !canManageSector(ctx, pipeline.sectorCode)) return;
+
   try {
     await prisma.pipelineItem.delete({ where: { id: itemId, tenantId } });
   } catch (err) {

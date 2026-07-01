@@ -1,9 +1,10 @@
-import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { ItemForm } from "@/components/pipelines/ItemForm";
 import { criarItem } from "../../../actions";
+import { getAuthContext, canManageSector } from "@/lib/auth/context";
+import { scopedPipelineWhere, scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
 
 export default async function NovoItemPage({
   params,
@@ -11,22 +12,22 @@ export default async function NovoItemPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const h = await headers();
-  const tenantId = h.get("x-tenant-id")!;
+  const ctx = await getAuthContext();
 
   const prisma = getPrisma();
-  const pipeline = await prisma.pipeline.findFirst({ where: { id, tenantId } });
+  const pipeline = await prisma.pipeline.findFirst({ where: { id, ...scopedPipelineWhere(ctx) } });
   if (!pipeline) notFound();
+  if (!canManageSector(ctx, pipeline.sectorCode)) notFound();
 
   const entities =
     pipeline.entityType === "COMPANY"
       ? await prisma.company.findMany({
-          where: { tenantId },
+          where: await scopedCompanyWhere(ctx),
           orderBy: { name: "asc" },
           select: { id: true, name: true },
         })
       : await prisma.person.findMany({
-          where: { tenantId },
+          where: await scopedPersonWhere(ctx),
           orderBy: { name: "asc" },
           select: { id: true, name: true },
         });

@@ -1,9 +1,10 @@
-import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { EmpresaForm } from "@/components/empresas/EmpresaForm";
 import { atualizarEmpresa } from "../../actions";
+import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { scopedCompanyWhere } from "@/lib/auth/scope";
 
 export default async function EditarEmpresaPage({
   params,
@@ -11,12 +12,12 @@ export default async function EditarEmpresaPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const h = await headers();
-  const tenantId = h.get("x-tenant-id")!;
+  const ctx = await getAuthContext();
+  if (!canWrite(ctx.role)) notFound();
 
   const prisma = getPrisma();
   const company = await prisma.company.findFirst({
-    where: { id, tenantId },
+    where: { id, ...(await scopedCompanyWhere(ctx)) },
   });
 
   if (!company) notFound();

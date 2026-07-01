@@ -1,4 +1,3 @@
-import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -6,6 +5,8 @@ import { MoveStageSelect } from "@/components/pipelines/MoveStageSelect";
 import { AddNoteForm } from "@/components/pipelines/AddNoteForm";
 import { DeleteButton } from "@/components/pipelines/DeleteButton";
 import { moverItem, adicionarNota, excluirItem } from "../../../actions";
+import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
+import { scopedPipelineWhere } from "@/lib/auth/scope";
 
 const ACTIVITY_LABEL: Record<string, string> = {
   NOTE: "Nota",
@@ -21,19 +22,22 @@ export default async function PipelineItemPage({
   params: Promise<{ id: string; itemId: string }>;
 }) {
   const { id, itemId } = await params;
-  const h = await headers();
-  const tenantId = h.get("x-tenant-id")!;
+  const ctx = await getAuthContext();
+  const tenantId = ctx.tenantId;
 
   const prisma = getPrisma();
   const [pipeline, item] = await Promise.all([
     prisma.pipeline.findFirst({
-      where: { id, tenantId },
+      where: { id, ...scopedPipelineWhere(ctx) },
       include: { stages: { orderBy: { order: "asc" } } },
     }),
     prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId } }),
   ]);
 
   if (!pipeline || !item) notFound();
+
+  const canDelete = canManageSector(ctx, pipeline.sectorCode);
+  const canAct = canActOnSector(ctx, pipeline.sectorCode);
 
   const entity =
     item.entityType === "COMPANY"
@@ -80,27 +84,35 @@ export default async function PipelineItemPage({
             </Link>
           )}
         </div>
-        <DeleteButton action={deleteAction} nome={entity?.name ?? "este item"} />
+        {canDelete && <DeleteButton action={deleteAction} nome={entity?.name ?? "este item"} />}
       </div>
 
       {/* Estágio */}
       <div className="bg-surface border border-border rounded-lg p-5 mb-4">
         <h2 className="text-[13px] font-medium text-fg mb-3">Estágio</h2>
-        <MoveStageSelect
-          itemId={itemId}
-          currentStageId={item.stageId}
-          stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name }))}
-          moveAction={moverItem}
-        />
+        {canAct ? (
+          <MoveStageSelect
+            itemId={itemId}
+            currentStageId={item.stageId}
+            stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name }))}
+            moveAction={moverItem}
+          />
+        ) : (
+          <p className="text-[13px] text-fg">
+            {pipeline.stages.find((s) => s.id === item.stageId)?.name ?? "—"}
+          </p>
+        )}
       </div>
 
       {/* Timeline */}
       <div className="bg-surface border border-border rounded-lg p-5">
         <h2 className="text-[13px] font-medium text-fg mb-3">Atividades</h2>
 
-        <div className="mb-4">
-          <AddNoteForm action={addNoteAction} />
-        </div>
+        {canAct && (
+          <div className="mb-4">
+            <AddNoteForm action={addNoteAction} />
+          </div>
+        )}
 
         {activities.length === 0 ? (
           <p className="text-[13px] text-fg-muted">Nenhuma atividade registrada ainda.</p>

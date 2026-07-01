@@ -1,10 +1,11 @@
-import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PersonType } from "@/generated/prisma/enums";
 import { excluirPessoa } from "../actions";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
+import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { scopedPersonWhere } from "@/lib/auth/scope";
 
 const TYPE_LABEL: Record<PersonType, string> = {
   CANDIDATO:   "Candidato",
@@ -22,12 +23,12 @@ export default async function PessoaPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const h = await headers();
-  const tenantId = h.get("x-tenant-id")!;
+  const ctx = await getAuthContext();
+  const canEdit = canWrite(ctx.role);
 
   const prisma = getPrisma();
   const person = await prisma.person.findFirst({
-    where: { id, tenantId },
+    where: { id, ...(await scopedPersonWhere(ctx)) },
     include: { currentCompany: { select: { id: true, name: true } } },
   });
 
@@ -64,15 +65,17 @@ export default async function PessoaPage({
           )}
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Link
-            href={`/pessoas/${id}/editar`}
-            className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
-          >
-            Editar
-          </Link>
-          <DeleteButton action={deleteAction} nome={person.name} />
-        </div>
+        {canEdit && (
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Link
+              href={`/pessoas/${id}/editar`}
+              className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
+            >
+              Editar
+            </Link>
+            <DeleteButton action={deleteAction} nome={person.name} />
+          </div>
+        )}
       </div>
 
       {/* Identificação */}

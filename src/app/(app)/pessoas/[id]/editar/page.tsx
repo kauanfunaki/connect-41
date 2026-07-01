@@ -1,9 +1,10 @@
-import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PessoaForm } from "@/components/pessoas/PessoaForm";
 import { atualizarPessoa } from "../../actions";
+import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { scopedPersonWhere } from "@/lib/auth/scope";
 
 export default async function EditarPessoaPage({
   params,
@@ -11,14 +12,14 @@ export default async function EditarPessoaPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const h = await headers();
-  const tenantId = h.get("x-tenant-id")!;
+  const ctx = await getAuthContext();
+  if (!canWrite(ctx.role)) notFound();
 
   const prisma = getPrisma();
   const [person, companies] = await Promise.all([
-    prisma.person.findFirst({ where: { id, tenantId } }),
+    prisma.person.findFirst({ where: { id, ...(await scopedPersonWhere(ctx)) } }),
     prisma.company.findMany({
-      where: { tenantId, status: "ACTIVE" },
+      where: { tenantId: ctx.tenantId, status: "ACTIVE" },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),

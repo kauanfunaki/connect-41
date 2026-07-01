@@ -1,15 +1,16 @@
-import { headers } from "next/headers";
 import Link from "next/link";
 import { getPrisma } from "@/lib/prisma";
 import { SECTOR_LABELS, SECTOR_COLORS } from "@/lib/sectors";
+import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { scopedPipelineWhere } from "@/lib/auth/scope";
 
 export default async function PipelinesPage() {
-  const h = await headers();
-  const tenantId = h.get("x-tenant-id")!;
+  const ctx = await getAuthContext();
+  const canCreate = canWrite(ctx.role);
 
   const prisma = getPrisma();
   const pipelines = await prisma.pipeline.findMany({
-    where: { tenantId },
+    where: scopedPipelineWhere(ctx),
     orderBy: [{ sectorCode: "asc" }, { name: "asc" }],
     include: { _count: { select: { items: true } } },
   });
@@ -28,12 +29,14 @@ export default async function PipelinesPage() {
             {pipelines.length} pipeline{pipelines.length !== 1 ? "s" : ""} configurado{pipelines.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <Link
-          href="/pipelines/novo"
-          className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
-        >
-          + Novo Pipeline
-        </Link>
+        {canCreate && (
+          <Link
+            href="/pipelines/novo"
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+          >
+            + Novo Pipeline
+          </Link>
+        )}
       </div>
 
       {pipelines.length === 0 ? (

@@ -1,10 +1,11 @@
-import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { CompanyStatus } from "@/generated/prisma/enums";
 import { excluirEmpresa } from "../actions";
 import { DeleteButton } from "@/components/empresas/DeleteButton";
+import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { scopedCompanyWhere } from "@/lib/auth/scope";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
   PROSPECT: "Prospecto",
@@ -26,12 +27,12 @@ export default async function EmpresaPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const h = await headers();
-  const tenantId = h.get("x-tenant-id")!;
+  const ctx = await getAuthContext();
+  const canEdit = canWrite(ctx.role);
 
   const prisma = getPrisma();
   const company = await prisma.company.findFirst({
-    where: { id, tenantId },
+    where: { id, ...(await scopedCompanyWhere(ctx)) },
     include: {
       services: { orderBy: { createdAt: "asc" } },
       people:   { orderBy: { name: "asc" }, take: 10 },
@@ -88,15 +89,17 @@ export default async function EmpresaPage({
           )}
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Link
-            href={`/empresas/${id}/editar`}
-            className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
-          >
-            Editar
-          </Link>
-          <DeleteButton action={deleteAction} nome={company.name} />
-        </div>
+        {canEdit && (
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Link
+              href={`/empresas/${id}/editar`}
+              className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
+            >
+              Editar
+            </Link>
+            <DeleteButton action={deleteAction} nome={company.name} />
+          </div>
+        )}
       </div>
 
       {/* Identificação */}

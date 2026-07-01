@@ -1,17 +1,13 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { PersonType } from "@/generated/prisma/enums";
+import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { scopedPersonWhere } from "@/lib/auth/scope";
 
 export type PessoaState = { error: string } | null;
-
-async function getTenantId(): Promise<string | null> {
-  const h = await headers();
-  return h.get("x-tenant-id");
-}
 
 function pick(form: FormData, key: string): string | null {
   return (form.get(key) as string)?.trim() || null;
@@ -34,8 +30,9 @@ export async function criarPessoa(
   _prev: PessoaState,
   form: FormData
 ): Promise<PessoaState> {
-  const tenantId = await getTenantId();
-  if (!tenantId) return { error: "Não autenticado" };
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { error: "Não autenticado" };
+  if (!canWrite(ctx.role)) return { error: "Sem permissão para criar pessoas." };
 
   const data = pessoaData(form);
   if (!data.name) return { error: "Nome é obrigatório" };
@@ -44,7 +41,7 @@ export async function criarPessoa(
   let id: string;
 
   try {
-    const person = await prisma.person.create({ data: { tenantId, ...data } });
+    const person = await prisma.person.create({ data: { tenantId: ctx.tenantId, ...data } });
     id = person.id;
   } catch (err) {
     console.error("[criarPessoa]", err);
@@ -58,8 +55,9 @@ export async function atualizarPessoa(
   _prev: PessoaState,
   form: FormData
 ): Promise<PessoaState> {
-  const tenantId = await getTenantId();
-  if (!tenantId) return { error: "Não autenticado" };
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { error: "Não autenticado" };
+  if (!canWrite(ctx.role)) return { error: "Sem permissão para editar pessoas." };
 
   const id = form.get("id") as string;
   const data = pessoaData(form);
@@ -67,8 +65,14 @@ export async function atualizarPessoa(
 
   const prisma = getPrisma();
 
+  const existing = await prisma.person.findFirst({
+    where: { id, ...(await scopedPersonWhere(ctx)) },
+    select: { id: true },
+  });
+  if (!existing) return { error: "Pessoa não encontrada ou fora do seu escopo." };
+
   try {
-    await prisma.person.update({ where: { id, tenantId }, data });
+    await prisma.person.update({ where: { id }, data });
   } catch (err) {
     console.error("[atualizarPessoa]", err);
     return { error: "Erro ao atualizar pessoa." };
@@ -79,12 +83,19 @@ export async function atualizarPessoa(
 }
 
 export async function excluirPessoa(id: string): Promise<void> {
-  const tenantId = await getTenantId();
-  if (!tenantId) return;
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || !canWrite(ctx.role)) return;
 
   const prisma = getPrisma();
+
+  const existing = await prisma.person.findFirst({
+    where: { id, ...(await scopedPersonWhere(ctx)) },
+    select: { id: true },
+  });
+  if (!existing) return;
+
   try {
-    await prisma.person.delete({ where: { id, tenantId } });
+    await prisma.person.delete({ where: { id } });
   } catch (err) {
     console.error("[excluirPessoa]", err);
     return;

@@ -1,8 +1,13 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { EmpresaForm } from "@/components/empresas/EmpresaForm";
 import { criarEmpresa } from "../actions";
+import { getAuthContext, canWrite } from "@/lib/auth/context";
 
-export default function NovaEmpresaPage() {
+export default async function NovaEmpresaPage() {
+  const ctx = await getAuthContext();
+  if (!canWrite(ctx.role)) notFound();
+
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center gap-2 mb-6">

@@ -1,17 +1,13 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { CompanyStatus } from "@/generated/prisma/enums";
+import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { scopedCompanyWhere } from "@/lib/auth/scope";
 
 export type EmpresaState = { error: string } | null;
-
-async function getTenantId(): Promise<string | null> {
-  const h = await headers();
-  return h.get("x-tenant-id");
-}
 
 function pickString(form: FormData, key: string): string | null {
   return (form.get(key) as string)?.trim() || null;
@@ -45,8 +41,9 @@ export async function criarEmpresa(
   _prev: EmpresaState,
   form: FormData
 ): Promise<EmpresaState> {
-  const tenantId = await getTenantId();
-  if (!tenantId) return { error: "Não autenticado" };
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { error: "Não autenticado" };
+  if (!canWrite(ctx.role)) return { error: "Sem permissão para criar empresas." };
 
   const data = companyData(form);
   if (!data.name) return { error: "Razão Social é obrigatória" };
@@ -55,7 +52,7 @@ export async function criarEmpresa(
   let id: string;
 
   try {
-    const company = await prisma.company.create({ data: { tenantId, ...data } });
+    const company = await prisma.company.create({ data: { tenantId: ctx.tenantId, ...data } });
     id = company.id;
   } catch (err) {
     console.error("[criarEmpresa]", err);
@@ -69,8 +66,9 @@ export async function atualizarEmpresa(
   _prev: EmpresaState,
   form: FormData
 ): Promise<EmpresaState> {
-  const tenantId = await getTenantId();
-  if (!tenantId) return { error: "Não autenticado" };
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { error: "Não autenticado" };
+  if (!canWrite(ctx.role)) return { error: "Sem permissão para editar empresas." };
 
   const id = form.get("id") as string;
   const data = companyData(form);
@@ -78,8 +76,14 @@ export async function atualizarEmpresa(
 
   const prisma = getPrisma();
 
+  const existing = await prisma.company.findFirst({
+    where: { id, ...(await scopedCompanyWhere(ctx)) },
+    select: { id: true },
+  });
+  if (!existing) return { error: "Empresa não encontrada ou fora do seu escopo." };
+
   try {
-    await prisma.company.update({ where: { id, tenantId }, data });
+    await prisma.company.update({ where: { id }, data });
   } catch (err) {
     console.error("[atualizarEmpresa]", err);
     return { error: "Erro ao atualizar empresa." };
@@ -90,12 +94,19 @@ export async function atualizarEmpresa(
 }
 
 export async function excluirEmpresa(id: string): Promise<void> {
-  const tenantId = await getTenantId();
-  if (!tenantId) return;
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || !canWrite(ctx.role)) return;
 
   const prisma = getPrisma();
+
+  const existing = await prisma.company.findFirst({
+    where: { id, ...(await scopedCompanyWhere(ctx)) },
+    select: { id: true },
+  });
+  if (!existing) return;
+
   try {
-    await prisma.company.delete({ where: { id, tenantId } });
+    await prisma.company.delete({ where: { id } });
   } catch (err) {
     console.error("[excluirEmpresa]", err);
     return;

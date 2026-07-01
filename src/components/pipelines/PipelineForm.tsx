@@ -11,9 +11,10 @@ type Stage = { name: string; color: string };
 
 type Props = {
   action: (prev: PipelineState, form: FormData) => Promise<PipelineState>;
+  sectorOptions?: { value: string; label: string }[];
 };
 
-export function PipelineForm({ action }: Props) {
+export function PipelineForm({ action, sectorOptions = SECTOR_OPTIONS }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const [stages, setStages] = useState<Stage[]>([
     { name: "", color: DEFAULT_COLORS[0] },
@@ -57,7 +58,7 @@ export function PipelineForm({ action }: Props) {
         <Field label="Setor *" htmlFor="sectorCode">
           <select id="sectorCode" name="sectorCode" required className={INPUT}>
             <option value="">Selecionar…</option>
-            {SECTOR_OPTIONS.map((s) => (
+            {sectorOptions.map((s) => (
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
           </select>

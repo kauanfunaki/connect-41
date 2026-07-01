@@ -1,16 +1,17 @@
-import { headers } from "next/headers";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PessoaForm } from "@/components/pessoas/PessoaForm";
 import { criarPessoa } from "../actions";
+import { getAuthContext, canWrite } from "@/lib/auth/context";
 
 export default async function NovaPessoaPage() {
-  const h = await headers();
-  const tenantId = h.get("x-tenant-id")!;
+  const ctx = await getAuthContext();
+  if (!canWrite(ctx.role)) notFound();
 
   const prisma = getPrisma();
   const companies = await prisma.company.findMany({
-    where: { tenantId, status: "ACTIVE" },
+    where: { tenantId: ctx.tenantId, status: "ACTIVE" },
     orderBy: { name: "asc" },
     select: { id: true, name: true },
   });

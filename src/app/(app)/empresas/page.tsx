@@ -1,7 +1,8 @@
-import { headers } from "next/headers";
 import Link from "next/link";
 import { getPrisma } from "@/lib/prisma";
 import { CompanyStatus } from "@/generated/prisma/enums";
+import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { scopedCompanyWhere } from "@/lib/auth/scope";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
   PROSPECT: "Prospecto",
@@ -31,8 +32,8 @@ export default async function EmpresasPage({
   searchParams: Promise<{ search?: string; status?: string; page?: string }>;
 }) {
   const { search, status, page } = await searchParams;
-  const h = await headers();
-  const tenantId = h.get("x-tenant-id")!;
+  const ctx = await getAuthContext();
+  const canCreate = canWrite(ctx.role);
 
   const prisma = getPrisma();
   const pageNum = Math.max(1, parseInt(page ?? "1"));
@@ -42,7 +43,7 @@ export default async function EmpresasPage({
       : undefined;
 
   const where = {
-    tenantId,
+    ...(await scopedCompanyWhere(ctx)),
     ...(search ? { name: { contains: search } } : {}),
     ...(statusFilter ? { status: statusFilter } : {}),
   };
@@ -80,12 +81,14 @@ export default async function EmpresasPage({
             {total} empresa{total !== 1 ? "s" : ""} cadastrada{total !== 1 ? "s" : ""}
           </p>
         </div>
-        <Link
-          href="/empresas/nova"
-          className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
-        >
-          + Nova Empresa
-        </Link>
+        {canCreate && (
+          <Link
+            href="/empresas/nova"
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+          >
+            + Nova Empresa
+          </Link>
+        )}
       </div>
 
       {/* Filters */}
@@ -173,12 +176,14 @@ export default async function EmpresasPage({
                     {c.createdAt.toLocaleDateString("pt-BR")}
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    <Link
-                      href={`/empresas/${c.id}/editar`}
-                      className="text-[12px] text-fg-muted hover:text-fg transition-colors"
-                    >
-                      Editar
-                    </Link>
+                    {canCreate && (
+                      <Link
+                        href={`/empresas/${c.id}/editar`}
+                        className="text-[12px] text-fg-muted hover:text-fg transition-colors"
+                      >
+                        Editar
+                      </Link>
+                    )}
                   </td>
                 </tr>
               ))}
