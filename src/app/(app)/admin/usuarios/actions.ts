@@ -140,3 +140,39 @@ export async function alternarAtivoUsuario(id: string, novoStatus: boolean): Pro
 
   revalidatePath("/admin/usuarios");
 }
+
+export async function alternarAtivoEmMassa(ids: string[], novoStatus: boolean): Promise<void> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || !isFullWrite(ctx.role) || ids.length === 0) return;
+
+  const targetIds = ids.filter((id) => id !== ctx.userId || novoStatus);
+  if (targetIds.length === 0) return;
+
+  const prisma = getPrisma();
+  const where =
+    ctx.role === "SUPER_ADMIN"
+      ? { id: { in: targetIds }, tenantId: ctx.tenantId }
+      : { id: { in: targetIds }, tenantId: ctx.tenantId, role: { not: "SUPER_ADMIN" as const } };
+
+  await prisma.user.updateMany({ where, data: { active: novoStatus } });
+
+  revalidatePath("/admin/usuarios");
+}
+
+export async function atribuirSetorEmMassa(ids: string[], sectorCode: string): Promise<void> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || !isFullWrite(ctx.role) || ids.length === 0 || !sectorCode) return;
+
+  const prisma = getPrisma();
+  const users = await prisma.user.findMany({
+    where: { id: { in: ids }, tenantId: ctx.tenantId },
+    select: { id: true },
+  });
+
+  await prisma.userSector.createMany({
+    data: users.map((u) => ({ userId: u.id, sectorCode })),
+    skipDuplicates: true,
+  });
+
+  revalidatePath("/admin/usuarios");
+}

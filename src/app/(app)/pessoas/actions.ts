@@ -109,3 +109,16 @@ export async function excluirPessoa(id: string): Promise<void> {
   revalidatePath("/pessoas");
   redirect("/pessoas");
 }
+
+export async function inativarPessoasEmMassa(ids: string[]): Promise<void> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || !canWrite(ctx.role) || ids.length === 0) return;
+
+  const prisma = getPrisma();
+  await prisma.person.updateMany({
+    where: { id: { in: ids }, ...(await scopedPersonWhere(ctx)) },
+    data: { active: false },
+  });
+
+  revalidatePath("/pessoas");
+}

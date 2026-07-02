@@ -3,6 +3,8 @@ import { getPrisma } from "@/lib/prisma";
 import { PersonType } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
+import { PessoasTable } from "@/components/pessoas/PessoasTable";
+import { inativarPessoasEmMassa } from "./actions";
 
 const TYPE_LABEL: Record<PersonType, string> = {
   CANDIDATO:   "Candidato",
@@ -118,80 +120,31 @@ export default async function PessoasPage({
       </div>
 
       {/* Table */}
-      <div className="bg-surface border border-border rounded-lg overflow-hidden">
-        {people.length === 0 ? (
-          <div className="py-16 text-center text-[13px] text-fg-muted">
-            {search || typeFilter
-              ? "Nenhuma pessoa encontrada com esses filtros."
-              : "Nenhuma pessoa cadastrada ainda."}
-          </div>
-        ) : (
-          <table className="w-full text-[13px]">
-            <thead>
-              <tr className="border-b border-border bg-surface-2">
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Nome</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Tipo</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">CPF</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">E-mail</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Empresa</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Criada em</th>
-                <th className="px-4 py-2.5" />
-              </tr>
-            </thead>
-            <tbody>
-              {people.map((p) => (
-                <tr
-                  key={p.id}
-                  className="border-b border-border last:border-0 hover:bg-surface-2 transition-colors"
-                >
-                  <td className="px-4 py-2.5">
-                    <Link
-                      href={`/pessoas/${p.id}`}
-                      className="font-medium text-fg hover:text-brand transition-colors"
-                    >
-                      {p.name}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${TYPE_STYLE[p.type]}`}
-                    >
-                      {TYPE_LABEL[p.type]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 text-fg-muted tnum">{p.cpf ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-fg-muted">{p.email ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-fg-muted">
-                    {p.currentCompany ? (
-                      <Link
-                        href={`/empresas/${p.currentCompany.id}`}
-                        className="hover:text-brand transition-colors"
-                      >
-                        {p.currentCompany.name}
-                      </Link>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5 text-fg-muted tnum">
-                    {p.createdAt.toLocaleDateString("pt-BR")}
-                  </td>
-                  <td className="px-4 py-2.5 text-right">
-                    {canCreate && (
-                      <Link
-                        href={`/pessoas/${p.id}/editar`}
-                        className="text-[12px] text-fg-muted hover:text-fg transition-colors"
-                      >
-                        Editar
-                      </Link>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {people.length === 0 ? (
+        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
+          {search || typeFilter
+            ? "Nenhuma pessoa encontrada com esses filtros."
+            : "Nenhuma pessoa cadastrada ainda."}
+        </div>
+      ) : (
+        <PessoasTable
+          people={people.map((p) => ({
+            id: p.id,
+            name: p.name,
+            type: p.type,
+            active: p.active,
+            cpf: p.cpf,
+            email: p.email,
+            companyName: p.currentCompany?.name ?? null,
+            companyId: p.currentCompany?.id ?? null,
+            createdAtLabel: p.createdAt.toLocaleDateString("pt-BR"),
+          }))}
+          canCreate={canCreate}
+          typeLabel={TYPE_LABEL}
+          typeStyle={TYPE_STYLE}
+          inativarPessoasEmMassa={inativarPessoasEmMassa}
+        />
+      )}
 
       {/* Pagination */}
       {totalPages > 1 && (

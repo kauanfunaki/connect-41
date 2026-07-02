@@ -120,3 +120,29 @@ export async function excluirEmpresa(id: string): Promise<void> {
   revalidatePath("/empresas");
   redirect("/empresas");
 }
+
+export async function atualizarStatusEmMassa(ids: string[], status: CompanyStatus): Promise<void> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || !canWrite(ctx.role) || ids.length === 0) return;
+
+  const prisma = getPrisma();
+  await prisma.company.updateMany({
+    where: { id: { in: ids }, ...(await scopedCompanyWhere(ctx)) },
+    data: { status },
+  });
+
+  revalidatePath("/empresas");
+}
+
+// Exclusão em massa é mais restrita que a individual (canWrite) — só Super Admin.
+export async function excluirEmpresasEmMassa(ids: string[]): Promise<void> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || ctx.role !== "SUPER_ADMIN" || ids.length === 0) return;
+
+  const prisma = getPrisma();
+  await prisma.company.deleteMany({
+    where: { id: { in: ids }, ...(await scopedCompanyWhere(ctx)) },
+  });
+
+  revalidatePath("/empresas");
+}

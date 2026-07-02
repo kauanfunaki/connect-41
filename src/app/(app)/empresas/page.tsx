@@ -3,6 +3,8 @@ import { getPrisma } from "@/lib/prisma";
 import { CompanyStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
+import { EmpresasTable } from "@/components/empresas/EmpresasTable";
+import { atualizarStatusEmMassa, excluirEmpresasEmMassa } from "./actions";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
   PROSPECT: "Prospecto",
@@ -34,6 +36,7 @@ export default async function EmpresasPage({
   const { search, status, page } = await searchParams;
   const ctx = await getAuthContext();
   const canCreate = canWrite(ctx.role);
+  const isSuperAdmin = ctx.role === "SUPER_ADMIN";
 
   const prisma = getPrisma();
   const pageNum = Math.max(1, parseInt(page ?? "1"));
@@ -128,69 +131,30 @@ export default async function EmpresasPage({
       </div>
 
       {/* Table */}
-      <div className="bg-surface border border-border rounded-lg overflow-hidden">
-        {companies.length === 0 ? (
-          <div className="py-16 text-center text-[13px] text-fg-muted">
-            {search || statusFilter
-              ? "Nenhuma empresa encontrada com esses filtros."
-              : "Nenhuma empresa cadastrada ainda."}
-          </div>
-        ) : (
-          <table className="w-full text-[13px]">
-            <thead>
-              <tr className="border-b border-border bg-surface-2">
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Nome</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">CNPJ</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Status</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">E-mail</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Criada em</th>
-                <th className="px-4 py-2.5" />
-              </tr>
-            </thead>
-            <tbody>
-              {companies.map((c) => (
-                <tr
-                  key={c.id}
-                  className="border-b border-border last:border-0 hover:bg-surface-2 transition-colors"
-                >
-                  <td className="px-4 py-2.5">
-                    <Link
-                      href={`/empresas/${c.id}`}
-                      className="font-medium text-fg hover:text-brand transition-colors"
-                    >
-                      {c.name}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-2.5 text-fg-muted tnum">
-                    {c.cnpj ?? "—"}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${STATUS_STYLE[c.status]}`}
-                    >
-                      {STATUS_LABEL[c.status]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 text-fg-muted">{c.email ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-fg-muted tnum">
-                    {c.createdAt.toLocaleDateString("pt-BR")}
-                  </td>
-                  <td className="px-4 py-2.5 text-right">
-                    {canCreate && (
-                      <Link
-                        href={`/empresas/${c.id}/editar`}
-                        className="text-[12px] text-fg-muted hover:text-fg transition-colors"
-                      >
-                        Editar
-                      </Link>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {companies.length === 0 ? (
+        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
+          {search || statusFilter
+            ? "Nenhuma empresa encontrada com esses filtros."
+            : "Nenhuma empresa cadastrada ainda."}
+        </div>
+      ) : (
+        <EmpresasTable
+          companies={companies.map((c) => ({
+            id: c.id,
+            name: c.name,
+            cnpj: c.cnpj,
+            status: c.status,
+            email: c.email,
+            createdAtLabel: c.createdAt.toLocaleDateString("pt-BR"),
+          }))}
+          canCreate={canCreate}
+          isSuperAdmin={isSuperAdmin}
+          statusLabel={STATUS_LABEL}
+          statusStyle={STATUS_STYLE}
+          atualizarStatusEmMassa={atualizarStatusEmMassa}
+          excluirEmpresasEmMassa={excluirEmpresasEmMassa}
+        />
+      )}
 
       {/* Pagination */}
       {totalPages > 1 && (
