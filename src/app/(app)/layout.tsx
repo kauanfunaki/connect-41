@@ -48,12 +48,8 @@ export default async function AppLayout({
       <aside className="w-[220px] flex-shrink-0 flex flex-col border-r border-border bg-surface">
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 h-12 px-4 border-b border-border flex-shrink-0">
-          <span
-            className="inline-flex items-center justify-center w-7 h-7 rounded-[6px] text-on-brand text-[13px] font-semibold"
-            style={{ background: "var(--c41-brand-600)" }}
-          >
-            41
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/logo.png" alt="41 Tech" className="h-7 w-7 object-contain invert dark:invert-0" />
           <span className="text-fg font-semibold text-[14px] tracking-[-0.01em]">
             Connect 41
           </span>

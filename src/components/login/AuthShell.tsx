@@ -10,26 +10,22 @@ export function AuthShell({
       {/* Coluna do formulário */}
       <div className="flex-1 flex items-center justify-center px-4 py-10">
         <div className="w-full max-w-[380px]">
-          <div className="mb-9 flex items-center gap-2.5">
-            <span
-              className="inline-flex items-center justify-center w-8 h-8 rounded-[7px] text-on-brand text-[13px] font-semibold flex-shrink-0"
-              style={{ background: "var(--c41-brand-600)" }}
-            >
-              41
-            </span>
+          <div className="mb-9 flex items-center justify-center gap-2.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logo.png" alt="41 Tech" className="h-8 w-8 object-contain invert dark:invert-0 flex-shrink-0" />
             <span className="text-fg font-semibold text-[14px] tracking-[-0.01em]">
               41 Tech
             </span>
           </div>
 
-          <h1 className="text-fg font-semibold text-[20px] tracking-[-0.01em] mb-1.5">
+          <h1 className="text-fg font-semibold text-[20px] tracking-[-0.01em] mb-1.5 text-center">
             Connect 41
           </h1>
-          <p className="text-fg-muted text-[13px] mb-7">{subtitle}</p>
+          <p className="text-fg-muted text-[13px] mb-7 text-center">{subtitle}</p>
 
           {children}
 
-          <p className="text-[10px] text-fg-muted mt-8">
+          <p className="text-[10px] text-fg-muted mt-8 text-center">
             Connect 41 · Uso interno 41 Tech
           </p>
         </div>
@@ -48,13 +44,9 @@ export function AuthShell({
             backgroundSize: "44px 44px",
           }}
         />
-        <div className="relative max-w-[360px]">
-          <div
-            className="w-9 h-9 rounded-[7px] mb-7 flex items-center justify-center text-[13px] font-semibold"
-            style={{ background: "rgba(255,255,255,0.12)", color: "#fff" }}
-          >
-            41
-          </div>
+        <div className="relative max-w-[360px] text-center flex flex-col items-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/logo.png" alt="41 Tech" className="h-10 w-10 object-contain mb-7" />
           <h2 className="text-[23px] font-semibold text-white tracking-[-0.01em] mb-3 leading-snug">
             Tudo o que a 41 Tech acompanha, num só lugar.
           </h2>
