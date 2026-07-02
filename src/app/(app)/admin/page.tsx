@@ -16,8 +16,18 @@ export default async function AdminPage() {
     cards.push(
       { href: "/admin/usuarios", icon: "🔐", title: "Usuários", description: "Contas, papéis e acesso a setores" },
       { href: "/admin/setores", icon: "🏷️", title: "Setores", description: "Catálogo de setores/cargos do tenant" },
-      { href: "/admin/modulos", icon: "🧱", title: "Módulos", description: "Ativação de módulos plugáveis por setor" }
+      { href: "/admin/modulos", icon: "🧱", title: "Módulos", description: "Ativação de módulos plugáveis por setor" },
+      { href: "/admin/filiais", icon: "🏬", title: "Filiais", description: "Etiqueta organizacional para Empresas" }
     );
+  }
+
+  if (ctx.role === "SUPER_ADMIN") {
+    cards.push({
+      href: "/admin/workspaces",
+      icon: "🌐",
+      title: "Workspaces",
+      description: "Clientes (tenants) e acesso entre eles",
+    });
   }
 
   cards.push(

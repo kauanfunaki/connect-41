@@ -42,6 +42,7 @@ export type EmpresaDefaultValues = {
   website?: string;
   status?: CompanyStatus;
   source?: string;
+  branchId?: string;
 };
 
 type Props = {
@@ -49,9 +50,10 @@ type Props = {
   cancelHref: string;
   defaultValues?: EmpresaDefaultValues;
   customFields?: CustomFieldInput[];
+  branchOptions?: { value: string; label: string }[];
 };
 
-export function EmpresaForm({ action, cancelHref, defaultValues, customFields = [] }: Props) {
+export function EmpresaForm({ action, cancelHref, defaultValues, customFields = [], branchOptions = [] }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const [fetching, setFetching] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -382,6 +384,16 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
               className={INPUT}
             />
           </Field>
+          {branchOptions.length > 0 && (
+            <Field label="Filial" htmlFor="branchId">
+              <select id="branchId" name="branchId" defaultValue={defaultValues?.branchId ?? ""} className={INPUT}>
+                <option value="">Nenhuma</option>
+                {branchOptions.map((b) => (
+                  <option key={b.value} value={b.value}>{b.label}</option>
+                ))}
+              </select>
+            </Field>
+          )}
         </div>
       </Section>
 

@@ -6,6 +6,7 @@ import { atualizarEmpresa } from "../../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { getCompanySectors, getApplicableCustomFields } from "@/lib/customFields";
+import { getActiveBranchOptions } from "@/lib/branches";
 
 export default async function EditarEmpresaPage({
   params,
@@ -25,6 +26,7 @@ export default async function EditarEmpresaPage({
 
   const companySectors = await getCompanySectors(ctx.tenantId, id);
   const customFields = await getApplicableCustomFields(ctx, "COMPANY", id, companySectors);
+  const branchOptions = await getActiveBranchOptions(ctx.tenantId);
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -55,6 +57,7 @@ export default async function EditarEmpresaPage({
           action={atualizarEmpresa}
           cancelHref={`/empresas/${id}`}
           customFields={customFields}
+          branchOptions={branchOptions}
           defaultValues={{
             id,
             name:                  company.name,
@@ -76,6 +79,7 @@ export default async function EditarEmpresaPage({
             website:               company.website               ?? undefined,
             status:                company.status,
             source:                company.source                ?? undefined,
+            branchId:              company.branchId               ?? undefined,
           }}
         />
       </div>

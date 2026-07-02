@@ -3,10 +3,13 @@ import { notFound } from "next/navigation";
 import { EmpresaForm } from "@/components/empresas/EmpresaForm";
 import { criarEmpresa } from "../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getActiveBranchOptions } from "@/lib/branches";
 
 export default async function NovaEmpresaPage() {
   const ctx = await getAuthContext();
   if (!canWrite(ctx.role)) notFound();
+
+  const branchOptions = await getActiveBranchOptions(ctx.tenantId);
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -26,7 +29,7 @@ export default async function NovaEmpresaPage() {
       </h1>
 
       <div className="bg-surface border border-border rounded-lg p-6">
-        <EmpresaForm action={criarEmpresa} cancelHref="/empresas" />
+        <EmpresaForm action={criarEmpresa} cancelHref="/empresas" branchOptions={branchOptions} />
       </div>
     </div>
   );

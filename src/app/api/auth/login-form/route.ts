@@ -2,6 +2,7 @@
 import { getPrisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/auth/password";
 import { signAccess, signRefresh } from "@/lib/auth/jwt";
+import { getAccessibleTenantIds } from "@/lib/auth/tenantAccess";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -50,7 +51,11 @@ export async function POST(req: NextRequest) {
     const accessMaxAge = remember ? 60 * 60 * 24 * 30 : 60 * 15;
     const refreshMaxAge = remember ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 7;
 
-    const accessToken = signAccess({ sub: user.id, tenantId: user.tenantId, role: user.role, sectors }, accessTtl);
+    const accessibleTenants = await getAccessibleTenantIds(user.id, user.role, user.tenantId);
+    const accessToken = signAccess(
+      { sub: user.id, tenantId: user.tenantId, role: user.role, sectors, accessibleTenants },
+      accessTtl
+    );
 
     const jti = crypto.randomUUID();
     const rawRefresh = signRefresh({ sub: user.id, jti }, refreshTtl);

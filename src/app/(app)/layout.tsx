@@ -4,6 +4,7 @@ import { NotificationBell } from "@/components/shell/NotificationBell";
 import { ProfileMenu } from "@/components/shell/ProfileMenu";
 import { GlobalSearch } from "@/components/shell/GlobalSearch";
 import { NavItem, SectorNavItem } from "@/components/shell/NavLink";
+import { WorkspaceSwitcher } from "@/components/shell/WorkspaceSwitcher";
 import { getSectorMaps } from "@/lib/sectors";
 import { ROLE_LABELS } from "@/lib/roles";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -25,13 +26,20 @@ export default async function AppLayout({
   const visibleSectors = sectors.filter((s) => sectorsWithModules.has(s));
 
   const prisma = getPrisma();
-  const [unreadCount, me] = await Promise.all([
+  const [unreadCount, me, accessibleTenants] = await Promise.all([
     ctx.userId
       ? prisma.notification.count({ where: { tenantId, userId: ctx.userId, read: false } })
       : Promise.resolve(0),
     ctx.userId
       ? prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true, photoUrl: true } })
       : Promise.resolve(null),
+    role === "SUPER_ADMIN"
+      ? prisma.tenant.findMany({
+          where: { OR: [{ id: ctx.homeTenantId }, { accessGrants: { some: { userId: ctx.userId } } }] },
+          select: { id: true, name: true },
+          orderBy: { name: "asc" },
+        })
+      : Promise.resolve([]),
   ]);
 
   return (
@@ -50,6 +58,8 @@ export default async function AppLayout({
             Connect 41
           </span>
         </div>
+
+        <WorkspaceSwitcher tenants={accessibleTenants} currentTenantId={tenantId} />
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">

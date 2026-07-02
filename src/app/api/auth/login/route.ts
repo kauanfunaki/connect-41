@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/auth/password";
 import { signAccess, signRefresh } from "@/lib/auth/jwt";
+import { getAccessibleTenantIds } from "@/lib/auth/tenantAccess";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -32,11 +33,13 @@ export async function POST(req: NextRequest) {
     }
 
     const sectors = user.sectors.map((s: { sectorCode: string }) => s.sectorCode);
+    const accessibleTenants = await getAccessibleTenantIds(user.id, user.role, user.tenantId);
     const accessToken = signAccess({
       sub: user.id,
       tenantId: user.tenantId,
       role: user.role,
       sectors,
+      accessibleTenants,
     });
 
     const jti = crypto.randomUUID();

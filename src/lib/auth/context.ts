@@ -4,15 +4,18 @@ import type { UserRole } from "@/generated/prisma/enums";
 export interface AuthContext {
   userId: string;
   tenantId: string;
+  homeTenantId: string;
   role: UserRole;
   sectors: string[];
 }
 
 export async function getAuthContext(): Promise<AuthContext> {
   const h = await headers();
+  const tenantId = h.get("x-tenant-id") ?? "";
   return {
     userId: h.get("x-user-id") ?? "",
-    tenantId: h.get("x-tenant-id") ?? "",
+    tenantId,
+    homeTenantId: h.get("x-home-tenant-id") ?? tenantId,
     role: (h.get("x-user-role") ?? "SECTOR_USER") as UserRole,
     sectors: h.get("x-user-sectors")?.split(",").filter(Boolean) ?? [],
   };

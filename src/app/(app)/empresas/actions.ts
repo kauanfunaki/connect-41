@@ -35,6 +35,7 @@ function companyData(form: FormData) {
     website:               pickString(form, "website"),
     status:                (form.get("status") as CompanyStatus) ?? CompanyStatus.PROSPECT,
     source:                pickString(form, "source"),
+    branchId:              pickString(form, "branchId"),
   };
 }
 

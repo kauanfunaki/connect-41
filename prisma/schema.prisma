@@ -94,8 +94,45 @@ model Tenant {
   sectors        Sector[]
   tenantModules  TenantModule[]
   tags           Tag[]
+  branches       Branch[]
+  accessGrants   UserTenantAccess[]
 
   @@map("tenants")
+}
+
+// Acesso de um SUPER_ADMIN a um tenant além do seu próprio (User.tenantId) —
+// permite que o suporte da 41 Tech alterne entre workspaces de clientes sem
+// precisar de uma conta separada por cliente. Só tem efeito para SUPER_ADMIN;
+// os demais papéis continuam presos ao tenant do próprio usuário.
+model UserTenantAccess {
+  userId    String
+  tenantId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([userId, tenantId])
+  @@map("user_tenant_access")
+}
+
+// Filial de um tenant — puramente organizacional (etiqueta/contexto), não isola
+// dados: uma Empresa pode ser marcada com a filial que a atende, mas continua
+// visível/editável normalmente por qualquer usuário do tenant com acesso a ela.
+model Branch {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String   @db.VarChar(120)
+  active    Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+  companies Company[]
+
+  @@index([tenantId])
+  @@map("branches")
 }
 
 // Setor/cargo cadastrável — referenciado por código (string livre, sem FK) em
@@ -158,6 +195,7 @@ model User {
   activities    Activity[]
   handoffs      Handoff[]
   notifications Notification[]
+  tenantAccess  UserTenantAccess[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -217,10 +255,12 @@ model Company {
   status                CompanyStatus @default(PROSPECT)
   source                String?       @db.VarChar(80)
   responsibleUserId     String?
+  branchId              String?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
   tenant   Tenant  @relation(fields: [tenantId], references: [id])
+  branch   Branch? @relation(fields: [branchId], references: [id])
 
   services  CompanyService[]
   people    Person[]

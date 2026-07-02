@@ -39,11 +39,22 @@ export async function middleware(req: NextRequest) {
 
   try {
     const payload = await verifyAccessEdge(token);
+
+    // Troca de workspace: só tem efeito se o tenant do cookie estiver entre os
+    // que o próprio token autoriza (accessibleTenants, só populado p/ SUPER_ADMIN).
+    // Isso evita depender de acesso a banco aqui no Edge runtime.
+    const activeTenantCookie = req.cookies.get("active_tenant_id")?.value;
+    const effectiveTenantId =
+      activeTenantCookie && payload.accessibleTenants?.includes(activeTenantCookie)
+        ? activeTenantCookie
+        : payload.tenantId;
+
     const headers = new Headers(req.headers);
     headers.set("x-user-id", payload.sub);
-    headers.set("x-tenant-id", payload.tenantId);
+    headers.set("x-tenant-id", effectiveTenantId);
     headers.set("x-user-role", payload.role);
-    headers.set("x-user-sectors", payload.sectors.join(","));
+    headers.set("x-user-sectors", effectiveTenantId === payload.tenantId ? payload.sectors.join(",") : "");
+    headers.set("x-home-tenant-id", payload.tenantId);
     return NextResponse.next({ request: { headers } });
   } catch {
     if (pathname.startsWith("/api/")) {
