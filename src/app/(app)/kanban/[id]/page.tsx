@@ -7,6 +7,10 @@ import { moverItem } from "../actions";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedPipelineWhere } from "@/lib/auth/scope";
 
+function daysSince(d: Date): number {
+  return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000));
+}
+
 export default async function KanbanBoardPage({
   params,
 }: {
@@ -55,6 +59,26 @@ export default async function KanbanBoardPage({
     }
   }
 
+  // Última mudança de estágio de cada item (mais recente primeiro) — usada pra
+  // calcular "X dias na etapa" sem precisar de campo novo no schema.
+  const [lastStageChanges, recentMoves] = await Promise.all([
+    prisma.activity.findMany({
+      where: { tenantId: ctx.tenantId, type: "STATUS_CHANGE", pipelineItem: { pipelineId: id } },
+      orderBy: { createdAt: "desc" },
+      select: { pipelineItemId: true, createdAt: true },
+    }),
+    prisma.activity.findMany({
+      where: { tenantId: ctx.tenantId, type: "STATUS_CHANGE", pipelineItem: { pipelineId: id } },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      include: { user: { select: { name: true } }, pipelineItem: { select: { entityId: true } } },
+    }),
+  ]);
+
+  const lastChangeByItem: Record<string, Date> = {};
+  for (const c of lastStageChanges) {
+    if (!(c.pipelineItemId in lastChangeByItem)) lastChangeByItem[c.pipelineItemId] = c.createdAt;
+  }
   const items = pipeline.items.map((i) => ({
     id: i.id,
     stageId: i.stageId,
@@ -63,6 +87,15 @@ export default async function KanbanBoardPage({
     dueDate: i.dueDate ? i.dueDate.toISOString() : null,
     tags: i.tags.map((t) => ({ id: t.tag.id, name: t.tag.name, color: t.tag.color })),
     assignees: i.assignees.map((a) => ({ id: a.user.id, name: a.user.name })),
+    daysInStage: daysSince(lastChangeByItem[i.id] ?? i.createdAt),
+  }));
+
+  const timeline = recentMoves.map((m) => ({
+    id: m.id,
+    userName: m.user.name,
+    entityName: entityNames[m.pipelineItem.entityId] ?? "(removido)",
+    content: m.content ?? "",
+    createdAt: m.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }),
   }));
 
   return (
@@ -101,6 +134,27 @@ export default async function KanbanBoardPage({
           moveAction={moverItem}
         />
       </div>
+
+      {timeline.length > 0 && (
+        <div className="flex-shrink-0 mt-4 pt-4 border-t border-border">
+          <h2 className="text-[12px] font-medium text-fg-secondary mb-2.5">Timeline de movimentação</h2>
+          <div className="flex gap-3 overflow-x-auto pb-1">
+            {timeline.map((t) => (
+              <div
+                key={t.id}
+                className="flex-shrink-0 w-[240px] bg-surface border border-border rounded-md px-3 py-2.5"
+              >
+                <p className="text-[12px] text-fg leading-snug">
+                  <span className="font-medium">{t.entityName}</span> {t.content}
+                </p>
+                <p className="text-[11px] text-fg-muted mt-1">
+                  {t.userName} · {t.createdAt}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

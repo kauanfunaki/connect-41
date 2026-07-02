@@ -14,6 +14,7 @@ type Item = {
   dueDate: string | null;
   tags?: Tag[];
   assignees?: Assignee[];
+  daysInStage?: number;
 };
 
 type Props = {
@@ -122,9 +123,16 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                       draggingId === item.id ? "opacity-40" : ""
                     }`}
                   >
-                    <p className="text-[13px] font-medium text-fg leading-snug truncate group-hover:text-fg transition-colors">
-                      {item.entityName}
-                    </p>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-[13px] font-medium text-fg leading-snug truncate group-hover:text-fg transition-colors">
+                        {item.entityName}
+                      </p>
+                      {item.daysInStage !== undefined && (
+                        <span className="text-[10px] text-fg-muted tnum flex-shrink-0 leading-snug">
+                          {item.daysInStage}d
+                        </span>
+                      )}
+                    </div>
 
                     {item.tags && item.tags.length > 0 && (
                       <div className="flex flex-wrap items-center gap-1 mt-1.5">
