@@ -16,6 +16,12 @@ export default async function NovoHandoffPage({
   const { entityType: entityTypeRaw, entityId } = await searchParams;
   const ctx = await getAuthContext();
 
+  // Solicitar handoff é capacidade de SECTOR_ADMIN (e ADMIN/SUPER_ADMIN) — SECTOR_USER
+  // e READONLY não podem, mesmo acessando a URL direto (o botão já fica escondido
+  // pra eles, mas a página em si também precisa bloquear).
+  const canCreate = isFullWrite(ctx.role) || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.length > 0);
+  if (!canCreate) notFound();
+
   const { options: allSectorOptions } = await getSectorMaps(ctx.tenantId);
   const fromSectorOptions = isFullWrite(ctx.role)
     ? allSectorOptions
