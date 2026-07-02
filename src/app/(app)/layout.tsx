@@ -1,6 +1,8 @@
-import { LogoutButton } from "@/components/shell/LogoutButton";
+import Link from "next/link";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { NotificationBell } from "@/components/shell/NotificationBell";
+import { ProfileMenu } from "@/components/shell/ProfileMenu";
+import { GlobalSearch } from "@/components/shell/GlobalSearch";
 import { NavItem, SectorNavItem } from "@/components/shell/NavLink";
 import { getSectorMaps } from "@/lib/sectors";
 import { ROLE_LABELS } from "@/lib/roles";
@@ -17,20 +19,27 @@ export default async function AppLayout({
   const { role, sectors, tenantId } = ctx;
   const isAdmin = isFullWrite(role);
   const canManageFields = isAdmin || (role === "SECTOR_ADMIN" && sectors.length > 0);
+  const canOpenAdmin = isAdmin || canManageFields;
   const { labels: sectorLabels, colors: sectorColors } = await getSectorMaps(tenantId);
   const sectorsWithModules = await getSectorsWithEnabledModules(tenantId);
   const visibleSectors = sectors.filter((s) => sectorsWithModules.has(s));
 
-  const unreadCount = ctx.userId
-    ? await getPrisma().notification.count({ where: { tenantId, userId: ctx.userId, read: false } })
-    : 0;
+  const prisma = getPrisma();
+  const [unreadCount, me] = await Promise.all([
+    ctx.userId
+      ? prisma.notification.count({ where: { tenantId, userId: ctx.userId, read: false } })
+      : Promise.resolve(0),
+    ctx.userId
+      ? prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true, photoUrl: true } })
+      : Promise.resolve(null),
+  ]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-canvas">
       {/* ── Sidebar ── */}
       <aside className="w-[220px] flex-shrink-0 flex flex-col border-r border-border bg-surface">
         {/* Logo */}
-        <div className="flex items-center gap-2 h-12 px-4 border-b border-border flex-shrink-0">
+        <div className="flex items-center justify-center gap-2 h-12 px-4 border-b border-border flex-shrink-0">
           <span
             className="inline-flex items-center justify-center w-7 h-7 rounded-[6px] text-on-brand text-[13px] font-semibold"
             style={{ background: "var(--c41-brand-600)" }}
@@ -68,56 +77,36 @@ export default async function AppLayout({
               ))}
             </>
           )}
-
-          {isAdmin && (
-            <>
-              <p className="px-2 pt-4 pb-1.5 text-[11px] font-medium text-fg-muted uppercase tracking-wider">
-                Administração
-              </p>
-              <NavItem href="/admin/usuarios" icon="🔐" label="Usuários" />
-              <NavItem href="/admin/setores" icon="🏷️" label="Setores" />
-              <NavItem href="/admin/modulos" icon="🧱" label="Módulos" />
-            </>
-          )}
-
-          {!isAdmin && canManageFields && (
-            <>
-              <p className="px-2 pt-4 pb-1.5 text-[11px] font-medium text-fg-muted uppercase tracking-wider">
-                Administração
-              </p>
-              <NavItem href="/admin/campos" icon="🧩" label="Campos Customizados" />
-              <NavItem href="/admin/tags" icon="🏷" label="Tags" />
-            </>
-          )}
-          {isAdmin && (
-            <>
-              <NavItem href="/admin/campos" icon="🧩" label="Campos Customizados" />
-              <NavItem href="/admin/tags" icon="🏷" label="Tags" />
-            </>
-          )}
         </nav>
 
-        {/* Footer: role + logout */}
-        <div className="border-t border-border px-4 py-3 flex items-center justify-between gap-2 flex-shrink-0">
-          <div className="min-w-0">
-            <p className="text-[12px] font-medium text-fg truncate">
-              {ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role}
-            </p>
-            <p className="text-[10px] text-fg-muted">
-              {sectors.length} setor{sectors.length !== 1 ? "es" : ""}
-            </p>
-          </div>
-          <LogoutButton />
+        {/* Footer: tema */}
+        <div className="border-t border-border px-4 py-2.5 flex items-center flex-shrink-0">
+          <ThemeToggle />
         </div>
       </aside>
 
       {/* ── Main area ── */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Topbar */}
-        <header className="h-12 flex-shrink-0 flex items-center justify-end border-b border-border bg-surface px-6">
-          <div className="flex items-center gap-3">
+        <header className="h-12 flex-shrink-0 flex items-center justify-between gap-4 border-b border-border bg-surface px-4">
+          <GlobalSearch />
+
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {canOpenAdmin && (
+              <Link
+                href="/admin"
+                title="Administração"
+                className="w-7 h-7 inline-flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors"
+              >
+                ⚙️
+              </Link>
+            )}
             <NotificationBell unreadCount={unreadCount} />
-            <ThemeToggle />
+            <ProfileMenu
+              name={me?.name ?? "Usuário"}
+              roleLabel={ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role}
+              photoUrl={me?.photoUrl ?? null}
+            />
           </div>
         </header>
 

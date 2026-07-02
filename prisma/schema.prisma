@@ -146,6 +146,7 @@ model User {
   name         String   @db.VarChar(120)
   email        String   @db.VarChar(120)
   passwordHash String   @db.VarChar(255)
+  photoUrl     String?  @db.VarChar(255)
   role         UserRole @default(SECTOR_USER)
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
