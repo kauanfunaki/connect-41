@@ -50,7 +50,7 @@ export default async function AppLayout({
           <NavItem href="/" icon="⊞" label="Início" />
           <NavItem href="/empresas" icon="🏢" label="Empresas" />
           <NavItem href="/pessoas" icon="👤" label="Pessoas" />
-          <NavItem href="/pipelines" icon="📋" label="Pipelines" />
+          <NavItem href="/kanban" icon="📋" label="Kanban" />
           <NavItem href="/handoffs" icon="🔁" label="Handoffs" />
 
           {visibleSectors.length > 0 && (
@@ -109,17 +109,8 @@ export default async function AppLayout({
       {/* ── Main area ── */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Topbar */}
-        <header className="h-12 flex-shrink-0 flex items-center justify-between border-b border-border bg-surface px-6">
-          <span className="text-[13px] text-fg-muted">Connect 41 · CRM</span>
+        <header className="h-12 flex-shrink-0 flex items-center justify-end border-b border-border bg-surface px-6">
           <div className="flex items-center gap-3">
-            <span className="text-[10px] text-fg-muted">
-              {new Date().toLocaleDateString("pt-BR", {
-                weekday: "long",
-                day: "2-digit",
-                month: "long",
-                year: "numeric",
-              })}
-            </span>
             <NotificationBell unreadCount={unreadCount} />
             <ThemeToggle />
           </div>

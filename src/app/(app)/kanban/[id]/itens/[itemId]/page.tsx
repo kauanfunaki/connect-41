@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { MoveStageSelect } from "@/components/pipelines/MoveStageSelect";
-import { AddNoteForm } from "@/components/pipelines/AddNoteForm";
-import { DeleteButton } from "@/components/pipelines/DeleteButton";
+import { MoveStageSelect } from "@/components/kanban/MoveStageSelect";
+import { AddNoteForm } from "@/components/kanban/AddNoteForm";
+import { DeleteButton } from "@/components/kanban/DeleteButton";
 import { moverItem, adicionarNota, excluirItem } from "../../../actions";
 import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
 import { scopedPipelineWhere } from "@/lib/auth/scope";
@@ -16,7 +16,7 @@ const ACTIVITY_LABEL: Record<string, string> = {
   MENTION: "Menção",
 };
 
-export default async function PipelineItemPage({
+export default async function KanbanItemPage({
   params,
 }: {
   params: Promise<{ id: string; itemId: string }>;
@@ -56,12 +56,12 @@ export default async function PipelineItemPage({
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
-        <Link href="/pipelines" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Pipelines
+        <Link href="/kanban" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
+          Kanban
         </Link>
         <span className="text-fg-muted">/</span>
         <Link
-          href={`/pipelines/${id}`}
+          href={`/kanban/${id}`}
           className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate max-w-[160px]"
         >
           {pipeline.name}
@@ -128,7 +128,7 @@ export default async function PipelineItemPage({
                   <span className="text-[11px] text-fg-muted">{a.user.name}</span>
                   <span className="text-[11px] text-fg-muted">·</span>
                   <span className="text-[11px] text-fg-muted tnum">
-                    {a.createdAt.toLocaleString("pt-BR")}
+                    {a.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
                   </span>
                 </div>
                 {a.content && <p className="text-[13px] text-fg">{a.content}</p>}

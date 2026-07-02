@@ -29,7 +29,7 @@ export default async function HomePage() {
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
         <StatCard href="/empresas" label="Empresas" value={companyCount} />
         <StatCard href="/pessoas" label="Pessoas" value={personCount} />
-        <StatCard href="/pipelines" label="Pipelines ativos" value={pipelineCount} />
+        <StatCard href="/kanban" label="Kanban ativos" value={pipelineCount} />
         <StatCard
           href="/handoffs?status=PENDING"
           label="Handoffs pendentes"

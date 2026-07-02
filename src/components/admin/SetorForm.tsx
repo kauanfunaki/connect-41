@@ -50,7 +50,7 @@ export function SetorForm({ action, cancelHref, defaultValues }: Props) {
         <Field label="Código" htmlFor="code">
           <input id="code" type="text" value={defaultValues.code} disabled className={`${INPUT} font-mono`} />
           <p className="text-[11px] text-fg-muted mt-1">
-            Gerado a partir do nome na criação — não pode ser alterado (já é usado em pipelines, usuários e handoffs).
+            Gerado a partir do nome na criação — não pode ser alterado (já é usado em kanban, usuários e handoffs).
           </p>
         </Field>
       )}

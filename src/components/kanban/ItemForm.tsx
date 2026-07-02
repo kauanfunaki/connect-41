@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import type { PipelineState } from "@/app/(app)/pipelines/actions";
+import type { PipelineState } from "@/app/(app)/kanban/actions";
 import type { PipelineEntityType } from "@/generated/prisma/enums";
 
 type EntityOption = { id: string; name: string };

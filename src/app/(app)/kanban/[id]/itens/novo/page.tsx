@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { ItemForm } from "@/components/pipelines/ItemForm";
+import { ItemForm } from "@/components/kanban/ItemForm";
 import { criarItem } from "../../../actions";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedPipelineWhere, scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
@@ -35,12 +35,12 @@ export default async function NovoItemPage({
   return (
     <div className="p-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-6">
-        <Link href="/pipelines" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Pipelines
+        <Link href="/kanban" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
+          Kanban
         </Link>
         <span className="text-fg-muted">/</span>
         <Link
-          href={`/pipelines/${id}`}
+          href={`/kanban/${id}`}
           className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate max-w-[200px]"
         >
           {pipeline.name}
@@ -50,7 +50,7 @@ export default async function NovoItemPage({
       </div>
 
       <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">
-        Adicionar {pipeline.entityType === "COMPANY" ? "Empresa" : "Pessoa"} ao Pipeline
+        Adicionar {pipeline.entityType === "COMPANY" ? "Empresa" : "Pessoa"} ao Kanban
       </h1>
 
       <div className="bg-surface border border-border rounded-lg p-6">
@@ -59,7 +59,7 @@ export default async function NovoItemPage({
           pipelineId={id}
           entityType={pipeline.entityType}
           entities={entities}
-          cancelHref={`/pipelines/${id}`}
+          cancelHref={`/kanban/${id}`}
         />
       </div>
     </div>

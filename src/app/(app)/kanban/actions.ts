@@ -21,10 +21,10 @@ export async function criarPipeline(
   const sectorCode = (form.get("sectorCode") as string)?.trim();
   const entityType = form.get("entityType") as PipelineEntityType;
 
-  if (!name) return { error: "Nome do pipeline é obrigatório" };
+  if (!name) return { error: "Nome do kanban é obrigatório" };
   if (!sectorCode) return { error: "Setor é obrigatório" };
   if (!canManageSector(ctx, sectorCode)) {
-    return { error: "Sem permissão para criar pipeline neste setor." };
+    return { error: "Sem permissão para criar kanban neste setor." };
   }
 
   const stageNames = form.getAll("stageName") as string[];
@@ -58,10 +58,10 @@ export async function criarPipeline(
     id = pipeline.id;
   } catch (err) {
     console.error("[criarPipeline]", err);
-    return { error: "Erro ao criar pipeline. Tente novamente." };
+    return { error: "Erro ao criar kanban. Tente novamente." };
   }
 
-  redirect(`/pipelines/${id}`);
+  redirect(`/kanban/${id}`);
 }
 
 export async function criarItem(
@@ -83,7 +83,7 @@ export async function criarItem(
   const prisma = getPrisma();
 
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, ...scopedPipelineWhere(ctx) } });
-  if (!pipeline) return { error: "Pipeline não encontrado ou fora do seu escopo." };
+  if (!pipeline) return { error: "Kanban não encontrado ou fora do seu escopo." };
   if (!canManageSector(ctx, pipeline.sectorCode)) {
     return { error: "Sem permissão para adicionar itens neste setor." };
   }
@@ -93,7 +93,7 @@ export async function criarItem(
       where: { pipelineId },
       orderBy: { order: "asc" },
     });
-    if (!firstStage) return { error: "Pipeline sem estágios configurados" };
+    if (!firstStage) return { error: "Kanban sem estágios configurados" };
 
     await prisma.pipelineItem.create({
       data: {
@@ -111,8 +111,8 @@ export async function criarItem(
     return { error: "Erro ao adicionar item. Tente novamente." };
   }
 
-  revalidatePath(`/pipelines/${pipelineId}`);
-  redirect(`/pipelines/${pipelineId}`);
+  revalidatePath(`/kanban/${pipelineId}`);
+  redirect(`/kanban/${pipelineId}`);
 }
 
 export async function moverItem(
@@ -153,8 +153,8 @@ export async function moverItem(
       },
     });
 
-    revalidatePath(`/pipelines/${item.pipelineId}`);
-    revalidatePath(`/pipelines/${item.pipelineId}/itens/${itemId}`);
+    revalidatePath(`/kanban/${item.pipelineId}`);
+    revalidatePath(`/kanban/${item.pipelineId}/itens/${itemId}`);
   } catch (err) {
     console.error("[moverItem]", err);
   }
@@ -195,7 +195,7 @@ export async function adicionarNota(
     return { error: "Erro ao adicionar nota." };
   }
 
-  revalidatePath(`/pipelines/${pipelineId}/itens/${itemId}`);
+  revalidatePath(`/kanban/${pipelineId}/itens/${itemId}`);
   return null;
 }
 
@@ -216,6 +216,6 @@ export async function excluirItem(pipelineId: string, itemId: string): Promise<v
     return;
   }
 
-  revalidatePath(`/pipelines/${pipelineId}`);
-  redirect(`/pipelines/${pipelineId}`);
+  revalidatePath(`/kanban/${pipelineId}`);
+  redirect(`/kanban/${pipelineId}`);
 }

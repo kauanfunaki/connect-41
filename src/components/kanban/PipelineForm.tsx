@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
-import type { PipelineState } from "@/app/(app)/pipelines/actions";
+import type { PipelineState } from "@/app/(app)/kanban/actions";
 
 const DEFAULT_COLORS = ["#586577", "#2E6FB8", "#C8860D", "#1E8E5A", "#C5374B"];
 
@@ -44,7 +44,7 @@ export function PipelineForm({ action, sectorOptions }: Props) {
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Nome do Pipeline *" htmlFor="name">
+        <Field label="Nome do Kanban *" htmlFor="name">
           <input
             id="name"
             name="name"
@@ -123,10 +123,10 @@ export function PipelineForm({ action, sectorOptions }: Props) {
           disabled={isPending}
           className="h-9 px-5 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
         >
-          {isPending ? "Criando…" : "Criar Pipeline"}
+          {isPending ? "Criando…" : "Criar Kanban"}
         </button>
         <Link
-          href="/pipelines"
+          href="/kanban"
           className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
         >
           Cancelar

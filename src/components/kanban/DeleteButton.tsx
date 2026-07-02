@@ -7,7 +7,7 @@ type Props = {
 
 export function DeleteButton({ action, nome }: Props) {
   async function handleClick() {
-    if (!confirm(`Remover "${nome}" deste pipeline? Esta ação não pode ser desfeita.`)) return;
+    if (!confirm(`Remover "${nome}" deste kanban? Esta ação não pode ser desfeita.`)) return;
     await action();
   }
 

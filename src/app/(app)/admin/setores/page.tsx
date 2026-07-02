@@ -57,7 +57,7 @@ export default async function SetoresPage() {
       </div>
 
       <p className="text-[11px] text-fg-muted mt-4">
-        Setores não podem ser excluídos após criados (o código é referenciado em pipelines,
+        Setores não podem ser excluídos após criados (o código é referenciado em kanban,
         usuários e handoffs) — desative em vez de remover.
       </p>
     </div>

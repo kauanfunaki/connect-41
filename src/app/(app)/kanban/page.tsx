@@ -4,7 +4,7 @@ import { getSectorMaps } from "@/lib/sectors";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPipelineWhere } from "@/lib/auth/scope";
 
-export default async function PipelinesPage() {
+export default async function KanbanListPage() {
   const ctx = await getAuthContext();
   const canCreate = canWrite(ctx.role);
   const { labels: sectorLabels, colors: sectorColors } = await getSectorMaps(ctx.tenantId);
@@ -25,24 +25,24 @@ export default async function PipelinesPage() {
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Pipelines</h1>
+          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Kanban</h1>
           <p className="text-[13px] text-fg-muted mt-0.5">
-            {pipelines.length} pipeline{pipelines.length !== 1 ? "s" : ""} configurado{pipelines.length !== 1 ? "s" : ""}
+            {pipelines.length} kanban{pipelines.length !== 1 ? "s" : ""} configurado{pipelines.length !== 1 ? "s" : ""}
           </p>
         </div>
         {canCreate && (
           <Link
-            href="/pipelines/novo"
+            href="/kanban/novo"
             className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
           >
-            + Novo Pipeline
+            + Novo Kanban
           </Link>
         )}
       </div>
 
       {pipelines.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhum pipeline cadastrado ainda.
+          Nenhum kanban cadastrado ainda.
         </div>
       ) : (
         <div className="space-y-6">
@@ -61,7 +61,7 @@ export default async function PipelinesPage() {
                 {list.map((p) => (
                   <Link
                     key={p.id}
-                    href={`/pipelines/${p.id}`}
+                    href={`/kanban/${p.id}`}
                     className="bg-surface border border-border rounded-lg p-4 hover:border-border-strong transition-colors"
                   >
                     <p className="text-[13px] font-medium text-fg mb-1">{p.name}</p>

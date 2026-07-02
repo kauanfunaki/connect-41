@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useRef } from "react";
-import type { PipelineState } from "@/app/(app)/pipelines/actions";
+import type { PipelineState } from "@/app/(app)/kanban/actions";
 
 type Props = {
   action: (prev: PipelineState, form: FormData) => Promise<PipelineState>;
