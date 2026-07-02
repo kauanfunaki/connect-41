@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { marcarNotificacaoLida } from "@/app/(app)/notificacoes/actions";
 
 type Props = {
@@ -12,13 +12,24 @@ type Props = {
 };
 
 export function NotificationItem({ id, message, read, href, createdAt }: Props) {
-  function handleClick() {
-    if (!read) marcarNotificacaoLida(id);
+  const router = useRouter();
+
+  // Precisa esperar o marcarNotificacaoLida terminar ANTES de navegar — se for
+  // "dispara e esquece" junto com um <Link>, a navegação client-side cancela a
+  // requisição da Server Action no meio do caminho e a notificação nunca marca
+  // como lida (bug real reportado: só "marcar todas" funcionava).
+  async function handleClick(e: React.MouseEvent) {
+    e.preventDefault();
+    if (!read) await marcarNotificacaoLida(id);
+    if (href) router.push(href);
   }
 
-  const content = (
+  return (
     <div
-      className={`flex items-start gap-3 px-4 py-3 ${!read ? "bg-brand-subtle/40" : ""}`}
+      onClick={handleClick}
+      className={`flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors ${
+        !read ? "bg-brand-subtle/40" : "hover:bg-surface-2"
+      }`}
     >
       <span
         className={`mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${read ? "bg-transparent" : "bg-brand"}`}
@@ -28,19 +39,5 @@ export function NotificationItem({ id, message, read, href, createdAt }: Props) 
         <p className="text-[11px] text-fg-muted mt-0.5">{createdAt}</p>
       </div>
     </div>
-  );
-
-  if (!href) {
-    return (
-      <div onClick={handleClick} className="cursor-pointer">
-        {content}
-      </div>
-    );
-  }
-
-  return (
-    <Link href={href} onClick={handleClick} className="block hover:bg-surface-2 transition-colors">
-      {content}
-    </Link>
   );
 }
