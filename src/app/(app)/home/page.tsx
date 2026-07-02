@@ -31,8 +31,8 @@ export default async function HomePage() {
         <StatCard href="/pessoas" label="Pessoas" value={personCount} />
         <StatCard href="/kanban" label="Kanban ativos" value={pipelineCount} />
         <StatCard
-          href="/handoffs?status=PENDING"
-          label="Handoffs pendentes"
+          href="/transferencias?status=PENDING"
+          label="Transferências pendentes"
           value={pendingHandoffs}
           highlight={pendingHandoffs > 0}
         />

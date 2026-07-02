@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { HandoffForm } from "@/components/handoffs/HandoffForm";
+import { HandoffForm } from "@/components/transferencias/HandoffForm";
 import { criarHandoff } from "../actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
@@ -57,7 +57,7 @@ export default async function NovoHandoffPage({
     );
   }
 
-  // Modo 2: acesso direto por /handoffs — escolhe a entidade no próprio formulário
+  // Modo 2: acesso direto por /transferencias — escolhe a entidade no próprio formulário
   const [companies, people] = await Promise.all([
     prisma.company.findMany({
       where: await scopedCompanyWhere(ctx),
@@ -72,12 +72,12 @@ export default async function NovoHandoffPage({
   ]);
 
   return (
-    <FormShell backHref="/handoffs" backLabel="Handoffs">
+    <FormShell backHref="/transferencias" backLabel="Transferências">
       <HandoffForm
         action={criarHandoff}
         fromSectorOptions={fromSectorOptions}
         toSectorOptions={allSectorOptions}
-        cancelHref="/handoffs"
+        cancelHref="/transferencias"
         companies={companies}
         people={people}
       />
@@ -101,11 +101,11 @@ function FormShell({
           {backLabel}
         </Link>
         <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Solicitar Handoff</span>
+        <span className="text-[13px] text-fg">Solicitar Transferência</span>
       </div>
 
       <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">
-        Solicitar Handoff
+        Solicitar Transferência
       </h1>
 
       <div className="bg-surface border border-border rounded-lg p-6">{children}</div>

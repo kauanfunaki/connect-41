@@ -55,20 +55,20 @@ export async function criarHandoff(
     });
   } catch (err) {
     console.error("[criarHandoff]", err);
-    return { error: "Erro ao solicitar handoff. Tente novamente." };
+    return { error: "Erro ao solicitar transferência. Tente novamente." };
   }
 
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
   await notifySector(toSector, {
     tenantId: ctx.tenantId,
     type: "HANDOFF_RECEIVED",
-    message: `Novo handoff de ${sectorLabels[fromSector] ?? fromSector} para "${entity.name}"`,
+    message: `Nova transferência de ${sectorLabels[fromSector] ?? fromSector} para "${entity.name}"`,
     entityType,
     entityId,
   });
 
-  revalidatePath("/handoffs");
-  redirect("/handoffs");
+  revalidatePath("/transferencias");
+  redirect("/transferencias");
 }
 
 export async function aceitarHandoff(id: string): Promise<void> {
@@ -94,12 +94,12 @@ export async function aceitarHandoff(id: string): Promise<void> {
   await notifyUser(handoff.requestedBy, {
     tenantId: ctx.tenantId,
     type: "HANDOFF_ACCEPTED",
-    message: `${sectorLabels[handoff.toSector] ?? handoff.toSector} aceitou seu handoff`,
+    message: `${sectorLabels[handoff.toSector] ?? handoff.toSector} aceitou sua transferência`,
     entityType: handoff.entityType,
     entityId: handoff.entityId,
   });
 
-  revalidatePath("/handoffs");
+  revalidatePath("/transferencias");
 }
 
 export async function rejeitarHandoff(id: string): Promise<void> {
@@ -125,10 +125,10 @@ export async function rejeitarHandoff(id: string): Promise<void> {
   await notifyUser(handoff.requestedBy, {
     tenantId: ctx.tenantId,
     type: "HANDOFF_REJECTED",
-    message: `${sectorLabels[handoff.toSector] ?? handoff.toSector} rejeitou seu handoff`,
+    message: `${sectorLabels[handoff.toSector] ?? handoff.toSector} rejeitou sua transferência`,
     entityType: handoff.entityType,
     entityId: handoff.entityId,
   });
 
-  revalidatePath("/handoffs");
+  revalidatePath("/transferencias");
 }

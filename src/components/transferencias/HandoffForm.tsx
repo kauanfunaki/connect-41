@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
-import type { HandoffState } from "@/app/(app)/handoffs/actions";
+import type { HandoffState } from "@/app/(app)/transferencias/actions";
 import type { EntityType } from "@/generated/prisma/enums";
 
 type EntityOption = { id: string; name: string };

@@ -7,12 +7,12 @@ type Props = {
 
 export function HandoffActions({ aceitarAction, rejeitarAction }: Props) {
   async function handleAceitar() {
-    if (!confirm("Aceitar este handoff? A entidade passa a ser acompanhada pelo setor de destino.")) return;
+    if (!confirm("Aceitar esta transferência? A entidade passa a ser acompanhada pelo setor de destino.")) return;
     await aceitarAction();
   }
 
   async function handleRejeitar() {
-    if (!confirm("Rejeitar este handoff?")) return;
+    if (!confirm("Rejeitar esta transferência?")) return;
     await rejeitarAction();
   }
 

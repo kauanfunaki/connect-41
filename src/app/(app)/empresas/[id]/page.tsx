@@ -97,10 +97,10 @@ export default async function EmpresaPage({
         <div className="flex items-center gap-2 flex-shrink-0">
           {canRequestHandoff && (
             <Link
-              href={`/handoffs/novo?entityType=COMPANY&entityId=${id}`}
+              href={`/transferencias/novo?entityType=COMPANY&entityId=${id}`}
               className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
             >
-              Solicitar Handoff
+              Solicitar Transferência
             </Link>
           )}
           {canEdit && (

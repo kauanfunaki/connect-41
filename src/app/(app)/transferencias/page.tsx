@@ -3,7 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps } from "@/lib/sectors";
 import { getAuthContext, canManageSector, isFullWrite } from "@/lib/auth/context";
 import { scopedHandoffWhere } from "@/lib/auth/scope";
-import { HandoffActions } from "@/components/handoffs/HandoffActions";
+import { HandoffActions } from "@/components/transferencias/HandoffActions";
 import { aceitarHandoff, rejeitarHandoff } from "./actions";
 import type { HandoffStatus } from "@/generated/prisma/enums";
 
@@ -63,24 +63,24 @@ export default async function HandoffsPage({
   people.forEach((p) => (entityNames[p.id] = p.name));
 
   function buildUrl(newStatus: HandoffStatus) {
-    return `/handoffs?status=${newStatus}`;
+    return `/transferencias?status=${newStatus}`;
   }
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Handoffs</h1>
+          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Transferências</h1>
           <p className="text-[13px] text-fg-muted mt-0.5">
             Transferências de acompanhamento entre setores
           </p>
         </div>
         {canCreate && (
           <Link
-            href="/handoffs/novo"
+            href="/transferencias/novo"
             className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
           >
-            + Novo Handoff
+            + Nova Transferência
           </Link>
         )}
       </div>
@@ -107,7 +107,7 @@ export default async function HandoffsPage({
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {handoffs.length === 0 ? (
           <div className="py-16 text-center text-[13px] text-fg-muted">
-            Nenhum handoff {STATUS_LABEL[statusFilter].toLowerCase()} encontrado.
+            Nenhuma transferência {STATUS_LABEL[statusFilter].toLowerCase()} encontrada.
           </div>
         ) : (
           <div className="divide-y divide-border">

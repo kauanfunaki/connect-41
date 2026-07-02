@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { LogoutButton } from "@/components/shell/LogoutButton";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { NotificationBell } from "@/components/shell/NotificationBell";
+import { NavItem, SectorNavItem } from "@/components/shell/NavLink";
 import { getSectorMaps } from "@/lib/sectors";
 import { ROLE_LABELS } from "@/lib/roles";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -51,7 +51,7 @@ export default async function AppLayout({
           <NavItem href="/empresas" icon="🏢" label="Empresas" />
           <NavItem href="/pessoas" icon="👤" label="Pessoas" />
           <NavItem href="/kanban" icon="📋" label="Kanban" />
-          <NavItem href="/handoffs" icon="🔁" label="Handoffs" />
+          <NavItem href="/transferencias" icon="🔁" label="Transferências" />
 
           {visibleSectors.length > 0 && (
             <>
@@ -77,7 +77,6 @@ export default async function AppLayout({
               <NavItem href="/admin/usuarios" icon="🔐" label="Usuários" />
               <NavItem href="/admin/setores" icon="🏷️" label="Setores" />
               <NavItem href="/admin/modulos" icon="🧱" label="Módulos" />
-              <NavItem href="/admin/tenant" icon="🏛️" label="Empresa (Tenant)" />
             </>
           )}
 
@@ -128,48 +127,5 @@ export default async function AppLayout({
         </main>
       </div>
     </div>
-  );
-}
-
-function NavItem({
-  href,
-  icon,
-  label,
-}: {
-  href: string;
-  icon: string;
-  label: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-2.5 px-2 py-1.5 rounded-md text-[12px] font-medium text-fg-secondary hover:bg-surface-2 hover:text-fg transition-colors"
-    >
-      <span className="text-[14px] leading-none">{icon}</span>
-      {label}
-    </Link>
-  );
-}
-
-function SectorNavItem({
-  href,
-  label,
-  color,
-}: {
-  href: string;
-  label: string;
-  color: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-2.5 px-2 py-1.5 rounded-md text-[11px] text-fg-secondary hover:bg-surface-2 hover:text-fg transition-colors"
-    >
-      <span
-        className="w-2 h-2 rounded-full flex-shrink-0"
-        style={{ background: color }}
-      />
-      {label}
-    </Link>
   );
 }
