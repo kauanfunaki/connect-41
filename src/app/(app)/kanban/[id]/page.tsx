@@ -20,7 +20,13 @@ export default async function KanbanBoardPage({
     where: { id, ...scopedPipelineWhere(ctx) },
     include: {
       stages: { orderBy: { order: "asc" } },
-      items: { orderBy: { createdAt: "asc" } },
+      items: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          tags: { include: { tag: { select: { id: true, name: true, color: true } } } },
+          assignees: { include: { user: { select: { id: true, name: true } } } },
+        },
+      },
     },
   });
 
@@ -55,6 +61,8 @@ export default async function KanbanBoardPage({
     entityName: entityNames[i.entityId] ?? "(removido)",
     priority: i.priority,
     dueDate: i.dueDate ? i.dueDate.toISOString() : null,
+    tags: i.tags.map((t) => ({ id: t.tag.id, name: t.tag.name, color: t.tag.color })),
+    assignees: i.assignees.map((a) => ({ id: a.user.id, name: a.user.name })),
   }));
 
   return (
@@ -88,7 +96,7 @@ export default async function KanbanBoardPage({
       <div className="flex-1 min-h-0">
         <KanbanBoard
           pipelineId={id}
-          stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name, color: s.color }))}
+          stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name, color: s.color, isTerminal: s.isTerminal }))}
           items={items}
           moveAction={moverItem}
         />

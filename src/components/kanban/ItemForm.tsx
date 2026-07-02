@@ -6,16 +6,20 @@ import type { PipelineState } from "@/app/(app)/kanban/actions";
 import type { PipelineEntityType } from "@/generated/prisma/enums";
 
 type EntityOption = { id: string; name: string };
+type TagOption = { id: string; name: string; color: string };
+type UserOption = { id: string; name: string };
 
 type Props = {
   action: (prev: PipelineState, form: FormData) => Promise<PipelineState>;
   pipelineId: string;
   entityType: PipelineEntityType;
   entities: EntityOption[];
+  tags?: TagOption[];
+  sectorUsers?: UserOption[];
   cancelHref: string;
 };
 
-export function ItemForm({ action, pipelineId, entityType, entities, cancelHref }: Props) {
+export function ItemForm({ action, pipelineId, entityType, entities, tags = [], sectorUsers = [], cancelHref }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
 
   return (
@@ -50,6 +54,42 @@ export function ItemForm({ action, pipelineId, entityType, entities, cancelHref 
           </select>
         </Field>
       </div>
+
+      {tags.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[12px] font-medium text-fg">Tags</p>
+          <div className="flex flex-wrap gap-2">
+            {tags.map((t) => (
+              <label
+                key={t.id}
+                className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-border text-[12px] text-fg-secondary has-checked:border-transparent has-checked:text-fg transition-colors"
+                style={{ background: "transparent" }}
+              >
+                <input type="checkbox" name="tags" value={t.id} className="sr-only peer" />
+                <span
+                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                  style={{ background: t.color }}
+                />
+                {t.name}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {sectorUsers.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[12px] font-medium text-fg">Responsáveis</p>
+          <div className="flex flex-wrap gap-3">
+            {sectorUsers.map((u) => (
+              <label key={u.id} className="cursor-pointer inline-flex items-center gap-1.5 text-[12px] text-fg">
+                <input type="checkbox" name="assignees" value={u.id} className="w-3.5 h-3.5 rounded border-border" />
+                {u.name}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center gap-3 pt-2">
         <button

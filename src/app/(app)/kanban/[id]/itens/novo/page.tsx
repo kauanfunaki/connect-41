@@ -5,6 +5,7 @@ import { ItemForm } from "@/components/kanban/ItemForm";
 import { criarItem } from "../../../actions";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedPipelineWhere, scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
+import { getSectorUsers } from "@/lib/sectorUsers";
 
 export default async function NovoItemPage({
   params,
@@ -31,6 +32,15 @@ export default async function NovoItemPage({
           orderBy: { name: "asc" },
           select: { id: true, name: true },
         });
+
+  const [tags, sectorUsers] = await Promise.all([
+    prisma.tag.findMany({
+      where: { tenantId: ctx.tenantId, sectorCode: pipeline.sectorCode },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, color: true },
+    }),
+    getSectorUsers(ctx.tenantId, pipeline.sectorCode),
+  ]);
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
@@ -59,6 +69,8 @@ export default async function NovoItemPage({
           pipelineId={id}
           entityType={pipeline.entityType}
           entities={entities}
+          tags={tags}
+          sectorUsers={sectorUsers}
           cancelHref={`/kanban/${id}`}
         />
       </div>

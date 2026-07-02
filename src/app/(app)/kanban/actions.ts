@@ -80,6 +80,9 @@ export async function criarItem(
 
   if (!entityId) return { error: "Selecione uma empresa ou pessoa" };
 
+  const tagIds = form.getAll("tags") as string[];
+  const assigneeIds = form.getAll("assignees") as string[];
+
   const prisma = getPrisma();
 
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, ...scopedPipelineWhere(ctx) } });
@@ -104,6 +107,8 @@ export async function criarItem(
         entityId,
         dueDate: dueDateRaw ? new Date(dueDateRaw) : null,
         priority: priorityRaw ? parseInt(priorityRaw) : 0,
+        tags: tagIds.length > 0 ? { create: tagIds.map((tagId) => ({ tagId })) } : undefined,
+        assignees: assigneeIds.length > 0 ? { create: assigneeIds.map((userId) => ({ userId })) } : undefined,
       },
     });
   } catch (err) {
@@ -197,6 +202,113 @@ export async function adicionarNota(
 
   revalidatePath(`/kanban/${pipelineId}/itens/${itemId}`);
   return null;
+}
+
+export async function atualizarPrazoPrioridade(
+  pipelineId: string,
+  itemId: string,
+  _prev: PipelineState,
+  form: FormData
+): Promise<PipelineState> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  if (!tenantId) return { error: "Não autenticado" };
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) {
+    return { error: "Sem permissão para editar este item." };
+  }
+
+  const dueDateRaw = (form.get("dueDate") as string)?.trim();
+  const priorityRaw = (form.get("priority") as string)?.trim();
+
+  try {
+    await prisma.pipelineItem.update({
+      where: { id: itemId },
+      data: {
+        dueDate: dueDateRaw ? new Date(dueDateRaw) : null,
+        priority: priorityRaw ? parseInt(priorityRaw) : 0,
+      },
+    });
+  } catch (err) {
+    console.error("[atualizarPrazoPrioridade]", err);
+    return { error: "Erro ao atualizar prazo/prioridade." };
+  }
+
+  revalidatePath(`/kanban/${pipelineId}`);
+  revalidatePath(`/kanban/${pipelineId}/itens/${itemId}`);
+  return null;
+}
+
+export async function alternarTagItem(
+  pipelineId: string,
+  itemId: string,
+  tagId: string,
+  marcado: boolean
+): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  if (!tenantId) return;
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+
+  try {
+    if (marcado) {
+      await prisma.pipelineItemTag.upsert({
+        where: { pipelineItemId_tagId: { pipelineItemId: itemId, tagId } },
+        create: { pipelineItemId: itemId, tagId },
+        update: {},
+      });
+    } else {
+      await prisma.pipelineItemTag.delete({
+        where: { pipelineItemId_tagId: { pipelineItemId: itemId, tagId } },
+      });
+    }
+  } catch (err) {
+    console.error("[alternarTagItem]", err);
+    return;
+  }
+
+  revalidatePath(`/kanban/${pipelineId}`);
+  revalidatePath(`/kanban/${pipelineId}/itens/${itemId}`);
+}
+
+export async function alternarResponsavelItem(
+  pipelineId: string,
+  itemId: string,
+  userId: string,
+  marcado: boolean
+): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  if (!tenantId) return;
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+
+  try {
+    if (marcado) {
+      await prisma.pipelineItemAssignee.upsert({
+        where: { pipelineItemId_userId: { pipelineItemId: itemId, userId } },
+        create: { pipelineItemId: itemId, userId },
+        update: {},
+      });
+    } else {
+      await prisma.pipelineItemAssignee.delete({
+        where: { pipelineItemId_userId: { pipelineItemId: itemId, userId } },
+      });
+    }
+  } catch (err) {
+    console.error("[alternarResponsavelItem]", err);
+    return;
+  }
+
+  revalidatePath(`/kanban/${pipelineId}`);
+  revalidatePath(`/kanban/${pipelineId}/itens/${itemId}`);
 }
 
 export async function excluirItem(pipelineId: string, itemId: string): Promise<void> {

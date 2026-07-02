@@ -87,9 +87,15 @@ export default async function AppLayout({
                 Administração
               </p>
               <NavItem href="/admin/campos" icon="🧩" label="Campos Customizados" />
+              <NavItem href="/admin/tags" icon="🏷" label="Tags" />
             </>
           )}
-          {isAdmin && <NavItem href="/admin/campos" icon="🧩" label="Campos Customizados" />}
+          {isAdmin && (
+            <>
+              <NavItem href="/admin/campos" icon="🧩" label="Campos Customizados" />
+              <NavItem href="/admin/tags" icon="🏷" label="Tags" />
+            </>
+          )}
         </nav>
 
         {/* Footer: role + logout */}

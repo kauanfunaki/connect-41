@@ -93,6 +93,7 @@ model Tenant {
   customValues   CustomValue[]
   sectors        Sector[]
   tenantModules  TenantModule[]
+  tags           Tag[]
 
   @@map("tenants")
 }
@@ -150,9 +151,9 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  tenant        Tenant                 @relation(fields: [tenantId], references: [id])
   sectors       UserSector[]
-  pipelineItems PipelineItem[] @relation("AssignedItems")
+  assignedItems PipelineItemAssignee[]
   activities    Activity[]
   handoffs      Handoff[]
   notifications Notification[]
@@ -306,27 +307,69 @@ model PipelineStage {
 }
 
 model PipelineItem {
-  id             String             @id @default(uuid())
-  tenantId       String
-  pipelineId     String
-  stageId        String
-  entityType     PipelineEntityType
-  entityId       String             // Company.id ou Person.id (referência por string, sem FK Prisma — relação polimórfica)
-  assignedUserId String?
-  priority       Int                @default(0)
-  dueDate        DateTime?
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  id         String             @id @default(uuid())
+  tenantId   String
+  pipelineId String
+  stageId    String
+  entityType PipelineEntityType
+  entityId   String             // Company.id ou Person.id (referência por string, sem FK Prisma — relação polimórfica)
+  priority   Int                @default(0)
+  dueDate    DateTime?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
 
-  tenant       Tenant        @relation(fields: [tenantId], references: [id])
-  pipeline     Pipeline      @relation(fields: [pipelineId], references: [id])
-  stage        PipelineStage @relation(fields: [stageId], references: [id])
-  assignedUser User?         @relation("AssignedItems", fields: [assignedUserId], references: [id])
-  activities   Activity[]
+  tenant     Tenant                 @relation(fields: [tenantId], references: [id])
+  pipeline   Pipeline               @relation(fields: [pipelineId], references: [id])
+  stage      PipelineStage          @relation(fields: [stageId], references: [id])
+  activities Activity[]
+  assignees  PipelineItemAssignee[]
+  tags       PipelineItemTag[]
 
   @@index([tenantId, pipelineId])
   @@index([tenantId, entityType, entityId])
   @@map("pipeline_items")
+}
+
+// Responsáveis internos de um item — N:N (substitui o antigo assignedUserId singular)
+model PipelineItemAssignee {
+  pipelineItemId String
+  userId         String
+  createdAt      DateTime @default(now())
+
+  pipelineItem PipelineItem @relation(fields: [pipelineItemId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([pipelineItemId, userId])
+  @@map("pipeline_item_assignees")
+}
+
+// Catálogo de tags por setor — reaproveitável entre todos os kanbans do mesmo setor
+model Tag {
+  id         String   @id @default(uuid())
+  tenantId   String
+  sectorCode String   @db.VarChar(40)
+  name       String   @db.VarChar(60)
+  color      String   @default("#586577") @db.VarChar(7)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenant Tenant            @relation(fields: [tenantId], references: [id])
+  items  PipelineItemTag[]
+
+  @@unique([tenantId, sectorCode, name])
+  @@index([tenantId, sectorCode])
+  @@map("tags")
+}
+
+model PipelineItemTag {
+  pipelineItemId String
+  tagId          String
+
+  pipelineItem PipelineItem @relation(fields: [pipelineItemId], references: [id], onDelete: Cascade)
+  tag          Tag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([pipelineItemId, tagId])
+  @@map("pipeline_item_tags")
 }
 
 // ─── Atividades (timeline) ────────────────────────────────────────────────────
