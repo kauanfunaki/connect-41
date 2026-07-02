@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(await file.arrayBuffer());
   await writeFile(path.join(dir, filename), buffer);
 
-  const photoUrl = `/uploads/avatars/${filename}?v=${Date.now()}`;
+  const photoUrl = `/api/avatars/${filename}?v=${Date.now()}`;
   const prisma = getPrisma();
   await prisma.user.update({ where: { id: ctx.userId }, data: { photoUrl } });
 
