@@ -1,0 +1,23 @@
+{
+  "projectId": "12d5b9b3-56b1-4c49-bdd1-11a289a323a5",
+  "shape": "package",
+  "pkg": "connect-41",
+  "globalName": "Connect41",
+  "cssEntry": ".design-sync/.cache/compiled-globals.css",
+  "tsconfig": "tsconfig.json",
+  "srcDir": "src/components",
+  "componentSrcMap": {
+    "NotificationItem": null
+  },
+  "libOverrides": {
+    "source-kit.mjs": "NotificationItem.tsx value-imports a real Next.js server action (marcarNotificacaoLida) that transitively pulls in @prisma/client + mariadb driver; upstream only applies componentSrcMap:null to the post-hoc component list, not the synth entry file list, so the excluded file still broke the bundle. Fork excludes componentSrcMap:null files at entry-synthesis time too. Also disambiguates same-name export collisions across files (see DeleteButton in NOTES.md) and injects the MockRouterProvider export into the synth entry directly, since cfg.extraEntries' workspaceRoot bound is broken by the external --node-modules staging this repo requires (see NOTES.md).",
+    "bundle.mjs": "Real next/link + next/navigation runtime code gets bundled (not just types), which reads many process.env.__NEXT_* flags the upstream narrow 'process.env.NODE_ENV' define never matches; browsers have no process global at all, so every unmatched read threw ReferenceError and broke every preview. Fork broadens the define to a full process shim; the bundle header/manifest contract is untouched."
+  },
+  "overrides": {
+    "KanbanBoard": { "cardMode": "column" },
+    "AuthShell": { "cardMode": "single", "viewport": "1280x700" },
+    "BulkActionBar": { "cardMode": "single", "primaryStory": "Default" }
+  },
+  "provider": { "component": "MockRouterProvider" },
+  "readmeHeader": ".design-sync/conventions.md"
+}
