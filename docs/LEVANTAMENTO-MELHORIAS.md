@@ -201,7 +201,156 @@ Aplica-se a **todas as telas de lista** (Empresas, Pessoas, Kanban visão-lista 
 
 ---
 
+## Empresas — cadastro e tela inicial
+
+> Mapeamento puro — nada implementado ainda. Registrado a partir dos pontos trazidos por você em 02/07/2026.
+
+### 1. Campo "ID" da empresa (ID do domínio/Acessorias)
+- Hoje não existe nenhum campo de ID externo em `Company` — só o `id` interno (uuid), que não é visível/editável.
+- Pedido: um campo **"ID"** visível tanto no formulário de cadastro quanto na listagem de Empresas, que é sempre o mesmo ID usado no sistema de domínio (a julgar pelo contexto, o Acessorias).
+- **Precisa de confirmação:** esse ID é sempre numérico/alfanumérico fixo vindo de fora (você digita manualmente o ID que já existe no Acessorias) ou o Connect 41 deveria gerar algo e sincronizar pro Acessorias? Pelo que você descreveu, parece ser **só um campo de referência manual** (você cola o ID que já existe lá) — a confirmar.
+- Schema: campo novo `Company.externalId` (string, opcional, provavelmente com índice pra busca rápida).
+
+### 2. Data de abertura da empresa
+- Não existe hoje. Pedido: campo de **data de abertura da empresa**, relacionado à Inscrição Municipal (você mencionou os dois juntos duas vezes, parece ser algo que sempre preenche junto).
+- **UF já existe** no cadastro hoje (`stateCode`, na seção Endereço) — se o pedido for ter a UF junto da Inscrição Municipal/Fiscal (seção "Dados Fiscais", que hoje só tem Inscrição Estadual/Municipal/NIRE), é reposicionar campo existente, não criar novo.
+- Schema: campo novo `Company.foundationDate` (Date, opcional).
+
+### 3. Área de contatos — múltiplos, incluindo pessoas da 41
+- Hoje `Company` só tem `email` e `phone` simples (1 de cada).
+- Pedido: uma seção de **contatos múltiplos**, misturando:
+  - Contatos do cliente (telefone/e-mail de quem responde na empresa).
+  - Contatos internos da 41 responsáveis por aquela empresa (ex: "Tati" aparece em todas, "Amanda" quando é BPO).
+- Isso é estruturalmente diferente do campo simples — precisa de uma **tabela nova** (`CompanyContact` ou similar): nome, tipo (cliente / interno 41), cargo/papel, telefone, e-mail, e talvez vínculo com `User` quando for alguém da 41 (pra não digitar o nome à mão toda vez).
+- **Precisa de confirmação:** contatos internos da 41 são sempre os mesmos poucos nomes (Tati, Amanda...) — vale um catálogo pré-cadastrado (tipo Tags/Setores) pra só marcar quem é responsável, em vez de digitar nome toda vez?
+
+### 4. Campo "Responsáveis pelos departamentos"
+- Pedido: saber quem da 41 é responsável por cada **setor/serviço** que aquela empresa contratou (ex: quem responde pelo Fiscal daquela empresa, quem responde pelo DP).
+- Isso conecta direto com `CompanyService` (já existe: qual setor uma empresa contratou) — provavelmente é um campo de responsável (`User`) dentro de cada `CompanyService`, não um campo solto em `Company`.
+- **Se sobrepõe com o item 3** (contatos internos) — pode ser a mesma solução: um responsável por serviço/setor é um tipo específico de "contato interno".
+
+### 5. Tela inicial de Empresas — repensar coluna "E-mail"
+- Você notou que a coluna "E-mail" na listagem não é muito útil, já que várias empresas têm mais de um e-mail de contato.
+- **Decorre direto do item 3** — assim que existir contato múltiplo, a coluna da listagem provavelmente troca de "e-mail único" pra algo como "contato principal" ou some, sobrando só no detalhe da empresa.
+
+### 6. Tela inicial de Empresas — mostrar Regime Tributário e Tags
+- Hoje Regime Tributário só aparece dentro do cadastro/detalhe da empresa, não na listagem.
+- Pedido: mostrar na tela inicial (lista) o **Regime Tributário** e, abaixo dele, as **Tags** (as mesmas tags coloridas por setor criadas na Fase H para o Kanban, aplicadas aqui em Empresas — ou um conceito de tag próprio de Empresas, a confirmar).
+- **Precisa de confirmação:** as "tags" mencionadas aqui são as mesmas do catálogo de Tags do Kanban (Fase H) reaproveitadas em Empresas, ou é um conceito de tag diferente, específico de Empresas?
+
+---
+
+## DP/RH/Recrutamento/Gestão — processos trazidos por você (mapeamento bruto)
+
+> Colado por você em 03/07/2026, registrado aqui como está — **nada avaliado ou implementado
+> ainda**. São processos/checklists de trabalho real do setor, não telas prontas. Cada bloco
+> abaixo é candidato a virar um **módulo plugável** dentro da fundação de Módulos já existente
+> no Connect 41 (`TenantModule` + `MODULE_CATALOG`, o mesmo mecanismo do módulo de
+> Recrutamento) — a maioria não tem equivalente hoje no schema (`Pipeline`/`PipelineItem`
+> genéricos não cobrem os campos específicos desses fluxos: ASO, verbas rescisórias, período
+> aquisitivo de férias, faixas salariais etc.), então cada um provavelmente exige model novo
+> próprio quando for priorizado.
+
+### 1. Admissão e Controle de Exames Admissionais
+**Setor sugerido:** DP/RH
+- Solicitação e acompanhamento dos exames admissionais
+- Encaminhamento do candidato para clínica ocupacional
+- Controle de realização e prazo de entrega do ASO
+- Conferência do ASO admissional e status de aptidão
+- Controle de pendências documentais antes do início do colaborador
+- Organização dos documentos admissionais em arquivo físico ou digital
+- Interface com clínica, contabilidade ou departamento pessoal
+
+**Nota:** conecta com o fluxo de Recrutamento (candidato aprovado → vira admissão) — avaliar se
+isso é a continuação natural do Pipeline de Recrutamento ou um módulo separado que recebe o
+candidato aprovado.
+
+### 2. Conferência de RCT e Rescisões
+**Setor sugerido:** DP/RH
+- Conferência do Termo de Rescisão do Contrato de Trabalho
+- Análise das verbas rescisórias: saldo de salário, férias, 13º e aviso prévio
+- Conferência de férias vencidas, proporcionais e 1/3 constitucional
+- Validação de descontos, faltas, atrasos e apontamentos
+- Conferência de médias de horas extras, adicionais, comissões ou variáveis
+- Verificação de FGTS, multa rescisória e prazos legais, quando aplicável
+- Identificação de inconsistências e apoio na correção com a contabilidade
+- Organização dos documentos rescisórios e acompanhamento das pendências
+
+### 3. Gestão e Controle de Férias
+**Setor sugerido:** DP/RH
+- Controle de períodos aquisitivos e concessivos
+- Identificação de férias vencidas ou próximas do vencimento
+- Elaboração e atualização do calendário de férias
+- Programação de férias junto aos gestores e áreas envolvidas
+- Controle de férias individuais, coletivas e fracionadas, quando aplicável
+- Acompanhamento de prazos de aviso e pagamento
+- Conferência de recibos, datas de início, retorno e saldo
+- Envio de alertas periódicos para evitar passivos trabalhistas
+- Emissão de relatórios de status por colaborador, área ou gestor
+
+**Nota:** os "alertas periódicos" e "relatórios de status" aqui têm sobreposição direta com o
+item 6 (Indicadores e Relatórios de RH) — considerar desenhar como uma coisa só.
+
+### 4. Implantação de Cargos e Salários
+**Setor sugerido:** Gestão (ou DP/RH — a confirmar, é mais estratégico/estrutural que operacional)
+- Levantamento da estrutura organizacional atual
+- Mapeamento de áreas, setores, cargos existentes e funções exercidas
+- Padronização de nomenclaturas de cargos
+- Elaboração de descrições de cargo com missão, atividades e requisitos
+- Definição de responsabilidades, competências e níveis de senioridade
+- Organização de cargos por família, área ou hierarquia
+- Apoio na construção de faixas salariais e critérios de progressão
+- Identificação de distorções internas e oportunidades de ajuste
+- Criação de matriz simples de cargos e salários
+- Apoio na comunicação e implantação do modelo junto à liderança
+
+**Nota:** é o item mais distante do modelo atual do Connect 41 (não é um fluxo recorrente tipo
+Kanban, é um projeto de consultoria/estruturação) — provavelmente vira uma tela de cadastro/
+matriz própria, não um pipeline.
+
+### 5. Rotinas de Departamento Pessoal e Apoio Administrativo
+**Setor sugerido:** DP/RH
+- Conferência e organização de documentos dos colaboradores
+- Controle de contratos de experiência e prazos de vencimento
+- Acompanhamento de alterações cadastrais, promoções e transferências
+- Controle de afastamentos, atestados médicos e pendências
+- Apoio no envio de informações para folha de pagamento
+- Conferência de informações enviadas à contabilidade ou DP externo
+- Organização de arquivos digitais e controles internos
+- Apoio em comunicados internos e fluxos administrativos de RH
+
+**Nota:** é o bloco mais "guarda-chuva" — várias dessas rotinas (contratos de experiência com
+prazo de vencimento, afastamentos) parecem reaproveitáveis do mecanismo de `dueDate`/badge de
+atraso que já existe no Kanban (Fase H), aplicado a um Pipeline de "Colaborador ativo" em vez
+de "Candidato".
+
+### 6. Indicadores e Relatórios de RH
+**Setor sugerido:** Gestão (cross-cutting — puxa dado de DP/RH e Recrutamento)
+- Controle de admissões, desligamentos e movimentações internas
+- Acompanhamento de turnover e absenteísmo
+- Relatórios de vagas abertas, em andamento e encerradas
+- Relatórios de férias vencidas, programadas e pendentes
+- Relatórios de treinamentos realizados, vencidos e a vencer
+- Controle de pendências documentais e operacionais
+- Criação de dashboards simples em planilhas
+- Apresentação de pontos de atenção e recomendações para a gestão
+
+**Nota:** isso é essencialmente um dashboard analítico setorial — mesma família do "Projeto 2 —
+Dashboard analítico" que já está registrado como adiado em outro ponto do levantamento geral.
+Só faz sentido depois que os itens 1, 2, 3 e 5 existirem de verdade (não tem o que reportar
+antes de ter o dado).
+
+### Perguntas em aberto (antes de qualquer um destes virar fase)
+- [ ] Cada bloco acima vira um módulo/Pipeline próprio, ou dá pra agrupar mais de um numa tela
+      só (ex.: Admissão + Rotinas de DP num único módulo "Colaboradores")?
+- [ ] Existe ordem de prioridade entre os 6 blocos, ou entram todos na fila igual?
+- [ ] Item 4 (Cargos e Salários) — confirmar se é mesmo Gestão ou DP/RH.
+- [ ] Item 6 (Indicadores) — depende dos outros existirem primeiro; não priorizar isoladamente.
+
+---
+
 ## Próximos tópicos (aguardando)
-- [ ] Empresas
+- [x] Empresas (mapeado acima — itens 1 a 6, aguardando priorização e confirmações antes de entrar em fase; item "Apelido e-Contínuo" descartado a pedido seu em 02/07/2026)
+- [x] DP/RH/Recrutamento/Gestão — processos (mapeado acima em 6 blocos, 03/07/2026 — aguardando priorização e confirmações, nenhum ainda em fase)
 - [ ] Pessoas
 - [ ] (outros, conforme você for passando)
