@@ -120,21 +120,32 @@ need to be evaluated as *assembled screens*, not fragments. Two gaps fixed:
   mim", "Esqueceu a senha?", the submit button, and the "Solicitar acesso"
   footer link that the real `src/app/login/page.tsx` has. Rewrote it as a full
   composition (`Login` + `LoginComErro` variant) matching the real page.
-- No composed Shell existed at all — only loose `NavItem`/`SectorNavItem`/
-  `ProfileMenu`/`NotificationBell`/`ThemeToggle`/`WorkspaceSwitcher` previews,
-  and `GlobalSearch` (the topbar search — a core piece of this same priority
-  screen) had **no preview at all**. Added `GlobalSearch.tsx` (standalone) and
-  `AppShell.tsx` (full sidebar+topbar composed together, mirroring
-  `src/app/(app)/layout.tsx`) with stub tenants/sectors/notification data.
-  Registered `AppShell` in `cfg.overrides` with a `1280x800` viewport (same
-  pattern as `AuthShell`'s `1280x700`) since it's a full-width layout, not a
-  single component — the default card viewport would clip the 220px sidebar +
-  content area.
+- `GlobalSearch` (the topbar search — a core piece of the Shell screen) had
+  **no preview at all**. Added `GlobalSearch.tsx` (standalone) — graded good.
 
 **A re-sync must re-run the full build pipeline** (compile-css, bundle,
 Windows node_modules staging as documented above) to pick these up — editing
 just the `.tsx` preview source here does not by itself update what's live in
 the claude.ai/design project.
+
+## AppShell: dead end, removed (2026-07-04)
+
+An `AppShell.tsx` was authored composing `NavItem`/`SectorNavItem`/
+`WorkspaceSwitcher`/`ThemeToggle`/`GlobalSearch`/`NotificationBell`/
+`ProfileMenu` into a full sidebar+topbar screen mirroring
+`src/app/(app)/layout.tsx`, with a matching `cfg.overrides.AppShell` viewport
+entry. **This does nothing in the package shape**: `.design-sync/previews/<Name>.tsx`
+only binds to a component actually exported from `src/components` — there is
+no real `AppShell` export (the layout composes these pieces inline, it's
+never extracted into its own component), so the build logs `(stale preview:
+AppShell — component no longer exported)` and silently drops the file; the
+`cfg.overrides.AppShell` entry was equally inert (matches nothing). Removed
+both the preview file and the override entry. If a composed full-Shell card
+is wanted in the DS pane, the only way to get one is to first extract a real
+`AppShell` component into `src/components/shell/AppShell.tsx` (an actual
+source change to the app, not a design-sync-only change) — that's a decision
+for whoever owns `src/app/(app)/layout.tsx`, not something to redo silently
+on a future sync.
 
 ## Re-sync risks
 

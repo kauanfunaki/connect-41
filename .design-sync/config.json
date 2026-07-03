@@ -16,7 +16,6 @@
   "overrides": {
     "KanbanBoard": { "cardMode": "column" },
     "AuthShell": { "cardMode": "single", "viewport": "1280x700" },
-    "AppShell": { "cardMode": "single", "viewport": "1280x800" },
     "BulkActionBar": { "cardMode": "single", "primaryStory": "Default" }
   },
   "provider": { "component": "MockRouterProvider" },
