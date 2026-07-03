@@ -128,24 +128,31 @@ Windows node_modules staging as documented above) to pick these up — editing
 just the `.tsx` preview source here does not by itself update what's live in
 the claude.ai/design project.
 
-## AppShell: dead end, removed (2026-07-04)
+## AppShell: initially a dead end, then extracted for real (2026-07-04)
 
-An `AppShell.tsx` was authored composing `NavItem`/`SectorNavItem`/
+First attempt: an `AppShell.tsx` preview composed `NavItem`/`SectorNavItem`/
 `WorkspaceSwitcher`/`ThemeToggle`/`GlobalSearch`/`NotificationBell`/
 `ProfileMenu` into a full sidebar+topbar screen mirroring
 `src/app/(app)/layout.tsx`, with a matching `cfg.overrides.AppShell` viewport
-entry. **This does nothing in the package shape**: `.design-sync/previews/<Name>.tsx`
-only binds to a component actually exported from `src/components` — there is
-no real `AppShell` export (the layout composes these pieces inline, it's
-never extracted into its own component), so the build logs `(stale preview:
-AppShell — component no longer exported)` and silently drops the file; the
-`cfg.overrides.AppShell` entry was equally inert (matches nothing). Removed
-both the preview file and the override entry. If a composed full-Shell card
-is wanted in the DS pane, the only way to get one is to first extract a real
-`AppShell` component into `src/components/shell/AppShell.tsx` (an actual
-source change to the app, not a design-sync-only change) — that's a decision
-for whoever owns `src/app/(app)/layout.tsx`, not something to redo silently
-on a future sync.
+entry. That did nothing in the package shape: `.design-sync/previews/<Name>.tsx`
+only binds to a component actually exported from `src/components`, and there
+was no real `AppShell` export — the layout composed these pieces inline,
+never extracted into its own component — so the build silently dropped the
+file and the override was inert. Removed both.
+
+**Follow-up (same day):** extracted a real `src/components/shell/AppShell.tsx`
+— a pure presentational component (sidebar + topbar, all the pieces above,
+`children` slot for page content) taking every dynamic bit as props
+(`tenantId`, `accessibleTenants`, `sectors`, `canOpenAdmin`, `unreadCount`,
+`profileName`/`profileRoleLabel`/`profilePhotoUrl`). `src/app/(app)/layout.tsx`
+now only fetches data (auth context, prisma) and renders
+`<AppShell {...props}>{children}</AppShell>` — no visual JSX left inline
+there. Re-authored the `AppShell.tsx` preview importing the real component and
+re-added `cfg.overrides.AppShell` (`1280x800` viewport, same pattern as
+`AuthShell`'s `1280x700`). **A re-sync must re-run the full build pipeline**
+to pick this up — this is a real component now, so it should bind and render
+like any other, but it hasn't been graded by an actual re-sync run yet as of
+this note.
 
 ## Re-sync risks
 
