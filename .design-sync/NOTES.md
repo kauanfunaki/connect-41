@@ -110,6 +110,32 @@ pointed for synth-entry mode on Windows:
   entirely) — a re-sync on a fresh machine must recreate it before running
   the converter. See the `--node-modules` path in the build commands below.
 
+## Fidelity gaps closed (2026-07-04)
+
+The first sync only authored per-component previews — fine for isolated pieces,
+but the 3 screens actually prioritized for the redesign (Login, Shell, Kanban)
+need to be evaluated as *assembled screens*, not fragments. Two gaps fixed:
+
+- `AuthShell.tsx` preview was only the two input fields — missing "Lembrar de
+  mim", "Esqueceu a senha?", the submit button, and the "Solicitar acesso"
+  footer link that the real `src/app/login/page.tsx` has. Rewrote it as a full
+  composition (`Login` + `LoginComErro` variant) matching the real page.
+- No composed Shell existed at all — only loose `NavItem`/`SectorNavItem`/
+  `ProfileMenu`/`NotificationBell`/`ThemeToggle`/`WorkspaceSwitcher` previews,
+  and `GlobalSearch` (the topbar search — a core piece of this same priority
+  screen) had **no preview at all**. Added `GlobalSearch.tsx` (standalone) and
+  `AppShell.tsx` (full sidebar+topbar composed together, mirroring
+  `src/app/(app)/layout.tsx`) with stub tenants/sectors/notification data.
+  Registered `AppShell` in `cfg.overrides` with a `1280x800` viewport (same
+  pattern as `AuthShell`'s `1280x700`) since it's a full-width layout, not a
+  single component — the default card viewport would clip the 220px sidebar +
+  content area.
+
+**A re-sync must re-run the full build pipeline** (compile-css, bundle,
+Windows node_modules staging as documented above) to pick these up — editing
+just the `.tsx` preview source here does not by itself update what's live in
+the claude.ai/design project.
+
 ## Re-sync risks
 
 - The compiled CSS cache (`.design-sync/.cache/compiled-globals.css`) is
