@@ -204,6 +204,24 @@ export default async function EmpresaPage({
           >
             Departamentos
           </Link>
+          <Link
+            href={`/empresas/${id}/beneficios`}
+            className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
+          >
+            Benefícios
+          </Link>
+          <Link
+            href={`/empresas/${id}/turnos`}
+            className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
+          >
+            Turnos
+          </Link>
+          <Link
+            href={`/empresas/${id}/folha`}
+            className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
+          >
+            Folha de Pagamento
+          </Link>
         </div>
       </div>
 

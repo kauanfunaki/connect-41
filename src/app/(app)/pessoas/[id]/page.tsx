@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
+import { PersonType, PersonEmploymentStatus, TrainingParticipantStatus } from "@/generated/prisma/enums";
 import { excluirPessoa } from "../actions";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
 import { getAuthContext, canWrite, isFullWrite } from "@/lib/auth/context";
@@ -24,6 +24,15 @@ import { criarAfastamento, atualizarAfastamento, excluirAfastamento } from "./af
 import { AddDesligamentoForm } from "@/components/pessoas/AddDesligamentoForm";
 import { DesligamentoRow } from "@/components/pessoas/DesligamentoRow";
 import { criarDesligamento, atualizarDesligamento, excluirDesligamento } from "./desligamento/actions";
+import { AddHoraExtraForm } from "@/components/pessoas/AddHoraExtraForm";
+import { HoraExtraRow } from "@/components/pessoas/HoraExtraRow";
+import { criarHoraExtra, atualizarHoraExtra, excluirHoraExtra } from "./horas-extras/actions";
+import { AddBeneficioForm } from "@/components/pessoas/AddBeneficioForm";
+import { BeneficioRow } from "@/components/pessoas/BeneficioRow";
+import { vincularBeneficio, atualizarBeneficioAssignment, removerBeneficioAssignment } from "./beneficios/actions";
+import { AddEscalaForm } from "@/components/pessoas/AddEscalaForm";
+import { EscalaRow } from "@/components/pessoas/EscalaRow";
+import { criarEscala, atualizarEscala, excluirEscala } from "./escala/actions";
 
 const TYPE_LABEL: Record<PersonType, string> = {
   CANDIDATO:   "Candidato",
@@ -43,6 +52,16 @@ const STATUS_LABEL: Record<PersonEmploymentStatus, string> = {
   DESLIGADO:              "Desligado",
 };
 
+const TRAINING_STATUS_LABEL: Record<TrainingParticipantStatus, string> = {
+  PLANEJADO: "Planejado",
+  CONVOCADO: "Convocado",
+  REALIZADO: "Realizado",
+  AUSENTE:   "Ausente",
+  REPROVADO: "Reprovado",
+  CONCLUIDO: "Concluído",
+  VENCIDO:   "Vencido",
+};
+
 export default async function PessoaPage({
   params,
 }: {
@@ -54,7 +73,7 @@ export default async function PessoaPage({
   const canRequestHandoff = isFullWrite(ctx.role) || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.length > 0);
 
   const prisma = getPrisma();
-  const [person, canViewBank, canViewSalary, canViewMedical, documents, exames, salaryHistory, vacations, absences, terminations] = await Promise.all([
+  const [person, canViewBank, canViewSalary, canViewMedical, documents, exames, salaryHistory, vacations, absences, terminations, overtimeEntries, beneficios, escala, trainingParticipations, evaluations] = await Promise.all([
     prisma.person.findFirst({
       where: { id, ...(await scopedPersonWhere(ctx)) },
       include: {
@@ -76,6 +95,27 @@ export default async function PessoaPage({
     prisma.vacation.findMany({ where: { tenantId: ctx.tenantId, personId: id }, orderBy: { acquisitivePeriodStart: "desc" } }),
     prisma.absence.findMany({ where: { tenantId: ctx.tenantId, personId: id }, orderBy: { startDate: "desc" } }),
     prisma.termination.findMany({ where: { tenantId: ctx.tenantId, personId: id }, orderBy: { requestedAt: "desc" } }),
+    prisma.overtimeEntry.findMany({ where: { tenantId: ctx.tenantId, personId: id }, orderBy: { date: "desc" } }),
+    prisma.benefitAssignment.findMany({
+      where: { tenantId: ctx.tenantId, personId: id },
+      orderBy: { startDate: "desc" },
+      include: { benefit: { select: { name: true } } },
+    }),
+    prisma.scheduleEntry.findMany({
+      where: { tenantId: ctx.tenantId, personId: id },
+      orderBy: { date: "desc" },
+      include: { shift: { select: { name: true } } },
+    }),
+    prisma.trainingParticipant.findMany({
+      where: { tenantId: ctx.tenantId, personId: id },
+      orderBy: { createdAt: "desc" },
+      include: { class: { select: { id: true, date: true, training: { select: { id: true, name: true } } } } },
+    }),
+    prisma.evaluation.findMany({
+      where: { tenantId: ctx.tenantId, personId: id },
+      orderBy: { evaluationDate: "desc" },
+      include: { cycle: { select: { id: true, name: true } } },
+    }),
   ]);
 
   if (!person) notFound();
@@ -86,6 +126,23 @@ export default async function PessoaPage({
   const criarFeriasAction = criarFerias.bind(null, id);
   const criarAfastamentoAction = criarAfastamento.bind(null, id);
   const criarDesligamentoAction = criarDesligamento.bind(null, id);
+  const criarHoraExtraAction = criarHoraExtra.bind(null, id);
+  const vincularBeneficioAction = vincularBeneficio.bind(null, id);
+  const criarEscalaAction = criarEscala.bind(null, id);
+  const beneficiosDisponiveis = person.currentCompanyId
+    ? await prisma.benefitCatalog.findMany({
+        where: { tenantId: ctx.tenantId, companyId: person.currentCompanyId, active: true },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true },
+      })
+    : [];
+  const turnosDisponiveis = person.currentCompanyId
+    ? await prisma.workShift.findMany({
+        where: { tenantId: ctx.tenantId, companyId: person.currentCompanyId, active: true },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true },
+      })
+    : [];
   const cargosDaEmpresa = person.currentCompanyId
     ? await prisma.cargo.findMany({
         where: { tenantId: ctx.tenantId, companyId: person.currentCompanyId, active: true },
@@ -406,6 +463,157 @@ export default async function PessoaPage({
           {canEdit && terminations.every((t) => t.status === "CANCELADO") && (
             <AddDesligamentoForm action={criarDesligamentoAction} />
           )}
+        </div>
+      )}
+
+      {/* Desempenho */}
+      {person.type === "COLABORADOR" && evaluations.length > 0 && (
+        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+          <h2 className="text-[14px] font-semibold text-fg mb-3">
+            Avaliações de Desempenho ({evaluations.length})
+          </h2>
+          <div className="divide-y divide-border">
+            {evaluations.map((e) => (
+              <div key={e.id} className="py-2.5">
+                <div className="flex items-center justify-between">
+                  <Link href={`/avaliacoes/${e.cycle.id}/avaliar/${id}`} className="text-[13px] text-brand hover:underline">
+                    {e.cycle.name}
+                  </Link>
+                  <span className="text-[12px] text-fg-muted">
+                    {e.averageScore != null ? `Média: ${e.averageScore.toString()}` : "Sem nota"}
+                  </span>
+                </div>
+                {e.developmentPlan && (
+                  <p className="text-[12px] text-fg-muted mt-0.5">Plano: {e.developmentPlan}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Treinamentos */}
+      {person.type === "COLABORADOR" && trainingParticipations.length > 0 && (
+        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+          <h2 className="text-[14px] font-semibold text-fg mb-3">
+            Treinamentos ({trainingParticipations.length})
+          </h2>
+          <div className="divide-y divide-border">
+            {trainingParticipations.map((p) => (
+              <div key={p.id} className="flex items-center justify-between py-2.5">
+                <Link
+                  href={`/treinamentos/${p.class.training.id}/turmas/${p.class.id}`}
+                  className="text-[13px] text-brand hover:underline"
+                >
+                  {p.class.training.name} — {p.class.date.toLocaleDateString("pt-BR")}
+                </Link>
+                <span className="text-[12px] text-fg-muted">{TRAINING_STATUS_LABEL[p.status]}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Escala de Trabalho */}
+      {person.type === "COLABORADOR" && (
+        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+          <h2 className="text-[14px] font-semibold text-fg mb-3">
+            Escala de Trabalho {escala.length > 0 && `(${escala.length})`}
+          </h2>
+
+          {escala.length === 0 ? (
+            <p className="text-[13px] text-fg-muted mb-3">Nenhuma escala montada ainda.</p>
+          ) : (
+            <div>
+              {escala.map((e) => (
+                <EscalaRow
+                  key={e.id}
+                  escala={{
+                    id: e.id,
+                    dateLabel: e.date.toLocaleDateString("pt-BR"),
+                    shiftName: e.shift?.name ?? null,
+                    dayOff: e.dayOff,
+                    isHoliday: e.isHoliday,
+                    status: e.status,
+                  }}
+                  updateAction={atualizarEscala.bind(null, id, e.id)}
+                  removeAction={excluirEscala.bind(null, id, e.id)}
+                  canManage={canEdit}
+                />
+              ))}
+            </div>
+          )}
+
+          {canEdit && <AddEscalaForm action={criarEscalaAction} shifts={turnosDisponiveis} />}
+        </div>
+      )}
+
+      {/* Benefícios */}
+      {person.type === "COLABORADOR" && (
+        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+          <h2 className="text-[14px] font-semibold text-fg mb-3">
+            Benefícios {beneficios.length > 0 && `(${beneficios.length})`}
+          </h2>
+
+          {beneficios.length === 0 ? (
+            <p className="text-[13px] text-fg-muted mb-3">Nenhum benefício vinculado ainda.</p>
+          ) : (
+            <div>
+              {beneficios.map((b) => (
+                <BeneficioRow
+                  key={b.id}
+                  beneficio={{
+                    id: b.id,
+                    benefitName: b.benefit.name,
+                    status: b.status,
+                    companyValue: b.companyValue?.toString() ?? null,
+                    discountValue: b.discountValue?.toString() ?? null,
+                    startDateLabel: b.startDate.toLocaleDateString("pt-BR"),
+                    endDateLabel: b.endDate?.toLocaleDateString("pt-BR") ?? null,
+                  }}
+                  updateAction={atualizarBeneficioAssignment.bind(null, id, b.id)}
+                  removeAction={removerBeneficioAssignment.bind(null, id, b.id)}
+                  canManage={canEdit}
+                />
+              ))}
+            </div>
+          )}
+
+          {canEdit && <AddBeneficioForm action={vincularBeneficioAction} beneficios={beneficiosDisponiveis} />}
+        </div>
+      )}
+
+      {/* Horas Extras */}
+      {person.type === "COLABORADOR" && (
+        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+          <h2 className="text-[14px] font-semibold text-fg mb-3">
+            Horas Extras {overtimeEntries.length > 0 && `(${overtimeEntries.length})`}
+          </h2>
+
+          {overtimeEntries.length === 0 ? (
+            <p className="text-[13px] text-fg-muted mb-3">Nenhum lançamento de horas extras ainda.</p>
+          ) : (
+            <div>
+              {overtimeEntries.map((o) => (
+                <HoraExtraRow
+                  key={o.id}
+                  entry={{
+                    id: o.id,
+                    dateLabel: o.date.toLocaleDateString("pt-BR"),
+                    dayType: o.dayType,
+                    overtimeHours: o.overtimeHours?.toString() ?? null,
+                    status: o.status,
+                    justification: o.justification,
+                  }}
+                  updateAction={atualizarHoraExtra.bind(null, id, o.id)}
+                  removeAction={excluirHoraExtra.bind(null, id, o.id)}
+                  canManage={canEdit}
+                />
+              ))}
+            </div>
+          )}
+
+          {canEdit && <AddHoraExtraForm action={criarHoraExtraAction} />}
         </div>
       )}
 

@@ -35,6 +35,13 @@ export default async function AdminPage() {
     { href: "/admin/tags", icon: "🏷", title: "Tags", description: "Tags coloridas reaproveitáveis no Kanban" }
   );
 
+  if (isAdmin) {
+    cards.push(
+      { href: "/admin/feriados", icon: "📅", title: "Feriados", description: "Catálogo de feriados usado na Escala de Trabalho" },
+      { href: "/admin/competencias", icon: "🎯", title: "Competências", description: "Catálogo usado nas avaliações de desempenho" }
+    );
+  }
+
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="mb-6">

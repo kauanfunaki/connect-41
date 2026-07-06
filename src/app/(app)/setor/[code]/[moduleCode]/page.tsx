@@ -11,6 +11,11 @@ const MODULE_ROUTES: Record<string, string> = {
   dprh_ferias:        "/ferias",
   dprh_afastamentos:  "/afastamentos",
   dprh_desligamentos: "/desligamentos",
+  dprh_horas_extras:  "/horas-extras",
+  dprh_escalas:       "/escalas",
+  dprh_treinamentos:  "/treinamentos",
+  dprh_avaliacoes:    "/avaliacoes",
+  dprh_indicadores:   "/indicadores-rh",
 };
 
 export default async function SectorModulePage({

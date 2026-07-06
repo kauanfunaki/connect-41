@@ -46,6 +46,41 @@ export const MODULE_CATALOG: ModuleDef[] = [
     description: "Desligamentos em andamento e turnover",
     defaultEnabled: true,
   },
+  {
+    code: "dprh_horas_extras",
+    label: "Horas Extras",
+    sectorCode: "dprh",
+    description: "Lançamentos de horas extras pendentes de aprovação",
+    defaultEnabled: true,
+  },
+  {
+    code: "dprh_escalas",
+    label: "Escalas",
+    sectorCode: "dprh",
+    description: "Escala de trabalho dos próximos 30 dias",
+    defaultEnabled: true,
+  },
+  {
+    code: "dprh_treinamentos",
+    label: "Treinamentos",
+    sectorCode: "dprh",
+    description: "Catálogo de treinamentos, turmas e participantes",
+    defaultEnabled: true,
+  },
+  {
+    code: "dprh_avaliacoes",
+    label: "Avaliações de Desempenho",
+    sectorCode: "dprh",
+    description: "Ciclos de avaliação por competência",
+    defaultEnabled: true,
+  },
+  {
+    code: "dprh_indicadores",
+    label: "Indicadores de RH",
+    sectorCode: "dprh",
+    description: "Dashboard consolidado — headcount, turnover, absenteísmo, custo de folha e mais",
+    defaultEnabled: true,
+  },
 ];
 
 export function getModuleDef(code: string): ModuleDef | undefined {
