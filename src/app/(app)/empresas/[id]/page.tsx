@@ -188,6 +188,25 @@ export default async function EmpresaPage({
         </div>
       </div>
 
+      {/* RH/DP */}
+      <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+        <h2 className="text-[14px] font-semibold text-fg mb-3">RH/DP</h2>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/empresas/${id}/cargos`}
+            className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
+          >
+            Cargos
+          </Link>
+          <Link
+            href={`/empresas/${id}/departamentos`}
+            className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
+          >
+            Departamentos
+          </Link>
+        </div>
+      </div>
+
       {/* Serviços contratados */}
       <div className="bg-surface border border-border rounded-lg p-5 mb-4">
         <div className="flex items-center justify-between mb-3">

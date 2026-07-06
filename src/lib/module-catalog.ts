@@ -10,7 +10,43 @@ export type ModuleDef = {
   defaultEnabled: boolean;
 };
 
-export const MODULE_CATALOG: ModuleDef[] = [];
+export const MODULE_CATALOG: ModuleDef[] = [
+  {
+    code: "recrutamento_vagas",
+    label: "Vagas",
+    sectorCode: "recrutamento",
+    description: "Vagas e processo seletivo",
+    defaultEnabled: true,
+  },
+  {
+    code: "dprh_admissao",
+    label: "Admissões",
+    sectorCode: "dprh",
+    description: "Admissões em andamento e exames admissionais",
+    defaultEnabled: true,
+  },
+  {
+    code: "dprh_ferias",
+    label: "Férias",
+    sectorCode: "dprh",
+    description: "Controle de férias vencidas e a vencer",
+    defaultEnabled: true,
+  },
+  {
+    code: "dprh_afastamentos",
+    label: "Afastamentos",
+    sectorCode: "dprh",
+    description: "Afastamentos e atestados ativos",
+    defaultEnabled: true,
+  },
+  {
+    code: "dprh_desligamentos",
+    label: "Desligamentos",
+    sectorCode: "dprh",
+    description: "Desligamentos em andamento e turnover",
+    defaultEnabled: true,
+  },
+];
 
 export function getModuleDef(code: string): ModuleDef | undefined {
   return MODULE_CATALOG.find((m) => m.code === code);

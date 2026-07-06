@@ -69,6 +69,121 @@ enum PipelineEntityType {
   PERSON
 }
 
+// ─── RH/DP + Recrutamento ──────────────────────────────────────────────────────
+
+enum PersonEmploymentStatus {
+  ATIVO
+  DESLIGADO
+  AFASTADO
+  EM_FERIAS
+  ADMISSAO_EM_ANDAMENTO
+}
+
+enum VagaStatus {
+  ABERTA
+  EM_ANDAMENTO
+  ENCERRADA
+  CANCELADA
+}
+
+enum VagaPrioridade {
+  BAIXA
+  MEDIA
+  ALTA
+}
+
+enum ProcessoSeletivoStatus {
+  EM_ANDAMENTO
+  APROVADO
+  REPROVADO
+  DESISTENTE
+  CONTRATADO
+  ENCERRADO
+}
+
+enum ExameAdmissionalStatus {
+  SOLICITADO
+  AGENDADO
+  REALIZADO
+  ASO_PENDENTE
+  ASO_APTO
+  ASO_INAPTO
+  ASO_APTO_COM_RESTRICAO
+}
+
+enum DocumentEntityType {
+  PERSON
+  COMPANY
+  VAGA
+  PIPELINE_ITEM
+}
+
+enum DocumentCategory {
+  ADMISSAO
+  ASO
+  CURRICULO
+  ATESTADO
+  CERTIFICADO
+  RECIBO
+  CONTRATO
+  OUTRO
+}
+
+enum SensitiveFieldGroup {
+  DADOS_BANCARIOS
+  DADOS_MEDICOS
+  SALARIO
+  DOCUMENTOS_PESSOAIS
+}
+
+enum VacationStatus {
+  PLANEJADA
+  SOLICITADA
+  EM_ANALISE
+  APROVADA
+  PROGRAMADA
+  EM_GOZO
+  CONCLUIDA
+  CANCELADA
+}
+
+enum AbsenceType {
+  FALTA
+  ATESTADO_PARCIAL
+  ATESTADO_INTEGRAL
+  LICENCA
+  AFASTAMENTO
+  RETORNO
+}
+
+enum AbsenceStatus {
+  LANCADO
+  EM_ANALISE
+  APROVADO
+  REPROVADO
+  AFASTADO
+  RETORNO_PREVISTO
+  CONCLUIDO
+}
+
+enum TerminationType {
+  VOLUNTARIO
+  INVOLUNTARIO
+  TERMINO_CONTRATO
+  EXPERIENCIA
+  JUSTA_CAUSA
+  SEM_JUSTA_CAUSA
+}
+
+enum TerminationStatus {
+  SOLICITADO
+  EM_CALCULO
+  DOCUMENTACAO_PENDENTE
+  ASSINATURA_PENDENTE
+  FINALIZADO
+  CANCELADO
+}
+
 // ─── Tenancy + Auth ──────────────────────────────────────────────────────────
 
 model Tenant {
@@ -96,6 +211,17 @@ model Tenant {
   tags           Tag[]
   branches       Branch[]
   accessGrants   UserTenantAccess[]
+  departments    Department[]
+  cargos         Cargo[]
+  vagas          Vaga[]
+  candidaturas   Candidatura[]
+  exames         ExameAdmissional[]
+  documents      Document[]
+  fieldPermissions FieldPermission[]
+  salaryChanges  SalaryChange[]
+  vacations      Vacation[]
+  absences       Absence[]
+  terminations   Termination[]
 
   @@map("tenants")
 }
@@ -196,6 +322,7 @@ model User {
   handoffs      Handoff[]
   notifications Notification[]
   tenantAccess  UserTenantAccess[]
+  uploadedDocuments Document[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -262,8 +389,11 @@ model Company {
   tenant   Tenant  @relation(fields: [tenantId], references: [id])
   branch   Branch? @relation(fields: [branchId], references: [id])
 
-  services  CompanyService[]
-  people    Person[]
+  services    CompanyService[]
+  people      Person[]
+  departments Department[]
+  cargos      Cargo[]
+  vagas       Vaga[]
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -303,9 +433,46 @@ model Person {
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
+  // ─── Dados trabalhistas (Núcleo de Colaboradores) ───────────────────────────
+  rg               String?                @db.VarChar(20)
+  pis              String?                @db.VarChar(20)
+  ctps             String?                @db.VarChar(20)
+  ctpsSerie        String?                @db.VarChar(10)
+  admissionDate    DateTime?
+  dismissalDate    DateTime?
+  employmentStatus PersonEmploymentStatus @default(ADMISSAO_EM_ANDAMENTO)
+  cargoId          String?
+  departmentId     String?
+  monthlyWorkHours Decimal?               @db.Decimal(6, 2)
+  weeklyWorkHours  Decimal?               @db.Decimal(5, 2)
+  workShift        String?                @db.VarChar(60)
+  currentSalary    Decimal?               @db.Decimal(12, 2)
+  bankName         String?                @db.VarChar(80)
+  bankAgency       String?                @db.VarChar(20)
+  bankAccount      String?                @db.VarChar(30)
+  bankAccountType  String?                @db.VarChar(20)
+  zipCode          String?                @db.VarChar(10)
+  addressStreet    String?                @db.VarChar(180)
+  addressNumber    String?                @db.VarChar(20)
+  addressComplement String?               @db.VarChar(80)
+  neighborhood     String?                @db.VarChar(80)
+  city             String?                @db.VarChar(80)
+  stateCode        String?                @db.VarChar(2)
+  education        String?                @db.VarChar(80)
+
   tenant         Tenant   @relation(fields: [tenantId], references: [id])
   currentCompany Company? @relation(fields: [currentCompanyId], references: [id])
+  cargo          Cargo?      @relation(fields: [cargoId], references: [id])
+  department     Department? @relation(fields: [departmentId], references: [id])
 
+  candidaturas Candidatura[]
+  exames       ExameAdmissional[]
+  salaryChanges SalaryChange[]
+  vacations     Vacation[]
+  absences      Absence[]
+  terminations  Termination[]
+
+  @@unique([tenantId, cpf])
   @@index([tenantId])
   @@index([tenantId, type])
   @@map("people")
@@ -366,6 +533,7 @@ model PipelineItem {
   activities Activity[]
   assignees  PipelineItemAssignee[]
   tags       PipelineItemTag[]
+  candidatura Candidatura?
 
   @@index([tenantId, pipelineId])
   @@index([tenantId, entityType, entityId])
@@ -473,6 +641,263 @@ model CustomValue {
   @@unique([customFieldId, entityId])
   @@index([tenantId, entityId])
   @@map("custom_values")
+}
+
+// ─── RH/DP + Recrutamento ──────────────────────────────────────────────────────
+
+// Departamento/Seção interna da empresa-cliente — diferente do Sector (setor de
+// atendimento da 41 Tech: Fiscal, DP, Recrutamento etc.).
+model Department {
+  id        String   @id @default(uuid())
+  tenantId  String
+  companyId String
+  name      String   @db.VarChar(120)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id])
+  company Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  people  Person[]
+
+  @@unique([companyId, name])
+  @@index([tenantId])
+  @@map("departments")
+}
+
+// Catálogo de cargos por empresa-cliente (não compartilhado entre empresas do tenant).
+model Cargo {
+  id                     String   @id @default(uuid())
+  tenantId               String
+  companyId              String
+  name                   String   @db.VarChar(120)
+  area                   String?  @db.VarChar(80)
+  description            String?  @db.Text
+  technicalRequirements  String?  @db.Text
+  behavioralRequirements String?  @db.Text
+  salaryRangeMin         Decimal? @db.Decimal(12, 2)
+  salaryRangeMid         Decimal? @db.Decimal(12, 2)
+  salaryRangeMax         Decimal? @db.Decimal(12, 2)
+  active                 Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id])
+  company Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vagas   Vaga[]
+  people  Person[]
+  salaryChanges SalaryChange[]
+
+  @@unique([companyId, name])
+  @@index([tenantId, companyId])
+  @@map("cargos")
+}
+
+model Vaga {
+  id                String         @id @default(uuid())
+  tenantId          String
+  companyId         String
+  cargoId           String?
+  sectorCode        String         @db.VarChar(40)
+  title             String         @db.VarChar(180)
+  quantity          Int            @default(1)
+  responsibleUserId String?
+  openedAt          DateTime       @default(now())
+  closedAt          DateTime?
+  status            VagaStatus     @default(ABERTA)
+  priority          VagaPrioridade @default(MEDIA)
+  notes             String?        @db.Text
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+  cargo   Cargo?  @relation(fields: [cargoId], references: [id])
+
+  candidaturas Candidatura[]
+
+  @@index([tenantId, sectorCode, status])
+  @@map("vagas")
+}
+
+// Liga um Person (candidato) a uma Vaga. O vínculo com PipelineItem é opcional —
+// nem toda candidatura precisa de um Kanban por trás, mas quando existe reaproveita
+// o motor de Pipeline/Tags/Timeline já pronto para a visualização em colunas.
+model Candidatura {
+  id               String                 @id @default(uuid())
+  tenantId         String
+  vagaId           String
+  personId         String
+  pipelineItemId   String?                @unique
+  origin           String?                @db.VarChar(80)
+  resumeUrl        String?                @db.VarChar(255)
+  status           ProcessoSeletivoStatus @default(EM_ANDAMENTO)
+  rejectionReason  String?                @db.Text
+  withdrawalReason String?                @db.Text
+  hiredAt          DateTime?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  vaga         Vaga          @relation(fields: [vagaId], references: [id])
+  person       Person        @relation(fields: [personId], references: [id])
+  pipelineItem PipelineItem? @relation(fields: [pipelineItemId], references: [id])
+  exames       ExameAdmissional[]
+
+  @@unique([vagaId, personId])
+  @@index([tenantId, vagaId])
+  @@map("candidaturas")
+}
+
+model ExameAdmissional {
+  id            String                 @id @default(uuid())
+  tenantId      String
+  personId      String
+  candidaturaId String?
+  clinicName    String?                @db.VarChar(120)
+  requestedAt   DateTime               @default(now())
+  scheduledAt   DateTime?
+  performedAt   DateTime?
+  asoDueDate    DateTime?
+  status        ExameAdmissionalStatus @default(SOLICITADO)
+  notes         String?                @db.Text
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  person      Person       @relation(fields: [personId], references: [id])
+  candidatura Candidatura? @relation(fields: [candidaturaId], references: [id])
+
+  @@index([tenantId, personId])
+  @@map("exames_admissionais")
+}
+
+// Mecanismo genérico de anexo, reaproveitável por qualquer entidade/módulo.
+model Document {
+  id           String             @id @default(uuid())
+  tenantId     String
+  entityType   DocumentEntityType
+  entityId     String
+  category     DocumentCategory
+  fileName     String             @db.VarChar(180)
+  fileUrl      String             @db.VarChar(255)
+  mimeType     String             @db.VarChar(100)
+  fileSize     Int
+  sensitive    Boolean            @default(false)
+  uploadedById String
+  createdAt    DateTime           @default(now())
+
+  tenant     Tenant @relation(fields: [tenantId], references: [id])
+  uploadedBy User   @relation(fields: [uploadedById], references: [id])
+
+  @@index([tenantId, entityType, entityId])
+  @@map("documents")
+}
+
+// Permissão de leitura por grupo de campo/documento sensível, por papel. Ausência
+// de linha = negado por padrão (diferente do TenantModule, aqui o default é fechado).
+model FieldPermission {
+  id         String              @id @default(uuid())
+  tenantId   String
+  role       UserRole
+  fieldGroup SensitiveFieldGroup
+  canView    Boolean             @default(false)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, role, fieldGroup])
+  @@map("field_permissions")
+}
+
+// Histórico salarial — reajustes e promoções do colaborador ao longo do tempo.
+model SalaryChange {
+  id             String   @id @default(uuid())
+  tenantId       String
+  personId       String
+  previousSalary Decimal? @db.Decimal(12, 2)
+  newSalary      Decimal  @db.Decimal(12, 2)
+  changePercent  Decimal? @db.Decimal(5, 2)
+  cargoId        String?  // preenchido quando o reajuste é uma promoção com troca de cargo
+  reason         String?  @db.Text
+  effectiveDate  DateTime
+  createdAt      DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  person Person @relation(fields: [personId], references: [id])
+  cargo  Cargo? @relation(fields: [cargoId], references: [id])
+
+  @@index([tenantId, personId])
+  @@map("salary_changes")
+}
+
+model Vacation {
+  id                     String         @id @default(uuid())
+  tenantId               String
+  personId               String
+  acquisitivePeriodStart DateTime
+  acquisitivePeriodEnd   DateTime
+  concessivePeriodStart  DateTime?
+  concessivePeriodEnd    DateTime?
+  startDate              DateTime?
+  returnDate             DateTime?
+  days                   Int            @default(30)
+  cashAllowance          Boolean        @default(false)
+  installment            Boolean        @default(false)
+  status                 VacationStatus @default(PLANEJADA)
+  notes                  String?        @db.Text
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  person Person @relation(fields: [personId], references: [id])
+
+  @@index([tenantId, personId])
+  @@map("vacations")
+}
+
+model Absence {
+  id           String        @id @default(uuid())
+  tenantId     String
+  personId     String
+  type         AbsenceType
+  startDate    DateTime
+  returnDate   DateTime?
+  lostDays     Int?
+  lostHours    Decimal?      @db.Decimal(6, 2)
+  reason       String?       @db.Text
+  shift        String?       @db.VarChar(60)
+  location     String?       @db.VarChar(120)
+  professional String?       @db.VarChar(120)
+  status       AbsenceStatus @default(LANCADO)
+  notes        String?       @db.Text
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  person Person @relation(fields: [personId], references: [id])
+
+  @@index([tenantId, personId])
+  @@map("absences")
+}
+
+model Termination {
+  id          String            @id @default(uuid())
+  tenantId    String
+  personId    String
+  type        TerminationType
+  reason      String?           @db.Text
+  status      TerminationStatus @default(SOLICITADO)
+  requestedAt DateTime          @default(now())
+  finalizedAt DateTime?
+  notes       String?           @db.Text
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  person Person @relation(fields: [personId], references: [id])
+
+  @@index([tenantId, personId])
+  @@map("terminations")
 }
 
 // ─── Cross-setor ──────────────────────────────────────────────────────────────

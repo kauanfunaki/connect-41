@@ -1,14 +1,22 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { PessoaState } from "@/app/(app)/pessoas/actions";
-import { PersonType } from "@/generated/prisma/enums";
+import { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
 import { CustomFieldsSection, type CustomFieldInput } from "@/components/shared/CustomFieldsSection";
 
 const TYPE_OPTIONS: { value: PersonType; label: string }[] = [
   { value: "CANDIDATO",    label: "Candidato" },
   { value: "COLABORADOR",  label: "Colaborador" },
+];
+
+const STATUS_OPTIONS: { value: PersonEmploymentStatus; label: string }[] = [
+  { value: "ADMISSAO_EM_ANDAMENTO", label: "Admissão em andamento" },
+  { value: "ATIVO",                 label: "Ativo" },
+  { value: "EM_FERIAS",             label: "Em férias" },
+  { value: "AFASTADO",              label: "Afastado" },
+  { value: "DESLIGADO",             label: "Desligado" },
 ];
 
 export type PessoaDefaultValues = {
@@ -20,20 +28,66 @@ export type PessoaDefaultValues = {
   birthDate?: string; // ISO date string YYYY-MM-DD
   type?: PersonType;
   currentCompanyId?: string;
+
+  rg?: string;
+  pis?: string;
+  ctps?: string;
+  ctpsSerie?: string;
+  education?: string;
+  admissionDate?: string;
+  dismissalDate?: string;
+  employmentStatus?: PersonEmploymentStatus;
+  cargoId?: string;
+  departmentId?: string;
+  monthlyWorkHours?: string;
+  weeklyWorkHours?: string;
+  workShift?: string;
+
+  zipCode?: string;
+  addressStreet?: string;
+  addressNumber?: string;
+  addressComplement?: string;
+  neighborhood?: string;
+  city?: string;
+  stateCode?: string;
+
+  bankName?: string;
+  bankAgency?: string;
+  bankAccount?: string;
+  bankAccountType?: string;
+  currentSalary?: string;
 };
 
 type CompanyOption = { id: string; name: string };
+type CargoOption = { id: string; name: string; companyId: string };
+type DepartmentOption = { id: string; name: string; companyId: string };
 
 type Props = {
   action: (prev: PessoaState, form: FormData) => Promise<PessoaState>;
   cancelHref: string;
   defaultValues?: PessoaDefaultValues;
   companies: CompanyOption[];
+  cargos: CargoOption[];
+  departments: DepartmentOption[];
+  canEditSensitive: boolean;
   customFields?: CustomFieldInput[];
 };
 
-export function PessoaForm({ action, cancelHref, defaultValues, companies, customFields = [] }: Props) {
+export function PessoaForm({
+  action,
+  cancelHref,
+  defaultValues,
+  companies,
+  cargos,
+  departments,
+  canEditSensitive,
+  customFields = [],
+}: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
+  const [companyId, setCompanyId] = useState(defaultValues?.currentCompanyId ?? "");
+
+  const cargosDaEmpresa = cargos.filter((c) => c.companyId === companyId);
+  const departamentosDaEmpresa = departments.filter((d) => d.companyId === companyId);
 
   return (
     <form action={formAction} className="space-y-6">
@@ -97,6 +151,27 @@ export function PessoaForm({ action, cancelHref, defaultValues, companies, custo
             />
           </Field>
         </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          <Field label="RG" htmlFor="rg">
+            <input id="rg" name="rg" type="text" defaultValue={defaultValues?.rg ?? ""} className={INPUT} />
+          </Field>
+          <Field label="PIS" htmlFor="pis">
+            <input id="pis" name="pis" type="text" defaultValue={defaultValues?.pis ?? ""} className={INPUT} />
+          </Field>
+          <Field label="Escolaridade" htmlFor="education">
+            <input id="education" name="education" type="text" defaultValue={defaultValues?.education ?? ""} className={INPUT} />
+          </Field>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="CTPS" htmlFor="ctps">
+            <input id="ctps" name="ctps" type="text" defaultValue={defaultValues?.ctps ?? ""} className={INPUT} />
+          </Field>
+          <Field label="CTPS Série" htmlFor="ctpsSerie">
+            <input id="ctpsSerie" name="ctpsSerie" type="text" defaultValue={defaultValues?.ctpsSerie ?? ""} className={INPUT} />
+          </Field>
+        </div>
       </Section>
 
       {/* ── Contato ───────────────────────────────────── */}
@@ -128,14 +203,44 @@ export function PessoaForm({ action, cancelHref, defaultValues, companies, custo
         </div>
       </Section>
 
+      {/* ── Endereço ──────────────────────────────────── */}
+      <Section title="Endereço">
+        <div className="grid grid-cols-3 gap-4">
+          <Field label="CEP" htmlFor="zipCode">
+            <input id="zipCode" name="zipCode" type="text" defaultValue={defaultValues?.zipCode ?? ""} className={INPUT} />
+          </Field>
+          <Field label="Logradouro" htmlFor="addressStreet">
+            <input id="addressStreet" name="addressStreet" type="text" defaultValue={defaultValues?.addressStreet ?? ""} className={INPUT} />
+          </Field>
+          <Field label="Número" htmlFor="addressNumber">
+            <input id="addressNumber" name="addressNumber" type="text" defaultValue={defaultValues?.addressNumber ?? ""} className={INPUT} />
+          </Field>
+        </div>
+        <div className="grid grid-cols-4 gap-4">
+          <Field label="Complemento" htmlFor="addressComplement">
+            <input id="addressComplement" name="addressComplement" type="text" defaultValue={defaultValues?.addressComplement ?? ""} className={INPUT} />
+          </Field>
+          <Field label="Bairro" htmlFor="neighborhood">
+            <input id="neighborhood" name="neighborhood" type="text" defaultValue={defaultValues?.neighborhood ?? ""} className={INPUT} />
+          </Field>
+          <Field label="Cidade" htmlFor="city">
+            <input id="city" name="city" type="text" defaultValue={defaultValues?.city ?? ""} className={INPUT} />
+          </Field>
+          <Field label="UF" htmlFor="stateCode">
+            <input id="stateCode" name="stateCode" type="text" maxLength={2} defaultValue={defaultValues?.stateCode ?? ""} className={INPUT} />
+          </Field>
+        </div>
+      </Section>
+
       {/* ── Vínculo ───────────────────────────────────── */}
       <Section title="Vínculo">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <Field label="Empresa atual" htmlFor="currentCompanyId">
             <select
               id="currentCompanyId"
               name="currentCompanyId"
-              defaultValue={defaultValues?.currentCompanyId ?? ""}
+              value={companyId}
+              onChange={(e) => setCompanyId(e.target.value)}
               className={INPUT}
             >
               <option value="">Nenhuma</option>
@@ -144,8 +249,100 @@ export function PessoaForm({ action, cancelHref, defaultValues, companies, custo
               ))}
             </select>
           </Field>
+          <Field label="Cargo" htmlFor="cargoId">
+            <select
+              id="cargoId"
+              name="cargoId"
+              defaultValue={defaultValues?.cargoId ?? ""}
+              disabled={!companyId}
+              className={INPUT}
+            >
+              <option value="">{companyId ? "Nenhum" : "Selecione uma empresa"}</option>
+              {cargosDaEmpresa.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Departamento" htmlFor="departmentId">
+            <select
+              id="departmentId"
+              name="departmentId"
+              defaultValue={defaultValues?.departmentId ?? ""}
+              disabled={!companyId}
+              className={INPUT}
+            >
+              <option value="">{companyId ? "Nenhum" : "Selecione uma empresa"}</option>
+              {departamentosDaEmpresa.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </Field>
         </div>
       </Section>
+
+      {/* ── Dados Trabalhistas ────────────────────────── */}
+      <Section title="Dados Trabalhistas">
+        <div className="grid grid-cols-3 gap-4">
+          <Field label="Status" htmlFor="employmentStatus">
+            <select
+              id="employmentStatus"
+              name="employmentStatus"
+              defaultValue={defaultValues?.employmentStatus ?? "ADMISSAO_EM_ANDAMENTO"}
+              className={INPUT}
+            >
+              {STATUS_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Data de Admissão" htmlFor="admissionDate">
+            <input id="admissionDate" name="admissionDate" type="date" defaultValue={defaultValues?.admissionDate ?? ""} className={INPUT} />
+          </Field>
+          <Field label="Data de Demissão" htmlFor="dismissalDate">
+            <input id="dismissalDate" name="dismissalDate" type="date" defaultValue={defaultValues?.dismissalDate ?? ""} className={INPUT} />
+          </Field>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <Field label="Jornada" htmlFor="workShift">
+            <input id="workShift" name="workShift" type="text" placeholder="ex: 08h-18h" defaultValue={defaultValues?.workShift ?? ""} className={INPUT} />
+          </Field>
+          <Field label="Carga Horária Semanal" htmlFor="weeklyWorkHours">
+            <input id="weeklyWorkHours" name="weeklyWorkHours" type="number" step="0.5" defaultValue={defaultValues?.weeklyWorkHours ?? ""} className={INPUT} />
+          </Field>
+          <Field label="Carga Horária Mensal" htmlFor="monthlyWorkHours">
+            <input id="monthlyWorkHours" name="monthlyWorkHours" type="number" step="0.5" defaultValue={defaultValues?.monthlyWorkHours ?? ""} className={INPUT} />
+          </Field>
+        </div>
+      </Section>
+
+      {/* ── Dados Bancários e Salário (sensível) ───────── */}
+      {canEditSensitive ? (
+        <Section title="Dados Bancários e Salário">
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Salário Atual" htmlFor="currentSalary">
+              <input id="currentSalary" name="currentSalary" type="number" step="0.01" defaultValue={defaultValues?.currentSalary ?? ""} className={INPUT} />
+            </Field>
+            <Field label="Banco" htmlFor="bankName">
+              <input id="bankName" name="bankName" type="text" defaultValue={defaultValues?.bankName ?? ""} className={INPUT} />
+            </Field>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <Field label="Agência" htmlFor="bankAgency">
+              <input id="bankAgency" name="bankAgency" type="text" defaultValue={defaultValues?.bankAgency ?? ""} className={INPUT} />
+            </Field>
+            <Field label="Conta" htmlFor="bankAccount">
+              <input id="bankAccount" name="bankAccount" type="text" defaultValue={defaultValues?.bankAccount ?? ""} className={INPUT} />
+            </Field>
+            <Field label="Tipo de Conta" htmlFor="bankAccountType">
+              <input id="bankAccountType" name="bankAccountType" type="text" defaultValue={defaultValues?.bankAccountType ?? ""} className={INPUT} />
+            </Field>
+          </div>
+        </Section>
+      ) : (
+        <p className="text-[12px] text-fg-muted italic">
+          Dados bancários e salário são sensíveis — seu papel não tem permissão para ver ou editar esses campos.
+        </p>
+      )}
 
       {/* Campos Adicionais (setoriais) */}
       <CustomFieldsSection fields={customFields} />
