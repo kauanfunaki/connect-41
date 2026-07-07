@@ -43,6 +43,9 @@ next-env.d.ts
 
 /src/generated/prisma
 
+# uploads privados (documentos anexados — servidos só via /api/documents/[id])
+/storage/
+
 # design-sync
 /.ds-sync/
 /ds-bundle/

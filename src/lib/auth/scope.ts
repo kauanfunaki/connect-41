@@ -18,6 +18,13 @@ export function scopedPipelineWhere(ctx: AuthContext) {
   return { tenantId: ctx.tenantId, sectorCode: { in: ctx.sectors } };
 }
 
+// Vaga é setor-scoped como Pipeline (mesmo campo sectorCode livre, sem FK).
+export function scopedVagaWhere(ctx: AuthContext) {
+  if (isFullAccess(ctx.role)) return { tenantId: ctx.tenantId };
+  if (ctx.sectors.length === 0) return { tenantId: ctx.tenantId, sectorCode: "__none__" };
+  return { tenantId: ctx.tenantId, sectorCode: { in: ctx.sectors } };
+}
+
 // Handoff já carrega fromSector/toSector explicitamente — o vínculo é direto,
 // sem precisar resolver via Pipeline/CompanyService como em Company/Person.
 export function scopedHandoffWhere(ctx: AuthContext) {
