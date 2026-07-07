@@ -1,20 +1,17 @@
 import Link from "next/link";
 import { getPrisma } from "@/lib/prisma";
-import { PersonType } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
-import { scopedPersonWhere } from "@/lib/auth/scope";
-import { PessoasTable } from "@/components/pessoas/PessoasTable";
-import { CompanyFilterSelect } from "@/components/shared/CompanyFilterSelect";
-import { inativarPessoasEmMassa } from "./actions";
+import { CandidatosTable } from "@/components/candidatos/CandidatosTable";
+import { inativarCandidatosEmMassa } from "./actions";
 
 const PER_PAGE = 20;
 
-export default async function PessoasPage({
+export default async function CandidatosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; companyId?: string; page?: string }>;
+  searchParams: Promise<{ search?: string; page?: string }>;
 }) {
-  const { search, companyId, page } = await searchParams;
+  const { search, page } = await searchParams;
   const ctx = await getAuthContext();
   const canCreate = canWrite(ctx.role);
 
@@ -22,63 +19,54 @@ export default async function PessoasPage({
   const pageNum = Math.max(1, parseInt(page ?? "1"));
 
   const where = {
-    ...(await scopedPersonWhere(ctx)),
-    type: PersonType.COLABORADOR,
+    tenantId: ctx.tenantId,
+    type: "CANDIDATO" as const,
     ...(search ? { name: { contains: search } } : {}),
-    ...(companyId ? { currentCompanyId: companyId } : {}),
   };
 
-  const [people, total, companies] = await Promise.all([
+  const [candidatos, total] = await Promise.all([
     prisma.person.findMany({
       where,
       orderBy: { createdAt: "desc" },
       skip: (pageNum - 1) * PER_PAGE,
       take: PER_PAGE,
-      include: { currentCompany: { select: { id: true, name: true } } },
+      include: { _count: { select: { candidaturas: true } } },
     }),
     prisma.person.count({ where }),
-    prisma.company.findMany({
-      where: { tenantId: ctx.tenantId, status: "ACTIVE" },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    }),
   ]);
 
   const totalPages = Math.ceil(total / PER_PAGE);
 
   function buildUrl(params: Record<string, string | undefined>) {
     const q = new URLSearchParams();
-    const merged = { search, companyId, page, ...params };
+    const merged = { search, page, ...params };
     for (const [k, v] of Object.entries(merged)) {
       if (v) q.set(k, v);
     }
-    return `/pessoas?${q.toString()}`;
+    return `/candidatos?${q.toString()}`;
   }
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Pessoas</h1>
+          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Candidatos</h1>
           <p className="text-[13px] text-fg-muted mt-0.5">
-            {total} colaborador{total !== 1 ? "es" : ""} cadastrado{total !== 1 ? "s" : ""}
+            {total} candidato{total !== 1 ? "s" : ""} no banco de talentos
           </p>
         </div>
         {canCreate && (
           <Link
-            href="/pessoas/nova"
+            href="/candidatos/nova"
             className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
           >
-            + Nova Pessoa
+            + Novo Candidato
           </Link>
         )}
       </div>
 
-      {/* Filters */}
       <div className="flex items-center gap-3 mb-4">
-        <form method="GET" action="/pessoas" className="flex-1 max-w-xs">
-          {companyId && <input type="hidden" name="companyId" value={companyId} />}
+        <form method="GET" action="/candidatos" className="flex-1 max-w-xs">
           <input
             name="search"
             defaultValue={search ?? ""}
@@ -86,41 +74,28 @@ export default async function PessoasPage({
             className="w-full h-8 px-3 rounded-md border border-border bg-canvas text-[13px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors"
           />
         </form>
-
-        <CompanyFilterSelect companies={companies} value={companyId ?? ""} />
-
-        {companyId && (
-          <Link href={buildUrl({ companyId: undefined, page: "1" })} className="text-[12px] text-fg-muted hover:text-fg">
-            Limpar
-          </Link>
-        )}
       </div>
 
-      {/* Table */}
-      {people.length === 0 ? (
+      {candidatos.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          {search || companyId
-            ? "Nenhuma pessoa encontrada com esses filtros."
-            : "Nenhuma pessoa cadastrada ainda."}
+          {search ? "Nenhum candidato encontrado com esse filtro." : "Nenhum candidato cadastrado ainda."}
         </div>
       ) : (
-        <PessoasTable
-          people={people.map((p) => ({
-            id: p.id,
-            name: p.name,
-            active: p.active,
-            cpf: p.cpf,
-            email: p.email,
-            companyName: p.currentCompany?.name ?? null,
-            companyId: p.currentCompany?.id ?? null,
-            createdAtLabel: p.createdAt.toLocaleDateString("pt-BR"),
+        <CandidatosTable
+          candidatos={candidatos.map((c) => ({
+            id: c.id,
+            name: c.name,
+            active: c.active,
+            cpf: c.cpf,
+            email: c.email,
+            candidaturasCount: c._count.candidaturas,
+            createdAtLabel: c.createdAt.toLocaleDateString("pt-BR"),
           }))}
           canCreate={canCreate}
-          inativarPessoasEmMassa={inativarPessoasEmMassa}
+          inativarCandidatosEmMassa={inativarCandidatosEmMassa}
         />
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-4">
           <span className="text-[12px] text-fg-muted">

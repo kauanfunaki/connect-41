@@ -3,13 +3,8 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { PessoaState } from "@/app/(app)/pessoas/actions";
-import { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
+import { PersonEmploymentStatus } from "@/generated/prisma/enums";
 import { CustomFieldsSection, type CustomFieldInput } from "@/components/shared/CustomFieldsSection";
-
-const TYPE_OPTIONS: { value: PersonType; label: string }[] = [
-  { value: "CANDIDATO",    label: "Candidato" },
-  { value: "COLABORADOR",  label: "Colaborador" },
-];
 
 const STATUS_OPTIONS: { value: PersonEmploymentStatus; label: string }[] = [
   { value: "ADMISSAO_EM_ANDAMENTO", label: "Admissão em andamento" },
@@ -26,7 +21,6 @@ export type PessoaDefaultValues = {
   email?: string;
   phone?: string;
   birthDate?: string; // ISO date string YYYY-MM-DD
-  type?: PersonType;
   currentCompanyId?: string;
 
   rg?: string;
@@ -115,21 +109,6 @@ export function PessoaForm({
               className={INPUT}
             />
           </Field>
-          <Field label="Tipo" htmlFor="type">
-            <select
-              id="type"
-              name="type"
-              defaultValue={defaultValues?.type ?? "CANDIDATO"}
-              className={INPUT}
-            >
-              {TYPE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </Field>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
           <Field label="CPF" htmlFor="cpf">
             <input
               id="cpf"
@@ -141,6 +120,9 @@ export function PessoaForm({
               className={INPUT}
             />
           </Field>
+        </div>
+
+        <div className="grid grid-cols-4 gap-4">
           <Field label="Data de Nascimento" htmlFor="birthDate">
             <input
               id="birthDate"
@@ -150,9 +132,6 @@ export function PessoaForm({
               className={INPUT}
             />
           </Field>
-        </div>
-
-        <div className="grid grid-cols-3 gap-4">
           <Field label="RG" htmlFor="rg">
             <input id="rg" name="rg" type="text" defaultValue={defaultValues?.rg ?? ""} className={INPUT} />
           </Field>

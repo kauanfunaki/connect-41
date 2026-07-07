@@ -7,6 +7,7 @@ import { getModuleDef } from "@/lib/module-catalog";
 // esta página só existe pra o link montado em /setor/[code] ter destino.
 const MODULE_ROUTES: Record<string, string> = {
   recrutamento_vagas: "/vagas",
+  recrutamento_candidatos: "/candidatos",
   dprh_admissao:      "/admissoes",
   dprh_ferias:        "/ferias",
   dprh_afastamentos:  "/afastamentos",

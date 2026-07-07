@@ -75,7 +75,7 @@ export default async function PessoaPage({
   const prisma = getPrisma();
   const [person, canViewBank, canViewSalary, canViewMedical, documents, exames, salaryHistory, vacations, absences, terminations, overtimeEntries, beneficios, escala, trainingParticipations, evaluations] = await Promise.all([
     prisma.person.findFirst({
-      where: { id, ...(await scopedPersonWhere(ctx)) },
+      where: { id, type: PersonType.COLABORADOR, ...(await scopedPersonWhere(ctx)) },
       include: {
         currentCompany: { select: { id: true, name: true } },
         cargo: { select: { id: true, name: true } },

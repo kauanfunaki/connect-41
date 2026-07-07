@@ -11,11 +11,11 @@ export async function GET(req: NextRequest) {
 
   const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
   if (q.length < 2) {
-    return NextResponse.json({ companies: [], people: [], pipelines: [] });
+    return NextResponse.json({ companies: [], people: [], candidatos: [], pipelines: [] });
   }
 
   const prisma = getPrisma();
-  const [companies, people, pipelines] = await Promise.all([
+  const [companies, people, candidatos, pipelines] = await Promise.all([
     prisma.company.findMany({
       where: { ...(await scopedCompanyWhere(ctx)), name: { contains: q } },
       orderBy: { name: "asc" },
@@ -23,7 +23,13 @@ export async function GET(req: NextRequest) {
       select: { id: true, name: true },
     }),
     prisma.person.findMany({
-      where: { ...(await scopedPersonWhere(ctx)), name: { contains: q } },
+      where: { ...(await scopedPersonWhere(ctx)), type: "COLABORADOR", name: { contains: q } },
+      orderBy: { name: "asc" },
+      take: LIMIT,
+      select: { id: true, name: true },
+    }),
+    prisma.person.findMany({
+      where: { ...(await scopedPersonWhere(ctx)), type: "CANDIDATO", name: { contains: q } },
       orderBy: { name: "asc" },
       take: LIMIT,
       select: { id: true, name: true },
@@ -36,5 +42,5 @@ export async function GET(req: NextRequest) {
     }),
   ]);
 
-  return NextResponse.json({ companies, people, pipelines });
+  return NextResponse.json({ companies, people, candidatos, pipelines });
 }
