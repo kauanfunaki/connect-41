@@ -1,4 +1,22 @@
 import Link from "next/link";
+import {
+  Home,
+  Building2,
+  Users,
+  Columns3,
+  ArrowRightLeft,
+  Settings,
+  Calculator,
+  ReceiptText,
+  UserRoundCog,
+  FileSignature,
+  WalletCards,
+  BriefcaseBusiness,
+  UserSearch,
+  ClipboardList,
+  ShieldCheck,
+  LayoutGrid,
+} from "lucide-react";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { NotificationBell } from "@/components/shell/NotificationBell";
 import { ProfileMenu } from "@/components/shell/ProfileMenu";
@@ -8,6 +26,21 @@ import { WorkspaceSwitcher } from "@/components/shell/WorkspaceSwitcher";
 
 type Tenant = { id: string; name: string };
 type Sector = { code: string; label: string; color: string };
+
+// Ícone linear por setor (identidade visual; cor do setor continua vindo do dot).
+const SECTOR_ICONS: Record<string, React.ReactNode> = {
+  tech: <Columns3 size={16} />,
+  dprh: <UserRoundCog size={16} />,
+  recrutamento: <UserSearch size={16} />,
+  societario: <FileSignature size={16} />,
+  financeiro: <WalletCards size={16} />,
+  fiscal: <ReceiptText size={16} />,
+  contabil: <Calculator size={16} />,
+  bpo: <ClipboardList size={16} />,
+  comercial: <BriefcaseBusiness size={16} />,
+  corretora: <ShieldCheck size={16} />,
+  gestao: <LayoutGrid size={16} />,
+};
 
 type Props = {
   tenantId: string;
@@ -55,11 +88,11 @@ export function AppShell({
           <p className="px-2 pb-1.5 text-[11px] font-medium text-fg-muted uppercase tracking-wider">
             Geral
           </p>
-          <NavItem href="/" icon="⊞" label="Início" />
-          <NavItem href="/empresas" icon="🏢" label="Empresas" />
-          <NavItem href="/pessoas" icon="👤" label="Pessoas" />
-          <NavItem href="/kanban" icon="📋" label="Kanban" />
-          <NavItem href="/transferencias" icon="🔁" label="Transferências" />
+          <NavItem href="/" icon={<Home size={16} />} label="Início" />
+          <NavItem href="/empresas" icon={<Building2 size={16} />} label="Empresas" />
+          <NavItem href="/pessoas" icon={<Users size={16} />} label="Pessoas" />
+          <NavItem href="/kanban" icon={<Columns3 size={16} />} label="Kanban" />
+          <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />
 
           {sectors.length > 0 && (
             <>
@@ -67,7 +100,13 @@ export function AppShell({
                 Meus Setores
               </p>
               {sectors.map((s) => (
-                <SectorNavItem key={s.code} href={`/setor/${s.code}`} label={s.label} color={s.color} />
+                <SectorNavItem
+                  key={s.code}
+                  href={`/setor/${s.code}`}
+                  label={s.label}
+                  color={s.color}
+                  icon={SECTOR_ICONS[s.code]}
+                />
               ))}
             </>
           )}
@@ -92,7 +131,7 @@ export function AppShell({
                 title="Administração"
                 className="w-7 h-7 inline-flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors"
               >
-                ⚙️
+                <Settings size={16} />
               </Link>
             )}
             <NotificationBell unreadCount={unreadCount} />

@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 type NavItemProps = {
   href: string;
-  icon: string;
+  icon: React.ReactNode;
   label: string;
 };
 
@@ -27,7 +27,7 @@ export function NavItem({ href, icon, label }: NavItemProps) {
           : "text-fg-secondary hover:bg-surface-2 hover:text-fg"
       }`}
     >
-      <span className="text-[14px] leading-none">{icon}</span>
+      <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>
       {label}
     </Link>
   );
@@ -37,9 +37,10 @@ type SectorNavItemProps = {
   href: string;
   label: string;
   color: string;
+  icon?: React.ReactNode;
 };
 
-export function SectorNavItem({ href, label, color }: SectorNavItemProps) {
+export function SectorNavItem({ href, label, color, icon }: SectorNavItemProps) {
   const pathname = usePathname();
   const active = isActivePath(pathname, href);
 
@@ -51,6 +52,7 @@ export function SectorNavItem({ href, label, color }: SectorNavItemProps) {
       }`}
     >
       <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
+      {icon && <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>}
       {label}
     </Link>
   );

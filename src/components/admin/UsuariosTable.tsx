@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
+import { StatusDot } from "@/components/shared/StatusDot";
 import { ToggleActiveButton } from "@/components/admin/ToggleActiveButton";
 
 type SectorTag = { code: string; label: string; color: string };
@@ -136,15 +137,10 @@ export function UsuariosTable({
                       </div>
                     </td>
                     <td className="px-4 py-2.5">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${
-                          u.active
-                            ? "bg-success/10 text-success border-success/25"
-                            : "bg-surface-2 text-fg-muted border-border"
-                        }`}
-                      >
-                        {u.active ? "Ativo" : "Inativo"}
-                      </span>
+                      <StatusDot
+                        color={u.active ? "var(--c41-success)" : "var(--c41-neutral-400)"}
+                        label={u.active ? "Ativo" : "Inativo"}
+                      />
                     </td>
                     <td className="px-4 py-2.5 text-right">
                       <div className="flex items-center justify-end gap-2">

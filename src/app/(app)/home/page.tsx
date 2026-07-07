@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { scopedCompanyWhere, scopedPersonWhere, scopedPipelineWhere, scopedHandoffWhere } from "@/lib/auth/scope";
@@ -77,7 +78,7 @@ export default async function HomePage() {
   people.forEach((p) => (entityNames[p.id] = p.name));
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <PageContainer>
       <div className="mb-6">
         <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">
           Início
@@ -87,15 +88,16 @@ export default async function HomePage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
-        <StatCard href="/empresas" label="Empresas" value={companyCount} />
-        <StatCard href="/pessoas" label="Pessoas" value={personCount} />
-        <StatCard href="/kanban" label="Kanban ativos" value={pipelineCount} />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <StatCard href="/empresas" label="Empresas" value={companyCount} delay={0} />
+        <StatCard href="/pessoas" label="Pessoas" value={personCount} delay={40} />
+        <StatCard href="/kanban" label="Kanban ativos" value={pipelineCount} delay={80} />
         <StatCard
           href="/transferencias?status=PENDING"
           label="Transferências pendentes"
           value={pendingHandoffs}
           highlight={pendingHandoffs > 0}
+          delay={120}
         />
       </div>
 
@@ -162,7 +164,7 @@ export default async function HomePage() {
             : "Você tem acesso a todos os setores do tenant."}
         </p>
       </div>
-    </div>
+    </PageContainer>
   );
 }
 
@@ -171,16 +173,19 @@ function StatCard({
   label,
   value,
   highlight,
+  delay = 0,
 }: {
   href: string;
   label: string;
   value: number;
   highlight?: boolean;
+  delay?: number;
 }) {
   return (
     <Link
       href={href}
-      className="bg-surface border border-border rounded-lg px-4 py-4 hover:border-border-strong transition-colors block"
+      style={{ animationDelay: `${delay}ms` }}
+      className="reveal-in bg-surface border border-border rounded-lg px-4 py-4 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform] block"
     >
       <p className="text-[12px] text-fg-muted mb-1">{label}</p>
       <p className={`text-[24px] font-semibold tnum leading-none mb-1 ${highlight ? "text-warning" : "text-fg"}`}>
