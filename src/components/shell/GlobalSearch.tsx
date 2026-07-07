@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Search } from "lucide-react";
 
 type SearchResults = {
   companies: { id: string; name: string }[];
@@ -51,9 +52,9 @@ export function GlobalSearch() {
   }
 
   return (
-    <div ref={rootRef} className="relative w-full max-w-[320px]">
-      <div className="flex items-center gap-2 h-8 px-3 rounded-md border border-border bg-canvas focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20 transition-colors">
-        <span className="text-fg-muted text-[13px] leading-none flex-shrink-0">⌕</span>
+    <div ref={rootRef} className="relative w-full max-w-[360px]">
+      <div className="flex items-center gap-2.5 h-[38px] px-3.5 rounded-[10px] border border-border bg-input-bg focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)] transition-colors">
+        <Search size={16} className="text-fg-muted flex-shrink-0" />
         <input
           type="text"
           value={query}
@@ -63,14 +64,14 @@ export function GlobalSearch() {
           }}
           onFocus={() => setOpen(true)}
           placeholder="Buscar empresas, pessoas, kanban…"
-          className="w-full h-full bg-transparent text-[12px] text-fg placeholder:text-fg-muted outline-none border-none"
+          className="w-full h-full bg-transparent text-[15px] text-fg placeholder:text-fg-muted outline-none border-none"
         />
       </div>
 
       {open && query.trim().length >= 2 && (
-        <div className="absolute left-0 top-[calc(100%+6px)] w-[320px] bg-surface border border-border rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.1)] py-1.5 z-20 max-h-[360px] overflow-y-auto">
+        <div className="scroll-y absolute left-0 top-[calc(100%+10px)] w-[360px] bg-surface-elevated border border-border-strong rounded-2xl shadow-[var(--c41-shadow-lg)] py-2 z-20 max-h-[360px] overflow-y-auto">
           {!hasResults ? (
-            <p className="px-3 py-2.5 text-[12px] text-fg-muted">Nenhum resultado para &quot;{query}&quot;.</p>
+            <p className="px-3.5 py-3 text-[13px] text-fg-muted">Nenhum resultado para &quot;{query}&quot;.</p>
           ) : (
             <>
               <ResultGroup
@@ -99,14 +100,14 @@ function ResultGroup({
 }) {
   if (items.length === 0) return null;
   return (
-    <div className="py-1">
-      <p className="px-3 pb-1 text-[10px] font-medium text-fg-muted uppercase tracking-wider">{label}</p>
+    <div className="py-1 px-1">
+      <p className="px-2.5 pb-1 text-[11px] font-semibold text-fg-muted uppercase tracking-wider">{label}</p>
       {items.map((item) => (
         <button
           key={item.id}
           type="button"
           onClick={() => onSelect(item.id)}
-          className="w-full text-left px-3 py-1.5 text-[12px] text-fg hover:bg-surface-2 transition-colors truncate"
+          className="w-full text-left px-2.5 py-2 rounded-lg text-[14px] text-fg hover:bg-surface-hover transition-colors truncate"
         >
           {item.name}
         </button>

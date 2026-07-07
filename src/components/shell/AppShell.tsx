@@ -71,12 +71,12 @@ export function AppShell({
   return (
     <div className="flex h-screen overflow-hidden bg-canvas">
       {/* ── Sidebar ── */}
-      <aside className="w-[220px] flex-shrink-0 flex flex-col border-r border-border bg-surface">
+      <aside className="w-[240px] flex-shrink-0 flex flex-col border-r border-border bg-sidebar-bg">
         {/* Logo */}
-        <div className="flex items-center justify-center gap-2 h-12 px-4 border-b border-border flex-shrink-0">
+        <div className="flex items-center gap-2.5 h-14 px-5 border-b border-border flex-shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/logo.png" alt="41 Tech" className="h-7 w-7 object-contain invert dark:invert-0" />
-          <span className="text-fg font-semibold text-[14px] tracking-[-0.01em]">
+          <span className="text-fg font-display font-semibold text-[16px] tracking-[-0.01em]">
             Connect 41
           </span>
         </div>
@@ -84,8 +84,8 @@ export function AppShell({
         <WorkspaceSwitcher tenants={accessibleTenants} currentTenantId={tenantId} />
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
-          <p className="px-2 pb-1.5 text-[11px] font-medium text-fg-muted uppercase tracking-wider">
+        <nav className="scroll-y flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+          <p className="px-2.5 pb-1.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wider">
             Geral
           </p>
           <NavItem href="/" icon={<Home size={16} />} label="Início" />
@@ -96,7 +96,7 @@ export function AppShell({
 
           {sectors.length > 0 && (
             <>
-              <p className="px-2 pt-4 pb-1.5 text-[11px] font-medium text-fg-muted uppercase tracking-wider">
+              <p className="px-2.5 pt-4 pb-1.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wider">
                 Meus Setores
               </p>
               {sectors.map((s) => (
@@ -113,7 +113,7 @@ export function AppShell({
         </nav>
 
         {/* Footer: tema */}
-        <div className="border-t border-border px-4 py-2.5 flex items-center flex-shrink-0">
+        <div className="border-t border-border px-4 py-3 flex items-center flex-shrink-0">
           <ThemeToggle />
         </div>
       </aside>
@@ -121,17 +121,17 @@ export function AppShell({
       {/* ── Main area ── */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Topbar */}
-        <header className="h-12 flex-shrink-0 flex items-center justify-between gap-4 border-b border-border bg-surface px-4">
+        <header className="h-[60px] flex-shrink-0 flex items-center justify-between gap-4 border-b border-border bg-topbar-bg px-6">
           <GlobalSearch />
 
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2.5 flex-shrink-0">
             {canOpenAdmin && (
               <Link
                 href="/admin"
                 title="Administração"
-                className="w-7 h-7 inline-flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors"
+                className="w-[38px] h-[38px] inline-flex items-center justify-center rounded-[10px] bg-surface-hover border border-border text-fg-secondary hover:text-fg hover:border-border-strong transition-colors"
               >
-                <Settings size={16} />
+                <Settings size={17} />
               </Link>
             )}
             <NotificationBell unreadCount={unreadCount} />
@@ -140,7 +140,7 @@ export function AppShell({
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="scroll-y flex-1 overflow-y-auto">
           {children}
         </main>
       </div>

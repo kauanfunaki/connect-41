@@ -76,23 +76,23 @@ export function UsuariosTable({
         {users.length === 0 ? (
           <div className="py-16 text-center text-[13px] text-fg-muted">Nenhum usuário cadastrado ainda.</div>
         ) : (
-          <table className="w-full text-[13px]">
+          <table className="w-full text-[length:var(--fs-body)]">
             <thead>
-              <tr className="border-b border-border bg-surface-2">
-                <th className="w-10 px-4 py-2.5">
+              <tr className="border-b border-border bg-table-header-bg">
+                <th className="w-10 px-4 py-3">
                   <input
                     type="checkbox"
                     checked={allSelected}
                     onChange={toggleAll}
-                    className="w-3.5 h-3.5 rounded border-border"
+                    className="c41-checkbox"
                   />
                 </th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Nome</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">E-mail</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Papel</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Setores</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Status</th>
-                <th className="px-4 py-2.5" />
+                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
+                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">E-mail</th>
+                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Papel</th>
+                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Setores</th>
+                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
@@ -100,26 +100,31 @@ export function UsuariosTable({
                 const isSelf = u.id === currentUserId;
                 const toggleAction = alternarAtivoUsuario.bind(null, u.id, !u.active);
                 return (
-                  <tr key={u.id} className="border-b border-border last:border-0 hover:bg-surface-2 transition-colors">
-                    <td className="px-4 py-2.5">
+                  <tr
+                    key={u.id}
+                    className={`border-b border-border last:border-0 transition-colors ${
+                      selected.has(u.id) ? "bg-selected-bg" : "hover:bg-surface-hover"
+                    }`}
+                  >
+                    <td className="px-4 py-3">
                       {!isSelf && (
                         <input
                           type="checkbox"
                           checked={selected.has(u.id)}
                           onChange={() => toggleOne(u.id)}
-                          className="w-3.5 h-3.5 rounded border-border"
+                          className="c41-checkbox"
                         />
                       )}
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-4 py-3">
                       <Link href={`/admin/usuarios/${u.id}/editar`} className="font-medium text-fg hover:text-brand transition-colors">
                         {u.name}
                       </Link>
-                      {isSelf && <span className="text-[11px] text-fg-muted ml-1.5">(você)</span>}
+                      {isSelf && <span className="text-[12px] text-fg-muted ml-1.5">(você)</span>}
                     </td>
-                    <td className="px-4 py-2.5 text-fg-muted">{u.email}</td>
-                    <td className="px-4 py-2.5 text-fg-muted">{u.roleLabel}</td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-4 py-3 text-fg-secondary">{u.email}</td>
+                    <td className="px-4 py-3 text-fg-secondary">{u.roleLabel}</td>
+                    <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
                         {u.sectors.length === 0 ? (
                           <span className="text-fg-muted">—</span>
@@ -127,7 +132,7 @@ export function UsuariosTable({
                           u.sectors.map((s) => (
                             <span
                               key={s.code}
-                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-surface-2 text-fg-secondary border border-border"
+                              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-medium bg-surface-hover text-fg-secondary border border-border"
                             >
                               <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: s.color }} />
                               {s.label}
@@ -136,15 +141,15 @@ export function UsuariosTable({
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-4 py-3">
                       <StatusDot
-                        color={u.active ? "var(--c41-success)" : "var(--c41-neutral-400)"}
+                        color={u.active ? "var(--c41-success)" : "var(--c41-fg-muted)"}
                         label={u.active ? "Ativo" : "Inativo"}
                       />
                     </td>
-                    <td className="px-4 py-2.5 text-right">
+                    <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Link href={`/admin/usuarios/${u.id}/editar`} className="text-[12px] text-fg-muted hover:text-fg transition-colors">
+                        <Link href={`/admin/usuarios/${u.id}/editar`} className="text-[13px] font-medium text-fg-muted hover:text-fg transition-colors">
                           Editar
                         </Link>
                         {!isSelf && <ToggleActiveButton action={toggleAction} ativo={u.active} nome={u.name} />}
@@ -162,14 +167,14 @@ export function UsuariosTable({
         <button
           type="button"
           onClick={() => applyToggle(true)}
-          className="h-8 px-3 rounded-md border border-success/30 text-[12px] font-medium text-success hover:bg-success/8 transition-colors"
+          className="h-8 px-3 rounded-md border border-success/30 text-[13px] font-semibold text-success hover:bg-success-bg transition-colors"
         >
           Ativar
         </button>
         <button
           type="button"
           onClick={() => applyToggle(false)}
-          className="h-8 px-3 rounded-md border border-danger/30 text-[12px] font-medium text-danger hover:bg-danger/8 transition-colors"
+          className="h-8 px-3 rounded-md border border-danger/30 text-[13px] font-semibold text-danger hover:bg-danger-bg transition-colors"
         >
           Desativar
         </button>
