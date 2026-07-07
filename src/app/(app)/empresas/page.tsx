@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { getPrisma } from "@/lib/prisma";
 import { CompanyStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -13,11 +14,11 @@ const STATUS_LABEL: Record<CompanyStatus, string> = {
   CHURNED:  "Cancelado",
 };
 
-const STATUS_STYLE: Record<CompanyStatus, string> = {
-  PROSPECT: "bg-warning/10 text-warning border-warning/25",
-  ACTIVE:   "bg-success/10 text-success border-success/25",
-  INACTIVE: "bg-surface-2 text-fg-muted border-border",
-  CHURNED:  "bg-danger/10 text-danger border-danger/25",
+const STATUS_COLOR: Record<CompanyStatus, string> = {
+  PROSPECT: "var(--c41-warning)",
+  ACTIVE:   "var(--c41-success)",
+  INACTIVE: "var(--c41-neutral-400)",
+  CHURNED:  "var(--c41-danger)",
 };
 
 const FILTER_TABS: { value: CompanyStatus; label: string }[] = [
@@ -73,7 +74,7 @@ export default async function EmpresasPage({
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <PageContainer>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -150,7 +151,7 @@ export default async function EmpresasPage({
           canCreate={canCreate}
           isSuperAdmin={isSuperAdmin}
           statusLabel={STATUS_LABEL}
-          statusStyle={STATUS_STYLE}
+          statusColor={STATUS_COLOR}
           atualizarStatusEmMassa={atualizarStatusEmMassa}
           excluirEmpresasEmMassa={excluirEmpresasEmMassa}
         />
@@ -182,6 +183,6 @@ export default async function EmpresasPage({
           </div>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

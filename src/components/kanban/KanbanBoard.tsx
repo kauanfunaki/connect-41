@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { StatusDot } from "@/components/shared/StatusDot";
 
 type Stage = { id: string; name: string; color: string | null; isTerminal?: boolean };
 type Tag = { id: string; name: string; color: string };
@@ -73,7 +74,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
               const itemId = e.dataTransfer.getData("text/plain");
               if (itemId) handleDrop(stage.id, itemId);
             }}
-            className={`flex-shrink-0 w-[268px] flex flex-col rounded-lg border transition-[border-color,background-color] duration-150 ${
+            className={`flex-1 min-w-[268px] max-w-[340px] flex flex-col rounded-lg border transition-[border-color,background-color] duration-150 ${
               isDragOver ? "border-brand/50 bg-brand/[0.04]" : "border-border bg-surface-2/30"
             }`}
           >
@@ -163,9 +164,11 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                             </span>
                           )}
                           {item.priority > 0 && (
-                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-warning/10 text-warning">
-                              {item.priority >= 2 ? "Urgente" : "Alta"}
-                            </span>
+                            <StatusDot
+                              color="var(--c41-warning)"
+                              label={item.priority >= 2 ? "Urgente" : "Alta"}
+                              className="text-[10px]"
+                            />
                           )}
                         </div>
 

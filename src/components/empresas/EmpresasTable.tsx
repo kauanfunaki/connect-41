@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
+import { StatusDot } from "@/components/shared/StatusDot";
 import type { CompanyStatus } from "@/generated/prisma/enums";
 
 type Row = {
@@ -19,7 +20,7 @@ type Props = {
   canCreate: boolean;
   isSuperAdmin: boolean;
   statusLabel: Record<CompanyStatus, string>;
-  statusStyle: Record<CompanyStatus, string>;
+  statusColor: Record<CompanyStatus, string>;
   atualizarStatusEmMassa: (ids: string[], status: CompanyStatus) => Promise<void>;
   excluirEmpresasEmMassa: (ids: string[]) => Promise<void>;
 };
@@ -36,7 +37,7 @@ export function EmpresasTable({
   canCreate,
   isSuperAdmin,
   statusLabel,
-  statusStyle,
+  statusColor,
   atualizarStatusEmMassa,
   excluirEmpresasEmMassa,
 }: Props) {
@@ -93,7 +94,7 @@ export function EmpresasTable({
                       type="checkbox"
                       checked={allSelected}
                       onChange={toggleAll}
-                      className="w-3.5 h-3.5 rounded border-border"
+                      className="c41-checkbox"
                     />
                   </th>
                 )}
@@ -109,7 +110,9 @@ export function EmpresasTable({
               {companies.map((c) => (
                 <tr
                   key={c.id}
-                  className="border-b border-border last:border-0 hover:bg-surface-2 transition-colors"
+                  className={`border-b border-border last:border-0 transition-colors ${
+                    selected.has(c.id) ? "bg-brand/[0.06] hover:bg-brand/[0.09]" : "hover:bg-surface-2"
+                  }`}
                 >
                   {canCreate && (
                     <td className="px-4 py-2.5">
@@ -117,7 +120,7 @@ export function EmpresasTable({
                         type="checkbox"
                         checked={selected.has(c.id)}
                         onChange={() => toggleOne(c.id)}
-                        className="w-3.5 h-3.5 rounded border-border"
+                        className="c41-checkbox"
                       />
                     </td>
                   )}
@@ -128,9 +131,7 @@ export function EmpresasTable({
                   </td>
                   <td className="px-4 py-2.5 text-fg-muted tnum">{c.cnpj ?? "—"}</td>
                   <td className="px-4 py-2.5">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${statusStyle[c.status]}`}>
-                      {statusLabel[c.status]}
-                    </span>
+                    <StatusDot color={statusColor[c.status]} label={statusLabel[c.status]} />
                   </td>
                   <td className="px-4 py-2.5 text-fg-muted">{c.email ?? "—"}</td>
                   <td className="px-4 py-2.5 text-fg-muted tnum">{c.createdAtLabel}</td>

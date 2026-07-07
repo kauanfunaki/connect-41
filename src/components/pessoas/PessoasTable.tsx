@@ -3,6 +3,11 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
+<<<<<<< HEAD
+=======
+import { StatusDot } from "@/components/shared/StatusDot";
+import type { PersonType } from "@/generated/prisma/enums";
+>>>>>>> dde4988a12f1e8fd524bc4d2daa474ab64d2706b
 
 type Row = {
   id: string;
@@ -64,7 +69,7 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
                       type="checkbox"
                       checked={allSelected}
                       onChange={toggleAll}
-                      className="w-3.5 h-3.5 rounded border-border"
+                      className="c41-checkbox"
                     />
                   </th>
                 )}
@@ -79,14 +84,19 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
             </thead>
             <tbody>
               {people.map((p) => (
-                <tr key={p.id} className="border-b border-border last:border-0 hover:bg-surface-2 transition-colors">
+                <tr
+                  key={p.id}
+                  className={`border-b border-border last:border-0 transition-colors ${
+                    selected.has(p.id) ? "bg-brand/[0.06] hover:bg-brand/[0.09]" : "hover:bg-surface-2"
+                  }`}
+                >
                   {canCreate && (
                     <td className="px-4 py-2.5">
                       <input
                         type="checkbox"
                         checked={selected.has(p.id)}
                         onChange={() => toggleOne(p.id)}
-                        className="w-3.5 h-3.5 rounded border-border"
+                        className="c41-checkbox"
                       />
                     </td>
                   )}
@@ -96,6 +106,7 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
                     </Link>
                   </td>
                   <td className="px-4 py-2.5">
+<<<<<<< HEAD
                     <span
                       className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${
                         p.active
@@ -105,6 +116,17 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
                     >
                       {p.active ? "Ativo" : "Inativo"}
                     </span>
+=======
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${typeStyle[p.type]}`}>
+                      {typeLabel[p.type]}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <StatusDot
+                      color={p.active ? "var(--c41-success)" : "var(--c41-neutral-400)"}
+                      label={p.active ? "Ativo" : "Inativo"}
+                    />
+>>>>>>> dde4988a12f1e8fd524bc4d2daa474ab64d2706b
                   </td>
                   <td className="px-4 py-2.5 text-fg-muted tnum">{p.cpf ?? "—"}</td>
                   <td className="px-4 py-2.5 text-fg-muted">{p.email ?? "—"}</td>

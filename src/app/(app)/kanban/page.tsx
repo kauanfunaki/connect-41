@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps } from "@/lib/sectors";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -22,7 +23,7 @@ export default async function KanbanListPage() {
   }, {});
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <PageContainer>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Kanban</h1>
@@ -58,11 +59,12 @@ export default async function KanbanListPage() {
                 </h2>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                {list.map((p) => (
+                {list.map((p, i) => (
                   <Link
                     key={p.id}
                     href={`/kanban/${p.id}`}
-                    className="bg-surface border border-border rounded-lg p-4 hover:border-border-strong transition-colors"
+                    style={{ animationDelay: `${Math.min(i, 8) * 35}ms` }}
+                    className="reveal-in bg-surface border border-border rounded-lg p-4 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform]"
                   >
                     <p className="text-[13px] font-medium text-fg mb-1">{p.name}</p>
                     <p className="text-[12px] text-fg-muted">
@@ -76,6 +78,6 @@ export default async function KanbanListPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

@@ -5,23 +5,24 @@
 
 /* ==========================================================================
    Connect 41 — Design Tokens (fonte da verdade)
+   Direção "Tinta & Verde" — dark-first, brand verde-lima (substitui o azul).
    Consuma via utilitários Tailwind (bg-canvas, text-fg, border-border, bg-brand…)
    ou diretamente pelas variáveis --c41-*. Troca claro/escuro automática.
    ========================================================================== */
 :root {
-  /* marca — Connect Blue (âncora 600 = #1A5FA8) */
-  --c41-brand-50:#EEF4FB; --c41-brand-100:#D6E6F6; --c41-brand-200:#AECCEC;
-  --c41-brand-300:#7FACDD; --c41-brand-400:#4F89CB; --c41-brand-500:#2E6FB8;
-  --c41-brand-600:#1A5FA8; --c41-brand-700:#154C87; --c41-brand-800:#123E6E; --c41-brand-900:#0E3056;
+  /* marca — verde-lima (âncora 600 = #4B7A3C) */
+  --c41-brand-50:#EEF6EA; --c41-brand-100:#D9EAD0; --c41-brand-200:#B7D9A6;
+  --c41-brand-300:#97C67E; --c41-brand-400:#7FB86B; --c41-brand-500:#5C9349;
+  --c41-brand-600:#4B7A3C; --c41-brand-700:#3B6030; --c41-brand-800:#2C4924; --c41-brand-900:#1D3117;
 
-  /* neutros — cool slate */
+  /* neutros — cool slate (ainda usados por estados neutros pontuais) */
   --c41-neutral-0:#FFFFFF; --c41-neutral-50:#F7F8FA; --c41-neutral-100:#EFF1F4;
   --c41-neutral-200:#E2E6EB; --c41-neutral-300:#CDD3DB; --c41-neutral-400:#A7B0BC;
   --c41-neutral-500:#7A8696; --c41-neutral-600:#586577; --c41-neutral-700:#404B5A;
   --c41-neutral-800:#2A323D; --c41-neutral-900:#1A1F27; --c41-neutral-950:#11151B;
 
   /* semânticas */
-  --c41-success:#1E8E5A; --c41-warning:#C8860D; --c41-danger:#C5374B; --c41-info:#1A5FA8;
+  --c41-success:#1E8E5A; --c41-warning:#C8860D; --c41-danger:#C5374B; --c41-info:#4B7A3C;
 
   /* cores por setor */
   --c41-sector-tech:#2E6FB8; --c41-sector-dprh:#7C5CBF; --c41-sector-recrutamento:#1E8E5A;
@@ -29,48 +30,50 @@
   --c41-sector-contabil:#4F46E5; --c41-sector-bpo:#B7791F; --c41-sector-comercial:#E15A2B;
   --c41-sector-corretora:#0891B2; --c41-sector-gestao:#586577;
 
-  /* semânticos de superfície/texto — TEMA CLARO (padrão) */
-  --c41-canvas:        var(--c41-neutral-50);
-  --c41-surface:       var(--c41-neutral-0);
-  --c41-surface-2:     var(--c41-neutral-100);
-  --c41-border:        var(--c41-neutral-200);
-  --c41-border-strong: var(--c41-neutral-300);
-  --c41-fg:            var(--c41-neutral-900);
-  --c41-fg-secondary:  var(--c41-neutral-600);
-  --c41-fg-muted:      #6B7686;            /* a11y: ~4.6:1 sobre branco (AA texto pequeno) */
+  /* semânticos de superfície/texto — TEMA CLARO (bege quente, não branco/cinza frio) */
+  --c41-canvas:        #F4F2EA;
+  --c41-surface:       #FFFFFF;
+  --c41-surface-2:     #EBE8DD;
+  --c41-border:        #DEDACC;
+  --c41-border-strong: #C9C4B2;
+  --c41-fg:            #14151D;
+  --c41-fg-secondary:  #4B4B57;
+  --c41-fg-muted:      #6E6D79;
   --c41-brand:         var(--c41-brand-600);
   --c41-brand-hover:   var(--c41-brand-700);
   --c41-brand-subtle:  var(--c41-brand-50);
-  --c41-on-brand:      #FFFFFF;
+  --c41-on-brand:      #F4F2EA;
 }
 
 :root[data-theme="dark"] {
-  --c41-canvas:        var(--c41-neutral-950);
-  --c41-surface:       var(--c41-neutral-900);
-  --c41-surface-2:     var(--c41-neutral-800);
-  --c41-border:        var(--c41-neutral-800);
-  --c41-border-strong: var(--c41-neutral-700);
-  --c41-fg:            var(--c41-neutral-100);
-  --c41-fg-secondary:  var(--c41-neutral-400);
-  --c41-fg-muted:      #939DAB;            /* a11y: ~6:1 sobre surface escura (AA) */
-  --c41-brand:         var(--c41-brand-500);
-  --c41-brand-hover:   var(--c41-brand-400);
-  --c41-brand-subtle:  var(--c41-brand-900);
+  --c41-canvas:        #0B0C13;
+  --c41-surface:       #12131C;
+  --c41-surface-2:     #1B1D29;
+  --c41-border:        #23252F;
+  --c41-border-strong: #34374A;
+  --c41-fg:            #E9E7E1;
+  --c41-fg-secondary:  #9C9BA6;
+  --c41-fg-muted:      #6E6D79;
+  --c41-brand:         var(--c41-brand-400);
+  --c41-brand-hover:   #94C982;
+  --c41-brand-subtle:  #1E2A19;
+  --c41-on-brand:      #0B0C13;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
-    --c41-canvas:        var(--c41-neutral-950);
-    --c41-surface:       var(--c41-neutral-900);
-    --c41-surface-2:     var(--c41-neutral-800);
-    --c41-border:        var(--c41-neutral-800);
-    --c41-border-strong: var(--c41-neutral-700);
-    --c41-fg:            var(--c41-neutral-100);
-    --c41-fg-secondary:  var(--c41-neutral-400);
-    --c41-fg-muted:      #939DAB;
-    --c41-brand:         var(--c41-brand-500);
-    --c41-brand-hover:   var(--c41-brand-400);
-    --c41-brand-subtle:  var(--c41-brand-900);
+    --c41-canvas:        #0B0C13;
+    --c41-surface:       #12131C;
+    --c41-surface-2:     #1B1D29;
+    --c41-border:        #23252F;
+    --c41-border-strong: #34374A;
+    --c41-fg:            #E9E7E1;
+    --c41-fg-secondary:  #9C9BA6;
+    --c41-fg-muted:      #6E6D79;
+    --c41-brand:         var(--c41-brand-400);
+    --c41-brand-hover:   #94C982;
+    --c41-brand-subtle:  #1E2A19;
+    --c41-on-brand:      #0B0C13;
   }
 }
 
@@ -107,6 +110,7 @@
 
   --font-sans: var(--font-ibm-plex-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: var(--font-ibm-plex-mono), ui-monospace, Consolas, monospace;
+  --font-display: var(--font-space-grotesk), var(--font-ibm-plex-sans), system-ui, sans-serif;
 
   --radius-sm: 4px; --radius-md: 6px; --radius-lg: 8px; --radius-xl: 12px;
 }
@@ -122,6 +126,33 @@ body {
 
 .tnum { font-variant-numeric: tabular-nums; }   /* valores, CNPJ, IDs */
 
+/* Títulos usam Space Grotesk (display); corpo/UI seguem em IBM Plex Sans */
+h1, h2, h3 { font-family: var(--font-display); }
+
+/* ----- Checkbox de tabela, coerente com o tema escuro ----- */
+.c41-checkbox {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--c41-border-strong);
+  background: var(--c41-surface-2);
+  cursor: pointer;
+  transition: border-color 0.12s, background-color 0.12s;
+  flex-shrink: 0;
+}
+.c41-checkbox:hover {
+  border-color: var(--c41-brand);
+}
+.c41-checkbox:checked {
+  background: var(--c41-brand) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.2l3 3 6-6.4'/%3E%3C/svg%3E") center/10px no-repeat;
+  border-color: var(--c41-brand);
+}
+.c41-checkbox:focus-visible {
+  outline: 2px solid var(--c41-brand);
+  outline-offset: 1px;
+}
+
 /* ----- Kanban: entrada suave dos cards (um único momento de reveal, sem exagero) ----- */
 @keyframes kanban-card-in {
   from { opacity: 0; transform: translateY(3px); }
@@ -130,6 +161,11 @@ body {
 .kanban-card-enter {
   animation: kanban-card-in 0.22s ease-out both;
 }
+
+/* ----- Reveal genérico: stagger de entrada em grids/listas (Home, Kanban list) ----- */
+.reveal-in {
+  animation: kanban-card-in 0.28s ease-out both;
+}
 @media (prefers-reduced-motion: reduce) {
-  .kanban-card-enter { animation: none; }
+  .kanban-card-enter, .reveal-in { animation: none; }
 }
