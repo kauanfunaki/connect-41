@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PersonType } from "@/generated/prisma/enums";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { PessoaForm } from "@/components/pessoas/PessoaForm";
 import { atualizarPessoa } from "../../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -49,7 +50,8 @@ export default async function EditarPessoaPage({
   const customFields = await getApplicableCustomFields(ctx, "PERSON", id, personSectors);
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <PageContainer>
+      <div className="max-w-[1000px] mx-auto">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Pessoas
@@ -65,9 +67,8 @@ export default async function EditarPessoaPage({
         <span className="text-[13px] text-fg">Editar</span>
       </div>
 
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Editar Pessoa</h1>
+      <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em] mb-6">Editar Pessoa</h1>
 
-      <div className="bg-surface border border-border rounded-lg p-6">
         <PessoaForm
           action={atualizarPessoa}
           cancelHref={`/pessoas/${id}`}
@@ -119,6 +120,6 @@ export default async function EditarPessoaPage({
           }}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }

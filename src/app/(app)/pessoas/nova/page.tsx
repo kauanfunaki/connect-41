@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { PessoaForm } from "@/components/pessoas/PessoaForm";
 import { criarPessoa } from "../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -31,18 +32,18 @@ export default async function NovaPessoaPage() {
   ]);
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Pessoas
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Nova Pessoa</span>
-      </div>
+    <PageContainer>
+      <div className="max-w-[1000px] mx-auto">
+        <div className="flex items-center gap-2 mb-6">
+          <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
+            Pessoas
+          </Link>
+          <span className="text-fg-muted">/</span>
+          <span className="text-[13px] text-fg">Nova Pessoa</span>
+        </div>
 
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Nova Pessoa</h1>
+        <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em] mb-6">Nova Pessoa</h1>
 
-      <div className="bg-surface border border-border rounded-lg p-6">
         <PessoaForm
           action={criarPessoa}
           cancelHref="/pessoas"
@@ -52,6 +53,6 @@ export default async function NovaPessoaPage() {
           canEditSensitive={canEditSensitive}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }

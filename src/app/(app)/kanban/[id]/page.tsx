@@ -61,7 +61,7 @@ export default async function KanbanBoardPage({
 
   // Última mudança de estágio de cada item (mais recente primeiro) — usada pra
   // calcular "X dias na etapa" sem precisar de campo novo no schema.
-  const [lastStageChanges, recentMoves] = await Promise.all([
+  const [lastStageChanges, recentMoves, recentActivityAnyType] = await Promise.all([
     prisma.activity.findMany({
       where: { tenantId: ctx.tenantId, type: "STATUS_CHANGE", pipelineItem: { pipelineId: id } },
       orderBy: { createdAt: "desc" },
@@ -73,7 +73,24 @@ export default async function KanbanBoardPage({
       take: 20,
       include: { user: { select: { name: true } }, pipelineItem: { select: { entityId: true } } },
     }),
+    // última atividade (qualquer tipo) por item — usada só pra linha única do card no board.
+    prisma.activity.findMany({
+      where: { tenantId: ctx.tenantId, pipelineItem: { pipelineId: id } },
+      orderBy: { createdAt: "desc" },
+      take: 200,
+      select: { pipelineItemId: true, type: true, content: true },
+    }),
   ]);
+
+  const ACTIVITY_LABEL: Record<string, string> = {
+    NOTE: "Nota", STATUS_CHANGE: "Mudou de etapa", DOCUMENT: "Anexou documento",
+    HANDOFF: "Handoff", MENTION: "Menção",
+  };
+  const lastActivityByItem: Record<string, string> = {};
+  for (const a of recentActivityAnyType) {
+    if (a.pipelineItemId in lastActivityByItem) continue;
+    lastActivityByItem[a.pipelineItemId] = a.content?.trim() ? a.content : (ACTIVITY_LABEL[a.type] ?? a.type);
+  }
 
   const lastChangeByItem: Record<string, Date> = {};
   for (const c of lastStageChanges) {
@@ -88,6 +105,7 @@ export default async function KanbanBoardPage({
     tags: i.tags.map((t) => ({ id: t.tag.id, name: t.tag.name, color: t.tag.color })),
     assignees: i.assignees.map((a) => ({ id: a.user.id, name: a.user.name })),
     daysInStage: daysSince(lastChangeByItem[i.id] ?? i.createdAt),
+    lastActivity: lastActivityByItem[i.id] ?? null,
   }));
 
   const timeline = recentMoves.map((m) => ({

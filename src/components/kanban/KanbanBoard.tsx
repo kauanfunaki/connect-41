@@ -16,6 +16,7 @@ type Item = {
   tags?: Tag[];
   assignees?: Assignee[];
   daysInStage?: number;
+  lastActivity?: string | null;
 };
 
 type Props = {
@@ -43,6 +44,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
   const [items, setItems] = useState(initialItems);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   function handleDrop(stageId: string, itemId: string) {
@@ -111,6 +113,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                     key={item.id}
                     href={`/kanban/${pipelineId}/itens/${item.id}`}
                     draggable
+                    onMouseDown={() => setSelectedId(item.id)}
                     onDragStart={(e) => {
                       e.dataTransfer.setData("text/plain", item.id);
                       setDraggingId(item.id);
@@ -120,9 +123,11 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                       borderLeftColor: color,
                       animationDelay: `${Math.min(i, 8) * 25}ms`,
                     }}
-                    className={`kanban-card-enter group block bg-surface border border-border border-l-[3px] rounded-xl pl-3 pr-3 py-3 cursor-grab active:cursor-grabbing transition-[border-color,box-shadow,opacity,background-color] duration-150 hover:bg-surface-hover hover:border-border-strong hover:shadow-[var(--c41-shadow-sm)] ${
-                      draggingId === item.id ? "opacity-90 shadow-[var(--c41-shadow-lg)] rotate-[-1.5deg]" : ""
-                    }`}
+                    className={`kanban-card-enter group block bg-surface border border-l-[3px] rounded-xl pl-3 pr-3 py-3 cursor-grab active:cursor-grabbing transition-[border-color,box-shadow,opacity,background-color] duration-150 hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] ${
+                      selectedId === item.id
+                        ? "border-brand shadow-[0_0_0_3px_var(--c41-brand-subtle)]"
+                        : "border-border hover:border-border-strong"
+                    } ${draggingId === item.id ? "opacity-90 shadow-[var(--c41-shadow-lg)] rotate-[-1.5deg]" : ""}`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <p className="text-[length:var(--fs-kanban-title)] font-semibold text-fg leading-snug truncate group-hover:text-fg transition-colors">
@@ -191,6 +196,12 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                           </div>
                         )}
                       </div>
+                    )}
+
+                    {item.lastActivity && (
+                      <p className="text-[11px] text-fg-muted mt-2 pt-2 border-t border-border truncate">
+                        {item.lastActivity}
+                      </p>
                     )}
                   </Link>
                 );
