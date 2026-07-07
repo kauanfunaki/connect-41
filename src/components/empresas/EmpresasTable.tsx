@@ -85,7 +85,8 @@ export function EmpresasTable({
             Nenhuma empresa encontrada.
           </div>
         ) : (
-          <table className="w-full text-[length:var(--fs-body)]">
+          <div className="scroll-x overflow-x-auto">
+          <table className="w-full min-w-[860px] text-[length:var(--fs-body)]">
             <thead>
               <tr className="border-b border-border bg-table-header-bg">
                 {canCreate && (
@@ -146,6 +147,7 @@ export function EmpresasTable({
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

@@ -76,7 +76,8 @@ export function UsuariosTable({
         {users.length === 0 ? (
           <div className="py-16 text-center text-[13px] text-fg-muted">Nenhum usuário cadastrado ainda.</div>
         ) : (
-          <table className="w-full text-[length:var(--fs-body)]">
+          <div className="scroll-x overflow-x-auto">
+          <table className="w-full min-w-[900px] text-[length:var(--fs-body)]">
             <thead>
               <tr className="border-b border-border bg-table-header-bg">
                 <th className="w-10 px-4 py-3">
@@ -160,6 +161,7 @@ export function UsuariosTable({
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

@@ -56,7 +56,8 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
         {people.length === 0 ? (
           <div className="py-16 text-center text-[13px] text-fg-muted">Nenhuma pessoa encontrada.</div>
         ) : (
-          <table className="w-full text-[length:var(--fs-body)]">
+          <div className="scroll-x overflow-x-auto">
+          <table className="w-full min-w-[860px] text-[length:var(--fs-body)]">
             <thead>
               <tr className="border-b border-border bg-table-header-bg">
                 {canCreate && (
@@ -130,6 +131,7 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
