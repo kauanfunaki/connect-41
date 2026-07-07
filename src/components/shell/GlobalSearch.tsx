@@ -7,10 +7,11 @@ import { Search } from "lucide-react";
 type SearchResults = {
   companies: { id: string; name: string }[];
   people: { id: string; name: string }[];
+  candidatos: { id: string; name: string }[];
   pipelines: { id: string; name: string }[];
 };
 
-const EMPTY: SearchResults = { companies: [], people: [], pipelines: [] };
+const EMPTY: SearchResults = { companies: [], people: [], candidatos: [], pipelines: [] };
 
 export function GlobalSearch() {
   const [query, setQuery] = useState("");
@@ -43,7 +44,8 @@ export function GlobalSearch() {
     };
   }, [query]);
 
-  const hasResults = results.companies.length + results.people.length + results.pipelines.length > 0;
+  const hasResults =
+    results.companies.length + results.people.length + results.candidatos.length + results.pipelines.length > 0;
 
   function go(href: string) {
     setOpen(false);
@@ -63,7 +65,7 @@ export function GlobalSearch() {
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
-          placeholder="Buscar empresas, pessoas, kanban…"
+          placeholder="Buscar empresas, pessoas, candidatos, kanban…"
           className="w-full h-full bg-transparent text-[15px] text-fg placeholder:text-fg-muted outline-none border-none"
         />
       </div>
@@ -80,6 +82,7 @@ export function GlobalSearch() {
                 onSelect={(id) => go(`/empresas/${id}`)}
               />
               <ResultGroup label="Pessoas" items={results.people} onSelect={(id) => go(`/pessoas/${id}`)} />
+              <ResultGroup label="Candidatos" items={results.candidatos} onSelect={(id) => go(`/candidatos/${id}`)} />
               <ResultGroup label="Kanban" items={results.pipelines} onSelect={(id) => go(`/kanban/${id}`)} />
             </>
           )}

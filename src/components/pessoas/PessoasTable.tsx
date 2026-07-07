@@ -4,12 +4,10 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { StatusDot } from "@/components/shared/StatusDot";
-import type { PersonType } from "@/generated/prisma/enums";
 
 type Row = {
   id: string;
   name: string;
-  type: PersonType;
   active: boolean;
   cpf: string | null;
   email: string | null;
@@ -21,12 +19,10 @@ type Row = {
 type Props = {
   people: Row[];
   canCreate: boolean;
-  typeLabel: Record<PersonType, string>;
-  typeStyle: Record<PersonType, string>;
   inativarPessoasEmMassa: (ids: string[]) => Promise<void>;
 };
 
-export function PessoasTable({ people, canCreate, typeLabel, typeStyle, inativarPessoasEmMassa }: Props) {
+export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [, startTransition] = useTransition();
 
@@ -74,7 +70,6 @@ export function PessoasTable({ people, canCreate, typeLabel, typeStyle, inativar
                   </th>
                 )}
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Tipo</th>
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">CPF</th>
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">E-mail</th>
@@ -105,11 +100,6 @@ export function PessoasTable({ people, canCreate, typeLabel, typeStyle, inativar
                     <Link href={`/pessoas/${p.id}`} className="font-medium text-fg hover:text-brand transition-colors">
                       {p.name}
                     </Link>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12.5px] font-semibold border ${typeStyle[p.type]}`}>
-                      {typeLabel[p.type]}
-                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <StatusDot

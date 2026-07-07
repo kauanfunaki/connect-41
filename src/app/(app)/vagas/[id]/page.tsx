@@ -133,9 +133,16 @@ export default async function VagaPage({
 
       {/* Candidatos */}
       <div className="bg-surface border border-border rounded-lg p-5">
-        <h2 className="text-[14px] font-semibold text-fg mb-3">
-          Candidatos ({vaga.candidaturas.length})
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-[14px] font-semibold text-fg">
+            Candidatos ({vaga.candidaturas.length})
+          </h2>
+          {canAct && (
+            <Link href="/candidatos/nova" className="text-[12px] text-brand hover:underline">
+              + Novo Candidato
+            </Link>
+          )}
+        </div>
 
         {vaga.candidaturas.length === 0 ? (
           <p className="text-[13px] text-fg-muted">Nenhum candidato vinculado ainda.</p>

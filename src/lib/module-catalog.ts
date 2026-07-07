@@ -19,6 +19,13 @@ export const MODULE_CATALOG: ModuleDef[] = [
     defaultEnabled: true,
   },
   {
+    code: "recrutamento_candidatos",
+    label: "Candidatos",
+    sectorCode: "recrutamento",
+    description: "Banco de candidatos, independente de vaga",
+    defaultEnabled: true,
+  },
+  {
     code: "dprh_admissao",
     label: "Admissões",
     sectorCode: "dprh",

@@ -4,6 +4,7 @@ import { VagaStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
+import { CompanyFilterSelect } from "@/components/shared/CompanyFilterSelect";
 
 const STATUS_LABEL: Record<VagaStatus, string> = {
   ABERTA:       "Aberta",
@@ -22,9 +23,9 @@ const STATUS_STYLE: Record<VagaStatus, string> = {
 export default async function VagasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; sectorCode?: string }>;
+  searchParams: Promise<{ status?: string; sectorCode?: string; companyId?: string }>;
 }) {
-  const { status, sectorCode } = await searchParams;
+  const { status, sectorCode, companyId } = await searchParams;
   const ctx = await getAuthContext();
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
 
@@ -38,16 +39,24 @@ export default async function VagasPage({
     ...scopedVagaWhere(ctx),
     ...(statusFilter ? { status: statusFilter } : {}),
     ...(sectorCode ? { sectorCode } : {}),
+    ...(companyId ? { companyId } : {}),
   };
 
-  const vagas = await prisma.vaga.findMany({
-    where,
-    orderBy: { openedAt: "desc" },
-    include: {
-      company: { select: { id: true, name: true } },
-      _count: { select: { candidaturas: true } },
-    },
-  });
+  const [vagas, companies] = await Promise.all([
+    prisma.vaga.findMany({
+      where,
+      orderBy: { openedAt: "desc" },
+      include: {
+        company: { select: { id: true, name: true } },
+        _count: { select: { candidaturas: true } },
+      },
+    }),
+    prisma.company.findMany({
+      where: { tenantId: ctx.tenantId, status: "ACTIVE" },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
 
   const canCreateAny = vagas.length === 0
     ? true // ainda não dá pra saber o setor; o form em /vagas/novo faz a checagem real
@@ -72,25 +81,32 @@ export default async function VagasPage({
         )}
       </div>
 
-      <div className="flex items-center gap-1 mb-4">
-        {(["ABERTA", "EM_ANDAMENTO", "ENCERRADA", "CANCELADA"] as VagaStatus[]).map((s) => (
-          <Link
-            key={s}
-            href={`/vagas?status=${s}${sectorCode ? `&sectorCode=${sectorCode}` : ""}`}
-            className={`inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
-              statusFilter === s
-                ? "bg-surface-2 text-fg border border-border-strong"
-                : "text-fg-muted hover:text-fg hover:bg-surface-2"
-            }`}
-          >
-            {STATUS_LABEL[s]}
-          </Link>
-        ))}
-        {statusFilter && (
-          <Link href={`/vagas${sectorCode ? `?sectorCode=${sectorCode}` : ""}`} className="text-[12px] text-fg-muted hover:text-fg ml-1">
-            Limpar
-          </Link>
-        )}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-1">
+          {(["ABERTA", "EM_ANDAMENTO", "ENCERRADA", "CANCELADA"] as VagaStatus[]).map((s) => (
+            <Link
+              key={s}
+              href={`/vagas?status=${s}${sectorCode ? `&sectorCode=${sectorCode}` : ""}${companyId ? `&companyId=${companyId}` : ""}`}
+              className={`inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
+                statusFilter === s
+                  ? "bg-surface-2 text-fg border border-border-strong"
+                  : "text-fg-muted hover:text-fg hover:bg-surface-2"
+              }`}
+            >
+              {STATUS_LABEL[s]}
+            </Link>
+          ))}
+          {statusFilter && (
+            <Link
+              href={`/vagas?${sectorCode ? `sectorCode=${sectorCode}` : ""}${companyId ? `&companyId=${companyId}` : ""}`}
+              className="text-[12px] text-fg-muted hover:text-fg ml-1"
+            >
+              Limpar
+            </Link>
+          )}
+        </div>
+
+        <CompanyFilterSelect companies={companies} value={companyId ?? ""} />
       </div>
 
       {vagas.length === 0 ? (

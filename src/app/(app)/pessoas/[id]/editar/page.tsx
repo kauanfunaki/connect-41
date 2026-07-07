@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
+import { PersonType } from "@/generated/prisma/enums";
 import { PessoaForm } from "@/components/pessoas/PessoaForm";
 import { atualizarPessoa } from "../../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -23,7 +24,7 @@ export default async function EditarPessoaPage({
 
   const prisma = getPrisma();
   const [person, companies, cargos, departments, canEditSensitive] = await Promise.all([
-    prisma.person.findFirst({ where: { id, ...(await scopedPersonWhere(ctx)) } }),
+    prisma.person.findFirst({ where: { id, type: PersonType.COLABORADOR, ...(await scopedPersonWhere(ctx)) } }),
     prisma.company.findMany({
       where: { tenantId: ctx.tenantId, status: "ACTIVE" },
       orderBy: { name: "asc" },
@@ -82,7 +83,6 @@ export default async function EditarPessoaPage({
             email:            person.email           ?? undefined,
             phone:            person.phone           ?? undefined,
             birthDate:        toDateInput(person.birthDate),
-            type:             person.type,
             currentCompanyId: person.currentCompanyId ?? undefined,
 
             rg:               person.rg        ?? undefined,

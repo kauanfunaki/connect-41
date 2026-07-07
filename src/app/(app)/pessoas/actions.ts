@@ -34,7 +34,8 @@ async function pessoaData(form: FormData, ctx: Awaited<ReturnType<typeof getAuth
     email:            pick(form, "email"),
     phone:            pick(form, "phone"),
     birthDate:        birthDateRaw ? new Date(birthDateRaw) : null,
-    type:             (form.get("type") as PersonType) ?? PersonType.CANDIDATO,
+    // Pessoas só cadastra colaboradores — candidatos entram pelo módulo de Recrutamento.
+    type:             PersonType.COLABORADOR,
     currentCompanyId: pick(form, "currentCompanyId"),
 
     // Dados trabalhistas
@@ -118,7 +119,7 @@ export async function atualizarPessoa(
   const prisma = getPrisma();
 
   const existing = await prisma.person.findFirst({
-    where: { id, ...(await scopedPersonWhere(ctx)) },
+    where: { id, type: PersonType.COLABORADOR, ...(await scopedPersonWhere(ctx)) },
     select: { id: true },
   });
   if (!existing) return { error: "Pessoa não encontrada ou fora do seu escopo." };
@@ -148,7 +149,7 @@ export async function excluirPessoa(id: string): Promise<void> {
   const prisma = getPrisma();
 
   const existing = await prisma.person.findFirst({
-    where: { id, ...(await scopedPersonWhere(ctx)) },
+    where: { id, type: PersonType.COLABORADOR, ...(await scopedPersonWhere(ctx)) },
     select: { id: true },
   });
   if (!existing) return;
@@ -170,7 +171,7 @@ export async function inativarPessoasEmMassa(ids: string[]): Promise<void> {
 
   const prisma = getPrisma();
   await prisma.person.updateMany({
-    where: { id: { in: ids }, ...(await scopedPersonWhere(ctx)) },
+    where: { id: { in: ids }, type: PersonType.COLABORADOR, ...(await scopedPersonWhere(ctx)) },
     data: { active: false },
   });
 
