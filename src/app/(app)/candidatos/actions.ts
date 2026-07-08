@@ -4,27 +4,22 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { PersonType } from "@/generated/prisma/enums";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
+import { canWriteEntity } from "@/lib/auth/policy";
+import { pick, pickDate } from "@/lib/forms";
+import { isPrismaUniqueError, isPrismaForeignKeyError } from "@/lib/prismaErrors";
+import { validatePersonForm } from "@/lib/validation/person";
+import type { ActionState } from "@/lib/actionState";
 
-export type CandidatoState = { error: string } | null;
-
-function pick(form: FormData, key: string): string | null {
-  return (form.get(key) as string)?.trim() || null;
-}
-
-function isPrismaUniqueError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && "code" in err && (err as { code?: string }).code === "P2002";
-}
+export type CandidatoState = ActionState;
 
 function candidatoData(form: FormData) {
-  const birthDateRaw = pick(form, "birthDate");
-
   return {
     name:      (form.get("name") as string)?.trim(),
     cpf:       pick(form, "cpf"),
     email:     pick(form, "email"),
     phone:     pick(form, "phone"),
-    birthDate: birthDateRaw ? new Date(birthDateRaw) : null,
+    birthDate: pickDate(form, "birthDate"),
     rg:        pick(form, "rg"),
     education: pick(form, "education"),
 
@@ -46,10 +41,12 @@ export async function criarCandidato(
 ): Promise<CandidatoState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para criar candidatos." };
+  if (!canWriteEntity(ctx)) return { error: "Sem permissão para criar candidatos." };
+
+  const validationError = validatePersonForm(form);
+  if (validationError) return { error: validationError };
 
   const data = candidatoData(form);
-  if (!data.name) return { error: "Nome é obrigatório" };
 
   const prisma = getPrisma();
   let id: string;
@@ -76,11 +73,13 @@ export async function atualizarCandidato(
 ): Promise<CandidatoState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para editar candidatos." };
+  if (!canWriteEntity(ctx)) return { error: "Sem permissão para editar candidatos." };
+
+  const validationError = validatePersonForm(form);
+  if (validationError) return { error: validationError };
 
   const id = form.get("id") as string;
   const data = candidatoData(form);
-  if (!data.name) return { error: "Nome é obrigatório" };
 
   const prisma = getPrisma();
 
@@ -104,9 +103,9 @@ export async function atualizarCandidato(
   redirect(`/candidatos/${id}`);
 }
 
-export async function excluirCandidato(id: string): Promise<void> {
+export async function excluirCandidato(id: string): Promise<CandidatoState> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWrite(ctx.role)) return;
+  if (!ctx.tenantId || !canWriteEntity(ctx)) return { error: "Sem permissão." };
 
   const prisma = getPrisma();
 
@@ -114,13 +113,19 @@ export async function excluirCandidato(id: string): Promise<void> {
     where: { id, tenantId: ctx.tenantId, type: PersonType.CANDIDATO },
     select: { id: true },
   });
-  if (!existing) return;
+  if (!existing) return { error: "Candidato não encontrado." };
 
   try {
     await prisma.person.delete({ where: { id } });
   } catch (err) {
+    if (isPrismaForeignKeyError(err)) {
+      return {
+        error:
+          "Este candidato tem candidaturas vinculadas e não pode ser excluído. Use “Inativar” para arquivá-lo.",
+      };
+    }
     console.error("[excluirCandidato]", err);
-    return;
+    return { error: "Erro ao excluir candidato." };
   }
 
   revalidatePath("/candidatos");
@@ -129,7 +134,7 @@ export async function excluirCandidato(id: string): Promise<void> {
 
 export async function inativarCandidatosEmMassa(ids: string[]): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWrite(ctx.role) || ids.length === 0) return;
+  if (!ctx.tenantId || !canWriteEntity(ctx) || ids.length === 0) return;
 
   const prisma = getPrisma();
   await prisma.person.updateMany({

@@ -18,11 +18,30 @@ const PUBLIC_PATHS = [
   "/api/health",
 ];
 
+// Headers de identidade que SÓ podem ser setados por este middleware. Qualquer
+// valor vindo do cliente é removido antes de qualquer decisão — senão um request
+// forjado com `x-user-role: SUPER_ADMIN` seria confiado por getAuthContext().
+const IDENTITY_HEADERS = [
+  "x-user-id",
+  "x-tenant-id",
+  "x-user-role",
+  "x-user-sectors",
+  "x-home-tenant-id",
+];
+
+function stripIdentityHeaders(headers: Headers): void {
+  for (const h of IDENTITY_HEADERS) headers.delete(h);
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Sempre parte de headers sem identidade forjável.
+  const headers = new Headers(req.headers);
+  stripIdentityHeaders(headers);
+
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers } });
   }
 
   const cookieToken = req.cookies.get("access_token")?.value;
@@ -49,7 +68,6 @@ export async function middleware(req: NextRequest) {
         ? activeTenantCookie
         : payload.tenantId;
 
-    const headers = new Headers(req.headers);
     headers.set("x-user-id", payload.sub);
     headers.set("x-tenant-id", effectiveTenantId);
     headers.set("x-user-role", payload.role);
@@ -67,7 +85,8 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
+  // Sem exclusão por extensão de arquivo: excluir `*.png` do middleware deixava
+  // qualquer rota terminada em imagem passar sem stripping dos headers de
+  // identidade (bypass latente). Só recursos estáticos internos do Next ficam de fora.
+  matcher: ["/((?!_next/static|_next/image|favicon\\.ico).*)"],
 };

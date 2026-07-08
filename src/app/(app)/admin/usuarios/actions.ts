@@ -7,6 +7,7 @@ import type { UserRole } from "@/generated/prisma/enums";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { assignableRoles } from "@/lib/roles";
 import { hashPassword } from "@/lib/auth/password";
+import { revokeAllUserSessions } from "@/lib/auth/sessions";
 
 export type UsuarioState = { error: string } | null;
 
@@ -117,6 +118,11 @@ export async function atualizarUsuario(
     return { error: "Erro ao atualizar usuário." };
   }
 
+  // Trocar senha ou desativar a conta encerra as sessões abertas do usuário.
+  if (password.length > 0 || !active) {
+    await revokeAllUserSessions(id);
+  }
+
   revalidatePath("/admin/usuarios");
   redirect("/admin/usuarios");
 }
@@ -133,6 +139,7 @@ export async function alternarAtivoUsuario(id: string, novoStatus: boolean): Pro
 
   try {
     await prisma.user.update({ where: { id }, data: { active: novoStatus } });
+    if (!novoStatus) await revokeAllUserSessions(id);
   } catch (err) {
     console.error("[alternarAtivoUsuario]", err);
     return;
@@ -155,6 +162,14 @@ export async function alternarAtivoEmMassa(ids: string[], novoStatus: boolean): 
       : { id: { in: targetIds }, tenantId: ctx.tenantId, role: { not: "SUPER_ADMIN" as const } };
 
   await prisma.user.updateMany({ where, data: { active: novoStatus } });
+
+  // Desativar em massa também encerra as sessões dos alvos.
+  if (!novoStatus) {
+    await prisma.refreshToken.updateMany({
+      where: { userId: { in: targetIds }, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
 
   revalidatePath("/admin/usuarios");
 }

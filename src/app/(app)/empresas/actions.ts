@@ -4,39 +4,61 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { CompanyStatus } from "@/generated/prisma/enums";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
+import { canWriteEntity } from "@/lib/auth/policy";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { getCompanySectors, getApplicableCustomFields, saveCustomFieldValues } from "@/lib/customFields";
+import { pick } from "@/lib/forms";
+import { isPrismaForeignKeyError } from "@/lib/prismaErrors";
+import { isValidCNPJ, digitsOnly } from "@/lib/validation/common";
 
 export type EmpresaState = { error: string } | null;
-
-function pickString(form: FormData, key: string): string | null {
-  return (form.get(key) as string)?.trim() || null;
-}
 
 function companyData(form: FormData) {
   return {
     name:                  (form.get("name") as string)?.trim(),
-    tradeName:             pickString(form, "tradeName"),
-    cnpj:                  pickString(form, "cnpj"),
-    taxRegime:             pickString(form, "taxRegime"),
-    zipCode:               pickString(form, "zipCode"),
-    addressStreet:         pickString(form, "addressStreet"),
-    addressNumber:         pickString(form, "addressNumber"),
-    addressComplement:     pickString(form, "addressComplement"),
-    neighborhood:          pickString(form, "neighborhood"),
-    city:                  pickString(form, "city"),
-    stateCode:             pickString(form, "stateCode"),
-    stateRegistration:     pickString(form, "stateRegistration"),
-    municipalRegistration: pickString(form, "municipalRegistration"),
-    nire:                  pickString(form, "nire"),
-    email:                 pickString(form, "email"),
-    phone:                 pickString(form, "phone"),
-    website:               pickString(form, "website"),
+    tradeName:             pick(form, "tradeName"),
+    cnpj:                  digitsOnly(pick(form, "cnpj")),
+    taxRegime:             pick(form, "taxRegime"),
+    zipCode:               pick(form, "zipCode"),
+    addressStreet:         pick(form, "addressStreet"),
+    addressNumber:         pick(form, "addressNumber"),
+    addressComplement:     pick(form, "addressComplement"),
+    neighborhood:          pick(form, "neighborhood"),
+    city:                  pick(form, "city"),
+    stateCode:             pick(form, "stateCode"),
+    stateRegistration:     pick(form, "stateRegistration"),
+    municipalRegistration: pick(form, "municipalRegistration"),
+    nire:                  pick(form, "nire"),
+    email:                 pick(form, "email"),
+    phone:                 pick(form, "phone"),
+    website:               pick(form, "website"),
     status:                (form.get("status") as CompanyStatus) ?? CompanyStatus.PROSPECT,
-    source:                pickString(form, "source"),
-    branchId:              pickString(form, "branchId"),
+    source:                pick(form, "source"),
+    branchId:              pick(form, "branchId"),
   };
+}
+
+// Valida razão social e CNPJ (dígito verificador). Sem constraint de unicidade no
+// banco ainda (há duplicatas legadas a limpar antes) — a checagem de duplicado é
+// feita no app, por tenant.
+async function validateCompany(
+  data: ReturnType<typeof companyData>,
+  tenantId: string,
+  ignoreId?: string
+): Promise<string | null> {
+  if (!data.name) return "Razão Social é obrigatória.";
+  if (data.cnpj && !isValidCNPJ(data.cnpj)) return "CNPJ inválido.";
+
+  if (data.cnpj) {
+    const prisma = getPrisma();
+    const dup = await prisma.company.findFirst({
+      where: { tenantId, cnpj: data.cnpj, ...(ignoreId ? { id: { not: ignoreId } } : {}) },
+      select: { id: true },
+    });
+    if (dup) return "Já existe uma empresa com este CNPJ.";
+  }
+  return null;
 }
 
 export async function criarEmpresa(
@@ -45,10 +67,11 @@ export async function criarEmpresa(
 ): Promise<EmpresaState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para criar empresas." };
+  if (!canWriteEntity(ctx)) return { error: "Sem permissão para criar empresas." };
 
   const data = companyData(form);
-  if (!data.name) return { error: "Razão Social é obrigatória" };
+  const validationError = await validateCompany(data, ctx.tenantId);
+  if (validationError) return { error: validationError };
 
   const prisma = getPrisma();
   let id: string;
@@ -70,11 +93,12 @@ export async function atualizarEmpresa(
 ): Promise<EmpresaState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para editar empresas." };
+  if (!canWriteEntity(ctx)) return { error: "Sem permissão para editar empresas." };
 
   const id = form.get("id") as string;
   const data = companyData(form);
-  if (!data.name) return { error: "Razão Social é obrigatória" };
+  const validationError = await validateCompany(data, ctx.tenantId, id);
+  if (validationError) return { error: validationError };
 
   const prisma = getPrisma();
 
@@ -99,9 +123,9 @@ export async function atualizarEmpresa(
   redirect(`/empresas/${id}`);
 }
 
-export async function excluirEmpresa(id: string): Promise<void> {
+export async function excluirEmpresa(id: string): Promise<EmpresaState> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWrite(ctx.role)) return;
+  if (!ctx.tenantId || !canWriteEntity(ctx)) return { error: "Sem permissão." };
 
   const prisma = getPrisma();
 
@@ -109,13 +133,19 @@ export async function excluirEmpresa(id: string): Promise<void> {
     where: { id, ...(await scopedCompanyWhere(ctx)) },
     select: { id: true },
   });
-  if (!existing) return;
+  if (!existing) return { error: "Empresa não encontrada ou fora do seu escopo." };
 
   try {
     await prisma.company.delete({ where: { id } });
   } catch (err) {
+    if (isPrismaForeignKeyError(err)) {
+      return {
+        error:
+          "Esta empresa tem registros vinculados (colaboradores, serviços, vagas, etc.) e não pode ser excluída.",
+      };
+    }
     console.error("[excluirEmpresa]", err);
-    return;
+    return { error: "Erro ao excluir empresa." };
   }
 
   revalidatePath("/empresas");
@@ -124,7 +154,7 @@ export async function excluirEmpresa(id: string): Promise<void> {
 
 export async function atualizarStatusEmMassa(ids: string[], status: CompanyStatus): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWrite(ctx.role) || ids.length === 0) return;
+  if (!ctx.tenantId || !canWriteEntity(ctx) || ids.length === 0) return;
 
   const prisma = getPrisma();
   await prisma.company.updateMany({
