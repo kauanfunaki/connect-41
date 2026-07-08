@@ -78,8 +78,11 @@
   --c41-fg:              #F5F3F8;
   --c41-fg-secondary:    #BDB8C7;
   --c41-fg-muted:        #8B8695;
-  --c41-brand:           var(--c41-brand-500);
-  --c41-brand-hover:     #3450C9;
+  /* mais claro que o brand-500 anterior — contraste melhor pra texto/ícone
+     em fundo escuro (nav ativo, abas, links, botões). Ver ConnectLoadingScreen,
+     que já usava esse degrau por causa desse mesmo problema de visibilidade. */
+  --c41-brand:           var(--c41-brand-400);
+  --c41-brand-hover:     var(--c41-brand-500);
   --c41-brand-subtle:    rgba(67,92,201,.20);
   --c41-on-brand:        #FFFFFF;
   --c41-success:         var(--c41-success-dark);
@@ -115,8 +118,8 @@
     --c41-fg:              #F5F3F8;
     --c41-fg-secondary:    #BDB8C7;
     --c41-fg-muted:        #8B8695;
-    --c41-brand:           var(--c41-brand-500);
-    --c41-brand-hover:     #3450C9;
+    --c41-brand:           var(--c41-brand-400);
+    --c41-brand-hover:     var(--c41-brand-500);
     --c41-brand-subtle:    rgba(67,92,201,.20);
     --c41-on-brand:        #FFFFFF;
     --c41-success:         var(--c41-success-dark);
