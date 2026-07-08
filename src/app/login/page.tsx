@@ -9,6 +9,7 @@ import { MailIcon } from "@/components/login/icons";
 const ERRORS: Record<string, string> = {
   "credenciais-invalidas": "E-mail ou senha incorretos.",
   "preencha-os-campos":    "Preencha e-mail e senha.",
+  "muitas-tentativas":     "Muitas tentativas de login. Aguarde alguns minutos e tente novamente.",
   "erro-interno":          "Erro interno. Tente novamente.",
 };
 

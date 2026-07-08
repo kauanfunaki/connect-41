@@ -4,25 +4,19 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
+import { canWriteEntity } from "@/lib/auth/policy";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { getPersonSectors, getApplicableCustomFields, saveCustomFieldValues } from "@/lib/customFields";
+import { pick, pickDate } from "@/lib/forms";
+import { isPrismaUniqueError, isPrismaForeignKeyError } from "@/lib/prismaErrors";
+import { validatePersonForm } from "@/lib/validation/person";
+import type { ActionState } from "@/lib/actionState";
 
-export type PessoaState = { error: string } | null;
-
-function pick(form: FormData, key: string): string | null {
-  return (form.get(key) as string)?.trim() || null;
-}
-
-function pickDate(form: FormData, key: string): Date | null {
-  const raw = pick(form, key);
-  return raw ? new Date(raw) : null;
-}
+export type PessoaState = ActionState;
 
 async function pessoaData(form: FormData, ctx: Awaited<ReturnType<typeof getAuthContext>>) {
-  const birthDateRaw = pick(form, "birthDate");
-
   const [canBank, canSalary] = await Promise.all([
     canViewSensitiveField(ctx, "DADOS_BANCARIOS"),
     canViewSensitiveField(ctx, "SALARIO"),
@@ -33,7 +27,7 @@ async function pessoaData(form: FormData, ctx: Awaited<ReturnType<typeof getAuth
     cpf:              pick(form, "cpf"),
     email:            pick(form, "email"),
     phone:            pick(form, "phone"),
-    birthDate:        birthDateRaw ? new Date(birthDateRaw) : null,
+    birthDate:        pickDate(form, "birthDate"),
     // Pessoas só cadastra colaboradores — candidatos entram pelo módulo de Recrutamento.
     type:             PersonType.COLABORADOR,
     currentCompanyId: pick(form, "currentCompanyId"),
@@ -82,10 +76,12 @@ export async function criarPessoa(
 ): Promise<PessoaState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para criar pessoas." };
+  if (!canWriteEntity(ctx)) return { error: "Sem permissão para criar pessoas." };
+
+  const validationError = validatePersonForm(form);
+  if (validationError) return { error: validationError };
 
   const data = await pessoaData(form, ctx);
-  if (!data.name) return { error: "Nome é obrigatório" };
 
   const prisma = getPrisma();
   let id: string;
@@ -110,11 +106,13 @@ export async function atualizarPessoa(
 ): Promise<PessoaState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para editar pessoas." };
+  if (!canWriteEntity(ctx)) return { error: "Sem permissão para editar pessoas." };
+
+  const validationError = validatePersonForm(form);
+  if (validationError) return { error: validationError };
 
   const id = form.get("id") as string;
   const data = await pessoaData(form, ctx);
-  if (!data.name) return { error: "Nome é obrigatório" };
 
   const prisma = getPrisma();
 
@@ -142,9 +140,9 @@ export async function atualizarPessoa(
   redirect(`/pessoas/${id}`);
 }
 
-export async function excluirPessoa(id: string): Promise<void> {
+export async function excluirPessoa(id: string): Promise<PessoaState> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWrite(ctx.role)) return;
+  if (!ctx.tenantId || !canWriteEntity(ctx)) return { error: "Sem permissão." };
 
   const prisma = getPrisma();
 
@@ -152,13 +150,19 @@ export async function excluirPessoa(id: string): Promise<void> {
     where: { id, type: PersonType.COLABORADOR, ...(await scopedPersonWhere(ctx)) },
     select: { id: true },
   });
-  if (!existing) return;
+  if (!existing) return { error: "Pessoa não encontrada ou fora do seu escopo." };
 
   try {
     await prisma.person.delete({ where: { id } });
   } catch (err) {
+    if (isPrismaForeignKeyError(err)) {
+      return {
+        error:
+          "Esta pessoa tem registros vinculados (candidaturas, férias, folha, etc.) e não pode ser excluída. Use “Inativar” para arquivá-la mantendo o histórico.",
+      };
+    }
     console.error("[excluirPessoa]", err);
-    return;
+    return { error: "Erro ao excluir pessoa." };
   }
 
   revalidatePath("/pessoas");
@@ -167,7 +171,7 @@ export async function excluirPessoa(id: string): Promise<void> {
 
 export async function inativarPessoasEmMassa(ids: string[]): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWrite(ctx.role) || ids.length === 0) return;
+  if (!ctx.tenantId || !canWriteEntity(ctx) || ids.length === 0) return;
 
   const prisma = getPrisma();
   await prisma.person.updateMany({
@@ -176,8 +180,4 @@ export async function inativarPessoasEmMassa(ids: string[]): Promise<void> {
   });
 
   revalidatePath("/pessoas");
-}
-
-function isPrismaUniqueError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && "code" in err && (err as { code?: string }).code === "P2002";
 }

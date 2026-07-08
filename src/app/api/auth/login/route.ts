@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/auth/password";
 import { signAccess, signRefresh } from "@/lib/auth/jwt";
 import { getAccessibleTenantIds } from "@/lib/auth/tenantAccess";
+import { hit, reset, clientIp } from "@/lib/rateLimit";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -21,9 +22,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "email e password são obrigatórios" }, { status: 400 });
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+    const ip = clientIp(req);
+    if (!hit(`login-ip:${ip}`, 20).allowed || !hit(`login-email:${normalizedEmail}`, 5).allowed) {
+      return NextResponse.json(
+        { error: "Muitas tentativas. Tente novamente em alguns minutos." },
+        { status: 429 }
+      );
+    }
+
     const prisma = getPrisma();
     const user = await prisma.user.findFirst({
-      where: { email: email.toLowerCase().trim(), active: true },
+      where: { email: normalizedEmail, active: true },
       include: { sectors: true },
     });
 
@@ -31,6 +41,8 @@ export async function POST(req: NextRequest) {
     if (!user || !valid) {
       return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 });
     }
+
+    reset(`login-email:${normalizedEmail}`);
 
     const sectors = user.sectors.map((s: { sectorCode: string }) => s.sectorCode);
     const accessibleTenants = await getAccessibleTenantIds(user.id, user.role, user.tenantId);

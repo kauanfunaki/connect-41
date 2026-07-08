@@ -1,4 +1,6 @@
 import { AppShell } from "@/components/shell/AppShell";
+import { SessionKeeper } from "@/components/shell/SessionKeeper";
+import { ToastProvider } from "@/components/ui/Toast";
 import { getSectorMaps } from "@/lib/sectors";
 import { ROLE_LABELS } from "@/lib/roles";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -39,17 +41,20 @@ export default async function AppLayout({
   ]);
 
   return (
-    <AppShell
-      tenantId={tenantId}
-      accessibleTenants={accessibleTenants}
-      sectors={visibleSectors}
-      canOpenAdmin={canOpenAdmin}
-      unreadCount={unreadCount}
-      profileName={me?.name ?? "Usuário"}
-      profileRoleLabel={ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role}
-      profilePhotoUrl={me?.photoUrl ?? null}
-    >
-      {children}
-    </AppShell>
+    <ToastProvider>
+      <AppShell
+        tenantId={tenantId}
+        accessibleTenants={accessibleTenants}
+        sectors={visibleSectors}
+        canOpenAdmin={canOpenAdmin}
+        unreadCount={unreadCount}
+        profileName={me?.name ?? "Usuário"}
+        profileRoleLabel={ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role}
+        profilePhotoUrl={me?.photoUrl ?? null}
+      >
+        <SessionKeeper />
+        {children}
+      </AppShell>
+    </ToastProvider>
   );
 }

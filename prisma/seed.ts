@@ -34,12 +34,21 @@ async function main() {
   console.log(`✓ Tenant: ${tenant.name} (${tenant.id})`);
 
   // ── Admin ─────────────────────────────────────────────────────────────────
-  const TEMP_PASSWORD = "Connect41@2026";
-  const passwordHash = await hashPassword(TEMP_PASSWORD);
+  // Senha nunca fica hardcoded no repo. Exigir SEED_ADMIN_PASSWORD no ambiente.
+  const seedPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (!seedPassword || seedPassword.length < 12) {
+    throw new Error(
+      "Defina SEED_ADMIN_PASSWORD (>= 12 caracteres) no ambiente antes de rodar o seed."
+    );
+  }
+  const passwordHash = await hashPassword(seedPassword);
 
+  // IMPORTANTE: no update NÃO tocamos em passwordHash — rodar o seed de novo num
+  // ambiente onde a senha já foi trocada NÃO reseta a senha do admin existente.
+  // A senha do seed só é aplicada na criação inicial da conta.
   const admin = await prisma.user.upsert({
     where: { tenantId_email: { tenantId: tenant.id, email: "adm6@41bpo.com.br" } },
-    update: { passwordHash, role: "ADMIN", active: true },
+    update: { role: "ADMIN", active: true },
     create: {
       tenantId: tenant.id,
       name: "Kauan Brasileiro",
@@ -64,7 +73,7 @@ async function main() {
   console.log("\n─────────────────────────────────────────");
   console.log("  Acesso inicial");
   console.log(`  E-mail : adm6@41bpo.com.br`);
-  console.log(`  Senha  : ${TEMP_PASSWORD}`);
+  console.log(`  Senha  : (a definida em SEED_ADMIN_PASSWORD)`);
   console.log("  ⚠ Troque a senha após o primeiro login");
   console.log("─────────────────────────────────────────\n");
 }

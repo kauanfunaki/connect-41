@@ -4,8 +4,23 @@ import path from "path";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
+import type { DocumentCategory, SensitiveFieldGroup } from "@/generated/prisma/enums";
 
 const STORAGE_DIR = path.join(process.cwd(), "storage", "documents");
+
+// Documentos médicos (ASO/atestado) são protegidos pelo grupo DADOS_MEDICOS
+// mesmo que a flag `sensitive` não tenha sido marcada no upload — dado de saúde
+// é sensível por natureza (LGPD). Os demais caem em DOCUMENTOS_PESSOAIS.
+const MEDICAL_CATEGORIES: DocumentCategory[] = ["ASO", "ATESTADO"];
+
+function requiredGroupFor(
+  category: DocumentCategory,
+  sensitiveFlag: boolean
+): SensitiveFieldGroup | null {
+  if (MEDICAL_CATEGORIES.includes(category)) return "DADOS_MEDICOS";
+  if (sensitiveFlag) return "DOCUMENTOS_PESSOAIS";
+  return null; // documento não sensível — liberado para qualquer usuário do tenant
+}
 
 const CONTENT_TYPES: Record<string, string> = {
   jpg: "image/jpeg",
@@ -30,8 +45,9 @@ export async function GET(
     return NextResponse.json({ error: "Documento não encontrado." }, { status: 404 });
   }
 
-  if (document.sensitive) {
-    const allowed = await canViewSensitiveField(ctx, "DOCUMENTOS_PESSOAIS");
+  const requiredGroup = requiredGroupFor(document.category, document.sensitive);
+  if (requiredGroup) {
+    const allowed = await canViewSensitiveField(ctx, requiredGroup);
     if (!allowed) {
       return NextResponse.json({ error: "Sem permissão para ver este documento." }, { status: 403 });
     }

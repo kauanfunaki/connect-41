@@ -3,11 +3,9 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
-<<<<<<< HEAD
-=======
 import { StatusDot } from "@/components/shared/StatusDot";
-import type { PersonType } from "@/generated/prisma/enums";
->>>>>>> dde4988a12f1e8fd524bc4d2daa474ab64d2706b
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useToast } from "@/components/ui/Toast";
 
 type Row = {
   id: string;
@@ -28,7 +26,9 @@ type Props = {
 
 export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [, startTransition] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const toast = useToast();
 
   const allSelected = people.length > 0 && selected.size === people.length;
 
@@ -46,11 +46,13 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
   }
 
   function applyInativar() {
-    if (!confirm(`Inativar ${selected.size} pessoa(s) selecionada(s)?`)) return;
+    const count = selected.size;
     const ids = Array.from(selected);
-    setSelected(new Set());
-    startTransition(() => {
-      inativarPessoasEmMassa(ids);
+    startTransition(async () => {
+      await inativarPessoasEmMassa(ids);
+      setSelected(new Set());
+      setConfirmOpen(false);
+      toast.success(`${count} pessoa(s) inativada(s).`);
     });
   }
 
@@ -106,27 +108,10 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
                     </Link>
                   </td>
                   <td className="px-4 py-2.5">
-<<<<<<< HEAD
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${
-                        p.active
-                          ? "bg-success/10 text-success border-success/25"
-                          : "bg-surface-2 text-fg-muted border-border"
-                      }`}
-                    >
-                      {p.active ? "Ativo" : "Inativo"}
-                    </span>
-=======
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${typeStyle[p.type]}`}>
-                      {typeLabel[p.type]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5">
                     <StatusDot
                       color={p.active ? "var(--c41-success)" : "var(--c41-neutral-400)"}
                       label={p.active ? "Ativo" : "Inativo"}
                     />
->>>>>>> dde4988a12f1e8fd524bc4d2daa474ab64d2706b
                   </td>
                   <td className="px-4 py-2.5 text-fg-muted tnum">{p.cpf ?? "—"}</td>
                   <td className="px-4 py-2.5 text-fg-muted">{p.email ?? "—"}</td>
@@ -157,12 +142,23 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
       <BulkActionBar count={selected.size} onClear={() => setSelected(new Set())}>
         <button
           type="button"
-          onClick={applyInativar}
+          onClick={() => setConfirmOpen(true)}
           className="h-8 px-3 rounded-md border border-danger/30 text-[12px] font-medium text-danger hover:bg-danger/8 transition-colors"
         >
           Inativar
         </button>
       </BulkActionBar>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={`Inativar ${selected.size} pessoa(s)?`}
+        description="As pessoas selecionadas serão arquivadas (não excluídas) e deixam de aparecer como ativas."
+        confirmLabel="Inativar"
+        destructive
+        pending={pending}
+        onConfirm={applyInativar}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </>
   );
 }

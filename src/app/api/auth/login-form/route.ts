@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/auth/password";
 import { signAccess, signRefresh } from "@/lib/auth/jwt";
 import { getAccessibleTenantIds } from "@/lib/auth/tenantAccess";
+import { hit, reset, clientIp } from "@/lib/rateLimit";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +31,13 @@ export async function POST(req: NextRequest) {
       return htmlRedirect("/login?error=preencha-os-campos");
     }
 
+    // Rate limit por IP e por e-mail (o que estourar primeiro bloqueia). Evita
+    // brute force / credential stuffing contra e-mails corporativos conhecidos.
+    const ip = clientIp(req);
+    if (!hit(`login-ip:${ip}`, 20).allowed || !hit(`login-email:${email}`, 5).allowed) {
+      return htmlRedirect("/login?error=muitas-tentativas");
+    }
+
     const prisma = getPrisma();
     const user = await prisma.user.findFirst({
       where: { email, active: true },
@@ -41,21 +49,27 @@ export async function POST(req: NextRequest) {
       return htmlRedirect("/login?error=credenciais-invalidas");
     }
 
+    // Login OK — zera o contador do e-mail para não punir quem errou antes de acertar.
+    reset(`login-email:${email}`);
+
     const sectors = user.sectors.map((s: { sectorCode: string }) => s.sectorCode);
 
-    // "Lembrar de mim" estende a sessão inteira (access + refresh) para 30 dias.
-    // Sem auto-refresh silencioso no cliente hoje, o access_token é o que
-    // efetivamente controla por quanto tempo o usuário fica logado.
-    const accessTtl = remember ? "30d" : undefined;
+    // Access token é SEMPRE curto (15min) e revalidado pelo refresh silencioso
+    // no cliente (SessionKeeper). "Lembrar de mim" estende só o REFRESH token
+    // (30d vs 7d) — que é revogável no banco. Assim, desativar um usuário ou
+    // trocar a senha derruba a sessão em ~15min, mesmo com "lembrar" marcado.
     const refreshTtl = remember ? "30d" : undefined;
-    const accessMaxAge = remember ? 60 * 60 * 24 * 30 : 60 * 15;
+    const accessMaxAge = 60 * 15;
     const refreshMaxAge = remember ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 7;
 
     const accessibleTenants = await getAccessibleTenantIds(user.id, user.role, user.tenantId);
-    const accessToken = signAccess(
-      { sub: user.id, tenantId: user.tenantId, role: user.role, sectors, accessibleTenants },
-      accessTtl
-    );
+    const accessToken = signAccess({
+      sub: user.id,
+      tenantId: user.tenantId,
+      role: user.role,
+      sectors,
+      accessibleTenants,
+    });
 
     const jti = crypto.randomUUID();
     const rawRefresh = signRefresh({ sub: user.id, jti }, refreshTtl);
