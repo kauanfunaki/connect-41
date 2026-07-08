@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { Building2 } from "lucide-react";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { StatusDot } from "@/components/shared/StatusDot";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { CompanyStatus } from "@/generated/prisma/enums";
 
 type Row = {
@@ -81,9 +83,7 @@ export function EmpresasTable({
     <>
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {companies.length === 0 ? (
-          <div className="py-16 text-center text-[13px] text-fg-muted">
-            Nenhuma empresa encontrada.
-          </div>
+          <EmptyState icon={<Building2 />} title="Nenhuma empresa encontrada" />
         ) : (
           <div className="scroll-x overflow-x-auto">
           <table className="w-full min-w-[860px] text-[length:var(--fs-body)]">

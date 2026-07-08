@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { Users } from "lucide-react";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { StatusDot } from "@/components/shared/StatusDot";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Row = {
   id: string;
@@ -54,7 +56,7 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
     <>
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {people.length === 0 ? (
-          <div className="py-16 text-center text-[13px] text-fg-muted">Nenhuma pessoa encontrada.</div>
+          <EmptyState icon={<Users />} title="Nenhuma pessoa encontrada" />
         ) : (
           <div className="scroll-x overflow-x-auto">
           <table className="w-full min-w-[860px] text-[length:var(--fs-body)]">

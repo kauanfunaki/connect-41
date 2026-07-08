@@ -42,12 +42,15 @@ const SECTOR_ICONS: Record<string, React.ReactNode> = {
   gestao: <LayoutGrid size={16} />,
 };
 
+type NotificationEntry = { id: string; message: string; read: boolean; href: string | null; createdAt: string };
+
 type Props = {
   tenantId: string;
   accessibleTenants: Tenant[];
   sectors: Sector[];
   canOpenAdmin: boolean;
   unreadCount: number;
+  notifications: NotificationEntry[];
   profileName: string;
   profileRoleLabel: string;
   profilePhotoUrl: string | null;
@@ -63,6 +66,7 @@ export function AppShell({
   sectors,
   canOpenAdmin,
   unreadCount,
+  notifications,
   profileName,
   profileRoleLabel,
   profilePhotoUrl,
@@ -134,7 +138,7 @@ export function AppShell({
                 <Settings size={17} />
               </Link>
             )}
-            <NotificationBell unreadCount={unreadCount} />
+            <NotificationBell unreadCount={unreadCount} notifications={notifications} />
             <ProfileMenu name={profileName} roleLabel={profileRoleLabel} photoUrl={profilePhotoUrl} />
           </div>
         </header>

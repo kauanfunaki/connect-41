@@ -22,7 +22,7 @@ export default async function AppLayout({
     .map((s) => ({ code: s, label: sectorLabels[s] ?? s, color: sectorColors[s] ?? "#586577" }));
 
   const prisma = getPrisma();
-  const [unreadCount, me, accessibleTenants] = await Promise.all([
+  const [unreadCount, me, accessibleTenants, recentNotifications] = await Promise.all([
     ctx.userId
       ? prisma.notification.count({ where: { tenantId, userId: ctx.userId, read: false } })
       : Promise.resolve(0),
@@ -36,7 +36,29 @@ export default async function AppLayout({
           orderBy: { name: "asc" },
         })
       : Promise.resolve([]),
+    ctx.userId
+      ? prisma.notification.findMany({
+          where: { tenantId, userId: ctx.userId },
+          orderBy: { createdAt: "desc" },
+          take: 6,
+        })
+      : Promise.resolve([]),
   ]);
+
+  const notifications = recentNotifications.map((n) => ({
+    id: n.id,
+    message: n.message,
+    read: n.read,
+    href:
+      n.entityType && n.entityId
+        ? n.entityType === "COMPANY"
+          ? `/empresas/${n.entityId}`
+          : `/pessoas/${n.entityId}`
+        : null,
+    createdAt: n.createdAt.toLocaleString("pt-BR", {
+      day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo",
+    }),
+  }));
 
   return (
     <AppShell
@@ -45,6 +67,7 @@ export default async function AppLayout({
       sectors={visibleSectors}
       canOpenAdmin={canOpenAdmin}
       unreadCount={unreadCount}
+      notifications={notifications}
       profileName={me?.name ?? "Usuário"}
       profileRoleLabel={ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role}
       profilePhotoUrl={me?.photoUrl ?? null}

@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { Columns3 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Button } from "@/components/ui/Button";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps } from "@/lib/sectors";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -42,8 +45,13 @@ export default async function KanbanListPage() {
       </div>
 
       {pipelines.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhum kanban cadastrado ainda.
+        <div className="bg-surface border border-border rounded-2xl">
+          <EmptyState
+            icon={<Columns3 />}
+            title="Nenhum kanban cadastrado ainda"
+            description="Crie o primeiro kanban do setor pra começar a organizar o funil."
+            action={canCreate ? <Link href="/kanban/novo"><Button>+ Novo Kanban</Button></Link> : undefined}
+          />
         </div>
       ) : (
         <div className="space-y-6">

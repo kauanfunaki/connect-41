@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { UserRoundCog } from "lucide-react";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { StatusDot } from "@/components/shared/StatusDot";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { ToggleActiveButton } from "@/components/admin/ToggleActiveButton";
 
 type SectorTag = { code: string; label: string; color: string };
@@ -74,7 +76,7 @@ export function UsuariosTable({
     <>
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {users.length === 0 ? (
-          <div className="py-16 text-center text-[13px] text-fg-muted">Nenhum usuário cadastrado ainda.</div>
+          <EmptyState icon={<UserRoundCog />} title="Nenhum usuário cadastrado ainda" />
         ) : (
           <div className="scroll-x overflow-x-auto">
           <table className="w-full min-w-[900px] text-[length:var(--fs-body)]">

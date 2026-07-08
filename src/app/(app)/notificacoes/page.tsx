@@ -1,7 +1,9 @@
+import { Bell } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { NotificationItem } from "@/components/shell/NotificationItem";
 import { MarkAllReadButton } from "@/components/shell/MarkAllReadButton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { marcarTodasLidas } from "./actions";
 
 export default async function NotificacoesPage() {
@@ -32,9 +34,7 @@ export default async function NotificacoesPage() {
 
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {notifications.length === 0 ? (
-          <div className="py-16 text-center text-[13px] text-fg-muted">
-            Nenhuma notificação por aqui ainda.
-          </div>
+          <EmptyState icon={<Bell />} title="Nenhuma notificação por aqui ainda" />
         ) : (
           <div className="divide-y divide-border">
             {notifications.map((n) => (

@@ -1,10 +1,13 @@
 import Link from "next/link";
+import { Users } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { PersonType } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { PessoasTable } from "@/components/pessoas/PessoasTable";
 import { CompanyFilterSelect } from "@/components/shared/CompanyFilterSelect";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Button } from "@/components/ui/Button";
 import { inativarPessoasEmMassa } from "./actions";
 
 const PER_PAGE = 20;
@@ -98,10 +101,21 @@ export default async function PessoasPage({
 
       {/* Table */}
       {people.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          {search || companyId
-            ? "Nenhuma pessoa encontrada com esses filtros."
-            : "Nenhuma pessoa cadastrada ainda."}
+        <div className="bg-surface border border-border rounded-2xl">
+          <EmptyState
+            icon={<Users />}
+            title={search || companyId ? "Nenhuma pessoa encontrada" : "Nenhuma pessoa cadastrada ainda"}
+            description={
+              search || companyId
+                ? "Tente ajustar a busca ou os filtros."
+                : "Comece cadastrando a primeira pessoa do tenant."
+            }
+            action={
+              !search && !companyId && canCreate ? (
+                <Link href="/pessoas/nova"><Button>+ Nova Pessoa</Button></Link>
+              ) : undefined
+            }
+          />
         </div>
       ) : (
         <PessoasTable

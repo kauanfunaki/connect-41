@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { Building2 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Button } from "@/components/ui/Button";
 import { getPrisma } from "@/lib/prisma";
 import { CompanyStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -133,10 +136,21 @@ export default async function EmpresasPage({
 
       {/* Table */}
       {companies.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          {search || statusFilter
-            ? "Nenhuma empresa encontrada com esses filtros."
-            : "Nenhuma empresa cadastrada ainda."}
+        <div className="bg-surface border border-border rounded-2xl">
+          <EmptyState
+            icon={<Building2 />}
+            title={search || statusFilter ? "Nenhuma empresa encontrada" : "Nenhuma empresa cadastrada ainda"}
+            description={
+              search || statusFilter
+                ? "Tente ajustar a busca ou os filtros."
+                : "Comece cadastrando a primeira empresa do tenant."
+            }
+            action={
+              !search && !statusFilter && canCreate ? (
+                <Link href="/empresas/nova"><Button>+ Nova Empresa</Button></Link>
+              ) : undefined
+            }
+          />
         </div>
       ) : (
         <EmpresasTable
