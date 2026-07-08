@@ -26,13 +26,11 @@ export default async function NovaEmpresaPage() {
           <span className="text-[13px] text-fg">Nova Empresa</span>
         </div>
 
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">
+        <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em] mb-6">
           Nova Empresa
         </h1>
 
-        <div className="bg-surface border border-border rounded-lg p-6">
-          <EmpresaForm action={criarEmpresa} cancelHref="/empresas" branchOptions={branchOptions} />
-        </div>
+        <EmpresaForm action={criarEmpresa} cancelHref="/empresas" branchOptions={branchOptions} />
       </div>
     </PageContainer>
   );

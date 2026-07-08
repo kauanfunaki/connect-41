@@ -79,11 +79,11 @@ export default async function HomePage() {
 
   return (
     <PageContainer>
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">
+      <div className="mb-7">
+        <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em]">
           Início
         </h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">
+        <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
           Bem-vindo ao Connect 41 — CRM interno da 41 Tech.
         </p>
       </div>
@@ -102,22 +102,22 @@ export default async function HomePage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="bg-surface border border-border rounded-lg p-5">
-          <h2 className="text-[13px] font-semibold text-fg mb-3">Prazos próximos (7 dias)</h2>
+        <div className="bg-surface border border-border rounded-2xl p-5">
+          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Prazos próximos (7 dias)</h2>
           {upcomingItems.length === 0 ? (
-            <p className="text-[13px] text-fg-muted">Nenhum prazo nos próximos 7 dias.</p>
+            <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhum prazo nos próximos 7 dias.</p>
           ) : (
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               {upcomingItems.map((item) => (
                 <Link
                   key={item.id}
                   href={`/kanban/${item.pipelineId}/itens/${item.id}`}
                   className="flex items-center justify-between gap-2 group"
                 >
-                  <span className="text-[13px] text-fg group-hover:text-brand transition-colors truncate">
+                  <span className="text-[length:var(--fs-body)] text-fg group-hover:text-brand transition-colors truncate">
                     {entityNames[item.entityId] ?? "(removido)"}
                   </span>
-                  <span className="text-[11px] text-fg-muted tnum flex-shrink-0">
+                  <span className="text-[length:var(--fs-helper)] text-fg-muted tnum flex-shrink-0">
                     {item.dueDate?.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} ·{" "}
                     {item.pipeline.name}
                   </span>
@@ -127,24 +127,24 @@ export default async function HomePage() {
           )}
         </div>
 
-        <div className="bg-surface border border-border rounded-lg p-5">
-          <h2 className="text-[13px] font-semibold text-fg mb-3">Atividade recente</h2>
+        <div className="bg-surface border border-border rounded-2xl p-5">
+          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Atividade recente</h2>
           {recentActivities.length === 0 ? (
-            <p className="text-[13px] text-fg-muted">Nenhuma atividade registrada ainda.</p>
+            <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhuma atividade registrada ainda.</p>
           ) : (
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               {recentActivities.map((a) => (
                 <Link
                   key={a.id}
                   href={`/kanban/${a.pipelineItem.pipelineId}/itens/${a.pipelineItem.id}`}
                   className="block group"
                 >
-                  <p className="text-[13px] text-fg-secondary leading-snug">
+                  <p className="text-[length:var(--fs-body)] text-fg-secondary leading-snug">
                     <span className="font-medium text-fg group-hover:text-brand transition-colors">{a.user.name}</span>{" "}
                     {ACTIVITY_LABEL[a.type] ?? "atualizou"}{" "}
                     <span className="font-medium">{entityNames[a.pipelineItem.entityId] ?? "(removido)"}</span>
                   </p>
-                  <p className="text-[11px] text-fg-muted">
+                  <p className="text-[length:var(--fs-helper)] text-fg-muted">
                     {a.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
                   </p>
                 </Link>
@@ -154,11 +154,11 @@ export default async function HomePage() {
         </div>
       </div>
 
-      <div className="bg-surface border border-border rounded-lg p-5">
-        <p className="text-[13px] font-medium text-fg mb-1">
+      <div className="bg-surface border border-border rounded-2xl p-5">
+        <p className="text-[length:var(--fs-body)] font-semibold text-fg mb-1">
           {ROLE_LABELS[ctx.role]}
         </p>
-        <p className="text-[13px] text-fg-muted leading-relaxed">
+        <p className="text-[length:var(--fs-helper)] text-fg-muted leading-relaxed">
           {ctx.sectors.length > 0
             ? `Você tem acesso a ${ctx.sectors.length} setor${ctx.sectors.length !== 1 ? "es" : ""}.`
             : "Você tem acesso a todos os setores do tenant."}
@@ -185,10 +185,10 @@ function StatCard({
     <Link
       href={href}
       style={{ animationDelay: `${delay}ms` }}
-      className="reveal-in bg-surface border border-border rounded-lg px-4 py-4 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform] block"
+      className="reveal-in bg-surface border border-border rounded-2xl px-[18px] py-4 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform] block flex flex-col gap-2"
     >
-      <p className="text-[12px] text-fg-muted mb-1">{label}</p>
-      <p className={`text-[24px] font-semibold tnum leading-none mb-1 ${highlight ? "text-warning" : "text-fg"}`}>
+      <p className="text-[length:var(--fs-helper)] text-fg-muted">{label}</p>
+      <p className={`font-display text-[length:var(--fs-metric)] font-semibold tnum leading-none ${highlight ? "text-warning" : "text-fg"}`}>
         {value}
       </p>
     </Link>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { EmpresaForm } from "@/components/empresas/EmpresaForm";
 import { atualizarEmpresa } from "../../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -29,7 +30,8 @@ export default async function EditarEmpresaPage({
   const branchOptions = await getActiveBranchOptions(ctx.tenantId);
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <PageContainer>
+      <div className="max-w-[1000px] mx-auto">
       <div className="flex items-center gap-2 mb-6">
         <Link
           href="/empresas"
@@ -48,11 +50,10 @@ export default async function EditarEmpresaPage({
         <span className="text-[13px] text-fg">Editar</span>
       </div>
 
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">
+      <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em] mb-6">
         Editar Empresa
       </h1>
 
-      <div className="bg-surface border border-border rounded-lg p-6">
         <EmpresaForm
           action={atualizarEmpresa}
           cancelHref={`/empresas/${id}`}
@@ -83,6 +84,6 @@ export default async function EditarEmpresaPage({
           }}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }

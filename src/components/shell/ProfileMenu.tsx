@@ -67,19 +67,22 @@ export function ProfileMenu({ name, roleLabel, photoUrl: initialPhotoUrl }: Prop
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 pl-1 pr-2 h-8 rounded-md hover:bg-surface-2 transition-colors"
+        aria-expanded={open}
+        className={`flex items-center gap-2.5 h-[38px] pl-1 pr-3 rounded-[10px] bg-surface-hover border transition-colors ${
+          open ? "border-border-strong" : "border-border hover:border-border-strong"
+        }`}
       >
-        <Avatar photoUrl={photoUrl} name={name} size={26} />
-        <span className="text-[12px] font-medium text-fg max-w-[120px] truncate">{name}</span>
+        <Avatar photoUrl={photoUrl} name={name} size={28} />
+        <span className="text-[14px] font-semibold text-fg max-w-[120px] truncate">{name}</span>
       </button>
 
       {open && (
-        <div className="absolute right-0 top-[calc(100%+6px)] w-[240px] bg-surface border border-border rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.1)] py-2 z-20">
-          <div className="flex items-center gap-3 px-3 pb-2.5 mb-1 border-b border-border">
-            <Avatar photoUrl={photoUrl} name={name} size={34} />
+        <div className="absolute right-0 top-[calc(100%+10px)] w-[230px] bg-surface-elevated border border-border-strong rounded-2xl shadow-[var(--c41-shadow-lg)] p-3 z-20">
+          <div className="flex items-center gap-3 p-1.5 pb-3 mb-1 border-b border-border">
+            <Avatar photoUrl={photoUrl} name={name} size={38} />
             <div className="min-w-0">
-              <p className="text-[13px] font-medium text-fg truncate">{name}</p>
-              <p className="text-[11px] text-fg-muted truncate">{roleLabel}</p>
+              <p className="text-[14px] font-semibold text-fg truncate">{name}</p>
+              <p className="text-[12px] text-fg-muted truncate">{roleLabel}</p>
             </div>
           </div>
 
@@ -87,7 +90,7 @@ export function ProfileMenu({ name, roleLabel, photoUrl: initialPhotoUrl }: Prop
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="w-full text-left px-3 py-1.5 text-[12px] text-fg-secondary hover:bg-surface-2 hover:text-fg transition-colors disabled:opacity-60"
+            className="w-full text-left px-2 py-2 rounded-lg text-[14px] font-medium text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors disabled:opacity-60"
           >
             {uploading ? "Enviando…" : "Alterar foto"}
           </button>
@@ -99,13 +102,13 @@ export function ProfileMenu({ name, roleLabel, photoUrl: initialPhotoUrl }: Prop
             onChange={handleFileChange}
           />
 
-          {error && <p className="px-3 py-1 text-[11px] text-danger">{error}</p>}
+          {error && <p className="px-2 py-1 text-[12px] text-danger">{error}</p>}
 
           <div className="mt-1 pt-1 border-t border-border">
             <button
               type="button"
               onClick={handleLogout}
-              className="w-full text-left px-3 py-1.5 text-[12px] text-danger hover:bg-danger/8 transition-colors"
+              className="w-full text-left px-2 py-2 rounded-lg text-[14px] font-medium text-danger hover:bg-danger-bg transition-colors"
             >
               Sair
             </button>

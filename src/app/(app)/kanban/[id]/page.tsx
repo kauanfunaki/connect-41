@@ -61,7 +61,7 @@ export default async function KanbanBoardPage({
 
   // Última mudança de estágio de cada item (mais recente primeiro) — usada pra
   // calcular "X dias na etapa" sem precisar de campo novo no schema.
-  const [lastStageChanges, recentMoves] = await Promise.all([
+  const [lastStageChanges, recentMoves, recentActivityAnyType] = await Promise.all([
     prisma.activity.findMany({
       where: { tenantId: ctx.tenantId, type: "STATUS_CHANGE", pipelineItem: { pipelineId: id } },
       orderBy: { createdAt: "desc" },
@@ -73,7 +73,24 @@ export default async function KanbanBoardPage({
       take: 20,
       include: { user: { select: { name: true } }, pipelineItem: { select: { entityId: true } } },
     }),
+    // última atividade (qualquer tipo) por item — usada só pra linha única do card no board.
+    prisma.activity.findMany({
+      where: { tenantId: ctx.tenantId, pipelineItem: { pipelineId: id } },
+      orderBy: { createdAt: "desc" },
+      take: 200,
+      select: { pipelineItemId: true, type: true, content: true },
+    }),
   ]);
+
+  const ACTIVITY_LABEL: Record<string, string> = {
+    NOTE: "Nota", STATUS_CHANGE: "Mudou de etapa", DOCUMENT: "Anexou documento",
+    HANDOFF: "Handoff", MENTION: "Menção",
+  };
+  const lastActivityByItem: Record<string, string> = {};
+  for (const a of recentActivityAnyType) {
+    if (a.pipelineItemId in lastActivityByItem) continue;
+    lastActivityByItem[a.pipelineItemId] = a.content?.trim() ? a.content : (ACTIVITY_LABEL[a.type] ?? a.type);
+  }
 
   const lastChangeByItem: Record<string, Date> = {};
   for (const c of lastStageChanges) {
@@ -88,6 +105,7 @@ export default async function KanbanBoardPage({
     tags: i.tags.map((t) => ({ id: t.tag.id, name: t.tag.name, color: t.tag.color })),
     assignees: i.assignees.map((a) => ({ id: a.user.id, name: a.user.name })),
     daysInStage: daysSince(lastChangeByItem[i.id] ?? i.createdAt),
+    lastActivity: lastActivityByItem[i.id] ?? null,
   }));
 
   const timeline = recentMoves.map((m) => ({
@@ -110,8 +128,8 @@ export default async function KanbanBoardPage({
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">{pipeline.name}</h1>
-          <p className="text-[13px] text-fg-muted mt-0.5">
+          <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em]">{pipeline.name}</h1>
+          <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
             {sectorLabels[pipeline.sectorCode] ?? pipeline.sectorCode} ·{" "}
             {pipeline.entityType === "COMPANY" ? "Empresas" : "Pessoas"}
           </p>
@@ -119,7 +137,7 @@ export default async function KanbanBoardPage({
         {canAddItem && (
           <Link
             href={`/kanban/${id}/itens/novo`}
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[10px] bg-brand text-on-brand text-[length:var(--fs-button)] font-semibold hover:bg-brand-hover transition-colors"
           >
             + Item
           </Link>
@@ -136,20 +154,28 @@ export default async function KanbanBoardPage({
       </div>
 
       {timeline.length > 0 && (
-        <div className="flex-shrink-0 mt-4 pt-4 border-t border-border">
-          <h2 className="text-[12px] font-medium text-fg-secondary mb-2.5">Timeline de movimentação</h2>
-          <div className="flex gap-3 overflow-x-auto pb-1">
-            {timeline.map((t) => (
-              <div
-                key={t.id}
-                className="flex-shrink-0 w-[240px] bg-surface border border-border rounded-md px-3 py-2.5"
-              >
-                <p className="text-[12px] text-fg leading-snug">
-                  <span className="font-medium">{t.entityName}</span> {t.content}
-                </p>
-                <p className="text-[11px] text-fg-muted mt-1">
-                  {t.userName} · {t.createdAt}
-                </p>
+        <div className="flex-shrink-0 mt-4 pt-4 border-t border-border max-h-[220px] flex flex-col">
+          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3 flex-shrink-0">
+            Timeline de movimentação
+          </h2>
+          <div className="scroll-y overflow-y-auto pr-1">
+            {timeline.map((t, i) => (
+              <div key={t.id} className="flex gap-3 relative pb-4 last:pb-0">
+                {i < timeline.length - 1 && (
+                  <span className="absolute left-[10px] top-[22px] bottom-0 w-px bg-border" />
+                )}
+                <span className="w-[21px] h-[21px] rounded-full bg-surface-hover border border-border-strong flex items-center justify-center flex-shrink-0 z-[1]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand" />
+                </span>
+                <div className="min-w-0 flex-1 flex items-start justify-between gap-3">
+                  <p className="text-[length:var(--fs-body)] text-fg-secondary leading-snug">
+                    <span className="font-semibold text-fg">{t.entityName}</span> {t.content}
+                    <span className="text-fg-muted"> · {t.userName}</span>
+                  </p>
+                  <span className="font-mono text-[11px] text-fg-muted whitespace-nowrap flex-shrink-0">
+                    {t.createdAt}
+                  </span>
+                </div>
               </div>
             ))}
           </div>

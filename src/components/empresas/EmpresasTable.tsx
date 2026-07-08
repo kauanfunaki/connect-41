@@ -85,11 +85,12 @@ export function EmpresasTable({
             Nenhuma empresa encontrada.
           </div>
         ) : (
-          <table className="w-full text-[13px]">
+          <div className="scroll-x overflow-x-auto">
+          <table className="w-full min-w-[860px] text-[length:var(--fs-body)]">
             <thead>
-              <tr className="border-b border-border bg-surface-2">
+              <tr className="border-b border-border bg-table-header-bg">
                 {canCreate && (
-                  <th className="w-10 px-4 py-2.5">
+                  <th className="w-10 px-4 py-3">
                     <input
                       type="checkbox"
                       checked={allSelected}
@@ -98,12 +99,12 @@ export function EmpresasTable({
                     />
                   </th>
                 )}
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Nome</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">CNPJ</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Status</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">E-mail</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Criada em</th>
-                <th className="px-4 py-2.5" />
+                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
+                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">CNPJ</th>
+                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
+                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">E-mail</th>
+                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Criada em</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
@@ -111,11 +112,11 @@ export function EmpresasTable({
                 <tr
                   key={c.id}
                   className={`border-b border-border last:border-0 transition-colors ${
-                    selected.has(c.id) ? "bg-brand/[0.06] hover:bg-brand/[0.09]" : "hover:bg-surface-2"
+                    selected.has(c.id) ? "bg-selected-bg" : "hover:bg-surface-hover"
                   }`}
                 >
                   {canCreate && (
-                    <td className="px-4 py-2.5">
+                    <td className="px-4 py-3">
                       <input
                         type="checkbox"
                         checked={selected.has(c.id)}
@@ -124,20 +125,20 @@ export function EmpresasTable({
                       />
                     </td>
                   )}
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-3">
                     <Link href={`/empresas/${c.id}`} className="font-medium text-fg hover:text-brand transition-colors">
                       {c.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-2.5 text-fg-muted tnum">{c.cnpj ?? "—"}</td>
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-3 text-fg-secondary tnum">{c.cnpj ?? "—"}</td>
+                  <td className="px-4 py-3">
                     <StatusDot color={statusColor[c.status]} label={statusLabel[c.status]} />
                   </td>
-                  <td className="px-4 py-2.5 text-fg-muted">{c.email ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-fg-muted tnum">{c.createdAtLabel}</td>
-                  <td className="px-4 py-2.5 text-right">
+                  <td className="px-4 py-3 text-fg-secondary">{c.email ?? "—"}</td>
+                  <td className="px-4 py-3 text-fg-secondary tnum">{c.createdAtLabel}</td>
+                  <td className="px-4 py-3 text-right">
                     {canCreate && (
-                      <Link href={`/empresas/${c.id}/editar`} className="text-[12px] text-fg-muted hover:text-fg transition-colors">
+                      <Link href={`/empresas/${c.id}/editar`} className="text-[13px] font-medium text-fg-muted hover:text-fg transition-colors">
                         Editar
                       </Link>
                     )}
@@ -146,6 +147,7 @@ export function EmpresasTable({
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

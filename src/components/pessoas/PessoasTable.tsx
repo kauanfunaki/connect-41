@@ -4,8 +4,11 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { StatusDot } from "@/components/shared/StatusDot";
+<<<<<<< HEAD
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
+=======
+>>>>>>> 9dd05343575f0a52b5c0abbeb183740e584a20c9
 
 type Row = {
   id: string;
@@ -62,11 +65,12 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
         {people.length === 0 ? (
           <div className="py-16 text-center text-[13px] text-fg-muted">Nenhuma pessoa encontrada.</div>
         ) : (
-          <table className="w-full text-[13px]">
+          <div className="scroll-x overflow-x-auto">
+          <table className="w-full min-w-[860px] text-[length:var(--fs-body)]">
             <thead>
-              <tr className="border-b border-border bg-surface-2">
+              <tr className="border-b border-border bg-table-header-bg">
                 {canCreate && (
-                  <th className="w-10 px-4 py-2.5">
+                  <th className="w-10 px-4 py-3">
                     <input
                       type="checkbox"
                       checked={allSelected}
@@ -75,13 +79,13 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
                     />
                   </th>
                 )}
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Nome</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Status</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">CPF</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">E-mail</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Empresa</th>
-                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Criada em</th>
-                <th className="px-4 py-2.5" />
+                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
+                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
+                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">CPF</th>
+                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">E-mail</th>
+                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Empresa</th>
+                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Criada em</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
@@ -89,11 +93,11 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
                 <tr
                   key={p.id}
                   className={`border-b border-border last:border-0 transition-colors ${
-                    selected.has(p.id) ? "bg-brand/[0.06] hover:bg-brand/[0.09]" : "hover:bg-surface-2"
+                    selected.has(p.id) ? "bg-selected-bg" : "hover:bg-surface-hover"
                   }`}
                 >
                   {canCreate && (
-                    <td className="px-4 py-2.5">
+                    <td className="px-4 py-3">
                       <input
                         type="checkbox"
                         checked={selected.has(p.id)}
@@ -102,20 +106,24 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
                       />
                     </td>
                   )}
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-3">
                     <Link href={`/pessoas/${p.id}`} className="font-medium text-fg hover:text-brand transition-colors">
                       {p.name}
                     </Link>
                   </td>
+<<<<<<< HEAD
                   <td className="px-4 py-2.5">
+=======
+                  <td className="px-4 py-3">
+>>>>>>> 9dd05343575f0a52b5c0abbeb183740e584a20c9
                     <StatusDot
-                      color={p.active ? "var(--c41-success)" : "var(--c41-neutral-400)"}
+                      color={p.active ? "var(--c41-success)" : "var(--c41-fg-muted)"}
                       label={p.active ? "Ativo" : "Inativo"}
                     />
                   </td>
-                  <td className="px-4 py-2.5 text-fg-muted tnum">{p.cpf ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-fg-muted">{p.email ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-fg-muted">
+                  <td className="px-4 py-3 text-fg-secondary tnum">{p.cpf ?? "—"}</td>
+                  <td className="px-4 py-3 text-fg-secondary">{p.email ?? "—"}</td>
+                  <td className="px-4 py-3 text-fg-secondary">
                     {p.companyId ? (
                       <Link href={`/empresas/${p.companyId}`} className="hover:text-brand transition-colors">
                         {p.companyName}
@@ -124,10 +132,10 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
                       "—"
                     )}
                   </td>
-                  <td className="px-4 py-2.5 text-fg-muted tnum">{p.createdAtLabel}</td>
-                  <td className="px-4 py-2.5 text-right">
+                  <td className="px-4 py-3 text-fg-secondary tnum">{p.createdAtLabel}</td>
+                  <td className="px-4 py-3 text-right">
                     {canCreate && (
-                      <Link href={`/pessoas/${p.id}/editar`} className="text-[12px] text-fg-muted hover:text-fg transition-colors">
+                      <Link href={`/pessoas/${p.id}/editar`} className="text-[13px] font-medium text-fg-muted hover:text-fg transition-colors">
                         Editar
                       </Link>
                     )}
@@ -136,14 +144,20 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
       <BulkActionBar count={selected.size} onClear={() => setSelected(new Set())}>
         <button
           type="button"
+<<<<<<< HEAD
           onClick={() => setConfirmOpen(true)}
           className="h-8 px-3 rounded-md border border-danger/30 text-[12px] font-medium text-danger hover:bg-danger/8 transition-colors"
+=======
+          onClick={applyInativar}
+          className="h-8 px-3 rounded-md border border-danger/30 text-[13px] font-semibold text-danger hover:bg-danger-bg transition-colors"
+>>>>>>> 9dd05343575f0a52b5c0abbeb183740e584a20c9
         >
           Inativar
         </button>

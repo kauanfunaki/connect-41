@@ -16,6 +16,7 @@ type Item = {
   tags?: Tag[];
   assignees?: Assignee[];
   daysInStage?: number;
+  lastActivity?: string | null;
 };
 
 type Props = {
@@ -43,6 +44,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
   const [items, setItems] = useState(initialItems);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   function handleDrop(stageId: string, itemId: string) {
@@ -55,7 +57,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
   }
 
   return (
-    <div className="flex gap-4 h-full overflow-x-auto pb-4">
+    <div className="scroll-x bg-surface border border-border rounded-2xl p-4 h-full overflow-x-auto flex gap-3">
       {stages.map((stage) => {
         const color = stage.color ?? FALLBACK_COLOR;
         const stageItems = items.filter((i) => i.stageId === stage.id);
@@ -74,30 +76,30 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
               const itemId = e.dataTransfer.getData("text/plain");
               if (itemId) handleDrop(stage.id, itemId);
             }}
-            className={`flex-1 min-w-[268px] max-w-[340px] flex flex-col rounded-lg border transition-[border-color,background-color] duration-150 ${
-              isDragOver ? "border-brand/50 bg-brand/[0.04]" : "border-border bg-surface-2/30"
+            className={`flex-1 min-w-[268px] max-w-[340px] flex flex-col rounded-xl border transition-[outline-color,background-color] duration-150 ${
+              isDragOver ? "bg-brand-subtle outline outline-2 outline-dashed outline-brand -outline-offset-2 border-transparent" : "border-border bg-canvas"
             }`}
           >
             {/* Column header */}
-            <div className="flex items-center gap-2 px-3 h-10 border-b border-border flex-shrink-0">
+            <div className="flex items-center gap-2 px-3 h-11 border-b border-border flex-shrink-0">
               <span
                 className="w-[7px] h-[7px] rounded-full flex-shrink-0"
                 style={{ background: color }}
               />
-              <h3 className="text-[12px] font-medium text-fg-secondary flex-1 truncate tracking-[-0.005em]">
+              <h3 className="text-[length:var(--fs-kanban-title)] font-medium text-fg-secondary flex-1 truncate tracking-[-0.005em]">
                 {stage.name}
               </h3>
-              <span className="text-[11px] text-fg-muted tnum leading-none px-1.5 py-0.5 rounded-full bg-surface border border-border">
+              <span className="text-[11px] font-semibold text-fg-muted tnum leading-none px-2 py-1 rounded-full bg-surface-hover">
                 {stageItems.length}
               </span>
             </div>
 
             {/* Cards */}
-            <div className="flex-1 overflow-y-auto p-2 space-y-1.5 min-h-[100px]">
+            <div className="scroll-y flex-1 overflow-y-auto p-2.5 space-y-2 min-h-[100px]">
               {stageItems.length === 0 && (
                 <div
-                  className={`h-16 rounded-md border border-dashed flex items-center justify-center text-[11px] transition-colors ${
-                    isDragOver ? "border-brand/40 text-brand" : "border-border text-fg-muted/70"
+                  className={`h-16 rounded-xl border-[1.5px] border-dashed flex items-center justify-center text-[12px] transition-colors ${
+                    isDragOver ? "border-brand text-brand" : "border-border-strong text-fg-muted"
                   }`}
                 >
                   {isDragOver ? "Soltar aqui" : "Nenhum item"}
@@ -111,6 +113,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                     key={item.id}
                     href={`/kanban/${pipelineId}/itens/${item.id}`}
                     draggable
+                    onMouseDown={() => setSelectedId(item.id)}
                     onDragStart={(e) => {
                       e.dataTransfer.setData("text/plain", item.id);
                       setDraggingId(item.id);
@@ -120,27 +123,29 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                       borderLeftColor: color,
                       animationDelay: `${Math.min(i, 8) * 25}ms`,
                     }}
-                    className={`kanban-card-enter group block bg-surface border border-border border-l-[3px] rounded-md pl-3 pr-3 py-2.5 cursor-grab active:cursor-grabbing transition-[border-color,box-shadow,opacity] duration-150 hover:border-border-strong hover:shadow-[0_1px_6px_rgba(0,0,0,0.06)] ${
-                      draggingId === item.id ? "opacity-40" : ""
-                    }`}
+                    className={`kanban-card-enter group block bg-surface border border-l-[3px] rounded-xl pl-3 pr-3 py-3 cursor-grab active:cursor-grabbing transition-[border-color,box-shadow,opacity,background-color] duration-150 hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] ${
+                      selectedId === item.id
+                        ? "border-brand shadow-[0_0_0_3px_var(--c41-brand-subtle)]"
+                        : "border-border hover:border-border-strong"
+                    } ${draggingId === item.id ? "opacity-90 shadow-[var(--c41-shadow-lg)] rotate-[-1.5deg]" : ""}`}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-[13px] font-medium text-fg leading-snug truncate group-hover:text-fg transition-colors">
+                      <p className="text-[length:var(--fs-kanban-title)] font-semibold text-fg leading-snug truncate group-hover:text-fg transition-colors">
                         {item.entityName}
                       </p>
                       {item.daysInStage !== undefined && (
-                        <span className="text-[10px] text-fg-muted tnum flex-shrink-0 leading-snug">
+                        <span className="text-[length:var(--fs-kanban-meta)] text-fg-muted tnum flex-shrink-0 leading-snug">
                           {item.daysInStage}d
                         </span>
                       )}
                     </div>
 
                     {item.tags && item.tags.length > 0 && (
-                      <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                      <div className="flex flex-wrap items-center gap-1 mt-2">
                         {item.tags.map((t) => (
                           <span
                             key={t.id}
-                            className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                            className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full"
                             style={{ background: `${t.color}1A`, color: t.color }}
                           >
                             {t.name}
@@ -150,11 +155,11 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                     )}
 
                     {(item.dueDate || item.priority > 0 || (item.assignees && item.assignees.length > 0)) && (
-                      <div className="flex items-center justify-between gap-1.5 mt-1.5">
-                        <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="flex items-center justify-between gap-1.5 mt-2">
+                        <div className="flex items-center gap-2 min-w-0">
                           {item.dueDate && (
                             <span
-                              className={`text-[11px] tnum ${overdue ? "text-danger font-medium" : "text-fg-muted"}`}
+                              className={`text-[length:var(--fs-kanban-meta)] tnum ${overdue ? "text-danger font-semibold" : "text-fg-muted"}`}
                             >
                               {overdue && "⚠ "}
                               {new Date(item.dueDate).toLocaleDateString("pt-BR", {
@@ -167,7 +172,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                             <StatusDot
                               color="var(--c41-warning)"
                               label={item.priority >= 2 ? "Urgente" : "Alta"}
-                              className="text-[10px]"
+                              className="text-[length:var(--fs-kanban-meta)]"
                             />
                           )}
                         </div>
@@ -178,19 +183,25 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                               <span
                                 key={a.id}
                                 title={a.name}
-                                className="w-5 h-5 rounded-full bg-surface-2 border border-border text-[9px] font-medium text-fg-secondary flex items-center justify-center"
+                                className="w-5 h-5 rounded-full bg-surface-hover border border-border text-[9px] font-medium text-fg-secondary flex items-center justify-center"
                               >
                                 {initials(a.name)}
                               </span>
                             ))}
                             {item.assignees.length > 3 && (
-                              <span className="w-5 h-5 rounded-full bg-surface-2 border border-border text-[9px] font-medium text-fg-muted flex items-center justify-center">
+                              <span className="w-5 h-5 rounded-full bg-surface-hover border border-border text-[9px] font-medium text-fg-muted flex items-center justify-center">
                                 +{item.assignees.length - 3}
                               </span>
                             )}
                           </div>
                         )}
                       </div>
+                    )}
+
+                    {item.lastActivity && (
+                      <p className="text-[11px] text-fg-muted mt-2 pt-2 border-t border-border truncate">
+                        {item.lastActivity}
+                      </p>
                     )}
                   </Link>
                 );
