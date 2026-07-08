@@ -10,7 +10,9 @@ type NavItemProps = {
 };
 
 function isActivePath(pathname: string, href: string): boolean {
-  if (href === "/") return pathname === "/";
+  // "/" só existe como redirect pra "/home" — sem esse caso especial o item
+  // "Início" nunca fica marcado como ativo (pathname real nunca é "/").
+  if (href === "/") return pathname === "/" || pathname === "/home";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -21,13 +23,12 @@ export function NavItem({ href, icon, label }: NavItemProps) {
   return (
     <Link
       href={href}
-      className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[14px] font-medium transition-colors ${
-        active
-          ? "bg-brand-subtle text-fg"
-          : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
+      className={`relative flex items-center gap-2.5 px-2.5 py-2 -ml-3 pl-[calc(0.625rem+0.75rem)] rounded-lg text-[14px] font-medium transition-colors ${
+        active ? "text-brand" : "text-fg-secondary hover:text-fg"
       }`}
     >
-      <span className={`flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${active ? "text-brand-hover" : ""}`}>{icon}</span>
+      {active && <span className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-brand" />}
+      <span className={`flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${active ? "text-brand" : ""}`}>{icon}</span>
       {label}
     </Link>
   );
@@ -47,12 +48,13 @@ export function SectorNavItem({ href, label, color, icon }: SectorNavItemProps) 
   return (
     <Link
       href={href}
-      className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] transition-colors ${
-        active ? "bg-brand-subtle text-fg font-medium" : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
+      className={`relative flex items-center gap-2.5 px-2.5 py-2 -ml-3 pl-[calc(0.625rem+0.75rem)] rounded-lg text-[13px] transition-colors ${
+        active ? "text-brand font-medium" : "text-fg-secondary hover:text-fg"
       }`}
     >
+      {active && <span className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-brand" />}
       <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: color }} />
-      {icon && <span className="flex-shrink-0 [&>svg]:w-[15px] [&>svg]:h-[15px]">{icon}</span>}
+      {icon && <span className={`flex-shrink-0 [&>svg]:w-[15px] [&>svg]:h-[15px] ${active ? "text-brand" : ""}`}>{icon}</span>}
       {label}
     </Link>
   );

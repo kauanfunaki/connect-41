@@ -77,12 +77,15 @@ export function AppShell({
       {/* ── Sidebar ── */}
       <aside className="w-[240px] flex-shrink-0 flex flex-col border-r border-border bg-sidebar-bg">
         {/* Logo */}
-        <div className="flex items-center gap-2.5 h-14 px-5 border-b border-border flex-shrink-0">
+        <div className="flex items-center justify-center gap-2.5 h-14 px-5 border-b border-border flex-shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo.png" alt="41 Tech" className="h-7 w-7 object-contain invert dark:invert-0" />
-          <span className="text-fg font-display font-semibold text-[16px] tracking-[-0.01em]">
-            Connect 41
-          </span>
+          <img src="/brand/logo.png" alt="41 Tech" className="h-7 w-7 object-contain flex-shrink-0 invert dark:invert-0" />
+          <div className="min-w-0 leading-tight">
+            <p className="text-fg font-display font-semibold text-[16px] tracking-[-0.01em] truncate">
+              Connect 41
+            </p>
+            <p className="text-fg-muted text-[11px] truncate">41 Tech</p>
+          </div>
         </div>
 
         <WorkspaceSwitcher tenants={accessibleTenants} currentTenantId={tenantId} />
@@ -116,9 +119,28 @@ export function AppShell({
           )}
         </nav>
 
-        {/* Footer: tema */}
-        <div className="border-t border-border px-4 py-3 flex items-center flex-shrink-0">
-          <ThemeToggle />
+        {/* Footer: configurações */}
+        <div className="border-t border-border px-3 py-3 flex-shrink-0">
+          {canOpenAdmin ? (
+            <Link
+              href="/admin"
+              className="flex items-center justify-center gap-2.5 px-2.5 py-2 rounded-lg text-[14px] font-medium text-fg-secondary hover:text-fg transition-colors"
+            >
+              <Settings size={16} className="flex-shrink-0" />
+              Configurações
+            </Link>
+          ) : (
+            // TODO: sem tela de configurações pra usuário comum ainda — só o visual, sem rota.
+            <button
+              type="button"
+              title="Em breve"
+              disabled
+              className="w-full flex items-center justify-center gap-2.5 px-2.5 py-2 rounded-lg text-[14px] font-medium text-fg-muted opacity-60 cursor-not-allowed"
+            >
+              <Settings size={16} className="flex-shrink-0" />
+              Configurações
+            </button>
+          )}
         </div>
       </aside>
 
@@ -129,15 +151,7 @@ export function AppShell({
           <GlobalSearch />
 
           <div className="flex items-center gap-2.5 flex-shrink-0">
-            {canOpenAdmin && (
-              <Link
-                href="/admin"
-                title="Administração"
-                className="w-[38px] h-[38px] inline-flex items-center justify-center rounded-[10px] bg-surface-hover border border-border text-fg-secondary hover:text-fg hover:border-border-strong transition-colors"
-              >
-                <Settings size={17} />
-              </Link>
-            )}
+            <ThemeToggle />
             <NotificationBell unreadCount={unreadCount} notifications={notifications} />
             <ProfileMenu name={profileName} roleLabel={profileRoleLabel} photoUrl={profilePhotoUrl} />
           </div>

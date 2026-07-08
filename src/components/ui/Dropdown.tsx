@@ -24,7 +24,7 @@ export function Dropdown({ trigger, children, align = "left", width = 240 }: Pro
   }, [open]);
 
   return (
-    <div ref={rootRef} className="relative inline-block">
+    <div ref={rootRef} className="relative block">
       {trigger({ open, toggle: () => setOpen((v) => !v) })}
       {open && (
         <div

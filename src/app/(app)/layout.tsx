@@ -37,7 +37,12 @@ export default async function AppLayout({
           select: { id: true, name: true },
           orderBy: { name: "asc" },
         })
-      : Promise.resolve([]),
+      // Sem múltiplos tenants: busca só o nome do tenant atual, pro seletor de
+      // workspace da sidebar mostrar o nome real mesmo sem troca disponível.
+      : prisma.tenant.findMany({
+          where: { id: tenantId },
+          select: { id: true, name: true },
+        }),
     ctx.userId
       ? prisma.notification.findMany({
           where: { tenantId, userId: ctx.userId },
