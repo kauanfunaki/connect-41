@@ -258,6 +258,7 @@ model Tenant {
   cnpj      String?  @unique @db.VarChar(18)
   slug      String   @unique @db.VarChar(60)
   plan      String   @default("starter") @db.VarChar(40)
+  logoUrl   String?  @db.VarChar(255)
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -460,6 +461,7 @@ model Company {
   email                 String?       @db.VarChar(120)
   phone                 String?       @db.VarChar(30)
   website               String?       @db.VarChar(255)
+  logoUrl               String?       @db.VarChar(255)
   // CRM
   status                CompanyStatus @default(PROSPECT)
   source                String?       @db.VarChar(80)

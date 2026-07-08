@@ -15,7 +15,12 @@ type Row = {
   status: CompanyStatus;
   email: string | null;
   createdAtLabel: string;
+  logoUrl: string | null;
 };
+
+function initials(name: string): string {
+  return name.trim().charAt(0).toUpperCase() || "?";
+}
 
 type Props = {
   companies: Row[];
@@ -126,7 +131,21 @@ export function EmpresasTable({
                     </td>
                   )}
                   <td className="px-4 py-3">
-                    <Link href={`/empresas/${c.id}`} className="font-medium text-fg hover:text-brand transition-colors">
+                    <Link href={`/empresas/${c.id}`} className="flex items-center gap-2.5 font-medium text-fg hover:text-brand transition-colors">
+                      {c.logoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={c.logoUrl}
+                          alt={c.name}
+                          width={28}
+                          height={28}
+                          className="w-7 h-7 rounded-md object-cover border border-border flex-shrink-0"
+                        />
+                      ) : (
+                        <span className="w-7 h-7 rounded-md bg-brand-subtle text-brand font-display font-semibold text-[11px] flex items-center justify-center flex-shrink-0">
+                          {initials(c.name)}
+                        </span>
+                      )}
                       {c.name}
                     </Link>
                   </td>

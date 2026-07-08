@@ -161,6 +161,7 @@ export default async function EmpresasPage({
             status: c.status,
             email: c.email,
             createdAtLabel: c.createdAt.toLocaleDateString("pt-BR"),
+            logoUrl: c.logoUrl,
           }))}
           canCreate={canCreate}
           isSuperAdmin={isSuperAdmin}

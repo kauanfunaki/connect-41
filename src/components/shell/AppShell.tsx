@@ -124,7 +124,7 @@ export function AppShell({
           {canOpenAdmin ? (
             <Link
               href="/admin"
-              className="flex items-center justify-center gap-2.5 px-2.5 py-2 rounded-lg text-[14px] font-medium text-fg-secondary hover:text-fg transition-colors"
+              className="flex items-center gap-2.5 px-2.5 py-2 -ml-3 pl-[calc(0.625rem+0.75rem)] rounded-lg text-[14px] font-medium text-fg-secondary hover:text-fg transition-colors"
             >
               <Settings size={16} className="flex-shrink-0" />
               Configurações
@@ -135,7 +135,7 @@ export function AppShell({
               type="button"
               title="Em breve"
               disabled
-              className="w-full flex items-center justify-center gap-2.5 px-2.5 py-2 rounded-lg text-[14px] font-medium text-fg-muted opacity-60 cursor-not-allowed"
+              className="w-full flex items-center gap-2.5 px-2.5 py-2 -ml-3 pl-[calc(0.625rem+0.75rem)] rounded-lg text-[14px] font-medium text-fg-muted opacity-60 cursor-not-allowed"
             >
               <Settings size={16} className="flex-shrink-0" />
               Configurações
