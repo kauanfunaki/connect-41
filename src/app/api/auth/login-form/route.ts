@@ -1,9 +1,10 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/auth/password";
 import { signAccess, signRefresh } from "@/lib/auth/jwt";
 import { getAccessibleTenantIds } from "@/lib/auth/tenantAccess";
 import { hit, reset, clientIp } from "@/lib/rateLimit";
+import { renderConnectLoadingScreenHTML } from "@/components/shared/ConnectLoadingScreen";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,22 @@ function htmlRedirect(to: string): NextResponse {
       <meta http-equiv="refresh" content="0;url=${to}">
       <script>window.location.replace(${JSON.stringify(to)})</script>
     </head><body></body></html>`,
+    { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } }
+  );
+}
+
+// Só pro caminho de sucesso: mesma técnica de redirect via HTML (evita o
+// problema de URL interna do container), mas com a tela de carregamento do
+// Connect visível por uma janela curta antes do redirect — evita flicker de
+// página em branco sem travar o usuário com atraso artificial longo.
+function htmlSuccessRedirect(to: string, theme: "light" | "dark"): NextResponse {
+  const markup = renderConnectLoadingScreenHTML();
+  return new NextResponse(
+    `<!DOCTYPE html><html data-theme="${theme}"><head>
+      <meta http-equiv="refresh" content="3;url=${to}">
+      <style>html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;}</style>
+      <script>setTimeout(function(){window.location.replace(${JSON.stringify(to)})},3000)</script>
+    </head><body>${markup}</body></html>`,
     { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } }
   );
 }
@@ -80,10 +97,11 @@ export async function POST(req: NextRequest) {
     });
 
     const isProduction = process.env.NODE_ENV === "production";
+    const theme = req.cookies.get("theme")?.value === "dark" ? "dark" : "light";
 
     // Cookie setado na mesma resposta que entrega o HTML de redirect.
     // O browser processa Set-Cookie antes de executar o meta-refresh.
-    const res = htmlRedirect("/home");
+    const res = htmlSuccessRedirect("/home", theme);
     res.cookies.set("access_token", accessToken, {
       httpOnly: true,
       secure: isProduction,
