@@ -71,14 +71,20 @@ export async function criarHandoff(
   redirect("/transferencias");
 }
 
-export async function aceitarHandoff(id: string): Promise<void> {
+export type HandoffActionResult = { error: string } | null;
+
+export async function aceitarHandoff(id: string): Promise<HandoffActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId) return;
+  if (!ctx.tenantId) return { error: "Não autenticado." };
 
   const prisma = getPrisma();
   const handoff = await prisma.handoff.findFirst({ where: { id, tenantId: ctx.tenantId } });
-  if (!handoff || handoff.status !== "PENDING") return;
-  if (!canManageSector(ctx, handoff.toSector)) return;
+  if (!handoff || handoff.status !== "PENDING") {
+    return { error: "Esta transferência já foi resolvida por outra pessoa." };
+  }
+  if (!canManageSector(ctx, handoff.toSector)) {
+    return { error: "Sem permissão para aceitar transferências deste setor." };
+  }
 
   try {
     await prisma.handoff.update({
@@ -87,7 +93,7 @@ export async function aceitarHandoff(id: string): Promise<void> {
     });
   } catch (err) {
     console.error("[aceitarHandoff]", err);
-    return;
+    return { error: "Erro ao aceitar transferência. Tente novamente." };
   }
 
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
@@ -100,16 +106,21 @@ export async function aceitarHandoff(id: string): Promise<void> {
   });
 
   revalidatePath("/transferencias");
+  return null;
 }
 
-export async function rejeitarHandoff(id: string): Promise<void> {
+export async function rejeitarHandoff(id: string): Promise<HandoffActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId) return;
+  if (!ctx.tenantId) return { error: "Não autenticado." };
 
   const prisma = getPrisma();
   const handoff = await prisma.handoff.findFirst({ where: { id, tenantId: ctx.tenantId } });
-  if (!handoff || handoff.status !== "PENDING") return;
-  if (!canManageSector(ctx, handoff.toSector)) return;
+  if (!handoff || handoff.status !== "PENDING") {
+    return { error: "Esta transferência já foi resolvida por outra pessoa." };
+  }
+  if (!canManageSector(ctx, handoff.toSector)) {
+    return { error: "Sem permissão para rejeitar transferências deste setor." };
+  }
 
   try {
     await prisma.handoff.update({
@@ -118,7 +129,7 @@ export async function rejeitarHandoff(id: string): Promise<void> {
     });
   } catch (err) {
     console.error("[rejeitarHandoff]", err);
-    return;
+    return { error: "Erro ao rejeitar transferência. Tente novamente." };
   }
 
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
@@ -131,4 +142,5 @@ export async function rejeitarHandoff(id: string): Promise<void> {
   });
 
   revalidatePath("/transferencias");
+  return null;
 }

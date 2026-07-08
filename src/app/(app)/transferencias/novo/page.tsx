@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
+import { PageContainer } from "@/components/shared/PageContainer";
+import { Card } from "@/components/ui/Card";
 import { HandoffForm } from "@/components/transferencias/HandoffForm";
 import { criarHandoff } from "../actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -95,7 +97,7 @@ function FormShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href={backHref} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           {backLabel}
@@ -104,11 +106,11 @@ function FormShell({
         <span className="text-[13px] text-fg">Solicitar Transferência</span>
       </div>
 
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">
+      <h1 className="text-[length:var(--fs-display)] font-display font-semibold text-fg tracking-[-0.01em] mb-6">
         Solicitar Transferência
       </h1>
 
-      <div className="bg-surface border border-border rounded-lg p-6">{children}</div>
-    </div>
+      <Card className="p-6">{children}</Card>
+    </PageContainer>
   );
 }
