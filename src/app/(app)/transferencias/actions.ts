@@ -111,6 +111,55 @@ export async function aceitarHandoff(id: string): Promise<HandoffActionResult> {
   return null;
 }
 
+export async function atribuirResponsavel(id: string, userId: string | null): Promise<HandoffActionResult> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { error: "Não autenticado." };
+
+  const prisma = getPrisma();
+  const handoff = await prisma.handoff.findFirst({ where: { id, tenantId: ctx.tenantId } });
+  if (!handoff) return { error: "Transferência não encontrada." };
+  if (!canManageSector(ctx, handoff.toSector)) {
+    return { error: "Sem permissão para atribuir responsável nesta transferência." };
+  }
+
+  if (userId) {
+    const assignee = await prisma.user.findFirst({ where: { id: userId, tenantId: ctx.tenantId, active: true } });
+    if (!assignee) return { error: "Usuário inválido." };
+  }
+
+  try {
+    await prisma.handoff.update({ where: { id }, data: { assignedTo: userId } });
+  } catch (err) {
+    console.error("[atribuirResponsavel]", err);
+    return { error: "Erro ao atribuir responsável. Tente novamente." };
+  }
+
+  if (userId && userId !== ctx.userId) {
+    await notifyUser(userId, {
+      tenantId: ctx.tenantId,
+      type: "HANDOFF_ASSIGNED",
+      message: "Você foi definido como responsável por uma transferência",
+      entityType: handoff.entityType,
+      entityId: handoff.entityId,
+    });
+  }
+
+  revalidatePath(`/transferencias/${id}`);
+  return null;
+}
+
+export async function registrarVisualizacao(id: string): Promise<void> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || !ctx.userId) return;
+
+  const prisma = getPrisma();
+  await prisma.handoffView.upsert({
+    where: { handoffId_userId: { handoffId: id, userId: ctx.userId } },
+    create: { tenantId: ctx.tenantId, handoffId: id, userId: ctx.userId },
+    update: { viewedAt: new Date() },
+  });
+}
+
 export async function rejeitarHandoff(id: string): Promise<HandoffActionResult> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado." };

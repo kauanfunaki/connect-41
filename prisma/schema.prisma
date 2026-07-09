@@ -304,6 +304,7 @@ model Tenant {
   evaluationCycles     EvaluationCycle[]
   evaluations          Evaluation[]
   evaluationScores     EvaluationScore[]
+  handoffViews         HandoffView[]
 
   @@map("tenants")
 }
@@ -401,7 +402,9 @@ model User {
   sectors       UserSector[]
   assignedItems PipelineItemAssignee[]
   activities    Activity[]
-  handoffs      Handoff[]
+  handoffs      Handoff[]              @relation("HandoffRequester")
+  handoffsAssigned Handoff[]           @relation("HandoffAssignee")
+  handoffViews  HandoffView[]
   notifications Notification[]
   tenantAccess  UserTenantAccess[]
   uploadedDocuments Document[]
@@ -1322,6 +1325,7 @@ model Handoff {
   entityType  EntityType
   entityId    String
   requestedBy String
+  assignedTo  String?
   message     String?       @db.Text
   description String?       @db.Text
   status      HandoffStatus @default(PENDING)
@@ -1329,12 +1333,33 @@ model Handoff {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  tenant    Tenant @relation(fields: [tenantId], references: [id])
-  requester User   @relation(fields: [requestedBy], references: [id])
+  tenant    Tenant        @relation(fields: [tenantId], references: [id])
+  requester User          @relation("HandoffRequester", fields: [requestedBy], references: [id])
+  assignee  User?         @relation("HandoffAssignee", fields: [assignedTo], references: [id])
+  views     HandoffView[]
 
   @@index([tenantId, toSector, status])
   @@index([tenantId, entityType, entityId])
   @@map("handoffs")
+}
+
+// Registro de quem visualizou o detalhe de uma transferência — @@unique
+// garante idempotência (marcar como visto em toda visita não gera duplicata,
+// só atualiza viewedAt).
+model HandoffView {
+  id        String   @id @default(uuid())
+  tenantId  String
+  handoffId String
+  userId    String
+  viewedAt  DateTime @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  handoff Handoff @relation(fields: [handoffId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([handoffId, userId])
+  @@index([tenantId])
+  @@map("handoff_views")
 }
 
 model Notification {

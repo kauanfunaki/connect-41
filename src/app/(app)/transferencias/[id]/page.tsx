@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRightLeft, ArrowRight } from "lucide-react";
+import { ArrowRightLeft, ArrowRight, Eye } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps } from "@/lib/sectors";
+import { getSectorUsers } from "@/lib/sectorUsers";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedHandoffWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -10,7 +11,8 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { SectorChip } from "@/components/ui/SectorChip";
 import { HandoffActions } from "@/components/transferencias/HandoffActions";
-import { aceitarHandoff, rejeitarHandoff } from "../actions";
+import { AssigneeSelect } from "@/components/transferencias/AssigneeSelect";
+import { aceitarHandoff, rejeitarHandoff, atribuirResponsavel, registrarVisualizacao } from "../actions";
 import type { HandoffStatus } from "@/generated/prisma/enums";
 
 const STATUS_LABEL: Record<HandoffStatus, string> = {
@@ -36,10 +38,12 @@ export default async function HandoffDetailPage({
   const prisma = getPrisma();
   const handoff = await prisma.handoff.findFirst({
     where: { id, ...scopedHandoffWhere(ctx) },
-    include: { requester: { select: { name: true } } },
+    include: { requester: { select: { name: true } }, assignee: { select: { id: true, name: true } } },
   });
 
   if (!handoff) notFound();
+
+  if (ctx.userId) await registrarVisualizacao(handoff.id);
 
   const entity =
     handoff.entityType === "COMPANY"
@@ -49,8 +53,19 @@ export default async function HandoffDetailPage({
   const entityHref = handoff.entityType === "COMPANY" ? `/empresas/${handoff.entityId}` : `/pessoas/${handoff.entityId}`;
   const { labels: sectorLabels, colors: sectorColors } = await getSectorMaps(ctx.tenantId);
   const canResolve = handoff.status === "PENDING" && canManageSector(ctx, handoff.toSector);
+  const canAssign = canManageSector(ctx, handoff.toSector);
   const aceitarAction = aceitarHandoff.bind(null, handoff.id);
   const rejeitarAction = rejeitarHandoff.bind(null, handoff.id);
+  const atribuirAction = atribuirResponsavel.bind(null, handoff.id);
+
+  const [assigneeOptions, views] = await Promise.all([
+    canAssign ? getSectorUsers(ctx.tenantId, handoff.toSector) : Promise.resolve([]),
+    prisma.handoffView.findMany({
+      where: { handoffId: handoff.id },
+      include: { user: { select: { name: true } } },
+      orderBy: { viewedAt: "desc" },
+    }),
+  ]);
 
   return (
     <PageContainer variant="narrow">
@@ -100,7 +115,39 @@ export default async function HandoffDetailPage({
 
           {canResolve && <HandoffActions aceitarAction={aceitarAction} rejeitarAction={rejeitarAction} />}
         </div>
+
+        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
+          <span className="text-[12px] text-fg-muted">Responsável:</span>
+          {canAssign ? (
+            <AssigneeSelect
+              action={atribuirAction}
+              options={assigneeOptions}
+              currentAssigneeId={handoff.assignee?.id ?? null}
+            />
+          ) : (
+            <span className="text-[12px] text-fg">{handoff.assignee?.name ?? "Sem responsável"}</span>
+          )}
+        </div>
       </Card>
+
+      {views.length > 0 && (
+        <Card className="p-5 mb-4">
+          <h2 className="text-[14px] font-semibold text-fg mb-2 flex items-center gap-1.5">
+            <Eye size={14} className="text-fg-muted" />
+            Visualizado por
+          </h2>
+          <div className="space-y-1.5">
+            {views.map((v) => (
+              <p key={v.id} className="text-[13px] text-fg-secondary">
+                <span className="font-medium text-fg">{v.user.name}</span>{" "}
+                <span className="text-fg-muted">
+                  em {v.viewedAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </p>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <Card className="p-5 mb-4">
         <h2 className="text-[14px] font-semibold text-fg mb-2">Mensagem</h2>
