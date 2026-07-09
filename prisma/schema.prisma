@@ -1323,6 +1323,7 @@ model Handoff {
   entityId    String
   requestedBy String
   message     String?       @db.Text
+  description String?       @db.Text
   status      HandoffStatus @default(PENDING)
   resolvedAt  DateTime?
   createdAt   DateTime      @default(now())

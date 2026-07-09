@@ -32,27 +32,25 @@ export default async function NovaPessoaPage() {
   ]);
 
   return (
-    <PageContainer>
-      <div className="max-w-[1000px] mx-auto">
-        <div className="flex items-center gap-2 mb-6">
-          <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-            Pessoas
-          </Link>
-          <span className="text-fg-muted">/</span>
-          <span className="text-[13px] text-fg">Nova Pessoa</span>
-        </div>
-
-        <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em] mb-6">Nova Pessoa</h1>
-
-        <PessoaForm
-          action={criarPessoa}
-          cancelHref="/pessoas"
-          companies={companies}
-          cargos={cargos}
-          departments={departments}
-          canEditSensitive={canEditSensitive}
-        />
+    <PageContainer variant="narrow">
+      <div className="flex items-center gap-2 mb-6">
+        <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
+          Pessoas
+        </Link>
+        <span className="text-fg-muted">/</span>
+        <span className="text-[13px] text-fg">Nova Pessoa</span>
       </div>
+
+      <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em] mb-6">Nova Pessoa</h1>
+
+      <PessoaForm
+        action={criarPessoa}
+        cancelHref="/pessoas"
+        companies={companies}
+        cargos={cargos}
+        departments={departments}
+        canEditSensitive={canEditSensitive}
+      />
     </PageContainer>
   );
 }

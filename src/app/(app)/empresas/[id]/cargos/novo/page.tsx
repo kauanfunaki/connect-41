@@ -4,6 +4,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { CargoForm } from "@/components/empresas/CargoForm";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { criarCargo } from "../actions";
 
 export default async function NovoCargoPage({
@@ -23,7 +24,7 @@ export default async function NovoCargoPage({
   if (!company) notFound();
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Empresas</Link>
         <span className="text-fg-muted">/</span>
@@ -37,6 +38,6 @@ export default async function NovoCargoPage({
       <div className="bg-surface border border-border rounded-lg p-6">
         <CargoForm action={criarCargo} companyId={companyId} cancelHref={`/empresas/${companyId}/cargos`} />
       </div>
-    </div>
+    </PageContainer>
   );
 }

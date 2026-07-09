@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FilialForm } from "@/components/admin/FilialForm";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { criarFilial } from "../actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 
@@ -9,7 +10,7 @@ export default async function NovaFilialPage() {
   if (!isFullWrite(ctx.role)) notFound();
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/admin/filiais" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Filiais
@@ -23,6 +24,6 @@ export default async function NovaFilialPage() {
       <div className="bg-surface border border-border rounded-lg p-6">
         <FilialForm action={criarFilial} cancelHref="/admin/filiais" />
       </div>
-    </div>
+    </PageContainer>
   );
 }

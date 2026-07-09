@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { ItemForm } from "@/components/kanban/ItemForm";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { criarItem } from "../../actions";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedPipelineWhere, scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
@@ -43,7 +44,7 @@ export default async function NovoItemPage({
   ]);
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/kanban" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Kanban
@@ -74,6 +75,6 @@ export default async function NovoItemPage({
           cancelHref={`/kanban/${id}`}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }

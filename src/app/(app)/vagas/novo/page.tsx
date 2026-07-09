@@ -4,6 +4,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getSectorMaps } from "@/lib/sectors";
 import { VagaForm } from "@/components/vagas/VagaForm";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { criarVaga } from "../actions";
 
 export default async function NovaVagaPage() {
@@ -34,7 +35,7 @@ export default async function NovaVagaPage() {
   ]);
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/vagas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Vagas</Link>
         <span className="text-fg-muted">/</span>
@@ -53,6 +54,6 @@ export default async function NovaVagaPage() {
           sectorOptions={allowedSectors}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }

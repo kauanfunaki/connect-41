@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CandidatoForm } from "@/components/candidatos/CandidatoForm";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { criarCandidato } from "../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 
@@ -9,7 +10,7 @@ export default async function NovoCandidatoPage() {
   if (!canWrite(ctx.role)) notFound();
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/candidatos" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Candidatos
@@ -23,6 +24,6 @@ export default async function NovoCandidatoPage() {
       <div className="bg-surface border border-border rounded-lg p-6">
         <CandidatoForm action={criarCandidato} cancelHref="/candidatos" />
       </div>
-    </div>
+    </PageContainer>
   );
 }

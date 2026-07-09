@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAuthContext } from "@/lib/auth/context";
 import { WorkspaceForm } from "@/components/admin/WorkspaceForm";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { criarWorkspace } from "../actions";
 
 export default async function NovoWorkspacePage() {
@@ -9,7 +10,7 @@ export default async function NovoWorkspacePage() {
   if (ctx.role !== "SUPER_ADMIN") notFound();
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/admin/workspaces" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Workspaces
@@ -23,6 +24,6 @@ export default async function NovoWorkspacePage() {
       <div className="bg-surface border border-border rounded-lg p-6">
         <WorkspaceForm action={criarWorkspace} cancelHref="/admin/workspaces" />
       </div>
-    </div>
+    </PageContainer>
   );
 }

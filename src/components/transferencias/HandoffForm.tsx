@@ -105,8 +105,18 @@ export function HandoffForm({
         <textarea
           id="message"
           name="message"
-          rows={3}
-          placeholder="Contexto para quem vai receber o handoff…"
+          rows={2}
+          placeholder="Resumo curto para quem vai receber o handoff…"
+          className={`${INPUT} h-auto py-2 resize-none`}
+        />
+      </Field>
+
+      <Field label="Descrição" htmlFor="description">
+        <textarea
+          id="description"
+          name="description"
+          rows={4}
+          placeholder="Detalhe o que motivou esta transferência, contexto adicional, pendências etc…"
           className={`${INPUT} h-auto py-2 resize-none`}
         />
       </Field>

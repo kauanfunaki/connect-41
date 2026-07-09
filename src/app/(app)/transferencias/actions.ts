@@ -23,6 +23,7 @@ export async function criarHandoff(
   const fromSector = (form.get("fromSector") as string)?.trim();
   const toSector = (form.get("toSector") as string)?.trim();
   const message = (form.get("message") as string)?.trim() || null;
+  const description = (form.get("description") as string)?.trim() || null;
 
   if (!entityId || !entityType) return { error: "Entidade inválida." };
   if (!fromSector || !toSector) return { error: "Selecione o setor de origem e o de destino." };
@@ -51,6 +52,7 @@ export async function criarHandoff(
         entityId,
         requestedBy: ctx.userId,
         message,
+        description,
       },
     });
   } catch (err) {

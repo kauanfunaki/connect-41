@@ -123,7 +123,6 @@ export default async function HandoffsPage({
       ) : (
         <div className="space-y-3">
           {handoffs.map((h) => {
-            const entityHref = h.entityType === "COMPANY" ? `/empresas/${h.entityId}` : `/pessoas/${h.entityId}`;
             const canResolve = h.status === "PENDING" && canManageSector(ctx, h.toSector);
             const aceitarAction = aceitarHandoff.bind(null, h.id);
             const rejeitarAction = rejeitarHandoff.bind(null, h.id);
@@ -131,34 +130,33 @@ export default async function HandoffsPage({
             return (
               <Card key={h.id} className="p-4">
                 <div className="flex items-start gap-3">
-                  <span className="w-9 h-9 rounded-lg bg-surface-hover border border-border flex items-center justify-center text-fg-secondary flex-shrink-0">
-                    <ArrowRightLeft size={16} />
-                  </span>
+                  <Link href={`/transferencias/${h.id}`} className="group flex items-start gap-3 flex-1 min-w-0">
+                    <span className="w-9 h-9 rounded-lg bg-surface-hover border border-border flex items-center justify-center text-fg-secondary flex-shrink-0">
+                      <ArrowRightLeft size={16} />
+                    </span>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap mb-2">
-                      <SectorChip label={sectorLabels[h.fromSector] ?? h.fromSector} color={sectorColors[h.fromSector] ?? "#586577"} />
-                      <ArrowRight size={13} className="text-fg-muted flex-shrink-0" />
-                      <SectorChip label={sectorLabels[h.toSector] ?? h.toSector} color={sectorColors[h.toSector] ?? "#586577"} />
-                      <Badge variant={STATUS_BADGE_VARIANT[h.status]}>{STATUS_LABEL[h.status]}</Badge>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap mb-2">
+                        <SectorChip label={sectorLabels[h.fromSector] ?? h.fromSector} color={sectorColors[h.fromSector] ?? "#586577"} />
+                        <ArrowRight size={13} className="text-fg-muted flex-shrink-0" />
+                        <SectorChip label={sectorLabels[h.toSector] ?? h.toSector} color={sectorColors[h.toSector] ?? "#586577"} />
+                        <Badge variant={STATUS_BADGE_VARIANT[h.status]}>{STATUS_LABEL[h.status]}</Badge>
+                      </div>
+
+                      <p className="text-[length:var(--fs-body)] font-medium text-fg group-hover:text-brand transition-colors">
+                        {entityNames[h.entityId] ?? "(removido)"}
+                      </p>
+
+                      {h.message && (
+                        <p className="text-[length:var(--fs-helper)] text-fg-secondary mt-1">{h.message}</p>
+                      )}
+
+                      <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1.5">
+                        Solicitado por {h.requester.name} em{" "}
+                        {h.createdAt.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+                      </p>
                     </div>
-
-                    <Link
-                      href={entityHref}
-                      className="text-[length:var(--fs-body)] font-medium text-fg hover:text-brand transition-colors"
-                    >
-                      {entityNames[h.entityId] ?? "(removido)"}
-                    </Link>
-
-                    {h.message && (
-                      <p className="text-[length:var(--fs-helper)] text-fg-secondary mt-1">{h.message}</p>
-                    )}
-
-                    <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1.5">
-                      Solicitado por {h.requester.name} em{" "}
-                      {h.createdAt.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
-                    </p>
-                  </div>
+                  </Link>
 
                   {canResolve && (
                     <HandoffActions aceitarAction={aceitarAction} rejeitarAction={rejeitarAction} />
