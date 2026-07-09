@@ -411,6 +411,7 @@ model User {
   uploadedDocuments Document[]
   evaluationsGiven  Evaluation[]
   auditLogs         AuditLog[]
+  responsibleFor    CompanyService[] @relation("CompanyServiceResponsible")
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -450,6 +451,8 @@ model Company {
   tradeName             String?       @db.VarChar(180)   // Nome Fantasia
   cnpj                  String?       @db.VarChar(18)
   taxRegime             String?       @db.VarChar(60)    // Regime Tributário
+  externalId            String?       @db.VarChar(60)    // ID manual do sistema de domínio (ex: Acessorias) — sem sincronização
+  foundationDate        DateTime?                         // Data de abertura da empresa
   // Endereço
   zipCode               String?       @db.VarChar(10)
   addressStreet         String?       @db.VarChar(180)
@@ -492,19 +495,23 @@ model Company {
   @@map("companies")
 }
 
-// Qual serviço (setor) uma empresa contratou
+// Qual serviço (setor) uma empresa contratou. responsibleUserId é o
+// "responsável" por setor/serviço (nomenclatura "tag" no Acessorias, a
+// referência do usuário) — ex: Contábil -> João.
 model CompanyService {
-  id         String        @id @default(uuid())
-  companyId  String
-  tenantId   String
-  sectorCode String        @db.VarChar(40)
-  startDate  DateTime?
-  endDate    DateTime?
-  status     ServiceStatus @default(ACTIVE)
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  id                String        @id @default(uuid())
+  companyId         String
+  tenantId          String
+  sectorCode        String        @db.VarChar(40)
+  responsibleUserId String?
+  startDate         DateTime?
+  endDate           DateTime?
+  status            ServiceStatus @default(ACTIVE)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company     Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  responsible User?   @relation("CompanyServiceResponsible", fields: [responsibleUserId], references: [id])
 
   @@unique([companyId, sectorCode])
   @@index([tenantId, sectorCode])

@@ -41,6 +41,8 @@ export type EmpresaDefaultValues = {
   tradeName?: string;
   cnpj?: string;
   taxRegime?: string;
+  externalId?: string;
+  foundationDate?: string;
   zipCode?: string;
   addressStreet?: string;
   addressNumber?: string;
@@ -79,6 +81,8 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
     name: defaultValues?.name ?? "",
     tradeName: defaultValues?.tradeName ?? "",
     taxRegime: defaultValues?.taxRegime ?? "",
+    externalId: defaultValues?.externalId ?? "",
+    foundationDate: defaultValues?.foundationDate ?? "",
     zipCode: defaultValues?.zipCode ?? "",
     stateCode: defaultValues?.stateCode ?? "",
     addressStreet: defaultValues?.addressStreet ?? "",
@@ -253,6 +257,9 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
                   ))}
                 </Select>
               </CampoForm>
+              <CampoForm label="ID" htmlFor="externalId" helper="Referência manual (ex: ID do Acessorias) — sem sincronização automática.">
+                <Input id="externalId" name="externalId" type="text" defaultValue={defaultValues?.externalId ?? ""} placeholder="Ex: 12345" />
+              </CampoForm>
             </FieldGrid>
           </FormSection>
         </div>
@@ -329,6 +336,11 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
                 <Input id="nire" name="nire" type="text" defaultValue={defaultValues?.nire ?? ""} placeholder="41300012345" />
               </CampoForm>
             </FieldGrid>
+            <FieldGrid columns="grid-cols-3">
+              <CampoForm label="Data de Abertura" htmlFor="foundationDate">
+                <Input id="foundationDate" name="foundationDate" type="date" defaultValue={defaultValues?.foundationDate ?? ""} />
+              </CampoForm>
+            </FieldGrid>
             {/* TODO: CNAE principal/secundários — sem campo correspondente no schema atual (Company). */}
             <p className="text-[length:var(--fs-helper)] text-fg-muted italic">
               CNAE principal e secundários: ainda não existe campo pra isso no cadastro — pendente de modelagem.
@@ -354,10 +366,16 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
                 </CampoForm>
               )}
             </FieldGrid>
-            {/* TODO: Responsável interno / Tags-setores relacionados — sem campo correspondente no schema atual. */}
-            <p className="text-[length:var(--fs-helper)] text-fg-muted italic">
-              Responsável interno e tags/setores relacionados: ainda não existem campos pra isso — pendente de modelagem.
-            </p>
+            {defaultValues?.id ? (
+              <p className="text-[length:var(--fs-helper)] text-fg-muted italic">
+                Responsável por setor/serviço (Contábil → João, etc.) é gerenciado no card
+                &quot;Serviços contratados&quot; da ficha da empresa, não neste formulário.
+              </p>
+            ) : (
+              <p className="text-[length:var(--fs-helper)] text-fg-muted italic">
+                Após salvar, adicione os setores contratados e seus responsáveis na ficha da empresa.
+              </p>
+            )}
             <CustomFieldsSection fields={customFields} />
           </FormSection>
         </div>
@@ -374,6 +392,7 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
                 { label: "Razão Social", value: values.name },
                 { label: "Nome Fantasia", value: values.tradeName },
                 { label: "Regime Tributário", value: values.taxRegime },
+                { label: "ID", value: values.externalId },
               ]}
             />
             <ReviewBlock
@@ -404,6 +423,7 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
                 { label: "Inscrição Estadual", value: values.stateRegistration },
                 { label: "Inscrição Municipal", value: values.municipalRegistration },
                 { label: "NIRE", value: values.nire },
+                { label: "Data de Abertura", value: values.foundationDate },
               ]}
             />
             <ReviewBlock

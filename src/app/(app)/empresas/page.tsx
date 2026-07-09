@@ -7,6 +7,7 @@ import { getPrisma } from "@/lib/prisma";
 import { CompanyStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
+import { getSectorMaps } from "@/lib/sectors";
 import { EmpresasTable } from "@/components/empresas/EmpresasTable";
 import { atualizarStatusEmMassa, excluirEmpresasEmMassa } from "./actions";
 
@@ -55,14 +56,21 @@ export default async function EmpresasPage({
     ...(statusFilter ? { status: statusFilter } : {}),
   };
 
-  const [companies, total] = await Promise.all([
+  const [companies, total, sectorMaps] = await Promise.all([
     prisma.company.findMany({
       where,
       orderBy: { createdAt: "desc" },
       skip: (pageNum - 1) * PER_PAGE,
       take: PER_PAGE,
+      include: {
+        services: {
+          where: { status: "ACTIVE" },
+          include: { responsible: { select: { name: true } } },
+        },
+      },
     }),
     prisma.company.count({ where }),
+    getSectorMaps(ctx.tenantId),
   ]);
 
   const totalPages = Math.ceil(total / PER_PAGE);
@@ -160,8 +168,17 @@ export default async function EmpresasPage({
             cnpj: c.cnpj,
             status: c.status,
             email: c.email,
+            taxRegime: c.taxRegime,
             createdAtLabel: c.createdAt.toLocaleDateString("pt-BR"),
             logoUrl: c.logoUrl,
+            tags: c.services
+              .filter((s) => s.responsible)
+              .map((s) => ({
+                sectorCode: s.sectorCode,
+                label: sectorMaps.labels[s.sectorCode] ?? s.sectorCode,
+                color: sectorMaps.colors[s.sectorCode] ?? "#586577",
+                responsibleName: s.responsible!.name,
+              })),
           }))}
           canCreate={canCreate}
           isSuperAdmin={isSuperAdmin}

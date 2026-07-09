@@ -1,16 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { excluirEmpresa } from "../actions";
-import { getAuthContext, canWrite, isFullWrite } from "@/lib/auth/context";
+import { excluirEmpresa, adicionarServico, atribuirResponsavelServico } from "../actions";
+import { getAuthContext, canWrite, isFullWrite, canManageSector } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { getCompanySectors, getApplicableCustomFields } from "@/lib/customFields";
-import { getSectorMaps } from "@/lib/sectors";
+import { getSectorMaps, getAllSectors } from "@/lib/sectors";
+import { getSectorUsers } from "@/lib/sectorUsers";
 import { listDocuments } from "@/lib/documents";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { CompanyHeader } from "@/components/empresas/CompanyHeader";
 import { CompanyDetailTabs } from "@/components/empresas/CompanyDetailTabs";
 import { CompanyOverviewSection } from "@/components/empresas/CompanyOverviewSection";
+import { ServicesSection } from "@/components/empresas/ServicesSection";
 import { CompanyPeopleSection } from "@/components/empresas/CompanyPeopleSection";
 import { CompanyOperationsSection } from "@/components/empresas/CompanyOperationsSection";
 import { CompanyHistorySection } from "@/components/empresas/CompanyHistorySection";
@@ -58,6 +60,20 @@ export default async function EmpresaPage({
 
   const customFields = await getApplicableCustomFields(ctx, "COMPANY", id, companySectors);
 
+  // Serviços contratados + responsável por setor ("tag" no vocabulário do
+  // Acessorias) — setores que o usuário atual pode gerenciar, e os usuários
+  // elegíveis como responsável em cada um (membros do setor + admins).
+  const allSectors = await getAllSectors(ctx.tenantId);
+  const manageableSectors = allSectors
+    .filter((s) => s.active && canManageSector(ctx, s.code))
+    .map((s) => ({ code: s.code, label: sectorMaps.labels[s.code] ?? s.code, color: sectorMaps.colors[s.code] ?? "#586577" }));
+
+  const relevantSectorCodes = [...new Set([...company.services.map((s) => s.sectorCode), ...manageableSectors.map((s) => s.code)])];
+  const usersBySectorEntries = await Promise.all(
+    relevantSectorCodes.map(async (code) => [code, await getSectorUsers(ctx.tenantId, code)] as const)
+  );
+  const usersBySector = Object.fromEntries(usersBySectorEntries);
+
   return (
     <PageContainer>
       <div className="flex items-center gap-2 mb-5">
@@ -88,13 +104,19 @@ export default async function EmpresaPage({
         peopleCount={company.people.length}
         documentsCount={documents.length}
         overview={
-          <CompanyOverviewSection
-            company={company}
-            services={company.services}
-            sectorLabels={sectorMaps.labels}
-            sectorColors={sectorMaps.colors}
-            customFields={customFields}
-          />
+          <div className="space-y-4">
+            <CompanyOverviewSection company={company} customFields={customFields} />
+            <ServicesSection
+              companyId={company.id}
+              services={company.services}
+              sectorLabels={sectorMaps.labels}
+              sectorColors={sectorMaps.colors}
+              manageableSectors={manageableSectors}
+              usersBySector={usersBySector}
+              addAction={adicionarServico}
+              assignAction={atribuirResponsavelServico}
+            />
+          </div>
         }
         people={<CompanyPeopleSection companyId={company.id} people={company.people} />}
         operations={<CompanyOperationsSection companyId={company.id} />}

@@ -67,6 +67,8 @@ export default async function EditarEmpresaPage({
             tradeName:             company.tradeName             ?? undefined,
             cnpj:                  company.cnpj                 ?? undefined,
             taxRegime:             company.taxRegime             ?? undefined,
+            externalId:            company.externalId            ?? undefined,
+            foundationDate:        company.foundationDate?.toISOString().slice(0, 10),
             zipCode:               company.zipCode               ?? undefined,
             addressStreet:         company.addressStreet         ?? undefined,
             addressNumber:         company.addressNumber         ?? undefined,

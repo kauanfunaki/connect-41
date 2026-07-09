@@ -8,14 +8,18 @@ import { StatusDot } from "@/components/shared/StatusDot";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { CompanyStatus } from "@/generated/prisma/enums";
 
+type Tag = { sectorCode: string; label: string; color: string; responsibleName: string };
+
 type Row = {
   id: string;
   name: string;
   cnpj: string | null;
   status: CompanyStatus;
   email: string | null;
+  taxRegime: string | null;
   createdAtLabel: string;
   logoUrl: string | null;
+  tags: Tag[];
 };
 
 function initials(name: string): string {
@@ -107,7 +111,8 @@ export function EmpresasTable({
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">CNPJ</th>
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">E-mail</th>
+                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Regime</th>
+                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Responsáveis</th>
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Criada em</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -153,7 +158,25 @@ export function EmpresasTable({
                   <td className="px-4 py-3">
                     <StatusDot color={statusColor[c.status]} label={statusLabel[c.status]} />
                   </td>
-                  <td className="px-4 py-3 text-fg-secondary">{c.email ?? "—"}</td>
+                  <td className="px-4 py-3 text-fg-secondary">{c.taxRegime ?? "—"}</td>
+                  <td className="px-4 py-3">
+                    {c.tags.length === 0 ? (
+                      <span className="text-fg-muted">—</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {c.tags.map((t) => (
+                          <span
+                            key={t.sectorCode}
+                            title={`${t.label}: ${t.responsibleName}`}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-surface-hover text-fg-secondary border border-border whitespace-nowrap"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: t.color }} />
+                            {t.label}: {t.responsibleName}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-fg-secondary tnum">{c.createdAtLabel}</td>
                   <td className="px-4 py-3 text-right">
                     {canCreate && (

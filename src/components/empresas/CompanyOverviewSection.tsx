@@ -1,7 +1,5 @@
 import { Card } from "@/components/ui/Card";
-import { SectorChip } from "@/components/ui/SectorChip";
 import { InfoRow } from "@/components/empresas/InfoRow";
-import type { ServiceStatus } from "@/generated/prisma/enums";
 
 type CustomFieldValue = {
   id: string;
@@ -10,18 +8,14 @@ type CustomFieldValue = {
   value: string | null;
 };
 
-type ServiceEntry = {
-  id: string;
-  sectorCode: string;
-  status: ServiceStatus;
-};
-
 type Props = {
   company: {
     name: string;
     tradeName: string | null;
     cnpj: string | null;
     taxRegime: string | null;
+    externalId: string | null;
+    foundationDate: Date | null;
     addressStreet: string | null;
     addressNumber: string | null;
     addressComplement: string | null;
@@ -39,13 +33,10 @@ type Props = {
     createdAt: Date;
     updatedAt: Date;
   };
-  services: ServiceEntry[];
-  sectorLabels: Record<string, string>;
-  sectorColors: Record<string, string>;
   customFields: CustomFieldValue[];
 };
 
-export function CompanyOverviewSection({ company, services, sectorLabels, sectorColors, customFields }: Props) {
+export function CompanyOverviewSection({ company, customFields }: Props) {
   const fullAddress = [
     company.addressStreet,
     company.addressNumber,
@@ -66,6 +57,11 @@ export function CompanyOverviewSection({ company, services, sectorLabels, sector
           <InfoRow label="Nome Fantasia" value={company.tradeName} />
           <InfoRow label="CNPJ" value={company.cnpj} mono />
           <InfoRow label="Regime Tributário" value={company.taxRegime} />
+          <InfoRow label="ID" value={company.externalId} mono />
+          <InfoRow
+            label="Data de Abertura"
+            value={company.foundationDate?.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+          />
         </div>
       </Card>
 
@@ -118,23 +114,6 @@ export function CompanyOverviewSection({ company, services, sectorLabels, sector
             value={company.updatedAt.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
           />
         </div>
-      </Card>
-
-      <Card className="p-5">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3">Serviços contratados</h2>
-        {services.length === 0 ? (
-          <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhum serviço cadastrado.</p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {services.map((s) => (
-              <SectorChip
-                key={s.id}
-                label={`${sectorLabels[s.sectorCode] ?? s.sectorCode}${s.status !== "ACTIVE" ? " · inativo" : ""}`}
-                color={s.status === "ACTIVE" ? (sectorColors[s.sectorCode] ?? "var(--c41-fg-muted)") : "var(--c41-fg-muted)"}
-              />
-            ))}
-          </div>
-        )}
       </Card>
 
       {customFields.length > 0 && (

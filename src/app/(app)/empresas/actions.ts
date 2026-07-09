@@ -4,11 +4,11 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { CompanyStatus } from "@/generated/prisma/enums";
-import { getAuthContext } from "@/lib/auth/context";
+import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { canWriteEntity } from "@/lib/auth/policy";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { getCompanySectors, getApplicableCustomFields, saveCustomFieldValues } from "@/lib/customFields";
-import { pick } from "@/lib/forms";
+import { pick, pickDate } from "@/lib/forms";
 import { isPrismaForeignKeyError } from "@/lib/prismaErrors";
 import { isValidCNPJ, digitsOnly } from "@/lib/validation/common";
 import { logAudit } from "@/lib/audit";
@@ -21,6 +21,8 @@ function companyData(form: FormData) {
     tradeName:             pick(form, "tradeName"),
     cnpj:                  digitsOnly(pick(form, "cnpj")),
     taxRegime:             pick(form, "taxRegime"),
+    externalId:            pick(form, "externalId"),
+    foundationDate:        pickDate(form, "foundationDate"),
     zipCode:               pick(form, "zipCode"),
     addressStreet:         pick(form, "addressStreet"),
     addressNumber:         pick(form, "addressNumber"),
@@ -204,4 +206,88 @@ export async function excluirEmpresasEmMassa(ids: string[]): Promise<void> {
   });
 
   revalidatePath("/empresas");
+}
+
+export type ServiceState = { error: string } | null;
+
+// Adiciona um serviço (setor) contratado pela empresa. Gate por canManageSector
+// — só quem gerencia aquele setor pode marcar a empresa como cliente dele.
+export async function adicionarServico(
+  companyId: string,
+  sectorCode: string
+): Promise<ServiceState> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { error: "Não autenticado" };
+  if (!canManageSector(ctx, sectorCode)) {
+    return { error: "Sem permissão para adicionar este setor." };
+  }
+
+  const prisma = getPrisma();
+  const company = await prisma.company.findFirst({
+    where: { id: companyId, ...(await scopedCompanyWhere(ctx)) },
+    select: { id: true },
+  });
+  if (!company) return { error: "Empresa não encontrada ou fora do seu escopo." };
+
+  try {
+    await prisma.companyService.create({
+      data: { tenantId: ctx.tenantId, companyId, sectorCode },
+    });
+  } catch (err) {
+    console.error("[adicionarServico]", err);
+    return { error: "Erro ao adicionar setor. Ele já pode estar cadastrado." };
+  }
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "companyservice.create",
+    entityType: "CompanyService",
+    entityId: companyId,
+    metadata: { sectorCode },
+  });
+
+  revalidatePath(`/empresas/${companyId}`);
+  return null;
+}
+
+// Define (ou remove) o responsável de um serviço/setor já contratado pela
+// empresa — a "tag" no vocabulário do Acessorias, referenciado por você.
+export async function atribuirResponsavelServico(
+  serviceId: string,
+  userId: string | null
+): Promise<ServiceState> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { error: "Não autenticado" };
+
+  const prisma = getPrisma();
+  const service = await prisma.companyService.findFirst({ where: { id: serviceId, tenantId: ctx.tenantId } });
+  if (!service) return { error: "Serviço não encontrado." };
+  if (!canManageSector(ctx, service.sectorCode)) {
+    return { error: "Sem permissão para atribuir responsável neste setor." };
+  }
+
+  if (userId) {
+    const user = await prisma.user.findFirst({ where: { id: userId, tenantId: ctx.tenantId, active: true } });
+    if (!user) return { error: "Usuário inválido." };
+  }
+
+  try {
+    await prisma.companyService.update({ where: { id: serviceId }, data: { responsibleUserId: userId } });
+  } catch (err) {
+    console.error("[atribuirResponsavelServico]", err);
+    return { error: "Erro ao atribuir responsável." };
+  }
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "companyservice.assign",
+    entityType: "CompanyService",
+    entityId: serviceId,
+    metadata: { sectorCode: service.sectorCode, responsibleUserId: userId },
+  });
+
+  revalidatePath(`/empresas/${service.companyId}`);
+  return null;
 }
