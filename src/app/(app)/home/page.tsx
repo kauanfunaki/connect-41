@@ -15,8 +15,8 @@ import { HorizontalBarChart, DonutChart, TrendChart } from "@/components/shared/
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite, isFullWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere, scopedPersonWhere, scopedPipelineWhere, scopedHandoffWhere } from "@/lib/auth/scope";
-import { getSectorMaps, getSectorsWithEnabledModules } from "@/lib/sectors";
-import { getTenantModuleStates } from "@/lib/modules";
+import { getSectorMaps } from "@/lib/sectors";
+import { getTenantModuleStates, getSectorsWithEnabledModules } from "@/lib/modules";
 
 const ACTIVITY_LABEL: Record<string, string> = {
   NOTE: "adicionou uma nota em",

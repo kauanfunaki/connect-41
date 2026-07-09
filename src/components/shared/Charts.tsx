@@ -58,33 +58,37 @@ export function DonutChart({
 
   const radius = 40;
   const circumference = 2 * Math.PI * radius;
-  let offsetAcc = 0;
+
+  // Pré-calcula dash/offset de cada fatia num loop simples (não numa closure
+  // mutada dentro do .map() do JSX — eslint-plugin-react-hooks bloqueia
+  // reatribuição de variável capturada por callback usado durante o render).
+  const segments: { label: string; color: string; value: number; dash: number; offset: number }[] = [];
+  let cursor = 0;
+  for (const d of data) {
+    const dash = (d.value / total) * circumference;
+    segments.push({ label: d.label, color: d.color, value: d.value, dash, offset: -cursor });
+    cursor += dash;
+  }
 
   return (
     <div className="flex items-center gap-5 flex-wrap">
       <svg viewBox="0 0 100 100" className="w-28 h-28 flex-shrink-0 -rotate-90">
         <circle cx="50" cy="50" r={radius} fill="none" stroke="var(--c41-surface-2)" strokeWidth="14" />
-        {data.map((d) => {
-          const frac = d.value / total;
-          const dash = frac * circumference;
-          const dashOffset = -offsetAcc;
-          offsetAcc += dash;
-          return (
-            <circle
-              key={d.label}
-              cx="50"
-              cy="50"
-              r={radius}
-              fill="none"
-              stroke={d.color}
-              strokeWidth="14"
-              strokeDasharray={`${dash} ${circumference - dash}`}
-              strokeDashoffset={dashOffset}
-            >
-              <title>{`${d.label}: ${d.value}`}</title>
-            </circle>
-          );
-        })}
+        {segments.map((s) => (
+          <circle
+            key={s.label}
+            cx="50"
+            cy="50"
+            r={radius}
+            fill="none"
+            stroke={s.color}
+            strokeWidth="14"
+            strokeDasharray={`${s.dash} ${circumference - s.dash}`}
+            strokeDashoffset={s.offset}
+          >
+            <title>{`${s.label}: ${s.value}`}</title>
+          </circle>
+        ))}
       </svg>
       <div className="space-y-1.5 min-w-0">
         {data.map((d) => (
