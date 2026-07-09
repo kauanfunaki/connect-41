@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
+import { logAudit } from "@/lib/audit";
 
 export type TagState = { error: string } | null;
 
@@ -38,6 +39,8 @@ export async function criarTag(_prev: TagState, form: FormData): Promise<TagStat
     return { error: "Erro ao criar tag. Tente novamente." };
   }
 
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "tag.create", entityType: "Tag", metadata: { sectorCode, name } });
+
   revalidatePath("/admin/tags");
   redirect("/admin/tags");
 }
@@ -69,6 +72,8 @@ export async function atualizarTag(_prev: TagState, form: FormData): Promise<Tag
     return { error: "Erro ao atualizar tag." };
   }
 
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "tag.update", entityType: "Tag", entityId: id, metadata: { name } });
+
   revalidatePath("/admin/tags");
   redirect("/admin/tags");
 }
@@ -87,6 +92,8 @@ export async function excluirTag(id: string): Promise<void> {
     console.error("[excluirTag]", err);
     return;
   }
+
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "tag.delete", entityType: "Tag", entityId: id, metadata: { name: existing.name } });
 
   revalidatePath("/admin/tags");
 }

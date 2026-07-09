@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import type { CustomFieldType, EntityType } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
+import { logAudit } from "@/lib/audit";
 
 export type CampoState = { error: string } | null;
 
@@ -85,6 +86,8 @@ export async function criarCampo(
     return { error: "Erro ao criar campo. Tente novamente." };
   }
 
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "customfield.create", entityType: "CustomField", metadata: { sectorCode, entityType, key, label } });
+
   revalidatePath("/admin/campos");
   redirect("/admin/campos");
 }
@@ -133,6 +136,8 @@ export async function atualizarCampo(
     return { error: "Erro ao atualizar campo." };
   }
 
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "customfield.update", entityType: "CustomField", entityId: id, metadata: { label } });
+
   revalidatePath("/admin/campos");
   redirect("/admin/campos");
 }
@@ -151,6 +156,8 @@ export async function excluirCampo(id: string): Promise<void> {
     console.error("[excluirCampo]", err);
     return;
   }
+
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "customfield.delete", entityType: "CustomField", entityId: id, metadata: { label: existing.label } });
 
   revalidatePath("/admin/campos");
 }

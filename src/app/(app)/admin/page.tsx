@@ -11,6 +11,7 @@ import {
   Tag,
   CalendarDays,
   Target,
+  ScrollText,
 } from "lucide-react";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -35,12 +36,20 @@ export default async function AdminPage() {
   }
 
   if (ctx.role === "SUPER_ADMIN") {
-    cards.push({
-      href: "/admin/workspaces",
-      icon: <Globe size={20} />,
-      title: "Workspaces",
-      description: "Clientes (tenants) e acesso entre eles",
-    });
+    cards.push(
+      {
+        href: "/admin/workspaces",
+        icon: <Globe size={20} />,
+        title: "Workspaces",
+        description: "Clientes (tenants) e acesso entre eles",
+      },
+      {
+        href: "/admin/auditoria",
+        icon: <ScrollText size={20} />,
+        title: "Auditoria",
+        description: "Trilha de quem fez o quê no workspace",
+      }
+    );
   }
 
   cards.push(

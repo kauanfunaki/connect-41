@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
+import { logAudit } from "@/lib/audit";
 
 export type SetorState = { error: string } | null;
 
@@ -61,6 +62,8 @@ export async function criarSetor(
     return { error: "Erro ao criar setor. Tente novamente." };
   }
 
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "sector.create", entityType: "Sector", metadata: { code, label } });
+
   revalidatePath("/admin/setores");
   redirect("/admin/setores");
 }
@@ -100,6 +103,8 @@ export async function atualizarSetor(
     console.error("[atualizarSetor]", err);
     return { error: "Erro ao atualizar setor." };
   }
+
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "sector.update", entityType: "Sector", entityId: id, metadata: { label } });
 
   revalidatePath("/admin/setores");
   redirect("/admin/setores");

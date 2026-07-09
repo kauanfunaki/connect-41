@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
+import { logAudit } from "@/lib/audit";
 
 export type HolidayState = { error: string } | null;
 
@@ -30,6 +31,8 @@ export async function criarFeriado(_prev: HolidayState, form: FormData): Promise
     return { error: "Erro ao cadastrar feriado." };
   }
 
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "holiday.create", entityType: "Holiday", metadata: { name, date: dateRaw } });
+
   revalidatePath("/admin/feriados");
   redirect("/admin/feriados");
 }
@@ -48,6 +51,8 @@ export async function excluirFeriado(id: string): Promise<void> {
     console.error("[excluirFeriado]", err);
     return;
   }
+
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "holiday.delete", entityType: "Holiday", entityId: id, metadata: { name: existing.name } });
 
   revalidatePath("/admin/feriados");
 }

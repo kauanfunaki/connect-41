@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
+import { logAudit } from "@/lib/audit";
 
 export type FilialState = { error: string } | null;
 
@@ -25,6 +26,8 @@ export async function criarFilial(_prev: FilialState, form: FormData): Promise<F
     console.error("[criarFilial]", err);
     return { error: "Erro ao criar filial. Tente novamente." };
   }
+
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "branch.create", entityType: "Branch", metadata: { name } });
 
   revalidatePath("/admin/filiais");
   redirect("/admin/filiais");
@@ -55,6 +58,8 @@ export async function atualizarFilial(_prev: FilialState, form: FormData): Promi
     console.error("[atualizarFilial]", err);
     return { error: "Erro ao atualizar filial." };
   }
+
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "branch.update", entityType: "Branch", entityId: id, metadata: { name } });
 
   revalidatePath("/admin/filiais");
   redirect("/admin/filiais");

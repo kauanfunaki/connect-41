@@ -305,6 +305,7 @@ model Tenant {
   evaluations          Evaluation[]
   evaluationScores     EvaluationScore[]
   handoffViews         HandoffView[]
+  auditLogs            AuditLog[]
 
   @@map("tenants")
 }
@@ -409,6 +410,7 @@ model User {
   tenantAccess  UserTenantAccess[]
   uploadedDocuments Document[]
   evaluationsGiven  Evaluation[]
+  auditLogs         AuditLog[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -1360,6 +1362,27 @@ model HandoffView {
   @@unique([handoffId, userId])
   @@index([tenantId])
   @@map("handoff_views")
+}
+
+// Trilha de auditoria — quem fez o quê, quando. Somente leitura pela UI
+// (/admin/auditoria, restrito a SUPER_ADMIN); nunca editável ou excluível
+// pelo app. Best-effort: falha ao gravar log nunca deve derrubar a ação real.
+model AuditLog {
+  id         String    @id @default(uuid())
+  tenantId   String
+  userId     String
+  action     String    @db.VarChar(60)  // ex: "company.create", "sector.update"
+  entityType String?   @db.VarChar(40)  // livre (Company, Person, Sector, Tag...) — não usa o enum EntityType, que só cobre Company/Person
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, entityType, entityId])
+  @@map("audit_logs")
 }
 
 model Notification {

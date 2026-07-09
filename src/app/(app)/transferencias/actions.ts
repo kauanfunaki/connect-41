@@ -8,6 +8,7 @@ import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
 import { notifySector, notifyUser } from "@/lib/notifications";
+import { logAudit } from "@/lib/audit";
 
 export type HandoffState = { error: string } | null;
 
@@ -42,8 +43,9 @@ export async function criarHandoff(
       : await prisma.person.findFirst({ where: { id: entityId, ...scope } });
   if (!entity) return { error: "Empresa/Pessoa não encontrada ou fora do seu escopo." };
 
+  let handoffId: string;
   try {
-    await prisma.handoff.create({
+    const created = await prisma.handoff.create({
       data: {
         tenantId: ctx.tenantId,
         fromSector,
@@ -55,10 +57,20 @@ export async function criarHandoff(
         description,
       },
     });
+    handoffId = created.id;
   } catch (err) {
     console.error("[criarHandoff]", err);
     return { error: "Erro ao solicitar transferência. Tente novamente." };
   }
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "handoff.create",
+    entityType: "Handoff",
+    entityId: handoffId,
+    metadata: { fromSector, toSector },
+  });
 
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
   await notifySector(toSector, {
@@ -98,6 +110,14 @@ export async function aceitarHandoff(id: string): Promise<HandoffActionResult> {
     return { error: "Erro ao aceitar transferência. Tente novamente." };
   }
 
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "handoff.accept",
+    entityType: "Handoff",
+    entityId: id,
+  });
+
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
   await notifyUser(handoff.requestedBy, {
     tenantId: ctx.tenantId,
@@ -133,6 +153,15 @@ export async function atribuirResponsavel(id: string, userId: string | null): Pr
     console.error("[atribuirResponsavel]", err);
     return { error: "Erro ao atribuir responsável. Tente novamente." };
   }
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "handoff.assign",
+    entityType: "Handoff",
+    entityId: id,
+    metadata: { assignedTo: userId },
+  });
 
   if (userId && userId !== ctx.userId) {
     await notifyUser(userId, {
@@ -182,6 +211,14 @@ export async function rejeitarHandoff(id: string): Promise<HandoffActionResult> 
     console.error("[rejeitarHandoff]", err);
     return { error: "Erro ao rejeitar transferência. Tente novamente." };
   }
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "handoff.reject",
+    entityType: "Handoff",
+    entityId: id,
+  });
 
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
   await notifyUser(handoff.requestedBy, {

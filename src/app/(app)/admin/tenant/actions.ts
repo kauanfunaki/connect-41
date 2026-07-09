@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
+import { logAudit } from "@/lib/audit";
 
 export type TenantState = { error: string } | { success: true } | null;
 
@@ -41,6 +42,8 @@ export async function atualizarTenant(
     console.error("[atualizarTenant]", err);
     return { error: "Erro ao atualizar dados do tenant." };
   }
+
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "tenant.update", entityType: "Tenant", entityId: ctx.tenantId, metadata: { name } });
 
   revalidatePath("/admin/tenant");
   return { success: true };

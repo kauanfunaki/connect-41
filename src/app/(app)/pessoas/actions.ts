@@ -13,6 +13,7 @@ import { pick, pickDate } from "@/lib/forms";
 import { isPrismaUniqueError, isPrismaForeignKeyError } from "@/lib/prismaErrors";
 import { validatePersonForm } from "@/lib/validation/person";
 import type { ActionState } from "@/lib/actionState";
+import { logAudit } from "@/lib/audit";
 
 export type PessoaState = ActionState;
 
@@ -97,6 +98,15 @@ export async function criarPessoa(
     return { error: "Erro ao criar pessoa. Tente novamente." };
   }
 
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "person.create",
+    entityType: "Person",
+    entityId: id,
+    metadata: { name: data.name },
+  });
+
   redirect(`/pessoas/${id}`);
 }
 
@@ -132,6 +142,15 @@ export async function atualizarPessoa(
     return { error: "Erro ao atualizar pessoa." };
   }
 
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "person.update",
+    entityType: "Person",
+    entityId: id,
+    metadata: { name: data.name },
+  });
+
   const personSectors = await getPersonSectors(ctx.tenantId, id);
   const applicableFields = await getApplicableCustomFields(ctx, "PERSON", id, personSectors);
   await saveCustomFieldValues(ctx.tenantId, id, applicableFields, form);
@@ -148,7 +167,7 @@ export async function excluirPessoa(id: string): Promise<PessoaState> {
 
   const existing = await prisma.person.findFirst({
     where: { id, type: PersonType.COLABORADOR, ...(await scopedPersonWhere(ctx)) },
-    select: { id: true },
+    select: { id: true, name: true },
   });
   if (!existing) return { error: "Pessoa não encontrada ou fora do seu escopo." };
 
@@ -164,6 +183,15 @@ export async function excluirPessoa(id: string): Promise<PessoaState> {
     console.error("[excluirPessoa]", err);
     return { error: "Erro ao excluir pessoa." };
   }
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "person.delete",
+    entityType: "Person",
+    entityId: id,
+    metadata: { name: existing.name },
+  });
 
   revalidatePath("/pessoas");
   redirect("/pessoas");

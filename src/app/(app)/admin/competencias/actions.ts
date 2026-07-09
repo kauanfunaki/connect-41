@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
+import { logAudit } from "@/lib/audit";
 
 export type CompetencyState = { error: string } | null;
 
@@ -28,6 +29,8 @@ export async function criarCompetencia(_prev: CompetencyState, form: FormData): 
     return { error: "Erro ao cadastrar competência." };
   }
 
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "competency.create", entityType: "Competency", metadata: { name } });
+
   revalidatePath("/admin/competencias");
   return null;
 }
@@ -46,6 +49,8 @@ export async function excluirCompetencia(id: string): Promise<void> {
     console.error("[excluirCompetencia]", err);
     return;
   }
+
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "competency.delete", entityType: "Competency", entityId: id, metadata: { name: existing.name } });
 
   revalidatePath("/admin/competencias");
 }

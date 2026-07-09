@@ -8,6 +8,7 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { assignableRoles } from "@/lib/roles";
 import { hashPassword } from "@/lib/auth/password";
 import { revokeAllUserSessions } from "@/lib/auth/sessions";
+import { logAudit } from "@/lib/audit";
 
 export type UsuarioState = { error: string } | null;
 
@@ -55,6 +56,8 @@ export async function criarUsuario(
     console.error("[criarUsuario]", err);
     return { error: "Erro ao criar usuário. Tente novamente." };
   }
+
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "user.create", entityType: "User", entityId: id, metadata: { name, email, role } });
 
   revalidatePath("/admin/usuarios");
   redirect(`/admin/usuarios/${id}/editar`);
@@ -118,6 +121,8 @@ export async function atualizarUsuario(
     return { error: "Erro ao atualizar usuário." };
   }
 
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "user.update", entityType: "User", entityId: id, metadata: { name, email, role, active } });
+
   // Trocar senha ou desativar a conta encerra as sessões abertas do usuário.
   if (password.length > 0 || !active) {
     await revokeAllUserSessions(id);
@@ -144,6 +149,14 @@ export async function alternarAtivoUsuario(id: string, novoStatus: boolean): Pro
     console.error("[alternarAtivoUsuario]", err);
     return;
   }
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: novoStatus ? "user.activate" : "user.deactivate",
+    entityType: "User",
+    entityId: id,
+  });
 
   revalidatePath("/admin/usuarios");
 }

@@ -11,6 +11,7 @@ import { getCompanySectors, getApplicableCustomFields, saveCustomFieldValues } f
 import { pick } from "@/lib/forms";
 import { isPrismaForeignKeyError } from "@/lib/prismaErrors";
 import { isValidCNPJ, digitsOnly } from "@/lib/validation/common";
+import { logAudit } from "@/lib/audit";
 
 export type EmpresaState = { error: string } | null;
 
@@ -84,6 +85,15 @@ export async function criarEmpresa(
     return { error: "Erro ao criar empresa. Tente novamente." };
   }
 
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "company.create",
+    entityType: "Company",
+    entityId: id,
+    metadata: { name: data.name },
+  });
+
   redirect(`/empresas/${id}`);
 }
 
@@ -115,6 +125,15 @@ export async function atualizarEmpresa(
     return { error: "Erro ao atualizar empresa." };
   }
 
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "company.update",
+    entityType: "Company",
+    entityId: id,
+    metadata: { name: data.name },
+  });
+
   const companySectors = await getCompanySectors(ctx.tenantId, id);
   const applicableFields = await getApplicableCustomFields(ctx, "COMPANY", id, companySectors);
   await saveCustomFieldValues(ctx.tenantId, id, applicableFields, form);
@@ -131,7 +150,7 @@ export async function excluirEmpresa(id: string): Promise<EmpresaState> {
 
   const existing = await prisma.company.findFirst({
     where: { id, ...(await scopedCompanyWhere(ctx)) },
-    select: { id: true },
+    select: { id: true, name: true },
   });
   if (!existing) return { error: "Empresa não encontrada ou fora do seu escopo." };
 
@@ -147,6 +166,15 @@ export async function excluirEmpresa(id: string): Promise<EmpresaState> {
     console.error("[excluirEmpresa]", err);
     return { error: "Erro ao excluir empresa." };
   }
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "company.delete",
+    entityType: "Company",
+    entityId: id,
+    metadata: { name: existing.name },
+  });
 
   revalidatePath("/empresas");
   redirect("/empresas");
