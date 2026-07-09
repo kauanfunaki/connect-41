@@ -4,7 +4,7 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* ==========================================================================
-   Connect 41 — Design Tokens (fonte da verdade)
+   Connect — Design Tokens (fonte da verdade)
    Direção B "Perímetro" — SaaS B2B premium, dark-first, azul 41 Tech como
    primária. Consuma via utilitários Tailwind (bg-canvas, text-fg, bg-brand…)
    ou diretamente pelas variáveis --c41-*. Troca claro/escuro automática via

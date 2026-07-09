@@ -18,7 +18,7 @@ export default async function TenantPage() {
         Empresa (Tenant)
       </h1>
       <p className="text-[13px] text-fg-muted mb-6">
-        Dados do workspace da 41 Tech no Connect 41.
+        Dados do workspace da 41 Tech no Connect.
       </p>
 
       <div className="bg-surface border border-border rounded-lg p-6">

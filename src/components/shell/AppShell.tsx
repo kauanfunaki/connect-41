@@ -79,10 +79,10 @@ export function AppShell({
         {/* Logo */}
         <div className="flex items-center justify-center gap-2.5 h-14 px-5 border-b border-border flex-shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo.png" alt="41 Tech" className="h-7 w-7 object-contain flex-shrink-0 invert dark:invert-0" />
+          <img src="/brand/logo.png" alt="Connect" className="h-7 w-7 object-contain flex-shrink-0" />
           <div className="min-w-0 leading-tight">
             <p className="text-fg font-display font-semibold text-[16px] tracking-[-0.01em] truncate">
-              Connect 41
+              Connect
             </p>
             <p className="text-fg-muted text-[11px] truncate">41 Tech</p>
           </div>

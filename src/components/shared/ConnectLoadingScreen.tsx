@@ -151,11 +151,6 @@ export const CONNECT_LOADING_STYLES = `
   height: 26px;
   width: 26px;
   object-fit: contain;
-  filter: invert(1);
-}
-
-[data-theme="dark"] .connect-loading-logo {
-  filter: none;
 }
 
 .connect-loading-brand-name {

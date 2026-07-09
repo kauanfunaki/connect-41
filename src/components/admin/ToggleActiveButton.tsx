@@ -9,7 +9,7 @@ type Props = {
 export function ToggleActiveButton({ action, ativo, nome }: Props) {
   async function handleClick() {
     const msg = ativo
-      ? `Desativar "${nome}"? A pessoa perderá acesso ao Connect 41.`
+      ? `Desativar "${nome}"? A pessoa perderá acesso ao Connect.`
       : `Reativar "${nome}"?`;
     if (!confirm(msg)) return;
     await action();

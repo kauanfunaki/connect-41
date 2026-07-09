@@ -25,7 +25,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Connect 41",
+  title: "Connect",
   description: "CRM interno multi-setor da 41 Tech",
 };
 

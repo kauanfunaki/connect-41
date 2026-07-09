@@ -84,7 +84,7 @@ export default async function HomePage() {
           Início
         </h1>
         <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
-          Bem-vindo ao Connect 41 — CRM interno da 41 Tech.
+          Bem-vindo ao Connect — CRM interno da 41 Tech.
         </p>
       </div>
 
