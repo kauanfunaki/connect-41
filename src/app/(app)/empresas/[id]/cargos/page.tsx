@@ -4,6 +4,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { excluirCargo } from "./actions";
 
 export default async function CargosPage({
@@ -28,7 +29,7 @@ export default async function CargosPage({
   });
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-6">
         <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Empresas
@@ -85,6 +86,6 @@ export default async function CargosPage({
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

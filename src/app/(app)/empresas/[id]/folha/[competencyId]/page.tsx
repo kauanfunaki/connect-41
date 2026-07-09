@@ -10,6 +10,7 @@ import { atualizarStatusCompetencia, excluirCompetencia } from "../actions";
 import { LancarEventoForm } from "@/components/folha/LancarEventoForm";
 import { PayrollEntryRow } from "@/components/folha/PayrollEntryRow";
 import { CompetenciaStatusForm } from "@/components/folha/CompetenciaStatusForm";
+import { PageContainer } from "@/components/shared/PageContainer";
 
 const MONTH_LABEL = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -57,7 +58,7 @@ export default async function CompetenciaPage({
   const atualizarStatusAction = atualizarStatusCompetencia.bind(null, companyId, competencyId);
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-6">
         <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Empresas</Link>
         <span className="text-fg-muted">/</span>
@@ -111,6 +112,6 @@ export default async function CompetenciaPage({
 
         {canManage && <LancarEventoForm action={lancarEventoAction} colaboradores={colaboradores} />}
       </div>
-    </div>
+    </PageContainer>
   );
 }

@@ -4,6 +4,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { excluirTurno } from "./actions";
 
 export default async function TurnosPage({
@@ -28,7 +29,7 @@ export default async function TurnosPage({
   });
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-6">
         <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Empresas</Link>
         <span className="text-fg-muted">/</span>
@@ -83,6 +84,6 @@ export default async function TurnosPage({
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

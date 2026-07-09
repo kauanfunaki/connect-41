@@ -5,6 +5,7 @@ import { BenefitType } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { excluirBeneficio } from "./actions";
 
 const TYPE_LABEL: Record<BenefitType, string> = {
@@ -44,7 +45,7 @@ export default async function BeneficiosPage({
   });
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-6">
         <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Empresas</Link>
         <span className="text-fg-muted">/</span>
@@ -99,6 +100,6 @@ export default async function BeneficiosPage({
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }
