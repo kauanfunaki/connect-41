@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { AddNoteForm } from "@/components/kanban/AddNoteForm";
 import { CardActionBar } from "@/components/kanban/CardActionBar";
+import { DescriptionEditor } from "@/components/kanban/DescriptionEditor";
+import { ActivityFeed, type FeedItem } from "@/components/kanban/ActivityFeed";
 import {
   moverItem,
   adicionarNota,
   excluirItem,
   atualizarPrazoPrioridade,
+  atualizarDescricao,
   alternarTagItem,
   alternarResponsavelItem,
 } from "../../../actions";
@@ -72,11 +74,22 @@ export default async function KanbanItemPage({
   const deleteAction = excluirItem.bind(null, id, itemId);
   const addNoteAction = adicionarNota.bind(null, id, itemId);
   const prazoAction = atualizarPrazoPrioridade.bind(null, id, itemId);
+  const descricaoAction = atualizarDescricao.bind(null, id, itemId);
   const tagToggleAction = alternarTagItem.bind(null, id, itemId);
   const assigneeToggleAction = alternarResponsavelItem.bind(null, id, itemId);
 
+  const feedItems: FeedItem[] = activities.map((a) => ({
+    id: a.id,
+    type: a.type,
+    label: ACTIVITY_LABEL[a.type] ?? a.type,
+    createdAtLabel: a.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }),
+    userName: a.user.name,
+    content: a.content,
+    importante: a.type === "STATUS_CHANGE" || a.type === "HANDOFF",
+  }));
+
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-6 max-w-5xl mx-auto">
       <div className="flex items-center gap-2 mb-4">
         <Link href="/kanban" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Kanban
@@ -126,51 +139,9 @@ export default async function KanbanItemPage({
         deleteAction={deleteAction}
       />
 
-      {/* Atividades */}
-      <div className="bg-surface border border-border rounded-lg p-5">
-        <h2 className="text-[13px] font-semibold text-fg mb-3">Atividades</h2>
-
-        {canAct && (
-          <div className="mb-3">
-            <AddNoteForm action={addNoteAction} />
-          </div>
-        )}
-
-        {activities.length === 0 ? (
-          <p className="text-[length:var(--fs-helper)] text-fg-muted">Nenhuma atividade registrada ainda.</p>
-        ) : (
-          <div className="scroll-y max-h-[320px] overflow-y-auto">
-            {activities.map((a, i) => {
-              const importante = a.type === "STATUS_CHANGE" || a.type === "HANDOFF";
-              return (
-                <div key={a.id} className="flex gap-2.5 relative pb-3 last:pb-0">
-                  {i < activities.length - 1 && (
-                    <span className="absolute left-[9px] top-[20px] bottom-0 w-px bg-border" />
-                  )}
-                  <span
-                    className={`w-[18px] h-[18px] rounded-full flex items-center justify-center flex-shrink-0 z-[1] border ${
-                      importante ? "bg-brand-subtle border-brand" : "bg-surface-hover border-border-strong"
-                    }`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full ${importante ? "bg-brand" : "bg-fg-muted"}`} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-[length:var(--fs-body)] text-fg font-medium leading-snug">
-                        {ACTIVITY_LABEL[a.type] ?? a.type}
-                      </p>
-                      <span className="font-mono text-[11px] text-fg-muted whitespace-nowrap flex-shrink-0">
-                        {a.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
-                      </span>
-                    </div>
-                    <p className="text-[length:var(--fs-helper)] text-fg-muted">{a.user.name}</p>
-                    {a.content && <p className="text-[length:var(--fs-body)] text-fg-secondary mt-1">{a.content}</p>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
+        <DescriptionEditor canAct={canAct} description={item.description} action={descricaoAction} />
+        <ActivityFeed items={feedItems} canAct={canAct} addNoteAction={addNoteAction} />
       </div>
     </div>
   );

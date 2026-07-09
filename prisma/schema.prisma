@@ -617,6 +617,7 @@ model PipelineItem {
   entityId   String             // Company.id ou Person.id (referência por string, sem FK Prisma — relação polimórfica)
   priority   Int                @default(0)
   dueDate    DateTime?
+  description String?           @db.Text
   createdAt  DateTime           @default(now())
   updatedAt  DateTime           @updatedAt
 

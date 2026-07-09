@@ -77,6 +77,7 @@ export async function criarItem(
   const entityId = form.get("entityId") as string;
   const dueDateRaw = (form.get("dueDate") as string)?.trim();
   const priorityRaw = (form.get("priority") as string)?.trim();
+  const descriptionRaw = (form.get("description") as string)?.trim();
 
   if (!entityId) return { error: "Selecione uma empresa ou pessoa" };
 
@@ -107,6 +108,7 @@ export async function criarItem(
         entityId,
         dueDate: dueDateRaw ? new Date(dueDateRaw) : null,
         priority: priorityRaw ? parseInt(priorityRaw) : 0,
+        description: descriptionRaw ? descriptionRaw : null,
         tags: tagIds.length > 0 ? { create: tagIds.map((tagId) => ({ tagId })) } : undefined,
         assignees: assigneeIds.length > 0 ? { create: assigneeIds.map((userId) => ({ userId })) } : undefined,
       },
@@ -234,6 +236,39 @@ export async function atualizarPrazoPrioridade(
   } catch (err) {
     console.error("[atualizarPrazoPrioridade]", err);
     return { error: "Erro ao atualizar prazo/prioridade." };
+  }
+
+  revalidatePath(`/kanban/${pipelineId}`);
+  revalidatePath(`/kanban/${pipelineId}/itens/${itemId}`);
+  return null;
+}
+
+export async function atualizarDescricao(
+  pipelineId: string,
+  itemId: string,
+  _prev: PipelineState,
+  form: FormData
+): Promise<PipelineState> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  if (!tenantId) return { error: "Não autenticado" };
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) {
+    return { error: "Sem permissão para editar este item." };
+  }
+
+  const description = (form.get("description") as string)?.trim();
+
+  try {
+    await prisma.pipelineItem.update({
+      where: { id: itemId },
+      data: { description: description ? description : null },
+    });
+  } catch (err) {
+    console.error("[atualizarDescricao]", err);
+    return { error: "Erro ao atualizar descrição." };
   }
 
   revalidatePath(`/kanban/${pipelineId}`);

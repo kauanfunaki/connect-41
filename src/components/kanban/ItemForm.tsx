@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
+import { Textarea } from "@/components/ui/Textarea";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 import type { PipelineEntityType } from "@/generated/prisma/enums";
 
@@ -54,6 +55,15 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
           </select>
         </Field>
       </div>
+
+      <Field label="Descrição" htmlFor="description">
+        <Textarea
+          id="description"
+          name="description"
+          rows={3}
+          placeholder="Adicione uma descrição para este card..."
+        />
+      </Field>
 
       {tags.length > 0 && (
         <div className="space-y-2">
