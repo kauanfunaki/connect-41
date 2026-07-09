@@ -3,8 +3,9 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
 import { AddFeriadoForm } from "@/components/admin/AddFeriadoForm";
+import { ImportFeriadosButton } from "@/components/admin/ImportFeriadosButton";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { criarFeriado, excluirFeriado } from "./actions";
+import { criarFeriado, excluirFeriado, importarFeriadosNacionais } from "./actions";
 
 export default async function FeriadosPage() {
   const ctx = await getAuthContext();
@@ -24,6 +25,12 @@ export default async function FeriadosPage() {
           {feriados.length} feriado{feriados.length !== 1 ? "s" : ""} cadastrado{feriados.length !== 1 ? "s" : ""}
         </p>
       </div>
+
+      <ImportFeriadosButton action={importarFeriadosNacionais} />
+      <p className="text-[11px] text-fg-muted mb-5">
+        Importa só feriados nacionais (via BrasilAPI). Feriados estaduais e municipais continuam
+        sendo cadastrados manualmente abaixo.
+      </p>
 
       <AddFeriadoForm action={criarFeriado} />
 

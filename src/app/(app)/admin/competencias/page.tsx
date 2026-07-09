@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
-import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
 import { AddCompetenciaForm } from "@/components/admin/AddCompetenciaForm";
+import { CompetenciaRow } from "@/components/admin/CompetenciaRow";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { criarCompetencia, excluirCompetencia } from "./actions";
+import { criarCompetencia, atualizarCompetencia, excluirCompetencia } from "./actions";
 
 export default async function CompetenciasPage() {
   const ctx = await getAuthContext();
@@ -34,13 +34,12 @@ export default async function CompetenciasPage() {
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">
           {competencias.map((c) => (
-            <div key={c.id} className="flex items-center justify-between px-4 py-2.5">
-              <div>
-                <p className="text-[13px] text-fg">{c.name}</p>
-                {c.description && <p className="text-[12px] text-fg-muted">{c.description}</p>}
-              </div>
-              <DeleteFieldButton action={excluirCompetencia.bind(null, c.id)} nome={c.name} />
-            </div>
+            <CompetenciaRow
+              key={c.id}
+              competencia={c}
+              updateAction={atualizarCompetencia}
+              deleteAction={excluirCompetencia.bind(null, c.id)}
+            />
           ))}
         </div>
       )}
