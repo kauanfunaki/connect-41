@@ -11,7 +11,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { HorizontalBarChart, DonutChart, TrendChart } from "@/components/shared/Charts";
+import { HorizontalBarChart, DonutChart, TrendChart, MiniBarChart } from "@/components/shared/Charts";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite, isFullWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere, scopedPersonWhere, scopedPipelineWhere, scopedHandoffWhere } from "@/lib/auth/scope";
@@ -57,6 +57,13 @@ function daysFromNow(days: number): Date {
   return d;
 }
 
+function monthsAgo(months: number): Date {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() - months);
+  return d;
+}
+
 export default async function HomePage() {
   const ctx = await getAuthContext();
   const canCreateCompany = canWrite(ctx.role);
@@ -66,6 +73,7 @@ export default async function HomePage() {
 
   const prisma = getPrisma();
   const fourteenDaysAgo = daysFromNow(-14);
+  const sixMonthsAgo = monthsAgo(5);
 
   const [
     me,
@@ -80,6 +88,7 @@ export default async function HomePage() {
     companyByStatusRaw,
     openItemsForCharts,
     activityCreatedDates,
+    companiesCreatedRaw,
   ] = await Promise.all([
     ctx.userId ? prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true } }) : Promise.resolve(null),
     prisma.tenant.findUnique({ where: { id: ctx.tenantId }, select: { name: true } }),
@@ -120,6 +129,10 @@ export default async function HomePage() {
     }),
     prisma.activity.findMany({
       where: { tenantId: ctx.tenantId, pipelineItem: { pipeline: scopedPipelineWhere(ctx) }, createdAt: { gte: fourteenDaysAgo } },
+      select: { createdAt: true },
+    }),
+    prisma.company.findMany({
+      where: { ...(await scopedCompanyWhere(ctx)), createdAt: { gte: sixMonthsAgo } },
       select: { createdAt: true },
     }),
   ]);
@@ -198,6 +211,20 @@ export default async function HomePage() {
   }
   const trendData = Array.from(dayBuckets.entries()).map(([label, value]) => ({ label, value }));
 
+  // Novas empresas por mês, últimos 6 meses (inclui o atual) — preenche o
+  // espaço vazio ao lado do donut "Empresas por status" com outro recorte.
+  const monthBuckets = new Map<string, number>();
+  for (let i = 5; i >= 0; i--) {
+    const d = monthsAgo(i);
+    const key = d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
+    monthBuckets.set(key, 0);
+  }
+  for (const c of companiesCreatedRaw) {
+    const key = c.createdAt.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
+    if (monthBuckets.has(key)) monthBuckets.set(key, (monthBuckets.get(key) ?? 0) + 1);
+  }
+  const newCompaniesByMonth = Array.from(monthBuckets.entries()).map(([label, value]) => ({ label, value }));
+
   const today = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
   const firstName = me?.name?.trim().split(/\s+/)[0] ?? "";
 
@@ -242,7 +269,13 @@ export default async function HomePage() {
 
         <div className="bg-surface border border-border rounded-2xl p-5">
           <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Empresas por status</h2>
-          <DonutChart data={companyStatusData} emptyLabel="Nenhuma empresa cadastrada ainda." />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+            <DonutChart data={companyStatusData} emptyLabel="Nenhuma empresa cadastrada ainda." />
+            <div className="sm:border-l sm:border-border sm:pl-4">
+              <p className="text-[11px] font-medium text-fg-muted uppercase tracking-wide mb-2">Novas / mês</p>
+              <MiniBarChart data={newCompaniesByMonth} emptyLabel="Sem novas empresas nos últimos 6 meses." />
+            </div>
+          </div>
         </div>
 
         <div className="bg-surface border border-border rounded-2xl p-5">
@@ -374,21 +407,21 @@ function StatCard({
     <Link
       href={href}
       style={{ animationDelay: `${delay}ms` }}
-      className="reveal-in bg-surface border border-border rounded-2xl px-4 py-4 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform] flex flex-col gap-2.5"
+      className="reveal-in bg-surface border border-border rounded-2xl px-4 py-3.5 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform] flex flex-col gap-2"
     >
-      <span
-        className={`inline-flex w-8 h-8 rounded-lg items-center justify-center ${
-          highlight ? "bg-warning/10 text-warning" : "bg-brand-subtle text-brand"
-        }`}
-      >
-        {icon}
-      </span>
-      <div>
-        <p className={`font-display text-[length:var(--fs-metric)] font-semibold tnum leading-none ${highlight ? "text-warning" : "text-fg"}`}>
-          {value}
-        </p>
-        <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">{label}</p>
+      <div className="flex items-center gap-2">
+        <span
+          className={`inline-flex w-7 h-7 rounded-lg items-center justify-center flex-shrink-0 ${
+            highlight ? "bg-warning/10 text-warning" : "bg-brand-subtle text-brand"
+          }`}
+        >
+          {icon}
+        </span>
+        <p className="text-[length:var(--fs-helper)] text-fg-muted truncate">{label}</p>
       </div>
+      <p className={`font-display text-[length:var(--fs-metric)] font-semibold tnum leading-none ${highlight ? "text-warning" : "text-fg"}`}>
+        {value}
+      </p>
     </Link>
   );
 }
