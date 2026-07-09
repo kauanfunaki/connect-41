@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { AddCicloForm } from "@/components/avaliacoes/AddCicloForm";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { criarCiclo } from "./actions";
 
 export default async function AvaliacoesPage() {
@@ -16,7 +17,7 @@ export default async function AvaliacoesPage() {
   });
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <PageContainer>
       <div className="mb-6">
         <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Avaliações de Desempenho</h1>
         <p className="text-[13px] text-fg-muted mt-0.5">
@@ -51,6 +52,6 @@ export default async function AvaliacoesPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

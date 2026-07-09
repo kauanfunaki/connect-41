@@ -15,6 +15,7 @@ type Row = {
   active: boolean;
   cpf: string | null;
   email: string | null;
+  photoUrl: string | null;
   companyName: string | null;
   companyId: string | null;
   createdAtLabel: string;
@@ -25,6 +26,13 @@ type Props = {
   canCreate: boolean;
   inativarPessoasEmMassa: (ids: string[]) => Promise<void>;
 };
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  const first = parts[0]?.[0] ?? "";
+  const second = parts.length > 1 ? parts[1][0] : "";
+  return (first + second).toUpperCase() || "?";
+}
 
 export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -106,7 +114,21 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
                     </td>
                   )}
                   <td className="px-4 py-3">
-                    <Link href={`/pessoas/${p.id}`} className="font-medium text-fg hover:text-brand transition-colors">
+                    <Link href={`/pessoas/${p.id}`} className="flex items-center gap-2.5 font-medium text-fg hover:text-brand transition-colors">
+                      {p.photoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={p.photoUrl}
+                          alt={p.name}
+                          width={28}
+                          height={28}
+                          className="w-7 h-7 rounded-full object-cover border border-border flex-shrink-0"
+                        />
+                      ) : (
+                        <span className="w-7 h-7 rounded-full bg-brand-subtle text-brand font-display font-semibold text-[11px] flex items-center justify-center flex-shrink-0">
+                          {initials(p.name)}
+                        </span>
+                      )}
                       {p.name}
                     </Link>
                   </td>

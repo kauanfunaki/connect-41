@@ -4,6 +4,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { ToggleAccessButton } from "@/components/admin/ToggleAccessButton";
 import { WorkspaceLogoUpload } from "@/components/admin/WorkspaceLogoUpload";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { concederAcesso, revogarAcesso } from "../actions";
 
 export default async function WorkspaceDetailPage({
@@ -32,7 +33,7 @@ export default async function WorkspaceDetailPage({
   const grantedIds = new Set(grants.map((g) => g.userId));
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/admin/workspaces" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Workspaces
@@ -80,6 +81,6 @@ export default async function WorkspaceDetailPage({
           </div>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

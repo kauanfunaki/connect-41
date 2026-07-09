@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PersonType, PersonEmploymentStatus, TrainingParticipantStatus } from "@/generated/prisma/enums";
 import { excluirPessoa } from "../actions";
-import { DeleteButton } from "@/components/pessoas/DeleteButton";
+import { PageContainer } from "@/components/shared/PageContainer";
+import { PersonHeader } from "@/components/pessoas/PersonHeader";
 import { getAuthContext, canWrite, isFullWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
@@ -37,11 +38,6 @@ import { criarEscala, atualizarEscala, excluirEscala } from "./escala/actions";
 const TYPE_LABEL: Record<PersonType, string> = {
   CANDIDATO:   "Candidato",
   COLABORADOR: "Colaborador",
-};
-
-const TYPE_STYLE: Record<PersonType, string> = {
-  CANDIDATO:   "bg-brand/10 text-brand border-brand/25",
-  COLABORADOR: "bg-success/10 text-success border-success/25",
 };
 
 const STATUS_LABEL: Record<PersonEmploymentStatus, string> = {
@@ -166,9 +162,9 @@ export default async function PessoaPage({
     .join(", ");
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <PageContainer>
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-6">
+      <div className="flex items-center gap-2 mb-5">
         <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Pessoas
         </Link>
@@ -176,170 +172,142 @@ export default async function PessoaPage({
         <span className="text-[13px] text-fg truncate">{person.name}</span>
       </div>
 
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">
-              {person.name}
-            </h1>
-            <span
-              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${TYPE_STYLE[person.type]}`}
-            >
-              {TYPE_LABEL[person.type]}
-            </span>
-            {person.type === "COLABORADOR" && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border bg-surface-2 text-fg-secondary border-border">
-                {STATUS_LABEL[person.employmentStatus]}
-              </span>
-            )}
-          </div>
-          {person.cpf && (
-            <p className="text-[13px] text-fg-muted tnum mt-0.5">CPF: {person.cpf}</p>
-          )}
-        </div>
+      <PersonHeader
+        id={id}
+        name={person.name}
+        photoUrl={person.photoUrl}
+        type={person.type}
+        employmentStatus={person.employmentStatus}
+        cpf={person.cpf}
+        email={person.email}
+        phone={person.phone}
+        companyId={person.currentCompany?.id ?? null}
+        companyName={person.currentCompany?.name ?? null}
+        canEdit={canEdit}
+        canRequestHandoff={canRequestHandoff}
+        deleteAction={deleteAction}
+      />
 
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {canRequestHandoff && (
-            <Link
-              href={`/transferencias/novo?entityType=PERSON&entityId=${id}`}
-              className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
-            >
-              Solicitar Transferência
-            </Link>
-          )}
-          {canEdit && (
-            <>
-              <Link
-                href={`/pessoas/${id}/editar`}
-                className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
-              >
-                Editar
-              </Link>
-              <DeleteButton action={deleteAction} nome={person.name} />
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Identificação */}
-      <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-        <h2 className="text-[14px] font-semibold text-fg mb-4">Identificação</h2>
-        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-          <InfoRow label="Nome"               value={person.name} />
-          <InfoRow label="Tipo"               value={TYPE_LABEL[person.type]} />
-          <InfoRow label="CPF"                value={person.cpf} mono />
-          <InfoRow
-            label="Data de Nascimento"
-            value={
-              person.birthDate
-                ? person.birthDate.toLocaleDateString("pt-BR", {
-                    day: "2-digit", month: "long", year: "numeric",
-                  })
-                : null
-            }
-          />
-          <InfoRow label="RG" value={person.rg} mono />
-          <InfoRow label="PIS" value={person.pis} mono />
-          <InfoRow label="CTPS" value={[person.ctps, person.ctpsSerie].filter(Boolean).join(" / ") || null} mono />
-          <InfoRow label="Escolaridade" value={person.education} />
-        </div>
-      </div>
-
-      {/* Contato */}
-      <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-        <h2 className="text-[14px] font-semibold text-fg mb-4">Contato</h2>
-        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-          <InfoRow label="E-mail"   value={person.email} />
-          <InfoRow label="Telefone" value={person.phone} />
-        </div>
-      </div>
-
-      {/* Endereço */}
-      {fullAddress && (
-        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-          <h2 className="text-[14px] font-semibold text-fg mb-4">Endereço</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        {/* Identificação */}
+        <div className="bg-surface border border-border rounded-lg p-5">
+          <h2 className="text-[14px] font-semibold text-fg mb-4">Identificação</h2>
           <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-            <InfoRow label="Logradouro"  value={[person.addressStreet, person.addressNumber].filter(Boolean).join(", ")} />
-            <InfoRow label="Complemento" value={person.addressComplement} />
-            <InfoRow label="Bairro"      value={person.neighborhood} />
-            <InfoRow label="Cidade / UF" value={[person.city, person.stateCode].filter(Boolean).join(" — ")} />
-            <InfoRow label="CEP"         value={person.zipCode} mono />
+            <InfoRow label="Nome"               value={person.name} />
+            <InfoRow label="Tipo"               value={TYPE_LABEL[person.type]} />
+            <InfoRow label="CPF"                value={person.cpf} mono />
+            <InfoRow
+              label="Data de Nascimento"
+              value={
+                person.birthDate
+                  ? person.birthDate.toLocaleDateString("pt-BR", {
+                      day: "2-digit", month: "long", year: "numeric",
+                    })
+                  : null
+              }
+            />
+            <InfoRow label="RG" value={person.rg} mono />
+            <InfoRow label="PIS" value={person.pis} mono />
+            <InfoRow label="CTPS" value={[person.ctps, person.ctpsSerie].filter(Boolean).join(" / ") || null} mono />
+            <InfoRow label="Escolaridade" value={person.education} />
           </div>
         </div>
-      )}
 
-      {/* Vínculo */}
-      <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-        <h2 className="text-[14px] font-semibold text-fg mb-4">Vínculo</h2>
-        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-          {person.currentCompany ? (
-            <div>
-              <p className="text-[10px] text-fg-muted mb-0.5">Empresa atual</p>
-              <Link
-                href={`/empresas/${person.currentCompany.id}`}
-                className="text-[13px] text-brand hover:underline"
-              >
-                {person.currentCompany.name}
-              </Link>
+        {/* Contato */}
+        <div className="bg-surface border border-border rounded-lg p-5">
+          <h2 className="text-[14px] font-semibold text-fg mb-4">Contato</h2>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+            <InfoRow label="E-mail"   value={person.email} />
+            <InfoRow label="Telefone" value={person.phone} />
+          </div>
+        </div>
+
+        {/* Endereço */}
+        {fullAddress && (
+          <div className="bg-surface border border-border rounded-lg p-5">
+            <h2 className="text-[14px] font-semibold text-fg mb-4">Endereço</h2>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+              <InfoRow label="Logradouro"  value={[person.addressStreet, person.addressNumber].filter(Boolean).join(", ")} />
+              <InfoRow label="Complemento" value={person.addressComplement} />
+              <InfoRow label="Bairro"      value={person.neighborhood} />
+              <InfoRow label="Cidade / UF" value={[person.city, person.stateCode].filter(Boolean).join(" — ")} />
+              <InfoRow label="CEP"         value={person.zipCode} mono />
             </div>
-          ) : (
-            <InfoRow label="Empresa atual" value={null} />
-          )}
-          <InfoRow label="Cargo" value={person.cargo?.name} />
-          <InfoRow label="Departamento" value={person.department?.name} />
-          <InfoRow
-            label="Cadastrada em"
-            value={person.createdAt.toLocaleDateString("pt-BR", {
-              day: "2-digit", month: "long", year: "numeric",
-            })}
-          />
-        </div>
-      </div>
+          </div>
+        )}
 
-      {/* Dados Trabalhistas */}
-      {person.type === "COLABORADOR" && (
-        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-          <h2 className="text-[14px] font-semibold text-fg mb-4">Dados Trabalhistas</h2>
+        {/* Vínculo */}
+        <div className="bg-surface border border-border rounded-lg p-5">
+          <h2 className="text-[14px] font-semibold text-fg mb-4">Vínculo</h2>
           <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-            <InfoRow label="Status" value={STATUS_LABEL[person.employmentStatus]} />
+            {person.currentCompany ? (
+              <div>
+                <p className="text-[10px] text-fg-muted mb-0.5">Empresa atual</p>
+                <Link
+                  href={`/empresas/${person.currentCompany.id}`}
+                  className="text-[13px] text-brand hover:underline"
+                >
+                  {person.currentCompany.name}
+                </Link>
+              </div>
+            ) : (
+              <InfoRow label="Empresa atual" value={null} />
+            )}
+            <InfoRow label="Cargo" value={person.cargo?.name} />
+            <InfoRow label="Departamento" value={person.department?.name} />
             <InfoRow
-              label="Data de Admissão"
-              value={person.admissionDate?.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+              label="Cadastrada em"
+              value={person.createdAt.toLocaleDateString("pt-BR", {
+                day: "2-digit", month: "long", year: "numeric",
+              })}
             />
-            <InfoRow
-              label="Data de Demissão"
-              value={person.dismissalDate?.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
-            />
-            <InfoRow label="Jornada" value={person.workShift} />
-            <InfoRow label="Carga Horária Semanal" value={person.weeklyWorkHours?.toString()} />
-            <InfoRow label="Carga Horária Mensal" value={person.monthlyWorkHours?.toString()} />
           </div>
         </div>
-      )}
 
-      {/* Dados Bancários e Salário (sensível) */}
-      {person.type === "COLABORADOR" && (canViewBank || canViewSalary) && (
-        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-          <h2 className="text-[14px] font-semibold text-fg mb-4">Dados Bancários e Salário</h2>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-            {canViewSalary && (
+        {/* Dados Trabalhistas */}
+        {person.type === "COLABORADOR" && (
+          <div className="bg-surface border border-border rounded-lg p-5">
+            <h2 className="text-[14px] font-semibold text-fg mb-4">Dados Trabalhistas</h2>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+              <InfoRow label="Status" value={STATUS_LABEL[person.employmentStatus]} />
               <InfoRow
-                label="Salário Atual"
-                value={person.currentSalary != null ? `R$ ${person.currentSalary.toString()}` : null}
+                label="Data de Admissão"
+                value={person.admissionDate?.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
               />
-            )}
-            {canViewBank && (
-              <>
-                <InfoRow label="Banco" value={person.bankName} />
-                <InfoRow label="Agência" value={person.bankAgency} mono />
-                <InfoRow label="Conta" value={person.bankAccount} mono />
-                <InfoRow label="Tipo de Conta" value={person.bankAccountType} />
-              </>
-            )}
+              <InfoRow
+                label="Data de Demissão"
+                value={person.dismissalDate?.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+              />
+              <InfoRow label="Jornada" value={person.workShift} />
+              <InfoRow label="Carga Horária Semanal" value={person.weeklyWorkHours?.toString()} />
+              <InfoRow label="Carga Horária Mensal" value={person.monthlyWorkHours?.toString()} />
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Dados Bancários e Salário (sensível) */}
+        {person.type === "COLABORADOR" && (canViewBank || canViewSalary) && (
+          <div className="bg-surface border border-border rounded-lg p-5">
+            <h2 className="text-[14px] font-semibold text-fg mb-4">Dados Bancários e Salário</h2>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+              {canViewSalary && (
+                <InfoRow
+                  label="Salário Atual"
+                  value={person.currentSalary != null ? `R$ ${person.currentSalary.toString()}` : null}
+                />
+              )}
+              {canViewBank && (
+                <>
+                  <InfoRow label="Banco" value={person.bankName} />
+                  <InfoRow label="Agência" value={person.bankAgency} mono />
+                  <InfoRow label="Conta" value={person.bankAccount} mono />
+                  <InfoRow label="Tipo de Conta" value={person.bankAccountType} />
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Histórico Salarial */}
       {person.type === "COLABORADOR" && canViewSalary && (
@@ -682,7 +650,7 @@ export default async function PessoaPage({
           createdAtLabel: d.createdAt.toLocaleDateString("pt-BR"),
         }))}
       />
-    </div>
+    </PageContainer>
   );
 }
 

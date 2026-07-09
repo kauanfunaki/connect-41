@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
+import { PageContainer } from "@/components/shared/PageContainer";
 
 export default async function HorasExtrasPage() {
   const ctx = await getAuthContext();
@@ -13,7 +14,7 @@ export default async function HorasExtrasPage() {
   });
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <PageContainer>
       <div className="mb-6">
         <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Horas Extras Pendentes</h1>
         <p className="text-[13px] text-fg-muted mt-0.5">
@@ -42,6 +43,6 @@ export default async function HorasExtrasPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

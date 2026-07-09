@@ -24,7 +24,7 @@ import { GlobalSearch } from "@/components/shell/GlobalSearch";
 import { NavItem, SectorNavItem } from "@/components/shell/NavLink";
 import { WorkspaceSwitcher } from "@/components/shell/WorkspaceSwitcher";
 
-type Tenant = { id: string; name: string };
+type Tenant = { id: string; name: string; logoUrl: string | null };
 type Sector = { code: string; label: string; color: string };
 
 // Ícone linear por setor (identidade visual; cor do setor continua vindo do dot).

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
+import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const logoUrl = `/api/workspace-logos/${filename}?v=${Date.now()}`;
   await prisma.tenant.update({ where: { id }, data: { logoUrl } });
+  revalidatePath("/", "layout");
 
   return NextResponse.json({ logoUrl });
 }
@@ -57,6 +59,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const { id } = await params;
   const prisma = getPrisma();
   await prisma.tenant.update({ where: { id }, data: { logoUrl: null } });
+  revalidatePath("/", "layout");
 
   return NextResponse.json({ logoUrl: null });
 }

@@ -5,6 +5,7 @@ import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
 import { CompanyFilterSelect } from "@/components/shared/CompanyFilterSelect";
+import { PageContainer } from "@/components/shared/PageContainer";
 
 const STATUS_LABEL: Record<VagaStatus, string> = {
   ABERTA:       "Aberta",
@@ -63,7 +64,7 @@ export default async function VagasPage({
     : vagas.some((v) => canManageSector(ctx, v.sectorCode));
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <PageContainer>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Vagas</h1>
@@ -137,6 +138,6 @@ export default async function VagasPage({
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

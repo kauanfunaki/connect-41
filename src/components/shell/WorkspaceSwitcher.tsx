@@ -3,7 +3,7 @@
 import { ChevronDown } from "lucide-react";
 import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
 
-type Tenant = { id: string; name: string };
+type Tenant = { id: string; name: string; logoUrl: string | null };
 
 type Props = {
   tenants: Tenant[];
@@ -31,9 +31,20 @@ export function WorkspaceSwitcher({ tenants, currentTenantId }: Props) {
 
   const cardInner = (
     <>
-      <span className="w-8 h-8 rounded-lg bg-brand-subtle text-brand font-display font-semibold text-[13px] flex items-center justify-center flex-shrink-0">
-        {initial(currentName)}
-      </span>
+      {current?.logoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={current.logoUrl}
+          alt={currentName}
+          width={32}
+          height={32}
+          className="w-8 h-8 rounded-lg object-cover border border-border flex-shrink-0"
+        />
+      ) : (
+        <span className="w-8 h-8 rounded-lg bg-brand-subtle text-brand font-display font-semibold text-[13px] flex items-center justify-center flex-shrink-0">
+          {initial(currentName)}
+        </span>
+      )}
       <span className="min-w-0 flex-1 text-left leading-tight">
         <span className="block text-[10px] font-semibold text-fg-muted uppercase tracking-wider">Workspace</span>
         <span className="block text-[13px] font-medium text-fg truncate">{currentName}</span>
@@ -73,7 +84,23 @@ export function WorkspaceSwitcher({ tenants, currentTenantId }: Props) {
       >
         {tenants.map((t) => (
           <DropdownItem key={t.id} onClick={() => switchTo(t.id)}>
-            <span className={t.id === currentTenantId ? "text-brand font-semibold" : ""}>{t.name}</span>
+            <span className="flex items-center gap-2 min-w-0">
+              {t.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={t.logoUrl}
+                  alt={t.name}
+                  width={20}
+                  height={20}
+                  className="w-5 h-5 rounded-md object-cover border border-border flex-shrink-0"
+                />
+              ) : (
+                <span className="w-5 h-5 rounded-md bg-brand-subtle text-brand font-display font-semibold text-[10px] flex items-center justify-center flex-shrink-0">
+                  {initial(t.name)}
+                </span>
+              )}
+              <span className={`truncate ${t.id === currentTenantId ? "text-brand font-semibold" : ""}`}>{t.name}</span>
+            </span>
           </DropdownItem>
         ))}
       </Dropdown>

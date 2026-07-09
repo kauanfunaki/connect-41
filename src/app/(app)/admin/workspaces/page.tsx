@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
+import { PageContainer } from "@/components/shared/PageContainer";
 
 export default async function WorkspacesPage() {
   const ctx = await getAuthContext();
@@ -11,7 +12,7 @@ export default async function WorkspacesPage() {
   const tenants = await prisma.tenant.findMany({ orderBy: { name: "asc" } });
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Workspaces</h1>
@@ -66,6 +67,6 @@ export default async function WorkspacesPage() {
           ))}
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

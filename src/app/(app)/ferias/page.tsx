@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
+import { PageContainer } from "@/components/shared/PageContainer";
 
 const ACTIVE_STATUSES = ["PLANEJADA", "SOLICITADA", "EM_ANALISE", "APROVADA", "PROGRAMADA", "EM_GOZO"] as const;
 
@@ -19,7 +20,7 @@ export default async function FeriasPage() {
   const aVencer = vacations.filter((v) => !v.concessivePeriodEnd || v.concessivePeriodEnd >= now);
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <PageContainer>
       <div className="mb-6">
         <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Férias</h1>
         <p className="text-[13px] text-fg-muted mt-0.5">
@@ -29,7 +30,7 @@ export default async function FeriasPage() {
 
       <Section title={`Vencidas (${vencidas.length})`} items={vencidas} empty="Nenhuma férias vencida." danger />
       <Section title={`A vencer / Programadas (${aVencer.length})`} items={aVencer} empty="Nenhuma férias a vencer." />
-    </div>
+    </PageContainer>
   );
 }
 

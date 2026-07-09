@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { CandidatosTable } from "@/components/candidatos/CandidatosTable";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { inativarCandidatosEmMassa } from "./actions";
 
 const PER_PAGE = 20;
@@ -47,7 +48,7 @@ export default async function CandidatosPage({
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <PageContainer>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Candidatos</h1>
@@ -121,6 +122,6 @@ export default async function CandidatosPage({
           </div>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

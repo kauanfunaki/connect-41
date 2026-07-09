@@ -6,6 +6,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { PessoasTable } from "@/components/pessoas/PessoasTable";
 import { CompanyFilterSelect } from "@/components/shared/CompanyFilterSelect";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { inativarPessoasEmMassa } from "./actions";
@@ -59,7 +60,7 @@ export default async function PessoasPage({
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <PageContainer>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -125,6 +126,7 @@ export default async function PessoasPage({
             active: p.active,
             cpf: p.cpf,
             email: p.email,
+            photoUrl: p.photoUrl,
             companyName: p.currentCompany?.name ?? null,
             companyId: p.currentCompany?.id ?? null,
             createdAtLabel: p.createdAt.toLocaleDateString("pt-BR"),
@@ -160,6 +162,6 @@ export default async function PessoasPage({
           </div>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

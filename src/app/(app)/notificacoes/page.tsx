@@ -4,6 +4,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { NotificationItem } from "@/components/shell/NotificationItem";
 import { MarkAllReadButton } from "@/components/shell/MarkAllReadButton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { marcarTodasLidas } from "./actions";
 
 export default async function NotificacoesPage() {
@@ -21,7 +22,7 @@ export default async function NotificacoesPage() {
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Notificações</h1>
@@ -62,6 +63,6 @@ export default async function NotificacoesPage() {
           </div>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

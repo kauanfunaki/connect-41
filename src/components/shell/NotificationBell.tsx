@@ -31,8 +31,8 @@ export function NotificationBell({ unreadCount, notifications }: Props) {
         >
           <Bell size={17} />
           {unreadCount > 0 && (
-            <span className="absolute top-[6px] right-[7px] min-w-[16px] h-[16px] px-1 rounded-full bg-danger text-white text-[10px] font-semibold leading-[16px] text-center border-2 border-surface-hover">
-              {unreadCount > 9 ? "9+" : unreadCount}
+            <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-danger text-white text-[10px] font-semibold leading-[16px] text-center border-2 border-surface-hover">
+              {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}
         </button>

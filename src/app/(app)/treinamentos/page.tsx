@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { PageContainer } from "@/components/shared/PageContainer";
 
 export default async function TreinamentosPage() {
   const ctx = await getAuthContext();
@@ -14,7 +15,7 @@ export default async function TreinamentosPage() {
   });
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <PageContainer>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Treinamentos</h1>
@@ -53,6 +54,6 @@ export default async function TreinamentosPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

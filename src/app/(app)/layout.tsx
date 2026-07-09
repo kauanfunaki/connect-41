@@ -34,14 +34,14 @@ export default async function AppLayout({
     role === "SUPER_ADMIN"
       ? prisma.tenant.findMany({
           where: { OR: [{ id: ctx.homeTenantId }, { accessGrants: { some: { userId: ctx.userId } } }] },
-          select: { id: true, name: true },
+          select: { id: true, name: true, logoUrl: true },
           orderBy: { name: "asc" },
         })
       // Sem múltiplos tenants: busca só o nome do tenant atual, pro seletor de
       // workspace da sidebar mostrar o nome real mesmo sem troca disponível.
       : prisma.tenant.findMany({
           where: { id: tenantId },
-          select: { id: true, name: true },
+          select: { id: true, name: true, logoUrl: true },
         }),
     ctx.userId
       ? prisma.notification.findMany({

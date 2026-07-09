@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
+import { PageContainer } from "@/components/shared/PageContainer";
 
 const PENDING_EXAM_STATUSES = new Set(["SOLICITADO", "AGENDADO", "REALIZADO", "ASO_PENDENTE"]);
 
@@ -29,7 +30,7 @@ export default async function AdmissoesPage() {
   const docCountMap = new Map(docCounts.map((d) => [d.entityId, d._count._all]));
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <PageContainer>
       <div className="mb-6">
         <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Admissões em Andamento</h1>
         <p className="text-[13px] text-fg-muted mt-0.5">
@@ -73,6 +74,6 @@ export default async function AdmissoesPage() {
           })}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }
