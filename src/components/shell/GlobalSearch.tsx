@@ -54,7 +54,7 @@ export function GlobalSearch() {
   }
 
   return (
-    <div ref={rootRef} className="relative w-full max-w-[360px]">
+    <div ref={rootRef} className="relative w-full max-w-md">
       <div className="flex items-center gap-2.5 h-[38px] px-3.5 rounded-[10px] border border-border bg-input-bg focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)] transition-colors">
         <Search size={16} className="text-fg-muted flex-shrink-0" />
         <input
@@ -65,13 +65,13 @@ export function GlobalSearch() {
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
-          placeholder="Buscar empresas, pessoas, candidatos, kanban…"
+          placeholder="Buscar empresas, pessoas, kanban…"
           className="w-full h-full bg-transparent text-[15px] text-fg placeholder:text-fg-muted outline-none border-none"
         />
       </div>
 
       {open && query.trim().length >= 2 && (
-        <div className="scroll-y absolute left-0 top-[calc(100%+10px)] w-[360px] bg-surface-elevated border border-border-strong rounded-2xl shadow-[var(--c41-shadow-lg)] py-2 z-20 max-h-[360px] overflow-y-auto">
+        <div className="scroll-y absolute left-0 top-[calc(100%+10px)] w-full min-w-[360px] bg-surface-elevated border border-border-strong rounded-2xl shadow-[var(--c41-shadow-lg)] py-2 z-20 max-h-[360px] overflow-y-auto">
           {!hasResults ? (
             <p className="px-3.5 py-3 text-[13px] text-fg-muted">Nenhum resultado para &quot;{query}&quot;.</p>
           ) : (

@@ -106,7 +106,7 @@ export function HandoffForm({
           id="message"
           name="message"
           rows={2}
-          placeholder="Resumo curto para quem vai receber o handoff…"
+          placeholder="Resumo curto para quem vai receber a transferência…"
           className={`${INPUT} h-auto py-2 resize-none`}
         />
       </Field>
@@ -127,7 +127,7 @@ export function HandoffForm({
           disabled={isPending}
           className="h-9 px-5 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
         >
-          {isPending ? "Enviando…" : "Solicitar Handoff"}
+          {isPending ? "Enviando…" : "Solicitar Transferência"}
         </button>
         <Link
           href={cancelHref}
