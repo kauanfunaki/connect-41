@@ -12,8 +12,10 @@ import {
   CalendarDays,
   Target,
   ScrollText,
+  Video,
 } from "lucide-react";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
+import { canManageMeetings } from "@/lib/integrations/oauth";
 import { PageContainer } from "@/components/shared/PageContainer";
 
 type Card = { href: string; icon: React.ReactNode; title: string; description: string };
@@ -56,6 +58,15 @@ export default async function AdminPage() {
     { href: "/admin/campos", icon: <Puzzle size={20} />, title: "Campos Customizados", description: "Campos extras por setor e entidade" },
     { href: "/admin/tags", icon: <Tag size={20} />, title: "Tags", description: "Tags coloridas reaproveitáveis no Kanban" }
   );
+
+  if (canManageMeetings(ctx)) {
+    cards.push({
+      href: "/admin/integracoes",
+      icon: <Video size={20} />,
+      title: "Integrações",
+      description: "Conectar Google Meet / Microsoft Teams para reuniões",
+    });
+  }
 
   if (isAdmin) {
     cards.push(

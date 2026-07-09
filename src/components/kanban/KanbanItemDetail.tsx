@@ -4,6 +4,7 @@ import { getPrisma } from "@/lib/prisma";
 import { CardActionBar } from "@/components/kanban/CardActionBar";
 import { DescriptionEditor } from "@/components/kanban/DescriptionEditor";
 import { ActivityFeed, type FeedItem } from "@/components/kanban/ActivityFeed";
+import { MeetingsSection } from "@/components/kanban/MeetingsSection";
 import {
   moverItem,
   adicionarNota,
@@ -13,7 +14,9 @@ import {
   alternarTagItem,
   alternarResponsavelItem,
 } from "@/app/(app)/kanban/actions";
+import { agendarReuniao, excluirReuniao } from "@/app/(app)/kanban/meetings-actions";
 import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
+import { canManageMeetings } from "@/lib/integrations/oauth";
 import { scopedPipelineWhere } from "@/lib/auth/scope";
 import { getSectorUsers } from "@/lib/sectorUsers";
 
@@ -59,7 +62,9 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
   const canDelete = canManageSector(ctx, pipeline.sectorCode);
   const canAct = canActOnSector(ctx, pipeline.sectorCode);
 
-  const [entity, activities, sectorTags, sectorUsers] = await Promise.all([
+  const canScheduleMeetings = canManageMeetings(ctx);
+
+  const [entity, activities, sectorTags, sectorUsers, meetings, oauthAccounts] = await Promise.all([
     item.entityType === "COMPANY"
       ? prisma.company.findFirst({ where: { id: item.entityId, tenantId }, select: { id: true, name: true } })
       : prisma.person.findFirst({ where: { id: item.entityId, tenantId }, select: { id: true, name: true } }),
@@ -74,6 +79,10 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
       select: { id: true, name: true, color: true },
     }),
     getSectorUsers(tenantId, pipeline.sectorCode),
+    prisma.meeting.findMany({ where: { tenantId, pipelineItemId: itemId }, orderBy: { startAt: "desc" } }),
+    canScheduleMeetings
+      ? prisma.oAuthAccount.findMany({ where: { tenantId, userId: ctx.userId }, select: { provider: true } })
+      : Promise.resolve([]),
   ]);
 
   const deleteAction = excluirItem.bind(null, id, itemId);
@@ -82,6 +91,10 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
   const descricaoAction = atualizarDescricao.bind(null, id, itemId);
   const tagToggleAction = alternarTagItem.bind(null, id, itemId);
   const assigneeToggleAction = alternarResponsavelItem.bind(null, id, itemId);
+  const scheduleMeetingAction = agendarReuniao.bind(null, id, itemId);
+  const deleteMeetingAction = excluirReuniao.bind(null, id);
+  const hasGoogle = oauthAccounts.some((a) => a.provider === "GOOGLE");
+  const hasMicrosoft = oauthAccounts.some((a) => a.provider === "MICROSOFT");
 
   const feedItems: FeedItem[] = activities.map((a) => ({
     id: a.id,
@@ -150,6 +163,22 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
         <DescriptionEditor canAct={canAct} description={item.description} action={descricaoAction} />
         <ActivityFeed items={feedItems} canAct={canAct} addNoteAction={addNoteAction} />
       </div>
+
+      <MeetingsSection
+        meetings={meetings.map((m) => ({
+          id: m.id,
+          provider: m.provider,
+          title: m.title,
+          meetingUrl: m.meetingUrl,
+          startAt: m.startAt.toISOString(),
+          endAt: m.endAt.toISOString(),
+        }))}
+        canSchedule={canScheduleMeetings}
+        hasGoogle={hasGoogle}
+        hasMicrosoft={hasMicrosoft}
+        scheduleAction={scheduleMeetingAction}
+        deleteAction={deleteMeetingAction}
+      />
     </div>
   );
 }

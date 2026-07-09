@@ -306,6 +306,8 @@ model Tenant {
   evaluationScores     EvaluationScore[]
   handoffViews         HandoffView[]
   auditLogs            AuditLog[]
+  oauthAccounts        OAuthAccount[]
+  meetings             Meeting[]
 
   @@map("tenants")
 }
@@ -412,6 +414,8 @@ model User {
   evaluationsGiven  Evaluation[]
   auditLogs         AuditLog[]
   responsibleFor    CompanyService[] @relation("CompanyServiceResponsible")
+  oauthAccounts     OAuthAccount[]
+  meetingsCreated   Meeting[]        @relation("MeetingCreatedBy")
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -641,6 +645,7 @@ model PipelineItem {
   assignees  PipelineItemAssignee[]
   tags       PipelineItemTag[]
   candidatura Candidatura?
+  meetings    Meeting[]
 
   @@index([tenantId, pipelineId])
   @@index([tenantId, entityType, entityId])
@@ -1408,4 +1413,63 @@ model Notification {
 
   @@index([tenantId, userId, read])
   @@map("notifications")
+}
+
+// ─── Reuniões (Fase M) ────────────────────────────────────────────────────────
+
+enum MeetingProvider {
+  GOOGLE
+  MICROSOFT
+}
+
+// Conexão OAuth de um usuário com Google ou Microsoft — só coordenadores
+// (SECTOR_ADMIN) e admins conectam a própria conta (gate na Server Action, não
+// aqui). accessToken/refreshToken nunca são lidos no client, só em Server
+// Actions/Route Handlers.
+model OAuthAccount {
+  id           String          @id @default(uuid())
+  tenantId     String
+  userId       String
+  provider     MeetingProvider
+  accountEmail String?         @db.VarChar(160)
+  accessToken  String          @db.Text
+  refreshToken String          @db.Text
+  expiresAt    DateTime
+  scope        String?         @db.VarChar(255)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([tenantId])
+  @@map("oauth_accounts")
+}
+
+// Reunião agendada via Google Meet ou Microsoft Teams — vinculada a um item do
+// Kanban (pipelineItemId) e/ou à agenda própria de um setor (sectorCode),
+// conforme decisão do levantamento (as duas formas não são exclusivas).
+model Meeting {
+  id              String          @id @default(uuid())
+  tenantId        String
+  provider        MeetingProvider
+  title           String          @db.VarChar(180)
+  meetingUrl      String          @db.VarChar(500)
+  externalEventId String          @db.VarChar(255)
+  startAt         DateTime
+  endAt           DateTime
+  pipelineItemId  String?
+  sectorCode      String?         @db.VarChar(40)
+  createdByUserId String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  pipelineItem PipelineItem? @relation(fields: [pipelineItemId], references: [id], onDelete: Cascade)
+  createdBy    User          @relation("MeetingCreatedBy", fields: [createdByUserId], references: [id])
+
+  @@index([tenantId, pipelineItemId])
+  @@index([tenantId, sectorCode, startAt])
+  @@map("meetings")
 }

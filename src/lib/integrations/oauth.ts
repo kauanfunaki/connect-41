@@ -1,0 +1,44 @@
+import { getPrisma } from "@/lib/prisma";
+import { isFullWrite, type AuthContext } from "@/lib/auth/context";
+import { refreshGoogleToken } from "@/lib/integrations/google";
+import { refreshMicrosoftToken } from "@/lib/integrations/microsoft";
+import type { MeetingProvider } from "@/generated/prisma/enums";
+
+// Só coordenadores (SECTOR_ADMIN) e admins conectam a própria conta — usuários
+// comuns não fazem reuniões como parte do trabalho (decisão do levantamento).
+export function canManageMeetings(ctx: AuthContext): boolean {
+  return isFullWrite(ctx.role) || ctx.role === "SECTOR_ADMIN";
+}
+
+// Retorna um access token válido para o usuário+provider, renovando via
+// refresh_token se estiver vencido (ou a 2min de vencer, margem de segurança).
+export async function getValidAccessToken(
+  tenantId: string,
+  userId: string,
+  provider: MeetingProvider
+): Promise<string | null> {
+  const prisma = getPrisma();
+  const account = await prisma.oAuthAccount.findFirst({ where: { tenantId, userId, provider } });
+  if (!account) return null;
+
+  const expiringSoon = account.expiresAt.getTime() - Date.now() < 2 * 60 * 1000;
+  if (!expiringSoon) return account.accessToken;
+
+  const refreshed =
+    provider === "GOOGLE"
+      ? await refreshGoogleToken(account.refreshToken)
+      : await refreshMicrosoftToken(account.refreshToken);
+
+  const expiresAt = new Date(Date.now() + refreshed.expires_in * 1000);
+  await prisma.oAuthAccount.update({
+    where: { id: account.id },
+    data: {
+      accessToken: refreshed.access_token,
+      // Google só reemite refresh_token às vezes (ex: primeiro consent) — preserva o antigo se não vier um novo.
+      refreshToken: refreshed.refresh_token ?? account.refreshToken,
+      expiresAt,
+    },
+  });
+
+  return refreshed.access_token;
+}
