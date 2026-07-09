@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { SetorForm } from "@/components/admin/SetorForm";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { atualizarSetor } from "../../actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 
@@ -19,7 +20,7 @@ export default async function EditarSetorPage({
   if (!sector) notFound();
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/admin/setores" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Setores
@@ -44,6 +45,6 @@ export default async function EditarSetorPage({
           }}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }

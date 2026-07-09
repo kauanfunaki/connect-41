@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { FilialForm } from "@/components/admin/FilialForm";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { atualizarFilial } from "../../actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 
@@ -19,7 +20,7 @@ export default async function EditarFilialPage({
   if (!branch) notFound();
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/admin/filiais" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Filiais
@@ -37,6 +38,6 @@ export default async function EditarFilialPage({
           defaultValues={{ id: branch.id, name: branch.name, active: branch.active, order: branch.order }}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }

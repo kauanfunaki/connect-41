@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getAllBranches } from "@/lib/branches";
+import { PageContainer } from "@/components/shared/PageContainer";
 
 export default async function FiliaisPage() {
   const ctx = await getAuthContext();
@@ -10,7 +11,7 @@ export default async function FiliaisPage() {
   const branches = await getAllBranches(ctx.tenantId);
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <PageContainer>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Filiais</h1>
@@ -53,6 +54,6 @@ export default async function FiliaisPage() {
           </div>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

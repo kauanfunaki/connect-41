@@ -5,6 +5,7 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { ROLE_LABELS } from "@/lib/roles";
 import { getSectorMaps } from "@/lib/sectors";
 import { UsuariosTable } from "@/components/admin/UsuariosTable";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { alternarAtivoUsuario, alternarAtivoEmMassa, atribuirSetorEmMassa } from "./actions";
 
 export default async function UsuariosPage() {
@@ -20,7 +21,7 @@ export default async function UsuariosPage() {
   });
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <PageContainer>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Usuários</h1>
@@ -55,6 +56,6 @@ export default async function UsuariosPage() {
         alternarAtivoEmMassa={alternarAtivoEmMassa}
         atribuirSetorEmMassa={atribuirSetorEmMassa}
       />
-    </div>
+    </PageContainer>
   );
 }

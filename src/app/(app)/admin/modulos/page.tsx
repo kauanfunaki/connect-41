@@ -3,6 +3,7 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getTenantModuleStates } from "@/lib/modules";
 import { getSectorMaps } from "@/lib/sectors";
 import { ToggleModuleButton } from "@/components/admin/ToggleModuleButton";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { alternarModulo } from "./actions";
 
 export default async function ModulosPage() {
@@ -20,7 +21,7 @@ export default async function ModulosPage() {
   }, {});
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <PageContainer>
       <div className="mb-6">
         <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Módulos</h1>
         <p className="text-[13px] text-fg-muted mt-0.5">
@@ -59,6 +60,6 @@ export default async function ModulosPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

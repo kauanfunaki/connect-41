@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { UsuarioForm } from "@/components/admin/UsuarioForm";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { atualizarUsuario } from "../../actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { assignableRoles, ROLE_OPTIONS } from "@/lib/roles";
@@ -31,7 +32,7 @@ export default async function EditarUsuarioPage({
   const { options: sectorOptions } = await getSectorMaps(ctx.tenantId);
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/admin/usuarios" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Usuários
@@ -61,6 +62,6 @@ export default async function EditarUsuarioPage({
           }}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }

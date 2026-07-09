@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { TenantForm } from "@/components/admin/TenantForm";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { atualizarTenant } from "./actions";
 
 export default async function TenantPage() {
@@ -13,7 +14,7 @@ export default async function TenantPage() {
   if (!tenant) notFound();
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <PageContainer variant="narrow">
       <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-1">
         Empresa (Tenant)
       </h1>
@@ -34,6 +35,6 @@ export default async function TenantPage() {
           }}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }

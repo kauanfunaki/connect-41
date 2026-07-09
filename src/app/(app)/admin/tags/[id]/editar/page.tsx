@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { TagForm } from "@/components/admin/TagForm";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { atualizarTag } from "../../actions";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 
@@ -19,7 +20,7 @@ export default async function EditarTagPage({
   if (!canManageSector(ctx, tag.sectorCode)) notFound();
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/admin/tags" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Tags
@@ -38,6 +39,6 @@ export default async function EditarTagPage({
           defaultValues={{ id: tag.id, sectorCode: tag.sectorCode, name: tag.name, color: tag.color }}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }

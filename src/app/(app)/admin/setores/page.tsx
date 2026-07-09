@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getAllSectors } from "@/lib/sectors";
+import { PageContainer } from "@/components/shared/PageContainer";
 
 export default async function SetoresPage() {
   const ctx = await getAuthContext();
@@ -10,7 +11,7 @@ export default async function SetoresPage() {
   const sectors = await getAllSectors(ctx.tenantId);
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <PageContainer>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Setores</h1>
@@ -60,6 +61,6 @@ export default async function SetoresPage() {
         Setores não podem ser excluídos após criados (o código é referenciado em kanban,
         usuários e handoffs) — desative em vez de remover.
       </p>
-    </div>
+    </PageContainer>
   );
 }

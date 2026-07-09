@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { CampoForm } from "@/components/admin/CampoForm";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { atualizarCampo } from "../../actions";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 
@@ -19,7 +20,7 @@ export default async function EditarCampoPage({
   if (!canManageSector(ctx, field.sectorCode)) notFound();
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/admin/campos" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Campos Customizados
@@ -47,6 +48,6 @@ export default async function EditarCampoPage({
           }}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }

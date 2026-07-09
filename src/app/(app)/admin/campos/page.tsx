@@ -4,6 +4,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getSectorMaps } from "@/lib/sectors";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { excluirCampo } from "./actions";
 
 const FIELD_TYPE_LABEL: Record<string, string> = {
@@ -39,7 +40,7 @@ export default async function CamposPage() {
   }, {});
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <PageContainer>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Campos Customizados</h1>
@@ -97,6 +98,6 @@ export default async function CamposPage() {
           })}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

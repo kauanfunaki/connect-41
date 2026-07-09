@@ -4,6 +4,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getSectorMaps } from "@/lib/sectors";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { excluirTag } from "./actions";
 
 export default async function TagsPage() {
@@ -29,7 +30,7 @@ export default async function TagsPage() {
   }, {});
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <PageContainer>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Tags</h1>
@@ -79,6 +80,6 @@ export default async function TagsPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }
