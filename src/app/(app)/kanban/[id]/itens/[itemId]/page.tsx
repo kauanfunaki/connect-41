@@ -1,12 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { MoveStageSelect } from "@/components/kanban/MoveStageSelect";
 import { AddNoteForm } from "@/components/kanban/AddNoteForm";
-import { DeleteButton } from "@/components/kanban/DeleteButton";
-import { PrazoPrioridadeForm } from "@/components/kanban/PrazoPrioridadeForm";
-import { TagToggleList } from "@/components/kanban/TagToggleList";
-import { AssigneeToggleList } from "@/components/kanban/AssigneeToggleList";
+import { CardActionBar } from "@/components/kanban/CardActionBar";
 import {
   moverItem,
   adicionarNota,
@@ -80,8 +76,8 @@ export default async function KanbanItemPage({
   const assigneeToggleAction = alternarResponsavelItem.bind(null, id, itemId);
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="flex items-center gap-2 mb-6">
+    <div className="p-6 max-w-3xl mx-auto">
+      <div className="flex items-center gap-2 mb-4">
         <Link href="/kanban" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Kanban
         </Link>
@@ -96,149 +92,85 @@ export default async function KanbanItemPage({
         <span className="text-[13px] text-fg truncate">{entity?.name ?? "(removido)"}</span>
       </div>
 
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-1">
-            {entity?.name ?? "(removido)"}
-          </h1>
-          {entity && (
-            <Link
-              href={item.entityType === "COMPANY" ? `/empresas/${entity.id}` : `/pessoas/${entity.id}`}
-              className="text-[13px] text-brand hover:underline"
-            >
-              Ver ficha completa →
-            </Link>
-          )}
-        </div>
-        {canDelete && <DeleteButton action={deleteAction} nome={entity?.name ?? "este item"} />}
+      <div className="mb-4">
+        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-1">
+          {entity?.name ?? "(removido)"}
+        </h1>
+        {entity && (
+          <Link
+            href={item.entityType === "COMPANY" ? `/empresas/${entity.id}` : `/pessoas/${entity.id}`}
+            className="text-[13px] text-brand hover:underline"
+          >
+            Ver ficha completa →
+          </Link>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
-        {/* Coluna principal */}
-        <div className="space-y-4">
-          <div className="bg-surface border border-border rounded-lg p-5">
-            <h2 className="text-[13px] font-semibold text-fg mb-3">Estágio</h2>
-            {canAct ? (
-              <MoveStageSelect
-                itemId={itemId}
-                currentStageId={item.stageId}
-                stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name }))}
-                moveAction={moverItem}
-              />
-            ) : (
-              <p className="text-[13px] text-fg">
-                {pipeline.stages.find((s) => s.id === item.stageId)?.name ?? "—"}
-              </p>
-            )}
+      <CardActionBar
+        canAct={canAct}
+        canDelete={canDelete}
+        itemId={itemId}
+        entityName={entity?.name ?? "este item"}
+        stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name }))}
+        currentStageId={item.stageId}
+        moveAction={moverItem}
+        dueDate={item.dueDate ? item.dueDate.toISOString() : null}
+        priority={item.priority}
+        prazoAction={prazoAction}
+        allTags={sectorTags}
+        selectedTagIds={item.tags.map((t) => t.tagId)}
+        tagToggleAction={tagToggleAction}
+        allUsers={sectorUsers}
+        selectedUserIds={item.assignees.map((a) => a.userId)}
+        assigneeToggleAction={assigneeToggleAction}
+        deleteAction={deleteAction}
+      />
+
+      {/* Atividades */}
+      <div className="bg-surface border border-border rounded-lg p-5">
+        <h2 className="text-[13px] font-semibold text-fg mb-3">Atividades</h2>
+
+        {canAct && (
+          <div className="mb-3">
+            <AddNoteForm action={addNoteAction} />
           </div>
+        )}
 
-          <div className="bg-surface border border-border rounded-lg p-5">
-            <h2 className="text-[13px] font-semibold text-fg mb-3">Prazo & Prioridade</h2>
-            {canAct ? (
-              <PrazoPrioridadeForm
-                action={prazoAction}
-                dueDate={item.dueDate ? item.dueDate.toISOString() : null}
-                priority={item.priority}
-              />
-            ) : (
-              <p className="text-[13px] text-fg">
-                {item.dueDate
-                  ? item.dueDate.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
-                  : "Sem prazo definido"}
-              </p>
-            )}
-          </div>
-
-          <div className="bg-surface border border-border rounded-lg p-5">
-            <h2 className="text-[13px] font-semibold text-fg mb-3">Tags</h2>
-            {canAct ? (
-              <TagToggleList
-                allTags={sectorTags}
-                selectedIds={item.tags.map((t) => t.tagId)}
-                toggleAction={tagToggleAction}
-              />
-            ) : sectorTags.filter((t) => item.tags.some((it) => it.tagId === t.id)).length === 0 ? (
-              <p className="text-[13px] text-fg-muted">Nenhuma tag.</p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {sectorTags
-                  .filter((t) => item.tags.some((it) => it.tagId === t.id))
-                  .map((t) => (
-                    <span
-                      key={t.id}
-                      className="text-[12px] font-medium px-2.5 py-1 rounded-full"
-                      style={{ background: `${t.color}1A`, color: t.color }}
-                    >
-                      {t.name}
-                    </span>
-                  ))}
-              </div>
-            )}
-          </div>
-
-          <div className="bg-surface border border-border rounded-lg p-5">
-            <h2 className="text-[13px] font-semibold text-fg mb-3">Responsáveis</h2>
-            {canAct ? (
-              <AssigneeToggleList
-                allUsers={sectorUsers}
-                selectedIds={item.assignees.map((a) => a.userId)}
-                toggleAction={assigneeToggleAction}
-              />
-            ) : (
-              <p className="text-[13px] text-fg-muted">
-                {sectorUsers.filter((u) => item.assignees.some((a) => a.userId === u.id)).map((u) => u.name).join(", ") ||
-                  "Nenhum responsável."}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Painel de atividades */}
-        <div className="bg-surface border border-border rounded-lg p-5 lg:sticky lg:top-6 self-start">
-          <h2 className="text-[13px] font-semibold text-fg mb-3">Atividades</h2>
-
-          {canAct && (
-            <div className="mb-4">
-              <AddNoteForm action={addNoteAction} />
-            </div>
-          )}
-
-          {activities.length === 0 ? (
-            <p className="text-[length:var(--fs-helper)] text-fg-muted">Nenhuma atividade registrada ainda.</p>
-          ) : (
-            <div className="scroll-y max-h-[560px] overflow-y-auto">
-              {activities.map((a, i) => {
-                const importante = a.type === "STATUS_CHANGE" || a.type === "HANDOFF";
-                return (
-                  <div key={a.id} className="flex gap-3 relative pb-4 last:pb-0">
-                    {i < activities.length - 1 && (
-                      <span className="absolute left-[10px] top-[22px] bottom-0 w-px bg-border" />
-                    )}
-                    <span
-                      className={`w-[21px] h-[21px] rounded-full flex items-center justify-center flex-shrink-0 z-[1] border ${
-                        importante ? "bg-brand-subtle border-brand" : "bg-surface-hover border-border-strong"
-                      }`}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full ${importante ? "bg-brand" : "bg-fg-muted"}`} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-[length:var(--fs-body)] text-fg font-medium leading-snug">
-                          {ACTIVITY_LABEL[a.type] ?? a.type}
-                        </p>
-                        <span className="font-mono text-[11px] text-fg-muted whitespace-nowrap flex-shrink-0">
-                          {a.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
-                        </span>
-                      </div>
-                      <p className="text-[length:var(--fs-helper)] text-fg-muted">{a.user.name}</p>
-                      {a.content && <p className="text-[length:var(--fs-body)] text-fg-secondary mt-1">{a.content}</p>}
+        {activities.length === 0 ? (
+          <p className="text-[length:var(--fs-helper)] text-fg-muted">Nenhuma atividade registrada ainda.</p>
+        ) : (
+          <div className="scroll-y max-h-[320px] overflow-y-auto">
+            {activities.map((a, i) => {
+              const importante = a.type === "STATUS_CHANGE" || a.type === "HANDOFF";
+              return (
+                <div key={a.id} className="flex gap-2.5 relative pb-3 last:pb-0">
+                  {i < activities.length - 1 && (
+                    <span className="absolute left-[9px] top-[20px] bottom-0 w-px bg-border" />
+                  )}
+                  <span
+                    className={`w-[18px] h-[18px] rounded-full flex items-center justify-center flex-shrink-0 z-[1] border ${
+                      importante ? "bg-brand-subtle border-brand" : "bg-surface-hover border-border-strong"
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${importante ? "bg-brand" : "bg-fg-muted"}`} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-[length:var(--fs-body)] text-fg font-medium leading-snug">
+                        {ACTIVITY_LABEL[a.type] ?? a.type}
+                      </p>
+                      <span className="font-mono text-[11px] text-fg-muted whitespace-nowrap flex-shrink-0">
+                        {a.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
+                      </span>
                     </div>
+                    <p className="text-[length:var(--fs-helper)] text-fg-muted">{a.user.name}</p>
+                    {a.content && <p className="text-[length:var(--fs-body)] text-fg-secondary mt-1">{a.content}</p>}
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
