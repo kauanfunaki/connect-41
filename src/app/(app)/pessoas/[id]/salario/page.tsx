@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { BackButton } from "@/components/shared/BackButton";
 import { getAuthContext } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
@@ -50,6 +51,7 @@ export default async function SalarioPage({
 
   return (
     <PageContainer>
+      <BackButton className="mb-3" />
       <div className="flex items-center gap-2 mb-6">
         <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Pessoas</Link>
         <span className="text-fg-muted">/</span>

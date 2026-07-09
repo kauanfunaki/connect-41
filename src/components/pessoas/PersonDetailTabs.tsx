@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { LayoutGrid, Building2, Briefcase, FileText, History } from "lucide-react";
 import { Tabs } from "@/components/ui/Tabs";
 
@@ -23,7 +24,14 @@ export function PersonDetailTabs({
   documentsCount,
   history,
 }: Props) {
-  const [active, setActive] = useState("overview");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const validTabs = ["overview", "vinculo", "trabalhista", "documents", "history"];
+  const tabFromUrl = searchParams.get("tab");
+  const [active, setActive] = useState(
+    tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : "overview"
+  );
 
   const tabs = [
     { key: "overview", label: "Visão Geral", icon: <LayoutGrid /> },
@@ -33,9 +41,14 @@ export function PersonDetailTabs({
     { key: "history", label: "Histórico", icon: <History /> },
   ];
 
+  function handleChange(key: string) {
+    setActive(key);
+    router.replace(`${pathname}?tab=${key}`, { scroll: false });
+  }
+
   return (
     <div>
-      <Tabs tabs={tabs} active={active} onChange={setActive} className="mb-5" />
+      <Tabs tabs={tabs} active={active} onChange={handleChange} className="mb-5" />
       <div>
         {active === "overview" && overview}
         {active === "vinculo" && vinculo}

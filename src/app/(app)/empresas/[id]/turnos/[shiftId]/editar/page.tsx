@@ -4,6 +4,8 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { WorkShiftForm } from "@/components/empresas/WorkShiftForm";
+import { PageContainer } from "@/components/shared/PageContainer";
+import { BackButton } from "@/components/shared/BackButton";
 import { atualizarTurno } from "../../actions";
 
 export default async function EditarTurnoPage({
@@ -26,7 +28,8 @@ export default async function EditarTurnoPage({
   if (!turno) notFound();
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <PageContainer variant="narrow">
+      <BackButton className="mb-3" />
       <div className="flex items-center gap-2 mb-6">
         <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Empresas</Link>
         <span className="text-fg-muted">/</span>
@@ -45,6 +48,6 @@ export default async function EditarTurnoPage({
           defaultValues={{ id: turno.id, name: turno.name, startTime: turno.startTime, endTime: turno.endTime }}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }

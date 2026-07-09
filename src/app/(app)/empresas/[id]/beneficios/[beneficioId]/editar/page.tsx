@@ -4,6 +4,8 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { BenefitCatalogForm } from "@/components/empresas/BenefitCatalogForm";
+import { PageContainer } from "@/components/shared/PageContainer";
+import { BackButton } from "@/components/shared/BackButton";
 import { atualizarBeneficio } from "../../actions";
 
 export default async function EditarBeneficioPage({
@@ -26,7 +28,8 @@ export default async function EditarBeneficioPage({
   if (!beneficio) notFound();
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <PageContainer variant="narrow">
+      <BackButton className="mb-3" />
       <div className="flex items-center gap-2 mb-6">
         <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Empresas</Link>
         <span className="text-fg-muted">/</span>
@@ -50,6 +53,6 @@ export default async function EditarBeneficioPage({
           }}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }

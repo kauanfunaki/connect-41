@@ -5,6 +5,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { WorkShiftForm } from "@/components/empresas/WorkShiftForm";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { BackButton } from "@/components/shared/BackButton";
 import { criarTurno } from "../actions";
 
 export default async function NovoTurnoPage({
@@ -25,6 +26,7 @@ export default async function NovoTurnoPage({
 
   return (
     <PageContainer variant="narrow">
+      <BackButton className="mb-3" />
       <div className="flex items-center gap-2 mb-6">
         <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Empresas</Link>
         <span className="text-fg-muted">/</span>

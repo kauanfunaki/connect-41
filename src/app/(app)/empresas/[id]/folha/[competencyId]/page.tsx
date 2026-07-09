@@ -11,6 +11,7 @@ import { LancarEventoForm } from "@/components/folha/LancarEventoForm";
 import { PayrollEntryRow } from "@/components/folha/PayrollEntryRow";
 import { CompetenciaStatusForm } from "@/components/folha/CompetenciaStatusForm";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { BackButton } from "@/components/shared/BackButton";
 
 const MONTH_LABEL = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -59,6 +60,7 @@ export default async function CompetenciaPage({
 
   return (
     <PageContainer>
+      <BackButton className="mb-3" />
       <div className="flex items-center gap-2 mb-6">
         <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Empresas</Link>
         <span className="text-fg-muted">/</span>

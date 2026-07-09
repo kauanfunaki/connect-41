@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PersonType } from "@/generated/prisma/enums";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { BackButton } from "@/components/shared/BackButton";
 import { PessoaForm } from "@/components/pessoas/PessoaForm";
 import { atualizarPessoa } from "../../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -52,6 +53,7 @@ export default async function EditarPessoaPage({
   return (
     <PageContainer>
       <div className="max-w-[1000px] mx-auto">
+      <BackButton className="mb-3" />
       <div className="flex items-center gap-2 mb-6">
         <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Pessoas

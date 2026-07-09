@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { BackButton } from "@/components/shared/BackButton";
 import { EmpresaForm } from "@/components/empresas/EmpresaForm";
 import { atualizarEmpresa } from "../../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -32,6 +33,7 @@ export default async function EditarEmpresaPage({
   return (
     <PageContainer>
       <div className="max-w-[1000px] mx-auto">
+      <BackButton className="mb-3" />
       <div className="flex items-center gap-2 mb-6">
         <Link
           href="/empresas"
