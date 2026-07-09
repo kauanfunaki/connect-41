@@ -13,18 +13,21 @@ type PipelineEntry = {
 type Props = {
   pipelineItems: PipelineEntry[];
   activities: ActivityEntry[];
+  /** "empresa" (padrão) ou "pessoa" — usado só no texto do estado vazio. */
+  entityLabel?: string;
 };
 
-// Agrega os PipelineItems (kanbans) e Activities ligados a esta empresa —
-// Activity não tem FK direta pra Company, só pra PipelineItem (relação
+// Agrega os PipelineItems (kanbans) e Activities ligados a esta entidade —
+// Activity não tem FK direta pra Company/Person, só pra PipelineItem (relação
 // polimórfica via entityType/entityId), então o histórico é montado aqui.
-export function CompanyHistorySection({ pipelineItems, activities }: Props) {
+// Genérico o bastante pra ser reaproveitado no detalhe de pessoa também.
+export function CompanyHistorySection({ pipelineItems, activities, entityLabel = "empresa" }: Props) {
   return (
     <div className="space-y-4">
       <Card className="p-5">
         <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3">Pipelines</h2>
         {pipelineItems.length === 0 ? (
-          <EmptyState title="Nenhum pipeline vinculado" description="Esta empresa ainda não está em nenhum Kanban." />
+          <EmptyState title="Nenhum pipeline vinculado" description={`Esta ${entityLabel} ainda não está em nenhum Kanban.`} />
         ) : (
           <div className="flex flex-wrap gap-2">
             {pipelineItems.map((p) => (

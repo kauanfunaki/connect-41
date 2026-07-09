@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps } from "@/lib/sectors";
 import { KanbanBoard } from "@/components/kanban/KanbanBoard";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { moverItem } from "../actions";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedPipelineWhere } from "@/lib/auth/scope";
@@ -117,7 +118,7 @@ export default async function KanbanBoardPage({
   }));
 
   return (
-    <div className="p-6 h-full flex flex-col">
+    <PageContainer className="h-full flex flex-col">
       <div className="flex items-center gap-2 mb-1">
         <Link href="/kanban" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Kanban
@@ -181,6 +182,6 @@ export default async function KanbanBoardPage({
           </div>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

@@ -5,6 +5,8 @@ import { PersonType, PersonEmploymentStatus, TrainingParticipantStatus } from "@
 import { excluirPessoa } from "../actions";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PersonHeader } from "@/components/pessoas/PersonHeader";
+import { PersonDetailTabs } from "@/components/pessoas/PersonDetailTabs";
+import { CompanyHistorySection } from "@/components/empresas/CompanyHistorySection";
 import { getAuthContext, canWrite, isFullWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
@@ -69,7 +71,7 @@ export default async function PessoaPage({
   const canRequestHandoff = isFullWrite(ctx.role) || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.length > 0);
 
   const prisma = getPrisma();
-  const [person, canViewBank, canViewSalary, canViewMedical, documents, exames, salaryHistory, vacations, absences, terminations, overtimeEntries, beneficios, escala, trainingParticipations, evaluations] = await Promise.all([
+  const [person, canViewBank, canViewSalary, canViewMedical, documents, exames, salaryHistory, vacations, absences, terminations, overtimeEntries, beneficios, escala, trainingParticipations, evaluations, pipelineItems, historyActivities] = await Promise.all([
     prisma.person.findFirst({
       where: { id, type: PersonType.COLABORADOR, ...(await scopedPersonWhere(ctx)) },
       include: {
@@ -111,6 +113,17 @@ export default async function PessoaPage({
       where: { tenantId: ctx.tenantId, personId: id },
       orderBy: { evaluationDate: "desc" },
       include: { cycle: { select: { id: true, name: true } } },
+    }),
+    prisma.pipelineItem.findMany({
+      where: { tenantId: ctx.tenantId, entityType: "PERSON", entityId: id },
+      include: { pipeline: { select: { id: true, name: true } }, stage: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.activity.findMany({
+      where: { tenantId: ctx.tenantId, pipelineItem: { entityType: "PERSON", entityId: id } },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+      include: { user: { select: { name: true } }, pipelineItem: { include: { pipeline: { select: { name: true } } } } },
     }),
   ]);
 
@@ -161,109 +174,161 @@ export default async function PessoaPage({
     .filter(Boolean)
     .join(", ");
 
-  return (
-    <PageContainer>
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-5">
-        <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Pessoas
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg truncate">{person.name}</span>
+  const overviewContent = (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Identificação */}
+      <div className="bg-surface border border-border rounded-lg p-5">
+        <h2 className="text-[14px] font-semibold text-fg mb-4">Identificação</h2>
+        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+          <InfoRow label="Nome"               value={person.name} />
+          <InfoRow label="Tipo"               value={TYPE_LABEL[person.type]} />
+          <InfoRow label="CPF"                value={person.cpf} mono />
+          <InfoRow
+            label="Data de Nascimento"
+            value={
+              person.birthDate
+                ? person.birthDate.toLocaleDateString("pt-BR", {
+                    day: "2-digit", month: "long", year: "numeric",
+                  })
+                : null
+            }
+          />
+          <InfoRow label="RG" value={person.rg} mono />
+          <InfoRow label="PIS" value={person.pis} mono />
+          <InfoRow label="CTPS" value={[person.ctps, person.ctpsSerie].filter(Boolean).join(" / ") || null} mono />
+          <InfoRow label="Escolaridade" value={person.education} />
+        </div>
       </div>
 
-      <PersonHeader
-        id={id}
-        name={person.name}
-        photoUrl={person.photoUrl}
-        type={person.type}
-        employmentStatus={person.employmentStatus}
-        cpf={person.cpf}
-        email={person.email}
-        phone={person.phone}
-        companyId={person.currentCompany?.id ?? null}
-        companyName={person.currentCompany?.name ?? null}
-        canEdit={canEdit}
-        canRequestHandoff={canRequestHandoff}
-        deleteAction={deleteAction}
-      />
+      {/* Contato */}
+      <div className="bg-surface border border-border rounded-lg p-5">
+        <h2 className="text-[14px] font-semibold text-fg mb-4">Contato</h2>
+        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+          <InfoRow label="E-mail"   value={person.email} />
+          <InfoRow label="Telefone" value={person.phone} />
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        {/* Identificação */}
+      {/* Endereço */}
+      {fullAddress && (
         <div className="bg-surface border border-border rounded-lg p-5">
-          <h2 className="text-[14px] font-semibold text-fg mb-4">Identificação</h2>
+          <h2 className="text-[14px] font-semibold text-fg mb-4">Endereço</h2>
           <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-            <InfoRow label="Nome"               value={person.name} />
-            <InfoRow label="Tipo"               value={TYPE_LABEL[person.type]} />
-            <InfoRow label="CPF"                value={person.cpf} mono />
-            <InfoRow
-              label="Data de Nascimento"
-              value={
-                person.birthDate
-                  ? person.birthDate.toLocaleDateString("pt-BR", {
-                      day: "2-digit", month: "long", year: "numeric",
-                    })
-                  : null
-              }
-            />
-            <InfoRow label="RG" value={person.rg} mono />
-            <InfoRow label="PIS" value={person.pis} mono />
-            <InfoRow label="CTPS" value={[person.ctps, person.ctpsSerie].filter(Boolean).join(" / ") || null} mono />
-            <InfoRow label="Escolaridade" value={person.education} />
+            <InfoRow label="Logradouro"  value={[person.addressStreet, person.addressNumber].filter(Boolean).join(", ")} />
+            <InfoRow label="Complemento" value={person.addressComplement} />
+            <InfoRow label="Bairro"      value={person.neighborhood} />
+            <InfoRow label="Cidade / UF" value={[person.city, person.stateCode].filter(Boolean).join(" — ")} />
+            <InfoRow label="CEP"         value={person.zipCode} mono />
           </div>
         </div>
+      )}
+    </div>
+  );
 
-        {/* Contato */}
-        <div className="bg-surface border border-border rounded-lg p-5">
-          <h2 className="text-[14px] font-semibold text-fg mb-4">Contato</h2>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-            <InfoRow label="E-mail"   value={person.email} />
-            <InfoRow label="Telefone" value={person.phone} />
-          </div>
-        </div>
-
-        {/* Endereço */}
-        {fullAddress && (
-          <div className="bg-surface border border-border rounded-lg p-5">
-            <h2 className="text-[14px] font-semibold text-fg mb-4">Endereço</h2>
-            <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-              <InfoRow label="Logradouro"  value={[person.addressStreet, person.addressNumber].filter(Boolean).join(", ")} />
-              <InfoRow label="Complemento" value={person.addressComplement} />
-              <InfoRow label="Bairro"      value={person.neighborhood} />
-              <InfoRow label="Cidade / UF" value={[person.city, person.stateCode].filter(Boolean).join(" — ")} />
-              <InfoRow label="CEP"         value={person.zipCode} mono />
+  const vinculoContent = (
+    <div className="space-y-4">
+      {/* Vínculo */}
+      <div className="bg-surface border border-border rounded-lg p-5">
+        <h2 className="text-[14px] font-semibold text-fg mb-4">Vínculo</h2>
+        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+          {person.currentCompany ? (
+            <div>
+              <p className="text-[10px] text-fg-muted mb-0.5">Empresa atual</p>
+              <Link
+                href={`/empresas/${person.currentCompany.id}`}
+                className="text-[13px] text-brand hover:underline"
+              >
+                {person.currentCompany.name}
+              </Link>
             </div>
-          </div>
-        )}
-
-        {/* Vínculo */}
-        <div className="bg-surface border border-border rounded-lg p-5">
-          <h2 className="text-[14px] font-semibold text-fg mb-4">Vínculo</h2>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-            {person.currentCompany ? (
-              <div>
-                <p className="text-[10px] text-fg-muted mb-0.5">Empresa atual</p>
-                <Link
-                  href={`/empresas/${person.currentCompany.id}`}
-                  className="text-[13px] text-brand hover:underline"
-                >
-                  {person.currentCompany.name}
-                </Link>
-              </div>
-            ) : (
-              <InfoRow label="Empresa atual" value={null} />
-            )}
-            <InfoRow label="Cargo" value={person.cargo?.name} />
-            <InfoRow label="Departamento" value={person.department?.name} />
-            <InfoRow
-              label="Cadastrada em"
-              value={person.createdAt.toLocaleDateString("pt-BR", {
-                day: "2-digit", month: "long", year: "numeric",
-              })}
-            />
-          </div>
+          ) : (
+            <InfoRow label="Empresa atual" value={null} />
+          )}
+          <InfoRow label="Cargo" value={person.cargo?.name} />
+          <InfoRow label="Departamento" value={person.department?.name} />
+          <InfoRow
+            label="Cadastrada em"
+            value={person.createdAt.toLocaleDateString("pt-BR", {
+              day: "2-digit", month: "long", year: "numeric",
+            })}
+          />
         </div>
+      </div>
 
+      {/* Escala de Trabalho */}
+      {person.type === "COLABORADOR" && (
+        <div className="bg-surface border border-border rounded-lg p-5">
+          <h2 className="text-[14px] font-semibold text-fg mb-3">
+            Escala de Trabalho {escala.length > 0 && `(${escala.length})`}
+          </h2>
+
+          {escala.length === 0 ? (
+            <p className="text-[13px] text-fg-muted mb-3">Nenhuma escala montada ainda.</p>
+          ) : (
+            <div>
+              {escala.map((e) => (
+                <EscalaRow
+                  key={e.id}
+                  escala={{
+                    id: e.id,
+                    dateLabel: e.date.toLocaleDateString("pt-BR"),
+                    shiftName: e.shift?.name ?? null,
+                    dayOff: e.dayOff,
+                    isHoliday: e.isHoliday,
+                    status: e.status,
+                  }}
+                  updateAction={atualizarEscala.bind(null, id, e.id)}
+                  removeAction={excluirEscala.bind(null, id, e.id)}
+                  canManage={canEdit}
+                />
+              ))}
+            </div>
+          )}
+
+          {canEdit && <AddEscalaForm action={criarEscalaAction} shifts={turnosDisponiveis} />}
+        </div>
+      )}
+
+      {/* Benefícios */}
+      {person.type === "COLABORADOR" && (
+        <div className="bg-surface border border-border rounded-lg p-5">
+          <h2 className="text-[14px] font-semibold text-fg mb-3">
+            Benefícios {beneficios.length > 0 && `(${beneficios.length})`}
+          </h2>
+
+          {beneficios.length === 0 ? (
+            <p className="text-[13px] text-fg-muted mb-3">Nenhum benefício vinculado ainda.</p>
+          ) : (
+            <div>
+              {beneficios.map((b) => (
+                <BeneficioRow
+                  key={b.id}
+                  beneficio={{
+                    id: b.id,
+                    benefitName: b.benefit.name,
+                    status: b.status,
+                    companyValue: b.companyValue?.toString() ?? null,
+                    discountValue: b.discountValue?.toString() ?? null,
+                    startDateLabel: b.startDate.toLocaleDateString("pt-BR"),
+                    endDateLabel: b.endDate?.toLocaleDateString("pt-BR") ?? null,
+                  }}
+                  updateAction={atualizarBeneficioAssignment.bind(null, id, b.id)}
+                  removeAction={removerBeneficioAssignment.bind(null, id, b.id)}
+                  canManage={canEdit}
+                />
+              ))}
+            </div>
+          )}
+
+          {canEdit && <AddBeneficioForm action={vincularBeneficioAction} beneficios={beneficiosDisponiveis} />}
+        </div>
+      )}
+    </div>
+  );
+
+  const trabalhistaContent = (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Dados Trabalhistas */}
         {person.type === "COLABORADOR" && (
           <div className="bg-surface border border-border rounded-lg p-5">
@@ -328,7 +393,7 @@ export default async function PessoaPage({
 
       {/* Férias */}
       {person.type === "COLABORADOR" && (
-        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+        <div className="bg-surface border border-border rounded-lg p-5">
           <h2 className="text-[14px] font-semibold text-fg mb-3">
             Férias {vacations.length > 0 && `(${vacations.length})`}
           </h2>
@@ -364,7 +429,7 @@ export default async function PessoaPage({
 
       {/* Afastamentos/Atestados */}
       {person.type === "COLABORADOR" && (
-        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+        <div className="bg-surface border border-border rounded-lg p-5">
           <h2 className="text-[14px] font-semibold text-fg mb-3">
             Afastamentos e Atestados {absences.length > 0 && `(${absences.length})`}
           </h2>
@@ -400,7 +465,7 @@ export default async function PessoaPage({
 
       {/* Desligamento */}
       {person.type === "COLABORADOR" && (
-        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+        <div className="bg-surface border border-border rounded-lg p-5">
           <h2 className="text-[14px] font-semibold text-fg mb-3">
             Desligamento {terminations.length > 0 && `(${terminations.length})`}
           </h2>
@@ -434,126 +499,9 @@ export default async function PessoaPage({
         </div>
       )}
 
-      {/* Desempenho */}
-      {person.type === "COLABORADOR" && evaluations.length > 0 && (
-        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-          <h2 className="text-[14px] font-semibold text-fg mb-3">
-            Avaliações de Desempenho ({evaluations.length})
-          </h2>
-          <div className="divide-y divide-border">
-            {evaluations.map((e) => (
-              <div key={e.id} className="py-2.5">
-                <div className="flex items-center justify-between">
-                  <Link href={`/avaliacoes/${e.cycle.id}/avaliar/${id}`} className="text-[13px] text-brand hover:underline">
-                    {e.cycle.name}
-                  </Link>
-                  <span className="text-[12px] text-fg-muted">
-                    {e.averageScore != null ? `Média: ${e.averageScore.toString()}` : "Sem nota"}
-                  </span>
-                </div>
-                {e.developmentPlan && (
-                  <p className="text-[12px] text-fg-muted mt-0.5">Plano: {e.developmentPlan}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Treinamentos */}
-      {person.type === "COLABORADOR" && trainingParticipations.length > 0 && (
-        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-          <h2 className="text-[14px] font-semibold text-fg mb-3">
-            Treinamentos ({trainingParticipations.length})
-          </h2>
-          <div className="divide-y divide-border">
-            {trainingParticipations.map((p) => (
-              <div key={p.id} className="flex items-center justify-between py-2.5">
-                <Link
-                  href={`/treinamentos/${p.class.training.id}/turmas/${p.class.id}`}
-                  className="text-[13px] text-brand hover:underline"
-                >
-                  {p.class.training.name} — {p.class.date.toLocaleDateString("pt-BR")}
-                </Link>
-                <span className="text-[12px] text-fg-muted">{TRAINING_STATUS_LABEL[p.status]}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Escala de Trabalho */}
-      {person.type === "COLABORADOR" && (
-        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-          <h2 className="text-[14px] font-semibold text-fg mb-3">
-            Escala de Trabalho {escala.length > 0 && `(${escala.length})`}
-          </h2>
-
-          {escala.length === 0 ? (
-            <p className="text-[13px] text-fg-muted mb-3">Nenhuma escala montada ainda.</p>
-          ) : (
-            <div>
-              {escala.map((e) => (
-                <EscalaRow
-                  key={e.id}
-                  escala={{
-                    id: e.id,
-                    dateLabel: e.date.toLocaleDateString("pt-BR"),
-                    shiftName: e.shift?.name ?? null,
-                    dayOff: e.dayOff,
-                    isHoliday: e.isHoliday,
-                    status: e.status,
-                  }}
-                  updateAction={atualizarEscala.bind(null, id, e.id)}
-                  removeAction={excluirEscala.bind(null, id, e.id)}
-                  canManage={canEdit}
-                />
-              ))}
-            </div>
-          )}
-
-          {canEdit && <AddEscalaForm action={criarEscalaAction} shifts={turnosDisponiveis} />}
-        </div>
-      )}
-
-      {/* Benefícios */}
-      {person.type === "COLABORADOR" && (
-        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-          <h2 className="text-[14px] font-semibold text-fg mb-3">
-            Benefícios {beneficios.length > 0 && `(${beneficios.length})`}
-          </h2>
-
-          {beneficios.length === 0 ? (
-            <p className="text-[13px] text-fg-muted mb-3">Nenhum benefício vinculado ainda.</p>
-          ) : (
-            <div>
-              {beneficios.map((b) => (
-                <BeneficioRow
-                  key={b.id}
-                  beneficio={{
-                    id: b.id,
-                    benefitName: b.benefit.name,
-                    status: b.status,
-                    companyValue: b.companyValue?.toString() ?? null,
-                    discountValue: b.discountValue?.toString() ?? null,
-                    startDateLabel: b.startDate.toLocaleDateString("pt-BR"),
-                    endDateLabel: b.endDate?.toLocaleDateString("pt-BR") ?? null,
-                  }}
-                  updateAction={atualizarBeneficioAssignment.bind(null, id, b.id)}
-                  removeAction={removerBeneficioAssignment.bind(null, id, b.id)}
-                  canManage={canEdit}
-                />
-              ))}
-            </div>
-          )}
-
-          {canEdit && <AddBeneficioForm action={vincularBeneficioAction} beneficios={beneficiosDisponiveis} />}
-        </div>
-      )}
-
       {/* Horas Extras */}
       {person.type === "COLABORADOR" && (
-        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+        <div className="bg-surface border border-border rounded-lg p-5">
           <h2 className="text-[14px] font-semibold text-fg mb-3">
             Horas Extras {overtimeEntries.length > 0 && `(${overtimeEntries.length})`}
           </h2>
@@ -587,7 +535,7 @@ export default async function PessoaPage({
 
       {/* Exames Admissionais */}
       {person.type === "COLABORADOR" && (
-        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+        <div className="bg-surface border border-border rounded-lg p-5">
           <h2 className="text-[14px] font-semibold text-fg mb-3">
             Exames Admissionais {exames.length > 0 && `(${exames.length})`}
           </h2>
@@ -620,9 +568,57 @@ export default async function PessoaPage({
         </div>
       )}
 
+      {/* Desempenho */}
+      {person.type === "COLABORADOR" && evaluations.length > 0 && (
+        <div className="bg-surface border border-border rounded-lg p-5">
+          <h2 className="text-[14px] font-semibold text-fg mb-3">
+            Avaliações de Desempenho ({evaluations.length})
+          </h2>
+          <div className="divide-y divide-border">
+            {evaluations.map((e) => (
+              <div key={e.id} className="py-2.5">
+                <div className="flex items-center justify-between">
+                  <Link href={`/avaliacoes/${e.cycle.id}/avaliar/${id}`} className="text-[13px] text-brand hover:underline">
+                    {e.cycle.name}
+                  </Link>
+                  <span className="text-[12px] text-fg-muted">
+                    {e.averageScore != null ? `Média: ${e.averageScore.toString()}` : "Sem nota"}
+                  </span>
+                </div>
+                {e.developmentPlan && (
+                  <p className="text-[12px] text-fg-muted mt-0.5">Plano: {e.developmentPlan}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Treinamentos */}
+      {person.type === "COLABORADOR" && trainingParticipations.length > 0 && (
+        <div className="bg-surface border border-border rounded-lg p-5">
+          <h2 className="text-[14px] font-semibold text-fg mb-3">
+            Treinamentos ({trainingParticipations.length})
+          </h2>
+          <div className="divide-y divide-border">
+            {trainingParticipations.map((p) => (
+              <div key={p.id} className="flex items-center justify-between py-2.5">
+                <Link
+                  href={`/treinamentos/${p.class.training.id}/turmas/${p.class.id}`}
+                  className="text-[13px] text-brand hover:underline"
+                >
+                  {p.class.training.name} — {p.class.date.toLocaleDateString("pt-BR")}
+                </Link>
+                <span className="text-[12px] text-fg-muted">{TRAINING_STATUS_LABEL[p.status]}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Campos Adicionais (setoriais) */}
       {customFields.length > 0 && (
-        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+        <div className="bg-surface border border-border rounded-lg p-5">
           <h2 className="text-[14px] font-semibold text-fg mb-4">Campos Adicionais</h2>
           <div className="grid grid-cols-2 gap-x-8 gap-y-3">
             {customFields.map((f) => (
@@ -635,20 +631,79 @@ export default async function PessoaPage({
           </div>
         </div>
       )}
+    </div>
+  );
 
-      {/* Documentos */}
-      <DocumentsSection
-        entityType="PERSON"
-        entityId={id}
-        canUpload={canEdit}
-        documents={documents.map((d) => ({
-          id: d.id,
-          fileName: d.fileName,
-          category: d.category,
-          sensitive: d.sensitive,
-          uploadedByName: d.uploadedBy.name,
-          createdAtLabel: d.createdAt.toLocaleDateString("pt-BR"),
-        }))}
+  const documentsContent = (
+    <DocumentsSection
+      entityType="PERSON"
+      entityId={id}
+      canUpload={canEdit}
+      documents={documents.map((d) => ({
+        id: d.id,
+        fileName: d.fileName,
+        category: d.category,
+        sensitive: d.sensitive,
+        uploadedByName: d.uploadedBy.name,
+        createdAtLabel: d.createdAt.toLocaleDateString("pt-BR"),
+      }))}
+    />
+  );
+
+  const historyContent = (
+    <CompanyHistorySection
+      entityLabel="pessoa"
+      pipelineItems={pipelineItems.map((p) => ({
+        id: p.id,
+        pipelineId: p.pipeline.id,
+        pipelineName: p.pipeline.name,
+        stageName: p.stage.name,
+      }))}
+      activities={historyActivities.map((a) => ({
+        id: a.id,
+        type: a.type,
+        content: a.content,
+        createdAt: a.createdAt,
+        userName: a.user.name,
+        contextLabel: a.pipelineItem.pipeline.name,
+      }))}
+    />
+  );
+
+  return (
+    <PageContainer>
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 mb-5">
+        <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
+          Pessoas
+        </Link>
+        <span className="text-fg-muted">/</span>
+        <span className="text-[13px] text-fg truncate">{person.name}</span>
+      </div>
+
+      <PersonHeader
+        id={id}
+        name={person.name}
+        photoUrl={person.photoUrl}
+        type={person.type}
+        employmentStatus={person.employmentStatus}
+        cpf={person.cpf}
+        email={person.email}
+        phone={person.phone}
+        companyId={person.currentCompany?.id ?? null}
+        companyName={person.currentCompany?.name ?? null}
+        canEdit={canEdit}
+        canRequestHandoff={canRequestHandoff}
+        deleteAction={deleteAction}
+      />
+
+      <PersonDetailTabs
+        overview={overviewContent}
+        vinculo={vinculoContent}
+        trabalhista={trabalhistaContent}
+        documents={documentsContent}
+        documentsCount={documents.length}
+        history={historyContent}
       />
     </PageContainer>
   );

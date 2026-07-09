@@ -1,29 +1,4 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { getPrisma } from "@/lib/prisma";
-import { CardActionBar } from "@/components/kanban/CardActionBar";
-import { DescriptionEditor } from "@/components/kanban/DescriptionEditor";
-import { ActivityFeed, type FeedItem } from "@/components/kanban/ActivityFeed";
-import {
-  moverItem,
-  adicionarNota,
-  excluirItem,
-  atualizarPrazoPrioridade,
-  atualizarDescricao,
-  alternarTagItem,
-  alternarResponsavelItem,
-} from "../../../actions";
-import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
-import { scopedPipelineWhere } from "@/lib/auth/scope";
-import { getSectorUsers } from "@/lib/sectorUsers";
-
-const ACTIVITY_LABEL: Record<string, string> = {
-  NOTE: "Nota",
-  STATUS_CHANGE: "Mudança de estágio",
-  DOCUMENT: "Documento",
-  HANDOFF: "Handoff",
-  MENTION: "Menção",
-};
+import { KanbanItemDetail } from "@/components/kanban/KanbanItemDetail";
 
 export default async function KanbanItemPage({
   params,
@@ -31,118 +6,10 @@ export default async function KanbanItemPage({
   params: Promise<{ id: string; itemId: string }>;
 }) {
   const { id, itemId } = await params;
-  const ctx = await getAuthContext();
-  const tenantId = ctx.tenantId;
-
-  const prisma = getPrisma();
-  const [pipeline, item] = await Promise.all([
-    prisma.pipeline.findFirst({
-      where: { id, ...scopedPipelineWhere(ctx) },
-      include: { stages: { orderBy: { order: "asc" } } },
-    }),
-    prisma.pipelineItem.findFirst({
-      where: { id: itemId, tenantId },
-      include: {
-        tags: { select: { tagId: true } },
-        assignees: { select: { userId: true } },
-      },
-    }),
-  ]);
-
-  if (!pipeline || !item) notFound();
-
-  const canDelete = canManageSector(ctx, pipeline.sectorCode);
-  const canAct = canActOnSector(ctx, pipeline.sectorCode);
-
-  const [entity, activities, sectorTags, sectorUsers] = await Promise.all([
-    item.entityType === "COMPANY"
-      ? prisma.company.findFirst({ where: { id: item.entityId, tenantId }, select: { id: true, name: true } })
-      : prisma.person.findFirst({ where: { id: item.entityId, tenantId }, select: { id: true, name: true } }),
-    prisma.activity.findMany({
-      where: { pipelineItemId: itemId, tenantId },
-      orderBy: { createdAt: "desc" },
-      include: { user: { select: { name: true } } },
-    }),
-    prisma.tag.findMany({
-      where: { tenantId, sectorCode: pipeline.sectorCode },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, color: true },
-    }),
-    getSectorUsers(tenantId, pipeline.sectorCode),
-  ]);
-
-  const deleteAction = excluirItem.bind(null, id, itemId);
-  const addNoteAction = adicionarNota.bind(null, id, itemId);
-  const prazoAction = atualizarPrazoPrioridade.bind(null, id, itemId);
-  const descricaoAction = atualizarDescricao.bind(null, id, itemId);
-  const tagToggleAction = alternarTagItem.bind(null, id, itemId);
-  const assigneeToggleAction = alternarResponsavelItem.bind(null, id, itemId);
-
-  const feedItems: FeedItem[] = activities.map((a) => ({
-    id: a.id,
-    type: a.type,
-    label: ACTIVITY_LABEL[a.type] ?? a.type,
-    createdAtLabel: a.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }),
-    userName: a.user.name,
-    content: a.content,
-    importante: a.type === "STATUS_CHANGE" || a.type === "HANDOFF",
-  }));
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <div className="flex items-center gap-2 mb-4">
-        <Link href="/kanban" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Kanban
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <Link
-          href={`/kanban/${id}`}
-          className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate max-w-[160px]"
-        >
-          {pipeline.name}
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg truncate">{entity?.name ?? "(removido)"}</span>
-      </div>
-
-      <div className="mb-4">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-1">
-          {entity?.name ?? "(removido)"}
-        </h1>
-        {entity && (
-          <Link
-            href={item.entityType === "COMPANY" ? `/empresas/${entity.id}` : `/pessoas/${entity.id}`}
-            className="text-[13px] text-brand hover:underline"
-          >
-            Ver ficha completa →
-          </Link>
-        )}
-      </div>
-
-      <CardActionBar
-        canAct={canAct}
-        canDelete={canDelete}
-        itemId={itemId}
-        entityName={entity?.name ?? "este item"}
-        stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name }))}
-        currentStageId={item.stageId}
-        moveAction={moverItem}
-        dueDate={item.dueDate ? item.dueDate.toISOString() : null}
-        priority={item.priority}
-        prazoAction={prazoAction}
-        allTags={sectorTags}
-        selectedTagIds={item.tags.map((t) => t.tagId)}
-        tagToggleAction={tagToggleAction}
-        allUsers={sectorUsers}
-        selectedUserIds={item.assignees.map((a) => a.userId)}
-        assigneeToggleAction={assigneeToggleAction}
-        deleteAction={deleteAction}
-      />
-
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
-        <DescriptionEditor canAct={canAct} description={item.description} action={descricaoAction} />
-        <ActivityFeed items={feedItems} canAct={canAct} addNoteAction={addNoteAction} />
-      </div>
+      <KanbanItemDetail id={id} itemId={itemId} />
     </div>
   );
 }
