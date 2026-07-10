@@ -39,11 +39,16 @@ export default async function AgendaPage() {
       <div className="mb-6">
         <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Agenda</h1>
         <p className="text-[13px] text-fg-muted mt-0.5">
-          Reuniões que você agendou via Google Meet/Microsoft Teams.
+          Reuniões agendadas pelo Connect 41 (botão &ldquo;Agendar reunião&rdquo; dentro de um item de Kanban).
+          Reuniões criadas direto no Google Calendar/Teams não aparecem aqui.
         </p>
       </div>
 
-      <Section title={`Próximas (${upcoming.length})`} meetings={upcoming} empty="Nenhuma reunião agendada." />
+      <Section
+        title={`Próximas (${upcoming.length})`}
+        meetings={upcoming}
+        empty="Nenhuma reunião agendada. Agende pelo item de Kanban da empresa/pessoa correspondente."
+      />
       <Section title={`Passadas (${past.length})`} meetings={past} empty="Nenhuma reunião passada." muted />
     </PageContainer>
   );

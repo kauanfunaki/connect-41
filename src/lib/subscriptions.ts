@@ -1,22 +1,5 @@
 import { getPrisma } from "@/lib/prisma";
 
-export const MANAGEMENT_MODE_LABEL = {
-  MANAGED: "Gerenciado pela 41 Tech",
-  SELF_SERVICE: "Autoatendimento (cliente administra)",
-} as const;
-
-export const BILLING_TYPE_LABEL = {
-  FLAT_MONTHLY: "Valor fixo mensal",
-  PER_USER_MONTHLY: "Por usuário/mês",
-} as const;
-
-export const SUBSCRIPTION_STATUS_LABEL = {
-  TRIAL: "Em teste",
-  ACTIVE: "Ativa",
-  PAST_DUE: "Em atraso",
-  CANCELED: "Cancelada",
-} as const;
-
 // Total de usuários ativos do tenant — base pra cobrança PER_USER_MONTHLY e
 // pro enforcement de seatLimit em planos self-service.
 export async function countActiveUsers(tenantId: string): Promise<number> {

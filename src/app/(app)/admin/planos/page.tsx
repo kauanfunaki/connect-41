@@ -3,7 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { TogglePlanoButton } from "@/components/admin/TogglePlanoButton";
-import { MANAGEMENT_MODE_LABEL, BILLING_TYPE_LABEL } from "@/lib/subscriptions";
+import { MANAGEMENT_MODE_LABEL, BILLING_TYPE_LABEL } from "@/lib/subscription-labels";
 import { NovoPlanoForm } from "@/components/admin/NovoPlanoForm";
 import { alternarPlano } from "./actions";
 

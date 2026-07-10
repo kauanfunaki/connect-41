@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { countActiveUsers, SUBSCRIPTION_STATUS_LABEL } from "@/lib/subscriptions";
+import { countActiveUsers } from "@/lib/subscriptions";
+import { SUBSCRIPTION_STATUS_LABEL } from "@/lib/subscription-labels";
 
 // Só existe pra tenants SELF_SERVICE (frente 2 do modelo comercial) — em
 // MANAGED é a 41 Tech quem administra a assinatura, o cliente não precisa

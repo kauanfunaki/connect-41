@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { salvarAssinatura, type AssinaturaState } from "@/app/(app)/admin/assinaturas/actions";
-import { MANAGEMENT_MODE_LABEL, SUBSCRIPTION_STATUS_LABEL } from "@/lib/subscriptions";
+import { MANAGEMENT_MODE_LABEL, SUBSCRIPTION_STATUS_LABEL } from "@/lib/subscription-labels";
 
 type Plan = { id: string; name: string; managementMode: "MANAGED" | "SELF_SERVICE" };
 
