@@ -13,7 +13,7 @@ export default async function NovaEmpresaPage() {
   const branchOptions = await getActiveBranchOptions(ctx.tenantId);
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-6">
         <Link
           href="/empresas"

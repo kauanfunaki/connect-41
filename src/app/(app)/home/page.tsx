@@ -270,7 +270,9 @@ export default async function HomePage() {
         <div className="bg-surface border border-border rounded-2xl p-5">
           <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Empresas por status</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-            <DonutChart data={companyStatusData} emptyLabel="Nenhuma empresa cadastrada ainda." />
+            <div className="flex justify-center">
+              <DonutChart data={companyStatusData} emptyLabel="Nenhuma empresa cadastrada ainda." />
+            </div>
             <div className="sm:border-l sm:border-border sm:pl-4">
               <p className="text-[11px] font-medium text-fg-muted uppercase tracking-wide mb-2">Novas / mês</p>
               <MiniBarChart data={newCompaniesByMonth} emptyLabel="Sem novas empresas nos últimos 6 meses." />

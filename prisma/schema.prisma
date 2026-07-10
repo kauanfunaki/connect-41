@@ -479,6 +479,7 @@ model User {
   responsibleFor    CompanyService[] @relation("CompanyServiceResponsible")
   oauthAccounts     OAuthAccount[]
   meetingsCreated   Meeting[]        @relation("MeetingCreatedBy")
+  meetingAttendances MeetingAttendee[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -1528,11 +1529,27 @@ model Meeting {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
-  tenant       Tenant        @relation(fields: [tenantId], references: [id])
-  pipelineItem PipelineItem? @relation(fields: [pipelineItemId], references: [id], onDelete: Cascade)
-  createdBy    User          @relation("MeetingCreatedBy", fields: [createdByUserId], references: [id])
+  tenant       Tenant            @relation(fields: [tenantId], references: [id])
+  pipelineItem PipelineItem?     @relation(fields: [pipelineItemId], references: [id], onDelete: Cascade)
+  createdBy    User              @relation("MeetingCreatedBy", fields: [createdByUserId], references: [id])
+  attendees    MeetingAttendee[]
 
   @@index([tenantId, pipelineItemId])
   @@index([tenantId, sectorCode, startAt])
   @@map("meetings")
+}
+
+// Responsáveis/participantes da reunião — só usuários com acesso à
+// plataforma (não convidados externos, que entram só pelo link do
+// Meet/Teams).
+model MeetingAttendee {
+  meetingId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([meetingId, userId])
+  @@map("meeting_attendees")
 }

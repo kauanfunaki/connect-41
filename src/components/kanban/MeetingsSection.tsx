@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
-import { Video, ExternalLink, Trash2 } from "lucide-react";
+import { Video, ExternalLink, Trash2, Copy, Check } from "lucide-react";
 import type { MeetingState } from "@/app/(app)/kanban/meetings-actions";
 import type { MeetingProvider } from "@/generated/prisma/enums";
 
@@ -13,20 +13,46 @@ type MeetingRow = {
   meetingUrl: string;
   startAt: string;
   endAt: string;
+  attendees: { id: string; name: string }[];
 };
+
+type SectorUser = { id: string; name: string };
 
 type Props = {
   meetings: MeetingRow[];
   canSchedule: boolean;
   hasGoogle: boolean;
   hasMicrosoft: boolean;
+  allUsers: SectorUser[];
   scheduleAction: (prev: MeetingState, form: FormData) => Promise<MeetingState>;
   deleteAction: (meetingId: string) => Promise<void>;
 };
 
+function CopyLinkButton({ url }: { url: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      title="Copiar link da reunião"
+      className="inline-flex items-center gap-1 text-[12px] text-fg-muted hover:text-fg transition-colors"
+    >
+      {copied ? <Check size={12} className="text-success" /> : <Copy size={12} />}
+      {copied ? "Copiado" : "Copiar link"}
+    </button>
+  );
+}
+
 const PROVIDER_LABEL: Record<MeetingProvider, string> = { GOOGLE: "Google Meet", MICROSOFT: "MS Teams" };
 
-export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft, scheduleAction, deleteAction }: Props) {
+export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft, allUsers, scheduleAction, deleteAction }: Props) {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(scheduleAction, null);
   const hasAnyProvider = hasGoogle || hasMicrosoft;
@@ -87,6 +113,21 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
                 {hasGoogle && <option value="GOOGLE">Google Meet</option>}
                 {hasMicrosoft && <option value="MICROSOFT">Microsoft Teams</option>}
               </select>
+
+              {allUsers.length > 0 && (
+                <div>
+                  <p className="text-[11px] text-fg-muted mb-1.5">Responsáveis pela reunião</p>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1.5 max-h-24 overflow-y-auto">
+                    {allUsers.map((u) => (
+                      <label key={u.id} className="flex items-center gap-1.5 text-[12px] text-fg-secondary">
+                        <input type="checkbox" name="attendeeIds" value={u.id} className="accent-[var(--c41-brand)]" />
+                        {u.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={isPending}
@@ -105,34 +146,42 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
       ) : (
         <div className="space-y-2">
           {meetings.map((m) => (
-            <div key={m.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-surface-hover border border-border">
-              <div className="min-w-0">
-                <p className="text-[13px] text-fg font-medium truncate">{m.title}</p>
-                <p className="text-[11px] text-fg-muted">
-                  {PROVIDER_LABEL[m.provider]} ·{" "}
-                  {new Date(m.startAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <a
-                  href={m.meetingUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[12px] text-brand hover:underline"
-                >
-                  Entrar <ExternalLink size={12} />
-                </a>
-                {canSchedule && (
-                  <button
-                    type="button"
-                    onClick={() => confirm("Remover esta reunião da lista? (não cancela no provedor)") && deleteAction(m.id)}
-                    className="text-fg-muted hover:text-danger transition-colors"
-                    title="Remover"
+            <div key={m.id} className="px-3 py-2 rounded-lg bg-surface-hover border border-border">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[13px] text-fg font-medium truncate">{m.title}</p>
+                  <p className="text-[11px] text-fg-muted">
+                    {PROVIDER_LABEL[m.provider]} ·{" "}
+                    {new Date(m.startAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <CopyLinkButton url={m.meetingUrl} />
+                  <a
+                    href={m.meetingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[12px] text-brand hover:underline"
                   >
-                    <Trash2 size={13} />
-                  </button>
-                )}
+                    Entrar <ExternalLink size={12} />
+                  </a>
+                  {canSchedule && (
+                    <button
+                      type="button"
+                      onClick={() => confirm("Remover esta reunião da lista? (não cancela no provedor)") && deleteAction(m.id)}
+                      className="text-fg-muted hover:text-danger transition-colors"
+                      title="Remover"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
+                </div>
               </div>
+              {m.attendees.length > 0 && (
+                <p className="text-[11px] text-fg-muted mt-1.5">
+                  Responsáveis: {m.attendees.map((a) => a.name).join(", ")}
+                </p>
+              )}
             </div>
           ))}
         </div>

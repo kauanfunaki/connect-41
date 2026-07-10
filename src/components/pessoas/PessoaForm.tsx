@@ -94,6 +94,9 @@ export function PessoaForm({
   const [state, formAction, isPending] = useActionState(action, null);
   const formRef = useRef<HTMLFormElement>(null);
   const [step, setStep] = useState(0);
+  // Etapa mais distante já alcançada — permite pular pra frente de volta pra
+  // uma etapa já preenchida, mesmo depois de voltar pra uma etapa anterior.
+  const [maxStepReached, setMaxStepReached] = useState(0);
   const [stepError, setStepError] = useState<number | null>(null);
   const isEditing = Boolean(defaultValues?.id);
 
@@ -159,7 +162,11 @@ export function PessoaForm({
       return;
     }
     setStepError(null);
-    setStep((s) => Math.min(s + 1, lastStep));
+    setStep((s) => {
+      const n = Math.min(s + 1, lastStep);
+      setMaxStepReached((m) => Math.max(m, n));
+      return n;
+    });
   }
 
   function back() {
@@ -172,10 +179,10 @@ export function PessoaForm({
       STEP_LABELS.map((label, i): StepStatus => {
         if (i === stepError) return "error";
         if (i === step) return "current";
-        if (i < step) return "done";
+        if (i <= maxStepReached) return "done";
         return "upcoming";
       }).map((status, i) => ({ label: STEP_LABELS[i], status })),
-    [step, stepError]
+    [step, stepError, maxStepReached]
   );
 
   const companyLabel = companies.find((c) => c.id === companyId)?.name;
@@ -184,7 +191,7 @@ export function PessoaForm({
 
   return (
     <div className="bg-surface border border-border rounded-2xl overflow-hidden">
-      <Stepper steps={steps} onStepClick={(i) => i < step && goTo(i)} />
+      <Stepper steps={steps} onStepClick={(i) => i <= maxStepReached && goTo(i)} />
 
       <form ref={formRef} action={formAction} noValidate onChange={onFormChange} className="px-6 py-5">
         {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}

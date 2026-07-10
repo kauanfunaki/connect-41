@@ -7,6 +7,7 @@ import { canManageMeetings, getValidAccessToken } from "@/lib/integrations/oauth
 import { createGoogleMeetEvent } from "@/lib/integrations/google";
 import { createTeamsMeetingEvent } from "@/lib/integrations/microsoft";
 import { logAudit } from "@/lib/audit";
+import { parseSaoPauloDateTimeLocal } from "@/lib/datetime";
 import type { MeetingProvider } from "@/generated/prisma/enums";
 
 export type MeetingState = { error: string } | null;
@@ -25,12 +26,13 @@ export async function agendarReuniao(
   const provider = form.get("provider") as MeetingProvider;
   const startRaw = form.get("startAt") as string;
   const endRaw = form.get("endAt") as string;
+  const attendeeIds = (form.getAll("attendeeIds") as string[]).filter(Boolean);
 
   if (!title) return { error: "Título é obrigatório." };
   if (provider !== "GOOGLE" && provider !== "MICROSOFT") return { error: "Selecione um provedor." };
 
-  const startAt = new Date(startRaw);
-  const endAt = new Date(endRaw);
+  const startAt = parseSaoPauloDateTimeLocal(startRaw);
+  const endAt = parseSaoPauloDateTimeLocal(endRaw);
   if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime()) || endAt <= startAt) {
     return { error: "Datas inválidas — o fim deve ser depois do início." };
   }
@@ -42,7 +44,7 @@ export async function agendarReuniao(
   const accessToken = await getValidAccessToken(ctx.tenantId, ctx.userId, provider);
   if (!accessToken) {
     return {
-      error: `Conecte sua conta ${provider === "GOOGLE" ? "Google" : "Microsoft"} em Configurações → Integrações antes de agendar.`,
+      error: `Não foi possível usar sua conta ${provider === "GOOGLE" ? "Google" : "Microsoft"} (desconectada ou token expirado). Reconecte em Configurações → Integrações antes de agendar.`,
     };
   }
 
@@ -57,6 +59,12 @@ export async function agendarReuniao(
     return { error: "Erro ao criar a reunião no provedor. Tente novamente." };
   }
 
+  // Participantes só podem ser usuários com acesso à plataforma do próprio
+  // tenant — evita atrelar um userId arbitrário vindo do form.
+  const validAttendeeIds = attendeeIds.length > 0
+    ? (await prisma.user.findMany({ where: { id: { in: attendeeIds }, tenantId: ctx.tenantId }, select: { id: true } })).map((u) => u.id)
+    : [];
+
   await prisma.meeting.create({
     data: {
       tenantId: ctx.tenantId,
@@ -68,6 +76,7 @@ export async function agendarReuniao(
       endAt,
       pipelineItemId,
       createdByUserId: ctx.userId,
+      attendees: { create: validAttendeeIds.map((userId) => ({ userId })) },
     },
   });
 

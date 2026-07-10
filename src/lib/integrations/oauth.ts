@@ -34,10 +34,20 @@ export async function getValidAccessToken(
   const expiringSoon = account.expiresAt.getTime() - Date.now() < 2 * 60 * 1000;
   if (!expiringSoon) return account.accessToken;
 
-  const refreshed =
-    provider === "GOOGLE"
-      ? await refreshGoogleToken(account.refreshToken)
-      : await refreshMicrosoftToken(account.refreshToken);
+  // Renovação pode falhar (token revogado no provedor, credenciais trocadas
+  // no Cloud Console etc.) — não deixar propagar: isso derrubaria a página
+  // inteira do item de Kanban em vez de só bloquear o agendamento com uma
+  // mensagem pedindo pra reconectar a conta.
+  let refreshed: { access_token: string; refresh_token?: string; expires_in: number };
+  try {
+    refreshed =
+      provider === "GOOGLE"
+        ? await refreshGoogleToken(account.refreshToken)
+        : await refreshMicrosoftToken(account.refreshToken);
+  } catch (err) {
+    console.error("[getValidAccessToken] falha ao renovar token", provider, err);
+    return null;
+  }
 
   const expiresAt = new Date(Date.now() + refreshed.expires_in * 1000);
   await prisma.oAuthAccount.update({

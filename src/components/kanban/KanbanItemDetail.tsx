@@ -79,7 +79,11 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
       select: { id: true, name: true, color: true },
     }),
     getSectorUsers(tenantId, pipeline.sectorCode),
-    prisma.meeting.findMany({ where: { tenantId, pipelineItemId: itemId }, orderBy: { startAt: "desc" } }),
+    prisma.meeting.findMany({
+      where: { tenantId, pipelineItemId: itemId },
+      orderBy: { startAt: "desc" },
+      include: { attendees: { include: { user: { select: { id: true, name: true } } } } },
+    }),
     canScheduleMeetings
       ? prisma.oAuthAccount.findMany({ where: { tenantId, userId: ctx.userId }, select: { provider: true } })
       : Promise.resolve([]),
@@ -172,10 +176,12 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
           meetingUrl: m.meetingUrl,
           startAt: m.startAt.toISOString(),
           endAt: m.endAt.toISOString(),
+          attendees: m.attendees.map((a) => ({ id: a.user.id, name: a.user.name })),
         }))}
         canSchedule={canScheduleMeetings}
         hasGoogle={hasGoogle}
         hasMicrosoft={hasMicrosoft}
+        allUsers={sectorUsers}
         scheduleAction={scheduleMeetingAction}
         deleteAction={deleteMeetingAction}
       />

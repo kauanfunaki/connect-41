@@ -133,29 +133,38 @@ export function TrendChart({
 
   return (
     <div>
-      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full h-24 overflow-visible">
-        <defs>
-          <linearGradient id="trend-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--c41-brand)" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="var(--c41-brand)" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <path d={areaPath} fill="url(#trend-fill)" stroke="none" />
-        <path
-          d={linePath}
-          fill="none"
-          stroke="var(--c41-brand)"
-          strokeWidth="2"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
-        />
+      {/* Wrapper relativo — os pontos são <div>s posicionados por percentual em
+          cima do SVG, não <circle>s dentro dele: o viewBox é esticado de forma
+          não-uniforme (preserveAspectRatio="none", necessário pra área/linha
+          preencherem a largura toda), o que deformaria círculos em elipses. */}
+      <div className="relative w-full h-24">
+        <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full h-full overflow-visible">
+          <defs>
+            <linearGradient id="trend-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--c41-brand)" stopOpacity="0.28" />
+              <stop offset="100%" stopColor="var(--c41-brand)" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path d={areaPath} fill="url(#trend-fill)" stroke="none" />
+          <path
+            d={linePath}
+            fill="none"
+            stroke="var(--c41-brand)"
+            strokeWidth="2"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
         {points.map(([x, y], i) => (
-          <circle key={i} cx={x} cy={y} r="1.8" fill="var(--c41-brand)" vectorEffect="non-scaling-stroke">
-            <title>{`${data[i].label}: ${data[i].value}`}</title>
-          </circle>
+          <span
+            key={i}
+            className="absolute w-[7px] h-[7px] rounded-full bg-[var(--c41-brand)] -translate-x-1/2 -translate-y-1/2"
+            style={{ left: `${(x / w) * 100}%`, top: `${(y / h) * 100}%` }}
+            title={`${data[i].label}: ${data[i].value}`}
+          />
         ))}
-      </svg>
+      </div>
       <div className="flex justify-between mt-1.5 text-[10px] text-fg-muted">
         <span>{data[0].label}</span>
         <span>{data[data.length - 1].label}</span>

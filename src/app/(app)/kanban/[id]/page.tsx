@@ -155,28 +155,26 @@ export default async function KanbanBoardPage({
       </div>
 
       {timeline.length > 0 && (
-        <div className="flex-shrink-0 mt-4 pt-4 border-t border-border max-h-[220px] flex flex-col">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3 flex-shrink-0">
+        <div className="flex-shrink-0 mt-4 pt-4 border-t border-border">
+          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-2.5">
             Timeline de movimentação
           </h2>
-          <div className="scroll-y overflow-y-auto pr-1">
-            {timeline.map((t, i) => (
-              <div key={t.id} className="flex gap-3 relative pb-4 last:pb-0">
-                {i < timeline.length - 1 && (
-                  <span className="absolute left-[10px] top-[22px] bottom-0 w-px bg-border" />
-                )}
-                <span className="w-[21px] h-[21px] rounded-full bg-surface-hover border border-border-strong flex items-center justify-center flex-shrink-0 z-[1]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-brand" />
-                </span>
-                <div className="min-w-0 flex-1 flex items-start justify-between gap-3">
-                  <p className="text-[length:var(--fs-body)] text-fg-secondary leading-snug">
-                    <span className="font-semibold text-fg">{t.entityName}</span> {t.content}
-                    <span className="text-fg-muted"> · {t.userName}</span>
-                  </p>
-                  <span className="font-mono text-[11px] text-fg-muted whitespace-nowrap flex-shrink-0">
-                    {t.createdAt}
-                  </span>
+          {/* Horizontal em vez de vertical — libera altura pro board do Kanban,
+              que é o conteúdo principal da tela. */}
+          <div className="scroll-x flex gap-2.5 overflow-x-auto pb-1">
+            {timeline.map((t) => (
+              <div
+                key={t.id}
+                className="flex-shrink-0 w-[220px] bg-surface-hover border border-border rounded-lg px-3 py-2"
+              >
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0" />
+                  <span className="font-mono text-[10px] text-fg-muted truncate">{t.createdAt}</span>
                 </div>
+                <p className="text-[12px] text-fg-secondary leading-snug line-clamp-2">
+                  <span className="font-semibold text-fg">{t.entityName}</span> {t.content}
+                </p>
+                <p className="text-[11px] text-fg-muted mt-1 truncate">{t.userName}</p>
               </div>
             ))}
           </div>
