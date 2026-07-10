@@ -31,8 +31,9 @@ export function ConnectLoadingScreen({ words = CONNECT_LOADING_WORDS }: Props) {
       <div className="connect-loading-card">
         <div className="connect-loading-brand" aria-hidden="true">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo.png" alt="" className="connect-loading-logo" />
-          <span className="connect-loading-brand-name">Connect</span>
+          <img src="/brand/logo-horizontal-light.svg" alt="" className="connect-loading-logo connect-loading-logo-light" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/logo-horizontal-dark.svg" alt="" className="connect-loading-logo connect-loading-logo-dark" />
         </div>
 
         <div className="connect-loading-visual" aria-hidden="true">
@@ -75,8 +76,8 @@ export function renderConnectLoadingScreenHTML(words: string[] = CONNECT_LOADING
     <style>${CONNECT_LOADING_STYLES}</style>
     <div class="connect-loading-card">
       <div class="connect-loading-brand" aria-hidden="true">
-        <img src="/brand/logo.png" alt="" class="connect-loading-logo" />
-        <span class="connect-loading-brand-name">Connect</span>
+        <img src="/brand/logo-horizontal-light.svg" alt="" class="connect-loading-logo connect-loading-logo-light" />
+        <img src="/brand/logo-horizontal-dark.svg" alt="" class="connect-loading-logo connect-loading-logo-dark" />
       </div>
       <div class="connect-loading-visual" aria-hidden="true">
         <span class="connect-spinner"></span>
@@ -148,17 +149,15 @@ export const CONNECT_LOADING_STYLES = `
 }
 
 .connect-loading-logo {
-  height: 26px;
-  width: 26px;
+  height: 22px;
+  width: auto;
   object-fit: contain;
 }
 
-.connect-loading-brand-name {
-  font-weight: 600;
-  font-size: 14px;
-  letter-spacing: -0.01em;
-  color: var(--cls-fg);
-}
+.connect-loading-logo-dark { display: none; }
+
+[data-theme="dark"] .connect-loading-logo-light { display: none; }
+[data-theme="dark"] .connect-loading-logo-dark { display: block; }
 
 .connect-loading-visual {
   display: flex;

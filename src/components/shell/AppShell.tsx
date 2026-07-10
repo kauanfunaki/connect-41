@@ -104,13 +104,17 @@ export function AppShell({
         {/* Logo */}
         <div className="flex items-center justify-center gap-2.5 h-14 px-5 border-b border-border flex-shrink-0 relative">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo.png" alt="Connect" className="h-7 w-7 object-contain flex-shrink-0" />
-          <div className="min-w-0 leading-tight">
-            <p className="text-fg font-display font-semibold text-[16px] tracking-[-0.01em] truncate">
-              Connect
-            </p>
-            <p className="text-fg-muted text-[11px] truncate">41 Tech</p>
-          </div>
+          <img
+            src="/brand/logo-horizontal-light.svg"
+            alt="Connect"
+            className="block dark:hidden h-8 w-auto object-contain flex-shrink-0"
+          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/logo-horizontal-dark.svg"
+            alt="Connect"
+            className="hidden dark:block h-8 w-auto object-contain flex-shrink-0"
+          />
           <button
             type="button"
             onClick={() => setMobileOpen(false)}

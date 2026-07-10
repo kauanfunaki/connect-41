@@ -10,23 +10,19 @@ export function AuthShell({
       {/* Coluna do formulário */}
       <div className="flex-1 flex items-center justify-center px-4 py-10">
         <div className="w-full max-w-[380px]">
-          <div className="mb-9 flex items-center justify-center gap-2.5">
+          <div className="mb-8 flex items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/logo.png" alt="Connect" className="h-8 w-8 object-contain flex-shrink-0" />
-            <span className="text-fg font-semibold text-[14px] tracking-[-0.01em]">
-              41 Tech
-            </span>
+            <img src="/brand/logo-horizontal-light.svg" alt="Connect" className="block dark:hidden h-8 w-auto object-contain" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logo-horizontal-dark.svg" alt="Connect" className="hidden dark:block h-8 w-auto object-contain" />
           </div>
 
-          <h1 className="text-fg font-semibold text-[20px] tracking-[-0.01em] mb-1.5 text-center">
-            Connect
-          </h1>
           <p className="text-fg-muted text-[13px] mb-7 text-center">{subtitle}</p>
 
           {children}
 
           <p className="text-[10px] text-fg-muted mt-8 text-center">
-            Connect · Uso interno 41 Tech
+            Connect
           </p>
         </div>
       </div>
@@ -46,13 +42,13 @@ export function AuthShell({
         />
         <div className="relative max-w-[360px] text-center flex flex-col items-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo.png" alt="Connect" className="h-10 w-10 object-contain mb-7" />
+          <img src="/brand/symbol-color-dark-bg.svg" alt="Connect" className="h-10 w-10 object-contain mb-7" />
           <h2 className="text-[23px] font-semibold text-white tracking-[-0.01em] mb-3 leading-snug">
-            Tudo o que a 41 Tech acompanha, num só lugar.
+            Tudo o que sua empresa acompanha, num só lugar.
           </h2>
           <p className="text-[13px] leading-relaxed" style={{ color: "rgba(255,255,255,0.62)" }}>
             Contábil, Fiscal, Societário, DP/RH, Recrutamento e mais — o Connect
-            centraliza empresas, pessoas e o fluxo de trabalho de todos os setores da 41 Tech.
+            centraliza empresas, pessoas e o fluxo de trabalho de todos os setores do seu negócio.
           </p>
         </div>
       </div>
