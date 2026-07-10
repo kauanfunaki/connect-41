@@ -13,9 +13,12 @@ import {
   Target,
   ScrollText,
   Video,
+  CreditCard,
+  Receipt,
 } from "lucide-react";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
+import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
 
 type Card = { href: string; icon: React.ReactNode; title: string; description: string };
@@ -50,8 +53,33 @@ export default async function AdminPage() {
         icon: <ScrollText size={20} />,
         title: "Auditoria",
         description: "Trilha de quem fez o quê no workspace",
+      },
+      {
+        href: "/admin/assinaturas",
+        icon: <CreditCard size={20} />,
+        title: "Assinaturas",
+        description: "Plano, modo de gestão e cobrança de cada cliente",
+      },
+      {
+        href: "/admin/planos",
+        icon: <Receipt size={20} />,
+        title: "Planos",
+        description: "Catálogo comercial — gerenciado vs. autoatendimento",
       }
     );
+  }
+
+  if (isAdmin && ctx.role !== "SUPER_ADMIN") {
+    const prisma = getPrisma();
+    const tenant = await prisma.tenant.findUnique({ where: { id: ctx.tenantId }, select: { managementMode: true } });
+    if (tenant?.managementMode === "SELF_SERVICE") {
+      cards.push({
+        href: "/assinatura",
+        icon: <CreditCard size={20} />,
+        title: "Minha Assinatura",
+        description: "Plano contratado, usuários ativos e limite do plano",
+      });
+    }
   }
 
   cards.push(

@@ -17,6 +17,23 @@ enum UserRole {
   READONLY     // todos os setores, somente leitura (Diretoria)
 }
 
+enum ManagementMode {
+  MANAGED       // frente 1: 41 Tech administra o CRM pelo cliente (cobrança mensal fixa)
+  SELF_SERVICE  // frente 2: cliente administra o próprio CRM (cobrança por usuário)
+}
+
+enum BillingType {
+  FLAT_MONTHLY     // valor fixo mensal — usado em planos MANAGED
+  PER_USER_MONTHLY // valor por usuário ativo — usado em planos SELF_SERVICE
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
 enum CompanyStatus {
   PROSPECT
   ACTIVE
@@ -258,11 +275,13 @@ model Tenant {
   cnpj      String?  @unique @db.VarChar(18)
   slug      String   @unique @db.VarChar(60)
   plan      String   @default("starter") @db.VarChar(40)
+  managementMode ManagementMode @default(MANAGED)
   logoUrl   String?  @db.VarChar(255)
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  subscription   Subscription?
   users          User[]
   companies      Company[]
   people         Person[]
@@ -387,6 +406,50 @@ model TenantModule {
   @@unique([tenantId, moduleCode])
   @@index([tenantId])
   @@map("tenant_modules")
+}
+
+// Catálogo de planos comercializáveis (vive em código+banco, editável só por
+// SUPER_ADMIN) — cada plano já fixa o modo de gestão (frente 1 vs frente 2 do
+// levantamento comercial) e como é cobrado.
+model SubscriptionPlan {
+  id             String         @id @default(uuid())
+  name           String         @db.VarChar(80)
+  managementMode ManagementMode
+  billingType    BillingType
+  basePrice      Decimal        @db.Decimal(10, 2) @default(0) // usado quando billingType = FLAT_MONTHLY
+  pricePerUser   Decimal?       @db.Decimal(10, 2)              // usado quando billingType = PER_USER_MONTHLY
+  setupFee       Decimal        @db.Decimal(10, 2) @default(0)
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  subscriptions Subscription[]
+
+  @@map("subscription_plans")
+}
+
+// Assinatura ativa de um tenant — 1:1. Controle manual (sem gateway de
+// pagamento integrado ainda): a 41 Tech marca status/pagamento da implantação
+// à mão em /admin/assinaturas.
+model Subscription {
+  id               String             @id @default(uuid())
+  tenantId         String             @unique
+  planId           String
+  status           SubscriptionStatus @default(TRIAL)
+  seatLimit        Int?               // limite de usuários — só relevante em planos PER_USER_MONTHLY
+  startedAt        DateTime           @default(now())
+  currentPeriodEnd DateTime?
+  setupFeeAmount   Decimal?           @db.Decimal(10, 2)
+  setupFeePaidAt   DateTime?
+  notes            String?            @db.Text
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  tenant Tenant           @relation(fields: [tenantId], references: [id])
+  plan   SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  @@index([planId])
+  @@map("subscriptions")
 }
 
 model User {

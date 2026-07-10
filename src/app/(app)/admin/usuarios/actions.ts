@@ -10,6 +10,7 @@ import { hashPassword } from "@/lib/auth/password";
 import { revokeAllUserSessions } from "@/lib/auth/sessions";
 import { logAudit } from "@/lib/audit";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
+import { canAddUser } from "@/lib/subscriptions";
 
 export type UsuarioState = { error: string } | null;
 
@@ -31,6 +32,9 @@ export async function criarUsuario(
   if (!email) return { error: "E-mail é obrigatório" };
   if (password.length < 8) return { error: "Senha deve ter ao menos 8 caracteres" };
   if (!assignableRoles(ctx.role).includes(role)) return { error: "Papel inválido." };
+
+  const seatCheck = await canAddUser(ctx.tenantId);
+  if (!seatCheck.allowed) return { error: seatCheck.reason! };
 
   const prisma = getPrisma();
   let id: string;
@@ -138,6 +142,11 @@ export async function alternarAtivoUsuario(id: string, novoStatus: boolean): Pro
   const existing = await prisma.user.findFirst({ where: { id, tenantId: ctx.tenantId } });
   if (!existing) return;
   if (existing.role === "SUPER_ADMIN" && ctx.role !== "SUPER_ADMIN") return;
+
+  if (novoStatus && !existing.active) {
+    const seatCheck = await canAddUser(ctx.tenantId);
+    if (!seatCheck.allowed) return;
+  }
 
   try {
     await prisma.user.update({ where: { id }, data: { active: novoStatus } });
