@@ -5,12 +5,9 @@ import { getPrisma } from "@/lib/prisma";
 import { ProcessoSeletivoStatus, PersonEmploymentStatus, PersonType } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
+import { isPrismaUniqueError } from "@/lib/prismaErrors";
 
 export type CandidaturaState = { error: string } | null;
-
-function isPrismaUniqueError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && "code" in err && (err as { code?: string }).code === "P2002";
-}
 
 export async function adicionarCandidato(
   vagaId: string,

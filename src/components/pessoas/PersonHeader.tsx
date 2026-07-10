@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Copy, Check, Building2, Mail, Phone } from "lucide-react";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
+import { AvatarImage } from "@/components/shared/AvatarImage";
 import type { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
 
 const TYPE_LABEL: Record<PersonType, string> = {
@@ -24,13 +25,6 @@ const STATUS_LABEL: Record<PersonEmploymentStatus, string> = {
   AFASTADO: "Afastado",
   DESLIGADO: "Desligado",
 };
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  const first = parts[0]?.[0] ?? "";
-  const second = parts.length > 1 ? parts[1][0] : "";
-  return (first + second).toUpperCase() || "?";
-}
 
 type Props = {
   id: string;
@@ -78,20 +72,7 @@ export function PersonHeader({
     <div className="bg-surface border border-border rounded-2xl p-6 mb-5">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-start gap-4 min-w-0">
-          {photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={photoUrl}
-              alt={name}
-              width={56}
-              height={56}
-              className="w-14 h-14 rounded-full object-cover border border-border flex-shrink-0"
-            />
-          ) : (
-            <span className="w-14 h-14 rounded-full bg-brand-subtle text-brand font-display font-semibold text-[20px] flex items-center justify-center flex-shrink-0">
-              {initials(name)}
-            </span>
-          )}
+          <AvatarImage src={photoUrl} name={name} size={56} shape="circle" fontSize={20} />
 
           <div className="min-w-0 pt-0.5">
             <div className="flex items-center gap-2.5 flex-wrap">

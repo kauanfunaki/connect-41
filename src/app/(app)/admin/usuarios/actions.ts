@@ -9,12 +9,9 @@ import { assignableRoles } from "@/lib/roles";
 import { hashPassword } from "@/lib/auth/password";
 import { revokeAllUserSessions } from "@/lib/auth/sessions";
 import { logAudit } from "@/lib/audit";
+import { isPrismaUniqueError } from "@/lib/prismaErrors";
 
 export type UsuarioState = { error: string } | null;
-
-function isPrismaUniqueError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && "code" in err && (err as { code?: string }).code === "P2002";
-}
 
 export async function criarUsuario(
   _prev: UsuarioState,

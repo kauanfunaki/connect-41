@@ -4,12 +4,9 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { TrainingParticipantStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { isPrismaUniqueError } from "@/lib/prismaErrors";
 
 export type TrainingParticipantState = { error: string } | null;
-
-function isPrismaUniqueError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && "code" in err && (err as { code?: string }).code === "P2002";
-}
 
 export async function adicionarParticipante(
   trainingId: string,

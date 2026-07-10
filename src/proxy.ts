@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import type { AccessTokenPayload } from "@/lib/auth/types";
 
-// jose usa Web Crypto API — funciona no Edge Runtime (ao contrário de jsonwebtoken).
+// jose usa Web Crypto API — funciona tanto no runtime Node quanto no Edge
+// (ao contrário de jsonwebtoken). Mantido mesmo após a migração pra Proxy
+// (que roda em Node por padrão no Next 16) por já ser runtime-agnóstico.
 async function verifyAccessEdge(token: string): Promise<AccessTokenPayload> {
   const secret = new TextEncoder().encode(process.env.JWT_ACCESS_SECRET ?? "");
   const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
@@ -16,9 +18,13 @@ const PUBLIC_PATHS = [
   "/api/auth/refresh",
   "/api/auth/logout",
   "/api/health",
+  // Assets estáticos servidos sob /public — sem token, o proxy redirecionava
+  // essas requisições pro /login (retornando HTML em vez da imagem), quebrando o
+  // logo na tela de login e na tela de loading pós-login (contextos sem sessão).
+  "/brand/",
 ];
 
-// Headers de identidade que SÓ podem ser setados por este middleware. Qualquer
+// Headers de identidade que SÓ podem ser setados por este proxy. Qualquer
 // valor vindo do cliente é removido antes de qualquer decisão — senão um request
 // forjado com `x-user-role: SUPER_ADMIN` seria confiado por getAuthContext().
 const IDENTITY_HEADERS = [
@@ -33,7 +39,7 @@ function stripIdentityHeaders(headers: Headers): void {
   for (const h of IDENTITY_HEADERS) headers.delete(h);
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Sempre parte de headers sem identidade forjável.
@@ -61,7 +67,7 @@ export async function middleware(req: NextRequest) {
 
     // Troca de workspace: só tem efeito se o tenant do cookie estiver entre os
     // que o próprio token autoriza (accessibleTenants, só populado p/ SUPER_ADMIN).
-    // Isso evita depender de acesso a banco aqui no Edge runtime.
+    // Isso evita depender de acesso a banco aqui no proxy.
     const activeTenantCookie = req.cookies.get("active_tenant_id")?.value;
     const effectiveTenantId =
       activeTenantCookie && payload.accessibleTenants?.includes(activeTenantCookie)
@@ -85,7 +91,7 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Sem exclusão por extensão de arquivo: excluir `*.png` do middleware deixava
+  // Sem exclusão por extensão de arquivo: excluir `*.png` do proxy deixava
   // qualquer rota terminada em imagem passar sem stripping dos headers de
   // identidade (bypass latente). Só recursos estáticos internos do Next ficam de fora.
   matcher: ["/((?!_next/static|_next/image|favicon\\.ico).*)"],

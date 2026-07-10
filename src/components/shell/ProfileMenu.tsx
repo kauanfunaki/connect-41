@@ -3,19 +3,13 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Dropdown, DropdownItem, DropdownSeparator } from "@/components/ui/Dropdown";
+import { AvatarImage } from "@/components/shared/AvatarImage";
 
 type Props = {
   name: string;
   roleLabel: string;
   photoUrl: string | null;
 };
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  const first = parts[0]?.[0] ?? "";
-  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
-  return (first + last).toUpperCase();
-}
 
 export function ProfileMenu({ name, roleLabel, photoUrl: initialPhotoUrl }: Props) {
   const [photoUrl, setPhotoUrl] = useState(initialPhotoUrl);
@@ -65,13 +59,13 @@ export function ProfileMenu({ name, roleLabel, photoUrl: initialPhotoUrl }: Prop
             open ? "border-border-strong" : "border-border hover:border-border-strong"
           }`}
         >
-          <Avatar photoUrl={photoUrl} name={name} size={28} />
+          <AvatarImage src={photoUrl} name={name} size={28} bordered={false} />
           <span className="text-[14px] font-semibold text-fg max-w-[120px] truncate">{name}</span>
         </button>
       )}
     >
       <div className="flex items-center gap-3 p-1.5 pb-3 mb-1 border-b border-border">
-        <Avatar photoUrl={photoUrl} name={name} size={38} />
+        <AvatarImage src={photoUrl} name={name} size={38} bordered={false} />
         <div className="min-w-0">
           <p className="text-[14px] font-semibold text-fg truncate">{name}</p>
           <p className="text-[12px] text-fg-muted truncate">{roleLabel}</p>
@@ -96,29 +90,5 @@ export function ProfileMenu({ name, roleLabel, photoUrl: initialPhotoUrl }: Prop
         Sair
       </DropdownItem>
     </Dropdown>
-  );
-}
-
-function Avatar({ photoUrl, name, size }: { photoUrl: string | null; name: string; size: number }) {
-  if (photoUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={photoUrl}
-        alt={name}
-        width={size}
-        height={size}
-        className="rounded-full object-cover flex-shrink-0"
-        style={{ width: size, height: size }}
-      />
-    );
-  }
-  return (
-    <span
-      className="rounded-full bg-brand/10 text-brand font-medium flex items-center justify-center flex-shrink-0"
-      style={{ width: size, height: size, fontSize: size * 0.4 }}
-    >
-      {initials(name)}
-    </span>
   );
 }

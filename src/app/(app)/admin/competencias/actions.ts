@@ -4,12 +4,9 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
+import { isPrismaUniqueError } from "@/lib/prismaErrors";
 
 export type CompetencyState = { error: string } | null;
-
-function isPrismaUniqueError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && "code" in err && (err as { code?: string }).code === "P2002";
-}
 
 export async function criarCompetencia(_prev: CompetencyState, form: FormData): Promise<CompetencyState> {
   const ctx = await getAuthContext();

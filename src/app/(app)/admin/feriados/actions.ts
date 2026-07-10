@@ -5,12 +5,9 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
+import { isPrismaUniqueError } from "@/lib/prismaErrors";
 
 export type HolidayState = { error: string } | null;
-
-function isPrismaUniqueError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && "code" in err && (err as { code?: string }).code === "P2002";
-}
 
 export async function criarFeriado(_prev: HolidayState, form: FormData): Promise<HolidayState> {
   const ctx = await getAuthContext();

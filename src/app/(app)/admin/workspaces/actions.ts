@@ -1,4 +1,5 @@
 "use server";
+import { isPrismaUniqueError } from "@/lib/prismaErrors";
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -6,10 +7,6 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 
 export type WorkspaceState = { error: string } | null;
-
-function isPrismaUniqueError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && "code" in err && (err as { code?: string }).code === "P2002";
-}
 
 function slugify(name: string): string {
   return name

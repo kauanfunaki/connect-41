@@ -8,6 +8,17 @@ import { StatusDot } from "@/components/shared/StatusDot";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
+import { AvatarImage } from "@/components/shared/AvatarImage";
+
+// Mascara o miolo do CPF na listagem (dado pessoal exposto a qualquer usuário
+// do tenant) — mantém início/fim visíveis o bastante pra localizar visualmente
+// sem expor o CPF completo por extenso numa tela de navegação/busca.
+function maskCpf(cpf: string | null): string {
+  if (!cpf) return "—";
+  const digits = cpf.replace(/\D/g, "");
+  if (digits.length !== 11) return cpf;
+  return `${digits.slice(0, 3)}.***.***-${digits.slice(9)}`;
+}
 
 type Row = {
   id: string;
@@ -26,13 +37,6 @@ type Props = {
   canCreate: boolean;
   inativarPessoasEmMassa: (ids: string[]) => Promise<void>;
 };
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  const first = parts[0]?.[0] ?? "";
-  const second = parts.length > 1 ? parts[1][0] : "";
-  return (first + second).toUpperCase() || "?";
-}
 
 export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -115,20 +119,7 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
                   )}
                   <td className="px-4 py-3">
                     <Link href={`/pessoas/${p.id}`} className="flex items-center gap-2.5 font-medium text-fg hover:text-brand transition-colors">
-                      {p.photoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={p.photoUrl}
-                          alt={p.name}
-                          width={28}
-                          height={28}
-                          className="w-7 h-7 rounded-full object-cover border border-border flex-shrink-0"
-                        />
-                      ) : (
-                        <span className="w-7 h-7 rounded-full bg-brand-subtle text-brand font-display font-semibold text-[11px] flex items-center justify-center flex-shrink-0">
-                          {initials(p.name)}
-                        </span>
-                      )}
+                      <AvatarImage src={p.photoUrl} name={p.name} size={28} shape="circle" fontSize={11} />
                       {p.name}
                     </Link>
                   </td>
@@ -138,7 +129,7 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
                       label={p.active ? "Ativo" : "Inativo"}
                     />
                   </td>
-                  <td className="px-4 py-3 text-fg-secondary tnum">{p.cpf ?? "—"}</td>
+                  <td className="px-4 py-3 text-fg-secondary tnum">{maskCpf(p.cpf)}</td>
                   <td className="px-4 py-3 text-fg-secondary">{p.email ?? "—"}</td>
                   <td className="px-4 py-3 text-fg-secondary">
                     {p.companyId ? (

@@ -1,4 +1,5 @@
 "use server";
+import { isPrismaUniqueError } from "@/lib/prismaErrors";
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -8,10 +9,6 @@ import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 
 export type CampoState = { error: string } | null;
-
-function isPrismaUniqueError(err: unknown): boolean {
-  return typeof err === "object" && err !== null && "code" in err && (err as { code?: string }).code === "P2002";
-}
 
 function slugify(label: string): string {
   return label

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { AvatarImage } from "@/components/shared/AvatarImage";
 
 export default async function WorkspacesPage() {
   const ctx = await getAuthContext();
@@ -33,21 +34,7 @@ export default async function WorkspacesPage() {
           {tenants.map((t) => (
             <div key={t.id} className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-3 min-w-0">
-                {t.logoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={t.logoUrl}
-                    alt={t.name}
-                    width={32}
-                    height={32}
-                    className="rounded-md object-cover flex-shrink-0 border border-border"
-                    style={{ width: 32, height: 32 }}
-                  />
-                ) : (
-                  <span className="w-8 h-8 rounded-md bg-brand-subtle text-brand font-display font-semibold text-[13px] flex items-center justify-center flex-shrink-0">
-                    {t.name.trim().charAt(0).toUpperCase() || "?"}
-                  </span>
-                )}
+                <AvatarImage src={t.logoUrl} name={t.name} size={32} shape="lg" fontSize={13} />
                 <div className="min-w-0">
                   <p className="text-[13px] font-medium text-fg truncate">{t.name}</p>
                   <p className="text-[11px] text-fg-muted font-mono truncate">{t.cnpj ?? t.slug}</p>

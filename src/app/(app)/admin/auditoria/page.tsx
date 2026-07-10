@@ -26,9 +26,11 @@ const ACTION_LABEL: Record<string, string> = {
   "branch.create": "criou a filial",
   "branch.update": "editou a filial",
   "competency.create": "criou a competência",
+  "competency.update": "editou a competência",
   "competency.delete": "excluiu a competência",
   "holiday.create": "cadastrou o feriado",
   "holiday.delete": "excluiu o feriado",
+  "holiday.import": "importou feriados nacionais",
   "module.enable": "ativou o módulo",
   "module.disable": "desativou o módulo",
   "user.create": "criou o usuário",
@@ -36,6 +38,12 @@ const ACTION_LABEL: Record<string, string> = {
   "user.activate": "ativou o usuário",
   "user.deactivate": "desativou o usuário",
   "tenant.update": "editou os dados do tenant",
+  "companyservice.create": "adicionou um setor contratado",
+  "companyservice.assign": "atribuiu responsável de setor",
+  "meeting.create": "agendou uma reunião",
+  "meeting.delete": "removeu uma reunião",
+  "integration.connect": "conectou uma integração",
+  "integration.disconnect": "desconectou uma integração",
 };
 
 function describeMetadata(metadata: unknown): string | null {

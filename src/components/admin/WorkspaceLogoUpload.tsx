@@ -1,16 +1,13 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { AvatarImage } from "@/components/shared/AvatarImage";
 
 type Props = {
   tenantId: string;
   tenantName: string;
   logoUrl: string | null;
 };
-
-function initial(name: string): string {
-  return name.trim().charAt(0).toUpperCase() || "?";
-}
 
 export function WorkspaceLogoUpload({ tenantId, tenantName, logoUrl: initialLogoUrl }: Props) {
   const [logoUrl, setLogoUrl] = useState(initialLogoUrl);
@@ -61,21 +58,7 @@ export function WorkspaceLogoUpload({ tenantId, tenantName, logoUrl: initialLogo
 
   return (
     <div className="flex items-center gap-4">
-      {logoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={logoUrl}
-          alt={tenantName}
-          width={56}
-          height={56}
-          className="rounded-lg object-cover flex-shrink-0 border border-border"
-          style={{ width: 56, height: 56 }}
-        />
-      ) : (
-        <span className="w-14 h-14 rounded-lg bg-brand-subtle text-brand font-display font-semibold text-[20px] flex items-center justify-center flex-shrink-0">
-          {initial(tenantName)}
-        </span>
-      )}
+      <AvatarImage src={logoUrl} name={tenantName} size={56} shape="lg" fontSize={20} />
 
       <div>
         <div className="flex items-center gap-2">

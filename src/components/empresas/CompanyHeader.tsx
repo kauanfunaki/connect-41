@@ -6,6 +6,7 @@ import { Copy, Check, MapPin, Mail, Phone, Camera, X } from "lucide-react";
 import type { CompanyStatus } from "@/generated/prisma/enums";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { DeleteButton } from "@/components/ui/DeleteButton";
+import { AvatarImage } from "@/components/shared/AvatarImage";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
   PROSPECT: "Prospecto",
@@ -20,13 +21,6 @@ const STATUS_COLOR: Record<CompanyStatus, string> = {
   INACTIVE: "var(--c41-fg-muted)",
   CHURNED: "var(--c41-danger)",
 };
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  const first = parts[0]?.[0] ?? "";
-  const second = parts.length > 1 ? parts[1][0] : "";
-  return (first + second).toUpperCase() || "?";
-}
 
 type Props = {
   id: string;
@@ -113,20 +107,7 @@ export function CompanyHeader({
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-start gap-4 min-w-0">
           <div className="relative flex-shrink-0 group">
-            {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={logoUrl}
-                alt={name}
-                width={56}
-                height={56}
-                className="w-14 h-14 rounded-xl object-cover border border-border"
-              />
-            ) : (
-              <span className="w-14 h-14 rounded-xl bg-brand-subtle text-brand font-display font-semibold text-[20px] flex items-center justify-center">
-                {initials(name)}
-              </span>
-            )}
+            <AvatarImage src={logoUrl} name={name} size={56} shape="xl" fontSize={20} />
 
             {canEdit && (
               <>

@@ -6,6 +6,7 @@ import { Building2 } from "lucide-react";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { AvatarImage } from "@/components/shared/AvatarImage";
 import type { CompanyStatus } from "@/generated/prisma/enums";
 
 type Tag = { sectorCode: string; label: string; color: string; responsibleName: string };
@@ -21,10 +22,6 @@ type Row = {
   logoUrl: string | null;
   tags: Tag[];
 };
-
-function initials(name: string): string {
-  return name.trim().charAt(0).toUpperCase() || "?";
-}
 
 type Props = {
   companies: Row[];
@@ -137,20 +134,7 @@ export function EmpresasTable({
                   )}
                   <td className="px-4 py-3">
                     <Link href={`/empresas/${c.id}`} className="flex items-center gap-2.5 font-medium text-fg hover:text-brand transition-colors">
-                      {c.logoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={c.logoUrl}
-                          alt={c.name}
-                          width={28}
-                          height={28}
-                          className="w-7 h-7 rounded-md object-cover border border-border flex-shrink-0"
-                        />
-                      ) : (
-                        <span className="w-7 h-7 rounded-md bg-brand-subtle text-brand font-display font-semibold text-[11px] flex items-center justify-center flex-shrink-0">
-                          {initials(c.name)}
-                        </span>
-                      )}
+                      <AvatarImage src={c.logoUrl} name={c.name} size={28} shape="lg" fontSize={11} />
                       {c.name}
                     </Link>
                   </td>
