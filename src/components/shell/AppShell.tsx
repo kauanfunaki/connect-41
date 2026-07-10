@@ -8,6 +8,7 @@ import {
   Users,
   Columns3,
   ArrowRightLeft,
+  CalendarDays,
   Settings,
   Calculator,
   ReceiptText,
@@ -54,6 +55,7 @@ type Props = {
   accessibleTenants: Tenant[];
   sectors: Sector[];
   canOpenAdmin: boolean;
+  canManageMeetings: boolean;
   unreadCount: number;
   notifications: NotificationEntry[];
   profileName: string;
@@ -70,6 +72,7 @@ export function AppShell({
   accessibleTenants,
   sectors,
   canOpenAdmin,
+  canManageMeetings,
   unreadCount,
   notifications,
   profileName,
@@ -133,6 +136,9 @@ export function AppShell({
           <NavItem href="/pessoas" icon={<Users size={16} />} label="Pessoas" />
           <NavItem href="/kanban" icon={<Columns3 size={16} />} label="Kanban" />
           <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />
+          {canManageMeetings && (
+            <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />
+          )}
 
           {sectors.length > 0 && (
             <>

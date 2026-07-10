@@ -6,6 +6,7 @@ import { ROLE_LABELS } from "@/lib/roles";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorsWithEnabledModules } from "@/lib/modules";
+import { canManageMeetings } from "@/lib/integrations/oauth";
 
 export default async function AppLayout({
   children,
@@ -74,6 +75,7 @@ export default async function AppLayout({
         accessibleTenants={accessibleTenants}
         sectors={visibleSectors}
         canOpenAdmin={canOpenAdmin}
+        canManageMeetings={canManageMeetings(ctx)}
         unreadCount={unreadCount}
         notifications={notifications}
         profileName={me?.name ?? "Usuário"}
