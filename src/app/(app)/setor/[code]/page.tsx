@@ -4,15 +4,14 @@ import {
   ArrowRight,
   Briefcase,
   UserSearch,
-  UserPlus,
-  Palmtree,
+  Users,
   Stethoscope,
-  UserMinus,
   Clock,
   CalendarClock,
   GraduationCap,
   Star,
   BarChart3,
+  IdCard,
   LayoutGrid,
 } from "lucide-react";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
@@ -24,15 +23,14 @@ import { PageContainer } from "@/components/shared/PageContainer";
 const MODULE_ICONS: Record<string, React.ReactNode> = {
   recrutamento_vagas: <Briefcase size={20} />,
   recrutamento_candidatos: <UserSearch size={20} />,
-  dprh_admissao: <UserPlus size={20} />,
-  dprh_ferias: <Palmtree size={20} />,
+  dprh_colaboradores: <Users size={20} />,
   dprh_afastamentos: <Stethoscope size={20} />,
-  dprh_desligamentos: <UserMinus size={20} />,
   dprh_horas_extras: <Clock size={20} />,
   dprh_escalas: <CalendarClock size={20} />,
   dprh_treinamentos: <GraduationCap size={20} />,
   dprh_avaliacoes: <Star size={20} />,
-  dprh_indicadores: <BarChart3 size={20} />,
+  gestao_cargos_salarios: <IdCard size={20} />,
+  gestao_indicadores_rh: <BarChart3 size={20} />,
 };
 
 export default async function SectorHubPage({

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
-import { canManageMeetings } from "@/lib/integrations/oauth";
+import { canManageMeetings, getPublicOrigin } from "@/lib/integrations/oauth";
 import { exchangeGoogleCode, decodeGoogleEmail } from "@/lib/integrations/google";
 import { logAudit } from "@/lib/audit";
 
@@ -13,9 +13,10 @@ export async function GET(req: NextRequest) {
   const state = url.searchParams.get("state");
   const errorParam = url.searchParams.get("error");
   const cookieState = req.cookies.get("oauth_state_google")?.value;
+  const origin = getPublicOrigin("GOOGLE") || url.origin;
 
   const fail = (reason: string) => {
-    const res = NextResponse.redirect(new URL(`/admin/integracoes?error=${reason}`, req.url));
+    const res = NextResponse.redirect(new URL(`/admin/integracoes?error=${reason}`, origin));
     res.cookies.delete("oauth_state_google");
     return res;
   };
@@ -61,7 +62,7 @@ export async function GET(req: NextRequest) {
 
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "integration.connect", entityType: "OAuthAccount", metadata: { provider: "GOOGLE" } });
 
-  const res = NextResponse.redirect(new URL("/admin/integracoes?connected=google", req.url));
+  const res = NextResponse.redirect(new URL("/admin/integracoes?connected=google", origin));
   res.cookies.delete("oauth_state_google");
   return res;
 }

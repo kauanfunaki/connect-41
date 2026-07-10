@@ -26,17 +26,10 @@ export const MODULE_CATALOG: ModuleDef[] = [
     defaultEnabled: true,
   },
   {
-    code: "dprh_admissao",
-    label: "Admissões",
+    code: "dprh_colaboradores",
+    label: "Colaboradores",
     sectorCode: "dprh",
-    description: "Admissões em andamento e exames admissionais",
-    defaultEnabled: true,
-  },
-  {
-    code: "dprh_ferias",
-    label: "Férias",
-    sectorCode: "dprh",
-    description: "Controle de férias vencidas e a vencer",
+    description: "Admissões, rescisões e férias — ciclo de vida do colaborador",
     defaultEnabled: true,
   },
   {
@@ -44,13 +37,6 @@ export const MODULE_CATALOG: ModuleDef[] = [
     label: "Afastamentos",
     sectorCode: "dprh",
     description: "Afastamentos e atestados ativos",
-    defaultEnabled: true,
-  },
-  {
-    code: "dprh_desligamentos",
-    label: "Desligamentos",
-    sectorCode: "dprh",
-    description: "Desligamentos em andamento e turnover",
     defaultEnabled: true,
   },
   {
@@ -82,9 +68,16 @@ export const MODULE_CATALOG: ModuleDef[] = [
     defaultEnabled: true,
   },
   {
-    code: "dprh_indicadores",
+    code: "gestao_cargos_salarios",
+    label: "Cargos e Salários",
+    sectorCode: "gestao",
+    description: "Matriz de cargos, áreas e faixas salariais de todas as empresas",
+    defaultEnabled: true,
+  },
+  {
+    code: "gestao_indicadores_rh",
     label: "Indicadores de RH",
-    sectorCode: "dprh",
+    sectorCode: "gestao",
     description: "Dashboard consolidado — headcount, turnover, absenteísmo, custo de folha e mais",
     defaultEnabled: true,
   },

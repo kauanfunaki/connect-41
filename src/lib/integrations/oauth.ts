@@ -10,6 +10,16 @@ export function canManageMeetings(ctx: AuthContext): boolean {
   return isFullWrite(ctx.role) || ctx.role === "SECTOR_ADMIN";
 }
 
+// Atrás do proxy reverso do EasyPanel, req.url reporta o host interno do
+// container (ex.: 0.0.0.0:80) em vez do domínio público — usar isso pra montar
+// redirects gera URLs quebradas. O redirect URI configurado (mesmo valor
+// cadastrado no Google Cloud/Azure) sempre tem o domínio público correto.
+export function getPublicOrigin(provider: MeetingProvider): string {
+  const redirectUri =
+    provider === "GOOGLE" ? process.env.GOOGLE_REDIRECT_URI : process.env.MICROSOFT_REDIRECT_URI;
+  return redirectUri ? new URL(redirectUri).origin : "";
+}
+
 // Retorna um access token válido para o usuário+provider, renovando via
 // refresh_token se estiver vencido (ou a 2min de vencer, margem de segurança).
 export async function getValidAccessToken(

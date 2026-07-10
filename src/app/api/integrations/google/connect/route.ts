@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthContext } from "@/lib/auth/context";
-import { canManageMeetings } from "@/lib/integrations/oauth";
+import { canManageMeetings, getPublicOrigin } from "@/lib/integrations/oauth";
 import { isGoogleConfigured, getGoogleAuthUrl } from "@/lib/integrations/google";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  const origin = getPublicOrigin("GOOGLE") || new URL(req.url).origin;
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !canManageMeetings(ctx)) {
-    return NextResponse.redirect(new URL("/admin/integracoes?error=sem-permissao", req.url));
+    return NextResponse.redirect(new URL("/admin/integracoes?error=sem-permissao", origin));
   }
   if (!isGoogleConfigured()) {
-    return NextResponse.redirect(new URL("/admin/integracoes?error=google-nao-configurado", req.url));
+    return NextResponse.redirect(new URL("/admin/integracoes?error=google-nao-configurado", origin));
   }
 
   const state = crypto.randomUUID();
