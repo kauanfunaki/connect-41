@@ -25,6 +25,10 @@ export async function criarReuniaoAvulsa(_prev: MeetingState, form: FormData): P
   const startRaw = form.get("startAt") as string;
   const endRaw = form.get("endAt") as string;
   const attendeeIds = (form.getAll("attendeeIds") as string[]).filter(Boolean);
+  const companyIdRaw = (form.get("companyId") as string | null)?.trim();
+  const companyId = companyIdRaw ? companyIdRaw : null;
+  const clientNameRaw = (form.get("clientName") as string | null)?.trim();
+  const clientName = clientNameRaw ? clientNameRaw : null;
 
   if (!title) return { error: "Título é obrigatório." };
   if (provider !== "GOOGLE" && provider !== "MICROSOFT") return { error: "Selecione um provedor." };
@@ -55,10 +59,16 @@ export async function criarReuniaoAvulsa(_prev: MeetingState, form: FormData): P
 
   const prisma = getPrisma();
   // Participantes só podem ser usuários com acesso à plataforma do próprio
-  // tenant — evita atrelar um userId arbitrário vindo do form.
-  const validAttendeeIds = attendeeIds.length > 0
-    ? (await prisma.user.findMany({ where: { id: { in: attendeeIds }, tenantId: ctx.tenantId }, select: { id: true } })).map((u) => u.id)
-    : [];
+  // tenant — evita atrelar um userId arbitrário vindo do form. Mesma lógica
+  // pra companyId: confirma que a empresa pertence ao tenant antes de salvar.
+  const [validAttendeeIds, company] = await Promise.all([
+    attendeeIds.length > 0
+      ? prisma.user.findMany({ where: { id: { in: attendeeIds }, tenantId: ctx.tenantId }, select: { id: true } }).then((u) => u.map((x) => x.id))
+      : Promise.resolve([]),
+    companyId
+      ? prisma.company.findFirst({ where: { id: companyId, tenantId: ctx.tenantId }, select: { id: true } })
+      : Promise.resolve(null),
+  ]);
 
   const meeting = await prisma.meeting.create({
     data: {
@@ -69,6 +79,8 @@ export async function criarReuniaoAvulsa(_prev: MeetingState, form: FormData): P
       externalEventId: created.externalEventId,
       startAt,
       endAt,
+      companyId: company?.id ?? null,
+      clientName,
       createdByUserId: ctx.userId,
       attendees: { create: validAttendeeIds.map((userId) => ({ userId })) },
     },

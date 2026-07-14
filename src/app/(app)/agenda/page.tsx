@@ -35,7 +35,7 @@ export default async function AgendaPage({
   const rangeEnd = saoPauloDateTimeToUtc(days[6], 23, 59);
 
   const prisma = getPrisma();
-  const [meetingsRaw, oauthAccounts, allUsers] = await Promise.all([
+  const [meetingsRaw, oauthAccounts, allUsers, companies] = await Promise.all([
     prisma.meeting.findMany({
       where: {
         tenantId: ctx.tenantId,
@@ -43,11 +43,19 @@ export default async function AgendaPage({
         OR: [{ createdByUserId: ctx.userId }, { attendees: { some: { userId: ctx.userId } } }],
       },
       orderBy: { startAt: "asc" },
-      include: { attendees: { include: { user: { select: { id: true, name: true } } } } },
+      include: {
+        attendees: { include: { user: { select: { id: true, name: true } } } },
+        company: { select: { id: true, name: true } },
+      },
     }),
     prisma.oAuthAccount.findMany({ where: { tenantId: ctx.tenantId, userId: ctx.userId }, select: { provider: true } }),
     prisma.user.findMany({
       where: { tenantId: ctx.tenantId, active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+    prisma.company.findMany({
+      where: { tenantId: ctx.tenantId, status: "ACTIVE" },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
@@ -64,6 +72,8 @@ export default async function AgendaPage({
     startAt: m.startAt.toISOString(),
     endAt: m.endAt.toISOString(),
     attendees: m.attendees.map((a) => ({ id: a.user.id, name: a.user.name })),
+    company: m.company ? { id: m.company.id, name: m.company.name } : null,
+    clientName: m.clientName,
   }));
 
   const weekDays = days.map((dateKey) => ({ dateKey, isToday: dateKey === todayKey }));
@@ -89,6 +99,7 @@ export default async function AgendaPage({
         hasGoogle={hasGoogle}
         hasMicrosoft={hasMicrosoft}
         allUsers={allUsers}
+        companies={companies}
       />
     </PageContainer>
   );

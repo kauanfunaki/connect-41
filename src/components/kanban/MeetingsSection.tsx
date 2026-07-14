@@ -2,12 +2,13 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
-import { Video, ExternalLink, Trash2, Copy, Check } from "lucide-react";
+import { Video, ExternalLink, Trash2 } from "lucide-react";
 import type { MeetingState } from "@/app/(app)/kanban/meetings-actions";
 import type { MeetingProvider } from "@/generated/prisma/enums";
-import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
+import { AttendeePicker } from "@/components/shared/AttendeePicker";
 
 type MeetingRow = {
   id: string;
@@ -30,28 +31,6 @@ type Props = {
   scheduleAction: (prev: MeetingState, form: FormData) => Promise<MeetingState>;
   deleteAction: (meetingId: string) => Promise<void>;
 };
-
-function CopyLinkButton({ url }: { url: string }) {
-  const [copied, setCopied] = useState(false);
-
-  async function handleCopy() {
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      title="Copiar link da reunião"
-      className="inline-flex items-center gap-1 text-[12px] text-fg-muted hover:text-fg transition-colors"
-    >
-      {copied ? <Check size={12} className="text-success" /> : <Copy size={12} />}
-      {copied ? "Copiado" : "Copiar link"}
-    </button>
-  );
-}
 
 const PROVIDER_LABEL: Record<MeetingProvider, string> = { GOOGLE: "Google Meet", MICROSOFT: "MS Teams" };
 
@@ -102,19 +81,7 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
                 {hasMicrosoft && <option value="MICROSOFT">Microsoft Teams</option>}
               </Select>
 
-              {allUsers.length > 0 && (
-                <div>
-                  <p className="text-[11px] text-fg-muted mb-1.5">Responsáveis pela reunião</p>
-                  <div className="flex flex-wrap gap-x-3 gap-y-1.5 max-h-24 overflow-y-auto">
-                    {allUsers.map((u) => (
-                      <label key={u.id} className="flex items-center gap-1.5 text-[12px] text-fg-secondary">
-                        <Checkbox name="attendeeIds" value={u.id} />
-                        {u.name}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <AttendeePicker users={allUsers} label="Responsáveis pela reunião" />
 
               <button
                 type="submit"

@@ -4,12 +4,13 @@ import { useActionState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
 import { CampoForm } from "@/components/ui/CampoForm";
-import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { AttendeePicker } from "@/components/shared/AttendeePicker";
 import type { MeetingState } from "@/app/(app)/agenda/actions";
 
 type UserOption = { id: string; name: string };
+type CompanyOption = { id: string; name: string };
 
 type Props = {
   action: (prev: MeetingState, form: FormData) => Promise<MeetingState>;
@@ -18,6 +19,7 @@ type Props = {
   hasGoogle: boolean;
   hasMicrosoft: boolean;
   allUsers: UserOption[];
+  companies: CompanyOption[];
   onClose: () => void;
 };
 
@@ -26,7 +28,7 @@ type Props = {
 // direto pela Agenda. Componente remonta a cada abertura (o pai só o
 // renderiza quando open=true), então defaultValue reflete sempre o slot
 // clicado mais recente sem precisar de estado controlado.
-export function CreateMeetingDialog({ action, initialStart, initialEnd, hasGoogle, hasMicrosoft, allUsers, onClose }: Props) {
+export function CreateMeetingDialog({ action, initialStart, initialEnd, hasGoogle, hasMicrosoft, allUsers, companies, onClose }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const hasAnyProvider = hasGoogle || hasMicrosoft;
   const wasPending = useRef(false);
@@ -101,19 +103,21 @@ export function CreateMeetingDialog({ action, initialStart, initialEnd, hasGoogl
               </Select>
             </CampoForm>
 
-            {allUsers.length > 0 && (
-              <div>
-                <p className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">Responsáveis</p>
-                <div className="flex flex-wrap gap-x-3 gap-y-1.5 max-h-28 overflow-y-auto">
-                  {allUsers.map((u) => (
-                    <label key={u.id} className="flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-secondary">
-                      <Checkbox name="attendeeIds" value={u.id} />
-                      {u.name}
-                    </label>
+            <div className="grid grid-cols-2 gap-3">
+              <CampoForm label="Empresa" htmlFor="companyId">
+                <Select id="companyId" name="companyId" defaultValue="">
+                  <option value="">Nenhuma</option>
+                  {companies.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
-                </div>
-              </div>
-            )}
+                </Select>
+              </CampoForm>
+              <CampoForm label="Cliente(s)" htmlFor="clientName" helper="Separe por vírgula, se houver mais de um">
+                <Input id="clientName" name="clientName" placeholder="Ex: Bruno, Maria" />
+              </CampoForm>
+            </div>
+
+            <AttendeePicker users={allUsers} />
 
             {state?.error && <p className="text-[length:var(--fs-helper)] text-danger">{state.error}</p>}
 

@@ -4,6 +4,7 @@ import { useMemo, useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Plus, ExternalLink } from "lucide-react";
 import { CreateMeetingDialog } from "./CreateMeetingDialog";
+import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
 import { saoPauloParts, weekdayLabel, dayNumber } from "@/lib/agenda";
 import type { MeetingState } from "@/app/(app)/agenda/actions";
 import type { MeetingProvider } from "@/generated/prisma/enums";
@@ -24,10 +25,13 @@ type MeetingRow = {
   startAt: string; // ISO
   endAt: string; // ISO
   attendees: { id: string; name: string }[];
+  company: { id: string; name: string } | null;
+  clientName: string | null;
 };
 
 type WeekDay = { dateKey: string; isToday: boolean };
 type UserOption = { id: string; name: string };
+type CompanyOption = { id: string; name: string };
 
 type Props = {
   weekDays: WeekDay[];
@@ -41,6 +45,7 @@ type Props = {
   hasGoogle: boolean;
   hasMicrosoft: boolean;
   allUsers: UserOption[];
+  companies: CompanyOption[];
 };
 
 function pad(n: number): string {
@@ -67,6 +72,7 @@ export function WeekCalendar({
   hasGoogle,
   hasMicrosoft,
   allUsers,
+  companies,
 }: Props) {
   const [dialogSlot, setDialogSlot] = useState<{ start: string; end: string } | null>(null);
 
@@ -192,6 +198,7 @@ export function WeekCalendar({
           hasGoogle={hasGoogle}
           hasMicrosoft={hasMicrosoft}
           allUsers={allUsers}
+          companies={companies}
           onClose={() => setDialogSlot(null)}
         />
       )}
@@ -246,19 +253,25 @@ function MeetingBlock({
         <p className="text-[11px] font-medium truncate leading-tight" style={textStyle ?? { color: "var(--c41-brand)" }}>
           {meeting.title}
         </p>
-        {height > 30 && <p className="text-[10px] text-fg-muted truncate leading-tight">{formatTime(start)}</p>}
+        {height > 30 && (
+          <p className="text-[10px] text-fg-muted truncate leading-tight">
+            {meeting.company ? meeting.company.name : formatTime(start)}
+          </p>
+        )}
       </button>
 
       {open && (
-        <div className="absolute z-20 top-full left-0 mt-1 w-60 bg-surface-elevated border border-border-strong rounded-xl shadow-[var(--c41-shadow-lg)] p-3 space-y-2">
+        <div className="absolute z-20 top-full left-0 mt-1 w-64 bg-surface-elevated border border-border-strong rounded-xl shadow-[var(--c41-shadow-lg)] p-3 space-y-2">
           <p className="text-[13px] font-medium text-fg">{meeting.title}</p>
           <p className="text-[12px] text-fg-muted">
             {formatTime(start)}–{formatTime(end)} · {PROVIDER_LABEL[meeting.provider]}
           </p>
+          {meeting.company && <p className="text-[12px] text-fg-secondary">Empresa: <span className="text-fg">{meeting.company.name}</span></p>}
+          {meeting.clientName && <p className="text-[12px] text-fg-secondary">Cliente(s): <span className="text-fg">{meeting.clientName}</span></p>}
           {meeting.attendees.length > 0 && (
             <p className="text-[12px] text-fg-secondary">Com {meeting.attendees.map((a) => a.name).join(", ")}</p>
           )}
-          <div className="flex items-center gap-3 pt-1">
+          <div className="flex items-center gap-3 pt-1 flex-wrap">
             <a
               href={meeting.meetingUrl}
               target="_blank"
@@ -267,6 +280,7 @@ function MeetingBlock({
             >
               Entrar <ExternalLink size={12} />
             </a>
+            <CopyLinkButton url={meeting.meetingUrl} />
             <button
               type="button"
               onClick={() => {

@@ -557,6 +557,7 @@ model Company {
   payrollCompetencies PayrollCompetency[]
   benefitCatalogs     BenefitCatalog[]
   workShifts          WorkShift[]
+  meetings            Meeting[]
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -1525,17 +1526,21 @@ model Meeting {
   endAt           DateTime
   pipelineItemId  String?
   sectorCode      String?         @db.VarChar(40)
+  companyId       String?         // empresa associada — reunião criada pela Agenda, sem item de Kanban
+  clientName      String?         @db.VarChar(255) // nome(s) do(s) participante(s)/cliente(s), texto livre
   createdByUserId String
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
   tenant       Tenant            @relation(fields: [tenantId], references: [id])
   pipelineItem PipelineItem?     @relation(fields: [pipelineItemId], references: [id], onDelete: Cascade)
+  company      Company?          @relation(fields: [companyId], references: [id], onDelete: SetNull)
   createdBy    User              @relation("MeetingCreatedBy", fields: [createdByUserId], references: [id])
   attendees    MeetingAttendee[]
 
   @@index([tenantId, pipelineItemId])
   @@index([tenantId, sectorCode, startAt])
+  @@index([tenantId, companyId])
   @@map("meetings")
 }
 
