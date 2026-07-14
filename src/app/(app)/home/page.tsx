@@ -2,21 +2,20 @@ import Link from "next/link";
 import {
   Building2,
   Users,
-  Columns3,
   Clock,
-  Bell,
   ArrowRightLeft,
-  Plus,
-  Settings,
   ChevronRight,
+  Video,
+  ExternalLink,
 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { HorizontalBarChart, DonutChart, TrendChart, MiniBarChart } from "@/components/shared/Charts";
+import { QuickCreateMenu } from "@/components/shared/QuickCreateMenu";
+import { HorizontalBarChart, TrendChart } from "@/components/shared/Charts";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite, isFullWrite } from "@/lib/auth/context";
+import { getAuthContext, canWrite, isFullWrite, isFullAccess } from "@/lib/auth/context";
 import { scopedCompanyWhere, scopedPersonWhere, scopedPipelineWhere, scopedHandoffWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
-import { getTenantModuleStates, getSectorsWithEnabledModules } from "@/lib/modules";
+import { getSectorsWithEnabledModules } from "@/lib/modules";
 
 const ACTIVITY_LABEL: Record<string, string> = {
   NOTE: "adicionou uma nota em",
@@ -26,26 +25,7 @@ const ACTIVITY_LABEL: Record<string, string> = {
   MENTION: "mencionou você em",
 };
 
-const COMPANY_STATUS_LABEL: Record<string, string> = {
-  PROSPECT: "Prospecto",
-  ACTIVE: "Ativo",
-  INACTIVE: "Inativo",
-  CHURNED: "Cancelado",
-};
-
-const COMPANY_STATUS_COLOR: Record<string, string> = {
-  PROSPECT: "var(--c41-warning)",
-  ACTIVE: "var(--c41-success)",
-  INACTIVE: "var(--c41-fg-muted)",
-  CHURNED: "var(--c41-danger)",
-};
-
-const PRIORITY_LABEL: Record<number, string> = { 0: "Normal", 1: "Alta", 2: "Urgente" };
-const PRIORITY_COLOR: Record<number, string> = {
-  0: "var(--c41-fg-muted)",
-  1: "var(--c41-warning)",
-  2: "var(--c41-danger)",
-};
+const PROVIDER_LABEL: Record<string, string> = { GOOGLE: "Google Meet", MICROSOFT: "MS Teams" };
 
 function nowDate(): Date {
   return new Date();
@@ -57,11 +37,53 @@ function daysFromNow(days: number): Date {
   return d;
 }
 
-function monthsAgo(months: number): Date {
+function startOfMonth(): Date {
   const d = new Date();
   d.setDate(1);
-  d.setMonth(d.getMonth() - months);
+  d.setHours(0, 0, 0, 0);
   return d;
+}
+
+// Tempo relativo curto pro feed de atividade — evita timestamp cru com segundos.
+function formatRelativeTime(date: Date): string {
+  const diffMs = Date.now() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "agora";
+  if (diffMin < 60) return `há ${diffMin}min`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return `há ${diffH}h`;
+  const diffD = Math.floor(diffH / 24);
+  if (diffD === 1) return "ontem";
+  if (diffD < 7) return `há ${diffD}d`;
+  return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+}
+
+type DueBadgeInfo = { label: string; className: string };
+
+// Classifica prazo em badge semântico — vencido some silenciosamente na versão
+// antiga (query só pegava dueDate >= hoje); aqui é o ponto central da tela.
+function classifyDueDate(dueDate: Date | null, todayStart: Date, todayEnd: Date): DueBadgeInfo | null {
+  if (!dueDate) return null;
+  if (dueDate < todayStart) return { label: "Vencido", className: "bg-danger-bg text-danger" };
+  if (dueDate <= todayEnd) return { label: "Hoje", className: "bg-warning-bg text-warning" };
+  const tomorrowEnd = new Date(todayEnd);
+  tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
+  if (dueDate <= tomorrowEnd) return { label: "Amanhã", className: "bg-surface-2 text-fg-secondary" };
+  return {
+    label: dueDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }),
+    className: "bg-surface-2 text-fg-muted",
+  };
+}
+
+function formatMeetingWhen(d: Date, todayStart: Date, todayEnd: Date): string {
+  const time = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
+  if (d >= todayStart && d <= todayEnd) return `Hoje, ${time}`;
+  const tomorrowStart = new Date(todayStart);
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+  const tomorrowEnd = new Date(todayEnd);
+  tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
+  if (d >= tomorrowStart && d <= tomorrowEnd) return `Amanhã, ${time}`;
+  return `${d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" })}, ${time}`;
 }
 
 export default async function HomePage() {
@@ -69,136 +91,193 @@ export default async function HomePage() {
   const canCreateCompany = canWrite(ctx.role);
   const canCreatePerson = canWrite(ctx.role);
   const canCreateTransfer = isFullWrite(ctx.role) || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.length > 0);
-  const canOpenAdmin = canCreateTransfer;
+  const showWorkspaceOverview = isFullAccess(ctx.role) || ctx.role === "SECTOR_ADMIN";
 
   const prisma = getPrisma();
+  const now = nowDate();
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(now);
+  todayEnd.setHours(23, 59, 59, 999);
   const fourteenDaysAgo = daysFromNow(-14);
-  const sixMonthsAgo = monthsAgo(5);
+  const monthStart = startOfMonth();
+
+  const incomingHandoffWhere = isFullAccess(ctx.role)
+    ? { tenantId: ctx.tenantId, status: "PENDING" as const }
+    : ctx.sectors.length > 0
+      ? { tenantId: ctx.tenantId, status: "PENDING" as const, toSector: { in: ctx.sectors } }
+      : null;
 
   const [
     me,
     tenant,
     companyActiveCount,
+    newCompaniesThisMonth,
     personCount,
-    pipelineCount,
-    unreadNotifications,
-    pendingHandoffs,
-    upcomingItems,
-    recentActivities,
-    companyByStatusRaw,
-    openItemsForCharts,
+    pendingHandoffsCount,
+    openPipelineItemsRaw,
+    recentActivitiesRaw,
     activityCreatedDates,
-    companiesCreatedRaw,
+    upcomingMeetings,
+    incomingHandoffsRaw,
   ] = await Promise.all([
     ctx.userId ? prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true } }) : Promise.resolve(null),
     prisma.tenant.findUnique({ where: { id: ctx.tenantId }, select: { name: true } }),
     prisma.company.count({ where: { ...(await scopedCompanyWhere(ctx)), status: "ACTIVE" } }),
+    prisma.company.count({ where: { ...(await scopedCompanyWhere(ctx)), createdAt: { gte: monthStart } } }),
     prisma.person.count({ where: { ...(await scopedPersonWhere(ctx)), type: "COLABORADOR" } }),
-    prisma.pipeline.count({ where: scopedPipelineWhere(ctx) }),
-    ctx.userId
-      ? prisma.notification.count({ where: { tenantId: ctx.tenantId, userId: ctx.userId, read: false } })
-      : Promise.resolve(0),
     prisma.handoff.count({ where: { ...scopedHandoffWhere(ctx), status: "PENDING" } }),
     prisma.pipelineItem.findMany({
-      where: {
-        tenantId: ctx.tenantId,
-        dueDate: { gte: nowDate(), lte: daysFromNow(7) },
-        pipeline: scopedPipelineWhere(ctx),
+      where: { tenantId: ctx.tenantId, pipeline: scopedPipelineWhere(ctx), stage: { isTerminal: false } },
+      select: {
+        id: true,
+        entityId: true,
+        entityType: true,
+        dueDate: true,
+        createdAt: true,
+        pipelineId: true,
+        stage: { select: { name: true, color: true } },
+        pipeline: { select: { name: true, sectorCode: true } },
+        assignees: { select: { userId: true } },
       },
-      orderBy: { dueDate: "asc" },
-      take: 6,
-      include: { pipeline: { select: { id: true, name: true } } },
     }),
     prisma.activity.findMany({
       where: { tenantId: ctx.tenantId, pipelineItem: { pipeline: scopedPipelineWhere(ctx) } },
       orderBy: { createdAt: "desc" },
-      take: 8,
+      take: 12,
       include: {
-        user: { select: { name: true } },
+        user: { select: { id: true, name: true } },
         pipelineItem: { select: { id: true, pipelineId: true, entityId: true, entityType: true } },
       },
-    }),
-    prisma.company.groupBy({
-      by: ["status"],
-      where: await scopedCompanyWhere(ctx),
-      _count: { _all: true },
-    }),
-    prisma.pipelineItem.findMany({
-      where: { tenantId: ctx.tenantId, pipeline: scopedPipelineWhere(ctx), stage: { isTerminal: false } },
-      select: { priority: true, stage: { select: { name: true, color: true } } },
     }),
     prisma.activity.findMany({
       where: { tenantId: ctx.tenantId, pipelineItem: { pipeline: scopedPipelineWhere(ctx) }, createdAt: { gte: fourteenDaysAgo } },
       select: { createdAt: true },
     }),
-    prisma.company.findMany({
-      where: { ...(await scopedCompanyWhere(ctx)), createdAt: { gte: sixMonthsAgo } },
-      select: { createdAt: true },
-    }),
+    ctx.userId
+      ? prisma.meeting.findMany({
+          where: {
+            tenantId: ctx.tenantId,
+            startAt: { gte: now },
+            OR: [{ createdByUserId: ctx.userId }, { attendees: { some: { userId: ctx.userId } } }],
+          },
+          orderBy: { startAt: "asc" },
+          take: 4,
+        })
+      : Promise.resolve([]),
+    incomingHandoffWhere
+      ? prisma.handoff.findMany({
+          where: incomingHandoffWhere,
+          orderBy: { createdAt: "desc" },
+          take: 4,
+          include: { requester: { select: { name: true } } },
+        })
+      : Promise.resolve([]),
   ]);
 
-  // Nomes das entidades referenciadas nos prazos/atividades (Company ou Person).
-  const companyIds = [
-    ...upcomingItems.filter((i) => i.entityType === "COMPANY").map((i) => i.entityId),
-    ...recentActivities.filter((a) => a.pipelineItem.entityType === "COMPANY").map((a) => a.pipelineItem.entityId),
-  ];
-  const personIds = [
-    ...upcomingItems.filter((i) => i.entityType === "PERSON").map((i) => i.entityId),
-    ...recentActivities.filter((a) => a.pipelineItem.entityType === "PERSON").map((a) => a.pipelineItem.entityId),
-  ];
+  // "Meu dia" — itens atribuídos a mim (qualquer prazo) unidos com todo item
+  // com prazo definido no meu escopo (inclui vencidos, que a versão antiga
+  // nunca mostrava porque a query só pegava dueDate >= hoje).
+  const assignedToMe = ctx.userId
+    ? openPipelineItemsRaw.filter((i) => i.assignees.some((a) => a.userId === ctx.userId))
+    : [];
+  const withDueDate = openPipelineItemsRaw.filter((i) => i.dueDate);
+  const meuDiaMap = new Map<string, (typeof openPipelineItemsRaw)[number]>();
+  for (const item of [...assignedToMe, ...withDueDate]) meuDiaMap.set(item.id, item);
+  const meuDiaItems = Array.from(meuDiaMap.values())
+    .sort((a, b) => {
+      if (a.dueDate && b.dueDate) return a.dueDate.getTime() - b.dueDate.getTime();
+      if (a.dueDate) return -1;
+      if (b.dueDate) return 1;
+      return b.createdAt.getTime() - a.createdAt.getTime();
+    })
+    .slice(0, 8);
+
+  const vencidosCount = openPipelineItemsRaw.filter((i) => i.dueDate && i.dueDate < todayStart).length;
+  const hojeCount = openPipelineItemsRaw.filter((i) => i.dueDate && i.dueDate >= todayStart && i.dueDate <= todayEnd).length;
+
+  // Nomes das entidades referenciadas (Company ou Person) — item de "Meu dia",
+  // atividade recente e transferências a revisar, tudo numa só rodada.
+  const companyIds = new Set<string>();
+  const personIds = new Set<string>();
+  for (const i of meuDiaItems) (i.entityType === "COMPANY" ? companyIds : personIds).add(i.entityId);
+  for (const a of recentActivitiesRaw) (a.pipelineItem.entityType === "COMPANY" ? companyIds : personIds).add(a.pipelineItem.entityId);
+  for (const h of incomingHandoffsRaw) (h.entityType === "COMPANY" ? companyIds : personIds).add(h.entityId);
   const [companiesNamed, peopleNamed] = await Promise.all([
-    companyIds.length > 0
-      ? prisma.company.findMany({ where: { id: { in: companyIds } }, select: { id: true, name: true } })
+    companyIds.size > 0
+      ? prisma.company.findMany({ where: { id: { in: Array.from(companyIds) } }, select: { id: true, name: true } })
       : Promise.resolve([]),
-    personIds.length > 0
-      ? prisma.person.findMany({ where: { id: { in: personIds } }, select: { id: true, name: true } })
+    personIds.size > 0
+      ? prisma.person.findMany({ where: { id: { in: Array.from(personIds) } }, select: { id: true, name: true } })
       : Promise.resolve([]),
   ]);
   const entityNames: Record<string, string> = {};
   companiesNamed.forEach((c) => (entityNames[c.id] = c.name));
   peopleNamed.forEach((p) => (entityNames[p.id] = p.name));
 
-  // Widget "seus setores" — só setores com módulo habilitado; escopo (todos, se
-  // acesso total) ou restrito aos setores do usuário (SECTOR_ADMIN/SECTOR_USER).
-  const [{ labels: sectorLabels, colors: sectorColors }, sectorsWithModules, moduleStates] = await Promise.all([
+  // Feed de atividade agrupado — eventos consecutivos do mesmo autor/entidade
+  // viram uma linha só ("fez N alterações"), em vez de N linhas idênticas.
+  type ActivityGroup = {
+    id: string;
+    userName: string;
+    entityId: string;
+    pipelineId: string;
+    pipelineItemId: string;
+    label: string;
+    count: number;
+    createdAt: Date;
+  };
+  const activityGroups: ActivityGroup[] = [];
+  for (const a of recentActivitiesRaw) {
+    const last = activityGroups[activityGroups.length - 1];
+    if (last && last.userName === a.user.name && last.entityId === a.pipelineItem.entityId) {
+      last.count += 1;
+    } else {
+      activityGroups.push({
+        id: a.id,
+        userName: a.user.name,
+        entityId: a.pipelineItem.entityId,
+        pipelineId: a.pipelineItem.pipelineId,
+        pipelineItemId: a.pipelineItem.id,
+        label: ACTIVITY_LABEL[a.type] ?? "atualizou",
+        count: 1,
+        createdAt: a.createdAt,
+      });
+    }
+    if (activityGroups.length >= 6) break;
+  }
+
+  // Widget "seus setores" — só setores com módulo habilitado; métrica agora é
+  // volume de trabalho (abertos/vencidos), não "N módulos disponíveis".
+  const [{ labels: sectorLabels, colors: sectorColors }, sectorsWithModules] = await Promise.all([
     getSectorMaps(ctx.tenantId),
     getSectorsWithEnabledModules(ctx.tenantId),
-    getTenantModuleStates(ctx.tenantId),
   ]);
   const visibleSectorCodes = (
     isFullWrite(ctx.role) || ctx.role === "READONLY" ? Array.from(sectorsWithModules) : ctx.sectors
   ).filter((code) => sectorsWithModules.has(code));
-  const sectorWidgets = visibleSectorCodes.map((code) => ({
-    code,
-    label: sectorLabels[code] ?? code,
-    color: sectorColors[code] ?? "#586577",
-    moduleCount: moduleStates.filter((m) => m.sectorCode === code && m.enabled).length,
-  }));
+  const sectorWidgets = visibleSectorCodes.map((code) => {
+    const items = openPipelineItemsRaw.filter((i) => i.pipeline.sectorCode === code);
+    return {
+      code,
+      label: sectorLabels[code] ?? code,
+      color: sectorColors[code] ?? "#586577",
+      openCount: items.length,
+      overdueCount: items.filter((i) => i.dueDate && i.dueDate < todayStart).length,
+    };
+  });
 
-  // Kanban por estágio + pendências por prioridade — mesma consulta, dois recortes.
+  // Kanban por estágio + movimentações — únicos gráficos mantidos (visão do
+  // workspace, só admin/coordenador); cortados os que tinham pouco sinal
+  // (donut de 1 categoria, paleta arco-íris fora dos tokens).
   const stageCounts = new Map<string, { value: number; color: string }>();
-  for (const item of openItemsForCharts) {
+  for (const item of openPipelineItemsRaw) {
     const key = item.stage.name;
     const prev = stageCounts.get(key);
     stageCounts.set(key, { value: (prev?.value ?? 0) + 1, color: item.stage.color ?? "#586577" });
   }
   const stageChartData = Array.from(stageCounts.entries()).map(([label, v]) => ({ label, value: v.value, color: v.color }));
 
-  const priorityCounts = [0, 1, 2].map((p) => ({
-    label: PRIORITY_LABEL[p],
-    value: openItemsForCharts.filter((i) => i.priority === p).length,
-    color: PRIORITY_COLOR[p],
-  }));
-
-  const companyStatusData = companyByStatusRaw
-    .map((row) => ({
-      label: COMPANY_STATUS_LABEL[row.status] ?? row.status,
-      value: row._count._all,
-      color: COMPANY_STATUS_COLOR[row.status] ?? "#586577",
-    }))
-    .filter((d) => d.value > 0);
-
-  // Movimentações por dia, últimos 14 dias.
   const dayBuckets = new Map<string, number>();
   for (let i = 13; i >= 0; i--) {
     const d = daysFromNow(-i);
@@ -211,22 +290,10 @@ export default async function HomePage() {
   }
   const trendData = Array.from(dayBuckets.entries()).map(([label, value]) => ({ label, value }));
 
-  // Novas empresas por mês, últimos 6 meses (inclui o atual) — preenche o
-  // espaço vazio ao lado do donut "Empresas por status" com outro recorte.
-  const monthBuckets = new Map<string, number>();
-  for (let i = 5; i >= 0; i--) {
-    const d = monthsAgo(i);
-    const key = d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
-    monthBuckets.set(key, 0);
-  }
-  for (const c of companiesCreatedRaw) {
-    const key = c.createdAt.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
-    if (monthBuckets.has(key)) monthBuckets.set(key, (monthBuckets.get(key) ?? 0) + 1);
-  }
-  const newCompaniesByMonth = Array.from(monthBuckets.entries()).map(([label, value]) => ({ label, value }));
-
   const today = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
   const firstName = me?.name?.trim().split(/\s+/)[0] ?? "";
+  const pendingForMe = vencidosCount + hojeCount + incomingHandoffsRaw.length;
+  const nextMeeting = upcomingMeetings[0] && upcomingMeetings[0].startAt <= todayEnd ? upcomingMeetings[0] : null;
 
   return (
     <PageContainer>
@@ -237,155 +304,259 @@ export default async function HomePage() {
             {firstName ? `Olá, ${firstName}` : "Início"}
           </h1>
           <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
-            Aqui está um resumo do workspace {tenant?.name ? <span className="text-fg font-medium">{tenant.name}</span> : ""}
+            {pendingForMe > 0
+              ? `${pendingForMe} pendência${pendingForMe !== 1 ? "s" : ""} precisa${pendingForMe !== 1 ? "m" : ""} de você`
+              : <>Aqui está um resumo do workspace {tenant?.name ? <span className="text-fg font-medium">{tenant.name}</span> : ""}</>}
           </p>
         </div>
-        <p className="text-[length:var(--fs-helper)] text-fg-muted tnum">{today}</p>
+        <div className="flex items-center gap-3">
+          <p className="text-[length:var(--fs-helper)] text-fg-muted tnum">{today}</p>
+          <QuickCreateMenu
+            canCreateCompany={canCreateCompany}
+            canCreatePerson={canCreatePerson}
+            canCreateTransfer={canCreateTransfer}
+          />
+        </div>
       </div>
 
-      {/* Cards de indicadores */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
-        <StatCard href="/empresas" icon={<Building2 size={16} />} label="Empresas ativas" value={companyActiveCount} delay={0} />
-        <StatCard href="/pessoas" icon={<Users size={16} />} label="Pessoas cadastradas" value={personCount} delay={40} />
-        <StatCard href="/kanban" icon={<Columns3 size={16} />} label="Kanbans ativos" value={pipelineCount} delay={80} />
-        <StatCard href="/kanban" icon={<Clock size={16} />} label="Prazos (7 dias)" value={upcomingItems.length} delay={120} highlight={upcomingItems.length > 0} />
-        <StatCard href="/notificacoes" icon={<Bell size={16} />} label="Notificações" value={unreadNotifications} delay={160} highlight={unreadNotifications > 0} />
+      {/* Indicadores */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        <StatCard
+          href="/empresas"
+          icon={<Building2 size={16} />}
+          label="Empresas ativas"
+          value={companyActiveCount}
+          delay={0}
+          sub={newCompaniesThisMonth > 0 ? `+${newCompaniesThisMonth} este mês` : undefined}
+        />
+        <StatCard
+          href="/kanban"
+          icon={<Clock size={16} />}
+          label="Vencidos / hoje"
+          value={vencidosCount + hojeCount}
+          delay={40}
+          highlight={vencidosCount + hojeCount > 0}
+          sub={vencidosCount > 0 ? `${vencidosCount} vencido${vencidosCount !== 1 ? "s" : ""}` : undefined}
+        />
         <StatCard
           href="/transferencias?status=PENDING"
           icon={<ArrowRightLeft size={16} />}
           label="Transferências"
-          value={pendingHandoffs}
-          delay={200}
-          highlight={pendingHandoffs > 0}
+          value={pendingHandoffsCount}
+          delay={80}
+          highlight={pendingHandoffsCount > 0}
+          sub={pendingHandoffsCount > 0 ? "aguardando" : undefined}
+        />
+        <StatCard
+          href="/pessoas"
+          icon={<Users size={16} />}
+          label="Pessoas cadastradas"
+          value={personCount}
+          delay={120}
         />
       </div>
 
-      {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <div className="bg-surface border border-border rounded-2xl p-5">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Cards do Kanban por estágio</h2>
-          <HorizontalBarChart data={stageChartData} emptyLabel="Nenhum card em aberto nos seus kanbans." />
-        </div>
-
-        <div className="bg-surface border border-border rounded-2xl p-5">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Empresas por status</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-            <div className="flex justify-center">
-              <DonutChart data={companyStatusData} emptyLabel="Nenhuma empresa cadastrada ainda." />
-            </div>
-            <div className="sm:border-l sm:border-border sm:pl-4">
-              <p className="text-[11px] font-medium text-fg-muted uppercase tracking-wide mb-2">Novas / mês</p>
-              <MiniBarChart data={newCompaniesByMonth} emptyLabel="Sem novas empresas nos últimos 6 meses." />
-            </div>
+      {/* Próxima reunião de hoje */}
+      {nextMeeting && (
+        <div className="flex items-center justify-between gap-3 bg-brand-subtle border border-brand/20 rounded-2xl px-4 py-3 mb-4">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Video size={16} className="text-brand flex-shrink-0" />
+            <p className="text-[length:var(--fs-body)] text-fg truncate">
+              <span className="font-medium">{nextMeeting.title}</span>
+              <span className="text-fg-muted">
+                {" · "}
+                {formatMeetingWhen(nextMeeting.startAt, todayStart, todayEnd)}
+                {" · "}
+                {PROVIDER_LABEL[nextMeeting.provider] ?? nextMeeting.provider}
+              </span>
+            </p>
           </div>
-        </div>
-
-        <div className="bg-surface border border-border rounded-2xl p-5">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Movimentações (14 dias)</h2>
-          <TrendChart data={trendData} />
-        </div>
-
-        <div className="bg-surface border border-border rounded-2xl p-5">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Pendências por prioridade</h2>
-          <HorizontalBarChart data={priorityCounts} emptyLabel="Nenhum card em aberto nos seus kanbans." />
-        </div>
-      </div>
-
-      {/* Prazos próximos + Atividade recente */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div className="bg-surface border border-border rounded-2xl p-5">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Prazos próximos (7 dias)</h2>
-          {upcomingItems.length === 0 ? (
-            <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhum prazo nos próximos 7 dias.</p>
-          ) : (
-            <div className="space-y-3">
-              {upcomingItems.map((item) => (
-                <Link
-                  key={item.id}
-                  href={`/kanban/${item.pipelineId}/itens/${item.id}`}
-                  className="flex items-center justify-between gap-2 group"
-                >
-                  <span className="text-[length:var(--fs-body)] text-fg group-hover:text-brand transition-colors truncate">
-                    {entityNames[item.entityId] ?? "(removido)"}
-                  </span>
-                  <span className="text-[length:var(--fs-helper)] text-fg-muted tnum flex-shrink-0">
-                    {item.dueDate?.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} ·{" "}
-                    {item.pipeline.name}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="bg-surface border border-border rounded-2xl p-5">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Atividade recente</h2>
-          {recentActivities.length === 0 ? (
-            <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhuma atividade registrada ainda.</p>
-          ) : (
-            <div className="space-y-3">
-              {recentActivities.map((a) => (
-                <Link
-                  key={a.id}
-                  href={`/kanban/${a.pipelineItem.pipelineId}/itens/${a.pipelineItem.id}`}
-                  className="block group"
-                >
-                  <p className="text-[length:var(--fs-body)] text-fg-secondary leading-snug">
-                    <span className="font-medium text-fg group-hover:text-brand transition-colors">{a.user.name}</span>{" "}
-                    {ACTIVITY_LABEL[a.type] ?? "atualizou"}{" "}
-                    <span className="font-medium">{entityNames[a.pipelineItem.entityId] ?? "(removido)"}</span>
-                  </p>
-                  <p className="text-[length:var(--fs-helper)] text-fg-muted">
-                    {a.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Ações rápidas */}
-      <div className="bg-surface border border-border rounded-2xl p-5 mb-4">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Ações rápidas</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {canCreateCompany && <QuickAction href="/empresas/nova" icon={<Plus size={15} />} label="Nova Empresa" />}
-          {canCreatePerson && <QuickAction href="/pessoas/nova" icon={<Plus size={15} />} label="Nova Pessoa" />}
-          <QuickAction href="/kanban" icon={<Columns3 size={15} />} label="Abrir Kanban" />
-          {canCreateTransfer && <QuickAction href="/transferencias/novo" icon={<ArrowRightLeft size={15} />} label="Nova Transferência" />}
-          <QuickAction href="/notificacoes" icon={<Bell size={15} />} label="Notificações" />
-          {canOpenAdmin && <QuickAction href="/admin" icon={<Settings size={15} />} label="Configurações" />}
-        </div>
-      </div>
-
-      {/* Seus setores */}
-      {sectorWidgets.length > 0 && (
-        <div className="bg-surface border border-border rounded-2xl p-5">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">
-            {sectorWidgets.length > 1 ? "Seus setores" : "Seu setor"}
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {sectorWidgets.map((s) => (
-              <Link
-                key={s.code}
-                href={`/setor/${s.code}`}
-                className="group flex items-center justify-between gap-2 bg-surface-hover border border-border rounded-xl px-4 py-3 hover:border-border-strong transition-colors"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.color }} />
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-medium text-fg truncate">{s.label}</p>
-                    <p className="text-[11px] text-fg-muted">
-                      {s.moduleCount} módulo{s.moduleCount !== 1 ? "s" : ""} disponíve{s.moduleCount !== 1 ? "is" : "l"}
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight size={15} className="text-fg-muted flex-shrink-0 group-hover:text-fg transition-colors" />
-              </Link>
-            ))}
-          </div>
+          <a
+            href={nextMeeting.meetingUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 flex-shrink-0 h-8 px-3 rounded-full bg-brand text-on-brand text-[12.5px] font-medium hover:bg-brand-hover transition-colors"
+          >
+            Entrar <ExternalLink size={12} />
+          </a>
         </div>
       )}
+
+      {/* Corpo: coluna principal (meu trabalho) + coluna lateral */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1.7fr_1fr] gap-4">
+        <div className="flex flex-col gap-4 min-w-0">
+          {/* Meu dia */}
+          <div className="bg-surface border border-border rounded-2xl p-5">
+            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Meu dia</h2>
+            {meuDiaItems.length === 0 ? (
+              <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhum item com prazo ou atribuído a você.</p>
+            ) : (
+              <div className="space-y-1">
+                {meuDiaItems.map((item) => {
+                  const badge = classifyDueDate(item.dueDate, todayStart, todayEnd);
+                  return (
+                    <Link
+                      key={item.id}
+                      href={`/kanban/${item.pipelineId}/itens/${item.id}`}
+                      className="flex items-center justify-between gap-3 py-2 group"
+                    >
+                      <span className="text-[length:var(--fs-body)] text-fg group-hover:text-brand transition-colors truncate min-w-0">
+                        {entityNames[item.entityId] ?? "(removido)"}
+                        <span className="text-fg-muted font-normal">
+                          {" · "}
+                          {sectorLabels[item.pipeline.sectorCode] ?? item.pipeline.sectorCode}
+                          {" · "}
+                          {item.stage.name}
+                        </span>
+                      </span>
+                      {badge ? (
+                        <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full ${badge.className}`}>
+                          {badge.label}
+                        </span>
+                      ) : (
+                        <span className="flex-shrink-0 text-[length:var(--fs-helper)] text-fg-muted">Sem prazo</span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Transferências a revisar */}
+          <div className="bg-surface border border-border rounded-2xl p-5">
+            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Transferências a revisar</h2>
+            {incomingHandoffsRaw.length === 0 ? (
+              <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhuma transferência aguardando o seu setor.</p>
+            ) : (
+              <div className="space-y-3">
+                {incomingHandoffsRaw.map((h) => (
+                  <div key={h.id} className="flex items-center justify-between gap-3">
+                    <p className="text-[length:var(--fs-body)] text-fg truncate min-w-0">
+                      {sectorLabels[h.fromSector] ?? h.fromSector} → {sectorLabels[h.toSector] ?? h.toSector}
+                      {" · "}
+                      <span className="font-medium">{entityNames[h.entityId] ?? "(removido)"}</span>
+                      <span className="text-fg-muted">{" · "}{h.requester.name} · {formatRelativeTime(h.createdAt)}</span>
+                    </p>
+                    <Link
+                      href={`/transferencias/${h.id}`}
+                      className="flex-shrink-0 text-[12.5px] font-medium text-brand border border-brand/30 rounded-full px-3 py-1 hover:bg-brand-subtle transition-colors"
+                    >
+                      Revisar
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Visão do workspace — só admin/coordenador */}
+          {showWorkspaceOverview && (
+            <div className="bg-surface border border-border rounded-2xl p-5">
+              <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Visão do workspace</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <p className="text-[11px] font-medium text-fg-muted uppercase tracking-wide mb-2.5">Cards por estágio</p>
+                  <HorizontalBarChart data={stageChartData} emptyLabel="Nenhum card em aberto nos seus kanbans." />
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium text-fg-muted uppercase tracking-wide mb-2.5">Movimentações (14 dias)</p>
+                  <TrendChart data={trendData} />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-4 min-w-0">
+          {/* Agenda */}
+          <div className="bg-surface border border-border rounded-2xl p-5">
+            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Agenda</h2>
+            {upcomingMeetings.length === 0 ? (
+              <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhuma reunião agendada.</p>
+            ) : (
+              <div className="space-y-2.5">
+                {upcomingMeetings.map((m) => (
+                  <a
+                    key={m.id}
+                    href={m.meetingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between gap-2 group"
+                  >
+                    <span className="text-[length:var(--fs-body)] text-fg group-hover:text-brand transition-colors truncate min-w-0">
+                      {m.title}
+                    </span>
+                    <span className="text-[length:var(--fs-helper)] text-fg-muted tnum flex-shrink-0">
+                      {formatMeetingWhen(m.startAt, todayStart, todayEnd)}
+                    </span>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Atividade */}
+          <div className="bg-surface border border-border rounded-2xl p-5">
+            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Atividade</h2>
+            {activityGroups.length === 0 ? (
+              <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhuma atividade registrada ainda.</p>
+            ) : (
+              <div className="space-y-3">
+                {activityGroups.map((g) => (
+                  <Link key={g.id} href={`/kanban/${g.pipelineId}/itens/${g.pipelineItemId}`} className="flex items-start gap-2.5 group">
+                    <span className="w-6 h-6 rounded-full bg-brand-subtle text-brand text-[10px] font-semibold flex items-center justify-center flex-shrink-0 mt-0.5">
+                      {g.userName.trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join("").toUpperCase()}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[length:var(--fs-body)] text-fg-secondary leading-snug">
+                        <span className="font-medium text-fg group-hover:text-brand transition-colors">{g.userName}</span>{" "}
+                        {g.count > 1 ? (
+                          `fez ${g.count} alterações em `
+                        ) : (
+                          `${g.label} `
+                        )}
+                        <span className="font-medium">{entityNames[g.entityId] ?? "(removido)"}</span>
+                      </p>
+                      <p className="text-[length:var(--fs-helper)] text-fg-muted">{formatRelativeTime(g.createdAt)}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Seus setores */}
+          {sectorWidgets.length > 0 && (
+            <div className="bg-surface border border-border rounded-2xl p-5">
+              <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">
+                {sectorWidgets.length > 1 ? "Seus setores" : "Seu setor"}
+              </h2>
+              <div className="flex flex-col gap-2">
+                {sectorWidgets.map((s) => (
+                  <Link
+                    key={s.code}
+                    href={`/setor/${s.code}`}
+                    className="group flex items-center justify-between gap-2 bg-surface-hover border border-border rounded-xl px-3.5 py-2.5 hover:border-border-strong transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.color }} />
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-medium text-fg truncate">{s.label}</p>
+                        <p className="text-[11px] text-fg-muted">
+                          {s.openCount} aberto{s.openCount !== 1 ? "s" : ""}
+                          {s.overdueCount > 0 && <span className="text-danger"> · {s.overdueCount} atrasado{s.overdueCount !== 1 ? "s" : ""}</span>}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight size={15} className="text-fg-muted flex-shrink-0 group-hover:text-fg transition-colors" />
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </PageContainer>
   );
 }
@@ -397,6 +568,7 @@ function StatCard({
   value,
   highlight,
   delay = 0,
+  sub,
 }: {
   href: string;
   icon: React.ReactNode;
@@ -404,6 +576,7 @@ function StatCard({
   value: number;
   highlight?: boolean;
   delay?: number;
+  sub?: string;
 }) {
   return (
     <Link
@@ -421,21 +594,12 @@ function StatCard({
         </span>
         <p className="text-[length:var(--fs-helper)] text-fg-muted truncate">{label}</p>
       </div>
-      <p className={`font-display text-[length:var(--fs-metric)] font-semibold tnum leading-none ${highlight ? "text-warning" : "text-fg"}`}>
-        {value}
-      </p>
-    </Link>
-  );
-}
-
-function QuickAction({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-2 bg-surface-hover border border-border rounded-xl px-3 py-2.5 text-[12.5px] font-medium text-fg-secondary hover:text-fg hover:border-border-strong transition-colors"
-    >
-      <span className="text-fg-muted flex-shrink-0">{icon}</span>
-      <span className="truncate">{label}</span>
+      <div className="flex items-baseline gap-2">
+        <p className={`font-display text-[length:var(--fs-metric)] font-semibold tnum leading-none ${highlight ? "text-warning" : "text-fg"}`}>
+          {value}
+        </p>
+        {sub && <span className="text-[11px] text-fg-muted truncate">{sub}</span>}
+      </div>
     </Link>
   );
 }
