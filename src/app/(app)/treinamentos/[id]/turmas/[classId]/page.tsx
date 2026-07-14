@@ -5,6 +5,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { adicionarParticipante, atualizarParticipante, removerParticipante } from "./actions";
 import { AddParticipanteForm } from "@/components/treinamentos/AddParticipanteForm";
 import { ParticipanteRow } from "@/components/treinamentos/ParticipanteRow";
+import { PageContainer } from "@/components/shared/PageContainer";
 
 export default async function TurmaPage({
   params,
@@ -35,7 +36,7 @@ export default async function TurmaPage({
   const addParticipanteAction = adicionarParticipante.bind(null, trainingId, classId);
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/treinamentos" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Treinamentos</Link>
         <span className="text-fg-muted">/</span>
@@ -76,6 +77,6 @@ export default async function TurmaPage({
 
         {canManage && <AddParticipanteForm action={addParticipanteAction} candidatos={candidatos} />}
       </div>
-    </div>
+    </PageContainer>
   );
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { excluirCandidato } from "../actions";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -56,7 +57,7 @@ export default async function CandidatoPage({
     .join(", ");
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/candidatos" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Candidatos
@@ -177,7 +178,7 @@ export default async function CandidatoPage({
           createdAtLabel: d.createdAt.toLocaleDateString("pt-BR"),
         }))}
       />
-    </div>
+    </PageContainer>
   );
 }
 

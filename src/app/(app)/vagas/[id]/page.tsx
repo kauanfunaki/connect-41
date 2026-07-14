@@ -8,6 +8,7 @@ import { getSectorMaps } from "@/lib/sectors";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
 import { AddCandidatoForm } from "@/components/vagas/AddCandidatoForm";
 import { CandidaturaRow } from "@/components/vagas/CandidaturaRow";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { excluirVaga, encerrarVaga } from "../actions";
 import { adicionarCandidato, atualizarStatusCandidatura, removerCandidatura } from "./actions";
 
@@ -62,7 +63,7 @@ export default async function VagaPage({
   const addCandidatoAction = adicionarCandidato.bind(null, id);
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/vagas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Vagas</Link>
         <span className="text-fg-muted">/</span>
@@ -168,7 +169,7 @@ export default async function VagaPage({
 
         {canAct && <AddCandidatoForm action={addCandidatoAction} candidatos={candidatos} />}
       </div>
-    </div>
+    </PageContainer>
   );
 }
 

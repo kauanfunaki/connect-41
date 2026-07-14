@@ -4,6 +4,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { EvaluationForm } from "@/components/avaliacoes/EvaluationForm";
 import { registrarAvaliacao } from "./actions";
+import { PageContainer } from "@/components/shared/PageContainer";
 
 export default async function AvaliarColaboradorPage({
   params,
@@ -29,7 +30,7 @@ export default async function AvaliarColaboradorPage({
   const action = registrarAvaliacao.bind(null, cycleId, personId);
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/avaliacoes" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Avaliações</Link>
         <span className="text-fg-muted">/</span>
@@ -60,6 +61,6 @@ export default async function AvaliarColaboradorPage({
           />
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

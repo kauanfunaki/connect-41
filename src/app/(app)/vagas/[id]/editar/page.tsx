@@ -6,6 +6,7 @@ import { scopedVagaWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
 import { VagaForm } from "@/components/vagas/VagaForm";
 import { atualizarVaga } from "../../actions";
+import { PageContainer } from "@/components/shared/PageContainer";
 
 export default async function EditarVagaPage({
   params,
@@ -41,7 +42,7 @@ export default async function EditarVagaPage({
   ]);
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/vagas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Vagas</Link>
         <span className="text-fg-muted">/</span>
@@ -73,6 +74,6 @@ export default async function EditarVagaPage({
           }}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }

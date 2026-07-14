@@ -5,6 +5,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
 import { excluirCiclo, encerrarCiclo } from "../actions";
 import { SelecionarColaboradorForm } from "@/components/avaliacoes/SelecionarColaboradorForm";
+import { PageContainer } from "@/components/shared/PageContainer";
 
 export default async function CicloPage({
   params,
@@ -38,7 +39,7 @@ export default async function CicloPage({
   const encerrarAction = encerrarCiclo.bind(null, id);
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/avaliacoes" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Avaliações</Link>
         <span className="text-fg-muted">/</span>
@@ -99,6 +100,6 @@ export default async function CicloPage({
           <SelecionarColaboradorForm cycleId={id} colaboradores={colaboradores} />
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

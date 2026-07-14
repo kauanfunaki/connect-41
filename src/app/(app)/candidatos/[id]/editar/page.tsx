@@ -4,6 +4,7 @@ import { getPrisma } from "@/lib/prisma";
 import { CandidatoForm } from "@/components/candidatos/CandidatoForm";
 import { atualizarCandidato } from "../../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { PageContainer } from "@/components/shared/PageContainer";
 
 function toDateInput(d: Date | null): string | undefined {
   return d ? d.toISOString().slice(0, 10) : undefined;
@@ -26,7 +27,7 @@ export default async function EditarCandidatoPage({
   if (!person) notFound();
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/candidatos" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Candidatos
@@ -68,6 +69,6 @@ export default async function EditarCandidatoPage({
           }}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }

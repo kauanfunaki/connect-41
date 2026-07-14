@@ -4,6 +4,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { TrainingForm } from "@/components/treinamentos/TrainingForm";
 import { atualizarTreinamento } from "../../actions";
+import { PageContainer } from "@/components/shared/PageContainer";
 
 export default async function EditarTreinamentoPage({
   params,
@@ -19,7 +20,7 @@ export default async function EditarTreinamentoPage({
   if (!training) notFound();
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/treinamentos" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Treinamentos</Link>
         <span className="text-fg-muted">/</span>
@@ -43,6 +44,6 @@ export default async function EditarTreinamentoPage({
           }}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }

@@ -1,4 +1,5 @@
 import { KanbanItemDetail } from "@/components/kanban/KanbanItemDetail";
+import { PageContainer } from "@/components/shared/PageContainer";
 
 export default async function KanbanItemPage({
   params,
@@ -8,8 +9,8 @@ export default async function KanbanItemPage({
   const { id, itemId } = await params;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <PageContainer>
       <KanbanItemDetail id={id} itemId={itemId} />
-    </div>
+    </PageContainer>
   );
 }

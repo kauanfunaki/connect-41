@@ -7,6 +7,7 @@ import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
 import { excluirTreinamento } from "../actions";
 import { criarTurma, excluirTurma } from "./actions";
 import { AddTurmaForm } from "@/components/treinamentos/AddTurmaForm";
+import { PageContainer } from "@/components/shared/PageContainer";
 
 export default async function TreinamentoPage({
   params,
@@ -33,7 +34,7 @@ export default async function TreinamentoPage({
   const criarTurmaAction = criarTurma.bind(null, id);
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <PageContainer variant="narrow">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/treinamentos" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Treinamentos</Link>
         <span className="text-fg-muted">/</span>
@@ -95,6 +96,6 @@ export default async function TreinamentoPage({
 
         {canManage && <AddTurmaForm action={criarTurmaAction} />}
       </div>
-    </div>
+    </PageContainer>
   );
 }
