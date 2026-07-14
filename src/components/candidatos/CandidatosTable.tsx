@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
+import { Checkbox } from "@/components/ui/Checkbox";
 
 type Row = {
   id: string;
@@ -59,12 +60,7 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
               <tr className="border-b border-border bg-surface-2">
                 {canCreate && (
                   <th className="w-10 px-4 py-2.5">
-                    <input
-                      type="checkbox"
-                      checked={allSelected}
-                      onChange={toggleAll}
-                      className="w-3.5 h-3.5 rounded border-border"
-                    />
+                    <Checkbox checked={allSelected} onChange={toggleAll} />
                   </th>
                 )}
                 <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Nome</th>
@@ -81,12 +77,7 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
                 <tr key={c.id} className="border-b border-border last:border-0 hover:bg-surface-2 transition-colors">
                   {canCreate && (
                     <td className="px-4 py-2.5">
-                      <input
-                        type="checkbox"
-                        checked={selected.has(c.id)}
-                        onChange={() => toggleOne(c.id)}
-                        className="w-3.5 h-3.5 rounded border-border"
-                      />
+                      <Checkbox checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} />
                     </td>
                   )}
                   <td className="px-4 py-2.5">

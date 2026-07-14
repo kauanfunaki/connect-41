@@ -4,6 +4,8 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { CandidaturaState } from "@/app/(app)/vagas/[id]/actions";
 import { ProcessoSeletivoStatus } from "@/generated/prisma/enums";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 
 const STATUS_LABEL: Record<ProcessoSeletivoStatus, string> = {
   EM_ANDAMENTO: "Em andamento",
@@ -62,26 +64,31 @@ export function CandidaturaRow({ candidatura, updateAction, removeAction, canMan
 
       {canManage && (
         <form action={formAction} className="flex items-end gap-2 flex-wrap mt-2">
-          <select
-            name="status"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as ProcessoSeletivoStatus)}
-            className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand"
-          >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-            ))}
-          </select>
+          <div className="w-44">
+            <Select
+              name="status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as ProcessoSeletivoStatus)}
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+              ))}
+            </Select>
+          </div>
           {status === "REPROVADO" && (
-            <input name="rejectionReason" placeholder="Motivo da reprovação" className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg flex-1 min-w-[160px]" />
+            <div className="flex-1 min-w-[160px]">
+              <Input name="rejectionReason" placeholder="Motivo da reprovação" />
+            </div>
           )}
           {status === "DESISTENTE" && (
-            <input name="withdrawalReason" placeholder="Motivo da desistência" className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg flex-1 min-w-[160px]" />
+            <div className="flex-1 min-w-[160px]">
+              <Input name="withdrawalReason" placeholder="Motivo da desistência" />
+            </div>
           )}
           <button
             type="submit"
             disabled={isPending}
-            className="h-8 px-3 rounded-md border border-border text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
+            className="h-9 px-3 rounded-md border border-border text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
           >
             {isPending ? "Salvando…" : "Atualizar"}
           </button>
@@ -90,7 +97,7 @@ export function CandidaturaRow({ candidatura, updateAction, removeAction, canMan
             onClick={() => {
               if (confirm(`Remover ${candidatura.personName} desta vaga?`)) removeAction();
             }}
-            className="h-8 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
+            className="h-9 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
           >
             Remover
           </button>

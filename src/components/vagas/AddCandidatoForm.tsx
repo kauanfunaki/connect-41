@@ -2,6 +2,9 @@
 
 import { useActionState } from "react";
 import type { CandidaturaState } from "@/app/(app)/vagas/[id]/actions";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 
 type PersonOption = { id: string; name: string };
 
@@ -15,18 +18,20 @@ export function AddCandidatoForm({ action, candidatos }: Props) {
 
   return (
     <form action={formAction} className="flex items-end gap-3 flex-wrap border-t border-border pt-4">
-      <div className="space-y-1.5">
-        <label htmlFor="personId" className="block text-[12px] font-medium text-fg">Candidato</label>
-        <select id="personId" name="personId" required className={INPUT}>
-          <option value="">Selecione</option>
-          {candidatos.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
+      <div className="w-56">
+        <CampoForm label="Candidato" htmlFor="personId" required>
+          <Select id="personId" name="personId" required>
+            <option value="">Selecione</option>
+            {candidatos.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </Select>
+        </CampoForm>
       </div>
-      <div className="space-y-1.5">
-        <label htmlFor="origin" className="block text-[12px] font-medium text-fg">Origem</label>
-        <input id="origin" name="origin" type="text" placeholder="ex: LinkedIn" className={INPUT} />
+      <div className="w-48">
+        <CampoForm label="Origem" htmlFor="origin">
+          <Input id="origin" name="origin" type="text" placeholder="ex: LinkedIn" />
+        </CampoForm>
       </div>
       <button
         type="submit"
@@ -41,6 +46,3 @@ export function AddCandidatoForm({ action, candidatos }: Props) {
     </form>
   );
 }
-
-const INPUT =
-  "h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";

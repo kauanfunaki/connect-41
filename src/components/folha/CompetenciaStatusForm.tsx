@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import type { PayrollCompetencyState } from "@/app/(app)/empresas/[id]/folha/actions";
 import { PayrollStatus } from "@/generated/prisma/enums";
+import { Select } from "@/components/ui/Select";
 
 const STATUS_LABEL: Record<PayrollStatus, string> = {
   PENDENTE:       "Pendente",
@@ -26,20 +27,21 @@ export function CompetenciaStatusForm({ action, currentStatus }: Props) {
   return (
     <div>
       <form action={formAction} className="flex items-center gap-2">
-        <select
-          name="status"
-          value={status}
-          onChange={(e) => setStatus(e.target.value as PayrollStatus)}
-          className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand"
-        >
-          {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-          ))}
-        </select>
+        <div className="w-44">
+          <Select
+            name="status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value as PayrollStatus)}
+          >
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+            ))}
+          </Select>
+        </div>
         <button
           type="submit"
           disabled={isPending}
-          className="h-8 px-3 rounded-md border border-border text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
+          className="h-9 px-3 rounded-md border border-border text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
         >
           {isPending ? "Salvando…" : "Atualizar Status"}
         </button>

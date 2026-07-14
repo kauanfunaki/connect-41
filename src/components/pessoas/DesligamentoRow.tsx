@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import type { TerminationState } from "@/app/(app)/pessoas/[id]/desligamento/actions";
 import { TerminationType, TerminationStatus } from "@/generated/prisma/enums";
+import { Select } from "@/components/ui/Select";
 
 const TYPE_LABEL: Record<TerminationType, string> = {
   VOLUNTARIO:       "Voluntário",
@@ -70,20 +71,21 @@ export function DesligamentoRow({ desligamento, updateAction, removeAction, canM
 
       {canManage && (
         <form action={formAction} className="flex items-end gap-2 flex-wrap mt-2">
-          <select
-            name="status"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as TerminationStatus)}
-            className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand"
-          >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-            ))}
-          </select>
+          <div className="w-56">
+            <Select
+              name="status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as TerminationStatus)}
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+              ))}
+            </Select>
+          </div>
           <button
             type="submit"
             disabled={isPending}
-            className="h-8 px-3 rounded-md border border-border text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
+            className="h-9 px-3 rounded-md border border-border text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
           >
             {isPending ? "Salvando…" : "Atualizar"}
           </button>
@@ -92,7 +94,7 @@ export function DesligamentoRow({ desligamento, updateAction, removeAction, canM
             onClick={() => {
               if (confirm("Remover este registro de desligamento?")) removeAction();
             }}
-            className="h-8 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
+            className="h-9 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
           >
             Remover
           </button>

@@ -3,6 +3,9 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { salvarAssinatura, type AssinaturaState } from "@/app/(app)/admin/assinaturas/actions";
 import { MANAGEMENT_MODE_LABEL, SUBSCRIPTION_STATUS_LABEL } from "@/lib/subscription-labels";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 
 type Plan = { id: string; name: string; managementMode: "MANAGED" | "SELF_SERVICE" };
 
@@ -41,78 +44,59 @@ export function AssinaturaRow({ tenant, subscription, plans, activeUsers }: Prop
         <input type="hidden" name="tenantId" value={tenant.id} />
         <p className="text-[13px] text-fg font-medium">{tenant.name}</p>
         <div className="grid grid-cols-2 gap-2">
-          <select
-            name="managementMode"
-            defaultValue={tenant.managementMode}
-            className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand"
-          >
+          <Select name="managementMode" defaultValue={tenant.managementMode}>
             <option value="MANAGED">Frente 1 — Gerenciado</option>
             <option value="SELF_SERVICE">Frente 2 — Autoatendimento</option>
-          </select>
-          <select
-            name="planId"
-            defaultValue={subscription?.planId ?? ""}
-            required
-            className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand"
-          >
+          </Select>
+          <Select name="planId" defaultValue={subscription?.planId ?? ""} required>
             <option value="" disabled>Selecione um plano</option>
             {plans.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
-          </select>
-          <select
-            name="status"
-            defaultValue={subscription?.status ?? "TRIAL"}
-            className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand"
-          >
+          </Select>
+          <Select name="status" defaultValue={subscription?.status ?? "TRIAL"}>
             {Object.entries(SUBSCRIPTION_STATUS_LABEL).map(([v, l]) => (
               <option key={v} value={v}>{l}</option>
             ))}
-          </select>
-          <input
+          </Select>
+          <Input
             name="seatLimit"
             type="number"
             min={1}
             defaultValue={subscription?.seatLimit ?? ""}
             placeholder="Limite de usuários (self-service)"
-            className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand"
           />
-          <input
+          <Input
             name="currentPeriodEnd"
             type="date"
             defaultValue={subscription?.currentPeriodEnd?.slice(0, 10) ?? ""}
-            className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand"
           />
-          <input
+          <Input
             name="setupFeeAmount"
-            placeholder="Valor de implantação (R$)"
+            placeholder="Valor de implantação"
             inputMode="decimal"
             defaultValue={subscription?.setupFeeAmount ?? ""}
-            className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand"
+            prefix="R$"
           />
         </div>
-        <label className="flex items-center gap-2 text-[12px] text-fg-muted">
-          <input type="checkbox" name="setupFeePaid" defaultChecked={!!subscription?.setupFeePaidAt} />
-          Implantação já paga
-        </label>
-        <input
+        <Checkbox name="setupFeePaid" defaultChecked={!!subscription?.setupFeePaidAt} label="Implantação já paga" />
+        <Input
           name="notes"
           defaultValue={subscription?.notes ?? ""}
           placeholder="Observações (contrato, negociação…)"
-          className="w-full h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand"
         />
         <div className="flex items-center gap-2">
           <button
             type="submit"
             disabled={isPending}
-            className="h-8 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+            className="h-9 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
           >
             {isPending ? "Salvando…" : "Salvar"}
           </button>
           <button
             type="button"
             onClick={() => setEditing(false)}
-            className="h-8 px-3 rounded-md border border-border text-[12px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors"
+            className="h-9 px-3 rounded-md border border-border text-[12px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors"
           >
             Cancelar
           </button>

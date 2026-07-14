@@ -9,6 +9,7 @@ import { CompanyFilterSelect } from "@/components/shared/CompanyFilterSelect";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { inativarPessoasEmMassa } from "./actions";
 
 const PER_PAGE = 20;
@@ -83,11 +84,10 @@ export default async function PessoasPage({
       <div className="flex items-center gap-3 mb-4">
         <form method="GET" action="/pessoas" className="flex-1 max-w-xs">
           {companyId && <input type="hidden" name="companyId" value={companyId} />}
-          <input
+          <Input
             name="search"
             defaultValue={search ?? ""}
             placeholder="Buscar por nome…"
-            className="w-full h-8 px-3 rounded-md border border-border bg-canvas text-[13px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors"
           />
         </form>
 

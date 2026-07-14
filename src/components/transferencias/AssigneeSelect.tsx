@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
 import type { HandoffActionResult } from "@/app/(app)/transferencias/actions";
 
@@ -29,11 +30,11 @@ export function AssigneeSelect({ action, options, currentAssigneeId }: Props) {
   }
 
   return (
-    <select
+    <Select
       defaultValue={currentAssigneeId ?? ""}
       onChange={handleChange}
       disabled={pending}
-      className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand disabled:opacity-60"
+      className="w-auto"
     >
       <option value="">Sem responsável</option>
       {options.map((o) => (
@@ -41,6 +42,6 @@ export function AssigneeSelect({ action, options, currentAssigneeId }: Props) {
           {o.name}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }

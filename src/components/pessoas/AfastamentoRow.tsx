@@ -3,6 +3,8 @@
 import { useActionState, useState } from "react";
 import type { AbsenceState } from "@/app/(app)/pessoas/[id]/afastamentos/actions";
 import { AbsenceType, AbsenceStatus } from "@/generated/prisma/enums";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 
 const TYPE_LABEL: Record<AbsenceType, string> = {
   FALTA:             "Falta",
@@ -77,21 +79,24 @@ export function AfastamentoRow({ afastamento, updateAction, removeAction, canMan
 
       {canManage && (
         <form action={formAction} className="flex items-end gap-2 flex-wrap mt-2">
-          <select
-            name="status"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as AbsenceStatus)}
-            className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand"
-          >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-            ))}
-          </select>
-          <input name="returnDate" type="date" title="Data de retorno" className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg" />
+          <div className="w-44">
+            <Select
+              name="status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as AbsenceStatus)}
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+              ))}
+            </Select>
+          </div>
+          <div className="w-40">
+            <Input name="returnDate" type="date" title="Data de retorno" />
+          </div>
           <button
             type="submit"
             disabled={isPending}
-            className="h-8 px-3 rounded-md border border-border text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
+            className="h-9 px-3 rounded-md border border-border text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
           >
             {isPending ? "Salvando…" : "Atualizar"}
           </button>
@@ -100,7 +105,7 @@ export function AfastamentoRow({ afastamento, updateAction, removeAction, canMan
             onClick={() => {
               if (confirm("Remover este registro?")) removeAction();
             }}
-            className="h-8 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
+            className="h-9 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
           >
             Remover
           </button>

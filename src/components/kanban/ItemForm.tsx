@@ -3,6 +3,10 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { Textarea } from "@/components/ui/Textarea";
+import { CampoForm as Field } from "@/components/ui/CampoForm";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 import type { PipelineEntityType } from "@/generated/prisma/enums";
 
@@ -34,25 +38,25 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
         </p>
       )}
 
-      <Field label={entityType === "COMPANY" ? "Empresa *" : "Pessoa *"} htmlFor="entityId">
-        <select id="entityId" name="entityId" required className={INPUT}>
+      <Field label={entityType === "COMPANY" ? "Empresa" : "Pessoa"} htmlFor="entityId" required>
+        <Select id="entityId" name="entityId" required>
           <option value="">Selecionar…</option>
           {entities.map((e) => (
             <option key={e.id} value={e.id}>{e.name}</option>
           ))}
-        </select>
+        </Select>
       </Field>
 
       <div className="grid grid-cols-2 gap-4">
         <Field label="Prazo" htmlFor="dueDate">
-          <input id="dueDate" name="dueDate" type="date" className={INPUT} />
+          <Input id="dueDate" name="dueDate" type="date" />
         </Field>
         <Field label="Prioridade" htmlFor="priority">
-          <select id="priority" name="priority" defaultValue="0" className={INPUT}>
+          <Select id="priority" name="priority" defaultValue="0">
             <option value="0">Normal</option>
             <option value="1">Alta</option>
             <option value="2">Urgente</option>
-          </select>
+          </Select>
         </Field>
       </div>
 
@@ -93,7 +97,7 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
           <div className="flex flex-wrap gap-3">
             {sectorUsers.map((u) => (
               <label key={u.id} className="cursor-pointer inline-flex items-center gap-1.5 text-[12px] text-fg">
-                <input type="checkbox" name="assignees" value={u.id} className="w-3.5 h-3.5 rounded border-border" />
+                <Checkbox name="assignees" value={u.id} />
                 {u.name}
               </label>
             ))}
@@ -119,17 +123,3 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
     </form>
   );
 }
-
-function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-[12px] font-medium text-fg">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-const INPUT =
-  "w-full h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";

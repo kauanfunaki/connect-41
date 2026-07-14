@@ -4,6 +4,9 @@ import { useActionState } from "react";
 import Link from "next/link";
 import type { TagState } from "@/app/(app)/admin/tags/actions";
 import { SECTOR_COLOR_PALETTE } from "@/lib/sector-constants";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 
 export type TagDefaultValues = {
   id?: string;
@@ -34,31 +37,30 @@ export function TagForm({ action, cancelHref, sectorOptions, defaultValues }: Pr
       )}
 
       {!isEdit ? (
-        <Field label="Setor *" htmlFor="sectorCode">
-          <select id="sectorCode" name="sectorCode" required className={INPUT}>
+        <CampoForm label="Setor" htmlFor="sectorCode" required>
+          <Select id="sectorCode" name="sectorCode" required>
             <option value="">Selecionar…</option>
             {sectorOptions.map((s) => (
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
-          </select>
-        </Field>
+          </Select>
+        </CampoForm>
       ) : (
         <p className="text-[12px] text-fg-muted">
           O setor não pode ser alterado após criado — exclua e recrie a tag se precisar mudar.
         </p>
       )}
 
-      <Field label="Nome da tag *" htmlFor="name">
-        <input
+      <CampoForm label="Nome da tag" htmlFor="name" required>
+        <Input
           id="name"
           name="name"
           type="text"
           required
           defaultValue={defaultValues?.name ?? ""}
           placeholder="Ex: Urgente, Aguardando documento…"
-          className={INPUT}
         />
-      </Field>
+      </CampoForm>
 
       <div className="space-y-2">
         <p className="text-[12px] font-medium text-fg">Cor</p>
@@ -105,17 +107,3 @@ export function TagForm({ action, cancelHref, sectorOptions, defaultValues }: Pr
     </form>
   );
 }
-
-function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-[12px] font-medium text-fg">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-const INPUT =
-  "w-full h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors disabled:opacity-60";

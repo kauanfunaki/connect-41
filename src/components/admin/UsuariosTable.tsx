@@ -6,6 +6,8 @@ import { UserRoundCog } from "lucide-react";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { Select } from "@/components/ui/Select";
 import { ToggleActiveButton } from "@/components/admin/ToggleActiveButton";
 
 type SectorTag = { code: string; label: string; color: string };
@@ -83,12 +85,7 @@ export function UsuariosTable({
             <thead>
               <tr className="border-b border-border bg-table-header-bg">
                 <th className="w-10 px-4 py-3">
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    onChange={toggleAll}
-                    className="c41-checkbox"
-                  />
+                  <Checkbox checked={allSelected} onChange={toggleAll} />
                 </th>
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">E-mail</th>
@@ -111,12 +108,7 @@ export function UsuariosTable({
                   >
                     <td className="px-4 py-3">
                       {!isSelf && (
-                        <input
-                          type="checkbox"
-                          checked={selected.has(u.id)}
-                          onChange={() => toggleOne(u.id)}
-                          className="c41-checkbox"
-                        />
+                        <Checkbox checked={selected.has(u.id)} onChange={() => toggleOne(u.id)} />
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -184,15 +176,16 @@ export function UsuariosTable({
         </button>
         {sectorOptions.length > 0 && (
           <>
-            <select
-              value={bulkSector}
-              onChange={(e) => setBulkSector(e.target.value)}
-              className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none"
-            >
-              {sectorOptions.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+            <div className="w-44">
+              <Select
+                value={bulkSector}
+                onChange={(e) => setBulkSector(e.target.value)}
+              >
+                {sectorOptions.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </Select>
+            </div>
             <button
               type="button"
               onClick={applySector}

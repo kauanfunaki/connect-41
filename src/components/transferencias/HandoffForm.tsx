@@ -4,6 +4,9 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { HandoffState } from "@/app/(app)/transferencias/actions";
 import type { EntityType } from "@/generated/prisma/enums";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Select } from "@/components/ui/Select";
+import { Textarea } from "@/components/ui/Textarea";
 
 type EntityOption = { id: string; name: string };
 
@@ -47,32 +50,35 @@ export function HandoffForm({
         </>
       ) : (
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Tipo *" htmlFor="entityType">
-            <select
+          <CampoForm label="Tipo" htmlFor="entityType" required>
+            <Select
               id="entityType"
               name="entityType"
               required
               value={entityType}
               onChange={(e) => setEntityType(e.target.value as EntityType)}
-              className={INPUT}
             >
               <option value="COMPANY">Empresa</option>
               <option value="PERSON">Pessoa</option>
-            </select>
-          </Field>
-          <Field label={entityType === "COMPANY" ? "Empresa *" : "Pessoa *"} htmlFor="entityId">
-            <select id="entityId" name="entityId" required defaultValue="" className={INPUT}>
+            </Select>
+          </CampoForm>
+          <CampoForm
+            label={entityType === "COMPANY" ? "Empresa" : "Pessoa"}
+            htmlFor="entityId"
+            required
+            helper={
+              entityOptions.length === 0
+                ? `Nenhuma ${entityType === "COMPANY" ? "empresa" : "pessoa"} disponível no seu escopo.`
+                : undefined
+            }
+          >
+            <Select id="entityId" name="entityId" required defaultValue="">
               <option value="" disabled>Selecionar…</option>
               {entityOptions.map((e) => (
                 <option key={e.id} value={e.id}>{e.name}</option>
               ))}
-            </select>
-            {entityOptions.length === 0 && (
-              <p className="text-[11px] text-fg-muted mt-1">
-                Nenhuma {entityType === "COMPANY" ? "empresa" : "pessoa"} disponível no seu escopo.
-              </p>
-            )}
-          </Field>
+            </Select>
+          </CampoForm>
         </div>
       )}
 
@@ -83,43 +89,41 @@ export function HandoffForm({
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Setor de origem *" htmlFor="fromSector">
-          <select id="fromSector" name="fromSector" required defaultValue="" className={INPUT}>
+        <CampoForm label="Setor de origem" htmlFor="fromSector" required>
+          <Select id="fromSector" name="fromSector" required defaultValue="">
             <option value="" disabled>Selecionar…</option>
             {fromSectorOptions.map((s) => (
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
-          </select>
-        </Field>
-        <Field label="Setor de destino *" htmlFor="toSector">
-          <select id="toSector" name="toSector" required defaultValue="" className={INPUT}>
+          </Select>
+        </CampoForm>
+        <CampoForm label="Setor de destino" htmlFor="toSector" required>
+          <Select id="toSector" name="toSector" required defaultValue="">
             <option value="" disabled>Selecionar…</option>
             {toSectorOptions.map((s) => (
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
-          </select>
-        </Field>
+          </Select>
+        </CampoForm>
       </div>
 
-      <Field label="Mensagem" htmlFor="message">
-        <textarea
+      <CampoForm label="Mensagem" htmlFor="message">
+        <Textarea
           id="message"
           name="message"
           rows={2}
           placeholder="Resumo curto para quem vai receber a transferência…"
-          className={`${INPUT} h-auto py-2 resize-none`}
         />
-      </Field>
+      </CampoForm>
 
-      <Field label="Descrição" htmlFor="description">
-        <textarea
+      <CampoForm label="Descrição" htmlFor="description">
+        <Textarea
           id="description"
           name="description"
           rows={4}
           placeholder="Detalhe o que motivou esta transferência, contexto adicional, pendências etc…"
-          className={`${INPUT} h-auto py-2 resize-none`}
         />
-      </Field>
+      </CampoForm>
 
       <div className="flex items-center gap-3 pt-2">
         <button
@@ -139,17 +143,3 @@ export function HandoffForm({
     </form>
   );
 }
-
-function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-[12px] font-medium text-fg">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-const INPUT =
-  "w-full h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";

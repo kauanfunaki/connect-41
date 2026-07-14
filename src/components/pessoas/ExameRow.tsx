@@ -3,6 +3,8 @@
 import { useActionState, useState } from "react";
 import type { ExameState } from "@/app/(app)/pessoas/[id]/exames/actions";
 import { ExameAdmissionalStatus } from "@/generated/prisma/enums";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 
 const STATUS_LABEL: Record<ExameAdmissionalStatus, string> = {
   SOLICITADO:             "Solicitado",
@@ -66,21 +68,24 @@ export function ExameRow({ exame, updateAction, removeAction, canManage }: Props
 
       {canManage && (
         <form action={formAction} className="flex items-end gap-2 flex-wrap mt-2">
-          <select
-            name="status"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as ExameAdmissionalStatus)}
-            className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand"
-          >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-            ))}
-          </select>
-          <input name="performedAt" type="date" title="Data de realização" className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg" />
+          <div className="w-52">
+            <Select
+              name="status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as ExameAdmissionalStatus)}
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+              ))}
+            </Select>
+          </div>
+          <div className="w-40">
+            <Input name="performedAt" type="date" title="Data de realização" />
+          </div>
           <button
             type="submit"
             disabled={isPending}
-            className="h-8 px-3 rounded-md border border-border text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
+            className="h-9 px-3 rounded-md border border-border text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
           >
             {isPending ? "Salvando…" : "Atualizar"}
           </button>
@@ -89,7 +94,7 @@ export function ExameRow({ exame, updateAction, removeAction, canManage }: Props
             onClick={() => {
               if (confirm("Remover este exame?")) removeAction();
             }}
-            className="h-8 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
+            className="h-9 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
           >
             Remover
           </button>

@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 import type { PayrollCompetencyState } from "@/app/(app)/empresas/[id]/folha/actions";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Input } from "@/components/ui/Input";
 
 type Props = {
   action: (prev: PayrollCompetencyState, form: FormData) => Promise<PayrollCompetencyState>;
@@ -15,13 +17,15 @@ export function AbrirCompetenciaForm({ action, companyId }: Props) {
   return (
     <form action={formAction} className="flex items-end gap-3 flex-wrap mb-6">
       <input type="hidden" name="companyId" value={companyId} />
-      <div className="space-y-1.5">
-        <label htmlFor="month" className="block text-[12px] font-medium text-fg">Mês</label>
-        <input id="month" name="month" type="number" min={1} max={12} defaultValue={now.getMonth() + 1} className={`${INPUT} w-20`} />
+      <div className="w-24">
+        <CampoForm label="Mês" htmlFor="month">
+          <Input id="month" name="month" type="number" min={1} max={12} defaultValue={now.getMonth() + 1} />
+        </CampoForm>
       </div>
-      <div className="space-y-1.5">
-        <label htmlFor="year" className="block text-[12px] font-medium text-fg">Ano</label>
-        <input id="year" name="year" type="number" min={2000} defaultValue={now.getFullYear()} className={`${INPUT} w-24`} />
+      <div className="w-28">
+        <CampoForm label="Ano" htmlFor="year">
+          <Input id="year" name="year" type="number" min={2000} defaultValue={now.getFullYear()} />
+        </CampoForm>
       </div>
       <button
         type="submit"
@@ -34,6 +38,3 @@ export function AbrirCompetenciaForm({ action, companyId }: Props) {
     </form>
   );
 }
-
-const INPUT =
-  "h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";

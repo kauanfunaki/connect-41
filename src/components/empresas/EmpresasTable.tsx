@@ -6,6 +6,8 @@ import { Building2 } from "lucide-react";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { Select } from "@/components/ui/Select";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import type { CompanyStatus } from "@/generated/prisma/enums";
 
@@ -97,12 +99,7 @@ export function EmpresasTable({
               <tr className="border-b border-border bg-table-header-bg">
                 {canCreate && (
                   <th className="w-10 px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={allSelected}
-                      onChange={toggleAll}
-                      className="c41-checkbox"
-                    />
+                    <Checkbox checked={allSelected} onChange={toggleAll} />
                   </th>
                 )}
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
@@ -124,12 +121,7 @@ export function EmpresasTable({
                 >
                   {canCreate && (
                     <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selected.has(c.id)}
-                        onChange={() => toggleOne(c.id)}
-                        className="c41-checkbox"
-                      />
+                      <Checkbox checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} />
                     </td>
                   )}
                   <td className="px-4 py-3">
@@ -178,15 +170,16 @@ export function EmpresasTable({
       </div>
 
       <BulkActionBar count={selected.size} onClear={() => setSelected(new Set())}>
-        <select
-          value={bulkStatus}
-          onChange={(e) => setBulkStatus(e.target.value as CompanyStatus)}
-          className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none"
-        >
-          {STATUS_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
+        <div className="w-40">
+          <Select
+            value={bulkStatus}
+            onChange={(e) => setBulkStatus(e.target.value as CompanyStatus)}
+          >
+            {STATUS_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </Select>
+        </div>
         <button
           type="button"
           onClick={applyStatus}

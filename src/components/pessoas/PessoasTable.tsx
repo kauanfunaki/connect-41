@@ -6,6 +6,7 @@ import { Users } from "lucide-react";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 import { AvatarImage } from "@/components/shared/AvatarImage";
@@ -82,12 +83,7 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
               <tr className="border-b border-border bg-table-header-bg">
                 {canCreate && (
                   <th className="w-10 px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={allSelected}
-                      onChange={toggleAll}
-                      className="c41-checkbox"
-                    />
+                    <Checkbox checked={allSelected} onChange={toggleAll} />
                   </th>
                 )}
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
@@ -109,12 +105,7 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
                 >
                   {canCreate && (
                     <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selected.has(p.id)}
-                        onChange={() => toggleOne(p.id)}
-                        className="c41-checkbox"
-                      />
+                      <Checkbox checked={selected.has(p.id)} onChange={() => toggleOne(p.id)} />
                     </td>
                   )}
                   <td className="px-4 py-3">

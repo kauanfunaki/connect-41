@@ -3,6 +3,9 @@
 import { useActionState } from "react";
 import type { AbsenceState } from "@/app/(app)/pessoas/[id]/afastamentos/actions";
 import { AbsenceType } from "@/generated/prisma/enums";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 
 const TYPE_LABEL: Record<AbsenceType, string> = {
   FALTA:             "Falta",
@@ -24,55 +27,49 @@ export function AddAfastamentoForm({ action, canEditMedical }: Props) {
 
   return (
     <form action={formAction} className="border-t border-border pt-4 space-y-3">
-      <div className="flex items-end gap-3 flex-wrap">
-        <div className="space-y-1.5">
-          <label htmlFor="type" className="block text-[12px] font-medium text-fg">Tipo</label>
-          <select id="type" name="type" required className={INPUT}>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <CampoForm label="Tipo" htmlFor="type" required>
+          <Select id="type" name="type" required>
             {TYPE_OPTIONS.map((t) => (
               <option key={t} value={t}>{TYPE_LABEL[t]}</option>
             ))}
-          </select>
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="startDate" className="block text-[12px] font-medium text-fg">Data de Início</label>
-          <input id="startDate" name="startDate" type="date" required className={INPUT} />
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="returnDate" className="block text-[12px] font-medium text-fg">Data de Retorno Prevista</label>
-          <input id="returnDate" name="returnDate" type="date" className={INPUT} />
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="lostDays" className="block text-[12px] font-medium text-fg">Dias Perdidos</label>
-          <input id="lostDays" name="lostDays" type="number" min={0} className={`${INPUT} w-24`} />
-        </div>
+          </Select>
+        </CampoForm>
+        <CampoForm label="Data de Início" htmlFor="startDate" required>
+          <Input id="startDate" name="startDate" type="date" required />
+        </CampoForm>
+        <CampoForm label="Data de Retorno Prevista" htmlFor="returnDate">
+          <Input id="returnDate" name="returnDate" type="date" />
+        </CampoForm>
+        <CampoForm label="Dias Perdidos" htmlFor="lostDays">
+          <Input id="lostDays" name="lostDays" type="number" min={0} />
+        </CampoForm>
       </div>
 
       {canEditMedical && (
-        <div className="flex items-end gap-3 flex-wrap">
-          <div className="space-y-1.5">
-            <label htmlFor="reason" className="block text-[12px] font-medium text-fg">Motivo</label>
-            <input id="reason" name="reason" type="text" className={INPUT} />
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="location" className="block text-[12px] font-medium text-fg">Local de Atendimento</label>
-            <input id="location" name="location" type="text" className={INPUT} />
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="professional" className="block text-[12px] font-medium text-fg">Profissional/Conselho</label>
-            <input id="professional" name="professional" type="text" className={INPUT} />
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <CampoForm label="Motivo" htmlFor="reason">
+            <Input id="reason" name="reason" type="text" />
+          </CampoForm>
+          <CampoForm label="Local de Atendimento" htmlFor="location">
+            <Input id="location" name="location" type="text" />
+          </CampoForm>
+          <CampoForm label="Profissional/Conselho" htmlFor="professional">
+            <Input id="professional" name="professional" type="text" />
+          </CampoForm>
         </div>
       )}
 
       <div className="flex items-end gap-3">
-        <div className="space-y-1.5 flex-1">
-          <label htmlFor="notes" className="block text-[12px] font-medium text-fg">Observações</label>
-          <input id="notes" name="notes" type="text" className={INPUT + " w-full"} />
+        <div className="flex-1">
+          <CampoForm label="Observações" htmlFor="notes">
+            <Input id="notes" name="notes" type="text" />
+          </CampoForm>
         </div>
         <button
           type="submit"
           disabled={isPending}
-          className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+          className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors flex-shrink-0"
         >
           {isPending ? "Registrando…" : "Registrar Ausência"}
         </button>
@@ -81,6 +78,3 @@ export function AddAfastamentoForm({ action, canEditMedical }: Props) {
     </form>
   );
 }
-
-const INPUT =
-  "h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";

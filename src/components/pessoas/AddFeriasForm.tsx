@@ -2,6 +2,9 @@
 
 import { useActionState } from "react";
 import type { VacationState } from "@/app/(app)/pessoas/[id]/ferias/actions";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { Input } from "@/components/ui/Input";
 
 type Props = {
   action: (prev: VacationState, form: FormData) => Promise<VacationState>;
@@ -12,45 +15,45 @@ export function AddFeriasForm({ action }: Props) {
 
   return (
     <form action={formAction} className="border-t border-border pt-4 space-y-3">
-      <div className="flex items-end gap-3 flex-wrap">
-        <div className="space-y-1.5">
-          <label htmlFor="acquisitivePeriodStart" className="block text-[12px] font-medium text-fg">Período Aquisitivo — Início</label>
-          <input id="acquisitivePeriodStart" name="acquisitivePeriodStart" type="date" required className={INPUT} />
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="acquisitivePeriodEnd" className="block text-[12px] font-medium text-fg">Período Aquisitivo — Fim</label>
-          <input id="acquisitivePeriodEnd" name="acquisitivePeriodEnd" type="date" required className={INPUT} />
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="days" className="block text-[12px] font-medium text-fg">Dias</label>
-          <input id="days" name="days" type="number" min={1} max={30} defaultValue={30} className={`${INPUT} w-20`} />
-        </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <CampoForm label="Período Aquisitivo — Início" htmlFor="acquisitivePeriodStart" required>
+          <Input id="acquisitivePeriodStart" name="acquisitivePeriodStart" type="date" required />
+        </CampoForm>
+        <CampoForm label="Período Aquisitivo — Fim" htmlFor="acquisitivePeriodEnd" required>
+          <Input id="acquisitivePeriodEnd" name="acquisitivePeriodEnd" type="date" required />
+        </CampoForm>
+        <CampoForm label="Dias" htmlFor="days">
+          <Input id="days" name="days" type="number" min={1} max={30} defaultValue={30} />
+        </CampoForm>
       </div>
       <div className="flex items-end gap-3 flex-wrap">
-        <div className="space-y-1.5">
-          <label htmlFor="concessivePeriodStart" className="block text-[12px] font-medium text-fg">Período Concessivo — Início</label>
-          <input id="concessivePeriodStart" name="concessivePeriodStart" type="date" className={INPUT} />
+        <div className="w-52">
+          <CampoForm label="Período Concessivo — Início" htmlFor="concessivePeriodStart">
+            <Input id="concessivePeriodStart" name="concessivePeriodStart" type="date" />
+          </CampoForm>
         </div>
-        <div className="space-y-1.5">
-          <label htmlFor="concessivePeriodEnd" className="block text-[12px] font-medium text-fg">Período Concessivo — Fim</label>
-          <input id="concessivePeriodEnd" name="concessivePeriodEnd" type="date" className={INPUT} />
+        <div className="w-52">
+          <CampoForm label="Período Concessivo — Fim" htmlFor="concessivePeriodEnd">
+            <Input id="concessivePeriodEnd" name="concessivePeriodEnd" type="date" />
+          </CampoForm>
         </div>
-        <label className="flex items-center gap-1.5 text-[12px] text-fg-secondary pb-2">
-          <input type="checkbox" name="cashAllowance" value="true" /> Abono pecuniário
-        </label>
-        <label className="flex items-center gap-1.5 text-[12px] text-fg-secondary pb-2">
-          <input type="checkbox" name="installment" value="true" /> Parcelamento
-        </label>
+        <div className="pb-2">
+          <Checkbox id="cashAllowance" name="cashAllowance" value="true" label="Abono pecuniário" />
+        </div>
+        <div className="pb-2">
+          <Checkbox id="installment" name="installment" value="true" label="Parcelamento" />
+        </div>
       </div>
       <div className="flex items-end gap-3">
-        <div className="space-y-1.5 flex-1">
-          <label htmlFor="notes" className="block text-[12px] font-medium text-fg">Observações</label>
-          <input id="notes" name="notes" type="text" className={INPUT + " w-full"} />
+        <div className="flex-1">
+          <CampoForm label="Observações" htmlFor="notes">
+            <Input id="notes" name="notes" type="text" />
+          </CampoForm>
         </div>
         <button
           type="submit"
           disabled={isPending}
-          className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+          className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors flex-shrink-0"
         >
           {isPending ? "Programando…" : "Programar Férias"}
         </button>
@@ -59,6 +62,3 @@ export function AddFeriasForm({ action }: Props) {
     </form>
   );
 }
-
-const INPUT =
-  "h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";

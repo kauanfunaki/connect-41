@@ -5,6 +5,9 @@ import Link from "next/link";
 import { Video, ExternalLink, Trash2, Copy, Check } from "lucide-react";
 import type { MeetingState } from "@/app/(app)/kanban/meetings-actions";
 import type { MeetingProvider } from "@/generated/prisma/enums";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 
 type MeetingRow = {
   id: string;
@@ -85,34 +88,19 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
             </p>
           ) : (
             <>
-              <input
+              <Input
                 name="title"
                 required
                 placeholder="Título da reunião"
-                className="w-full h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand"
               />
               <div className="grid grid-cols-2 gap-2">
-                <input
-                  name="startAt"
-                  type="datetime-local"
-                  required
-                  className="h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand"
-                />
-                <input
-                  name="endAt"
-                  type="datetime-local"
-                  required
-                  className="h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand"
-                />
+                <Input name="startAt" type="datetime-local" required />
+                <Input name="endAt" type="datetime-local" required />
               </div>
-              <select
-                name="provider"
-                required
-                className="h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand"
-              >
+              <Select name="provider" required>
                 {hasGoogle && <option value="GOOGLE">Google Meet</option>}
                 {hasMicrosoft && <option value="MICROSOFT">Microsoft Teams</option>}
-              </select>
+              </Select>
 
               {allUsers.length > 0 && (
                 <div>
@@ -120,7 +108,7 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
                   <div className="flex flex-wrap gap-x-3 gap-y-1.5 max-h-24 overflow-y-auto">
                     {allUsers.map((u) => (
                       <label key={u.id} className="flex items-center gap-1.5 text-[12px] text-fg-secondary">
-                        <input type="checkbox" name="attendeeIds" value={u.id} className="accent-[var(--c41-brand)]" />
+                        <Checkbox name="attendeeIds" value={u.id} />
                         {u.name}
                       </label>
                     ))}

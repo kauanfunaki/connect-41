@@ -2,6 +2,9 @@
 
 import { useActionState } from "react";
 import type { BenefitAssignmentState } from "@/app/(app)/pessoas/[id]/beneficios/actions";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 
 type BenefitOption = { id: string; name: string };
 
@@ -15,38 +18,35 @@ export function AddBeneficioForm({ action, beneficios }: Props) {
 
   return (
     <form action={formAction} className="border-t border-border pt-4 space-y-3">
-      <div className="flex items-end gap-3 flex-wrap">
-        <div className="space-y-1.5">
-          <label htmlFor="benefitId" className="block text-[12px] font-medium text-fg">Benefício</label>
-          <select id="benefitId" name="benefitId" required className={INPUT}>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <CampoForm label="Benefício" htmlFor="benefitId" required>
+          <Select id="benefitId" name="benefitId" required>
             <option value="">Selecione</option>
             {beneficios.map((b) => (
               <option key={b.id} value={b.id}>{b.name}</option>
             ))}
-          </select>
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="startDate" className="block text-[12px] font-medium text-fg">Início da Vigência</label>
-          <input id="startDate" name="startDate" type="date" required className={INPUT} />
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="companyValue" className="block text-[12px] font-medium text-fg">Valor Empresa</label>
-          <input id="companyValue" name="companyValue" type="number" step="0.01" className={`${INPUT} w-28`} />
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="discountValue" className="block text-[12px] font-medium text-fg">Valor Desconto</label>
-          <input id="discountValue" name="discountValue" type="number" step="0.01" className={`${INPUT} w-28`} />
-        </div>
+          </Select>
+        </CampoForm>
+        <CampoForm label="Início da Vigência" htmlFor="startDate" required>
+          <Input id="startDate" name="startDate" type="date" required />
+        </CampoForm>
+        <CampoForm label="Valor Empresa" htmlFor="companyValue">
+          <Input id="companyValue" name="companyValue" type="number" step="0.01" prefix="R$" placeholder="0,00" />
+        </CampoForm>
+        <CampoForm label="Valor Desconto" htmlFor="discountValue">
+          <Input id="discountValue" name="discountValue" type="number" step="0.01" prefix="R$" placeholder="0,00" />
+        </CampoForm>
       </div>
       <div className="flex items-end gap-3">
-        <div className="space-y-1.5 flex-1">
-          <label htmlFor="notes" className="block text-[12px] font-medium text-fg">Observações</label>
-          <input id="notes" name="notes" type="text" className={INPUT + " w-full"} />
+        <div className="flex-1">
+          <CampoForm label="Observações" htmlFor="notes">
+            <Input id="notes" name="notes" type="text" />
+          </CampoForm>
         </div>
         <button
           type="submit"
           disabled={isPending}
-          className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+          className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors flex-shrink-0"
         >
           {isPending ? "Vinculando…" : "Vincular Benefício"}
         </button>
@@ -55,6 +55,3 @@ export function AddBeneficioForm({ action, beneficios }: Props) {
     </form>
   );
 }
-
-const INPUT =
-  "h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";

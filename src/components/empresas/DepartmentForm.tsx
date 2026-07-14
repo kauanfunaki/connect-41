@@ -3,6 +3,8 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import type { DepartmentState } from "@/app/(app)/empresas/[id]/departamentos/actions";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Input } from "@/components/ui/Input";
 
 type Props = {
   action: (prev: DepartmentState, form: FormData) => Promise<DepartmentState>;
@@ -25,17 +27,15 @@ export function DepartmentForm({ action, companyId, cancelHref, defaultValues }:
         </p>
       )}
 
-      <div className="space-y-1.5">
-        <label htmlFor="name" className="block text-[12px] font-medium text-fg">Nome do Departamento *</label>
-        <input
+      <CampoForm label="Nome do Departamento" htmlFor="name" required>
+        <Input
           id="name"
           name="name"
           type="text"
           required
           defaultValue={defaultValues?.name ?? ""}
-          className="w-full h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors"
         />
-      </div>
+      </CampoForm>
 
       <div className="flex items-center gap-3 pt-2">
         <button

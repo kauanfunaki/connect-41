@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import type { OvertimeState } from "@/app/(app)/pessoas/[id]/horas-extras/actions";
 import { DayType, OvertimeStatus } from "@/generated/prisma/enums";
+import { Select } from "@/components/ui/Select";
 
 const DAY_TYPE_LABEL: Record<DayType, string> = {
   UTIL: "Dia útil", FOLGA: "Folga", DOMINGO: "Domingo", FERIADO: "Feriado", NOTURNO: "Noturno",
@@ -63,20 +64,21 @@ export function HoraExtraRow({ entry, updateAction, removeAction, canManage }: P
 
       {canManage && (
         <form action={formAction} className="flex items-end gap-2 flex-wrap mt-2">
-          <select
-            name="status"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as OvertimeStatus)}
-            className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand"
-          >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-            ))}
-          </select>
+          <div className="w-52">
+            <Select
+              name="status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as OvertimeStatus)}
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+              ))}
+            </Select>
+          </div>
           <button
             type="submit"
             disabled={isPending}
-            className="h-8 px-3 rounded-md border border-border text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
+            className="h-9 px-3 rounded-md border border-border text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
           >
             {isPending ? "Salvando…" : "Atualizar"}
           </button>
@@ -85,7 +87,7 @@ export function HoraExtraRow({ entry, updateAction, removeAction, canManage }: P
             onClick={() => {
               if (confirm("Remover este lançamento?")) removeAction();
             }}
-            className="h-8 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
+            className="h-9 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
           >
             Remover
           </button>

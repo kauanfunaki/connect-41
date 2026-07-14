@@ -3,6 +3,9 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import type { FilialState } from "@/app/(app)/admin/filiais/actions";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { Input } from "@/components/ui/Input";
 
 export type FilialDefaultValues = {
   id?: string;
@@ -31,35 +34,32 @@ export function FilialForm({ action, cancelHref, defaultValues }: Props) {
         </p>
       )}
 
-      <Field label="Nome da filial *" htmlFor="name">
-        <input
+      <CampoForm label="Nome da filial" htmlFor="name" required>
+        <Input
           id="name"
           name="name"
           type="text"
           required
           defaultValue={defaultValues?.name ?? ""}
           placeholder="Ex: Matriz, Filial Curitiba…"
-          className={INPUT}
         />
-      </Field>
+      </CampoForm>
 
       {isEdit && (
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Ordem" htmlFor="order">
-            <input id="order" name="order" type="number" defaultValue={defaultValues?.order ?? 0} className={INPUT} />
-          </Field>
-          <Field label="Status" htmlFor="active">
-            <label className="flex items-center gap-2 h-9">
-              <input
+          <CampoForm label="Ordem" htmlFor="order">
+            <Input id="order" name="order" type="number" defaultValue={defaultValues?.order ?? 0} />
+          </CampoForm>
+          <CampoForm label="Status" htmlFor="active">
+            <div className="h-9 flex items-center">
+              <Checkbox
                 id="active"
                 name="active"
-                type="checkbox"
                 defaultChecked={defaultValues?.active ?? true}
-                className="w-4 h-4 rounded border-border"
+                label="Filial ativa"
               />
-              <span className="text-[13px] text-fg">Filial ativa</span>
-            </label>
-          </Field>
+            </div>
+          </CampoForm>
         </div>
       )}
 
@@ -81,17 +81,3 @@ export function FilialForm({ action, cancelHref, defaultValues }: Props) {
     </form>
   );
 }
-
-function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-[12px] font-medium text-fg">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-const INPUT =
-  "w-full h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors disabled:opacity-60";

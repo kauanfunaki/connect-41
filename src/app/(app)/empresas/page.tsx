@@ -3,6 +3,7 @@ import { Building2 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { getPrisma } from "@/lib/prisma";
 import { CompanyStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -113,11 +114,10 @@ export default async function EmpresasPage({
           {statusFilter && (
             <input type="hidden" name="status" value={statusFilter} />
           )}
-          <input
+          <Input
             name="search"
             defaultValue={search ?? ""}
             placeholder="Buscar por nome…"
-            className="w-full h-8 px-3 rounded-md border border-border bg-canvas text-[13px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors"
           />
         </form>
 

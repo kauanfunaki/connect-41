@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
 import type { ServiceState } from "@/app/(app)/empresas/actions";
 import type { ServiceStatus } from "@/generated/prisma/enums";
@@ -97,17 +98,18 @@ export function ServicesSection({
                 </span>
 
                 {canManageThis ? (
-                  <select
-                    defaultValue={s.responsibleUserId ?? ""}
-                    disabled={pending}
-                    onChange={(e) => handleAssign(s.id, e.target.value || null)}
-                    className="h-7 px-2 rounded-md border border-border bg-canvas text-[11.5px] text-fg outline-none focus:border-brand disabled:opacity-60"
-                  >
-                    <option value="">Sem responsável</option>
-                    {options.map((u) => (
-                      <option key={u.id} value={u.id}>{u.name}</option>
-                    ))}
-                  </select>
+                  <div className="w-52">
+                    <Select
+                      defaultValue={s.responsibleUserId ?? ""}
+                      disabled={pending}
+                      onChange={(e) => handleAssign(s.id, e.target.value || null)}
+                    >
+                      <option value="">Sem responsável</option>
+                      {options.map((u) => (
+                        <option key={u.id} value={u.id}>{u.name}</option>
+                      ))}
+                    </Select>
+                  </div>
                 ) : (
                   <span className="text-[11.5px] text-fg-muted">
                     {options.find((u) => u.id === s.responsibleUserId)?.name ?? "Sem responsável"}
@@ -121,17 +123,18 @@ export function ServicesSection({
 
       {availableToAdd.length > 0 && (
         <div className="flex items-center gap-2 pt-3 border-t border-border">
-          <select
-            value={addingSector}
-            onChange={(e) => setAddingSector(e.target.value)}
-            disabled={pending}
-            className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand disabled:opacity-60 flex-1 max-w-[220px]"
-          >
-            <option value="">Adicionar setor…</option>
-            {availableToAdd.map((s) => (
-              <option key={s.code} value={s.code}>{s.label}</option>
-            ))}
-          </select>
+          <div className="flex-1 max-w-[220px]">
+            <Select
+              value={addingSector}
+              onChange={(e) => setAddingSector(e.target.value)}
+              disabled={pending}
+            >
+              <option value="">Adicionar setor…</option>
+              {availableToAdd.map((s) => (
+                <option key={s.code} value={s.code}>{s.label}</option>
+              ))}
+            </Select>
+          </div>
           <button
             type="button"
             onClick={handleAdd}

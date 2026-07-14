@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { RefreshCw } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
+import { Select } from "@/components/ui/Select";
 import type { ImportFeriadosResult } from "@/app/(app)/admin/feriados/actions";
 
 type Props = {
@@ -36,16 +37,17 @@ export function ImportFeriadosButton({ action }: Props) {
 
   return (
     <div className="flex items-center gap-2 mb-2">
-      <select
-        value={year}
-        onChange={(e) => setYear(Number(e.target.value))}
-        disabled={pending}
-        className="h-9 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand disabled:opacity-60"
-      >
-        {YEAR_OPTIONS.map((y) => (
-          <option key={y} value={y}>{y}</option>
-        ))}
-      </select>
+      <div className="w-24">
+        <Select
+          value={year}
+          onChange={(e) => setYear(Number(e.target.value))}
+          disabled={pending}
+        >
+          {YEAR_OPTIONS.map((y) => (
+            <option key={y} value={y}>{y}</option>
+          ))}
+        </Select>
+      </div>
       <button
         type="button"
         onClick={handleImport}

@@ -2,6 +2,9 @@
 
 import { useActionState } from "react";
 import type { EvaluationState } from "@/app/(app)/avaliacoes/[id]/avaliar/[personId]/actions";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
 
 type CompetencyOption = { id: string; name: string };
 
@@ -35,9 +38,8 @@ export function EvaluationForm({ action, competencies, defaultValues }: Props) {
         </h3>
         <div className="grid grid-cols-2 gap-4">
           {competencies.map((c) => (
-            <div key={c.id} className="space-y-1.5">
-              <label htmlFor={`score_${c.id}`} className="block text-[12px] font-medium text-fg">{c.name}</label>
-              <input
+            <CampoForm key={c.id} label={c.name} htmlFor={`score_${c.id}`}>
+              <Input
                 id={`score_${c.id}`}
                 name={`score_${c.id}`}
                 type="number"
@@ -45,27 +47,23 @@ export function EvaluationForm({ action, competencies, defaultValues }: Props) {
                 max={10}
                 step="0.5"
                 defaultValue={defaultValues?.scores?.[c.id] ?? ""}
-                className={INPUT}
               />
-            </div>
+            </CampoForm>
           ))}
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <label htmlFor="notes" className="block text-[12px] font-medium text-fg">Observações</label>
-        <textarea id="notes" name="notes" rows={3} defaultValue={defaultValues?.notes ?? ""} className={INPUT} />
-      </div>
+      <CampoForm label="Observações" htmlFor="notes">
+        <Textarea id="notes" name="notes" rows={3} defaultValue={defaultValues?.notes ?? ""} />
+      </CampoForm>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <label htmlFor="developmentPlan" className="block text-[12px] font-medium text-fg">Plano de Desenvolvimento</label>
-          <textarea id="developmentPlan" name="developmentPlan" rows={3} defaultValue={defaultValues?.developmentPlan ?? ""} className={INPUT} />
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="improvementDeadline" className="block text-[12px] font-medium text-fg">Prazo de Melhoria</label>
-          <input id="improvementDeadline" name="improvementDeadline" type="date" defaultValue={defaultValues?.improvementDeadline ?? ""} className={INPUT} />
-        </div>
+        <CampoForm label="Plano de Desenvolvimento" htmlFor="developmentPlan">
+          <Textarea id="developmentPlan" name="developmentPlan" rows={3} defaultValue={defaultValues?.developmentPlan ?? ""} />
+        </CampoForm>
+        <CampoForm label="Prazo de Melhoria" htmlFor="improvementDeadline">
+          <Input id="improvementDeadline" name="improvementDeadline" type="date" defaultValue={defaultValues?.improvementDeadline ?? ""} />
+        </CampoForm>
       </div>
 
       <button
@@ -78,6 +76,3 @@ export function EvaluationForm({ action, competencies, defaultValues }: Props) {
     </form>
   );
 }
-
-const INPUT =
-  "w-full px-3 py-2 rounded-md border border-border bg-canvas text-[12px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";

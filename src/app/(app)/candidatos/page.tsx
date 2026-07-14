@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { CandidatosTable } from "@/components/candidatos/CandidatosTable";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Input } from "@/components/ui/Input";
 import { inativarCandidatosEmMassa } from "./actions";
 
 const PER_PAGE = 20;
@@ -68,11 +69,10 @@ export default async function CandidatosPage({
 
       <div className="flex items-center gap-3 mb-4">
         <form method="GET" action="/candidatos" className="flex-1 max-w-xs">
-          <input
+          <Input
             name="search"
             defaultValue={search ?? ""}
             placeholder="Buscar por nome…"
-            className="w-full h-8 px-3 rounded-md border border-border bg-canvas text-[13px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors"
           />
         </form>
       </div>

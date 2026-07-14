@@ -3,6 +3,9 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { DocumentEntityType, DocumentCategory } from "@/generated/prisma/enums";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { Select } from "@/components/ui/Select";
 
 const CATEGORY_LABEL: Record<DocumentCategory, string> = {
   ADMISSAO:    "Admissão",
@@ -93,22 +96,22 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload }:
 
       {canUpload && (
         <form ref={formRef} onSubmit={handleSubmit} className="flex items-end gap-3 flex-wrap border-t border-border pt-4">
-          <div className="space-y-1.5">
-            <label htmlFor="category" className="block text-[12px] font-medium text-fg">Categoria</label>
-            <select id="category" name="category" defaultValue="OUTRO" className={INPUT}>
-              {CATEGORY_OPTIONS.map((c) => (
-                <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>
-              ))}
-            </select>
+          <div className="w-44">
+            <CampoForm label="Categoria" htmlFor="category">
+              <Select id="category" name="category" defaultValue="OUTRO">
+                {CATEGORY_OPTIONS.map((c) => (
+                  <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>
+                ))}
+              </Select>
+            </CampoForm>
           </div>
           <div className="space-y-1.5">
-            <label htmlFor="file" className="block text-[12px] font-medium text-fg">Arquivo</label>
-            <input id="file" name="file" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" required className="text-[12px] text-fg" />
+            <label htmlFor="file" className="block text-[length:var(--fs-label)] font-medium text-fg">Arquivo</label>
+            <input id="file" name="file" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" required className="text-[12px] text-fg file:mr-3 file:h-9 file:px-3 file:rounded-[10px] file:border file:border-border-strong file:bg-surface-hover file:text-fg file:text-[12px] file:font-medium file:cursor-pointer file:border-solid hover:file:border-brand file:transition-colors" />
           </div>
-          <label className="flex items-center gap-1.5 text-[12px] text-fg-secondary pb-2">
-            <input type="checkbox" name="sensitive" value="true" />
-            Documento sensível
-          </label>
+          <div className="pb-2">
+            <Checkbox name="sensitive" value="true" label="Documento sensível" />
+          </div>
           <button
             type="submit"
             disabled={isUploading}
@@ -127,6 +130,3 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload }:
     </div>
   );
 }
-
-const INPUT =
-  "h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";

@@ -4,6 +4,10 @@ import { useActionState } from "react";
 import Link from "next/link";
 import type { UsuarioState } from "@/app/(app)/admin/usuarios/actions";
 import type { UserRole } from "@/generated/prisma/enums";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 
 export type UsuarioDefaultValues = {
   id?: string;
@@ -46,67 +50,60 @@ export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, de
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Nome *" htmlFor="name">
-          <input
+        <CampoForm label="Nome" htmlFor="name" required>
+          <Input
             id="name"
             name="name"
             type="text"
             required
             defaultValue={defaultValues?.name ?? ""}
             placeholder="Nome completo"
-            className={INPUT}
           />
-        </Field>
-        <Field label="E-mail *" htmlFor="email">
-          <input
+        </CampoForm>
+        <CampoForm label="E-mail" htmlFor="email" required>
+          <Input
             id="email"
             name="email"
             type="email"
             required
             defaultValue={defaultValues?.email ?? ""}
             placeholder="nome@41contabil.com.br"
-            className={INPUT}
           />
-        </Field>
+        </CampoForm>
       </div>
 
-      <Field
-        label={isEdit ? "Nova senha" : "Senha *"}
-        htmlFor="password"
-      >
-        <input
+      <CampoForm label={isEdit ? "Nova senha" : "Senha"} htmlFor="password" required={!isEdit}>
+        <Input
           id="password"
           name="password"
           type="password"
           required={!isEdit}
           minLength={8}
           placeholder={isEdit ? "Deixe em branco para manter a atual" : "Mínimo 8 caracteres"}
-          className={INPUT}
         />
-      </Field>
+      </CampoForm>
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Papel *" htmlFor="role">
-          <select
+        <CampoForm
+          label="Papel"
+          htmlFor="role"
+          required
+          helper={isSelf ? "Você não pode alterar seu próprio papel." : undefined}
+        >
+          <Select
             id="role"
             name="role"
             required
             defaultValue={defaultValues?.role ?? "SECTOR_USER"}
-            className={INPUT}
           >
             {roleOptionsForSelect.map((r) => (
               <option key={r.value} value={r.value}>{r.label}</option>
             ))}
-          </select>
-          {isSelf && (
-            <p className="text-[11px] text-fg-muted mt-1">
-              Você não pode alterar seu próprio papel.
-            </p>
-          )}
-        </Field>
+          </Select>
+        </CampoForm>
 
         {isEdit && (
-          <Field label="Status" htmlFor="active">
+          <CampoForm label="Status" htmlFor="active">
             {isSelf ? (
               <>
                 <input type="hidden" name="active" value="on" />
@@ -115,35 +112,31 @@ export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, de
                 </p>
               </>
             ) : (
-              <label className="flex items-center gap-2 h-9">
-                <input
+              <div className="h-9 flex items-center">
+                <Checkbox
                   id="active"
                   name="active"
-                  type="checkbox"
                   defaultChecked={defaultValues?.active ?? true}
-                  className="w-4 h-4 rounded border-border"
+                  label="Usuário ativo"
                 />
-                <span className="text-[13px] text-fg">Usuário ativo</span>
-              </label>
+              </div>
             )}
-          </Field>
+          </CampoForm>
         )}
       </div>
 
       <div className="space-y-2">
-        <p className="text-[12px] font-medium text-fg">Setores</p>
+        <p className="text-[length:var(--fs-label)] font-medium text-fg">Setores</p>
         <div className="grid grid-cols-3 gap-2">
           {sectorOptions.map((s) => (
             <label
               key={s.value}
               className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-border text-[12px] text-fg-secondary hover:bg-surface-2 transition-colors cursor-pointer"
             >
-              <input
-                type="checkbox"
+              <Checkbox
                 name="sectors"
                 value={s.value}
                 defaultChecked={selectedSectors.has(s.value)}
-                className="w-3.5 h-3.5 rounded border-border"
               />
               {s.label}
             </label>
@@ -169,17 +162,3 @@ export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, de
     </form>
   );
 }
-
-function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-[12px] font-medium text-fg">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-const INPUT =
-  "w-full h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors disabled:opacity-60 disabled:cursor-not-allowed";

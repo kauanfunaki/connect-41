@@ -4,6 +4,10 @@ import { useActionState } from "react";
 import Link from "next/link";
 import type { BenefitCatalogState } from "@/app/(app)/empresas/[id]/beneficios/actions";
 import { BenefitType } from "@/generated/prisma/enums";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Textarea } from "@/components/ui/Textarea";
 
 const TYPE_LABEL: Record<BenefitType, string> = {
   VALE_REFEICAO:       "Vale-refeição",
@@ -50,21 +54,21 @@ export function BenefitCatalogForm({ action, companyId, cancelHref, defaultValue
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Nome *" htmlFor="name">
-          <input id="name" name="name" type="text" required defaultValue={defaultValues?.name ?? ""} className={INPUT} />
-        </Field>
-        <Field label="Tipo" htmlFor="type">
-          <select id="type" name="type" defaultValue={defaultValues?.type ?? "OUTRO"} className={INPUT}>
+        <CampoForm label="Nome" htmlFor="name" required>
+          <Input id="name" name="name" type="text" required defaultValue={defaultValues?.name ?? ""} />
+        </CampoForm>
+        <CampoForm label="Tipo" htmlFor="type">
+          <Select id="type" name="type" defaultValue={defaultValues?.type ?? "OUTRO"}>
             {TYPE_OPTIONS.map((t) => (
               <option key={t} value={t}>{TYPE_LABEL[t]}</option>
             ))}
-          </select>
-        </Field>
+          </Select>
+        </CampoForm>
       </div>
 
-      <Field label="Regra de Elegibilidade" htmlFor="eligibilityRule">
-        <textarea id="eligibilityRule" name="eligibilityRule" rows={2} defaultValue={defaultValues?.eligibilityRule ?? ""} className={INPUT} />
-      </Field>
+      <CampoForm label="Regra de Elegibilidade" htmlFor="eligibilityRule">
+        <Textarea id="eligibilityRule" name="eligibilityRule" rows={2} defaultValue={defaultValues?.eligibilityRule ?? ""} />
+      </CampoForm>
 
       <div className="flex items-center gap-3 pt-2">
         <button
@@ -81,15 +85,3 @@ export function BenefitCatalogForm({ action, companyId, cancelHref, defaultValue
     </form>
   );
 }
-
-function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-[12px] font-medium text-fg">{label}</label>
-      {children}
-    </div>
-  );
-}
-
-const INPUT =
-  "w-full px-3 py-2 rounded-md border border-border bg-canvas text-[12px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";

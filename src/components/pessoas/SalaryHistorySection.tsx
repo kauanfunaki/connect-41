@@ -2,6 +2,9 @@
 
 import { useActionState } from "react";
 import type { SalaryChangeState } from "@/app/(app)/pessoas/[id]/salario/actions";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 
 export type SalaryChangeItem = {
   id: string;
@@ -56,26 +59,30 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
       )}
 
       <form action={formAction} className="flex items-end gap-3 flex-wrap border-t border-border pt-4">
-        <div className="space-y-1.5">
-          <label htmlFor="newSalary" className="block text-[12px] font-medium text-fg">Novo Salário</label>
-          <input id="newSalary" name="newSalary" type="number" step="0.01" required className={INPUT} />
+        <div className="w-44">
+          <CampoForm label="Novo Salário" htmlFor="newSalary" required>
+            <Input id="newSalary" name="newSalary" type="number" step="0.01" required prefix="R$" placeholder="0,00" />
+          </CampoForm>
         </div>
-        <div className="space-y-1.5">
-          <label htmlFor="effectiveDate" className="block text-[12px] font-medium text-fg">Data do Reajuste</label>
-          <input id="effectiveDate" name="effectiveDate" type="date" required className={INPUT} />
+        <div className="w-40">
+          <CampoForm label="Data do Reajuste" htmlFor="effectiveDate" required>
+            <Input id="effectiveDate" name="effectiveDate" type="date" required />
+          </CampoForm>
         </div>
-        <div className="space-y-1.5">
-          <label htmlFor="cargoId" className="block text-[12px] font-medium text-fg">Novo Cargo (promoção)</label>
-          <select id="cargoId" name="cargoId" defaultValue="" className={INPUT}>
-            <option value="">Sem alteração</option>
-            {cargos.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+        <div className="w-52">
+          <CampoForm label="Novo Cargo (promoção)" htmlFor="cargoId">
+            <Select id="cargoId" name="cargoId" defaultValue="">
+              <option value="">Sem alteração</option>
+              {cargos.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </Select>
+          </CampoForm>
         </div>
-        <div className="space-y-1.5">
-          <label htmlFor="reason" className="block text-[12px] font-medium text-fg">Motivo</label>
-          <input id="reason" name="reason" type="text" className={INPUT} />
+        <div className="flex-1 min-w-[160px]">
+          <CampoForm label="Motivo" htmlFor="reason">
+            <Input id="reason" name="reason" type="text" />
+          </CampoForm>
         </div>
         <button
           type="submit"
@@ -93,6 +100,3 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
     </div>
   );
 }
-
-const INPUT =
-  "h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";

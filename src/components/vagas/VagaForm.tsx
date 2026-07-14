@@ -4,6 +4,10 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { VagaState } from "@/app/(app)/vagas/actions";
 import { VagaPrioridade } from "@/generated/prisma/enums";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Textarea } from "@/components/ui/Textarea";
 
 const PRIORITY_OPTIONS: { value: VagaPrioridade; label: string }[] = [
   { value: "BAIXA", label: "Baixa" },
@@ -53,69 +57,68 @@ export function VagaForm({ action, cancelHref, companies, cargos, users, sectorO
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Título da Vaga *" htmlFor="title">
-          <input id="title" name="title" type="text" required defaultValue={defaultValues?.title ?? ""} className={INPUT} />
-        </Field>
-        <Field label="Setor *" htmlFor="sectorCode">
-          <select id="sectorCode" name="sectorCode" required defaultValue={defaultValues?.sectorCode ?? ""} className={INPUT}>
+        <CampoForm label="Título da Vaga" htmlFor="title" required>
+          <Input id="title" name="title" type="text" required defaultValue={defaultValues?.title ?? ""} />
+        </CampoForm>
+        <CampoForm label="Setor" htmlFor="sectorCode" required>
+          <Select id="sectorCode" name="sectorCode" required defaultValue={defaultValues?.sectorCode ?? ""}>
             <option value="">Selecione</option>
             {sectorOptions.map((s) => (
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
-          </select>
-        </Field>
+          </Select>
+        </CampoForm>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        <Field label="Empresa *" htmlFor="companyId">
-          <select
+        <CampoForm label="Empresa" htmlFor="companyId" required>
+          <Select
             id="companyId"
             name="companyId"
             required
             value={companyId}
             onChange={(e) => setCompanyId(e.target.value)}
-            className={INPUT}
           >
             <option value="">Selecione</option>
             {companies.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
-          </select>
-        </Field>
-        <Field label="Cargo" htmlFor="cargoId">
-          <select id="cargoId" name="cargoId" defaultValue={defaultValues?.cargoId ?? ""} disabled={!companyId} className={INPUT}>
+          </Select>
+        </CampoForm>
+        <CampoForm label="Cargo" htmlFor="cargoId">
+          <Select id="cargoId" name="cargoId" defaultValue={defaultValues?.cargoId ?? ""} disabled={!companyId}>
             <option value="">{companyId ? "Nenhum" : "Selecione uma empresa"}</option>
             {cargosDaEmpresa.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
-          </select>
-        </Field>
-        <Field label="Quantidade" htmlFor="quantity">
-          <input id="quantity" name="quantity" type="number" min={1} defaultValue={defaultValues?.quantity ?? 1} className={INPUT} />
-        </Field>
+          </Select>
+        </CampoForm>
+        <CampoForm label="Quantidade" htmlFor="quantity">
+          <Input id="quantity" name="quantity" type="number" min={1} defaultValue={defaultValues?.quantity ?? 1} />
+        </CampoForm>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Responsável" htmlFor="responsibleUserId">
-          <select id="responsibleUserId" name="responsibleUserId" defaultValue={defaultValues?.responsibleUserId ?? ""} className={INPUT}>
+        <CampoForm label="Responsável" htmlFor="responsibleUserId">
+          <Select id="responsibleUserId" name="responsibleUserId" defaultValue={defaultValues?.responsibleUserId ?? ""}>
             <option value="">Nenhum</option>
             {users.map((u) => (
               <option key={u.id} value={u.id}>{u.name}</option>
             ))}
-          </select>
-        </Field>
-        <Field label="Prioridade" htmlFor="priority">
-          <select id="priority" name="priority" defaultValue={defaultValues?.priority ?? "MEDIA"} className={INPUT}>
+          </Select>
+        </CampoForm>
+        <CampoForm label="Prioridade" htmlFor="priority">
+          <Select id="priority" name="priority" defaultValue={defaultValues?.priority ?? "MEDIA"}>
             {PRIORITY_OPTIONS.map((p) => (
               <option key={p.value} value={p.value}>{p.label}</option>
             ))}
-          </select>
-        </Field>
+          </Select>
+        </CampoForm>
       </div>
 
-      <Field label="Observações" htmlFor="notes">
-        <textarea id="notes" name="notes" rows={3} defaultValue={defaultValues?.notes ?? ""} className={INPUT} />
-      </Field>
+      <CampoForm label="Observações" htmlFor="notes">
+        <Textarea id="notes" name="notes" rows={3} defaultValue={defaultValues?.notes ?? ""} />
+      </CampoForm>
 
       <div className="flex items-center gap-3 pt-2">
         <button
@@ -132,15 +135,3 @@ export function VagaForm({ action, cancelHref, companies, cargos, users, sectorO
     </form>
   );
 }
-
-function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-[12px] font-medium text-fg">{label}</label>
-      {children}
-    </div>
-  );
-}
-
-const INPUT =
-  "w-full px-3 py-2 rounded-md border border-border bg-canvas text-[12px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";

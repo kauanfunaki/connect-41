@@ -4,6 +4,10 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { CampoState } from "@/app/(app)/admin/campos/actions";
 import type { CustomFieldType, EntityType } from "@/generated/prisma/enums";
+import { CampoForm as Field } from "@/components/ui/CampoForm";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 
 const FIELD_TYPE_OPTIONS: { value: CustomFieldType; label: string }[] = [
   { value: "TEXT", label: "Texto curto" },
@@ -49,19 +53,19 @@ export function CampoForm({ action, cancelHref, sectorOptions, defaultValues }: 
 
       {!isEdit && (
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Setor *" htmlFor="sectorCode">
-            <select id="sectorCode" name="sectorCode" required className={INPUT}>
+          <Field label="Setor" htmlFor="sectorCode" required>
+            <Select id="sectorCode" name="sectorCode" required>
               <option value="">Selecionar…</option>
               {sectorOptions.map((s) => (
                 <option key={s.value} value={s.value}>{s.label}</option>
               ))}
-            </select>
+            </Select>
           </Field>
-          <Field label="Aplica-se a *" htmlFor="entityType">
-            <select id="entityType" name="entityType" required defaultValue="COMPANY" className={INPUT}>
+          <Field label="Aplica-se a" htmlFor="entityType" required>
+            <Select id="entityType" name="entityType" required defaultValue="COMPANY">
               <option value="COMPANY">Empresas</option>
               <option value="PERSON">Pessoas</option>
-            </select>
+            </Select>
           </Field>
         </div>
       )}
@@ -72,68 +76,62 @@ export function CampoForm({ action, cancelHref, sectorOptions, defaultValues }: 
         </p>
       )}
 
-      <Field label="Nome do campo *" htmlFor="label">
-        <input
+      <Field label="Nome do campo" htmlFor="label" required>
+        <Input
           id="label"
           name="label"
           type="text"
           required
           defaultValue={defaultValues?.label ?? ""}
           placeholder="Ex: Data de admissão, Faixa salarial…"
-          className={INPUT}
         />
       </Field>
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Tipo do campo *" htmlFor="fieldType">
-          <select
+        <Field label="Tipo do campo" htmlFor="fieldType" required>
+          <Select
             id="fieldType"
             name="fieldType"
             required
             value={fieldType}
             onChange={(e) => setFieldType(e.target.value as CustomFieldType)}
-            className={INPUT}
           >
             {FIELD_TYPE_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label="Obrigatório" htmlFor="required">
-          <label className="flex items-center gap-2 h-9">
-            <input
+          <div className="h-9 flex items-center">
+            <Checkbox
               id="required"
               name="required"
-              type="checkbox"
               defaultChecked={defaultValues?.required ?? false}
-              className="w-4 h-4 rounded border-border"
+              label="Preenchimento obrigatório"
             />
-            <span className="text-[13px] text-fg">Preenchimento obrigatório</span>
-          </label>
+          </div>
         </Field>
       </div>
 
       {fieldType === "SELECT" && (
-        <Field label="Opções (separadas por vírgula) *" htmlFor="options">
-          <input
+        <Field label="Opções (separadas por vírgula)" htmlFor="options" required>
+          <Input
             id="options"
             name="options"
             type="text"
             defaultValue={(defaultValues?.options ?? []).join(", ")}
             placeholder="Ex: Baixo, Médio, Alto"
-            className={INPUT}
           />
         </Field>
       )}
 
       {isEdit && (
         <Field label="Ordem" htmlFor="order">
-          <input
+          <Input
             id="order"
             name="order"
             type="number"
             defaultValue={defaultValues?.order ?? 0}
-            className={INPUT}
           />
         </Field>
       )}
@@ -156,17 +154,3 @@ export function CampoForm({ action, cancelHref, sectorOptions, defaultValues }: 
     </form>
   );
 }
-
-function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-[12px] font-medium text-fg">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-const INPUT =
-  "w-full h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors disabled:opacity-60";

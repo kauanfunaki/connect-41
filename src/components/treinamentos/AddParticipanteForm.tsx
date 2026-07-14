@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 import type { TrainingParticipantState } from "@/app/(app)/treinamentos/[id]/turmas/[classId]/actions";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Select } from "@/components/ui/Select";
 
 type PersonOption = { id: string; name: string };
 
@@ -15,14 +17,15 @@ export function AddParticipanteForm({ action, candidatos }: Props) {
 
   return (
     <form action={formAction} className="border-t border-border pt-4 flex items-end gap-3 flex-wrap">
-      <div className="space-y-1.5">
-        <label htmlFor="personId" className="block text-[12px] font-medium text-fg">Colaborador</label>
-        <select id="personId" name="personId" required className={INPUT}>
-          <option value="">Selecione</option>
-          {candidatos.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
+      <div className="w-64">
+        <CampoForm label="Colaborador" htmlFor="personId" required>
+          <Select id="personId" name="personId" required>
+            <option value="">Selecione</option>
+            {candidatos.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </Select>
+        </CampoForm>
       </div>
       <button
         type="submit"
@@ -35,6 +38,3 @@ export function AddParticipanteForm({ action, candidatos }: Props) {
     </form>
   );
 }
-
-const INPUT =
-  "h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";

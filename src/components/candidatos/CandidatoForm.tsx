@@ -3,6 +3,8 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import type { CandidatoState } from "@/app/(app)/candidatos/actions";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Input } from "@/components/ui/Input";
 
 export type CandidatoDefaultValues = {
   id?: string;
@@ -45,64 +47,60 @@ export function CandidatoForm({ action, cancelHref, defaultValues }: Props) {
       {/* ── Identificação ─────────────────────────────── */}
       <Section title="Identificação">
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Nome *" htmlFor="name">
-            <input
+          <CampoForm label="Nome" htmlFor="name" required>
+            <Input
               id="name"
               name="name"
               type="text"
               required
               defaultValue={defaultValues?.name ?? ""}
               placeholder="Nome completo"
-              className={INPUT}
             />
-          </Field>
-          <Field label="Data de Nascimento" htmlFor="birthDate">
-            <input
+          </CampoForm>
+          <CampoForm label="Data de Nascimento" htmlFor="birthDate">
+            <Input
               id="birthDate"
               name="birthDate"
               type="date"
               defaultValue={defaultValues?.birthDate ?? ""}
-              className={INPUT}
             />
-          </Field>
+          </CampoForm>
         </div>
 
         <div className="grid grid-cols-3 gap-4">
-          <Field label="CPF" htmlFor="cpf">
-            <input
+          <CampoForm label="CPF" htmlFor="cpf">
+            <Input
               id="cpf"
               name="cpf"
               type="text"
               defaultValue={defaultValues?.cpf ?? ""}
               placeholder="000.000.000-00"
               maxLength={14}
-              className={INPUT}
             />
-          </Field>
-          <Field label="RG" htmlFor="rg">
-            <input id="rg" name="rg" type="text" defaultValue={defaultValues?.rg ?? ""} className={INPUT} />
-          </Field>
-          <Field label="Escolaridade" htmlFor="education">
-            <input id="education" name="education" type="text" defaultValue={defaultValues?.education ?? ""} className={INPUT} />
-          </Field>
+          </CampoForm>
+          <CampoForm label="RG" htmlFor="rg">
+            <Input id="rg" name="rg" type="text" defaultValue={defaultValues?.rg ?? ""} />
+          </CampoForm>
+          <CampoForm label="Escolaridade" htmlFor="education">
+            <Input id="education" name="education" type="text" defaultValue={defaultValues?.education ?? ""} />
+          </CampoForm>
         </div>
       </Section>
 
       {/* ── Contato ───────────────────────────────────── */}
       <Section title="Contato">
         <div className="grid grid-cols-2 gap-4">
-          <Field label="E-mail" htmlFor="email">
-            <input
+          <CampoForm label="E-mail" htmlFor="email">
+            <Input
               id="email"
               name="email"
               type="email"
               defaultValue={defaultValues?.email ?? ""}
               placeholder="nome@email.com"
-              className={INPUT}
             />
-          </Field>
-          <Field label="Telefone" htmlFor="phone">
-            <input
+          </CampoForm>
+          <CampoForm label="Telefone" htmlFor="phone">
+            <Input
               id="phone"
               name="phone"
               type="tel"
@@ -111,38 +109,37 @@ export function CandidatoForm({ action, cancelHref, defaultValues }: Props) {
               pattern="[\d\s()\-+]{8,20}"
               maxLength={20}
               title="Informe um número de telefone válido"
-              className={INPUT}
             />
-          </Field>
+          </CampoForm>
         </div>
       </Section>
 
       {/* ── Endereço ──────────────────────────────────── */}
       <Section title="Endereço">
         <div className="grid grid-cols-3 gap-4">
-          <Field label="CEP" htmlFor="zipCode">
-            <input id="zipCode" name="zipCode" type="text" defaultValue={defaultValues?.zipCode ?? ""} className={INPUT} />
-          </Field>
-          <Field label="Logradouro" htmlFor="addressStreet">
-            <input id="addressStreet" name="addressStreet" type="text" defaultValue={defaultValues?.addressStreet ?? ""} className={INPUT} />
-          </Field>
-          <Field label="Número" htmlFor="addressNumber">
-            <input id="addressNumber" name="addressNumber" type="text" defaultValue={defaultValues?.addressNumber ?? ""} className={INPUT} />
-          </Field>
+          <CampoForm label="CEP" htmlFor="zipCode">
+            <Input id="zipCode" name="zipCode" type="text" defaultValue={defaultValues?.zipCode ?? ""} />
+          </CampoForm>
+          <CampoForm label="Logradouro" htmlFor="addressStreet">
+            <Input id="addressStreet" name="addressStreet" type="text" defaultValue={defaultValues?.addressStreet ?? ""} />
+          </CampoForm>
+          <CampoForm label="Número" htmlFor="addressNumber">
+            <Input id="addressNumber" name="addressNumber" type="text" defaultValue={defaultValues?.addressNumber ?? ""} />
+          </CampoForm>
         </div>
         <div className="grid grid-cols-4 gap-4">
-          <Field label="Complemento" htmlFor="addressComplement">
-            <input id="addressComplement" name="addressComplement" type="text" defaultValue={defaultValues?.addressComplement ?? ""} className={INPUT} />
-          </Field>
-          <Field label="Bairro" htmlFor="neighborhood">
-            <input id="neighborhood" name="neighborhood" type="text" defaultValue={defaultValues?.neighborhood ?? ""} className={INPUT} />
-          </Field>
-          <Field label="Cidade" htmlFor="city">
-            <input id="city" name="city" type="text" defaultValue={defaultValues?.city ?? ""} className={INPUT} />
-          </Field>
-          <Field label="UF" htmlFor="stateCode">
-            <input id="stateCode" name="stateCode" type="text" maxLength={2} defaultValue={defaultValues?.stateCode ?? ""} className={INPUT} />
-          </Field>
+          <CampoForm label="Complemento" htmlFor="addressComplement">
+            <Input id="addressComplement" name="addressComplement" type="text" defaultValue={defaultValues?.addressComplement ?? ""} />
+          </CampoForm>
+          <CampoForm label="Bairro" htmlFor="neighborhood">
+            <Input id="neighborhood" name="neighborhood" type="text" defaultValue={defaultValues?.neighborhood ?? ""} />
+          </CampoForm>
+          <CampoForm label="Cidade" htmlFor="city">
+            <Input id="city" name="city" type="text" defaultValue={defaultValues?.city ?? ""} />
+          </CampoForm>
+          <CampoForm label="UF" htmlFor="stateCode">
+            <Input id="stateCode" name="stateCode" type="text" maxLength={2} defaultValue={defaultValues?.stateCode ?? ""} />
+          </CampoForm>
         </div>
       </Section>
 
@@ -176,17 +173,3 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </div>
   );
 }
-
-function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-[12px] font-medium text-fg">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-const INPUT =
-  "w-full h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Select } from "@/components/ui/Select";
 
 type PersonOption = { id: string; name: string };
 
@@ -16,19 +18,19 @@ export function SelecionarColaboradorForm({ cycleId, colaboradores }: Props) {
 
   return (
     <div className="border-t border-border pt-4 flex items-end gap-3">
-      <div className="space-y-1.5 flex-1">
-        <label htmlFor="personId" className="block text-[12px] font-medium text-fg">Colaborador</label>
-        <select
-          id="personId"
-          value={personId}
-          onChange={(e) => setPersonId(e.target.value)}
-          className="w-full h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors"
-        >
-          <option value="">Selecione</option>
-          {colaboradores.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
+      <div className="flex-1">
+        <CampoForm label="Colaborador" htmlFor="personId">
+          <Select
+            id="personId"
+            value={personId}
+            onChange={(e) => setPersonId(e.target.value)}
+          >
+            <option value="">Selecione</option>
+            {colaboradores.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </Select>
+        </CampoForm>
       </div>
       <button
         type="button"

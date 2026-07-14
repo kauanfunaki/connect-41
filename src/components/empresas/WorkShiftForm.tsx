@@ -3,6 +3,8 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import type { WorkShiftState } from "@/app/(app)/empresas/[id]/turnos/actions";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Input } from "@/components/ui/Input";
 
 export type WorkShiftDefaultValues = {
   id?: string;
@@ -33,15 +35,15 @@ export function WorkShiftForm({ action, companyId, cancelHref, defaultValues }: 
       )}
 
       <div className="grid grid-cols-3 gap-4">
-        <Field label="Nome do Turno *" htmlFor="name">
-          <input id="name" name="name" type="text" required defaultValue={defaultValues?.name ?? ""} className={INPUT} />
-        </Field>
-        <Field label="Início *" htmlFor="startTime">
-          <input id="startTime" name="startTime" type="time" required defaultValue={defaultValues?.startTime ?? ""} className={INPUT} />
-        </Field>
-        <Field label="Fim *" htmlFor="endTime">
-          <input id="endTime" name="endTime" type="time" required defaultValue={defaultValues?.endTime ?? ""} className={INPUT} />
-        </Field>
+        <CampoForm label="Nome do Turno" htmlFor="name" required>
+          <Input id="name" name="name" type="text" required defaultValue={defaultValues?.name ?? ""} />
+        </CampoForm>
+        <CampoForm label="Início" htmlFor="startTime" required>
+          <Input id="startTime" name="startTime" type="time" required defaultValue={defaultValues?.startTime ?? ""} />
+        </CampoForm>
+        <CampoForm label="Fim" htmlFor="endTime" required>
+          <Input id="endTime" name="endTime" type="time" required defaultValue={defaultValues?.endTime ?? ""} />
+        </CampoForm>
       </div>
 
       <div className="flex items-center gap-3 pt-2">
@@ -59,15 +61,3 @@ export function WorkShiftForm({ action, companyId, cancelHref, defaultValues }: 
     </form>
   );
 }
-
-function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-[12px] font-medium text-fg">{label}</label>
-      {children}
-    </div>
-  );
-}
-
-const INPUT =
-  "w-full h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";

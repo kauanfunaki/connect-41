@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { Select } from "@/components/ui/Select";
 
 type Stage = { id: string; name: string };
 
@@ -15,15 +16,15 @@ export function MoveStageSelect({ itemId, currentStageId, stages, moveAction }: 
   const [isPending, startTransition] = useTransition();
 
   return (
-    <select
+    <Select
       defaultValue={currentStageId}
       disabled={isPending}
       onChange={(e) => startTransition(() => moveAction(itemId, e.target.value))}
-      className="h-9 px-3 rounded-md border border-border bg-canvas text-[13px] text-fg outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors disabled:opacity-60"
+      className="w-auto"
     >
       {stages.map((s) => (
         <option key={s.id} value={s.id}>{s.name}</option>
       ))}
-    </select>
+    </Select>
   );
 }

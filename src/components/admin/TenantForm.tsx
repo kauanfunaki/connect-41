@@ -2,6 +2,9 @@
 
 import { useActionState } from "react";
 import type { TenantState } from "@/app/(app)/admin/tenant/actions";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { Input } from "@/components/ui/Input";
 
 type Props = {
   action: (prev: TenantState, form: FormData) => Promise<TenantState>;
@@ -32,64 +35,60 @@ export function TenantForm({ action, isSuperAdmin, defaultValues }: Props) {
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Nome *" htmlFor="name">
-          <input
+        <CampoForm label="Nome" htmlFor="name" required>
+          <Input
             id="name"
             name="name"
             type="text"
             required
             defaultValue={defaultValues.name}
-            className={INPUT}
           />
-        </Field>
-        <Field label="CNPJ" htmlFor="cnpj">
-          <input
+        </CampoForm>
+        <CampoForm label="CNPJ" htmlFor="cnpj">
+          <Input
             id="cnpj"
             name="cnpj"
             type="text"
             defaultValue={defaultValues.cnpj ?? ""}
             placeholder="00.000.000/0000-00"
-            className={INPUT}
           />
-        </Field>
+        </CampoForm>
       </div>
 
-      <Field label="Slug" htmlFor="slug">
-        <input
+      <CampoForm
+        label="Slug"
+        htmlFor="slug"
+        helper="Identificador interno do tenant — não pode ser alterado por aqui."
+      >
+        <Input
           id="slug"
           type="text"
           value={defaultValues.slug}
           disabled
-          className={`${INPUT} font-mono`}
+          className="font-mono"
         />
-        <p className="text-[11px] text-fg-muted mt-1">
-          Identificador interno do tenant — não pode ser alterado por aqui.
-        </p>
-      </Field>
+      </CampoForm>
 
       {isSuperAdmin && (
         <div className="grid grid-cols-2 gap-4 border-t border-border pt-4">
-          <Field label="Plano" htmlFor="plan">
-            <input
+          <CampoForm label="Plano" htmlFor="plan">
+            <Input
               id="plan"
               name="plan"
               type="text"
               defaultValue={defaultValues.plan}
-              className={INPUT}
             />
-          </Field>
-          <Field label="Status" htmlFor="active">
-            <label className="flex items-center gap-2 h-9">
-              <input
+          </CampoForm>
+          <CampoForm label="Status" htmlFor="active">
+            <div className="h-9 flex items-center">
+              <Checkbox
                 id="active"
                 name="active"
-                type="checkbox"
                 defaultChecked={defaultValues.active}
-                className="w-4 h-4 rounded border-border"
+                label="Tenant ativo"
               />
-              <span className="text-[13px] text-fg">Tenant ativo</span>
-            </label>
-          </Field>
+            </div>
+          </CampoForm>
         </div>
       )}
 
@@ -105,17 +104,3 @@ export function TenantForm({ action, isSuperAdmin, defaultValues }: Props) {
     </form>
   );
 }
-
-function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-[12px] font-medium text-fg">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-const INPUT =
-  "w-full h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors disabled:opacity-60";

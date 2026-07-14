@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { TrainingParticipantState } from "@/app/(app)/treinamentos/[id]/turmas/[classId]/actions";
 import { TrainingParticipantStatus } from "@/generated/prisma/enums";
+import { Select } from "@/components/ui/Select";
 
 const STATUS_LABEL: Record<TrainingParticipantStatus, string> = {
   PLANEJADO: "Planejado",
@@ -58,20 +59,21 @@ export function ParticipanteRow({ participante, updateAction, removeAction, canM
 
       {canManage && (
         <form action={formAction} className="flex items-end gap-2 flex-wrap mt-1.5">
-          <select
-            name="status"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as TrainingParticipantStatus)}
-            className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand"
-          >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-            ))}
-          </select>
+          <div className="w-44">
+            <Select
+              name="status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as TrainingParticipantStatus)}
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+              ))}
+            </Select>
+          </div>
           <button
             type="submit"
             disabled={isPending}
-            className="h-8 px-3 rounded-md border border-border text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
+            className="h-9 px-3 rounded-md border border-border text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
           >
             {isPending ? "Salvando…" : "Atualizar"}
           </button>
@@ -80,7 +82,7 @@ export function ParticipanteRow({ participante, updateAction, removeAction, canM
             onClick={() => {
               if (confirm("Remover este participante da turma?")) removeAction();
             }}
-            className="h-8 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
+            className="h-9 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
           >
             Remover
           </button>

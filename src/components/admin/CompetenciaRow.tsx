@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
+import { Input } from "@/components/ui/Input";
 import type { CompetencyState } from "@/app/(app)/admin/competencias/actions";
 
 type Props = {
@@ -32,29 +33,23 @@ export function CompetenciaRow({ competencia, updateAction, deleteAction }: Prop
       <form action={formAction} className="px-4 py-2.5 space-y-2">
         <input type="hidden" name="id" value={competencia.id} />
         <div className="flex items-center gap-2 flex-wrap">
-          <input
-            name="name"
-            defaultValue={competencia.name}
-            required
-            className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand"
-          />
-          <input
-            name="description"
-            defaultValue={competencia.description ?? ""}
-            placeholder="Descrição"
-            className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand flex-1 min-w-[160px]"
-          />
+          <div className="w-48">
+            <Input name="name" defaultValue={competencia.name} required />
+          </div>
+          <div className="flex-1 min-w-[160px]">
+            <Input name="description" defaultValue={competencia.description ?? ""} placeholder="Descrição" />
+          </div>
           <button
             type="submit"
             disabled={isPending}
-            className="h-8 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+            className="h-9 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
           >
             {isPending ? "Salvando…" : "Salvar"}
           </button>
           <button
             type="button"
             onClick={() => setEditing(false)}
-            className="h-8 px-3 rounded-md border border-border text-[12px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors"
+            className="h-9 px-3 rounded-md border border-border text-[12px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors"
           >
             Cancelar
           </button>

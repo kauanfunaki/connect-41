@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Check, ChevronDown, MoreHorizontal } from "lucide-react";
 import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
 import { IconButton } from "@/components/ui/IconButton";
+import { Input } from "@/components/ui/Input";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { TagToggleList } from "@/components/kanban/TagToggleList";
 import { AssigneeToggleList } from "@/components/kanban/AssigneeToggleList";
@@ -150,11 +151,10 @@ function DueDatePopover({
     >
       <div className="space-y-2">
         <label className="block text-[11px] font-medium text-fg-muted">Prazo</label>
-        <input
+        <Input
           type="date"
           value={value}
           onChange={(e) => save(e.target.value)}
-          className="w-full h-9 px-2.5 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors"
         />
         {value && (
           <button

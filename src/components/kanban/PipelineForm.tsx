@@ -3,6 +3,9 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
+import { CampoForm as Field } from "@/components/ui/CampoForm";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 
 const DEFAULT_COLORS = ["#586577", "#2E6FB8", "#C8860D", "#1E8E5A", "#C5374B"];
 
@@ -44,31 +47,30 @@ export function PipelineForm({ action, sectorOptions }: Props) {
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Nome do Kanban *" htmlFor="name">
-          <input
+        <Field label="Nome do Kanban" htmlFor="name" required>
+          <Input
             id="name"
             name="name"
             type="text"
             required
             placeholder="Ex: Funil de Vagas"
-            className={INPUT}
           />
         </Field>
-        <Field label="Setor *" htmlFor="sectorCode">
-          <select id="sectorCode" name="sectorCode" required className={INPUT}>
+        <Field label="Setor" htmlFor="sectorCode" required>
+          <Select id="sectorCode" name="sectorCode" required>
             <option value="">Selecionar…</option>
             {sectorOptions.map((s) => (
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
-          </select>
+          </Select>
         </Field>
       </div>
 
-      <Field label="Tipo de Entidade *" htmlFor="entityType">
-        <select id="entityType" name="entityType" required defaultValue="COMPANY" className={INPUT}>
+      <Field label="Tipo de Entidade" htmlFor="entityType" required>
+        <Select id="entityType" name="entityType" required defaultValue="COMPANY">
           <option value="COMPANY">Empresas</option>
           <option value="PERSON">Pessoas</option>
-        </select>
+        </Select>
       </Field>
 
       <div className="space-y-3">
@@ -95,14 +97,15 @@ export function PipelineForm({ action, sectorOptions }: Props) {
                 onChange={(e) => updateStage(i, "color", e.target.value)}
                 className="w-9 h-9 rounded-md border border-border bg-canvas cursor-pointer flex-shrink-0"
               />
-              <input
-                type="text"
-                name="stageName"
-                value={stage.name}
-                onChange={(e) => updateStage(i, "name", e.target.value)}
-                placeholder={`Estágio ${i + 1}`}
-                className={`${INPUT} flex-1`}
-              />
+              <div className="flex-1">
+                <Input
+                  type="text"
+                  name="stageName"
+                  value={stage.name}
+                  onChange={(e) => updateStage(i, "name", e.target.value)}
+                  placeholder={`Estágio ${i + 1}`}
+                />
+              </div>
               {stages.length > 1 && (
                 <button
                   type="button"
@@ -135,17 +138,3 @@ export function PipelineForm({ action, sectorOptions }: Props) {
     </form>
   );
 }
-
-function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-[12px] font-medium text-fg">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-const INPUT =
-  "w-full h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";

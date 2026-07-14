@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 import type { CompetencyState } from "@/app/(app)/admin/competencias/actions";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Input } from "@/components/ui/Input";
 
 type Props = {
   action: (prev: CompetencyState, form: FormData) => Promise<CompetencyState>;
@@ -12,13 +14,15 @@ export function AddCompetenciaForm({ action }: Props) {
 
   return (
     <form action={formAction} className="flex items-end gap-3 flex-wrap mb-6">
-      <div className="space-y-1.5">
-        <label htmlFor="name" className="block text-[12px] font-medium text-fg">Nome da Competência</label>
-        <input id="name" name="name" type="text" required className={INPUT} />
+      <div className="w-56">
+        <CampoForm label="Nome da Competência" htmlFor="name" required>
+          <Input id="name" name="name" type="text" required />
+        </CampoForm>
       </div>
-      <div className="space-y-1.5 flex-1">
-        <label htmlFor="description" className="block text-[12px] font-medium text-fg">Descrição</label>
-        <input id="description" name="description" type="text" className={INPUT + " w-full"} />
+      <div className="flex-1 min-w-[200px]">
+        <CampoForm label="Descrição" htmlFor="description">
+          <Input id="description" name="description" type="text" />
+        </CampoForm>
       </div>
       <button
         type="submit"
@@ -31,6 +35,3 @@ export function AddCompetenciaForm({ action }: Props) {
     </form>
   );
 }
-
-const INPUT =
-  "h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";

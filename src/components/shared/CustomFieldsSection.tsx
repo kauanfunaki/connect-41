@@ -1,5 +1,10 @@
 "use client";
 
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Textarea } from "@/components/ui/Textarea";
+
 export type CustomFieldInput = {
   id: string;
   label: string;
@@ -19,12 +24,9 @@ export function CustomFieldsSection({ fields }: { fields: CustomFieldInput[] }) 
       </h3>
       <div className="grid grid-cols-2 gap-4">
         {fields.map((f) => (
-          <div key={f.id} className="space-y-1.5">
-            <label htmlFor={`custom_${f.id}`} className="block text-[12px] font-medium text-fg">
-              {f.label} {f.required && <span className="text-danger">*</span>}
-            </label>
+          <CampoForm key={f.id} label={f.label} htmlFor={`custom_${f.id}`} required={f.required}>
             <CustomFieldInputControl field={f} />
-          </div>
+          </CampoForm>
         ))}
       </div>
     </div>
@@ -33,68 +35,62 @@ export function CustomFieldsSection({ fields }: { fields: CustomFieldInput[] }) 
 
 function CustomFieldInputControl({ field }: { field: CustomFieldInput }) {
   const name = `custom_${field.id}`;
-  const inputClass =
-    "w-full h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";
 
   switch (field.fieldType) {
     case "TEXTAREA":
       return (
-        <textarea
+        <Textarea
           id={name}
           name={name}
           rows={3}
           required={field.required}
           defaultValue={field.value ?? ""}
-          className={`${inputClass} h-auto py-2 resize-none`}
         />
       );
     case "NUMBER":
       return (
-        <input
+        <Input
           id={name}
           name={name}
           type="number"
           required={field.required}
           defaultValue={field.value ?? ""}
-          className={inputClass}
         />
       );
     case "DATE":
       return (
-        <input
+        <Input
           id={name}
           name={name}
           type="date"
           required={field.required}
           defaultValue={field.value ?? ""}
-          className={inputClass}
         />
       );
     case "SELECT":
       return (
-        <select id={name} name={name} required={field.required} defaultValue={field.value ?? ""} className={inputClass}>
+        <Select id={name} name={name} required={field.required} defaultValue={field.value ?? ""}>
           <option value="">Selecionar…</option>
           {field.options.map((o) => (
             <option key={o} value={o}>{o}</option>
           ))}
-        </select>
+        </Select>
       );
     case "BOOLEAN":
       return (
-        <select id={name} name={name} defaultValue={field.value ?? "false"} className={inputClass}>
+        <Select id={name} name={name} defaultValue={field.value ?? "false"}>
           <option value="false">Não</option>
           <option value="true">Sim</option>
-        </select>
+        </Select>
       );
     default:
       return (
-        <input
+        <Input
           id={name}
           name={name}
           type="text"
           required={field.required}
           defaultValue={field.value ?? ""}
-          className={inputClass}
         />
       );
   }

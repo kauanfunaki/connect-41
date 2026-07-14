@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Search } from "lucide-react";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 
 type UserOption = { id: string; name: string };
@@ -19,12 +20,7 @@ function UserChip({ user, active, onToggle }: { user: UserOption; active: boolea
         active ? "border-brand/40 bg-brand/[0.06] text-fg" : "border-border text-fg-muted hover:text-fg"
       }`}
     >
-      <input
-        type="checkbox"
-        checked={active}
-        onChange={onToggle}
-        className="w-3.5 h-3.5 rounded border-border"
-      />
+      <Checkbox checked={active} onChange={onToggle} />
       {user.name}
     </label>
   );

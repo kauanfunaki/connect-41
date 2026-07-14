@@ -3,6 +3,9 @@
 import { useActionState } from "react";
 import type { OvertimeState } from "@/app/(app)/pessoas/[id]/horas-extras/actions";
 import { DayType } from "@/generated/prisma/enums";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 
 const DAY_TYPE_LABEL: Record<DayType, string> = {
   UTIL:     "Dia útil",
@@ -22,45 +25,40 @@ export function AddHoraExtraForm({ action }: Props) {
 
   return (
     <form action={formAction} className="border-t border-border pt-4 space-y-3">
-      <div className="flex items-end gap-3 flex-wrap">
-        <div className="space-y-1.5">
-          <label htmlFor="date" className="block text-[12px] font-medium text-fg">Data</label>
-          <input id="date" name="date" type="date" required className={INPUT} />
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="dayType" className="block text-[12px] font-medium text-fg">Tipo de Dia</label>
-          <select id="dayType" name="dayType" defaultValue="UTIL" className={INPUT}>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <CampoForm label="Data" htmlFor="date" required>
+          <Input id="date" name="date" type="date" required />
+        </CampoForm>
+        <CampoForm label="Tipo de Dia" htmlFor="dayType">
+          <Select id="dayType" name="dayType" defaultValue="UTIL">
             {DAY_TYPE_OPTIONS.map((t) => (
               <option key={t} value={t}>{DAY_TYPE_LABEL[t]}</option>
             ))}
-          </select>
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="owedHours" className="block text-[12px] font-medium text-fg">Horas Devidas</label>
-          <input id="owedHours" name="owedHours" type="number" step="0.25" className={`${INPUT} w-24`} />
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="workedHours" className="block text-[12px] font-medium text-fg">Horas Trabalhadas</label>
-          <input id="workedHours" name="workedHours" type="number" step="0.25" className={`${INPUT} w-28`} />
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="overtimeHours" className="block text-[12px] font-medium text-fg">Horas Extras</label>
-          <input id="overtimeHours" name="overtimeHours" type="number" step="0.25" className={`${INPUT} w-24`} />
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="additionalRate" className="block text-[12px] font-medium text-fg">Adicional (%)</label>
-          <input id="additionalRate" name="additionalRate" type="number" step="0.01" className={`${INPUT} w-24`} />
-        </div>
+          </Select>
+        </CampoForm>
+        <CampoForm label="Horas Devidas" htmlFor="owedHours">
+          <Input id="owedHours" name="owedHours" type="number" step="0.25" suffix="h" />
+        </CampoForm>
+        <CampoForm label="Horas Trabalhadas" htmlFor="workedHours">
+          <Input id="workedHours" name="workedHours" type="number" step="0.25" suffix="h" />
+        </CampoForm>
+        <CampoForm label="Horas Extras" htmlFor="overtimeHours">
+          <Input id="overtimeHours" name="overtimeHours" type="number" step="0.25" suffix="h" />
+        </CampoForm>
+        <CampoForm label="Adicional" htmlFor="additionalRate">
+          <Input id="additionalRate" name="additionalRate" type="number" step="0.01" suffix="%" />
+        </CampoForm>
       </div>
       <div className="flex items-end gap-3">
-        <div className="space-y-1.5 flex-1">
-          <label htmlFor="justification" className="block text-[12px] font-medium text-fg">Justificativa</label>
-          <input id="justification" name="justification" type="text" className={INPUT + " w-full"} />
+        <div className="flex-1">
+          <CampoForm label="Justificativa" htmlFor="justification">
+            <Input id="justification" name="justification" type="text" />
+          </CampoForm>
         </div>
         <button
           type="submit"
           disabled={isPending}
-          className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+          className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors flex-shrink-0"
         >
           {isPending ? "Lançando…" : "Lançar Horas"}
         </button>
@@ -69,6 +67,3 @@ export function AddHoraExtraForm({ action }: Props) {
     </form>
   );
 }
-
-const INPUT =
-  "h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";

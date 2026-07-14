@@ -3,6 +3,8 @@
 import { useActionState, useState } from "react";
 import type { BenefitAssignmentState } from "@/app/(app)/pessoas/[id]/beneficios/actions";
 import { BenefitStatus } from "@/generated/prisma/enums";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 
 const STATUS_LABEL: Record<BenefitStatus, string> = {
   ATIVO:     "Ativo",
@@ -62,21 +64,24 @@ export function BeneficioRow({ beneficio, updateAction, removeAction, canManage 
 
       {canManage && (
         <form action={formAction} className="flex items-end gap-2 flex-wrap mt-2">
-          <select
-            name="status"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as BenefitStatus)}
-            className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand"
-          >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-            ))}
-          </select>
-          <input name="endDate" type="date" title="Fim da vigência" className="h-8 px-2 rounded-md border border-border bg-canvas text-[12px] text-fg" />
+          <div className="w-40">
+            <Select
+              name="status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as BenefitStatus)}
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+              ))}
+            </Select>
+          </div>
+          <div className="w-40">
+            <Input name="endDate" type="date" title="Fim da vigência" />
+          </div>
           <button
             type="submit"
             disabled={isPending}
-            className="h-8 px-3 rounded-md border border-border text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
+            className="h-9 px-3 rounded-md border border-border text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
           >
             {isPending ? "Salvando…" : "Atualizar"}
           </button>
@@ -85,7 +90,7 @@ export function BeneficioRow({ beneficio, updateAction, removeAction, canManage 
             onClick={() => {
               if (confirm("Remover este benefício do colaborador?")) removeAction();
             }}
-            className="h-8 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
+            className="h-9 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
           >
             Remover
           </button>

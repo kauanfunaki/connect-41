@@ -4,6 +4,9 @@ import { useActionState } from "react";
 import Link from "next/link";
 import type { SetorState } from "@/app/(app)/admin/setores/actions";
 import { SECTOR_COLOR_PALETTE } from "@/lib/sector-constants";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { Input } from "@/components/ui/Input";
 
 export type SetorDefaultValues = {
   id?: string;
@@ -34,29 +37,29 @@ export function SetorForm({ action, cancelHref, defaultValues }: Props) {
         </p>
       )}
 
-      <Field label="Nome do setor *" htmlFor="label">
-        <input
+      <CampoForm label="Nome do setor" htmlFor="label" required>
+        <Input
           id="label"
           name="label"
           type="text"
           required
           defaultValue={defaultValues?.label ?? ""}
           placeholder="Ex: Trabalhista, Marketing…"
-          className={INPUT}
         />
-      </Field>
+      </CampoForm>
 
       {isEdit && defaultValues?.code && (
-        <Field label="Código" htmlFor="code">
-          <input id="code" type="text" value={defaultValues.code} disabled className={`${INPUT} font-mono`} />
-          <p className="text-[11px] text-fg-muted mt-1">
-            Gerado a partir do nome na criação — não pode ser alterado (já é usado em kanban, usuários e handoffs).
-          </p>
-        </Field>
+        <CampoForm
+          label="Código"
+          htmlFor="code"
+          helper="Gerado a partir do nome na criação — não pode ser alterado (já é usado em kanban, usuários e handoffs)."
+        >
+          <Input id="code" type="text" value={defaultValues.code} disabled className="font-mono" />
+        </CampoForm>
       )}
 
       <div className="space-y-2">
-        <p className="text-[12px] font-medium text-fg">Cor</p>
+        <p className="text-[length:var(--fs-label)] font-medium text-fg">Cor</p>
         <div className="flex flex-wrap items-center gap-2">
           {SECTOR_COLOR_PALETTE.map((c) => (
             <label key={c} className="cursor-pointer">
@@ -84,27 +87,24 @@ export function SetorForm({ action, cancelHref, defaultValues }: Props) {
 
       {isEdit && (
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Ordem" htmlFor="order">
-            <input
+          <CampoForm label="Ordem" htmlFor="order">
+            <Input
               id="order"
               name="order"
               type="number"
               defaultValue={defaultValues?.order ?? 0}
-              className={INPUT}
             />
-          </Field>
-          <Field label="Status" htmlFor="active">
-            <label className="flex items-center gap-2 h-9">
-              <input
+          </CampoForm>
+          <CampoForm label="Status" htmlFor="active">
+            <div className="h-9 flex items-center">
+              <Checkbox
                 id="active"
                 name="active"
-                type="checkbox"
                 defaultChecked={defaultValues?.active ?? true}
-                className="w-4 h-4 rounded border-border"
+                label="Setor ativo"
               />
-              <span className="text-[13px] text-fg">Setor ativo</span>
-            </label>
-          </Field>
+            </div>
+          </CampoForm>
         </div>
       )}
 
@@ -126,17 +126,3 @@ export function SetorForm({ action, cancelHref, defaultValues }: Props) {
     </form>
   );
 }
-
-function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-[12px] font-medium text-fg">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-const INPUT =
-  "w-full h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors disabled:opacity-60";

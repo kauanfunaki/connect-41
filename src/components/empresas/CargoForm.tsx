@@ -3,6 +3,9 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import type { CargoState } from "@/app/(app)/empresas/[id]/cargos/actions";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
 
 export type CargoDefaultValues = {
   id?: string;
@@ -38,37 +41,37 @@ export function CargoForm({ action, companyId, cancelHref, defaultValues }: Prop
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Nome do Cargo *" htmlFor="name">
-          <input id="name" name="name" type="text" required defaultValue={defaultValues?.name ?? ""} className={INPUT} />
-        </Field>
-        <Field label="Área" htmlFor="area">
-          <input id="area" name="area" type="text" defaultValue={defaultValues?.area ?? ""} className={INPUT} />
-        </Field>
+        <CampoForm label="Nome do Cargo" htmlFor="name" required>
+          <Input id="name" name="name" type="text" required defaultValue={defaultValues?.name ?? ""} />
+        </CampoForm>
+        <CampoForm label="Área" htmlFor="area">
+          <Input id="area" name="area" type="text" defaultValue={defaultValues?.area ?? ""} />
+        </CampoForm>
       </div>
 
-      <Field label="Descrição" htmlFor="description">
-        <textarea id="description" name="description" rows={2} defaultValue={defaultValues?.description ?? ""} className={INPUT} />
-      </Field>
+      <CampoForm label="Descrição" htmlFor="description">
+        <Textarea id="description" name="description" rows={2} defaultValue={defaultValues?.description ?? ""} />
+      </CampoForm>
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Requisitos Técnicos" htmlFor="technicalRequirements">
-          <textarea id="technicalRequirements" name="technicalRequirements" rows={3} defaultValue={defaultValues?.technicalRequirements ?? ""} className={INPUT} />
-        </Field>
-        <Field label="Requisitos Comportamentais" htmlFor="behavioralRequirements">
-          <textarea id="behavioralRequirements" name="behavioralRequirements" rows={3} defaultValue={defaultValues?.behavioralRequirements ?? ""} className={INPUT} />
-        </Field>
+        <CampoForm label="Requisitos Técnicos" htmlFor="technicalRequirements">
+          <Textarea id="technicalRequirements" name="technicalRequirements" rows={3} defaultValue={defaultValues?.technicalRequirements ?? ""} />
+        </CampoForm>
+        <CampoForm label="Requisitos Comportamentais" htmlFor="behavioralRequirements">
+          <Textarea id="behavioralRequirements" name="behavioralRequirements" rows={3} defaultValue={defaultValues?.behavioralRequirements ?? ""} />
+        </CampoForm>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        <Field label="Faixa Salarial Inicial" htmlFor="salaryRangeMin">
-          <input id="salaryRangeMin" name="salaryRangeMin" type="number" step="0.01" defaultValue={defaultValues?.salaryRangeMin ?? ""} className={INPUT} />
-        </Field>
-        <Field label="Faixa Salarial Intermediária" htmlFor="salaryRangeMid">
-          <input id="salaryRangeMid" name="salaryRangeMid" type="number" step="0.01" defaultValue={defaultValues?.salaryRangeMid ?? ""} className={INPUT} />
-        </Field>
-        <Field label="Faixa Salarial Final" htmlFor="salaryRangeMax">
-          <input id="salaryRangeMax" name="salaryRangeMax" type="number" step="0.01" defaultValue={defaultValues?.salaryRangeMax ?? ""} className={INPUT} />
-        </Field>
+        <CampoForm label="Faixa Salarial Inicial" htmlFor="salaryRangeMin">
+          <Input id="salaryRangeMin" name="salaryRangeMin" type="number" step="0.01" defaultValue={defaultValues?.salaryRangeMin ?? ""} prefix="R$" placeholder="0,00" />
+        </CampoForm>
+        <CampoForm label="Faixa Salarial Intermediária" htmlFor="salaryRangeMid">
+          <Input id="salaryRangeMid" name="salaryRangeMid" type="number" step="0.01" defaultValue={defaultValues?.salaryRangeMid ?? ""} prefix="R$" placeholder="0,00" />
+        </CampoForm>
+        <CampoForm label="Faixa Salarial Final" htmlFor="salaryRangeMax">
+          <Input id="salaryRangeMax" name="salaryRangeMax" type="number" step="0.01" defaultValue={defaultValues?.salaryRangeMax ?? ""} prefix="R$" placeholder="0,00" />
+        </CampoForm>
       </div>
 
       <div className="flex items-center gap-3 pt-2">
@@ -86,15 +89,3 @@ export function CargoForm({ action, companyId, cancelHref, defaultValues }: Prop
     </form>
   );
 }
-
-function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-[12px] font-medium text-fg">{label}</label>
-      {children}
-    </div>
-  );
-}
-
-const INPUT =
-  "w-full px-3 py-2 rounded-md border border-border bg-canvas text-[12px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";

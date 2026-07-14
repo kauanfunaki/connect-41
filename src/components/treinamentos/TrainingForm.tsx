@@ -3,6 +3,9 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import type { TrainingState } from "@/app/(app)/treinamentos/actions";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
 
 export type TrainingDefaultValues = {
   id?: string;
@@ -31,21 +34,21 @@ export function TrainingForm({ action, cancelHref, defaultValues }: Props) {
         </p>
       )}
 
-      <Field label="Nome do Treinamento *" htmlFor="name">
-        <input id="name" name="name" type="text" required defaultValue={defaultValues?.name ?? ""} className={INPUT} />
-      </Field>
+      <CampoForm label="Nome do Treinamento" htmlFor="name" required>
+        <Input id="name" name="name" type="text" required defaultValue={defaultValues?.name ?? ""} />
+      </CampoForm>
 
-      <Field label="Descrição" htmlFor="description">
-        <textarea id="description" name="description" rows={3} defaultValue={defaultValues?.description ?? ""} className={INPUT} />
-      </Field>
+      <CampoForm label="Descrição" htmlFor="description">
+        <Textarea id="description" name="description" rows={3} defaultValue={defaultValues?.description ?? ""} />
+      </CampoForm>
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Carga Horária" htmlFor="workloadHours">
-          <input id="workloadHours" name="workloadHours" type="number" step="0.5" defaultValue={defaultValues?.workloadHours ?? ""} className={INPUT} />
-        </Field>
-        <Field label="Validade (meses)" htmlFor="validityMonths">
-          <input id="validityMonths" name="validityMonths" type="number" min={0} defaultValue={defaultValues?.validityMonths ?? ""} className={INPUT} />
-        </Field>
+        <CampoForm label="Carga Horária" htmlFor="workloadHours">
+          <Input id="workloadHours" name="workloadHours" type="number" step="0.5" defaultValue={defaultValues?.workloadHours ?? ""} suffix="h" />
+        </CampoForm>
+        <CampoForm label="Validade (meses)" htmlFor="validityMonths">
+          <Input id="validityMonths" name="validityMonths" type="number" min={0} defaultValue={defaultValues?.validityMonths ?? ""} />
+        </CampoForm>
       </div>
 
       <div className="flex items-center gap-3 pt-2">
@@ -63,15 +66,3 @@ export function TrainingForm({ action, cancelHref, defaultValues }: Props) {
     </form>
   );
 }
-
-function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-[12px] font-medium text-fg">{label}</label>
-      {children}
-    </div>
-  );
-}
-
-const INPUT =
-  "w-full px-3 py-2 rounded-md border border-border bg-canvas text-[12px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";

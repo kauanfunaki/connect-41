@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 import type { TrainingClassState } from "@/app/(app)/treinamentos/[id]/actions";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Input } from "@/components/ui/Input";
 
 type Props = {
   action: (prev: TrainingClassState, form: FormData) => Promise<TrainingClassState>;
@@ -12,17 +14,20 @@ export function AddTurmaForm({ action }: Props) {
 
   return (
     <form action={formAction} className="border-t border-border pt-4 flex items-end gap-3 flex-wrap">
-      <div className="space-y-1.5">
-        <label htmlFor="date" className="block text-[12px] font-medium text-fg">Data</label>
-        <input id="date" name="date" type="date" required className={INPUT} />
+      <div className="w-40">
+        <CampoForm label="Data" htmlFor="date" required>
+          <Input id="date" name="date" type="date" required />
+        </CampoForm>
       </div>
-      <div className="space-y-1.5">
-        <label htmlFor="shift" className="block text-[12px] font-medium text-fg">Turno</label>
-        <input id="shift" name="shift" type="text" className={INPUT} />
+      <div className="w-40">
+        <CampoForm label="Turno" htmlFor="shift">
+          <Input id="shift" name="shift" type="text" />
+        </CampoForm>
       </div>
-      <div className="space-y-1.5">
-        <label htmlFor="instructor" className="block text-[12px] font-medium text-fg">Instrutor</label>
-        <input id="instructor" name="instructor" type="text" className={INPUT} />
+      <div className="w-48">
+        <CampoForm label="Instrutor" htmlFor="instructor">
+          <Input id="instructor" name="instructor" type="text" />
+        </CampoForm>
       </div>
       <button
         type="submit"
@@ -35,6 +40,3 @@ export function AddTurmaForm({ action }: Props) {
     </form>
   );
 }
-
-const INPUT =
-  "h-9 px-3 rounded-md border border-border bg-canvas text-[12px] text-fg outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors";

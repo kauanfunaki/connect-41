@@ -2,6 +2,7 @@
 
 import { useActionState, useRef } from "react";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
+import { Textarea } from "@/components/ui/Textarea";
 
 type Props = {
   action: (prev: PipelineState, form: FormData) => Promise<PipelineState>;
@@ -23,12 +24,11 @@ export function AddNoteForm({ action }: Props) {
       {state?.error && (
         <p className="text-[12px] text-danger">{state.error}</p>
       )}
-      <textarea
+      <Textarea
         name="content"
         required
         rows={2}
         placeholder="Adicionar uma nota…"
-        className="w-full px-3 py-2 rounded-md border border-border bg-canvas text-[13px] text-fg placeholder:text-fg-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors resize-none"
       />
       <button
         type="submit"
