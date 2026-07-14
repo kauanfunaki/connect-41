@@ -275,7 +275,7 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
         {/* ── 2. Endereço ───────────────────────────────── */}
         <div data-step={1} className={step === 1 ? "" : "hidden"}>
           <FormSection title="Endereço">
-            <FieldGrid columns="grid-cols-[1fr_80px]">
+            <FieldGrid columns="sm:grid-cols-[1fr_80px]">
               <CampoForm label="CEP" htmlFor="zipCode">
                 <Input id="zipCode" name="zipCode" type="text" defaultValue={defaultValues?.zipCode ?? ""} placeholder="00000-000" maxLength={9} />
               </CampoForm>
@@ -283,7 +283,7 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
                 <Input id="stateCode" name="stateCode" type="text" defaultValue={defaultValues?.stateCode ?? ""} placeholder="PR" maxLength={2} className="uppercase" />
               </CampoForm>
             </FieldGrid>
-            <FieldGrid columns="grid-cols-[1fr_120px]">
+            <FieldGrid columns="sm:grid-cols-[1fr_120px]">
               <CampoForm label="Logradouro" htmlFor="addressStreet">
                 <Input id="addressStreet" name="addressStreet" type="text" defaultValue={defaultValues?.addressStreet ?? ""} placeholder="Rua / Av. / Estrada…" />
               </CampoForm>
@@ -333,7 +333,7 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
         {/* ── 4. Dados fiscais ──────────────────────────── */}
         <div data-step={3} className={step === 3 ? "" : "hidden"}>
           <FormSection title="Dados fiscais">
-            <FieldGrid columns="grid-cols-3">
+            <FieldGrid columns="sm:grid-cols-3">
               <CampoForm label="Inscrição Estadual" htmlFor="stateRegistration">
                 <Input id="stateRegistration" name="stateRegistration" type="text" defaultValue={defaultValues?.stateRegistration ?? ""} placeholder="000.000.000-0" />
               </CampoForm>
@@ -344,7 +344,7 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
                 <Input id="nire" name="nire" type="text" defaultValue={defaultValues?.nire ?? ""} placeholder="41300012345" />
               </CampoForm>
             </FieldGrid>
-            <FieldGrid columns="grid-cols-3">
+            <FieldGrid columns="sm:grid-cols-3">
               <CampoForm label="Data de Abertura" htmlFor="foundationDate">
                 <Input id="foundationDate" name="foundationDate" type="date" defaultValue={defaultValues?.foundationDate ?? ""} />
               </CampoForm>

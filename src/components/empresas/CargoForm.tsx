@@ -40,7 +40,7 @@ export function CargoForm({ action, companyId, cancelHref, defaultValues }: Prop
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <CampoForm label="Nome do Cargo" htmlFor="name" required>
           <Input id="name" name="name" type="text" required defaultValue={defaultValues?.name ?? ""} />
         </CampoForm>
@@ -53,7 +53,7 @@ export function CargoForm({ action, companyId, cancelHref, defaultValues }: Prop
         <Textarea id="description" name="description" rows={2} defaultValue={defaultValues?.description ?? ""} />
       </CampoForm>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <CampoForm label="Requisitos Técnicos" htmlFor="technicalRequirements">
           <Textarea id="technicalRequirements" name="technicalRequirements" rows={3} defaultValue={defaultValues?.technicalRequirements ?? ""} />
         </CampoForm>
@@ -62,7 +62,7 @@ export function CargoForm({ action, companyId, cancelHref, defaultValues }: Prop
         </CampoForm>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <CampoForm label="Faixa Salarial Inicial" htmlFor="salaryRangeMin">
           <Input id="salaryRangeMin" name="salaryRangeMin" type="number" step="0.01" defaultValue={defaultValues?.salaryRangeMin ?? ""} prefix="R$" placeholder="0,00" />
         </CampoForm>

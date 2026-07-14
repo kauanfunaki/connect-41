@@ -49,7 +49,7 @@ export function HandoffForm({
           </div>
         </>
       ) : (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <CampoForm label="Tipo" htmlFor="entityType" required>
             <Select
               id="entityType"
@@ -88,7 +88,7 @@ export function HandoffForm({
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <CampoForm label="Setor de origem" htmlFor="fromSector" required>
           <Select id="fromSector" name="fromSector" required defaultValue="">
             <option value="" disabled>Selecionar…</option>

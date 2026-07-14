@@ -36,7 +36,7 @@ export function EvaluationForm({ action, competencies, defaultValues }: Props) {
         <h3 className="text-[11px] font-semibold text-fg-muted uppercase tracking-wider border-b border-border pb-2">
           Notas por Competência (0-10)
         </h3>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {competencies.map((c) => (
             <CampoForm key={c.id} label={c.name} htmlFor={`score_${c.id}`}>
               <Input
@@ -57,7 +57,7 @@ export function EvaluationForm({ action, competencies, defaultValues }: Props) {
         <Textarea id="notes" name="notes" rows={3} defaultValue={defaultValues?.notes ?? ""} />
       </CampoForm>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <CampoForm label="Plano de Desenvolvimento" htmlFor="developmentPlan">
           <Textarea id="developmentPlan" name="developmentPlan" rows={3} defaultValue={defaultValues?.developmentPlan ?? ""} />
         </CampoForm>

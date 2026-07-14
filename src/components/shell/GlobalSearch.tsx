@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 
 type SearchResults = {
   companies: { id: string; name: string }[];
@@ -13,11 +13,16 @@ type SearchResults = {
 
 const EMPTY: SearchResults = { companies: [], people: [], candidatos: [], pipelines: [] };
 
+// Abaixo de sm, o input inline não cabe na topbar (some espremido pelos
+// ícones de tema/notificação/perfil) — vira um botão de lupa que abre um
+// campo em overlay cobrindo a topbar inteira, com foco automático.
 export function GlobalSearch() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults>(EMPTY);
   const [open, setOpen] = useState(false);
+  const [mobileExpanded, setMobileExpanded] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -28,6 +33,10 @@ export function GlobalSearch() {
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [open]);
+
+  useEffect(() => {
+    if (mobileExpanded) inputRef.current?.focus();
+  }, [mobileExpanded]);
 
   useEffect(() => {
     if (query.trim().length < 2) return;
@@ -49,46 +58,84 @@ export function GlobalSearch() {
 
   function go(href: string) {
     setOpen(false);
+    setMobileExpanded(false);
     setQuery("");
     router.push(href);
   }
 
-  return (
-    <div ref={rootRef} className="relative w-full max-w-md">
-      <div className="flex items-center gap-2.5 h-[38px] px-3.5 rounded-[10px] border border-border bg-input-bg focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)] transition-colors">
-        <Search size={16} className="text-fg-muted flex-shrink-0" />
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setOpen(true);
-          }}
-          onFocus={() => setOpen(true)}
-          placeholder="Buscar empresas, pessoas, kanban…"
-          className="w-full h-full bg-transparent text-[15px] text-fg placeholder:text-fg-muted outline-none border-none"
-        />
-      </div>
+  function closeMobile() {
+    setMobileExpanded(false);
+    setOpen(false);
+    setQuery("");
+  }
 
-      {open && query.trim().length >= 2 && (
-        <div className="scroll-y absolute left-0 top-[calc(100%+10px)] w-full min-w-[360px] bg-surface-elevated border border-border-strong rounded-2xl shadow-[var(--c41-shadow-lg)] py-2 z-20 max-h-[360px] overflow-y-auto">
-          {!hasResults ? (
-            <p className="px-3.5 py-3 text-[13px] text-fg-muted">Nenhum resultado para &quot;{query}&quot;.</p>
-          ) : (
-            <>
-              <ResultGroup
-                label="Empresas"
-                items={results.companies}
-                onSelect={(id) => go(`/empresas/${id}`)}
-              />
-              <ResultGroup label="Pessoas" items={results.people} onSelect={(id) => go(`/pessoas/${id}`)} />
-              <ResultGroup label="Candidatos" items={results.candidatos} onSelect={(id) => go(`/candidatos/${id}`)} />
-              <ResultGroup label="Kanban" items={results.pipelines} onSelect={(id) => go(`/kanban/${id}`)} />
-            </>
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setMobileExpanded(true)}
+        className="sm:hidden flex-shrink-0 text-fg-secondary hover:text-fg transition-colors"
+        aria-label="Buscar"
+      >
+        <Search size={19} />
+      </button>
+
+      <div
+        ref={rootRef}
+        className={
+          mobileExpanded
+            ? "fixed inset-x-0 top-0 z-50 h-[60px] flex items-center px-4 bg-topbar-bg sm:static sm:h-auto sm:px-0 sm:bg-transparent sm:w-full sm:max-w-md"
+            : "hidden sm:block relative w-full max-w-md"
+        }
+      >
+        <div className="relative w-full">
+          <div className="flex items-center gap-2.5 h-[38px] px-3.5 rounded-[10px] border border-border bg-input-bg focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)] transition-colors">
+            <Search size={16} className="text-fg-muted flex-shrink-0" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setOpen(true);
+              }}
+              onFocus={() => setOpen(true)}
+              placeholder="Buscar empresas, pessoas, kanban…"
+              className="w-full h-full bg-transparent text-[15px] text-fg placeholder:text-fg-muted outline-none border-none"
+            />
+            {mobileExpanded && (
+              <button
+                type="button"
+                onClick={closeMobile}
+                className="sm:hidden flex-shrink-0 text-fg-muted hover:text-fg transition-colors"
+                aria-label="Fechar busca"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+
+          {open && query.trim().length >= 2 && (
+            <div className="scroll-y absolute left-0 top-[calc(100%+10px)] w-full bg-surface-elevated border border-border-strong rounded-2xl shadow-[var(--c41-shadow-lg)] py-2 z-20 max-h-[360px] overflow-y-auto">
+              {!hasResults ? (
+                <p className="px-3.5 py-3 text-[13px] text-fg-muted">Nenhum resultado para &quot;{query}&quot;.</p>
+              ) : (
+                <>
+                  <ResultGroup
+                    label="Empresas"
+                    items={results.companies}
+                    onSelect={(id) => go(`/empresas/${id}`)}
+                  />
+                  <ResultGroup label="Pessoas" items={results.people} onSelect={(id) => go(`/pessoas/${id}`)} />
+                  <ResultGroup label="Candidatos" items={results.candidatos} onSelect={(id) => go(`/candidatos/${id}`)} />
+                  <ResultGroup label="Kanban" items={results.pipelines} onSelect={(id) => go(`/kanban/${id}`)} />
+                </>
+              )}
+            </div>
           )}
         </div>
-      )}
-    </div>
+      </div>
+    </>
   );
 }
 

@@ -52,7 +52,7 @@ export function CampoForm({ action, cancelHref, sectorOptions, defaultValues }: 
       )}
 
       {!isEdit && (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Setor" htmlFor="sectorCode" required>
             <Select id="sectorCode" name="sectorCode" required>
               <option value="">Selecionar…</option>
@@ -87,7 +87,7 @@ export function CampoForm({ action, cancelHref, sectorOptions, defaultValues }: 
         />
       </Field>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="Tipo do campo" htmlFor="fieldType" required>
           <Select
             id="fieldType"

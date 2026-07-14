@@ -86,7 +86,7 @@ export function SetorForm({ action, cancelHref, defaultValues }: Props) {
       </div>
 
       {isEdit && (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <CampoForm label="Ordem" htmlFor="order">
             <Input
               id="order"

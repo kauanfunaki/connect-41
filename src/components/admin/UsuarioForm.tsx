@@ -49,7 +49,7 @@ export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, de
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <CampoForm label="Nome" htmlFor="name" required>
           <Input
             id="name"
@@ -83,7 +83,7 @@ export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, de
         />
       </CampoForm>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <CampoForm
           label="Papel"
           htmlFor="role"
@@ -127,7 +127,7 @@ export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, de
 
       <div className="space-y-2">
         <p className="text-[length:var(--fs-label)] font-medium text-fg">Setores</p>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {sectorOptions.map((s) => (
             <label
               key={s.value}

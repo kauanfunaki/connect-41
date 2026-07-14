@@ -28,7 +28,7 @@ export function NovoPlanoForm() {
             placeholder="Nome do plano (ex: Gerenciado Essencial)"
           />
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Select name="managementMode" required>
               <option value="MANAGED">Frente 1 — Gerenciado pela 41 Tech</option>
               <option value="SELF_SERVICE">Frente 2 — Cliente administra</option>
@@ -45,7 +45,7 @@ export function NovoPlanoForm() {
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {billingType === "FLAT_MONTHLY" ? (
               <Input
                 name="basePrice"

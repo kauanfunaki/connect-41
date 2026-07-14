@@ -42,7 +42,7 @@ export function TrainingForm({ action, cancelHref, defaultValues }: Props) {
         <Textarea id="description" name="description" rows={3} defaultValue={defaultValues?.description ?? ""} />
       </CampoForm>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <CampoForm label="Carga Horária" htmlFor="workloadHours">
           <Input id="workloadHours" name="workloadHours" type="number" step="0.5" defaultValue={defaultValues?.workloadHours ?? ""} suffix="h" />
         </CampoForm>

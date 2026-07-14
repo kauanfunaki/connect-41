@@ -55,12 +55,12 @@ export function ProfileMenu({ name, roleLabel, photoUrl: initialPhotoUrl }: Prop
           type="button"
           onClick={toggle}
           aria-expanded={open}
-          className={`flex items-center gap-2.5 h-[38px] pl-1 pr-3 rounded-[10px] bg-surface-hover border transition-colors ${
+          className={`flex items-center gap-2.5 h-[38px] pl-1 pr-1 sm:pr-3 rounded-[10px] bg-surface-hover border transition-colors ${
             open ? "border-border-strong" : "border-border hover:border-border-strong"
           }`}
         >
           <AvatarImage src={photoUrl} name={name} size={28} bordered={false} />
-          <span className="text-[14px] font-semibold text-fg max-w-[120px] truncate">{name}</span>
+          <span className="hidden sm:inline text-[14px] font-semibold text-fg max-w-[120px] truncate">{name}</span>
         </button>
       )}
     >

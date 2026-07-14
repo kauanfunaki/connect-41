@@ -56,7 +56,7 @@ export function VagaForm({ action, cancelHref, companies, cargos, users, sectorO
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <CampoForm label="Título da Vaga" htmlFor="title" required>
           <Input id="title" name="title" type="text" required defaultValue={defaultValues?.title ?? ""} />
         </CampoForm>
@@ -70,7 +70,7 @@ export function VagaForm({ action, cancelHref, companies, cargos, users, sectorO
         </CampoForm>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <CampoForm label="Empresa" htmlFor="companyId" required>
           <Select
             id="companyId"
@@ -98,7 +98,7 @@ export function VagaForm({ action, cancelHref, companies, cargos, users, sectorO
         </CampoForm>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <CampoForm label="Responsável" htmlFor="responsibleUserId">
           <Select id="responsibleUserId" name="responsibleUserId" defaultValue={defaultValues?.responsibleUserId ?? ""}>
             <option value="">Nenhum</option>

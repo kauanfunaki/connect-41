@@ -46,7 +46,7 @@ export function FilialForm({ action, cancelHref, defaultValues }: Props) {
       </CampoForm>
 
       {isEdit && (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <CampoForm label="Ordem" htmlFor="order">
             <Input id="order" name="order" type="number" defaultValue={defaultValues?.order ?? 0} />
           </CampoForm>

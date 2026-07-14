@@ -14,7 +14,7 @@ export function ReviewBlock({ title, onEdit, items }: Props) {
           Editar
         </button>
       </div>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[13px]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-[13px]">
         {items.map((it) => (
           <span key={it.label} className="text-fg-muted">
             {it.label}: <b className="text-fg font-medium">{it.value || "—"}</b>

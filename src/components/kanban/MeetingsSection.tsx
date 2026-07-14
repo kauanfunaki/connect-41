@@ -72,7 +72,7 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
                 required
                 placeholder="Título da reunião"
               />
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <Input name="startAt" type="datetime-local" required />
                 <Input name="endAt" type="datetime-local" required />
               </div>

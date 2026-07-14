@@ -55,7 +55,8 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
         {candidatos.length === 0 ? (
           <div className="py-16 text-center text-[13px] text-fg-muted">Nenhum candidato encontrado.</div>
         ) : (
-          <table className="w-full text-[13px]">
+          <div className="scroll-x overflow-x-auto">
+          <table className="w-full min-w-[760px] text-[13px]">
             <thead>
               <tr className="border-b border-border bg-surface-2">
                 {canCreate && (
@@ -111,6 +112,7 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

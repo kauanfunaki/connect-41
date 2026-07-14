@@ -53,7 +53,7 @@ export function BenefitCatalogForm({ action, companyId, cancelHref, defaultValue
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <CampoForm label="Nome" htmlFor="name" required>
           <Input id="name" name="name" type="text" required defaultValue={defaultValues?.name ?? ""} />
         </CampoForm>

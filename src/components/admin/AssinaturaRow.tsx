@@ -43,7 +43,7 @@ export function AssinaturaRow({ tenant, subscription, plans, activeUsers }: Prop
       <form action={formAction} className="px-4 py-3 bg-surface-hover space-y-2">
         <input type="hidden" name="tenantId" value={tenant.id} />
         <p className="text-[13px] text-fg font-medium">{tenant.name}</p>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <Select name="managementMode" defaultValue={tenant.managementMode}>
             <option value="MANAGED">Frente 1 — Gerenciado</option>
             <option value="SELF_SERVICE">Frente 2 — Autoatendimento</option>

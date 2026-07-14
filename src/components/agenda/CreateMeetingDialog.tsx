@@ -87,7 +87,7 @@ export function CreateMeetingDialog({ action, initialStart, initialEnd, hasGoogl
               <Input id="title" name="title" required placeholder="Ex: Alinhamento semanal" />
             </CampoForm>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <CampoForm label="Início" htmlFor="startAt" required>
                 <Input id="startAt" name="startAt" type="datetime-local" required defaultValue={initialStart} />
               </CampoForm>
@@ -103,7 +103,7 @@ export function CreateMeetingDialog({ action, initialStart, initialEnd, hasGoogl
               </Select>
             </CampoForm>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <CampoForm label="Empresa" htmlFor="companyId">
                 <Select id="companyId" name="companyId" defaultValue="">
                   <option value="">Nenhuma</option>

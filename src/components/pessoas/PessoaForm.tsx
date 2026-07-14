@@ -213,7 +213,7 @@ export function PessoaForm({
                 <Input id="cpf" name="cpf" type="text" defaultValue={defaultValues?.cpf ?? ""} placeholder="000.000.000-00" maxLength={14} />
               </CampoForm>
             </FieldGrid>
-            <FieldGrid columns="grid-cols-2">
+            <FieldGrid columns="sm:grid-cols-2">
               <CampoForm label="RG" htmlFor="rg">
                 <Input id="rg" name="rg" type="text" defaultValue={defaultValues?.rg ?? ""} />
               </CampoForm>
@@ -239,7 +239,7 @@ export function PessoaForm({
         {/* ── 2. Endereço ───────────────────────────────── */}
         <div data-step={1} className={step === 1 ? "" : "hidden"}>
           <FormSection title="Endereço">
-            <FieldGrid columns="grid-cols-[1fr_80px]">
+            <FieldGrid columns="sm:grid-cols-[1fr_80px]">
               <CampoForm label="CEP" htmlFor="zipCode">
                 <Input id="zipCode" name="zipCode" type="text" defaultValue={defaultValues?.zipCode ?? ""} />
               </CampoForm>
@@ -247,7 +247,7 @@ export function PessoaForm({
                 <Input id="stateCode" name="stateCode" type="text" maxLength={2} defaultValue={defaultValues?.stateCode ?? ""} className="uppercase" />
               </CampoForm>
             </FieldGrid>
-            <FieldGrid columns="grid-cols-[1fr_120px]">
+            <FieldGrid columns="sm:grid-cols-[1fr_120px]">
               <CampoForm label="Logradouro" htmlFor="addressStreet">
                 <Input id="addressStreet" name="addressStreet" type="text" defaultValue={defaultValues?.addressStreet ?? ""} />
               </CampoForm>
@@ -274,7 +274,7 @@ export function PessoaForm({
         {/* ── 3. Vínculo profissional ────────────────────── */}
         <div data-step={2} className={step === 2 ? "" : "hidden"}>
           <FormSection title="Vínculo profissional">
-            <FieldGrid columns="grid-cols-3">
+            <FieldGrid columns="sm:grid-cols-3">
               <CampoForm label="Empresa" htmlFor="currentCompanyId">
                 <Select id="currentCompanyId" name="currentCompanyId" defaultValue={defaultValues?.currentCompanyId ?? ""}>
                   <option value="">Nenhuma</option>
@@ -300,7 +300,7 @@ export function PessoaForm({
                 </Select>
               </CampoForm>
             </FieldGrid>
-            <FieldGrid columns="grid-cols-3">
+            <FieldGrid columns="sm:grid-cols-3">
               <CampoForm label="Status" htmlFor="employmentStatus">
                 <Select id="employmentStatus" name="employmentStatus" defaultValue={defaultValues?.employmentStatus ?? "ADMISSAO_EM_ANDAMENTO"}>
                   {STATUS_OPTIONS.map((o) => (
@@ -315,7 +315,7 @@ export function PessoaForm({
                 <Input id="dismissalDate" name="dismissalDate" type="date" defaultValue={defaultValues?.dismissalDate ?? ""} />
               </CampoForm>
             </FieldGrid>
-            <FieldGrid columns="grid-cols-3">
+            <FieldGrid columns="sm:grid-cols-3">
               <CampoForm label="Jornada" htmlFor="workShift">
                 <Input id="workShift" name="workShift" type="text" placeholder="ex: 08h-18h" defaultValue={defaultValues?.workShift ?? ""} />
               </CampoForm>
@@ -332,7 +332,7 @@ export function PessoaForm({
         {/* ── 4. Dados complementares ────────────────────── */}
         <div data-step={3} className={step === 3 ? "" : "hidden"}>
           <FormSection title="Dados complementares">
-            <FieldGrid columns="grid-cols-3">
+            <FieldGrid columns="sm:grid-cols-3">
               <CampoForm label="Escolaridade" htmlFor="education">
                 <Input id="education" name="education" type="text" defaultValue={defaultValues?.education ?? ""} />
               </CampoForm>
@@ -362,7 +362,7 @@ export function PessoaForm({
                     <Input id="bankName" name="bankName" type="text" defaultValue={defaultValues?.bankName ?? ""} />
                   </CampoForm>
                 </FieldGrid>
-                <FieldGrid columns="grid-cols-3">
+                <FieldGrid columns="sm:grid-cols-3">
                   <CampoForm label="Agência" htmlFor="bankAgency">
                     <Input id="bankAgency" name="bankAgency" type="text" defaultValue={defaultValues?.bankAgency ?? ""} />
                   </CampoForm>

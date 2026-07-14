@@ -41,7 +41,8 @@ export default async function CargosSalariosPage() {
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg overflow-hidden">
-          <table className="w-full text-[13px]">
+          <div className="scroll-x overflow-x-auto">
+          <table className="w-full min-w-[600px] text-[13px]">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-fg-muted">
                 <th className="px-4 py-2.5 font-medium">Cargo</th>
@@ -71,6 +72,7 @@ export default async function CargosSalariosPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </PageContainer>

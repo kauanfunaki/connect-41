@@ -46,7 +46,7 @@ export function CandidatoForm({ action, cancelHref, defaultValues }: Props) {
 
       {/* ── Identificação ─────────────────────────────── */}
       <Section title="Identificação">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <CampoForm label="Nome" htmlFor="name" required>
             <Input
               id="name"
@@ -67,7 +67,7 @@ export function CandidatoForm({ action, cancelHref, defaultValues }: Props) {
           </CampoForm>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <CampoForm label="CPF" htmlFor="cpf">
             <Input
               id="cpf"
@@ -89,7 +89,7 @@ export function CandidatoForm({ action, cancelHref, defaultValues }: Props) {
 
       {/* ── Contato ───────────────────────────────────── */}
       <Section title="Contato">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <CampoForm label="E-mail" htmlFor="email">
             <Input
               id="email"
@@ -116,7 +116,7 @@ export function CandidatoForm({ action, cancelHref, defaultValues }: Props) {
 
       {/* ── Endereço ──────────────────────────────────── */}
       <Section title="Endereço">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <CampoForm label="CEP" htmlFor="zipCode">
             <Input id="zipCode" name="zipCode" type="text" defaultValue={defaultValues?.zipCode ?? ""} />
           </CampoForm>
@@ -127,7 +127,7 @@ export function CandidatoForm({ action, cancelHref, defaultValues }: Props) {
             <Input id="addressNumber" name="addressNumber" type="text" defaultValue={defaultValues?.addressNumber ?? ""} />
           </CampoForm>
         </div>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <CampoForm label="Complemento" htmlFor="addressComplement">
             <Input id="addressComplement" name="addressComplement" type="text" defaultValue={defaultValues?.addressComplement ?? ""} />
           </CampoForm>

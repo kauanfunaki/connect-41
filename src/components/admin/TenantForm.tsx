@@ -34,7 +34,7 @@ export function TenantForm({ action, isSuperAdmin, defaultValues }: Props) {
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <CampoForm label="Nome" htmlFor="name" required>
           <Input
             id="name"
@@ -70,7 +70,7 @@ export function TenantForm({ action, isSuperAdmin, defaultValues }: Props) {
       </CampoForm>
 
       {isSuperAdmin && (
-        <div className="grid grid-cols-2 gap-4 border-t border-border pt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-border pt-4">
           <CampoForm label="Plano" htmlFor="plan">
             <Input
               id="plan"

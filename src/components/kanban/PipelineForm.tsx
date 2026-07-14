@@ -46,7 +46,7 @@ export function PipelineForm({ action, sectorOptions }: Props) {
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="Nome do Kanban" htmlFor="name" required>
           <Input
             id="name"

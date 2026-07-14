@@ -22,7 +22,7 @@ export function PrazoPrioridadeForm({ action, dueDate, priority }: Props) {
           {state.error}
         </p>
       )}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <CampoForm label="Prazo" htmlFor="dueDate">
           <Input
             id="dueDate"

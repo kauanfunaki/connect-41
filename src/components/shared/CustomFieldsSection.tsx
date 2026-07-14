@@ -22,7 +22,7 @@ export function CustomFieldsSection({ fields }: { fields: CustomFieldInput[] }) 
       <h3 className="text-[11px] font-semibold text-fg-muted uppercase tracking-wider border-b border-border pb-2">
         Campos Adicionais
       </h3>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {fields.map((f) => (
           <CampoForm key={f.id} label={f.label} htmlFor={`custom_${f.id}`} required={f.required}>
             <CustomFieldInputControl field={f} />
