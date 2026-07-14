@@ -10,20 +10,20 @@ datasource db {
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
 enum UserRole {
-  SUPER_ADMIN  // acesso a todos os tenants (suporte 41 Tech)
-  ADMIN        // todo o tenant: setores, usuários, config
+  SUPER_ADMIN // acesso a todos os tenants (suporte 41 Tech)
+  ADMIN // todo o tenant: setores, usuários, config
   SECTOR_ADMIN // seu(s) setor(es): CRUD + handoffs
-  SECTOR_USER  // seu(s) setor(es): leitura + atividades
-  READONLY     // todos os setores, somente leitura (Diretoria)
+  SECTOR_USER // seu(s) setor(es): leitura + atividades
+  READONLY // todos os setores, somente leitura (Diretoria)
 }
 
 enum ManagementMode {
-  MANAGED       // frente 1: 41 Tech administra o CRM pelo cliente (cobrança mensal fixa)
-  SELF_SERVICE  // frente 2: cliente administra o próprio CRM (cobrança por usuário)
+  MANAGED // frente 1: 41 Tech administra o CRM pelo cliente (cobrança mensal fixa)
+  SELF_SERVICE // frente 2: cliente administra o próprio CRM (cobrança por usuário)
 }
 
 enum BillingType {
-  FLAT_MONTHLY     // valor fixo mensal — usado em planos MANAGED
+  FLAT_MONTHLY // valor fixo mensal — usado em planos MANAGED
   PER_USER_MONTHLY // valor por usuário ativo — usado em planos SELF_SERVICE
 }
 
@@ -144,6 +144,16 @@ enum DocumentCategory {
   RECIBO
   CONTRATO
   OUTRO
+}
+
+enum ClientDocumentStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum ClientDocumentViewAction {
+  VIEWED
+  DOWNLOADED
 }
 
 enum SensitiveFieldGroup {
@@ -270,56 +280,56 @@ enum TrainingParticipantStatus {
 // ─── Tenancy + Auth ──────────────────────────────────────────────────────────
 
 model Tenant {
-  id        String   @id @default(uuid())
-  name      String   @db.VarChar(120)
-  cnpj      String?  @unique @db.VarChar(18)
-  slug      String   @unique @db.VarChar(60)
-  plan      String   @default("starter") @db.VarChar(40)
+  id             String         @id @default(uuid())
+  name           String         @db.VarChar(120)
+  cnpj           String?        @unique @db.VarChar(18)
+  slug           String         @unique @db.VarChar(60)
+  plan           String         @default("starter") @db.VarChar(40)
   managementMode ManagementMode @default(MANAGED)
-  logoUrl   String?  @db.VarChar(255)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  logoUrl        String?        @db.VarChar(255)
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
-  subscription   Subscription?
-  users          User[]
-  companies      Company[]
-  people         Person[]
-  pipelines      Pipeline[]
-  pipelineItems  PipelineItem[]
-  activities     Activity[]
-  handoffs       Handoff[]
-  notifications  Notification[]
-  customFields   CustomField[]
-  customValues   CustomValue[]
-  sectors        Sector[]
-  tenantModules  TenantModule[]
-  tags           Tag[]
-  branches       Branch[]
-  accessGrants   UserTenantAccess[]
-  departments    Department[]
-  cargos         Cargo[]
-  vagas          Vaga[]
-  candidaturas   Candidatura[]
-  exames         ExameAdmissional[]
-  documents      Document[]
-  fieldPermissions FieldPermission[]
-  salaryChanges  SalaryChange[]
-  vacations      Vacation[]
-  absences       Absence[]
-  terminations   Termination[]
-  payrollCompetencies PayrollCompetency[]
-  payrollEntries      PayrollEntry[]
-  overtimeEntries     OvertimeEntry[]
-  benefitCatalogs     BenefitCatalog[]
-  benefitAssignments  BenefitAssignment[]
-  workShifts          WorkShift[]
-  holidays            Holiday[]
-  scheduleEntries     ScheduleEntry[]
-  trainings           Training[]
-  trainingClasses     TrainingClass[]
+  subscription         Subscription?
+  users                User[]
+  companies            Company[]
+  people               Person[]
+  pipelines            Pipeline[]
+  pipelineItems        PipelineItem[]
+  activities           Activity[]
+  handoffs             Handoff[]
+  notifications        Notification[]
+  customFields         CustomField[]
+  customValues         CustomValue[]
+  sectors              Sector[]
+  tenantModules        TenantModule[]
+  tags                 Tag[]
+  branches             Branch[]
+  accessGrants         UserTenantAccess[]
+  departments          Department[]
+  cargos               Cargo[]
+  vagas                Vaga[]
+  candidaturas         Candidatura[]
+  exames               ExameAdmissional[]
+  documents            Document[]
+  fieldPermissions     FieldPermission[]
+  salaryChanges        SalaryChange[]
+  vacations            Vacation[]
+  absences             Absence[]
+  terminations         Termination[]
+  payrollCompetencies  PayrollCompetency[]
+  payrollEntries       PayrollEntry[]
+  overtimeEntries      OvertimeEntry[]
+  benefitCatalogs      BenefitCatalog[]
+  benefitAssignments   BenefitAssignment[]
+  workShifts           WorkShift[]
+  holidays             Holiday[]
+  scheduleEntries      ScheduleEntry[]
+  trainings            Training[]
+  trainingClasses      TrainingClass[]
   trainingParticipants TrainingParticipant[]
-  competencies        Competency[]
+  competencies         Competency[]
   evaluationCycles     EvaluationCycle[]
   evaluations          Evaluation[]
   evaluationScores     EvaluationScore[]
@@ -327,6 +337,8 @@ model Tenant {
   auditLogs            AuditLog[]
   oauthAccounts        OAuthAccount[]
   meetings             Meeting[]
+  clientDocuments      ClientDocument[]
+  smtpConfig           TenantSmtpConfig?
 
   @@map("tenants")
 }
@@ -416,9 +428,9 @@ model SubscriptionPlan {
   name           String         @db.VarChar(80)
   managementMode ManagementMode
   billingType    BillingType
-  basePrice      Decimal        @db.Decimal(10, 2) @default(0) // usado quando billingType = FLAT_MONTHLY
-  pricePerUser   Decimal?       @db.Decimal(10, 2)              // usado quando billingType = PER_USER_MONTHLY
-  setupFee       Decimal        @db.Decimal(10, 2) @default(0)
+  basePrice      Decimal        @default(0) @db.Decimal(10, 2) // usado quando billingType = FLAT_MONTHLY
+  pricePerUser   Decimal?       @db.Decimal(10, 2) // usado quando billingType = PER_USER_MONTHLY
+  setupFee       Decimal        @default(0) @db.Decimal(10, 2)
   active         Boolean        @default(true)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
@@ -436,7 +448,7 @@ model Subscription {
   tenantId         String             @unique
   planId           String
   status           SubscriptionStatus @default(TRIAL)
-  seatLimit        Int?               // limite de usuários — só relevante em planos PER_USER_MONTHLY
+  seatLimit        Int? // limite de usuários — só relevante em planos PER_USER_MONTHLY
   startedAt        DateTime           @default(now())
   currentPeriodEnd DateTime?
   setupFeeAmount   Decimal?           @db.Decimal(10, 2)
@@ -464,22 +476,23 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  tenant        Tenant                 @relation(fields: [tenantId], references: [id])
-  sectors       UserSector[]
-  assignedItems PipelineItemAssignee[]
-  activities    Activity[]
-  handoffs      Handoff[]              @relation("HandoffRequester")
-  handoffsAssigned Handoff[]           @relation("HandoffAssignee")
-  handoffViews  HandoffView[]
-  notifications Notification[]
-  tenantAccess  UserTenantAccess[]
-  uploadedDocuments Document[]
-  evaluationsGiven  Evaluation[]
-  auditLogs         AuditLog[]
-  responsibleFor    CompanyService[] @relation("CompanyServiceResponsible")
-  oauthAccounts     OAuthAccount[]
-  meetingsCreated   Meeting[]        @relation("MeetingCreatedBy")
-  meetingAttendances MeetingAttendee[]
+  tenant                 Tenant                 @relation(fields: [tenantId], references: [id])
+  sectors                UserSector[]
+  assignedItems          PipelineItemAssignee[]
+  activities             Activity[]
+  handoffs               Handoff[]              @relation("HandoffRequester")
+  handoffsAssigned       Handoff[]              @relation("HandoffAssignee")
+  handoffViews           HandoffView[]
+  notifications          Notification[]
+  tenantAccess           UserTenantAccess[]
+  uploadedDocuments      Document[]
+  evaluationsGiven       Evaluation[]
+  auditLogs              AuditLog[]
+  responsibleFor         CompanyService[]       @relation("CompanyServiceResponsible")
+  oauthAccounts          OAuthAccount[]
+  meetingsCreated        Meeting[]              @relation("MeetingCreatedBy")
+  meetingAttendances     MeetingAttendee[]
+  clientDocumentsCreated ClientDocument[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -488,8 +501,8 @@ model User {
 
 // Quais setores um usuário pode acessar
 model UserSector {
-  userId      String
-  sectorCode  String @db.VarChar(40)
+  userId     String
+  sectorCode String @db.VarChar(40)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -498,11 +511,11 @@ model UserSector {
 }
 
 model RefreshToken {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   userId    String
-  tokenHash String   @db.VarChar(255)
+  tokenHash String    @db.VarChar(255)
   expiresAt DateTime
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   revokedAt DateTime?
 
   @@index([userId])
@@ -515,12 +528,12 @@ model Company {
   id                    String        @id @default(uuid())
   tenantId              String
   // Identificação
-  name                  String        @db.VarChar(180)   // Razão Social
-  tradeName             String?       @db.VarChar(180)   // Nome Fantasia
+  name                  String        @db.VarChar(180) // Razão Social
+  tradeName             String?       @db.VarChar(180) // Nome Fantasia
   cnpj                  String?       @db.VarChar(18)
-  taxRegime             String?       @db.VarChar(60)    // Regime Tributário
-  externalId            String?       @db.VarChar(60)    // ID manual do sistema de domínio (ex: Acessorias) — sem sincronização
-  foundationDate        DateTime?                         // Data de abertura da empresa
+  taxRegime             String?       @db.VarChar(60) // Regime Tributário
+  externalId            String?       @db.VarChar(60) // ID manual do sistema de domínio (ex: Acessorias) — sem sincronização
+  foundationDate        DateTime? // Data de abertura da empresa
   // Endereço
   zipCode               String?       @db.VarChar(10)
   addressStreet         String?       @db.VarChar(180)
@@ -546,18 +559,19 @@ model Company {
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
-  tenant   Tenant  @relation(fields: [tenantId], references: [id])
-  branch   Branch? @relation(fields: [branchId], references: [id])
+  tenant Tenant  @relation(fields: [tenantId], references: [id])
+  branch Branch? @relation(fields: [branchId], references: [id])
 
-  services    CompanyService[]
-  people      Person[]
-  departments Department[]
-  cargos      Cargo[]
-  vagas       Vaga[]
+  services            CompanyService[]
+  people              Person[]
+  departments         Department[]
+  cargos              Cargo[]
+  vagas               Vaga[]
   payrollCompetencies PayrollCompetency[]
   benefitCatalogs     BenefitCatalog[]
   workShifts          WorkShift[]
   meetings            Meeting[]
+  clientDocuments     ClientDocument[]
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -588,58 +602,58 @@ model CompanyService {
 }
 
 model Person {
-  id             String     @id @default(uuid())
-  tenantId       String
-  name           String     @db.VarChar(180)
-  cpf            String?    @db.VarChar(14)
-  email          String?    @db.VarChar(120)
-  phone          String?    @db.VarChar(30)
-  photoUrl       String?    @db.VarChar(255)
-  birthDate      DateTime?
-  type           PersonType @default(CANDIDATO)
-  active         Boolean    @default(true)
+  id               String     @id @default(uuid())
+  tenantId         String
+  name             String     @db.VarChar(180)
+  cpf              String?    @db.VarChar(14)
+  email            String?    @db.VarChar(120)
+  phone            String?    @db.VarChar(30)
+  photoUrl         String?    @db.VarChar(255)
+  birthDate        DateTime?
+  type             PersonType @default(CANDIDATO)
+  active           Boolean    @default(true)
   currentCompanyId String?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 
   // ─── Dados trabalhistas (Núcleo de Colaboradores) ───────────────────────────
-  rg               String?                @db.VarChar(20)
-  pis              String?                @db.VarChar(20)
-  ctps             String?                @db.VarChar(20)
-  ctpsSerie        String?                @db.VarChar(10)
-  admissionDate    DateTime?
-  dismissalDate    DateTime?
-  employmentStatus PersonEmploymentStatus @default(ADMISSAO_EM_ANDAMENTO)
-  cargoId          String?
-  departmentId     String?
-  monthlyWorkHours Decimal?               @db.Decimal(6, 2)
-  weeklyWorkHours  Decimal?               @db.Decimal(5, 2)
-  workShift        String?                @db.VarChar(60)
-  currentSalary    Decimal?               @db.Decimal(12, 2)
-  bankName         String?                @db.VarChar(80)
-  bankAgency       String?                @db.VarChar(20)
-  bankAccount      String?                @db.VarChar(30)
-  bankAccountType  String?                @db.VarChar(20)
-  zipCode          String?                @db.VarChar(10)
-  addressStreet    String?                @db.VarChar(180)
-  addressNumber    String?                @db.VarChar(20)
-  addressComplement String?               @db.VarChar(80)
-  neighborhood     String?                @db.VarChar(80)
-  city             String?                @db.VarChar(80)
-  stateCode        String?                @db.VarChar(2)
-  education        String?                @db.VarChar(80)
+  rg                String?                @db.VarChar(20)
+  pis               String?                @db.VarChar(20)
+  ctps              String?                @db.VarChar(20)
+  ctpsSerie         String?                @db.VarChar(10)
+  admissionDate     DateTime?
+  dismissalDate     DateTime?
+  employmentStatus  PersonEmploymentStatus @default(ADMISSAO_EM_ANDAMENTO)
+  cargoId           String?
+  departmentId      String?
+  monthlyWorkHours  Decimal?               @db.Decimal(6, 2)
+  weeklyWorkHours   Decimal?               @db.Decimal(5, 2)
+  workShift         String?                @db.VarChar(60)
+  currentSalary     Decimal?               @db.Decimal(12, 2)
+  bankName          String?                @db.VarChar(80)
+  bankAgency        String?                @db.VarChar(20)
+  bankAccount       String?                @db.VarChar(30)
+  bankAccountType   String?                @db.VarChar(20)
+  zipCode           String?                @db.VarChar(10)
+  addressStreet     String?                @db.VarChar(180)
+  addressNumber     String?                @db.VarChar(20)
+  addressComplement String?                @db.VarChar(80)
+  neighborhood      String?                @db.VarChar(80)
+  city              String?                @db.VarChar(80)
+  stateCode         String?                @db.VarChar(2)
+  education         String?                @db.VarChar(80)
 
-  tenant         Tenant   @relation(fields: [tenantId], references: [id])
-  currentCompany Company? @relation(fields: [currentCompanyId], references: [id])
+  tenant         Tenant      @relation(fields: [tenantId], references: [id])
+  currentCompany Company?    @relation(fields: [currentCompanyId], references: [id])
   cargo          Cargo?      @relation(fields: [cargoId], references: [id])
   department     Department? @relation(fields: [departmentId], references: [id])
 
-  candidaturas Candidatura[]
-  exames       ExameAdmissional[]
-  salaryChanges SalaryChange[]
-  vacations     Vacation[]
-  absences      Absence[]
-  terminations  Termination[]
+  candidaturas         Candidatura[]
+  exames               ExameAdmissional[]
+  salaryChanges        SalaryChange[]
+  vacations            Vacation[]
+  absences             Absence[]
+  terminations         Termination[]
   payrollEntries       PayrollEntry[]
   overtimeEntries      OvertimeEntry[]
   benefitAssignments   BenefitAssignment[]
@@ -678,7 +692,7 @@ model PipelineStage {
   pipelineId String
   name       String   @db.VarChar(80)
   order      Int
-  color      String?  @db.VarChar(7)  // hex, ex: #1A5FA8
+  color      String?  @db.VarChar(7) // hex, ex: #1A5FA8
   isTerminal Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -691,24 +705,24 @@ model PipelineStage {
 }
 
 model PipelineItem {
-  id         String             @id @default(uuid())
-  tenantId   String
-  pipelineId String
-  stageId    String
-  entityType PipelineEntityType
-  entityId   String             // Company.id ou Person.id (referência por string, sem FK Prisma — relação polimórfica)
-  priority   Int                @default(0)
-  dueDate    DateTime?
-  description String?           @db.Text
-  createdAt  DateTime           @default(now())
-  updatedAt  DateTime           @updatedAt
+  id          String             @id @default(uuid())
+  tenantId    String
+  pipelineId  String
+  stageId     String
+  entityType  PipelineEntityType
+  entityId    String // Company.id ou Person.id (referência por string, sem FK Prisma — relação polimórfica)
+  priority    Int                @default(0)
+  dueDate     DateTime?
+  description String?            @db.Text
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 
-  tenant     Tenant                 @relation(fields: [tenantId], references: [id])
-  pipeline   Pipeline               @relation(fields: [pipelineId], references: [id])
-  stage      PipelineStage          @relation(fields: [stageId], references: [id])
-  activities Activity[]
-  assignees  PipelineItemAssignee[]
-  tags       PipelineItemTag[]
+  tenant      Tenant                 @relation(fields: [tenantId], references: [id])
+  pipeline    Pipeline               @relation(fields: [pipelineId], references: [id])
+  stage       PipelineStage          @relation(fields: [stageId], references: [id])
+  activities  Activity[]
+  assignees   PipelineItemAssignee[]
+  tags        PipelineItemTag[]
   candidatura Candidatura?
   meetings    Meeting[]
 
@@ -768,7 +782,7 @@ model Activity {
   userId         String
   type           ActivityType
   content        String?      @db.Text
-  metadata       Json?        // dados extras (ex: stageFrom, stageTo no STATUS_CHANGE)
+  metadata       Json? // dados extras (ex: stageFrom, stageTo no STATUS_CHANGE)
   createdAt      DateTime     @default(now())
 
   tenant       Tenant       @relation(fields: [tenantId], references: [id])
@@ -789,13 +803,13 @@ model CustomField {
   key        String          @db.VarChar(80)
   label      String          @db.VarChar(120)
   fieldType  CustomFieldType
-  options    Json?           // para SELECT: array de strings
+  options    Json? // para SELECT: array de strings
   required   Boolean         @default(false)
   order      Int             @default(0)
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
 
-  tenant Tenant       @relation(fields: [tenantId], references: [id])
+  tenant Tenant        @relation(fields: [tenantId], references: [id])
   values CustomValue[]
 
   @@unique([tenantId, sectorCode, entityType, key])
@@ -807,7 +821,7 @@ model CustomValue {
   id            String   @id @default(uuid())
   tenantId      String
   customFieldId String
-  entityId      String   // Company.id ou Person.id
+  entityId      String // Company.id ou Person.id
   value         String?  @db.Text
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -859,10 +873,10 @@ model Cargo {
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
-  tenant  Tenant   @relation(fields: [tenantId], references: [id])
-  company Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  vagas   Vaga[]
-  people  Person[]
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vagas         Vaga[]
+  people        Person[]
   salaryChanges SalaryChange[]
 
   @@unique([companyId, name])
@@ -915,10 +929,10 @@ model Candidatura {
   createdAt        DateTime               @default(now())
   updatedAt        DateTime               @updatedAt
 
-  tenant       Tenant        @relation(fields: [tenantId], references: [id])
-  vaga         Vaga          @relation(fields: [vagaId], references: [id])
-  person       Person        @relation(fields: [personId], references: [id])
-  pipelineItem PipelineItem? @relation(fields: [pipelineItemId], references: [id])
+  tenant       Tenant             @relation(fields: [tenantId], references: [id])
+  vaga         Vaga               @relation(fields: [vagaId], references: [id])
+  person       Person             @relation(fields: [personId], references: [id])
+  pipelineItem PipelineItem?      @relation(fields: [pipelineItemId], references: [id])
   exames       ExameAdmissional[]
 
   @@unique([vagaId, personId])
@@ -971,6 +985,94 @@ model Document {
   @@map("documents")
 }
 
+// Documento formal enviado a um cliente (Company) por e-mail — inspirado no
+// Acessórias. Diferente do Document genérico acima: é público (visualizável sem
+// login via ClientDocumentRecipient.token) e serve de prova de recebimento.
+// Trava de integridade: uma vez que exista recipient.sentAt, bodyHtml/arquivo
+// não devem mais ser editados (o link já enviado precisa mostrar sempre o
+// mesmo conteúdo que foi de fato visualizado).
+model ClientDocument {
+  id          String               @id @default(uuid())
+  tenantId    String
+  companyId   String
+  title       String               @db.VarChar(180)
+  bodyHtml    String               @db.Text
+  fileName    String?              @db.VarChar(180)
+  fileUrl     String?              @db.VarChar(255)
+  mimeType    String?              @db.VarChar(100)
+  fileSize    Int?
+  status      ClientDocumentStatus @default(DRAFT)
+  publishedAt DateTime?
+  createdById String
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  tenant     Tenant                    @relation(fields: [tenantId], references: [id])
+  company    Company                   @relation(fields: [companyId], references: [id])
+  createdBy  User                      @relation(fields: [createdById], references: [id])
+  recipients ClientDocumentRecipient[]
+
+  @@index([tenantId, companyId])
+  @@map("client_documents")
+}
+
+// Um destinatário de um envio — token único vira o link público (/d/{token}).
+// sentAt marca o envio; first/lastViewedAt são um resumo denormalizado (o log
+// completo de cada abertura/download vive em ClientDocumentView).
+model ClientDocumentRecipient {
+  id               String    @id @default(uuid())
+  clientDocumentId String
+  email            String    @db.VarChar(180)
+  token            String    @unique @db.VarChar(64)
+  sentAt           DateTime?
+  firstViewedAt    DateTime?
+  lastViewedAt     DateTime?
+  createdAt        DateTime  @default(now())
+
+  clientDocument ClientDocument       @relation(fields: [clientDocumentId], references: [id])
+  views          ClientDocumentView[]
+
+  @@index([clientDocumentId])
+  @@map("client_document_recipients")
+}
+
+// Log de prova: uma linha por abertura de link ou download de anexo, nunca
+// deduplicado — é a evidência que sustenta "o cliente visualizou em tal
+// data/hora, deste IP".
+model ClientDocumentView {
+  id          String                   @id @default(uuid())
+  recipientId String
+  action      ClientDocumentViewAction @default(VIEWED)
+  ipAddress   String                   @db.VarChar(64)
+  userAgent   String?                  @db.VarChar(255)
+  viewedAt    DateTime                 @default(now())
+
+  recipient ClientDocumentRecipient @relation(fields: [recipientId], references: [id])
+
+  @@index([recipientId])
+  @@map("client_document_views")
+}
+
+// Config de SMTP por tenant (Connect 41 é comercializado para vários
+// escritórios — não pode depender de uma conta SMTP fixa do 41 Tech).
+// passwordEnc nunca fica em texto puro — ver src/lib/crypto.ts (AES-256-GCM).
+model TenantSmtpConfig {
+  id          String   @id @default(uuid())
+  tenantId    String   @unique
+  host        String   @db.VarChar(180)
+  port        Int
+  secure      Boolean  @default(true)
+  username    String   @db.VarChar(180)
+  passwordEnc String   @db.Text
+  fromName    String   @db.VarChar(120)
+  fromEmail   String   @db.VarChar(180)
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("tenant_smtp_configs")
+}
+
 // Permissão de leitura por grupo de campo/documento sensível, por papel. Ausência
 // de linha = negado por padrão (diferente do TenantModule, aqui o default é fechado).
 model FieldPermission {
@@ -994,7 +1096,7 @@ model SalaryChange {
   previousSalary Decimal? @db.Decimal(12, 2)
   newSalary      Decimal  @db.Decimal(12, 2)
   changePercent  Decimal? @db.Decimal(5, 2)
-  cargoId        String?  // preenchido quando o reajuste é uma promoção com troca de cargo
+  cargoId        String? // preenchido quando o reajuste é uma promoção com troca de cargo
   reason         String?  @db.Text
   effectiveDate  DateTime
   createdAt      DateTime @default(now())
@@ -1213,9 +1315,9 @@ model WorkShift {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant   Tenant          @relation(fields: [tenantId], references: [id])
-  company  Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  entries  ScheduleEntry[]
+  tenant  Tenant          @relation(fields: [tenantId], references: [id])
+  company Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  entries ScheduleEntry[]
 
   @@unique([companyId, name])
   @@index([tenantId, companyId])
@@ -1225,10 +1327,10 @@ model WorkShift {
 // Feriado — cadastro tenant-wide (não por empresa; feriado nacional/estadual/municipal
 // vale igual pra todos os clientes do tenant).
 model Holiday {
-  id       String   @id @default(uuid())
-  tenantId String
-  date     DateTime
-  name     String   @db.VarChar(120)
+  id        String   @id @default(uuid())
+  tenantId  String
+  date      DateTime
+  name      String   @db.VarChar(120)
   createdAt DateTime @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
@@ -1263,15 +1365,15 @@ model ScheduleEntry {
 
 // Catálogo de treinamentos — tenant-wide (compartilhado entre empresas do tenant).
 model Training {
-  id          String   @id @default(uuid())
-  tenantId    String
-  name        String   @db.VarChar(150)
-  description String?  @db.Text
-  workloadHours Decimal? @db.Decimal(5, 2)
+  id             String   @id @default(uuid())
+  tenantId       String
+  name           String   @db.VarChar(150)
+  description    String?  @db.Text
+  workloadHours  Decimal? @db.Decimal(5, 2)
   validityMonths Int?
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   tenant  Tenant          @relation(fields: [tenantId], references: [id])
   classes TrainingClass[]
@@ -1290,8 +1392,8 @@ model TrainingClass {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  tenant       Tenant                 @relation(fields: [tenantId], references: [id])
-  training     Training               @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  tenant       Tenant                @relation(fields: [tenantId], references: [id])
+  training     Training              @relation(fields: [trainingId], references: [id], onDelete: Cascade)
   participants TrainingParticipant[]
 
   @@index([tenantId, trainingId])
@@ -1445,14 +1547,14 @@ model HandoffView {
 // (/admin/auditoria, restrito a SUPER_ADMIN); nunca editável ou excluível
 // pelo app. Best-effort: falha ao gravar log nunca deve derrubar a ação real.
 model AuditLog {
-  id         String    @id @default(uuid())
+  id         String   @id @default(uuid())
   tenantId   String
   userId     String
-  action     String    @db.VarChar(60)  // ex: "company.create", "sector.update"
-  entityType String?   @db.VarChar(40)  // livre (Company, Person, Sector, Tag...) — não usa o enum EntityType, que só cobre Company/Person
+  action     String   @db.VarChar(60) // ex: "company.create", "sector.update"
+  entityType String?  @db.VarChar(40) // livre (Company, Person, Sector, Tag...) — não usa o enum EntityType, que só cobre Company/Person
   entityId   String?
   metadata   Json?
-  createdAt  DateTime  @default(now())
+  createdAt  DateTime @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
   user   User   @relation(fields: [userId], references: [id])
@@ -1463,15 +1565,15 @@ model AuditLog {
 }
 
 model Notification {
-  id         String     @id @default(uuid())
+  id         String      @id @default(uuid())
   tenantId   String
   userId     String
-  type       String     @db.VarChar(60)  // ex: HANDOFF_RECEIVED, MENTION, STAGE_OVERDUE
+  type       String      @db.VarChar(60) // ex: HANDOFF_RECEIVED, MENTION, STAGE_OVERDUE
   entityType EntityType?
   entityId   String?
-  message    String     @db.VarChar(255)
-  read       Boolean    @default(false)
-  createdAt  DateTime   @default(now())
+  message    String      @db.VarChar(255)
+  read       Boolean     @default(false)
+  createdAt  DateTime    @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1526,7 +1628,7 @@ model Meeting {
   endAt           DateTime
   pipelineItemId  String?
   sectorCode      String?         @db.VarChar(40)
-  companyId       String?         // empresa associada — reunião criada pela Agenda, sem item de Kanban
+  companyId       String? // empresa associada — reunião criada pela Agenda, sem item de Kanban
   clientName      String?         @db.VarChar(255) // nome(s) do(s) participante(s)/cliente(s), texto livre
   createdByUserId String
   createdAt       DateTime        @default(now())

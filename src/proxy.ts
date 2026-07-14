@@ -22,6 +22,10 @@ const PUBLIC_PATHS = [
   // essas requisições pro /login (retornando HTML em vez da imagem), quebrando o
   // logo na tela de login e na tela de loading pós-login (contextos sem sessão).
   "/brand/",
+  // Link público de visualização de Documentos para Clientes — o cliente que
+  // recebe o e-mail não tem (e não deve precisar de) login no Connect 41. A
+  // prova de acesso é o token na própria URL, validado dentro da rota.
+  "/d/",
 ];
 
 // Headers de identidade que SÓ podem ser setados por este proxy. Qualquer

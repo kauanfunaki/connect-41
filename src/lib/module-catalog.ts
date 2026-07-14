@@ -81,6 +81,13 @@ export const MODULE_CATALOG: ModuleDef[] = [
     description: "Dashboard consolidado — headcount, turnover, absenteísmo, custo de folha e mais",
     defaultEnabled: true,
   },
+  {
+    code: "gestao_documentos_clientes",
+    label: "Documentos para Clientes",
+    sectorCode: "gestao",
+    description: "Envio de documentos por e-mail com prova de recebimento e visualização",
+    defaultEnabled: true,
+  },
 ];
 
 export function getModuleDef(code: string): ModuleDef | undefined {
