@@ -26,7 +26,7 @@ export default async function AgendaPage({
 }) {
   const { week } = await searchParams;
   const ctx = await getAuthContext();
-  if (!canManageMeetings(ctx)) redirect("/");
+  if (!canManageMeetings(ctx)) redirect("/home");
 
   const mondayKey = mondayOfWeek(week);
   const days = weekDayKeys(mondayKey);

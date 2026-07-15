@@ -135,7 +135,7 @@ export function AppShell({
           <p className="px-2.5 pb-1.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wider">
             Geral
           </p>
-          <NavItem href="/" icon={<Home size={16} />} label="Início" />
+          <NavItem href="/home" icon={<Home size={16} />} label="Início" />
           <NavItem href="/empresas" icon={<Building2 size={16} />} label="Empresas" />
           <NavItem href="/pessoas" icon={<Users size={16} />} label="Pessoas" />
           <NavItem href="/kanban" icon={<Columns3 size={16} />} label="Kanban" />

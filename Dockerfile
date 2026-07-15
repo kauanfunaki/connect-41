@@ -30,9 +30,17 @@ RUN groupadd --system --gid 1001 nodejs \
   && useradd --system --uid 1001 --gid nodejs nextjs
 
 # saída standalone: server.js + node_modules mínimos
-COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# storage/ e public/uploads/ não existem no build (são estado de runtime,
+# criados sob demanda pelos uploads: avatares, logos, documentos) — precisam
+# já nascer com dono nextjs, senão o primeiro mkdir em runtime falha com EACCES
+# (/app é root:root por padrão via WORKDIR). Se o EasyPanel montar um volume
+# persistente num desses caminhos, o Docker copia o conteúdo desta camada (já
+# com o dono certo) pro volume na primeira inicialização.
+RUN mkdir -p /app/storage /app/public/uploads && chown -R nextjs:nodejs /app/storage /app/public/uploads
 
 USER nextjs
 EXPOSE 3000

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { UsuarioState } from "@/app/(app)/admin/usuarios/actions";
 import type { UserRole } from "@/generated/prisma/enums";
@@ -30,7 +30,16 @@ type Props = {
 export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, defaultValues, isSelf }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const isEdit = Boolean(defaultValues?.id);
-  const selectedSectors = new Set(defaultValues?.sectors ?? []);
+  const [selectedSectors, setSelectedSectors] = useState(() => new Set(defaultValues?.sectors ?? []));
+
+  function toggleSector(code: string) {
+    setSelectedSectors((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      return next;
+    });
+  }
   // Campos <select>/<input> com `disabled` não são enviados no FormData — quando o próprio
   // usuário está editando seu registro, travamos as opções (papel único, ativo forçado) em
   // vez de desabilitar, para o valor continuar sendo submetido e bater com a regra do servidor.
@@ -126,21 +135,55 @@ export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, de
       </div>
 
       <div className="space-y-2">
-        <p className="text-[length:var(--fs-label)] font-medium text-fg">Setores</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          {sectorOptions.map((s) => (
-            <label
-              key={s.value}
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-border text-[12px] text-fg-secondary hover:bg-surface-2 transition-colors cursor-pointer"
+        <div className="flex items-center justify-between">
+          <p className="text-[length:var(--fs-label)] font-medium text-fg">
+            Setores com acesso
+            <span className="text-fg-muted font-normal ml-1.5">
+              ({selectedSectors.size} de {sectorOptions.length})
+            </span>
+          </p>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setSelectedSectors(new Set(sectorOptions.map((s) => s.value)))}
+              className="text-[12px] text-brand hover:underline"
             >
-              <Checkbox
-                name="sectors"
-                value={s.value}
-                defaultChecked={selectedSectors.has(s.value)}
-              />
-              {s.label}
-            </label>
-          ))}
+              Selecionar todos
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedSectors(new Set())}
+              className="text-[12px] text-fg-muted hover:text-fg hover:underline"
+            >
+              Limpar
+            </button>
+          </div>
+        </div>
+        <p className="text-[length:var(--fs-helper)] text-fg-muted">
+          Escolha só os setores que este usuário precisa acessar — evite marcar todos por padrão, isso deixa a listagem poluída.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {sectorOptions.map((s) => {
+            const checked = selectedSectors.has(s.value);
+            return (
+              <label
+                key={s.value}
+                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-[12px] transition-colors cursor-pointer ${
+                  checked
+                    ? "border-brand/40 bg-brand/8 text-fg font-medium"
+                    : "border-border text-fg-secondary hover:bg-surface-2"
+                }`}
+              >
+                <Checkbox
+                  name="sectors"
+                  value={s.value}
+                  checked={checked}
+                  onChange={() => toggleSector(s.value)}
+                />
+                {s.label}
+              </label>
+            );
+          })}
         </div>
       </div>
 

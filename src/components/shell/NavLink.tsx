@@ -10,9 +10,6 @@ type NavItemProps = {
 };
 
 function isActivePath(pathname: string, href: string): boolean {
-  // "/" só existe como redirect pra "/home" — sem esse caso especial o item
-  // "Início" nunca fica marcado como ativo (pathname real nunca é "/").
-  if (href === "/") return pathname === "/" || pathname === "/home";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Dropdown, DropdownItem, DropdownSeparator } from "@/components/ui/Dropdown";
 import { AvatarImage } from "@/components/shared/AvatarImage";
+import { ImageCropModal } from "@/components/shared/ImageCropModal";
 
 type Props = {
   name: string;
@@ -15,17 +16,26 @@ export function ProfileMenu({ name, roleLabel, photoUrl: initialPhotoUrl }: Prop
   const [photoUrl, setPhotoUrl] = useState(initialPhotoUrl);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (file) setPendingFile(file);
+  }
+
+  function resetInput() {
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function handleCropConfirm(blob: Blob) {
+    setPendingFile(null);
     setError(null);
     setUploading(true);
     try {
       const form = new FormData();
-      form.append("photo", file);
+      form.append("photo", blob, `photo.${blob.type.split("/")[1] ?? "jpg"}`);
       const res = await fetch("/api/users/me/photo", { method: "POST", body: form });
       const data = await res.json();
       if (!res.ok) {
@@ -37,7 +47,7 @@ export function ProfileMenu({ name, roleLabel, photoUrl: initialPhotoUrl }: Prop
       setError("Erro ao enviar foto.");
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      resetInput();
     }
   }
 
@@ -89,6 +99,15 @@ export function ProfileMenu({ name, roleLabel, photoUrl: initialPhotoUrl }: Prop
       <DropdownItem danger onClick={handleLogout}>
         Sair
       </DropdownItem>
+
+      <ImageCropModal
+        file={pendingFile}
+        onCancel={() => {
+          setPendingFile(null);
+          resetInput();
+        }}
+        onConfirm={handleCropConfirm}
+      />
     </Dropdown>
   );
 }

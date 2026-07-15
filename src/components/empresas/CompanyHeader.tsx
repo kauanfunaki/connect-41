@@ -7,6 +7,7 @@ import type { CompanyStatus } from "@/generated/prisma/enums";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { DeleteButton } from "@/components/ui/DeleteButton";
 import { AvatarImage } from "@/components/shared/AvatarImage";
+import { ImageCropModal } from "@/components/shared/ImageCropModal";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
   PROSPECT: "Prospecto",
@@ -57,6 +58,7 @@ export function CompanyHeader({
   const [logoUrl, setLogoUrl] = useState(initialLogoUrl);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoError, setLogoError] = useState<string | null>(null);
+  const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const location = [city, stateCode].filter(Boolean).join(" — ");
 
@@ -67,14 +69,22 @@ export function CompanyHeader({
     setTimeout(() => setCopied(false), 1500);
   }
 
-  async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (file) setPendingLogoFile(file);
+  }
+
+  function resetLogoInput() {
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function handleLogoCropConfirm(blob: Blob) {
+    setPendingLogoFile(null);
     setLogoError(null);
     setUploadingLogo(true);
     try {
       const form = new FormData();
-      form.append("logo", file);
+      form.append("logo", blob, `logo.${blob.type.split("/")[1] ?? "jpg"}`);
       const res = await fetch(`/api/empresas/${id}/logo`, { method: "POST", body: form });
       const data = await res.json();
       if (!res.ok) setLogoError(data.error ?? "Erro ao enviar foto.");
@@ -83,7 +93,7 @@ export function CompanyHeader({
       setLogoError("Erro ao enviar foto.");
     } finally {
       setUploadingLogo(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      resetLogoInput();
     }
   }
 
@@ -215,6 +225,16 @@ export function CompanyHeader({
           )}
         </div>
       </div>
+
+      <ImageCropModal
+        file={pendingLogoFile}
+        shape="rect"
+        onCancel={() => {
+          setPendingLogoFile(null);
+          resetLogoInput();
+        }}
+        onConfirm={handleLogoCropConfirm}
+      />
     </div>
   );
 }

@@ -120,19 +120,29 @@ export function UsuariosTable({
                     <td className="px-4 py-3 text-fg-secondary">{u.email}</td>
                     <td className="px-4 py-3 text-fg-secondary">{u.roleLabel}</td>
                     <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap items-center gap-1">
                         {u.sectors.length === 0 ? (
                           <span className="text-fg-muted">—</span>
                         ) : (
-                          u.sectors.map((s) => (
-                            <span
-                              key={s.code}
-                              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-medium bg-surface-hover text-fg-secondary border border-border"
-                            >
-                              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: s.color }} />
-                              {s.label}
-                            </span>
-                          ))
+                          <>
+                            {u.sectors.slice(0, 3).map((s) => (
+                              <span
+                                key={s.code}
+                                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-medium bg-surface-hover text-fg-secondary border border-border"
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: s.color }} />
+                                {s.label}
+                              </span>
+                            ))}
+                            {u.sectors.length > 3 && (
+                              <span
+                                title={u.sectors.slice(3).map((s) => s.label).join(", ")}
+                                className="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-medium bg-surface-hover text-fg-muted border border-border cursor-default"
+                              >
+                                +{u.sectors.length - 3}
+                              </span>
+                            )}
+                          </>
                         )}
                       </div>
                     </td>

@@ -15,6 +15,7 @@ import {
   Video,
   CreditCard,
   Receipt,
+  Settings2,
 } from "lucide-react";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
@@ -36,7 +37,8 @@ export default async function AdminPage() {
       { href: "/admin/usuarios", icon: <ShieldCheck size={20} />, title: "Usuários", description: "Contas, papéis e acesso a setores" },
       { href: "/admin/setores", icon: <Layers size={20} />, title: "Setores", description: "Catálogo de setores/cargos do tenant" },
       { href: "/admin/modulos", icon: <Blocks size={20} />, title: "Módulos", description: "Ativação de módulos plugáveis por setor" },
-      { href: "/admin/filiais", icon: <Building size={20} />, title: "Filiais", description: "Etiqueta organizacional para Empresas" }
+      { href: "/admin/filiais", icon: <Building size={20} />, title: "Filiais", description: "Etiqueta organizacional para Empresas" },
+      { href: "/admin/tenant", icon: <Settings2 size={20} />, title: "Empresa (Tenant)", description: "Dados do workspace e configuração de e-mail (SMTP)" }
     );
   }
 

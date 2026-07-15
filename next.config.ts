@@ -10,7 +10,10 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "font-src 'self' data:",
-  "connect-src 'self'",
+  // brasilapi.com.br: autocompletar dados da empresa a partir do CNPJ
+  // (EmpresaForm.tsx) — sem essa origem liberada, o fetch falha silenciosamente
+  // bloqueado pela CSP (a falha de rede já é tratada como best-effort no form).
+  "connect-src 'self' https://brasilapi.com.br",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "object-src 'none'",

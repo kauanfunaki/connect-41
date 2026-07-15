@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { AvatarImage } from "@/components/shared/AvatarImage";
+import { ImageCropModal } from "@/components/shared/ImageCropModal";
 
 type Props = {
   tenantId: string;
@@ -13,6 +14,7 @@ export function WorkspaceLogoUpload({ tenantId, tenantName, logoUrl: initialLogo
   const [logoUrl, setLogoUrl] = useState(initialLogoUrl);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleRemove() {
@@ -33,14 +35,22 @@ export function WorkspaceLogoUpload({ tenantId, tenantName, logoUrl: initialLogo
     }
   }
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (file) setPendingFile(file);
+  }
+
+  function resetInput() {
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function handleCropConfirm(blob: Blob) {
+    setPendingFile(null);
     setError(null);
     setUploading(true);
     try {
       const form = new FormData();
-      form.append("logo", file);
+      form.append("logo", blob, `logo.${blob.type.split("/")[1] ?? "jpg"}`);
       const res = await fetch(`/api/admin/workspaces/${tenantId}/logo`, { method: "POST", body: form });
       const data = await res.json();
       if (!res.ok) {
@@ -52,7 +62,7 @@ export function WorkspaceLogoUpload({ tenantId, tenantName, logoUrl: initialLogo
       setError("Erro ao enviar foto.");
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      resetInput();
     }
   }
 
@@ -90,6 +100,16 @@ export function WorkspaceLogoUpload({ tenantId, tenantName, logoUrl: initialLogo
         />
         {error && <p className="mt-1.5 text-[12px] text-danger">{error}</p>}
       </div>
+
+      <ImageCropModal
+        file={pendingFile}
+        shape="rect"
+        onCancel={() => {
+          setPendingFile(null);
+          resetInput();
+        }}
+        onConfirm={handleCropConfirm}
+      />
     </div>
   );
 }
