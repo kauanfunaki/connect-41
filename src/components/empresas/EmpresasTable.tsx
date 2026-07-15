@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { Select } from "@/components/ui/Select";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import type { CompanyStatus } from "@/generated/prisma/enums";
+import { formatCnpj } from "@/lib/format";
 
 type Tag = { sectorCode: string; label: string; color: string; responsibleName: string };
 
@@ -130,7 +131,7 @@ export function EmpresasTable({
                       {c.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-fg-secondary tnum">{c.cnpj ?? "—"}</td>
+                  <td className="px-4 py-3 text-fg-secondary tnum">{formatCnpj(c.cnpj)}</td>
                   <td className="px-4 py-3">
                     <StatusDot color={statusColor[c.status]} label={statusLabel[c.status]} />
                   </td>

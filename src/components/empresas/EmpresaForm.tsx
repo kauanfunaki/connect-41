@@ -13,6 +13,7 @@ import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { Stepper, type StepStatus } from "@/components/ui/Stepper";
 import { ReviewBlock } from "@/components/ui/ReviewBlock";
+import { formatCnpj, formatPhone, formatCep } from "@/lib/format";
 
 const STATUS_OPTIONS: { value: CompanyStatus; label: string }[] = [
   { value: "ACTIVE",   label: "Ativo" },
@@ -395,7 +396,7 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
               title="Identificação"
               onEdit={() => goTo(0)}
               items={[
-                { label: "CNPJ", value: values.cnpj },
+                { label: "CNPJ", value: values.cnpj ? formatCnpj(values.cnpj) : "" },
                 { label: "Status", value: STATUS_LABEL[values.status as CompanyStatus] },
                 { label: "Razão Social", value: values.name },
                 { label: "Nome Fantasia", value: values.tradeName },
@@ -407,7 +408,7 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
               title="Endereço"
               onEdit={() => goTo(1)}
               items={[
-                { label: "CEP", value: values.zipCode },
+                { label: "CEP", value: values.zipCode ? formatCep(values.zipCode) : "" },
                 { label: "UF", value: values.stateCode },
                 { label: "Logradouro", value: values.addressStreet },
                 { label: "Número", value: values.addressNumber },
@@ -420,7 +421,7 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
               onEdit={() => goTo(2)}
               items={[
                 { label: "E-mail", value: values.email },
-                { label: "Telefone", value: values.phone },
+                { label: "Telefone", value: values.phone ? formatPhone(values.phone) : "" },
                 { label: "Website", value: values.website },
               ]}
             />

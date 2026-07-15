@@ -25,7 +25,7 @@ import { scopedPersonWhere } from "@/lib/auth/scope";
 import { getPersonSectors, getApplicableCustomFields } from "@/lib/customFields";
 import { listDocuments } from "@/lib/documents";
 import { DocumentsSection } from "@/components/documents/DocumentsSection";
-import { formatCalendarDate, formatInstantDate } from "@/lib/format";
+import { formatCalendarDate, formatInstantDate, maskCpf, formatPhone, formatCep } from "@/lib/format";
 
 const TYPE_LABEL: Record<PersonType, string> = {
   CANDIDATO:   "Candidato",
@@ -116,7 +116,7 @@ export default async function PessoaPage({
         <div className="grid grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="Nome"               value={person.name} />
           <InfoRow label="Tipo"               value={TYPE_LABEL[person.type]} />
-          <InfoRow label="CPF"                value={person.cpf} mono />
+          <InfoRow label="CPF"                value={maskCpf(person.cpf)} mono />
           <InfoRow
             label="Data de Nascimento"
             value={
@@ -139,7 +139,7 @@ export default async function PessoaPage({
         <h2 className="text-[14px] font-semibold text-fg mb-4">Contato</h2>
         <div className="grid grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="E-mail"   value={person.email} />
-          <InfoRow label="Telefone" value={person.phone} />
+          <InfoRow label="Telefone" value={formatPhone(person.phone)} />
         </div>
       </div>
 
@@ -152,7 +152,7 @@ export default async function PessoaPage({
             <InfoRow label="Complemento" value={person.addressComplement} />
             <InfoRow label="Bairro"      value={person.neighborhood} />
             <InfoRow label="Cidade / UF" value={[person.city, person.stateCode].filter(Boolean).join(" — ")} />
-            <InfoRow label="CEP"         value={person.zipCode} mono />
+            <InfoRow label="CEP"         value={formatCep(person.zipCode)} mono />
           </div>
         </div>
       )}

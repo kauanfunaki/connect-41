@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { maskCpf } from "@/lib/format";
 
 type Row = {
   id: string;
@@ -97,7 +98,7 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
                       {c.active ? "Ativo" : "Inativo"}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-fg-muted tnum">{c.cpf ?? "—"}</td>
+                  <td className="px-4 py-2.5 text-fg-muted tnum">{maskCpf(c.cpf)}</td>
                   <td className="px-4 py-2.5 text-fg-muted">{c.email ?? "—"}</td>
                   <td className="px-4 py-2.5 text-fg-muted">{c.candidaturasCount}</td>
                   <td className="px-4 py-2.5 text-fg-muted tnum">{c.createdAtLabel}</td>

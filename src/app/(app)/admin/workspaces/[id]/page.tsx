@@ -6,6 +6,7 @@ import { ToggleAccessButton } from "@/components/admin/ToggleAccessButton";
 import { WorkspaceLogoUpload } from "@/components/admin/WorkspaceLogoUpload";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { concederAcesso, revogarAcesso } from "../actions";
+import { formatCnpj } from "@/lib/format";
 
 export default async function WorkspaceDetailPage({
   params,
@@ -44,7 +45,7 @@ export default async function WorkspaceDetailPage({
 
       <div className="mb-6">
         <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">{tenant.name}</h1>
-        <p className="text-[13px] text-fg-muted mt-0.5 font-mono">{tenant.cnpj ?? tenant.slug}</p>
+        <p className="text-[13px] text-fg-muted mt-0.5 font-mono">{tenant.cnpj ? formatCnpj(tenant.cnpj) : tenant.slug}</p>
       </div>
 
       <div className="bg-surface border border-border rounded-lg p-5 mb-4">

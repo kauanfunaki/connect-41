@@ -10,16 +10,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 import { AvatarImage } from "@/components/shared/AvatarImage";
-
-// Mascara o miolo do CPF na listagem (dado pessoal exposto a qualquer usuário
-// do tenant) — mantém início/fim visíveis o bastante pra localizar visualmente
-// sem expor o CPF completo por extenso numa tela de navegação/busca.
-function maskCpf(cpf: string | null): string {
-  if (!cpf) return "—";
-  const digits = cpf.replace(/\D/g, "");
-  if (digits.length !== 11) return cpf;
-  return `${digits.slice(0, 3)}.***.***-${digits.slice(9)}`;
-}
+import { maskCpf } from "@/lib/format";
 
 type Row = {
   id: string;

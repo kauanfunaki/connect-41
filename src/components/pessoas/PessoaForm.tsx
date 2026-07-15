@@ -13,6 +13,7 @@ import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { Stepper, type StepStatus } from "@/components/ui/Stepper";
 import { ReviewBlock } from "@/components/ui/ReviewBlock";
+import { formatPhone, formatCep } from "@/lib/format";
 
 const STATUS_OPTIONS: { value: PersonEmploymentStatus; label: string }[] = [
   { value: "ADMISSAO_EM_ANDAMENTO", label: "Admissão em andamento" },
@@ -418,14 +419,14 @@ export function PessoaForm({
                 { label: "RG", value: values.rg },
                 { label: "Nascimento", value: values.birthDate },
                 { label: "E-mail", value: values.email },
-                { label: "Telefone", value: values.phone },
+                { label: "Telefone", value: values.phone ? formatPhone(values.phone) : "" },
               ]}
             />
             <ReviewBlock
               title="Endereço"
               onEdit={() => goTo(1)}
               items={[
-                { label: "CEP", value: values.zipCode },
+                { label: "CEP", value: values.zipCode ? formatCep(values.zipCode) : "" },
                 { label: "UF", value: values.stateCode },
                 { label: "Logradouro", value: values.addressStreet },
                 { label: "Número", value: values.addressNumber },

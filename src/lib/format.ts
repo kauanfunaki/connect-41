@@ -27,3 +27,44 @@ export function formatInstantDateTime(date: Date, opts: Intl.DateTimeFormatOptio
 export function formatInstantTime(date: Date, opts: Intl.DateTimeFormatOptions = {}): string {
   return date.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", ...opts });
 }
+
+// Documentos brasileiros — aplica a máscara só quando a quantidade de dígitos
+// bate com o formato esperado; caso contrário devolve o valor cru (dado
+// incompleto/de teste não deve virar "—" nem quebrar a tela). `null`/vazio
+// sempre vira "—", igual ao fallback do InfoRow.
+
+export function formatCnpj(value: string | null | undefined): string {
+  if (!value) return "—";
+  const digits = value.replace(/\D/g, "");
+  if (digits.length !== 14) return value;
+  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
+}
+
+export function formatPhone(value: string | null | undefined): string {
+  if (!value) return "—";
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return value;
+}
+
+export function formatCep(value: string | null | undefined): string {
+  if (!value) return "—";
+  const digits = value.replace(/\D/g, "");
+  if (digits.length !== 8) return value;
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+}
+
+// Mascara o miolo do CPF — dado pessoal exposto a qualquer usuário do tenant
+// que tenha acesso ao registro; mantém início/fim visíveis o bastante pra
+// localizar visualmente sem expor o CPF completo por extenso. Aplicado
+// sempre, em toda tela (lista e ficha) — não existe hoje um nível de
+// permissão que libere o CPF completo (ver [[canViewSensitiveField]] em
+// sensitiveFields.ts, que cobre DADOS_BANCARIOS/MEDICOS/SALARIO/DOCUMENTOS,
+// não CPF).
+export function maskCpf(value: string | null | undefined): string {
+  if (!value) return "—";
+  const digits = value.replace(/\D/g, "");
+  if (digits.length !== 11) return value;
+  return `${digits.slice(0, 3)}.***.***-${digits.slice(9)}`;
+}

@@ -7,6 +7,7 @@ import { StatusDot } from "@/components/shared/StatusDot";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import type { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
+import { maskCpf, formatPhone } from "@/lib/format";
 
 const TYPE_LABEL: Record<PersonType, string> = {
   CANDIDATO: "Candidato",
@@ -98,7 +99,7 @@ export function PersonHeader({
                   className="inline-flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted hover:text-fg tnum transition-colors"
                 >
                   {copied ? <Check size={13} className="text-success" /> : <Copy size={13} />}
-                  {cpf}
+                  {maskCpf(cpf)}
                 </button>
               )}
               {companyId && companyName && (
@@ -125,7 +126,7 @@ export function PersonHeader({
                   className="inline-flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted hover:text-fg transition-colors"
                 >
                   <Phone size={13} />
-                  {phone}
+                  {formatPhone(phone)}
                 </a>
               )}
             </div>

@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/Card";
 import { InfoRow } from "@/components/empresas/InfoRow";
-import { formatCalendarDate, formatInstantDate } from "@/lib/format";
+import { formatCalendarDate, formatInstantDate, formatCnpj, formatPhone, formatCep } from "@/lib/format";
 
 type CustomFieldValue = {
   id: string;
@@ -56,7 +56,7 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="Razão Social" value={company.name} />
           <InfoRow label="Nome Fantasia" value={company.tradeName} />
-          <InfoRow label="CNPJ" value={company.cnpj} mono />
+          <InfoRow label="CNPJ" value={formatCnpj(company.cnpj)} mono />
           <InfoRow label="Regime Tributário" value={company.taxRegime} />
           <InfoRow label="ID" value={company.externalId} mono />
           <InfoRow
@@ -70,7 +70,7 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
         <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">Contato</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="E-mail" value={company.email} />
-          <InfoRow label="Telefone" value={company.phone} />
+          <InfoRow label="Telefone" value={formatPhone(company.phone)} />
           <InfoRow label="Website" value={company.website} href={company.website ?? undefined} />
         </div>
       </Card>
@@ -86,7 +86,7 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
             <InfoRow label="Complemento" value={company.addressComplement} />
             <InfoRow label="Bairro" value={company.neighborhood} />
             <InfoRow label="Cidade / UF" value={[company.city, company.stateCode].filter(Boolean).join(" — ")} />
-            <InfoRow label="CEP" value={company.zipCode} mono />
+            <InfoRow label="CEP" value={formatCep(company.zipCode)} mono />
           </div>
         </Card>
       )}

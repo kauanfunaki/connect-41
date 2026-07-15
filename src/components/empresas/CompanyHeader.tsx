@@ -8,6 +8,7 @@ import { StatusDot } from "@/components/shared/StatusDot";
 import { DeleteButton } from "@/components/ui/DeleteButton";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
+import { formatCnpj, formatPhone } from "@/lib/format";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
   PROSPECT: "Prospecto",
@@ -171,7 +172,7 @@ export function CompanyHeader({
                   className="inline-flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted hover:text-fg tnum transition-colors"
                 >
                   {copied ? <Check size={13} className="text-success" /> : <Copy size={13} />}
-                  {cnpj}
+                  {formatCnpj(cnpj)}
                 </button>
               )}
               {location && (
@@ -195,7 +196,7 @@ export function CompanyHeader({
                   className="inline-flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted hover:text-fg transition-colors"
                 >
                   <Phone size={13} />
-                  {phone}
+                  {formatPhone(phone)}
                 </a>
               )}
             </div>

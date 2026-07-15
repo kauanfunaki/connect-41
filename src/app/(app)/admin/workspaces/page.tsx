@@ -4,6 +4,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { AvatarImage } from "@/components/shared/AvatarImage";
+import { formatCnpj } from "@/lib/format";
 
 export default async function WorkspacesPage() {
   const ctx = await getAuthContext();
@@ -37,7 +38,7 @@ export default async function WorkspacesPage() {
                 <AvatarImage src={t.logoUrl} name={t.name} size={32} shape="lg" fontSize={13} />
                 <div className="min-w-0">
                   <p className="text-[13px] font-medium text-fg truncate">{t.name}</p>
-                  <p className="text-[11px] text-fg-muted font-mono truncate">{t.cnpj ?? t.slug}</p>
+                  <p className="text-[11px] text-fg-muted font-mono truncate">{t.cnpj ? formatCnpj(t.cnpj) : t.slug}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 flex-shrink-0">
