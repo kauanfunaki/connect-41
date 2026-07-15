@@ -7,6 +7,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { AddFeriasForm } from "@/components/pessoas/AddFeriasForm";
 import { FeriasRow } from "@/components/pessoas/FeriasRow";
+import { formatCalendarDate } from "@/lib/format";
 import { criarFerias, atualizarFerias, excluirFerias } from "./actions";
 
 export default async function FeriasPage({
@@ -58,9 +59,9 @@ export default async function FeriasPage({
                 ferias={{
                   id: v.id,
                   status: v.status,
-                  acquisitivePeriodLabel: `${v.acquisitivePeriodStart.toLocaleDateString("pt-BR")} — ${v.acquisitivePeriodEnd.toLocaleDateString("pt-BR")}`,
+                  acquisitivePeriodLabel: `${formatCalendarDate(v.acquisitivePeriodStart)} — ${formatCalendarDate(v.acquisitivePeriodEnd)}`,
                   concessivePeriodLabel: v.concessivePeriodStart && v.concessivePeriodEnd
-                    ? `${v.concessivePeriodStart.toLocaleDateString("pt-BR")} — ${v.concessivePeriodEnd.toLocaleDateString("pt-BR")}`
+                    ? `${formatCalendarDate(v.concessivePeriodStart)} — ${formatCalendarDate(v.concessivePeriodEnd)}`
                     : null,
                   days: v.days,
                   isVencida: !!v.concessivePeriodEnd && v.concessivePeriodEnd < new Date() && !["CONCLUIDA", "CANCELADA"].includes(v.status),

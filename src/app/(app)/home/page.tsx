@@ -16,6 +16,7 @@ import { getAuthContext, canWrite, isFullWrite, isFullAccess } from "@/lib/auth/
 import { scopedCompanyWhere, scopedPersonWhere, scopedPipelineWhere, scopedHandoffWhere } from "@/lib/auth/scope";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getSectorsWithEnabledModules } from "@/lib/modules";
+import { formatCalendarDate, formatInstantDate, formatInstantTime } from "@/lib/format";
 
 const ACTIVITY_LABEL: Record<string, string> = {
   NOTE: "adicionou uma nota em",
@@ -55,7 +56,7 @@ function formatRelativeTime(date: Date): string {
   const diffD = Math.floor(diffH / 24);
   if (diffD === 1) return "ontem";
   if (diffD < 7) return `há ${diffD}d`;
-  return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  return formatInstantDate(date, { day: "2-digit", month: "short" });
 }
 
 type DueBadgeInfo = { label: string; className: string };
@@ -70,20 +71,20 @@ function classifyDueDate(dueDate: Date | null, todayStart: Date, todayEnd: Date)
   tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
   if (dueDate <= tomorrowEnd) return { label: "Amanhã", className: "bg-surface-2 text-fg-secondary" };
   return {
-    label: dueDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }),
+    label: formatCalendarDate(dueDate, { day: "2-digit", month: "short" }),
     className: "bg-surface-2 text-fg-muted",
   };
 }
 
 function formatMeetingWhen(d: Date, todayStart: Date, todayEnd: Date): string {
-  const time = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
+  const time = formatInstantTime(d, { hour: "2-digit", minute: "2-digit" });
   if (d >= todayStart && d <= todayEnd) return `Hoje, ${time}`;
   const tomorrowStart = new Date(todayStart);
   tomorrowStart.setDate(tomorrowStart.getDate() + 1);
   const tomorrowEnd = new Date(todayEnd);
   tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
   if (d >= tomorrowStart && d <= tomorrowEnd) return `Amanhã, ${time}`;
-  return `${d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" })}, ${time}`;
+  return `${formatInstantDate(d, { weekday: "short", day: "2-digit", month: "2-digit" })}, ${time}`;
 }
 
 export default async function HomePage() {
@@ -281,16 +282,16 @@ export default async function HomePage() {
   const dayBuckets = new Map<string, number>();
   for (let i = 13; i >= 0; i--) {
     const d = daysFromNow(-i);
-    const key = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+    const key = formatInstantDate(d, { day: "2-digit", month: "2-digit" });
     dayBuckets.set(key, 0);
   }
   for (const a of activityCreatedDates) {
-    const key = a.createdAt.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+    const key = formatInstantDate(a.createdAt, { day: "2-digit", month: "2-digit" });
     if (dayBuckets.has(key)) dayBuckets.set(key, (dayBuckets.get(key) ?? 0) + 1);
   }
   const trendData = Array.from(dayBuckets.entries()).map(([label, value]) => ({ label, value }));
 
-  const today = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+  const today = formatInstantDate(new Date(), { day: "2-digit", month: "long", year: "numeric" });
   const firstName = me?.name?.trim().split(/\s+/)[0] ?? "";
   const pendingForMe = vencidosCount + hojeCount + incomingHandoffsRaw.length;
   const nextMeeting = upcomingMeetings[0] && upcomingMeetings[0].startAt <= todayEnd ? upcomingMeetings[0] : null;

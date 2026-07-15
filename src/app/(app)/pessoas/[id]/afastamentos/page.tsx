@@ -8,6 +8,7 @@ import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { AddAfastamentoForm } from "@/components/pessoas/AddAfastamentoForm";
 import { AfastamentoRow } from "@/components/pessoas/AfastamentoRow";
+import { formatCalendarDate } from "@/lib/format";
 import { criarAfastamento, atualizarAfastamento, excluirAfastamento } from "./actions";
 
 export default async function AfastamentosPage({
@@ -61,8 +62,8 @@ export default async function AfastamentosPage({
                   id: a.id,
                   type: a.type,
                   status: a.status,
-                  startDateLabel: a.startDate.toLocaleDateString("pt-BR"),
-                  returnDateLabel: a.returnDate?.toLocaleDateString("pt-BR") ?? null,
+                  startDateLabel: formatCalendarDate(a.startDate),
+                  returnDateLabel: a.returnDate ? formatCalendarDate(a.returnDate) : null,
                   lostDays: a.lostDays,
                   reason: a.reason,
                 }}

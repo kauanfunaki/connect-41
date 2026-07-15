@@ -7,6 +7,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { AddDesligamentoForm } from "@/components/pessoas/AddDesligamentoForm";
 import { DesligamentoRow } from "@/components/pessoas/DesligamentoRow";
+import { formatInstantDate } from "@/lib/format";
 import { criarDesligamento, atualizarDesligamento, excluirDesligamento } from "./actions";
 
 export default async function DesligamentoPage({
@@ -60,8 +61,8 @@ export default async function DesligamentoPage({
                   type: t.type,
                   status: t.status,
                   reason: t.reason,
-                  requestedAtLabel: t.requestedAt.toLocaleDateString("pt-BR"),
-                  finalizedAtLabel: t.finalizedAt?.toLocaleDateString("pt-BR") ?? null,
+                  requestedAtLabel: formatInstantDate(t.requestedAt),
+                  finalizedAtLabel: t.finalizedAt ? formatInstantDate(t.finalizedAt) : null,
                 }}
                 updateAction={atualizarDesligamento.bind(null, id, t.id)}
                 removeAction={excluirDesligamento.bind(null, id, t.id)}

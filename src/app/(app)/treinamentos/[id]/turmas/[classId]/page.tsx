@@ -6,6 +6,7 @@ import { adicionarParticipante, atualizarParticipante, removerParticipante } fro
 import { AddParticipanteForm } from "@/components/treinamentos/AddParticipanteForm";
 import { ParticipanteRow } from "@/components/treinamentos/ParticipanteRow";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { formatCalendarDate } from "@/lib/format";
 
 export default async function TurmaPage({
   params,
@@ -44,11 +45,11 @@ export default async function TurmaPage({
           {trainingClass.training.name}
         </Link>
         <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">{trainingClass.date.toLocaleDateString("pt-BR")}</span>
+        <span className="text-[13px] text-fg">{formatCalendarDate(trainingClass.date)}</span>
       </div>
 
       <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-1">
-        {trainingClass.training.name} — {trainingClass.date.toLocaleDateString("pt-BR")}
+        {trainingClass.training.name} — {formatCalendarDate(trainingClass.date)}
       </h1>
       <p className="text-[13px] text-fg-muted mb-6">
         {[trainingClass.shift, trainingClass.instructor].filter(Boolean).join(" · ") || "Sem turno/instrutor definidos"}

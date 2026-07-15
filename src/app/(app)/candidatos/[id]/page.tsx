@@ -7,6 +7,7 @@ import { DeleteButton } from "@/components/pessoas/DeleteButton";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { listDocuments } from "@/lib/documents";
 import { DocumentsSection } from "@/components/documents/DocumentsSection";
+import { formatCalendarDate, formatInstantDate } from "@/lib/format";
 import type { ProcessoSeletivoStatus } from "@/generated/prisma/enums";
 
 const CANDIDATURA_STATUS_LABEL: Record<ProcessoSeletivoStatus, string> = {
@@ -105,7 +106,7 @@ export default async function CandidatoPage({
             label="Data de Nascimento"
             value={
               person.birthDate
-                ? person.birthDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })
+                ? formatCalendarDate(person.birthDate, { day: "2-digit", month: "long", year: "numeric" })
                 : null
             }
           />
@@ -175,7 +176,7 @@ export default async function CandidatoPage({
           category: d.category,
           sensitive: d.sensitive,
           uploadedByName: d.uploadedBy.name,
-          createdAtLabel: d.createdAt.toLocaleDateString("pt-BR"),
+          createdAtLabel: formatInstantDate(d.createdAt),
         }))}
       />
     </PageContainer>

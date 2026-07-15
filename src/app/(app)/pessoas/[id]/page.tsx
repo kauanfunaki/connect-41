@@ -25,6 +25,7 @@ import { scopedPersonWhere } from "@/lib/auth/scope";
 import { getPersonSectors, getApplicableCustomFields } from "@/lib/customFields";
 import { listDocuments } from "@/lib/documents";
 import { DocumentsSection } from "@/components/documents/DocumentsSection";
+import { formatCalendarDate, formatInstantDate } from "@/lib/format";
 
 const TYPE_LABEL: Record<PersonType, string> = {
   CANDIDATO:   "Candidato",
@@ -120,7 +121,7 @@ export default async function PessoaPage({
             label="Data de Nascimento"
             value={
               person.birthDate
-                ? person.birthDate.toLocaleDateString("pt-BR", {
+                ? formatCalendarDate(person.birthDate, {
                     day: "2-digit", month: "long", year: "numeric",
                   })
                 : null
@@ -181,7 +182,7 @@ export default async function PessoaPage({
           <InfoRow label="Departamento" value={person.department?.name} />
           <InfoRow
             label="Cadastrada em"
-            value={person.createdAt.toLocaleDateString("pt-BR", {
+            value={formatInstantDate(person.createdAt, {
               day: "2-digit", month: "long", year: "numeric",
             })}
           />
@@ -202,11 +203,11 @@ export default async function PessoaPage({
             <InfoRow label="Status" value={STATUS_LABEL[person.employmentStatus]} />
             <InfoRow
               label="Data de Admissão"
-              value={person.admissionDate?.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+              value={person.admissionDate ? formatCalendarDate(person.admissionDate, { day: "2-digit", month: "long", year: "numeric" }) : null}
             />
             <InfoRow
               label="Data de Demissão"
-              value={person.dismissalDate?.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+              value={person.dismissalDate ? formatCalendarDate(person.dismissalDate, { day: "2-digit", month: "long", year: "numeric" }) : null}
             />
             <InfoRow label="Jornada" value={person.workShift} />
             <InfoRow label="Carga Horária Semanal" value={person.weeklyWorkHours?.toString()} />
@@ -246,7 +247,7 @@ export default async function PessoaPage({
         category: d.category,
         sensitive: d.sensitive,
         uploadedByName: d.uploadedBy.name,
-        createdAtLabel: d.createdAt.toLocaleDateString("pt-BR"),
+        createdAtLabel: formatInstantDate(d.createdAt),
       }))}
     />
   );

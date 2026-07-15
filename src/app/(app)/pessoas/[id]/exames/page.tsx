@@ -7,6 +7,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { AddExameForm } from "@/components/pessoas/AddExameForm";
 import { ExameRow } from "@/components/pessoas/ExameRow";
+import { formatCalendarDate } from "@/lib/format";
 import { criarExame, atualizarExame, excluirExame } from "./actions";
 
 export default async function ExamesPage({
@@ -59,9 +60,9 @@ export default async function ExamesPage({
                   id: e.id,
                   status: e.status,
                   clinicName: e.clinicName,
-                  scheduledAtLabel: e.scheduledAt?.toLocaleDateString("pt-BR") ?? null,
-                  performedAtLabel: e.performedAt?.toLocaleDateString("pt-BR") ?? null,
-                  asoDueDateLabel: e.asoDueDate?.toLocaleDateString("pt-BR") ?? null,
+                  scheduledAtLabel: e.scheduledAt ? formatCalendarDate(e.scheduledAt) : null,
+                  performedAtLabel: e.performedAt ? formatCalendarDate(e.performedAt) : null,
+                  asoDueDateLabel: e.asoDueDate ? formatCalendarDate(e.asoDueDate) : null,
                   notes: e.notes,
                 }}
                 updateAction={atualizarExame.bind(null, id, e.id)}

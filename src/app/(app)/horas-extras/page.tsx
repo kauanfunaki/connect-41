@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { formatCalendarDate } from "@/lib/format";
 
 export default async function HorasExtrasPage() {
   const ctx = await getAuthContext();
@@ -36,7 +37,7 @@ export default async function HorasExtrasPage() {
             >
               <p className="text-[13px] text-fg">{o.person.name}</p>
               <span className="text-[12px] text-fg-muted">
-                {o.date.toLocaleDateString("pt-BR")}
+                {formatCalendarDate(o.date)}
                 {o.overtimeHours && ` · ${o.overtimeHours.toString()}h extras`}
               </span>
             </Link>

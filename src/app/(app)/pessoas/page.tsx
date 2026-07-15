@@ -10,6 +10,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { formatInstantDate } from "@/lib/format";
 import { inativarPessoasEmMassa } from "./actions";
 
 const PER_PAGE = 20;
@@ -129,7 +130,7 @@ export default async function PessoasPage({
             photoUrl: p.photoUrl,
             companyName: p.currentCompany?.name ?? null,
             companyId: p.currentCompany?.id ?? null,
-            createdAtLabel: p.createdAt.toLocaleDateString("pt-BR"),
+            createdAtLabel: formatInstantDate(p.createdAt),
           }))}
           canCreate={canCreate}
           inativarPessoasEmMassa={inativarPessoasEmMassa}

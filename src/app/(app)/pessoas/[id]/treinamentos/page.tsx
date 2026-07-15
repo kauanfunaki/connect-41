@@ -6,6 +6,7 @@ import { BackButton } from "@/components/shared/BackButton";
 import { getAuthContext } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { TrainingParticipantStatus } from "@/generated/prisma/enums";
+import { formatCalendarDate } from "@/lib/format";
 
 const TRAINING_STATUS_LABEL: Record<TrainingParticipantStatus, string> = {
   PLANEJADO: "Planejado",
@@ -64,7 +65,7 @@ export default async function TreinamentosPessoaPage({
                   href={`/treinamentos/${p.class.training.id}/turmas/${p.class.id}`}
                   className="text-[13px] text-brand hover:underline"
                 >
-                  {p.class.training.name} — {p.class.date.toLocaleDateString("pt-BR")}
+                  {p.class.training.name} — {formatCalendarDate(p.class.date)}
                 </Link>
                 <span className="text-[12px] text-fg-muted">{TRAINING_STATUS_LABEL[p.status]}</span>
               </div>

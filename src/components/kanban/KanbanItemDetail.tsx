@@ -19,6 +19,7 @@ import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/cont
 import { canManageMeetings } from "@/lib/integrations/oauth";
 import { scopedPipelineWhere } from "@/lib/auth/scope";
 import { getSectorUsers } from "@/lib/sectorUsers";
+import { formatInstantDateTime } from "@/lib/format";
 
 const ACTIVITY_LABEL: Record<string, string> = {
   NOTE: "Nota",
@@ -104,7 +105,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
     id: a.id,
     type: a.type,
     label: ACTIVITY_LABEL[a.type] ?? a.type,
-    createdAtLabel: a.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }),
+    createdAtLabel: formatInstantDateTime(a.createdAt),
     userName: a.user.name,
     content: a.content,
     importante: a.type === "STATUS_CHANGE" || a.type === "HANDOFF",

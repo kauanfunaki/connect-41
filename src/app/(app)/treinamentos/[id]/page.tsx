@@ -8,6 +8,7 @@ import { excluirTreinamento } from "../actions";
 import { criarTurma, excluirTurma } from "./actions";
 import { AddTurmaForm } from "@/components/treinamentos/AddTurmaForm";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { formatCalendarDate } from "@/lib/format";
 
 export default async function TreinamentoPage({
   params,
@@ -77,7 +78,7 @@ export default async function TreinamentoPage({
             {training.classes.map((c) => (
               <div key={c.id} className="flex items-center justify-between py-2.5">
                 <Link href={`/treinamentos/${id}/turmas/${c.id}`} className="text-[13px] text-brand hover:underline">
-                  {c.date.toLocaleDateString("pt-BR")}
+                  {formatCalendarDate(c.date)}
                   {c.shift && ` — ${c.shift}`}
                 </Link>
                 <div className="flex items-center gap-3">
@@ -86,7 +87,7 @@ export default async function TreinamentoPage({
                     {c.instructor && ` · ${c.instructor}`}
                   </span>
                   {canManage && (
-                    <DeleteFieldButton action={excluirTurma.bind(null, id, c.id)} nome={`turma de ${c.date.toLocaleDateString("pt-BR")}`} />
+                    <DeleteFieldButton action={excluirTurma.bind(null, id, c.id)} nome={`turma de ${formatCalendarDate(c.date)}`} />
                   )}
                 </div>
               </div>

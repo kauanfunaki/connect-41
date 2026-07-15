@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { StatusDot } from "@/components/shared/StatusDot";
+import { formatCalendarDate } from "@/lib/format";
 
 type Stage = { id: string; name: string; color: string | null; isTerminal?: boolean };
 type Tag = { id: string; name: string; color: string };
@@ -162,7 +163,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                               className={`text-[length:var(--fs-kanban-meta)] tnum ${overdue ? "text-danger font-semibold" : "text-fg-muted"}`}
                             >
                               {overdue && "⚠ "}
-                              {new Date(item.dueDate).toLocaleDateString("pt-BR", {
+                              {formatCalendarDate(new Date(item.dueDate), {
                                 day: "2-digit",
                                 month: "short",
                               })}

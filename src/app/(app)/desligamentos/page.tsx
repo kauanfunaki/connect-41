@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { TerminationStatus } from "@/generated/prisma/enums";
+import { formatInstantDate } from "@/lib/format";
 
 const STATUS_LABEL: Record<TerminationStatus, string> = {
   SOLICITADO:            "Solicitado",
@@ -46,7 +47,7 @@ export default async function DesligamentosPage() {
             >
               <p className="text-[13px] text-fg">{t.person.name}</p>
               <span className="text-[12px] text-fg-muted">
-                {STATUS_LABEL[t.status]} · solicitado em {t.requestedAt.toLocaleDateString("pt-BR")}
+                {STATUS_LABEL[t.status]} · solicitado em {formatInstantDate(t.requestedAt)}
               </span>
             </Link>
           ))}

@@ -7,6 +7,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { SalaryHistorySection } from "@/components/pessoas/SalaryHistorySection";
+import { formatCalendarDate } from "@/lib/format";
 import { registrarReajuste } from "./actions";
 
 export default async function SalarioPage({
@@ -94,7 +95,7 @@ export default async function SalarioPage({
             changePercent: h.changePercent?.toString() ?? null,
             cargoName: h.cargo?.name ?? null,
             reason: h.reason,
-            effectiveDateLabel: h.effectiveDate.toLocaleDateString("pt-BR"),
+            effectiveDateLabel: formatCalendarDate(h.effectiveDate),
           }))}
         />
       )}

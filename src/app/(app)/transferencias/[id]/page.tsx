@@ -8,6 +8,7 @@ import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedHandoffWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
+import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
 import { SectorChip } from "@/components/ui/SectorChip";
 import { HandoffActions } from "@/components/transferencias/HandoffActions";
@@ -102,11 +103,11 @@ export default async function HandoffDetailPage({
               )}
               <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
                 Solicitado por {handoff.requester.name} em{" "}
-                {handoff.createdAt.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+                {formatInstantDate(handoff.createdAt, { day: "2-digit", month: "long", year: "numeric" })}
                 {handoff.resolvedAt && (
                   <>
                     {" "}· resolvido em{" "}
-                    {handoff.resolvedAt.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+                    {formatInstantDate(handoff.resolvedAt, { day: "2-digit", month: "long", year: "numeric" })}
                   </>
                 )}
               </p>
@@ -141,7 +142,7 @@ export default async function HandoffDetailPage({
               <p key={v.id} className="text-[13px] text-fg-secondary">
                 <span className="font-medium text-fg">{v.user.name}</span>{" "}
                 <span className="text-fg-muted">
-                  em {v.viewedAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                  em {formatInstantDateTime(v.viewedAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
                 </span>
               </p>
             ))}

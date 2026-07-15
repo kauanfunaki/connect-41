@@ -6,6 +6,7 @@ import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Badge } from "@/components/ui/Badge";
+import { formatInstantDate } from "@/lib/format";
 
 export default async function DocumentosClientePage({
   params,
@@ -76,7 +77,7 @@ export default async function DocumentosClientePage({
                 <div>
                   <p className="text-[13px] text-fg font-medium">{d.title}</p>
                   <p className="text-[12px] text-fg-muted mt-0.5">
-                    criado em {d.createdAt.toLocaleDateString("pt-BR")}
+                    criado em {formatInstantDate(d.createdAt)}
                     {d.recipients.length > 0 && ` · ${d.recipients.length} destinatário${d.recipients.length !== 1 ? "s" : ""} (${viewedCount} visualizou${viewedCount !== 1 ? "ram" : ""})`}
                   </p>
                 </div>

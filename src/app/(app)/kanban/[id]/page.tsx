@@ -7,6 +7,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { moverItem } from "../actions";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedPipelineWhere } from "@/lib/auth/scope";
+import { formatInstantDateTime } from "@/lib/format";
 
 function daysSince(d: Date): number {
   return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000));
@@ -114,7 +115,7 @@ export default async function KanbanBoardPage({
     userName: m.user.name,
     entityName: entityNames[m.pipelineItem.entityId] ?? "(removido)",
     content: m.content ?? "",
-    createdAt: m.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }),
+    createdAt: formatInstantDateTime(m.createdAt),
   }));
 
   return (

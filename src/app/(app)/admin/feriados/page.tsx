@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
+import { formatCalendarDate } from "@/lib/format";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
 import { AddFeriadoForm } from "@/components/admin/AddFeriadoForm";
 import { ImportFeriadosButton } from "@/components/admin/ImportFeriadosButton";
@@ -44,7 +45,7 @@ export default async function FeriadosPage() {
             <div key={f.id} className="flex items-center justify-between px-4 py-2.5">
               <p className="text-[13px] text-fg">{f.name}</p>
               <div className="flex items-center gap-3">
-                <span className="text-[12px] text-fg-muted">{f.date.toLocaleDateString("pt-BR")}</span>
+                <span className="text-[12px] text-fg-muted">{formatCalendarDate(f.date)}</span>
                 <DeleteFieldButton action={excluirFeriado.bind(null, f.id)} nome={f.name} />
               </div>
             </div>

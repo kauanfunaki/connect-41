@@ -8,6 +8,7 @@ import { getSectorMaps } from "@/lib/sectors";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
 import { AddCandidatoForm } from "@/components/vagas/AddCandidatoForm";
 import { CandidaturaRow } from "@/components/vagas/CandidaturaRow";
+import { formatInstantDate } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { excluirVaga, encerrarVaga } from "../actions";
 import { adicionarCandidato, atualizarStatusCandidatura, removerCandidatura } from "./actions";
@@ -115,12 +116,12 @@ export default async function VagaPage({
           <InfoRow label="Prioridade" value={PRIORITY_LABEL[vaga.priority]} />
           <InfoRow
             label="Aberta em"
-            value={vaga.openedAt.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+            value={formatInstantDate(vaga.openedAt, { day: "2-digit", month: "long", year: "numeric" })}
           />
           {vaga.closedAt && (
             <InfoRow
               label="Encerrada em"
-              value={vaga.closedAt.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+              value={formatInstantDate(vaga.closedAt, { day: "2-digit", month: "long", year: "numeric" })}
             />
           )}
         </div>

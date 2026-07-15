@@ -46,7 +46,16 @@ const PRIORITY_COLOR: Record<number, string> = {
   2: "var(--c41-danger)",
 };
 
+// Exceção deliberada à regra de formatação central (@/lib/format): roda no
+// client, então tanto o parse (`T00:00:00` sem timezone) quanto o
+// toLocaleDateString abaixo usam o MESMO fuso — o do navegador do usuário.
+// É um round-trip local-para-local sempre consistente, diferente do bug de
+// timezone do servidor (onde o parse é UTC mas a formatação usava o fuso do
+// processo Node). Não trocar por formatCalendarDate aqui: isso forçaria UTC
+// só na formatação, quebrando o round-trip para qualquer usuário fora de um
+// fuso equivalente ao de Brasília.
 function formatDueDate(value: string): string {
+  // eslint-disable-next-line no-restricted-syntax
   return new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 }
 

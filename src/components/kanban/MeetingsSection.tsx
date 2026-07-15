@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
 import { AttendeePicker } from "@/components/shared/AttendeePicker";
+import { formatInstantDateTime } from "@/lib/format";
 
 type MeetingRow = {
   id: string;
@@ -107,7 +108,7 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
                   <p className="text-[13px] text-fg font-medium truncate">{m.title}</p>
                   <p className="text-[11px] text-fg-muted">
                     {PROVIDER_LABEL[m.provider]} ·{" "}
-                    {new Date(m.startAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    {formatInstantDateTime(new Date(m.startAt), { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
                   </p>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">

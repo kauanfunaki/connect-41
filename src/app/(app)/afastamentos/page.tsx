@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
+import { formatCalendarDate } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
 
 export default async function AfastamentosPage() {
@@ -43,8 +44,8 @@ export default async function AfastamentosPage() {
                 )}
               </div>
               <span className="text-[12px] text-fg-muted">
-                Desde {a.startDate.toLocaleDateString("pt-BR")}
-                {a.returnDate && ` · retorno previsto ${a.returnDate.toLocaleDateString("pt-BR")}`}
+                Desde {formatCalendarDate(a.startDate)}
+                {a.returnDate && ` · retorno previsto ${formatCalendarDate(a.returnDate)}`}
               </span>
             </Link>
           ))}

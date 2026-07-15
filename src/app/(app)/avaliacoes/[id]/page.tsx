@@ -6,6 +6,7 @@ import { DeleteButton } from "@/components/pessoas/DeleteButton";
 import { excluirCiclo, encerrarCiclo } from "../actions";
 import { SelecionarColaboradorForm } from "@/components/avaliacoes/SelecionarColaboradorForm";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { formatCalendarDate } from "@/lib/format";
 
 export default async function CicloPage({
   params,
@@ -50,8 +51,8 @@ export default async function CicloPage({
         <div>
           <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">{ciclo.name}</h1>
           <p className="text-[13px] text-fg-muted mt-0.5">
-            {ciclo.startDate.toLocaleDateString("pt-BR")}
-            {ciclo.endDate && ` — ${ciclo.endDate.toLocaleDateString("pt-BR")}`}
+            {formatCalendarDate(ciclo.startDate)}
+            {ciclo.endDate && ` — ${formatCalendarDate(ciclo.endDate)}`}
             {!ciclo.active && " · Encerrado"}
           </p>
         </div>

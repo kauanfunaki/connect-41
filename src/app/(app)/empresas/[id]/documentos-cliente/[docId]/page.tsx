@@ -8,6 +8,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
 import { Badge } from "@/components/ui/Badge";
+import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
 import { PublishDocumentButton } from "@/components/documentosCliente/PublishDocumentButton";
 import { ResendRecipientButton } from "@/components/documentosCliente/ResendRecipientButton";
 import { SendDocumentForm } from "@/components/documentosCliente/SendDocumentForm";
@@ -63,7 +64,7 @@ export default async function DocumentoClienteDetailPage({
             </Badge>
           </div>
           <p className="text-[13px] text-fg-muted">
-            criado por {document.createdBy.name} em {document.createdAt.toLocaleDateString("pt-BR")}
+            criado por {document.createdBy.name} em {formatInstantDate(document.createdAt)}
           </p>
         </div>
         {canManage && (
@@ -126,11 +127,11 @@ export default async function DocumentoClienteDetailPage({
                       )}
                     </div>
                     <p className="text-[11px] text-fg-muted mt-1">
-                      enviado em {r.sentAt ? r.sentAt.toLocaleString("pt-BR") : "—"}
+                      enviado em {r.sentAt ? formatInstantDateTime(r.sentAt) : "—"}
                     </p>
                     {r.firstViewedAt ? (
                       <p className="text-[11px] text-success mt-0.5">
-                        primeira visualização: {r.firstViewedAt.toLocaleString("pt-BR")}
+                        primeira visualização: {formatInstantDateTime(r.firstViewedAt)}
                       </p>
                     ) : (
                       <p className="text-[11px] text-warning mt-0.5">ainda não visualizado</p>
@@ -141,7 +142,7 @@ export default async function DocumentoClienteDetailPage({
                         {r.views.slice(0, 5).map((v) => (
                           <p key={v.id} className="text-[11px] text-fg-muted flex items-center gap-1.5">
                             {v.action === "VIEWED" ? <Eye size={11} /> : <Download size={11} />}
-                            {v.viewedAt.toLocaleString("pt-BR")} · {v.ipAddress}
+                            {formatInstantDateTime(v.viewedAt)} · {v.ipAddress}
                           </p>
                         ))}
                         {r.views.length > 5 && (

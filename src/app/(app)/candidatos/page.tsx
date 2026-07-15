@@ -4,6 +4,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { CandidatosTable } from "@/components/candidatos/CandidatosTable";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Input } from "@/components/ui/Input";
+import { formatInstantDate } from "@/lib/format";
 import { inativarCandidatosEmMassa } from "./actions";
 
 const PER_PAGE = 20;
@@ -90,7 +91,7 @@ export default async function CandidatosPage({
             cpf: c.cpf,
             email: c.email,
             candidaturasCount: c._count.candidaturas,
-            createdAtLabel: c.createdAt.toLocaleDateString("pt-BR"),
+            createdAtLabel: formatInstantDate(c.createdAt),
           }))}
           canCreate={canCreate}
           inativarCandidatosEmMassa={inativarCandidatosEmMassa}

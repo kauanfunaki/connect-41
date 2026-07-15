@@ -7,6 +7,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { AddHoraExtraForm } from "@/components/pessoas/AddHoraExtraForm";
 import { HoraExtraRow } from "@/components/pessoas/HoraExtraRow";
+import { formatCalendarDate } from "@/lib/format";
 import { criarHoraExtra, atualizarHoraExtra, excluirHoraExtra } from "./actions";
 
 export default async function HorasExtrasPage({
@@ -57,7 +58,7 @@ export default async function HorasExtrasPage({
                 key={o.id}
                 entry={{
                   id: o.id,
-                  dateLabel: o.date.toLocaleDateString("pt-BR"),
+                  dateLabel: formatCalendarDate(o.date),
                   dayType: o.dayType,
                   overtimeHours: o.overtimeHours?.toString() ?? null,
                   status: o.status,

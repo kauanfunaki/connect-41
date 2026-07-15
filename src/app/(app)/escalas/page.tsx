@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { formatCalendarDate } from "@/lib/format";
 
 export default async function EscalasPage() {
   const ctx = await getAuthContext();
@@ -22,7 +23,7 @@ export default async function EscalasPage() {
   });
 
   const grouped = entries.reduce<Record<string, typeof entries>>((acc, e) => {
-    const key = e.date.toLocaleDateString("pt-BR");
+    const key = formatCalendarDate(e.date);
     (acc[key] ??= []).push(e);
     return acc;
   }, {});

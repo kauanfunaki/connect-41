@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Plus, ExternalLink } from "lucide-react";
 import { CreateMeetingDialog } from "./CreateMeetingDialog";
 import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
 import { saoPauloParts, weekdayLabel, dayNumber } from "@/lib/agenda";
+import { formatInstantTime } from "@/lib/format";
 import type { MeetingState } from "@/app/(app)/agenda/actions";
 import type { MeetingProvider } from "@/generated/prisma/enums";
 
@@ -53,7 +54,7 @@ function pad(n: number): string {
 }
 
 function formatTime(d: Date): string {
-  return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
+  return formatInstantTime(d, { hour: "2-digit", minute: "2-digit" });
 }
 
 function clamp(n: number, min: number, max: number): number {

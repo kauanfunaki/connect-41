@@ -7,6 +7,7 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorsWithEnabledModules } from "@/lib/modules";
 import { canManageMeetings } from "@/lib/integrations/oauth";
+import { formatInstantDateTime } from "@/lib/format";
 
 export default async function AppLayout({
   children,
@@ -63,8 +64,8 @@ export default async function AppLayout({
           ? `/empresas/${n.entityId}`
           : `/pessoas/${n.entityId}`
         : null,
-    createdAt: n.createdAt.toLocaleString("pt-BR", {
-      day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo",
+    createdAt: formatInstantDateTime(n.createdAt, {
+      day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
     }),
   }));
 

@@ -1,3 +1,5 @@
+import { formatInstantDateTime } from "@/lib/format";
+
 const ACTIVITY_LABEL: Record<string, string> = {
   NOTE: "Nota",
   STATUS_CHANGE: "Mudança de estágio",
@@ -50,7 +52,7 @@ export function ActivityTimeline({ activities, emptyLabel = "Nenhuma atividade r
                   {a.contextLabel && <span className="text-fg-muted font-normal"> · {a.contextLabel}</span>}
                 </p>
                 <span className="font-mono text-[11px] text-fg-muted whitespace-nowrap flex-shrink-0">
-                  {a.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
+                  {formatInstantDateTime(a.createdAt)}
                 </span>
               </div>
               <p className="text-[length:var(--fs-helper)] text-fg-muted">{a.userName}</p>

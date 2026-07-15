@@ -8,6 +8,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { SectorChip } from "@/components/ui/SectorChip";
+import { formatInstantDate } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { HandoffActions } from "@/components/transferencias/HandoffActions";
 import { aceitarHandoff, rejeitarHandoff } from "./actions";
@@ -153,7 +154,7 @@ export default async function HandoffsPage({
 
                       <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1.5">
                         Solicitado por {h.requester.name} em{" "}
-                        {h.createdAt.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+                        {formatInstantDate(h.createdAt, { day: "2-digit", month: "long", year: "numeric" })}
                       </p>
                     </div>
                   </Link>

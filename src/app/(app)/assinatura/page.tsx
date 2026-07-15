@@ -4,6 +4,7 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { countActiveUsers } from "@/lib/subscriptions";
 import { SUBSCRIPTION_STATUS_LABEL } from "@/lib/subscription-labels";
+import { formatCalendarDate, formatInstantDate } from "@/lib/format";
 
 // Só existe pra tenants SELF_SERVICE (frente 2 do modelo comercial) — em
 // MANAGED é a 41 Tech quem administra a assinatura, o cliente não precisa
@@ -50,7 +51,7 @@ export default async function AssinaturaPage() {
             </p>
             {subscription.currentPeriodEnd && (
               <p className="text-[12px] text-fg-muted mt-1">
-                Próxima renovação: {subscription.currentPeriodEnd.toLocaleDateString("pt-BR")}
+                Próxima renovação: {formatCalendarDate(subscription.currentPeriodEnd)}
               </p>
             )}
           </div>
@@ -77,7 +78,7 @@ export default async function AssinaturaPage() {
             <p className="text-[11px] text-fg-muted uppercase tracking-wide mb-1">Implantação</p>
             <p className="text-[13px] text-fg">
               {subscription.setupFeePaidAt
-                ? `Paga em ${subscription.setupFeePaidAt.toLocaleDateString("pt-BR")}`
+                ? `Paga em ${formatInstantDate(subscription.setupFeePaidAt)}`
                 : `Pendente${subscription.setupFeeAmount ? ` — ${fmt(subscription.setupFeeAmount)}` : ""}`}
             </p>
           </div>

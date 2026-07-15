@@ -7,6 +7,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { AddEscalaForm } from "@/components/pessoas/AddEscalaForm";
 import { EscalaRow } from "@/components/pessoas/EscalaRow";
+import { formatCalendarDate } from "@/lib/format";
 import { criarEscala, atualizarEscala, excluirEscala } from "./actions";
 
 export default async function EscalaPage({
@@ -67,7 +68,7 @@ export default async function EscalaPage({
                 key={e.id}
                 escala={{
                   id: e.id,
-                  dateLabel: e.date.toLocaleDateString("pt-BR"),
+                  dateLabel: formatCalendarDate(e.date),
                   shiftName: e.shift?.name ?? null,
                   dayOff: e.dayOff,
                   isHoliday: e.isHoliday,

@@ -8,6 +8,7 @@ import { getCompanySectors, getApplicableCustomFields } from "@/lib/customFields
 import { getSectorMaps, getAllSectors } from "@/lib/sectors";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { listDocuments } from "@/lib/documents";
+import { formatInstantDate } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { CompanyHeader } from "@/components/empresas/CompanyHeader";
 import { CompanyDetailTabs } from "@/components/empresas/CompanyDetailTabs";
@@ -131,7 +132,7 @@ export default async function EmpresaPage({
               category: d.category,
               sensitive: d.sensitive,
               uploadedByName: d.uploadedBy.name,
-              createdAtLabel: d.createdAt.toLocaleDateString("pt-BR"),
+              createdAtLabel: formatInstantDate(d.createdAt),
             }))}
           />
         }

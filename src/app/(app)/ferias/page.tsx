@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { formatCalendarDate } from "@/lib/format";
 
 const ACTIVE_STATUSES = ["PLANEJADA", "SOLICITADA", "EM_ANALISE", "APROVADA", "PROGRAMADA", "EM_GOZO"] as const;
 
@@ -66,7 +67,7 @@ function Section({
               <p className="text-[13px] text-fg">{v.person.name}</p>
               <span className="text-[12px] text-fg-muted">
                 {v.days} dias
-                {v.concessivePeriodEnd && ` · concessivo até ${v.concessivePeriodEnd.toLocaleDateString("pt-BR")}`}
+                {v.concessivePeriodEnd && ` · concessivo até ${formatCalendarDate(v.concessivePeriodEnd)}`}
               </span>
             </Link>
           ))}

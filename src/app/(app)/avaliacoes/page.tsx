@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { AddCicloForm } from "@/components/avaliacoes/AddCicloForm";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { formatCalendarDate } from "@/lib/format";
 import { criarCiclo } from "./actions";
 
 export default async function AvaliacoesPage() {
@@ -42,8 +43,8 @@ export default async function AvaliacoesPage() {
               <div>
                 <p className="text-[13px] text-fg font-medium">{c.name}</p>
                 <p className="text-[12px] text-fg-muted">
-                  {c.startDate.toLocaleDateString("pt-BR")}
-                  {c.endDate && ` — ${c.endDate.toLocaleDateString("pt-BR")}`}
+                  {formatCalendarDate(c.startDate)}
+                  {c.endDate && ` — ${formatCalendarDate(c.endDate)}`}
                   {!c.active && " · Encerrado"}
                 </p>
               </div>

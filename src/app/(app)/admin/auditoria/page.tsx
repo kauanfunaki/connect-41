@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Badge } from "@/components/ui/Badge";
+import { formatInstantDateTime } from "@/lib/format";
 
 const ACTION_LABEL: Record<string, string> = {
   "company.create": "criou a empresa",
@@ -99,8 +100,7 @@ export default async function AuditoriaPage() {
                   {detail && <p className="text-[11px] text-fg-muted font-mono mt-0.5 truncate">{detail}</p>}
                 </div>
                 <span className="text-[12px] text-fg-muted tnum flex-shrink-0">
-                  {log.createdAt.toLocaleString("pt-BR", {
-                    timeZone: "America/Sao_Paulo",
+                  {formatInstantDateTime(log.createdAt, {
                     day: "2-digit",
                     month: "short",
                     hour: "2-digit",

@@ -10,6 +10,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
 import { EmpresasTable } from "@/components/empresas/EmpresasTable";
+import { formatInstantDate } from "@/lib/format";
 import { atualizarStatusEmMassa, excluirEmpresasEmMassa } from "./actions";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
@@ -169,7 +170,7 @@ export default async function EmpresasPage({
             status: c.status,
             email: c.email,
             taxRegime: c.taxRegime,
-            createdAtLabel: c.createdAt.toLocaleDateString("pt-BR"),
+            createdAtLabel: formatInstantDate(c.createdAt),
             logoUrl: c.logoUrl,
             tags: c.services
               .filter((s) => s.responsible)

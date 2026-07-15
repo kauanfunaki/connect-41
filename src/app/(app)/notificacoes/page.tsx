@@ -6,6 +6,7 @@ import { MarkAllReadButton } from "@/components/shell/MarkAllReadButton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { marcarTodasLidas } from "./actions";
+import { formatInstantDateTime } from "@/lib/format";
 
 export default async function NotificacoesPage() {
   const ctx = await getAuthContext();
@@ -51,12 +52,11 @@ export default async function NotificacoesPage() {
                       : `/pessoas/${n.entityId}`
                     : null
                 }
-                createdAt={n.createdAt.toLocaleString("pt-BR", {
+                createdAt={formatInstantDateTime(n.createdAt, {
                   day: "2-digit",
                   month: "short",
                   hour: "2-digit",
                   minute: "2-digit",
-                  timeZone: "America/Sao_Paulo",
                 })}
               />
             ))}

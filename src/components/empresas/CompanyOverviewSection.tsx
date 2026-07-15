@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/Card";
 import { InfoRow } from "@/components/empresas/InfoRow";
+import { formatCalendarDate, formatInstantDate } from "@/lib/format";
 
 type CustomFieldValue = {
   id: string;
@@ -60,7 +61,7 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
           <InfoRow label="ID" value={company.externalId} mono />
           <InfoRow
             label="Data de Abertura"
-            value={company.foundationDate?.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+            value={company.foundationDate ? formatCalendarDate(company.foundationDate, { day: "2-digit", month: "long", year: "numeric" }) : null}
           />
         </div>
       </Card>
@@ -107,11 +108,11 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
           <InfoRow label="Origem" value={company.source} />
           <InfoRow
             label="Criada em"
-            value={company.createdAt.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+            value={formatInstantDate(company.createdAt, { day: "2-digit", month: "long", year: "numeric" })}
           />
           <InfoRow
             label="Atualizada"
-            value={company.updatedAt.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+            value={formatInstantDate(company.updatedAt, { day: "2-digit", month: "long", year: "numeric" })}
           />
         </div>
       </Card>

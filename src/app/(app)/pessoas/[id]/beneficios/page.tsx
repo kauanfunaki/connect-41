@@ -7,6 +7,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { AddBeneficioForm } from "@/components/pessoas/AddBeneficioForm";
 import { BeneficioRow } from "@/components/pessoas/BeneficioRow";
+import { formatCalendarDate } from "@/lib/format";
 import { vincularBeneficio, atualizarBeneficioAssignment, removerBeneficioAssignment } from "./actions";
 
 export default async function BeneficiosPessoaPage({
@@ -71,8 +72,8 @@ export default async function BeneficiosPessoaPage({
                   status: b.status,
                   companyValue: b.companyValue?.toString() ?? null,
                   discountValue: b.discountValue?.toString() ?? null,
-                  startDateLabel: b.startDate.toLocaleDateString("pt-BR"),
-                  endDateLabel: b.endDate?.toLocaleDateString("pt-BR") ?? null,
+                  startDateLabel: formatCalendarDate(b.startDate),
+                  endDateLabel: b.endDate ? formatCalendarDate(b.endDate) : null,
                 }}
                 updateAction={atualizarBeneficioAssignment.bind(null, id, b.id)}
                 removeAction={removerBeneficioAssignment.bind(null, id, b.id)}
