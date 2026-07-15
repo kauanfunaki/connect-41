@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { formatCalendarDate } from "@/lib/format";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function EscalasPage() {
   const ctx = await getAuthContext();
@@ -38,8 +39,8 @@ export default async function EscalasPage() {
       </div>
 
       {Object.keys(grouped).length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhuma escala montada para os próximos 30 dias.
+        <div className="bg-surface border border-border rounded-lg">
+          <EmptyState title="Nenhuma escala montada para os próximos 30 dias." />
         </div>
       ) : (
         <div className="space-y-4">

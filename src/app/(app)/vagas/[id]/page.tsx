@@ -110,7 +110,7 @@ export default async function VagaPage({
       {/* Detalhes */}
       <div className="bg-surface border border-border rounded-lg p-5 mb-4">
         <h2 className="text-[14px] font-semibold text-fg mb-4">Detalhes</h2>
-        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="Cargo" value={vaga.cargo?.name} />
           <InfoRow label="Quantidade" value={String(vaga.quantity)} />
           <InfoRow label="Prioridade" value={PRIORITY_LABEL[vaga.priority]} />

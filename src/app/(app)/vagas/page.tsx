@@ -6,6 +6,7 @@ import { scopedVagaWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
 import { CompanyFilterSelect } from "@/components/shared/CompanyFilterSelect";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const STATUS_LABEL: Record<VagaStatus, string> = {
   ABERTA:       "Aberta",
@@ -111,8 +112,8 @@ export default async function VagasPage({
       </div>
 
       {vagas.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhuma vaga encontrada.
+        <div className="bg-surface border border-border rounded-lg">
+          <EmptyState title="Nenhuma vaga encontrada." />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

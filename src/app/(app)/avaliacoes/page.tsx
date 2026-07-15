@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { AddCicloForm } from "@/components/avaliacoes/AddCicloForm";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { formatCalendarDate } from "@/lib/format";
 import { criarCiclo } from "./actions";
 
@@ -29,8 +30,8 @@ export default async function AvaliacoesPage() {
       {canManage && <AddCicloForm action={criarCiclo} />}
 
       {ciclos.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhum ciclo de avaliação criado ainda.
+        <div className="bg-surface border border-border rounded-lg">
+          <EmptyState title="Nenhum ciclo de avaliação criado ainda." />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

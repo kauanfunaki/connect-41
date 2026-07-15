@@ -6,6 +6,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { AbrirCompetenciaForm } from "@/components/folha/AbrirCompetenciaForm";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { abrirCompetencia } from "./actions";
@@ -71,8 +72,8 @@ export default async function FolhaPage({
       {canManage && <AbrirCompetenciaForm action={abrirCompetencia} companyId={companyId} />}
 
       {competencias.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhuma competência aberta ainda.
+        <div className="bg-surface border border-border rounded-lg">
+          <EmptyState title="Nenhuma competência aberta ainda." />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

@@ -4,6 +4,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { TerminationStatus } from "@/generated/prisma/enums";
 import { formatInstantDate } from "@/lib/format";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const STATUS_LABEL: Record<TerminationStatus, string> = {
   SOLICITADO:            "Solicitado",
@@ -34,8 +35,8 @@ export default async function DesligamentosPage() {
       </div>
 
       {terminations.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhum desligamento em andamento.
+        <div className="bg-surface border border-border rounded-lg">
+          <EmptyState title="Nenhum desligamento em andamento." />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

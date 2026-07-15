@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 // Bloco 4 do levantamento de RH/DP ("Implantação de Cargos e Salários") —
 // setor Gestão (decisão do usuário, 2026-07-10). Cargo já existe como model
@@ -36,8 +37,11 @@ export default async function CargosSalariosPage() {
       </div>
 
       {cargos.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhum cargo cadastrado ainda. Cadastre cargos na ficha de cada empresa.
+        <div className="bg-surface border border-border rounded-lg">
+          <EmptyState
+            title="Nenhum cargo cadastrado ainda."
+            description="Cadastre cargos na ficha de cada empresa."
+          />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg overflow-hidden">

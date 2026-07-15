@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function TreinamentosPage() {
   const ctx = await getAuthContext();
@@ -34,8 +35,8 @@ export default async function TreinamentosPage() {
       </div>
 
       {treinamentos.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhum treinamento cadastrado ainda.
+        <div className="bg-surface border border-border rounded-lg">
+          <EmptyState title="Nenhum treinamento cadastrado ainda." />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

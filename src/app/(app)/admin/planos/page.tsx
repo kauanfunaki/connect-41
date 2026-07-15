@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { TogglePlanoButton } from "@/components/admin/TogglePlanoButton";
 import { MANAGEMENT_MODE_LABEL, BILLING_TYPE_LABEL } from "@/lib/subscription-labels";
 import { NovoPlanoForm } from "@/components/admin/NovoPlanoForm";
@@ -32,8 +33,8 @@ export default async function PlanosPage() {
       <NovoPlanoForm />
 
       {plans.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted mt-6">
-          Nenhum plano cadastrado ainda.
+        <div className="bg-surface border border-border rounded-lg mt-6">
+          <EmptyState title="Nenhum plano cadastrado ainda." />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border mt-6">

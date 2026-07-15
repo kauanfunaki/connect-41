@@ -18,6 +18,7 @@ import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { getTenantModuleStates } from "@/lib/modules";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 // Ícone por módulo — identidade visual dos cards do hub setorial.
 const MODULE_ICONS: Record<string, React.ReactNode> = {
@@ -63,8 +64,8 @@ export default async function SectorHubPage({
       </div>
 
       {modules.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhum módulo ativo para este setor ainda.
+        <div className="bg-surface border border-border rounded-lg">
+          <EmptyState title="Nenhum módulo ativo para este setor ainda." />
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

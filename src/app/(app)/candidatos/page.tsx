@@ -5,6 +5,7 @@ import { CandidatosTable } from "@/components/candidatos/CandidatosTable";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Input } from "@/components/ui/Input";
 import { formatInstantDate } from "@/lib/format";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { inativarCandidatosEmMassa } from "./actions";
 
 const PER_PAGE = 20;
@@ -79,8 +80,10 @@ export default async function CandidatosPage({
       </div>
 
       {candidatos.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          {search ? "Nenhum candidato encontrado com esse filtro." : "Nenhum candidato cadastrado ainda."}
+        <div className="bg-surface border border-border rounded-lg">
+          <EmptyState
+            title={search ? "Nenhum candidato encontrado com esse filtro." : "Nenhum candidato cadastrado ainda."}
+          />
         </div>
       ) : (
         <CandidatosTable

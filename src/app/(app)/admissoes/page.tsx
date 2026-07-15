@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const PENDING_EXAM_STATUSES = new Set(["SOLICITADO", "AGENDADO", "REALIZADO", "ASO_PENDENTE"]);
 
@@ -39,8 +40,8 @@ export default async function AdmissoesPage() {
       </div>
 
       {people.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhuma admissão em andamento no momento.
+        <div className="bg-surface border border-border rounded-lg">
+          <EmptyState title="Nenhuma admissão em andamento no momento." />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

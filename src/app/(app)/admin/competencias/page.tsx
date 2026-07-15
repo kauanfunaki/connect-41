@@ -4,6 +4,7 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { AddCompetenciaForm } from "@/components/admin/AddCompetenciaForm";
 import { CompetenciaRow } from "@/components/admin/CompetenciaRow";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { criarCompetencia, atualizarCompetencia, excluirCompetencia } from "./actions";
 
 export default async function CompetenciasPage() {
@@ -28,8 +29,8 @@ export default async function CompetenciasPage() {
       <AddCompetenciaForm action={criarCompetencia} />
 
       {competencias.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhuma competência cadastrada ainda.
+        <div className="bg-surface border border-border rounded-lg">
+          <EmptyState title="Nenhuma competência cadastrada ainda." />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

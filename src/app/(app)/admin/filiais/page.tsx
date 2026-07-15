@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getAllBranches } from "@/lib/branches";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function FiliaisPage() {
   const ctx = await getAuthContext();
@@ -30,7 +31,7 @@ export default async function FiliaisPage() {
 
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {branches.length === 0 ? (
-          <div className="py-16 text-center text-[13px] text-fg-muted">Nenhuma filial cadastrada ainda.</div>
+          <EmptyState title="Nenhuma filial cadastrada ainda." />
         ) : (
           <div className="divide-y divide-border">
             {branches.map((b) => (

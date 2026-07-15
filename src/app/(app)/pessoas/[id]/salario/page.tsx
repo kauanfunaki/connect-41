@@ -66,7 +66,7 @@ export default async function SalarioPage({
       <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Dados Bancários e Salário</h1>
 
       <div className="bg-surface border border-border rounded-lg p-5 mb-4">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           {canViewSalary && (
             <InfoRow
               label="Salário Atual"

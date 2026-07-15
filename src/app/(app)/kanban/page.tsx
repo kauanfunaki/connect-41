@@ -66,7 +66,7 @@ export default async function KanbanListPage() {
                   {sectorLabel(sectorLabels, sectorCode)}
                 </h2>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {list.map((p, i) => (
                   <Link
                     key={p.id}

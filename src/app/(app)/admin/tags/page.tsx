@@ -5,6 +5,7 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { excluirTag } from "./actions";
 
 export default async function TagsPage() {
@@ -47,8 +48,8 @@ export default async function TagsPage() {
       </div>
 
       {Object.keys(grouped).length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhuma tag cadastrada ainda.
+        <div className="bg-surface border border-border rounded-lg">
+          <EmptyState title="Nenhuma tag cadastrada ainda." />
         </div>
       ) : (
         <div className="space-y-6">

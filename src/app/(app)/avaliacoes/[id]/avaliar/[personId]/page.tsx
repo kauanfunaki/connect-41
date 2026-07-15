@@ -5,6 +5,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { EvaluationForm } from "@/components/avaliacoes/EvaluationForm";
 import { registrarAvaliacao } from "./actions";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function AvaliarColaboradorPage({
   params,
@@ -42,8 +43,11 @@ export default async function AvaliarColaboradorPage({
       <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Avaliar {person.name}</h1>
 
       {competencies.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhuma competência cadastrada ainda. Cadastre em Admin → Competências antes de avaliar.
+        <div className="bg-surface border border-border rounded-lg">
+          <EmptyState
+            title="Nenhuma competência cadastrada ainda."
+            description="Cadastre em Admin → Competências antes de avaliar."
+          />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg p-6">

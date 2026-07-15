@@ -7,6 +7,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Badge } from "@/components/ui/Badge";
 import { formatInstantDate } from "@/lib/format";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function DocumentosClientePage({
   params,
@@ -61,8 +62,8 @@ export default async function DocumentosClientePage({
       </div>
 
       {documentos.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhum documento criado ainda.
+        <div className="bg-surface border border-border rounded-lg">
+          <EmptyState title="Nenhum documento criado ainda." />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

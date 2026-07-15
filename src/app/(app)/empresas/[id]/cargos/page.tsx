@@ -5,6 +5,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { BackButton } from "@/components/shared/BackButton";
 import { excluirCargo } from "./actions";
 
@@ -62,8 +63,8 @@ export default async function CargosPage({
       </div>
 
       {cargos.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhum cargo cadastrado ainda.
+        <div className="bg-surface border border-border rounded-lg">
+          <EmptyState title="Nenhum cargo cadastrado ainda." />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

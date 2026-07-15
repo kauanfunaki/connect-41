@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { AssinaturaRow } from "@/components/admin/AssinaturaRow";
+import { EmptyState } from "@/components/ui/EmptyState";
 import Link from "next/link";
 
 export default async function AssinaturasPage() {
@@ -40,8 +41,8 @@ export default async function AssinaturasPage() {
       </div>
 
       {tenants.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhum tenant cadastrado.
+        <div className="bg-surface border border-border rounded-lg">
+          <EmptyState title="Nenhum tenant cadastrado." />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

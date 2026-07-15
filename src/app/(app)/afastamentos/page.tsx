@@ -4,6 +4,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { formatCalendarDate } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function AfastamentosPage() {
   const ctx = await getAuthContext();
@@ -26,8 +27,8 @@ export default async function AfastamentosPage() {
       </div>
 
       {absences.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhum afastamento ativo no momento.
+        <div className="bg-surface border border-border rounded-lg">
+          <EmptyState title="Nenhum afastamento ativo no momento." />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

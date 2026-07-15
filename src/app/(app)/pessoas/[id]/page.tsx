@@ -113,7 +113,7 @@ export default async function PessoaPage({
       {/* Identificação */}
       <div className="bg-surface border border-border rounded-lg p-5">
         <h2 className="text-[14px] font-semibold text-fg mb-4">Identificação</h2>
-        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="Nome"               value={person.name} />
           <InfoRow label="Tipo"               value={TYPE_LABEL[person.type]} />
           <InfoRow label="CPF"                value={maskCpf(person.cpf)} mono />
@@ -137,7 +137,7 @@ export default async function PessoaPage({
       {/* Contato */}
       <div className="bg-surface border border-border rounded-lg p-5">
         <h2 className="text-[14px] font-semibold text-fg mb-4">Contato</h2>
-        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="E-mail"   value={person.email} />
           <InfoRow label="Telefone" value={formatPhone(person.phone)} />
         </div>
@@ -147,7 +147,7 @@ export default async function PessoaPage({
       {fullAddress && (
         <div className="bg-surface border border-border rounded-lg p-5">
           <h2 className="text-[14px] font-semibold text-fg mb-4">Endereço</h2>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
             <InfoRow label="Logradouro"  value={[person.addressStreet, person.addressNumber].filter(Boolean).join(", ")} />
             <InfoRow label="Complemento" value={person.addressComplement} />
             <InfoRow label="Bairro"      value={person.neighborhood} />
@@ -164,7 +164,7 @@ export default async function PessoaPage({
       {/* Vínculo */}
       <div className="bg-surface border border-border rounded-lg p-5">
         <h2 className="text-[14px] font-semibold text-fg mb-4">Vínculo</h2>
-        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           {person.currentCompany ? (
             <div>
               <p className="text-[10px] text-fg-muted mb-0.5">Empresa atual</p>
@@ -199,7 +199,7 @@ export default async function PessoaPage({
       {person.type === "COLABORADOR" && (
         <div className="bg-surface border border-border rounded-lg p-5">
           <h2 className="text-[14px] font-semibold text-fg mb-4">Dados Trabalhistas</h2>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
             <InfoRow label="Status" value={STATUS_LABEL[person.employmentStatus]} />
             <InfoRow
               label="Data de Admissão"
@@ -222,7 +222,7 @@ export default async function PessoaPage({
       {customFields.length > 0 && (
         <div className="bg-surface border border-border rounded-lg p-5">
           <h2 className="text-[14px] font-semibold text-fg mb-4">Campos Adicionais</h2>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
             {customFields.map((f) => (
               <InfoRow
                 key={f.id}

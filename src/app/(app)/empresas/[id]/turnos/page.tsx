@@ -5,6 +5,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { BackButton } from "@/components/shared/BackButton";
 import { excluirTurno } from "./actions";
 
@@ -60,8 +61,8 @@ export default async function TurnosPage({
       </div>
 
       {turnos.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhum turno cadastrado ainda.
+        <div className="bg-surface border border-border rounded-lg">
+          <EmptyState title="Nenhum turno cadastrado ainda." />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

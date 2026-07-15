@@ -4,6 +4,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Badge } from "@/components/ui/Badge";
 import { formatInstantDateTime } from "@/lib/format";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const ACTION_LABEL: Record<string, string> = {
   "company.create": "criou a empresa",
@@ -78,8 +79,8 @@ export default async function AuditoriaPage() {
       </div>
 
       {logs.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhuma ação registrada ainda.
+        <div className="bg-surface border border-border rounded-lg">
+          <EmptyState title="Nenhuma ação registrada ainda." />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

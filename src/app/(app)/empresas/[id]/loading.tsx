@@ -1,18 +1,26 @@
 import { PageContainer } from "@/components/shared/PageContainer";
 
-// Skeleton exibido enquanto a ficha da pessoa (várias queries) carrega — feedback
-// imediato em conexão lenta, em vez de tela em branco. Mesmo PageContainer
-// (wide, 1440px) da página real, senão a troca skeleton -> conteúdo pula de
-// largura (mismatch com o max-w-4xl antigo).
-export default function LoadingPessoa() {
+// Skeleton exibido enquanto a ficha da empresa (várias queries) carrega —
+// mesmo PageContainer (wide) da página real, senão a troca skeleton ->
+// conteúdo pula de largura.
+export default function LoadingEmpresa() {
   return (
     <PageContainer>
       <div className="animate-pulse">
-        <div className="h-4 w-40 bg-surface-2 rounded mb-6" />
+        <div className="h-4 w-24 bg-surface-2 rounded mb-5" />
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="h-6 w-56 bg-surface-2 rounded" />
-          <div className="h-5 w-20 bg-surface-2 rounded-full" />
+          <div className="h-12 w-12 bg-surface-2 rounded-lg" />
+          <div className="space-y-2">
+            <div className="h-5 w-56 bg-surface-2 rounded" />
+            <div className="h-3.5 w-40 bg-surface-2 rounded" />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 mb-6 border-b border-border pb-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-3.5 w-20 bg-surface-2 rounded" />
+          ))}
         </div>
 
         {[0, 1, 2].map((i) => (

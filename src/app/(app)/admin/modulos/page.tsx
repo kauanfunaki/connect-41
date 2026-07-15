@@ -4,6 +4,7 @@ import { getTenantModuleStates } from "@/lib/modules";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { ToggleModuleButton } from "@/components/admin/ToggleModuleButton";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { alternarModulo } from "./actions";
 
 export default async function ModulosPage() {
@@ -30,9 +31,11 @@ export default async function ModulosPage() {
       </div>
 
       {modules.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhum módulo no catálogo ainda. Os módulos de setor (Recrutamento, RH/DP…) aparecem aqui
-          quando forem construídos.
+        <div className="bg-surface border border-border rounded-lg">
+          <EmptyState
+            title="Nenhum módulo no catálogo ainda."
+            description="Os módulos de setor (Recrutamento, RH/DP…) aparecem aqui quando forem construídos."
+          />
         </div>
       ) : (
         <div className="space-y-6">

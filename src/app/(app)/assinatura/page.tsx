@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { countActiveUsers } from "@/lib/subscriptions";
 import { SUBSCRIPTION_STATUS_LABEL } from "@/lib/subscription-labels";
 import { formatCalendarDate, formatInstantDate } from "@/lib/format";
@@ -34,8 +35,8 @@ export default async function AssinaturaPage() {
       </div>
 
       {!subscription ? (
-        <div className="bg-surface border border-border rounded-lg py-16 text-center text-[13px] text-fg-muted">
-          Nenhuma assinatura configurada ainda. Fale com a 41 Tech.
+        <div className="bg-surface border border-border rounded-lg">
+          <EmptyState title="Nenhuma assinatura configurada ainda." description="Fale com a 41 Tech." />
         </div>
       ) : (
         <div className="space-y-4">

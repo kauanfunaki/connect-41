@@ -100,7 +100,7 @@ export default async function CandidatoPage({
       {/* Identificação */}
       <div className="bg-surface border border-border rounded-lg p-5 mb-4">
         <h2 className="text-[14px] font-semibold text-fg mb-4">Identificação</h2>
-        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="CPF" value={maskCpf(person.cpf)} mono />
           <InfoRow
             label="Data de Nascimento"
@@ -118,7 +118,7 @@ export default async function CandidatoPage({
       {/* Contato */}
       <div className="bg-surface border border-border rounded-lg p-5 mb-4">
         <h2 className="text-[14px] font-semibold text-fg mb-4">Contato</h2>
-        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="E-mail" value={person.email} />
           <InfoRow label="Telefone" value={formatPhone(person.phone)} />
         </div>
@@ -128,7 +128,7 @@ export default async function CandidatoPage({
       {fullAddress && (
         <div className="bg-surface border border-border rounded-lg p-5 mb-4">
           <h2 className="text-[14px] font-semibold text-fg mb-4">Endereço</h2>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
             <InfoRow label="Logradouro" value={[person.addressStreet, person.addressNumber].filter(Boolean).join(", ")} />
             <InfoRow label="Complemento" value={person.addressComplement} />
             <InfoRow label="Bairro" value={person.neighborhood} />
