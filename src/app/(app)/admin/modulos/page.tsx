@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getTenantModuleStates } from "@/lib/modules";
-import { getSectorMaps } from "@/lib/sectors";
+import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { ToggleModuleButton } from "@/components/admin/ToggleModuleButton";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { alternarModulo } from "./actions";
@@ -39,7 +39,7 @@ export default async function ModulosPage() {
           {Object.entries(grouped).map(([sectorCode, list]) => (
             <div key={sectorCode}>
               <h2 className="text-[15px] font-medium text-fg mb-2">
-                {sectorLabels[sectorCode] ?? sectorCode}
+                {sectorLabel(sectorLabels, sectorCode)}
               </h2>
               <div className="bg-surface border border-border rounded-lg divide-y divide-border">
                 {list.map((m) => (

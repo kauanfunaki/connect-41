@@ -57,3 +57,10 @@ export async function getSectorMaps(tenantId: string): Promise<SectorMaps> {
   const options = all.filter((s) => s.active).map((s) => ({ value: s.code, label: s.label }));
   return { labels, colors, options };
 }
+
+// Label de exibição de um setor a partir do map de labels — se o código não
+// tiver label cadastrado (setor removido/renomeado), formata o código como
+// título em vez de mostrar o slug cru (ex.: "dp" -> "Dp").
+export function sectorLabel(labels: Record<string, string>, code: string): string {
+  return labels[code] ?? code.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}

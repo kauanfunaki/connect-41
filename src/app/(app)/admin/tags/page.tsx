@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
-import { getSectorMaps } from "@/lib/sectors";
+import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { excluirTag } from "./actions";
@@ -55,7 +55,7 @@ export default async function TagsPage() {
           {Object.entries(grouped).map(([sectorCode, list]) => (
             <div key={sectorCode}>
               <h2 className="text-[15px] font-medium text-fg mb-2">
-                {sectorLabels[sectorCode] ?? sectorCode}
+                {sectorLabel(sectorLabels, sectorCode)}
               </h2>
               <div className="bg-surface border border-border rounded-lg divide-y divide-border">
                 {list.map((t) => (

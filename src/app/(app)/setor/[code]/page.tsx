@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { getTenantModuleStates } from "@/lib/modules";
-import { getSectorMaps } from "@/lib/sectors";
+import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { PageContainer } from "@/components/shared/PageContainer";
 
 // Ícone por módulo — identidade visual dos cards do hub setorial.
@@ -55,7 +55,7 @@ export default async function SectorHubPage({
     <PageContainer>
       <div className="mb-6">
         <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">
-          {sectorLabels[code] ?? code}
+          {sectorLabel(sectorLabels, code)}
         </h1>
         <p className="text-[13px] text-fg-muted mt-0.5">
           Módulos disponíveis para este setor.

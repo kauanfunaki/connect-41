@@ -14,7 +14,7 @@ import { HorizontalBarChart, TrendChart } from "@/components/shared/Charts";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite, isFullWrite, isFullAccess } from "@/lib/auth/context";
 import { scopedCompanyWhere, scopedPersonWhere, scopedPipelineWhere, scopedHandoffWhere } from "@/lib/auth/scope";
-import { getSectorMaps } from "@/lib/sectors";
+import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getSectorsWithEnabledModules } from "@/lib/modules";
 
 const ACTIVITY_LABEL: Record<string, string> = {
@@ -260,7 +260,7 @@ export default async function HomePage() {
     const items = openPipelineItemsRaw.filter((i) => i.pipeline.sectorCode === code);
     return {
       code,
-      label: sectorLabels[code] ?? code,
+      label: sectorLabel(sectorLabels, code),
       color: sectorColors[code] ?? "#586577",
       openCount: items.length,
       overdueCount: items.filter((i) => i.dueDate && i.dueDate < todayStart).length,

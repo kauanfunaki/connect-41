@@ -58,14 +58,19 @@ export default async function IntegracoesPage({
       )}
 
       <div className="space-y-4">
-        <Card className="p-5 flex items-center justify-between gap-4">
+        <Card className={`p-5 flex items-center justify-between gap-4 ${!isGoogleConfigured() ? "opacity-60" : ""}`}>
           <div className="flex items-center gap-3 min-w-0">
             <span className="w-10 h-10 rounded-lg bg-brand-subtle text-brand flex items-center justify-center flex-shrink-0">
               <Video size={18} />
             </span>
             <div className="min-w-0">
               <p className="text-[14px] font-medium text-fg">Google Calendar / Meet</p>
-              {google ? (
+              {!isGoogleConfigured() ? (
+                <p className="text-[12px] text-fg-muted">
+                  Indisponível — credenciais do Google não configuradas no servidor (GOOGLE_CLIENT_ID/SECRET)
+                  {google ? ". Uma conexão salva existe, mas não pode ser usada até isso ser configurado." : ""}
+                </p>
+              ) : google ? (
                 <p className="text-[12px] text-success flex items-center gap-1">
                   <Check size={12} /> Conectado {google.accountEmail ? `como ${google.accountEmail}` : ""}
                 </p>
@@ -74,31 +79,32 @@ export default async function IntegracoesPage({
               )}
             </div>
           </div>
-          {google ? (
-            <DisconnectButton action={desconectarIntegracao.bind(null, "GOOGLE")} />
-          ) : (
-            <a
-              href="/api/integrations/google/connect"
-              className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors inline-flex items-center flex-shrink-0"
-            >
-              Conectar
-            </a>
-          )}
+          {isGoogleConfigured() &&
+            (google ? (
+              <DisconnectButton action={desconectarIntegracao.bind(null, "GOOGLE")} />
+            ) : (
+              <a
+                href="/api/integrations/google/connect"
+                className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors inline-flex items-center flex-shrink-0"
+              >
+                Conectar
+              </a>
+            ))}
         </Card>
-        {!isGoogleConfigured() && (
-          <p className="text-[11px] text-fg-muted -mt-3">
-            Credenciais do Google ainda não configuradas no servidor (GOOGLE_CLIENT_ID/SECRET).
-          </p>
-        )}
 
-        <Card className="p-5 flex items-center justify-between gap-4">
+        <Card className={`p-5 flex items-center justify-between gap-4 ${!isMicrosoftConfigured() ? "opacity-60" : ""}`}>
           <div className="flex items-center gap-3 min-w-0">
             <span className="w-10 h-10 rounded-lg bg-brand-subtle text-brand flex items-center justify-center flex-shrink-0">
               <Video size={18} />
             </span>
             <div className="min-w-0">
               <p className="text-[14px] font-medium text-fg">Microsoft Teams / Outlook</p>
-              {microsoft ? (
+              {!isMicrosoftConfigured() ? (
+                <p className="text-[12px] text-fg-muted">
+                  Indisponível — credenciais da Microsoft não configuradas no servidor (MICROSOFT_CLIENT_ID/SECRET)
+                  {microsoft ? ". Uma conexão salva existe, mas não pode ser usada até isso ser configurado." : ""}
+                </p>
+              ) : microsoft ? (
                 <p className="text-[12px] text-success flex items-center gap-1">
                   <Check size={12} /> Conectado {microsoft.accountEmail ? `como ${microsoft.accountEmail}` : ""}
                 </p>
@@ -107,22 +113,18 @@ export default async function IntegracoesPage({
               )}
             </div>
           </div>
-          {microsoft ? (
-            <DisconnectButton action={desconectarIntegracao.bind(null, "MICROSOFT")} />
-          ) : (
-            <a
-              href="/api/integrations/microsoft/connect"
-              className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors inline-flex items-center flex-shrink-0"
-            >
-              Conectar
-            </a>
-          )}
+          {isMicrosoftConfigured() &&
+            (microsoft ? (
+              <DisconnectButton action={desconectarIntegracao.bind(null, "MICROSOFT")} />
+            ) : (
+              <a
+                href="/api/integrations/microsoft/connect"
+                className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors inline-flex items-center flex-shrink-0"
+              >
+                Conectar
+              </a>
+            ))}
         </Card>
-        {!isMicrosoftConfigured() && (
-          <p className="text-[11px] text-fg-muted -mt-3">
-            Credenciais da Microsoft ainda não configuradas no servidor (MICROSOFT_CLIENT_ID/SECRET).
-          </p>
-        )}
       </div>
     </PageContainer>
   );

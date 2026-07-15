@@ -4,7 +4,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { getPrisma } from "@/lib/prisma";
-import { getSectorMaps } from "@/lib/sectors";
+import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPipelineWhere } from "@/lib/auth/scope";
 
@@ -63,7 +63,7 @@ export default async function KanbanListPage() {
                   style={{ background: sectorColors[sectorCode] ?? "#586577" }}
                 />
                 <h2 className="text-[15px] font-medium text-fg">
-                  {sectorLabels[sectorCode] ?? sectorCode}
+                  {sectorLabel(sectorLabels, sectorCode)}
                 </h2>
               </div>
               <div className="grid grid-cols-3 gap-3">
@@ -76,7 +76,7 @@ export default async function KanbanListPage() {
                   >
                     <p className="text-[13px] font-medium text-fg mb-1">{p.name}</p>
                     <p className="text-[12px] text-fg-muted">
-                      {p._count.items} item{p._count.items !== 1 ? "s" : ""} ·{" "}
+                      {p._count.items} {p._count.items === 1 ? "item" : "itens"} ·{" "}
                       {p.entityType === "COMPANY" ? "Empresas" : "Pessoas"}
                     </p>
                   </Link>

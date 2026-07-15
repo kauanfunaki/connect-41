@@ -135,6 +135,7 @@ export async function moverItem(
   try {
     const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId } });
     if (!item) return;
+    if (item.stageId === newStageId) return; // reordenar dentro da mesma coluna — sem mudança de estágio, não registra atividade
 
     const pipeline = await prisma.pipeline.findFirst({ where: { id: item.pipelineId } });
     if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
