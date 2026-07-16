@@ -16,14 +16,15 @@ const ERRORS: Record<string, string> = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; next?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, next } = await searchParams;
   const errorMsg = error ? (ERRORS[error] ?? "Erro ao autenticar.") : null;
 
   return (
     <AuthShell subtitle="Acesse sua conta para continuar">
       <form method="POST" action="/api/auth/login-form" className="space-y-4">
+        {next && <input type="hidden" name="next" value={next} />}
         <AuthField label="E-mail" htmlFor="email" icon={<MailIcon />}>
           <input
             id="email"

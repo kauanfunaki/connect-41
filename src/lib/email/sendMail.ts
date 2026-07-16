@@ -104,6 +104,55 @@ export async function sendClientDocumentEmail(input: SendClientDocumentEmailInpu
   }
 }
 
+export type SendPasswordResetEmailInput = {
+  tenantId: string;
+  to: string;
+  resetToken: string;
+};
+
+export async function sendPasswordResetEmail(input: SendPasswordResetEmailInput): Promise<SmtpResult> {
+  const transport = await getTenantTransport(input.tenantId);
+  if (!transport) {
+    return { ok: false, error: "Nenhuma configuração de SMTP cadastrada para este workspace." };
+  }
+  const { transporter, config } = transport;
+
+  const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
+  const resetUrl = `${baseUrl}/login/redefinir-senha?token=${input.resetToken}`;
+
+  const html = `
+    <div style="font-family: Arial, Helvetica, sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+      <p style="font-size: 14px; line-height: 1.5;">Olá,</p>
+      <p style="font-size: 14px; line-height: 1.5;">
+        Recebemos uma solicitação para redefinir a senha da sua conta no Connect. Se foi você, clique no botão abaixo:
+      </p>
+      <p style="margin: 24px 0;">
+        <a href="${resetUrl}" style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500;">
+          Redefinir senha
+        </a>
+      </p>
+      <p style="font-size: 13px; color: #555;">O link expira em 1 hora. Se você não pediu essa redefinição, pode ignorar este e-mail.</p>
+      <p style="font-size: 12px; color: #888; margin-top: 32px;">
+        Se o botão acima não funcionar, copie e cole este link no navegador:<br />
+        <span style="word-break: break-all;">${resetUrl}</span>
+      </p>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: `"${config.fromName}" <${config.fromEmail}>`,
+      to: input.to,
+      subject: "Redefinição de senha — Connect",
+      html,
+    });
+    return { ok: true };
+  } catch (err) {
+    console.error("[sendPasswordResetEmail]", err);
+    return { ok: false, error: "Falha ao enviar e-mail. Verifique a configuração de SMTP." };
+  }
+}
+
 function escapeHtml(input: string): string {
   return input
     .replace(/&/g, "&amp;")

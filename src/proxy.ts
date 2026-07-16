@@ -43,6 +43,57 @@ function stripIdentityHeaders(headers: Headers): void {
   for (const h of IDENTITY_HEADERS) headers.delete(h);
 }
 
+function loginRedirect(req: NextRequest): NextResponse {
+  const url = new URL("/login", req.url);
+  // Preserva o destino original (login-form devolve pra cá em vez de sempre
+  // cair na Home) — só o pathname+search, nunca a origin, pra não virar
+  // open-redirect caso alguém monte a URL de fora.
+  const next = `${req.nextUrl.pathname}${req.nextUrl.search}`;
+  if (next !== "/") url.searchParams.set("next", next);
+  return NextResponse.redirect(url);
+}
+
+function applyIdentityHeaders(headers: Headers, payload: AccessTokenPayload, req: NextRequest): void {
+  // Troca de workspace: só tem efeito se o tenant do cookie estiver entre os
+  // que o próprio token autoriza (accessibleTenants, só populado p/ SUPER_ADMIN).
+  // Isso evita depender de acesso a banco aqui no proxy.
+  const activeTenantCookie = req.cookies.get("active_tenant_id")?.value;
+  const effectiveTenantId =
+    activeTenantCookie && payload.accessibleTenants?.includes(activeTenantCookie)
+      ? activeTenantCookie
+      : payload.tenantId;
+
+  headers.set("x-user-id", payload.sub);
+  headers.set("x-tenant-id", effectiveTenantId);
+  headers.set("x-user-role", payload.role);
+  headers.set("x-user-sectors", effectiveTenantId === payload.tenantId ? payload.sectors.join(",") : "");
+  headers.set("x-home-tenant-id", payload.tenantId);
+}
+
+// Renova o access token via /api/auth/refresh quando ele já expirou mas o
+// refresh token (7-30d) ainda é válido — sem isso, abrir um link direto ou
+// voltar numa aba depois de o access token (15min) expirar forçava login
+// mesmo com sessão válida (o refresh silencioso do SessionKeeper só roda com
+// a aba aberta e em foco, não ajuda no primeiro request de uma navegação nova).
+// Delegado à própria rota (Node — Prisma, jsonwebtoken, crypto) em vez de
+// duplicar a lógica de rotação de refresh token aqui no proxy.
+async function tryRefresh(req: NextRequest): Promise<{ accessToken: string; setCookies: string[] } | null> {
+  const refreshToken = req.cookies.get("refresh_token")?.value;
+  if (!refreshToken) return null;
+
+  try {
+    const res = await fetch(new URL("/api/auth/refresh", req.url), {
+      method: "POST",
+      headers: { cookie: `refresh_token=${refreshToken}` },
+    });
+    if (!res.ok) return null;
+    const { accessToken } = (await res.json()) as { accessToken: string };
+    return { accessToken, setCookies: res.headers.getSetCookie() };
+  } catch {
+    return null;
+  }
+}
+
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -63,32 +114,33 @@ export async function proxy(req: NextRequest) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
     }
-    return NextResponse.redirect(new URL("/login", req.url));
+    return loginRedirect(req);
   }
 
   try {
     const payload = await verifyAccessEdge(token);
-
-    // Troca de workspace: só tem efeito se o tenant do cookie estiver entre os
-    // que o próprio token autoriza (accessibleTenants, só populado p/ SUPER_ADMIN).
-    // Isso evita depender de acesso a banco aqui no proxy.
-    const activeTenantCookie = req.cookies.get("active_tenant_id")?.value;
-    const effectiveTenantId =
-      activeTenantCookie && payload.accessibleTenants?.includes(activeTenantCookie)
-        ? activeTenantCookie
-        : payload.tenantId;
-
-    headers.set("x-user-id", payload.sub);
-    headers.set("x-tenant-id", effectiveTenantId);
-    headers.set("x-user-role", payload.role);
-    headers.set("x-user-sectors", effectiveTenantId === payload.tenantId ? payload.sectors.join(",") : "");
-    headers.set("x-home-tenant-id", payload.tenantId);
+    applyIdentityHeaders(headers, payload, req);
     return NextResponse.next({ request: { headers } });
   } catch {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Token inválido ou expirado" }, { status: 401 });
     }
-    const res = NextResponse.redirect(new URL("/login", req.url));
+
+    const refreshed = await tryRefresh(req);
+    if (refreshed) {
+      try {
+        const payload = await verifyAccessEdge(refreshed.accessToken);
+        applyIdentityHeaders(headers, payload, req);
+        const res = NextResponse.next({ request: { headers } });
+        for (const cookie of refreshed.setCookies) res.headers.append("set-cookie", cookie);
+        return res;
+      } catch {
+        // Token recém-emitido não deveria falhar aqui — mas se falhar, cai
+        // no redirect de login normal abaixo em vez de propagar o erro.
+      }
+    }
+
+    const res = loginRedirect(req);
     res.cookies.delete("access_token");
     return res;
   }

@@ -522,6 +522,20 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+// Token de redefinição de senha por e-mail — mesmo padrão do RefreshToken
+// (hash armazenado, nunca o token cru; de uso único via usedAt).
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @db.VarChar(255)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
 // ─── Entidades Centrais ───────────────────────────────────────────────────────
 
 model Company {

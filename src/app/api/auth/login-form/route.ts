@@ -9,6 +9,22 @@ import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
+// Só aceita destino relativo interno ("/algo") — nunca "//host" (protocol-relative)
+// nem algo com esquema embutido, senão o "next" vindo da query vira open-redirect.
+function safeNext(value: string | null): string | null {
+  if (!value) return null;
+  if (!value.startsWith("/") || value.startsWith("//")) return null;
+  return value;
+}
+
+// Reanexa o "next" no redirect de erro — senão uma senha errada num deep link
+// perde o destino e o usuário cai na Home mesmo acertando na tentativa seguinte.
+function loginErrorRedirect(error: string, next: string | null): NextResponse {
+  const params = new URLSearchParams({ error });
+  if (next) params.set("next", next);
+  return htmlRedirect(`/login?${params.toString()}`);
+}
+
 function htmlRedirect(to: string): NextResponse {
   // Responde com HTML que redireciona no browser â€” evita qualquer
   // problema de URL interna do container (0.0.0.0, host errado, etc.)
@@ -43,16 +59,17 @@ export async function POST(req: NextRequest) {
     const email = (form.get("email") as string | null)?.toLowerCase().trim();
     const password = form.get("password") as string | null;
     const remember = form.get("remember") === "on";
+    const next = safeNext(form.get("next") as string | null);
 
     if (!email || !password) {
-      return htmlRedirect("/login?error=preencha-os-campos");
+      return loginErrorRedirect("preencha-os-campos", next);
     }
 
     // Rate limit por IP e por e-mail (o que estourar primeiro bloqueia). Evita
     // brute force / credential stuffing contra e-mails corporativos conhecidos.
     const ip = clientIp(req);
     if (!hit(`login-ip:${ip}`, 20).allowed || !hit(`login-email:${email}`, 5).allowed) {
-      return htmlRedirect("/login?error=muitas-tentativas");
+      return loginErrorRedirect("muitas-tentativas", next);
     }
 
     const prisma = getPrisma();
@@ -63,7 +80,7 @@ export async function POST(req: NextRequest) {
 
     const valid = user ? await verifyPassword(password, user.passwordHash) : false;
     if (!user || !valid) {
-      return htmlRedirect("/login?error=credenciais-invalidas");
+      return loginErrorRedirect("credenciais-invalidas", next);
     }
 
     // Login OK — zera o contador do e-mail para não punir quem errou antes de acertar.
@@ -101,7 +118,7 @@ export async function POST(req: NextRequest) {
 
     // Cookie setado na mesma resposta que entrega o HTML de redirect.
     // O browser processa Set-Cookie antes de executar o meta-refresh.
-    const res = htmlSuccessRedirect("/home", theme);
+    const res = htmlSuccessRedirect(next ?? "/home", theme);
     res.cookies.set("access_token", accessToken, {
       httpOnly: true,
       secure: isProduction,
