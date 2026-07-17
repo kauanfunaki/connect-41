@@ -101,3 +101,23 @@ export async function createGoogleMeetEvent(
   if (!meetingUrl) throw new Error("Evento criado, mas o Google não retornou o link do Meet.");
   return { externalEventId: event.id, meetingUrl };
 }
+
+// Atualiza título/horário do evento já criado (edição de reunião) — best-effort,
+// chamado só quando o editor tem o próprio token Google válido (normalmente o
+// criador da reunião); falha aqui não deve impedir a edição salvar no Connect.
+export async function updateGoogleMeetEvent(
+  accessToken: string,
+  externalEventId: string,
+  input: { title: string; startAt: Date; endAt: Date }
+): Promise<void> {
+  const res = await fetch(`${CALENDAR_EVENTS_URL}/${externalEventId}`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      summary: input.title,
+      start: { dateTime: input.startAt.toISOString(), timeZone: "America/Sao_Paulo" },
+      end: { dateTime: input.endAt.toISOString(), timeZone: "America/Sao_Paulo" },
+    }),
+  });
+  if (!res.ok) throw new Error(`Falha ao atualizar evento no Google Calendar: ${await res.text()}`);
+}

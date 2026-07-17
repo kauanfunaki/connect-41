@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { canManageMeetings, getValidAccessToken } from "@/lib/integrations/oauth";
-import { createGoogleMeetEvent } from "@/lib/integrations/google";
-import { createTeamsMeetingEvent } from "@/lib/integrations/microsoft";
+import { createGoogleMeetEvent, updateGoogleMeetEvent } from "@/lib/integrations/google";
+import { createTeamsMeetingEvent, updateTeamsMeetingEvent } from "@/lib/integrations/microsoft";
 import { logAudit } from "@/lib/audit";
 import { parseSaoPauloDateTimeLocal } from "@/lib/datetime";
 import type { MeetingProvider } from "@/generated/prisma/enums";
@@ -93,6 +93,94 @@ export async function criarReuniaoAvulsa(_prev: MeetingState, form: FormData): P
     entityType: "Meeting",
     entityId: meeting.id,
     metadata: { provider, title },
+  });
+
+  revalidatePath("/agenda");
+  return null;
+}
+
+// Edita título, horário, empresa/cliente e participantes de uma reunião já
+// criada. Provedor e link não mudam (o link pertence ao evento original) —
+// o formulário só reabre os demais campos preenchidos. Restrito a quem criou
+// a reunião: é o token dela que tem permissão de escrita no evento externo.
+export async function editarReuniaoAvulsa(_prev: MeetingState, form: FormData): Promise<MeetingState> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || !ctx.userId) return { error: "Não autenticado" };
+  if (!canManageMeetings(ctx)) return { error: "Sem permissão para editar reuniões." };
+
+  const meetingId = form.get("meetingId") as string;
+  const title = (form.get("title") as string)?.trim();
+  const startRaw = form.get("startAt") as string;
+  const endRaw = form.get("endAt") as string;
+  const attendeeIds = (form.getAll("attendeeIds") as string[]).filter(Boolean);
+  const companyIdRaw = (form.get("companyId") as string | null)?.trim();
+  const companyId = companyIdRaw ? companyIdRaw : null;
+  const clientNameRaw = (form.get("clientName") as string | null)?.trim();
+  const clientName = clientNameRaw ? clientNameRaw : null;
+
+  if (!meetingId) return { error: "Reunião inválida." };
+  if (!title) return { error: "Título é obrigatório." };
+
+  const startAt = parseSaoPauloDateTimeLocal(startRaw);
+  const endAt = parseSaoPauloDateTimeLocal(endRaw);
+  if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime()) || endAt <= startAt) {
+    return { error: "Datas inválidas — o fim deve ser depois do início." };
+  }
+
+  const prisma = getPrisma();
+  const meeting = await prisma.meeting.findFirst({ where: { id: meetingId, tenantId: ctx.tenantId } });
+  if (!meeting) return { error: "Reunião não encontrada." };
+  if (meeting.createdByUserId !== ctx.userId) {
+    return { error: "Só quem criou a reunião pode editá-la." };
+  }
+
+  // Melhor esforço: reflete a mudança no evento do Google/Teams também. Se o
+  // token não estiver disponível ou a chamada falhar, a edição no Connect
+  // segue normalmente — só o calendário externo fica desatualizado.
+  const accessToken = await getValidAccessToken(ctx.tenantId, ctx.userId, meeting.provider);
+  if (accessToken) {
+    try {
+      if (meeting.provider === "GOOGLE") {
+        await updateGoogleMeetEvent(accessToken, meeting.externalEventId, { title, startAt, endAt });
+      } else {
+        await updateTeamsMeetingEvent(accessToken, meeting.externalEventId, { title, startAt, endAt });
+      }
+    } catch (err) {
+      console.error("[editarReuniaoAvulsa] falha ao sincronizar evento externo", err);
+    }
+  }
+
+  const [validAttendeeIds, company] = await Promise.all([
+    attendeeIds.length > 0
+      ? prisma.user.findMany({ where: { id: { in: attendeeIds }, tenantId: ctx.tenantId }, select: { id: true } }).then((u) => u.map((x) => x.id))
+      : Promise.resolve([]),
+    companyId
+      ? prisma.company.findFirst({ where: { id: companyId, tenantId: ctx.tenantId }, select: { id: true } })
+      : Promise.resolve(null),
+  ]);
+
+  await prisma.meeting.update({
+    where: { id: meetingId },
+    data: {
+      title,
+      startAt,
+      endAt,
+      companyId: company?.id ?? null,
+      clientName,
+      attendees: {
+        deleteMany: {},
+        create: validAttendeeIds.map((userId) => ({ userId })),
+      },
+    },
+  });
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "meeting.update",
+    entityType: "Meeting",
+    entityId: meetingId,
+    metadata: { title },
   });
 
   revalidatePath("/agenda");

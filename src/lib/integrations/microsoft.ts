@@ -100,3 +100,22 @@ export async function createTeamsMeetingEvent(
   if (!meetingUrl) throw new Error("Evento criado, mas a Microsoft não retornou o link do Teams.");
   return { externalEventId: event.id, meetingUrl };
 }
+
+// Atualiza título/horário do evento já criado (edição de reunião) — best-effort,
+// mesmo racional do updateGoogleMeetEvent.
+export async function updateTeamsMeetingEvent(
+  accessToken: string,
+  externalEventId: string,
+  input: { title: string; startAt: Date; endAt: Date }
+): Promise<void> {
+  const res = await fetch(`${GRAPH_EVENTS_URL}/${externalEventId}`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      subject: input.title,
+      start: { dateTime: input.startAt.toISOString(), timeZone: "America/Sao_Paulo" },
+      end: { dateTime: input.endAt.toISOString(), timeZone: "America/Sao_Paulo" },
+    }),
+  });
+  if (!res.ok) throw new Error(`Falha ao atualizar evento no Microsoft Teams: ${await res.text()}`);
+}

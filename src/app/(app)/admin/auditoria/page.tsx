@@ -46,6 +46,7 @@ const ACTION_LABEL: Record<string, string> = {
   "companyservice.create": "adicionou um setor contratado",
   "companyservice.assign": "atribuiu responsável de setor",
   "meeting.create": "agendou uma reunião",
+  "meeting.update": "editou uma reunião",
   "meeting.delete": "removeu uma reunião",
   "integration.connect": "conectou uma integração",
   "integration.disconnect": "desconectou uma integração",

@@ -3,7 +3,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { WeekCalendar } from "@/components/agenda/WeekCalendar";
-import { criarReuniaoAvulsa, excluirReuniaoAvulsa } from "./actions";
+import { criarReuniaoAvulsa, editarReuniaoAvulsa, excluirReuniaoAvulsa } from "./actions";
 import {
   saoPauloParts,
   saoPauloDateTimeToUtc,
@@ -74,6 +74,7 @@ export default async function AgendaPage({
     attendees: m.attendees.map((a) => ({ id: a.user.id, name: a.user.name })),
     company: m.company ? { id: m.company.id, name: m.company.name } : null,
     clientName: m.clientName,
+    createdByUserId: m.createdByUserId,
   }));
 
   const weekDays = days.map((dateKey) => ({ dateKey, isToday: dateKey === todayKey }));
@@ -95,11 +96,13 @@ export default async function AgendaPage({
         nextHref={`/agenda?week=${addDaysToKey(mondayKey, 7)}`}
         todayHref="/agenda"
         createAction={criarReuniaoAvulsa}
+        editAction={editarReuniaoAvulsa}
         deleteAction={excluirReuniaoAvulsa}
         hasGoogle={hasGoogle}
         hasMicrosoft={hasMicrosoft}
         allUsers={allUsers}
         companies={companies}
+        currentUserId={ctx.userId}
       />
     </PageContainer>
   );

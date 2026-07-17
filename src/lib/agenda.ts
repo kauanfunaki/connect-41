@@ -30,6 +30,16 @@ export function saoPauloParts(d: Date): { year: number; month: number; day: numb
   };
 }
 
+// Inverso de parseSaoPauloDateTimeLocal (src/lib/datetime.ts): formata um
+// instante UTC de volta pra "YYYY-MM-DDTHH:mm" em horário de Brasília, pro
+// defaultValue de um <input type="datetime-local"> (ex: reabrir o form de
+// edição de reunião já com o horário certo, sem o deslocamento de fuso do
+// servidor).
+export function toSaoPauloDateTimeLocal(d: Date): string {
+  const { dateKey, hour, minute } = saoPauloParts(d);
+  return `${dateKey}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
 // Converte "YYYY-MM-DDTHH:mm" (calendário Brasília) pro instante UTC correspondente.
 export function saoPauloDateTimeToUtc(dateKey: string, hour: number, minute: number): Date {
   const [year, month, day] = dateKey.split("-").map(Number);

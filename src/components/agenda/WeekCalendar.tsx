@@ -2,10 +2,11 @@
 
 import { useMemo, useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Plus, ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, ExternalLink, Pencil } from "lucide-react";
 import { CreateMeetingDialog } from "./CreateMeetingDialog";
+import { EditMeetingDialog } from "./EditMeetingDialog";
 import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
-import { saoPauloParts, weekdayLabel, dayNumber } from "@/lib/agenda";
+import { saoPauloParts, weekdayLabel, dayNumber, toSaoPauloDateTimeLocal } from "@/lib/agenda";
 import { formatInstantTime } from "@/lib/format";
 import type { MeetingState } from "@/app/(app)/agenda/actions";
 import type { MeetingProvider } from "@/generated/prisma/enums";
@@ -28,6 +29,7 @@ type MeetingRow = {
   attendees: { id: string; name: string }[];
   company: { id: string; name: string } | null;
   clientName: string | null;
+  createdByUserId: string;
 };
 
 type WeekDay = { dateKey: string; isToday: boolean };
@@ -42,11 +44,13 @@ type Props = {
   nextHref: string;
   todayHref: string;
   createAction: (prev: MeetingState, form: FormData) => Promise<MeetingState>;
+  editAction: (prev: MeetingState, form: FormData) => Promise<MeetingState>;
   deleteAction: (meetingId: string) => Promise<void>;
   hasGoogle: boolean;
   hasMicrosoft: boolean;
   allUsers: UserOption[];
   companies: CompanyOption[];
+  currentUserId: string;
 };
 
 function pad(n: number): string {
@@ -69,11 +73,13 @@ export function WeekCalendar({
   nextHref,
   todayHref,
   createAction,
+  editAction,
   deleteAction,
   hasGoogle,
   hasMicrosoft,
   allUsers,
   companies,
+  currentUserId,
 }: Props) {
   const [dialogSlot, setDialogSlot] = useState<{ start: string; end: string } | null>(null);
 
@@ -182,8 +188,20 @@ export function WeekCalendar({
                   />
                 ))}
 
+                {d.isToday && <NowIndicator />}
+
                 {(meetingsByDay.get(d.dateKey) ?? []).map((m) => (
-                  <MeetingBlock key={m.id} meeting={m} top={m.top} height={m.height} deleteAction={deleteAction} />
+                  <MeetingBlock
+                    key={m.id}
+                    meeting={m}
+                    top={m.top}
+                    height={m.height}
+                    editAction={editAction}
+                    deleteAction={deleteAction}
+                    allUsers={allUsers}
+                    companies={companies}
+                    currentUserId={currentUserId}
+                  />
                 ))}
               </div>
             ))}
@@ -207,19 +225,64 @@ export function WeekCalendar({
   );
 }
 
+// Linha vermelha com bolinha marcando o horário atual, no espírito do Google
+// Agenda — só aparece na coluna de hoje e dentro da janela de horas visível.
+// Recalcula a cada 30s (client-side; sem refetch de servidor).
+function NowIndicator() {
+  const [top, setTop] = useState<number | null>(null);
+
+  useEffect(() => {
+    function update() {
+      const sp = saoPauloParts(new Date());
+      const min = (sp.hour - START_HOUR) * 60 + sp.minute;
+      if (min < 0 || min > TOTAL_MIN) {
+        setTop(null);
+        return;
+      }
+      setTop((min / 60) * ROW_HEIGHT);
+    }
+    update();
+    const id = setInterval(update, 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  if (top === null) return null;
+
+  return (
+    <div
+      style={{ position: "absolute", top, left: 0, right: 0 }}
+      className="z-20 flex items-center pointer-events-none"
+      aria-hidden="true"
+    >
+      <span className="w-2 h-2 rounded-full bg-danger -ml-1 flex-shrink-0" />
+      <div className="flex-1 h-px bg-danger" />
+    </div>
+  );
+}
+
 function MeetingBlock({
   meeting,
   top,
   height,
+  editAction,
   deleteAction,
+  allUsers,
+  companies,
+  currentUserId,
 }: {
   meeting: MeetingRow;
   top: number;
   height: number;
+  editAction: (prev: MeetingState, form: FormData) => Promise<MeetingState>;
   deleteAction: (meetingId: string) => Promise<void>;
+  allUsers: UserOption[];
+  companies: CompanyOption[];
+  currentUserId: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const canEdit = meeting.createdByUserId === currentUserId;
 
   useEffect(() => {
     if (!open) return;
@@ -282,6 +345,18 @@ function MeetingBlock({
               Entrar <ExternalLink size={12} />
             </a>
             <CopyLinkButton url={meeting.meetingUrl} />
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(true);
+                  setOpen(false);
+                }}
+                className="inline-flex items-center gap-1 text-[12px] text-fg-secondary hover:text-fg transition-colors"
+              >
+                <Pencil size={11} /> Editar
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -293,6 +368,25 @@ function MeetingBlock({
             </button>
           </div>
         </div>
+      )}
+
+      {editing && (
+        <EditMeetingDialog
+          action={editAction}
+          meeting={{
+            id: meeting.id,
+            provider: meeting.provider,
+            title: meeting.title,
+            startAtLocal: toSaoPauloDateTimeLocal(start),
+            endAtLocal: toSaoPauloDateTimeLocal(end),
+            companyId: meeting.company?.id ?? null,
+            clientName: meeting.clientName,
+            attendeeIds: meeting.attendees.map((a) => a.id),
+          }}
+          allUsers={allUsers}
+          companies={companies}
+          onClose={() => setEditing(false)}
+        />
       )}
     </div>
   );
