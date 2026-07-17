@@ -26,12 +26,22 @@ const STATUS_LABEL: Record<CompanyStatus, string> = {
 };
 
 const TAX_REGIME_OPTIONS = [
-  "MEI",
-  "Simples Nacional",
-  "Lucro Presumido",
-  "Lucro Real",
-  "Lucro Arbitrado",
-  "Imune / Isento",
+  "Indefinido",
+  "Domésticas - CEI",
+  "Imune/Isenta",
+  "Lucro Presumido - Comércio Indústria e Serviço",
+  "Lucro Presumido - Sem Movimento",
+  "Lucro Real - Comércio Indústria e Serviço",
+  "Lucro Real - Sem Movimento",
+  "Lucro Real Inativa - Sem Funcionários e Com Pro-Labóre",
+  "MEI - Com Funcionário",
+  "MEI - Sem Funcionário",
+  "Produtor Rural",
+  "Simples Nacional - Comércio ou Serviço - Com Pró-labore - Com Funcionários",
+  "Simples Nacional - Comércio ou Serviço - Com Pró-labore - Sem Funcionários",
+  "Simples Nacional - Comércio ou Serviço - Sem Pró-labore - Com Funcionários",
+  "Simples Nacional - Comércio ou Serviço - Sem Pró-labore - Sem Funcionários",
+  "Simples Nacional - Serviço ou Comércio - Sem Movimento",
 ];
 
 const STEP_LABELS = ["Identificação", "Endereço", "Contato", "Dados fiscais", "Responsáveis", "Revisão"];
@@ -75,10 +85,13 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
   const [fetching, setFetching] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [step, setStep] = useState(0);
+  // Edição de empresa já cadastrada: todos os passos já têm dados, então a
+  // navegação pelo Stepper fica livre desde o início (passo 1 → 5 direto).
+  const isEdit = Boolean(defaultValues?.id);
   // Etapa mais distante já alcançada — permite pular pra frente de volta pra
   // uma etapa já preenchida, mesmo depois de voltar pra uma etapa anterior
   // (sem isso, "i < step" no clique do Stepper trava o avanço depois de voltar).
-  const [maxStepReached, setMaxStepReached] = useState(0);
+  const [maxStepReached, setMaxStepReached] = useState(isEdit ? STEP_LABELS.length - 1 : 0);
   const [stepError, setStepError] = useState<number | null>(null);
   const [values, setValues] = useState<Record<string, string>>(() => ({
     cnpj: defaultValues?.cnpj ?? "",
@@ -142,6 +155,21 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
     setStep((s) => Math.max(s - 1, 0));
   }
 
+  // Salvar direto de qualquer passo (edição): valida todos os passos e, se
+  // algum estiver inválido, navega até ele em vez de submeter — evita o
+  // caminho longo de ter que avançar até a revisão só pra salvar uma alteração.
+  function saveNow() {
+    for (let i = 0; i <= lastStep; i++) {
+      if (!validateStep(i)) {
+        setStep(i);
+        setStepError(i);
+        return;
+      }
+    }
+    setStepError(null);
+    formRef.current?.requestSubmit();
+  }
+
   const steps = useMemo(
     () =>
       STEP_LABELS.map((label, i): StepStatus => {
@@ -194,12 +222,9 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
         }
       }
 
-      // Regime tributário a partir dos flags
-      if (d.opcao_mei) {
-        set("taxRegime", "MEI");
-      } else if (d.opcao_simples) {
-        set("taxRegime", "Simples Nacional");
-      }
+      // Regime tributário: a BrasilAPI só informa flags genéricos (MEI/Simples),
+      // que não determinam a variante detalhada usada aqui (com/sem funcionário,
+      // pró-labore etc.) — fica a cargo do usuário selecionar.
     } catch {
       // falha silenciosa — usuário preenche manualmente
     } finally {
@@ -261,6 +286,11 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
               <CampoForm label="Regime Tributário" htmlFor="taxRegime">
                 <Select id="taxRegime" name="taxRegime" defaultValue={defaultValues?.taxRegime ?? ""}>
                   <option value="">Selecionar…</option>
+                  {/* Valor legado fora da lista atual (ex: "Simples Nacional" genérico) —
+                      mantido como opção pra edição não perder/trocar o dado silenciosamente. */}
+                  {defaultValues?.taxRegime && !TAX_REGIME_OPTIONS.includes(defaultValues.taxRegime) && (
+                    <option value={defaultValues.taxRegime}>{defaultValues.taxRegime} (antigo)</option>
+                  )}
                   {TAX_REGIME_OPTIONS.map((r) => (
                     <option key={r} value={r}>{r}</option>
                   ))}
@@ -463,9 +493,16 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
               Cancelar
             </Link>
             {step < lastStep ? (
-              <Button type="button" onClick={next}>
-                Avançar →
-              </Button>
+              <>
+                {isEdit && (
+                  <Button type="button" variant="secondary" loading={isPending} onClick={saveNow}>
+                    Salvar alterações
+                  </Button>
+                )}
+                <Button type="button" onClick={next}>
+                  Avançar →
+                </Button>
+              </>
             ) : (
               <Button type="submit" loading={isPending}>
                 Confirmar e salvar

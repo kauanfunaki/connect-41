@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/shell/AppShell";
 import { SessionKeeper } from "@/components/shell/SessionKeeper";
+import { MeetingAlertOverlay } from "@/components/shell/MeetingAlertOverlay";
 import { ToastProvider } from "@/components/ui/Toast";
 import { getSectorMaps } from "@/lib/sectors";
 import { ROLE_LABELS } from "@/lib/roles";
@@ -84,6 +85,7 @@ export default async function AppLayout({
         profilePhotoUrl={me?.photoUrl ?? null}
       >
         <SessionKeeper />
+        <MeetingAlertOverlay />
         {children}
       </AppShell>
     </ToastProvider>

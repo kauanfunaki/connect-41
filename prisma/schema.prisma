@@ -66,10 +66,19 @@ enum ActivityType {
   MENTION
 }
 
-enum HandoffStatus {
-  PENDING
-  ACCEPTED
-  REJECTED
+// Situação da transferência em cada setor de destino:
+// NEW = "Nova", IN_PROGRESS = "Resolvendo", DONE = "Finalizada".
+enum HandoffSectorStatus {
+  NEW
+  IN_PROGRESS
+  DONE
+}
+
+enum HandoffPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }
 
 enum CustomFieldType {
@@ -299,6 +308,7 @@ model Tenant {
   pipelineItems        PipelineItem[]
   activities           Activity[]
   handoffs             Handoff[]
+  handoffSectors       HandoffSector[]
   notifications        Notification[]
   customFields         CustomField[]
   customValues         CustomValue[]
@@ -481,7 +491,7 @@ model User {
   assignedItems          PipelineItemAssignee[]
   activities             Activity[]
   handoffs               Handoff[]              @relation("HandoffRequester")
-  handoffsAssigned       Handoff[]              @relation("HandoffAssignee")
+  handoffSectorsAssigned HandoffSector[]        @relation("HandoffSectorAssignee")
   handoffViews           HandoffView[]
   notifications          Notification[]
   tenantAccess           UserTenantAccess[]
@@ -1512,30 +1522,55 @@ model EvaluationScore {
 
 // ─── Cross-setor ──────────────────────────────────────────────────────────────
 
+// Transferência entre setores no formato do dia a dia (Acessórias): informações
+// gerais (message/description) valem pra todos os setores de destino, e cada
+// setor recebe a própria instrução em HandoffSector — uma transferência só,
+// em vez de uma por setor.
 model Handoff {
-  id          String        @id @default(uuid())
+  id          String          @id @default(uuid())
   tenantId    String
-  fromSector  String        @db.VarChar(40)
-  toSector    String        @db.VarChar(40)
+  fromSector  String          @db.VarChar(40)
   entityType  EntityType
   entityId    String
   requestedBy String
-  assignedTo  String?
-  message     String?       @db.Text
-  description String?       @db.Text
-  status      HandoffStatus @default(PENDING)
-  resolvedAt  DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  message     String?         @db.Text
+  description String?         @db.Text
+  priority    HandoffPriority @default(MEDIUM)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
-  tenant    Tenant        @relation(fields: [tenantId], references: [id])
-  requester User          @relation("HandoffRequester", fields: [requestedBy], references: [id])
-  assignee  User?         @relation("HandoffAssignee", fields: [assignedTo], references: [id])
+  tenant    Tenant          @relation(fields: [tenantId], references: [id])
+  requester User            @relation("HandoffRequester", fields: [requestedBy], references: [id])
   views     HandoffView[]
+  sectors   HandoffSector[]
 
-  @@index([tenantId, toSector, status])
+  @@index([tenantId, createdAt])
   @@index([tenantId, entityType, entityId])
   @@map("handoffs")
+}
+
+// Instrução da transferência para UM setor de destino — cada setor tem seu
+// próprio status, instrução e responsável (designado pela coordenação do
+// setor, sempre entre membros do próprio setor).
+model HandoffSector {
+  id          String              @id @default(uuid())
+  tenantId    String
+  handoffId   String
+  sectorCode  String              @db.VarChar(40)
+  instruction String?             @db.Text
+  status      HandoffSectorStatus @default(NEW)
+  assignedTo  String?
+  resolvedAt  DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  tenant   Tenant  @relation(fields: [tenantId], references: [id])
+  handoff  Handoff @relation(fields: [handoffId], references: [id], onDelete: Cascade)
+  assignee User?   @relation("HandoffSectorAssignee", fields: [assignedTo], references: [id])
+
+  @@unique([handoffId, sectorCode])
+  @@index([tenantId, sectorCode, status])
+  @@map("handoff_sectors")
 }
 
 // Registro de quem visualizou o detalhe de uma transferência — @@unique
@@ -1664,9 +1699,12 @@ model Meeting {
 // plataforma (não convidados externos, que entram só pelo link do
 // Meet/Teams).
 model MeetingAttendee {
-  meetingId String
-  userId    String
-  createdAt DateTime @default(now())
+  meetingId      String
+  userId         String
+  createdAt      DateTime  @default(now())
+  // Ciência do alerta focal de reunião — null = o bloco centralizado ainda
+  // aparece pro usuário quando a reunião estiver próxima; preenchido no "OK".
+  acknowledgedAt DateTime?
 
   meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRightLeft, ArrowRight } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps } from "@/lib/sectors";
-import { getAuthContext, canManageSector, isFullWrite } from "@/lib/auth/context";
+import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { scopedHandoffWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
@@ -10,26 +10,19 @@ import { Badge } from "@/components/ui/Badge";
 import { SectorChip } from "@/components/ui/SectorChip";
 import { formatInstantDate } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { HandoffActions } from "@/components/transferencias/HandoffActions";
-import { aceitarHandoff, rejeitarHandoff } from "./actions";
-import type { HandoffStatus } from "@/generated/prisma/enums";
+import {
+  aggregateHandoffStatus,
+  HANDOFF_STATUS_LABEL,
+  HANDOFF_STATUS_BADGE,
+  HANDOFF_PRIORITY_LABEL,
+  HANDOFF_PRIORITY_BADGE,
+} from "@/lib/handoffs";
+import type { HandoffSectorStatus } from "@/generated/prisma/enums";
 
-const STATUS_LABEL: Record<HandoffStatus, string> = {
-  PENDING: "Aguardando aceite",
-  ACCEPTED: "Aceita",
-  REJECTED: "Rejeitada",
-};
-
-const STATUS_BADGE_VARIANT: Record<HandoffStatus, "warning" | "success" | "danger"> = {
-  PENDING: "warning",
-  ACCEPTED: "success",
-  REJECTED: "danger",
-};
-
-const FILTER_TABS: { value: HandoffStatus; label: string }[] = [
-  { value: "PENDING", label: "Aguardando aceite" },
-  { value: "ACCEPTED", label: "Aceitas" },
-  { value: "REJECTED", label: "Rejeitadas" },
+const FILTER_TABS: { value: HandoffSectorStatus; label: string }[] = [
+  { value: "NEW", label: "Novas" },
+  { value: "IN_PROGRESS", label: "Resolvendo" },
+  { value: "DONE", label: "Finalizadas" },
 ];
 
 export default async function HandoffsPage({
@@ -43,14 +36,23 @@ export default async function HandoffsPage({
   const { labels: sectorLabels, colors: sectorColors } = await getSectorMaps(ctx.tenantId);
 
   const statusFilter =
-    status && ["PENDING", "ACCEPTED", "REJECTED"].includes(status) ? (status as HandoffStatus) : "PENDING";
+    status && ["NEW", "IN_PROGRESS", "DONE"].includes(status) ? (status as HandoffSectorStatus) : "NEW";
 
   const prisma = getPrisma();
-  const handoffs = await prisma.handoff.findMany({
-    where: { ...scopedHandoffWhere(ctx), status: statusFilter },
+  const allHandoffs = await prisma.handoff.findMany({
+    where: scopedHandoffWhere(ctx),
     orderBy: { createdAt: "desc" },
-    include: { requester: { select: { name: true } } },
+    include: {
+      requester: { select: { name: true } },
+      sectors: { select: { sectorCode: true, status: true }, orderBy: { createdAt: "asc" } },
+    },
   });
+
+  // Status agregado (Nova = nenhum setor começou; Finalizada = todos terminaram;
+  // Resolvendo = qualquer coisa no meio) — derivado dos setores, não armazenado.
+  const handoffs = allHandoffs.filter(
+    (h) => aggregateHandoffStatus(h.sectors.map((s) => s.status)) === statusFilter
+  );
 
   // Resolve nomes das entidades (Company ou Person)
   const companyIds = handoffs.filter((h) => h.entityType === "COMPANY").map((h) => h.entityId);
@@ -68,10 +70,6 @@ export default async function HandoffsPage({
   const entityNames: Record<string, string> = {};
   companies.forEach((c) => (entityNames[c.id] = c.name));
   people.forEach((p) => (entityNames[p.id] = p.name));
-
-  function buildUrl(newStatus: HandoffStatus) {
-    return `/transferencias?status=${newStatus}`;
-  }
 
   return (
     <PageContainer>
@@ -100,7 +98,7 @@ export default async function HandoffsPage({
           return (
             <Link
               key={tab.value}
-              href={buildUrl(tab.value)}
+              href={`/transferencias?status=${tab.value}`}
               className={`inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
                 isActive
                   ? "bg-surface-2 text-fg border border-border-strong"
@@ -117,52 +115,50 @@ export default async function HandoffsPage({
         <Card>
           <EmptyState
             icon={<ArrowRightLeft />}
-            title={`Nenhuma transferência ${STATUS_LABEL[statusFilter].toLowerCase()}`}
+            title={`Nenhuma transferência ${HANDOFF_STATUS_LABEL[statusFilter].toLowerCase()}`}
             description="Transferências entre setores solicitadas na ficha de uma empresa ou pessoa aparecem aqui."
           />
         </Card>
       ) : (
         <div className="space-y-3">
           {handoffs.map((h) => {
-            const canResolve = h.status === "PENDING" && canManageSector(ctx, h.toSector);
-            const aceitarAction = aceitarHandoff.bind(null, h.id);
-            const rejeitarAction = rejeitarHandoff.bind(null, h.id);
-
+            const aggregate = aggregateHandoffStatus(h.sectors.map((s) => s.status));
             return (
               <Card key={h.id} className="p-4">
-                <div className="flex items-start gap-3">
-                  <Link href={`/transferencias/${h.id}`} className="group flex items-start gap-3 flex-1 min-w-0">
-                    <span className="w-9 h-9 rounded-lg bg-surface-hover border border-border flex items-center justify-center text-fg-secondary flex-shrink-0">
-                      <ArrowRightLeft size={16} />
-                    </span>
+                <Link href={`/transferencias/${h.id}`} className="group flex items-start gap-3">
+                  <span className="w-9 h-9 rounded-lg bg-surface-hover border border-border flex items-center justify-center text-fg-secondary flex-shrink-0">
+                    <ArrowRightLeft size={16} />
+                  </span>
 
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap mb-2">
-                        <SectorChip label={sectorLabels[h.fromSector] ?? h.fromSector} color={sectorColors[h.fromSector] ?? "#586577"} />
-                        <ArrowRight size={13} className="text-fg-muted flex-shrink-0" />
-                        <SectorChip label={sectorLabels[h.toSector] ?? h.toSector} color={sectorColors[h.toSector] ?? "#586577"} />
-                        <Badge variant={STATUS_BADGE_VARIANT[h.status]}>{STATUS_LABEL[h.status]}</Badge>
-                      </div>
-
-                      <p className="text-[length:var(--fs-body)] font-medium text-fg group-hover:text-brand transition-colors">
-                        {entityNames[h.entityId] ?? "(removido)"}
-                      </p>
-
-                      {h.message && (
-                        <p className="text-[length:var(--fs-helper)] text-fg-secondary mt-1">{h.message}</p>
-                      )}
-
-                      <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1.5">
-                        Solicitado por {h.requester.name} em{" "}
-                        {formatInstantDate(h.createdAt, { day: "2-digit", month: "long", year: "numeric" })}
-                      </p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                      <SectorChip label={sectorLabels[h.fromSector] ?? h.fromSector} color={sectorColors[h.fromSector] ?? "#586577"} />
+                      <ArrowRight size={13} className="text-fg-muted flex-shrink-0" />
+                      {h.sectors.map((s) => (
+                        <SectorChip
+                          key={s.sectorCode}
+                          label={sectorLabels[s.sectorCode] ?? s.sectorCode}
+                          color={sectorColors[s.sectorCode] ?? "#586577"}
+                        />
+                      ))}
+                      <Badge variant={HANDOFF_STATUS_BADGE[aggregate]}>{HANDOFF_STATUS_LABEL[aggregate]}</Badge>
+                      <Badge variant={HANDOFF_PRIORITY_BADGE[h.priority]}>{HANDOFF_PRIORITY_LABEL[h.priority]}</Badge>
                     </div>
-                  </Link>
 
-                  {canResolve && (
-                    <HandoffActions aceitarAction={aceitarAction} rejeitarAction={rejeitarAction} />
-                  )}
-                </div>
+                    <p className="text-[length:var(--fs-body)] font-medium text-fg group-hover:text-brand transition-colors">
+                      {entityNames[h.entityId] ?? "(removido)"}
+                    </p>
+
+                    {h.message && (
+                      <p className="text-[length:var(--fs-helper)] text-fg-secondary mt-1">{h.message}</p>
+                    )}
+
+                    <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1.5">
+                      Solicitado por {h.requester.name} em{" "}
+                      {formatInstantDate(h.createdAt, { day: "2-digit", month: "long", year: "numeric" })}
+                    </p>
+                  </div>
+                </Link>
               </Card>
             );
           })}

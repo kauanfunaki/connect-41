@@ -104,9 +104,9 @@ export default async function HomePage() {
   const monthStart = startOfMonth();
 
   const incomingHandoffWhere = isFullAccess(ctx.role)
-    ? { tenantId: ctx.tenantId, status: "PENDING" as const }
+    ? { tenantId: ctx.tenantId, sectors: { some: { status: "NEW" as const } } }
     : ctx.sectors.length > 0
-      ? { tenantId: ctx.tenantId, status: "PENDING" as const, toSector: { in: ctx.sectors } }
+      ? { tenantId: ctx.tenantId, sectors: { some: { status: "NEW" as const, sectorCode: { in: ctx.sectors } } } }
       : null;
 
   const [
@@ -127,7 +127,9 @@ export default async function HomePage() {
     prisma.company.count({ where: { ...(await scopedCompanyWhere(ctx)), status: "ACTIVE" } }),
     prisma.company.count({ where: { ...(await scopedCompanyWhere(ctx)), createdAt: { gte: monthStart } } }),
     prisma.person.count({ where: { ...(await scopedPersonWhere(ctx)), type: "COLABORADOR" } }),
-    prisma.handoff.count({ where: { ...scopedHandoffWhere(ctx), status: "PENDING" } }),
+    prisma.handoff.count({
+      where: { AND: [scopedHandoffWhere(ctx), { sectors: { some: { status: { not: "DONE" } } } }] },
+    }),
     prisma.pipelineItem.findMany({
       where: { tenantId: ctx.tenantId, pipeline: scopedPipelineWhere(ctx), stage: { isTerminal: false } },
       select: {
@@ -171,7 +173,10 @@ export default async function HomePage() {
           where: incomingHandoffWhere,
           orderBy: { createdAt: "desc" },
           take: 4,
-          include: { requester: { select: { name: true } } },
+          include: {
+            requester: { select: { name: true } },
+            sectors: { select: { sectorCode: true }, orderBy: { createdAt: "asc" } },
+          },
         })
       : Promise.resolve([]),
   ]);
@@ -340,13 +345,13 @@ export default async function HomePage() {
           sub={vencidosCount > 0 ? `${vencidosCount} vencido${vencidosCount !== 1 ? "s" : ""}` : undefined}
         />
         <StatCard
-          href="/transferencias?status=PENDING"
+          href="/transferencias?status=NEW"
           icon={<ArrowRightLeft size={16} />}
           label="Transferências"
           value={pendingHandoffsCount}
           delay={80}
           highlight={pendingHandoffsCount > 0}
-          sub={pendingHandoffsCount > 0 ? "aguardando" : undefined}
+          sub={pendingHandoffsCount > 0 ? "em aberto" : undefined}
         />
         <StatCard
           href="/pessoas"
@@ -434,7 +439,8 @@ export default async function HomePage() {
                 {incomingHandoffsRaw.map((h) => (
                   <div key={h.id} className="flex items-center justify-between gap-3">
                     <p className="text-[length:var(--fs-body)] text-fg truncate min-w-0">
-                      {sectorLabels[h.fromSector] ?? h.fromSector} → {sectorLabels[h.toSector] ?? h.toSector}
+                      {sectorLabels[h.fromSector] ?? h.fromSector} →{" "}
+                      {h.sectors.map((s) => sectorLabels[s.sectorCode] ?? s.sectorCode).join(", ")}
                       {" · "}
                       <span className="font-medium">{entityNames[h.entityId] ?? "(removido)"}</span>
                       <span className="text-fg-muted">{" · "}{h.requester.name} · {formatRelativeTime(h.createdAt)}</span>

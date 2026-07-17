@@ -11,22 +11,16 @@ import { Card } from "@/components/ui/Card";
 import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
 import { SectorChip } from "@/components/ui/SectorChip";
-import { HandoffActions } from "@/components/transferencias/HandoffActions";
 import { AssigneeSelect } from "@/components/transferencias/AssigneeSelect";
-import { aceitarHandoff, rejeitarHandoff, atribuirResponsavel, registrarVisualizacao } from "../actions";
-import type { HandoffStatus } from "@/generated/prisma/enums";
-
-const STATUS_LABEL: Record<HandoffStatus, string> = {
-  PENDING: "Aguardando aceite",
-  ACCEPTED: "Aceita",
-  REJECTED: "Rejeitada",
-};
-
-const STATUS_BADGE_VARIANT: Record<HandoffStatus, "warning" | "success" | "danger"> = {
-  PENDING: "warning",
-  ACCEPTED: "success",
-  REJECTED: "danger",
-};
+import { SectorStatusSelect } from "@/components/transferencias/SectorStatusSelect";
+import { atualizarStatusSetor, atribuirResponsavelSetor, registrarVisualizacao } from "../actions";
+import {
+  aggregateHandoffStatus,
+  HANDOFF_STATUS_LABEL,
+  HANDOFF_STATUS_BADGE,
+  HANDOFF_PRIORITY_LABEL,
+  HANDOFF_PRIORITY_BADGE,
+} from "@/lib/handoffs";
 
 export default async function HandoffDetailPage({
   params,
@@ -39,7 +33,13 @@ export default async function HandoffDetailPage({
   const prisma = getPrisma();
   const handoff = await prisma.handoff.findFirst({
     where: { id, ...scopedHandoffWhere(ctx) },
-    include: { requester: { select: { name: true } }, assignee: { select: { id: true, name: true } } },
+    include: {
+      requester: { select: { name: true } },
+      sectors: {
+        orderBy: { createdAt: "asc" },
+        include: { assignee: { select: { id: true, name: true } } },
+      },
+    },
   });
 
   if (!handoff) notFound();
@@ -53,20 +53,22 @@ export default async function HandoffDetailPage({
 
   const entityHref = handoff.entityType === "COMPANY" ? `/empresas/${handoff.entityId}` : `/pessoas/${handoff.entityId}`;
   const { labels: sectorLabels, colors: sectorColors } = await getSectorMaps(ctx.tenantId);
-  const canResolve = handoff.status === "PENDING" && canManageSector(ctx, handoff.toSector);
-  const canAssign = canManageSector(ctx, handoff.toSector);
-  const aceitarAction = aceitarHandoff.bind(null, handoff.id);
-  const rejeitarAction = rejeitarHandoff.bind(null, handoff.id);
-  const atribuirAction = atribuirResponsavel.bind(null, handoff.id);
+  const aggregate = aggregateHandoffStatus(handoff.sectors.map((s) => s.status));
 
-  const [assigneeOptions, views] = await Promise.all([
-    canAssign ? getSectorUsers(ctx.tenantId, handoff.toSector) : Promise.resolve([]),
-    prisma.handoffView.findMany({
-      where: { handoffId: handoff.id },
-      include: { user: { select: { name: true } } },
-      orderBy: { viewedAt: "desc" },
-    }),
-  ]);
+  // Opções de responsável por setor — só carrega pros setores que o usuário
+  // coordena (o select nem aparece pros demais). Sempre membros do setor.
+  const manageableSectors = handoff.sectors.filter((s) => canManageSector(ctx, s.sectorCode));
+  const assigneeOptionsBySector = Object.fromEntries(
+    await Promise.all(
+      manageableSectors.map(async (s) => [s.sectorCode, await getSectorUsers(ctx.tenantId, s.sectorCode)] as const)
+    )
+  );
+
+  const views = await prisma.handoffView.findMany({
+    where: { handoffId: handoff.id },
+    include: { user: { select: { name: true } } },
+    orderBy: { viewedAt: "desc" },
+  });
 
   return (
     <PageContainer variant="narrow">
@@ -79,60 +81,111 @@ export default async function HandoffDetailPage({
       </div>
 
       <Card className="p-6 mb-4">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div className="flex items-start gap-3 min-w-0">
-            <span className="w-10 h-10 rounded-lg bg-surface-hover border border-border flex items-center justify-center text-fg-secondary flex-shrink-0">
-              <ArrowRightLeft size={18} />
-            </span>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-2">
-                <SectorChip label={sectorLabels[handoff.fromSector] ?? handoff.fromSector} color={sectorColors[handoff.fromSector] ?? "#586577"} />
-                <ArrowRight size={13} className="text-fg-muted flex-shrink-0" />
-                <SectorChip label={sectorLabels[handoff.toSector] ?? handoff.toSector} color={sectorColors[handoff.toSector] ?? "#586577"} />
-                <Badge variant={STATUS_BADGE_VARIANT[handoff.status]}>{STATUS_LABEL[handoff.status]}</Badge>
-              </div>
-              {entity ? (
-                <Link
-                  href={entityHref}
-                  className="text-[length:var(--fs-section)] font-display font-semibold text-fg hover:text-brand transition-colors"
-                >
-                  {entity.name}
-                </Link>
-              ) : (
-                <p className="text-[length:var(--fs-section)] font-display font-semibold text-fg-muted">(removido)</p>
-              )}
-              <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
-                Solicitado por {handoff.requester.name} em{" "}
-                {formatInstantDate(handoff.createdAt, { day: "2-digit", month: "long", year: "numeric" })}
-                {handoff.resolvedAt && (
-                  <>
-                    {" "}· resolvido em{" "}
-                    {formatInstantDate(handoff.resolvedAt, { day: "2-digit", month: "long", year: "numeric" })}
-                  </>
-                )}
-              </p>
+        <div className="flex items-start gap-3 min-w-0">
+          <span className="w-10 h-10 rounded-lg bg-surface-hover border border-border flex items-center justify-center text-fg-secondary flex-shrink-0">
+            <ArrowRightLeft size={18} />
+          </span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-2">
+              <SectorChip label={sectorLabels[handoff.fromSector] ?? handoff.fromSector} color={sectorColors[handoff.fromSector] ?? "#586577"} />
+              <ArrowRight size={13} className="text-fg-muted flex-shrink-0" />
+              {handoff.sectors.map((s) => (
+                <SectorChip
+                  key={s.sectorCode}
+                  label={sectorLabels[s.sectorCode] ?? s.sectorCode}
+                  color={sectorColors[s.sectorCode] ?? "#586577"}
+                />
+              ))}
+              <Badge variant={HANDOFF_STATUS_BADGE[aggregate]}>{HANDOFF_STATUS_LABEL[aggregate]}</Badge>
+              <Badge variant={HANDOFF_PRIORITY_BADGE[handoff.priority]}>
+                Prioridade {HANDOFF_PRIORITY_LABEL[handoff.priority].toLowerCase()}
+              </Badge>
             </div>
+            {entity ? (
+              <Link
+                href={entityHref}
+                className="text-[length:var(--fs-section)] font-display font-semibold text-fg hover:text-brand transition-colors"
+              >
+                {entity.name}
+              </Link>
+            ) : (
+              <p className="text-[length:var(--fs-section)] font-display font-semibold text-fg-muted">(removido)</p>
+            )}
+            <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
+              Solicitado por {handoff.requester.name} em{" "}
+              {formatInstantDate(handoff.createdAt, { day: "2-digit", month: "long", year: "numeric" })}
+            </p>
           </div>
-
-          {canResolve && <HandoffActions aceitarAction={aceitarAction} rejeitarAction={rejeitarAction} />}
-        </div>
-
-        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
-          <span className="text-[12px] text-fg-muted">Responsável:</span>
-          {canAssign ? (
-            <AssigneeSelect
-              action={atribuirAction}
-              options={assigneeOptions}
-              currentAssigneeId={handoff.assignee?.id ?? null}
-            />
-          ) : (
-            <span className="text-[12px] text-fg">{handoff.assignee?.name ?? "Sem responsável"}</span>
-          )}
         </div>
       </Card>
 
+      <Card className="p-5 mb-4">
+        <h2 className="text-[14px] font-semibold text-fg mb-2">Informações gerais</h2>
+        {handoff.message ? (
+          <p className="text-[length:var(--fs-body)] text-fg-secondary whitespace-pre-wrap">{handoff.message}</p>
+        ) : (
+          <p className="text-[length:var(--fs-body)] text-fg-muted italic">Nenhuma informação geral adicionada.</p>
+        )}
+        {handoff.description && (
+          <>
+            <h2 className="text-[14px] font-semibold text-fg mb-2 mt-4">Descrição</h2>
+            <p className="text-[length:var(--fs-body)] text-fg-secondary whitespace-pre-wrap">{handoff.description}</p>
+          </>
+        )}
+      </Card>
+
+      {/* Um card por setor de destino: instrução, situação e responsável. */}
+      <div className="space-y-3 mb-4">
+        {handoff.sectors.map((s) => {
+          const canManage = canManageSector(ctx, s.sectorCode);
+          const canUpdateStatus = (canManage || s.assignedTo === ctx.userId) && ctx.role !== "READONLY";
+          return (
+            <Card key={s.id} className="p-5">
+              <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <SectorChip
+                    label={sectorLabels[s.sectorCode] ?? s.sectorCode}
+                    color={sectorColors[s.sectorCode] ?? "#586577"}
+                  />
+                  {!canUpdateStatus && (
+                    <Badge variant={HANDOFF_STATUS_BADGE[s.status]}>{HANDOFF_STATUS_LABEL[s.status]}</Badge>
+                  )}
+                </div>
+                {canUpdateStatus && (
+                  <SectorStatusSelect action={atualizarStatusSetor.bind(null, s.id)} current={s.status} />
+                )}
+              </div>
+
+              {s.instruction ? (
+                <p className="text-[length:var(--fs-body)] text-fg-secondary whitespace-pre-wrap mb-3">{s.instruction}</p>
+              ) : (
+                <p className="text-[length:var(--fs-body)] text-fg-muted italic mb-3">Sem instrução específica para este setor.</p>
+              )}
+
+              <div className="flex items-center gap-2 pt-3 border-t border-border">
+                <span className="text-[12px] text-fg-muted">Responsável:</span>
+                {canManage ? (
+                  <AssigneeSelect
+                    action={atribuirResponsavelSetor.bind(null, s.id)}
+                    options={assigneeOptionsBySector[s.sectorCode] ?? []}
+                    currentAssigneeId={s.assignee?.id ?? null}
+                  />
+                ) : (
+                  <span className="text-[12px] text-fg">{s.assignee?.name ?? "Sem responsável"}</span>
+                )}
+                {s.resolvedAt && (
+                  <span className="text-[12px] text-fg-muted ml-auto">
+                    Finalizada em {formatInstantDateTime(s.resolvedAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                )}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
       {views.length > 0 && (
-        <Card className="p-5 mb-4">
+        <Card className="p-5">
           <h2 className="text-[14px] font-semibold text-fg mb-2 flex items-center gap-1.5">
             <Eye size={14} className="text-fg-muted" />
             Visualizado por
@@ -149,24 +202,6 @@ export default async function HandoffDetailPage({
           </div>
         </Card>
       )}
-
-      <Card className="p-5 mb-4">
-        <h2 className="text-[14px] font-semibold text-fg mb-2">Mensagem</h2>
-        {handoff.message ? (
-          <p className="text-[length:var(--fs-body)] text-fg-secondary whitespace-pre-wrap">{handoff.message}</p>
-        ) : (
-          <p className="text-[length:var(--fs-body)] text-fg-muted italic">Nenhuma mensagem informada.</p>
-        )}
-      </Card>
-
-      <Card className="p-5">
-        <h2 className="text-[14px] font-semibold text-fg mb-2">Descrição</h2>
-        {handoff.description ? (
-          <p className="text-[length:var(--fs-body)] text-fg-secondary whitespace-pre-wrap">{handoff.description}</p>
-        ) : (
-          <p className="text-[length:var(--fs-body)] text-fg-muted italic">Nenhuma descrição adicionada.</p>
-        )}
-      </Card>
     </PageContainer>
   );
 }

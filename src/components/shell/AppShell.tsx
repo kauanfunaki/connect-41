@@ -20,6 +20,7 @@ import {
   ClipboardList,
   ShieldCheck,
   LayoutGrid,
+  ListTodo,
   Menu,
   X,
 } from "lucide-react";
@@ -138,6 +139,7 @@ export function AppShell({
           <NavItem href="/home" icon={<Home size={16} />} label="Início" />
           <NavItem href="/empresas" icon={<Building2 size={16} />} label="Empresas" />
           <NavItem href="/pessoas" icon={<Users size={16} />} label="Pessoas" />
+          <NavItem href="/tarefas" icon={<ListTodo size={16} />} label="Tarefas" />
           <NavItem href="/kanban" icon={<Columns3 size={16} />} label="Kanban" />
           <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />
           {canManageMeetings && (
