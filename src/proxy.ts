@@ -18,6 +18,10 @@ const PUBLIC_PATHS = [
   "/api/auth/refresh",
   "/api/auth/logout",
   "/api/health",
+  // Chamado por scheduler externo (n8n), sem sessão de usuário — autentica a
+  // própria requisição via CRON_SERVICE_TOKEN dentro do route handler (ver
+  // src/app/api/cron/alerts/route.ts), não pelo JWT deste proxy.
+  "/api/cron/",
   // Assets estáticos servidos sob /public — sem token, o proxy redirecionava
   // essas requisições pro /login (retornando HTML em vez da imagem), quebrando o
   // logo na tela de login e na tela de loading pós-login (contextos sem sessão).
