@@ -213,3 +213,30 @@ export async function runAlertEngine(): Promise<{ tenants: number; alertsSent: n
     results,
   };
 }
+
+const SCHEDULER_INTERVAL_MS = 15 * 60 * 1000;
+
+// Cache em globalThis pelo mesmo motivo do getPrisma() (src/lib/prisma.ts):
+// sobrevive ao HMR do Turbopack em dev, e garante que só existe um
+// setInterval por processo mesmo se register() for chamado mais de uma vez.
+const globalForScheduler = globalThis as unknown as { __alertSchedulerStarted?: boolean };
+
+// Gatilho interno (chamado por instrumentation.ts na subida do servidor) —
+// substitui a dependência de um scheduler externo (n8n) chamando
+// POST /api/cron/alerts. A rota continua existindo como gatilho manual/backup
+// (ex: forçar uma checagem fora do intervalo), mas deixa de ser o caminho
+// principal. O dedup diário via AlertDispatch protege mesmo se os dois
+// caminhos rodarem próximos um do outro.
+export function startAlertScheduler(): void {
+  if (globalForScheduler.__alertSchedulerStarted) return;
+  globalForScheduler.__alertSchedulerStarted = true;
+
+  const run = () => {
+    runAlertEngine()
+      .then((result) => console.log("[alerts] execução do scheduler interno", result))
+      .catch((err) => console.error("[alerts] falha no scheduler interno", err));
+  };
+
+  run(); // primeira execução já na subida, não espera os 15min iniciais
+  setInterval(run, SCHEDULER_INTERVAL_MS);
+}
