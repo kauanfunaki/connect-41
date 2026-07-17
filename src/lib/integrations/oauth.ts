@@ -12,9 +12,19 @@ export function canManageMeetings(ctx: AuthContext): boolean {
 
 // Atrás do proxy reverso do EasyPanel, req.url reporta o host interno do
 // container (ex.: 0.0.0.0:80) em vez do domínio público — usar isso pra montar
-// redirects gera URLs quebradas. O redirect URI configurado (mesmo valor
-// cadastrado no Google Cloud/Azure) sempre tem o domínio público correto.
+// redirects gera URLs quebradas. APP_PUBLIC_URL é a fonte canônica do domínio
+// público do app (troca de domínio = trocar UMA env); o redirect URI do
+// provedor fica só como fallback, pois pode apontar pro domínio antigo
+// enquanto o cadastro no Google Cloud/Azure não é atualizado.
 export function getPublicOrigin(provider: MeetingProvider): string {
+  const publicUrl = process.env.APP_PUBLIC_URL;
+  if (publicUrl) {
+    try {
+      return new URL(publicUrl).origin;
+    } catch {
+      // valor malformado — cai pro fallback abaixo
+    }
+  }
   const redirectUri =
     provider === "GOOGLE" ? process.env.GOOGLE_REDIRECT_URI : process.env.MICROSOFT_REDIRECT_URI;
   return redirectUri ? new URL(redirectUri).origin : "";
