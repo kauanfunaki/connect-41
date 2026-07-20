@@ -8,7 +8,7 @@ import { getCompanySectors, getApplicableCustomFields } from "@/lib/customFields
 import { getSectorMaps, getAllSectors } from "@/lib/sectors";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { listDocuments } from "@/lib/documents";
-import { formatInstantDate } from "@/lib/format";
+import { formatCalendarDate, formatInstantDate } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { CompanyHeader } from "@/components/empresas/CompanyHeader";
 import { CompanyDetailTabs } from "@/components/empresas/CompanyDetailTabs";
@@ -18,6 +18,8 @@ import { CompanyPeopleSection } from "@/components/empresas/CompanyPeopleSection
 import { CompanyOperationsSection } from "@/components/empresas/CompanyOperationsSection";
 import { CompanyHistorySection } from "@/components/empresas/CompanyHistorySection";
 import { DocumentsSection } from "@/components/documents/DocumentsSection";
+import { AiCompanySummary } from "@/components/empresas/AiCompanySummary";
+import { gerarResumoEmpresa } from "./ai-actions";
 
 export default async function EmpresaPage({
   params,
@@ -106,6 +108,7 @@ export default async function EmpresaPage({
         documentsCount={documents.length}
         overview={
           <div className="space-y-4">
+            <AiCompanySummary action={gerarResumoEmpresa.bind(null, company.id)} />
             <CompanyOverviewSection company={company} customFields={customFields} />
             <ServicesSection
               companyId={company.id}
@@ -133,6 +136,8 @@ export default async function EmpresaPage({
               sensitive: d.sensitive,
               uploadedByName: d.uploadedBy.name,
               createdAtLabel: formatInstantDate(d.createdAt),
+              expiresAtLabel: d.expiresAt ? formatCalendarDate(d.expiresAt) : null,
+              expired: d.expiresAt != null && d.expiresAt < new Date(),
             }))}
           />
         }

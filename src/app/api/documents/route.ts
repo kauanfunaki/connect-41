@@ -33,6 +33,19 @@ export async function POST(req: NextRequest) {
   const entityId = (form.get("entityId") as string)?.trim();
   const category = form.get("category") as string;
   const sensitive = form.get("sensitive") === "true";
+  // Data-calendário (YYYY-MM-DD do <input type="date">) → meia-noite UTC,
+  // mesma convenção das demais datas-calendário do projeto (ver src/lib/format.ts).
+  const expiresAtRaw = (form.get("expiresAt") as string)?.trim();
+  let expiresAt: Date | null = null;
+  if (expiresAtRaw) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(expiresAtRaw)) {
+      return NextResponse.json({ error: "Data de vencimento inválida." }, { status: 400 });
+    }
+    expiresAt = new Date(expiresAtRaw);
+    if (Number.isNaN(expiresAt.getTime())) {
+      return NextResponse.json({ error: "Data de vencimento inválida." }, { status: 400 });
+    }
+  }
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Arquivo não enviado." }, { status: 400 });
@@ -75,6 +88,7 @@ export async function POST(req: NextRequest) {
       mimeType: file.type,
       fileSize: file.size,
       sensitive,
+      expiresAt,
       uploadedById: ctx.userId,
     },
   });

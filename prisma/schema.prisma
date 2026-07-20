@@ -350,6 +350,7 @@ model Tenant {
   clientDocuments      ClientDocument[]
   smtpConfig           TenantSmtpConfig?
   alertDispatches      AlertDispatch[]
+  recurringObligations RecurringObligation[]
 
   @@map("tenants")
 }
@@ -504,6 +505,7 @@ model User {
   meetingsCreated        Meeting[]              @relation("MeetingCreatedBy")
   meetingAttendances     MeetingAttendee[]
   clientDocumentsCreated ClientDocument[]
+  recurringObligations   RecurringObligation[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -597,6 +599,7 @@ model Company {
   workShifts          WorkShift[]
   meetings            Meeting[]
   clientDocuments     ClientDocument[]
+  recurringObligations RecurringObligation[]
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -707,6 +710,7 @@ model Pipeline {
   tenant Tenant          @relation(fields: [tenantId], references: [id])
   stages PipelineStage[]
   items  PipelineItem[]
+  recurringObligations RecurringObligation[]
 
   @@index([tenantId, sectorCode])
   @@map("pipelines")
@@ -923,6 +927,10 @@ model Vaga {
   status            VagaStatus     @default(ABERTA)
   priority          VagaPrioridade @default(MEDIA)
   notes             String?        @db.Text
+  // Portal público (/carreiras/[slug]) — isPublic expõe a vaga; a descrição
+  // pública é separada de notes (que é anotação interna do recrutador).
+  isPublic          Boolean        @default(false)
+  publicDescription String?        @db.Text
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
@@ -1000,6 +1008,10 @@ model Document {
   mimeType     String             @db.VarChar(100)
   fileSize     Int
   sensitive    Boolean            @default(false)
+  // Vencimento opcional (ASO, CNH, certificado NR, contrato, procuração...) —
+  // meia-noite UTC como toda data-calendário. Alimenta o alerta DOC_EXPIRING
+  // do motor de alertas (src/lib/alerts.ts).
+  expiresAt    DateTime?
   uploadedById String
   createdAt    DateTime           @default(now())
 
@@ -1007,6 +1019,7 @@ model Document {
   uploadedBy User   @relation(fields: [uploadedById], references: [id])
 
   @@index([tenantId, entityType, entityId])
+  @@index([tenantId, expiresAt])
   @@map("documents")
 }
 
@@ -1630,6 +1643,35 @@ model Notification {
 
   @@index([tenantId, userId, read])
   @@map("notifications")
+}
+
+// Obrigação recorrente de uma empresa-cliente (DAS, DCTF, folha, férias
+// coletivas...) — todo mês o scheduler interno (src/lib/recurringObligations.ts)
+// gera um item de kanban no pipeline do setor, com vencimento no dia
+// configurado (prorrogado para o próximo dia útil quando cai em fim de
+// semana/feriado, padrão das obrigações fiscais). Dedup mensal via
+// AlertDispatch (chave OBLIGATION:{id}:{yyyy-MM}).
+model RecurringObligation {
+  id            String   @id @default(uuid())
+  tenantId      String
+  companyId     String
+  sectorCode    String   @db.VarChar(40)
+  pipelineId    String
+  title         String   @db.VarChar(160)
+  description   String?  @db.Text
+  dayOfMonth    Int // 1..31 — meses mais curtos usam o último dia
+  responsibleId String?
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  company     Company  @relation(fields: [companyId], references: [id])
+  pipeline    Pipeline @relation(fields: [pipelineId], references: [id])
+  responsible User?    @relation(fields: [responsibleId], references: [id])
+
+  @@index([tenantId, active])
+  @@map("recurring_obligations")
 }
 
 // Dedup do motor de alertas (cron externo, ver src/lib/alerts.ts) — evita

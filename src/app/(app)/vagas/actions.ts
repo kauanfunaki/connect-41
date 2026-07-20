@@ -23,6 +23,8 @@ function vagaData(form: FormData) {
     responsibleUserId: pick(form, "responsibleUserId"),
     priority:          (form.get("priority") as VagaPrioridade) ?? VagaPrioridade.MEDIA,
     notes:             pick(form, "notes"),
+    isPublic:          form.get("isPublic") === "true",
+    publicDescription: pick(form, "publicDescription"),
   };
 }
 

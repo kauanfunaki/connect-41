@@ -71,6 +71,8 @@ export default async function EditarVagaPage({
             responsibleUserId: vaga.responsibleUserId ?? undefined,
             priority: vaga.priority,
             notes: vaga.notes ?? undefined,
+            isPublic: vaga.isPublic,
+            publicDescription: vaga.publicDescription ?? undefined,
           }}
         />
       </div>

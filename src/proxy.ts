@@ -30,6 +30,11 @@ const PUBLIC_PATHS = [
   // recebe o e-mail não tem (e não deve precisar de) login no Connect 41. A
   // prova de acesso é o token na própria URL, validado dentro da rota.
   "/d/",
+  // Portal público de vagas por tenant — candidato não tem login. A página
+  // valida o slug e só expõe vagas com isPublic; a candidatura entra pela
+  // rota /api/carreiras/apply (rate-limited por IP dentro do handler).
+  "/carreiras/",
+  "/api/carreiras/",
 ];
 
 // Headers de identidade que SÓ podem ser setados por este proxy. Qualquer

@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { VagaState } from "@/app/(app)/vagas/actions";
 import { VagaPrioridade } from "@/generated/prisma/enums";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
@@ -25,6 +26,8 @@ export type VagaDefaultValues = {
   responsibleUserId?: string;
   priority?: VagaPrioridade;
   notes?: string;
+  isPublic?: boolean;
+  publicDescription?: string;
 };
 
 type Option = { id: string; name: string };
@@ -119,6 +122,24 @@ export function VagaForm({ action, cancelHref, companies, cargos, users, sectorO
       <CampoForm label="Observações" htmlFor="notes">
         <Textarea id="notes" name="notes" rows={3} defaultValue={defaultValues?.notes ?? ""} />
       </CampoForm>
+
+      <div className="border-t border-border pt-4 space-y-3">
+        <Checkbox
+          name="isPublic"
+          value="true"
+          defaultChecked={defaultValues?.isPublic ?? false}
+          label="Publicar no portal de vagas (visível sem login em /carreiras)"
+        />
+        <CampoForm label="Descrição pública da vaga" htmlFor="publicDescription">
+          <Textarea
+            id="publicDescription"
+            name="publicDescription"
+            rows={4}
+            defaultValue={defaultValues?.publicDescription ?? ""}
+            placeholder="O que o candidato vê no portal — atividades, requisitos, benefícios. Observações acima continuam internas."
+          />
+        </CampoForm>
+      </div>
 
       <div className="flex items-center gap-3 pt-2">
         <button

@@ -49,6 +49,10 @@ export default async function VagaPage({
   if (!vaga) notFound();
 
   const canManage = canManageSector(ctx, vaga.sectorCode);
+  const tenantSlug = (
+    await prisma.tenant.findUnique({ where: { id: ctx.tenantId }, select: { slug: true } })
+  )?.slug;
+  const publicBaseUrl = process.env.APP_PUBLIC_URL ?? "";
   const canAct = canActOnSector(ctx, vaga.sectorCode);
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
 
@@ -131,6 +135,19 @@ export default async function VagaPage({
             <p className="text-[13px] text-fg whitespace-pre-wrap">{vaga.notes}</p>
           </div>
         )}
+        {vaga.isPublic && tenantSlug && (
+          <div className="mt-3 pt-3 border-t border-border">
+            <p className="text-[10px] text-fg-muted mb-0.5">Portal público</p>
+            <a
+              href={`${publicBaseUrl}/carreiras/${tenantSlug}/${vaga.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[13px] text-brand hover:underline break-all"
+            >
+              {publicBaseUrl}/carreiras/{tenantSlug}/{vaga.id}
+            </a>
+          </div>
+        )}
       </div>
 
       {/* Candidatos */}
@@ -159,6 +176,7 @@ export default async function VagaPage({
                   origin: c.origin,
                   personId: c.person.id,
                   personName: c.person.name,
+                  hasResume: c.resumeUrl != null,
                 }}
                 updateAction={atualizarStatusCandidatura.bind(null, c.id)}
                 removeAction={removerCandidatura.bind(null, id, c.id)}

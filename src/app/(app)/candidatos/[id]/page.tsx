@@ -7,6 +7,8 @@ import { DeleteButton } from "@/components/pessoas/DeleteButton";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { listDocuments } from "@/lib/documents";
 import { DocumentsSection } from "@/components/documents/DocumentsSection";
+import { AiResumeExtract } from "@/components/candidatos/AiResumeExtract";
+import { extrairDadosCurriculo } from "./ai-actions";
 import { formatCalendarDate, formatInstantDate, maskCpf, formatPhone, formatCep } from "@/lib/format";
 import type { ProcessoSeletivoStatus } from "@/generated/prisma/enums";
 
@@ -165,6 +167,12 @@ export default async function CandidatoPage({
         )}
       </div>
 
+      {canEdit && (
+        <div className="mb-4">
+          <AiResumeExtract action={extrairDadosCurriculo.bind(null, id)} />
+        </div>
+      )}
+
       {/* Documentos */}
       <DocumentsSection
         entityType="PERSON"
@@ -177,6 +185,8 @@ export default async function CandidatoPage({
           sensitive: d.sensitive,
           uploadedByName: d.uploadedBy.name,
           createdAtLabel: formatInstantDate(d.createdAt),
+          expiresAtLabel: d.expiresAt ? formatCalendarDate(d.expiresAt) : null,
+          expired: d.expiresAt != null && d.expiresAt < new Date(),
         }))}
       />
     </PageContainer>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { DocumentEntityType, DocumentCategory } from "@/generated/prisma/enums";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 
 const CATEGORY_LABEL: Record<DocumentCategory, string> = {
@@ -27,6 +28,8 @@ export type DocumentItem = {
   sensitive: boolean;
   uploadedByName: string;
   createdAtLabel: string;
+  expiresAtLabel: string | null;
+  expired: boolean;
 };
 
 type Props = {
@@ -89,6 +92,17 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload }:
                   {d.sensitive && " · sensível"}
                 </p>
               </div>
+              {d.expiresAtLabel && (
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border flex-shrink-0 ${
+                    d.expired
+                      ? "bg-danger/10 text-danger border-danger/25"
+                      : "bg-warning/10 text-warning border-warning/25"
+                  }`}
+                >
+                  {d.expired ? `Vencido em ${d.expiresAtLabel}` : `Vence em ${d.expiresAtLabel}`}
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -108,6 +122,11 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload }:
           <div className="space-y-1.5">
             <label htmlFor="file" className="block text-[length:var(--fs-label)] font-medium text-fg">Arquivo</label>
             <input id="file" name="file" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" required className="text-[12px] text-fg file:mr-3 file:h-9 file:px-3 file:rounded-[10px] file:border file:border-border-strong file:bg-surface-hover file:text-fg file:text-[12px] file:font-medium file:cursor-pointer file:border-solid hover:file:border-brand file:transition-colors" />
+          </div>
+          <div className="w-40">
+            <CampoForm label="Vencimento (opcional)" htmlFor="expiresAt">
+              <Input id="expiresAt" name="expiresAt" type="date" />
+            </CampoForm>
           </div>
           <div className="pb-2">
             <Checkbox name="sensitive" value="true" label="Documento sensível" />

@@ -16,6 +16,8 @@ import {
   CreditCard,
   Receipt,
   Settings2,
+  EyeOff,
+  Repeat,
 } from "lucide-react";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
@@ -38,7 +40,9 @@ export default async function AdminPage() {
       { href: "/admin/setores", icon: <Layers size={20} />, title: "Setores", description: "Catálogo de setores/cargos do tenant" },
       { href: "/admin/modulos", icon: <Blocks size={20} />, title: "Módulos", description: "Ativação de módulos plugáveis por setor" },
       { href: "/admin/filiais", icon: <Building size={20} />, title: "Filiais", description: "Etiqueta organizacional para Empresas" },
-      { href: "/admin/tenant", icon: <Settings2 size={20} />, title: "Empresa (Tenant)", description: "Dados do workspace e configuração de e-mail (SMTP)" }
+      { href: "/admin/tenant", icon: <Settings2 size={20} />, title: "Empresa (Tenant)", description: "Dados do workspace e configuração de e-mail (SMTP)" },
+      { href: "/admin/permissoes-sensiveis", icon: <EyeOff size={20} />, title: "Campos Sensíveis", description: "Quem vê salário, dados bancários, médicos e documentos" },
+      { href: "/admin/obrigacoes", icon: <Repeat size={20} />, title: "Obrigações Recorrentes", description: "DAS, DCTF, folha — itens de kanban gerados todo mês" }
     );
   }
 

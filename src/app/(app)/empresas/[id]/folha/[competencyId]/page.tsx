@@ -12,6 +12,7 @@ import { PayrollEntryRow } from "@/components/folha/PayrollEntryRow";
 import { CompetenciaStatusForm } from "@/components/folha/CompetenciaStatusForm";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
+import { detectPayrollAnomalies } from "@/lib/payrollAnomalies";
 
 const MONTH_LABEL = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -46,6 +47,12 @@ export default async function CompetenciaPage({
     },
   });
   if (!competencia) notFound();
+
+  const anomalies = await detectPayrollAnomalies({
+    tenantId: ctx.tenantId,
+    companyId,
+    competencyId,
+  });
 
   const linkedPersonIds = new Set(competencia.entries.map((e) => e.personId));
   const colaboradores = await prisma.person.findMany({
@@ -84,6 +91,25 @@ export default async function CompetenciaPage({
       {canManage && (
         <div className="mb-4">
           <CompetenciaStatusForm action={atualizarStatusAction} currentStatus={competencia.status} />
+        </div>
+      )}
+
+      {anomalies.length > 0 && (
+        <div className="bg-surface border border-warning/30 rounded-lg p-5 mb-4">
+          <h2 className="text-[14px] font-semibold text-fg mb-1">Conferência assistida</h2>
+          <p className="text-[12px] text-fg-muted mb-3">
+            Pontos fora do padrão histórico — apontamento para revisão, não é cálculo trabalhista.
+          </p>
+          <div className="divide-y divide-border">
+            {anomalies.map((a, idx) => (
+              <div key={`${a.personId}-${a.kind}-${idx}`} className="py-2">
+                <p className="text-[13px] text-fg">
+                  <Link href={`/pessoas/${a.personId}`} className="text-brand hover:underline">{a.personName}</Link>
+                  {" — "}{a.detail}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

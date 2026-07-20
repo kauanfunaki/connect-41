@@ -248,6 +248,8 @@ export default async function PessoaPage({
         sensitive: d.sensitive,
         uploadedByName: d.uploadedBy.name,
         createdAtLabel: formatInstantDate(d.createdAt),
+        expiresAtLabel: d.expiresAt ? formatCalendarDate(d.expiresAt) : null,
+        expired: d.expiresAt != null && d.expiresAt < new Date(),
       }))}
     />
   );

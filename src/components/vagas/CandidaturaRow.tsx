@@ -33,6 +33,7 @@ export type CandidaturaItem = {
   origin: string | null;
   personId: string;
   personName: string;
+  hasResume: boolean;
 };
 
 type Props = {
@@ -55,6 +56,14 @@ export function CandidaturaRow({ candidatura, updateAction, removeAction, canMan
           </Link>
           {candidatura.origin && (
             <span className="text-[12px] text-fg-muted ml-2">via {candidatura.origin}</span>
+          )}
+          {candidatura.hasResume && (
+            <a
+              href={`/api/resumes/${candidatura.id}`}
+              className="text-[12px] text-brand hover:underline ml-2"
+            >
+              Currículo
+            </a>
           )}
         </div>
         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${STATUS_STYLE[candidatura.status]}`}>

@@ -14,6 +14,7 @@ const VACATION_WARNING_DAYS = 30;
 const PROBATION_CHECKPOINTS = [40, 45, 85, 90] as const; // dias desde a admissão (5 dias de antecedência + no dia)
 const EXAM_WARNING_DAYS = 15;
 const HANDOFF_STALE_DAYS = 3;
+const DOCUMENT_WARNING_DAYS = 30;
 
 const VACATION_OPEN_STATUSES = ["PLANEJADA", "SOLICITADA", "EM_ANALISE", "APROVADA", "PROGRAMADA", "EM_GOZO"] as const;
 const EXAM_RESOLVED_STATUSES = ["ASO_APTO", "ASO_INAPTO", "ASO_APTO_COM_RESTRICAO"] as const;
@@ -172,6 +173,40 @@ async function checkHandoffsParados(tenantId: string, today: Date): Promise<numb
   return sent;
 }
 
+// Notifica quem fez o upload — é sempre alguém com contexto do documento,
+// independente da entidade (PERSON/COMPANY/VAGA/PIPELINE_ITEM) a que ele
+// pertence. O alerta continua diário (dedup) enquanto o vencimento não for
+// resolvido (trocar o documento remove/atualiza o expiresAt).
+async function checkDocumentosVencendo(tenantId: string, today: Date): Promise<number> {
+  const prisma = getPrisma();
+  const limit = new Date(today.getTime() + DOCUMENT_WARNING_DAYS * DAY_MS);
+
+  const docs = await prisma.document.findMany({
+    where: { tenantId, expiresAt: { not: null, lte: limit } },
+    select: { id: true, fileName: true, category: true, expiresAt: true, uploadedById: true, entityType: true, entityId: true },
+  });
+
+  let sent = 0;
+  for (const d of docs) {
+    const key = `DOC_EXPIRING:${d.id}`;
+    if (!(await tryDispatch(tenantId, key, today))) continue;
+    const overdue = d.expiresAt! < today;
+    const dias = Math.abs(daysBetween(today, d.expiresAt!));
+    const message = overdue
+      ? `Documento "${d.fileName}" (${d.category}) vencido há ${dias} dia(s).`
+      : `Documento "${d.fileName}" (${d.category}) vence em ${dias} dia(s).`;
+    await notifyUser(d.uploadedById, {
+      tenantId,
+      type: "DOC_EXPIRING",
+      message,
+      entityType: d.entityType === "COMPANY" ? "COMPANY" : d.entityType === "PERSON" ? "PERSON" : undefined,
+      entityId: d.entityType === "COMPANY" || d.entityType === "PERSON" ? d.entityId : undefined,
+    });
+    sent++;
+  }
+  return sent;
+}
+
 type TenantResult = { tenantId: string; sent: number; errors: string[] };
 
 async function runForTenant(tenantId: string, today: Date): Promise<TenantResult> {
@@ -180,6 +215,7 @@ async function runForTenant(tenantId: string, today: Date): Promise<TenantResult
     ["probation", () => checkProbationDeadlines(tenantId, today)],
     ["exames", () => checkExamesVencendo(tenantId, today)],
     ["handoffs", () => checkHandoffsParados(tenantId, today)],
+    ["documentos", () => checkDocumentosVencendo(tenantId, today)],
   ];
 
   let sent = 0;
@@ -235,6 +271,13 @@ export function startAlertScheduler(): void {
     runAlertEngine()
       .then((result) => console.log("[alerts] execução do scheduler interno", result))
       .catch((err) => console.error("[alerts] falha no scheduler interno", err));
+    // Import dinâmico evita ciclo alerts ↔ recurringObligations no module graph.
+    import("@/lib/recurringObligations")
+      .then(({ generateRecurringObligations }) => generateRecurringObligations())
+      .then((r) => {
+        if (r.generated > 0) console.log("[obligations] itens gerados", r);
+      })
+      .catch((err) => console.error("[obligations] falha na geração", err));
   };
 
   run(); // primeira execução já na subida, não espera os 15min iniciais
