@@ -5,15 +5,17 @@ import type { ClientDocumentState } from "@/app/(app)/empresas/[id]/documentos-c
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 type Props = {
   action: (prev: ClientDocumentState, form: FormData) => Promise<ClientDocumentState>;
   companyId: string;
   documentId?: string;
+  cancelHref: string;
   defaultValues?: { title: string; bodyHtml: string; fileName?: string | null };
 };
 
-export function ClientDocumentForm({ action, companyId, documentId, defaultValues }: Props) {
+export function ClientDocumentForm({ action, companyId, documentId, cancelHref, defaultValues }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
 
   return (
@@ -47,15 +49,7 @@ export function ClientDocumentForm({ action, companyId, documentId, defaultValue
         />
       </CampoForm>
 
-      <div className="flex items-center gap-3 pt-2">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="h-9 px-5 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
-        >
-          {isPending ? "Salvando…" : "Salvar"}
-        </button>
-      </div>
+      <FormFooter cancelHref={cancelHref} pending={isPending} />
     </form>
   );
 }

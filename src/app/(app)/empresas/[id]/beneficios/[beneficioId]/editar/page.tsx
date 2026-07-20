@@ -1,10 +1,11 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { BenefitCatalogForm } from "@/components/empresas/BenefitCatalogForm";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { BackButton } from "@/components/shared/BackButton";
 import { atualizarBeneficio } from "../../actions";
 
@@ -28,30 +29,32 @@ export default async function EditarBeneficioPage({
   if (!beneficio) notFound();
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <BackButton className="mb-3" />
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Empresas</Link>
-        <span className="text-fg-muted">/</span>
-        <Link href={`/empresas/${companyId}/beneficios`} className="text-[13px] text-fg-muted hover:text-fg transition-colors">Benefícios</Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Editar</span>
-      </div>
+      <Breadcrumb
+        items={[
+          { label: "Empresas", href: "/empresas" },
+          { label: "Benefícios", href: `/empresas/${companyId}/beneficios` },
+          { label: "Editar" },
+        ]}
+      />
 
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Editar Benefício — {company.name}</h1>
+      <PageHeader title="Editar Benefício" subtitle={company.name} />
 
-      <div className="bg-surface border border-border rounded-lg p-6">
-        <BenefitCatalogForm
-          action={atualizarBeneficio}
-          companyId={companyId}
-          cancelHref={`/empresas/${companyId}/beneficios`}
-          defaultValues={{
-            id: beneficio.id,
-            name: beneficio.name,
-            type: beneficio.type,
-            eligibilityRule: beneficio.eligibilityRule ?? undefined,
-          }}
-        />
+      <div className="w-full max-w-[720px]">
+        <div className="bg-surface border border-border rounded-2xl p-6">
+          <BenefitCatalogForm
+            action={atualizarBeneficio}
+            companyId={companyId}
+            cancelHref={`/empresas/${companyId}/beneficios`}
+            defaultValues={{
+              id: beneficio.id,
+              name: beneficio.name,
+              type: beneficio.type,
+              eligibilityRule: beneficio.eligibilityRule ?? undefined,
+            }}
+          />
+        </div>
       </div>
     </PageContainer>
   );

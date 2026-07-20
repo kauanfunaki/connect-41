@@ -1,6 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { EmpresaForm } from "@/components/empresas/EmpresaForm";
 import { criarEmpresa } from "../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -14,22 +15,13 @@ export default async function NovaEmpresaPage() {
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link
-          href="/empresas"
-          className="text-[13px] text-fg-muted hover:text-fg transition-colors"
-        >
-          Empresas
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Nova Empresa</span>
+      <Breadcrumb items={[{ label: "Empresas", href: "/empresas" }, { label: "Nova Empresa" }]} />
+
+      <PageHeader title="Nova Empresa" />
+
+      <div className="w-full max-w-[900px]">
+        <EmpresaForm action={criarEmpresa} cancelHref="/empresas" branchOptions={branchOptions} />
       </div>
-
-      <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em] mb-6">
-        Nova Empresa
-      </h1>
-
-      <EmpresaForm action={criarEmpresa} cancelHref="/empresas" branchOptions={branchOptions} />
     </PageContainer>
   );
 }

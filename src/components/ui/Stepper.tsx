@@ -12,16 +12,34 @@ type Props = {
   onStepClick?: (index: number) => void;
 };
 
+const STATUS_LABEL: Record<StepStatus, string> = {
+  done: "concluída",
+  current: "etapa atual",
+  error: "com erro",
+  upcoming: "pendente",
+};
+
 // Indicador de progresso multi-step. `onStepClick` só deve ser chamado pra
 // etapas concluídas (o caller decide — aqui só repassamos o índice).
+//
+// `flex-wrap` em vez do antigo `overflow-x-auto`: um wizard com várias etapas
+// (ex: Empresa, 6 passos) não cabia numa linha só dentro de um formulário de
+// largura contida, forçando scroll horizontal dentro do próprio card — na
+// prática, a última etapa ficava fora da área visível sem indicação clara de
+// que dava pra rolar. Com wrap, etapas extras descem pra uma segunda linha em
+// vez de vazar/cortar.
 export function Stepper({ steps, onStepClick }: Props) {
   return (
-    <div className="flex items-center px-6 py-5 border-b border-border overflow-x-auto scroll-x">
+    <div className="flex items-center flex-wrap gap-y-3 px-6 py-5 border-b border-border" role="tablist">
       {steps.map((step, i) => (
-        <div key={step.label} className="flex items-center flex-shrink-0">
+        <div key={step.label} className="flex items-center">
           <button
             type="button"
+            role="tab"
             disabled={step.status === "upcoming"}
+            aria-current={step.status === "current" ? "step" : undefined}
+            aria-invalid={step.status === "error" ? true : undefined}
+            aria-label={`${i + 1}. ${step.label} — ${STATUS_LABEL[step.status]}`}
             onClick={() => onStepClick?.(i)}
             className={`flex items-center gap-2.5 ${step.status === "upcoming" ? "cursor-not-allowed" : "cursor-pointer"}`}
           >
@@ -52,7 +70,7 @@ export function Stepper({ steps, onStepClick }: Props) {
           </button>
           {i < steps.length - 1 && (
             <span
-              className={`w-14 h-[1.5px] mx-2.5 flex-shrink-0 ${
+              className={`w-8 sm:w-14 h-[1.5px] mx-2.5 flex-shrink-0 ${
                 step.status === "done" ? "bg-success" : "bg-border-strong"
               }`}
             />

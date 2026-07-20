@@ -1,10 +1,11 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { WorkShiftForm } from "@/components/empresas/WorkShiftForm";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { BackButton } from "@/components/shared/BackButton";
 import { atualizarTurno } from "../../actions";
 
@@ -28,25 +29,27 @@ export default async function EditarTurnoPage({
   if (!turno) notFound();
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <BackButton className="mb-3" />
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Empresas</Link>
-        <span className="text-fg-muted">/</span>
-        <Link href={`/empresas/${companyId}/turnos`} className="text-[13px] text-fg-muted hover:text-fg transition-colors">Turnos</Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Editar</span>
-      </div>
+      <Breadcrumb
+        items={[
+          { label: "Empresas", href: "/empresas" },
+          { label: "Turnos", href: `/empresas/${companyId}/turnos` },
+          { label: "Editar" },
+        ]}
+      />
 
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Editar Turno — {company.name}</h1>
+      <PageHeader title="Editar Turno" subtitle={company.name} />
 
-      <div className="bg-surface border border-border rounded-lg p-6">
-        <WorkShiftForm
-          action={atualizarTurno}
-          companyId={companyId}
-          cancelHref={`/empresas/${companyId}/turnos`}
-          defaultValues={{ id: turno.id, name: turno.name, startTime: turno.startTime, endTime: turno.endTime }}
-        />
+      <div className="w-full max-w-[720px]">
+        <div className="bg-surface border border-border rounded-2xl p-6">
+          <WorkShiftForm
+            action={atualizarTurno}
+            companyId={companyId}
+            cancelHref={`/empresas/${companyId}/turnos`}
+            defaultValues={{ id: turno.id, name: turno.name, startTime: turno.startTime, endTime: turno.endTime }}
+          />
+        </div>
       </div>
     </PageContainer>
   );

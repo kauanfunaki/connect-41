@@ -1,10 +1,11 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { DepartmentForm } from "@/components/empresas/DepartmentForm";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { BackButton } from "@/components/shared/BackButton";
 import { criarDepartment } from "../actions";
 
@@ -25,20 +26,22 @@ export default async function NovoDepartmentPage({
   if (!company) notFound();
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <BackButton className="mb-3" />
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Empresas</Link>
-        <span className="text-fg-muted">/</span>
-        <Link href={`/empresas/${companyId}/departamentos`} className="text-[13px] text-fg-muted hover:text-fg transition-colors">Departamentos</Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Novo</span>
-      </div>
+      <Breadcrumb
+        items={[
+          { label: "Empresas", href: "/empresas" },
+          { label: "Departamentos", href: `/empresas/${companyId}/departamentos` },
+          { label: "Novo" },
+        ]}
+      />
 
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Novo Departamento — {company.name}</h1>
+      <PageHeader title="Novo Departamento" subtitle={company.name} />
 
-      <div className="bg-surface border border-border rounded-lg p-6">
-        <DepartmentForm action={criarDepartment} companyId={companyId} cancelHref={`/empresas/${companyId}/departamentos`} />
+      <div className="w-full max-w-[720px]">
+        <div className="bg-surface border border-border rounded-2xl p-6">
+          <DepartmentForm action={criarDepartment} companyId={companyId} cancelHref={`/empresas/${companyId}/departamentos`} />
+        </div>
       </div>
     </PageContainer>
   );

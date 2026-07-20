@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
-import Link from "next/link";
 import type { DepartmentState } from "@/app/(app)/empresas/[id]/departamentos/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 type Props = {
   action: (prev: DepartmentState, form: FormData) => Promise<DepartmentState>;
@@ -37,18 +37,7 @@ export function DepartmentForm({ action, companyId, cancelHref, defaultValues }:
         />
       </CampoForm>
 
-      <div className="flex items-center gap-3 pt-2">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="h-9 px-5 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
-        >
-          {isPending ? "Salvando…" : "Salvar"}
-        </button>
-        <Link href={cancelHref} className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center">
-          Cancelar
-        </Link>
-      </div>
+      <FormFooter cancelHref={cancelHref} pending={isPending} />
     </form>
   );
 }

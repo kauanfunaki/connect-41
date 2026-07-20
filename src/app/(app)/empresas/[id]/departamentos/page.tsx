@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Network } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { BackButton } from "@/components/shared/BackButton";
 import { excluirDepartment } from "./actions";
@@ -30,41 +33,51 @@ export default async function DepartamentosPage({
     orderBy: { name: "asc" },
   });
 
+  const novoHref = `/empresas/${companyId}/departamentos/novo`;
+
   return (
     <PageContainer>
       <BackButton className="mb-3" />
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Empresas
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <Link href={`/empresas/${companyId}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate max-w-[200px]">
-          {company.name}
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Departamentos</span>
-      </div>
+      <Breadcrumb
+        items={[
+          { label: "Empresas", href: "/empresas" },
+          { label: company.name, href: `/empresas/${companyId}`, truncate: true },
+          { label: "Departamentos" },
+        ]}
+      />
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Departamentos</h1>
-          <p className="text-[13px] text-fg-muted mt-0.5">
-            {departments.length} departamento{departments.length !== 1 ? "s" : ""} cadastrado{departments.length !== 1 ? "s" : ""} nesta empresa
-          </p>
-        </div>
-        {canManage && (
-          <Link
-            href={`/empresas/${companyId}/departamentos/novo`}
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
-          >
-            + Novo Departamento
-          </Link>
-        )}
-      </div>
+      <PageHeader
+        title="Departamentos"
+        subtitle={`${departments.length} departamento${departments.length !== 1 ? "s" : ""} cadastrado${departments.length !== 1 ? "s" : ""} nesta empresa`}
+        action={
+          canManage && (
+            <Link
+              href={novoHref}
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+            >
+              + Novo Departamento
+            </Link>
+          )
+        }
+      />
 
       {departments.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
-          <EmptyState title="Nenhum departamento cadastrado ainda." />
+          <EmptyState
+            icon={<Network />}
+            title="Nenhum departamento cadastrado"
+            description="Organize os colaboradores desta empresa em departamentos para facilitar a gestão e os relatórios."
+            action={
+              canManage && (
+                <Link
+                  href={novoHref}
+                  className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+                >
+                  + Cadastrar departamento
+                </Link>
+              )
+            }
+          />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

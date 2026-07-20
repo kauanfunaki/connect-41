@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Wallet } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { PayrollStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -8,6 +9,8 @@ import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { AbrirCompetenciaForm } from "@/components/folha/AbrirCompetenciaForm";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { BackButton } from "@/components/shared/BackButton";
 import { abrirCompetencia } from "./actions";
 
@@ -52,28 +55,28 @@ export default async function FolhaPage({
   return (
     <PageContainer>
       <BackButton className="mb-3" />
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Empresas</Link>
-        <span className="text-fg-muted">/</span>
-        <Link href={`/empresas/${companyId}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate max-w-[200px]">
-          {company.name}
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Folha de Pagamento</span>
-      </div>
+      <Breadcrumb
+        items={[
+          { label: "Empresas", href: "/empresas" },
+          { label: company.name, href: `/empresas/${companyId}`, truncate: true },
+          { label: "Folha de Pagamento" },
+        ]}
+      />
 
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Folha de Pagamento</h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">
-          {competencias.length} competência{competencias.length !== 1 ? "s" : ""} — controle e conferência de lançamentos, não motor de cálculo
-        </p>
-      </div>
+      <PageHeader
+        title="Folha de Pagamento"
+        subtitle={`${competencias.length} competência${competencias.length !== 1 ? "s" : ""} — controle e conferência de lançamentos, não motor de cálculo`}
+      />
 
       {canManage && <AbrirCompetenciaForm action={abrirCompetencia} companyId={companyId} />}
 
       {competencias.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
-          <EmptyState title="Nenhuma competência aberta ainda." />
+          <EmptyState
+            icon={<Wallet />}
+            title="Nenhuma competência aberta"
+            description={canManage ? "Abra a primeira competência acima para começar a conferir os lançamentos de folha." : "Nenhuma competência de folha foi aberta ainda para esta empresa."}
+          />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

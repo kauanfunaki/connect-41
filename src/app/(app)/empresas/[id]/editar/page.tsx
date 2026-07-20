@@ -1,7 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { BackButton } from "@/components/shared/BackButton";
 import { EmpresaForm } from "@/components/empresas/EmpresaForm";
 import { atualizarEmpresa } from "../../actions";
@@ -32,30 +33,18 @@ export default async function EditarEmpresaPage({
 
   return (
     <PageContainer>
-      <div className="max-w-[1000px] mx-auto">
       <BackButton className="mb-3" />
-      <div className="flex items-center gap-2 mb-6">
-        <Link
-          href="/empresas"
-          className="text-[13px] text-fg-muted hover:text-fg transition-colors"
-        >
-          Empresas
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <Link
-          href={`/empresas/${id}`}
-          className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate max-w-[200px]"
-        >
-          {company.name}
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Editar</span>
-      </div>
+      <Breadcrumb
+        items={[
+          { label: "Empresas", href: "/empresas" },
+          { label: company.name, href: `/empresas/${id}`, truncate: true },
+          { label: "Editar" },
+        ]}
+      />
 
-      <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em] mb-6">
-        Editar Empresa
-      </h1>
+      <PageHeader title="Editar Empresa" />
 
+      <div className="w-full max-w-[900px]">
         <EmpresaForm
           action={atualizarEmpresa}
           cancelHref={`/empresas/${id}`}

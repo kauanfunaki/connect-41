@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Gift } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { BenefitType } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { BackButton } from "@/components/shared/BackButton";
 import { excluirBeneficio } from "./actions";
@@ -46,39 +49,51 @@ export default async function BeneficiosPage({
     orderBy: { name: "asc" },
   });
 
+  const novoHref = `/empresas/${companyId}/beneficios/novo`;
+
   return (
     <PageContainer>
       <BackButton className="mb-3" />
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Empresas</Link>
-        <span className="text-fg-muted">/</span>
-        <Link href={`/empresas/${companyId}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate max-w-[200px]">
-          {company.name}
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Benefícios</span>
-      </div>
+      <Breadcrumb
+        items={[
+          { label: "Empresas", href: "/empresas" },
+          { label: company.name, href: `/empresas/${companyId}`, truncate: true },
+          { label: "Benefícios" },
+        ]}
+      />
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Benefícios</h1>
-          <p className="text-[13px] text-fg-muted mt-0.5">
-            {beneficios.length} benefício{beneficios.length !== 1 ? "s" : ""} cadastrado{beneficios.length !== 1 ? "s" : ""} nesta empresa
-          </p>
-        </div>
-        {canManage && (
-          <Link
-            href={`/empresas/${companyId}/beneficios/novo`}
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
-          >
-            + Novo Benefício
-          </Link>
-        )}
-      </div>
+      <PageHeader
+        title="Benefícios"
+        subtitle={`${beneficios.length} benefício${beneficios.length !== 1 ? "s" : ""} cadastrado${beneficios.length !== 1 ? "s" : ""} nesta empresa`}
+        action={
+          canManage && (
+            <Link
+              href={novoHref}
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+            >
+              + Novo Benefício
+            </Link>
+          )
+        }
+      />
 
       {beneficios.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
-          <EmptyState title="Nenhum benefício cadastrado ainda." />
+          <EmptyState
+            icon={<Gift />}
+            title="Nenhum benefício cadastrado"
+            description="Cadastre os benefícios oferecidos aos colaboradores desta empresa, como vale-refeição, plano de saúde ou auxílio-transporte."
+            action={
+              canManage && (
+                <Link
+                  href={novoHref}
+                  className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+                >
+                  + Cadastrar benefício
+                </Link>
+              )
+            }
+          />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">
