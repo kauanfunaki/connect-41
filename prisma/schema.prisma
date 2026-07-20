@@ -81,6 +81,11 @@ enum HandoffPriority {
   URGENT
 }
 
+enum AiProvider {
+  ANTHROPIC
+  OPENAI
+}
+
 enum CustomFieldType {
   TEXT
   NUMBER
@@ -349,6 +354,7 @@ model Tenant {
   meetings             Meeting[]
   clientDocuments      ClientDocument[]
   smtpConfig           TenantSmtpConfig?
+  aiConfig             TenantAiConfig?
   alertDispatches      AlertDispatch[]
   recurringObligations RecurringObligation[]
 
@@ -1109,6 +1115,24 @@ model TenantSmtpConfig {
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@map("tenant_smtp_configs")
+}
+
+// Config de provedor de IA por tenant (Anthropic ou OpenAI) — mesma lógica do
+// TenantSmtpConfig: cada escritório usa a própria chave/conta, configurável em
+// Integrações → Inteligência Artificial. apiKeyEnc nunca fica em texto puro
+// (AES-256-GCM, ver src/lib/crypto.ts). Ausência de linha = usa o fallback
+// global via env (ANTHROPIC_API_KEY/OPENAI_API_KEY), se existir.
+model TenantAiConfig {
+  id        String     @id @default(uuid())
+  tenantId  String     @unique
+  provider  AiProvider
+  apiKeyEnc String     @db.Text
+  model     String?    @db.VarChar(80) // override opcional do modelo padrão do provedor
+  updatedAt DateTime   @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("tenant_ai_configs")
 }
 
 // Permissão de leitura por grupo de campo/documento sensível, por papel. Ausência

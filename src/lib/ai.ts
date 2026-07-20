@@ -1,27 +1,46 @@
-// Integração com a Claude API (Anthropic) — triagem de currículo e resumo de
-// histórico de empresa. Todas as funções degradam com erro amigável quando
-// ANTHROPIC_API_KEY não está configurada (feature opcional por ambiente).
+// Integração com IA (Claude/Anthropic ou OpenAI) — triagem de currículo e
+// resumo de histórico de empresa. Cada tenant pode configurar a própria
+// chave/provedor em Integrações → Inteligência Artificial (TenantAiConfig,
+// chave criptografada — ver src/lib/crypto.ts); sem config de tenant, cai no
+// fallback global via env (ANTHROPIC_API_KEY/OPENAI_API_KEY). Toda função
+// degrada com erro amigável quando nenhuma chave está disponível (feature
+// opcional por tenant/ambiente).
 // A conferência de folha NÃO passa por aqui — é estatística pura, ver
 // src/lib/payrollAnomalies.ts.
 import Anthropic from "@anthropic-ai/sdk";
+import { getPrisma } from "@/lib/prisma";
+import { decryptSecret } from "@/lib/crypto";
+import type { AiProvider } from "@/generated/prisma/enums";
 
-const MODEL = "claude-opus-4-8";
+const DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-8";
+const DEFAULT_OPENAI_MODEL = "gpt-4.1";
 
-// Singleton em globalThis pelo mesmo motivo do getPrisma() (src/lib/prisma.ts).
-const globalForAi = globalThis as unknown as { __anthropic?: Anthropic };
+type AiCredentials = { provider: AiProvider; apiKey: string; model: string };
 
-export function isAiConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+async function resolveCredentials(tenantId: string): Promise<AiCredentials | null> {
+  const prisma = getPrisma();
+  const tenantConfig = await prisma.tenantAiConfig.findUnique({ where: { tenantId } });
+
+  if (tenantConfig) {
+    return {
+      provider: tenantConfig.provider,
+      apiKey: decryptSecret(tenantConfig.apiKeyEnc),
+      model: tenantConfig.model || (tenantConfig.provider === "ANTHROPIC" ? DEFAULT_ANTHROPIC_MODEL : DEFAULT_OPENAI_MODEL),
+    };
+  }
+
+  // Sem config de tenant — fallback global via env (ordem: Anthropic, depois OpenAI).
+  if (process.env.ANTHROPIC_API_KEY) {
+    return { provider: "ANTHROPIC", apiKey: process.env.ANTHROPIC_API_KEY, model: DEFAULT_ANTHROPIC_MODEL };
+  }
+  if (process.env.OPENAI_API_KEY) {
+    return { provider: "OPENAI", apiKey: process.env.OPENAI_API_KEY, model: DEFAULT_OPENAI_MODEL };
+  }
+  return null;
 }
 
-function getClient(): Anthropic {
-  if (globalForAi.__anthropic) return globalForAi.__anthropic;
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error("ANTHROPIC_API_KEY não configurada — recursos de IA desativados.");
-  }
-  const client = new Anthropic();
-  globalForAi.__anthropic = client;
-  return client;
+export async function isAiConfigured(tenantId: string): Promise<boolean> {
+  return (await resolveCredentials(tenantId)) !== null;
 }
 
 export type ResumeExtraction = {
@@ -58,11 +77,11 @@ const RESUME_SCHEMA = {
   additionalProperties: false,
 } as const;
 
-export async function extractResumeData(pdfBase64: string): Promise<ResumeExtraction> {
-  const client = getClient();
+async function extractResumeDataAnthropic(apiKey: string, model: string, pdfBase64: string): Promise<ResumeExtraction> {
+  const client = new Anthropic({ apiKey });
 
   const response = await client.messages.create({
-    model: MODEL,
+    model,
     max_tokens: 2048,
     thinking: { type: "adaptive" },
     output_config: { format: { type: "json_schema", schema: RESUME_SCHEMA } },
@@ -93,18 +112,63 @@ export async function extractResumeData(pdfBase64: string): Promise<ResumeExtrac
   return JSON.parse(textBlock.text) as ResumeExtraction;
 }
 
-export async function summarizeCompanyHistory(input: {
-  companyName: string;
-  digest: string; // linhas de evento já montadas pelo chamador (reuniões, transferências, kanban, documentos)
-}): Promise<string> {
-  const client = getClient();
+// OpenAI via Responses API (fetch cru, sem SDK — mesmo padrão de
+// src/lib/integrations/google.ts e microsoft.ts): input_file com file_data em
+// base64 dispensa upload prévio do PDF.
+async function extractResumeDataOpenAi(apiKey: string, model: string, pdfBase64: string): Promise<ResumeExtraction> {
+  const res = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      input: [
+        {
+          role: "user",
+          content: [
+            { type: "input_file", filename: "curriculo.pdf", file_data: `data:application/pdf;base64,${pdfBase64}` },
+            {
+              type: "input_text",
+              text: "Extraia os dados deste currículo. Campos ausentes no documento ficam null — nunca invente dado de contato.",
+            },
+          ],
+        },
+      ],
+      text: { format: { type: "json_schema", name: "resume_extraction", schema: RESUME_SCHEMA, strict: true } },
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Falha ao processar currículo com a OpenAI: ${await res.text()}`);
+  }
+  const data = await res.json();
+  const text = data.output_text ?? data.output?.find((o: { type: string }) => o.type === "message")?.content?.[0]?.text;
+  if (!text) throw new Error("Resposta da IA sem conteúdo.");
+  return JSON.parse(text) as ResumeExtraction;
+}
+
+export async function extractResumeData(tenantId: string, pdfBase64: string): Promise<ResumeExtraction> {
+  const creds = await resolveCredentials(tenantId);
+  if (!creds) throw new Error("IA não configurada. Cadastre uma chave em Integrações → Inteligência Artificial.");
+  return creds.provider === "ANTHROPIC"
+    ? extractResumeDataAnthropic(creds.apiKey, creds.model, pdfBase64)
+    : extractResumeDataOpenAi(creds.apiKey, creds.model, pdfBase64);
+}
+
+const COMPANY_SUMMARY_SYSTEM_PROMPT =
+  "Você é assistente de uma contabilidade/BPO. Resuma o histórico operacional de uma empresa-cliente para preparar a equipe antes de uma reunião. Escreva em português do Brasil, direto e factual. Estruture em: visão geral (1 parágrafo), principais acontecimentos, pendências/pontos de atenção. Não invente nada que não esteja nos dados.";
+
+async function summarizeCompanyHistoryAnthropic(
+  apiKey: string,
+  model: string,
+  input: { companyName: string; digest: string }
+): Promise<string> {
+  const client = new Anthropic({ apiKey });
 
   const response = await client.messages.create({
-    model: MODEL,
+    model,
     max_tokens: 4096,
     thinking: { type: "adaptive" },
-    system:
-      "Você é assistente de uma contabilidade/BPO. Resuma o histórico operacional de uma empresa-cliente para preparar a equipe antes de uma reunião. Escreva em português do Brasil, direto e factual. Estruture em: visão geral (1 parágrafo), principais acontecimentos, pendências/pontos de atenção. Não invente nada que não esteja nos dados.",
+    system: COMPANY_SUMMARY_SYSTEM_PROMPT,
     messages: [
       {
         role: "user",
@@ -121,4 +185,39 @@ export async function summarizeCompanyHistory(input: {
     throw new Error("Resposta da IA sem conteúdo.");
   }
   return textBlock.text;
+}
+
+async function summarizeCompanyHistoryOpenAi(
+  apiKey: string,
+  model: string,
+  input: { companyName: string; digest: string }
+): Promise<string> {
+  const res = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      instructions: COMPANY_SUMMARY_SYSTEM_PROMPT,
+      input: `Empresa: ${input.companyName}\n\nEventos dos últimos 90 dias:\n${input.digest}`,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Falha ao gerar resumo com a OpenAI: ${await res.text()}`);
+  }
+  const data = await res.json();
+  const text = data.output_text ?? data.output?.find((o: { type: string }) => o.type === "message")?.content?.[0]?.text;
+  if (!text) throw new Error("Resposta da IA sem conteúdo.");
+  return text as string;
+}
+
+export async function summarizeCompanyHistory(
+  tenantId: string,
+  input: { companyName: string; digest: string }
+): Promise<string> {
+  const creds = await resolveCredentials(tenantId);
+  if (!creds) throw new Error("IA não configurada. Cadastre uma chave em Integrações → Inteligência Artificial.");
+  return creds.provider === "ANTHROPIC"
+    ? summarizeCompanyHistoryAnthropic(creds.apiKey, creds.model, input)
+    : summarizeCompanyHistoryOpenAi(creds.apiKey, creds.model, input);
 }

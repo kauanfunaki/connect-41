@@ -14,8 +14,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export async function gerarResumoEmpresa(companyId: string): Promise<AiSummaryState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!isAiConfigured()) {
-    return { error: "IA não configurada neste ambiente (ANTHROPIC_API_KEY ausente)." };
+  if (!(await isAiConfigured(ctx.tenantId))) {
+    return { error: "IA não configurada. Cadastre uma chave em Integrações → Inteligência Artificial." };
   }
 
   const prisma = getPrisma();
@@ -84,7 +84,7 @@ export async function gerarResumoEmpresa(companyId: string): Promise<AiSummarySt
 
   let summary: string;
   try {
-    summary = await summarizeCompanyHistory({
+    summary = await summarizeCompanyHistory(ctx.tenantId, {
       companyName: company.tradeName || company.name,
       digest: lines.join("\n"),
     });

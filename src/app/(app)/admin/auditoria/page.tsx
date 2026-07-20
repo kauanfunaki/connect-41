@@ -43,6 +43,8 @@ const ACTION_LABEL: Record<string, string> = {
   "user.activate": "ativou o usuário",
   "user.deactivate": "desativou o usuário",
   "tenant.update": "editou os dados do tenant",
+  "tenant.ai.update": "configurou a integração de IA",
+  "tenant.ai.remove": "removeu a configuração de IA",
   "companyservice.create": "adicionou um setor contratado",
   "companyservice.assign": "atribuiu responsável de setor",
   "meeting.create": "agendou uma reunião",

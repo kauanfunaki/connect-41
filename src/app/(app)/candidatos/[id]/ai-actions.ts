@@ -39,8 +39,8 @@ export async function extrairDadosCurriculo(personId: string): Promise<AiExtract
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
   if (!canWrite(ctx.role)) return { error: "Sem permissão." };
-  if (!isAiConfigured()) {
-    return { error: "IA não configurada neste ambiente (ANTHROPIC_API_KEY ausente)." };
+  if (!(await isAiConfigured(ctx.tenantId))) {
+    return { error: "IA não configurada. Cadastre uma chave em Integrações → Inteligência Artificial." };
   }
 
   const prisma = getPrisma();
@@ -63,7 +63,7 @@ export async function extrairDadosCurriculo(personId: string): Promise<AiExtract
 
   let extraction;
   try {
-    extraction = await extractResumeData(pdfBase64);
+    extraction = await extractResumeData(ctx.tenantId, pdfBase64);
   } catch (err) {
     console.error("[extrairDadosCurriculo]", err);
     return { error: err instanceof Error ? err.message : "Erro ao processar o currículo com IA." };

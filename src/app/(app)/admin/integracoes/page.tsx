@@ -1,13 +1,14 @@
 import { notFound } from "next/navigation";
-import { Video, Check } from "lucide-react";
+import { Video, Check, Sparkles } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext } from "@/lib/auth/context";
+import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
 import { isGoogleConfigured } from "@/lib/integrations/google";
 import { isMicrosoftConfigured } from "@/lib/integrations/microsoft";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
 import { DisconnectButton } from "@/components/admin/DisconnectButton";
+import { AiConfigForm } from "@/components/admin/AiConfigForm";
 import { desconectarIntegracao } from "./actions";
 
 const ERROR_LABEL: Record<string, string> = {
@@ -35,6 +36,11 @@ export default async function IntegracoesPage({
   const accounts = await prisma.oAuthAccount.findMany({ where: { tenantId: ctx.tenantId, userId: ctx.userId } });
   const google = accounts.find((a) => a.provider === "GOOGLE");
   const microsoft = accounts.find((a) => a.provider === "MICROSOFT");
+
+  // Config de IA é segredo tenant-wide (não pessoal, como as contas de
+  // reunião acima) — só quem administra o tenant todo (ADMIN/SUPER_ADMIN) vê e mexe.
+  const canManageAi = isFullWrite(ctx.role);
+  const aiConfig = canManageAi ? await prisma.tenantAiConfig.findUnique({ where: { tenantId: ctx.tenantId } }) : null;
 
   return (
     <PageContainer variant="narrow">
@@ -126,6 +132,27 @@ export default async function IntegracoesPage({
             ))}
         </Card>
       </div>
+
+      {canManageAi && (
+        <div className="mt-8">
+          <div className="mb-3">
+            <h2 className="text-[14px] font-semibold text-fg flex items-center gap-1.5">
+              <Sparkles size={14} className="text-brand" /> Inteligência Artificial
+            </h2>
+            <p className="text-[12.5px] text-fg-muted mt-0.5">
+              Chave usada pela triagem de currículo e pelo resumo de histórico de empresa. Cada
+              escritório usa a própria conta — sem configurar aqui, o app cai na chave padrão do
+              ambiente (se houver).
+            </p>
+          </div>
+          <Card className="p-5">
+            <AiConfigForm
+              hasConfig={Boolean(aiConfig)}
+              defaultValues={aiConfig ? { provider: aiConfig.provider, model: aiConfig.model } : undefined}
+            />
+          </Card>
+        </div>
+      )}
     </PageContainer>
   );
 }
