@@ -349,6 +349,7 @@ model Tenant {
   meetings             Meeting[]
   clientDocuments      ClientDocument[]
   smtpConfig           TenantSmtpConfig?
+  alertDispatches      AlertDispatch[]
 
   @@map("tenants")
 }
@@ -1629,6 +1630,24 @@ model Notification {
 
   @@index([tenantId, userId, read])
   @@map("notifications")
+}
+
+// Dedup do motor de alertas (cron externo, ver src/lib/alerts.ts) — evita
+// notificar a mesma condição mais de uma vez no mesmo dia mesmo que o job
+// rode várias vezes (ex: scheduler externo chamando a cada 15min). sentOn é
+// sempre meia-noite UTC do dia do disparo; a unicidade é por tenant+chave+dia.
+model AlertDispatch {
+  id        String   @id @default(uuid())
+  tenantId  String
+  alertKey  String   @db.VarChar(160) // ex: "VACATION_EXPIRING:{vacationId}"
+  sentOn    DateTime
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, alertKey, sentOn])
+  @@index([tenantId, sentOn])
+  @@map("alert_dispatches")
 }
 
 // ─── Reuniões (Fase M) ────────────────────────────────────────────────────────

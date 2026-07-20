@@ -3,6 +3,18 @@ import { getAuthContext } from "@/lib/auth/context";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { PageContainer } from "@/components/shared/PageContainer";
 
+function fmtInt(n: number): string {
+  return Number(n).toLocaleString("pt-BR");
+}
+
+function fmtDecimal(n: number, digits = 1): string {
+  return Number(n).toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+}
+
+function fmtCurrency(v: unknown): string {
+  return v == null ? "—" : `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+}
+
 export default async function IndicadoresRhPage() {
   const ctx = await getAuthContext();
   const prisma = getPrisma();
@@ -32,7 +44,9 @@ export default async function IndicadoresRhPage() {
     prisma.person.count({ where: { tenantId: ctx.tenantId, type: "COLABORADOR", active: true, employmentStatus: { not: "DESLIGADO" } } }),
     prisma.person.count({ where: { tenantId: ctx.tenantId, type: "COLABORADOR", admissionDate: { gte: last30 } } }),
     prisma.termination.count({ where: { tenantId: ctx.tenantId, status: "FINALIZADO", finalizedAt: { gte: last30 } } }),
-    prisma.absence.aggregate({ where: { tenantId: ctx.tenantId, startDate: { gte: last30 } }, _sum: { lostDays: true } }),
+    // status REPROVADO = solicitação de ausência negada — não é dia
+    // efetivamente perdido, então não pode entrar na métrica.
+    prisma.absence.aggregate({ where: { tenantId: ctx.tenantId, startDate: { gte: last30 }, status: { not: "REPROVADO" } }, _sum: { lostDays: true } }),
     prisma.overtimeEntry.aggregate({ where: { tenantId: ctx.tenantId, date: { gte: last30 } }, _sum: { overtimeHours: true } }),
     prisma.vaga.count({ where: { tenantId: ctx.tenantId, status: "ABERTA" } }),
     prisma.candidatura.count({ where: { tenantId: ctx.tenantId } }),
@@ -51,11 +65,11 @@ export default async function IndicadoresRhPage() {
   ]);
 
   const vagasCount = await prisma.vaga.count({ where: { tenantId: ctx.tenantId } });
-  const candidatosPorVaga = vagasCount > 0 ? (candidaturasTotal / vagasCount).toFixed(1) : "—";
+  const candidatosPorVaga = vagasCount > 0 ? fmtDecimal(candidaturasTotal / vagasCount, 1) : "—";
 
   const resolvidas = candidaturasContratado + candidaturasReprovado;
-  const taxaAprovacao = resolvidas > 0 ? ((candidaturasContratado / resolvidas) * 100).toFixed(0) : "—";
-  const taxaReprovacao = resolvidas > 0 ? ((candidaturasReprovado / resolvidas) * 100).toFixed(0) : "—";
+  const taxaAprovacao = resolvidas > 0 ? fmtInt(Math.round((candidaturasContratado / resolvidas) * 100)) : "—";
+  const taxaReprovacao = resolvidas > 0 ? fmtInt(Math.round((candidaturasReprovado / resolvidas) * 100)) : "—";
 
   const tempoMedioContratacaoDias = candidaturasResolvidasComData.length > 0
     ? Math.round(
@@ -68,10 +82,10 @@ export default async function IndicadoresRhPage() {
   const feriasVencidas = vacations.filter((v) => v.concessivePeriodEnd && v.concessivePeriodEnd < now).length;
   const feriasAVencer = vacations.length - feriasVencidas;
 
-  const turnoverPct = headcount > 0 ? ((demissoes / headcount) * 100).toFixed(1) : "0.0";
+  const turnoverPct = fmtDecimal(headcount > 0 ? (demissoes / headcount) * 100 : 0, 1);
 
-  let custoFolha: string | null = null;
-  let custoBeneficios: string | null = null;
+  let custoFolha: unknown = null;
+  let custoBeneficios: unknown = null;
   if (canViewSalary) {
     const [folhaAgg, beneficiosAgg] = await Promise.all([
       prisma.payrollEntry.aggregate({
@@ -83,32 +97,32 @@ export default async function IndicadoresRhPage() {
         _sum: { companyValue: true },
       }),
     ]);
-    custoFolha = folhaAgg._sum.grossSalary?.toString() ?? "0";
-    custoBeneficios = beneficiosAgg._sum.companyValue?.toString() ?? "0";
+    custoFolha = folhaAgg._sum.grossSalary ?? 0;
+    custoBeneficios = beneficiosAgg._sum.companyValue ?? 0;
   }
 
   const cards: { label: string; value: string; hint?: string }[] = [
-    { label: "Headcount", value: String(headcount), hint: "Colaboradores ativos" },
-    { label: "Admissões (30 dias)", value: String(admissoes) },
-    { label: "Demissões (30 dias)", value: String(demissoes) },
+    { label: "Headcount", value: fmtInt(headcount), hint: "Colaboradores ativos" },
+    { label: "Admissões (30 dias)", value: fmtInt(admissoes) },
+    { label: "Demissões (30 dias)", value: fmtInt(demissoes) },
     { label: "Turnover", value: `${turnoverPct}%`, hint: "Demissões / Headcount" },
-    { label: "Absenteísmo (30 dias)", value: `${absencesLast30._sum.lostDays ?? 0} dias`, hint: "Dias perdidos" },
-    { label: "Horas Extras (30 dias)", value: `${overtimeLast30._sum.overtimeHours?.toString() ?? 0}h` },
-    { label: "Férias Vencidas", value: String(feriasVencidas) },
-    { label: "Férias a Vencer", value: String(feriasAVencer) },
-    { label: "Vagas Abertas", value: String(vagasAbertas) },
+    { label: "Absenteísmo (30 dias)", value: `${fmtInt(absencesLast30._sum.lostDays ?? 0)} dias`, hint: "Dias perdidos" },
+    { label: "Horas Extras (30 dias)", value: `${fmtDecimal(Number(overtimeLast30._sum.overtimeHours ?? 0), 1)}h` },
+    { label: "Férias Vencidas", value: fmtInt(feriasVencidas) },
+    { label: "Férias a Vencer", value: fmtInt(feriasAVencer) },
+    { label: "Vagas Abertas", value: fmtInt(vagasAbertas) },
     { label: "Candidatos por Vaga", value: candidatosPorVaga },
     { label: "Taxa de Aprovação", value: taxaAprovacao === "—" ? "—" : `${taxaAprovacao}%` },
     { label: "Taxa de Reprovação", value: taxaReprovacao === "—" ? "—" : `${taxaReprovacao}%` },
-    { label: "Tempo Médio de Contratação", value: tempoMedioContratacaoDias != null ? `${tempoMedioContratacaoDias} dias` : "—" },
-    { label: "Treinamentos Realizados (90 dias)", value: String(treinamentosRealizados) },
-    { label: "Desempenho Médio", value: evaluationAvg._avg.averageScore?.toString() ?? "—" },
+    { label: "Tempo Médio de Contratação", value: tempoMedioContratacaoDias != null ? `${fmtInt(tempoMedioContratacaoDias)} dias` : "—" },
+    { label: "Treinamentos Realizados (90 dias)", value: fmtInt(treinamentosRealizados) },
+    { label: "Desempenho Médio", value: evaluationAvg._avg.averageScore != null ? fmtDecimal(Number(evaluationAvg._avg.averageScore), 2) : "—" },
   ];
 
   if (canViewSalary) {
     cards.push(
-      { label: "Custo de Folha (mês atual)", value: `R$ ${custoFolha}` },
-      { label: "Custo de Benefícios (ativos)", value: `R$ ${custoBeneficios}` }
+      { label: "Custo de Folha (mês atual)", value: fmtCurrency(custoFolha) },
+      { label: "Custo de Benefícios (ativos)", value: fmtCurrency(custoBeneficios) }
     );
   }
 
