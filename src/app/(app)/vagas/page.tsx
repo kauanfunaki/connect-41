@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Briefcase } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { VagaStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
@@ -6,7 +7,10 @@ import { scopedVagaWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
 import { CompanyFilterSelect } from "@/components/shared/CompanyFilterSelect";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Pagination } from "@/components/shared/Pagination";
 import { EmptyState } from "@/components/ui/EmptyState";
+
+const PER_PAGE = 30;
 
 const STATUS_LABEL: Record<VagaStatus, string> = {
   ABERTA:       "Aberta",
@@ -25,9 +29,9 @@ const STATUS_STYLE: Record<VagaStatus, string> = {
 export default async function VagasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; sectorCode?: string; companyId?: string }>;
+  searchParams: Promise<{ status?: string; sectorCode?: string; companyId?: string; page?: string }>;
 }) {
-  const { status, sectorCode, companyId } = await searchParams;
+  const { status, sectorCode, companyId, page } = await searchParams;
   const ctx = await getAuthContext();
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
 
@@ -36,6 +40,7 @@ export default async function VagasPage({
       ? (status as VagaStatus)
       : undefined;
 
+  const pageNum = Math.max(1, parseInt(page ?? "1"));
   const prisma = getPrisma();
   const where = {
     ...scopedVagaWhere(ctx),
@@ -44,21 +49,32 @@ export default async function VagasPage({
     ...(companyId ? { companyId } : {}),
   };
 
-  const [vagas, companies] = await Promise.all([
+  const [vagas, total, companies] = await Promise.all([
     prisma.vaga.findMany({
       where,
       orderBy: { openedAt: "desc" },
+      skip: (pageNum - 1) * PER_PAGE,
+      take: PER_PAGE,
       include: {
         company: { select: { id: true, name: true } },
         _count: { select: { candidaturas: true } },
       },
     }),
+    prisma.vaga.count({ where }),
     prisma.company.findMany({
       where: { tenantId: ctx.tenantId, status: "ACTIVE" },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
   ]);
+  const totalPages = Math.ceil(total / PER_PAGE);
+
+  function buildUrl(overrides: Record<string, string | undefined>) {
+    const q = new URLSearchParams();
+    const merged = { status, sectorCode, companyId, page, ...overrides };
+    for (const [k, v] of Object.entries(merged)) if (v) q.set(k, v);
+    return `/vagas?${q.toString()}`;
+  }
 
   const canCreateAny = vagas.length === 0
     ? true // ainda não dá pra saber o setor; o form em /vagas/novo faz a checagem real
@@ -70,7 +86,7 @@ export default async function VagasPage({
         <div>
           <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Vagas</h1>
           <p className="text-[13px] text-fg-muted mt-0.5">
-            {vagas.length} vaga{vagas.length !== 1 ? "s" : ""}
+            {total} vaga{total !== 1 ? "s" : ""}
           </p>
         </div>
         {canCreateAny && (
@@ -88,7 +104,7 @@ export default async function VagasPage({
           {(["ABERTA", "EM_ANDAMENTO", "ENCERRADA", "CANCELADA"] as VagaStatus[]).map((s) => (
             <Link
               key={s}
-              href={`/vagas?status=${s}${sectorCode ? `&sectorCode=${sectorCode}` : ""}${companyId ? `&companyId=${companyId}` : ""}`}
+              href={buildUrl({ status: s, page: undefined })}
               className={`inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
                 statusFilter === s
                   ? "bg-surface-2 text-fg border border-border-strong"
@@ -100,7 +116,7 @@ export default async function VagasPage({
           ))}
           {statusFilter && (
             <Link
-              href={`/vagas?${sectorCode ? `sectorCode=${sectorCode}` : ""}${companyId ? `&companyId=${companyId}` : ""}`}
+              href={buildUrl({ status: undefined, page: undefined })}
               className="text-[12px] text-fg-muted hover:text-fg ml-1"
             >
               Limpar
@@ -113,7 +129,21 @@ export default async function VagasPage({
 
       {vagas.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
-          <EmptyState title="Nenhuma vaga encontrada." />
+          <EmptyState
+            icon={<Briefcase />}
+            title="Nenhuma vaga encontrada"
+            description="Ajuste os filtros ou cadastre a primeira vaga do setor."
+            action={
+              canCreateAny && (
+                <Link
+                  href="/vagas/novo"
+                  className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+                >
+                  + Nova Vaga
+                </Link>
+              )
+            }
+          />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">
@@ -139,6 +169,8 @@ export default async function VagasPage({
           ))}
         </div>
       )}
+
+      <Pagination page={pageNum} totalPages={totalPages} buildHref={(p) => buildUrl({ page: String(p) })} />
     </PageContainer>
   );
 }

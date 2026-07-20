@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { UserMinus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -36,7 +37,7 @@ export default async function DesligamentosPage() {
 
       {terminations.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
-          <EmptyState title="Nenhum desligamento em andamento." />
+          <EmptyState icon={<UserMinus />} title="Nenhum desligamento em andamento" description="Desligamentos iniciados na ficha de cada pessoa aparecem aqui enquanto estiverem em andamento." />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

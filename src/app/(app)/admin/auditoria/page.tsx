@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ScrollText } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -180,6 +181,7 @@ export default async function AuditoriaPage({
       {logs.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
           <EmptyState
+            icon={<ScrollText />}
             title={hasFilters ? "Nenhuma ação encontrada com esses filtros." : "Nenhuma ação registrada ainda."}
           />
         </div>

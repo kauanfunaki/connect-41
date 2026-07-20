@@ -10,6 +10,7 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
 import { Stepper, type StepStatus } from "@/components/ui/Stepper";
 import { ReviewBlock } from "@/components/ui/ReviewBlock";
@@ -43,6 +44,7 @@ export type PessoaDefaultValues = {
   ctps?: string;
   ctpsSerie?: string;
   education?: string;
+  notes?: string;
   admissionDate?: string;
   dismissalDate?: string;
   employmentStatus?: PersonEmploymentStatus;
@@ -125,6 +127,7 @@ export function PessoaForm({
     weeklyWorkHours: defaultValues?.weeklyWorkHours ?? "",
     monthlyWorkHours: defaultValues?.monthlyWorkHours ?? "",
     education: defaultValues?.education ?? "",
+    notes: defaultValues?.notes ?? "",
     pis: defaultValues?.pis ?? "",
     ctps: defaultValues?.ctps ?? "",
     ctpsSerie: defaultValues?.ctpsSerie ?? "",
@@ -349,6 +352,9 @@ export function PessoaForm({
                 <Input id="ctpsSerie" name="ctpsSerie" type="text" defaultValue={defaultValues?.ctpsSerie ?? ""} />
               </CampoForm>
             </FieldGrid>
+            <CampoForm label="Observações" htmlFor="notes" helper="Anotações livres sobre a pessoa — visível só internamente.">
+              <Textarea id="notes" name="notes" rows={3} defaultValue={defaultValues?.notes ?? ""} />
+            </CampoForm>
 
             {canEditSensitive ? (
               <>
@@ -453,6 +459,7 @@ export function PessoaForm({
                 { label: "Escolaridade", value: values.education },
                 { label: "PIS", value: values.pis },
                 { label: "CTPS", value: values.ctps },
+                { label: "Observações", value: values.notes },
               ]}
             />
           </FormSection>

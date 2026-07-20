@@ -23,6 +23,8 @@ function companyData(form: FormData) {
     taxRegime:             pick(form, "taxRegime"),
     externalId:            pick(form, "externalId"),
     foundationDate:        pickDate(form, "foundationDate"),
+    cnaePrincipal:         pick(form, "cnaePrincipal"),
+    cnaeSecundarios:       pick(form, "cnaeSecundarios"),
     zipCode:               pick(form, "zipCode"),
     addressStreet:         pick(form, "addressStreet"),
     addressNumber:         pick(form, "addressNumber"),

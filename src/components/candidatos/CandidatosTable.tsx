@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { UserSearch } from "lucide-react";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { maskCpf } from "@/lib/format";
@@ -55,7 +56,7 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
     <>
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {candidatos.length === 0 ? (
-          <EmptyState title="Nenhum candidato encontrado." />
+          <EmptyState icon={<UserSearch />} title="Nenhum candidato encontrado." />
         ) : (
           <div className="scroll-x overflow-x-auto">
           <table className="w-full min-w-[760px] text-[13px]">

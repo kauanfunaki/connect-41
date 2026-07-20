@@ -4,7 +4,7 @@ const ACTIVITY_LABEL: Record<string, string> = {
   NOTE: "Nota",
   STATUS_CHANGE: "Mudança de estágio",
   DOCUMENT: "Documento",
-  HANDOFF: "Handoff",
+  HANDOFF: "Transferência",
   MENTION: "Menção",
 };
 

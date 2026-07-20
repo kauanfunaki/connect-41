@@ -134,6 +134,13 @@ export default async function PessoaPage({
         </div>
       </div>
 
+      {person.notes && (
+        <div className="bg-surface border border-border rounded-lg p-5 lg:col-span-2">
+          <h2 className="text-[14px] font-semibold text-fg mb-2">Observações</h2>
+          <p className="text-[13px] text-fg-secondary whitespace-pre-wrap">{person.notes}</p>
+        </div>
+      )}
+
       {/* Contato */}
       <div className="bg-surface border border-border rounded-lg p-5">
         <h2 className="text-[14px] font-semibold text-fg mb-4">Contato</h2>

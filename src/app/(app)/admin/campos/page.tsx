@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ListChecks } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
@@ -59,7 +60,19 @@ export default async function CamposPage() {
 
       {Object.keys(grouped).length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
-          <EmptyState title="Nenhum campo customizado cadastrado ainda." />
+          <EmptyState
+            icon={<ListChecks />}
+            title="Nenhum campo customizado cadastrado"
+            description="Crie campos extras para Empresas ou Pessoas, específicos de um setor ou de todo o tenant."
+            action={
+              <Link
+                href="/admin/campos/novo"
+                className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+              >
+                + Novo Campo
+              </Link>
+            }
+          />
         </div>
       ) : (
         <div className="space-y-6">

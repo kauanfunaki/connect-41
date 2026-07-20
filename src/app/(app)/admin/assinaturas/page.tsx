@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Building2 } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -42,7 +43,7 @@ export default async function AssinaturasPage() {
 
       {tenants.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
-          <EmptyState title="Nenhum tenant cadastrado." />
+          <EmptyState icon={<Building2 />} title="Nenhum tenant cadastrado" />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

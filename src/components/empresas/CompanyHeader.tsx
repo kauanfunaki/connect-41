@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Copy, Check, MapPin, Mail, Phone, Camera, X } from "lucide-react";
 import type { CompanyStatus } from "@/generated/prisma/enums";
 import { StatusDot } from "@/components/shared/StatusDot";
-import { DeleteButton } from "@/components/ui/DeleteButton";
+import { EntityOverflowMenu } from "@/components/ui/EntityOverflowMenu";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { formatCnpj, formatPhone } from "@/lib/format";
@@ -221,7 +221,7 @@ export function CompanyHeader({
               >
                 Editar
               </Link>
-              <DeleteButton action={deleteAction} nome={name} />
+              <EntityOverflowMenu deleteAction={deleteAction} nome={name} />
             </>
           )}
         </div>

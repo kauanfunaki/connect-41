@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { UserPlus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -41,7 +42,7 @@ export default async function AdmissoesPage() {
 
       {people.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
-          <EmptyState title="Nenhuma admissão em andamento no momento." />
+          <EmptyState icon={<UserPlus />} title="Nenhuma admissão em andamento" description="Admissões iniciadas na ficha de cada pessoa aparecem aqui enquanto estiverem em andamento." />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

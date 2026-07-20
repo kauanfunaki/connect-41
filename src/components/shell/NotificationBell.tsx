@@ -44,7 +44,7 @@ export function NotificationBell({ unreadCount, notifications }: Props) {
       </div>
 
       {notifications.length === 0 ? (
-        <EmptyState title="Nenhuma notificação" description="Você está em dia por aqui." />
+        <EmptyState icon={<Bell />} title="Nenhuma notificação" description="Você está em dia por aqui." />
       ) : (
         <div className="-mx-3">
           {notifications.map((n) => (

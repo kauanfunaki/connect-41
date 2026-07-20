@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Users } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -27,7 +28,7 @@ export function CompanyPeopleSection({ companyId, people }: Props) {
       </div>
 
       {people.length === 0 ? (
-        <EmptyState title="Nenhuma pessoa vinculada" description="Colaboradores e candidatos desta empresa aparecem aqui." />
+        <EmptyState icon={<Users />} title="Nenhuma pessoa vinculada" description="Colaboradores e candidatos desta empresa aparecem aqui." />
       ) : (
         <div className="divide-y divide-border">
           {people.map((p) => (

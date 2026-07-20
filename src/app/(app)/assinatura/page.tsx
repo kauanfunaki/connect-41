@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { CreditCard } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -36,7 +37,7 @@ export default async function AssinaturaPage() {
 
       {!subscription ? (
         <div className="bg-surface border border-border rounded-lg">
-          <EmptyState title="Nenhuma assinatura configurada ainda." description="Fale com a 41 Tech." />
+          <EmptyState icon={<CreditCard />} title="Nenhuma assinatura configurada ainda." description="Fale com a 41 Tech." />
         </div>
       ) : (
         <div className="space-y-4">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Columns3 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityTimeline, type ActivityEntry } from "@/components/shared/ActivityTimeline";
@@ -27,7 +28,7 @@ export function CompanyHistorySection({ pipelineItems, activities, entityLabel =
       <Card className="p-5">
         <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3">Pipelines</h2>
         {pipelineItems.length === 0 ? (
-          <EmptyState title="Nenhum pipeline vinculado" description={`Esta ${entityLabel} ainda não está em nenhum Kanban.`} />
+          <EmptyState icon={<Columns3 />} title="Nenhum pipeline vinculado" description={`Esta ${entityLabel} ainda não está em nenhum Kanban.`} />
         ) : (
           <div className="flex flex-wrap gap-2">
             {pipelineItems.map((p) => (

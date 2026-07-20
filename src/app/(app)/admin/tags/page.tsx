@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Tag as TagIcon } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
@@ -49,7 +50,19 @@ export default async function TagsPage() {
 
       {Object.keys(grouped).length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
-          <EmptyState title="Nenhuma tag cadastrada ainda." />
+          <EmptyState
+            icon={<TagIcon />}
+            title="Nenhuma tag cadastrada"
+            description="Cadastre tags reutilizáveis para marcar itens de kanban do mesmo setor."
+            action={
+              <Link
+                href="/admin/tags/novo"
+                className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+              >
+                + Nova Tag
+              </Link>
+            }
+          />
         </div>
       ) : (
         <div className="space-y-6">

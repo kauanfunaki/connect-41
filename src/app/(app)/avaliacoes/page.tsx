@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Star } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { AddCicloForm } from "@/components/avaliacoes/AddCicloForm";
@@ -31,7 +32,11 @@ export default async function AvaliacoesPage() {
 
       {ciclos.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
-          <EmptyState title="Nenhum ciclo de avaliação criado ainda." />
+          <EmptyState
+            icon={<Star />}
+            title="Nenhum ciclo de avaliação criado"
+            description={canManage ? "Use o formulário acima para abrir o primeiro ciclo de avaliação de desempenho." : "Nenhum ciclo de avaliação foi aberto ainda."}
+          />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

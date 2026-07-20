@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Building2 } from "lucide-react";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getAllBranches } from "@/lib/branches";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -31,7 +32,19 @@ export default async function FiliaisPage() {
 
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {branches.length === 0 ? (
-          <EmptyState title="Nenhuma filial cadastrada ainda." />
+          <EmptyState
+            icon={<Building2 />}
+            title="Nenhuma filial cadastrada"
+            description="Cadastre as filiais do tenant — é só organizacional, não isola dados entre elas."
+            action={
+              <Link
+                href="/admin/filiais/novo"
+                className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+              >
+                + Nova Filial
+              </Link>
+            }
+          />
         ) : (
           <div className="divide-y divide-border">
             {branches.map((b) => (

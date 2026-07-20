@@ -65,7 +65,11 @@ export default async function SectorHubPage({
 
       {modules.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
-          <EmptyState title="Nenhum módulo ativo para este setor ainda." />
+          <EmptyState
+            icon={<LayoutGrid size={20} />}
+            title="Nenhum módulo ativo para este setor"
+            description="Módulos são ativados pelo administrador em Configurações."
+          />
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

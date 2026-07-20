@@ -64,6 +64,8 @@ export type EmpresaDefaultValues = {
   stateRegistration?: string;
   municipalRegistration?: string;
   nire?: string;
+  cnaePrincipal?: string;
+  cnaeSecundarios?: string;
   email?: string;
   phone?: string;
   website?: string;
@@ -114,6 +116,8 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
     stateRegistration: defaultValues?.stateRegistration ?? "",
     municipalRegistration: defaultValues?.municipalRegistration ?? "",
     nire: defaultValues?.nire ?? "",
+    cnaePrincipal: defaultValues?.cnaePrincipal ?? "",
+    cnaeSecundarios: defaultValues?.cnaeSecundarios ?? "",
     source: defaultValues?.source ?? "",
     branchId: defaultValues?.branchId ?? "",
   }));
@@ -380,10 +384,14 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
                 <Input id="foundationDate" name="foundationDate" type="date" defaultValue={defaultValues?.foundationDate ?? ""} />
               </CampoForm>
             </FieldGrid>
-            {/* TODO: CNAE principal/secundários — sem campo correspondente no schema atual (Company). */}
-            <p className="text-[length:var(--fs-helper)] text-fg-muted italic">
-              CNAE principal e secundários: ainda não existe campo pra isso no cadastro — pendente de modelagem.
-            </p>
+            <FieldGrid>
+              <CampoForm label="CNAE Principal" htmlFor="cnaePrincipal" helper="Código da atividade principal, ex: 6920-6/01">
+                <Input id="cnaePrincipal" name="cnaePrincipal" type="text" defaultValue={defaultValues?.cnaePrincipal ?? ""} placeholder="0000-0/00" />
+              </CampoForm>
+              <CampoForm label="CNAEs Secundários" htmlFor="cnaeSecundarios" helper="Separe por vírgula, se houver mais de um">
+                <Input id="cnaeSecundarios" name="cnaeSecundarios" type="text" defaultValue={defaultValues?.cnaeSecundarios ?? ""} placeholder="0000-0/00, 0000-0/00" />
+              </CampoForm>
+            </FieldGrid>
           </FormSection>
         </div>
 
@@ -463,6 +471,8 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
                 { label: "Inscrição Municipal", value: values.municipalRegistration },
                 { label: "NIRE", value: values.nire },
                 { label: "Data de Abertura", value: values.foundationDate },
+                { label: "CNAE Principal", value: values.cnaePrincipal },
+                { label: "CNAEs Secundários", value: values.cnaeSecundarios },
               ]}
             />
             <ReviewBlock

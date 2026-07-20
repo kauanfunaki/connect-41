@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { CalendarClock } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
@@ -58,7 +59,11 @@ export default async function ObrigacoesPage() {
 
       {obligations.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
-          <EmptyState title="Nenhuma obrigação recorrente cadastrada ainda." />
+          <EmptyState
+            icon={<CalendarClock />}
+            title="Nenhuma obrigação recorrente cadastrada"
+            description="Use o formulário acima para cadastrar obrigações como DAS, DCTF e folha — o Connect gera o item de kanban todo mês automaticamente."
+          />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Stethoscope } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
@@ -28,7 +29,7 @@ export default async function AfastamentosPage() {
 
       {absences.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
-          <EmptyState title="Nenhum afastamento ativo no momento." />
+          <EmptyState icon={<Stethoscope />} title="Nenhum afastamento ativo" description="Afastamentos lançados na ficha de cada pessoa aparecem aqui enquanto estiverem ativos." />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

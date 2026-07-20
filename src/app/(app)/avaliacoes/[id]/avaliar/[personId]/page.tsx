@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Star } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { EvaluationForm } from "@/components/avaliacoes/EvaluationForm";
@@ -45,6 +46,7 @@ export default async function AvaliarColaboradorPage({
       {competencies.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
           <EmptyState
+            icon={<Star />}
             title="Nenhuma competência cadastrada ainda."
             description="Cadastre em Admin → Competências antes de avaliar."
           />

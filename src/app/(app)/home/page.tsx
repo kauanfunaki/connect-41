@@ -22,7 +22,7 @@ const ACTIVITY_LABEL: Record<string, string> = {
   NOTE: "adicionou uma nota em",
   STATUS_CHANGE: "moveu",
   DOCUMENT: "anexou um documento em",
-  HANDOFF: "registrou um handoff em",
+  HANDOFF: "registrou uma transferência em",
   MENTION: "mencionou você em",
 };
 

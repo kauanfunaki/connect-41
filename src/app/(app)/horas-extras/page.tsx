@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Clock } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -26,7 +27,7 @@ export default async function HorasExtrasPage() {
 
       {entries.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
-          <EmptyState title="Nenhum lançamento pendente de aprovação." />
+          <EmptyState icon={<Clock />} title="Nenhum lançamento pendente" description="Lançamentos de horas extras aguardando aprovação aparecem aqui." />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

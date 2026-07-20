@@ -567,6 +567,8 @@ model Company {
   taxRegime             String?       @db.VarChar(60) // Regime Tributário
   externalId            String?       @db.VarChar(60) // ID manual do sistema de domínio (ex: Acessorias) — sem sincronização
   foundationDate        DateTime? // Data de abertura da empresa
+  cnaePrincipal         String?       @db.VarChar(20) // Código CNAE principal, ex: 6920-6/01
+  cnaeSecundarios       String?       @db.Text // Lista de códigos CNAE secundários, separados por vírgula
   // Endereço
   zipCode               String?       @db.VarChar(10)
   addressStreet         String?       @db.VarChar(180)
@@ -676,6 +678,7 @@ model Person {
   city              String?                @db.VarChar(80)
   stateCode         String?                @db.VarChar(2)
   education         String?                @db.VarChar(80)
+  notes             String?                @db.Text // Observações livres sobre a pessoa
 
   tenant         Tenant      @relation(fields: [tenantId], references: [id])
   currentCompany Company?    @relation(fields: [currentCompanyId], references: [id])

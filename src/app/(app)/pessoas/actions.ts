@@ -39,6 +39,7 @@ async function pessoaData(form: FormData, ctx: Awaited<ReturnType<typeof getAuth
     ctps:             pick(form, "ctps"),
     ctpsSerie:        pick(form, "ctpsSerie"),
     education:        pick(form, "education"),
+    notes:            pick(form, "notes"),
     admissionDate:    pickDate(form, "admissionDate"),
     dismissalDate:    pickDate(form, "dismissalDate"),
     employmentStatus: (form.get("employmentStatus") as PersonEmploymentStatus) ?? PersonEmploymentStatus.ADMISSAO_EM_ANDAMENTO,

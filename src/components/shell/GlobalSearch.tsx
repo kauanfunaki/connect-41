@@ -4,14 +4,30 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
 
+type DocumentEntityType = "PERSON" | "COMPANY" | "VAGA" | "PIPELINE_ITEM";
+
 type SearchResults = {
   companies: { id: string; name: string }[];
   people: { id: string; name: string }[];
   candidatos: { id: string; name: string }[];
   pipelines: { id: string; name: string }[];
+  vagas: { id: string; name: string }[];
+  documentos: { id: string; name: string; entityType: DocumentEntityType; entityId: string }[];
 };
 
-const EMPTY: SearchResults = { companies: [], people: [], candidatos: [], pipelines: [] };
+const EMPTY: SearchResults = { companies: [], people: [], candidatos: [], pipelines: [], vagas: [], documentos: [] };
+
+// Documento não tem página própria — o resultado leva pra ficha de quem é
+// dono dele. Item de Kanban não tem link direto sem saber o pipelineId
+// (custaria uma query extra só pra isso) — cai na listagem geral.
+function documentHref(entityType: DocumentEntityType, entityId: string): string {
+  switch (entityType) {
+    case "PERSON": return `/pessoas/${entityId}`;
+    case "COMPANY": return `/empresas/${entityId}`;
+    case "VAGA": return `/vagas/${entityId}`;
+    case "PIPELINE_ITEM": return "/kanban";
+  }
+}
 
 // Abaixo de sm, o input inline não cabe na topbar (some espremido pelos
 // ícones de tema/notificação/perfil) — vira um botão de lupa que abre um
@@ -54,7 +70,13 @@ export function GlobalSearch() {
   }, [query]);
 
   const hasResults =
-    results.companies.length + results.people.length + results.candidatos.length + results.pipelines.length > 0;
+    results.companies.length +
+      results.people.length +
+      results.candidatos.length +
+      results.pipelines.length +
+      results.vagas.length +
+      results.documentos.length >
+    0;
 
   function go(href: string) {
     setOpen(false);
@@ -129,6 +151,15 @@ export function GlobalSearch() {
                   <ResultGroup label="Pessoas" items={results.people} onSelect={(id) => go(`/pessoas/${id}`)} />
                   <ResultGroup label="Candidatos" items={results.candidatos} onSelect={(id) => go(`/candidatos/${id}`)} />
                   <ResultGroup label="Kanban" items={results.pipelines} onSelect={(id) => go(`/kanban/${id}`)} />
+                  <ResultGroup label="Vagas" items={results.vagas} onSelect={(id) => go(`/vagas/${id}`)} />
+                  <ResultGroup
+                    label="Documentos"
+                    items={results.documentos}
+                    onSelect={(id) => {
+                      const doc = results.documentos.find((d) => d.id === id);
+                      if (doc) go(documentHref(doc.entityType, doc.entityId));
+                    }}
+                  />
                 </>
               )}
             </div>

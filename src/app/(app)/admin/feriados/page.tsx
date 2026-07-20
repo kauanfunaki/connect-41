@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { CalendarDays } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { formatCalendarDate } from "@/lib/format";
@@ -38,7 +39,11 @@ export default async function FeriadosPage() {
 
       {feriados.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
-          <EmptyState title="Nenhum feriado cadastrado ainda." />
+          <EmptyState
+            icon={<CalendarDays />}
+            title="Nenhum feriado cadastrado"
+            description="Importe os feriados nacionais acima ou cadastre feriados estaduais/municipais manualmente."
+          />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

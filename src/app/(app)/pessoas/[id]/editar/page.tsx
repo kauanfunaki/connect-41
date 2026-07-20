@@ -93,6 +93,7 @@ export default async function EditarPessoaPage({
             ctps:             person.ctps      ?? undefined,
             ctpsSerie:        person.ctpsSerie ?? undefined,
             education:        person.education ?? undefined,
+            notes:            person.notes ?? undefined,
             admissionDate:    toDateInput(person.admissionDate),
             dismissalDate:    toDateInput(person.dismissalDate),
             employmentStatus: person.employmentStatus,

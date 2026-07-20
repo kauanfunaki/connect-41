@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Package } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -34,7 +35,11 @@ export default async function PlanosPage() {
 
       {plans.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg mt-6">
-          <EmptyState title="Nenhum plano cadastrado ainda." />
+          <EmptyState
+            icon={<Package />}
+            title="Nenhum plano cadastrado"
+            description="Use o formulário acima para criar o primeiro plano do catálogo comercial."
+          />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border mt-6">

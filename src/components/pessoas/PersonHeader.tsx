@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Copy, Check, Building2, Mail, Phone } from "lucide-react";
 import { StatusDot } from "@/components/shared/StatusDot";
-import { DeleteButton } from "@/components/pessoas/DeleteButton";
+import { EntityOverflowMenu } from "@/components/ui/EntityOverflowMenu";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import type { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
 import { maskCpf, formatPhone } from "@/lib/format";
@@ -150,7 +150,7 @@ export function PersonHeader({
               >
                 Editar
               </Link>
-              <DeleteButton action={deleteAction} nome={name} />
+              <EntityOverflowMenu deleteAction={deleteAction} nome={name} />
             </>
           )}
         </div>

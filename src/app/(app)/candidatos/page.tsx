@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { UserSearch } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { CandidatosTable } from "@/components/candidatos/CandidatosTable";
@@ -82,6 +83,7 @@ export default async function CandidatosPage({
       {candidatos.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
           <EmptyState
+            icon={<UserSearch />}
             title={search ? "Nenhum candidato encontrado com esse filtro." : "Nenhum candidato cadastrado ainda."}
           />
         </div>

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { LayoutGrid } from "lucide-react";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getTenantModuleStates } from "@/lib/modules";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
@@ -33,6 +34,7 @@ export default async function ModulosPage() {
       {modules.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
           <EmptyState
+            icon={<LayoutGrid />}
             title="Nenhum módulo no catálogo ainda."
             description="Os módulos de setor (Recrutamento, RH/DP…) aparecem aqui quando forem construídos."
           />

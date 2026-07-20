@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Star } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { AddCompetenciaForm } from "@/components/admin/AddCompetenciaForm";
@@ -30,7 +31,11 @@ export default async function CompetenciasPage() {
 
       {competencias.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
-          <EmptyState title="Nenhuma competência cadastrada ainda." />
+          <EmptyState
+            icon={<Star />}
+            title="Nenhuma competência cadastrada"
+            description="Use o formulário acima para cadastrar as competências usadas nas avaliações de desempenho."
+          />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

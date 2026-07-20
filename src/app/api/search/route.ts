@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
-import { scopedCompanyWhere, scopedPersonWhere, scopedPipelineWhere } from "@/lib/auth/scope";
+import { scopedCompanyWhere, scopedPersonWhere, scopedPipelineWhere, scopedVagaWhere } from "@/lib/auth/scope";
 
 const LIMIT = 5;
 
@@ -11,11 +11,11 @@ export async function GET(req: NextRequest) {
 
   const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
   if (q.length < 2) {
-    return NextResponse.json({ companies: [], people: [], candidatos: [], pipelines: [] });
+    return NextResponse.json({ companies: [], people: [], candidatos: [], pipelines: [], vagas: [], documentos: [] });
   }
 
   const prisma = getPrisma();
-  const [companies, people, candidatos, pipelines] = await Promise.all([
+  const [companies, people, candidatos, pipelines, vagas, documentos] = await Promise.all([
     prisma.company.findMany({
       where: { ...(await scopedCompanyWhere(ctx)), name: { contains: q } },
       orderBy: { name: "asc" },
@@ -40,7 +40,29 @@ export async function GET(req: NextRequest) {
       take: LIMIT,
       select: { id: true, name: true },
     }),
+    prisma.vaga.findMany({
+      where: { ...scopedVagaWhere(ctx), title: { contains: q } },
+      orderBy: { title: "asc" },
+      take: LIMIT,
+      select: { id: true, title: true },
+    }),
+    // Documento não tem página própria — o resultado leva pra ficha da
+    // entidade dona (Empresa/Pessoa/Vaga). Documentos de item de Kanban
+    // (PIPELINE_ITEM) caem no fallback /kanban, sem link fundo certo.
+    prisma.document.findMany({
+      where: { tenantId: ctx.tenantId, fileName: { contains: q } },
+      orderBy: { createdAt: "desc" },
+      take: LIMIT,
+      select: { id: true, fileName: true, entityType: true, entityId: true },
+    }),
   ]);
 
-  return NextResponse.json({ companies, people, candidatos, pipelines });
+  return NextResponse.json({
+    companies,
+    people,
+    candidatos,
+    pipelines,
+    vagas: vagas.map((v) => ({ id: v.id, name: v.title })),
+    documentos: documentos.map((d) => ({ id: d.id, name: d.fileName, entityType: d.entityType, entityId: d.entityId })),
+  });
 }

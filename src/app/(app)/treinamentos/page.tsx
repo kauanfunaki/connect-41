@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { GraduationCap } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -36,7 +37,21 @@ export default async function TreinamentosPage() {
 
       {treinamentos.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
-          <EmptyState title="Nenhum treinamento cadastrado ainda." />
+          <EmptyState
+            icon={<GraduationCap />}
+            title="Nenhum treinamento cadastrado"
+            description="Cadastre treinamentos e organize turmas para os colaboradores."
+            action={
+              canManage && (
+                <Link
+                  href="/treinamentos/novo"
+                  className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+                >
+                  + Novo Treinamento
+                </Link>
+              )
+            }
+          />
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">

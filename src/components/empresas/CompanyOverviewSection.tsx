@@ -30,6 +30,8 @@ type Props = {
     stateRegistration: string | null;
     municipalRegistration: string | null;
     nire: string | null;
+    cnaePrincipal: string | null;
+    cnaeSecundarios: string | null;
     source: string | null;
     createdAt: Date;
     updatedAt: Date;
@@ -91,13 +93,15 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
         </Card>
       )}
 
-      {(company.stateRegistration || company.municipalRegistration || company.nire) && (
+      {(company.stateRegistration || company.municipalRegistration || company.nire || company.cnaePrincipal || company.cnaeSecundarios) && (
         <Card className="p-5">
           <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">Dados Fiscais</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-3">
             <InfoRow label="Inscrição Estadual" value={company.stateRegistration} mono />
             <InfoRow label="Inscrição Municipal" value={company.municipalRegistration} mono />
             <InfoRow label="NIRE" value={company.nire} mono />
+            <InfoRow label="CNAE Principal" value={company.cnaePrincipal} mono />
+            <InfoRow label="CNAEs Secundários" value={company.cnaeSecundarios} mono />
           </div>
         </Card>
       )}
