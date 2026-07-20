@@ -172,9 +172,16 @@ export function WeekCalendar({
 
           <div className="grid grid-cols-[56px_repeat(7,1fr)]">
             <div>
-              {HOURS.map((h) => (
+              {/* Cada rótulo flutua centralizado sobre a linha que separa esta
+                  hora da anterior (-top-2) — funciona porque sempre há uma
+                  linha acima. A primeira hora (7:00) não tem linha acima: com
+                  o mesmo deslocamento, o rótulo vazava pra cima da grade,
+                  cruzando a borda do cabeçalho dos dias. */}
+              {HOURS.map((h, i) => (
                 <div key={h} style={{ height: ROW_HEIGHT }} className="relative">
-                  <span className="absolute -top-2 right-2 text-[10.5px] text-fg-muted tnum">{h}:00</span>
+                  <span className={`absolute right-2 text-[10.5px] text-fg-muted tnum ${i === 0 ? "top-0.5" : "-top-2"}`}>
+                    {h}:00
+                  </span>
                 </div>
               ))}
             </div>
