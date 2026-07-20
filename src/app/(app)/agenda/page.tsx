@@ -45,7 +45,7 @@ export default async function AgendaPage({
       orderBy: { startAt: "asc" },
       include: {
         attendees: { include: { user: { select: { id: true, name: true } } } },
-        company: { select: { id: true, name: true } },
+        company: { select: { id: true, name: true, externalId: true } },
       },
     }),
     prisma.oAuthAccount.findMany({ where: { tenantId: ctx.tenantId, userId: ctx.userId }, select: { provider: true } }),
@@ -72,7 +72,7 @@ export default async function AgendaPage({
     startAt: m.startAt.toISOString(),
     endAt: m.endAt.toISOString(),
     attendees: m.attendees.map((a) => ({ id: a.user.id, name: a.user.name })),
-    company: m.company ? { id: m.company.id, name: m.company.name } : null,
+    company: m.company ? { id: m.company.id, name: m.company.name, externalId: m.company.externalId } : null,
     clientName: m.clientName,
     createdByUserId: m.createdByUserId,
   }));

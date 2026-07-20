@@ -173,7 +173,10 @@ export default async function HandoffDetailPage({
                 ) : (
                   <span className="text-[12px] text-fg">{s.assignee?.name ?? "Sem responsável"}</span>
                 )}
-                {s.resolvedAt && (
+                {/* Só faz sentido mostrar a data de finalização quando o setor de
+                    fato finalizou — dados migrados do modelo antigo podiam ter
+                    resolvedAt preenchido em setor ainda "Resolvendo". */}
+                {s.status === "DONE" && s.resolvedAt && (
                   <span className="text-[12px] text-fg-muted ml-auto">
                     Finalizada em {formatInstantDateTime(s.resolvedAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
                   </span>

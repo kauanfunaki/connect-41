@@ -27,7 +27,7 @@ via **Handoff**.
 Repo:   https://github.com/kauanfunaki/connect-41
 Local:  C:\Users\kauan.brasileiro\Documents\1. Apps\connect-41
 Deploy: EasyPanel (conta dev41tech), build via Dockerfile (Next standalone)
-Prod:   https://connect.41tech.cloud
+Prod:   https://useconnect.com.br
 Banco:  MySQL/MariaDB único (sem ambiente de homologação separado) em
         vps.41tech.cloud:3330/connect41 — o .env local do Kauan já aponta
         para produção. Cuidado ao rodar comandos de banco.

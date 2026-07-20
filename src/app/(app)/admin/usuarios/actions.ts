@@ -61,7 +61,9 @@ export async function criarUsuario(
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "user.create", entityType: "User", entityId: id, metadata: { name, email, role } });
 
   revalidatePath("/admin/usuarios");
-  redirect(`/admin/usuarios/${id}/editar`);
+  // Criou → volta pra lista. Ir pra tela de edição do recém-criado confundia
+  // (parecia que o cadastro não tinha terminado).
+  redirect("/admin/usuarios");
 }
 
 export async function atualizarUsuario(

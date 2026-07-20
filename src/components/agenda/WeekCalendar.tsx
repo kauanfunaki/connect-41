@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, Plus, ExternalLink, Pencil } from "lucide-react";
 import { CreateMeetingDialog } from "./CreateMeetingDialog";
 import { EditMeetingDialog } from "./EditMeetingDialog";
+import { MiniCalendar } from "./MiniCalendar";
 import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
 import { saoPauloParts, weekdayLabel, dayNumber, toSaoPauloDateTimeLocal } from "@/lib/agenda";
 import { formatInstantTime } from "@/lib/format";
@@ -27,7 +28,9 @@ type MeetingRow = {
   startAt: string; // ISO
   endAt: string; // ISO
   attendees: { id: string; name: string }[];
-  company: { id: string; name: string } | null;
+  // externalId = "ID" manual da empresa (referência do Acessórias) — é como o
+  // time identifica a empresa no dia a dia, então aparece junto do nome.
+  company: { id: string; name: string; externalId: string | null } | null;
   clientName: string | null;
   createdByUserId: string;
 };
@@ -139,6 +142,7 @@ export function WeekCalendar({
             >
               <ChevronRight size={15} />
             </Link>
+            <MiniCalendar currentWeekMonday={weekDays[0].dateKey} />
           </div>
         </div>
         <button
@@ -302,7 +306,10 @@ function MeetingBlock({
   const textStyle = isGoogle ? undefined : { color: "#7C5CBF" };
 
   return (
-    <div ref={rootRef} style={{ position: "absolute", top, height, left: 2, right: 2 }} className="z-10">
+    // Com o popover (ou o modal de edição) aberto o bloco sobe acima do
+    // marcador de horário atual (z-20) — senão a linha vermelha atravessa por
+    // cima das informações da reunião.
+    <div ref={rootRef} style={{ position: "absolute", top, height, left: 2, right: 2 }} className={open || editing ? "z-30" : "z-10"}>
       <button
         type="button"
         onClick={(e) => {
@@ -330,7 +337,15 @@ function MeetingBlock({
           <p className="text-[12px] text-fg-muted">
             {formatTime(start)}–{formatTime(end)} · {PROVIDER_LABEL[meeting.provider]}
           </p>
-          {meeting.company && <p className="text-[12px] text-fg-secondary">Empresa: <span className="text-fg">{meeting.company.name}</span></p>}
+          {meeting.company && (
+            <p className="text-[12px] text-fg-secondary">
+              Empresa:{" "}
+              <span className="text-fg">
+                {meeting.company.name}
+                {meeting.company.externalId && ` · ID ${meeting.company.externalId}`}
+              </span>
+            </p>
+          )}
           {meeting.clientName && <p className="text-[12px] text-fg-secondary">Cliente(s): <span className="text-fg">{meeting.clientName}</span></p>}
           {meeting.attendees.length > 0 && (
             <p className="text-[12px] text-fg-secondary">Com {meeting.attendees.map((a) => a.name).join(", ")}</p>
