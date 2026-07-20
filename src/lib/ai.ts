@@ -34,15 +34,21 @@ export type ResumeExtraction = {
   summary: string; // resumo profissional curto, pt-BR — exibido pro recrutador
 };
 
+// Descrições pedem tamanho máximo explícito — o structured output garante a
+// FORMA do JSON, não o tamanho da string, e as colunas no banco são VARCHAR
+// curtas (ver truncamento defensivo em candidatos/[id]/ai-actions.ts).
 const RESUME_SCHEMA = {
   type: "object",
   properties: {
-    name: { type: ["string", "null"], description: "Nome completo do candidato" },
-    email: { type: ["string", "null"] },
-    phone: { type: ["string", "null"], description: "Telefone com DDD, só dígitos e símbolos usuais" },
-    city: { type: ["string", "null"] },
-    stateCode: { type: ["string", "null"], description: "UF com 2 letras maiúsculas, ex: SC" },
-    education: { type: ["string", "null"], description: "Escolaridade/formação mais alta, resumida em uma linha" },
+    name: { type: ["string", "null"], description: "Nome completo do candidato, no máximo 180 caracteres" },
+    email: { type: ["string", "null"], description: "No máximo 120 caracteres" },
+    phone: { type: ["string", "null"], description: "Telefone com DDD, só dígitos e símbolos usuais, no máximo 30 caracteres" },
+    city: { type: ["string", "null"], description: "Só o nome da cidade, sem estado/país, no máximo 80 caracteres" },
+    stateCode: { type: ["string", "null"], description: "UF com exatamente 2 letras maiúsculas, ex: SC" },
+    education: {
+      type: ["string", "null"],
+      description: "Escolaridade/formação mais alta, resumida ao essencial (ex: 'Superior completo em Administração'), no máximo 80 caracteres — nunca inclua nome de instituição ou ano",
+    },
     summary: {
       type: "string",
       description: "Resumo profissional do candidato em 2-4 frases, em português: experiência, competências, senioridade aparente",

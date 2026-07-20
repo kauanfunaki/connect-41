@@ -70,35 +70,43 @@ export async function extrairDadosCurriculo(personId: string): Promise<AiExtract
   }
 
   // Só preenche campo vazio — a IA nunca sobrescreve dado digitado por gente.
+  // maxLength bate com a coluna do banco (VARCHAR) — trunca defensivamente
+  // mesmo com o structured output, porque o schema JSON não garante tamanho.
   const updates: Record<string, string> = {};
   const filled: string[] = [];
-  const candidates: Array<[keyof typeof extraction, string, string | null]> = [
-    ["email", "E-mail", person.email],
-    ["phone", "Telefone", person.phone],
-    ["city", "Cidade", person.city],
-    ["stateCode", "UF", person.stateCode],
-    ["education", "Escolaridade", person.education],
+  const candidates: Array<[keyof typeof extraction, string, string | null, number]> = [
+    ["email", "E-mail", person.email, 120],
+    ["phone", "Telefone", person.phone, 30],
+    ["city", "Cidade", person.city, 80],
+    ["stateCode", "UF", person.stateCode, 2],
+    ["education", "Escolaridade", person.education, 80],
   ];
-  for (const [key, label, current] of candidates) {
+  for (const [key, label, current, maxLength] of candidates) {
     const value = extraction[key];
     if (!current && typeof value === "string" && value.trim()) {
-      updates[key] = key === "stateCode" ? value.trim().toUpperCase().slice(0, 2) : value.trim();
+      const trimmed = value.trim().slice(0, maxLength);
+      updates[key] = key === "stateCode" ? trimmed.toUpperCase() : trimmed;
       filled.push(label);
     }
   }
 
-  if (Object.keys(updates).length > 0) {
-    await prisma.person.update({ where: { id: personId }, data: updates });
-  }
+  try {
+    if (Object.keys(updates).length > 0) {
+      await prisma.person.update({ where: { id: personId }, data: updates });
+    }
 
-  await logAudit({
-    tenantId: ctx.tenantId,
-    userId: ctx.userId,
-    action: "ai.resumeExtract",
-    entityType: "Person",
-    entityId: personId,
-    metadata: { filled },
-  });
+    await logAudit({
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      action: "ai.resumeExtract",
+      entityType: "Person",
+      entityId: personId,
+      metadata: { filled },
+    });
+  } catch (err) {
+    console.error("[extrairDadosCurriculo] falha ao salvar", err);
+    return { error: "IA extraiu os dados, mas houve um erro ao salvar na ficha. Tente novamente." };
+  }
 
   revalidatePath(`/candidatos/${personId}`);
   return { filled, summary: extraction.summary };
