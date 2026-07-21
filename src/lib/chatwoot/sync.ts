@@ -11,7 +11,7 @@ import { getPrisma } from "@/lib/prisma";
 import { resolveConnectionCredentials } from "./connection";
 import { listConversations } from "./client";
 import { normalizeConversation } from "./mappers";
-import { findLinkCandidates, resolveLink } from "./linking";
+import { findLinkCandidates, resolveLink, normalizePhoneBR } from "./linking";
 import { ChatwootError } from "./errors";
 
 const MAX_PAGES_PER_CALL = 5;
@@ -103,8 +103,9 @@ export async function upsertContactLink(
       tenantId,
       connectionId,
       chatwootContactId: contact.chatwootContactId,
+      chatwootName: contact.name,
       chatwootEmail: contact.email,
-      chatwootPhoneE164: contact.phone,
+      chatwootPhoneE164: normalizePhoneBR(contact.phone) ?? contact.phone,
       linkMethod: resolved.linkMethod,
       linkConfidence: resolved.linkConfidence,
       personId: resolved.personId,
@@ -112,8 +113,9 @@ export async function upsertContactLink(
       lastSyncAt: new Date(),
     },
     update: {
+      chatwootName: contact.name,
       chatwootEmail: contact.email,
-      chatwootPhoneE164: contact.phone,
+      chatwootPhoneE164: normalizePhoneBR(contact.phone) ?? contact.phone,
       linkMethod: resolved.linkMethod,
       linkConfidence: resolved.linkConfidence,
       personId: resolved.personId,

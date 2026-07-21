@@ -19,7 +19,8 @@ import { CompanyOperationsSection } from "@/components/empresas/CompanyOperation
 import { CompanyHistorySection } from "@/components/empresas/CompanyHistorySection";
 import { DocumentsSection } from "@/components/documents/DocumentsSection";
 import { AiCompanySummary } from "@/components/empresas/AiCompanySummary";
-import { ConversationsSummaryList } from "@/components/conversas/ConversationsSummaryList";
+import { AtendimentosAccordion } from "@/components/conversas/AtendimentosAccordion";
+import { channelLabel, statusLabel } from "@/lib/chatwoot/labels";
 import { gerarResumoEmpresa } from "./ai-actions";
 
 export default async function EmpresaPage({
@@ -153,15 +154,19 @@ export default async function EmpresaPage({
           />
         }
         conversations={
-          <ConversationsSummaryList
-            conversations={conversations.map((c) => ({
-              id: c.id,
-              channel: c.channel,
-              status: c.status,
-              lastMessagePreview: c.lastMessagePreview,
-              lastActivityLabel: c.lastActivityAt ? formatInstantDate(c.lastActivityAt) : null,
-            }))}
-          />
+          <div className="bg-surface border border-border rounded-2xl px-4 py-2">
+            <AtendimentosAccordion
+              atendimentos={conversations.map((c) => ({
+                id: c.id,
+                dateLabel: c.lastActivityAt ? formatInstantDate(c.lastActivityAt) : "Sem data",
+                channelLabel: channelLabel(c.channel),
+                statusLabel: statusLabel(c.status),
+                status: c.status,
+                assigneeLabel: c.assigneeLabel,
+                preview: c.lastMessagePreview,
+              }))}
+            />
+          </div>
         }
         history={
           <CompanyHistorySection

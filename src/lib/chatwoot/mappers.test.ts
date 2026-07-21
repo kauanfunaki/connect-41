@@ -29,6 +29,16 @@ describe("normalizeConversation", () => {
     expect(result.lastActivityAt?.getTime()).toBe(1_700_000_000 * 1000);
   });
 
+  it("lê o canal de meta.channel quando ausente na raiz (formato da listagem da Application API)", () => {
+    const raw: ChatwootApiConversation = {
+      id: 2,
+      inbox_id: 1,
+      status: "open",
+      meta: { channel: "Channel::Whatsapp" },
+    };
+    expect(normalizeConversation(raw).channel).toBe("Channel::Whatsapp");
+  });
+
   it("não quebra quando meta/sender ausentes (conversa sem contato identificado)", () => {
     const raw: ChatwootApiConversation = { id: 1, inbox_id: 1, status: "resolved" };
     const result = normalizeConversation(raw);

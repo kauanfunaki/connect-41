@@ -40,9 +40,12 @@ export type ChatwootApiConversation = {
   priority?: string | null;
   labels?: string[];
   unread_count?: number;
+  // Na prática o canal vem dentro de meta.channel na listagem da Application
+  // API (raiz só em alguns payloads de webhook) — o mapper tenta os dois.
   channel?: string;
   meta?: {
     sender?: ChatwootApiContact;
+    channel?: string;
     assignee?: { id: number; name?: string } | null;
     team?: { id: number; name?: string } | null;
   };

@@ -1195,6 +1195,7 @@ model ChatwootContactLink {
   chatwootContactId Int
   personId          String?
   companyId         String?
+  chatwootName      String?            @db.VarChar(180) // nome exibido no Chatwoot — cache local pra listagem sem depender de vínculo
   chatwootEmail     String?            @db.VarChar(180)
   chatwootPhoneE164 String?            @db.VarChar(20)
   linkMethod        ChatwootLinkMethod @default(UNLINKED)

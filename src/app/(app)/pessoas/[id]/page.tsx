@@ -25,7 +25,8 @@ import { scopedPersonWhere } from "@/lib/auth/scope";
 import { getPersonSectors, getApplicableCustomFields } from "@/lib/customFields";
 import { listDocuments } from "@/lib/documents";
 import { DocumentsSection } from "@/components/documents/DocumentsSection";
-import { ConversationsSummaryList } from "@/components/conversas/ConversationsSummaryList";
+import { AtendimentosAccordion } from "@/components/conversas/AtendimentosAccordion";
+import { channelLabel, statusLabel } from "@/lib/chatwoot/labels";
 import { formatCalendarDate, formatInstantDate, maskCpf, formatPhone, formatCep } from "@/lib/format";
 
 const TYPE_LABEL: Record<PersonType, string> = {
@@ -322,15 +323,19 @@ export default async function PessoaPage({
         documents={documentsContent}
         documentsCount={documents.length}
         conversations={
-          <ConversationsSummaryList
-            conversations={conversations.map((c) => ({
-              id: c.id,
-              channel: c.channel,
-              status: c.status,
-              lastMessagePreview: c.lastMessagePreview,
-              lastActivityLabel: c.lastActivityAt ? formatInstantDate(c.lastActivityAt) : null,
-            }))}
-          />
+          <div className="bg-surface border border-border rounded-2xl px-4 py-2">
+            <AtendimentosAccordion
+              atendimentos={conversations.map((c) => ({
+                id: c.id,
+                dateLabel: c.lastActivityAt ? formatInstantDate(c.lastActivityAt) : "Sem data",
+                channelLabel: channelLabel(c.channel),
+                statusLabel: statusLabel(c.status),
+                status: c.status,
+                assigneeLabel: c.assigneeLabel,
+                preview: c.lastMessagePreview,
+              }))}
+            />
+          </div>
         }
         conversationsCount={conversations.length}
         history={historyContent}

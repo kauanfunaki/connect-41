@@ -27,7 +27,7 @@ export function normalizeConversation(raw: ChatwootApiConversation): NormalizedC
     status: raw.status,
     priority: raw.priority ?? null,
     labels: raw.labels ?? [],
-    channel: raw.channel ?? "unknown",
+    channel: raw.channel ?? raw.meta?.channel ?? "unknown",
     lastActivityAt: raw.timestamp ? new Date(raw.timestamp * 1000) : null,
     unreadCount: raw.unread_count ?? 0,
     lastMessagePreview: raw.last_non_activity_message?.content?.slice(0, 280) ?? null,

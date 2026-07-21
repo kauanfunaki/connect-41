@@ -1,17 +1,18 @@
 import Link from "next/link";
-import { MessageCircle, Building2, User } from "lucide-react";
+import { MessageCircle, Building2, User, HelpCircle } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullAccess } from "@/lib/auth/context";
 import { scopedChatwootConversationWhere } from "@/lib/auth/scope";
 import { isChatwootConfigured } from "@/lib/chatwoot/connection";
-import { ensureMessagesLoaded } from "@/lib/chatwoot/conversations";
+import { channelLabel, statusLabel } from "@/lib/chatwoot/labels";
 import { formatInstantDate } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
-import { MessageThread } from "@/components/conversas/MessageThread";
+import { AtendimentosAccordion } from "@/components/conversas/AtendimentosAccordion";
+import { VincularContato } from "@/components/conversas/VincularContato";
 
-const PER_PAGE = 25;
+const PER_PAGE = 15; // contatos por página (cada um pode ter N atendimentos)
 
 const STATUS_TABS = [
   { value: "open", label: "Abertas" },
@@ -20,12 +21,15 @@ const STATUS_TABS = [
   { value: "snoozed", label: "Adiadas" },
 ];
 
+// Visão de auditoria: agrupada por contato, com os atendimentos (janelas de
+// 24h do Chatwoot) colapsados por data — pensada pra busca de atendimentos
+// antigos, não pra operação de chat em tempo real (isso continua no Chatwoot).
 export default async function ConversasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; status?: string; canal?: string; page?: string; id?: string }>;
+  searchParams: Promise<{ search?: string; status?: string; canal?: string; de?: string; ate?: string; page?: string; id?: string }>;
 }) {
-  const { search, status, canal, page, id } = await searchParams;
+  const { search, status, canal, de, ate, page, id } = await searchParams;
   const ctx = await getAuthContext();
   const prisma = getPrisma();
 
@@ -43,7 +47,10 @@ export default async function ConversasPage({
           }
           action={
             isFullAccess(ctx.role) ? (
-              <Link href="/admin/integracoes" className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors inline-flex items-center">
+              <Link
+                href="/admin/integracoes"
+                className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors inline-flex items-center"
+              >
                 Ir para Integrações
               </Link>
             ) : undefined
@@ -53,16 +60,25 @@ export default async function ConversasPage({
     );
   }
 
-  const pageNum = Math.max(1, parseInt(page ?? "1"));
-  const where = {
+  // Filtro de período sobre a data do atendimento (lastActivityAt). `ate` é
+  // inclusivo — soma 1 dia e usa lt.
+  const deDate = de ? new Date(`${de}T00:00:00`) : null;
+  const ateDate = ate ? new Date(new Date(`${ate}T00:00:00`).getTime() + 24 * 60 * 60 * 1000) : null;
+
+  const convWhere = {
     ...scopedChatwootConversationWhere(ctx),
     ...(status ? { status } : {}),
     ...(canal ? { channel: canal } : {}),
+    ...(deDate || ateDate
+      ? { lastActivityAt: { ...(deDate ? { gte: deDate } : {}), ...(ateDate ? { lt: ateDate } : {}) } }
+      : {}),
     ...(search
       ? {
           OR: [
             { lastMessagePreview: { contains: search } },
+            { contactLink: { chatwootName: { contains: search } } },
             { contactLink: { chatwootEmail: { contains: search } } },
+            { contactLink: { chatwootPhoneE164: { contains: search } } },
             { contactLink: { person: { name: { contains: search } } } },
             { contactLink: { company: { name: { contains: search } } } },
           ],
@@ -70,15 +86,23 @@ export default async function ConversasPage({
       : {}),
   };
 
-  const [conversations, total, channels] = await Promise.all([
-    prisma.chatwootConversation.findMany({
-      where,
-      orderBy: { lastActivityAt: "desc" },
-      skip: (pageNum - 1) * PER_PAGE,
+  const linkWhere = { tenantId: ctx.tenantId, conversations: { some: convWhere } };
+
+  const [links, totalContacts, orphanConversations, channels] = await Promise.all([
+    prisma.chatwootContactLink.findMany({
+      where: linkWhere,
+      orderBy: { updatedAt: "desc" },
+      skip: (Math.max(1, parseInt(page ?? "1")) - 1) * PER_PAGE,
       take: PER_PAGE,
-      include: { contactLink: { include: { person: { select: { id: true, name: true } }, company: { select: { id: true, name: true } } } } },
+      include: {
+        person: { select: { id: true, name: true } },
+        company: { select: { id: true, name: true } },
+        conversations: { where: convWhere, orderBy: { lastActivityAt: "desc" } },
+      },
     }),
-    prisma.chatwootConversation.count({ where }),
+    prisma.chatwootContactLink.count({ where: linkWhere }),
+    // Conversas sem contato identificado no Chatwoot — agrupadas num card próprio.
+    prisma.chatwootConversation.findMany({ where: { ...convWhere, contactLinkId: null }, orderBy: { lastActivityAt: "desc" }, take: 50 }),
     prisma.chatwootConversation.findMany({
       where: scopedChatwootConversationWhere(ctx),
       distinct: ["channel"],
@@ -87,45 +111,69 @@ export default async function ConversasPage({
     }),
   ]);
 
-  const totalPages = Math.ceil(total / PER_PAGE);
+  const pageNum = Math.max(1, parseInt(page ?? "1"));
+  const totalPages = Math.ceil(totalContacts / PER_PAGE);
+  const canManageLinks = isFullAccess(ctx.role);
 
   function buildUrl(params: Record<string, string | undefined>) {
     const q = new URLSearchParams();
-    const merged = { search, status, canal, page, ...params };
+    const merged = { search, status, canal, de, ate, page, ...params };
     for (const [k, v] of Object.entries(merged)) if (v) q.set(k, v);
     return `/conversas?${q.toString()}`;
   }
 
-  const selectedId = id ?? conversations[0]?.id;
-  const selected = selectedId ? await prisma.chatwootConversation.findFirst({ where: { id: selectedId, tenantId: ctx.tenantId } }) : null;
+  const toResumo = (c: (typeof orphanConversations)[number]) => ({
+    id: c.id,
+    dateLabel: c.lastActivityAt ? formatInstantDate(c.lastActivityAt) : "Sem data",
+    channelLabel: channelLabel(c.channel),
+    statusLabel: statusLabel(c.status),
+    status: c.status,
+    assigneeLabel: c.assigneeLabel,
+    preview: c.lastMessagePreview,
+  });
 
-  let messages: Awaited<ReturnType<typeof prisma.chatwootMessage.findMany>> = [];
-  if (selected) {
-    await ensureMessagesLoaded(ctx.tenantId, selected.id);
-    messages = await prisma.chatwootMessage.findMany({
-      where: { conversationId: selected.id },
-      orderBy: { chatwootCreatedAt: "asc" },
-    });
-  }
-
-  const canViewPrivate = isFullAccess(ctx.role);
+  const totalAtendimentos = links.reduce((sum, l) => sum + l.conversations.length, 0) + orphanConversations.length;
 
   return (
     <PageContainer>
       <div className="mb-5">
         <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Conversas</h1>
         <p className="text-[13px] text-fg-muted mt-0.5">
-          {total} conversa{total !== 1 ? "s" : ""} — histórico do Chatwoot, somente leitura.
+          Auditoria de atendimentos do Chatwoot — {totalContacts} contato{totalContacts !== 1 ? "s" : ""},{" "}
+          {totalAtendimentos} atendimento{totalAtendimentos !== 1 ? "s" : ""} nesta página. Somente leitura.
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <form method="GET" action="/conversas" className="flex-1 max-w-xs">
-          {status && <input type="hidden" name="status" value={status} />}
-          {canal && <input type="hidden" name="canal" value={canal} />}
-          <Input name="search" defaultValue={search ?? ""} placeholder="Buscar por contato, empresa ou mensagem…" />
-        </form>
+      {/* Filtros: busca + período + status + canal */}
+      <form method="GET" action="/conversas" className="flex flex-wrap items-end gap-3 mb-3">
+        <div className="flex-1 min-w-[220px] max-w-xs">
+          <label htmlFor="search" className="block text-[11.5px] text-fg-muted mb-1">Busca</label>
+          <Input id="search" name="search" defaultValue={search ?? ""} placeholder="Contato, empresa ou mensagem…" />
+        </div>
+        <div>
+          <label htmlFor="de" className="block text-[11.5px] text-fg-muted mb-1">De</label>
+          <Input id="de" name="de" type="date" defaultValue={de ?? ""} className="w-36" />
+        </div>
+        <div>
+          <label htmlFor="ate" className="block text-[11.5px] text-fg-muted mb-1">Até</label>
+          <Input id="ate" name="ate" type="date" defaultValue={ate ?? ""} className="w-36" />
+        </div>
+        {status && <input type="hidden" name="status" value={status} />}
+        {canal && <input type="hidden" name="canal" value={canal} />}
+        <button
+          type="submit"
+          className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+        >
+          Filtrar
+        </button>
+        {(search || de || ate || status || canal) && (
+          <Link href="/conversas" className="h-9 px-3 rounded-md text-[12.5px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center">
+            Limpar
+          </Link>
+        )}
+      </form>
 
+      <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className="flex items-center gap-1">
           {STATUS_TABS.map((tab) => {
             const isActive = tab.value === status;
@@ -142,9 +190,8 @@ export default async function ConversasPage({
             );
           })}
         </div>
-
-        {channels.length > 0 && (
-          <div className="flex items-center gap-1">
+        {channels.length > 1 && (
+          <div className="flex items-center gap-1 border-l border-border pl-2">
             {channels.map((c) => (
               <Link
                 key={c.channel}
@@ -153,93 +200,73 @@ export default async function ConversasPage({
                   c.channel === canal ? "bg-surface-2 text-fg border border-border-strong" : "text-fg-muted hover:text-fg hover:bg-surface-2"
                 }`}
               >
-                {c.channel}
+                {channelLabel(c.channel)}
               </Link>
             ))}
           </div>
         )}
       </div>
 
-      {conversations.length === 0 ? (
+      {links.length === 0 && orphanConversations.length === 0 ? (
         <div className="bg-surface border border-border rounded-2xl">
           <EmptyState
             icon={<MessageCircle />}
-            title="Nenhuma conversa encontrada"
+            title="Nenhum atendimento encontrado"
             description="Tente ajustar a busca ou os filtros, ou aguarde a próxima sincronização."
           />
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-4 bg-surface border border-border rounded-2xl overflow-hidden">
-          <div className="border-r border-border max-h-[70vh] overflow-y-auto">
-            {conversations.map((c) => {
-              const contactLabel = c.contactLink?.person?.name ?? c.contactLink?.company?.name ?? c.contactLink?.chatwootEmail ?? "Contato sem nome";
-              const isActive = c.id === selectedId;
-              return (
-                <Link
-                  key={c.id}
-                  href={buildUrl({ id: c.id })}
-                  className={`block px-4 py-3 border-b border-border last:border-b-0 transition-colors ${isActive ? "bg-surface-2" : "hover:bg-surface-hover"}`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[13px] font-medium text-fg truncate">{contactLabel}</span>
-                    {c.unreadCount > 0 && (
-                      <span className="flex-shrink-0 text-[10px] font-semibold bg-brand text-on-brand rounded-full px-1.5 py-0.5">{c.unreadCount}</span>
-                    )}
+        <div className="space-y-3">
+          {links.map((link) => {
+            const displayName =
+              link.person?.name ?? link.company?.name ?? link.chatwootName ?? link.chatwootEmail ?? link.chatwootPhoneE164 ?? "Contato sem identificação";
+            const linkedLabel = link.person?.name ?? link.company?.name ?? null;
+            const linkedHref = link.person ? `/pessoas/${link.person.id}` : link.company ? `/empresas/${link.company.id}` : null;
+            return (
+              <div key={link.id} className="bg-surface border border-border rounded-2xl px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-8 h-8 rounded-full bg-brand-subtle text-brand flex items-center justify-center flex-shrink-0">
+                      {link.company && !link.person ? <Building2 size={15} /> : <User size={15} />}
+                    </span>
+                    <div className="min-w-0">
+                      {linkedHref ? (
+                        <Link href={linkedHref} className="text-[13.5px] font-medium text-fg hover:text-brand transition-colors truncate block">
+                          {displayName}
+                        </Link>
+                      ) : (
+                        <p className="text-[13.5px] font-medium text-fg truncate">{displayName}</p>
+                      )}
+                      <p className="text-[11.5px] text-fg-muted truncate">
+                        {[link.chatwootEmail, link.chatwootPhoneE164].filter(Boolean).join(" · ") || "Sem e-mail/telefone no Chatwoot"}
+                        {" · "}
+                        {link.conversations.length} atendimento{link.conversations.length !== 1 ? "s" : ""}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-[12px] text-fg-muted truncate mt-0.5">{c.lastMessagePreview ?? "Sem mensagens ainda"}</p>
-                  <div className="flex items-center gap-2 mt-1 text-[11px] text-fg-muted">
-                    <span>{c.channel}</span>
-                    <span>·</span>
-                    <span>{c.status}</span>
-                    {c.contactLink?.company && (
-                      <>
-                        <span>·</span>
-                        <Building2 size={11} />
-                      </>
-                    )}
-                    {c.contactLink?.person && !c.contactLink?.company && (
-                      <>
-                        <span>·</span>
-                        <User size={11} />
-                      </>
-                    )}
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+                  <VincularContato contactLinkId={link.id} linkedLabel={linkedLabel} canManage={canManageLinks} />
+                </div>
+                <AtendimentosAccordion atendimentos={link.conversations.map(toResumo)} defaultOpenId={id} />
+              </div>
+            );
+          })}
 
-          <div className="p-4 max-h-[70vh] overflow-y-auto">
-            {!selected ? (
-              <EmptyState icon={<MessageCircle />} title="Selecione uma conversa" />
-            ) : (
-              <>
-                <div className="mb-4 pb-3 border-b border-border">
-                  <p className="text-[14px] font-medium text-fg">
-                    {selected.assigneeLabel ? `Atendente: ${selected.assigneeLabel}` : "Sem atendente atribuído"}
-                  </p>
-                  <p className="text-[12px] text-fg-muted mt-0.5">
-                    Canal: {selected.channel} · Status: {selected.status}
-                    {selected.teamLabel ? ` · Equipe: ${selected.teamLabel}` : ""}
+          {orphanConversations.length > 0 && (
+            <div className="bg-surface border border-border rounded-2xl px-4 py-3">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="w-8 h-8 rounded-full bg-surface-hover text-fg-muted flex items-center justify-center flex-shrink-0">
+                  <HelpCircle size={15} />
+                </span>
+                <div>
+                  <p className="text-[13.5px] font-medium text-fg">Sem contato identificado</p>
+                  <p className="text-[11.5px] text-fg-muted">
+                    {orphanConversations.length} atendimento{orphanConversations.length !== 1 ? "s" : ""} sem contato no Chatwoot
                   </p>
                 </div>
-                <MessageThread
-                  conversationId={selected.id}
-                  hasMore={messages.length > 0}
-                  canViewPrivate={canViewPrivate}
-                  messages={messages.map((m) => ({
-                    id: m.id,
-                    senderLabel: m.senderLabel,
-                    messageType: m.messageType,
-                    content: m.content,
-                    isPrivate: m.isPrivate,
-                    attachments: (m.attachments as { fileType: string; fileSize: number | null; url: string }[] | null) ?? [],
-                    createdAtLabel: formatInstantDate(m.chatwootCreatedAt),
-                  }))}
-                />
-              </>
-            )}
-          </div>
+              </div>
+              <AtendimentosAccordion atendimentos={orphanConversations.map(toResumo)} defaultOpenId={id} />
+            </div>
+          )}
         </div>
       )}
 
@@ -250,12 +277,18 @@ export default async function ConversasPage({
           </span>
           <div className="flex gap-1">
             {pageNum > 1 && (
-              <Link href={buildUrl({ page: String(pageNum - 1) })} className="h-8 px-3 rounded-md text-[12px] text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors flex items-center">
+              <Link
+                href={buildUrl({ page: String(pageNum - 1) })}
+                className="h-8 px-3 rounded-md text-[12px] text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors flex items-center"
+              >
                 ← Anterior
               </Link>
             )}
             {pageNum < totalPages && (
-              <Link href={buildUrl({ page: String(pageNum + 1) })} className="h-8 px-3 rounded-md text-[12px] text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors flex items-center">
+              <Link
+                href={buildUrl({ page: String(pageNum + 1) })}
+                className="h-8 px-3 rounded-md text-[12px] text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors flex items-center"
+              >
                 Próxima →
               </Link>
             )}
