@@ -170,6 +170,21 @@ enum ClientDocumentViewAction {
   DOWNLOADED
 }
 
+enum AdmissaoLinkStatus {
+  PENDENTE // link gerado, aguardando preenchimento pelo colaborador
+  PREENCHIDO // colaborador submeteu dados e documentos
+  CONCLUIDO // DP conferiu e concluiu a admissão (Person → ATIVO)
+}
+
+enum DependenteRelationship {
+  CONJUGE
+  COMPANHEIRO
+  FILHO
+  ENTEADO
+  PAIS
+  OUTRO
+}
+
 enum SensitiveFieldGroup {
   DADOS_BANCARIOS
   DADOS_MEDICOS
@@ -316,6 +331,8 @@ model Tenant {
   handoffSectors       HandoffSector[]
   notifications        Notification[]
   pushSubscriptions    PushSubscription[]
+  admissaoLinks        AdmissaoLink[]
+  dependentes          Dependente[]
   customFields         CustomField[]
   customValues         CustomValue[]
   sectors              Sector[]
@@ -515,6 +532,7 @@ model User {
   meetingAttendances     MeetingAttendee[]
   clientDocumentsCreated ClientDocument[]
   recurringObligations   RecurringObligation[]
+  admissaoLinksCreated   AdmissaoLink[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -702,6 +720,8 @@ model Person {
   trainingParticipants TrainingParticipant[]
   evaluations          Evaluation[]
   chatwootContactLinks ChatwootContactLink[]
+  admissaoLinks        AdmissaoLink[]
+  dependentes          Dependente[]
 
   @@unique([tenantId, cpf])
   @@index([tenantId])
@@ -1876,6 +1896,53 @@ model PushSubscription {
 
   @@index([tenantId, userId])
   @@map("push_subscriptions")
+}
+
+// Admissão digital self-service — link tokenizado que o novo colaborador
+// (em ADMISSAO_EM_ANDAMENTO) abre SEM login para preencher os próprios dados
+// e enviar documentos, alimentando a ficha e eliminando a digitação manual do
+// DP. Mesmo padrão de token público do ClientDocumentRecipient. O submit grava
+// direto no Person/Document; este model é só o gate + rastreio do estado.
+model AdmissaoLink {
+  id          String             @id @default(uuid())
+  tenantId    String
+  personId    String
+  token       String             @unique @db.VarChar(64)
+  status      AdmissaoLinkStatus @default(PENDENTE)
+  expiresAt   DateTime
+  submittedAt DateTime?
+  createdById String
+  createdAt   DateTime           @default(now())
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id])
+  person    Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  createdBy User   @relation(fields: [createdById], references: [id])
+
+  @@index([tenantId, personId])
+  @@map("admissao_links")
+}
+
+// Dependente de um colaborador (IRRF, salário-família, plano de saúde). Coletado
+// na admissão digital e usado depois pela geração do eSocial S-2200 (grupo de
+// dependentes) — os flags isIRDependent/isSalarioFamilia são os campos que o
+// cálculo trabalhista de cada empresa-cliente realmente consome.
+model Dependente {
+  id               String                 @id @default(uuid())
+  tenantId         String
+  personId         String
+  name             String                 @db.VarChar(180)
+  cpf              String?                @db.VarChar(14)
+  birthDate        DateTime?
+  relationship     DependenteRelationship @default(OUTRO)
+  isIRDependent    Boolean                @default(false)
+  isSalarioFamilia Boolean                @default(false)
+  createdAt        DateTime               @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, personId])
+  @@map("dependentes")
 }
 
 // Obrigação recorrente de uma empresa-cliente (DAS, DCTF, folha, férias

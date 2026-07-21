@@ -153,6 +153,63 @@ export async function sendPasswordResetEmail(input: SendPasswordResetEmailInput)
   }
 }
 
+export type SendAdmissaoEmailInput = {
+  tenantId: string;
+  to: string;
+  personName: string;
+  token: string;
+  companyName: string | null;
+};
+
+// Convite de admissão digital — o novo colaborador abre o link e preenche os
+// próprios dados/documentos. SMTP é por tenant e pode não estar configurado;
+// quem gera o link trata isso como best-effort (o caminho principal é copiar o
+// link e enviar por onde preferir).
+export async function sendAdmissaoEmail(input: SendAdmissaoEmailInput): Promise<SmtpResult> {
+  const transport = await getTenantTransport(input.tenantId);
+  if (!transport) {
+    return { ok: false, error: "Nenhuma configuração de SMTP cadastrada para este workspace." };
+  }
+  const { transporter, config } = transport;
+
+  const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
+  const admissaoUrl = `${baseUrl}/admissao/${input.token}`;
+  const empresa = input.companyName ? ` na <strong>${escapeHtml(input.companyName)}</strong>` : "";
+
+  const html = `
+    <div style="font-family: Arial, Helvetica, sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+      <p style="font-size: 14px; line-height: 1.5;">Olá, ${escapeHtml(input.personName)}!</p>
+      <p style="font-size: 14px; line-height: 1.5;">
+        Para dar continuidade à sua admissão${empresa}, preencha seus dados e envie seus documentos
+        pelo link seguro abaixo. Leva poucos minutos.
+      </p>
+      <p style="margin: 24px 0;">
+        <a href="${admissaoUrl}" style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500;">
+          Preencher minha admissão
+        </a>
+      </p>
+      <p style="font-size: 13px; color: #555;">O link é pessoal e expira em 7 dias.</p>
+      <p style="font-size: 12px; color: #888; margin-top: 32px;">
+        Se o botão acima não funcionar, copie e cole este link no navegador:<br />
+        <span style="word-break: break-all;">${admissaoUrl}</span>
+      </p>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: `"${config.fromName}" <${config.fromEmail}>`,
+      to: input.to,
+      subject: "Admissão digital — Connect",
+      html,
+    });
+    return { ok: true };
+  } catch (err) {
+    console.error("[sendAdmissaoEmail]", err);
+    return { ok: false, error: "Falha ao enviar e-mail. Verifique a configuração de SMTP." };
+  }
+}
+
 function escapeHtml(input: string): string {
   return input
     .replace(/&/g, "&amp;")

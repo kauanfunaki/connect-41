@@ -44,6 +44,11 @@ const PUBLIC_PATHS = [
   // rota /api/carreiras/apply (rate-limited por IP dentro do handler).
   "/carreiras/",
   "/api/carreiras/",
+  // Admissão digital self-service — novo colaborador não tem login. A página e
+  // a rota de submit validam o token do AdmissaoLink (status PENDENTE + não
+  // expirado) internamente; token inexistente é rate-limited por IP.
+  "/admissao/",
+  "/api/admissao/",
   // Webhook do Chatwoot — chamado pelo próprio Chatwoot, sem sessão de
   // usuário. A autenticação de verdade é a assinatura HMAC
   // (X-Chatwoot-Signature), verificada dentro da rota contra o segredo da
