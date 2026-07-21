@@ -6,8 +6,17 @@ import { PayrollStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
+import { digitsOnly } from "@/lib/validation/common";
+import { parsePayrollCsv } from "@/lib/payrollCsv";
 
 export type PayrollEntryState = { error: string } | null;
+
+const MAX_CSV_SIZE = 2 * 1024 * 1024; // 2MB — folgado para milhares de linhas de texto
+
+export type ImportPayrollCsvState =
+  | { error: string }
+  | { success: true; imported: number; skipped: { row: number; reason: string }[] }
+  | null;
 
 function pick(form: FormData, key: string): string | null {
   return (form.get(key) as string)?.trim() || null;
@@ -93,6 +102,123 @@ export async function lancarEvento(
 
   revalidatePath(`/empresas/${companyId}/folha/${competencyId}`);
   return null;
+}
+
+// Casa cada linha do CSV com um Colaborador da empresa por CPF (normalizado
+// para dígitos dos dois lados — o CPF é armazenado como o usuário digitou,
+// com ou sem máscara, então comparar direto quebraria silenciosamente).
+export async function importarFolhaCsv(
+  companyId: string,
+  competencyId: string,
+  _prev: ImportPayrollCsvState,
+  form: FormData
+): Promise<ImportPayrollCsvState> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { error: "Não autenticado" };
+  if (!canWrite(ctx.role)) return { error: "Sem permissão para importar folha." };
+  if (!(await canViewSensitiveField(ctx, "SALARIO"))) {
+    return { error: "Sem permissão para dados de folha (salário)." };
+  }
+  if (!(await assertCompetencyInScope(companyId, competencyId, ctx))) {
+    return { error: "Competência não encontrada ou fora do seu escopo." };
+  }
+
+  const file = form.get("file");
+  if (!(file instanceof File) || file.size === 0) return { error: "Selecione um arquivo CSV." };
+  if (file.size > MAX_CSV_SIZE) return { error: "Arquivo muito grande (máx. 2MB)." };
+
+  let text: string;
+  try {
+    text = await file.text();
+  } catch (err) {
+    console.error("[importarFolhaCsv] leitura", err);
+    return { error: "Não foi possível ler o arquivo." };
+  }
+
+  const { rows, fatalError } = parsePayrollCsv(text);
+  if (fatalError) return { error: fatalError };
+  if (rows.length === 0) return { error: "O arquivo não tem linhas de dados." };
+
+  const prisma = getPrisma();
+  // Casamento por CPF só entre colaboradores desta empresa — candidato ou
+  // colaborador de outra empresa nunca deve receber lançamento por engano.
+  const colaboradores = await prisma.person.findMany({
+    where: { tenantId: ctx.tenantId, type: "COLABORADOR", currentCompanyId: companyId, cpf: { not: null } },
+    select: { id: true, cpf: true },
+  });
+  const personIdByCpf = new Map<string, string>();
+  for (const p of colaboradores) {
+    const digits = digitsOnly(p.cpf);
+    if (digits) personIdByCpf.set(digits, p.id);
+  }
+
+  const skipped: { row: number; reason: string }[] = [];
+  let imported = 0;
+
+  for (const row of rows) {
+    const cpfDigits = digitsOnly(row.cpf);
+    if (!cpfDigits) {
+      skipped.push({ row: row.rowNumber, reason: "CPF ausente ou inválido" });
+      continue;
+    }
+    const personId = personIdByCpf.get(cpfDigits);
+    if (!personId) {
+      skipped.push({ row: row.rowNumber, reason: `CPF ${row.cpf} não corresponde a nenhum colaborador desta empresa` });
+      continue;
+    }
+    if (!row.grossSalary) {
+      skipped.push({ row: row.rowNumber, reason: "Salário bruto ausente ou inválido" });
+      continue;
+    }
+
+    try {
+      await prisma.payrollEntry.upsert({
+        where: { competencyId_personId: { competencyId, personId } },
+        create: {
+          tenantId: ctx.tenantId,
+          competencyId,
+          personId,
+          grossSalary: row.grossSalary,
+          workedDays: row.workedDays,
+          vacationDays: row.vacationDays,
+          thirteenthSalary: row.thirteenthSalary,
+          familyAllowance: row.familyAllowance,
+          absenceDays: row.absenceDays,
+          missedDays: row.missedDays,
+          overtimeHours: row.overtimeHours,
+          nightShiftAllowance: row.nightShiftAllowance,
+          hazardPay: row.hazardPay,
+          unhealthyPay: row.unhealthyPay,
+          benefitsTotal: row.benefitsTotal,
+          deductions: row.deductions,
+          notes: row.notes,
+        },
+        update: {
+          grossSalary: row.grossSalary,
+          workedDays: row.workedDays,
+          vacationDays: row.vacationDays,
+          thirteenthSalary: row.thirteenthSalary,
+          familyAllowance: row.familyAllowance,
+          absenceDays: row.absenceDays,
+          missedDays: row.missedDays,
+          overtimeHours: row.overtimeHours,
+          nightShiftAllowance: row.nightShiftAllowance,
+          hazardPay: row.hazardPay,
+          unhealthyPay: row.unhealthyPay,
+          benefitsTotal: row.benefitsTotal,
+          deductions: row.deductions,
+          notes: row.notes,
+        },
+      });
+      imported++;
+    } catch (err) {
+      console.error("[importarFolhaCsv] linha", row.rowNumber, err);
+      skipped.push({ row: row.rowNumber, reason: "Erro ao salvar no banco" });
+    }
+  }
+
+  revalidatePath(`/empresas/${companyId}/folha/${competencyId}`);
+  return { success: true, imported, skipped };
 }
 
 export async function atualizarStatusLancamento(
