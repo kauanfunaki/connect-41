@@ -21,6 +21,7 @@ import { DocumentsSection } from "@/components/documents/DocumentsSection";
 import { AiCompanySummary } from "@/components/empresas/AiCompanySummary";
 import { AtendimentosAccordion } from "@/components/conversas/AtendimentosAccordion";
 import { channelLabel, statusLabel } from "@/lib/chatwoot/labels";
+import { safeFindConversations } from "@/lib/chatwoot/conversations";
 import { gerarResumoEmpresa } from "./ai-actions";
 
 export default async function EmpresaPage({
@@ -65,14 +66,16 @@ export default async function EmpresaPage({
 
   const customFields = await getApplicableCustomFields(ctx, "COMPANY", id, companySectors);
 
-  const conversations = await prisma.chatwootConversation.findMany({
-    where: {
-      tenantId: ctx.tenantId,
-      OR: [{ contactLink: { companyId: id } }, { contactLink: { person: { currentCompanyId: id } } }],
-    },
-    orderBy: { lastActivityAt: "desc" },
-    take: 20,
-  });
+  const conversations = await safeFindConversations(() =>
+    prisma.chatwootConversation.findMany({
+      where: {
+        tenantId: ctx.tenantId,
+        OR: [{ contactLink: { companyId: id } }, { contactLink: { person: { currentCompanyId: id } } }],
+      },
+      orderBy: { lastActivityAt: "desc" },
+      take: 20,
+    })
+  );
 
   // Serviços contratados + responsável por setor ("tag" no vocabulário do
   // Acessorias) — setores que o usuário atual pode gerenciar, e os usuários
@@ -163,7 +166,7 @@ export default async function EmpresaPage({
                 statusLabel: statusLabel(c.status),
                 status: c.status,
                 assigneeLabel: c.assigneeLabel,
-                preview: c.lastMessagePreview,
+                messageCount: c.messageCount,
               }))}
             />
           </div>

@@ -30,7 +30,7 @@ const STATUS_LABEL: Record<StepStatus, string> = {
 // vez de vazar/cortar.
 export function Stepper({ steps, onStepClick }: Props) {
   return (
-    <div className="flex items-center flex-wrap gap-y-3 px-6 py-5 border-b border-border" role="tablist">
+    <div className="flex items-center justify-center flex-wrap gap-y-3 px-6 py-5 border-b border-border" role="tablist">
       {steps.map((step, i) => (
         <div key={step.label} className="flex items-center">
           <button

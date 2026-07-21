@@ -7,6 +7,20 @@ import { normalizeMessage } from "./mappers";
 
 const MESSAGES_PAGE_SIZE = 20;
 
+// Consulta defensiva das tabelas do Chatwoot — usada nas fichas de Empresa e
+// Pessoa (aba "Conversas"), que podem ser renderizadas antes de a migration
+// do Chatwoot ter sido aplicada em produção, ou com a conexão desconfigurada.
+// Sem isso, um erro do Prisma (tabela inexistente) derruba a ficha inteira
+// (error boundary) em vez de só a aba de conversas ficar vazia.
+export async function safeFindConversations<T>(query: () => Promise<T[]>): Promise<T[]> {
+  try {
+    return await query();
+  } catch (err) {
+    console.error("[chatwoot:conversations] falha ao consultar atendimentos — migration pendente ou Chatwoot indisponível?", err);
+    return [];
+  }
+}
+
 // Garante que a conversa tenha ao menos a primeira leva de mensagens
 // carregada localmente — chamado ao abrir uma conversa pela primeira vez.
 export async function ensureMessagesLoaded(tenantId: string, conversationLocalId: string): Promise<void> {

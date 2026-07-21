@@ -110,4 +110,26 @@ export async function listMessages(
   );
 }
 
+// Chatwoot não expõe um total de mensagens no objeto de conversa (confirmado
+// no código-fonte do Chatwoot — sem counter_cache) — a única forma de saber o
+// total é paginar /messages até a página vir vazia. Chamado só 1x por
+// conversa (na primeira sincronização), nunca na reconciliação — depois disso
+// o total é mantido por incremento no webhook message_created (ver sync.ts).
+// MAX_PAGES é um limite de segurança contra histórico anormalmente longo.
+const COUNT_MAX_PAGES = 50;
+
+export async function countAllMessages(creds: ChatwootCredentials, conversationId: number): Promise<number> {
+  let total = 0;
+  let beforeId: number | undefined;
+
+  for (let page = 0; page < COUNT_MAX_PAGES; page++) {
+    const result = await listMessages(creds, conversationId, beforeId);
+    if (result.payload.length === 0) break;
+    total += result.payload.length;
+    beforeId = Math.min(...result.payload.map((m) => m.id));
+  }
+
+  return total;
+}
+
 export { maskToken };

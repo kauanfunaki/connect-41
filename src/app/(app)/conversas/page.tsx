@@ -9,16 +9,19 @@ import { formatInstantDate } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { AtendimentosAccordion } from "@/components/conversas/AtendimentosAccordion";
 import { VincularContato } from "@/components/conversas/VincularContato";
 
 const PER_PAGE = 15; // contatos por página (cada um pode ter N atendimentos)
 
+// Mesma semântica de cor do badge de status em AtendimentosAccordion.tsx —
+// aqui só a cor do "pontinho", já que o botão inteiro já fica destacado quando ativo.
 const STATUS_TABS = [
-  { value: "open", label: "Abertas" },
-  { value: "pending", label: "Pendentes" },
-  { value: "resolved", label: "Resolvidas" },
-  { value: "snoozed", label: "Adiadas" },
+  { value: "open", label: "Abertas", dot: "bg-success" },
+  { value: "pending", label: "Pendentes", dot: "bg-warning" },
+  { value: "resolved", label: "Resolvidas", dot: "bg-fg-muted" },
+  { value: "snoozed", label: "Adiadas", dot: "bg-brand" },
 ];
 
 // Visão de auditoria: agrupada por contato, com os atendimentos (janelas de
@@ -27,9 +30,9 @@ const STATUS_TABS = [
 export default async function ConversasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; status?: string; canal?: string; de?: string; ate?: string; page?: string; id?: string }>;
+  searchParams: Promise<{ search?: string; status?: string; canal?: string; atendente?: string; de?: string; ate?: string; page?: string; id?: string }>;
 }) {
-  const { search, status, canal, de, ate, page, id } = await searchParams;
+  const { search, status, canal, atendente, de, ate, page, id } = await searchParams;
   const ctx = await getAuthContext();
   const prisma = getPrisma();
 
@@ -69,6 +72,7 @@ export default async function ConversasPage({
     ...scopedChatwootConversationWhere(ctx),
     ...(status ? { status } : {}),
     ...(canal ? { channel: canal } : {}),
+    ...(atendente ? { assigneeLabel: atendente } : {}),
     ...(deDate || ateDate
       ? { lastActivityAt: { ...(deDate ? { gte: deDate } : {}), ...(ateDate ? { lt: ateDate } : {}) } }
       : {}),
@@ -88,7 +92,7 @@ export default async function ConversasPage({
 
   const linkWhere = { tenantId: ctx.tenantId, conversations: { some: convWhere } };
 
-  const [links, totalContacts, orphanConversations, channels] = await Promise.all([
+  const [links, totalContacts, orphanConversations, channels, assignees] = await Promise.all([
     prisma.chatwootContactLink.findMany({
       where: linkWhere,
       orderBy: { updatedAt: "desc" },
@@ -109,6 +113,13 @@ export default async function ConversasPage({
       select: { channel: true },
       take: 20,
     }),
+    prisma.chatwootConversation.findMany({
+      where: { ...scopedChatwootConversationWhere(ctx), assigneeLabel: { not: null } },
+      distinct: ["assigneeLabel"],
+      select: { assigneeLabel: true },
+      orderBy: { assigneeLabel: "asc" },
+      take: 50,
+    }),
   ]);
 
   const pageNum = Math.max(1, parseInt(page ?? "1"));
@@ -117,7 +128,7 @@ export default async function ConversasPage({
 
   function buildUrl(params: Record<string, string | undefined>) {
     const q = new URLSearchParams();
-    const merged = { search, status, canal, de, ate, page, ...params };
+    const merged = { search, status, canal, atendente, de, ate, page, ...params };
     for (const [k, v] of Object.entries(merged)) if (v) q.set(k, v);
     return `/conversas?${q.toString()}`;
   }
@@ -129,7 +140,7 @@ export default async function ConversasPage({
     statusLabel: statusLabel(c.status),
     status: c.status,
     assigneeLabel: c.assigneeLabel,
-    preview: c.lastMessagePreview,
+    messageCount: c.messageCount,
   });
 
   const totalAtendimentos = links.reduce((sum, l) => sum + l.conversations.length, 0) + orphanConversations.length;
@@ -158,6 +169,17 @@ export default async function ConversasPage({
           <label htmlFor="ate" className="block text-[11.5px] text-fg-muted mb-1">Até</label>
           <Input id="ate" name="ate" type="date" defaultValue={ate ?? ""} className="w-36" />
         </div>
+        {assignees.length > 0 && (
+          <div>
+            <label htmlFor="atendente" className="block text-[11.5px] text-fg-muted mb-1">Atendente</label>
+            <Select id="atendente" name="atendente" defaultValue={atendente ?? ""} className="w-44">
+              <option value="">Todos</option>
+              {assignees.map((a) => (
+                <option key={a.assigneeLabel} value={a.assigneeLabel!}>{a.assigneeLabel}</option>
+              ))}
+            </Select>
+          </div>
+        )}
         {status && <input type="hidden" name="status" value={status} />}
         {canal && <input type="hidden" name="canal" value={canal} />}
         <button
@@ -166,7 +188,7 @@ export default async function ConversasPage({
         >
           Filtrar
         </button>
-        {(search || de || ate || status || canal) && (
+        {(search || de || ate || status || canal || atendente) && (
           <Link href="/conversas" className="h-9 px-3 rounded-md text-[12.5px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center">
             Limpar
           </Link>
@@ -181,10 +203,11 @@ export default async function ConversasPage({
               <Link
                 key={tab.value}
                 href={buildUrl({ status: isActive ? undefined : tab.value, page: "1" })}
-                className={`inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
+                className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
                   isActive ? "bg-surface-2 text-fg border border-border-strong" : "text-fg-muted hover:text-fg hover:bg-surface-2"
                 }`}
               >
+                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${tab.dot}`} />
                 {tab.label}
               </Link>
             );

@@ -1236,6 +1236,7 @@ model ChatwootConversation {
   lastActivityAt         DateTime?
   unreadCount            Int       @default(0)
   lastMessagePreview     String?   @db.VarChar(280)
+  messageCount           Int? // total de mensagens do atendimento — calculado 1x via paginação da API (ver countAllMessages) e mantido por incremento no webhook message_created; null = ainda não calculado
   syncedAt               DateTime  @default(now())
 
   connection  ChatwootConnection   @relation(fields: [connectionId], references: [id])

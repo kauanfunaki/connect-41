@@ -33,6 +33,11 @@ export async function processWebhookEvent(tenantId: string, connectionId: string
       updated_at: typeof payload.updated_at === "number" ? payload.updated_at : undefined,
     });
 
+    const existingMessage = await prisma.chatwootMessage.findUnique({
+      where: { tenantId_conversationId_chatwootMessageId: { tenantId, conversationId, chatwootMessageId: normalizedMessage.chatwootMessageId } },
+      select: { id: true },
+    });
+
     await prisma.chatwootMessage.upsert({
       where: { tenantId_conversationId_chatwootMessageId: { tenantId, conversationId, chatwootMessageId: normalizedMessage.chatwootMessageId } },
       create: {
@@ -57,6 +62,14 @@ export async function processWebhookEvent(tenantId: string, connectionId: string
         syncedAt: new Date(),
       },
     });
+
+    // Só incrementa o total em mensagem nova de verdade (não em edição) — o
+    // dedup de ChatwootWebhookEvent já garante que este evento message_created
+    // só é processado uma vez, então o incremento aqui é seguro. COALESCE
+    // trata o caso de messageCount ainda nunca ter sido calculado (null).
+    if (!existingMessage && payload.event === "message_created") {
+      await prisma.$executeRaw`UPDATE chatwoot_conversations SET messageCount = COALESCE(messageCount, 0) + 1 WHERE id = ${conversationId}`;
+    }
     return;
   }
 
@@ -74,8 +87,10 @@ export async function processWebhookEvent(tenantId: string, connectionId: string
     const existing = await prismaClient.chatwootContactLink.findUnique({
       where: { tenantId_connectionId_chatwootContactId: { tenantId, connectionId, chatwootContactId: raw.id } },
     });
-    if (!existing || existing.linkMethod === "MANUAL") return;
+    if (!existing) return;
 
+    // upsertContactLink já protege o vínculo (pessoa/empresa) de contatos
+    // MANUAL, mas sempre atualiza nome/e-mail/telefone de exibição.
     await upsertContactLink(prismaClient, tenantId, connectionId, {
       chatwootContactId: raw.id,
       name: raw.name ?? null,

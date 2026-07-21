@@ -27,6 +27,7 @@ import { listDocuments } from "@/lib/documents";
 import { DocumentsSection } from "@/components/documents/DocumentsSection";
 import { AtendimentosAccordion } from "@/components/conversas/AtendimentosAccordion";
 import { channelLabel, statusLabel } from "@/lib/chatwoot/labels";
+import { safeFindConversations } from "@/lib/chatwoot/conversations";
 import { formatCalendarDate, formatInstantDate, maskCpf, formatPhone, formatCep } from "@/lib/format";
 
 const TYPE_LABEL: Record<PersonType, string> = {
@@ -99,11 +100,13 @@ export default async function PessoaPage({
   const personSectors = await getPersonSectors(ctx.tenantId, id);
   const customFields = await getApplicableCustomFields(ctx, "PERSON", id, personSectors);
 
-  const conversations = await prisma.chatwootConversation.findMany({
-    where: { tenantId: ctx.tenantId, contactLink: { personId: id } },
-    orderBy: { lastActivityAt: "desc" },
-    take: 20,
-  });
+  const conversations = await safeFindConversations(() =>
+    prisma.chatwootConversation.findMany({
+      where: { tenantId: ctx.tenantId, contactLink: { personId: id } },
+      orderBy: { lastActivityAt: "desc" },
+      take: 20,
+    })
+  );
 
   const fullAddress = [
     person.addressStreet,
@@ -332,7 +335,7 @@ export default async function PessoaPage({
                 statusLabel: statusLabel(c.status),
                 status: c.status,
                 assigneeLabel: c.assigneeLabel,
-                preview: c.lastMessagePreview,
+                messageCount: c.messageCount,
               }))}
             />
           </div>

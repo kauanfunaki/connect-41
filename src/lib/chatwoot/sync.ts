@@ -9,7 +9,7 @@
 // de Conversas) e mantido depois via webhook.
 import { getPrisma } from "@/lib/prisma";
 import { resolveConnectionCredentials } from "./connection";
-import { listConversations } from "./client";
+import { listConversations, countAllMessages, type ChatwootCredentials } from "./client";
 import { normalizeConversation } from "./mappers";
 import { findLinkCandidates, resolveLink, normalizePhoneBR } from "./linking";
 import { ChatwootError } from "./errors";
@@ -23,7 +23,8 @@ export async function upsertConversation(
   prisma: ReturnType<typeof getPrisma>,
   tenantId: string,
   connectionId: string,
-  normalized: ReturnType<typeof normalizeConversation>
+  normalized: ReturnType<typeof normalizeConversation>,
+  creds?: ChatwootCredentials
 ): Promise<{ id: string; created: boolean }> {
   let contactLinkId: string | null = null;
   if (normalized.contact) {
@@ -33,8 +34,21 @@ export async function upsertConversation(
 
   const existing = await prisma.chatwootConversation.findUnique({
     where: { tenantId_connectionId_chatwootConversationId: { tenantId, connectionId, chatwootConversationId: normalized.chatwootConversationId } },
-    select: { id: true },
+    select: { id: true, messageCount: true },
   });
+
+  // Total de mensagens é calculado uma única vez (1ª sincronização da
+  // conversa) via paginação da API — depois disso, mantido só por incremento
+  // no webhook message_created (ver webhookProcessor.ts), nunca recalculado
+  // aqui de novo (evitaria N chamadas extras a cada reconciliação).
+  let messageCount = existing?.messageCount ?? undefined;
+  if ((messageCount === undefined || messageCount === null) && creds) {
+    try {
+      messageCount = await countAllMessages(creds, normalized.chatwootConversationId);
+    } catch (err) {
+      console.error("[chatwoot:sync] falha ao contar mensagens", normalized.chatwootConversationId, err);
+    }
+  }
 
   const saved = await prisma.chatwootConversation.upsert({
     where: { tenantId_connectionId_chatwootConversationId: { tenantId, connectionId, chatwootConversationId: normalized.chatwootConversationId } },
@@ -53,6 +67,7 @@ export async function upsertConversation(
       lastActivityAt: normalized.lastActivityAt,
       unreadCount: normalized.unreadCount,
       lastMessagePreview: normalized.lastMessagePreview,
+      messageCount: messageCount ?? null,
     },
     update: {
       contactLinkId,
@@ -64,6 +79,7 @@ export async function upsertConversation(
       lastActivityAt: normalized.lastActivityAt,
       unreadCount: normalized.unreadCount,
       lastMessagePreview: normalized.lastMessagePreview,
+      ...(messageCount !== undefined && messageCount !== null ? { messageCount } : {}),
       syncedAt: new Date(),
     },
   });
@@ -89,9 +105,21 @@ export async function upsertContactLink(
     where: { tenantId_connectionId_chatwootContactId: { tenantId, connectionId, chatwootContactId: contact.chatwootContactId } },
   });
 
-  // Vínculo manual já confirmado nunca é sobrescrito automaticamente.
+  const cacheFields = {
+    chatwootName: contact.name,
+    chatwootEmail: contact.email,
+    chatwootPhoneE164: normalizePhoneBR(contact.phone) ?? contact.phone,
+  };
+
+  // Vínculo manual já confirmado: o vínculo em si (pessoa/empresa) nunca é
+  // sobrescrito automaticamente, mas nome/e-mail/telefone são só cache de
+  // exibição do Chatwoot — sempre atualizamos, senão um contato renomeado no
+  // Chatwoot depois de vinculado manualmente ficaria com o nome desatualizado pra sempre.
   if (existing && existing.linkMethod === "MANUAL") {
-    return existing;
+    return prisma.chatwootContactLink.update({
+      where: { id: existing.id },
+      data: { ...cacheFields, lastSyncAt: new Date() },
+    });
   }
 
   const candidates = await findLinkCandidates(prisma, tenantId, contact);
@@ -103,9 +131,7 @@ export async function upsertContactLink(
       tenantId,
       connectionId,
       chatwootContactId: contact.chatwootContactId,
-      chatwootName: contact.name,
-      chatwootEmail: contact.email,
-      chatwootPhoneE164: normalizePhoneBR(contact.phone) ?? contact.phone,
+      ...cacheFields,
       linkMethod: resolved.linkMethod,
       linkConfidence: resolved.linkConfidence,
       personId: resolved.personId,
@@ -113,9 +139,7 @@ export async function upsertContactLink(
       lastSyncAt: new Date(),
     },
     update: {
-      chatwootName: contact.name,
-      chatwootEmail: contact.email,
-      chatwootPhoneE164: normalizePhoneBR(contact.phone) ?? contact.phone,
+      ...cacheFields,
       linkMethod: resolved.linkMethod,
       linkConfidence: resolved.linkConfidence,
       personId: resolved.personId,
@@ -160,7 +184,7 @@ export async function runChatwootSync(tenantId: string, type: "INITIAL" | "RECON
 
       for (const raw of conversations) {
         const normalized = normalizeConversation(raw);
-        const { created } = await upsertConversation(prisma, tenantId, connectionId, normalized);
+        const { created } = await upsertConversation(prisma, tenantId, connectionId, normalized, creds);
 
         recordsRead++;
         if (created) recordsCreated++;

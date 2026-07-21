@@ -11,13 +11,16 @@ export type AtendimentoResumo = {
   statusLabel: string;
   status: string; // cru, pra cor do badge
   assigneeLabel: string | null;
-  preview: string | null;
+  messageCount: number | null;
 };
 
-const STATUS_BADGE: Record<string, string> = {
+// 4 cores distintas por status — aberta (em andamento), pendente (aguardando
+// alguém), adiada (pausada por escolha do atendente) e resolvida (encerrada)
+// são estados bem diferentes pra fins de auditoria, não deveriam parecer iguais.
+export const STATUS_BADGE: Record<string, string> = {
   open: "text-success bg-success/8 border-success/20",
   pending: "text-warning bg-warning/8 border-warning/20",
-  snoozed: "text-fg-muted bg-surface-hover border-border",
+  snoozed: "text-brand bg-brand-subtle border-brand/25",
   resolved: "text-fg-muted bg-surface-hover border-border",
 };
 
@@ -137,7 +140,9 @@ export function AtendimentosAccordion({ atendimentos, defaultOpenId }: { atendim
                 {a.statusLabel}
               </span>
               {a.assigneeLabel && <span className="text-[11.5px] text-fg-muted flex-shrink-0 hidden sm:inline">{a.assigneeLabel}</span>}
-              <span className="text-[12px] text-fg-muted truncate min-w-0">{a.preview ?? ""}</span>
+              <span className="text-[12px] text-fg-muted truncate min-w-0">
+                {a.messageCount != null ? `${a.messageCount} ${a.messageCount === 1 ? "mensagem" : "mensagens"}` : "—"}
+              </span>
             </button>
             {isOpen && (
               <div className="pl-7 pr-2 pb-3">
