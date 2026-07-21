@@ -315,6 +315,7 @@ model Tenant {
   handoffs             Handoff[]
   handoffSectors       HandoffSector[]
   notifications        Notification[]
+  pushSubscriptions    PushSubscription[]
   customFields         CustomField[]
   customValues         CustomValue[]
   sectors              Sector[]
@@ -503,6 +504,7 @@ model User {
   handoffSectorsAssigned HandoffSector[]        @relation("HandoffSectorAssignee")
   handoffViews           HandoffView[]
   notifications          Notification[]
+  pushSubscriptions      PushSubscription[]
   tenantAccess           UserTenantAccess[]
   uploadedDocuments      Document[]
   evaluationsGiven       Evaluation[]
@@ -1854,6 +1856,25 @@ model Notification {
 
   @@index([tenantId, userId, read])
   @@map("notifications")
+}
+
+// Assinatura de push do navegador (Web Push API) — um usuário pode ter mais
+// de uma (várias abas/dispositivos). `endpoint` já é a chave natural de
+// idempotência: o navegador reusa o mesmo endpoint pra resubscribe.
+model PushSubscription {
+  id        String   @id @default(uuid())
+  tenantId  String
+  userId    String
+  endpoint  String   @unique @db.VarChar(500)
+  p256dh    String   @db.VarChar(255)
+  auth      String   @db.VarChar(255)
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId])
+  @@map("push_subscriptions")
 }
 
 // Obrigação recorrente de uma empresa-cliente (DAS, DCTF, folha, férias

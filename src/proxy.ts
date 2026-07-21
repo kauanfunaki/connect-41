@@ -26,6 +26,15 @@ const PUBLIC_PATHS = [
   // essas requisições pro /login (retornando HTML em vez da imagem), quebrando o
   // logo na tela de login e na tela de loading pós-login (contextos sem sessão).
   "/brand/",
+  // PWA: manifest.webmanifest é referenciado no <head> de toda página, inclusive
+  // /login (sem sessão) — o navegador avalia "instalável" ali antes do login, e
+  // um redirect pro /login em vez do JSON quebra isso. O service worker
+  // (/sw.js) e os ícones do manifest também não podem depender de cookie de
+  // sessão: o navegador re-executa o worker em background pra entregar push e
+  // mostrar a notificação (com ícone) mesmo sem nenhuma aba aberta/sessão ativa.
+  "/manifest.webmanifest",
+  "/sw.js",
+  "/icons/",
   // Link público de visualização de Documentos para Clientes — o cliente que
   // recebe o e-mail não tem (e não deve precisar de) login no Connect 41. A
   // prova de acesso é o token na própria URL, validado dentro da rota.
