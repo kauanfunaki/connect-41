@@ -5,6 +5,8 @@ import { getPrisma } from "@/lib/prisma";
 import { VacationStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
+import { COMMITTED_VACATION_STATUSES, findScheduleConflictsForVacationPeriod } from "@/lib/scheduleVacationConflict";
+import { formatCalendarDate } from "@/lib/format";
 
 export type VacationState = { error: string } | null;
 
@@ -91,13 +93,27 @@ export async function atualizarFerias(
   const existing = await prisma.vacation.findFirst({ where: { id: vacationId, tenantId: ctx.tenantId, personId } });
   if (!existing) return { error: "Registro de férias não encontrado." };
 
+  const effectiveStartDate = pickDate(form, "startDate") ?? existing.startDate;
+  const effectiveReturnDate = pickDate(form, "returnDate") ?? existing.returnDate;
+
+  // Ao confirmar férias (aprovada/programada/em gozo), nenhuma escala de
+  // trabalho já lançada pode sobrar dentro do período — precisa ser
+  // cancelada manualmente antes, não é sobrescrita silenciosamente.
+  if (COMMITTED_VACATION_STATUSES.includes(status) && effectiveStartDate && effectiveReturnDate) {
+    const conflicts = await findScheduleConflictsForVacationPeriod(ctx.tenantId, personId, effectiveStartDate, effectiveReturnDate);
+    if (conflicts.length > 0) {
+      const dates = conflicts.map((c) => formatCalendarDate(c.date)).join(", ");
+      return { error: `Já existe escala de trabalho lançada dentro do período de férias (${dates}) — cancele essas escalas antes de confirmar.` };
+    }
+  }
+
   try {
     await prisma.vacation.update({
       where: { id: vacationId },
       data: {
         status,
-        startDate: pickDate(form, "startDate") ?? existing.startDate,
-        returnDate: pickDate(form, "returnDate") ?? existing.returnDate,
+        startDate: effectiveStartDate,
+        returnDate: effectiveReturnDate,
       },
     });
 

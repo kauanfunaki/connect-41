@@ -9,6 +9,9 @@ const csp = [
   "img-src 'self' data: blob:",
   "style-src 'self' 'unsafe-inline'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  // Service worker de push (public/sw.js) — sem isto cairia no fallback de
+  // script-src, que funciona mas fica implícito; explícito documenta a intenção.
+  "worker-src 'self'",
   "font-src 'self' data:",
   // brasilapi.com.br: autocompletar dados da empresa a partir do CNPJ
   // (EmpresaForm.tsx) — sem essa origem liberada, o fetch falha silenciosamente

@@ -5,6 +5,8 @@ import { getPrisma } from "@/lib/prisma";
 import { ScheduleStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
+import { findVacationConflictForDate } from "@/lib/scheduleVacationConflict";
+import { formatCalendarDate } from "@/lib/format";
 
 export type ScheduleState = { error: string } | null;
 
@@ -35,6 +37,20 @@ export async function criarEscala(
 
   const dateRaw = pick(form, "date");
   if (!dateRaw) return { error: "Informe a data." };
+  const date = new Date(dateRaw);
+  const dayOff = form.get("dayOff") === "true";
+  const isHoliday = form.get("isHoliday") === "true";
+
+  // Só um dia de trabalho de verdade pode conflitar com férias — folga e
+  // feriado não representam convocação.
+  if (!dayOff && !isHoliday) {
+    const conflict = await findVacationConflictForDate(ctx.tenantId, personId, date);
+    if (conflict) {
+      return {
+        error: `Colaborador está de férias aprovadas de ${formatCalendarDate(conflict.startDate)} a ${formatCalendarDate(conflict.returnDate)} — não é possível lançar escala de trabalho nessa data.`,
+      };
+    }
+  }
 
   const prisma = getPrisma();
   try {
@@ -42,10 +58,10 @@ export async function criarEscala(
       data: {
         tenantId: ctx.tenantId,
         personId,
-        date: new Date(dateRaw),
+        date,
         shiftId: pick(form, "shiftId"),
-        dayOff: form.get("dayOff") === "true",
-        isHoliday: form.get("isHoliday") === "true",
+        dayOff,
+        isHoliday,
         notes: pick(form, "notes"),
       },
     });
