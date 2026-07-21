@@ -259,7 +259,7 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
                     id="cnpj"
                     name="cnpj"
                     type="text"
-                    defaultValue={defaultValues?.cnpj ?? ""}
+                    value={values.cnpj}
                     placeholder="00.000.000/0000-00"
                     onBlur={handleCNPJBlur}
                   />
@@ -271,7 +271,7 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
                 </div>
               </CampoForm>
               <CampoForm label="Status" htmlFor="status">
-                <Select id="status" name="status" defaultValue={defaultValues?.status ?? "ACTIVE"}>
+                <Select id="status" name="status" value={values.status}>
                   {STATUS_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
@@ -280,15 +280,15 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
             </FieldGrid>
             <FieldGrid>
               <CampoForm label="Razão Social" htmlFor="name" required>
-                <Input id="name" name="name" type="text" required defaultValue={defaultValues?.name ?? ""} placeholder="Nome jurídico da empresa" />
+                <Input id="name" name="name" type="text" required value={values.name} placeholder="Nome jurídico da empresa" />
               </CampoForm>
               <CampoForm label="Nome Fantasia" htmlFor="tradeName">
-                <Input id="tradeName" name="tradeName" type="text" defaultValue={defaultValues?.tradeName ?? ""} placeholder="Como é conhecida" />
+                <Input id="tradeName" name="tradeName" type="text" value={values.tradeName} placeholder="Como é conhecida" />
               </CampoForm>
             </FieldGrid>
             <FieldGrid>
               <CampoForm label="Regime Tributário" htmlFor="taxRegime">
-                <Select id="taxRegime" name="taxRegime" defaultValue={defaultValues?.taxRegime ?? ""}>
+                <Select id="taxRegime" name="taxRegime" value={values.taxRegime}>
                   <option value="">Selecionar…</option>
                   {/* Valor legado fora da lista atual (ex: "Simples Nacional" genérico) —
                       mantido como opção pra edição não perder/trocar o dado silenciosamente. */}
@@ -301,7 +301,7 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
                 </Select>
               </CampoForm>
               <CampoForm label="ID" htmlFor="externalId" helper="Referência manual (ex: ID do Acessorias) — sem sincronização automática.">
-                <Input id="externalId" name="externalId" type="text" defaultValue={defaultValues?.externalId ?? ""} placeholder="Ex: 12345" />
+                <Input id="externalId" name="externalId" type="text" value={values.externalId} placeholder="Ex: 12345" />
               </CampoForm>
             </FieldGrid>
           </FormSection>
@@ -312,31 +312,31 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
           <FormSection title="Endereço">
             <FieldGrid columns="sm:grid-cols-[1fr_80px]">
               <CampoForm label="CEP" htmlFor="zipCode">
-                <Input id="zipCode" name="zipCode" type="text" defaultValue={defaultValues?.zipCode ?? ""} placeholder="00000-000" maxLength={9} />
+                <Input id="zipCode" name="zipCode" type="text" value={values.zipCode} placeholder="00000-000" maxLength={9} />
               </CampoForm>
               <CampoForm label="UF" htmlFor="stateCode">
-                <Input id="stateCode" name="stateCode" type="text" defaultValue={defaultValues?.stateCode ?? ""} placeholder="PR" maxLength={2} className="uppercase" />
+                <Input id="stateCode" name="stateCode" type="text" value={values.stateCode} placeholder="PR" maxLength={2} className="uppercase" />
               </CampoForm>
             </FieldGrid>
             <FieldGrid columns="sm:grid-cols-[1fr_120px]">
               <CampoForm label="Logradouro" htmlFor="addressStreet">
-                <Input id="addressStreet" name="addressStreet" type="text" defaultValue={defaultValues?.addressStreet ?? ""} placeholder="Rua / Av. / Estrada…" />
+                <Input id="addressStreet" name="addressStreet" type="text" value={values.addressStreet} placeholder="Rua / Av. / Estrada…" />
               </CampoForm>
               <CampoForm label="Número" htmlFor="addressNumber">
-                <Input id="addressNumber" name="addressNumber" type="text" defaultValue={defaultValues?.addressNumber ?? ""} placeholder="123" />
+                <Input id="addressNumber" name="addressNumber" type="text" value={values.addressNumber} placeholder="123" />
               </CampoForm>
             </FieldGrid>
             <FieldGrid>
               <CampoForm label="Complemento" htmlFor="addressComplement">
-                <Input id="addressComplement" name="addressComplement" type="text" defaultValue={defaultValues?.addressComplement ?? ""} placeholder="Sala, andar, bloco…" />
+                <Input id="addressComplement" name="addressComplement" type="text" value={values.addressComplement} placeholder="Sala, andar, bloco…" />
               </CampoForm>
               <CampoForm label="Bairro" htmlFor="neighborhood">
-                <Input id="neighborhood" name="neighborhood" type="text" defaultValue={defaultValues?.neighborhood ?? ""} placeholder="Bairro" />
+                <Input id="neighborhood" name="neighborhood" type="text" value={values.neighborhood} placeholder="Bairro" />
               </CampoForm>
             </FieldGrid>
             <FieldGrid>
               <CampoForm label="Cidade" htmlFor="city">
-                <Input id="city" name="city" type="text" defaultValue={defaultValues?.city ?? ""} placeholder="Curitiba" />
+                <Input id="city" name="city" type="text" value={values.city} placeholder="Curitiba" />
               </CampoForm>
             </FieldGrid>
           </FormSection>
@@ -347,11 +347,11 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
           <FormSection title="Contato">
             <FieldGrid>
               <CampoForm label="E-mail" htmlFor="email">
-                <Input id="email" name="email" type="email" defaultValue={defaultValues?.email ?? ""} placeholder="contato@empresa.com.br" />
+                <Input id="email" name="email" type="email" value={values.email} placeholder="contato@empresa.com.br" />
               </CampoForm>
               <CampoForm label="Telefone" htmlFor="phone">
                 <Input
-                  id="phone" name="phone" type="tel" defaultValue={defaultValues?.phone ?? ""}
+                  id="phone" name="phone" type="tel" value={values.phone}
                   placeholder="(41) 99999-9999" pattern="[\d\s()\-+]{8,20}" maxLength={20}
                   title="Informe um número de telefone válido (ex: (41) 99999-9999)"
                 />
@@ -359,7 +359,7 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
             </FieldGrid>
             <FieldGrid>
               <CampoForm label="Website" htmlFor="website">
-                <Input id="website" name="website" type="url" defaultValue={defaultValues?.website ?? ""} placeholder="https://empresa.com.br" />
+                <Input id="website" name="website" type="url" value={values.website} placeholder="https://empresa.com.br" />
               </CampoForm>
             </FieldGrid>
           </FormSection>
@@ -370,26 +370,26 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
           <FormSection title="Dados fiscais">
             <FieldGrid columns="sm:grid-cols-3">
               <CampoForm label="Inscrição Estadual" htmlFor="stateRegistration">
-                <Input id="stateRegistration" name="stateRegistration" type="text" defaultValue={defaultValues?.stateRegistration ?? ""} placeholder="000.000.000-0" />
+                <Input id="stateRegistration" name="stateRegistration" type="text" value={values.stateRegistration} placeholder="000.000.000-0" />
               </CampoForm>
               <CampoForm label="Inscrição Municipal" htmlFor="municipalRegistration">
-                <Input id="municipalRegistration" name="municipalRegistration" type="text" defaultValue={defaultValues?.municipalRegistration ?? ""} placeholder="000000-0" />
+                <Input id="municipalRegistration" name="municipalRegistration" type="text" value={values.municipalRegistration} placeholder="000000-0" />
               </CampoForm>
               <CampoForm label="NIRE" htmlFor="nire">
-                <Input id="nire" name="nire" type="text" defaultValue={defaultValues?.nire ?? ""} placeholder="41300012345" />
+                <Input id="nire" name="nire" type="text" value={values.nire} placeholder="41300012345" />
               </CampoForm>
             </FieldGrid>
             <FieldGrid columns="sm:grid-cols-3">
               <CampoForm label="Data de Abertura" htmlFor="foundationDate">
-                <Input id="foundationDate" name="foundationDate" type="date" defaultValue={defaultValues?.foundationDate ?? ""} />
+                <Input id="foundationDate" name="foundationDate" type="date" value={values.foundationDate} />
               </CampoForm>
             </FieldGrid>
             <FieldGrid>
               <CampoForm label="CNAE Principal" htmlFor="cnaePrincipal" helper="Código da atividade principal, ex: 6920-6/01">
-                <Input id="cnaePrincipal" name="cnaePrincipal" type="text" defaultValue={defaultValues?.cnaePrincipal ?? ""} placeholder="0000-0/00" />
+                <Input id="cnaePrincipal" name="cnaePrincipal" type="text" value={values.cnaePrincipal} placeholder="0000-0/00" />
               </CampoForm>
               <CampoForm label="CNAEs Secundários" htmlFor="cnaeSecundarios" helper="Separe por vírgula, se houver mais de um">
-                <Input id="cnaeSecundarios" name="cnaeSecundarios" type="text" defaultValue={defaultValues?.cnaeSecundarios ?? ""} placeholder="0000-0/00, 0000-0/00" />
+                <Input id="cnaeSecundarios" name="cnaeSecundarios" type="text" value={values.cnaeSecundarios} placeholder="0000-0/00, 0000-0/00" />
               </CampoForm>
             </FieldGrid>
           </FormSection>
@@ -400,11 +400,11 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
           <FormSection title="Responsáveis e vínculos">
             <FieldGrid>
               <CampoForm label="Origem / Fonte" htmlFor="source">
-                <Input id="source" name="source" type="text" defaultValue={defaultValues?.source ?? ""} placeholder="Indicação, evento, site…" />
+                <Input id="source" name="source" type="text" value={values.source} placeholder="Indicação, evento, site…" />
               </CampoForm>
               {branchOptions.length > 0 && (
                 <CampoForm label="Filial" htmlFor="branchId">
-                  <Select id="branchId" name="branchId" defaultValue={defaultValues?.branchId ?? ""}>
+                  <Select id="branchId" name="branchId" value={values.branchId}>
                     <option value="">Nenhuma</option>
                     {branchOptions.map((b) => (
                       <option key={b.value} value={b.value}>{b.label}</option>

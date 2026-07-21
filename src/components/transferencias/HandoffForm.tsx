@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
 import type { HandoffState } from "@/app/(app)/transferencias/actions";
 import type { EntityType } from "@/generated/prisma/enums";
@@ -9,10 +9,12 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { HANDOFF_PRIORITY_OPTIONS } from "@/lib/handoffs";
+import { HANDOFF_TEMPLATES, renderHandoffTemplate } from "@/lib/handoffTemplates";
+import { formatCnpj } from "@/lib/format";
 
-type EntityOption = { id: string; name: string };
+type EntityOption = { id: string; name: string; cnpj?: string | null };
 
-type FixedEntity = { entityType: EntityType; entityId: string; entityName: string };
+type FixedEntity = { entityType: EntityType; entityId: string; entityName: string; entityCnpj?: string | null };
 
 type Props = {
   action: (prev: HandoffState, form: FormData) => Promise<HandoffState>;
@@ -38,19 +40,67 @@ export function HandoffForm({
 }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const [entityType, setEntityType] = useState<EntityType>(fixedEntity?.entityType ?? "COMPANY");
+  const [entityId, setEntityId] = useState("");
   const [fromSector, setFromSector] = useState("");
   const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
+  const [templateKey, setTemplateKey] = useState("");
+  const formRef = useRef<HTMLFormElement>(null);
   const entityOptions = entityType === "COMPANY" ? companies : people;
 
   function toggleSector(code: string, checked: boolean) {
     setSelectedSectors((prev) => (checked ? [...prev, code] : prev.filter((c) => c !== code)));
   }
 
+  // [EMPRESA]/[CNPJ] são substituídos pela empresa já selecionada no form (ou
+  // fixa, vinda da ficha) — os demais placeholders do modelo (responsável,
+  // prazo, valor...) não são deriváveis de nenhum campo existente aqui, ficam
+  // por conta de quem preenche.
+  function currentEntity(): { name?: string; cnpj?: string | null } {
+    if (fixedEntity) return { name: fixedEntity.entityName, cnpj: fixedEntity.entityCnpj ? formatCnpj(fixedEntity.entityCnpj) : null };
+    const found = entityOptions.find((e) => e.id === entityId);
+    return { name: found?.name, cnpj: found?.cnpj ? formatCnpj(found.cnpj) : null };
+  }
+
+  function applyTemplate(key: string) {
+    setTemplateKey(key);
+    if (!key) return;
+    const textarea = formRef.current?.elements.namedItem("description") as HTMLTextAreaElement | null;
+    if (!textarea) return;
+    if (textarea.value.trim().length > 0 && !window.confirm("Já existe texto em Descrição. Substituir pelo modelo selecionado?")) {
+      return;
+    }
+    textarea.value = renderHandoffTemplate(key, currentEntity());
+  }
+
+  // Se a empresa for trocada depois de um modelo já aplicado, reaplica com a
+  // nova empresa (o usuário acabou de escolher o modelo, ainda não editou).
+  function handleEntityChange(id: string) {
+    setEntityId(id);
+    if (!templateKey) return;
+    const textarea = formRef.current?.elements.namedItem("description") as HTMLTextAreaElement | null;
+    if (!textarea) return;
+    const found = entityOptions.find((e) => e.id === id);
+    textarea.value = renderHandoffTemplate(templateKey, { name: found?.name, cnpj: found?.cnpj ? formatCnpj(found.cnpj) : null });
+  }
+
   const destinationOptions = toSectorOptions.filter((s) => s.value !== fromSector);
   const selectedInOrder = toSectorOptions.filter((s) => selectedSectors.includes(s.value) && s.value !== fromSector);
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form ref={formRef} action={formAction} className="space-y-6">
+      <CampoForm
+        label="Modelo de solicitação"
+        htmlFor="handoffTemplate"
+        helper="Preenche o campo Descrição com o padrão de texto — os placeholders entre colchetes ficam para você completar."
+      >
+        <Select id="handoffTemplate" value={templateKey} onChange={(e) => applyTemplate(e.target.value)}>
+          <option value="">Nenhum (escrever manualmente)</option>
+          {HANDOFF_TEMPLATES.map((t) => (
+            <option key={t.key} value={t.key}>{t.label}</option>
+          ))}
+        </Select>
+      </CampoForm>
+
       {fixedEntity ? (
         <>
           <input type="hidden" name="entityType" value={fixedEntity.entityType} />
@@ -70,7 +120,10 @@ export function HandoffForm({
               name="entityType"
               required
               value={entityType}
-              onChange={(e) => setEntityType(e.target.value as EntityType)}
+              onChange={(e) => {
+                setEntityType(e.target.value as EntityType);
+                setEntityId("");
+              }}
             >
               <option value="COMPANY">Empresa</option>
               <option value="PERSON">Pessoa</option>
@@ -86,7 +139,7 @@ export function HandoffForm({
                 : undefined
             }
           >
-            <Select id="entityId" name="entityId" required defaultValue="">
+            <Select id="entityId" name="entityId" required value={entityId} onChange={(e) => handleEntityChange(e.target.value)}>
               <option value="" disabled>Selecionar…</option>
               {entityOptions.map((e) => (
                 <option key={e.id} value={e.id}>{e.name}</option>
