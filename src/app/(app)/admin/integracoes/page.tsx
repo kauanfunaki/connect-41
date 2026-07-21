@@ -1,14 +1,16 @@
 import { notFound } from "next/navigation";
-import { Video, Check, Sparkles } from "lucide-react";
+import { Video, Check, Sparkles, MessageCircle } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
 import { isGoogleConfigured } from "@/lib/integrations/google";
 import { isMicrosoftConfigured } from "@/lib/integrations/microsoft";
+import { formatInstantDate } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
 import { DisconnectButton } from "@/components/admin/DisconnectButton";
 import { AiConfigForm } from "@/components/admin/AiConfigForm";
+import { ChatwootConfigForm } from "@/components/admin/ChatwootConfigForm";
 import { desconectarIntegracao } from "./actions";
 
 const ERROR_LABEL: Record<string, string> = {
@@ -41,6 +43,16 @@ export default async function IntegracoesPage({
   // reunião acima) — só quem administra o tenant todo (ADMIN/SUPER_ADMIN) vê e mexe.
   const canManageAi = isFullWrite(ctx.role);
   const aiConfig = canManageAi ? await prisma.tenantAiConfig.findUnique({ where: { tenantId: ctx.tenantId } }) : null;
+
+  // Chatwoot é config tenant-wide, mesmo critério de acesso da IA/SMTP.
+  const canManageChatwoot = isFullWrite(ctx.role);
+  const chatwootConnection = canManageChatwoot
+    ? await prisma.chatwootConnection.findFirst({ where: { tenantId: ctx.tenantId }, orderBy: { createdAt: "asc" } })
+    : null;
+  const chatwootWebhookUrl =
+    chatwootConnection && process.env.APP_PUBLIC_URL
+      ? `${process.env.APP_PUBLIC_URL}/api/integrations/chatwoot/webhook/${chatwootConnection.id}`
+      : null;
 
   return (
     <PageContainer variant="narrow">
@@ -149,6 +161,28 @@ export default async function IntegracoesPage({
             <AiConfigForm
               hasConfig={Boolean(aiConfig)}
               defaultValues={aiConfig ? { provider: aiConfig.provider, model: aiConfig.model } : undefined}
+            />
+          </Card>
+        </div>
+      )}
+
+      {canManageChatwoot && (
+        <div className="mt-8">
+          <div className="mb-3">
+            <h2 className="text-[14px] font-semibold text-fg flex items-center gap-1.5">
+              <MessageCircle size={14} className="text-brand" /> Chatwoot
+            </h2>
+            <p className="text-[12.5px] text-fg-muted mt-0.5">
+              Histórico de conversas vinculado às empresas e pessoas cadastradas, somente leitura por enquanto. Ver
+              conversas em <span className="font-medium text-fg">Conversas</span> no menu lateral.
+            </p>
+          </div>
+          <Card className="p-5">
+            <ChatwootConfigForm
+              hasConfig={Boolean(chatwootConnection)}
+              defaultValues={chatwootConnection ? { baseUrl: chatwootConnection.baseUrl, accountId: chatwootConnection.accountId } : undefined}
+              webhookUrl={chatwootWebhookUrl}
+              lastSyncAtLabel={chatwootConnection?.lastSyncAt ? formatInstantDate(chatwootConnection.lastSyncAt) : null}
             />
           </Card>
         </div>

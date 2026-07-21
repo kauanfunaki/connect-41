@@ -25,6 +25,7 @@ import { scopedPersonWhere } from "@/lib/auth/scope";
 import { getPersonSectors, getApplicableCustomFields } from "@/lib/customFields";
 import { listDocuments } from "@/lib/documents";
 import { DocumentsSection } from "@/components/documents/DocumentsSection";
+import { ConversationsSummaryList } from "@/components/conversas/ConversationsSummaryList";
 import { formatCalendarDate, formatInstantDate, maskCpf, formatPhone, formatCep } from "@/lib/format";
 
 const TYPE_LABEL: Record<PersonType, string> = {
@@ -96,6 +97,12 @@ export default async function PessoaPage({
 
   const personSectors = await getPersonSectors(ctx.tenantId, id);
   const customFields = await getApplicableCustomFields(ctx, "PERSON", id, personSectors);
+
+  const conversations = await prisma.chatwootConversation.findMany({
+    where: { tenantId: ctx.tenantId, contactLink: { personId: id } },
+    orderBy: { lastActivityAt: "desc" },
+    take: 20,
+  });
 
   const fullAddress = [
     person.addressStreet,
@@ -314,6 +321,18 @@ export default async function PessoaPage({
         trabalhista={trabalhistaContent}
         documents={documentsContent}
         documentsCount={documents.length}
+        conversations={
+          <ConversationsSummaryList
+            conversations={conversations.map((c) => ({
+              id: c.id,
+              channel: c.channel,
+              status: c.status,
+              lastMessagePreview: c.lastMessagePreview,
+              lastActivityLabel: c.lastActivityAt ? formatInstantDate(c.lastActivityAt) : null,
+            }))}
+          />
+        }
+        conversationsCount={conversations.length}
         history={historyContent}
       />
     </PageContainer>

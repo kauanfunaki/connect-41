@@ -19,6 +19,7 @@ import { CompanyOperationsSection } from "@/components/empresas/CompanyOperation
 import { CompanyHistorySection } from "@/components/empresas/CompanyHistorySection";
 import { DocumentsSection } from "@/components/documents/DocumentsSection";
 import { AiCompanySummary } from "@/components/empresas/AiCompanySummary";
+import { ConversationsSummaryList } from "@/components/conversas/ConversationsSummaryList";
 import { gerarResumoEmpresa } from "./ai-actions";
 
 export default async function EmpresaPage({
@@ -63,6 +64,15 @@ export default async function EmpresaPage({
 
   const customFields = await getApplicableCustomFields(ctx, "COMPANY", id, companySectors);
 
+  const conversations = await prisma.chatwootConversation.findMany({
+    where: {
+      tenantId: ctx.tenantId,
+      OR: [{ contactLink: { companyId: id } }, { contactLink: { person: { currentCompanyId: id } } }],
+    },
+    orderBy: { lastActivityAt: "desc" },
+    take: 20,
+  });
+
   // Serviços contratados + responsável por setor ("tag" no vocabulário do
   // Acessorias) — setores que o usuário atual pode gerenciar, e os usuários
   // elegíveis como responsável em cada um (membros do setor + admins).
@@ -106,6 +116,7 @@ export default async function EmpresaPage({
       <CompanyDetailTabs
         peopleCount={company.people.length}
         documentsCount={documents.length}
+        conversationsCount={conversations.length}
         overview={
           <div className="space-y-4">
             <AiCompanySummary action={gerarResumoEmpresa.bind(null, company.id)} />
@@ -138,6 +149,17 @@ export default async function EmpresaPage({
               createdAtLabel: formatInstantDate(d.createdAt),
               expiresAtLabel: d.expiresAt ? formatCalendarDate(d.expiresAt) : null,
               expired: d.expiresAt != null && d.expiresAt < new Date(),
+            }))}
+          />
+        }
+        conversations={
+          <ConversationsSummaryList
+            conversations={conversations.map((c) => ({
+              id: c.id,
+              channel: c.channel,
+              status: c.status,
+              lastMessagePreview: c.lastMessagePreview,
+              lastActivityLabel: c.lastActivityAt ? formatInstantDate(c.lastActivityAt) : null,
             }))}
           />
         }

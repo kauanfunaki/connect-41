@@ -357,6 +357,7 @@ model Tenant {
   aiConfig             TenantAiConfig?
   alertDispatches      AlertDispatch[]
   recurringObligations RecurringObligation[]
+  chatwootConnections  ChatwootConnection[]
 
   @@map("tenants")
 }
@@ -597,17 +598,18 @@ model Company {
   tenant Tenant  @relation(fields: [tenantId], references: [id])
   branch Branch? @relation(fields: [branchId], references: [id])
 
-  services            CompanyService[]
-  people              Person[]
-  departments         Department[]
-  cargos              Cargo[]
-  vagas               Vaga[]
-  payrollCompetencies PayrollCompetency[]
-  benefitCatalogs     BenefitCatalog[]
-  workShifts          WorkShift[]
-  meetings            Meeting[]
-  clientDocuments     ClientDocument[]
+  services             CompanyService[]
+  people               Person[]
+  departments          Department[]
+  cargos               Cargo[]
+  vagas                Vaga[]
+  payrollCompetencies  PayrollCompetency[]
+  benefitCatalogs      BenefitCatalog[]
+  workShifts           WorkShift[]
+  meetings             Meeting[]
+  clientDocuments      ClientDocument[]
   recurringObligations RecurringObligation[]
+  chatwootContactLinks ChatwootContactLink[]
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -697,6 +699,7 @@ model Person {
   scheduleEntries      ScheduleEntry[]
   trainingParticipants TrainingParticipant[]
   evaluations          Evaluation[]
+  chatwootContactLinks ChatwootContactLink[]
 
   @@unique([tenantId, cpf])
   @@index([tenantId])
@@ -716,9 +719,9 @@ model Pipeline {
   createdAt  DateTime           @default(now())
   updatedAt  DateTime           @updatedAt
 
-  tenant Tenant          @relation(fields: [tenantId], references: [id])
-  stages PipelineStage[]
-  items  PipelineItem[]
+  tenant               Tenant                @relation(fields: [tenantId], references: [id])
+  stages               PipelineStage[]
+  items                PipelineItem[]
   recurringObligations RecurringObligation[]
 
   @@index([tenantId, sectorCode])
@@ -1136,6 +1139,186 @@ model TenantAiConfig {
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@map("tenant_ai_configs")
+}
+
+// ─── Chatwoot (histórico de conversas vinculado a Empresas/Pessoas) ──────────
+// Ver docs/CHATWOOT_INTEGRATION_FEASIBILITY.md para o desenho completo.
+// Diferente do TenantAiConfig, NÃO há fallback global via env — cada tenant
+// tem sua própria conta Chatwoot, sem conta "padrão" compartilhada faria
+// sentido aqui (token de terceiro de negócio, não uma feature best-effort).
+enum ChatwootLinkMethod {
+  MANUAL
+  EMAIL
+  PHONE
+  ASSISTED
+  UNLINKED
+}
+
+// Conexão do tenant com uma conta Chatwoot. apiTokenEnc/webhookSecretEnc nunca
+// ficam em texto puro — mesmo padrão AES-256-GCM de TenantAiConfig/TenantSmtpConfig
+// (ver src/lib/crypto.ts). webhookSecretEnc é o "webhook_secret" que o PRÓPRIO
+// Chatwoot gera ao criar a inscrição de webhook (visível na UI/API dele) — o
+// usuário cola esse valor na tela de configuração do Connect, que o usa para
+// verificar a assinatura HMAC-SHA256 (X-Chatwoot-Signature) de cada evento recebido.
+model ChatwootConnection {
+  id               String    @id @default(uuid())
+  tenantId         String
+  baseUrl          String    @db.VarChar(255)
+  accountId        String    @db.VarChar(40)
+  apiTokenEnc      String    @db.Text
+  webhookSecretEnc String    @db.Text
+  active           Boolean   @default(true)
+  lastSyncAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  tenant        Tenant                 @relation(fields: [tenantId], references: [id])
+  contactLinks  ChatwootContactLink[]
+  conversations ChatwootConversation[]
+  webhookEvents ChatwootWebhookEvent[]
+  syncRuns      ChatwootSyncRun[]
+
+  // Um tenant pode ter mais de uma conta Chatwoot (ex: setores diferentes).
+  @@unique([tenantId, accountId])
+  @@index([tenantId])
+  @@map("chatwoot_connections")
+}
+
+// Vínculo entre um contato do Chatwoot e uma Pessoa/Empresa do Connect. Campos
+// prefixados chatwoot* são EXCLUSIVOS do Chatwoot — nunca reaproveitar
+// Company.externalId (que já documenta outro propósito, sync com Acessorias)
+// nem qualquer campo nativo de Empresa/Pessoa para guardar dado do Chatwoot.
+model ChatwootContactLink {
+  id                String             @id @default(uuid())
+  tenantId          String
+  connectionId      String
+  chatwootContactId Int
+  personId          String?
+  companyId         String?
+  chatwootEmail     String?            @db.VarChar(180)
+  chatwootPhoneE164 String?            @db.VarChar(20)
+  linkMethod        ChatwootLinkMethod @default(UNLINKED)
+  linkConfidence    Int? // 0-100, null quando MANUAL/UNLINKED
+  lastSyncAt        DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  connection    ChatwootConnection     @relation(fields: [connectionId], references: [id])
+  person        Person?                @relation(fields: [personId], references: [id])
+  company       Company?               @relation(fields: [companyId], references: [id])
+  conversations ChatwootConversation[]
+
+  @@unique([tenantId, connectionId, chatwootContactId])
+  @@index([tenantId, personId])
+  @@index([tenantId, companyId])
+  @@map("chatwoot_contact_links")
+}
+
+// Metadados de conversa — sincronizados via reconciliação periódica e webhook.
+// assigneeLabel/teamLabel são texto livre (nome exibido no Chatwoot), não FK
+// pra User: atendente/equipe do Chatwoot não necessariamente correspondem a um
+// usuário do Connect, e acoplar os dois sistemas de identidade não é necessário
+// para a v1 (somente leitura).
+model ChatwootConversation {
+  id                     String    @id @default(uuid())
+  tenantId               String
+  connectionId           String
+  chatwootConversationId Int
+  contactLinkId          String?
+  inboxId                Int
+  assigneeLabel          String?   @db.VarChar(120)
+  teamLabel              String?   @db.VarChar(120)
+  status                 String    @db.VarChar(30)
+  priority               String?   @db.VarChar(20)
+  labels                 Json?
+  channel                String    @db.VarChar(60)
+  lastActivityAt         DateTime?
+  unreadCount            Int       @default(0)
+  lastMessagePreview     String?   @db.VarChar(280)
+  syncedAt               DateTime  @default(now())
+
+  connection  ChatwootConnection   @relation(fields: [connectionId], references: [id])
+  contactLink ChatwootContactLink? @relation(fields: [contactLinkId], references: [id])
+  messages    ChatwootMessage[]
+
+  @@unique([tenantId, connectionId, chatwootConversationId])
+  @@index([tenantId, contactLinkId])
+  @@index([tenantId, status, lastActivityAt])
+  @@map("chatwoot_conversations")
+}
+
+// Corpo de mensagem — carregado sob demanda na primeira abertura de uma
+// conversa (não replicado em massa na sincronização inicial, ver
+// docs/CHATWOOT_INTEGRATION_FEASIBILITY.md seção 12) e mantido via webhook
+// depois disso. attachments guarda só metadado + URL do Chatwoot, nunca o
+// binário (decisão explícita: não replicar anexo sem necessidade comprovada).
+model ChatwootMessage {
+  id                String    @id @default(uuid())
+  tenantId          String
+  conversationId    String
+  chatwootMessageId Int
+  senderLabel       String?   @db.VarChar(120)
+  senderType        String    @db.VarChar(30)
+  messageType       String    @db.VarChar(20)
+  contentType       String    @db.VarChar(30)
+  content           String?   @db.Text
+  isPrivate         Boolean   @default(false)
+  attachments       Json?
+  chatwootCreatedAt DateTime
+  chatwootUpdatedAt DateTime?
+  syncedAt          DateTime  @default(now())
+
+  conversation ChatwootConversation @relation(fields: [conversationId], references: [id])
+
+  @@unique([tenantId, conversationId, chatwootMessageId])
+  @@index([tenantId, conversationId, chatwootCreatedAt])
+  @@map("chatwoot_messages")
+}
+
+// Dedup de webhook — mesmo padrão de AlertDispatch (chave única evita
+// processar o mesmo evento duas vezes, inclusive se o Chatwoot reenviar por
+// timeout do nosso lado).
+model ChatwootWebhookEvent {
+  id              String    @id @default(uuid())
+  tenantId        String
+  connectionId    String
+  eventType       String    @db.VarChar(60)
+  externalEventId String    @db.VarChar(180)
+  status          String    @db.VarChar(20) // RECEIVED | PROCESSED | FAILED
+  attempts        Int       @default(0)
+  receivedAt      DateTime  @default(now())
+  processedAt     DateTime?
+  error           String?   @db.Text
+
+  connection ChatwootConnection @relation(fields: [connectionId], references: [id])
+
+  @@unique([tenantId, connectionId, externalEventId])
+  @@index([tenantId, status])
+  @@map("chatwoot_webhook_events")
+}
+
+// Registro de cada rodada de sincronização (inicial ou reconciliação) — mesmo
+// espírito de observabilidade simples do resto do projeto (sem
+// Prometheus/Grafana): consultável direto na tela de Integrações.
+model ChatwootSyncRun {
+  id             String    @id @default(uuid())
+  tenantId       String
+  connectionId   String
+  type           String    @db.VarChar(20) // INITIAL | RECONCILIATION
+  status         String    @db.VarChar(20) // RUNNING | COMPLETED | FAILED
+  nextPage       Int       @default(1) // checkpoint de paginação — retomado entre chamadas HTTP (sem worker/fila, ver docs)
+  startedAt      DateTime  @default(now())
+  finishedAt     DateTime?
+  recordsRead    Int       @default(0)
+  recordsCreated Int       @default(0)
+  recordsUpdated Int       @default(0)
+  recordsSkipped Int       @default(0)
+  error          String?   @db.Text
+
+  connection ChatwootConnection @relation(fields: [connectionId], references: [id])
+
+  @@index([tenantId, connectionId, startedAt])
+  @@map("chatwoot_sync_runs")
 }
 
 // Permissão de leitura por grupo de campo/documento sensível, por papel. Ausência

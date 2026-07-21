@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { LayoutGrid, Users, Briefcase, FileText, History } from "lucide-react";
+import { LayoutGrid, Users, Briefcase, FileText, History, MessageCircle } from "lucide-react";
 import { Tabs } from "@/components/ui/Tabs";
 
 type Props = {
@@ -13,6 +13,8 @@ type Props = {
   documents: React.ReactNode;
   documentsCount: number;
   history: React.ReactNode;
+  conversations: React.ReactNode;
+  conversationsCount: number;
 };
 
 export function CompanyDetailTabs({
@@ -23,11 +25,13 @@ export function CompanyDetailTabs({
   documents,
   documentsCount,
   history,
+  conversations,
+  conversationsCount,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const validTabs = ["overview", "people", "operations", "documents", "history"];
+  const validTabs = ["overview", "people", "operations", "documents", "conversations", "history"];
   const tabFromUrl = searchParams.get("tab");
   const [active, setActive] = useState(
     tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : "overview"
@@ -38,6 +42,7 @@ export function CompanyDetailTabs({
     { key: "people", label: `Pessoas${peopleCount ? ` (${peopleCount})` : ""}`, icon: <Users /> },
     { key: "operations", label: "RH & Operação", icon: <Briefcase /> },
     { key: "documents", label: `Documentos${documentsCount ? ` (${documentsCount})` : ""}`, icon: <FileText /> },
+    { key: "conversations", label: `Conversas${conversationsCount ? ` (${conversationsCount})` : ""}`, icon: <MessageCircle /> },
     { key: "history", label: "Histórico", icon: <History /> },
   ];
 
@@ -54,6 +59,7 @@ export function CompanyDetailTabs({
         {active === "people" && people}
         {active === "operations" && operations}
         {active === "documents" && documents}
+        {active === "conversations" && conversations}
         {active === "history" && history}
       </div>
     </div>

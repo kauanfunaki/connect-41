@@ -35,6 +35,12 @@ const PUBLIC_PATHS = [
   // rota /api/carreiras/apply (rate-limited por IP dentro do handler).
   "/carreiras/",
   "/api/carreiras/",
+  // Webhook do Chatwoot — chamado pelo próprio Chatwoot, sem sessão de
+  // usuário. A autenticação de verdade é a assinatura HMAC
+  // (X-Chatwoot-Signature), verificada dentro da rota contra o segredo da
+  // conexão identificada pelo :connectionId da URL (ver
+  // src/app/api/integrations/chatwoot/webhook/[connectionId]/route.ts).
+  "/api/integrations/chatwoot/webhook/",
 ];
 
 // Headers de identidade que SÓ podem ser setados por este proxy. Qualquer

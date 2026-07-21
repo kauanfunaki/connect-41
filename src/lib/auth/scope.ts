@@ -1,5 +1,13 @@
 import { isFullAccess, type AuthContext } from "@/lib/auth/context";
 
+// Conversas do Chatwoot são conhecimento geral do tenant, igual Empresas/Pessoas
+// (RBAC opção A — ver docs/CHATWOOT_INTEGRATION_FEASIBILITY.md §16): qualquer
+// usuário autenticado do tenant pode visualizar. Mensagens privadas ficam
+// restritas separadamente (isFullAccess) na leitura de mensagens, não aqui.
+export function scopedChatwootConversationWhere(ctx: AuthContext) {
+  return { tenantId: ctx.tenantId };
+}
+
 // Empresas e Pessoas são conhecimento geral da empresa — qualquer usuário
 // autenticado do tenant pode VISUALIZAR qualquer uma, independente de setor.
 // O que é restrito por papel (não por setor) é CRIAR/EDITAR/EXCLUIR, já
