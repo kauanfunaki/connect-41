@@ -37,7 +37,7 @@ export default async function PessoasPage({
   const [people, total, companies] = await Promise.all([
     prisma.person.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: { name: "asc" },
       skip: (pageNum - 1) * PER_PAGE,
       take: PER_PAGE,
       include: { currentCompany: { select: { id: true, name: true } } },

@@ -44,8 +44,7 @@ export default async function EditarEmpresaPage({
 
       <PageHeader title="Editar Empresa" />
 
-      <div className="w-full max-w-[900px]">
-        <EmpresaForm
+      <EmpresaForm
           action={atualizarEmpresa}
           cancelHref={`/empresas/${id}`}
           customFields={customFields}
@@ -78,7 +77,6 @@ export default async function EditarEmpresaPage({
             branchId:              company.branchId               ?? undefined,
           }}
         />
-      </div>
     </PageContainer>
   );
 }

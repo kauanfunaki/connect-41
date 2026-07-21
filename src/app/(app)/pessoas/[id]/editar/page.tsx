@@ -52,7 +52,6 @@ export default async function EditarPessoaPage({
 
   return (
     <PageContainer>
-      <div className="max-w-[1000px] mx-auto">
       <BackButton className="mb-3" />
       <div className="flex items-center gap-2 mb-6">
         <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
@@ -122,7 +121,6 @@ export default async function EditarPessoaPage({
               : {}),
           }}
         />
-      </div>
     </PageContainer>
   );
 }

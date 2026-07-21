@@ -19,9 +19,7 @@ export default async function NovaEmpresaPage() {
 
       <PageHeader title="Nova Empresa" />
 
-      <div className="w-full max-w-[900px]">
-        <EmpresaForm action={criarEmpresa} cancelHref="/empresas" branchOptions={branchOptions} />
-      </div>
+      <EmpresaForm action={criarEmpresa} cancelHref="/empresas" branchOptions={branchOptions} />
     </PageContainer>
   );
 }

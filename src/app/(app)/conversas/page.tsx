@@ -92,39 +92,71 @@ export default async function ConversasPage({
 
   const linkWhere = { tenantId: ctx.tenantId, conversations: { some: convWhere } };
 
-  const [links, totalContacts, orphanConversations, channels, assignees] = await Promise.all([
-    prisma.chatwootContactLink.findMany({
-      where: linkWhere,
-      orderBy: { updatedAt: "desc" },
-      skip: (Math.max(1, parseInt(page ?? "1")) - 1) * PER_PAGE,
-      take: PER_PAGE,
-      include: {
-        person: { select: { id: true, name: true } },
-        company: { select: { id: true, name: true } },
-        conversations: { where: convWhere, orderBy: { lastActivityAt: "desc" } },
-      },
-    }),
-    prisma.chatwootContactLink.count({ where: linkWhere }),
-    // Conversas sem contato identificado no Chatwoot — agrupadas num card próprio.
-    prisma.chatwootConversation.findMany({ where: { ...convWhere, contactLinkId: null }, orderBy: { lastActivityAt: "desc" }, take: 50 }),
-    prisma.chatwootConversation.findMany({
-      where: scopedChatwootConversationWhere(ctx),
-      distinct: ["channel"],
-      select: { channel: true },
-      take: 20,
-    }),
-    prisma.chatwootConversation.findMany({
-      where: { ...scopedChatwootConversationWhere(ctx), assigneeLabel: { not: null } },
-      distinct: ["assigneeLabel"],
-      select: { assigneeLabel: true },
-      orderBy: { assigneeLabel: "asc" },
-      take: 50,
-    }),
-  ]);
+  async function loadConversasData() {
+    return Promise.all([
+      prisma.chatwootContactLink.findMany({
+        where: linkWhere,
+        orderBy: { updatedAt: "desc" },
+        skip: (Math.max(1, parseInt(page ?? "1")) - 1) * PER_PAGE,
+        take: PER_PAGE,
+        include: {
+          person: { select: { id: true, name: true } },
+          company: { select: { id: true, name: true } },
+          conversations: { where: convWhere, orderBy: { lastActivityAt: "desc" } },
+        },
+      }),
+      prisma.chatwootContactLink.count({ where: linkWhere }),
+      // Conversas sem contato identificado no Chatwoot — agrupadas num card próprio.
+      prisma.chatwootConversation.findMany({ where: { ...convWhere, contactLinkId: null }, orderBy: { lastActivityAt: "desc" }, take: 50 }),
+      prisma.chatwootConversation.findMany({
+        where: scopedChatwootConversationWhere(ctx),
+        distinct: ["channel"],
+        select: { channel: true },
+        take: 20,
+      }),
+      prisma.chatwootConversation.findMany({
+        where: { ...scopedChatwootConversationWhere(ctx), assigneeLabel: { not: null } },
+        distinct: ["assigneeLabel"],
+        select: { assigneeLabel: true },
+        orderBy: { assigneeLabel: "asc" },
+        take: 50,
+      }),
+    ]);
+  }
+
+  // Defensivo: se a migration mais recente ainda não foi aplicada em produção
+  // (coluna nova referenciada pelo schema, mas ausente no banco) ou o Chatwoot
+  // estiver instável, essa consulta falha — melhor mostrar um estado de erro
+  // específico desta página do que derrubar tudo no error boundary genérico.
+  let links: Awaited<ReturnType<typeof loadConversasData>>[0] = [];
+  let totalContacts = 0;
+  let orphanConversations: Awaited<ReturnType<typeof loadConversasData>>[2] = [];
+  let channels: Awaited<ReturnType<typeof loadConversasData>>[3] = [];
+  let assignees: Awaited<ReturnType<typeof loadConversasData>>[4] = [];
+  let loadError = false;
+
+  try {
+    [links, totalContacts, orphanConversations, channels, assignees] = await loadConversasData();
+  } catch (err) {
+    console.error("[conversas:page] falha ao consultar atendimentos — migration pendente ou Chatwoot indisponível?", err);
+    loadError = true;
+  }
 
   const pageNum = Math.max(1, parseInt(page ?? "1"));
   const totalPages = Math.ceil(totalContacts / PER_PAGE);
   const canManageLinks = isFullAccess(ctx.role);
+
+  if (loadError) {
+    return (
+      <PageContainer>
+        <EmptyState
+          icon={<MessageCircle />}
+          title="Não foi possível carregar as conversas"
+          description="Tente novamente em alguns instantes. Se persistir, confirme com o administrador se a última atualização do Connect foi aplicada por completo."
+        />
+      </PageContainer>
+    );
+  }
 
   function buildUrl(params: Record<string, string | undefined>) {
     const q = new URLSearchParams();

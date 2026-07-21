@@ -61,7 +61,7 @@ export default async function EmpresasPage({
   const [companies, total, sectorMaps] = await Promise.all([
     prisma.company.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: { name: "asc" },
       skip: (pageNum - 1) * PER_PAGE,
       take: PER_PAGE,
       include: {
