@@ -39,12 +39,13 @@ export default async function NovoHandoffPage({
     const scope = entityType === "COMPANY" ? await scopedCompanyWhere(ctx) : await scopedPersonWhere(ctx);
     const entity =
       entityType === "COMPANY"
-        ? await prisma.company.findFirst({ where: { id: entityId, ...scope }, select: { id: true, name: true } })
+        ? await prisma.company.findFirst({ where: { id: entityId, ...scope }, select: { id: true, name: true, cnpj: true } })
         : await prisma.person.findFirst({ where: { id: entityId, ...scope }, select: { id: true, name: true } });
 
     if (!entity) notFound();
 
     const backHref = entityType === "COMPANY" ? `/empresas/${entityId}` : `/pessoas/${entityId}`;
+    const entityCnpj: string | null = "cnpj" in entity ? (entity.cnpj as string | null) : null;
 
     return (
       <FormShell backHref={backHref} backLabel={entity.name}>
@@ -53,7 +54,7 @@ export default async function NovoHandoffPage({
           fromSectorOptions={fromSectorOptions}
           toSectorOptions={allSectorOptions}
           cancelHref={backHref}
-          fixedEntity={{ entityType: entityType as EntityType, entityId: entity.id, entityName: entity.name }}
+          fixedEntity={{ entityType: entityType as EntityType, entityId: entity.id, entityName: entity.name, entityCnpj }}
         />
       </FormShell>
     );
@@ -64,7 +65,7 @@ export default async function NovoHandoffPage({
     prisma.company.findMany({
       where: await scopedCompanyWhere(ctx),
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: { id: true, name: true, cnpj: true },
     }),
     prisma.person.findMany({
       where: await scopedPersonWhere(ctx),
