@@ -18,6 +18,7 @@ import { excluirPessoa } from "../actions";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PersonHeader } from "@/components/pessoas/PersonHeader";
 import { PersonDetailTabs } from "@/components/pessoas/PersonDetailTabs";
+import { AdmissaoCard } from "@/components/pessoas/AdmissaoCard";
 import { CompanyHistorySection } from "@/components/empresas/CompanyHistorySection";
 import { OperationsLinkList, type OperationLink } from "@/components/shared/OperationsLinkList";
 import { getAuthContext, canWrite, isFullWrite } from "@/lib/auth/context";
@@ -41,6 +42,15 @@ const STATUS_LABEL: Record<PersonEmploymentStatus, string> = {
   EM_FERIAS:              "Em férias",
   AFASTADO:               "Afastado",
   DESLIGADO:              "Desligado",
+};
+
+const DEP_REL_LABEL: Record<string, string> = {
+  FILHO:       "Filho(a)",
+  ENTEADO:     "Enteado(a)",
+  CONJUGE:     "Cônjuge",
+  COMPANHEIRO: "Companheiro(a)",
+  PAIS:        "Pai / Mãe",
+  OUTRO:       "Outro",
 };
 
 const VINCULO_LINKS: OperationLink[] = [
@@ -108,6 +118,32 @@ export default async function PessoaPage({
     })
   );
 
+  // Admissão digital: carrega o link ativo (não concluído) só quando faz sentido
+  // — colaborador ainda em admissão.
+  const admissaoLink =
+    person.employmentStatus === "ADMISSAO_EM_ANDAMENTO"
+      ? await prisma.admissaoLink.findFirst({
+          where: { personId: id, tenantId: ctx.tenantId, status: { not: "CONCLUIDO" } },
+          orderBy: { createdAt: "desc" },
+          select: { status: true, token: true, expiresAt: true, submittedAt: true },
+        })
+      : null;
+
+  const initialAdmissaoLink =
+    admissaoLink?.status === "PENDENTE"
+      ? { status: "PENDENTE" as const, token: admissaoLink.token, expiresAtLabel: formatInstantDate(admissaoLink.expiresAt) }
+      : admissaoLink?.status === "PREENCHIDO"
+        ? { status: "PREENCHIDO" as const, submittedAtLabel: admissaoLink.submittedAt ? formatInstantDate(admissaoLink.submittedAt) : "—" }
+        : null;
+
+  const dependentes =
+    person.type === "COLABORADOR"
+      ? await prisma.dependente.findMany({
+          where: { personId: id, tenantId: ctx.tenantId },
+          orderBy: { createdAt: "asc" },
+        })
+      : [];
+
   const fullAddress = [
     person.addressStreet,
     person.addressNumber,
@@ -120,7 +156,11 @@ export default async function PessoaPage({
     .join(", ");
 
   const overviewContent = (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div className="space-y-4">
+      {person.employmentStatus === "ADMISSAO_EM_ANDAMENTO" && (
+        <AdmissaoCard personId={id} initialLink={initialAdmissaoLink} canManage={canEdit} />
+      )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* Identificação */}
       <div className="bg-surface border border-border rounded-lg p-5">
         <h2 className="text-[14px] font-semibold text-fg mb-4">Identificação</h2>
@@ -174,6 +214,7 @@ export default async function PessoaPage({
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 
@@ -230,6 +271,35 @@ export default async function PessoaPage({
             <InfoRow label="Jornada" value={person.workShift} />
             <InfoRow label="Carga Horária Semanal" value={person.weeklyWorkHours?.toString()} />
             <InfoRow label="Carga Horária Mensal" value={person.monthlyWorkHours?.toString()} />
+          </div>
+        </div>
+      )}
+
+      {/* Dependentes */}
+      {person.type === "COLABORADOR" && dependentes.length > 0 && (
+        <div className="bg-surface border border-border rounded-lg p-5">
+          <h2 className="text-[14px] font-semibold text-fg mb-4">Dependentes</h2>
+          <div className="divide-y divide-border">
+            {dependentes.map((d) => (
+              <div key={d.id} className="flex items-center justify-between py-2.5">
+                <div>
+                  <p className="text-[13px] text-fg">{d.name}</p>
+                  <p className="text-[11px] text-fg-muted mt-0.5">
+                    {DEP_REL_LABEL[d.relationship] ?? d.relationship}
+                    {d.birthDate && ` · ${formatCalendarDate(d.birthDate)}`}
+                    {d.cpf && ` · CPF ${maskCpf(d.cpf)}`}
+                  </p>
+                </div>
+                <div className="flex gap-1.5 flex-shrink-0">
+                  {d.isIRDependent && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-brand/10 text-brand border border-brand/25">IR</span>
+                  )}
+                  {d.isSalarioFamilia && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-surface-2 text-fg-muted border border-border">Salário-família</span>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

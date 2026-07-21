@@ -15,6 +15,8 @@ const PROBATION_CHECKPOINTS = [40, 45, 85, 90] as const; // dias desde a admiss�
 const EXAM_WARNING_DAYS = 15;
 const HANDOFF_STALE_DAYS = 3;
 const DOCUMENT_WARNING_DAYS = 30;
+const ADMISSAO_PENDENTE_DAYS = 5; // link gerado, colaborador ainda não preencheu
+const ADMISSAO_CONFERENCIA_DAYS = 2; // colaborador preencheu, DP ainda não concluiu
 
 const VACATION_OPEN_STATUSES = ["PLANEJADA", "SOLICITADA", "EM_ANALISE", "APROVADA", "PROGRAMADA", "EM_GOZO"] as const;
 const EXAM_RESOLVED_STATUSES = ["ASO_APTO", "ASO_INAPTO", "ASO_APTO_COM_RESTRICAO"] as const;
@@ -207,6 +209,40 @@ async function checkDocumentosVencendo(tenantId: string, today: Date): Promise<n
   return sent;
 }
 
+// Admissão digital emperrada — dois estados acionáveis, ambos notificam quem
+// gerou o link (o responsável do DP), não o setor inteiro: (1) link PENDENTE há
+// dias sem o colaborador preencher; (2) já PREENCHIDO mas o DP não concluiu a
+// conferência. Nag diário (dedup) enquanto não resolver.
+async function checkAdmissoesParadas(tenantId: string, today: Date): Promise<number> {
+  const prisma = getPrisma();
+  const pendenteLimit = new Date(today.getTime() - ADMISSAO_PENDENTE_DAYS * DAY_MS);
+  const conferenciaLimit = new Date(today.getTime() - ADMISSAO_CONFERENCIA_DAYS * DAY_MS);
+
+  const links = await prisma.admissaoLink.findMany({
+    where: {
+      tenantId,
+      OR: [
+        { status: "PENDENTE", createdAt: { lte: pendenteLimit } },
+        { status: "PREENCHIDO", submittedAt: { lte: conferenciaLimit } },
+      ],
+    },
+    include: { person: { select: { id: true, name: true } } },
+  });
+
+  let sent = 0;
+  for (const link of links) {
+    const key = `ADMISSAO_STALE:${link.id}:${link.status}`;
+    if (!(await tryDispatch(tenantId, key, today))) continue;
+    const message =
+      link.status === "PENDENTE"
+        ? `${link.person.name} ainda não preencheu a admissão digital (link enviado há ${daysBetween(link.createdAt, today)} dia(s)).`
+        : `Admissão de ${link.person.name} aguardando conferência há ${daysBetween(link.submittedAt!, today)} dia(s).`;
+    await notifyUser(link.createdById, { tenantId, type: "ADMISSAO_STALE", message, entityType: "PERSON", entityId: link.personId });
+    sent++;
+  }
+  return sent;
+}
+
 type TenantResult = { tenantId: string; sent: number; errors: string[] };
 
 async function runForTenant(tenantId: string, today: Date): Promise<TenantResult> {
@@ -216,6 +252,7 @@ async function runForTenant(tenantId: string, today: Date): Promise<TenantResult
     ["exames", () => checkExamesVencendo(tenantId, today)],
     ["handoffs", () => checkHandoffsParados(tenantId, today)],
     ["documentos", () => checkDocumentosVencendo(tenantId, today)],
+    ["admissoes", () => checkAdmissoesParadas(tenantId, today)],
   ];
 
   let sent = 0;
