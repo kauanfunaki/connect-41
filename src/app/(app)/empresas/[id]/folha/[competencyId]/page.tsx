@@ -5,9 +5,10 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
-import { lancarEvento, atualizarStatusLancamento, excluirLancamento } from "./actions";
+import { lancarEvento, atualizarStatusLancamento, excluirLancamento, importarFolhaCsv } from "./actions";
 import { atualizarStatusCompetencia, excluirCompetencia } from "../actions";
 import { LancarEventoForm } from "@/components/folha/LancarEventoForm";
+import { ImportarFolhaCsvForm } from "@/components/folha/ImportarFolhaCsvForm";
 import { PayrollEntryRow } from "@/components/folha/PayrollEntryRow";
 import { CompetenciaStatusForm } from "@/components/folha/CompetenciaStatusForm";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -63,6 +64,7 @@ export default async function CompetenciaPage({
 
   const deleteAction = excluirCompetencia.bind(null, companyId, competencyId);
   const lancarEventoAction = lancarEvento.bind(null, companyId, competencyId);
+  const importarCsvAction = importarFolhaCsv.bind(null, companyId, competencyId);
   const atualizarStatusAction = atualizarStatusCompetencia.bind(null, companyId, competencyId);
 
   return (
@@ -139,6 +141,7 @@ export default async function CompetenciaPage({
         )}
 
         {canManage && <LancarEventoForm action={lancarEventoAction} colaboradores={colaboradores} />}
+        {canManage && <ImportarFolhaCsvForm action={importarCsvAction} />}
       </div>
     </PageContainer>
   );
