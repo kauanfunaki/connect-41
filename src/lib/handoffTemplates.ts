@@ -1,9 +1,17 @@
-// Modelos de texto para o campo "Descrição" da Transferência — mesmos padrões
-// usados no Acessórias, portados como referência de conteúdo (não são dados
-// de tenant, não têm tela de edição — lista fixa em código, como
-// TAX_REGIME_OPTIONS em EmpresaForm.tsx). [EMPRESA] e [CNPJ] são substituídos
-// automaticamente pela empresa/pessoa selecionada no formulário quando
-// possível; os demais placeholders ficam para o usuário preencher manualmente.
+// Modelos de texto para os campos "Informações gerais" e "Descrição" da
+// Transferência — mesmos padrões usados no Acessórias, portados como
+// referência de conteúdo (não são dados de tenant, não têm tela de edição —
+// lista fixa em código, como TAX_REGIME_OPTIONS em EmpresaForm.tsx).
+//
+// Cada modelo já vem separado em duas partes, espelhando os dois campos do
+// formulário: `message` = título + empresa/CNPJ + origem + breve resumo (a
+// parte que vale pra qualquer setor que receber a transferência);
+// `description` = o detalhamento operacional (orientações, demandas por
+// setor, responsáveis, documentos, observações).
+//
+// [EMPRESA] e [CNPJ] são substituídos automaticamente pela empresa/pessoa
+// selecionada no formulário quando possível; os demais placeholders ficam
+// para o usuário preencher manualmente.
 export type HandoffTemplateKey =
   | "BAIXA_CNPJ"
   | "REGULARIZACAO_BAIXA"
@@ -21,22 +29,30 @@ export type HandoffTemplateKey =
   | "REGULARIZACAO_MUNICIPAL_ESTADUAL"
   | "SOLICITACAO_MULTISSETORIAL";
 
-export type HandoffTemplate = { key: HandoffTemplateKey; label: string; body: string };
+export type HandoffTemplate = {
+  key: HandoffTemplateKey;
+  label: string;
+  message: string;
+  description: string;
+  // Palavras-chave (normalizadas, sem acento) usadas para casar automaticamente
+  // com os setores de destino do tenant — só preenchido nos modelos que têm
+  // blocos "Demanda X:"/"Instruções — X:" claramente separados por setor.
+  sectorHints?: string[];
+};
 
 export const HANDOFF_TEMPLATES: HandoffTemplate[] = [
   {
     key: "BAIXA_CNPJ",
     label: "Baixa de CNPJ",
-    body: `BAIXA DE CNPJ
+    message: `BAIXA DE CNPJ
 
 Empresa: [EMPRESA]
 CNPJ: [CNPJ]
 
 Origem da solicitação: [SOLICITANTE OU CANAL]
 
-O cliente confirmou que deseja prosseguir com a baixa do CNPJ.
-
-Orientações:
+O cliente confirmou que deseja prosseguir com a baixa do CNPJ.`,
+    description: `Orientações:
 
 - iniciar o processo de encerramento;
 - seguir as etapas aplicáveis ao processo de baixa;
@@ -58,7 +74,7 @@ Observações:
   {
     key: "REGULARIZACAO_BAIXA",
     label: "Regularização seguida de baixa de CNPJ",
-    body: `REGULARIZAÇÃO E BAIXA DE CNPJ
+    message: `REGULARIZAÇÃO E BAIXA DE CNPJ
 
 Empresa: [EMPRESA]
 CNPJ: [CNPJ]
@@ -67,9 +83,8 @@ Breve resumo:
 
 A empresa encontra-se [INAPTA, SUSPENSA, COM OMISSÃO DE DECLARAÇÕES OU OUTRA SITUAÇÃO].
 
-É necessário regularizar a situação cadastral e fiscal antes de realizar a baixa do CNPJ.
-
-Demanda fiscal:
+É necessário regularizar a situação cadastral e fiscal antes de realizar a baixa do CNPJ.`,
+    description: `Demanda fiscal:
 
 - identificar declarações e obrigações omitidas;
 - verificar os períodos pendentes;
@@ -109,18 +124,18 @@ Canal de atendimento: [CANAL]
 Observações:
 
 [DEPENDÊNCIAS, PRAZOS OU PARTICULARIDADES]`,
+    sectorHints: ["fiscal", "contabil", "societario"],
   },
   {
     key: "ALTERACAO_CONTRATUAL",
     label: "Alteração contratual",
-    body: `ALTERAÇÃO CONTRATUAL
+    message: `ALTERAÇÃO CONTRATUAL
 
 Empresa: [EMPRESA]
 CNPJ: [CNPJ]
 
-Solicitação recebida de: [SOLICITANTE]
-
-Alterações solicitadas:
+Solicitação recebida de: [SOLICITANTE]`,
+    description: `Alterações solicitadas:
 
 - entrada do sócio [NOME];
 - saída do sócio [NOME];
@@ -155,7 +170,7 @@ Observações:
   {
     key: "SETUP_MIGRACAO",
     label: "Setup de migração de cliente",
-    body: `SETUP DE MIGRAÇÃO
+    message: `SETUP DE MIGRAÇÃO
 
 Empresa: [EMPRESA]
 CNPJ: [CNPJ]
@@ -183,9 +198,8 @@ Breve resumo do cliente:
 - nível atual de organização documental;
 - situação perante o antigo contador;
 - particularidades da operação;
-- informações comerciais relevantes.
-
-Instruções — Contábil:
+- informações comerciais relevantes.`,
+    description: `Instruções — Contábil:
 
 - verificar com o antigo contador quais obrigações já foram executadas no exercício;
 - confirmar a existência de balanços e demonstrações contábeis anteriores;
@@ -248,11 +262,12 @@ Responsável por Customer Success: [RESPONSÁVEL]
 Observações gerais:
 
 [INFORMAÇÕES COMPLEMENTARES]`,
+    sectorHints: ["contabil", "fiscal", "societario", "pessoal", "dp", "onboarding", "customer success", "cs"],
   },
   {
     key: "ABERTURA_NOVA_EMPRESA",
     label: "Abertura de nova empresa",
-    body: `ABERTURA DE NOVA EMPRESA
+    message: `ABERTURA DE NOVA EMPRESA
 
 Solicitante: [SOLICITANTE]
 
@@ -263,9 +278,8 @@ Sócio ou sócios: [NOMES]
 Endereço pretendido: [ENDEREÇO]
 Nome empresarial pretendido: [NOME]
 Nome fantasia pretendido: [NOME]
-Empresa relacionada: [EMPRESA RELACIONADA]
-
-Informações já confirmadas:
+Empresa relacionada: [EMPRESA RELACIONADA]`,
+    description: `Informações já confirmadas:
 
 - [INFORMAÇÃO]
 - [INFORMAÇÃO]
@@ -288,14 +302,13 @@ Responsável: [RESPONSÁVEL]`,
   {
     key: "SETUP_ABERTURA",
     label: "Setup completo de abertura",
-    body: `SETUP DE ABERTURA
+    message: `SETUP DE ABERTURA
 
 Nome empresarial pretendido: [NOME]
 Nome fantasia: [NOME]
 Regime tributário pretendido: [REGIME]
-Capital social pretendido: [VALOR]
-
-Atividade principal:
+Capital social pretendido: [VALOR]`,
+    description: `Atividade principal:
 
 Código CNAE: [CÓDIGO]
 Descrição: [DESCRIÇÃO]
@@ -369,7 +382,7 @@ Observações:
   {
     key: "CONFIGURACAO_EMPRESA_NOVA",
     label: "Configuração e parametrização de empresa nova",
-    body: `CONFIGURAÇÃO E PARAMETRIZAÇÃO DE EMPRESA NOVA
+    message: `CONFIGURAÇÃO E PARAMETRIZAÇÃO DE EMPRESA NOVA
 
 Empresa: [EMPRESA]
 CNPJ: [CNPJ]
@@ -377,9 +390,8 @@ CNPJ: [CNPJ]
 Data de abertura: [DATA]
 Data de início da prestação dos serviços: [DATA]
 Regime tributário: [REGIME]
-Capital social: [VALOR]
-
-Procurações e acessos:
+Capital social: [VALOR]`,
+    description: `Procurações e acessos:
 
 - situação da procuração na Receita Federal: [SITUAÇÃO];
 - situação dos acessos municipais: [SITUAÇÃO];
@@ -406,7 +418,7 @@ Observações importantes:
   {
     key: "INCLUSAO_CNAE",
     label: "Inclusão de CNAE",
-    body: `INCLUSÃO DE CNAE
+    message: `INCLUSÃO DE CNAE
 
 Empresa: [EMPRESA]
 CNPJ: [CNPJ]
@@ -416,9 +428,8 @@ Solicitante: [SOLICITANTE]
 CNAE a incluir:
 
 Código: [CÓDIGO CNAE]
-Descrição: [DESCRIÇÃO DA ATIVIDADE]
-
-Orientações:
+Descrição: [DESCRIÇÃO DA ATIVIDADE]`,
+    description: `Orientações:
 
 - manter os CNAEs atuais, quando aplicável;
 - verificar se a atividade será principal ou secundária;
@@ -442,14 +453,13 @@ Observações:
   {
     key: "ALTERACAO_CNAES",
     label: "Alteração de CNAEs ou atividades",
-    body: `ALTERAÇÃO DE ATIVIDADES
+    message: `ALTERAÇÃO DE ATIVIDADES
 
 Empresa: [EMPRESA]
 CNPJ: [CNPJ]
 
-Origem da solicitação: [SOLICITANTE OU CANAL]
-
-Atividades a incluir:
+Origem da solicitação: [SOLICITANTE OU CANAL]`,
+    description: `Atividades a incluir:
 
 - [CÓDIGO CNAE] — [DESCRIÇÃO]
 - [CÓDIGO CNAE] — [DESCRIÇÃO]
@@ -486,14 +496,13 @@ Observações:
   {
     key: "ALTERACAO_ENDERECO_ATIVIDADES",
     label: "Alteração de endereço e atividades",
-    body: `ALTERAÇÃO DE ENDEREÇO E ATIVIDADES
+    message: `ALTERAÇÃO DE ENDEREÇO E ATIVIDADES
 
 Empresa: [EMPRESA]
 CNPJ: [CNPJ]
 
-Origem da solicitação: [SOLICITANTE OU SETUP]
-
-Novo endereço:
+Origem da solicitação: [SOLICITANTE OU SETUP]`,
+    description: `Novo endereço:
 
 Logradouro: [LOGRADOURO]
 Número: [NÚMERO]
@@ -537,16 +546,15 @@ Observações:
   {
     key: "NOVO_CLIENTE_CONSTITUIDO",
     label: "Novo cliente constituído pelo próprio escritório",
-    body: `NOVO CLIENTE CONSTITUÍDO PELO ESCRITÓRIO
+    message: `NOVO CLIENTE CONSTITUÍDO PELO ESCRITÓRIO
 
 Empresa: [EMPRESA]
 CNPJ: [CNPJ]
 
 O processo de abertura da empresa foi concluído.
 
-As informações necessárias para o início das atividades estão disponíveis no setup e nos documentos anexados.
-
-Informações adicionais:
+As informações necessárias para o início das atividades estão disponíveis no setup e nos documentos anexados.`,
+    description: `Informações adicionais:
 
 - empresa relacionada: [EMPRESA];
 - vínculo com outros clientes: [DESCRIÇÃO];
@@ -578,7 +586,7 @@ Observações:
   {
     key: "ENCERRAMENTO_EMPRESA",
     label: "Encerramento de empresa",
-    body: `ENCERRAMENTO DE EMPRESA
+    message: `ENCERRAMENTO DE EMPRESA
 
 Empresa: [EMPRESA]
 CNPJ: [CNPJ]
@@ -587,9 +595,8 @@ Solicitante: [SOLICITANTE]
 
 Solicitação:
 
-Realizar a baixa e o encerramento formal da empresa.
-
-Orientações:
+Realizar a baixa e o encerramento formal da empresa.`,
+    description: `Orientações:
 
 - iniciar o processo de encerramento;
 - verificar pendências fiscais;
@@ -611,7 +618,7 @@ Observações:
   {
     key: "DISTRATO_VARIAS_EMPRESAS",
     label: "Distrato de várias empresas",
-    body: `DISTRATO DE EMPRESAS
+    message: `DISTRATO DE EMPRESAS
 
 Data da solicitação: [DATA]
 Último dia da prestação dos serviços: [DATA]
@@ -629,9 +636,8 @@ Empresas pendentes de confirmação:
 
 Observação importante:
 
-Confirmar com o cliente se as empresas pendentes também deverão ser encerradas ou se ficaram de fora da solicitação por engano.
-
-Orientações:
+Confirmar com o cliente se as empresas pendentes também deverão ser encerradas ou se ficaram de fora da solicitação por engano.`,
+    description: `Orientações:
 
 - realizar o processo individual de encerramento de cada empresa;
 - acompanhar as obrigações e pendências separadamente;
@@ -651,16 +657,15 @@ Observações:
   {
     key: "REGULARIZACAO_MUNICIPAL_ESTADUAL",
     label: "Regularização municipal e estadual",
-    body: `REGULARIZAÇÃO MUNICIPAL E ESTADUAL
+    message: `REGULARIZAÇÃO MUNICIPAL E ESTADUAL
 
 Empresa: [EMPRESA]
 CNPJ: [CNPJ]
 
 Breve resumo:
 
-A empresa encontra-se impedida de [DESCREVER A OPERAÇÃO BLOQUEADA] devido a pendências municipais ou estaduais.
-
-Situação identificada:
+A empresa encontra-se impedida de [DESCREVER A OPERAÇÃO BLOQUEADA] devido a pendências municipais ou estaduais.`,
+    description: `Situação identificada:
 
 - ausência ou pendência de alvará;
 - solicitação anterior ainda não concluída;
@@ -708,11 +713,12 @@ Prazo para atualização: [DATA]
 Observações:
 
 [INFORMAÇÕES COMPLEMENTARES]`,
+    sectorHints: ["fiscal"],
   },
   {
     key: "SOLICITACAO_MULTISSETORIAL",
     label: "Solicitação multissetorial (genérico)",
-    body: `[TÍTULO DA SOLICITAÇÃO]
+    message: `[TÍTULO DA SOLICITAÇÃO]
 
 Empresa: [EMPRESA]
 CNPJ: [CNPJ]
@@ -721,9 +727,8 @@ Origem da solicitação: [ORIGEM]
 
 Breve resumo:
 
-[CONTEXTO DO PEDIDO]
-
-Demanda — Fiscal:
+[CONTEXTO DO PEDIDO]`,
+    description: `Demanda — Fiscal:
 
 - [AÇÃO]
 - [AÇÃO]
@@ -784,6 +789,7 @@ Documentos ou anexos:
 Observações:
 
 [INFORMAÇÕES COMPLEMENTARES]`,
+    sectorHints: ["fiscal", "contabil", "societario", "pessoal", "dp", "onboarding", "customer success", "cs"],
   },
 ];
 
@@ -794,12 +800,51 @@ export function getHandoffTemplate(key: string): HandoffTemplate | undefined {
 // Substitui só [EMPRESA]/[CNPJ] pelo que já está selecionado no formulário —
 // os demais placeholders (responsável, prazo, valor...) não são deriváveis de
 // nenhum campo existente e ficam para preenchimento manual, por design.
-export function renderHandoffTemplate(key: string, entity: { name?: string; cnpj?: string | null }): string {
+export function renderHandoffTemplate(
+  key: string,
+  entity: { name?: string; cnpj?: string | null }
+): { message: string; description: string } {
   const template = getHandoffTemplate(key);
-  if (!template) return "";
+  if (!template) return { message: "", description: "" };
 
-  let body = template.body;
-  if (entity.name) body = body.replaceAll("[EMPRESA]", entity.name);
-  if (entity.cnpj) body = body.replaceAll("[CNPJ]", entity.cnpj);
-  return body;
+  function substitute(text: string): string {
+    let result = text;
+    if (entity.name) result = result.replaceAll("[EMPRESA]", entity.name);
+    if (entity.cnpj) result = result.replaceAll("[CNPJ]", entity.cnpj);
+    return result;
+  }
+
+  return { message: substitute(template.message), description: substitute(template.description) };
+}
+
+function normalize(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+}
+
+// Casa os hints de setor do modelo contra os setores REAIS do tenant (código
+// e rótulo são livres por tenant, não um enum fixo) — compara os dois lados
+// normalizados (sem acento/maiúscula) e aceita substring nos dois sentidos,
+// pra "DP" bater com "Departamento Pessoal" e vice-versa.
+export function matchSectorsForTemplate(
+  key: string,
+  sectorOptions: { value: string; label: string }[]
+): string[] {
+  const template = getHandoffTemplate(key);
+  if (!template?.sectorHints || template.sectorHints.length === 0) return [];
+
+  const matched: string[] = [];
+  for (const option of sectorOptions) {
+    const code = normalize(option.value);
+    const label = normalize(option.label);
+    const isMatch = template.sectorHints.some((hint) => {
+      const h = normalize(hint);
+      return code.includes(h) || h.includes(code) || label.includes(h) || h.includes(label);
+    });
+    if (isMatch) matched.push(option.value);
+  }
+  return matched;
 }

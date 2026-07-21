@@ -33,6 +33,16 @@ export default async function NovoHandoffPage({
 
   const prisma = getPrisma();
 
+  // Lista de usuários pra autocomplete de "@menção" na Descrição — qualquer
+  // usuário ativo do tenant pode ser referenciado, não só quem já atua no
+  // setor de origem/destino (a pessoa pode ser de outro setor e ainda assim
+  // precisar ser avisada).
+  const mentionUsers = await prisma.user.findMany({
+    where: { tenantId: ctx.tenantId, active: true },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
+
   // Modo 1: entidade pré-selecionada (veio do botão "Solicitar Handoff" na ficha)
   if (entityId) {
     const entityType = entityTypeRaw === "PERSON" ? "PERSON" : "COMPANY";
@@ -55,6 +65,7 @@ export default async function NovoHandoffPage({
           toSectorOptions={allSectorOptions}
           cancelHref={backHref}
           fixedEntity={{ entityType: entityType as EntityType, entityId: entity.id, entityName: entity.name, entityCnpj }}
+          mentionUsers={mentionUsers}
         />
       </FormShell>
     );
@@ -83,6 +94,7 @@ export default async function NovoHandoffPage({
         cancelHref="/transferencias"
         companies={companies}
         people={people}
+        mentionUsers={mentionUsers}
       />
     </FormShell>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { HandoffState } from "@/app/(app)/transferencias/actions";
 import type { EntityType } from "@/generated/prisma/enums";
@@ -9,8 +9,9 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { HANDOFF_PRIORITY_OPTIONS } from "@/lib/handoffs";
-import { HANDOFF_TEMPLATES, renderHandoffTemplate } from "@/lib/handoffTemplates";
+import { HANDOFF_TEMPLATES, renderHandoffTemplate, matchSectorsForTemplate } from "@/lib/handoffTemplates";
 import { formatCnpj } from "@/lib/format";
+import { MentionTextarea, type MentionUser } from "@/components/transferencias/MentionTextarea";
 
 type EntityOption = { id: string; name: string; cnpj?: string | null };
 
@@ -24,6 +25,7 @@ type Props = {
   fixedEntity?: FixedEntity;
   companies?: EntityOption[];
   people?: EntityOption[];
+  mentionUsers?: MentionUser[];
 };
 
 // Uma transferência, N setores de destino: informações gerais valem pra todos
@@ -37,6 +39,7 @@ export function HandoffForm({
   fixedEntity,
   companies = [],
   people = [],
+  mentionUsers = [],
 }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const [entityType, setEntityType] = useState<EntityType>(fixedEntity?.entityType ?? "COMPANY");
@@ -44,7 +47,9 @@ export function HandoffForm({
   const [fromSector, setFromSector] = useState("");
   const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
   const [templateKey, setTemplateKey] = useState("");
-  const formRef = useRef<HTMLFormElement>(null);
+  const [messageValue, setMessageValue] = useState("");
+  const [descriptionValue, setDescriptionValue] = useState("");
+  const [instructions, setInstructions] = useState<Record<string, string>>({});
   const entityOptions = entityType === "COMPANY" ? companies : people;
 
   function toggleSector(code: string, checked: boolean) {
@@ -62,14 +67,23 @@ export function HandoffForm({
   }
 
   function applyTemplate(key: string) {
+    if (key && (messageValue.trim() || descriptionValue.trim())) {
+      if (!window.confirm("Já existe texto em Informações gerais ou Descrição. Substituir pelo modelo selecionado?")) {
+        return;
+      }
+    }
     setTemplateKey(key);
     if (!key) return;
-    const textarea = formRef.current?.elements.namedItem("description") as HTMLTextAreaElement | null;
-    if (!textarea) return;
-    if (textarea.value.trim().length > 0 && !window.confirm("Já existe texto em Descrição. Substituir pelo modelo selecionado?")) {
-      return;
-    }
-    textarea.value = renderHandoffTemplate(key, currentEntity());
+
+    const rendered = renderHandoffTemplate(key, currentEntity());
+    setMessageValue(rendered.message);
+    setDescriptionValue(rendered.description);
+
+    // Auto-seleciona os setores de destino que o modelo referencia
+    // explicitamente (ex: "Demanda — Fiscal:") — o usuário ainda pode marcar
+    // ou desmarcar manualmente depois, isso só poupa o passo repetitivo.
+    const matchedSectors = matchSectorsForTemplate(key, toSectorOptions);
+    if (matchedSectors.length > 0) setSelectedSectors(matchedSectors);
   }
 
   // Se a empresa for trocada depois de um modelo já aplicado, reaplica com a
@@ -77,21 +91,21 @@ export function HandoffForm({
   function handleEntityChange(id: string) {
     setEntityId(id);
     if (!templateKey) return;
-    const textarea = formRef.current?.elements.namedItem("description") as HTMLTextAreaElement | null;
-    if (!textarea) return;
     const found = entityOptions.find((e) => e.id === id);
-    textarea.value = renderHandoffTemplate(templateKey, { name: found?.name, cnpj: found?.cnpj ? formatCnpj(found.cnpj) : null });
+    const rendered = renderHandoffTemplate(templateKey, { name: found?.name, cnpj: found?.cnpj ? formatCnpj(found.cnpj) : null });
+    setMessageValue(rendered.message);
+    setDescriptionValue(rendered.description);
   }
 
   const destinationOptions = toSectorOptions.filter((s) => s.value !== fromSector);
   const selectedInOrder = toSectorOptions.filter((s) => selectedSectors.includes(s.value) && s.value !== fromSector);
 
   return (
-    <form ref={formRef} action={formAction} className="space-y-6">
+    <form action={formAction} className="space-y-6">
       <CampoForm
         label="Modelo de solicitação"
         htmlFor="handoffTemplate"
-        helper="Preenche o campo Descrição com o padrão de texto — os placeholders entre colchetes ficam para você completar."
+        helper="Preenche Informações gerais e Descrição com o padrão de texto (e os setores de destino, quando o modelo já indica quais) — os placeholders entre colchetes ficam para você completar."
       >
         <Select id="handoffTemplate" value={templateKey} onChange={(e) => applyTemplate(e.target.value)}>
           <option value="">Nenhum (escrever manualmente)</option>
@@ -183,7 +197,7 @@ export function HandoffForm({
         label="Setores de destino"
         htmlFor="toSectors"
         required
-        helper="Selecione todos os setores envolvidos — cada um recebe a própria instrução abaixo."
+        helper="Preenchido automaticamente quando o modelo escolhido já indica os setores — ajuste manualmente se precisar."
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 border border-border rounded-[10px] px-3.5 py-3">
           {destinationOptions.map((s) => (
@@ -211,17 +225,26 @@ export function HandoffForm({
         <Textarea
           id="message"
           name="message"
-          rows={2}
+          rows={3}
           placeholder="Resumo curto para quem vai receber a transferência…"
+          value={messageValue}
+          onChange={(e) => setMessageValue(e.target.value)}
         />
       </CampoForm>
 
-      <CampoForm label="Descrição" htmlFor="description">
-        <Textarea
+      <CampoForm
+        label="Descrição"
+        htmlFor="description"
+        helper='Digite "@" para referenciar um colaborador — ele recebe uma notificação quando a transferência for criada.'
+      >
+        <MentionTextarea
           id="description"
           name="description"
-          rows={4}
+          rows={16}
           placeholder="Detalhe o que motivou esta transferência, contexto adicional, pendências etc…"
+          value={descriptionValue}
+          onChange={setDescriptionValue}
+          users={mentionUsers}
         />
       </CampoForm>
 
@@ -234,6 +257,8 @@ export function HandoffForm({
                 id={`instruction_${s.value}`}
                 name={`instruction_${s.value}`}
                 rows={3}
+                value={instructions[s.value] ?? ""}
+                onChange={(e) => setInstructions((prev) => ({ ...prev, [s.value]: e.target.value }))}
                 placeholder={`O que o setor ${s.label} precisa fazer nesta transferência…`}
               />
             </CampoForm>

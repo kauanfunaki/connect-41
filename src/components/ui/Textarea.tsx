@@ -1,12 +1,20 @@
 "use client";
 
+import { forwardRef } from "react";
+
 type Props = React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
   error?: boolean;
 };
 
-export function Textarea({ error = false, className = "", disabled, readOnly, ...rest }: Props) {
+// forwardRef: MentionTextarea (transferencias) precisa do DOM node pra ler
+// selectionStart/posicionar o cursor ao inserir uma menção.
+export const Textarea = forwardRef<HTMLTextAreaElement, Props>(function Textarea(
+  { error = false, className = "", disabled, readOnly, ...rest },
+  ref
+) {
   return (
     <textarea
+      ref={ref}
       disabled={disabled}
       readOnly={readOnly}
       className={`w-full min-h-[76px] px-3 py-2.5 rounded-[10px] border bg-input-bg text-[length:var(--fs-input)] text-fg placeholder:text-fg-muted outline-none transition-colors resize-none ${
@@ -17,4 +25,4 @@ export function Textarea({ error = false, className = "", disabled, readOnly, ..
       {...rest}
     />
   );
-}
+});

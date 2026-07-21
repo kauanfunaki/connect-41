@@ -8,6 +8,7 @@ import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
 import { notifySector, notifyUser } from "@/lib/notifications";
+import { findMentionedUserIds } from "@/lib/handoffMentions";
 import { logAudit } from "@/lib/audit";
 
 export type HandoffState = { error: string } | null;
@@ -107,6 +108,25 @@ export async function criarHandoff(
         entityId,
       })
     )
+  );
+
+  // "@Nome Completo" em Informações gerais/Descrição/instruções por setor
+  // vira uma notificação de verdade pra pessoa referenciada — não é só texto
+  // solto (ver src/lib/handoffMentions.ts e MentionTextarea).
+  const instructionTexts = toSectors.map((sectorCode) => form.get(`instruction_${sectorCode}`) as string | null);
+  const mentionedUserIds = await findMentionedUserIds(ctx.tenantId, [message, description, ...instructionTexts]);
+  await Promise.all(
+    mentionedUserIds
+      .filter((userId) => userId !== ctx.userId)
+      .map((userId) =>
+        notifyUser(userId, {
+          tenantId: ctx.tenantId,
+          type: "HANDOFF_MENTION",
+          message: `Você foi mencionado em uma transferência para "${entity.name}"`,
+          entityType,
+          entityId,
+        })
+      )
   );
 
   revalidatePath("/transferencias");
