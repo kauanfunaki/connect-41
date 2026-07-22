@@ -7,8 +7,26 @@ import { PipelineEntityType, ActivityType } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
 import { scopedPipelineWhere } from "@/lib/auth/scope";
 import { boardPath } from "@/lib/kanbanPaths";
+import { findMentionedUserIds } from "@/lib/handoffMentions";
+import { notifyUser } from "@/lib/notifications";
 
 export type PipelineState = { error: string } | null;
+
+// Destinatários "de interesse" de um item — responsáveis + participantes
+// (watchers). Usado pra notificar quem acompanha a tarefa quando entra um
+// comentário novo, sem incluir o próprio autor da ação.
+async function interestedUserIds(pipelineItemId: string, excludeUserId: string): Promise<string[]> {
+  const prisma = getPrisma();
+  const [assignees, watchers] = await Promise.all([
+    prisma.pipelineItemAssignee.findMany({ where: { pipelineItemId }, select: { userId: true } }),
+    prisma.pipelineItemWatcher.findMany({ where: { pipelineItemId }, select: { userId: true } }),
+  ]);
+  const ids = new Set<string>();
+  for (const a of assignees) ids.add(a.userId);
+  for (const w of watchers) ids.add(w.userId);
+  ids.delete(excludeUserId);
+  return [...ids];
+}
 
 export async function criarPipeline(
   _prev: PipelineState,
@@ -190,12 +208,30 @@ export async function adicionarNota(
   const content = (form.get("content") as string)?.trim();
   if (!content) return { error: "Escreva uma nota" };
 
+  // parentActivityId opcional — presente quando a nota é resposta a outra.
+  const parentActivityId = (form.get("parentActivityId") as string)?.trim() || null;
+
   const prisma = getPrisma();
 
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
   if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) {
     return { error: "Sem permissão para registrar atividade neste setor." };
   }
+
+  // Resposta só é válida se apontar pra um comentário (NOTE) do mesmo item.
+  let validParentId: string | null = null;
+  if (parentActivityId) {
+    const parent = await prisma.activity.findFirst({
+      where: { id: parentActivityId, pipelineItemId: itemId, tenantId, type: ActivityType.NOTE },
+      select: { id: true },
+    });
+    validParentId = parent?.id ?? null;
+  }
+
+  const item = await prisma.pipelineItem.findFirst({
+    where: { id: itemId, tenantId },
+    select: { entityType: true, entityId: true, title: true },
+  });
 
   try {
     await prisma.activity.create({
@@ -205,6 +241,7 @@ export async function adicionarNota(
         userId,
         type: ActivityType.NOTE,
         content,
+        parentActivityId: validParentId,
       },
     });
   } catch (err) {
@@ -212,8 +249,114 @@ export async function adicionarNota(
     return { error: "Erro ao adicionar nota." };
   }
 
+  // Notificações: mencionados (@Nome) + interessados (responsáveis/participantes),
+  // sem duplicar e sem notificar o próprio autor. Menção é o sinal mais forte,
+  // então tem prioridade quando o usuário é mencionado E interessado.
+  if (item) {
+    const notifyEntity = { entityType: item.entityType, entityId: item.entityId };
+    const taskLabel = item.title ?? "tarefa";
+    const mentioned = await findMentionedUserIds(tenantId, [content]);
+    const mentionedSet = new Set(mentioned);
+    mentionedSet.delete(userId);
+
+    for (const uid of mentionedSet) {
+      await notifyUser(uid, {
+        tenantId, type: "MENTION", message: `Você foi mencionado em um comentário (${taskLabel}).`, ...notifyEntity,
+      });
+    }
+
+    const interested = await interestedUserIds(itemId, userId);
+    for (const uid of interested) {
+      if (mentionedSet.has(uid)) continue; // já notificado pela menção
+      await notifyUser(uid, {
+        tenantId, type: "COMMENT", message: `Novo comentário em ${taskLabel}.`, ...notifyEntity,
+      });
+    }
+  }
+
   revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
   return null;
+}
+
+export async function editarNota(pipelineId: string, itemId: string, activityId: string, content: string): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId, userId } = ctx;
+  if (!tenantId || !userId || !content.trim()) return;
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline) return;
+
+  // Só o próprio autor edita a própria nota (independe de canManage).
+  const note = await prisma.activity.findFirst({
+    where: { id: activityId, pipelineItemId: itemId, tenantId, type: ActivityType.NOTE },
+    select: { userId: true },
+  });
+  if (!note || note.userId !== userId) return;
+
+  try {
+    await prisma.activity.update({ where: { id: activityId }, data: { content: content.trim(), editedAt: new Date() } });
+  } catch (err) {
+    console.error("[editarNota]", err);
+    return;
+  }
+
+  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
+}
+
+export async function excluirNota(pipelineId: string, itemId: string, activityId: string): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId, userId } = ctx;
+  if (!tenantId || !userId) return;
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline) return;
+
+  const note = await prisma.activity.findFirst({
+    where: { id: activityId, pipelineItemId: itemId, tenantId, type: ActivityType.NOTE },
+    select: { userId: true },
+  });
+  // Autor apaga a própria nota; coordenador (canManage) apaga qualquer nota.
+  if (!note || (note.userId !== userId && !canManageSector(ctx, pipeline.sectorCode))) return;
+
+  try {
+    await prisma.activity.delete({ where: { id: activityId } });
+  } catch (err) {
+    console.error("[excluirNota]", err);
+    return;
+  }
+
+  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
+}
+
+export async function alternarObservadorItem(pipelineId: string, itemId: string, userId: string, marcado: boolean): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  if (!tenantId) return;
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+
+  try {
+    if (marcado) {
+      await prisma.pipelineItemWatcher.upsert({
+        where: { pipelineItemId_userId: { pipelineItemId: itemId, userId } },
+        create: { pipelineItemId: itemId, userId },
+        update: {},
+      });
+    } else {
+      await prisma.pipelineItemWatcher.delete({
+        where: { pipelineItemId_userId: { pipelineItemId: itemId, userId } },
+      });
+    }
+  } catch (err) {
+    console.error("[alternarObservadorItem]", err);
+    return;
+  }
+
+  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
 }
 
 const PRIORITY_LABEL: Record<number, string> = { 0: "Normal", 1: "Alta", 2: "Urgente" };

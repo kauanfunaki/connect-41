@@ -12,11 +12,14 @@ import { ChecklistSection } from "@/components/kanban/ChecklistSection";
 import {
   moverItem,
   adicionarNota,
+  editarNota,
+  excluirNota,
   excluirItem,
   atualizarPrazoPrioridade,
   atualizarDescricao,
   alternarTagItem,
   alternarResponsavelItem,
+  alternarObservadorItem,
   criarSubtarefa,
   excluirSubtarefa,
   criarChecklistItem,
@@ -76,6 +79,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
       include: {
         tags: { select: { tagId: true } },
         assignees: { select: { userId: true } },
+        watchers: { select: { userId: true } },
       },
     }),
   ]);
@@ -94,7 +98,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
     prisma.activity.findMany({
       where: { pipelineItemId: itemId, tenantId },
       orderBy: { createdAt: "desc" },
-      include: { user: { select: { name: true } } },
+      include: { user: { select: { id: true, name: true } } },
     }),
     prisma.tag.findMany({
       where: { tenantId, sectorCode: pipeline.sectorCode },
@@ -113,7 +117,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
     listDocuments(tenantId, "PIPELINE_ITEM", itemId),
   ]);
 
-  const [parentItem, subtasks, checklistItems] = await Promise.all([
+  const [parentItem, subtasks, checklistItems, mentionUsers] = await Promise.all([
     item.parentItemId
       ? prisma.pipelineItem.findFirst({ where: { id: item.parentItemId, tenantId }, select: { id: true, title: true, entityId: true, entityType: true } })
       : Promise.resolve(null),
@@ -125,6 +129,9 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
           include: { stage: { select: { name: true, isTerminal: true } } },
         }),
     prisma.checklistItem.findMany({ where: { pipelineItemId: itemId, tenantId }, orderBy: { order: "asc" } }),
+    // @menção em comentário pode citar qualquer usuário do tenant (não só do
+    // setor) — mesma regra do autocomplete de Transferências.
+    prisma.user.findMany({ where: { tenantId, active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
 
   let parentEntityName: string | null = null;
@@ -138,10 +145,13 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
 
   const deleteAction = excluirItem.bind(null, id, itemId);
   const addNoteAction = adicionarNota.bind(null, id, itemId);
+  const editNoteAction = editarNota.bind(null, id, itemId);
+  const deleteNoteAction = excluirNota.bind(null, id, itemId);
   const prazoAction = atualizarPrazoPrioridade.bind(null, id, itemId);
   const descricaoAction = atualizarDescricao.bind(null, id, itemId);
   const tagToggleAction = alternarTagItem.bind(null, id, itemId);
   const assigneeToggleAction = alternarResponsavelItem.bind(null, id, itemId);
+  const watcherToggleAction = alternarObservadorItem.bind(null, id, itemId);
   const scheduleMeetingAction = agendarReuniao.bind(null, id, itemId);
   const deleteMeetingAction = excluirReuniao.bind(null, id);
   const hasGoogle = oauthAccounts.some((a) => a.provider === "GOOGLE");
@@ -156,15 +166,46 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
   const deleteChecklistAction = excluirChecklistItem.bind(null, itemId);
   const reorderChecklistAction = reordenarChecklistItem.bind(null, itemId);
 
-  const feedItems: FeedItem[] = activities.map((a) => ({
-    id: a.id,
-    type: a.type,
-    label: ACTIVITY_LABEL[a.type] ?? a.type,
-    createdAtLabel: formatInstantDateTime(a.createdAt),
-    userName: a.user.name,
-    content: a.content,
-    importante: IMPORTANT_ACTIVITY_TYPES.has(a.type),
-  }));
+  // Monta o feed: comentários (NOTE) de topo + eventos, com respostas
+  // aninhadas sob cada comentário. canModify = autor da nota ou coordenador.
+  function canModifyNote(noteUserId: string): boolean {
+    return noteUserId === ctx.userId || canDelete;
+  }
+  const repliesByParent = new Map<string, typeof activities>();
+  for (const a of activities) {
+    if (a.parentActivityId) {
+      const list = repliesByParent.get(a.parentActivityId) ?? [];
+      list.push(a);
+      repliesByParent.set(a.parentActivityId, list);
+    }
+  }
+  const feedItems: FeedItem[] = activities
+    .filter((a) => !a.parentActivityId)
+    .map((a) => ({
+      id: a.id,
+      type: a.type,
+      label: ACTIVITY_LABEL[a.type] ?? a.type,
+      createdAtLabel: formatInstantDateTime(a.createdAt),
+      userId: a.user.id,
+      userName: a.user.name,
+      content: a.content,
+      importante: IMPORTANT_ACTIVITY_TYPES.has(a.type),
+      isComment: a.type === "NOTE",
+      edited: a.editedAt != null,
+      canModify: a.type === "NOTE" && canModifyNote(a.user.id),
+      replies: (repliesByParent.get(a.id) ?? [])
+        .slice()
+        .sort((x, y) => x.createdAt.getTime() - y.createdAt.getTime())
+        .map((r) => ({
+          id: r.id,
+          userId: r.user.id,
+          userName: r.user.name,
+          createdAtLabel: formatInstantDateTime(r.createdAt),
+          content: r.content,
+          edited: r.editedAt != null,
+          canModify: canModifyNote(r.user.id),
+        })),
+    }));
 
   return (
     <div>
@@ -235,6 +276,8 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
         allUsers={sectorUsers}
         selectedUserIds={item.assignees.map((a) => a.userId)}
         assigneeToggleAction={assigneeToggleAction}
+        selectedWatcherIds={item.watchers.map((w) => w.userId)}
+        watcherToggleAction={watcherToggleAction}
         deleteAction={deleteAction}
       />
 
@@ -285,7 +328,14 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
             }))}
           />
         </div>
-        <ActivityFeed items={feedItems} canAct={canAct} addNoteAction={addNoteAction} />
+        <ActivityFeed
+          items={feedItems}
+          canAct={canAct}
+          mentionUsers={mentionUsers}
+          addNoteAction={addNoteAction}
+          editAction={editNoteAction}
+          deleteAction={deleteNoteAction}
+        />
       </div>
 
       <MeetingsSection

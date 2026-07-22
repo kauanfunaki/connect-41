@@ -36,6 +36,9 @@ type Props = {
   selectedUserIds: string[];
   assigneeToggleAction: (userId: string, marcado: boolean) => Promise<void>;
 
+  selectedWatcherIds: string[];
+  watcherToggleAction: (userId: string, marcado: boolean) => Promise<void>;
+
   deleteAction: () => Promise<void>;
 };
 
@@ -262,6 +265,27 @@ function AssigneesPopover({
   );
 }
 
+function WatchersPopover({
+  allUsers,
+  selectedWatcherIds,
+  watcherToggleAction,
+}: Pick<Props, "allUsers" | "selectedWatcherIds" | "watcherToggleAction">) {
+  const selectedCount = allUsers.filter((u) => selectedWatcherIds.includes(u.id)).length;
+
+  return (
+    <Dropdown
+      width={260}
+      trigger={({ open, toggle }) => (
+        <TriggerButton open={open} onClick={toggle}>
+          Participantes{selectedCount > 0 ? ` · ${selectedCount}` : ""}
+        </TriggerButton>
+      )}
+    >
+      <AssigneeToggleList allUsers={allUsers} selectedIds={selectedWatcherIds} toggleAction={watcherToggleAction} />
+    </Dropdown>
+  );
+}
+
 function MoreMenu({ entityName, deleteAction }: Pick<Props, "entityName" | "deleteAction">) {
   async function handleDelete() {
     if (!confirm(`Remover "${entityName}" deste kanban? Esta ação não pode ser desfeita.`)) return;
@@ -304,12 +328,15 @@ export function CardActionBar({
   allUsers,
   selectedUserIds,
   assigneeToggleAction,
+  selectedWatcherIds,
+  watcherToggleAction,
   deleteAction,
 }: Props) {
   if (!canAct) {
     const stageName = stages.find((s) => s.id === currentStageId)?.name ?? "—";
     const selectedTags = allTags.filter((t) => selectedTagIds.includes(t.id));
     const selectedUsers = allUsers.filter((u) => selectedUserIds.includes(u.id));
+    const selectedWatchers = allUsers.filter((u) => selectedWatcherIds.includes(u.id));
 
     return (
       <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -336,6 +363,11 @@ export function CardActionBar({
             {selectedUsers.map((u) => u.name).join(", ")}
           </span>
         )}
+        {selectedWatchers.length > 0 && (
+          <span className="inline-flex items-center h-9 px-3 rounded-lg border border-border bg-surface-hover text-[12px] font-medium text-fg-muted">
+            👁 {selectedWatchers.map((u) => u.name).join(", ")}
+          </span>
+        )}
       </div>
     );
   }
@@ -347,6 +379,7 @@ export function CardActionBar({
       <PriorityPopover dueDate={dueDate} priority={priority} prazoAction={prazoAction} />
       <TagsPopover allTags={allTags} selectedTagIds={selectedTagIds} tagToggleAction={tagToggleAction} />
       <AssigneesPopover allUsers={allUsers} selectedUserIds={selectedUserIds} assigneeToggleAction={assigneeToggleAction} />
+      <WatchersPopover allUsers={allUsers} selectedWatcherIds={selectedWatcherIds} watcherToggleAction={watcherToggleAction} />
       {canDelete && (
         <div className="ml-auto">
           <MoreMenu entityName={entityName} deleteAction={deleteAction} />
