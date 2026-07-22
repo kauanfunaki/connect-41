@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import { getPrisma } from "@/lib/prisma";
 import { decryptSecret } from "@/lib/crypto";
+import { formatInstantDateTime } from "@/lib/format";
 
 export type SmtpTestConfig = {
   host: string;
@@ -206,6 +207,62 @@ export async function sendAdmissaoEmail(input: SendAdmissaoEmailInput): Promise<
     return { ok: true };
   } catch (err) {
     console.error("[sendAdmissaoEmail]", err);
+    return { ok: false, error: "Falha ao enviar e-mail. Verifique a configuração de SMTP." };
+  }
+}
+
+export type SendInterviewInviteEmailInput = {
+  tenantId: string;
+  to: string;
+  candidateName: string;
+  vagaTitle: string;
+  companyName: string | null;
+  startAt: Date;
+  meetingUrl: string;
+};
+
+// Convite de entrevista — enviado ao candidato quando o recrutador agenda uma
+// reunião pra ele no funil de recrutamento. Best-effort (SMTP por tenant pode
+// não estar configurado): o agendamento em si nunca falha por causa deste e-mail.
+export async function sendInterviewInviteEmail(input: SendInterviewInviteEmailInput): Promise<SmtpResult> {
+  const transport = await getTenantTransport(input.tenantId);
+  if (!transport) {
+    return { ok: false, error: "Nenhuma configuração de SMTP cadastrada para este workspace." };
+  }
+  const { transporter, config } = transport;
+
+  const empresa = input.companyName ? ` na <strong>${escapeHtml(input.companyName)}</strong>` : "";
+  const dataHora = formatInstantDateTime(input.startAt, { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
+  const html = `
+    <div style="font-family: Arial, Helvetica, sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+      <p style="font-size: 14px; line-height: 1.5;">Olá, ${escapeHtml(input.candidateName)}!</p>
+      <p style="font-size: 14px; line-height: 1.5;">
+        Sua entrevista para a vaga <strong>${escapeHtml(input.vagaTitle)}</strong>${empresa} foi agendada:
+      </p>
+      <p style="font-size: 15px; font-weight: 600; margin: 16px 0;">${dataHora}</p>
+      <p style="margin: 24px 0;">
+        <a href="${input.meetingUrl}" style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500;">
+          Entrar na reunião
+        </a>
+      </p>
+      <p style="font-size: 12px; color: #888; margin-top: 32px;">
+        Se o botão acima não funcionar, copie e cole este link no navegador:<br />
+        <span style="word-break: break-all;">${input.meetingUrl}</span>
+      </p>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: `"${config.fromName}" <${config.fromEmail}>`,
+      to: input.to,
+      subject: `Entrevista agendada — ${input.vagaTitle}`,
+      html,
+    });
+    return { ok: true };
+  } catch (err) {
+    console.error("[sendInterviewInviteEmail]", err);
     return { ok: false, error: "Falha ao enviar e-mail. Verifique a configuração de SMTP." };
   }
 }
