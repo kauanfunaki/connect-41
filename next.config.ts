@@ -39,7 +39,21 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: __dirname,
   turbopack: { root: __dirname },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // Sem isto, qualquer cache intermediário (CDN/proxy na frente do domínio,
+      // fora do controle deste app) pode servir HTML de um deploy anterior —
+      // e como a referência de Server Action embutida no HTML é específica de
+      // cada build, isso causa "Failed to find Server Action" (404 na Server
+      // Action) mesmo depois de hard refresh no navegador, porque o HTML nunca
+      // chega a ser revalidado na origem. Exclui os assets estáticos do Next
+      // (hash no nome do arquivo, já são cacheáveis por design) e os arquivos
+      // de PWA/push, que precisam do próprio cache do navegador.
+      {
+        source: "/((?!_next/static|_next/image|favicon.ico|icons|brand|manifest.webmanifest|sw.js).*)",
+        headers: [{ key: "Cache-Control", value: "no-store, must-revalidate" }],
+      },
+    ];
   },
 };
 

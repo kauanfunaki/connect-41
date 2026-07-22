@@ -27,7 +27,8 @@ export type HandoffTemplateKey =
   | "ENCERRAMENTO_EMPRESA"
   | "DISTRATO_VARIAS_EMPRESAS"
   | "REGULARIZACAO_MUNICIPAL_ESTADUAL"
-  | "SOLICITACAO_MULTISSETORIAL";
+  | "SOLICITACAO_MULTISSETORIAL"
+  | "FECHAMENTO_MENSAL_BPO";
 
 export type HandoffTemplate = {
   key: HandoffTemplateKey;
@@ -790,6 +791,51 @@ Observações:
 
 [INFORMAÇÕES COMPLEMENTARES]`,
     sectorHints: ["fiscal", "contabil", "societario", "pessoal", "dp", "onboarding", "customer success", "cs"],
+  },
+  {
+    key: "FECHAMENTO_MENSAL_BPO",
+    label: "Fechamento mensal BPO → Fiscal/Contábil",
+    message: `FECHAMENTO MENSAL — BPO FINANCEIRO
+
+Empresa: [EMPRESA]
+CNPJ: [CNPJ]
+
+Competência: [MÊS/ANO]
+
+Fechamento financeiro da competência concluído pelo BPO. Segue a entrega para os setores responsáveis pelas obrigações contábeis e fiscais.`,
+    description: `Entrega — Contábil:
+
+- extratos bancários conciliados da competência;
+- planilha de fechamento (contas a pagar/receber, movimentações);
+- pendências identificadas na conciliação: [DESCRIÇÃO OU "NENHUMA"];
+- lançamentos que exigem atenção contábil: [DESCRIÇÃO].
+
+Responsável contábil: [RESPONSÁVEL]
+
+Entrega — Fiscal:
+
+- XML e relatórios de notas fiscais da competência;
+- guias de imposto pagas no período: [LISTA];
+- pendências de emissão ou apuração: [DESCRIÇÃO OU "NENHUMA"].
+
+Responsável fiscal: [RESPONSÁVEL]
+
+Situação de acesso bancário:
+
+- [OK / PENDENTE / BLOQUEADO — DESCREVER SE HOUVER RESTRIÇÃO]
+
+Demais entregas da competência (quando aplicável):
+
+- relatório operacional para o cliente;
+- planilha de fechamento de RH;
+- base Omie atualizada.
+
+Responsável pelo fechamento (BPO): [RESPONSÁVEL]
+
+Observações:
+
+[PRAZOS, MULTAS EM RISCO OU PARTICULARIDADES DA COMPETÊNCIA]`,
+    sectorHints: ["fiscal", "contabil"],
   },
 ];
 
