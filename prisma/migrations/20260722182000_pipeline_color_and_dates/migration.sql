@@ -1,0 +1,4 @@
+ALTER TABLE `pipelines`
+  ADD COLUMN `color` VARCHAR(7) NULL,
+  ADD COLUMN `startDate` DATETIME(3) NULL,
+  ADD COLUMN `endDate` DATETIME(3) NULL;

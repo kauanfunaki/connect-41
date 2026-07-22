@@ -3,11 +3,11 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps } from "@/lib/sectors";
 import { BoardView } from "@/components/kanban/BoardView";
+import { DuplicatePipelineButton } from "@/components/kanban/DuplicatePipelineButton";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { moverItem } from "../actions";
+import { moverItem, duplicarPipeline } from "../actions";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
-import { scopedPipelineWhere } from "@/lib/auth/scope";
-import { formatInstantDateTime } from "@/lib/format";
+import { scopedPipelineWhere, scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
 
 function daysSince(d: Date): number {
   return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000));
@@ -45,6 +45,11 @@ export default async function KanbanBoardPage({
   const canAddItem = canManageSector(ctx, pipeline.sectorCode);
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
 
+  const duplicateEntities =
+    pipeline.entityType === "COMPANY"
+      ? (await prisma.company.findMany({ where: await scopedCompanyWhere(ctx), orderBy: { name: "asc" }, select: { id: true, name: true } }))
+      : (await prisma.person.findMany({ where: await scopedPersonWhere(ctx), orderBy: { name: "asc" }, select: { id: true, name: true } }));
+
   // Resolve nomes das entidades (Company ou Person) referenciadas pelos itens
   const entityIds = pipeline.items.map((i) => i.entityId);
   const entityNames: Record<string, string> = {};
@@ -67,17 +72,11 @@ export default async function KanbanBoardPage({
 
   // Última mudança de estágio de cada item (mais recente primeiro) — usada pra
   // calcular "X dias na etapa" sem precisar de campo novo no schema.
-  const [lastStageChanges, recentMoves, recentActivityAnyType] = await Promise.all([
+  const [lastStageChanges, recentActivityAnyType] = await Promise.all([
     prisma.activity.findMany({
       where: { tenantId: ctx.tenantId, type: "STATUS_CHANGE", pipelineItem: { pipelineId: id } },
       orderBy: { createdAt: "desc" },
       select: { pipelineItemId: true, createdAt: true },
-    }),
-    prisma.activity.findMany({
-      where: { tenantId: ctx.tenantId, type: "STATUS_CHANGE", pipelineItem: { pipelineId: id } },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-      include: { user: { select: { name: true } }, pipelineItem: { select: { entityId: true } } },
     }),
     // última atividade (qualquer tipo) por item — usada pra linha única do card
     // no board, e pra achar quem criou cada item (type CREATED) sem query extra.
@@ -131,14 +130,6 @@ export default async function KanbanBoardPage({
     })),
   }));
 
-  const timeline = recentMoves.map((m) => ({
-    id: m.id,
-    userName: m.user.name,
-    entityName: entityNames[m.pipelineItem.entityId] ?? "(removido)",
-    content: m.content ?? "",
-    createdAt: formatInstantDateTime(m.createdAt),
-  }));
-
   return (
     <PageContainer className="h-full flex flex-col">
       <div className="flex items-center gap-2 mb-1">
@@ -158,12 +149,22 @@ export default async function KanbanBoardPage({
           </p>
         </div>
         {canAddItem && (
-          <Link
-            href={`/kanban/${id}/novo-item`}
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[10px] bg-brand text-on-brand text-[length:var(--fs-button)] font-semibold hover:bg-brand-hover transition-colors"
-          >
-            + Item
-          </Link>
+          <div className="flex items-center gap-2">
+            {duplicateEntities.length > 0 && (
+              <DuplicatePipelineButton
+                action={duplicarPipeline.bind(null, id)}
+                entities={duplicateEntities}
+                entityLabel={pipeline.entityType === "COMPANY" ? "Empresa" : "Pessoa"}
+                defaultName={`${pipeline.name} — cópia`}
+              />
+            )}
+            <Link
+              href={`/kanban/${id}/novo-item`}
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[10px] bg-brand text-on-brand text-[length:var(--fs-button)] font-semibold hover:bg-brand-hover transition-colors"
+            >
+              + Item
+            </Link>
+          </div>
         )}
       </div>
 
@@ -176,33 +177,6 @@ export default async function KanbanBoardPage({
           moveAction={moverItem}
         />
       </div>
-
-      {timeline.length > 0 && (
-        <div className="flex-shrink-0 mt-4 pt-4 border-t border-border">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-2.5">
-            Timeline de movimentação
-          </h2>
-          {/* Horizontal em vez de vertical — libera altura pro board do Kanban,
-              que é o conteúdo principal da tela. */}
-          <div className="scroll-x flex gap-2.5 overflow-x-auto pb-1">
-            {timeline.map((t) => (
-              <div
-                key={t.id}
-                className="flex-shrink-0 w-[220px] bg-surface-hover border border-border rounded-lg px-3 py-2"
-              >
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0" />
-                  <span className="font-mono text-[10px] text-fg-muted truncate">{t.createdAt}</span>
-                </div>
-                <p className="text-[12px] text-fg-secondary leading-snug line-clamp-2">
-                  <span className="font-semibold text-fg">{t.entityName}</span> {t.content}
-                </p>
-                <p className="text-[11px] text-fg-muted mt-1 truncate">{t.userName}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </PageContainer>
   );
 }

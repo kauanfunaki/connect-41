@@ -59,11 +59,22 @@ export async function criarPipeline(
   let id: string;
 
   try {
+    // Toda Lista precisa de um Espaço (estrutura Espaço → Pasta → Lista) — o
+    // formulário genérico de criação de kanban ainda não pede espaço
+    // explicitamente, então reaproveita/cria um espaço padrão (nome = code do
+    // setor) pra não travar esse fluxo enquanto a navegação por Espaço não
+    // chega nos demais setores.
+    let space = await prisma.space.findFirst({ where: { tenantId, sectorCode, name: sectorCode } });
+    if (!space) {
+      space = await prisma.space.create({ data: { tenantId, sectorCode, name: sectorCode } });
+    }
+
     const pipeline = await prisma.pipeline.create({
       data: {
         tenantId,
         name,
         sectorCode,
+        spaceId: space.id,
         entityType,
         stages: {
           create: stages.map((s, i) => ({
@@ -978,4 +989,134 @@ export async function excluirLancamentoTempo(pipelineId: string, itemId: string,
   }
 
   revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
+}
+
+// ─── Duplicar Pipeline ──────────────────────────────────────────────────────
+// Clona um Pipeline inteiro (estágios, tarefas de topo, subtarefas, checklist
+// e tags) pra uma empresa/pessoa de destino diferente — cobre o caso de
+// "template padrão" que se repete por cliente (ex.: processo de implantação
+// do BPO): monta o template 1x, depois duplica e aponta pro cliente novo em
+// vez de recriar tudo manualmente. Prazos e responsáveis NÃO são copiados
+// (ficam em branco na cópia) — são específicos de cada execução real.
+
+export async function duplicarPipeline(
+  sourcePipelineId: string,
+  _prev: PipelineState,
+  form: FormData
+): Promise<PipelineState> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  if (!tenantId) return { error: "Não autenticado" };
+
+  const name = (form.get("name") as string)?.trim();
+  const entityId = (form.get("entityId") as string)?.trim();
+  if (!name) return { error: "Nome do novo kanban é obrigatório" };
+  if (!entityId) return { error: "Selecione a empresa ou pessoa de destino" };
+
+  const prisma = getPrisma();
+  const source = await prisma.pipeline.findFirst({
+    where: { id: sourcePipelineId, ...scopedPipelineWhere(ctx) },
+    include: {
+      stages: { orderBy: { order: "asc" } },
+      items: {
+        where: { parentItemId: null },
+        include: {
+          tags: { select: { tagId: true } },
+          checklist: { orderBy: { order: "asc" } },
+          subtasks: {
+            include: {
+              tags: { select: { tagId: true } },
+              checklist: { orderBy: { order: "asc" } },
+            },
+          },
+        },
+      },
+    },
+  });
+  if (!source) return { error: "Kanban de origem não encontrado." };
+  if (!canManageSector(ctx, source.sectorCode)) {
+    return { error: "Sem permissão para duplicar kanban neste setor." };
+  }
+
+  const entity =
+    source.entityType === "COMPANY"
+      ? await prisma.company.findFirst({ where: { id: entityId, tenantId } })
+      : await prisma.person.findFirst({ where: { id: entityId, tenantId } });
+  if (!entity) return { error: "Empresa ou pessoa de destino não encontrada." };
+
+  let newPipelineId: string;
+  try {
+    const created = await prisma.pipeline.create({
+      data: {
+        tenantId,
+        name,
+        sectorCode: source.sectorCode,
+        spaceId: source.spaceId,
+        folderId: source.folderId,
+        color: source.color,
+        entityType: source.entityType,
+        stages: {
+          create: source.stages.map((s) => ({ name: s.name, color: s.color, order: s.order, isTerminal: s.isTerminal })),
+        },
+      },
+      include: { stages: true },
+    });
+    newPipelineId = created.id;
+
+    const stageMap = new Map<string, string>();
+    for (const oldStage of source.stages) {
+      const newStage = created.stages.find((s) => s.order === oldStage.order);
+      if (newStage) stageMap.set(oldStage.id, newStage.id);
+    }
+
+    for (const item of source.items) {
+      const newStageId = stageMap.get(item.stageId);
+      if (!newStageId) continue;
+
+      const newItem = await prisma.pipelineItem.create({
+        data: {
+          tenantId,
+          pipelineId: newPipelineId,
+          stageId: newStageId,
+          entityType: source.entityType,
+          entityId,
+          title: item.title,
+          description: item.description,
+          priority: item.priority,
+          tags: item.tags.length > 0 ? { create: item.tags.map((t) => ({ tagId: t.tagId })) } : undefined,
+          checklist:
+            item.checklist.length > 0
+              ? { create: item.checklist.map((c) => ({ tenantId, text: c.text, order: c.order })) }
+              : undefined,
+        },
+      });
+
+      for (const sub of item.subtasks) {
+        const subStageId = stageMap.get(sub.stageId) ?? newStageId;
+        await prisma.pipelineItem.create({
+          data: {
+            tenantId,
+            pipelineId: newPipelineId,
+            stageId: subStageId,
+            entityType: source.entityType,
+            entityId,
+            parentItemId: newItem.id,
+            title: sub.title,
+            description: sub.description,
+            priority: sub.priority,
+            tags: sub.tags.length > 0 ? { create: sub.tags.map((t) => ({ tagId: t.tagId })) } : undefined,
+            checklist:
+              sub.checklist.length > 0
+                ? { create: sub.checklist.map((c) => ({ tenantId, text: c.text, order: c.order })) }
+                : undefined,
+          },
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[duplicarPipeline]", err);
+    return { error: "Erro ao duplicar kanban. Tente novamente." };
+  }
+
+  redirect(boardPath({ id: newPipelineId, sectorCode: source.sectorCode }));
 }

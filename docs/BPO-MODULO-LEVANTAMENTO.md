@@ -157,3 +157,60 @@ Implementado:
 - Escopo de Notas/CT-e como checklist estruturado (se quiser ir além de "obrigação recorrente comum").
 - Drift do banco (`interview_scorecards`) — investigar com quem aplicou antes de rodar `migrate dev` de novo nesse ambiente.
 - Fases 3 (acesso bancário), 4 (dashboard financeiro) e 5 (telas preparatórias Omie) seguem não iniciadas.
+
+## 11. Reformulação do gerenciamento de tarefas (referência ClickUp), 2026-07-22
+
+Fora do escopo das fases do BPO, mas afeta diretamente o módulo: o usuário pediu uma reformulação geral de como tarefas funcionam no Connect, usando o ClickUp como referência de comportamento (não de implementação). Resumo do que mudou — cobre inclusive o board do BPO (`/bpo-financeiro`), já que reaproveita a mesma engine `Pipeline`/`PipelineItem`:
+
+- **Tarefa como entidade central**: `PipelineItem` ganhou `title` próprio (opcional) e `parentItemId` (subtarefa — 1 nível), independente de precisar de uma Company/Person "de verdade" pra existir.
+- **Subtarefas**: reaproveitam o próprio `PipelineItem` — ganham status, prioridade, prazo, responsável, comentários e anexos de graça.
+- **Checklist**: modelo novo `ChecklistItem`, flat, por item.
+- **Histórico completo**: `Activity` cobre agora criação, prioridade, prazo, descrição, responsável, etiqueta, checklist, subtarefa, conclusão/reabertura e apontamento de tempo (antes só cobria mudança de estágio e nota).
+- **Comentários avançados**: responder a comentário específico, editar/excluir, @menção (reaproveita `MentionTextarea`/`findMentionedUserIds` de Transferências), notificação a mencionados/interessados.
+- **Participante/observador**: `PipelineItemWatcher`, distinto de responsável.
+- **Views e filtros**: toggle Quadro/Lista (`BoardView`/`TaskListView`), filtro por responsável (incl. "sem responsável"), criador, etiqueta, prioridade, prazo, busca textual — tudo client-side sobre os dados já carregados.
+- **Busca global**: `/api/search` e `GlobalSearch` ganharam categoria "Tarefas".
+- **Conclusão/reabertura explícita**: botão dedicado (`CompletionBanner`), continua movendo pro estágio terminal por baixo, mas com evento de histórico próprio e banner "concluída por X em Y".
+- **Descrição rica**: `DescriptionEditor` passou a usar o `RichTextEditor` (Tiptap) que já existia no projeto (módulo de Documentos para Cliente) — negrito, títulos, listas, sanitizado no servidor.
+- **Estimativa e tempo**: `estimateMinutes` no item + `TimeEntry` (apontamento manual por usuário, sem cronômetro ao vivo).
+- **Duplicar Pipeline**: `duplicarPipeline` clona um Pipeline inteiro (estágios, tarefas, subtarefas, checklist, tags) pra uma Company/Person de destino diferente — prazos e responsáveis não são copiados. Botão "Duplicar" no header do board.
+
+Todas as migrations (`20260722140000` histórico, `20260722150000` subtarefas/checklist, `20260722160000` comentários/participantes, `20260722170000` conclusão/tempo) aplicadas no banco de dev via `db execute` + `migrate resolve` (mesmo procedimento das fases do BPO, por causa do drift do `interview_scorecards`). Verificado com `tsc`, `eslint` e `next build` a cada etapa.
+
+## 12. Processo "Implantação - Cliente Novo" (BPO), populado em 2026-07-22
+
+Adaptação do template de implantação de cliente novo (originalmente escrito pra ClickUp) pro Connect, usando a engine de tarefas reformulada na seção 11 — **não** foi colocado dentro do board genérico "Tarefas do BPO" (`bpo_tarefas`), e sim como um **Pipeline próprio** no mesmo setor `bpo`, acessível a partir de `/bpo-financeiro` (a home do módulo lista os pipelines quando há mais de um).
+
+### O que foi criado
+- Pipeline **"Implantação - Cliente Novo"** (setor `bpo`, `entityType: COMPANY`), com 4 estágios: A Fazer / Em Andamento / Aguardando Cliente / Concluído (último terminal).
+- **17 tarefas principais** (uma por "Tarefa X.Y" ou módulo do documento original), cada uma marcada com uma tag de fase (`Fase 1 · Comercial` até `Fase 9 · Encerramento`) — dá pra filtrar por fase direto no board (filtro de etiqueta já existe, seção 11).
+- **112 subtarefas** (as "Subtarefas" do documento original), cada uma como subtarefa de verdade (`parentItemId`), não checklist — porque no ClickUp original cada subtarefa deveria ter status/responsável/prioridade/data própria, e isso é exatamente o que o modelo de subtarefa do Connect oferece.
+- Dependências entre fases (ex. "só iniciar implantação após contrato assinado") registradas na **descrição** das tarefas relevantes (1.1 e 4.3) — não existe um campo de "dependência formal" bloqueante no Connect hoje, então ficou como texto/instrução.
+- Empresa placeholder **"Template BPO — Implantação de Cliente"** (status `INACTIVE`) — necessária porque todo `PipelineItem` exige uma Company/Person real vinculada; ao duplicar (ver abaixo), o clone inteiro é reapontado pra Company real do cliente.
+
+### Campos personalizados do ClickUp — mapeamento pro Connect
+Não recriamos campos custom 1:1 porque `CustomField` no Connect só suporta `entityType: COMPANY | PERSON`, não `PIPELINE_ITEM` — mudar isso seria alteração de schema mais ampla, fora do escopo pedido. Mapeamento adotado:
+
+| Campo ClickUp | Onde fica no Connect |
+|---|---|
+| Cliente | A própria Company vinculada ao item (`entityId`) |
+| CNPJ | Já existe na ficha da Company ("Ver ficha completa") |
+| Responsável Interno | Campo "Responsáveis" (assignee) do item |
+| Responsável Cliente | Sem campo dedicado — registrar na descrição rica da tarefa "Criar Projeto de Implantação" (nota deixada no próprio item) |
+| ERP | Idem — descrição da tarefa "Criar Projeto de Implantação" (hoje sempre Omie) |
+| Data de Início / Prevista | Prazo (`dueDate`) das tarefas relevantes de cada fase |
+| Data Go Live | `dueDate` da tarefa "Entrada em Produção" (Fase 8) |
+| Status da Implantação (%) | **Automático** — já é a barra de progresso de subtarefas (concluídas/total) que a tela de detalhe mostra pra qualquer tarefa com subtarefas |
+| Complexidade | Sem campo dedicado — sugestão: usar a Prioridade (Normal/Alta/Urgente) como proxy, ou registrar na descrição |
+| Tipo de Projeto | Sem campo dedicado — registrar na descrição (hoje só existe este tipo de projeto) |
+| Observações | Descrição rica do item, ou comentários |
+
+### Status e automações — deixado documentado, não configurado (pedido explícito do usuário)
+- **Status**: os 4 estágios acima (A Fazer/Em Andamento/Aguardando Cliente/Concluído) são o padrão genérico do Connect — se quiser estágios mais específicos por fase, é só editar o Pipeline (não precisa de dev).
+- **Automações sugeridas no documento original** (criar tarefa seguinte automaticamente, mover de fase ao concluir, notificar em "Aguardando Cliente", concluir tarefa principal quando todas as subtarefas terminarem, atualizar progresso automaticamente, lembretes de vencidas, alertar gestor em atraso > 3 dias) — **nenhuma foi implementada**. O Connect não tem motor de automação condicional genérico hoje (o que existe é o motor de alertas fixo em `src/lib/alerts.ts` e o de obrigações recorrentes). Implementar isso seria um projeto à parte — fica registrado aqui como pedido em aberto, não como pendência da Fase de tarefas.
+
+### Duplicar por cliente novo
+Feature nova: **"Duplicar Pipeline"** (`duplicarPipeline` em `src/app/(app)/kanban/actions.ts`, botão no header do board). Clona o Pipeline inteiro — estágios, as 17 tarefas, as 112 subtarefas, tags e checklist — pra uma Company de destino diferente, com nome novo. Prazos e responsáveis **não** são copiados (ficam em branco na cópia, já que são específicos de cada execução real). Fluxo pretendido: manter "Implantação - Cliente Novo" intocado como template, e a cada cliente novo, abrir o template → Duplicar → escolher a Company do cliente real → renomear.
+
+### Verificação
+Populado via script one-off (`npx tsx`, mesmo padrão de `prisma/seed.ts`), rodando contra o banco de dev. Não passa por commit (é dado, não código). `tsc`/`eslint`/`next build` já cobriram o código da feature "Duplicar Pipeline" na seção 11.

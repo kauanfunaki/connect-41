@@ -33,6 +33,13 @@ export function scopedVagaWhere(ctx: AuthContext) {
   return { tenantId: ctx.tenantId, sectorCode: { in: ctx.sectors } };
 }
 
+// Space é setor-scoped como Pipeline/Vaga (mesmo campo sectorCode livre, sem FK).
+export function scopedSpaceWhere(ctx: AuthContext) {
+  if (isFullAccess(ctx.role)) return { tenantId: ctx.tenantId };
+  if (ctx.sectors.length === 0) return { tenantId: ctx.tenantId, sectorCode: "__none__" };
+  return { tenantId: ctx.tenantId, sectorCode: { in: ctx.sectors } };
+}
+
 // Handoff: ADMIN/SUPER_ADMIN/READONLY (gerência geral) enxergam tudo; quem
 // abriu a transferência (controladoria) sempre a enxerga; e membros de
 // qualquer setor envolvido (origem ou destino, via handoff_sectors) também.

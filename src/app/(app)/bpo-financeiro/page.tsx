@@ -1,63 +1,69 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ClipboardList } from "lucide-react";
+import { LayoutGrid } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Button } from "@/components/ui/Button";
+import { NewSpaceButton } from "@/components/kanban/NewSpaceButton";
+import { criarEspaco } from "@/app/(app)/kanban/spaces-actions";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canManageSector, canWrite } from "@/lib/auth/context";
-import { scopedPipelineWhere } from "@/lib/auth/scope";
+import { getAuthContext, canManageSector } from "@/lib/auth/context";
+import { scopedSpaceWhere } from "@/lib/auth/scope";
 
-// Home do módulo dedicado do BPO Financeiro — não é o /kanban genérico: o
-// setor "bpo" tem sua própria tela de board (ver [id]/page.tsx), fora da
-// lista multi-setor. Se só existe 1 pipeline do setor, pula direto pro board;
-// se existem vários, mostra os cards; se nenhum, orienta a criar em /kanban/novo.
+// Home do módulo dedicado do BPO Financeiro — agora navega por Espaço, não
+// lista Pipelines direto (estrutura Espaço → Pasta → Lista). Se só existe 1
+// espaço no setor, pula direto pra ele.
 export default async function BpoFinanceiroHomePage() {
   const ctx = await getAuthContext();
 
   const prisma = getPrisma();
-  const pipelines = await prisma.pipeline.findMany({
-    where: { ...scopedPipelineWhere(ctx), sectorCode: "bpo" },
-    orderBy: { name: "asc" },
-    include: { _count: { select: { items: true } } },
+  const spaces = await prisma.space.findMany({
+    where: { ...scopedSpaceWhere(ctx), sectorCode: "bpo" },
+    orderBy: { order: "asc" },
+    include: { _count: { select: { pipelines: true, folders: true } } },
   });
 
-  if (pipelines.length === 1) {
-    redirect(`/bpo-financeiro/${pipelines[0].id}`);
+  if (spaces.length === 1) {
+    redirect(`/bpo-financeiro/espacos/${spaces[0].id}`);
   }
 
-  const canCreate = canWrite(ctx.role) && canManageSector(ctx, "bpo");
+  const canCreate = canManageSector(ctx, "bpo");
+  const createSpaceAction = criarEspaco.bind(null, "bpo");
 
   return (
     <PageContainer>
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">BPO Financeiro</h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">
-          Tarefas internas do setor — fechamento por competência, carteira de clientes e pendências.
-        </p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">BPO Financeiro</h1>
+          <p className="text-[13px] text-fg-muted mt-0.5">
+            Espaços do setor — cada um agrupa pastas e listas de clientes/processos.
+          </p>
+        </div>
+        {canCreate && <NewSpaceButton action={createSpaceAction} />}
       </div>
 
-      {pipelines.length === 0 ? (
+      {spaces.length === 0 ? (
         <div className="bg-surface border border-border rounded-2xl">
           <EmptyState
-            icon={<ClipboardList />}
-            title="Nenhum quadro do BPO cadastrado ainda"
-            description="Crie o kanban do setor BPO em /kanban/novo (setor BPO Financeiro) — depois de criado, ele passa a abrir direto por aqui."
-            action={canCreate ? <Link href="/kanban/novo"><Button>+ Novo Kanban</Button></Link> : undefined}
+            icon={<LayoutGrid />}
+            title="Nenhum espaço criado ainda"
+            description="Um espaço agrupa pastas e listas — ex.: um espaço por grande cliente ou por linha de trabalho."
           />
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {pipelines.map((p, i) => (
+          {spaces.map((s, i) => (
             <Link
-              key={p.id}
-              href={`/bpo-financeiro/${p.id}`}
+              key={s.id}
+              href={`/bpo-financeiro/espacos/${s.id}`}
               style={{ animationDelay: `${Math.min(i, 8) * 35}ms` }}
               className="reveal-in bg-surface border border-border rounded-lg p-4 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform]"
             >
-              <p className="text-[13px] font-medium text-fg mb-1">{p.name}</p>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: s.color }} />
+                <p className="text-[13px] font-medium text-fg">{s.name}</p>
+              </div>
               <p className="text-[12px] text-fg-muted">
-                {p._count.items} {p._count.items === 1 ? "item" : "itens"}
+                {s._count.folders} {s._count.folders === 1 ? "pasta" : "pastas"} · {s._count.pipelines} {s._count.pipelines === 1 ? "lista" : "listas"}
               </p>
             </Link>
           ))}

@@ -401,6 +401,8 @@ model Tenant {
   handoffViews         HandoffView[]
   checklistItems       ChecklistItem[]
   timeEntries          TimeEntry[]
+  spaces               Space[]
+  folders              Folder[]
   auditLogs            AuditLog[]
   oauthAccounts        OAuthAccount[]
   meetings             Meeting[]
@@ -769,22 +771,74 @@ model Person {
 
 // ─── Motor genérico de Pipeline ───────────────────────────────────────────────
 
+// Espaço — agrupamento organizacional DENTRO de um setor (não é o setor em
+// si). Um setor pode ter vários espaços (ex.: setor "bpo" com espaços "BLD",
+// "BPO", cada um agrupando um conjunto diferente de clientes/pastas/listas).
+// Toda Lista (Pipeline) pertence a um espaço — nunca solta.
+model Space {
+  id         String   @id @default(uuid())
+  tenantId   String
+  sectorCode String   @db.VarChar(40)
+  name       String   @db.VarChar(80)
+  color      String   @default("#586577") @db.VarChar(7)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+  folders   Folder[]
+  pipelines Pipeline[]
+
+  @@unique([tenantId, sectorCode, name])
+  @@index([tenantId, sectorCode])
+  @@map("spaces")
+}
+
+// Pasta — opcional, sempre dentro de um Espaço. Agrupa Listas relacionadas
+// (ex.: espaço "BPO" com pastas "Financeiro", "Coordenação").
+model Folder {
+  id        String   @id @default(uuid())
+  tenantId  String
+  spaceId   String
+  name      String   @db.VarChar(80)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+  space     Space      @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  pipelines Pipeline[]
+
+  @@index([tenantId, spaceId])
+  @@map("folders")
+}
+
 model Pipeline {
   id         String             @id @default(uuid())
   tenantId   String
   sectorCode String             @db.VarChar(40)
+  spaceId    String
+  folderId   String?
   name       String             @db.VarChar(120)
+  description String?           @db.Text
+  color      String?            @db.VarChar(7)
+  startDate  DateTime?
+  endDate    DateTime?
   entityType PipelineEntityType
   active     Boolean            @default(true)
   createdAt  DateTime           @default(now())
   updatedAt  DateTime           @updatedAt
 
   tenant               Tenant                @relation(fields: [tenantId], references: [id])
+  space                Space                 @relation(fields: [spaceId], references: [id])
+  folder               Folder?               @relation(fields: [folderId], references: [id])
   stages               PipelineStage[]
   items                PipelineItem[]
   recurringObligations RecurringObligation[]
 
   @@index([tenantId, sectorCode])
+  @@index([spaceId])
+  @@index([folderId])
   @@map("pipelines")
 }
 

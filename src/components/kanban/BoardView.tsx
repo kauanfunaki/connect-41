@@ -48,7 +48,7 @@ function stripHtml(html: string): string {
 }
 
 export function BoardView({ pipelineId, basePath, stages, items, moveAction }: Props) {
-  const [view, setView] = useState<"board" | "list">("board");
+  const [view, setView] = useState<"board" | "list">("list");
   const [search, setSearch] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState("");
   const [creatorFilter, setCreatorFilter] = useState("");
@@ -111,21 +111,21 @@ export function BoardView({ pipelineId, basePath, stages, items, moveAction }: P
         <div className="inline-flex rounded-lg border border-border overflow-hidden flex-shrink-0">
           <button
             type="button"
-            onClick={() => setView("board")}
-            className={`h-8 px-3 flex items-center gap-1.5 text-[12px] font-medium transition-colors ${
-              view === "board" ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg"
-            }`}
-          >
-            <Columns3 size={14} /> Quadro
-          </button>
-          <button
-            type="button"
             onClick={() => setView("list")}
-            className={`h-8 px-3 flex items-center gap-1.5 text-[12px] font-medium border-l border-border transition-colors ${
+            className={`h-8 px-3 flex items-center gap-1.5 text-[12px] font-medium transition-colors ${
               view === "list" ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg"
             }`}
           >
             <List size={14} /> Lista
+          </button>
+          <button
+            type="button"
+            onClick={() => setView("board")}
+            className={`h-8 px-3 flex items-center gap-1.5 text-[12px] font-medium border-l border-border transition-colors ${
+              view === "board" ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg"
+            }`}
+          >
+            <Columns3 size={14} /> Quadro
           </button>
         </div>
 
