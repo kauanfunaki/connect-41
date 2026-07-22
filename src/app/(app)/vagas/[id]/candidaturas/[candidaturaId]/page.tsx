@@ -7,10 +7,13 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
 import { ScorecardForm } from "@/components/vagas/ScorecardForm";
+import { MeetingsSection } from "@/components/kanban/MeetingsSection";
 import { STAGE_LABEL, type Stage } from "@/lib/recruitmentFunnel";
 import { CRITERIA, RECOMMENDATION_LABEL, consolidateScorecards, scorecardAverage } from "@/lib/scorecard";
 import { formatInstantDate } from "@/lib/format";
+import { canManageMeetings } from "@/lib/integrations/oauth";
 import { salvarScorecard, excluirScorecard } from "./actions";
+import { agendarEntrevista, excluirEntrevista } from "./meeting-actions";
 
 export default async function CandidaturaScorecardPage({
   params,
@@ -30,6 +33,10 @@ export default async function CandidaturaScorecardPage({
         orderBy: { createdAt: "asc" },
         include: { evaluator: { select: { id: true, name: true } } },
       },
+      meetings: {
+        orderBy: { startAt: "desc" },
+        include: { attendees: { include: { user: { select: { id: true, name: true } } } } },
+      },
     },
   });
   if (!candidatura) notFound();
@@ -37,6 +44,18 @@ export default async function CandidaturaScorecardPage({
   const canAct = canActOnSector(ctx, candidatura.vaga.sectorCode);
   const consolidation = consolidateScorecards(candidatura.scorecards);
   const myScorecard = candidatura.scorecards.find((s) => s.evaluator.id === ctx.userId);
+
+  const canSchedule = canManageMeetings(ctx);
+  const [oauthAccounts, allUsers] = await Promise.all([
+    canSchedule
+      ? prisma.oAuthAccount.findMany({ where: { tenantId: ctx.tenantId, userId: ctx.userId }, select: { provider: true } })
+      : Promise.resolve([]),
+    canSchedule
+      ? prisma.user.findMany({ where: { tenantId: ctx.tenantId, active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } })
+      : Promise.resolve([]),
+  ]);
+  const hasGoogle = oauthAccounts.some((a) => a.provider === "GOOGLE");
+  const hasMicrosoft = oauthAccounts.some((a) => a.provider === "MICROSOFT");
 
   return (
     <PageContainer variant="narrow">
@@ -61,6 +80,27 @@ export default async function CandidaturaScorecardPage({
           Pareceres de entrevista · etapa atual: {STAGE_LABEL[candidatura.stage as Stage]}
         </p>
       </div>
+
+      {/* Entrevistas */}
+      {canSchedule && (
+        <MeetingsSection
+          meetings={candidatura.meetings.map((m) => ({
+            id: m.id,
+            provider: m.provider,
+            title: m.title,
+            meetingUrl: m.meetingUrl,
+            startAt: m.startAt.toISOString(),
+            endAt: m.endAt.toISOString(),
+            attendees: m.attendees.map((a) => ({ id: a.user.id, name: a.user.name })),
+          }))}
+          canSchedule={canSchedule}
+          hasGoogle={hasGoogle}
+          hasMicrosoft={hasMicrosoft}
+          allUsers={allUsers}
+          scheduleAction={agendarEntrevista.bind(null, vagaId, candidaturaId)}
+          deleteAction={excluirEntrevista.bind(null, vagaId, candidaturaId)}
+        />
+      )}
 
       {/* Consolidado */}
       {consolidation.count > 0 && (

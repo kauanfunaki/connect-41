@@ -800,27 +800,27 @@ model PipelineStage {
 }
 
 model PipelineItem {
-  id          String             @id @default(uuid())
-  tenantId    String
-  pipelineId  String
-  stageId     String
-  entityType  PipelineEntityType
-  entityId    String // Company.id ou Person.id (referência por string, sem FK Prisma — relação polimórfica)
+  id           String             @id @default(uuid())
+  tenantId     String
+  pipelineId   String
+  stageId      String
+  entityType   PipelineEntityType
+  entityId     String // Company.id ou Person.id (referência por string, sem FK Prisma — relação polimórfica)
   // Título próprio, opcional — item de topo normalmente usa o nome da entidade
   // (entityName resolvido em runtime) como título; subtarefa (parentItemId
   // preenchido) sempre tem título próprio, já que várias subtarefas podem
   // compartilhar a mesma entidade do item pai.
-  title       String?            @db.VarChar(200)
+  title        String?            @db.VarChar(200)
   // Subtarefa: mesma tabela (PipelineItem) com parentItemId apontando pro item
   // "mãe" — reaproveita status/prioridade/prazo/responsável/tags/atividades/
   // anexos que já existem pra qualquer PipelineItem, sem duplicar modelo. Só
   // 1 nível (subtarefa de subtarefa não é permitido, controlado na action).
   parentItemId String?
-  priority    Int                @default(0)
-  dueDate     DateTime?
-  description String?            @db.Text
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  priority     Int                @default(0)
+  dueDate      DateTime?
+  description  String?            @db.Text
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
 
   tenant      Tenant                 @relation(fields: [tenantId], references: [id])
   pipeline    Pipeline               @relation(fields: [pipelineId], references: [id])
@@ -1092,6 +1092,7 @@ model Candidatura {
   pipelineItem PipelineItem?        @relation(fields: [pipelineItemId], references: [id])
   exames       ExameAdmissional[]
   scorecards   InterviewScorecard[]
+  meetings     Meeting[]
 
   @@unique([vagaId, personId])
   @@index([tenantId, vagaId])
@@ -2184,6 +2185,7 @@ model Meeting {
   pipelineItemId  String?
   sectorCode      String?         @db.VarChar(40)
   companyId       String? // empresa associada — reunião criada pela Agenda, sem item de Kanban
+  candidaturaId   String? // entrevista de recrutamento — reunião vinculada à candidatura, sem depender de pipelineItem
   clientName      String?         @db.VarChar(255) // nome(s) do(s) participante(s)/cliente(s), texto livre
   createdByUserId String
   createdAt       DateTime        @default(now())
@@ -2192,12 +2194,14 @@ model Meeting {
   tenant       Tenant            @relation(fields: [tenantId], references: [id])
   pipelineItem PipelineItem?     @relation(fields: [pipelineItemId], references: [id], onDelete: Cascade)
   company      Company?          @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  candidatura  Candidatura?      @relation(fields: [candidaturaId], references: [id], onDelete: Cascade)
   createdBy    User              @relation("MeetingCreatedBy", fields: [createdByUserId], references: [id])
   attendees    MeetingAttendee[]
 
   @@index([tenantId, pipelineItemId])
   @@index([tenantId, sectorCode, startAt])
   @@index([tenantId, companyId])
+  @@index([tenantId, candidaturaId])
   @@map("meetings")
 }
 
