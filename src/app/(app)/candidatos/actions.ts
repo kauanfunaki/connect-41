@@ -132,6 +132,43 @@ export async function excluirCandidato(id: string): Promise<CandidatoState> {
   redirect("/candidatos");
 }
 
+// Banco de talentos: tag/skill do candidato, preservada mesmo se ele for
+// reprovado/desistir de uma vaga específica — é o que o torna pesquisável pra
+// oportunidades futuras. Mesmo catálogo de Tag do setor "recrutamento" já
+// usado no Kanban (gerenciado em /admin/tags), só um join novo.
+export async function alternarTagPessoa(personId: string, tagId: string, marcado: boolean): Promise<void> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || !canWriteEntity(ctx)) return;
+
+  const prisma = getPrisma();
+  const person = await prisma.person.findFirst({
+    where: { id: personId, tenantId: ctx.tenantId, type: PersonType.CANDIDATO },
+    select: { id: true },
+  });
+  if (!person) return;
+
+  const tag = await prisma.tag.findFirst({ where: { id: tagId, tenantId: ctx.tenantId, sectorCode: "recrutamento" } });
+  if (!tag) return;
+
+  try {
+    if (marcado) {
+      await prisma.personTag.upsert({
+        where: { personId_tagId: { personId, tagId } },
+        create: { personId, tagId },
+        update: {},
+      });
+    } else {
+      await prisma.personTag.delete({ where: { personId_tagId: { personId, tagId } } });
+    }
+  } catch (err) {
+    console.error("[alternarTagPessoa]", err);
+    return;
+  }
+
+  revalidatePath(`/candidatos/${personId}`);
+  revalidatePath("/candidatos");
+}
+
 export async function inativarCandidatosEmMassa(ids: string[]): Promise<void> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !canWriteEntity(ctx) || ids.length === 0) return;
