@@ -81,6 +81,13 @@ export const MODULE_CATALOG: ModuleDef[] = [
     description: "Dashboard consolidado — headcount, turnover, absenteísmo, custo de folha e mais",
     defaultEnabled: true,
   },
+  {
+    code: "bpo_tarefas",
+    label: "Tarefas do BPO",
+    sectorCode: "bpo",
+    description: "Quadro dedicado do BPO Financeiro — fechamento por competência, carteira de clientes e pendências",
+    defaultEnabled: true,
+  },
 ];
 
 export function getModuleDef(code: string): ModuleDef | undefined {

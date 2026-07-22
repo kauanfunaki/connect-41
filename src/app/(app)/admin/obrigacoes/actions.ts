@@ -16,16 +16,33 @@ export async function criarObrigacao(_prev: ObligationState, form: FormData): Pr
   const pipelineId = (form.get("pipelineId") as string)?.trim();
   const title = (form.get("title") as string)?.trim();
   const description = (form.get("description") as string)?.trim();
+  const frequencyRaw = (form.get("frequency") as string)?.trim();
   const dayOfMonthRaw = (form.get("dayOfMonth") as string)?.trim();
+  const dayOfWeekRaw = (form.get("dayOfWeek") as string)?.trim();
   const responsibleId = (form.get("responsibleId") as string)?.trim();
 
   if (!companyId) return { error: "Empresa é obrigatória" };
   if (!pipelineId) return { error: "Kanban de destino é obrigatório" };
   if (!title) return { error: "Título é obrigatório" };
-  const dayOfMonth = parseInt(dayOfMonthRaw);
-  if (!Number.isInteger(dayOfMonth) || dayOfMonth < 1 || dayOfMonth > 31) {
-    return { error: "Dia do mês precisa estar entre 1 e 31" };
+
+  const frequency = ["DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY"].includes(frequencyRaw)
+    ? (frequencyRaw as "DAILY" | "WEEKLY" | "BIWEEKLY" | "MONTHLY")
+    : "MONTHLY";
+
+  let dayOfMonth: number | null = null;
+  let dayOfWeek: number | null = null;
+  if (frequency === "MONTHLY") {
+    dayOfMonth = parseInt(dayOfMonthRaw);
+    if (!Number.isInteger(dayOfMonth) || dayOfMonth < 1 || dayOfMonth > 31) {
+      return { error: "Dia do mês precisa estar entre 1 e 31" };
+    }
+  } else if (frequency === "WEEKLY" || frequency === "BIWEEKLY") {
+    dayOfWeek = parseInt(dayOfWeekRaw);
+    if (!Number.isInteger(dayOfWeek) || dayOfWeek < 1 || dayOfWeek > 7) {
+      return { error: "Dia da semana precisa estar entre segunda (1) e domingo (7)" };
+    }
   }
+  // DAILY não precisa de dayOfMonth/dayOfWeek — roda todo dia útil.
 
   const prisma = getPrisma();
   // sectorCode vem do pipeline (não do form) — garante consistência e evita
@@ -51,7 +68,9 @@ export async function criarObrigacao(_prev: ObligationState, form: FormData): Pr
       pipelineId,
       title,
       description: description || null,
+      frequency,
       dayOfMonth,
+      dayOfWeek,
       responsibleId: responsibleId || null,
     },
   });
@@ -62,7 +81,7 @@ export async function criarObrigacao(_prev: ObligationState, form: FormData): Pr
     action: "recurringObligation.create",
     entityType: "RecurringObligation",
     entityId: obligation.id,
-    metadata: { title, companyId, dayOfMonth },
+    metadata: { title, companyId, frequency, dayOfMonth, dayOfWeek },
   });
 
   revalidatePath("/admin/obrigacoes");

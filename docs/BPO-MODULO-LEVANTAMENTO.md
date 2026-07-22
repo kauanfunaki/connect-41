@@ -128,7 +128,32 @@ Confirmado por leitura direta do código: os quatro pontos da Fase 1 são **100%
 - Adicionar 1 objeto novo ao array: `key` (ex. `"fechamento-mensal-bpo"`), `label` (ex. "Fechamento mensal BPO → Fiscal/Contábil"), `message` com placeholders `[EMPRESA]`/`[CNPJ]` (substituídos automaticamente pela empresa selecionada, via `renderHandoffTemplate`), `description`, e opcionalmente `sectorHints: ["fiscal", "contabil"]` pra já sugerir o setor de destino certo (`matchSectorsForTemplate`).
 - Único artefato de código desta fase — um objeto a mais no array, sem migration, sem tela nova.
 
-### Resumo — nada bloqueia começar a Fase 1 hoje
-Passos 1-4 (setor, serviços, kanban, handoff) são inteiramente operacionais — dá pra rodar em produção assim que você validar. Passo 5 (16º modelo de texto) é o único PR necessário nesta fase, e é pequeno (edição de um array de constantes).
+### Status — Fase 1 concluída em 2026-07-22
+- Passos 1-4 (Sector `bpo`, CompanyService das 25+ empresas, vínculo `UserSector` dos analistas/Amanda) — feitos manualmente na UI pelo usuário.
+- Passo 5 (16º modelo de texto) — implementado em `src/lib/handoffTemplates.ts` (`FECHAMENTO_MENSAL_BPO`), texto rascunhado a partir do processo descrito na seção 2 (entregas separadas por Contábil/Fiscal, situação de acesso bancário, entregas complementares).
+- **Ajuste de escopo pedido pelo usuário durante a execução**: o Kanban do BPO não usa a tela genérica `/kanban` — ganhou módulo dedicado em "Meus Setores" → "BPO Financeiro" (ver seção 10, que também cobre a Fase 2).
 
-**Pendente antes de eu abrir o PR do passo 5**: confirmar o texto exato do modelo (o que deve constar no "Fechamento mensal BPO → Fiscal/Contábil" — quais itens de entrega: extratos conciliados, XML/relatório de nota, outros?). Posso rascunhar um texto padrão a partir do que já sei do processo (seção 2) e você ajusta, ou prefere ditar o texto você mesmo?
+### 9.6 Módulo dedicado "BPO Financeiro" em Meus Setores (ajuste pedido em 2026-07-22)
+Decisão: reaproveitar o schema `Pipeline`/`PipelineStage`/`PipelineItem` por baixo, mas com rotas e UI **100% dedicadas**, fora das telas gerais (`/kanban`). "Meus Setores" só ganha módulos dedicados extensíveis por setor — por ora só o BPO usa esse padrão, os demais setores continuam nas telas gerais.
+
+Implementado:
+- `src/lib/module-catalog.ts` — módulo `bpo_tarefas` (setor `bpo`, `defaultEnabled: true`) — é o que faz "BPO Financeiro" aparecer em Meus Setores na sidebar (setor só aparece lá se tiver ao menos 1 módulo do catálogo habilitado, ver `getSectorsWithEnabledModules` em `src/lib/modules.ts`).
+- `src/app/(app)/setor/[code]/[moduleCode]/page.tsx` — rota `bpo_tarefas` mapeada para `/bpo-financeiro`.
+- `src/app/(app)/bpo-financeiro/` — rotas próprias espelhando 1:1 a estrutura de `/kanban/[id]/*` (board, item detalhado, modal interceptado, novo item), restritas a `sectorCode: "bpo"`. Se o setor tem só 1 pipeline (o esperado), `/bpo-financeiro` pula direto pro board.
+- `src/components/kanban/KanbanBoard.tsx` ganhou prop `basePath` (antes o link do card era fixo em `/kanban/{id}`) — usado pelo board do BPO pra linkar pros próprios itens.
+- `src/app/(app)/kanban/actions.ts` ganhou helper `boardPath()` — as server actions (mover, editar, excluir item etc.) são únicas para ambas as telas; só o redirect/revalidate final aponta pra `/bpo-financeiro/{id}` quando `sectorCode === "bpo"`, ou `/kanban/{id}` nos demais setores.
+- Verificado com `tsc --noEmit`, `eslint` e `next build` (produção) — todas as rotas novas compilam.
+
+## 10. Status — Fase 2 (motor de recorrência sub-mensal), implementada em 2026-07-22
+
+- Schema: `RecurringObligation` ganhou `frequency` (enum `DAILY | WEEKLY | BIWEEKLY | MONTHLY`, default `MONTHLY`), `dayOfWeek` (1=segunda..7=domingo, usado em WEEKLY/BIWEEKLY), e `dayOfMonth` virou opcional (só obrigatório em MONTHLY). Migration `20260722130000_recurring_obligation_frequency` aplicada direto no banco de dev (`vps.41tech.cloud`) via `prisma db execute` — não usei `prisma migrate dev` porque havia **drift pré-existente** no banco (tabela `interview_scorecards` aplicada sem migration correspondente no repo, provavelmente de outra sessão/dev) que faria o Prisma pedir um `migrate reset` (apaga dados). Recomendo investigar esse drift separadamente antes de rodar `migrate dev` de novo nesse banco.
+- Gerador (`src/lib/recurringObligations.ts`): agora resolve o período ativo por frequência — mensal (comportamento antigo, inalterado), diária (todo dia útil), semanal e quinzenal (por `dayOfWeek`, quinzenal usa paridade de semana contada a partir de uma época fixa). Dedup por período via `AlertDispatch` como antes, só que a chave/`sentOn` variam por frequência (dia/semana/mês) em vez de sempre mensal.
+- **Emissão de Notas e CT-e (decisão da pergunta 6, opção a)**: ainda não tem tipo de item específico — por ora é só mais uma obrigação recorrente comum (ex. frequência mensal, `title: "Emissão de notas — [cliente]"`), sem checklist estruturado dedicado. Se quiser um checklist mais rico (múltiplos sub-itens por nota), é uma extensão futura.
+- UI: `/admin/obrigacoes` — formulário (`AddObrigacaoForm`) ganhou seletor de frequência com campos condicionais (dia do mês vs. dia da semana); listagem mostra a frequência de cada obrigação.
+- Verificado com `tsc --noEmit`, `eslint` e `next build`.
+- **Nada commitado, nem PR aberto** — mudanças só no working tree local. Banco de dev já tem a coluna nova aplicada (independe de commit).
+
+### Pendente
+- Escopo de Notas/CT-e como checklist estruturado (se quiser ir além de "obrigação recorrente comum").
+- Drift do banco (`interview_scorecards`) — investigar com quem aplicou antes de rodar `migrate dev` de novo nesse ambiente.
+- Fases 3 (acesso bancário), 4 (dashboard financeiro) e 5 (telas preparatórias Omie) seguem não iniciadas.

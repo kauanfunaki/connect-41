@@ -9,6 +9,18 @@ import { scopedPipelineWhere } from "@/lib/auth/scope";
 
 export type PipelineState = { error: string } | null;
 
+// Setores com módulo dedicado (rota própria, fora do /kanban genérico) usam
+// essa base de path nos redirects/revalidate em vez de /kanban/{id} — mantém
+// as server actions únicas mesmo com múltiplas telas de board no app.
+const DEDICATED_SECTOR_ROUTES: Record<string, string> = {
+  bpo: "/bpo-financeiro",
+};
+
+function boardPath(pipeline: { id: string; sectorCode: string }): string {
+  const base = DEDICATED_SECTOR_ROUTES[pipeline.sectorCode];
+  return base ? `${base}/${pipeline.id}` : `/kanban/${pipeline.id}`;
+}
+
 export async function criarPipeline(
   _prev: PipelineState,
   form: FormData
@@ -61,7 +73,7 @@ export async function criarPipeline(
     return { error: "Erro ao criar kanban. Tente novamente." };
   }
 
-  redirect(`/kanban/${id}`);
+  redirect(boardPath({ id, sectorCode }));
 }
 
 export async function criarItem(
@@ -118,8 +130,9 @@ export async function criarItem(
     return { error: "Erro ao adicionar item. Tente novamente." };
   }
 
-  revalidatePath(`/kanban/${pipelineId}`);
-  redirect(`/kanban/${pipelineId}`);
+  const base = boardPath(pipeline);
+  revalidatePath(base);
+  redirect(base);
 }
 
 export async function moverItem(
@@ -161,8 +174,9 @@ export async function moverItem(
       },
     });
 
-    revalidatePath(`/kanban/${item.pipelineId}`);
-    revalidatePath(`/kanban/${item.pipelineId}/itens/${itemId}`);
+    const base = boardPath(pipeline);
+    revalidatePath(base);
+    revalidatePath(`${base}/itens/${itemId}`);
   } catch (err) {
     console.error("[moverItem]", err);
   }
@@ -203,7 +217,7 @@ export async function adicionarNota(
     return { error: "Erro ao adicionar nota." };
   }
 
-  revalidatePath(`/kanban/${pipelineId}/itens/${itemId}`);
+  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
   return null;
 }
 
@@ -239,8 +253,11 @@ export async function atualizarPrazoPrioridade(
     return { error: "Erro ao atualizar prazo/prioridade." };
   }
 
-  revalidatePath(`/kanban/${pipelineId}`);
-  revalidatePath(`/kanban/${pipelineId}/itens/${itemId}`);
+  {
+    const base = boardPath(pipeline);
+    revalidatePath(base);
+    revalidatePath(`${base}/itens/${itemId}`);
+  }
   return null;
 }
 
@@ -272,8 +289,11 @@ export async function atualizarDescricao(
     return { error: "Erro ao atualizar descrição." };
   }
 
-  revalidatePath(`/kanban/${pipelineId}`);
-  revalidatePath(`/kanban/${pipelineId}/itens/${itemId}`);
+  {
+    const base = boardPath(pipeline);
+    revalidatePath(base);
+    revalidatePath(`${base}/itens/${itemId}`);
+  }
   return null;
 }
 
@@ -308,8 +328,11 @@ export async function alternarTagItem(
     return;
   }
 
-  revalidatePath(`/kanban/${pipelineId}`);
-  revalidatePath(`/kanban/${pipelineId}/itens/${itemId}`);
+  {
+    const base = boardPath(pipeline);
+    revalidatePath(base);
+    revalidatePath(`${base}/itens/${itemId}`);
+  }
 }
 
 export async function alternarResponsavelItem(
@@ -343,8 +366,11 @@ export async function alternarResponsavelItem(
     return;
   }
 
-  revalidatePath(`/kanban/${pipelineId}`);
-  revalidatePath(`/kanban/${pipelineId}/itens/${itemId}`);
+  {
+    const base = boardPath(pipeline);
+    revalidatePath(base);
+    revalidatePath(`${base}/itens/${itemId}`);
+  }
 }
 
 export async function excluirItem(pipelineId: string, itemId: string): Promise<void> {
@@ -364,6 +390,7 @@ export async function excluirItem(pipelineId: string, itemId: string): Promise<v
     return;
   }
 
-  revalidatePath(`/kanban/${pipelineId}`);
-  redirect(`/kanban/${pipelineId}`);
+  const base = boardPath(pipeline);
+  revalidatePath(base);
+  redirect(base);
 }

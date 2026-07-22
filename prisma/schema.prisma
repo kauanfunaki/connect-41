@@ -1970,25 +1970,39 @@ model Dependente {
   @@map("dependentes")
 }
 
+// Frequência de uma RecurringObligation. MONTHLY é o padrão histórico (usa
+// dayOfMonth); DAILY roda todo dia útil; WEEKLY/BIWEEKLY usam dayOfWeek
+// (1=segunda..7=domingo) — BIWEEKLY só dispara nas semanas de paridade par
+// contadas a partir de uma época fixa (ver WEEK_EPOCH em recurringObligations.ts).
+enum RecurringFrequency {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
 // Obrigação recorrente de uma empresa-cliente (DAS, DCTF, folha, férias
-// coletivas...) — todo mês o scheduler interno (src/lib/recurringObligations.ts)
-// gera um item de kanban no pipeline do setor, com vencimento no dia
-// configurado (prorrogado para o próximo dia útil quando cai em fim de
-// semana/feriado, padrão das obrigações fiscais). Dedup mensal via
-// AlertDispatch (chave OBLIGATION:{id}:{yyyy-MM}).
+// coletivas, título bancário diário, contas a receber semanais...) — o
+// scheduler interno (src/lib/recurringObligations.ts) gera um item de kanban
+// no pipeline do setor por período (dia/semana/quinzena/mês conforme a
+// frequência), com vencimento prorrogado para o próximo dia útil quando cai
+// em fim de semana/feriado. Dedup por período via AlertDispatch (chave
+// OBLIGATION:{id}:{periodo}, onde periodo varia por frequência).
 model RecurringObligation {
-  id            String   @id @default(uuid())
+  id            String             @id @default(uuid())
   tenantId      String
   companyId     String
-  sectorCode    String   @db.VarChar(40)
+  sectorCode    String             @db.VarChar(40)
   pipelineId    String
-  title         String   @db.VarChar(160)
-  description   String?  @db.Text
-  dayOfMonth    Int // 1..31 — meses mais curtos usam o último dia
+  title         String             @db.VarChar(160)
+  description   String?            @db.Text
+  frequency     RecurringFrequency @default(MONTHLY)
+  dayOfMonth    Int? // 1..31 — obrigatório quando frequency = MONTHLY; meses mais curtos usam o último dia
+  dayOfWeek     Int? // 1..7 (segunda..domingo) — obrigatório quando frequency = WEEKLY ou BIWEEKLY
   responsibleId String?
-  active        Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  active        Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
   company     Company  @relation(fields: [companyId], references: [id])

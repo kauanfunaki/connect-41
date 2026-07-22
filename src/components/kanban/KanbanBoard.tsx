@@ -25,6 +25,9 @@ type Props = {
   stages: Stage[];
   items: Item[];
   moveAction: (itemId: string, newStageId: string) => Promise<void>;
+  /** Base do link do card — default `/kanban/{pipelineId}`. Setores com módulo
+   * dedicado (ex. BPO em /bpo-financeiro) passam a própria base aqui. */
+  basePath?: string;
 };
 
 const FALLBACK_COLOR = "#586577";
@@ -41,7 +44,8 @@ function isOverdue(dueDate: string | null, isTerminal?: boolean): boolean {
   return new Date(dueDate).getTime() < Date.now();
 }
 
-export function KanbanBoard({ pipelineId, stages, items: initialItems, moveAction }: Props) {
+export function KanbanBoard({ pipelineId, stages, items: initialItems, moveAction, basePath }: Props) {
+  const base = basePath ?? `/kanban/${pipelineId}`;
   const [items, setItems] = useState(initialItems);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -112,7 +116,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                 return (
                   <Link
                     key={item.id}
-                    href={`/kanban/${pipelineId}/itens/${item.id}`}
+                    href={`${base}/itens/${item.id}`}
                     draggable
                     onMouseDown={() => setSelectedId(item.id)}
                     onDragStart={(e) => {

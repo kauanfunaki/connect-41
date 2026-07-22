@@ -10,6 +10,29 @@ import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
 import { ToggleObrigacaoButton } from "@/components/admin/ToggleObrigacaoButton";
 import { criarObrigacao, alternarObrigacao, excluirObrigacao } from "./actions";
 
+const WEEKDAY_LABELS: Record<number, string> = {
+  1: "segunda-feira",
+  2: "terça-feira",
+  3: "quarta-feira",
+  4: "quinta-feira",
+  5: "sexta-feira",
+  6: "sábado",
+  7: "domingo",
+};
+
+function frequencyLabel(o: { frequency: string; dayOfMonth: number | null; dayOfWeek: number | null }): string {
+  switch (o.frequency) {
+    case "DAILY":
+      return "diária";
+    case "WEEKLY":
+      return o.dayOfWeek ? `semanal · ${WEEKDAY_LABELS[o.dayOfWeek]}` : "semanal";
+    case "BIWEEKLY":
+      return o.dayOfWeek ? `quinzenal · ${WEEKDAY_LABELS[o.dayOfWeek]}` : "quinzenal";
+    default:
+      return o.dayOfMonth ? `mensal · dia ${o.dayOfMonth}` : "mensal";
+  }
+}
+
 export default async function ObrigacoesPage() {
   const ctx = await getAuthContext();
   if (!isFullWrite(ctx.role)) notFound();
@@ -21,7 +44,7 @@ export default async function ObrigacoesPage() {
     prisma.recurringObligation.findMany({
       where: { tenantId: ctx.tenantId },
       include: { company: { select: { name: true } }, responsible: { select: { name: true } }, pipeline: { select: { name: true } } },
-      orderBy: [{ active: "desc" }, { dayOfMonth: "asc" }, { title: "asc" }],
+      orderBy: [{ active: "desc" }, { frequency: "asc" }, { title: "asc" }],
     }),
     prisma.company.findMany({
       where: { tenantId: ctx.tenantId, status: { not: "CHURNED" } },
@@ -45,8 +68,9 @@ export default async function ObrigacoesPage() {
       <div className="mb-6">
         <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Obrigações Recorrentes</h1>
         <p className="text-[13px] text-fg-muted mt-0.5">
-          DAS, DCTF, folha e afins — todo mês o Connect gera automaticamente o item de kanban
-          da obrigação, com vencimento prorrogado para o próximo dia útil.
+          DAS, DCTF, folha, título bancário diário, contas a receber semanais e afins — o Connect
+          gera automaticamente o item de kanban na frequência escolhida (diária, semanal, quinzenal
+          ou mensal), com vencimento prorrogado para o próximo dia útil.
         </p>
       </div>
 
@@ -75,7 +99,7 @@ export default async function ObrigacoesPage() {
                   {!o.active && <span className="ml-2 text-[11px] font-normal text-fg-muted">(inativa)</span>}
                 </p>
                 <p className="text-[11px] text-fg-muted mt-0.5 truncate">
-                  {o.company.name} · {sectorLabel(labels, o.sectorCode)} · kanban {o.pipeline.name} · dia {o.dayOfMonth}
+                  {o.company.name} · {sectorLabel(labels, o.sectorCode)} · kanban {o.pipeline.name} · {frequencyLabel(o)}
                   {o.responsible ? ` · ${o.responsible.name}` : " · notifica o setor"}
                 </p>
               </div>
