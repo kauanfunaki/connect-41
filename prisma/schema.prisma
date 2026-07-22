@@ -72,6 +72,9 @@ enum ActivityType {
   TAG_CHANGE
   CHECKLIST_CHANGE
   SUBTASK_CHANGE
+  COMPLETED
+  REOPENED
+  TIME_LOGGED
 }
 
 // Situação da transferência em cada setor de destino:
@@ -397,6 +400,7 @@ model Tenant {
   evaluationScores     EvaluationScore[]
   handoffViews         HandoffView[]
   checklistItems       ChecklistItem[]
+  timeEntries          TimeEntry[]
   auditLogs            AuditLog[]
   oauthAccounts        OAuthAccount[]
   meetings             Meeting[]
@@ -547,6 +551,7 @@ model User {
   sectors                UserSector[]
   assignedItems          PipelineItemAssignee[]
   watchedItems           PipelineItemWatcher[]
+  timeEntries            TimeEntry[]
   activities             Activity[]
   handoffs               Handoff[]              @relation("HandoffRequester")
   handoffSectorsAssigned HandoffSector[]        @relation("HandoffSectorAssignee")
@@ -819,6 +824,9 @@ model PipelineItem {
   priority     Int                @default(0)
   dueDate      DateTime?
   description  String?            @db.Text
+  // Estimativa manual de esforço, em minutos — opcional (item nunca obriga
+  // controle de tempo). Tempo efetivamente gasto vem da soma de TimeEntry.
+  estimateMinutes Int?
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
@@ -832,6 +840,7 @@ model PipelineItem {
   watchers    PipelineItemWatcher[]
   tags        PipelineItemTag[]
   checklist   ChecklistItem[]
+  timeEntries TimeEntry[]
   candidatura Candidatura?
   meetings    Meeting[]
 
@@ -858,6 +867,26 @@ model ChecklistItem {
 
   @@index([tenantId, pipelineItemId])
   @@map("checklist_items")
+}
+
+// Apontamento manual de tempo gasto numa tarefa/subtarefa — por usuário, sem
+// cronômetro ao vivo (lançamento simples: quantos minutos, quando, nota opcional).
+model TimeEntry {
+  id             String   @id @default(uuid())
+  tenantId       String
+  pipelineItemId String
+  userId         String
+  minutes        Int
+  note           String?  @db.VarChar(280)
+  loggedOn       DateTime // data-calendário do trabalho (pode ser retroativo)
+  createdAt      DateTime @default(now())
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  pipelineItem PipelineItem @relation(fields: [pipelineItemId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@index([tenantId, pipelineItemId])
+  @@map("time_entries")
 }
 
 // Responsáveis internos de um item — N:N (substitui o antigo assignedUserId singular)

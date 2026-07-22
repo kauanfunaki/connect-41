@@ -13,9 +13,10 @@ type SearchResults = {
   pipelines: { id: string; name: string }[];
   vagas: { id: string; name: string }[];
   documentos: { id: string; name: string; entityType: DocumentEntityType; entityId: string }[];
+  tarefas: { id: string; name: string; href: string }[];
 };
 
-const EMPTY: SearchResults = { companies: [], people: [], candidatos: [], pipelines: [], vagas: [], documentos: [] };
+const EMPTY: SearchResults = { companies: [], people: [], candidatos: [], pipelines: [], vagas: [], documentos: [], tarefas: [] };
 
 // Documento não tem página própria — o resultado leva pra ficha de quem é
 // dono dele. Item de Kanban não tem link direto sem saber o pipelineId
@@ -75,7 +76,8 @@ export function GlobalSearch() {
       results.candidatos.length +
       results.pipelines.length +
       results.vagas.length +
-      results.documentos.length >
+      results.documentos.length +
+      results.tarefas.length >
     0;
 
   function go(href: string) {
@@ -151,6 +153,14 @@ export function GlobalSearch() {
                   <ResultGroup label="Pessoas" items={results.people} onSelect={(id) => go(`/pessoas/${id}`)} />
                   <ResultGroup label="Candidatos" items={results.candidatos} onSelect={(id) => go(`/candidatos/${id}`)} />
                   <ResultGroup label="Kanban" items={results.pipelines} onSelect={(id) => go(`/kanban/${id}`)} />
+                  <ResultGroup
+                    label="Tarefas"
+                    items={results.tarefas}
+                    onSelect={(id) => {
+                      const t = results.tarefas.find((x) => x.id === id);
+                      if (t) go(t.href);
+                    }}
+                  />
                   <ResultGroup label="Vagas" items={results.vagas} onSelect={(id) => go(`/vagas/${id}`)} />
                   <ResultGroup
                     label="Documentos"

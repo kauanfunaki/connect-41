@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Textarea } from "@/components/ui/Textarea";
+import { useRef, useState, useTransition } from "react";
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 
 type Props = {
@@ -10,24 +10,30 @@ type Props = {
   action: (prev: PipelineState, form: FormData) => Promise<PipelineState>;
 };
 
-// Seção "Descrição / Detalhes" da coluna esquerda — clique para editar,
-// estado vazio com call-to-action quando o card ainda não tem descrição.
+// Mesma classe usada dentro do RichTextEditor (src/components/ui/RichTextEditor.tsx)
+// pra renderização e edição terem a mesma tipografia de listas/títulos.
+const RICH_TEXT_CLASS =
+  "text-[length:var(--fs-body)] text-fg-secondary [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h2]:text-[15px] [&_h2]:font-semibold [&_h2]:mt-2 [&_p]:my-1";
+
+// Seção "Descrição / Detalhes" da coluna esquerda — clique para editar, com
+// formatação rica (negrito, títulos, listas) via Tiptap. O HTML é sanitizado
+// no servidor (src/lib/clientDocuments.ts, mesma allowlist do módulo de
+// Documentos para Cliente) antes de ser persistido.
 export function DescriptionEditor({ canAct, description, action }: Props) {
   const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(description ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const formRef = useRef<HTMLFormElement>(null);
 
   function openEditing() {
-    setValue(description ?? "");
     setError(null);
     setEditing(true);
   }
 
   function save() {
+    if (!formRef.current) return;
     setError(null);
-    const form = new FormData();
-    form.set("description", value);
+    const form = new FormData(formRef.current);
     startTransition(async () => {
       const res = await action(null, form);
       if (res?.error) setError(res.error);
@@ -40,7 +46,7 @@ export function DescriptionEditor({ canAct, description, action }: Props) {
       <div className="bg-surface border border-border rounded-lg p-5">
         <h2 className="text-[13px] font-semibold text-fg mb-3">Descrição</h2>
         {description ? (
-          <p className="text-[length:var(--fs-body)] text-fg-secondary whitespace-pre-wrap">{description}</p>
+          <div className={RICH_TEXT_CLASS} dangerouslySetInnerHTML={{ __html: description }} />
         ) : (
           <p className="text-[length:var(--fs-body)] text-fg-muted italic">Nenhuma descrição adicionada.</p>
         )}
@@ -64,15 +70,9 @@ export function DescriptionEditor({ canAct, description, action }: Props) {
       </div>
 
       {editing ? (
-        <div className="space-y-2">
+        <form ref={formRef} className="space-y-2">
           {error && <p className="text-[12px] text-danger">{error}</p>}
-          <Textarea
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            rows={5}
-            placeholder="Adicione uma descrição para este card..."
-            autoFocus
-          />
+          <RichTextEditor name="description" defaultValue={description ?? ""} />
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -91,14 +91,13 @@ export function DescriptionEditor({ canAct, description, action }: Props) {
               Cancelar
             </button>
           </div>
-        </div>
+        </form>
       ) : description ? (
-        <p
+        <div
           onClick={openEditing}
-          className="text-[length:var(--fs-body)] text-fg-secondary whitespace-pre-wrap cursor-text hover:bg-surface-hover rounded-md -mx-1 px-1 py-0.5 transition-colors"
-        >
-          {description}
-        </p>
+          className={`${RICH_TEXT_CLASS} cursor-text hover:bg-surface-hover rounded-md -mx-1 px-1 py-0.5 transition-colors`}
+          dangerouslySetInnerHTML={{ __html: description }}
+        />
       ) : (
         <button
           type="button"

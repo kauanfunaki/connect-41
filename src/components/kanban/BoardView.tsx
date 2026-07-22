@@ -1,12 +1,21 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Columns3, List } from "lucide-react";
+import { Columns3, List, Search } from "lucide-react";
 import { KanbanBoard } from "@/components/kanban/KanbanBoard";
 import { TaskListView, type TaskRow, type StageOption } from "@/components/kanban/TaskListView";
 import { Select } from "@/components/ui/Select";
+import { Input } from "@/components/ui/Input";
 
-type Item = TaskRow & { tags?: { id: string; name: string; color: string }[]; daysInStage?: number; lastActivity?: string | null; subtaskTotal?: number; subtaskDone?: number };
+type Item = TaskRow & {
+  tags?: { id: string; name: string; color: string }[];
+  daysInStage?: number;
+  lastActivity?: string | null;
+  description?: string | null;
+  creator?: { id: string; name: string } | null;
+  subtaskTotal?: number;
+  subtaskDone?: number;
+};
 
 type Props = {
   pipelineId: string;
@@ -23,6 +32,7 @@ const DUE_FILTERS = [
   { value: "today", label: "Vencem hoje" },
   { value: "none", label: "Sem prazo" },
 ];
+const NO_ASSIGNEE = "__sem_responsavel__";
 
 function isToday(d: Date): boolean {
   const now = new Date();
@@ -33,9 +43,16 @@ function isOverdue(dueDate: string): boolean {
   return new Date(dueDate).getTime() < Date.now();
 }
 
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, " ");
+}
+
 export function BoardView({ pipelineId, basePath, stages, items, moveAction }: Props) {
   const [view, setView] = useState<"board" | "list">("board");
+  const [search, setSearch] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState("");
+  const [creatorFilter, setCreatorFilter] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
   const [dueFilter, setDueFilter] = useState("");
 
@@ -47,18 +64,46 @@ export function BoardView({ pipelineId, basePath, stages, items, moveAction }: P
     return Array.from(map.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
   }, [items]);
 
+  const allCreators = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const item of items) {
+      if (item.creator) map.set(item.creator.id, item.creator.name);
+    }
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [items]);
+
+  const allTags = useMemo(() => {
+    const map = new Map<string, { name: string; color: string }>();
+    for (const item of items) {
+      for (const t of item.tags ?? []) map.set(t.id, { name: t.name, color: t.color });
+    }
+    return Array.from(map.entries()).map(([id, t]) => ({ id, ...t })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [items]);
+
   const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
     return items.filter((item) => {
-      if (assigneeFilter && !(item.assignees ?? []).some((a) => a.id === assigneeFilter)) return false;
+      if (q) {
+        const haystack = [
+          item.entityName,
+          item.description ? stripHtml(item.description) : "",
+          ...(item.subtasks ?? []).map((s) => s.entityName),
+        ].join(" ").toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      if (assigneeFilter === NO_ASSIGNEE && (item.assignees ?? []).length > 0) return false;
+      if (assigneeFilter && assigneeFilter !== NO_ASSIGNEE && !(item.assignees ?? []).some((a) => a.id === assigneeFilter)) return false;
+      if (creatorFilter && item.creator?.id !== creatorFilter) return false;
+      if (tagFilter && !(item.tags ?? []).some((t) => t.id === tagFilter)) return false;
       if (priorityFilter && String(item.priority) !== priorityFilter) return false;
       if (dueFilter === "none" && item.dueDate) return false;
       if (dueFilter === "overdue" && !(item.dueDate && isOverdue(item.dueDate))) return false;
       if (dueFilter === "today" && !(item.dueDate && isToday(new Date(item.dueDate)))) return false;
       return true;
     });
-  }, [items, assigneeFilter, priorityFilter, dueFilter]);
+  }, [items, search, assigneeFilter, creatorFilter, tagFilter, priorityFilter, dueFilter]);
 
-  const activeFilterCount = [assigneeFilter, priorityFilter, dueFilter].filter(Boolean).length;
+  const activeFilterCount = [search, assigneeFilter, creatorFilter, tagFilter, priorityFilter, dueFilter].filter(Boolean).length;
 
   return (
     <div className="h-full flex flex-col min-h-0">
@@ -84,12 +129,44 @@ export function BoardView({ pipelineId, basePath, stages, items, moveAction }: P
           </button>
         </div>
 
+        <div className="w-48">
+          <Input
+            icon={<Search size={14} />}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar título, descrição…"
+          />
+        </div>
+
         {allAssignees.length > 0 && (
           <div className="w-44">
             <Select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)}>
               <option value="">Todo responsável</option>
+              <option value={NO_ASSIGNEE}>Sem responsável</option>
               {allAssignees.map((a) => (
                 <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </Select>
+          </div>
+        )}
+
+        {allCreators.length > 0 && (
+          <div className="w-40">
+            <Select value={creatorFilter} onChange={(e) => setCreatorFilter(e.target.value)}>
+              <option value="">Todo criador</option>
+              {allCreators.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </Select>
+          </div>
+        )}
+
+        {allTags.length > 0 && (
+          <div className="w-36">
+            <Select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
+              <option value="">Toda etiqueta</option>
+              {allTags.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </Select>
           </div>
@@ -114,7 +191,9 @@ export function BoardView({ pipelineId, basePath, stages, items, moveAction }: P
         {activeFilterCount > 0 && (
           <button
             type="button"
-            onClick={() => { setAssigneeFilter(""); setPriorityFilter(""); setDueFilter(""); }}
+            onClick={() => {
+              setSearch(""); setAssigneeFilter(""); setCreatorFilter(""); setTagFilter(""); setPriorityFilter(""); setDueFilter("");
+            }}
             className="text-[12px] text-fg-muted hover:text-fg transition-colors"
           >
             Limpar filtros

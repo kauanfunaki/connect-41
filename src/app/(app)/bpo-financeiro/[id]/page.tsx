@@ -83,7 +83,7 @@ export default async function BpoBoardPage({
       where: { tenantId: ctx.tenantId, pipelineItem: { pipelineId: id } },
       orderBy: { createdAt: "desc" },
       take: 200,
-      select: { pipelineItemId: true, type: true, content: true },
+      select: { pipelineItemId: true, type: true, content: true, user: { select: { id: true, name: true } } },
     }),
   ]);
 
@@ -94,9 +94,12 @@ export default async function BpoBoardPage({
     DESCRIPTION_CHANGE: "Editou descrição", ASSIGNEE_CHANGE: "Mudou responsável", TAG_CHANGE: "Mudou etiqueta",
   };
   const lastActivityByItem: Record<string, string> = {};
+  const creatorByItem: Record<string, { id: string; name: string }> = {};
   for (const a of recentActivityAnyType) {
-    if (a.pipelineItemId in lastActivityByItem) continue;
-    lastActivityByItem[a.pipelineItemId] = a.content?.trim() ? a.content : (ACTIVITY_LABEL[a.type] ?? a.type);
+    if (!(a.pipelineItemId in lastActivityByItem)) {
+      lastActivityByItem[a.pipelineItemId] = a.content?.trim() ? a.content : (ACTIVITY_LABEL[a.type] ?? a.type);
+    }
+    if (a.type === "CREATED") creatorByItem[a.pipelineItemId] = a.user;
   }
 
   const lastChangeByItem: Record<string, Date> = {};
@@ -113,6 +116,8 @@ export default async function BpoBoardPage({
     assignees: i.assignees.map((a) => ({ id: a.user.id, name: a.user.name })),
     daysInStage: daysSince(lastChangeByItem[i.id] ?? i.createdAt),
     lastActivity: lastActivityByItem[i.id] ?? null,
+    description: i.description,
+    creator: creatorByItem[i.id] ?? null,
     subtaskTotal: i.subtasks.length,
     subtaskDone: i.subtasks.filter((s) => s.stage.isTerminal).length,
     subtasks: i.subtasks.map((s) => ({

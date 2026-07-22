@@ -79,12 +79,13 @@ export default async function KanbanBoardPage({
       take: 20,
       include: { user: { select: { name: true } }, pipelineItem: { select: { entityId: true } } },
     }),
-    // última atividade (qualquer tipo) por item — usada só pra linha única do card no board.
+    // última atividade (qualquer tipo) por item — usada pra linha única do card
+    // no board, e pra achar quem criou cada item (type CREATED) sem query extra.
     prisma.activity.findMany({
       where: { tenantId: ctx.tenantId, pipelineItem: { pipelineId: id } },
       orderBy: { createdAt: "desc" },
       take: 200,
-      select: { pipelineItemId: true, type: true, content: true },
+      select: { pipelineItemId: true, type: true, content: true, user: { select: { id: true, name: true } } },
     }),
   ]);
 
@@ -95,9 +96,12 @@ export default async function KanbanBoardPage({
     DESCRIPTION_CHANGE: "Editou descrição", ASSIGNEE_CHANGE: "Mudou responsável", TAG_CHANGE: "Mudou etiqueta",
   };
   const lastActivityByItem: Record<string, string> = {};
+  const creatorByItem: Record<string, { id: string; name: string }> = {};
   for (const a of recentActivityAnyType) {
-    if (a.pipelineItemId in lastActivityByItem) continue;
-    lastActivityByItem[a.pipelineItemId] = a.content?.trim() ? a.content : (ACTIVITY_LABEL[a.type] ?? a.type);
+    if (!(a.pipelineItemId in lastActivityByItem)) {
+      lastActivityByItem[a.pipelineItemId] = a.content?.trim() ? a.content : (ACTIVITY_LABEL[a.type] ?? a.type);
+    }
+    if (a.type === "CREATED") creatorByItem[a.pipelineItemId] = a.user;
   }
 
   const lastChangeByItem: Record<string, Date> = {};
@@ -114,6 +118,8 @@ export default async function KanbanBoardPage({
     assignees: i.assignees.map((a) => ({ id: a.user.id, name: a.user.name })),
     daysInStage: daysSince(lastChangeByItem[i.id] ?? i.createdAt),
     lastActivity: lastActivityByItem[i.id] ?? null,
+    description: i.description,
+    creator: creatorByItem[i.id] ?? null,
     subtaskTotal: i.subtasks.length,
     subtaskDone: i.subtasks.filter((s) => s.stage.isTerminal).length,
     subtasks: i.subtasks.map((s) => ({

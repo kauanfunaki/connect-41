@@ -9,6 +9,8 @@ import { DocumentsSection } from "@/components/documents/DocumentsSection";
 import { listDocuments } from "@/lib/documents";
 import { SubtasksSection } from "@/components/kanban/SubtasksSection";
 import { ChecklistSection } from "@/components/kanban/ChecklistSection";
+import { TimeTrackingSection } from "@/components/kanban/TimeTrackingSection";
+import { CompletionBanner } from "@/components/kanban/CompletionBanner";
 import {
   moverItem,
   adicionarNota,
@@ -27,6 +29,11 @@ import {
   editarChecklistItem,
   excluirChecklistItem,
   reordenarChecklistItem,
+  concluirTarefa,
+  reabrirTarefa,
+  atualizarEstimativa,
+  criarLancamentoTempo,
+  excluirLancamentoTempo,
 } from "@/app/(app)/kanban/actions";
 import { boardPath } from "@/lib/kanbanPaths";
 import { agendarReuniao, excluirReuniao } from "@/app/(app)/kanban/meetings-actions";
@@ -48,10 +55,16 @@ const ACTIVITY_LABEL: Record<string, string> = {
   DESCRIPTION_CHANGE: "Descrição alterada",
   ASSIGNEE_CHANGE: "Responsável alterado",
   TAG_CHANGE: "Etiqueta alterada",
+  CHECKLIST_CHANGE: "Checklist alterado",
+  SUBTASK_CHANGE: "Subtarefa alterada",
+  COMPLETED: "Tarefa concluída",
+  REOPENED: "Tarefa reaberta",
+  TIME_LOGGED: "Tempo apontado",
 };
 
 const IMPORTANT_ACTIVITY_TYPES = new Set([
   "STATUS_CHANGE", "HANDOFF", "CREATED", "PRIORITY_CHANGE", "DUE_DATE_CHANGE", "ASSIGNEE_CHANGE", "DOCUMENT",
+  "COMPLETED", "REOPENED",
 ]);
 
 type Props = {
@@ -117,7 +130,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
     listDocuments(tenantId, "PIPELINE_ITEM", itemId),
   ]);
 
-  const [parentItem, subtasks, checklistItems, mentionUsers] = await Promise.all([
+  const [parentItem, subtasks, checklistItems, mentionUsers, timeEntries, lastCompletion] = await Promise.all([
     item.parentItemId
       ? prisma.pipelineItem.findFirst({ where: { id: item.parentItemId, tenantId }, select: { id: true, title: true, entityId: true, entityType: true } })
       : Promise.resolve(null),
@@ -132,7 +145,20 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
     // @menção em comentário pode citar qualquer usuário do tenant (não só do
     // setor) — mesma regra do autocomplete de Transferências.
     prisma.user.findMany({ where: { tenantId, active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    prisma.timeEntry.findMany({
+      where: { pipelineItemId: itemId, tenantId },
+      orderBy: { loggedOn: "desc" },
+      include: { user: { select: { id: true, name: true } } },
+    }),
+    prisma.activity.findFirst({
+      where: { pipelineItemId: itemId, tenantId, type: "COMPLETED" },
+      orderBy: { createdAt: "desc" },
+      include: { user: { select: { name: true } } },
+    }),
   ]);
+
+  const currentStage = pipeline.stages.find((s) => s.id === item.stageId);
+  const isCompleted = currentStage?.isTerminal ?? false;
 
   let parentEntityName: string | null = null;
   if (parentItem) {
@@ -165,6 +191,11 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
   const editChecklistAction = editarChecklistItem.bind(null, itemId);
   const deleteChecklistAction = excluirChecklistItem.bind(null, itemId);
   const reorderChecklistAction = reordenarChecklistItem.bind(null, itemId);
+  const concluirAction = concluirTarefa.bind(null, id, itemId);
+  const reabrirAction = reabrirTarefa.bind(null, id, itemId);
+  const estimateAction = atualizarEstimativa.bind(null, id, itemId);
+  const createTimeEntryAction = criarLancamentoTempo.bind(null, itemId);
+  const deleteTimeEntryAction = excluirLancamentoTempo.bind(null, id, itemId);
 
   // Monta o feed: comentários (NOTE) de topo + eventos, com respostas
   // aninhadas sob cada comentário. canModify = autor da nota ou coordenador.
@@ -259,6 +290,20 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
         )}
       </div>
 
+      <CompletionBanner
+        canAct={canAct}
+        isCompleted={isCompleted}
+        completedByLabel={
+          isCompleted && lastCompletion
+            ? `Concluída em ${formatInstantDate(lastCompletion.createdAt)} por ${lastCompletion.user.name}`
+            : isCompleted
+              ? "Tarefa concluída"
+              : null
+        }
+        concluirAction={concluirAction}
+        reabrirAction={reabrirAction}
+      />
+
       <CardActionBar
         canAct={canAct}
         canDelete={canDelete}
@@ -310,6 +355,23 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
             editAction={editChecklistAction}
             deleteAction={deleteChecklistAction}
             reorderAction={reorderChecklistAction}
+          />
+
+          <TimeTrackingSection
+            canAct={canAct}
+            estimateMinutes={item.estimateMinutes}
+            entries={timeEntries.map((e) => ({
+              id: e.id,
+              userId: e.user.id,
+              userName: e.user.name,
+              minutes: e.minutes,
+              note: e.note,
+              loggedOnLabel: formatCalendarDate(e.loggedOn),
+              canDelete: e.user.id === ctx.userId || canDelete,
+            }))}
+            estimateAction={estimateAction}
+            createEntryAction={createTimeEntryAction}
+            deleteEntryAction={deleteTimeEntryAction}
           />
 
           <DocumentsSection

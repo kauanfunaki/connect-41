@@ -9,6 +9,7 @@ import { scopedPipelineWhere } from "@/lib/auth/scope";
 import { boardPath } from "@/lib/kanbanPaths";
 import { findMentionedUserIds } from "@/lib/handoffMentions";
 import { notifyUser } from "@/lib/notifications";
+import { sanitizeDocumentHtml } from "@/lib/clientDocuments";
 
 export type PipelineState = { error: string } | null;
 
@@ -447,7 +448,10 @@ export async function atualizarDescricao(
     return { error: "Sem permissão para editar este item." };
   }
 
-  const description = (form.get("description") as string)?.trim();
+  const raw = (form.get("description") as string)?.trim() ?? "";
+  const sanitized = raw ? sanitizeDocumentHtml(raw) : "";
+  // Editor rich text vazio ainda manda marcação tipo "<p></p>" — trata como vazio de verdade.
+  const description = sanitized.replace(/<[^>]+>/g, "").trim() ? sanitized : "";
 
   try {
     const before = await prisma.pipelineItem.findUnique({ where: { id: itemId }, select: { description: true } });
@@ -783,7 +787,6 @@ export async function excluirChecklistItem(pipelineItemId: string, checklistItem
 
   revalidatePath(`${boardPath(pipeline)}/itens/${pipelineItemId}`);
 }
-
 export async function reordenarChecklistItem(pipelineItemId: string, checklistItemId: string, direction: "up" | "down"): Promise<void> {
   const ctx = await getAuthContext();
   const { tenantId } = ctx;
@@ -811,4 +814,168 @@ export async function reordenarChecklistItem(pipelineItemId: string, checklistIt
   }
 
   revalidatePath(`${boardPath(pipeline)}/itens/${pipelineItemId}`);
+}
+
+// ─── Conclusão / reabertura explícita ──────────────────────────────────────
+// "Concluída" continua sendo derivado do estágio terminal (não vira campo
+// novo) — mas em vez de exigir que o usuário arraste até a última coluna,
+// esses dois botões fazem o mesmo movimento com 1 clique e registram um
+// evento de histórico específico (COMPLETED/REOPENED), distinto do
+// STATUS_CHANGE genérico usado pra mover entre colunas do meio.
+
+export async function concluirTarefa(pipelineId: string, itemId: string): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId, userId } = ctx;
+  if (!tenantId || !userId) return;
+
+  const prisma = getPrisma();
+  const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId } });
+  if (!item) return;
+
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+
+  try {
+    const terminalStage = await prisma.pipelineStage.findFirst({
+      where: { pipelineId, isTerminal: true },
+      orderBy: { order: "desc" },
+    });
+    if (!terminalStage || item.stageId === terminalStage.id) return;
+
+    await prisma.pipelineItem.update({ where: { id: itemId }, data: { stageId: terminalStage.id } });
+    await prisma.activity.create({
+      data: { tenantId, pipelineItemId: itemId, userId, type: ActivityType.COMPLETED, content: "Tarefa concluída" },
+    });
+  } catch (err) {
+    console.error("[concluirTarefa]", err);
+    return;
+  }
+
+  const base = boardPath(pipeline);
+  revalidatePath(base);
+  revalidatePath(`${base}/itens/${itemId}`);
+}
+
+export async function reabrirTarefa(pipelineId: string, itemId: string): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId, userId } = ctx;
+  if (!tenantId || !userId) return;
+
+  const prisma = getPrisma();
+  const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId } });
+  if (!item) return;
+
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+
+  try {
+    const firstStage = await prisma.pipelineStage.findFirst({
+      where: { pipelineId, isTerminal: false },
+      orderBy: { order: "asc" },
+    });
+    const targetStage = firstStage ?? (await prisma.pipelineStage.findFirst({ where: { pipelineId }, orderBy: { order: "asc" } }));
+    if (!targetStage || item.stageId === targetStage.id) return;
+
+    await prisma.pipelineItem.update({ where: { id: itemId }, data: { stageId: targetStage.id } });
+    await prisma.activity.create({
+      data: { tenantId, pipelineItemId: itemId, userId, type: ActivityType.REOPENED, content: "Tarefa reaberta" },
+    });
+  } catch (err) {
+    console.error("[reabrirTarefa]", err);
+    return;
+  }
+
+  const base = boardPath(pipeline);
+  revalidatePath(base);
+  revalidatePath(`${base}/itens/${itemId}`);
+}
+
+// ─── Estimativa e controle de tempo ────────────────────────────────────────
+// Lançamento manual (sem cronômetro ao vivo) — cobre estimativa, apontamento
+// por usuário, total acumulado e comparação estimado x realizado. Nada aqui
+// é obrigatório: ambos os campos ficam vazios por padrão.
+
+export async function atualizarEstimativa(pipelineId: string, itemId: string, minutesRaw: string): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  if (!tenantId) return;
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+
+  const trimmed = minutesRaw.trim();
+  const minutes = trimmed ? parseInt(trimmed, 10) : null;
+  if (trimmed && (!Number.isInteger(minutes) || minutes! < 0)) return;
+
+  try {
+    await prisma.pipelineItem.update({ where: { id: itemId }, data: { estimateMinutes: minutes } });
+  } catch (err) {
+    console.error("[atualizarEstimativa]", err);
+    return;
+  }
+
+  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
+}
+
+export async function criarLancamentoTempo(pipelineItemId: string, _prev: PipelineState, form: FormData): Promise<PipelineState> {
+  const ctx = await getAuthContext();
+  const { tenantId, userId } = ctx;
+  if (!tenantId || !userId) return { error: "Não autenticado" };
+
+  const minutesRaw = (form.get("minutes") as string)?.trim();
+  const minutes = parseInt(minutesRaw, 10);
+  if (!Number.isInteger(minutes) || minutes <= 0) return { error: "Informe os minutos gastos (maior que zero)" };
+
+  const noteRaw = (form.get("note") as string)?.trim();
+  const loggedOnRaw = (form.get("loggedOn") as string)?.trim();
+  const loggedOn = loggedOnRaw ? new Date(loggedOnRaw) : new Date();
+  if (Number.isNaN(loggedOn.getTime())) return { error: "Data inválida" };
+
+  const loaded = await loadItemPipeline(tenantId, pipelineItemId);
+  if (!loaded || !canActOnSector(ctx, loaded.pipeline.sectorCode)) {
+    return { error: "Sem permissão para editar este item." };
+  }
+  const { prisma, pipeline } = loaded;
+
+  try {
+    await prisma.timeEntry.create({
+      data: { tenantId, pipelineItemId, userId, minutes, note: noteRaw || null, loggedOn },
+    });
+    await prisma.activity.create({
+      data: {
+        tenantId, pipelineItemId, userId, type: ActivityType.TIME_LOGGED,
+        content: `${minutes} min apontados${noteRaw ? ` — ${noteRaw}` : ""}`,
+      },
+    });
+  } catch (err) {
+    console.error("[criarLancamentoTempo]", err);
+    return { error: "Erro ao registrar apontamento." };
+  }
+
+  revalidatePath(`${boardPath(pipeline)}/itens/${pipelineItemId}`);
+  return null;
+}
+
+export async function excluirLancamentoTempo(pipelineId: string, itemId: string, entryId: string): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId, userId } = ctx;
+  if (!tenantId) return;
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline) return;
+
+  const entry = await prisma.timeEntry.findFirst({ where: { id: entryId, pipelineItemId: itemId, tenantId }, select: { userId: true } });
+  // Autor apaga o próprio apontamento; coordenador (canManage) apaga qualquer um.
+  if (!entry || (entry.userId !== userId && !canManageSector(ctx, pipeline.sectorCode))) return;
+
+  try {
+    await prisma.timeEntry.delete({ where: { id: entryId } });
+  } catch (err) {
+    console.error("[excluirLancamentoTempo]", err);
+    return;
+  }
+
+  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
 }
