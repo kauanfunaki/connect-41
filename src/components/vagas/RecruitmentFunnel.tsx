@@ -11,9 +11,11 @@ export type FunnelCard = {
   origin: string | null;
   hasResume: boolean;
   stage: Stage;
+  scorecardCount: number;
 };
 
 type Props = {
+  vagaId: string;
   cards: FunnelCard[];
   canManage: boolean;
   moveAction: (candidaturaId: string, stage: Stage) => Promise<void>;
@@ -25,7 +27,7 @@ function initials(name: string): string {
   return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1]![0] : "")).toUpperCase();
 }
 
-export function RecruitmentFunnel({ cards: initialCards, canManage, moveAction, encerrarAction }: Props) {
+export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, moveAction, encerrarAction }: Props) {
   const [cards, setCards] = useState(initialCards);
   const [dragOver, setDragOver] = useState<Stage | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -105,11 +107,14 @@ export function RecruitmentFunnel({ cards: initialCards, canManage, moveAction, 
                       {c.personName}
                     </Link>
                   </div>
-                  <div className="flex items-center gap-2 mt-1.5 pl-8">
+                  <div className="flex items-center gap-2 mt-1.5 pl-8 flex-wrap">
                     {c.origin && <span className="text-[10px] text-fg-muted">via {c.origin}</span>}
                     {c.hasResume && (
                       <a href={`/api/resumes/${c.id}`} className="text-[10px] text-brand hover:underline">Currículo</a>
                     )}
+                    <Link href={`/vagas/${vagaId}/candidaturas/${c.id}`} className="text-[10px] text-brand hover:underline">
+                      Avaliar{c.scorecardCount > 0 ? ` (${c.scorecardCount})` : ""}
+                    </Link>
                   </div>
                   {canManage && !isContratado && (
                     <div className="flex gap-2 mt-2 pl-8">

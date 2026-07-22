@@ -43,7 +43,10 @@ export default async function VagaPage({
       cargo: { select: { id: true, name: true } },
       candidaturas: {
         orderBy: { createdAt: "desc" },
-        include: { person: { select: { id: true, name: true } } },
+        include: {
+          person: { select: { id: true, name: true } },
+          _count: { select: { scorecards: true } },
+        },
       },
     },
   });
@@ -83,6 +86,7 @@ export default async function VagaPage({
       origin: c.origin,
       hasResume: c.resumeUrl != null,
       stage: c.stage as Stage,
+      scorecardCount: c._count.scorecards,
     }));
   const encerrados = vaga.candidaturas.filter((c) => c.status === "REPROVADO" || c.status === "DESISTENTE");
 
@@ -202,6 +206,7 @@ export default async function VagaPage({
 
             {/* Board arrastável */}
             <RecruitmentFunnel
+              vagaId={id}
               cards={activeCards}
               canManage={canManage}
               moveAction={moverEtapaAction}
