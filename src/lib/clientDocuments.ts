@@ -88,3 +88,30 @@ export async function recordClientDocumentView(params: {
     },
   });
 }
+
+// Aceite eletrônico do destinatário — grava nome/data/IP no recipient e uma
+// linha SIGNED no log de prova (mesma trilha das visualizações/downloads).
+export async function recordClientDocumentSignature(params: {
+  recipientId: string;
+  signerName: string;
+  ipAddress: string;
+  userAgent: string | null;
+}): Promise<void> {
+  const prisma = getPrisma();
+  await prisma.clientDocumentRecipient.update({
+    where: { id: params.recipientId },
+    data: {
+      signedAt: new Date(),
+      signerName: params.signerName.slice(0, 180),
+      signerIp: params.ipAddress.slice(0, 64),
+    },
+  });
+  await prisma.clientDocumentView.create({
+    data: {
+      recipientId: params.recipientId,
+      action: "SIGNED",
+      ipAddress: params.ipAddress,
+      userAgent: params.userAgent?.slice(0, 255),
+    },
+  });
+}

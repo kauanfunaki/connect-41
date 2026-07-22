@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Eye, Download } from "lucide-react";
+import { Eye, Download, PenLine } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
@@ -62,6 +62,7 @@ export default async function DocumentoClienteDetailPage({
             <Badge variant={document.status === "PUBLISHED" ? "success" : "warning"}>
               {document.status === "PUBLISHED" ? "Publicado" : "Rascunho"}
             </Badge>
+            {document.requiresSignature && <Badge variant="info">Requer assinatura</Badge>}
           </div>
           <p className="text-[13px] text-fg-muted">
             criado por {document.createdBy.name} em {formatInstantDate(document.createdAt)}
@@ -136,12 +137,21 @@ export default async function DocumentoClienteDetailPage({
                     ) : (
                       <p className="text-[11px] text-warning mt-0.5">ainda não visualizado</p>
                     )}
+                    {document.requiresSignature &&
+                      (r.signedAt ? (
+                        <p className="text-[11px] text-success mt-0.5 flex items-center gap-1.5">
+                          <PenLine size={11} />
+                          assinado por {r.signerName ?? "—"} em {formatInstantDateTime(r.signedAt)}
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-warning mt-0.5">assinatura pendente</p>
+                      ))}
 
                     {r.views.length > 0 && (
                       <div className="mt-2 pt-2 border-t border-border space-y-1">
                         {r.views.slice(0, 5).map((v) => (
                           <p key={v.id} className="text-[11px] text-fg-muted flex items-center gap-1.5">
-                            {v.action === "VIEWED" ? <Eye size={11} /> : <Download size={11} />}
+                            {v.action === "VIEWED" ? <Eye size={11} /> : v.action === "SIGNED" ? <PenLine size={11} /> : <Download size={11} />}
                             {formatInstantDateTime(v.viewedAt)} · {v.ipAddress}
                           </p>
                         ))}

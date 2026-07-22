@@ -70,6 +70,7 @@ export async function criarDocumento(_prev: ClientDocumentState, form: FormData)
       fileUrl: fileData?.fileUrl,
       mimeType: fileData?.mimeType,
       fileSize: fileData?.fileSize,
+      requiresSignature: form.get("requiresSignature") === "true",
       createdById: ctx.userId,
     },
   });
@@ -124,6 +125,7 @@ export async function atualizarDocumento(_prev: ClientDocumentState, form: FormD
     data: {
       title,
       bodyHtml: sanitizeDocumentHtml(bodyHtmlRaw),
+      requiresSignature: form.get("requiresSignature") === "true",
       ...(fileData
         ? { fileName: fileData.fileName, fileUrl: fileData.fileUrl, mimeType: fileData.mimeType, fileSize: fileData.fileSize }
         : {}),

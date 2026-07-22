@@ -132,6 +132,19 @@ enum ProcessoSeletivoStatus {
   ENCERRADO
 }
 
+// Etapa no funil de recrutamento — dimensão ORTOGONAL ao status (que é o
+// resultado). O status diz se a candidatura está ativa/reprovada/contratada; o
+// stage diz até onde ela avançou no processo. Preservado mesmo em reprovados/
+// desistentes (é o que permite medir "quantos alcançaram cada etapa" sem
+// tabela de histórico). Ordem: TRIAGEM < ENTREVISTA < TESTE < PROPOSTA < CONTRATADO.
+enum RecruitmentStage {
+  TRIAGEM
+  ENTREVISTA
+  TESTE
+  PROPOSTA
+  CONTRATADO
+}
+
 enum ExameAdmissionalStatus {
   SOLICITADO
   AGENDADO
@@ -168,6 +181,7 @@ enum ClientDocumentStatus {
 enum ClientDocumentViewAction {
   VIEWED
   DOWNLOADED
+  SIGNED
 }
 
 enum AdmissaoLinkStatus {
@@ -990,6 +1004,7 @@ model Candidatura {
   origin           String?                @db.VarChar(80)
   resumeUrl        String?                @db.VarChar(255)
   status           ProcessoSeletivoStatus @default(EM_ANDAMENTO)
+  stage            RecruitmentStage       @default(TRIAGEM)
   rejectionReason  String?                @db.Text
   withdrawalReason String?                @db.Text
   hiredAt          DateTime?
@@ -1064,20 +1079,26 @@ model Document {
 // não devem mais ser editados (o link já enviado precisa mostrar sempre o
 // mesmo conteúdo que foi de fato visualizado).
 model ClientDocument {
-  id          String               @id @default(uuid())
-  tenantId    String
-  companyId   String
-  title       String               @db.VarChar(180)
-  bodyHtml    String               @db.Text
-  fileName    String?              @db.VarChar(180)
-  fileUrl     String?              @db.VarChar(255)
-  mimeType    String?              @db.VarChar(100)
-  fileSize    Int?
-  status      ClientDocumentStatus @default(DRAFT)
-  publishedAt DateTime?
-  createdById String
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  id                String               @id @default(uuid())
+  tenantId          String
+  companyId         String
+  title             String               @db.VarChar(180)
+  bodyHtml          String               @db.Text
+  fileName          String?              @db.VarChar(180)
+  fileUrl           String?              @db.VarChar(255)
+  mimeType          String?              @db.VarChar(100)
+  fileSize          Int?
+  status            ClientDocumentStatus @default(DRAFT)
+  // Assinatura eletrônica (extensão da admissão digital): quando true, o
+  // destinatário precisa assinar na página pública (/d/{token}) — nome + aceite
+  // registrados em ClientDocumentRecipient. Não é assinatura digital ICP-Brasil,
+  // é aceite eletrônico com trilha (nome/IP/data) na mesma linha da prova de
+  // recebimento que este módulo já registra.
+  requiresSignature Boolean              @default(false)
+  publishedAt       DateTime?
+  createdById       String
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
 
   tenant     Tenant                    @relation(fields: [tenantId], references: [id])
   company    Company                   @relation(fields: [companyId], references: [id])
@@ -1099,6 +1120,10 @@ model ClientDocumentRecipient {
   sentAt           DateTime?
   firstViewedAt    DateTime?
   lastViewedAt     DateTime?
+  // Aceite eletrônico (só usado quando o ClientDocument.requiresSignature)
+  signedAt         DateTime?
+  signerName       String?   @db.VarChar(180)
+  signerIp         String?   @db.VarChar(64)
   createdAt        DateTime  @default(now())
 
   clientDocument ClientDocument       @relation(fields: [clientDocumentId], references: [id])
