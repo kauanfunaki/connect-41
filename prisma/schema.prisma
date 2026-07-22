@@ -145,6 +145,12 @@ enum RecruitmentStage {
   CONTRATADO
 }
 
+enum InterviewRecommendation {
+  AVANCAR
+  TALVEZ
+  REPROVAR
+}
+
 enum ExameAdmissionalStatus {
   SOLICITADO
   AGENDADO
@@ -359,6 +365,7 @@ model Tenant {
   vagas                Vaga[]
   candidaturas         Candidatura[]
   exames               ExameAdmissional[]
+  interviewScorecards  InterviewScorecard[]
   documents            Document[]
   fieldPermissions     FieldPermission[]
   salaryChanges        SalaryChange[]
@@ -547,6 +554,7 @@ model User {
   clientDocumentsCreated ClientDocument[]
   recurringObligations   RecurringObligation[]
   admissaoLinksCreated   AdmissaoLink[]
+  interviewScorecards    InterviewScorecard[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -1011,11 +1019,12 @@ model Candidatura {
   createdAt        DateTime               @default(now())
   updatedAt        DateTime               @updatedAt
 
-  tenant       Tenant             @relation(fields: [tenantId], references: [id])
-  vaga         Vaga               @relation(fields: [vagaId], references: [id])
-  person       Person             @relation(fields: [personId], references: [id])
-  pipelineItem PipelineItem?      @relation(fields: [pipelineItemId], references: [id])
+  tenant       Tenant               @relation(fields: [tenantId], references: [id])
+  vaga         Vaga                 @relation(fields: [vagaId], references: [id])
+  person       Person               @relation(fields: [personId], references: [id])
+  pipelineItem PipelineItem?        @relation(fields: [pipelineItemId], references: [id])
   exames       ExameAdmissional[]
+  scorecards   InterviewScorecard[]
 
   @@unique([vagaId, personId])
   @@index([tenantId, vagaId])
@@ -1791,6 +1800,36 @@ model EvaluationScore {
   @@unique([evaluationId, competencyId])
   @@index([tenantId, evaluationId])
   @@map("evaluation_scores")
+}
+
+// Parecer estruturado de entrevista (scorecard) — um por entrevistador por
+// candidatura. Diferente de Evaluation (desempenho de colaborador, via catálogo
+// de Competency): aqui os critérios são fixos e simples (1-5), o foco é a
+// decisão de avançar o candidato no funil. O consolidado (média + tally de
+// recomendações) é calculado na leitura a partir dos scorecards de todos os
+// entrevistadores.
+model InterviewScorecard {
+  id              String                  @id @default(uuid())
+  tenantId        String
+  candidaturaId   String
+  evaluatorUserId String
+  stage           RecruitmentStage? // etapa em que a entrevista aconteceu (contexto)
+  comunicacao     Int? // 1-5
+  tecnico         Int? // 1-5
+  fitCultural     Int? // 1-5
+  experiencia     Int? // 1-5
+  recommendation  InterviewRecommendation @default(TALVEZ)
+  notes           String?                 @db.Text
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  candidatura Candidatura @relation(fields: [candidaturaId], references: [id], onDelete: Cascade)
+  evaluator   User        @relation(fields: [evaluatorUserId], references: [id])
+
+  @@unique([candidaturaId, evaluatorUserId])
+  @@index([tenantId, candidaturaId])
+  @@map("interview_scorecards")
 }
 
 // ─── Cross-setor ──────────────────────────────────────────────────────────────
