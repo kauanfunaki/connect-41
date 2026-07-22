@@ -132,6 +132,19 @@ enum ProcessoSeletivoStatus {
   ENCERRADO
 }
 
+// Etapa no funil de recrutamento — dimensão ORTOGONAL ao status (que é o
+// resultado). O status diz se a candidatura está ativa/reprovada/contratada; o
+// stage diz até onde ela avançou no processo. Preservado mesmo em reprovados/
+// desistentes (é o que permite medir "quantos alcançaram cada etapa" sem
+// tabela de histórico). Ordem: TRIAGEM < ENTREVISTA < TESTE < PROPOSTA < CONTRATADO.
+enum RecruitmentStage {
+  TRIAGEM
+  ENTREVISTA
+  TESTE
+  PROPOSTA
+  CONTRATADO
+}
+
 enum ExameAdmissionalStatus {
   SOLICITADO
   AGENDADO
@@ -991,6 +1004,7 @@ model Candidatura {
   origin           String?                @db.VarChar(80)
   resumeUrl        String?                @db.VarChar(255)
   status           ProcessoSeletivoStatus @default(EM_ANDAMENTO)
+  stage            RecruitmentStage       @default(TRIAGEM)
   rejectionReason  String?                @db.Text
   withdrawalReason String?                @db.Text
   hiredAt          DateTime?

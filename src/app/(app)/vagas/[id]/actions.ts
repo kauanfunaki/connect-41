@@ -2,12 +2,28 @@
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { ProcessoSeletivoStatus, PersonEmploymentStatus, PersonType } from "@/generated/prisma/enums";
+import { PersonEmploymentStatus, PersonType, RecruitmentStage } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 
 export type CandidaturaState = { error: string } | null;
+
+// Promove o candidato a colaborador em admissão — mesma lógica usada quando o
+// status vira CONTRATADO pelo controle de status ou pelo funil (soltar em
+// "Contratado").
+async function promoverParaColaborador(personId: string, companyId: string, cargoId: string | null) {
+  const prisma = getPrisma();
+  await prisma.person.update({
+    where: { id: personId },
+    data: {
+      type: PersonType.COLABORADOR,
+      employmentStatus: PersonEmploymentStatus.ADMISSAO_EM_ANDAMENTO,
+      currentCompanyId: companyId,
+      cargoId: cargoId ?? undefined,
+    },
+  });
+}
 
 export async function adicionarCandidato(
   vagaId: string,
@@ -44,63 +60,81 @@ export async function adicionarCandidato(
   return null;
 }
 
-export async function atualizarStatusCandidatura(
+// Move a candidatura entre etapas do funil (drag-and-drop). Soltar em
+// CONTRATADO dispara a contratação (status + promoção), reaproveitando a mesma
+// lógica do controle de status.
+export async function moverEtapaCandidatura(
+  vagaId: string,
   candidaturaId: string,
-  _prev: CandidaturaState,
-  form: FormData
-): Promise<CandidaturaState> {
+  stage: RecruitmentStage
+): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId) return { error: "Não autenticado" };
+  if (!ctx.tenantId) return;
+  if (!Object.values(RecruitmentStage).includes(stage)) return;
 
   const prisma = getPrisma();
   const candidatura = await prisma.candidatura.findFirst({
-    where: { id: candidaturaId, tenantId: ctx.tenantId },
+    where: { id: candidaturaId, tenantId: ctx.tenantId, vagaId },
     include: { vaga: true },
   });
-  if (!candidatura) return { error: "Candidatura não encontrada." };
-  if (!canActOnSector(ctx, candidatura.vaga.sectorCode)) {
-    return { error: "Sem permissão para atualizar esta candidatura." };
+  if (!candidatura) return;
+  if (!canActOnSector(ctx, candidatura.vaga.sectorCode)) return;
+
+  try {
+    if (stage === "CONTRATADO" && candidatura.status !== "CONTRATADO") {
+      await prisma.candidatura.update({
+        where: { id: candidaturaId },
+        data: { stage, status: "CONTRATADO", hiredAt: new Date() },
+      });
+      await promoverParaColaborador(candidatura.personId, candidatura.vaga.companyId, candidatura.vaga.cargoId);
+    } else {
+      await prisma.candidatura.update({ where: { id: candidaturaId }, data: { stage } });
+    }
+  } catch (err) {
+    console.error("[moverEtapaCandidatura]", err);
+    return;
   }
 
-  const status = form.get("status") as ProcessoSeletivoStatus;
-  if (!Object.values(ProcessoSeletivoStatus).includes(status)) {
-    return { error: "Status inválido." };
-  }
-  const rejectionReason = (form.get("rejectionReason") as string)?.trim() || null;
-  const withdrawalReason = (form.get("withdrawalReason") as string)?.trim() || null;
+  revalidatePath(`/vagas/${vagaId}`);
+  revalidatePath(`/pessoas/${candidatura.personId}`);
+}
 
+// Encerra a candidatura (reprovação/desistência). Mantém o `stage` atual de
+// propósito — é o que preserva a medição de "quantos alcançaram cada etapa".
+export async function encerrarCandidatura(
+  vagaId: string,
+  candidaturaId: string,
+  outcome: "REPROVADO" | "DESISTENTE",
+  reason: string | null
+): Promise<void> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return;
+  if (outcome !== "REPROVADO" && outcome !== "DESISTENTE") return;
+
+  const prisma = getPrisma();
+  const candidatura = await prisma.candidatura.findFirst({
+    where: { id: candidaturaId, tenantId: ctx.tenantId, vagaId },
+    include: { vaga: { select: { sectorCode: true } } },
+  });
+  if (!candidatura) return;
+  if (!canActOnSector(ctx, candidatura.vaga.sectorCode)) return;
+
+  const cleanReason = reason?.trim() || null;
   try {
     await prisma.candidatura.update({
       where: { id: candidaturaId },
       data: {
-        status,
-        rejectionReason: status === "REPROVADO" ? rejectionReason : null,
-        withdrawalReason: status === "DESISTENTE" ? withdrawalReason : null,
-        hiredAt: status === "CONTRATADO" ? new Date() : candidatura.hiredAt,
+        status: outcome,
+        rejectionReason: outcome === "REPROVADO" ? cleanReason : null,
+        withdrawalReason: outcome === "DESISTENTE" ? cleanReason : null,
       },
     });
-
-    // Converte o candidato em colaborador — o próximo passo (dados de admissão
-    // completos, cargo, salário etc.) continua na Ficha da Pessoa normalmente.
-    if (status === "CONTRATADO") {
-      await prisma.person.update({
-        where: { id: candidatura.personId },
-        data: {
-          type: PersonType.COLABORADOR,
-          employmentStatus: PersonEmploymentStatus.ADMISSAO_EM_ANDAMENTO,
-          currentCompanyId: candidatura.vaga.companyId,
-          cargoId: candidatura.vaga.cargoId ?? undefined,
-        },
-      });
-    }
   } catch (err) {
-    console.error("[atualizarStatusCandidatura]", err);
-    return { error: "Erro ao atualizar status da candidatura." };
+    console.error("[encerrarCandidatura]", err);
+    return;
   }
 
-  revalidatePath(`/vagas/${candidatura.vagaId}`);
-  revalidatePath(`/pessoas/${candidatura.personId}`);
-  return null;
+  revalidatePath(`/vagas/${vagaId}`);
 }
 
 export async function removerCandidatura(vagaId: string, candidaturaId: string): Promise<void> {

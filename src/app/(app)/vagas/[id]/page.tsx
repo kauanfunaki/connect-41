@@ -7,11 +7,12 @@ import { scopedVagaWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
 import { AddCandidatoForm } from "@/components/vagas/AddCandidatoForm";
-import { CandidaturaRow } from "@/components/vagas/CandidaturaRow";
+import { RecruitmentFunnel, type FunnelCard } from "@/components/vagas/RecruitmentFunnel";
+import { computeFunnelConversion, type Stage } from "@/lib/recruitmentFunnel";
 import { formatInstantDate } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { excluirVaga, encerrarVaga } from "../actions";
-import { adicionarCandidato, atualizarStatusCandidatura, removerCandidatura } from "./actions";
+import { adicionarCandidato, moverEtapaCandidatura, encerrarCandidatura } from "./actions";
 
 const STATUS_LABEL: Record<VagaStatus, string> = {
   ABERTA:       "Aberta",
@@ -66,9 +67,27 @@ export default async function VagaPage({
   const deleteAction = excluirVaga.bind(null, id);
   const encerrarAction = encerrarVaga.bind(null, id);
   const addCandidatoAction = adicionarCandidato.bind(null, id);
+  const moverEtapaAction = moverEtapaCandidatura.bind(null, id);
+  const encerrarCandidaturaAction = encerrarCandidatura.bind(null, id);
+
+  // Funil: separa candidaturas ativas (colunas do board) das encerradas
+  // (reprovado/desistente, faixa embaixo). O cálculo de conversão usa TODAS
+  // (o stage preservado é o que mede quem alcançou cada etapa).
+  const funnelStats = computeFunnelConversion(vaga.candidaturas.map((c) => ({ stage: c.stage, status: c.status })));
+  const activeCards: FunnelCard[] = vaga.candidaturas
+    .filter((c) => c.status !== "REPROVADO" && c.status !== "DESISTENTE")
+    .map((c) => ({
+      id: c.id,
+      personId: c.person.id,
+      personName: c.person.name,
+      origin: c.origin,
+      hasResume: c.resumeUrl != null,
+      stage: c.stage as Stage,
+    }));
+  const encerrados = vaga.candidaturas.filter((c) => c.status === "REPROVADO" || c.status === "DESISTENTE");
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-6">
         <Link href="/vagas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Vagas</Link>
         <span className="text-fg-muted">/</span>
@@ -150,11 +169,11 @@ export default async function VagaPage({
         )}
       </div>
 
-      {/* Candidatos */}
-      <div className="bg-surface border border-border rounded-lg p-5">
-        <div className="flex items-center justify-between mb-3">
+      {/* Funil de recrutamento */}
+      <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+        <div className="flex items-center justify-between mb-4">
           <h2 className="text-[14px] font-semibold text-fg">
-            Candidatos ({vaga.candidaturas.length})
+            Funil de recrutamento ({vaga.candidaturas.length} candidato{vaga.candidaturas.length !== 1 ? "s" : ""})
           </h2>
           {canAct && (
             <Link href="/candidatos/nova" className="text-[12px] text-brand hover:underline">
@@ -166,27 +185,59 @@ export default async function VagaPage({
         {vaga.candidaturas.length === 0 ? (
           <p className="text-[13px] text-fg-muted">Nenhum candidato vinculado ainda.</p>
         ) : (
-          <div>
-            {vaga.candidaturas.map((c) => (
-              <CandidaturaRow
-                key={c.id}
-                candidatura={{
-                  id: c.id,
-                  status: c.status,
-                  origin: c.origin,
-                  personId: c.person.id,
-                  personName: c.person.name,
-                  hasResume: c.resumeUrl != null,
-                }}
-                updateAction={atualizarStatusCandidatura.bind(null, c.id)}
-                removeAction={removerCandidatura.bind(null, id, c.id)}
-                canManage={canManage}
-              />
-            ))}
-          </div>
+          <>
+            {/* Conversão por etapa */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-5">
+              {funnelStats.stages.map((s) => (
+                <div key={s.stage} className="rounded-lg border border-border bg-surface-2 p-2.5">
+                  <p className="text-[10px] text-fg-muted uppercase tracking-wide truncate">{s.label}</p>
+                  <p className="text-[18px] font-semibold text-fg tnum">{s.conversionPct}%</p>
+                  <div className="h-1 rounded-full bg-border mt-1 overflow-hidden">
+                    <div className="h-full bg-brand rounded-full" style={{ width: `${s.conversionPct}%` }} />
+                  </div>
+                  <p className="text-[10px] text-fg-muted mt-1">{s.reached} alcançaram</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Board arrastável */}
+            <RecruitmentFunnel
+              cards={activeCards}
+              canManage={canManage}
+              moveAction={moverEtapaAction}
+              encerrarAction={encerrarCandidaturaAction}
+            />
+            {canManage && (
+              <p className="text-[11px] text-fg-muted mt-2">
+                Arraste os candidatos entre as etapas. Soltar em “Contratado” inicia a admissão.
+              </p>
+            )}
+
+            {/* Encerrados */}
+            {encerrados.length > 0 && (
+              <div className="mt-5 pt-4 border-t border-border">
+                <h3 className="text-[12px] font-semibold text-fg-muted mb-2">
+                  Encerrados ({encerrados.length})
+                </h3>
+                <div className="space-y-1.5">
+                  {encerrados.map((c) => (
+                    <div key={c.id} className="flex items-center justify-between text-[12px]">
+                      <Link href={`/pessoas/${c.person.id}`} className="text-fg-secondary hover:text-brand transition-colors">
+                        {c.person.name}
+                      </Link>
+                      <span className="text-fg-muted">
+                        {c.status === "REPROVADO" ? "Reprovado" : "Desistente"}
+                        {(c.rejectionReason || c.withdrawalReason) && ` · ${c.rejectionReason ?? c.withdrawalReason}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
 
-        {canAct && <AddCandidatoForm action={addCandidatoAction} candidatos={candidatos} />}
+        {canAct && <div className="mt-4"><AddCandidatoForm action={addCandidatoAction} candidatos={candidatos} /></div>}
       </div>
     </PageContainer>
   );
