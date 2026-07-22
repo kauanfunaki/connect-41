@@ -754,6 +754,7 @@ model Person {
   chatwootContactLinks ChatwootContactLink[]
   admissaoLinks        AdmissaoLink[]
   dependentes          Dependente[]
+  tags                 PersonTag[]
 
   @@unique([tenantId, cpf])
   @@index([tenantId])
@@ -900,6 +901,7 @@ model Tag {
 
   tenant Tenant            @relation(fields: [tenantId], references: [id])
   items  PipelineItemTag[]
+  people PersonTag[]
 
   @@unique([tenantId, sectorCode, name])
   @@index([tenantId, sectorCode])
@@ -917,22 +919,37 @@ model PipelineItemTag {
   @@map("pipeline_item_tags")
 }
 
+// Tag/skill de um candidato (banco de talentos) — mesmo catálogo de Tag já
+// usado no Kanban (setor "recrutamento"), só um join novo. Não regride quando
+// a candidatura é reprovada/desistente: é o que torna o candidato pesquisável
+// pra vagas futuras mesmo depois de um processo específico não dar certo.
+model PersonTag {
+  personId String
+  tagId    String
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([personId, tagId])
+  @@map("person_tags")
+}
+
 // ─── Atividades (timeline) ────────────────────────────────────────────────────
 
 model Activity {
-  id             String       @id @default(uuid())
-  tenantId       String
-  pipelineItemId String
-  userId         String
-  type           ActivityType
-  content        String?      @db.Text
-  metadata       Json? // dados extras (ex: stageFrom, stageTo no STATUS_CHANGE)
+  id               String       @id @default(uuid())
+  tenantId         String
+  pipelineItemId   String
+  userId           String
+  type             ActivityType
+  content          String?      @db.Text
+  metadata         Json? // dados extras (ex: stageFrom, stageTo no STATUS_CHANGE)
   // Resposta a um comentário específico (só faz sentido em NOTE) — self-relation;
   // um NOTE sem parentActivityId é um comentário de topo, com parentActivityId é
   // uma resposta. Eventos automáticos nunca têm parentActivityId.
   parentActivityId String?
   editedAt         DateTime? // preenchido quando o autor edita a própria nota
-  createdAt      DateTime     @default(now())
+  createdAt        DateTime     @default(now())
 
   tenant         Tenant       @relation(fields: [tenantId], references: [id])
   pipelineItem   PipelineItem @relation(fields: [pipelineItemId], references: [id], onDelete: Cascade)

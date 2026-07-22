@@ -10,6 +10,8 @@ import { DocumentsSection } from "@/components/documents/DocumentsSection";
 import { AiResumeExtract } from "@/components/candidatos/AiResumeExtract";
 import { extrairDadosCurriculo } from "./ai-actions";
 import { formatCalendarDate, formatInstantDate, maskCpf, formatPhone, formatCep } from "@/lib/format";
+import { TagToggleList } from "@/components/kanban/TagToggleList";
+import { alternarTagPessoa } from "../actions";
 import type { ProcessoSeletivoStatus } from "@/generated/prisma/enums";
 
 const CANDIDATURA_STATUS_LABEL: Record<ProcessoSeletivoStatus, string> = {
@@ -31,11 +33,17 @@ export default async function CandidatoPage({
   const canEdit = canWrite(ctx.role);
 
   const prisma = getPrisma();
-  const [person, documents] = await Promise.all([
+  const [person, documents, allTags] = await Promise.all([
     prisma.person.findFirst({
       where: { id, tenantId: ctx.tenantId, type: "CANDIDATO" },
+      include: { tags: { select: { tagId: true } } },
     }),
     listDocuments(ctx.tenantId, "PERSON", id),
+    prisma.tag.findMany({
+      where: { tenantId: ctx.tenantId, sectorCode: "recrutamento" },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, color: true },
+    }),
   ]);
 
   if (!person) notFound();
@@ -97,6 +105,19 @@ export default async function CandidatoPage({
             <DeleteButton action={deleteAction} nome={person.name} />
           </div>
         )}
+      </div>
+
+      {/* Tags / Skills — banco de talentos */}
+      <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+        <h2 className="text-[14px] font-semibold text-fg mb-1">Tags / Habilidades</h2>
+        <p className="text-[12px] text-fg-muted mb-3">
+          Torna o candidato pesquisável no banco de talentos, mesmo que não avance nesta vaga.
+        </p>
+        <TagToggleList
+          allTags={allTags}
+          selectedIds={person.tags.map((t) => t.tagId)}
+          toggleAction={alternarTagPessoa.bind(null, id)}
+        />
       </div>
 
       {/* Identificação */}

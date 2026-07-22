@@ -16,6 +16,7 @@ type Row = {
   email: string | null;
   candidaturasCount: number;
   createdAtLabel: string;
+  tags: { id: string; name: string; color: string }[];
 };
 
 type Props = {
@@ -69,6 +70,7 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
                 )}
                 <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Nome</th>
                 <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Status</th>
+                <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Tags</th>
                 <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">CPF</th>
                 <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">E-mail</th>
                 <th className="text-left px-4 py-2.5 text-[12px] font-medium text-fg-muted">Candidaturas</th>
@@ -99,6 +101,23 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
                     >
                       {c.active ? "Ativo" : "Inativo"}
                     </span>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {c.tags.length === 0 ? (
+                      <span className="text-fg-muted">—</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {c.tags.map((t) => (
+                          <span
+                            key={t.id}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium border"
+                            style={{ background: `${t.color}1A`, color: t.color, borderColor: `${t.color}40` }}
+                          >
+                            {t.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-2.5 text-fg-muted tnum">{maskCpf(c.cpf)}</td>
                   <td className="px-4 py-2.5 text-fg-muted">{c.email ?? "—"}</td>
