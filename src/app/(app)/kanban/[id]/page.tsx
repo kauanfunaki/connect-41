@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps } from "@/lib/sectors";
-import { KanbanBoard } from "@/components/kanban/KanbanBoard";
+import { BoardView } from "@/components/kanban/BoardView";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { moverItem } from "../actions";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
@@ -26,11 +26,15 @@ export default async function KanbanBoardPage({
     where: { id, ...scopedPipelineWhere(ctx) },
     include: {
       stages: { orderBy: { order: "asc" } },
+      // parentItemId: null — subtarefas não viram card solto no board, só
+      // aparecem dentro do detalhe do item pai.
       items: {
+        where: { parentItemId: null },
         orderBy: { createdAt: "asc" },
         include: {
           tags: { include: { tag: { select: { id: true, name: true, color: true } } } },
           assignees: { include: { user: { select: { id: true, name: true } } } },
+          subtasks: { select: { id: true, title: true, priority: true, stage: { select: { name: true, isTerminal: true } } } },
         },
       },
     },
@@ -103,13 +107,22 @@ export default async function KanbanBoardPage({
   const items = pipeline.items.map((i) => ({
     id: i.id,
     stageId: i.stageId,
-    entityName: entityNames[i.entityId] ?? "(removido)",
+    entityName: i.title ?? entityNames[i.entityId] ?? "(removido)",
     priority: i.priority,
     dueDate: i.dueDate ? i.dueDate.toISOString() : null,
     tags: i.tags.map((t) => ({ id: t.tag.id, name: t.tag.name, color: t.tag.color })),
     assignees: i.assignees.map((a) => ({ id: a.user.id, name: a.user.name })),
     daysInStage: daysSince(lastChangeByItem[i.id] ?? i.createdAt),
     lastActivity: lastActivityByItem[i.id] ?? null,
+    subtaskTotal: i.subtasks.length,
+    subtaskDone: i.subtasks.filter((s) => s.stage.isTerminal).length,
+    subtasks: i.subtasks.map((s) => ({
+      id: s.id,
+      entityName: s.title ?? "(sem título)",
+      stageName: s.stage.name,
+      isTerminal: s.stage.isTerminal,
+      priority: s.priority,
+    })),
   }));
 
   const timeline = recentMoves.map((m) => ({
@@ -149,8 +162,9 @@ export default async function KanbanBoardPage({
       </div>
 
       <div className="flex-1 min-h-0">
-        <KanbanBoard
+        <BoardView
           pipelineId={id}
+          basePath={`/kanban/${id}`}
           stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name, color: s.color, isTerminal: s.isTerminal }))}
           items={items}
           moveAction={moverItem}

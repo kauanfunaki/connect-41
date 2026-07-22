@@ -18,6 +18,8 @@ type Item = {
   assignees?: Assignee[];
   daysInStage?: number;
   lastActivity?: string | null;
+  subtaskTotal?: number;
+  subtaskDone?: number;
 };
 
 type Props = {
@@ -144,6 +146,12 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                         </span>
                       )}
                     </div>
+
+                    {item.subtaskTotal !== undefined && item.subtaskTotal > 0 && (
+                      <p className="text-[length:var(--fs-kanban-meta)] text-fg-muted mt-1.5">
+                        {item.subtaskDone}/{item.subtaskTotal} subtarefas
+                      </p>
+                    )}
 
                     {item.tags && item.tags.length > 0 && (
                       <div className="flex flex-wrap items-center gap-1 mt-2">

@@ -16,6 +16,7 @@ import {
   HANDOFF_PRIORITY_BADGE,
 } from "@/lib/handoffs";
 import type { HandoffPriority, Prisma } from "@/generated/prisma/client";
+import { boardPath } from "@/lib/kanbanPaths";
 
 const PRIORITY_ORDER: Record<HandoffPriority, number> = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
 
@@ -75,6 +76,7 @@ export default async function TarefasPage() {
             id: true,
             entityId: true,
             entityType: true,
+            title: true,
             dueDate: true,
             pipelineId: true,
             stage: { select: { name: true } },
@@ -200,11 +202,11 @@ export default async function TarefasPage() {
                 {meusCards.map((c) => (
                   <Link
                     key={c.id}
-                    href={`/kanban/${c.pipelineId}/itens/${c.id}`}
+                    href={`${boardPath({ id: c.pipelineId, sectorCode: c.pipeline.sectorCode })}/itens/${c.id}`}
                     className="flex items-center justify-between gap-3 py-2 group"
                   >
                     <span className="text-[length:var(--fs-body)] text-fg group-hover:text-brand transition-colors truncate min-w-0">
-                      {entityNames[c.entityId] ?? "(removido)"}
+                      {c.title ?? entityNames[c.entityId] ?? "(removido)"}
                       <span className="text-fg-muted font-normal">
                         {" · "}
                         {sectorLabels[c.pipeline.sectorCode] ?? c.pipeline.sectorCode}

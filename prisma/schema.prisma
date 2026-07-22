@@ -70,6 +70,8 @@ enum ActivityType {
   DESCRIPTION_CHANGE
   ASSIGNEE_CHANGE
   TAG_CHANGE
+  CHECKLIST_CHANGE
+  SUBTASK_CHANGE
 }
 
 // Situação da transferência em cada setor de destino:
@@ -394,6 +396,7 @@ model Tenant {
   evaluations          Evaluation[]
   evaluationScores     EvaluationScore[]
   handoffViews         HandoffView[]
+  checklistItems       ChecklistItem[]
   auditLogs            AuditLog[]
   oauthAccounts        OAuthAccount[]
   meetings             Meeting[]
@@ -802,6 +805,16 @@ model PipelineItem {
   stageId     String
   entityType  PipelineEntityType
   entityId    String // Company.id ou Person.id (referência por string, sem FK Prisma — relação polimórfica)
+  // Título próprio, opcional — item de topo normalmente usa o nome da entidade
+  // (entityName resolvido em runtime) como título; subtarefa (parentItemId
+  // preenchido) sempre tem título próprio, já que várias subtarefas podem
+  // compartilhar a mesma entidade do item pai.
+  title       String?            @db.VarChar(200)
+  // Subtarefa: mesma tabela (PipelineItem) com parentItemId apontando pro item
+  // "mãe" — reaproveita status/prioridade/prazo/responsável/tags/atividades/
+  // anexos que já existem pra qualquer PipelineItem, sem duplicar modelo. Só
+  // 1 nível (subtarefa de subtarefa não é permitido, controlado na action).
+  parentItemId String?
   priority    Int                @default(0)
   dueDate     DateTime?
   description String?            @db.Text
@@ -811,15 +824,38 @@ model PipelineItem {
   tenant      Tenant                 @relation(fields: [tenantId], references: [id])
   pipeline    Pipeline               @relation(fields: [pipelineId], references: [id])
   stage       PipelineStage          @relation(fields: [stageId], references: [id])
+  parent      PipelineItem?          @relation("SubTasks", fields: [parentItemId], references: [id], onDelete: Cascade)
+  subtasks    PipelineItem[]         @relation("SubTasks")
   activities  Activity[]
   assignees   PipelineItemAssignee[]
   tags        PipelineItemTag[]
+  checklist   ChecklistItem[]
   candidatura Candidatura?
   meetings    Meeting[]
 
   @@index([tenantId, pipelineId])
   @@index([tenantId, entityType, entityId])
+  @@index([parentItemId])
   @@map("pipeline_items")
+}
+
+// Checklist simples (sem virar subtarefa) — item de topo e subtarefa podem
+// ambos ter o próprio checklist.
+model ChecklistItem {
+  id             String   @id @default(uuid())
+  tenantId       String
+  pipelineItemId String
+  text           String   @db.VarChar(280)
+  done           Boolean  @default(false)
+  order          Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  pipelineItem PipelineItem @relation(fields: [pipelineItemId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, pipelineItemId])
+  @@map("checklist_items")
 }
 
 // Responsáveis internos de um item — N:N (substitui o antigo assignedUserId singular)

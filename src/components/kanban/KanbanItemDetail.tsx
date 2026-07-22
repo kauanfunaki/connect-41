@@ -7,6 +7,8 @@ import { ActivityFeed, type FeedItem } from "@/components/kanban/ActivityFeed";
 import { MeetingsSection } from "@/components/kanban/MeetingsSection";
 import { DocumentsSection } from "@/components/documents/DocumentsSection";
 import { listDocuments } from "@/lib/documents";
+import { SubtasksSection } from "@/components/kanban/SubtasksSection";
+import { ChecklistSection } from "@/components/kanban/ChecklistSection";
 import {
   moverItem,
   adicionarNota,
@@ -15,7 +17,15 @@ import {
   atualizarDescricao,
   alternarTagItem,
   alternarResponsavelItem,
+  criarSubtarefa,
+  excluirSubtarefa,
+  criarChecklistItem,
+  alternarChecklistItem,
+  editarChecklistItem,
+  excluirChecklistItem,
+  reordenarChecklistItem,
 } from "@/app/(app)/kanban/actions";
+import { boardPath } from "@/lib/kanbanPaths";
 import { agendarReuniao, excluirReuniao } from "@/app/(app)/kanban/meetings-actions";
 import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
@@ -103,6 +113,29 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
     listDocuments(tenantId, "PIPELINE_ITEM", itemId),
   ]);
 
+  const [parentItem, subtasks, checklistItems] = await Promise.all([
+    item.parentItemId
+      ? prisma.pipelineItem.findFirst({ where: { id: item.parentItemId, tenantId }, select: { id: true, title: true, entityId: true, entityType: true } })
+      : Promise.resolve(null),
+    item.parentItemId
+      ? Promise.resolve([])
+      : prisma.pipelineItem.findMany({
+          where: { parentItemId: itemId, tenantId },
+          orderBy: { createdAt: "asc" },
+          include: { stage: { select: { name: true, isTerminal: true } } },
+        }),
+    prisma.checklistItem.findMany({ where: { pipelineItemId: itemId, tenantId }, orderBy: { order: "asc" } }),
+  ]);
+
+  let parentEntityName: string | null = null;
+  if (parentItem) {
+    const parentEntity =
+      parentItem.entityType === "COMPANY"
+        ? await prisma.company.findFirst({ where: { id: parentItem.entityId, tenantId }, select: { name: true } })
+        : await prisma.person.findFirst({ where: { id: parentItem.entityId, tenantId }, select: { name: true } });
+    parentEntityName = parentItem.title ?? parentEntity?.name ?? "(removido)";
+  }
+
   const deleteAction = excluirItem.bind(null, id, itemId);
   const addNoteAction = adicionarNota.bind(null, id, itemId);
   const prazoAction = atualizarPrazoPrioridade.bind(null, id, itemId);
@@ -113,6 +146,15 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
   const deleteMeetingAction = excluirReuniao.bind(null, id);
   const hasGoogle = oauthAccounts.some((a) => a.provider === "GOOGLE");
   const hasMicrosoft = oauthAccounts.some((a) => a.provider === "MICROSOFT");
+
+  const basePath = boardPath(pipeline);
+  const createSubtaskAction = criarSubtarefa.bind(null, itemId);
+  const deleteSubtaskAction = excluirSubtarefa.bind(null, itemId);
+  const createChecklistAction = criarChecklistItem.bind(null, itemId);
+  const toggleChecklistAction = alternarChecklistItem.bind(null, itemId);
+  const editChecklistAction = editarChecklistItem.bind(null, itemId);
+  const deleteChecklistAction = excluirChecklistItem.bind(null, itemId);
+  const reorderChecklistAction = reordenarChecklistItem.bind(null, itemId);
 
   const feedItems: FeedItem[] = activities.map((a) => ({
     id: a.id,
@@ -139,15 +181,23 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
             {pipeline.name}
           </Link>
           <span className="text-fg-muted">/</span>
-          <span className="text-[13px] text-fg truncate">{entity?.name ?? "(removido)"}</span>
+          <span className="text-[13px] text-fg truncate">{item.title ?? entity?.name ?? "(removido)"}</span>
         </div>
       )}
 
       <div className="mb-4">
+        {item.parentItemId && (
+          <Link
+            href={`${basePath}/itens/${item.parentItemId}`}
+            className="text-[12px] text-fg-muted hover:text-fg transition-colors inline-block mb-1"
+          >
+            ← Subtarefa de &quot;{parentEntityName}&quot;
+          </Link>
+        )}
         <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-1">
-          {entity?.name ?? "(removido)"}
+          {item.title ?? entity?.name ?? "(removido)"}
         </h1>
-        {entity && (
+        {entity && !item.title && (
           <Link
             href={item.entityType === "COMPANY" ? `/empresas/${entity.id}` : `/pessoas/${entity.id}`}
             className="text-[13px] text-brand hover:underline"
@@ -155,13 +205,24 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
             Ver ficha completa →
           </Link>
         )}
+        {entity && item.title && (
+          <p className="text-[13px] text-fg-muted">
+            {entity.name} ·{" "}
+            <Link
+              href={item.entityType === "COMPANY" ? `/empresas/${entity.id}` : `/pessoas/${entity.id}`}
+              className="text-brand hover:underline"
+            >
+              Ver ficha completa →
+            </Link>
+          </p>
+        )}
       </div>
 
       <CardActionBar
         canAct={canAct}
         canDelete={canDelete}
         itemId={itemId}
-        entityName={entity?.name ?? "este item"}
+        entityName={item.title ?? entity?.name ?? "este item"}
         stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name }))}
         currentStageId={item.stageId}
         moveAction={moverItem}
@@ -180,6 +241,34 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
         <div className="flex flex-col gap-4 min-w-0">
           <DescriptionEditor canAct={canAct} description={item.description} action={descricaoAction} />
+
+          {!item.parentItemId && (
+            <SubtasksSection
+              canAct={canAct}
+              canDelete={canDelete}
+              basePath={basePath}
+              subtasks={subtasks.map((s) => ({
+                id: s.id,
+                title: s.title ?? "(sem título)",
+                stageName: s.stage.name,
+                isTerminal: s.stage.isTerminal,
+                priority: s.priority,
+              }))}
+              createAction={createSubtaskAction}
+              deleteAction={deleteSubtaskAction}
+            />
+          )}
+
+          <ChecklistSection
+            canAct={canAct}
+            items={checklistItems.map((c) => ({ id: c.id, text: c.text, done: c.done }))}
+            createAction={createChecklistAction}
+            toggleAction={toggleChecklistAction}
+            editAction={editChecklistAction}
+            deleteAction={deleteChecklistAction}
+            reorderAction={reorderChecklistAction}
+          />
+
           <DocumentsSection
             entityType="PIPELINE_ITEM"
             entityId={itemId}

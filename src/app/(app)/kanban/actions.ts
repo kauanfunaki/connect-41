@@ -6,20 +6,9 @@ import { getPrisma } from "@/lib/prisma";
 import { PipelineEntityType, ActivityType } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
 import { scopedPipelineWhere } from "@/lib/auth/scope";
+import { boardPath } from "@/lib/kanbanPaths";
 
 export type PipelineState = { error: string } | null;
-
-// Setores com módulo dedicado (rota própria, fora do /kanban genérico) usam
-// essa base de path nos redirects/revalidate em vez de /kanban/{id} — mantém
-// as server actions únicas mesmo com múltiplas telas de board no app.
-const DEDICATED_SECTOR_ROUTES: Record<string, string> = {
-  bpo: "/bpo-financeiro",
-};
-
-function boardPath(pipeline: { id: string; sectorCode: string }): string {
-  const base = DEDICATED_SECTOR_ROUTES[pipeline.sectorCode];
-  return base ? `${base}/${pipeline.id}` : `/kanban/${pipeline.id}`;
-}
 
 export async function criarPipeline(
   _prev: PipelineState,
@@ -459,4 +448,224 @@ export async function excluirItem(pipelineId: string, itemId: string): Promise<v
   const base = boardPath(pipeline);
   revalidatePath(base);
   redirect(base);
+}
+
+// ─── Subtarefas ────────────────────────────────────────────────────────────
+// Reaproveita a própria PipelineItem (parentItemId) em vez de um modelo novo —
+// uma subtarefa já ganha de graça status (stage), prioridade, prazo,
+// responsável, tags, atividades e anexos, exatamente como um item de topo.
+// Só 1 nível: uma subtarefa não pode ter subtarefas (checado abaixo).
+
+export async function criarSubtarefa(parentItemId: string, title: string): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId, userId } = ctx;
+  if (!tenantId || !title.trim()) return;
+
+  const prisma = getPrisma();
+  const parent = await prisma.pipelineItem.findFirst({ where: { id: parentItemId, tenantId } });
+  if (!parent || parent.parentItemId) return; // não achou, ou é subtarefa (só 1 nível)
+
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: parent.pipelineId } });
+  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+
+  try {
+    const firstStage = await prisma.pipelineStage.findFirst({
+      where: { pipelineId: parent.pipelineId },
+      orderBy: { order: "asc" },
+    });
+    if (!firstStage) return;
+
+    await prisma.pipelineItem.create({
+      data: {
+        tenantId,
+        pipelineId: parent.pipelineId,
+        stageId: firstStage.id,
+        entityType: parent.entityType,
+        entityId: parent.entityId,
+        parentItemId: parent.id,
+        title: title.trim(),
+      },
+    });
+
+    if (userId) {
+      await prisma.activity.create({
+        data: { tenantId, pipelineItemId: parent.id, userId, type: ActivityType.SUBTASK_CHANGE, content: `Subtarefa "${title.trim()}" criada` },
+      });
+    }
+  } catch (err) {
+    console.error("[criarSubtarefa]", err);
+    return;
+  }
+
+  revalidatePath(`${boardPath(pipeline)}/itens/${parentItemId}`);
+}
+
+export async function excluirSubtarefa(parentItemId: string, subtaskId: string): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId, userId } = ctx;
+  if (!tenantId) return;
+
+  const prisma = getPrisma();
+  const subtask = await prisma.pipelineItem.findFirst({ where: { id: subtaskId, tenantId, parentItemId } });
+  if (!subtask) return;
+
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: subtask.pipelineId } });
+  if (!pipeline || !canManageSector(ctx, pipeline.sectorCode)) return;
+
+  try {
+    const title = subtask.title ?? "";
+    await prisma.pipelineItem.delete({ where: { id: subtaskId } });
+    if (userId) {
+      await prisma.activity.create({
+        data: { tenantId, pipelineItemId: parentItemId, userId, type: ActivityType.SUBTASK_CHANGE, content: `Subtarefa "${title}" removida` },
+      });
+    }
+  } catch (err) {
+    console.error("[excluirSubtarefa]", err);
+    return;
+  }
+
+  revalidatePath(`${boardPath(pipeline)}/itens/${parentItemId}`);
+}
+
+// ─── Checklist ─────────────────────────────────────────────────────────────
+// Lista simples por item (sem "Checklist" nomeado separado) — cobre etapas
+// pequenas que não justificam virar subtarefa própria.
+
+async function loadItemPipeline(tenantId: string, pipelineItemId: string) {
+  const prisma = getPrisma();
+  const item = await prisma.pipelineItem.findFirst({ where: { id: pipelineItemId, tenantId } });
+  if (!item) return null;
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: item.pipelineId } });
+  if (!pipeline) return null;
+  return { prisma, item, pipeline };
+}
+
+export async function criarChecklistItem(pipelineItemId: string, textRaw: string): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId, userId } = ctx;
+  const text = textRaw.trim();
+  if (!tenantId || !text) return;
+
+  const loaded = await loadItemPipeline(tenantId, pipelineItemId);
+  if (!loaded || !canActOnSector(ctx, loaded.pipeline.sectorCode)) return;
+  const { prisma, pipeline } = loaded;
+
+  try {
+    const last = await prisma.checklistItem.findFirst({
+      where: { pipelineItemId },
+      orderBy: { order: "desc" },
+      select: { order: true },
+    });
+    await prisma.checklistItem.create({
+      data: { tenantId, pipelineItemId, text, order: (last?.order ?? -1) + 1 },
+    });
+    if (userId) {
+      await prisma.activity.create({
+        data: { tenantId, pipelineItemId, userId, type: ActivityType.CHECKLIST_CHANGE, content: `Item de checklist "${text}" adicionado` },
+      });
+    }
+  } catch (err) {
+    console.error("[criarChecklistItem]", err);
+    return;
+  }
+
+  revalidatePath(`${boardPath(pipeline)}/itens/${pipelineItemId}`);
+}
+
+export async function alternarChecklistItem(pipelineItemId: string, checklistItemId: string, done: boolean): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId, userId } = ctx;
+  if (!tenantId) return;
+
+  const loaded = await loadItemPipeline(tenantId, pipelineItemId);
+  if (!loaded || !canActOnSector(ctx, loaded.pipeline.sectorCode)) return;
+  const { prisma, pipeline } = loaded;
+
+  try {
+    const item = await prisma.checklistItem.update({
+      where: { id: checklistItemId, pipelineItemId },
+      data: { done },
+    });
+    if (userId) {
+      await prisma.activity.create({
+        data: {
+          tenantId, pipelineItemId, userId, type: ActivityType.CHECKLIST_CHANGE,
+          content: `Item de checklist "${item.text}" ${done ? "concluído" : "reaberto"}`,
+        },
+      });
+    }
+  } catch (err) {
+    console.error("[alternarChecklistItem]", err);
+    return;
+  }
+
+  revalidatePath(`${boardPath(pipeline)}/itens/${pipelineItemId}`);
+}
+
+export async function editarChecklistItem(pipelineItemId: string, checklistItemId: string, text: string): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  if (!tenantId || !text.trim()) return;
+
+  const loaded = await loadItemPipeline(tenantId, pipelineItemId);
+  if (!loaded || !canActOnSector(ctx, loaded.pipeline.sectorCode)) return;
+  const { prisma, pipeline } = loaded;
+
+  try {
+    await prisma.checklistItem.update({ where: { id: checklistItemId, pipelineItemId }, data: { text: text.trim() } });
+  } catch (err) {
+    console.error("[editarChecklistItem]", err);
+    return;
+  }
+
+  revalidatePath(`${boardPath(pipeline)}/itens/${pipelineItemId}`);
+}
+
+export async function excluirChecklistItem(pipelineItemId: string, checklistItemId: string): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  if (!tenantId) return;
+
+  const loaded = await loadItemPipeline(tenantId, pipelineItemId);
+  if (!loaded || !canActOnSector(ctx, loaded.pipeline.sectorCode)) return;
+  const { prisma, pipeline } = loaded;
+
+  try {
+    await prisma.checklistItem.delete({ where: { id: checklistItemId, pipelineItemId } });
+  } catch (err) {
+    console.error("[excluirChecklistItem]", err);
+    return;
+  }
+
+  revalidatePath(`${boardPath(pipeline)}/itens/${pipelineItemId}`);
+}
+
+export async function reordenarChecklistItem(pipelineItemId: string, checklistItemId: string, direction: "up" | "down"): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  if (!tenantId) return;
+
+  const loaded = await loadItemPipeline(tenantId, pipelineItemId);
+  if (!loaded || !canActOnSector(ctx, loaded.pipeline.sectorCode)) return;
+  const { prisma, pipeline } = loaded;
+
+  try {
+    const items = await prisma.checklistItem.findMany({ where: { pipelineItemId }, orderBy: { order: "asc" } });
+    const index = items.findIndex((i) => i.id === checklistItemId);
+    const swapIndex = direction === "up" ? index - 1 : index + 1;
+    if (index === -1 || swapIndex < 0 || swapIndex >= items.length) return;
+
+    const a = items[index];
+    const b = items[swapIndex];
+    await prisma.$transaction([
+      prisma.checklistItem.update({ where: { id: a.id }, data: { order: b.order } }),
+      prisma.checklistItem.update({ where: { id: b.id }, data: { order: a.order } }),
+    ]);
+  } catch (err) {
+    console.error("[reordenarChecklistItem]", err);
+    return;
+  }
+
+  revalidatePath(`${boardPath(pipeline)}/itens/${pipelineItemId}`);
 }
