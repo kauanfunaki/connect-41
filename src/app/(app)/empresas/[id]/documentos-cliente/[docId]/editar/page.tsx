@@ -58,7 +58,7 @@ export default async function EditarDocumentoClientePage({
               companyId={company.id}
               documentId={document.id}
               cancelHref={`/empresas/${companyId}/documentos-cliente`}
-              defaultValues={{ title: document.title, bodyHtml: document.bodyHtml, fileName: document.fileName }}
+              defaultValues={{ title: document.title, bodyHtml: document.bodyHtml, fileName: document.fileName, requiresSignature: document.requiresSignature }}
             />
           </div>
         )}

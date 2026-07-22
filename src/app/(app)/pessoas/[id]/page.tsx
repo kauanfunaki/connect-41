@@ -12,6 +12,7 @@ import {
   Gift,
   Star,
   GraduationCap,
+  FileSpreadsheet,
 } from "lucide-react";
 import { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
 import { excluirPessoa } from "../actions";
@@ -67,6 +68,7 @@ const TRABALHISTA_LINKS: OperationLink[] = [
   { href: "exames", label: "Exames Admissionais", description: "Exames e ASO", icon: <ClipboardCheck size={16} /> },
   { href: "avaliacoes", label: "Avaliações de Desempenho", description: "Ciclos de avaliação", icon: <Star size={16} /> },
   { href: "treinamentos", label: "Treinamentos", description: "Turmas e participações", icon: <GraduationCap size={16} /> },
+  { href: "esocial-s2200", label: "eSocial S-2200 (rascunho)", description: "Conferência dos dados de admissão", icon: <FileSpreadsheet size={16} /> },
 ];
 
 export default async function PessoaPage({

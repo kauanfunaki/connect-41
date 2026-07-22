@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import type { ClientDocumentState } from "@/app/(app)/empresas/[id]/documentos-cliente/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { FormFooter } from "@/components/ui/FormFooter";
 
@@ -12,7 +13,7 @@ type Props = {
   companyId: string;
   documentId?: string;
   cancelHref: string;
-  defaultValues?: { title: string; bodyHtml: string; fileName?: string | null };
+  defaultValues?: { title: string; bodyHtml: string; fileName?: string | null; requiresSignature?: boolean };
 };
 
 export function ClientDocumentForm({ action, companyId, documentId, cancelHref, defaultValues }: Props) {
@@ -48,6 +49,15 @@ export function ClientDocumentForm({ action, companyId, documentId, cancelHref, 
           className="text-[12px] text-fg file:mr-3 file:h-9 file:px-3 file:rounded-[10px] file:border file:border-border-strong file:bg-surface-hover file:text-fg file:text-[12px] file:font-medium file:cursor-pointer file:border-solid hover:file:border-brand file:transition-colors"
         />
       </CampoForm>
+
+      <div className="border-t border-border pt-4">
+        <Checkbox
+          name="requiresSignature"
+          value="true"
+          defaultChecked={defaultValues?.requiresSignature ?? false}
+          label="Exigir assinatura eletrônica do destinatário (aceite com nome, data/hora e IP na página de visualização)."
+        />
+      </div>
 
       <FormFooter cancelHref={cancelHref} pending={isPending} />
     </form>
