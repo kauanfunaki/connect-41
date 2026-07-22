@@ -86,7 +86,9 @@ export default async function KanbanBoardPage({
 
   const ACTIVITY_LABEL: Record<string, string> = {
     NOTE: "Nota", STATUS_CHANGE: "Mudou de etapa", DOCUMENT: "Anexou documento",
-    HANDOFF: "Transferência", MENTION: "Menção",
+    HANDOFF: "Transferência", MENTION: "Menção", CREATED: "Criado",
+    PRIORITY_CHANGE: "Mudou prioridade", DUE_DATE_CHANGE: "Mudou prazo",
+    DESCRIPTION_CHANGE: "Editou descrição", ASSIGNEE_CHANGE: "Mudou responsável", TAG_CHANGE: "Mudou etiqueta",
   };
   const lastActivityByItem: Record<string, string> = {};
   for (const a of recentActivityAnyType) {

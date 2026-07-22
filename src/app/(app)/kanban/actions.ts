@@ -81,7 +81,7 @@ export async function criarItem(
   form: FormData
 ): Promise<PipelineState> {
   const ctx = await getAuthContext();
-  const { tenantId } = ctx;
+  const { tenantId, userId } = ctx;
   if (!tenantId) return { error: "Não autenticado" };
 
   const pipelineId = form.get("pipelineId") as string;
@@ -111,7 +111,7 @@ export async function criarItem(
     });
     if (!firstStage) return { error: "Kanban sem estágios configurados" };
 
-    await prisma.pipelineItem.create({
+    const item = await prisma.pipelineItem.create({
       data: {
         tenantId,
         pipelineId,
@@ -125,6 +125,12 @@ export async function criarItem(
         assignees: assigneeIds.length > 0 ? { create: assigneeIds.map((userId) => ({ userId })) } : undefined,
       },
     });
+
+    if (userId) {
+      await prisma.activity.create({
+        data: { tenantId, pipelineItemId: item.id, userId, type: ActivityType.CREATED, content: `Criado em "${firstStage.name}"` },
+      });
+    }
   } catch (err) {
     console.error("[criarItem]", err);
     return { error: "Erro ao adicionar item. Tente novamente." };
@@ -221,6 +227,13 @@ export async function adicionarNota(
   return null;
 }
 
+const PRIORITY_LABEL: Record<number, string> = { 0: "Normal", 1: "Alta", 2: "Urgente" };
+
+function formatDueDateLabel(d: Date | null): string {
+  if (!d) return "sem prazo";
+  return d.toISOString().slice(0, 10).split("-").reverse().join("/");
+}
+
 export async function atualizarPrazoPrioridade(
   pipelineId: string,
   itemId: string,
@@ -228,7 +241,7 @@ export async function atualizarPrazoPrioridade(
   form: FormData
 ): Promise<PipelineState> {
   const ctx = await getAuthContext();
-  const { tenantId } = ctx;
+  const { tenantId, userId } = ctx;
   if (!tenantId) return { error: "Não autenticado" };
 
   const prisma = getPrisma();
@@ -239,15 +252,40 @@ export async function atualizarPrazoPrioridade(
 
   const dueDateRaw = (form.get("dueDate") as string)?.trim();
   const priorityRaw = (form.get("priority") as string)?.trim();
+  const newDueDate = dueDateRaw ? new Date(dueDateRaw) : null;
+  const newPriority = priorityRaw ? parseInt(priorityRaw) : 0;
 
   try {
+    const before = await prisma.pipelineItem.findUnique({
+      where: { id: itemId },
+      select: { dueDate: true, priority: true },
+    });
+
     await prisma.pipelineItem.update({
       where: { id: itemId },
-      data: {
-        dueDate: dueDateRaw ? new Date(dueDateRaw) : null,
-        priority: priorityRaw ? parseInt(priorityRaw) : 0,
-      },
+      data: { dueDate: newDueDate, priority: newPriority },
     });
+
+    if (userId && before) {
+      const beforeDue = before.dueDate ? before.dueDate.getTime() : null;
+      const afterDue = newDueDate ? newDueDate.getTime() : null;
+      if (beforeDue !== afterDue) {
+        await prisma.activity.create({
+          data: {
+            tenantId, pipelineItemId: itemId, userId, type: ActivityType.DUE_DATE_CHANGE,
+            content: `Prazo alterado de ${formatDueDateLabel(before.dueDate)} para ${formatDueDateLabel(newDueDate)}`,
+          },
+        });
+      }
+      if (before.priority !== newPriority) {
+        await prisma.activity.create({
+          data: {
+            tenantId, pipelineItemId: itemId, userId, type: ActivityType.PRIORITY_CHANGE,
+            content: `Prioridade alterada de "${PRIORITY_LABEL[before.priority] ?? before.priority}" para "${PRIORITY_LABEL[newPriority] ?? newPriority}"`,
+          },
+        });
+      }
+    }
   } catch (err) {
     console.error("[atualizarPrazoPrioridade]", err);
     return { error: "Erro ao atualizar prazo/prioridade." };
@@ -268,7 +306,7 @@ export async function atualizarDescricao(
   form: FormData
 ): Promise<PipelineState> {
   const ctx = await getAuthContext();
-  const { tenantId } = ctx;
+  const { tenantId, userId } = ctx;
   if (!tenantId) return { error: "Não autenticado" };
 
   const prisma = getPrisma();
@@ -280,10 +318,18 @@ export async function atualizarDescricao(
   const description = (form.get("description") as string)?.trim();
 
   try {
+    const before = await prisma.pipelineItem.findUnique({ where: { id: itemId }, select: { description: true } });
+
     await prisma.pipelineItem.update({
       where: { id: itemId },
       data: { description: description ? description : null },
     });
+
+    if (userId && before && (before.description ?? "") !== (description || "")) {
+      await prisma.activity.create({
+        data: { tenantId, pipelineItemId: itemId, userId, type: ActivityType.DESCRIPTION_CHANGE, content: "Descrição atualizada" },
+      });
+    }
   } catch (err) {
     console.error("[atualizarDescricao]", err);
     return { error: "Erro ao atualizar descrição." };
@@ -304,7 +350,7 @@ export async function alternarTagItem(
   marcado: boolean
 ): Promise<void> {
   const ctx = await getAuthContext();
-  const { tenantId } = ctx;
+  const { tenantId, userId } = ctx;
   if (!tenantId) return;
 
   const prisma = getPrisma();
@@ -321,6 +367,16 @@ export async function alternarTagItem(
     } else {
       await prisma.pipelineItemTag.delete({
         where: { pipelineItemId_tagId: { pipelineItemId: itemId, tagId } },
+      });
+    }
+
+    if (userId) {
+      const tag = await prisma.tag.findUnique({ where: { id: tagId }, select: { name: true } });
+      await prisma.activity.create({
+        data: {
+          tenantId, pipelineItemId: itemId, userId, type: ActivityType.TAG_CHANGE,
+          content: `Tag "${tag?.name ?? "?"}" ${marcado ? "adicionada" : "removida"}`,
+        },
       });
     }
   } catch (err) {
@@ -342,7 +398,7 @@ export async function alternarResponsavelItem(
   marcado: boolean
 ): Promise<void> {
   const ctx = await getAuthContext();
-  const { tenantId } = ctx;
+  const { tenantId, userId: actorId } = ctx;
   if (!tenantId) return;
 
   const prisma = getPrisma();
@@ -359,6 +415,16 @@ export async function alternarResponsavelItem(
     } else {
       await prisma.pipelineItemAssignee.delete({
         where: { pipelineItemId_userId: { pipelineItemId: itemId, userId } },
+      });
+    }
+
+    if (actorId) {
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+      await prisma.activity.create({
+        data: {
+          tenantId, pipelineItemId: itemId, userId: actorId, type: ActivityType.ASSIGNEE_CHANGE,
+          content: `${user?.name ?? "?"} ${marcado ? "adicionado" : "removido"} como responsável`,
+        },
       });
     }
   } catch (err) {

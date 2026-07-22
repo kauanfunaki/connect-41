@@ -93,5 +93,19 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  // Só PIPELINE_ITEM tem histórico de Activity — os demais entityTypes
+  // (Company/Person/Vaga) não têm FK pra pendurar o evento.
+  if (entityType === "PIPELINE_ITEM") {
+    await prisma.activity.create({
+      data: {
+        tenantId: ctx.tenantId,
+        pipelineItemId: entityId,
+        userId: ctx.userId,
+        type: "DOCUMENT",
+        content: `Anexou "${document.fileName}"`,
+      },
+    });
+  }
+
   return NextResponse.json({ id: document.id, fileName: document.fileName, category: document.category, sensitive: document.sensitive });
 }

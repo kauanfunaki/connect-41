@@ -64,6 +64,12 @@ enum ActivityType {
   DOCUMENT
   HANDOFF
   MENTION
+  CREATED
+  PRIORITY_CHANGE
+  DUE_DATE_CHANGE
+  DESCRIPTION_CHANGE
+  ASSIGNEE_CHANGE
+  TAG_CHANGE
 }
 
 // Situação da transferência em cada setor de destino:

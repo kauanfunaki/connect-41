@@ -5,6 +5,8 @@ import { CardActionBar } from "@/components/kanban/CardActionBar";
 import { DescriptionEditor } from "@/components/kanban/DescriptionEditor";
 import { ActivityFeed, type FeedItem } from "@/components/kanban/ActivityFeed";
 import { MeetingsSection } from "@/components/kanban/MeetingsSection";
+import { DocumentsSection } from "@/components/documents/DocumentsSection";
+import { listDocuments } from "@/lib/documents";
 import {
   moverItem,
   adicionarNota,
@@ -19,7 +21,7 @@ import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/cont
 import { canManageMeetings } from "@/lib/integrations/oauth";
 import { scopedPipelineWhere } from "@/lib/auth/scope";
 import { getSectorUsers } from "@/lib/sectorUsers";
-import { formatInstantDateTime } from "@/lib/format";
+import { formatCalendarDate, formatInstantDate, formatInstantDateTime } from "@/lib/format";
 
 const ACTIVITY_LABEL: Record<string, string> = {
   NOTE: "Nota",
@@ -27,7 +29,17 @@ const ACTIVITY_LABEL: Record<string, string> = {
   DOCUMENT: "Documento",
   HANDOFF: "Transferência",
   MENTION: "Menção",
+  CREATED: "Tarefa criada",
+  PRIORITY_CHANGE: "Prioridade alterada",
+  DUE_DATE_CHANGE: "Prazo alterado",
+  DESCRIPTION_CHANGE: "Descrição alterada",
+  ASSIGNEE_CHANGE: "Responsável alterado",
+  TAG_CHANGE: "Etiqueta alterada",
 };
+
+const IMPORTANT_ACTIVITY_TYPES = new Set([
+  "STATUS_CHANGE", "HANDOFF", "CREATED", "PRIORITY_CHANGE", "DUE_DATE_CHANGE", "ASSIGNEE_CHANGE", "DOCUMENT",
+]);
 
 type Props = {
   id: string;
@@ -65,7 +77,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
 
   const canScheduleMeetings = canManageMeetings(ctx);
 
-  const [entity, activities, sectorTags, sectorUsers, meetings, oauthAccounts] = await Promise.all([
+  const [entity, activities, sectorTags, sectorUsers, meetings, oauthAccounts, documents] = await Promise.all([
     item.entityType === "COMPANY"
       ? prisma.company.findFirst({ where: { id: item.entityId, tenantId }, select: { id: true, name: true } })
       : prisma.person.findFirst({ where: { id: item.entityId, tenantId }, select: { id: true, name: true } }),
@@ -88,6 +100,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
     canScheduleMeetings
       ? prisma.oAuthAccount.findMany({ where: { tenantId, userId: ctx.userId }, select: { provider: true } })
       : Promise.resolve([]),
+    listDocuments(tenantId, "PIPELINE_ITEM", itemId),
   ]);
 
   const deleteAction = excluirItem.bind(null, id, itemId);
@@ -108,7 +121,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
     createdAtLabel: formatInstantDateTime(a.createdAt),
     userName: a.user.name,
     content: a.content,
-    importante: a.type === "STATUS_CHANGE" || a.type === "HANDOFF",
+    importante: IMPORTANT_ACTIVITY_TYPES.has(a.type),
   }));
 
   return (
@@ -165,7 +178,24 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
-        <DescriptionEditor canAct={canAct} description={item.description} action={descricaoAction} />
+        <div className="flex flex-col gap-4 min-w-0">
+          <DescriptionEditor canAct={canAct} description={item.description} action={descricaoAction} />
+          <DocumentsSection
+            entityType="PIPELINE_ITEM"
+            entityId={itemId}
+            canUpload={canAct}
+            documents={documents.map((d) => ({
+              id: d.id,
+              fileName: d.fileName,
+              category: d.category,
+              sensitive: d.sensitive,
+              uploadedByName: d.uploadedBy.name,
+              createdAtLabel: formatInstantDate(d.createdAt),
+              expiresAtLabel: d.expiresAt ? formatCalendarDate(d.expiresAt) : null,
+              expired: d.expiresAt != null && d.expiresAt < new Date(),
+            }))}
+          />
+        </div>
         <ActivityFeed items={feedItems} canAct={canAct} addNoteAction={addNoteAction} />
       </div>
 
