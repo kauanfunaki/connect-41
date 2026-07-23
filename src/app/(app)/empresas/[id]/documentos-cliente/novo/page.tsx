@@ -27,7 +27,6 @@ export default async function NovoDocumentoClientePage({
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
       <Breadcrumb
         items={[
           { label: "Cadastros", href: "/empresas" },
@@ -36,6 +35,7 @@ export default async function NovoDocumentoClientePage({
           { label: "Novo" },
         ]}
       />
+      <BackButton className="mb-3" />
 
       <PageHeader title="Novo Documento" subtitle="Criado como rascunho — publique e envie quando estiver pronto." />
 

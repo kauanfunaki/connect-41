@@ -33,7 +33,6 @@ export default async function EditarEmpresaPage({
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
       <Breadcrumb
         items={[
           { label: "Cadastros", href: "/empresas" },
@@ -42,6 +41,7 @@ export default async function EditarEmpresaPage({
           { label: "Editar" },
         ]}
       />
+      <BackButton className="mb-3" />
 
       <PageHeader title="Editar Empresa" />
 

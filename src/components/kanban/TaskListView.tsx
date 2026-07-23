@@ -2,10 +2,9 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronRight, ChevronDown, Repeat } from "lucide-react";
+import { Check, ChevronRight, ChevronDown, Repeat } from "lucide-react";
 import { formatCalendarDate } from "@/lib/format";
 import { Input } from "@/components/ui/Input";
-import { MoveStageSelect } from "@/components/kanban/MoveStageSelect";
 
 export type AssigneeRow = { id: string; name: string; priority: number };
 export type SubtaskRow = {
@@ -35,6 +34,8 @@ type Props = {
   createTaskAction: (stageId: string, title: string) => Promise<void>;
   priorityAction: (itemId: string, userId: string, priority: number) => Promise<void>;
   moveAction: (itemId: string, newStageId: string) => Promise<void>;
+  concluirAction: (pipelineId: string, itemId: string) => Promise<void>;
+  reabrirAction: (pipelineId: string, itemId: string) => Promise<void>;
 };
 
 const PRIORITY_LABEL: Record<number, string> = { 0: "Normal", 1: "Alta", 2: "Urgente" };
@@ -95,27 +96,37 @@ function AssigneeAvatar({ a, itemId, canAct, priorityAction }: { a: AssigneeRow;
 }
 
 function Row({
-  item, basePath, depth = 0, canAct, priorityAction, stages, moveAction,
+  item, basePath, depth = 0, canAct, priorityAction, pipelineId, concluirAction, reabrirAction, dragId, onDragStartRow, onDragEndRow,
 }: {
   item: TaskRow | SubtaskRow;
   basePath: string;
   depth?: number;
   canAct: boolean;
   priorityAction: Props["priorityAction"];
-  stages: StageOption[];
-  moveAction: Props["moveAction"];
+  pipelineId: string;
+  concluirAction: Props["concluirAction"];
+  reabrirAction: Props["reabrirAction"];
+  dragId: string | null;
+  onDragStartRow: (id: string) => void;
+  onDragEndRow: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [, startTransition] = useTransition();
   const hasSubtasks = "subtasks" in item && item.subtasks && item.subtasks.length > 0;
   const dueDate = item.dueDate;
   const assignees = item.assignees ?? [];
+  const isTerminal = "isTerminal" in item ? item.isTerminal : false;
   const statusLabel = "stageName" in item ? item.stageName : undefined;
   const tags = item.tags ?? [];
+  const dragging = dragId === item.id;
 
   return (
     <>
       <div
-        className="flex items-center gap-2 py-2 px-2 hover:bg-surface-hover rounded-lg transition-colors group"
+        draggable={canAct}
+        onDragStart={() => onDragStartRow(item.id)}
+        onDragEnd={onDragEndRow}
+        className={`flex items-center gap-2 py-2 px-2 hover:bg-surface-hover rounded-lg transition-colors group ${dragging ? "opacity-40" : ""} ${canAct ? "cursor-grab active:cursor-grabbing" : ""}`}
         style={{ paddingLeft: `${8 + depth * 20}px` }}
       >
         {hasSubtasks ? (
@@ -131,15 +142,30 @@ function Row({
           <span className="w-[14px] flex-shrink-0" />
         )}
 
-        <span
-          className="w-[7px] h-[7px] rounded-full flex-shrink-0"
-          style={{ background: PRIORITY_COLOR[item.priority] ?? PRIORITY_COLOR[0] }}
+        <button
+          type="button"
+          disabled={!canAct}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            startTransition(() =>
+              isTerminal ? reabrirAction(pipelineId, item.id) : concluirAction(pipelineId, item.id)
+            );
+          }}
+          aria-label={isTerminal ? "Reabrir tarefa" : "Concluir tarefa"}
           title={PRIORITY_LABEL[item.priority] ?? "Normal"}
-        />
+          className="w-[14px] h-[14px] rounded-full border flex items-center justify-center flex-shrink-0 transition-colors disabled:cursor-default"
+          style={{
+            borderColor: PRIORITY_COLOR[item.priority] ?? PRIORITY_COLOR[0],
+            background: isTerminal ? (PRIORITY_COLOR[item.priority] ?? PRIORITY_COLOR[0]) : "transparent",
+          }}
+        >
+          {isTerminal && <Check size={9} className="text-on-brand" />}
+        </button>
 
         <Link
           href={`${basePath}/itens/${item.id}`}
-          className="text-[13px] text-fg group-hover:text-brand transition-colors truncate min-w-0"
+          className={`text-[13px] text-fg group-hover:text-brand transition-colors truncate min-w-0 ${isTerminal ? "line-through text-fg-muted" : ""}`}
         >
           {item.entityName}
         </Link>
@@ -160,14 +186,8 @@ function Row({
 
         <div className="flex-1" />
 
-        {"stageId" in item && canAct ? (
-          <span className="flex-shrink-0 hidden sm:inline" onClick={(e) => e.stopPropagation()}>
-            <MoveStageSelect itemId={item.id} currentStageId={item.stageId} stages={stages} moveAction={moveAction} />
-          </span>
-        ) : (
-          statusLabel && (
-            <span className="text-[11px] text-fg-muted flex-shrink-0 hidden sm:inline">{statusLabel}</span>
-          )
+        {statusLabel && (
+          <span className="text-[11px] text-fg-muted flex-shrink-0 hidden sm:inline">{statusLabel}</span>
         )}
 
         {hasSubtasks && (
@@ -195,7 +215,20 @@ function Row({
       {expanded && hasSubtasks && (
         <div>
           {(item as TaskRow).subtasks!.map((s) => (
-            <Row key={s.id} item={s} basePath={basePath} depth={depth + 1} canAct={canAct} priorityAction={priorityAction} stages={stages} moveAction={moveAction} />
+            <Row
+              key={s.id}
+              item={s}
+              basePath={basePath}
+              depth={depth + 1}
+              canAct={canAct}
+              priorityAction={priorityAction}
+              pipelineId={pipelineId}
+              concluirAction={concluirAction}
+              reabrirAction={reabrirAction}
+              dragId={dragId}
+              onDragStartRow={onDragStartRow}
+              onDragEndRow={onDragEndRow}
+            />
           ))}
         </div>
       )}
@@ -204,7 +237,8 @@ function Row({
 }
 
 function StageGroup({
-  stage, items, basePath, canAct, renameStageAction, createTaskAction, priorityAction, stages, moveAction,
+  stage, items, basePath, canAct, renameStageAction, createTaskAction, priorityAction, pipelineId, concluirAction, reabrirAction,
+  dragId, onDragStartRow, onDragEndRow, onDropStage,
 }: {
   stage: StageOption;
   items: TaskRow[];
@@ -213,14 +247,20 @@ function StageGroup({
   renameStageAction: Props["renameStageAction"];
   createTaskAction: Props["createTaskAction"];
   priorityAction: Props["priorityAction"];
-  stages: StageOption[];
-  moveAction: Props["moveAction"];
+  pipelineId: string;
+  concluirAction: Props["concluirAction"];
+  reabrirAction: Props["reabrirAction"];
+  dragId: string | null;
+  onDragStartRow: (id: string) => void;
+  onDragEndRow: () => void;
+  onDropStage: (stageId: string) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(stage.name);
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
+  const [dragOver, setDragOver] = useState(false);
   const [, startTransition] = useTransition();
 
   function saveName() {
@@ -240,7 +280,16 @@ function StageGroup({
   }
 
   return (
-    <div className="mb-2 last:mb-0">
+    <div
+      className={`mb-2 last:mb-0 rounded-lg transition-colors ${dragOver ? "bg-brand/[0.05] ring-1 ring-brand/30" : ""}`}
+      onDragOver={(e) => { if (dragId) { e.preventDefault(); setDragOver(true); } }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragOver(false);
+        if (dragId) onDropStage(stage.id);
+      }}
+    >
       <div className="flex items-center gap-2 px-2 py-1.5">
         <button type="button" onClick={() => setCollapsed((v) => !v)} className="text-fg-muted hover:text-fg flex-shrink-0">
           <ChevronDown size={13} className={`transition-transform ${collapsed ? "-rotate-90" : ""}`} />
@@ -274,8 +323,26 @@ function StageGroup({
           {items.length > 0 && (
             <div className="divide-y divide-border/60">
               {items.map((item) => (
-                <Row key={item.id} item={item} basePath={basePath} canAct={canAct} priorityAction={priorityAction} stages={stages} moveAction={moveAction} />
+                <Row
+                  key={item.id}
+                  item={item}
+                  basePath={basePath}
+                  canAct={canAct}
+                  priorityAction={priorityAction}
+                  pipelineId={pipelineId}
+                  concluirAction={concluirAction}
+                  reabrirAction={reabrirAction}
+                  dragId={dragId}
+                  onDragStartRow={onDragStartRow}
+                  onDragEndRow={onDragEndRow}
+                />
               ))}
+            </div>
+          )}
+
+          {items.length === 0 && (
+            <div className="h-8 flex items-center px-2" style={{ paddingLeft: "34px" }}>
+              {dragId && <p className="text-[11px] text-fg-muted">Solte aqui para mover</p>}
             </div>
           )}
 
@@ -314,12 +381,23 @@ function StageGroup({
 
 // Visão alternativa ao Kanban: mesmas tarefas, agrupadas por status (stage) em
 // vez de colunas — status renomeável inline, grupos colapsáveis, criação
-// rápida por status.
-export function TaskListView({ basePath, stages, items, canAct, renameStageAction, createTaskAction, priorityAction, moveAction }: Props) {
+// rápida por status. Mudar o status de uma tarefa é feito arrastando a linha
+// pra outro grupo (mesma linguagem do quadro Kanban), não por dropdown.
+export function TaskListView({ basePath, pipelineId, stages, items, canAct, renameStageAction, createTaskAction, priorityAction, moveAction, concluirAction, reabrirAction }: Props) {
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+
   const byStage = stages.map((stage) => ({
     stage,
     items: items.filter((i) => i.stageId === stage.id),
   }));
+
+  function handleDropStage(stageId: string) {
+    const id = dragId;
+    setDragId(null);
+    if (!id) return;
+    startTransition(() => moveAction(id, stageId));
+  }
 
   return (
     <div className="scroll-y bg-surface border border-border rounded-2xl p-2 h-full overflow-y-auto">
@@ -333,8 +411,13 @@ export function TaskListView({ basePath, stages, items, canAct, renameStageActio
           renameStageAction={renameStageAction}
           createTaskAction={createTaskAction}
           priorityAction={priorityAction}
-          stages={stages}
-          moveAction={moveAction}
+          pipelineId={pipelineId}
+          concluirAction={concluirAction}
+          reabrirAction={reabrirAction}
+          dragId={dragId}
+          onDragStartRow={setDragId}
+          onDragEndRow={() => setDragId(null)}
+          onDropStage={handleDropStage}
         />
       ))}
     </div>

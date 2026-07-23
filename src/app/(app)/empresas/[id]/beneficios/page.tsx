@@ -53,7 +53,6 @@ export default async function BeneficiosPage({
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
       <Breadcrumb
         items={[
           { label: "Cadastros", href: "/empresas" },
@@ -62,6 +61,7 @@ export default async function BeneficiosPage({
           { label: "Benefícios" },
         ]}
       />
+      <BackButton className="mb-3" />
 
       <PageHeader
         title="Benefícios"

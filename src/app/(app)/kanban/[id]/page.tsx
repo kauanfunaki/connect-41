@@ -5,7 +5,7 @@ import { getSectorMaps } from "@/lib/sectors";
 import { BoardView } from "@/components/kanban/BoardView";
 import { DuplicatePipelineButton } from "@/components/kanban/DuplicatePipelineButton";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { moverItem, duplicarPipeline, renomearEstagio, criarTarefaRapida, atualizarPrioridadeResponsavel } from "../actions";
+import { moverItem, duplicarPipeline, renomearEstagio, criarTarefaRapida, atualizarPrioridadeResponsavel, concluirTarefa, reabrirTarefa } from "../actions";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedPipelineWhere, scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
 
@@ -206,6 +206,8 @@ export default async function KanbanBoardPage({
           renameStageAction={renomearEstagio.bind(null, id)}
           createTaskAction={criarTarefaRapida.bind(null, id)}
           priorityAction={atualizarPrioridadeResponsavel.bind(null, id)}
+          concluirAction={concluirTarefa}
+          reabrirAction={reabrirTarefa}
         />
       </div>
     </PageContainer>

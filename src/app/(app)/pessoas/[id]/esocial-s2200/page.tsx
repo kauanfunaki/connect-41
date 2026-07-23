@@ -63,7 +63,6 @@ export default async function EsocialS2200Page({
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
       <div className="flex items-center gap-2 mb-6">
         <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Cadastros</Link>
         <span className="text-fg-muted">/</span>
@@ -75,6 +74,7 @@ export default async function EsocialS2200Page({
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg">eSocial S-2200</span>
       </div>
+      <BackButton className="mb-3" />
 
       <div className="mb-6">
         <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">eSocial S-2200 — rascunho</h1>

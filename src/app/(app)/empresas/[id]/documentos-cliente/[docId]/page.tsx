@@ -44,7 +44,6 @@ export default async function DocumentoClienteDetailPage({
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
       <div className="flex items-center gap-2 mb-6">
         <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Cadastros</Link>
         <span className="text-fg-muted">/</span>
@@ -56,6 +55,7 @@ export default async function DocumentoClienteDetailPage({
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg truncate max-w-[200px]">{document.title}</span>
       </div>
+      <BackButton className="mb-3" />
 
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>

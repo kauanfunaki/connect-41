@@ -30,7 +30,6 @@ export default async function EditarBeneficioPage({
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
       <Breadcrumb
         items={[
           { label: "Cadastros", href: "/empresas" },
@@ -39,6 +38,7 @@ export default async function EditarBeneficioPage({
           { label: "Editar" },
         ]}
       />
+      <BackButton className="mb-3" />
 
       <PageHeader title="Editar Benefício" subtitle={company.name} />
 

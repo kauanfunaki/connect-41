@@ -52,7 +52,6 @@ export default async function EditarPessoaPage({
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
       <div className="flex items-center gap-2 mb-6">
         <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Cadastros
@@ -71,6 +70,7 @@ export default async function EditarPessoaPage({
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg">Editar</span>
       </div>
+      <BackButton className="mb-3" />
 
       <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em] mb-6">Editar Pessoa</h1>
 

@@ -9,6 +9,7 @@ import { getSectorMaps, getAllSectors } from "@/lib/sectors";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { listDocuments } from "@/lib/documents";
 import { formatCalendarDate, formatInstantDate } from "@/lib/format";
+import { BackButton } from "@/components/shared/BackButton";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { CompanyHeader } from "@/components/empresas/CompanyHeader";
 import { CompanyDetailTabs } from "@/components/empresas/CompanyDetailTabs";
@@ -104,6 +105,7 @@ export default async function EmpresaPage({
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg truncate">{company.name}</span>
       </div>
+      <BackButton className="mb-3" />
 
       <CompanyHeader
         id={company.id}

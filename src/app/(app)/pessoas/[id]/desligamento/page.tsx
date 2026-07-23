@@ -35,7 +35,6 @@ export default async function DesligamentoPage({
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
       <div className="flex items-center gap-2 mb-6">
         <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Cadastros</Link>
         <span className="text-fg-muted">/</span>
@@ -47,6 +46,7 @@ export default async function DesligamentoPage({
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg">Desligamento</span>
       </div>
+      <BackButton className="mb-3" />
 
       <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Desligamento</h1>
 

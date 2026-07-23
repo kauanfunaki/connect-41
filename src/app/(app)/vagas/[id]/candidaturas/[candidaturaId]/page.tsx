@@ -59,7 +59,6 @@ export default async function CandidaturaScorecardPage({
 
   return (
     <PageContainer variant="narrow">
-      <BackButton className="mb-3" />
       <div className="flex items-center gap-2 mb-6">
         <Link href="/vagas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Vagas</Link>
         <span className="text-fg-muted">/</span>
@@ -69,6 +68,7 @@ export default async function CandidaturaScorecardPage({
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg truncate">{candidatura.person.name}</span>
       </div>
+      <BackButton className="mb-3" />
 
       <div className="mb-6">
         <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
 import { excluirPessoa } from "../actions";
+import { BackButton } from "@/components/shared/BackButton";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PersonHeader } from "@/components/pessoas/PersonHeader";
 import { PersonDetailTabs } from "@/components/pessoas/PersonDetailTabs";
@@ -378,6 +379,7 @@ export default async function PessoaPage({
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg truncate">{person.name}</span>
       </div>
+      <BackButton className="mb-3" />
 
       <PersonHeader
         id={id}

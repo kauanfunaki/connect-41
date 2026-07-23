@@ -37,7 +37,6 @@ export default async function CargosPage({
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
       <Breadcrumb
         items={[
           { label: "Cadastros", href: "/empresas" },
@@ -46,6 +45,7 @@ export default async function CargosPage({
           { label: "Cargos" },
         ]}
       />
+      <BackButton className="mb-3" />
 
       <PageHeader
         title="Cargos"

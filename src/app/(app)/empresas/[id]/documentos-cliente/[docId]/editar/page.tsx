@@ -35,7 +35,6 @@ export default async function EditarDocumentoClientePage({
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
       <Breadcrumb
         items={[
           { label: "Cadastros", href: "/empresas" },
@@ -44,6 +43,7 @@ export default async function EditarDocumentoClientePage({
           { label: "Editar" },
         ]}
       />
+      <BackButton className="mb-3" />
 
       <PageHeader title="Editar Documento" />
 

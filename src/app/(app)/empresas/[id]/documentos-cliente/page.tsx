@@ -38,7 +38,6 @@ export default async function DocumentosClientePage({
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
       <Breadcrumb
         items={[
           { label: "Cadastros", href: "/empresas" },
@@ -47,6 +46,7 @@ export default async function DocumentosClientePage({
           { label: "Documentos para Cliente" },
         ]}
       />
+      <BackButton className="mb-3" />
 
       <PageHeader
         title="Documentos para Cliente"

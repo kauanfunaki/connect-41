@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Columns3, List, ListFilter, Search } from "lucide-react";
+import { CalendarClock, Columns3, Flag, List, ListFilter, Search, Tag, User, UserCheck } from "lucide-react";
 import { KanbanBoard } from "@/components/kanban/KanbanBoard";
 import { TaskListView, type TaskRow, type StageOption } from "@/components/kanban/TaskListView";
 import { Select } from "@/components/ui/Select";
@@ -28,6 +28,8 @@ type Props = {
   renameStageAction: (stageId: string, name: string) => Promise<void>;
   createTaskAction: (stageId: string, title: string) => Promise<void>;
   priorityAction: (itemId: string, userId: string, priority: number) => Promise<void>;
+  concluirAction: (pipelineId: string, itemId: string) => Promise<void>;
+  reabrirAction: (pipelineId: string, itemId: string) => Promise<void>;
 };
 
 const PRIORITY_LABEL: Record<string, string> = { "": "Toda prioridade", "0": "Normal", "1": "Alta", "2": "Urgente" };
@@ -52,7 +54,7 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, " ");
 }
 
-export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAction, renameStageAction, createTaskAction, priorityAction }: Props) {
+export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAction, renameStageAction, createTaskAction, priorityAction, concluirAction, reabrirAction }: Props) {
   const [view, setView] = useState<"board" | "list">("list");
   const [search, setSearch] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState("");
@@ -61,6 +63,7 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
   const [priorityFilter, setPriorityFilter] = useState("");
   const [dueFilter, setDueFilter] = useState("");
   const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [activeFilterKey, setActiveFilterKey] = useState<string | null>(null);
 
   const allAssignees = useMemo(() => {
     const map = new Map<string, string>();
@@ -111,6 +114,14 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
 
   const activeFilterCount = [search, assigneeFilter, creatorFilter, tagFilter, priorityFilter, dueFilter].filter(Boolean).length;
 
+  const filterDefs = [
+    { key: "assignee", label: "Responsável", icon: <User size={14} />, show: allAssignees.length > 0, active: !!assigneeFilter },
+    { key: "creator", label: "Criador", icon: <UserCheck size={14} />, show: allCreators.length > 0, active: !!creatorFilter },
+    { key: "tag", label: "Etiqueta", icon: <Tag size={14} />, show: allTags.length > 0, active: !!tagFilter },
+    { key: "priority", label: "Prioridade", icon: <Flag size={14} />, show: true, active: !!priorityFilter },
+    { key: "due", label: "Prazo", icon: <CalendarClock size={14} />, show: true, active: !!dueFilter },
+  ].filter((f) => f.show);
+
   return (
     <div className="h-full flex flex-col min-h-0">
       <div className="flex items-center gap-2 mb-3 flex-wrap flex-shrink-0">
@@ -146,7 +157,7 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
 
         <button
           type="button"
-          onClick={() => setFilterModalOpen(true)}
+          onClick={() => { setActiveFilterKey(null); setFilterModalOpen(true); }}
           className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-md border text-[12px] font-medium transition-colors flex-shrink-0 ${
             activeFilterCount - (search ? 1 : 0) > 0
               ? "border-brand/40 bg-brand/[0.06] text-fg"
@@ -176,78 +187,108 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
         </span>
       </div>
 
-      <Modal open={filterModalOpen} onClose={() => setFilterModalOpen(false)} title="Filtros" maxWidth="max-w-sm">
-        <div className="space-y-3">
-          {allAssignees.length > 0 && (
-            <div>
-              <p className="text-[11px] font-medium text-fg-muted mb-1">Responsável</p>
-              <Select
-                value={assigneeFilter}
-                onChange={(e) => { setAssigneeFilter(e.target.value); setFilterModalOpen(false); }}
-              >
-                <option value="">Todo responsável</option>
-                <option value={NO_ASSIGNEE}>Sem responsável</option>
-                {allAssignees.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}</option>
-                ))}
-              </Select>
-            </div>
-          )}
+      <Modal
+        open={filterModalOpen}
+        onClose={() => { setFilterModalOpen(false); setActiveFilterKey(null); }}
+        title="Filtros"
+        maxWidth="max-w-sm"
+      >
+        <div className="flex items-center gap-1 mb-3 flex-wrap">
+          {filterDefs.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              title={f.label}
+              onClick={() => setActiveFilterKey((k) => (k === f.key ? null : f.key))}
+              className={`inline-flex items-center justify-center w-8 h-8 rounded-md border transition-colors ${
+                f.active || activeFilterKey === f.key
+                  ? "border-brand/40 bg-brand/[0.06] text-fg"
+                  : "border-border text-fg-secondary hover:text-fg hover:bg-surface-hover"
+              }`}
+            >
+              {f.icon}
+            </button>
+          ))}
+        </div>
 
-          {allCreators.length > 0 && (
-            <div>
-              <p className="text-[11px] font-medium text-fg-muted mb-1">Criador</p>
-              <Select
-                value={creatorFilter}
-                onChange={(e) => { setCreatorFilter(e.target.value); setFilterModalOpen(false); }}
-              >
-                <option value="">Todo criador</option>
-                {allCreators.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </Select>
-            </div>
-          )}
+        {activeFilterKey === "assignee" && (
+          <div>
+            <p className="text-[11px] font-medium text-fg-muted mb-1">Responsável</p>
+            <Select
+              autoFocus
+              value={assigneeFilter}
+              onChange={(e) => { setAssigneeFilter(e.target.value); setFilterModalOpen(false); setActiveFilterKey(null); }}
+            >
+              <option value="">Todo responsável</option>
+              <option value={NO_ASSIGNEE}>Sem responsável</option>
+              {allAssignees.map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </Select>
+          </div>
+        )}
 
-          {allTags.length > 0 && (
-            <div>
-              <p className="text-[11px] font-medium text-fg-muted mb-1">Etiqueta</p>
-              <Select
-                value={tagFilter}
-                onChange={(e) => { setTagFilter(e.target.value); setFilterModalOpen(false); }}
-              >
-                <option value="">Toda etiqueta</option>
-                {allTags.map((t) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </Select>
-            </div>
-          )}
+        {activeFilterKey === "creator" && (
+          <div>
+            <p className="text-[11px] font-medium text-fg-muted mb-1">Criador</p>
+            <Select
+              autoFocus
+              value={creatorFilter}
+              onChange={(e) => { setCreatorFilter(e.target.value); setFilterModalOpen(false); setActiveFilterKey(null); }}
+            >
+              <option value="">Todo criador</option>
+              {allCreators.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </Select>
+          </div>
+        )}
 
+        {activeFilterKey === "tag" && (
+          <div>
+            <p className="text-[11px] font-medium text-fg-muted mb-1">Etiqueta</p>
+            <Select
+              autoFocus
+              value={tagFilter}
+              onChange={(e) => { setTagFilter(e.target.value); setFilterModalOpen(false); setActiveFilterKey(null); }}
+            >
+              <option value="">Toda etiqueta</option>
+              {allTags.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </Select>
+          </div>
+        )}
+
+        {activeFilterKey === "priority" && (
           <div>
             <p className="text-[11px] font-medium text-fg-muted mb-1">Prioridade</p>
             <Select
+              autoFocus
               value={priorityFilter}
-              onChange={(e) => { setPriorityFilter(e.target.value); setFilterModalOpen(false); }}
+              onChange={(e) => { setPriorityFilter(e.target.value); setFilterModalOpen(false); setActiveFilterKey(null); }}
             >
               {Object.entries(PRIORITY_LABEL).map(([value, label]) => (
                 <option key={value} value={value}>{label}</option>
               ))}
             </Select>
           </div>
+        )}
 
+        {activeFilterKey === "due" && (
           <div>
             <p className="text-[11px] font-medium text-fg-muted mb-1">Prazo</p>
             <Select
+              autoFocus
               value={dueFilter}
-              onChange={(e) => { setDueFilter(e.target.value); setFilterModalOpen(false); }}
+              onChange={(e) => { setDueFilter(e.target.value); setFilterModalOpen(false); setActiveFilterKey(null); }}
             >
               {DUE_FILTERS.map((f) => (
                 <option key={f.value} value={f.value}>{f.label}</option>
               ))}
             </Select>
           </div>
-        </div>
+        )}
       </Modal>
 
       <div className="flex-1 min-h-0">
@@ -264,6 +305,8 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
             createTaskAction={createTaskAction}
             priorityAction={priorityAction}
             moveAction={moveAction}
+            concluirAction={concluirAction}
+            reabrirAction={reabrirAction}
           />
         )}
       </div>

@@ -30,7 +30,6 @@ export default async function EditarTurnoPage({
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
       <Breadcrumb
         items={[
           { label: "Cadastros", href: "/empresas" },
@@ -39,6 +38,7 @@ export default async function EditarTurnoPage({
           { label: "Editar" },
         ]}
       />
+      <BackButton className="mb-3" />
 
       <PageHeader title="Editar Turno" subtitle={company.name} />
 
