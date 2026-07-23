@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { Check, ChevronRight, ChevronDown, Repeat } from "lucide-react";
 import { formatCalendarDate } from "@/lib/format";
@@ -34,6 +34,7 @@ type Props = {
   createTaskAction: (stageId: string, title: string) => Promise<void>;
   priorityAction: (itemId: string, userId: string, priority: number) => Promise<void>;
   moveAction: (itemId: string, newStageId: string) => Promise<void>;
+  reorderAction: (itemId: string, direction: "up" | "down") => Promise<void>;
   concluirAction: (pipelineId: string, itemId: string) => Promise<void>;
   reabrirAction: (pipelineId: string, itemId: string) => Promise<void>;
 };
@@ -96,7 +97,7 @@ function AssigneeAvatar({ a, itemId, canAct, priorityAction }: { a: AssigneeRow;
 }
 
 function Row({
-  item, basePath, depth = 0, canAct, priorityAction, pipelineId, concluirAction, reabrirAction, stages, dragId, onDragStartRow, onDragEndRow,
+  item, basePath, depth = 0, canAct, priorityAction, pipelineId, concluirAction, reabrirAction, stages, dragId, onDragStartRow, onDragEndRow, onDropOnRow,
 }: {
   item: TaskRow | SubtaskRow;
   basePath: string;
@@ -110,6 +111,7 @@ function Row({
   dragId: string | null;
   onDragStartRow: (id: string) => void;
   onDragEndRow: () => void;
+  onDropOnRow?: (targetId: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [, startTransition] = useTransition();
@@ -129,6 +131,8 @@ function Row({
         draggable={canAct}
         onDragStart={() => onDragStartRow(item.id)}
         onDragEnd={onDragEndRow}
+        onDragOver={onDropOnRow ? (e) => { e.preventDefault(); e.stopPropagation(); } : undefined}
+        onDrop={onDropOnRow ? (e) => { e.preventDefault(); e.stopPropagation(); onDropOnRow(item.id); } : undefined}
         className={`flex items-center gap-2 py-2 px-2 hover:bg-surface-hover rounded-lg transition-colors group ${dragging ? "opacity-40" : ""} ${canAct ? "cursor-grab active:cursor-grabbing" : ""}`}
         style={{ paddingLeft: `${8 + depth * 20}px` }}
       >
@@ -157,18 +161,22 @@ function Row({
           }}
           aria-label={isTerminal ? "Reabrir tarefa" : "Concluir tarefa"}
           title={stage?.name ?? ""}
-          className="w-[14px] h-[14px] rounded-full border flex items-center justify-center flex-shrink-0 transition-colors disabled:cursor-default"
+          className="group/dot w-[14px] h-[14px] rounded-full border flex items-center justify-center flex-shrink-0 transition-transform hover:scale-125 disabled:cursor-default disabled:hover:scale-100"
           style={{
             borderColor: stageColor,
             background: isTerminal ? stageColor : "transparent",
           }}
         >
-          {isTerminal && <Check size={9} className="text-on-brand" />}
+          {isTerminal ? (
+            <Check size={9} className="text-on-brand" />
+          ) : (
+            <Check size={9} className="opacity-0 group-hover/dot:opacity-100 transition-opacity" style={{ color: stageColor }} />
+          )}
         </button>
 
         <Link
           href={`${basePath}/itens/${item.id}`}
-          className={`text-[13px] text-fg group-hover:text-brand transition-colors truncate min-w-0 ${isTerminal ? "line-through text-fg-muted" : ""}`}
+          className={`text-[13px] text-fg group-hover:text-brand transition-colors truncate min-w-0 ${isTerminal ? "text-fg-muted" : ""}`}
         >
           {item.entityName}
         </Link>
@@ -242,7 +250,7 @@ function Row({
 
 function StageGroup({
   stage, items, basePath, canAct, renameStageAction, createTaskAction, priorityAction, pipelineId, concluirAction, reabrirAction, stages,
-  dragId, onDragStartRow, onDragEndRow, onDropStage,
+  dragId, onDragStartRow, onDragEndRow, onDropStage, onDropOnRow,
 }: {
   stage: StageOption;
   items: TaskRow[];
@@ -259,6 +267,7 @@ function StageGroup({
   onDragStartRow: (id: string) => void;
   onDragEndRow: () => void;
   onDropStage: (stageId: string) => void;
+  onDropOnRow: (targetId: string) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -341,6 +350,7 @@ function StageGroup({
                   dragId={dragId}
                   onDragStartRow={onDragStartRow}
                   onDragEndRow={onDragEndRow}
+                  onDropOnRow={onDropOnRow}
                 />
               ))}
             </div>
@@ -385,15 +395,16 @@ function StageGroup({
   );
 }
 
-// Visão alternativa ao Kanban: mesmas tarefas, agrupadas por status (stage) em
-// vez de colunas — status renomeável inline, grupos colapsáveis, criação
-// rápida por status. Mudar o status de uma tarefa é feito arrastando a linha
-// pra outro grupo (mesma linguagem do quadro Kanban), não por dropdown.
 // Distância da borda (px) que já dispara o auto-scroll, e velocidade máxima.
 const EDGE_ZONE = 80;
 const MAX_SCROLL_SPEED = 18;
 
-export function TaskListView({ basePath, pipelineId, stages, items, canAct, renameStageAction, createTaskAction, priorityAction, moveAction, concluirAction, reabrirAction }: Props) {
+// Visão alternativa ao Kanban: mesmas tarefas, agrupadas por status (stage) em
+// vez de colunas — status renomeável inline, grupos colapsáveis, criação
+// rápida por status. Mudar o status de uma tarefa é feito arrastando a linha
+// pra outro grupo (mesma linguagem do quadro Kanban); soltar em cima de outra
+// tarefa do MESMO grupo reordena (troca adjacente, igual ao checklist).
+export function TaskListView({ basePath, pipelineId, stages, items, canAct, renameStageAction, createTaskAction, priorityAction, moveAction, reorderAction, concluirAction, reabrirAction }: Props) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -412,48 +423,83 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
     startTransition(() => moveAction(id, stageId));
   }
 
-  function tickScroll() {
-    const el = scrollRef.current;
-    if (el && scrollSpeedRef.current !== 0) {
-      el.scrollTop += scrollSpeedRef.current;
-      rafRef.current = requestAnimationFrame(tickScroll);
-    } else {
-      rafRef.current = null;
+  function handleDropOnRow(targetId: string) {
+    const id = dragId;
+    setDragId(null);
+    if (!id || id === targetId) return;
+    const source = items.find((i) => i.id === id);
+    const target = items.find((i) => i.id === targetId);
+    if (!source || !target) return;
+    if (source.stageId !== target.stageId) {
+      startTransition(() => moveAction(id, target.stageId));
+      return;
     }
+    const siblings = items.filter((i) => i.stageId === target.stageId);
+    const fromIndex = siblings.findIndex((i) => i.id === id);
+    const toIndex = siblings.findIndex((i) => i.id === targetId);
+    if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+    const direction = toIndex > fromIndex ? "down" : "up";
+    const steps = Math.abs(toIndex - fromIndex);
+    startTransition(async () => {
+      for (let i = 0; i < steps; i++) await reorderAction(id, direction);
+    });
   }
 
-  function handleContainerDragOver(e: React.DragEvent) {
+  // Auto-scroll ao arrastar perto das bordas — ouve dragover no documento
+  // inteiro (não só no container) pra não depender de qual linha específica
+  // está sob o cursor no momento.
+  useEffect(() => {
     if (!dragId) return;
-    const el = scrollRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const y = e.clientY;
-    let speed = 0;
-    if (y < rect.top + EDGE_ZONE) {
-      speed = -MAX_SCROLL_SPEED * (1 - (y - rect.top) / EDGE_ZONE);
-    } else if (y > rect.bottom - EDGE_ZONE) {
-      speed = MAX_SCROLL_SPEED * (1 - (rect.bottom - y) / EDGE_ZONE);
-    }
-    scrollSpeedRef.current = speed;
-    if (speed !== 0 && rafRef.current == null) {
-      rafRef.current = requestAnimationFrame(tickScroll);
-    }
-  }
 
-  function stopAutoScroll() {
-    scrollSpeedRef.current = 0;
-    if (rafRef.current != null) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
+    function stop() {
+      scrollSpeedRef.current = 0;
+      if (rafRef.current != null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
     }
-  }
+
+    function tick() {
+      const el = scrollRef.current;
+      if (el && scrollSpeedRef.current !== 0) {
+        el.scrollTop += scrollSpeedRef.current;
+        rafRef.current = requestAnimationFrame(tick);
+      } else {
+        rafRef.current = null;
+      }
+    }
+
+    function onDocDragOver(e: DragEvent) {
+      const el = scrollRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const y = e.clientY;
+      let speed = 0;
+      if (y >= rect.top && y < rect.top + EDGE_ZONE) {
+        speed = -MAX_SCROLL_SPEED * (1 - (y - rect.top) / EDGE_ZONE);
+      } else if (y <= rect.bottom && y > rect.bottom - EDGE_ZONE) {
+        speed = MAX_SCROLL_SPEED * (1 - (rect.bottom - y) / EDGE_ZONE);
+      }
+      scrollSpeedRef.current = speed;
+      if (speed !== 0 && rafRef.current == null) {
+        rafRef.current = requestAnimationFrame(tick);
+      }
+    }
+
+    document.addEventListener("dragover", onDocDragOver);
+    document.addEventListener("dragend", stop);
+    document.addEventListener("drop", stop);
+    return () => {
+      document.removeEventListener("dragover", onDocDragOver);
+      document.removeEventListener("dragend", stop);
+      document.removeEventListener("drop", stop);
+      stop();
+    };
+  }, [dragId]);
 
   return (
     <div
       ref={scrollRef}
-      onDragOver={handleContainerDragOver}
-      onDragLeave={(e) => { if (e.currentTarget === e.target) stopAutoScroll(); }}
-      onDrop={stopAutoScroll}
       className="scroll-y bg-surface border border-border rounded-2xl p-2 h-full overflow-y-auto"
     >
       {byStage.map(({ stage, items: stageItems }) => (
@@ -474,6 +520,7 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
           onDragStartRow={setDragId}
           onDragEndRow={() => setDragId(null)}
           onDropStage={handleDropStage}
+          onDropOnRow={handleDropOnRow}
         />
       ))}
     </div>

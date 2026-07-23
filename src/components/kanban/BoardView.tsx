@@ -25,6 +25,7 @@ type Props = {
   items: Item[];
   canAct: boolean;
   moveAction: (itemId: string, newStageId: string) => Promise<void>;
+  reorderAction: (itemId: string, direction: "up" | "down") => Promise<void>;
   renameStageAction: (stageId: string, name: string) => Promise<void>;
   createTaskAction: (stageId: string, title: string) => Promise<void>;
   priorityAction: (itemId: string, userId: string, priority: number) => Promise<void>;
@@ -54,7 +55,7 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, " ");
 }
 
-export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAction, renameStageAction, createTaskAction, priorityAction, concluirAction, reabrirAction }: Props) {
+export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAction, reorderAction, renameStageAction, createTaskAction, priorityAction, concluirAction, reabrirAction }: Props) {
   const [view, setView] = useState<"board" | "list">("list");
   const [search, setSearch] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState("");
@@ -305,6 +306,7 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
             createTaskAction={createTaskAction}
             priorityAction={priorityAction}
             moveAction={moveAction}
+            reorderAction={reorderAction}
             concluirAction={concluirAction}
             reabrirAction={reabrirAction}
           />

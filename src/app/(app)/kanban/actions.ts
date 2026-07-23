@@ -265,6 +265,43 @@ export async function moverItem(
   }
 }
 
+// Reordenar dentro do mesmo status (mesmo estágio + mesmo pai, se for
+// subtarefa) — troca adjacente, mesmo mecanismo do reordenarChecklistItem.
+export async function reordenarItem(itemId: string, direction: "up" | "down"): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  if (!tenantId) return;
+
+  const prisma = getPrisma();
+
+  try {
+    const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId } });
+    if (!item) return;
+
+    const pipeline = await prisma.pipeline.findFirst({ where: { id: item.pipelineId } });
+    if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+
+    const siblings = await prisma.pipelineItem.findMany({
+      where: { tenantId, pipelineId: item.pipelineId, stageId: item.stageId, parentItemId: item.parentItemId },
+      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+    });
+    const index = siblings.findIndex((i) => i.id === itemId);
+    const swapIndex = direction === "up" ? index - 1 : index + 1;
+    if (index === -1 || swapIndex < 0 || swapIndex >= siblings.length) return;
+
+    const a = siblings[index];
+    const b = siblings[swapIndex];
+    await prisma.$transaction([
+      prisma.pipelineItem.update({ where: { id: a.id }, data: { order: b.order } }),
+      prisma.pipelineItem.update({ where: { id: b.id }, data: { order: a.order } }),
+    ]);
+
+    revalidatePath(boardPath(pipeline));
+  } catch (err) {
+    console.error("[reordenarItem]", err);
+  }
+}
+
 export async function adicionarNota(
   pipelineId: string,
   itemId: string,

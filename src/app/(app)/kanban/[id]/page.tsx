@@ -5,7 +5,7 @@ import { getSectorMaps } from "@/lib/sectors";
 import { BoardView } from "@/components/kanban/BoardView";
 import { DuplicatePipelineButton } from "@/components/kanban/DuplicatePipelineButton";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { moverItem, duplicarPipeline, renomearEstagio, criarTarefaRapida, atualizarPrioridadeResponsavel, concluirTarefa, reabrirTarefa } from "../actions";
+import { moverItem, reordenarItem, duplicarPipeline, renomearEstagio, criarTarefaRapida, atualizarPrioridadeResponsavel, concluirTarefa, reabrirTarefa } from "../actions";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedPipelineWhere, scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
 
@@ -32,11 +32,12 @@ export default async function KanbanBoardPage({
       // aparecem dentro do detalhe do item pai.
       items: {
         where: { parentItemId: null },
-        orderBy: { createdAt: "asc" },
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
         include: {
           tags: { include: { tag: { select: { id: true, name: true, color: true } } } },
           assignees: { include: { user: { select: { id: true, name: true } } } },
           subtasks: {
+            orderBy: [{ order: "asc" }, { createdAt: "asc" }],
             select: {
               id: true, title: true, priority: true, dueDate: true, recurring: true, stageId: true,
               stage: { select: { name: true, isTerminal: true } },
@@ -204,6 +205,7 @@ export default async function KanbanBoardPage({
           items={items}
           canAct={canAddItem}
           moveAction={moverItem}
+          reorderAction={reordenarItem}
           renameStageAction={renomearEstagio.bind(null, id)}
           createTaskAction={criarTarefaRapida.bind(null, id)}
           priorityAction={atualizarPrioridadeResponsavel.bind(null, id)}

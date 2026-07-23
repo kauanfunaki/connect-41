@@ -91,19 +91,23 @@ export function SubtasksSection({ canAct, canDelete, basePath, pipelineId, subta
                 )
               }
               aria-label={s.isTerminal ? "Reabrir subtarefa" : "Concluir subtarefa"}
-              className="w-[14px] h-[14px] rounded-full border flex items-center justify-center flex-shrink-0 transition-colors disabled:cursor-default"
+              className="group/dot w-[14px] h-[14px] rounded-full border flex items-center justify-center flex-shrink-0 transition-transform hover:scale-125 disabled:cursor-default disabled:hover:scale-100"
               style={{
                 borderColor: s.stageColor ?? PRIORITY_COLOR[0],
                 background: s.isTerminal ? (s.stageColor ?? PRIORITY_COLOR[0]) : "transparent",
               }}
             >
-              {s.isTerminal && <Check size={9} className="text-on-brand" />}
+              {s.isTerminal ? (
+                <Check size={9} className="text-on-brand" />
+              ) : (
+                <Check size={9} className="opacity-0 group-hover/dot:opacity-100 transition-opacity" style={{ color: s.stageColor ?? PRIORITY_COLOR[0] }} />
+              )}
             </button>
             <Link
               href={`${basePath}/itens/${s.id}`}
               className="flex-1 min-w-0 flex items-center gap-2 text-[13px] text-fg hover:text-brand transition-colors"
             >
-              <span className={`truncate ${s.isTerminal ? "line-through text-fg-muted" : ""}`}>{s.title}</span>
+              <span className={`truncate ${s.isTerminal ? "text-fg-muted" : ""}`}>{s.title}</span>
             </Link>
             <span className="text-[11px] text-fg-muted flex-shrink-0">{s.stageName}</span>
             {canDelete && (

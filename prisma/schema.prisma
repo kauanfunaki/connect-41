@@ -880,6 +880,9 @@ model PipelineItem {
   // anexos que já existem pra qualquer PipelineItem, sem duplicar modelo. Só
   // 1 nível (subtarefa de subtarefa não é permitido, controlado na action).
   parentItemId String?
+  // Ordem manual dentro do (pipelineId, stageId, parentItemId) — drag-and-drop
+  // de reordenar na tabela de tarefas (mesmo mecanismo do ChecklistItem.order).
+  order        Int                 @default(0)
   priority     Int                 @default(0)
   startDate    DateTime?
   dueDate      DateTime?
@@ -919,6 +922,7 @@ model PipelineItem {
   @@index([tenantId, pipelineId])
   @@index([tenantId, entityType, entityId])
   @@index([parentItemId])
+  @@index([pipelineId, stageId, parentItemId, order])
   @@map("pipeline_items")
 }
 
