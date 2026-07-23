@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { Check, ChevronRight, ChevronDown, Repeat } from "lucide-react";
 import { formatCalendarDate } from "@/lib/format";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/Input";
 
 export type AssigneeRow = { id: string; name: string; priority: number };
 export type SubtaskRow = {
-  id: string; entityName: string; stageName: string; isTerminal: boolean; priority: number;
+  id: string; stageId: string; entityName: string; stageName: string; isTerminal: boolean; priority: number;
   assignees?: AssigneeRow[]; dueDate?: string | null; tags?: { id: string; name: string; color: string }[]; recurring?: boolean;
 };
 export type TaskRow = {
@@ -96,7 +96,7 @@ function AssigneeAvatar({ a, itemId, canAct, priorityAction }: { a: AssigneeRow;
 }
 
 function Row({
-  item, basePath, depth = 0, canAct, priorityAction, pipelineId, concluirAction, reabrirAction, dragId, onDragStartRow, onDragEndRow,
+  item, basePath, depth = 0, canAct, priorityAction, pipelineId, concluirAction, reabrirAction, stages, dragId, onDragStartRow, onDragEndRow,
 }: {
   item: TaskRow | SubtaskRow;
   basePath: string;
@@ -106,6 +106,7 @@ function Row({
   pipelineId: string;
   concluirAction: Props["concluirAction"];
   reabrirAction: Props["reabrirAction"];
+  stages: StageOption[];
   dragId: string | null;
   onDragStartRow: (id: string) => void;
   onDragEndRow: () => void;
@@ -115,7 +116,9 @@ function Row({
   const hasSubtasks = "subtasks" in item && item.subtasks && item.subtasks.length > 0;
   const dueDate = item.dueDate;
   const assignees = item.assignees ?? [];
-  const isTerminal = "isTerminal" in item ? item.isTerminal : false;
+  const stage = stages.find((s) => s.id === item.stageId);
+  const isTerminal = "isTerminal" in item ? item.isTerminal : (stage?.isTerminal ?? false);
+  const stageColor = stage?.color ?? "var(--c41-fg-muted)";
   const statusLabel = "stageName" in item ? item.stageName : undefined;
   const tags = item.tags ?? [];
   const dragging = dragId === item.id;
@@ -153,11 +156,11 @@ function Row({
             );
           }}
           aria-label={isTerminal ? "Reabrir tarefa" : "Concluir tarefa"}
-          title={PRIORITY_LABEL[item.priority] ?? "Normal"}
+          title={stage?.name ?? ""}
           className="w-[14px] h-[14px] rounded-full border flex items-center justify-center flex-shrink-0 transition-colors disabled:cursor-default"
           style={{
-            borderColor: PRIORITY_COLOR[item.priority] ?? PRIORITY_COLOR[0],
-            background: isTerminal ? (PRIORITY_COLOR[item.priority] ?? PRIORITY_COLOR[0]) : "transparent",
+            borderColor: stageColor,
+            background: isTerminal ? stageColor : "transparent",
           }}
         >
           {isTerminal && <Check size={9} className="text-on-brand" />}
@@ -225,6 +228,7 @@ function Row({
               pipelineId={pipelineId}
               concluirAction={concluirAction}
               reabrirAction={reabrirAction}
+              stages={stages}
               dragId={dragId}
               onDragStartRow={onDragStartRow}
               onDragEndRow={onDragEndRow}
@@ -237,7 +241,7 @@ function Row({
 }
 
 function StageGroup({
-  stage, items, basePath, canAct, renameStageAction, createTaskAction, priorityAction, pipelineId, concluirAction, reabrirAction,
+  stage, items, basePath, canAct, renameStageAction, createTaskAction, priorityAction, pipelineId, concluirAction, reabrirAction, stages,
   dragId, onDragStartRow, onDragEndRow, onDropStage,
 }: {
   stage: StageOption;
@@ -250,6 +254,7 @@ function StageGroup({
   pipelineId: string;
   concluirAction: Props["concluirAction"];
   reabrirAction: Props["reabrirAction"];
+  stages: StageOption[];
   dragId: string | null;
   onDragStartRow: (id: string) => void;
   onDragEndRow: () => void;
@@ -332,6 +337,7 @@ function StageGroup({
                   pipelineId={pipelineId}
                   concluirAction={concluirAction}
                   reabrirAction={reabrirAction}
+                  stages={stages}
                   dragId={dragId}
                   onDragStartRow={onDragStartRow}
                   onDragEndRow={onDragEndRow}
@@ -340,9 +346,9 @@ function StageGroup({
             </div>
           )}
 
-          {items.length === 0 && (
+          {items.length === 0 && dragId && (
             <div className="h-8 flex items-center px-2" style={{ paddingLeft: "34px" }}>
-              {dragId && <p className="text-[11px] text-fg-muted">Solte aqui para mover</p>}
+              <p className="text-[11px] text-fg-muted">Solte aqui para mover</p>
             </div>
           )}
 
@@ -383,9 +389,16 @@ function StageGroup({
 // vez de colunas — status renomeável inline, grupos colapsáveis, criação
 // rápida por status. Mudar o status de uma tarefa é feito arrastando a linha
 // pra outro grupo (mesma linguagem do quadro Kanban), não por dropdown.
+// Distância da borda (px) que já dispara o auto-scroll, e velocidade máxima.
+const EDGE_ZONE = 80;
+const MAX_SCROLL_SPEED = 18;
+
 export function TaskListView({ basePath, pipelineId, stages, items, canAct, renameStageAction, createTaskAction, priorityAction, moveAction, concluirAction, reabrirAction }: Props) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollSpeedRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
 
   const byStage = stages.map((stage) => ({
     stage,
@@ -399,8 +412,50 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
     startTransition(() => moveAction(id, stageId));
   }
 
+  function tickScroll() {
+    const el = scrollRef.current;
+    if (el && scrollSpeedRef.current !== 0) {
+      el.scrollTop += scrollSpeedRef.current;
+      rafRef.current = requestAnimationFrame(tickScroll);
+    } else {
+      rafRef.current = null;
+    }
+  }
+
+  function handleContainerDragOver(e: React.DragEvent) {
+    if (!dragId) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const y = e.clientY;
+    let speed = 0;
+    if (y < rect.top + EDGE_ZONE) {
+      speed = -MAX_SCROLL_SPEED * (1 - (y - rect.top) / EDGE_ZONE);
+    } else if (y > rect.bottom - EDGE_ZONE) {
+      speed = MAX_SCROLL_SPEED * (1 - (rect.bottom - y) / EDGE_ZONE);
+    }
+    scrollSpeedRef.current = speed;
+    if (speed !== 0 && rafRef.current == null) {
+      rafRef.current = requestAnimationFrame(tickScroll);
+    }
+  }
+
+  function stopAutoScroll() {
+    scrollSpeedRef.current = 0;
+    if (rafRef.current != null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+  }
+
   return (
-    <div className="scroll-y bg-surface border border-border rounded-2xl p-2 h-full overflow-y-auto">
+    <div
+      ref={scrollRef}
+      onDragOver={handleContainerDragOver}
+      onDragLeave={(e) => { if (e.currentTarget === e.target) stopAutoScroll(); }}
+      onDrop={stopAutoScroll}
+      className="scroll-y bg-surface border border-border rounded-2xl p-2 h-full overflow-y-auto"
+    >
       {byStage.map(({ stage, items: stageItems }) => (
         <StageGroup
           key={stage.id}
@@ -414,6 +469,7 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
           pipelineId={pipelineId}
           concluirAction={concluirAction}
           reabrirAction={reabrirAction}
+          stages={stages}
           dragId={dragId}
           onDragStartRow={setDragId}
           onDragEndRow={() => setDragId(null)}

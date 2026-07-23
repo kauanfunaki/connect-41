@@ -198,15 +198,15 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
             <button
               key={f.key}
               type="button"
-              title={f.label}
               onClick={() => setActiveFilterKey((k) => (k === f.key ? null : f.key))}
-              className={`inline-flex items-center justify-center w-8 h-8 rounded-md border transition-colors ${
+              className={`inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border text-[12px] font-medium transition-colors ${
                 f.active || activeFilterKey === f.key
                   ? "border-brand/40 bg-brand/[0.06] text-fg"
                   : "border-border text-fg-secondary hover:text-fg hover:bg-surface-hover"
               }`}
             >
               {f.icon}
+              {f.label}
             </button>
           ))}
         </div>

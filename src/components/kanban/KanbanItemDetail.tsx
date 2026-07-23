@@ -150,7 +150,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
       : prisma.pipelineItem.findMany({
           where: { parentItemId: itemId, tenantId },
           orderBy: { createdAt: "asc" },
-          include: { stage: { select: { name: true, isTerminal: true } } },
+          include: { stage: { select: { name: true, color: true, isTerminal: true } } },
         }),
     prisma.checklistItem.findMany({ where: { pipelineItemId: itemId, tenantId }, orderBy: { order: "asc" } }),
     // @menção em comentário pode citar qualquer usuário do tenant (não só do
@@ -378,6 +378,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
                   id: s.id,
                   title: s.title ?? "(sem título)",
                   stageName: s.stage.name,
+                  stageColor: s.stage.color,
                   isTerminal: s.stage.isTerminal,
                   priority: s.priority,
                 }))}

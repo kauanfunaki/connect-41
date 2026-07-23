@@ -38,7 +38,7 @@ export default async function KanbanBoardPage({
           assignees: { include: { user: { select: { id: true, name: true } } } },
           subtasks: {
             select: {
-              id: true, title: true, priority: true, dueDate: true, recurring: true,
+              id: true, title: true, priority: true, dueDate: true, recurring: true, stageId: true,
               stage: { select: { name: true, isTerminal: true } },
               tags: { include: { tag: { select: { id: true, name: true, color: true } } } },
               assignees: { include: { user: { select: { id: true, name: true } } } },
@@ -134,6 +134,7 @@ export default async function KanbanBoardPage({
     subtaskDone: i.subtasks.filter((s) => s.stage.isTerminal).length,
     subtasks: i.subtasks.map((s) => ({
       id: s.id,
+      stageId: s.stageId,
       entityName: s.title ?? "(sem título)",
       stageName: s.stage.name,
       isTerminal: s.stage.isTerminal,

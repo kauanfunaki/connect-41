@@ -9,6 +9,7 @@ export type SubtaskData = {
   id: string;
   title: string;
   stageName: string;
+  stageColor: string | null;
   isTerminal: boolean;
   priority: number;
 };
@@ -92,8 +93,8 @@ export function SubtasksSection({ canAct, canDelete, basePath, pipelineId, subta
               aria-label={s.isTerminal ? "Reabrir subtarefa" : "Concluir subtarefa"}
               className="w-[14px] h-[14px] rounded-full border flex items-center justify-center flex-shrink-0 transition-colors disabled:cursor-default"
               style={{
-                borderColor: PRIORITY_COLOR[s.priority] ?? PRIORITY_COLOR[0],
-                background: s.isTerminal ? (PRIORITY_COLOR[s.priority] ?? PRIORITY_COLOR[0]) : "transparent",
+                borderColor: s.stageColor ?? PRIORITY_COLOR[0],
+                background: s.isTerminal ? (s.stageColor ?? PRIORITY_COLOR[0]) : "transparent",
               }}
             >
               {s.isTerminal && <Check size={9} className="text-on-brand" />}

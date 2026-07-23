@@ -3,6 +3,14 @@ import { PageContainer } from "@/components/shared/PageContainer";
 export default function LoadingPessoas() {
   return (
     <PageContainer>
+      <div className="mb-5">
+        <div className="c41-skeleton w-20 h-3 mb-2" />
+        <div className="flex items-center gap-1">
+          <div className="c41-skeleton w-20 h-8 rounded-md" />
+          <div className="c41-skeleton w-20 h-8 rounded-md" />
+        </div>
+      </div>
+
       <div className="flex items-center justify-between mb-6">
         <div className="space-y-2">
           <div className="c41-skeleton w-32 h-6" />

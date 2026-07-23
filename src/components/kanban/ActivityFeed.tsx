@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
-import { Paperclip, Search, LinkIcon } from "lucide-react";
+import { FileSpreadsheet, FileText, Paperclip, Presentation, Search, LinkIcon, X } from "lucide-react";
 import { MentionTextarea, type MentionUser } from "@/components/transferencias/MentionTextarea";
 import { Input } from "@/components/ui/Input";
 import { renderRichText } from "@/lib/richText";
@@ -90,6 +90,39 @@ function TaskMentionPicker({ candidates, onPick }: { candidates: TaskMentionCand
   );
 }
 
+const IMAGE_EXT = ["jpg", "jpeg", "png", "webp", "gif"];
+
+function fileExt(fileName: string): string {
+  return fileName.split(".").pop()?.toLowerCase() ?? "";
+}
+
+function FileIcon({ fileName }: { fileName: string }) {
+  const ext = fileExt(fileName);
+  if (["xls", "xlsx", "csv"].includes(ext)) return <FileSpreadsheet size={16} />;
+  if (["ppt", "pptx"].includes(ext)) return <Presentation size={16} />;
+  return <FileText size={16} />;
+}
+
+type Attachment = { id: string; fileName: string; url: string };
+
+function AttachmentChip({ attachment, onRemove }: { attachment: Attachment; onRemove: () => void }) {
+  const isImage = IMAGE_EXT.includes(fileExt(attachment.fileName));
+  return (
+    <span className="inline-flex items-center gap-1.5 pl-1 pr-1.5 py-1 rounded-md border border-border bg-surface-hover text-[12px] text-fg-secondary">
+      {isImage ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={attachment.url} alt="" className="w-5 h-5 rounded object-cover flex-shrink-0" />
+      ) : (
+        <span className="text-fg-muted flex-shrink-0"><FileIcon fileName={attachment.fileName} /></span>
+      )}
+      <span className="truncate max-w-[140px]">{attachment.fileName}</span>
+      <button type="button" onClick={onRemove} aria-label="Remover anexo" className="text-fg-muted hover:text-danger flex-shrink-0">
+        <X size={12} />
+      </button>
+    </span>
+  );
+}
+
 function Composer({
   mentionUsers,
   taskCandidates,
@@ -112,18 +145,22 @@ function Composer({
   onCancel?: () => void;
 }) {
   const [value, setValue] = useState(defaultValue);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isPending, startTransition] = useTransition();
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function submit() {
-    if (!value.trim()) return;
+    if (!value.trim() && attachments.length === 0) return;
+    const attachmentText = attachments.map((a) => `[${a.fileName}](${a.url})`).join(" ");
+    const content = [value.trim(), attachmentText].filter(Boolean).join(" ");
     const form = new FormData();
-    form.set("content", value.trim());
+    form.set("content", content);
     if (parentActivityId) form.set("parentActivityId", parentActivityId);
     startTransition(() => {
       onSubmit(form);
       setValue("");
+      setAttachments([]);
     });
   }
 
@@ -141,7 +178,7 @@ function Composer({
       const res = await fetch("/api/documents", { method: "POST", body: form });
       const body = await res.json();
       if (res.ok) {
-        setValue((v) => `${v}${v ? " " : ""}[${body.fileName}](/api/documents/${body.id})`);
+        setAttachments((prev) => [...prev, { id: body.id, fileName: body.fileName, url: `/api/documents/${body.id}` }]);
       }
     } finally {
       setUploading(false);
@@ -159,6 +196,13 @@ function Composer({
         onChange={setValue}
         users={mentionUsers}
       />
+      {attachments.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {attachments.map((a) => (
+            <AttachmentChip key={a.id} attachment={a} onRemove={() => setAttachments((prev) => prev.filter((x) => x.id !== a.id))} />
+          ))}
+        </div>
+      )}
       <div className="flex items-center gap-1">
         <button
           type="button"
@@ -181,7 +225,7 @@ function Composer({
         <button
           type="button"
           onClick={submit}
-          disabled={isPending || uploading || !value.trim()}
+          disabled={isPending || uploading || (!value.trim() && attachments.length === 0)}
           className="h-8 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
         >
           {isPending ? "Salvando…" : uploading ? "Enviando…" : submitLabel}
