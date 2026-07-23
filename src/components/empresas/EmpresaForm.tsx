@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useRef, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { EmpresaState } from "@/app/(app)/empresas/actions";
 import { CompanyStatus } from "@/generated/prisma/enums";
@@ -187,10 +187,9 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
 
   const branchLabel = branchOptions.find((b) => b.value === values.branchId)?.label;
 
-  async function handleCNPJBlur(e: React.FocusEvent<HTMLInputElement>) {
-    const clean = e.target.value.replace(/\D/g, "");
-    if (clean.length !== 14) return;
+  const lastFetchedCnpjRef = useRef<string | null>(null);
 
+  async function fetchCnpjData(clean: string) {
     setFetching(true);
     try {
       const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${clean}`);
@@ -236,6 +235,13 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
     }
   }
 
+  useEffect(() => {
+    const clean = values.cnpj?.replace(/\D/g, "") ?? "";
+    if (clean.length !== 14 || clean === lastFetchedCnpjRef.current) return;
+    lastFetchedCnpjRef.current = clean;
+    fetchCnpjData(clean);
+  }, [values.cnpj]);
+
   return (
     <div className="bg-surface border border-border rounded-2xl overflow-hidden">
       <Stepper steps={steps} onStepClick={(i) => i <= maxStepReached && goTo(i)} />
@@ -253,7 +259,7 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
         <div data-step={0} className={step === 0 ? "" : "hidden"}>
           <FormSection title="Identificação">
             <FieldGrid>
-              <CampoForm label="CNPJ" htmlFor="cnpj" helper="Ao sair do campo, os dados são preenchidos automaticamente.">
+              <CampoForm label="CNPJ" htmlFor="cnpj" helper="Os dados são preenchidos automaticamente ao completar os dígitos.">
                 <div className="relative">
                   <Input
                     id="cnpj"
@@ -261,7 +267,6 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
                     type="text"
                     value={values.cnpj}
                     placeholder="00.000.000/0000-00"
-                    onBlur={handleCNPJBlur}
                   />
                   {fetching && (
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-fg-muted animate-pulse">
@@ -487,7 +492,7 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
         </div>
 
         {/* ── Navegação ──────────────────────────────────── */}
-        <div className="flex items-center justify-between pt-4 mt-1 border-t border-border">
+        <div className="flex items-center justify-between pt-6 mt-6 border-t border-border">
           <div>
             {step > 0 && (
               <Button type="button" variant="secondary" onClick={back}>

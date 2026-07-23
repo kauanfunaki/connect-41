@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { BackButton } from "@/components/shared/BackButton";
 import { PessoaForm } from "@/components/pessoas/PessoaForm";
 import { criarPessoa } from "../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -44,6 +45,8 @@ export default async function NovaPessoaPage() {
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg">Nova Pessoa</span>
       </div>
+
+      <BackButton className="mb-3" />
 
       <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em] mb-6">Nova Pessoa</h1>
 

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ListTree, Trash2, X } from "lucide-react";
+import { Check, ListTree, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 
 export type SubtaskData = {
@@ -17,9 +17,12 @@ type Props = {
   canAct: boolean;
   canDelete: boolean;
   basePath: string;
+  pipelineId: string;
   subtasks: SubtaskData[];
   createAction: (title: string) => Promise<void>;
   deleteAction: (id: string) => Promise<void>;
+  concluirAction: (pipelineId: string, itemId: string) => Promise<void>;
+  reabrirAction: (pipelineId: string, itemId: string) => Promise<void>;
 };
 
 const PRIORITY_COLOR: Record<number, string> = {
@@ -28,7 +31,7 @@ const PRIORITY_COLOR: Record<number, string> = {
   2: "var(--c41-danger)",
 };
 
-export function SubtasksSection({ canAct, canDelete, basePath, subtasks, createAction, deleteAction }: Props) {
+export function SubtasksSection({ canAct, canDelete, basePath, pipelineId, subtasks, createAction, deleteAction, concluirAction, reabrirAction }: Props) {
   const [title, setTitle] = useState("");
   const [open, setOpen] = useState(subtasks.length > 0);
   const [, startTransition] = useTransition();
@@ -78,14 +81,27 @@ export function SubtasksSection({ canAct, canDelete, basePath, subtasks, createA
       <div className="divide-y divide-border">
         {subtasks.map((s) => (
           <div key={s.id} className="flex items-center gap-2 py-2 group">
+            <button
+              type="button"
+              disabled={!canAct}
+              onClick={() =>
+                startTransition(() =>
+                  s.isTerminal ? reabrirAction(pipelineId, s.id) : concluirAction(pipelineId, s.id)
+                )
+              }
+              aria-label={s.isTerminal ? "Reabrir subtarefa" : "Concluir subtarefa"}
+              className="w-[14px] h-[14px] rounded-full border flex items-center justify-center flex-shrink-0 transition-colors disabled:cursor-default"
+              style={{
+                borderColor: PRIORITY_COLOR[s.priority] ?? PRIORITY_COLOR[0],
+                background: s.isTerminal ? (PRIORITY_COLOR[s.priority] ?? PRIORITY_COLOR[0]) : "transparent",
+              }}
+            >
+              {s.isTerminal && <Check size={9} className="text-on-brand" />}
+            </button>
             <Link
               href={`${basePath}/itens/${s.id}`}
               className="flex-1 min-w-0 flex items-center gap-2 text-[13px] text-fg hover:text-brand transition-colors"
             >
-              <span
-                className="w-[7px] h-[7px] rounded-full flex-shrink-0"
-                style={{ background: PRIORITY_COLOR[s.priority] ?? PRIORITY_COLOR[0] }}
-              />
               <span className={`truncate ${s.isTerminal ? "line-through text-fg-muted" : ""}`}>{s.title}</span>
             </Link>
             <span className="text-[11px] text-fg-muted flex-shrink-0">{s.stageName}</span>

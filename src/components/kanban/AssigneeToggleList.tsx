@@ -13,11 +13,11 @@ type Props = {
   toggleAction: (userId: string, marcado: boolean) => Promise<void>;
 };
 
-function UserChip({ user, active, onToggle }: { user: UserOption; active: boolean; onToggle: () => void }) {
+function UserRow({ user, active, onToggle }: { user: UserOption; active: boolean; onToggle: () => void }) {
   return (
     <label
-      className={`cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[12px] transition-colors ${
-        active ? "border-brand/40 bg-brand/[0.06] text-fg" : "border-border text-fg-muted hover:text-fg"
+      className={`cursor-pointer flex items-center gap-2 px-2 py-1.5 rounded-md text-[12px] transition-colors ${
+        active ? "text-fg" : "text-fg-muted hover:text-fg hover:bg-surface-hover"
       }`}
     >
       <Checkbox checked={active} onChange={onToggle} />
@@ -62,14 +62,6 @@ export function AssigneeToggleList({ allUsers, selectedIds, toggleAction }: Prop
 
   return (
     <div className="space-y-2.5">
-      {selectedUsers.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {selectedUsers.map((u) => (
-            <UserChip key={u.id} user={u} active onToggle={() => toggle(u.id)} />
-          ))}
-        </div>
-      )}
-
       <Input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -78,13 +70,16 @@ export function AssigneeToggleList({ allUsers, selectedIds, toggleAction }: Prop
         className="h-8 text-[12px]"
       />
 
-      <div className="flex flex-col gap-1 max-h-[160px] overflow-y-auto">
-        {availableUsers.length === 0 ? (
+      <div className="flex flex-col gap-0.5 max-h-[200px] overflow-y-auto">
+        {selectedUsers.map((u) => (
+          <UserRow key={u.id} user={u} active onToggle={() => toggle(u.id)} />
+        ))}
+        {availableUsers.length === 0 && selectedUsers.length === 0 ? (
           <p className="text-[12px] text-fg-muted py-1">
-            {normalizedQuery ? "Nenhum responsável encontrado." : "Todos já foram adicionados."}
+            {normalizedQuery ? "Nenhum responsável encontrado." : "Nenhum usuário disponível."}
           </p>
         ) : (
-          availableUsers.map((u) => <UserChip key={u.id} user={u} active={false} onToggle={() => toggle(u.id)} />)
+          availableUsers.map((u) => <UserRow key={u.id} user={u} active={false} onToggle={() => toggle(u.id)} />)
         )}
       </div>
     </div>

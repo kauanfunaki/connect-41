@@ -373,6 +373,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
                 canAct={canAct}
                 canDelete={canDelete}
                 basePath={basePath}
+                pipelineId={id}
                 subtasks={subtasks.map((s) => ({
                   id: s.id,
                   title: s.title ?? "(sem título)",
@@ -382,6 +383,8 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
                 }))}
                 createAction={createSubtaskAction}
                 deleteAction={deleteSubtaskAction}
+                concluirAction={concluirTarefa}
+                reabrirAction={reabrirTarefa}
               />
             )}
 

@@ -10,7 +10,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { CadastrosTabsBar } from "@/components/shared/CadastrosTabsBar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { formatInstantDate } from "@/lib/format";
 import { inativarPessoasEmMassa } from "./actions";
 
@@ -87,14 +87,9 @@ export default async function PessoasPage({
 
       {/* Filters */}
       <div className="flex items-center gap-3 mb-4">
-        <form method="GET" action="/pessoas" className="flex-1 max-w-xs">
-          {companyId && <input type="hidden" name="companyId" value={companyId} />}
-          <Input
-            name="search"
-            defaultValue={search ?? ""}
-            placeholder="Buscar por nome…"
-          />
-        </form>
+        <div className="flex-1 max-w-xs">
+          <DebouncedSearchInput placeholder="Buscar por nome…" />
+        </div>
 
         <CompanyFilterSelect companies={companies} value={companyId ?? ""} />
 

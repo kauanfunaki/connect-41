@@ -4,7 +4,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { CadastrosTabsBar } from "@/components/shared/CadastrosTabsBar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { getPrisma } from "@/lib/prisma";
 import { CompanyStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -115,16 +115,9 @@ export default async function EmpresasPage({
       {/* Filters */}
       <div className="flex items-center gap-3 mb-4">
         {/* Search */}
-        <form method="GET" action="/empresas" className="flex-1 max-w-xs">
-          {statusFilter && (
-            <input type="hidden" name="status" value={statusFilter} />
-          )}
-          <Input
-            name="search"
-            defaultValue={search ?? ""}
-            placeholder="Buscar por nome…"
-          />
-        </form>
+        <div className="flex-1 max-w-xs">
+          <DebouncedSearchInput placeholder="Buscar por nome…" />
+        </div>
 
         {/* Status tabs */}
         <div className="flex items-center gap-1">

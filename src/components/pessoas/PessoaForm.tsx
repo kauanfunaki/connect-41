@@ -466,7 +466,7 @@ export function PessoaForm({
         </div>
 
         {/* ── Navegação ──────────────────────────────────── */}
-        <div className="flex items-center justify-between pt-4 mt-1 border-t border-border">
+        <div className="flex items-center justify-between pt-6 mt-6 border-t border-border">
           <div>
             {step > 0 && (
               <Button type="button" variant="secondary" onClick={back}>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronRight, ChevronDown, Repeat } from "lucide-react";
 import { formatCalendarDate } from "@/lib/format";
 import { Input } from "@/components/ui/Input";
+import { MoveStageSelect } from "@/components/kanban/MoveStageSelect";
 
 export type AssigneeRow = { id: string; name: string; priority: number };
 export type SubtaskRow = {
@@ -33,6 +34,7 @@ type Props = {
   renameStageAction: (stageId: string, name: string) => Promise<void>;
   createTaskAction: (stageId: string, title: string) => Promise<void>;
   priorityAction: (itemId: string, userId: string, priority: number) => Promise<void>;
+  moveAction: (itemId: string, newStageId: string) => Promise<void>;
 };
 
 const PRIORITY_LABEL: Record<number, string> = { 0: "Normal", 1: "Alta", 2: "Urgente" };
@@ -92,7 +94,17 @@ function AssigneeAvatar({ a, itemId, canAct, priorityAction }: { a: AssigneeRow;
   );
 }
 
-function Row({ item, basePath, depth = 0, canAct, priorityAction }: { item: TaskRow | SubtaskRow; basePath: string; depth?: number; canAct: boolean; priorityAction: Props["priorityAction"] }) {
+function Row({
+  item, basePath, depth = 0, canAct, priorityAction, stages, moveAction,
+}: {
+  item: TaskRow | SubtaskRow;
+  basePath: string;
+  depth?: number;
+  canAct: boolean;
+  priorityAction: Props["priorityAction"];
+  stages: StageOption[];
+  moveAction: Props["moveAction"];
+}) {
   const [expanded, setExpanded] = useState(false);
   const hasSubtasks = "subtasks" in item && item.subtasks && item.subtasks.length > 0;
   const dueDate = item.dueDate;
@@ -148,8 +160,14 @@ function Row({ item, basePath, depth = 0, canAct, priorityAction }: { item: Task
 
         <div className="flex-1" />
 
-        {statusLabel && (
-          <span className="text-[11px] text-fg-muted flex-shrink-0 hidden sm:inline">{statusLabel}</span>
+        {"stageId" in item && canAct ? (
+          <span className="flex-shrink-0 hidden sm:inline" onClick={(e) => e.stopPropagation()}>
+            <MoveStageSelect itemId={item.id} currentStageId={item.stageId} stages={stages} moveAction={moveAction} />
+          </span>
+        ) : (
+          statusLabel && (
+            <span className="text-[11px] text-fg-muted flex-shrink-0 hidden sm:inline">{statusLabel}</span>
+          )
         )}
 
         {hasSubtasks && (
@@ -177,7 +195,7 @@ function Row({ item, basePath, depth = 0, canAct, priorityAction }: { item: Task
       {expanded && hasSubtasks && (
         <div>
           {(item as TaskRow).subtasks!.map((s) => (
-            <Row key={s.id} item={s} basePath={basePath} depth={depth + 1} canAct={canAct} priorityAction={priorityAction} />
+            <Row key={s.id} item={s} basePath={basePath} depth={depth + 1} canAct={canAct} priorityAction={priorityAction} stages={stages} moveAction={moveAction} />
           ))}
         </div>
       )}
@@ -186,7 +204,7 @@ function Row({ item, basePath, depth = 0, canAct, priorityAction }: { item: Task
 }
 
 function StageGroup({
-  stage, items, basePath, canAct, renameStageAction, createTaskAction, priorityAction,
+  stage, items, basePath, canAct, renameStageAction, createTaskAction, priorityAction, stages, moveAction,
 }: {
   stage: StageOption;
   items: TaskRow[];
@@ -195,6 +213,8 @@ function StageGroup({
   renameStageAction: Props["renameStageAction"];
   createTaskAction: Props["createTaskAction"];
   priorityAction: Props["priorityAction"];
+  stages: StageOption[];
+  moveAction: Props["moveAction"];
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -254,7 +274,7 @@ function StageGroup({
           {items.length > 0 && (
             <div className="divide-y divide-border/60">
               {items.map((item) => (
-                <Row key={item.id} item={item} basePath={basePath} canAct={canAct} priorityAction={priorityAction} />
+                <Row key={item.id} item={item} basePath={basePath} canAct={canAct} priorityAction={priorityAction} stages={stages} moveAction={moveAction} />
               ))}
             </div>
           )}
@@ -295,7 +315,7 @@ function StageGroup({
 // Visão alternativa ao Kanban: mesmas tarefas, agrupadas por status (stage) em
 // vez de colunas — status renomeável inline, grupos colapsáveis, criação
 // rápida por status.
-export function TaskListView({ basePath, stages, items, canAct, renameStageAction, createTaskAction, priorityAction }: Props) {
+export function TaskListView({ basePath, stages, items, canAct, renameStageAction, createTaskAction, priorityAction, moveAction }: Props) {
   const byStage = stages.map((stage) => ({
     stage,
     items: items.filter((i) => i.stageId === stage.id),
@@ -313,6 +333,8 @@ export function TaskListView({ basePath, stages, items, canAct, renameStageActio
           renameStageAction={renameStageAction}
           createTaskAction={createTaskAction}
           priorityAction={priorityAction}
+          stages={stages}
+          moveAction={moveAction}
         />
       ))}
     </div>

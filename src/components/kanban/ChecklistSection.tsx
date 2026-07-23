@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, CheckSquare, ChevronDown, ChevronUp, Pencil, Trash2, X } from "lucide-react";
+import { Check, CheckSquare, GripVertical, Pencil, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 
 export type ChecklistItemData = { id: string; text: string; done: boolean };
@@ -17,16 +17,18 @@ type Props = {
 };
 
 function ChecklistRow({
-  item, index, total, canAct, toggleAction, editAction, deleteAction, reorderAction,
+  item, canAct, toggleAction, editAction, deleteAction, dragging, onDragStart, onDragOver, onDrop, onDragEnd,
 }: {
   item: ChecklistItemData;
-  index: number;
-  total: number;
   canAct: boolean;
   toggleAction: Props["toggleAction"];
   editAction: Props["editAction"];
   deleteAction: Props["deleteAction"];
-  reorderAction: Props["reorderAction"];
+  dragging: boolean;
+  onDragStart: () => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: () => void;
+  onDragEnd: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(item.text);
@@ -39,7 +41,19 @@ function ChecklistRow({
   }
 
   return (
-    <div className="flex items-center gap-2 py-1.5 group">
+    <div
+      draggable={canAct && !editing}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      className={`flex items-center gap-2 py-1.5 group ${dragging ? "opacity-40" : ""}`}
+    >
+      {canAct && (
+        <span className="text-fg-muted opacity-0 group-hover:opacity-100 transition-opacity cursor-grab flex-shrink-0" aria-hidden="true">
+          <GripVertical size={13} />
+        </span>
+      )}
       <button
         type="button"
         disabled={!canAct}
@@ -74,8 +88,6 @@ function ChecklistRow({
 
       {canAct && !editing && (
         <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button type="button" disabled={index === 0} onClick={() => startTransition(() => reorderAction(item.id, "up"))} className="text-fg-muted hover:text-fg disabled:opacity-30 p-1"><ChevronUp size={13} /></button>
-          <button type="button" disabled={index === total - 1} onClick={() => startTransition(() => reorderAction(item.id, "down"))} className="text-fg-muted hover:text-fg disabled:opacity-30 p-1"><ChevronDown size={13} /></button>
           <button type="button" onClick={() => setEditing(true)} className="text-fg-muted hover:text-fg p-1"><Pencil size={13} /></button>
           <button type="button" onClick={() => startTransition(() => deleteAction(item.id))} className="text-fg-muted hover:text-danger p-1"><Trash2 size={13} /></button>
         </div>
@@ -87,6 +99,7 @@ function ChecklistRow({
 export function ChecklistSection({ canAct, items, createAction, toggleAction, editAction, deleteAction, reorderAction }: Props) {
   const [newText, setNewText] = useState("");
   const [open, setOpen] = useState(items.length > 0);
+  const [dragId, setDragId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   const done = items.filter((i) => i.done).length;
@@ -97,6 +110,23 @@ export function ChecklistSection({ canAct, items, createAction, toggleAction, ed
     if (!text) return;
     startTransition(() => createAction(text));
     setNewText("");
+  }
+
+  // Sem endpoint de posição absoluta — arrastar até o alvo dispara N trocas
+  // adjacentes na direção certa, reaproveitando a action de subir/descer.
+  function handleDrop(targetIndex: number) {
+    const id = dragId;
+    setDragId(null);
+    if (!id) return;
+    const fromIndex = items.findIndex((i) => i.id === id);
+    if (fromIndex === -1 || fromIndex === targetIndex) return;
+    const direction = targetIndex > fromIndex ? "down" : "up";
+    const steps = Math.abs(targetIndex - fromIndex);
+    startTransition(async () => {
+      for (let i = 0; i < steps; i++) {
+        await reorderAction(id, direction);
+      }
+    });
   }
 
   if (items.length === 0 && !open) {
@@ -136,13 +166,15 @@ export function ChecklistSection({ canAct, items, createAction, toggleAction, ed
           <ChecklistRow
             key={item.id}
             item={item}
-            index={i}
-            total={items.length}
             canAct={canAct}
             toggleAction={toggleAction}
             editAction={editAction}
             deleteAction={deleteAction}
-            reorderAction={reorderAction}
+            dragging={dragId === item.id}
+            onDragStart={() => setDragId(item.id)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={() => handleDrop(i)}
+            onDragEnd={() => setDragId(null)}
           />
         ))}
       </div>
