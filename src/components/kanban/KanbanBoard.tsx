@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { formatCalendarDate } from "@/lib/format";
+import { stripRichText } from "@/lib/richText";
 
 type Stage = { id: string; name: string; color: string | null; isTerminal?: boolean };
 type Tag = { id: string; name: string; color: string };
@@ -213,7 +214,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
 
                     {item.lastActivity && (
                       <p className="text-[11px] text-fg-muted mt-2 pt-2 border-t border-border truncate">
-                        {item.lastActivity}
+                        {stripRichText(item.lastActivity)}
                       </p>
                     )}
                   </Link>

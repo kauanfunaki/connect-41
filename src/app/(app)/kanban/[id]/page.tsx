@@ -25,6 +25,8 @@ export default async function KanbanBoardPage({
   const pipeline = await prisma.pipeline.findFirst({
     where: { id, ...scopedPipelineWhere(ctx) },
     include: {
+      space: { select: { id: true, name: true } },
+      folder: { select: { id: true, name: true } },
       stages: { orderBy: { order: "asc" } },
       // parentItemId: null — subtarefas não viram card solto no board, só
       // aparecem dentro do detalhe do item pai.
@@ -146,9 +148,21 @@ export default async function KanbanBoardPage({
   return (
     <PageContainer className="h-full flex flex-col">
       <div className="flex items-center gap-2 mb-1">
-        <Link href="/kanban" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Kanban
+        <Link href={`/setor/${pipeline.sectorCode}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
+          {sectorLabels[pipeline.sectorCode] ?? pipeline.sectorCode}
         </Link>
+        <span className="text-fg-muted">/</span>
+        <Link href={`/setor/${pipeline.sectorCode}/espacos/${pipeline.space.id}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
+          {pipeline.space.name}
+        </Link>
+        {pipeline.folder && (
+          <>
+            <span className="text-fg-muted">/</span>
+            <Link href={`/setor/${pipeline.sectorCode}/pastas/${pipeline.folder.id}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
+              {pipeline.folder.name}
+            </Link>
+          </>
+        )}
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg">{pipeline.name}</span>
       </div>

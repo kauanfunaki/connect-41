@@ -1,4 +1,5 @@
 import { formatInstantDateTime } from "@/lib/format";
+import { renderRichText } from "@/lib/richText";
 
 const ACTIVITY_LABEL: Record<string, string> = {
   NOTE: "Nota",
@@ -56,7 +57,7 @@ export function ActivityTimeline({ activities, emptyLabel = "Nenhuma atividade r
                 </span>
               </div>
               <p className="text-[length:var(--fs-helper)] text-fg-muted">{a.userName}</p>
-              {a.content && <p className="text-[length:var(--fs-body)] text-fg-secondary mt-1">{a.content}</p>}
+              {a.content && <p className="text-[length:var(--fs-body)] text-fg-secondary mt-1">{renderRichText(a.content)}</p>}
             </div>
           </div>
         );
