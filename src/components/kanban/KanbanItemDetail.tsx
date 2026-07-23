@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { CardActionBar } from "@/components/kanban/CardActionBar";
 import { DescriptionEditor } from "@/components/kanban/DescriptionEditor";
-import { ActivityFeed, type FeedItem } from "@/components/kanban/ActivityFeed";
-import { MeetingsSection } from "@/components/kanban/MeetingsSection";
+import { ActivityFeed, type FeedItem, type TaskMentionCandidate } from "@/components/kanban/ActivityFeed";
 import { DocumentsSection } from "@/components/documents/DocumentsSection";
 import { listDocuments } from "@/lib/documents";
 import { SubtasksSection } from "@/components/kanban/SubtasksSection";
 import { ChecklistSection } from "@/components/kanban/ChecklistSection";
-import { TimeTrackingSection } from "@/components/kanban/TimeTrackingSection";
+import { LinkedItemsSection } from "@/components/kanban/LinkedItemsSection";
+import { CanvasSection } from "@/components/kanban/CanvasSection";
+import { TaskFieldsPanel } from "@/components/kanban/TaskFieldsPanel";
 import { CompletionBanner } from "@/components/kanban/CompletionBanner";
+import { DeleteTaskButton } from "@/components/kanban/DeleteTaskButton";
 import {
   moverItem,
   adicionarNota,
@@ -32,13 +33,16 @@ import {
   concluirTarefa,
   reabrirTarefa,
   atualizarEstimativa,
-  criarLancamentoTempo,
-  excluirLancamentoTempo,
+  iniciarCronometro,
+  pararCronometro,
+  criarLinkItem,
+  removerLinkItem,
+  criarCanvas,
+  atualizarCanvas,
+  excluirCanvas,
 } from "@/app/(app)/kanban/actions";
 import { boardPath } from "@/lib/kanbanPaths";
-import { agendarReuniao, excluirReuniao } from "@/app/(app)/kanban/meetings-actions";
 import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
-import { canManageMeetings } from "@/lib/integrations/oauth";
 import { scopedPipelineWhere } from "@/lib/auth/scope";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { formatCalendarDate, formatInstantDate, formatInstantDateTime } from "@/lib/format";
@@ -102,12 +106,12 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
   const canDelete = canManageSector(ctx, pipeline.sectorCode);
   const canAct = canActOnSector(ctx, pipeline.sectorCode);
 
-  const canScheduleMeetings = canManageMeetings(ctx);
-
-  const [entity, activities, sectorTags, sectorUsers, meetings, oauthAccounts, documents] = await Promise.all([
-    item.entityType === "COMPANY"
-      ? prisma.company.findFirst({ where: { id: item.entityId, tenantId }, select: { id: true, name: true } })
-      : prisma.person.findFirst({ where: { id: item.entityId, tenantId }, select: { id: true, name: true } }),
+  const [entity, activities, sectorTags, sectorUsers, documents, activeTimerUser, otherItems, canvasPages] = await Promise.all([
+    !item.entityId
+      ? Promise.resolve(null)
+      : item.entityType === "COMPANY"
+        ? prisma.company.findFirst({ where: { id: item.entityId, tenantId }, select: { id: true, name: true } })
+        : prisma.person.findFirst({ where: { id: item.entityId, tenantId }, select: { id: true, name: true } }),
     prisma.activity.findMany({
       where: { pipelineItemId: itemId, tenantId },
       orderBy: { createdAt: "desc" },
@@ -119,18 +123,25 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
       select: { id: true, name: true, color: true },
     }),
     getSectorUsers(tenantId, pipeline.sectorCode),
-    prisma.meeting.findMany({
-      where: { tenantId, pipelineItemId: itemId },
-      orderBy: { startAt: "desc" },
-      include: { attendees: { include: { user: { select: { id: true, name: true } } } } },
-    }),
-    canScheduleMeetings
-      ? prisma.oAuthAccount.findMany({ where: { tenantId, userId: ctx.userId }, select: { provider: true } })
-      : Promise.resolve([]),
     listDocuments(tenantId, "PIPELINE_ITEM", itemId),
+    item.activeTimerUserId
+      ? prisma.user.findFirst({ where: { id: item.activeTimerUserId }, select: { id: true, name: true } })
+      : Promise.resolve(null),
+    // Candidatas pra "vincular tarefa" / "mencionar tarefa no comentário" —
+    // qualquer item do mesmo pipeline, exceto o próprio.
+    prisma.pipelineItem.findMany({
+      where: { pipelineId: id, tenantId, id: { not: itemId } },
+      select: { id: true, title: true, entityId: true, entityType: true },
+      take: 200,
+    }),
+    prisma.canvasPage.findMany({
+      where: { pipelineItemId: itemId, tenantId },
+      orderBy: { createdAt: "asc" },
+      include: { createdBy: { select: { name: true } } },
+    }),
   ]);
 
-  const [parentItem, subtasks, checklistItems, mentionUsers, timeEntries, lastCompletion] = await Promise.all([
+  const [parentItem, subtasks, checklistItems, mentionUsers, lastCompletion, links] = await Promise.all([
     item.parentItemId
       ? prisma.pipelineItem.findFirst({ where: { id: item.parentItemId, tenantId }, select: { id: true, title: true, entityId: true, entityType: true } })
       : Promise.resolve(null),
@@ -145,45 +156,49 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
     // @menção em comentário pode citar qualquer usuário do tenant (não só do
     // setor) — mesma regra do autocomplete de Transferências.
     prisma.user.findMany({ where: { tenantId, active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
-    prisma.timeEntry.findMany({
-      where: { pipelineItemId: itemId, tenantId },
-      orderBy: { loggedOn: "desc" },
-      include: { user: { select: { id: true, name: true } } },
-    }),
     prisma.activity.findFirst({
       where: { pipelineItemId: itemId, tenantId, type: "COMPLETED" },
       orderBy: { createdAt: "desc" },
       include: { user: { select: { name: true } } },
     }),
+    prisma.pipelineItemLink.findMany({
+      where: { pipelineItemId: itemId, tenantId },
+      include: { linkedItem: { select: { id: true, title: true, entityId: true, entityType: true } } },
+    }),
   ]);
 
   const currentStage = pipeline.stages.find((s) => s.id === item.stageId);
   const isCompleted = currentStage?.isTerminal ?? false;
+  const basePath = boardPath(pipeline);
+
+  // Resolve nomes de entidade pras candidatas/links/parent, numa rodada só.
+  const entityIdsToResolve = new Set<string>();
+  for (const o of otherItems) if (o.entityId) entityIdsToResolve.add(o.entityId);
+  for (const l of links) if (l.linkedItem.entityId) entityIdsToResolve.add(l.linkedItem.entityId);
+  const [resolvedCompanies, resolvedPeople] = await Promise.all([
+    entityIdsToResolve.size > 0 ? prisma.company.findMany({ where: { id: { in: [...entityIdsToResolve] }, tenantId }, select: { id: true, name: true } }) : Promise.resolve([]),
+    entityIdsToResolve.size > 0 ? prisma.person.findMany({ where: { id: { in: [...entityIdsToResolve] }, tenantId }, select: { id: true, name: true } }) : Promise.resolve([]),
+  ]);
+  const resolvedNames: Record<string, string> = {};
+  for (const c of resolvedCompanies) resolvedNames[c.id] = c.name;
+  for (const p of resolvedPeople) resolvedNames[p.id] = p.name;
+  function nameFor(o: { title: string | null; entityId: string | null }): string {
+    return o.title ?? (o.entityId ? resolvedNames[o.entityId] : null) ?? "(sem título)";
+  }
 
   let parentEntityName: string | null = null;
-  if (parentItem) {
-    const parentEntity =
-      parentItem.entityType === "COMPANY"
-        ? await prisma.company.findFirst({ where: { id: parentItem.entityId, tenantId }, select: { name: true } })
-        : await prisma.person.findFirst({ where: { id: parentItem.entityId, tenantId }, select: { name: true } });
-    parentEntityName = parentItem.title ?? parentEntity?.name ?? "(removido)";
-  }
+  if (parentItem) parentEntityName = nameFor(parentItem);
 
   const deleteAction = excluirItem.bind(null, id, itemId);
   const addNoteAction = adicionarNota.bind(null, id, itemId);
   const editNoteAction = editarNota.bind(null, id, itemId);
   const deleteNoteAction = excluirNota.bind(null, id, itemId);
-  const prazoAction = atualizarPrazoPrioridade.bind(null, id, itemId);
+  const datesAction = atualizarPrazoPrioridade.bind(null, id, itemId);
   const descricaoAction = atualizarDescricao.bind(null, id, itemId);
   const tagToggleAction = alternarTagItem.bind(null, id, itemId);
   const assigneeToggleAction = alternarResponsavelItem.bind(null, id, itemId);
   const watcherToggleAction = alternarObservadorItem.bind(null, id, itemId);
-  const scheduleMeetingAction = agendarReuniao.bind(null, id, itemId);
-  const deleteMeetingAction = excluirReuniao.bind(null, id);
-  const hasGoogle = oauthAccounts.some((a) => a.provider === "GOOGLE");
-  const hasMicrosoft = oauthAccounts.some((a) => a.provider === "MICROSOFT");
 
-  const basePath = boardPath(pipeline);
   const createSubtaskAction = criarSubtarefa.bind(null, itemId);
   const deleteSubtaskAction = excluirSubtarefa.bind(null, itemId);
   const createChecklistAction = criarChecklistItem.bind(null, itemId);
@@ -194,8 +209,15 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
   const concluirAction = concluirTarefa.bind(null, id, itemId);
   const reabrirAction = reabrirTarefa.bind(null, id, itemId);
   const estimateAction = atualizarEstimativa.bind(null, id, itemId);
-  const createTimeEntryAction = criarLancamentoTempo.bind(null, itemId);
-  const deleteTimeEntryAction = excluirLancamentoTempo.bind(null, id, itemId);
+  const startTimerAction = iniciarCronometro.bind(null, id, itemId);
+  const stopTimerAction = pararCronometro.bind(null, id, itemId);
+  const createLinkAction = criarLinkItem.bind(null, id, itemId);
+  const deleteLinkAction = removerLinkItem.bind(null, id, itemId);
+  const createCanvasAction = criarCanvas.bind(null, id, itemId);
+  const updateCanvasAction = atualizarCanvas.bind(null, id, itemId);
+  const deleteCanvasAction = excluirCanvas.bind(null, id, itemId);
+
+  const taskCandidates: TaskMentionCandidate[] = otherItems.map((o) => ({ id: o.id, name: nameFor(o), href: `${basePath}/itens/${o.id}` }));
 
   // Monta o feed: comentários (NOTE) de topo + eventos, com respostas
   // aninhadas sob cada comentário. canModify = autor da nota ou coordenador.
@@ -238,6 +260,8 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
         })),
     }));
 
+  const title = item.title ?? entity?.name ?? "(removido)";
+
   return (
     <div>
       {showBreadcrumb && (
@@ -253,11 +277,11 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
             {pipeline.name}
           </Link>
           <span className="text-fg-muted">/</span>
-          <span className="text-[13px] text-fg truncate">{item.title ?? entity?.name ?? "(removido)"}</span>
+          <span className="text-[13px] text-fg truncate">{title}</span>
         </div>
       )}
 
-      <div className="mb-4">
+      <div className="mb-3">
         {item.parentItemId && (
           <Link
             href={`${basePath}/itens/${item.parentItemId}`}
@@ -266,9 +290,12 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
             ← Subtarefa de &quot;{parentEntityName}&quot;
           </Link>
         )}
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-1">
-          {item.title ?? entity?.name ?? "(removido)"}
-        </h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-[28px] leading-tight font-bold text-fg tracking-[-0.015em] mb-1">
+            {title}
+          </h1>
+          {canDelete && <DeleteTaskButton entityName={title} deleteAction={deleteAction} />}
+        </div>
         {entity && !item.title && (
           <Link
             href={item.entityType === "COMPANY" ? `/empresas/${entity.id}` : `/pessoas/${entity.id}`}
@@ -304,75 +331,87 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
         reabrirAction={reabrirAction}
       />
 
-      <CardActionBar
-        canAct={canAct}
-        canDelete={canDelete}
-        itemId={itemId}
-        entityName={item.title ?? entity?.name ?? "este item"}
-        stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name }))}
-        currentStageId={item.stageId}
-        moveAction={moverItem}
-        dueDate={item.dueDate ? item.dueDate.toISOString() : null}
-        priority={item.priority}
-        prazoAction={prazoAction}
-        allTags={sectorTags}
-        selectedTagIds={item.tags.map((t) => t.tagId)}
-        tagToggleAction={tagToggleAction}
-        allUsers={sectorUsers}
-        selectedUserIds={item.assignees.map((a) => a.userId)}
-        assigneeToggleAction={assigneeToggleAction}
-        selectedWatcherIds={item.watchers.map((w) => w.userId)}
-        watcherToggleAction={watcherToggleAction}
-        deleteAction={deleteAction}
-      />
-
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 items-stretch">
         <div className="flex flex-col gap-4 min-w-0">
+          <TaskFieldsPanel
+            canAct={canAct}
+            itemId={itemId}
+            stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name }))}
+            currentStageId={item.stageId}
+            moveAction={moverItem}
+            dueDate={item.dueDate ? item.dueDate.toISOString() : null}
+            startDate={item.startDate ? item.startDate.toISOString() : null}
+            recurring={item.recurring}
+            recurrenceFrequency={item.recurrenceFrequency}
+            priority={item.priority}
+            datesAction={datesAction}
+            estimateMinutes={item.estimateMinutes}
+            estimateAction={estimateAction}
+            activeTimer={item.activeTimerUserId && item.activeTimerStartedAt ? {
+              userId: item.activeTimerUserId,
+              userName: activeTimerUser?.name ?? "Alguém",
+              startedAt: item.activeTimerStartedAt.toISOString(),
+            } : null}
+            currentUserId={ctx.userId}
+            startTimerAction={startTimerAction}
+            stopTimerAction={stopTimerAction}
+            allTags={sectorTags}
+            selectedTagIds={item.tags.map((t) => t.tagId)}
+            tagToggleAction={tagToggleAction}
+            allUsers={sectorUsers}
+            selectedUserIds={item.assignees.map((a) => a.userId)}
+            assigneeToggleAction={assigneeToggleAction}
+            selectedWatcherIds={item.watchers.map((w) => w.userId)}
+            watcherToggleAction={watcherToggleAction}
+          />
+
           <DescriptionEditor canAct={canAct} description={item.description} action={descricaoAction} />
 
-          {!item.parentItemId && (
-            <SubtasksSection
+          <div className="flex flex-wrap gap-2">
+            {!item.parentItemId && (
+              <SubtasksSection
+                canAct={canAct}
+                canDelete={canDelete}
+                basePath={basePath}
+                subtasks={subtasks.map((s) => ({
+                  id: s.id,
+                  title: s.title ?? "(sem título)",
+                  stageName: s.stage.name,
+                  isTerminal: s.stage.isTerminal,
+                  priority: s.priority,
+                }))}
+                createAction={createSubtaskAction}
+                deleteAction={deleteSubtaskAction}
+              />
+            )}
+
+            <LinkedItemsSection
               canAct={canAct}
-              canDelete={canDelete}
               basePath={basePath}
-              subtasks={subtasks.map((s) => ({
-                id: s.id,
-                title: s.title ?? "(sem título)",
-                stageName: s.stage.name,
-                isTerminal: s.stage.isTerminal,
-                priority: s.priority,
-              }))}
-              createAction={createSubtaskAction}
-              deleteAction={deleteSubtaskAction}
+              links={links.map((l) => ({ id: l.linkedItem.id, name: nameFor(l.linkedItem) }))}
+              candidates={taskCandidates}
+              createAction={createLinkAction}
+              deleteAction={deleteLinkAction}
             />
-          )}
 
-          <ChecklistSection
-            canAct={canAct}
-            items={checklistItems.map((c) => ({ id: c.id, text: c.text, done: c.done }))}
-            createAction={createChecklistAction}
-            toggleAction={toggleChecklistAction}
-            editAction={editChecklistAction}
-            deleteAction={deleteChecklistAction}
-            reorderAction={reorderChecklistAction}
-          />
+            <ChecklistSection
+              canAct={canAct}
+              items={checklistItems.map((c) => ({ id: c.id, text: c.text, done: c.done }))}
+              createAction={createChecklistAction}
+              toggleAction={toggleChecklistAction}
+              editAction={editChecklistAction}
+              deleteAction={deleteChecklistAction}
+              reorderAction={reorderChecklistAction}
+            />
 
-          <TimeTrackingSection
-            canAct={canAct}
-            estimateMinutes={item.estimateMinutes}
-            entries={timeEntries.map((e) => ({
-              id: e.id,
-              userId: e.user.id,
-              userName: e.user.name,
-              minutes: e.minutes,
-              note: e.note,
-              loggedOnLabel: formatCalendarDate(e.loggedOn),
-              canDelete: e.user.id === ctx.userId || canDelete,
-            }))}
-            estimateAction={estimateAction}
-            createEntryAction={createTimeEntryAction}
-            deleteEntryAction={deleteTimeEntryAction}
-          />
+            <CanvasSection
+              canAct={canAct}
+              pages={canvasPages.map((p) => ({ id: p.id, title: p.title, content: p.content, createdByName: p.createdBy.name }))}
+              createAction={createCanvasAction}
+              updateAction={updateCanvasAction}
+              deleteAction={deleteCanvasAction}
+            />
+          </div>
 
           <DocumentsSection
             entityType="PIPELINE_ITEM"
@@ -394,29 +433,13 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
           items={feedItems}
           canAct={canAct}
           mentionUsers={mentionUsers}
+          pipelineItemId={itemId}
+          taskCandidates={taskCandidates}
           addNoteAction={addNoteAction}
           editAction={editNoteAction}
           deleteAction={deleteNoteAction}
         />
       </div>
-
-      <MeetingsSection
-        meetings={meetings.map((m) => ({
-          id: m.id,
-          provider: m.provider,
-          title: m.title,
-          meetingUrl: m.meetingUrl,
-          startAt: m.startAt.toISOString(),
-          endAt: m.endAt.toISOString(),
-          attendees: m.attendees.map((a) => ({ id: a.user.id, name: a.user.name })),
-        }))}
-        canSchedule={canScheduleMeetings}
-        hasGoogle={hasGoogle}
-        hasMicrosoft={hasMicrosoft}
-        allUsers={sectorUsers}
-        scheduleAction={scheduleMeetingAction}
-        deleteAction={deleteMeetingAction}
-      />
     </div>
   );
 }

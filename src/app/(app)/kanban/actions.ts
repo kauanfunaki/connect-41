@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { PipelineEntityType, ActivityType } from "@/generated/prisma/enums";
+import { PipelineEntityType, ActivityType, RecurringFrequency } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
 import { scopedPipelineWhere } from "@/lib/auth/scope";
 import { boardPath } from "@/lib/kanbanPaths";
@@ -104,13 +104,16 @@ export async function criarItem(
   if (!tenantId) return { error: "Não autenticado" };
 
   const pipelineId = form.get("pipelineId") as string;
-  const entityType = form.get("entityType") as PipelineEntityType;
-  const entityId = form.get("entityId") as string;
+  const entityType = (form.get("entityType") as string)?.trim() || null;
+  const entityId = (form.get("entityId") as string)?.trim() || null;
+  const title = (form.get("title") as string)?.trim() || null;
   const dueDateRaw = (form.get("dueDate") as string)?.trim();
   const priorityRaw = (form.get("priority") as string)?.trim();
   const descriptionRaw = (form.get("description") as string)?.trim();
 
-  if (!entityId) return { error: "Selecione uma empresa ou pessoa" };
+  // Empresa/pessoa é opcional (nem toda tarefa está associada a uma) — mas
+  // sem entidade, o título vira obrigatório (é o que identifica a tarefa).
+  if (!entityId && !title) return { error: "Selecione uma empresa/pessoa ou informe um título" };
 
   const tagIds = form.getAll("tags") as string[];
   const assigneeIds = form.getAll("assignees") as string[];
@@ -135,8 +138,9 @@ export async function criarItem(
         tenantId,
         pipelineId,
         stageId: firstStage.id,
-        entityType,
+        entityType: entityType as PipelineEntityType | null,
         entityId,
+        title,
         dueDate: dueDateRaw ? new Date(dueDateRaw) : null,
         priority: priorityRaw ? parseInt(priorityRaw) : 0,
         description: descriptionRaw ? descriptionRaw : null,
@@ -158,6 +162,60 @@ export async function criarItem(
   const base = boardPath(pipeline);
   revalidatePath(base);
   redirect(base);
+}
+
+// Criação rápida — só o título, sem entidade/prazo/prioridade/responsável.
+// Usada pelo botão "+ Adicionar Tarefa" da visão em lista; o resto se
+// configura depois no detalhe da tarefa.
+export async function criarTarefaRapida(pipelineId: string, stageId: string, title: string): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId, userId } = ctx;
+  const trimmed = title.trim();
+  if (!tenantId || !trimmed) return;
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, ...scopedPipelineWhere(ctx) } });
+  if (!pipeline || !canManageSector(ctx, pipeline.sectorCode)) return;
+
+  const stage = await prisma.pipelineStage.findFirst({ where: { id: stageId, pipelineId } });
+  if (!stage) return;
+
+  try {
+    const item = await prisma.pipelineItem.create({
+      data: { tenantId, pipelineId, stageId, title: trimmed },
+    });
+    if (userId) {
+      await prisma.activity.create({
+        data: { tenantId, pipelineItemId: item.id, userId, type: ActivityType.CREATED, content: `Criado em "${stage.name}"` },
+      });
+    }
+  } catch (err) {
+    console.error("[criarTarefaRapida]", err);
+    return;
+  }
+
+  revalidatePath(boardPath(pipeline));
+}
+
+// Renomear estágio direto na visão em lista (clique no cabeçalho do status).
+export async function renomearEstagio(pipelineId: string, stageId: string, name: string): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  const trimmed = name.trim();
+  if (!tenantId || !trimmed) return;
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline || !canManageSector(ctx, pipeline.sectorCode)) return;
+
+  try {
+    await prisma.pipelineStage.update({ where: { id: stageId, pipelineId }, data: { name: trimmed } });
+  } catch (err) {
+    console.error("[renomearEstagio]", err);
+    return;
+  }
+
+  revalidatePath(boardPath(pipeline));
 }
 
 export async function moverItem(
@@ -265,7 +323,7 @@ export async function adicionarNota(
   // sem duplicar e sem notificar o próprio autor. Menção é o sinal mais forte,
   // então tem prioridade quando o usuário é mencionado E interessado.
   if (item) {
-    const notifyEntity = { entityType: item.entityType, entityId: item.entityId };
+    const notifyEntity = item.entityType && item.entityId ? { entityType: item.entityType, entityId: item.entityId } : {};
     const taskLabel = item.title ?? "tarefa";
     const mentioned = await findMentionedUserIds(tenantId, [content]);
     const mentionedSet = new Set(mentioned);
@@ -395,9 +453,15 @@ export async function atualizarPrazoPrioridade(
   }
 
   const dueDateRaw = (form.get("dueDate") as string)?.trim();
+  const startDateRaw = (form.get("startDate") as string)?.trim();
   const priorityRaw = (form.get("priority") as string)?.trim();
+  const recurring = form.get("recurring") === "true";
+  const frequencyRaw = (form.get("recurrenceFrequency") as string)?.trim();
   const newDueDate = dueDateRaw ? new Date(dueDateRaw) : null;
+  const newStartDate = startDateRaw ? new Date(startDateRaw) : null;
   const newPriority = priorityRaw ? parseInt(priorityRaw) : 0;
+  const newFrequency: RecurringFrequency | null =
+    recurring && ["DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY"].includes(frequencyRaw) ? (frequencyRaw as RecurringFrequency) : null;
 
   try {
     const before = await prisma.pipelineItem.findUnique({
@@ -407,7 +471,13 @@ export async function atualizarPrazoPrioridade(
 
     await prisma.pipelineItem.update({
       where: { id: itemId },
-      data: { dueDate: newDueDate, priority: newPriority },
+      data: {
+        dueDate: newDueDate,
+        startDate: newStartDate,
+        priority: newPriority,
+        recurring,
+        recurrenceFrequency: newFrequency,
+      },
     });
 
     if (userId && before) {
@@ -584,6 +654,140 @@ export async function alternarResponsavelItem(
     revalidatePath(base);
     revalidatePath(`${base}/itens/${itemId}`);
   }
+}
+
+// Prioridade específica de um responsável nessa tarefa (pode divergir da
+// prioridade geral do item) — usado no seletor por avatar da visão em lista.
+export async function atualizarPrioridadeResponsavel(pipelineId: string, itemId: string, userId: string, priority: number): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  if (!tenantId) return;
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+
+  try {
+    await prisma.pipelineItemAssignee.update({
+      where: { pipelineItemId_userId: { pipelineItemId: itemId, userId } },
+      data: { priority },
+    });
+  } catch (err) {
+    console.error("[atualizarPrioridadeResponsavel]", err);
+    return;
+  }
+
+  revalidatePath(boardPath(pipeline));
+}
+
+// ─── Cronômetro ao vivo ─────────────────────────────────────────────────────
+// Só 1 pessoa rastreando por vez num item — iniciar quando já há um cronômetro
+// ativo (de outra pessoa) simplesmente não faz nada (UI já esconde esse caso).
+
+export async function iniciarCronometro(pipelineId: string, itemId: string): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId, userId } = ctx;
+  if (!tenantId || !userId) return;
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+
+  try {
+    const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId }, select: { activeTimerUserId: true } });
+    if (!item || item.activeTimerUserId) return; // já tem alguém rastreando
+
+    await prisma.pipelineItem.update({
+      where: { id: itemId },
+      data: { activeTimerUserId: userId, activeTimerStartedAt: new Date() },
+    });
+  } catch (err) {
+    console.error("[iniciarCronometro]", err);
+    return;
+  }
+
+  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
+}
+
+export async function pararCronometro(pipelineId: string, itemId: string): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId, userId } = ctx;
+  if (!tenantId || !userId) return;
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+
+  try {
+    const item = await prisma.pipelineItem.findFirst({
+      where: { id: itemId, tenantId },
+      select: { activeTimerUserId: true, activeTimerStartedAt: true },
+    });
+    if (!item || item.activeTimerUserId !== userId || !item.activeTimerStartedAt) return;
+
+    const minutes = Math.max(1, Math.round((Date.now() - item.activeTimerStartedAt.getTime()) / 60_000));
+    await prisma.$transaction([
+      prisma.pipelineItem.update({ where: { id: itemId }, data: { activeTimerUserId: null, activeTimerStartedAt: null } }),
+      prisma.timeEntry.create({ data: { tenantId, pipelineItemId: itemId, userId, minutes, loggedOn: new Date() } }),
+    ]);
+    await prisma.activity.create({
+      data: { tenantId, pipelineItemId: itemId, userId, type: ActivityType.TIME_LOGGED, content: `${minutes} min apontados (cronômetro)` },
+    });
+  } catch (err) {
+    console.error("[pararCronometro]", err);
+    return;
+  }
+
+  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
+}
+
+// ─── Vincular itens / dependências ─────────────────────────────────────────
+
+export async function criarLinkItem(pipelineId: string, itemId: string, linkedItemId: string): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  if (!tenantId || itemId === linkedItemId) return;
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+
+  const linked = await prisma.pipelineItem.findFirst({ where: { id: linkedItemId, tenantId } });
+  if (!linked) return;
+
+  try {
+    await prisma.pipelineItemLink.upsert({
+      where: { pipelineItemId_linkedItemId: { pipelineItemId: itemId, linkedItemId } },
+      create: { tenantId, pipelineItemId: itemId, linkedItemId },
+      update: {},
+    });
+  } catch (err) {
+    console.error("[criarLinkItem]", err);
+    return;
+  }
+
+  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
+}
+
+export async function removerLinkItem(pipelineId: string, itemId: string, linkedItemId: string): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  if (!tenantId) return;
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+
+  try {
+    await prisma.pipelineItemLink.delete({
+      where: { pipelineItemId_linkedItemId: { pipelineItemId: itemId, linkedItemId } },
+    });
+  } catch (err) {
+    console.error("[removerLinkItem]", err);
+    return;
+  }
+
+  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
 }
 
 export async function excluirItem(pipelineId: string, itemId: string): Promise<void> {
@@ -1119,4 +1323,83 @@ export async function duplicarPipeline(
   }
 
   redirect(boardPath({ id: newPipelineId, sectorCode: source.sectorCode }));
+}
+
+// ─── Documentos (canvas) ────────────────────────────────────────────────────
+// Página em branco (não é upload de arquivo) — sempre vinculada a uma tarefa.
+// Sanitizado com a mesma allowlist do RichTextEditor usado em Documentos para
+// Cliente e na descrição da tarefa.
+
+export async function criarCanvas(pipelineId: string, itemId: string, titleRaw: string): Promise<{ error: string } | { id: string }> {
+  const ctx = await getAuthContext();
+  const { tenantId, userId } = ctx;
+  const title = titleRaw.trim();
+  if (!tenantId || !userId) return { error: "Não autenticado" };
+  if (!title) return { error: "Título é obrigatório" };
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return { error: "Sem permissão para criar documento." };
+
+  try {
+    const page = await prisma.canvasPage.create({
+      data: { tenantId, pipelineItemId: itemId, title, createdById: userId },
+    });
+    revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
+    return { id: page.id };
+  } catch (err) {
+    console.error("[criarCanvas]", err);
+    return { error: "Erro ao criar documento." };
+  }
+}
+
+export async function atualizarCanvas(
+  pipelineId: string,
+  itemId: string,
+  canvasId: string,
+  _prev: PipelineState,
+  form: FormData
+): Promise<PipelineState> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  if (!tenantId) return { error: "Não autenticado" };
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return { error: "Sem permissão para editar este documento." };
+
+  const title = (form.get("title") as string)?.trim();
+  if (!title) return { error: "Título é obrigatório" };
+  const rawContent = (form.get("content") as string)?.trim() ?? "";
+  const sanitized = rawContent ? sanitizeDocumentHtml(rawContent) : "";
+  const content = sanitized.replace(/<[^>]+>/g, "").trim() ? sanitized : "";
+
+  try {
+    await prisma.canvasPage.update({ where: { id: canvasId, pipelineItemId: itemId }, data: { title, content: content || null } });
+  } catch (err) {
+    console.error("[atualizarCanvas]", err);
+    return { error: "Erro ao salvar documento." };
+  }
+
+  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
+  return null;
+}
+
+export async function excluirCanvas(pipelineId: string, itemId: string, canvasId: string): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  if (!tenantId) return;
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline || !canManageSector(ctx, pipeline.sectorCode)) return;
+
+  try {
+    await prisma.canvasPage.delete({ where: { id: canvasId, pipelineItemId: itemId } });
+  } catch (err) {
+    console.error("[excluirCanvas]", err);
+    return;
+  }
+
+  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
 }

@@ -7,6 +7,7 @@ import { scopedPersonWhere } from "@/lib/auth/scope";
 import { PessoasTable } from "@/components/pessoas/PessoasTable";
 import { CompanyFilterSelect } from "@/components/shared/CompanyFilterSelect";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { CadastrosTabsBar } from "@/components/shared/CadastrosTabsBar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -63,6 +64,9 @@ export default async function PessoasPage({
 
   return (
     <PageContainer>
+      <CadastrosTabsBar active="pessoas" />
+
+      <div id="cadastros-content">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -163,6 +167,7 @@ export default async function PessoasPage({
           </div>
         </div>
       )}
+      </div>
     </PageContainer>
   );
 }

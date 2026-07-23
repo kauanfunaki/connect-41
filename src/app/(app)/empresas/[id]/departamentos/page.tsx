@@ -40,6 +40,7 @@ export default async function DepartamentosPage({
       <BackButton className="mb-3" />
       <Breadcrumb
         items={[
+          { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
           { label: company.name, href: `/empresas/${companyId}`, truncate: true },
           { label: "Departamentos" },

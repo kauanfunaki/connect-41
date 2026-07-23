@@ -4,7 +4,7 @@ import { getPrisma } from "@/lib/prisma";
 import { BoardView } from "@/components/kanban/BoardView";
 import { DuplicatePipelineButton } from "@/components/kanban/DuplicatePipelineButton";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { moverItem, duplicarPipeline } from "@/app/(app)/kanban/actions";
+import { moverItem, duplicarPipeline, renomearEstagio, criarTarefaRapida, atualizarPrioridadeResponsavel } from "@/app/(app)/kanban/actions";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedPipelineWhere, scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
 
@@ -39,7 +39,14 @@ export default async function BpoBoardPage({
         include: {
           tags: { include: { tag: { select: { id: true, name: true, color: true } } } },
           assignees: { include: { user: { select: { id: true, name: true } } } },
-          subtasks: { select: { id: true, title: true, priority: true, stage: { select: { name: true, isTerminal: true } } } },
+          subtasks: {
+            select: {
+              id: true, title: true, priority: true, dueDate: true, recurring: true,
+              stage: { select: { name: true, isTerminal: true } },
+              tags: { include: { tag: { select: { id: true, name: true, color: true } } } },
+              assignees: { include: { user: { select: { id: true, name: true } } } },
+            },
+          },
         },
       },
     },
@@ -55,7 +62,8 @@ export default async function BpoBoardPage({
       : (await prisma.person.findMany({ where: await scopedPersonWhere(ctx), orderBy: { name: "asc" }, select: { id: true, name: true } }));
 
   // Resolve nomes das entidades (Company ou Person) referenciadas pelos itens
-  const entityIds = pipeline.items.map((i) => i.entityId);
+  // — nem todo item tem entidade (tarefa sem empresa/pessoa associada).
+  const entityIds = pipeline.items.map((i) => i.entityId).filter((v): v is string => v != null);
   const entityNames: Record<string, string> = {};
 
   if (entityIds.length > 0) {
@@ -110,11 +118,12 @@ export default async function BpoBoardPage({
   const items = pipeline.items.map((i) => ({
     id: i.id,
     stageId: i.stageId,
-    entityName: i.title ?? entityNames[i.entityId] ?? "(removido)",
+    entityName: i.title ?? (i.entityId ? entityNames[i.entityId] : null) ?? "(sem título)",
     priority: i.priority,
     dueDate: i.dueDate ? i.dueDate.toISOString() : null,
     tags: i.tags.map((t) => ({ id: t.tag.id, name: t.tag.name, color: t.tag.color })),
-    assignees: i.assignees.map((a) => ({ id: a.user.id, name: a.user.name })),
+    assignees: i.assignees.map((a) => ({ id: a.user.id, name: a.user.name, priority: a.priority })),
+    recurring: i.recurring,
     daysInStage: daysSince(lastChangeByItem[i.id] ?? i.createdAt),
     lastActivity: lastActivityByItem[i.id] ?? null,
     description: i.description,
@@ -127,6 +136,10 @@ export default async function BpoBoardPage({
       stageName: s.stage.name,
       isTerminal: s.stage.isTerminal,
       priority: s.priority,
+      dueDate: s.dueDate ? s.dueDate.toISOString() : null,
+      recurring: s.recurring,
+      tags: s.tags.map((t) => ({ id: t.tag.id, name: t.tag.name, color: t.tag.color })),
+      assignees: s.assignees.map((a) => ({ id: a.user.id, name: a.user.name, priority: a.priority })),
     })),
   }));
 
@@ -187,7 +200,11 @@ export default async function BpoBoardPage({
           basePath={basePath}
           stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name, color: s.color, isTerminal: s.isTerminal }))}
           items={items}
+          canAct={canAddItem}
           moveAction={moverItem}
+          renameStageAction={renomearEstagio.bind(null, id)}
+          createTaskAction={criarTarefaRapida.bind(null, id)}
+          priorityAction={atualizarPrioridadeResponsavel.bind(null, id)}
         />
       </div>
     </PageContainer>

@@ -136,6 +136,7 @@ export default async function HomePage() {
         id: true,
         entityId: true,
         entityType: true,
+        title: true,
         dueDate: true,
         createdAt: true,
         pipelineId: true,
@@ -206,8 +207,12 @@ export default async function HomePage() {
   // atividade recente e transferências a revisar, tudo numa só rodada.
   const companyIds = new Set<string>();
   const personIds = new Set<string>();
-  for (const i of meuDiaItems) (i.entityType === "COMPANY" ? companyIds : personIds).add(i.entityId);
-  for (const a of recentActivitiesRaw) (a.pipelineItem.entityType === "COMPANY" ? companyIds : personIds).add(a.pipelineItem.entityId);
+  for (const i of meuDiaItems) {
+    if (i.entityId) (i.entityType === "COMPANY" ? companyIds : personIds).add(i.entityId);
+  }
+  for (const a of recentActivitiesRaw) {
+    if (a.pipelineItem.entityId) (a.pipelineItem.entityType === "COMPANY" ? companyIds : personIds).add(a.pipelineItem.entityId);
+  }
   for (const h of incomingHandoffsRaw) (h.entityType === "COMPANY" ? companyIds : personIds).add(h.entityId);
   const [companiesNamed, peopleNamed] = await Promise.all([
     companyIds.size > 0
@@ -226,7 +231,7 @@ export default async function HomePage() {
   type ActivityGroup = {
     id: string;
     userName: string;
-    entityId: string;
+    entityId: string | null;
     pipelineId: string;
     pipelineItemId: string;
     label: string;
@@ -407,7 +412,7 @@ export default async function HomePage() {
                       className="flex items-center justify-between gap-3 py-2 group"
                     >
                       <span className="text-[length:var(--fs-body)] text-fg group-hover:text-brand transition-colors truncate min-w-0">
-                        {entityNames[item.entityId] ?? "(removido)"}
+                        {item.title ?? (item.entityId ? entityNames[item.entityId] : null) ?? "(sem título)"}
                         <span className="text-fg-muted font-normal">
                           {" · "}
                           {sectorLabels[item.pipeline.sectorCode] ?? item.pipeline.sectorCode}
@@ -523,7 +528,7 @@ export default async function HomePage() {
                         ) : (
                           `${g.label} `
                         )}
-                        <span className="font-medium">{entityNames[g.entityId] ?? "(removido)"}</span>
+                        <span className="font-medium">{(g.entityId ? entityNames[g.entityId] : null) ?? "(tarefa)"}</span>
                       </p>
                       <p className="text-[length:var(--fs-helper)] text-fg-muted">{formatRelativeTime(g.createdAt)}</p>
                     </div>

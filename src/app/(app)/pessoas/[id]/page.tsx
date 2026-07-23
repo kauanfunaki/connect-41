@@ -369,6 +369,10 @@ export default async function PessoaPage({
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-5">
         <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
+          Cadastros
+        </Link>
+        <span className="text-fg-muted">/</span>
+        <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Pessoas
         </Link>
         <span className="text-fg-muted">/</span>

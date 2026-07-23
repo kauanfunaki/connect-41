@@ -55,6 +55,10 @@ export default async function EditarPessoaPage({
       <BackButton className="mb-3" />
       <div className="flex items-center gap-2 mb-6">
         <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
+          Cadastros
+        </Link>
+        <span className="text-fg-muted">/</span>
+        <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Pessoas
         </Link>
         <span className="text-fg-muted">/</span>

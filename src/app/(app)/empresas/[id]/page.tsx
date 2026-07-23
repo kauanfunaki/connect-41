@@ -95,6 +95,10 @@ export default async function EmpresaPage({
     <PageContainer>
       <div className="flex items-center gap-2 mb-5">
         <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
+          Cadastros
+        </Link>
+        <span className="text-fg-muted">/</span>
+        <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Empresas
         </Link>
         <span className="text-fg-muted">/</span>

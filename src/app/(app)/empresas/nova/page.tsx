@@ -15,7 +15,7 @@ export default async function NovaEmpresaPage() {
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Empresas", href: "/empresas" }, { label: "Nova Empresa" }]} />
+      <Breadcrumb items={[{ label: "Cadastros", href: "/empresas" }, { label: "Empresas", href: "/empresas" }, { label: "Nova Empresa" }]} />
 
       <PageHeader title="Nova Empresa" />
 

@@ -71,6 +71,8 @@ export default async function CompetenciaPage({
     <PageContainer>
       <BackButton className="mb-3" />
       <div className="flex items-center gap-2 mb-6">
+        <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Cadastros</Link>
+        <span className="text-fg-muted">/</span>
         <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Empresas</Link>
         <span className="text-fg-muted">/</span>
         <Link href={`/empresas/${companyId}/folha`} className="text-[13px] text-fg-muted hover:text-fg transition-colors">Folha</Link>

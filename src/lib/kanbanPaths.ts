@@ -12,3 +12,10 @@ export function boardPath(pipeline: { id: string; sectorCode: string }): string 
   const base = DEDICATED_SECTOR_ROUTES[pipeline.sectorCode];
   return base ? `${base}/${pipeline.id}` : `/kanban/${pipeline.id}`;
 }
+
+// Setores com módulo dedicado (ex. BPO em /bpo-financeiro) já mostram suas
+// Listas através do próprio card de módulo no hub do setor — não precisam da
+// seção genérica "Kanban" duplicada ali.
+export function hasDedicatedRoute(sectorCode: string): boolean {
+  return sectorCode in DEDICATED_SECTOR_ROUTES;
+}

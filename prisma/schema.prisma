@@ -403,6 +403,8 @@ model Tenant {
   timeEntries          TimeEntry[]
   spaces               Space[]
   folders              Folder[]
+  pipelineItemLinks    PipelineItemLink[]
+  canvasPages          CanvasPage[]
   auditLogs            AuditLog[]
   oauthAccounts        OAuthAccount[]
   meetings             Meeting[]
@@ -554,6 +556,7 @@ model User {
   assignedItems          PipelineItemAssignee[]
   watchedItems           PipelineItemWatcher[]
   timeEntries            TimeEntry[]
+  canvasPages            CanvasPage[]
   activities             Activity[]
   handoffs               Handoff[]              @relation("HandoffRequester")
   handoffSectorsAssigned HandoffSector[]        @relation("HandoffSectorAssignee")
@@ -860,42 +863,56 @@ model PipelineStage {
 }
 
 model PipelineItem {
-  id           String             @id @default(uuid())
+  id           String              @id @default(uuid())
   tenantId     String
   pipelineId   String
   stageId      String
-  entityType   PipelineEntityType
-  entityId     String // Company.id ou Person.id (referência por string, sem FK Prisma — relação polimórfica)
-  // Título próprio, opcional — item de topo normalmente usa o nome da entidade
-  // (entityName resolvido em runtime) como título; subtarefa (parentItemId
-  // preenchido) sempre tem título próprio, já que várias subtarefas podem
-  // compartilhar a mesma entidade do item pai.
-  title        String?            @db.VarChar(200)
+  // Opcional — nem toda tarefa está associada a uma empresa/pessoa específica
+  // (ex.: tarefa interna do setor). Quando nulo, `title` é obrigatório.
+  entityType   PipelineEntityType?
+  entityId     String? // Company.id ou Person.id (referência por string, sem FK Prisma — relação polimórfica)
+  // Título próprio, opcional quando há entidade — item de topo com entidade
+  // normalmente usa o nome da entidade (entityName resolvido em runtime) como
+  // título; subtarefa e tarefa sem entidade sempre têm título próprio.
+  title        String?             @db.VarChar(200)
   // Subtarefa: mesma tabela (PipelineItem) com parentItemId apontando pro item
   // "mãe" — reaproveita status/prioridade/prazo/responsável/tags/atividades/
   // anexos que já existem pra qualquer PipelineItem, sem duplicar modelo. Só
   // 1 nível (subtarefa de subtarefa não é permitido, controlado na action).
   parentItemId String?
-  priority     Int                @default(0)
+  priority     Int                 @default(0)
+  startDate    DateTime?
   dueDate      DateTime?
-  description  String?            @db.Text
+  description  String?             @db.Text
   // Estimativa manual de esforço, em minutos — opcional (item nunca obriga
   // controle de tempo). Tempo efetivamente gasto vem da soma de TimeEntry.
   estimateMinutes Int?
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  // Cronômetro ao vivo — só 1 usuário por vez rastreando tempo num item;
+  // "Parar" converte em TimeEntry e limpa os dois campos.
+  activeTimerUserId    String?
+  activeTimerStartedAt DateTime?
+  // Recorrência — só marca a intenção/frequência no item (mostra o ícone na
+  // UI); a geração automática de novas ocorrências fica pra uma extensão
+  // futura, não duplicar o motor de RecurringObligation aqui.
+  recurring           Boolean             @default(false)
+  recurrenceFrequency RecurringFrequency?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
 
   tenant      Tenant                 @relation(fields: [tenantId], references: [id])
   pipeline    Pipeline               @relation(fields: [pipelineId], references: [id])
   stage       PipelineStage          @relation(fields: [stageId], references: [id])
   parent      PipelineItem?          @relation("SubTasks", fields: [parentItemId], references: [id], onDelete: Cascade)
   subtasks    PipelineItem[]         @relation("SubTasks")
+  linksFrom   PipelineItemLink[]     @relation("LinkSource")
+  linksTo     PipelineItemLink[]     @relation("LinkTarget")
   activities  Activity[]
   assignees   PipelineItemAssignee[]
   watchers    PipelineItemWatcher[]
   tags        PipelineItemTag[]
   checklist   ChecklistItem[]
   timeEntries TimeEntry[]
+  canvasPages CanvasPage[]
   candidatura Candidatura?
   meetings    Meeting[]
 
@@ -903,6 +920,45 @@ model PipelineItem {
   @@index([tenantId, entityType, entityId])
   @@index([parentItemId])
   @@map("pipeline_items")
+}
+
+// Documento "canvas" — página em branco (não é upload de arquivo), sempre
+// vinculada a uma tarefa. Agregada na UI do Espaço/Pasta dona da Lista dessa
+// tarefa, pra ficar visível pra quem não abriu a tarefa específica.
+model CanvasPage {
+  id             String   @id @default(uuid())
+  tenantId       String
+  pipelineItemId String
+  title          String   @db.VarChar(160)
+  content        String?  @db.Text // HTML do RichTextEditor, sanitizado no servidor
+  createdById    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  pipelineItem PipelineItem @relation(fields: [pipelineItemId], references: [id], onDelete: Cascade)
+  createdBy    User         @relation(fields: [createdById], references: [id])
+
+  @@index([tenantId, pipelineItemId])
+  @@map("canvas_pages")
+}
+
+// Vínculo/dependência entre duas tarefas (independente de subtarefa) — só
+// registra a relação, sem bloquear nada automaticamente (não há motor de
+// dependência bloqueante hoje).
+model PipelineItemLink {
+  id             String   @id @default(uuid())
+  tenantId       String
+  pipelineItemId String
+  linkedItemId   String
+  createdAt      DateTime @default(now())
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  pipelineItem PipelineItem @relation("LinkSource", fields: [pipelineItemId], references: [id], onDelete: Cascade)
+  linkedItem   PipelineItem @relation("LinkTarget", fields: [linkedItemId], references: [id], onDelete: Cascade)
+
+  @@unique([pipelineItemId, linkedItemId])
+  @@map("pipeline_item_links")
 }
 
 // Checklist simples (sem virar subtarefa) — item de topo e subtarefa podem
@@ -948,6 +1004,10 @@ model TimeEntry {
 model PipelineItemAssignee {
   pipelineItemId String
   userId         String
+  // Prioridade específica desse responsável nessa tarefa — pode divergir da
+  // prioridade "geral" do item (PipelineItem.priority, usada quando não há
+  // responsável ou como valor de referência).
+  priority       Int      @default(0)
   createdAt      DateTime @default(now())
 
   pipelineItem PipelineItem @relation(fields: [pipelineItemId], references: [id], onDelete: Cascade)

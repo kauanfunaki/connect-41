@@ -29,7 +29,7 @@ export function KanbanItemModal({ children }: Props) {
         if (e.target === e.currentTarget) router.back();
       }}
     >
-      <div className="relative w-full min-h-full sm:min-h-0 sm:max-w-5xl sm:my-4 bg-canvas sm:border sm:border-border sm:rounded-2xl shadow-[var(--c41-shadow-lg)] sm:max-h-[calc(100vh-4rem)] overflow-y-auto">
+      <div className="relative w-full min-h-full sm:min-h-0 sm:max-w-[94vw] xl:max-w-[1400px] sm:my-4 bg-canvas sm:border sm:border-border sm:rounded-2xl shadow-[var(--c41-shadow-lg)] sm:max-h-[calc(100vh-3rem)] overflow-y-auto">
         <button
           type="button"
           onClick={() => router.back()}

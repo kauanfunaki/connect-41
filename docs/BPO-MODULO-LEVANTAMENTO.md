@@ -177,6 +177,33 @@ Fora do escopo das fases do BPO, mas afeta diretamente o módulo: o usuário ped
 
 Todas as migrations (`20260722140000` histórico, `20260722150000` subtarefas/checklist, `20260722160000` comentários/participantes, `20260722170000` conclusão/tempo) aplicadas no banco de dev via `db execute` + `migrate resolve` (mesmo procedimento das fases do BPO, por causa do drift do `interview_scorecards`). Verificado com `tsc`, `eslint` e `next build` a cada etapa.
 
+### Fase B/C — tabela de tarefas + modal redesenhado (referência prints ClickUp), 2026-07-22
+- **Lista como padrão**: `BoardView` abre em modo Lista, Quadro é secundário (toggle invertido).
+- **Status editável inline** na lista, **"+ Adicionar Tarefa"** por grupo, **grupos colapsáveis**, **prioridade por responsável** (`PipelineItemAssignee.priority`, seletor no avatar), tag ao lado do nome, **prazo com recorrência** (`PipelineItem.recurring`/`recurrenceFrequency`, reaproveita o enum `RecurringFrequency`).
+- **Criação sem exigir empresa**: `entityType`/`entityId` do `PipelineItem` viraram opcionais (`title` obrigatório quando não há entidade) — `criarTarefaRapida` cria só com o nome.
+- **Modal bem mais largo** (94vw/1400px), **título grande**, **`TaskFieldsPanel`** (Status/Responsáveis/Participantes/Datas+recorrência/Prioridade/Estimativa/Rastrear tempo com cronômetro ao vivo/Etiquetas, com "Recolher campos vazios").
+- **Descrição → botões** (não formulário sempre aberto): Adicionar subtarefa / Vincular itens ou dependências (`PipelineItemLink`, novo) / Criar checklist / Anexar arquivo.
+- **Chat invertido** (mais recente embaixo, perto do input), busca no chat, anexo de arquivo e menção de tarefa (`[texto](href)`) direto no composer.
+- Reuniões removidas do detalhe do Kanban (ficam só na Agenda e em Vagas/Candidaturas, que usam `MeetingsSection` de forma independente). `CardActionBar.tsx` (obsoleto) removido.
+- Migration `20260722190000_fase_b_c_task_fields`.
+
+### Fase D — Espaço → Pasta → Lista + remoção do menu genérico, 2026-07-22
+- **Espaço ≠ Setor**: `Space` é entidade nova, N por setor (ex. setor `bpo` pode ter espaços "BLD", "BPO" — nomenclatura real usada pelo setor hoje). `Folder` é opcional, sempre dentro de um Space. Toda Lista (`Pipeline`) agora tem `spaceId` obrigatório + `folderId` opcional.
+- Backfill automático: todo Pipeline pré-existente (de qualquer setor) ganhou um Space padrão (nome = code do setor) — sem perda de dado.
+- `/bpo-financeiro` passou a navegar por Espaço → Pasta → Lista (ao invés de listar Pipelines direto). Padrão genérico equivalente criado para os demais setores em `/setor/[code]/espacos/[spaceId]` e `/setor/[code]/pastas/[folderId]`, com o hub do setor (`/setor/[code]`) ganhando seção "Espaços".
+- **Aba "Kanban" removida do menu geral** — cada setor acessa suas Listas pelo próprio hub (`/setor/[code]`) ou, no caso do BPO, pelo card do módulo dedicado. Rotas `/kanban`, `/kanban/novo`, `/kanban/[id]` continuam funcionando (só não tem mais link direto no menu).
+- "Timeline de movimentação" removida de todo o Connect (não só do BPO).
+- "Nova lista": modal com nome obrigatório + "+ descrição" opcional (`criarListaSimples`, estágios padrão A Fazer/Em Andamento/Aguardando Cliente/Concluído, `entityType: COMPANY` por padrão).
+- Migrations `20260722180000_spaces_and_folders`, `20260722181000_pipeline_description`, `20260722182000_pipeline_color_and_dates`.
+
+### Fase E — Documentos/Canvas, 2026-07-22
+- **`CanvasPage`**: página em branco (não upload de arquivo) via `RichTextEditor`, sempre vinculada a uma tarefa (`pipelineItemId` obrigatório) — sanitizada com a mesma allowlist da descrição/Documentos para Cliente.
+- Na tarefa: botão "Criar documento" (mesmo padrão de botão-vira-seção das outras — Subtarefa/Vincular/Checklist/Anexar), lista + editor inline expansível por documento.
+- **Agregação no Espaço e na Pasta**: seção "Documentos" mostrando todos os canvases das Listas daquele Espaço/Pasta, layout ícone | nome | "• em {Tarefa X}" (mais apagado) — implementada em `src/lib/canvasAggregation.ts` (`getSpaceDocuments`/`getFolderDocuments`), reaproveitada nas 4 páginas de Espaço/Pasta (BPO + genérico).
+- Migration `20260722200000_canvas_pages`.
+
+### Status geral do redesenho de tarefas (fases A-E): **completo**. Verificado com `tsc --noEmit`, `eslint` e `next build` a cada etapa. Nada testado no navegador (sem credenciais de login disponíveis nesta sessão) — recomendo teste manual antes de considerar pronto pra produção. Nada commitado nem em PR.
+
 ## 12. Processo "Implantação - Cliente Novo" (BPO), populado em 2026-07-22
 
 Adaptação do template de implantação de cliente novo (originalmente escrito pra ClickUp) pro Connect, usando a engine de tarefas reformulada na seção 11 — **não** foi colocado dentro do board genérico "Tarefas do BPO" (`bpo_tarefas`), e sim como um **Pipeline próprio** no mesmo setor `bpo`, acessível a partir de `/bpo-financeiro` (a home do módulo lista os pipelines quando há mais de um).

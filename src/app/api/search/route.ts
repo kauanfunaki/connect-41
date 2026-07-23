@@ -71,7 +71,9 @@ export async function GET(req: NextRequest) {
   ]);
 
   const tarefaEntityIds = { COMPANY: new Set<string>(), PERSON: new Set<string>() };
-  for (const t of tarefaItems) tarefaEntityIds[t.entityType].add(t.entityId);
+  for (const t of tarefaItems) {
+    if (t.entityType && t.entityId) tarefaEntityIds[t.entityType].add(t.entityId);
+  }
   const [tarefaCompanies, tarefaPeople] = await Promise.all([
     tarefaEntityIds.COMPANY.size > 0
       ? prisma.company.findMany({ where: { id: { in: [...tarefaEntityIds.COMPANY] } }, select: { id: true, name: true } })
@@ -93,7 +95,7 @@ export async function GET(req: NextRequest) {
     documentos: documentos.map((d) => ({ id: d.id, name: d.fileName, entityType: d.entityType, entityId: d.entityId })),
     tarefas: tarefaItems.map((t) => ({
       id: t.id,
-      name: t.title ?? tarefaEntityNames[t.entityId] ?? "(removido)",
+      name: t.title ?? (t.entityId ? tarefaEntityNames[t.entityId] : null) ?? "(sem título)",
       href: `${boardPath(t.pipeline)}/itens/${t.id}`,
     })),
   });

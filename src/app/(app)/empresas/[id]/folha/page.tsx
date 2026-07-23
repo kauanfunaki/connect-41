@@ -57,6 +57,7 @@ export default async function FolhaPage({
       <BackButton className="mb-3" />
       <Breadcrumb
         items={[
+          { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
           { label: company.name, href: `/empresas/${companyId}`, truncate: true },
           { label: "Folha de Pagamento" },

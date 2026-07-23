@@ -22,7 +22,11 @@ type Props = {
   basePath: string;
   stages: StageOption[];
   items: Item[];
+  canAct: boolean;
   moveAction: (itemId: string, newStageId: string) => Promise<void>;
+  renameStageAction: (stageId: string, name: string) => Promise<void>;
+  createTaskAction: (stageId: string, title: string) => Promise<void>;
+  priorityAction: (itemId: string, userId: string, priority: number) => Promise<void>;
 };
 
 const PRIORITY_LABEL: Record<string, string> = { "": "Toda prioridade", "0": "Normal", "1": "Alta", "2": "Urgente" };
@@ -47,7 +51,7 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, " ");
 }
 
-export function BoardView({ pipelineId, basePath, stages, items, moveAction }: Props) {
+export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAction, renameStageAction, createTaskAction, priorityAction }: Props) {
   const [view, setView] = useState<"board" | "list">("list");
   const [search, setSearch] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState("");
@@ -209,7 +213,16 @@ export function BoardView({ pipelineId, basePath, stages, items, moveAction }: P
         {view === "board" ? (
           <KanbanBoard pipelineId={pipelineId} basePath={basePath} stages={stages} items={filtered} moveAction={moveAction} />
         ) : (
-          <TaskListView basePath={basePath} stages={stages} items={filtered} />
+          <TaskListView
+            basePath={basePath}
+            pipelineId={pipelineId}
+            stages={stages}
+            items={filtered}
+            canAct={canAct}
+            renameStageAction={renameStageAction}
+            createTaskAction={createTaskAction}
+            priorityAction={priorityAction}
+          />
         )}
       </div>
     </div>

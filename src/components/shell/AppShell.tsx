@@ -4,8 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Home,
-  Building2,
-  Users,
+  ContactRound,
   Columns3,
   ArrowRightLeft,
   CalendarDays,
@@ -29,7 +28,7 @@ import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { NotificationBell } from "@/components/shell/NotificationBell";
 import { ProfileMenu } from "@/components/shell/ProfileMenu";
 import { GlobalSearch } from "@/components/shell/GlobalSearch";
-import { NavItem, SectorNavItem } from "@/components/shell/NavLink";
+import { NavItem, SectorNavItem, CadastrosNavItem } from "@/components/shell/NavLink";
 import { WorkspaceSwitcher } from "@/components/shell/WorkspaceSwitcher";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
@@ -138,10 +137,8 @@ export function AppShell({
             Geral
           </p>
           <NavItem href="/home" icon={<Home size={16} />} label="Início" />
-          <NavItem href="/empresas" icon={<Building2 size={16} />} label="Empresas" />
-          <NavItem href="/pessoas" icon={<Users size={16} />} label="Pessoas" />
+          <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
           <NavItem href="/tarefas" icon={<ListTodo size={16} />} label="Tarefas" />
-          <NavItem href="/kanban" icon={<Columns3 size={16} />} label="Kanban" />
           <NavItem href="/conversas" icon={<MessageCircle size={16} />} label="Conversas" />
           <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />
           {canManageMeetings && (

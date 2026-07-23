@@ -33,6 +33,7 @@ export default async function EditarCargoPage({
       <BackButton className="mb-3" />
       <Breadcrumb
         items={[
+          { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
           { label: "Cargos", href: `/empresas/${companyId}/cargos` },
           { label: "Editar" },

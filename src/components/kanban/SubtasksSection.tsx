@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Trash2 } from "lucide-react";
+import { ListTree, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 
 export type SubtaskData = {
@@ -30,6 +30,7 @@ const PRIORITY_COLOR: Record<number, string> = {
 
 export function SubtasksSection({ canAct, canDelete, basePath, subtasks, createAction, deleteAction }: Props) {
   const [title, setTitle] = useState("");
+  const [open, setOpen] = useState(subtasks.length > 0);
   const [, startTransition] = useTransition();
 
   const done = subtasks.filter((s) => s.isTerminal).length;
@@ -42,7 +43,18 @@ export function SubtasksSection({ canAct, canDelete, basePath, subtasks, createA
     setTitle("");
   }
 
-  if (subtasks.length === 0 && !canAct) return null;
+  if (subtasks.length === 0 && !open) {
+    if (!canAct) return null;
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors"
+      >
+        <ListTree size={13} /> Adicionar subtarefa
+      </button>
+    );
+  }
 
   return (
     <div className="bg-surface border border-border rounded-lg p-5">

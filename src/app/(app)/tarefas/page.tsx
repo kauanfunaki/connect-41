@@ -108,7 +108,10 @@ export default async function TarefasPage() {
   const companyIds = new Set<string>();
   const personIds = new Set<string>();
   for (const i of instrucoes) (i.handoff.entityType === "COMPANY" ? companyIds : personIds).add(i.handoff.entityId);
-  for (const c of meusCards) (c.entityType === "COMPANY" ? companyIds : personIds).add(c.entityId);
+  for (const c of meusCards) {
+    if (!c.entityId) continue; // tarefa sem empresa/pessoa associada
+    (c.entityType === "COMPANY" ? companyIds : personIds).add(c.entityId);
+  }
   const [companies, people] = await Promise.all([
     companyIds.size > 0
       ? prisma.company.findMany({ where: { id: { in: Array.from(companyIds) } }, select: { id: true, name: true } })
@@ -206,7 +209,7 @@ export default async function TarefasPage() {
                     className="flex items-center justify-between gap-3 py-2 group"
                   >
                     <span className="text-[length:var(--fs-body)] text-fg group-hover:text-brand transition-colors truncate min-w-0">
-                      {c.title ?? entityNames[c.entityId] ?? "(removido)"}
+                      {c.title ?? (c.entityId ? entityNames[c.entityId] : null) ?? "(sem título)"}
                       <span className="text-fg-muted font-normal">
                         {" · "}
                         {sectorLabels[c.pipeline.sectorCode] ?? c.pipeline.sectorCode}

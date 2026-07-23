@@ -41,6 +41,7 @@ export default async function DocumentosClientePage({
       <BackButton className="mb-3" />
       <Breadcrumb
         items={[
+          { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
           { label: company.name, href: `/empresas/${companyId}`, truncate: true },
           { label: "Documentos para Cliente" },

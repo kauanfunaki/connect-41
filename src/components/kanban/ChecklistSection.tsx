@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, ChevronDown, ChevronUp, Pencil, Trash2, X } from "lucide-react";
+import { Check, CheckSquare, ChevronDown, ChevronUp, Pencil, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 
 export type ChecklistItemData = { id: string; text: string; done: boolean };
@@ -86,6 +86,7 @@ function ChecklistRow({
 
 export function ChecklistSection({ canAct, items, createAction, toggleAction, editAction, deleteAction, reorderAction }: Props) {
   const [newText, setNewText] = useState("");
+  const [open, setOpen] = useState(items.length > 0);
   const [, startTransition] = useTransition();
 
   const done = items.filter((i) => i.done).length;
@@ -98,7 +99,18 @@ export function ChecklistSection({ canAct, items, createAction, toggleAction, ed
     setNewText("");
   }
 
-  if (items.length === 0 && !canAct) return null;
+  if (items.length === 0 && !open) {
+    if (!canAct) return null;
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors"
+      >
+        <CheckSquare size={13} /> Criar checklist
+      </button>
+    );
+  }
 
   return (
     <div className="bg-surface border border-border rounded-lg p-5">

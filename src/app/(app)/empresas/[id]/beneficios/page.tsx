@@ -56,6 +56,7 @@ export default async function BeneficiosPage({
       <BackButton className="mb-3" />
       <Breadcrumb
         items={[
+          { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
           { label: company.name, href: `/empresas/${companyId}`, truncate: true },
           { label: "Benefícios" },

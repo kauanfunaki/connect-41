@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Building2 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { CadastrosTabsBar } from "@/components/shared/CadastrosTabsBar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -88,6 +89,9 @@ export default async function EmpresasPage({
 
   return (
     <PageContainer>
+      <CadastrosTabsBar active="empresas" />
+
+      <div id="cadastros-content">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -216,6 +220,7 @@ export default async function EmpresasPage({
           </div>
         </div>
       )}
+      </div>
     </PageContainer>
   );
 }
