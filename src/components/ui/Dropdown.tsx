@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 type Props = {
   trigger: (props: { open: boolean; toggle: () => void }) => React.ReactNode;
-  children: React.ReactNode;
+  children: React.ReactNode | ((props: { close: () => void }) => React.ReactNode);
   align?: "left" | "right";
   width?: number;
 };
@@ -33,7 +33,7 @@ export function Dropdown({ trigger, children, align = "left", width = 240 }: Pro
             align === "right" ? "right-0" : "left-0"
           } bg-surface-elevated border border-border-strong rounded-2xl shadow-[var(--c41-shadow-lg)] p-3 z-20 max-h-[360px] overflow-y-auto text-[length:var(--fs-dropdown)]`}
         >
-          {children}
+          {typeof children === "function" ? children({ close: () => setOpen(false) }) : children}
         </div>
       )}
     </div>

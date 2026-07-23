@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ListTree, Trash2 } from "lucide-react";
+import { ListTree, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 
 export type SubtaskData = {
@@ -60,8 +60,12 @@ export function SubtasksSection({ canAct, canDelete, basePath, subtasks, createA
     <div className="bg-surface border border-border rounded-lg p-5">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-[13px] font-semibold text-fg">Subtarefas</h2>
-        {subtasks.length > 0 && (
+        {subtasks.length > 0 ? (
           <span className="text-[11px] text-fg-muted tnum">{done}/{subtasks.length} concluídas · {pct}%</span>
+        ) : (
+          <button type="button" onClick={() => setOpen(false)} aria-label="Fechar" className="text-fg-muted hover:text-fg p-0.5">
+            <X size={14} />
+          </button>
         )}
       </div>
 

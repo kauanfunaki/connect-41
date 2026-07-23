@@ -116,8 +116,12 @@ export function ChecklistSection({ canAct, items, createAction, toggleAction, ed
     <div className="bg-surface border border-border rounded-lg p-5">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-[13px] font-semibold text-fg">Checklist</h2>
-        {items.length > 0 && (
+        {items.length > 0 ? (
           <span className="text-[11px] text-fg-muted tnum">{done}/{items.length} · {pct}%</span>
+        ) : (
+          <button type="button" onClick={() => setOpen(false)} aria-label="Fechar" className="text-fg-muted hover:text-fg p-0.5">
+            <X size={14} />
+          </button>
         )}
       </div>
 

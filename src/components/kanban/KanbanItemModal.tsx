@@ -24,7 +24,7 @@ export function KanbanItemModal({ children }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 sm:p-8"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto sm:overflow-hidden bg-black/60 sm:p-8"
       onClick={(e) => {
         if (e.target === e.currentTarget) router.back();
       }}

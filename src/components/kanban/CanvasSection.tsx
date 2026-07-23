@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { FileText, Plus, Trash2 } from "lucide-react";
+import { FileText, Plus, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
@@ -95,7 +95,14 @@ export function CanvasSection({ canAct, pages, createAction, updateAction, delet
 
   return (
     <div className="bg-surface border border-border rounded-lg p-5">
-      <h2 className="text-[13px] font-semibold text-fg mb-3">Documentos</h2>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-[13px] font-semibold text-fg">Documentos</h2>
+        {pages.length === 0 && (
+          <button type="button" onClick={() => setOpen(false)} aria-label="Fechar" className="text-fg-muted hover:text-fg p-0.5">
+            <X size={14} />
+          </button>
+        )}
+      </div>
 
       {pages.length > 0 && (
         <div className="divide-y divide-border">

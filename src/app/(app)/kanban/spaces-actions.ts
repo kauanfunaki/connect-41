@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
+import { boardPath, hasDedicatedRoute } from "@/lib/kanbanPaths";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 
 // Estágios padrão usados pelas Listas criadas pelo fluxo simplificado
@@ -32,7 +33,7 @@ export async function criarEspaco(sectorCode: string, _prev: PipelineState, form
     return { error: "Erro ao criar espaço. Já existe um espaço com esse nome neste setor?" };
   }
 
-  revalidatePath(`/bpo-financeiro`);
+  revalidatePath(hasDedicatedRoute(sectorCode) ? `/bpo-financeiro` : `/setor/${sectorCode}`);
   return null;
 }
 
@@ -56,7 +57,11 @@ export async function criarPasta(spaceId: string, _prev: PipelineState, form: Fo
     return { error: "Erro ao criar pasta." };
   }
 
-  revalidatePath(`/bpo-financeiro/espacos/${spaceId}`);
+  revalidatePath(
+    hasDedicatedRoute(space.sectorCode)
+      ? `/bpo-financeiro/espacos/${spaceId}`
+      : `/setor/${space.sectorCode}/espacos/${spaceId}`
+  );
   return null;
 }
 
@@ -87,7 +92,7 @@ export async function criarListaSimples(
   if (!name) return { error: "Nome da lista é obrigatório" };
   const description = (form.get("description") as string)?.trim() || null;
 
-  let pipelineId: string;
+  let destination: string;
   try {
     const pipeline = await prisma.pipeline.create({
       data: {
@@ -101,11 +106,11 @@ export async function criarListaSimples(
         stages: { create: DEFAULT_STAGES },
       },
     });
-    pipelineId = pipeline.id;
+    destination = boardPath(pipeline);
   } catch (err) {
     console.error("[criarListaSimples]", err);
     return { error: "Erro ao criar lista." };
   }
 
-  redirect(`/bpo-financeiro/${pipelineId}`);
+  redirect(destination);
 }

@@ -396,23 +396,34 @@ function EstimatePopover({
         </button>
       )}
     >
-      <div className="flex items-center gap-1.5">
-        <Input
-          type="number"
-          min={0}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && startTransition(() => estimateAction(value))}
-          placeholder="min"
-        />
-        <button
-          type="button"
-          onClick={() => startTransition(() => estimateAction(value))}
-          className="h-9 px-2.5 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover transition-colors flex-shrink-0"
-        >
-          OK
-        </button>
-      </div>
+      {({ close }) => (
+        <div className="flex items-center gap-1.5">
+          <Input
+            type="number"
+            min={0}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                startTransition(() => estimateAction(value));
+                close();
+              }
+            }}
+            placeholder="min"
+            autoFocus
+          />
+          <button
+            type="button"
+            onClick={() => {
+              startTransition(() => estimateAction(value));
+              close();
+            }}
+            className="h-9 px-2.5 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover transition-colors flex-shrink-0"
+          >
+            OK
+          </button>
+        </div>
+      )}
     </Dropdown>
   );
 }

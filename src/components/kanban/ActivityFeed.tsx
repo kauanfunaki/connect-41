@@ -482,7 +482,7 @@ export function ActivityFeed({ items, canAct, mentionUsers, pipelineItemId, task
                       <span className="font-mono text-[11px] text-fg-muted whitespace-nowrap flex-shrink-0">{a.createdAtLabel}</span>
                     </div>
                     <p className="text-[length:var(--fs-helper)] text-fg-muted">{a.userName}</p>
-                    {a.content && <p className="text-[length:var(--fs-body)] text-fg-secondary mt-1">{a.content}</p>}
+                    {a.content && <p className="text-[length:var(--fs-body)] text-fg-secondary mt-1">{renderRichText(a.content, mentionUsers)}</p>}
                   </div>
                 </div>
               )

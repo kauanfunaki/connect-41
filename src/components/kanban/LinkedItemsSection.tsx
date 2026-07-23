@@ -44,7 +44,14 @@ export function LinkedItemsSection({ canAct, basePath, links, candidates, create
 
   return (
     <div className="bg-surface border border-border rounded-lg p-5">
-      <h2 className="text-[13px] font-semibold text-fg mb-3">Itens vinculados</h2>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-[13px] font-semibold text-fg">Itens vinculados</h2>
+        {links.length === 0 && (
+          <button type="button" onClick={() => setOpen(false)} aria-label="Fechar" className="text-fg-muted hover:text-fg p-0.5">
+            <X size={14} />
+          </button>
+        )}
+      </div>
 
       {links.length > 0 && (
         <div className="divide-y divide-border mb-3">
