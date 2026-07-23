@@ -111,6 +111,17 @@ enum PipelineEntityType {
   PERSON
 }
 
+// Tipo visual do estágio (bolinha na visão de lista/subtarefas) — NOT_STARTED
+// vazia, IN_PROGRESS preenchida pela metade, PENDING pontilhada, DONE cheia
+// com check. isTerminal continua no schema (muita leitura já existente) e
+// passa a ser derivado: DONE => isTerminal true, qualquer outro => false.
+enum StageType {
+  NOT_STARTED
+  IN_PROGRESS
+  PENDING
+  DONE
+}
+
 // ─── RH/DP + Recrutamento ──────────────────────────────────────────────────────
 
 enum PersonEmploymentStatus {
@@ -850,10 +861,11 @@ model PipelineStage {
   pipelineId String
   name       String   @db.VarChar(80)
   order      Int
-  color      String?  @db.VarChar(7) // hex, ex: #1A5FA8
-  isTerminal Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  color      String?   @db.VarChar(7) // hex, ex: #1A5FA8
+  isTerminal Boolean   @default(false)
+  type       StageType @default(NOT_STARTED)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   pipeline Pipeline       @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
   items    PipelineItem[]

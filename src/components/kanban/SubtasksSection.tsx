@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Check, ListTree, Trash2, X } from "lucide-react";
+import { ListTree, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
+import { StageDot, type StageDotType } from "@/components/kanban/StageDot";
 
 export type SubtaskData = {
   id: string;
@@ -11,6 +12,7 @@ export type SubtaskData = {
   stageName: string;
   stageColor: string | null;
   isTerminal: boolean;
+  stageType?: StageDotType;
   priority: number;
 };
 
@@ -91,17 +93,13 @@ export function SubtasksSection({ canAct, canDelete, basePath, pipelineId, subta
                 )
               }
               aria-label={s.isTerminal ? "Reabrir subtarefa" : "Concluir subtarefa"}
-              className="group/dot w-[14px] h-[14px] rounded-full border flex items-center justify-center flex-shrink-0 transition-transform hover:scale-125 disabled:cursor-default disabled:hover:scale-100"
-              style={{
-                borderColor: s.stageColor ?? PRIORITY_COLOR[0],
-                background: s.isTerminal ? (s.stageColor ?? PRIORITY_COLOR[0]) : "transparent",
-              }}
+              className="group/dot flex-shrink-0 transition-transform hover:scale-125 disabled:cursor-default disabled:hover:scale-100"
             >
-              {s.isTerminal ? (
-                <Check size={9} className="text-on-brand" />
-              ) : (
-                <Check size={9} className="opacity-0 group-hover/dot:opacity-100 transition-opacity" style={{ color: s.stageColor ?? PRIORITY_COLOR[0] }} />
-              )}
+              <StageDot
+                color={s.stageColor ?? PRIORITY_COLOR[0]}
+                type={s.stageType ?? (s.isTerminal ? "DONE" : "NOT_STARTED")}
+                showCheckOnHover
+              />
             </button>
             <Link
               href={`${basePath}/itens/${s.id}`}

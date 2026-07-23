@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Link2, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
+import { getRecentLinkedIds, pushRecentLinkedId } from "@/lib/kanbanRecentLinks";
 
 export type LinkedItem = { id: string; name: string };
 export type LinkCandidate = { id: string; name: string };
@@ -38,14 +39,19 @@ export function LinkedItemsSection({ canAct, basePath, links, candidates, create
     );
   }
 
+  const available = candidates.filter((c) => !links.some((l) => l.id === c.id));
   const matches = query.trim()
-    ? candidates.filter((c) => c.name.toLowerCase().includes(query.toLowerCase()) && !links.some((l) => l.id === c.id)).slice(0, 8)
-    : [];
+    ? available.filter((c) => c.name.toLowerCase().includes(query.toLowerCase())).slice(0, 8)
+    : getRecentLinkedIds()
+        .map((recentId) => available.find((c) => c.id === recentId))
+        .filter((c): c is LinkCandidate => c != null)
+        .slice(0, 8);
+  const showingRecents = !query.trim() && matches.length > 0;
 
   return (
     <div className="bg-surface border border-border rounded-lg p-5">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-[13px] font-semibold text-fg">Itens vinculados</h2>
+        <h2 className="text-[13px] font-semibold text-fg">Tarefas relacionadas</h2>
         {links.length === 0 && (
           <button type="button" onClick={() => setOpen(false)} aria-label="Fechar" className="text-fg-muted hover:text-fg p-0.5">
             <X size={14} />
@@ -85,11 +91,19 @@ export function LinkedItemsSection({ canAct, basePath, links, candidates, create
             </div>
             {matches.length > 0 && (
               <div className="mt-1 bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] max-h-48 overflow-y-auto">
+                {showingRecents && (
+                  <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-fg-muted">Recentes</p>
+                )}
                 {matches.map((c) => (
                   <button
                     key={c.id}
                     type="button"
-                    onClick={() => { startTransition(() => createAction(c.id)); setQuery(""); setPicking(false); }}
+                    onClick={() => {
+                      pushRecentLinkedId(c.id);
+                      startTransition(() => createAction(c.id));
+                      setQuery("");
+                      setPicking(false);
+                    }}
                     className="w-full text-left px-3 py-2 text-[13px] text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors truncate"
                   >
                     {c.name}

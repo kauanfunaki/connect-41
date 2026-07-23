@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { Check, ChevronRight, ChevronDown, Repeat } from "lucide-react";
+import { ChevronRight, ChevronDown, Repeat } from "lucide-react";
 import { formatCalendarDate } from "@/lib/format";
 import { Input } from "@/components/ui/Input";
+import { StageDot, type StageDotType } from "@/components/kanban/StageDot";
 
 export type AssigneeRow = { id: string; name: string; priority: number };
 export type SubtaskRow = {
@@ -22,7 +23,13 @@ export type TaskRow = {
   assignees?: AssigneeRow[];
   subtasks?: SubtaskRow[];
 };
-export type StageOption = { id: string; name: string; color: string | null; isTerminal?: boolean };
+export type StageOption = { id: string; name: string; color: string | null; isTerminal?: boolean; type?: StageDotType };
+
+// Estágios ainda não migrados (type nulo/undefined) caem no fallback derivado
+// do isTerminal binário antigo — evita quebrar boards criados antes do campo existir.
+function resolveStageType(isTerminal: boolean, type?: StageDotType): StageDotType {
+  return type ?? (isTerminal ? "DONE" : "NOT_STARTED");
+}
 
 type Props = {
   basePath: string;
@@ -121,129 +128,123 @@ function Row({
   const stage = stages.find((s) => s.id === item.stageId);
   const isTerminal = "isTerminal" in item ? item.isTerminal : (stage?.isTerminal ?? false);
   const stageColor = stage?.color ?? "var(--c41-fg-muted)";
-  const statusLabel = "stageName" in item ? item.stageName : undefined;
+  const stageType = resolveStageType(isTerminal, stage?.type);
   const tags = item.tags ?? [];
   const dragging = dragId === item.id;
 
   return (
     <>
-      <div
+      <tr
         draggable={canAct}
         onDragStart={() => onDragStartRow(item.id)}
         onDragEnd={onDragEndRow}
         onDragOver={onDropOnRow ? (e) => { e.preventDefault(); e.stopPropagation(); } : undefined}
         onDrop={onDropOnRow ? (e) => { e.preventDefault(); e.stopPropagation(); onDropOnRow(item.id); } : undefined}
-        className={`flex items-center gap-2 py-2 px-2 hover:bg-surface-hover rounded-lg transition-colors group ${dragging ? "opacity-40" : ""} ${canAct ? "cursor-grab active:cursor-grabbing" : ""}`}
-        style={{ paddingLeft: `${8 + depth * 20}px` }}
+        className={`group hover:bg-surface-hover transition-colors ${dragging ? "opacity-40" : ""} ${canAct ? "cursor-grab active:cursor-grabbing" : ""}`}
       >
-        {hasSubtasks ? (
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            className="text-fg-muted hover:text-fg flex-shrink-0"
-            aria-label={expanded ? "Recolher subtarefas" : "Expandir subtarefas"}
-          >
-            <ChevronRight size={14} className={`transition-transform ${expanded ? "rotate-90" : ""}`} />
-          </button>
-        ) : (
-          <span className="w-[14px] flex-shrink-0" />
-        )}
-
-        <button
-          type="button"
-          disabled={!canAct}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            startTransition(() =>
-              isTerminal ? reabrirAction(pipelineId, item.id) : concluirAction(pipelineId, item.id)
-            );
-          }}
-          aria-label={isTerminal ? "Reabrir tarefa" : "Concluir tarefa"}
-          title={stage?.name ?? ""}
-          className="group/dot w-[14px] h-[14px] rounded-full border flex items-center justify-center flex-shrink-0 transition-transform hover:scale-125 disabled:cursor-default disabled:hover:scale-100"
-          style={{
-            borderColor: stageColor,
-            background: isTerminal ? stageColor : "transparent",
-          }}
-        >
-          {isTerminal ? (
-            <Check size={9} className="text-on-brand" />
-          ) : (
-            <Check size={9} className="opacity-0 group-hover/dot:opacity-100 transition-opacity" style={{ color: stageColor }} />
-          )}
-        </button>
-
-        <Link
-          href={`${basePath}/itens/${item.id}`}
-          className={`text-[13px] text-fg group-hover:text-brand transition-colors truncate min-w-0 ${isTerminal ? "text-fg-muted" : ""}`}
-        >
-          {item.entityName}
-        </Link>
-
-        {tags.length > 0 && (
-          <div className="flex items-center gap-1 flex-shrink-0">
-            {tags.slice(0, 2).map((t) => (
-              <span
-                key={t.id}
-                className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full"
-                style={{ background: `${t.color}1A`, color: t.color }}
+        <td className="py-2 pl-2 pr-1 w-14">
+          <div className="flex items-center gap-1" style={{ paddingLeft: `${depth * 20}px` }}>
+            {hasSubtasks ? (
+              <button
+                type="button"
+                onClick={() => setExpanded((v) => !v)}
+                className="text-fg-muted hover:text-fg flex-shrink-0"
+                aria-label={expanded ? "Recolher subtarefas" : "Expandir subtarefas"}
               >
-                {t.name}
+                <ChevronRight size={14} className={`transition-transform ${expanded ? "rotate-90" : ""}`} />
+              </button>
+            ) : (
+              <span className="w-[14px] flex-shrink-0" />
+            )}
+
+            <button
+              type="button"
+              disabled={!canAct}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                startTransition(() =>
+                  isTerminal ? reabrirAction(pipelineId, item.id) : concluirAction(pipelineId, item.id)
+                );
+              }}
+              aria-label={isTerminal ? "Reabrir tarefa" : "Concluir tarefa"}
+              title={stage?.name ?? ""}
+              className="group/dot flex-shrink-0 transition-transform hover:scale-125 disabled:cursor-default disabled:hover:scale-100"
+            >
+              <StageDot color={stageColor} type={stageType} showCheckOnHover />
+            </button>
+          </div>
+        </td>
+
+        <td className="py-2 pr-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <Link
+              href={`${basePath}/itens/${item.id}`}
+              className={`text-[13px] text-fg group-hover:text-brand transition-colors truncate min-w-0 ${isTerminal ? "text-fg-muted" : ""}`}
+            >
+              {item.entityName}
+            </Link>
+            {hasSubtasks && (
+              <span className="text-[11px] text-fg-muted flex-shrink-0 tnum">
+                {(item as TaskRow).subtasks!.filter((s) => s.isTerminal).length}/{(item as TaskRow).subtasks!.length}
               </span>
-            ))}
+            )}
           </div>
-        )}
+        </td>
 
-        <div className="flex-1" />
+        <td className="py-2 pr-2 w-44">
+          {tags.length > 0 && (
+            <div className="flex items-center gap-1 flex-wrap">
+              {tags.slice(0, 2).map((t) => (
+                <span
+                  key={t.id}
+                  className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                  style={{ background: `${t.color}1A`, color: t.color }}
+                >
+                  {t.name}
+                </span>
+              ))}
+            </div>
+          )}
+        </td>
 
-        {statusLabel && (
-          <span className="text-[11px] text-fg-muted flex-shrink-0 hidden sm:inline">{statusLabel}</span>
-        )}
+        <td className="py-2 pr-2 w-24">
+          {assignees.length > 0 && (
+            <div className="flex items-center -space-x-1.5">
+              {assignees.slice(0, 3).map((a) => (
+                <AssigneeAvatar key={a.id} a={a} itemId={item.id} canAct={canAct} priorityAction={priorityAction} />
+              ))}
+            </div>
+          )}
+        </td>
 
-        {hasSubtasks && (
-          <span className="text-[11px] text-fg-muted flex-shrink-0 tnum">
-            {(item as TaskRow).subtasks!.filter((s) => s.isTerminal).length}/{(item as TaskRow).subtasks!.length}
-          </span>
-        )}
+        <td className="py-2 pr-2 w-24 text-right">
+          {dueDate && (
+            <span className={`inline-flex items-center gap-1 text-[11px] tnum ${isOverdue(dueDate) ? "text-danger font-semibold" : "text-fg-muted"}`}>
+              {item.recurring && <Repeat size={10} />}
+              {formatCalendarDate(new Date(dueDate), { day: "2-digit", month: "short" })}
+            </span>
+          )}
+        </td>
+      </tr>
 
-        {assignees.length > 0 && (
-          <div className="flex items-center -space-x-1.5 flex-shrink-0">
-            {assignees.slice(0, 3).map((a) => (
-              <AssigneeAvatar key={a.id} a={a} itemId={item.id} canAct={canAct} priorityAction={priorityAction} />
-            ))}
-          </div>
-        )}
-
-        {dueDate && (
-          <span className={`flex items-center gap-1 text-[11px] tnum flex-shrink-0 w-20 justify-end ${isOverdue(dueDate) ? "text-danger font-semibold" : "text-fg-muted"}`}>
-            {item.recurring && <Repeat size={10} />}
-            {formatCalendarDate(new Date(dueDate), { day: "2-digit", month: "short" })}
-          </span>
-        )}
-      </div>
-
-      {expanded && hasSubtasks && (
-        <div>
-          {(item as TaskRow).subtasks!.map((s) => (
-            <Row
-              key={s.id}
-              item={s}
-              basePath={basePath}
-              depth={depth + 1}
-              canAct={canAct}
-              priorityAction={priorityAction}
-              pipelineId={pipelineId}
-              concluirAction={concluirAction}
-              reabrirAction={reabrirAction}
-              stages={stages}
-              dragId={dragId}
-              onDragStartRow={onDragStartRow}
-              onDragEndRow={onDragEndRow}
-            />
-          ))}
-        </div>
-      )}
+      {expanded && hasSubtasks && (item as TaskRow).subtasks!.map((s) => (
+        <Row
+          key={s.id}
+          item={s}
+          basePath={basePath}
+          depth={depth + 1}
+          canAct={canAct}
+          priorityAction={priorityAction}
+          pipelineId={pipelineId}
+          concluirAction={concluirAction}
+          reabrirAction={reabrirAction}
+          stages={stages}
+          dragId={dragId}
+          onDragStartRow={onDragStartRow}
+          onDragEndRow={onDragEndRow}
+        />
+      ))}
     </>
   );
 }
@@ -294,8 +295,8 @@ function StageGroup({
   }
 
   return (
-    <div
-      className={`mb-2 last:mb-0 rounded-lg transition-colors ${dragOver ? "bg-brand/[0.05] ring-1 ring-brand/30" : ""}`}
+    <tbody
+      className={dragOver ? "bg-brand/[0.05]" : undefined}
       onDragOver={(e) => { if (dragId) { e.preventDefault(); setDragOver(true); } }}
       onDragLeave={() => setDragOver(false)}
       onDrop={(e) => {
@@ -304,94 +305,97 @@ function StageGroup({
         if (dragId) onDropStage(stage.id);
       }}
     >
-      <div className="flex items-center gap-2 px-2 py-1.5">
-        <button type="button" onClick={() => setCollapsed((v) => !v)} className="text-fg-muted hover:text-fg flex-shrink-0">
-          <ChevronDown size={13} className={`transition-transform ${collapsed ? "-rotate-90" : ""}`} />
-        </button>
-        <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: stage.color ?? "#586577" }} />
-        {editingName && canAct ? (
-          <Input
-            value={nameValue}
-            onChange={(e) => setNameValue(e.target.value)}
-            onBlur={saveName}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") saveName();
-              if (e.key === "Escape") { setNameValue(stage.name); setEditingName(false); }
-            }}
-            autoFocus
-            className="h-6 w-40 text-[12px]"
-          />
-        ) : (
-          <h3
-            onClick={() => canAct && setEditingName(true)}
-            className={`text-[12px] font-semibold text-fg-secondary uppercase tracking-wide ${canAct ? "cursor-text hover:text-fg" : ""}`}
-          >
-            {stage.name}
-          </h3>
-        )}
-        <span className="text-[11px] text-fg-muted tnum">{items.length}</span>
-      </div>
+      <tr className="border-t border-border first:border-t-0">
+        <td colSpan={5} className="pt-3 pb-1.5 px-2">
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setCollapsed((v) => !v)} className="text-fg-muted hover:text-fg flex-shrink-0">
+              <ChevronDown size={13} className={`transition-transform ${collapsed ? "-rotate-90" : ""}`} />
+            </button>
+            <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: stage.color ?? "#586577" }} />
+            {editingName && canAct ? (
+              <Input
+                value={nameValue}
+                onChange={(e) => setNameValue(e.target.value)}
+                onBlur={saveName}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveName();
+                  if (e.key === "Escape") { setNameValue(stage.name); setEditingName(false); }
+                }}
+                autoFocus
+                className="h-6 w-40 text-[12px]"
+              />
+            ) : (
+              <h3
+                onClick={() => canAct && setEditingName(true)}
+                className={`text-[12px] font-semibold text-fg-secondary uppercase tracking-wide ${canAct ? "cursor-text hover:text-fg" : ""}`}
+              >
+                {stage.name}
+              </h3>
+            )}
+            <span className="text-[11px] text-fg-muted tnum">{items.length}</span>
+          </div>
+        </td>
+      </tr>
 
       {!collapsed && (
         <>
-          {items.length > 0 && (
-            <div className="divide-y divide-border/60">
-              {items.map((item) => (
-                <Row
-                  key={item.id}
-                  item={item}
-                  basePath={basePath}
-                  canAct={canAct}
-                  priorityAction={priorityAction}
-                  pipelineId={pipelineId}
-                  concluirAction={concluirAction}
-                  reabrirAction={reabrirAction}
-                  stages={stages}
-                  dragId={dragId}
-                  onDragStartRow={onDragStartRow}
-                  onDragEndRow={onDragEndRow}
-                  onDropOnRow={onDropOnRow}
-                />
-              ))}
-            </div>
-          )}
+          {items.map((item) => (
+            <Row
+              key={item.id}
+              item={item}
+              basePath={basePath}
+              canAct={canAct}
+              priorityAction={priorityAction}
+              pipelineId={pipelineId}
+              concluirAction={concluirAction}
+              reabrirAction={reabrirAction}
+              stages={stages}
+              dragId={dragId}
+              onDragStartRow={onDragStartRow}
+              onDragEndRow={onDragEndRow}
+              onDropOnRow={onDropOnRow}
+            />
+          ))}
 
           {items.length === 0 && dragId && (
-            <div className="h-8 flex items-center px-2" style={{ paddingLeft: "34px" }}>
-              <p className="text-[11px] text-fg-muted">Solte aqui para mover</p>
-            </div>
+            <tr>
+              <td colSpan={5} className="h-8" style={{ paddingLeft: "34px" }}>
+                <p className="text-[11px] text-fg-muted">Solte aqui para mover</p>
+              </td>
+            </tr>
           )}
 
           {canAct && (
-            adding ? (
-              <div className="flex items-center gap-2 px-2 py-1.5" style={{ paddingLeft: "34px" }}>
-                <Input
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") addTask();
-                    if (e.key === "Escape") { setAdding(false); setNewTitle(""); }
-                  }}
-                  onBlur={() => { if (!newTitle.trim()) setAdding(false); }}
-                  autoFocus
-                  placeholder="Nome da tarefa…"
-                  className="h-8 flex-1"
-                />
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setAdding(true)}
-                className="text-[12px] text-fg-muted hover:text-fg transition-colors px-2 py-1.5"
-                style={{ paddingLeft: "34px" }}
-              >
-                + Adicionar Tarefa
-              </button>
-            )
+            <tr>
+              <td colSpan={5} className="px-2 py-1.5" style={{ paddingLeft: "34px" }}>
+                {adding ? (
+                  <Input
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") addTask();
+                      if (e.key === "Escape") { setAdding(false); setNewTitle(""); }
+                    }}
+                    onBlur={() => { if (!newTitle.trim()) setAdding(false); }}
+                    autoFocus
+                    placeholder="Nome da tarefa…"
+                    className="h-8 max-w-xs"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setAdding(true)}
+                    className="text-[12px] text-fg-muted hover:text-fg transition-colors"
+                  >
+                    + Adicionar Tarefa
+                  </button>
+                )}
+              </td>
+            </tr>
           )}
         </>
       )}
-    </div>
+    </tbody>
   );
 }
 
@@ -400,10 +404,11 @@ const EDGE_ZONE = 80;
 const MAX_SCROLL_SPEED = 18;
 
 // Visão alternativa ao Kanban: mesmas tarefas, agrupadas por status (stage) em
-// vez de colunas — status renomeável inline, grupos colapsáveis, criação
-// rápida por status. Mudar o status de uma tarefa é feito arrastando a linha
-// pra outro grupo (mesma linguagem do quadro Kanban); soltar em cima de outra
-// tarefa do MESMO grupo reordena (troca adjacente, igual ao checklist).
+// vez de colunas, numa tabela real (colunas fixas: Tarefa/Tags/Responsáveis/
+// Prazo, header sticky) — status renomeável inline, grupos colapsáveis,
+// criação rápida por status. Mudar o status de uma tarefa é feito arrastando
+// a linha pra outro grupo (mesma linguagem do quadro Kanban); soltar em cima
+// de outra tarefa do MESMO grupo reordena (troca adjacente, igual ao checklist).
 export function TaskListView({ basePath, pipelineId, stages, items, canAct, renameStageAction, createTaskAction, priorityAction, moveAction, reorderAction, concluirAction, reabrirAction }: Props) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -502,27 +507,38 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
       ref={scrollRef}
       className="scroll-y bg-surface border border-border rounded-2xl p-2 h-full overflow-y-auto"
     >
-      {byStage.map(({ stage, items: stageItems }) => (
-        <StageGroup
-          key={stage.id}
-          stage={stage}
-          items={stageItems}
-          basePath={basePath}
-          canAct={canAct}
-          renameStageAction={renameStageAction}
-          createTaskAction={createTaskAction}
-          priorityAction={priorityAction}
-          pipelineId={pipelineId}
-          concluirAction={concluirAction}
-          reabrirAction={reabrirAction}
-          stages={stages}
-          dragId={dragId}
-          onDragStartRow={setDragId}
-          onDragEndRow={() => setDragId(null)}
-          onDropStage={handleDropStage}
-          onDropOnRow={handleDropOnRow}
-        />
-      ))}
+      <table className="w-full border-collapse">
+        <thead className="sticky top-0 bg-surface z-10">
+          <tr className="text-left">
+            <th className="w-14" />
+            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide pb-1.5 px-2">Tarefa</th>
+            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide pb-1.5 px-2 w-44">Tags</th>
+            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide pb-1.5 px-2 w-24">Responsáveis</th>
+            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide pb-1.5 px-2 w-24 text-right">Prazo</th>
+          </tr>
+        </thead>
+        {byStage.map(({ stage, items: stageItems }) => (
+          <StageGroup
+            key={stage.id}
+            stage={stage}
+            items={stageItems}
+            basePath={basePath}
+            canAct={canAct}
+            renameStageAction={renameStageAction}
+            createTaskAction={createTaskAction}
+            priorityAction={priorityAction}
+            pipelineId={pipelineId}
+            concluirAction={concluirAction}
+            reabrirAction={reabrirAction}
+            stages={stages}
+            dragId={dragId}
+            onDragStartRow={setDragId}
+            onDragEndRow={() => setDragId(null)}
+            onDropStage={handleDropStage}
+            onDropOnRow={handleDropOnRow}
+          />
+        ))}
+      </table>
     </div>
   );
 }

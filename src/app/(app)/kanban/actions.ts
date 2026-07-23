@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { PipelineEntityType, ActivityType, RecurringFrequency } from "@/generated/prisma/enums";
+import { PipelineEntityType, ActivityType, RecurringFrequency, StageType } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
 import { scopedPipelineWhere } from "@/lib/auth/scope";
 import { boardPath } from "@/lib/kanbanPaths";
@@ -82,6 +82,7 @@ export async function criarPipeline(
             color: s.color,
             order: i,
             isTerminal: i === stages.length - 1,
+            type: i === stages.length - 1 ? StageType.DONE : StageType.NOT_STARTED,
           })),
         },
       },
@@ -216,6 +217,76 @@ export async function renomearEstagio(pipelineId: string, stageId: string, name:
   }
 
   revalidatePath(boardPath(pipeline));
+}
+
+export type StageInput = { id?: string; name: string; color: string; type: StageType };
+export type EditStagesState = { error: string } | null;
+
+// CRUD completo de estágios de uma lista (editar nome/cor/tipo, criar, excluir,
+// reordenar), usado pelo modal "Editar lista". Recebe a lista final desejada
+// de estágios (com id pros existentes, sem id pros novos) e reconcilia com o
+// banco numa transação — reorder em duas fases (temp negativo -> final) pra
+// não colidir com a constraint única (pipelineId, order).
+export async function atualizarEstagios(pipelineId: string, stages: StageInput[]): Promise<EditStagesState> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  if (!tenantId) return { error: "Não autenticado" };
+
+  const cleaned = stages.map((s) => ({ ...s, name: s.name.trim() })).filter((s) => s.name);
+  if (cleaned.length === 0) return { error: "Adicione ao menos um estágio" };
+
+  const prisma = getPrisma();
+  const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
+  if (!pipeline) return { error: "Kanban não encontrado." };
+  if (!canManageSector(ctx, pipeline.sectorCode)) {
+    return { error: "Sem permissão para editar esta lista." };
+  }
+
+  const existing = await prisma.pipelineStage.findMany({
+    where: { pipelineId },
+    include: { _count: { select: { items: true } } },
+  });
+
+  const keptIds = new Set(cleaned.map((s) => s.id).filter((id): id is string => !!id));
+  const removed = existing.filter((s) => !keptIds.has(s.id));
+  const removedWithItems = removed.filter((s) => s._count.items > 0);
+  if (removedWithItems.length > 0) {
+    return { error: `Mova as tarefas de "${removedWithItems[0].name}" antes de excluir esse estágio.` };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      for (const s of removed) {
+        await tx.pipelineStage.delete({ where: { id: s.id } });
+      }
+      // Fase 1: joga todo mundo pra uma faixa negativa temporária, pra não
+      // colidir com @@unique([pipelineId, order]) ao trocar posições.
+      await tx.pipelineStage.updateMany({
+        where: { pipelineId, id: { in: [...keptIds] } },
+        data: { order: { decrement: 100000 } },
+      });
+      for (let i = 0; i < cleaned.length; i++) {
+        const s = cleaned[i];
+        const isTerminal = s.type === StageType.DONE;
+        if (s.id) {
+          await tx.pipelineStage.update({
+            where: { id: s.id, pipelineId },
+            data: { name: s.name, color: s.color, type: s.type, isTerminal, order: i },
+          });
+        } else {
+          await tx.pipelineStage.create({
+            data: { pipelineId, name: s.name, color: s.color, type: s.type, isTerminal, order: i },
+          });
+        }
+      }
+    });
+  } catch (err) {
+    console.error("[atualizarEstagios]", err);
+    return { error: "Erro ao salvar a lista. Tente novamente." };
+  }
+
+  revalidatePath(boardPath(pipeline));
+  return null;
 }
 
 export async function moverItem(
@@ -816,8 +887,16 @@ export async function removerLinkItem(pipelineId: string, itemId: string, linked
   if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
 
   try {
-    await prisma.pipelineItemLink.delete({
-      where: { pipelineItemId_linkedItemId: { pipelineItemId: itemId, linkedItemId } },
+    // O vínculo pode ter sido criado em qualquer direção (itemId como origem
+    // ou como alvo) — remove o registro nos dois sentidos possíveis.
+    await prisma.pipelineItemLink.deleteMany({
+      where: {
+        tenantId,
+        OR: [
+          { pipelineItemId: itemId, linkedItemId },
+          { pipelineItemId: linkedItemId, linkedItemId: itemId },
+        ],
+      },
     });
   } catch (err) {
     console.error("[removerLinkItem]", err);
@@ -1297,7 +1376,7 @@ export async function duplicarPipeline(
         color: source.color,
         entityType: source.entityType,
         stages: {
-          create: source.stages.map((s) => ({ name: s.name, color: s.color, order: s.order, isTerminal: s.isTerminal })),
+          create: source.stages.map((s) => ({ name: s.name, color: s.color, order: s.order, isTerminal: s.isTerminal, type: s.type })),
         },
       },
       include: { stages: true },

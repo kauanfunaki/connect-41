@@ -8,7 +8,7 @@ import { listDocuments } from "@/lib/documents";
 import { SubtasksSection } from "@/components/kanban/SubtasksSection";
 import { ChecklistSection } from "@/components/kanban/ChecklistSection";
 import { LinkedItemsSection } from "@/components/kanban/LinkedItemsSection";
-import { CanvasSection } from "@/components/kanban/CanvasSection";
+import { CanvasModal } from "@/components/kanban/CanvasModal";
 import { TaskFieldsPanel } from "@/components/kanban/TaskFieldsPanel";
 import { CompletionBanner } from "@/components/kanban/CompletionBanner";
 import { DeleteTaskButton } from "@/components/kanban/DeleteTaskButton";
@@ -150,7 +150,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
       : prisma.pipelineItem.findMany({
           where: { parentItemId: itemId, tenantId },
           orderBy: { createdAt: "asc" },
-          include: { stage: { select: { name: true, color: true, isTerminal: true } } },
+          include: { stage: { select: { name: true, color: true, isTerminal: true, type: true } } },
         }),
     prisma.checklistItem.findMany({ where: { pipelineItemId: itemId, tenantId }, orderBy: { order: "asc" } }),
     // @menção em comentário pode citar qualquer usuário do tenant (não só do
@@ -161,9 +161,15 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
       orderBy: { createdAt: "desc" },
       include: { user: { select: { name: true } } },
     }),
+    // Recíproco: item pode ser a origem (pipelineItemId) OU o alvo (linkedItemId)
+    // do vínculo — precisa das duas direções pra "Tarefas relacionadas" aparecer
+    // dos dois lados quando A vincula B.
     prisma.pipelineItemLink.findMany({
-      where: { pipelineItemId: itemId, tenantId },
-      include: { linkedItem: { select: { id: true, title: true, entityId: true, entityType: true } } },
+      where: { tenantId, OR: [{ pipelineItemId: itemId }, { linkedItemId: itemId }] },
+      include: {
+        pipelineItem: { select: { id: true, title: true, entityId: true, entityType: true } },
+        linkedItem: { select: { id: true, title: true, entityId: true, entityType: true } },
+      },
     }),
   ]);
 
@@ -171,10 +177,14 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
   const isCompleted = currentStage?.isTerminal ?? false;
   const basePath = boardPath(pipeline);
 
+  // "Outro lado" do vínculo relativo ao item atual — pipelineItem quando o
+  // item atual é o alvo (linkedItemId), linkedItem quando é a origem.
+  const relatedItems = links.map((l) => (l.pipelineItemId === itemId ? l.linkedItem : l.pipelineItem));
+
   // Resolve nomes de entidade pras candidatas/links/parent, numa rodada só.
   const entityIdsToResolve = new Set<string>();
   for (const o of otherItems) if (o.entityId) entityIdsToResolve.add(o.entityId);
-  for (const l of links) if (l.linkedItem.entityId) entityIdsToResolve.add(l.linkedItem.entityId);
+  for (const r of relatedItems) if (r.entityId) entityIdsToResolve.add(r.entityId);
   const [resolvedCompanies, resolvedPeople] = await Promise.all([
     entityIdsToResolve.size > 0 ? prisma.company.findMany({ where: { id: { in: [...entityIdsToResolve] }, tenantId }, select: { id: true, name: true } }) : Promise.resolve([]),
     entityIdsToResolve.size > 0 ? prisma.person.findMany({ where: { id: { in: [...entityIdsToResolve] }, tenantId }, select: { id: true, name: true } }) : Promise.resolve([]),
@@ -367,7 +377,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
 
           <DescriptionEditor canAct={canAct} description={item.description} action={descricaoAction} />
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2">
             {!item.parentItemId && (
               <SubtasksSection
                 canAct={canAct}
@@ -380,6 +390,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
                   stageName: s.stage.name,
                   stageColor: s.stage.color,
                   isTerminal: s.stage.isTerminal,
+                  stageType: s.stage.type,
                   priority: s.priority,
                 }))}
                 createAction={createSubtaskAction}
@@ -392,7 +403,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
             <LinkedItemsSection
               canAct={canAct}
               basePath={basePath}
-              links={links.map((l) => ({ id: l.linkedItem.id, name: nameFor(l.linkedItem) }))}
+              links={relatedItems.map((r) => ({ id: r.id, name: nameFor(r) }))}
               candidates={taskCandidates}
               createAction={createLinkAction}
               deleteAction={deleteLinkAction}
@@ -408,7 +419,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
               reorderAction={reorderChecklistAction}
             />
 
-            <CanvasSection
+            <CanvasModal
               canAct={canAct}
               pages={canvasPages.map((p) => ({ id: p.id, title: p.title, content: p.content, createdByName: p.createdBy.name }))}
               createAction={createCanvasAction}
