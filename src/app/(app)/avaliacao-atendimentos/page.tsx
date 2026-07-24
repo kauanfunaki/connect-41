@@ -1,4 +1,5 @@
-import { Gauge } from "lucide-react";
+import Link from "next/link";
+import { Gauge, Settings } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullAccess } from "@/lib/auth/context";
 import { isChatwootConfigured } from "@/lib/chatwoot/connection";
@@ -6,20 +7,22 @@ import { formatInstantDate } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AgentCard } from "@/components/avaliacaoAtendimentos/AgentCard";
-import { vincularAgenteChatwoot } from "./actions";
+import { gerarResumoAgente } from "./actions";
 
 // Painel agregado de Avaliação de Atendimentos (nota 0-100 = Escrita 0-50 +
 // SLA 0-50, ver src/lib/chatwoot/evaluation.ts) — mesma RBAC de /conversas:
-// qualquer usuário do tenant visualiza, só isFullAccess gerencia o vínculo
-// agente<->User. CSAT foi descartado nesta v1 (ver
+// qualquer usuário do tenant visualiza, só isFullAccess gera resumo/gerencia
+// vínculo. CSAT foi descartado nesta v1 (ver
 // Backlog-Avaliacao-Atendimentos-2026-07-24.md no vault Obsidian). Redesenho
 // 2026-07-24: grid de cards por atendente (era lista), anel de nota +
-// sub-notas revelados só ao clicar no card, drill-down de conversa num
-// painel lateral (era truncado inline).
+// sub-notas revelados só ao clicar no card, resumo geral consolidado pela IA
+// sob demanda, drill-down de conversa num painel lateral (era truncado
+// inline), vínculo agente<->User movido pra /admin/atendentes (não aparece
+// mais aqui toda vez que alguém só quer ver a nota).
 export default async function AvaliacaoAtendimentosPage() {
   const ctx = await getAuthContext();
   const prisma = getPrisma();
-  const canManageLinks = isFullAccess(ctx.role);
+  const canManage = isFullAccess(ctx.role);
 
   const configured = await isChatwootConfigured(ctx.tenantId);
   if (!configured) {
@@ -29,7 +32,7 @@ export default async function AvaliacaoAtendimentosPage() {
           icon={<Gauge />}
           title="Chatwoot não configurado"
           description={
-            canManageLinks
+            canManage
               ? "Configure a conexão em Admin → Integrações para começar a avaliar atendimentos aqui."
               : "Peça a um administrador para configurar a integração com o Chatwoot em Integrações."
           }
@@ -56,9 +59,9 @@ export default async function AvaliacaoAtendimentosPage() {
       }),
       prisma.chatwootAgentLink.findMany({
         where: { tenantId: ctx.tenantId },
-        include: { linkedUser: { select: { id: true, name: true, email: true, photoUrl: true } } },
+        include: { linkedUser: { select: { name: true, email: true, photoUrl: true } } },
       }),
-      prisma.user.findMany({ where: { tenantId: ctx.tenantId }, orderBy: { name: "asc" }, select: { id: true, name: true, email: true } }),
+      prisma.agentEvaluationSummary.findMany({ where: { tenantId: ctx.tenantId } }),
     ]);
   }
 
@@ -66,10 +69,10 @@ export default async function AvaliacaoAtendimentosPage() {
   // não pode derrubar a página inteira.
   let evaluations: Awaited<ReturnType<typeof loadData>>[0] = [];
   let agentLinks: Awaited<ReturnType<typeof loadData>>[1] = [];
-  let users: Awaited<ReturnType<typeof loadData>>[2] = [];
+  let summaries: Awaited<ReturnType<typeof loadData>>[2] = [];
   let loadError = false;
   try {
-    [evaluations, agentLinks, users] = await loadData();
+    [evaluations, agentLinks, summaries] = await loadData();
   } catch (err) {
     console.error("[avaliacao-atendimentos:page] falha ao consultar avaliações — migration pendente?", err);
     loadError = true;
@@ -88,6 +91,7 @@ export default async function AvaliacaoAtendimentosPage() {
   }
 
   const agentLinkByAgentId = new Map(agentLinks.map((l) => [l.chatwootAgentId, l]));
+  const summaryByGroupKey = new Map(summaries.map((s) => [s.groupKey, s]));
 
   type AgentGroup = {
     key: string;
@@ -135,11 +139,21 @@ export default async function AvaliacaoAtendimentosPage() {
 
   return (
     <PageContainer>
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Avaliação de Atendimentos</h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">
-          Nota de 0-100 (Escrita + SLA) por atendimento resolvido no Chatwoot — gerada automaticamente pela IA.
-        </p>
+      <div className="flex items-start justify-between gap-3 mb-6">
+        <div>
+          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Avaliação de Atendimentos</h1>
+          <p className="text-[13px] text-fg-muted mt-0.5">
+            Nota de 0-100 (Escrita + SLA) por atendimento resolvido no Chatwoot — gerada automaticamente pela IA.
+          </p>
+        </div>
+        {canManage && (
+          <Link
+            href="/admin/atendentes"
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border text-[12.5px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors flex-shrink-0"
+          >
+            <Settings size={13} /> Gerenciar atendentes
+          </Link>
+        )}
       </div>
 
       {agentGroups.length === 0 ? (
@@ -163,12 +177,14 @@ export default async function AvaliacaoAtendimentosPage() {
             {agentGroups.map((group) => {
               const agentLink = group.assigneeId != null ? agentLinkByAgentId.get(group.assigneeId) : undefined;
               const linkedUser = agentLink?.linkedUser ?? null;
+              const summaryRow = summaryByGroupKey.get(group.key);
 
               return (
                 <AgentCard
                   key={group.key}
+                  groupKey={group.key}
                   label={linkedUser?.name ?? group.label}
-                  subLabel={linkedUser ? group.label : null}
+                  linkedUserLabel={linkedUser ? `${linkedUser.name} (${linkedUser.email})` : null}
                   avatarUrl={linkedUser?.photoUrl ?? null}
                   avgScore={group.scoreSum / group.count}
                   avgWriting={group.writingSum / group.count}
@@ -183,11 +199,18 @@ export default async function AvaliacaoAtendimentosPage() {
                     reasoning: ev.reasoning,
                     evaluatedAtLabel: formatInstantDate(ev.evaluatedAt),
                   }))}
-                  agentLinkId={agentLink?.id ?? null}
-                  linkedUserId={agentLink?.linkedUserId ?? null}
-                  users={users}
-                  canManageLinks={canManageLinks}
-                  linkAction={vincularAgenteChatwoot}
+                  summary={
+                    summaryRow
+                      ? {
+                          text: summaryRow.summary,
+                          generatedAtLabel: formatInstantDate(summaryRow.generatedAt),
+                          evaluationCount: summaryRow.evaluationCount,
+                          examples: summaryRow.exampleConversationIds as { conversationId: string; note: string }[],
+                        }
+                      : null
+                  }
+                  canGenerateSummary={canManage}
+                  generateSummaryAction={gerarResumoAgente}
                 />
               );
             })}

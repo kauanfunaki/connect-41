@@ -292,3 +292,101 @@ export async function evaluateConversationWriting(tenantId: string, transcript: 
     ? evaluateConversationWritingAnthropic(creds.apiKey, creds.model, transcript)
     : evaluateConversationWritingOpenAi(creds.apiKey, creds.model, transcript);
 }
+
+// Resumo consolidado de um atendente — lê N avaliações já prontas (nota +
+// reasoning de cada uma, ver evaluateConversationWriting/computeSlaScore) e
+// escreve um parágrafo só com os padrões recorrentes, citando quais
+// atendimentos melhor ilustram cada ponto (pra virar link de prova no
+// drill-down que já existe). Sob demanda — nunca chamado automaticamente.
+export type AgentSummaryInput = { conversationId: string; score: number; writingScore: number; slaScore: number; reasoning: string };
+export type AgentSummaryResult = { summary: string; examples: { conversationId: string; note: string }[] };
+
+const AGENT_SUMMARY_SYSTEM_PROMPT =
+  "Você analisa um conjunto de avaliações de atendimento (nota de escrita 0-50 e nota de SLA 0-50, já geradas por outra IA) de UM MESMO atendente de um escritório de contabilidade/BPO, pra identificar padrões recorrentes — tanto problemas quanto pontos fortes. Escreva um resumo consolidado em português do Brasil, 3-5 frases, citando tendências reais (ex: 'comete erros de concordância com frequência', 'sempre responde dentro do prazo, mas demora pra resolver o problema'). Não invente padrão que não apareça em pelo menos 2 avaliações. Depois, selecione até 5 atendimentos da lista fornecida que melhor ilustram os pontos citados no resumo — cite o id exatamente como foi fornecido, nunca invente um id novo.";
+
+const AGENT_SUMMARY_SCHEMA = {
+  type: "object",
+  properties: {
+    summary: { type: "string", description: "Resumo consolidado em português, 3-5 frases" },
+    examples: {
+      type: "array",
+      maxItems: 5,
+      items: {
+        type: "object",
+        properties: {
+          conversationId: { type: "string", description: "Um dos ids fornecidos na lista, copiado exatamente" },
+          note: { type: "string", description: "Por que esse atendimento ilustra o ponto citado, 1 frase curta" },
+        },
+        required: ["conversationId", "note"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["summary", "examples"],
+  additionalProperties: false,
+} as const;
+
+function buildAgentSummaryPrompt(agentLabel: string, evaluations: AgentSummaryInput[]): string {
+  const list = evaluations
+    .map((e, i) => `${i + 1}. id: ${e.conversationId} | nota geral: ${e.score}/100 (escrita ${e.writingScore}/50, SLA ${e.slaScore}/50) | justificativa: ${e.reasoning}`)
+    .join("\n");
+  return `Atendente: ${agentLabel}\n\nAvaliações (${evaluations.length} atendimentos):\n${list}`;
+}
+
+async function summarizeAgentEvaluationsAnthropic(apiKey: string, model: string, agentLabel: string, evaluations: AgentSummaryInput[]): Promise<AgentSummaryResult> {
+  const client = new Anthropic({ apiKey });
+
+  const response = await client.messages.create({
+    model,
+    max_tokens: 1536,
+    thinking: { type: "adaptive" },
+    system: AGENT_SUMMARY_SYSTEM_PROMPT,
+    output_config: { format: { type: "json_schema", schema: AGENT_SUMMARY_SCHEMA } },
+    messages: [{ role: "user", content: buildAgentSummaryPrompt(agentLabel, evaluations) }],
+  });
+
+  if (response.stop_reason === "refusal") {
+    throw new Error("A IA não conseguiu gerar o resumo.");
+  }
+  const textBlock = response.content.find((b) => b.type === "text");
+  if (!textBlock || textBlock.type !== "text") {
+    throw new Error("Resposta da IA sem conteúdo.");
+  }
+  return JSON.parse(textBlock.text) as AgentSummaryResult;
+}
+
+async function summarizeAgentEvaluationsOpenAi(apiKey: string, model: string, agentLabel: string, evaluations: AgentSummaryInput[]): Promise<AgentSummaryResult> {
+  const res = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      instructions: AGENT_SUMMARY_SYSTEM_PROMPT,
+      input: buildAgentSummaryPrompt(agentLabel, evaluations),
+      text: { format: { type: "json_schema", name: "agent_summary", schema: AGENT_SUMMARY_SCHEMA, strict: true } },
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Falha ao gerar resumo com a OpenAI: ${await res.text()}`);
+  }
+  const data = await res.json();
+  const text = data.output_text ?? data.output?.find((o: { type: string }) => o.type === "message")?.content?.[0]?.text;
+  if (!text) throw new Error("Resposta da IA sem conteúdo.");
+  return JSON.parse(text) as AgentSummaryResult;
+}
+
+export async function summarizeAgentEvaluations(tenantId: string, agentLabel: string, evaluations: AgentSummaryInput[]): Promise<AgentSummaryResult> {
+  const creds = await resolveCredentials(tenantId);
+  if (!creds) throw new Error("IA não configurada. Cadastre uma chave em Integrações → Inteligência Artificial.");
+  const result =
+    creds.provider === "ANTHROPIC"
+      ? await summarizeAgentEvaluationsAnthropic(creds.apiKey, creds.model, agentLabel, evaluations)
+      : await summarizeAgentEvaluationsOpenAi(creds.apiKey, creds.model, agentLabel, evaluations);
+
+  // Defensivo: nunca confiar cegamente que a IA só citou ids que existem na
+  // lista fornecida (mesmo com json_schema, o VALOR de uma string livre pode
+  // vir errado) — um id inventado viraria um link morto no drill-down.
+  const validIds = new Set(evaluations.map((e) => e.conversationId));
+  return { ...result, examples: result.examples.filter((ex) => validIds.has(ex.conversationId)) };
+}

@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Video, Check, Sparkles, MessageCircle } from "lucide-react";
+import { Video, Check, Sparkles, MessageCircle, Headset } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
@@ -185,6 +186,12 @@ export default async function IntegracoesPage({
               lastSyncAtLabel={chatwootConnection?.lastSyncAt ? formatInstantDate(chatwootConnection.lastSyncAt) : null}
             />
           </Card>
+          <Link
+            href="/admin/atendentes"
+            className="inline-flex items-center gap-1.5 mt-3 text-[12.5px] font-medium text-brand hover:underline"
+          >
+            <Headset size={13} /> Gerenciar vínculo de atendentes (Avaliação de Atendimentos)
+          </Link>
         </div>
       )}
     </PageContainer>

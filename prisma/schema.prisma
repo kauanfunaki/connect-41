@@ -373,73 +373,74 @@ model Tenant {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  subscription         Subscription?
-  users                User[]
-  companies            Company[]
-  people               Person[]
-  pipelines            Pipeline[]
-  pipelineItems        PipelineItem[]
-  activities           Activity[]
-  handoffs             Handoff[]
-  handoffSectors       HandoffSector[]
-  notifications        Notification[]
-  pushSubscriptions    PushSubscription[]
-  admissaoLinks        AdmissaoLink[]
-  assessmentLinks      AssessmentLink[]
-  dependentes          Dependente[]
-  customFields         CustomField[]
-  customValues         CustomValue[]
-  sectors              Sector[]
-  tenantModules        TenantModule[]
-  tags                 Tag[]
-  branches             Branch[]
-  accessGrants         UserTenantAccess[]
-  departments          Department[]
-  cargos               Cargo[]
-  vagas                Vaga[]
-  candidaturas         Candidatura[]
-  exames               ExameAdmissional[]
-  interviewScorecards  InterviewScorecard[]
-  documents            Document[]
-  fieldPermissions     FieldPermission[]
-  salaryChanges        SalaryChange[]
-  vacations            Vacation[]
-  absences             Absence[]
-  terminations         Termination[]
-  payrollCompetencies  PayrollCompetency[]
-  payrollEntries       PayrollEntry[]
-  overtimeEntries      OvertimeEntry[]
-  benefitCatalogs      BenefitCatalog[]
-  benefitAssignments   BenefitAssignment[]
-  workShifts           WorkShift[]
-  holidays             Holiday[]
-  scheduleEntries      ScheduleEntry[]
-  trainings            Training[]
-  trainingClasses      TrainingClass[]
-  trainingParticipants TrainingParticipant[]
-  competencies         Competency[]
-  evaluationCycles     EvaluationCycle[]
-  evaluations          Evaluation[]
-  evaluationScores     EvaluationScore[]
-  handoffViews         HandoffView[]
-  checklistItems       ChecklistItem[]
-  timeEntries          TimeEntry[]
-  spaces               Space[]
-  folders              Folder[]
-  pipelineItemLinks    PipelineItemLink[]
-  canvasPages          CanvasPage[]
-  auditLogs            AuditLog[]
-  oauthAccounts        OAuthAccount[]
-  meetings             Meeting[]
-  clientDocuments      ClientDocument[]
-  smtpConfig           TenantSmtpConfig?
-  aiConfig             TenantAiConfig?
-  alertDispatches      AlertDispatch[]
-  recurringObligations RecurringObligation[]
-  chatwootConnections  ChatwootConnection[]
-  bpoCredentials       BpoCredential[]
-  bpoCredentialViews   BpoCredentialView[]
-  chatwootAgentLinks   ChatwootAgentLink[]
+  subscription             Subscription?
+  users                    User[]
+  companies                Company[]
+  people                   Person[]
+  pipelines                Pipeline[]
+  pipelineItems            PipelineItem[]
+  activities               Activity[]
+  handoffs                 Handoff[]
+  handoffSectors           HandoffSector[]
+  notifications            Notification[]
+  pushSubscriptions        PushSubscription[]
+  admissaoLinks            AdmissaoLink[]
+  assessmentLinks          AssessmentLink[]
+  dependentes              Dependente[]
+  customFields             CustomField[]
+  customValues             CustomValue[]
+  sectors                  Sector[]
+  tenantModules            TenantModule[]
+  tags                     Tag[]
+  branches                 Branch[]
+  accessGrants             UserTenantAccess[]
+  departments              Department[]
+  cargos                   Cargo[]
+  vagas                    Vaga[]
+  candidaturas             Candidatura[]
+  exames                   ExameAdmissional[]
+  interviewScorecards      InterviewScorecard[]
+  documents                Document[]
+  fieldPermissions         FieldPermission[]
+  salaryChanges            SalaryChange[]
+  vacations                Vacation[]
+  absences                 Absence[]
+  terminations             Termination[]
+  payrollCompetencies      PayrollCompetency[]
+  payrollEntries           PayrollEntry[]
+  overtimeEntries          OvertimeEntry[]
+  benefitCatalogs          BenefitCatalog[]
+  benefitAssignments       BenefitAssignment[]
+  workShifts               WorkShift[]
+  holidays                 Holiday[]
+  scheduleEntries          ScheduleEntry[]
+  trainings                Training[]
+  trainingClasses          TrainingClass[]
+  trainingParticipants     TrainingParticipant[]
+  competencies             Competency[]
+  evaluationCycles         EvaluationCycle[]
+  evaluations              Evaluation[]
+  evaluationScores         EvaluationScore[]
+  handoffViews             HandoffView[]
+  checklistItems           ChecklistItem[]
+  timeEntries              TimeEntry[]
+  spaces                   Space[]
+  folders                  Folder[]
+  pipelineItemLinks        PipelineItemLink[]
+  canvasPages              CanvasPage[]
+  auditLogs                AuditLog[]
+  oauthAccounts            OAuthAccount[]
+  meetings                 Meeting[]
+  clientDocuments          ClientDocument[]
+  smtpConfig               TenantSmtpConfig?
+  aiConfig                 TenantAiConfig?
+  alertDispatches          AlertDispatch[]
+  recurringObligations     RecurringObligation[]
+  chatwootConnections      ChatwootConnection[]
+  bpoCredentials           BpoCredential[]
+  bpoCredentialViews       BpoCredentialView[]
+  chatwootAgentLinks       ChatwootAgentLink[]
+  agentEvaluationSummaries AgentEvaluationSummary[]
 
   @@map("tenants")
 }
@@ -1667,6 +1668,27 @@ model ConversationEvaluation {
 
   @@index([tenantId, evaluatedAt])
   @@map("conversation_evaluations")
+}
+
+// Resumo consolidado de um atendente (várias avaliações -> 1 parágrafo com
+// padrões recorrentes), gerado sob demanda pela IA — nunca automático, custo
+// de IA só quando o usuário pede (ver src/lib/ai.ts summarizeAgentEvaluations).
+// groupKey replica a mesma chave de agrupamento da página (id:<assigneeId> ou
+// label:<assigneeLabel>) em vez de depender de ChatwootAgentLink, porque nem
+// todo atendente tem assigneeId sincronizado ainda.
+model AgentEvaluationSummary {
+  id                     String   @id @default(uuid())
+  tenantId               String
+  groupKey               String   @db.VarChar(160)
+  summary                String   @db.Text
+  exampleConversationIds Json // [{ conversationId: string, note: string }] — vira link pro drill-down existente
+  evaluationCount        Int // quantas avaliações entraram neste resumo, pra saber se ficou desatualizado
+  generatedAt            DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, groupKey])
+  @@map("agent_evaluation_summaries")
 }
 
 // Dedup de webhook — mesmo padrão de AlertDispatch (chave única evita
