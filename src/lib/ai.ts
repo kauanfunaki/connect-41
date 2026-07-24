@@ -221,3 +221,74 @@ export async function summarizeCompanyHistory(
     ? summarizeCompanyHistoryAnthropic(creds.apiKey, creds.model, input)
     : summarizeCompanyHistoryOpenAi(creds.apiKey, creds.model, input);
 }
+
+// Avaliação de Atendimentos — nota de escrita (0-50) de um atendimento do
+// Chatwoot, metade da nota final de 0-100 (a outra metade, SLA, é calculada
+// de forma determinística em src/lib/chatwoot/evaluation.ts, sem IA). CSAT foi
+// cogitado e descartado (ver Backlog-Avaliacao-Atendimentos-2026-07-24.md no
+// vault) — só português/educação entram aqui.
+export type WritingEvaluation = { writingScore: number; reasoning: string };
+
+const WRITING_EVALUATION_SYSTEM_PROMPT =
+  "Você avalia a qualidade da ESCRITA do atendente (não do cliente) em uma conversa de atendimento via WhatsApp de um escritório de contabilidade/BPO. Critérios: português correto (ortografia, gramática, concordância), tom educado e profissional, clareza da comunicação. Ignore o mérito técnico da resposta (se resolveu o problema certo ou não) — avalie só a forma como o atendente escreveu. Dê uma nota de 0 a 50 e uma justificativa objetiva em português, 1-3 frases.";
+
+const WRITING_EVALUATION_SCHEMA = {
+  type: "object",
+  properties: {
+    writingScore: { type: "integer", minimum: 0, maximum: 50, description: "Nota de 0 a 50 para a qualidade da escrita do atendente" },
+    reasoning: { type: "string", description: "Justificativa curta (1-3 frases) em português, citando o que pesou na nota" },
+  },
+  required: ["writingScore", "reasoning"],
+  additionalProperties: false,
+} as const;
+
+async function evaluateConversationWritingAnthropic(apiKey: string, model: string, transcript: string): Promise<WritingEvaluation> {
+  const client = new Anthropic({ apiKey });
+
+  const response = await client.messages.create({
+    model,
+    max_tokens: 1024,
+    thinking: { type: "adaptive" },
+    system: WRITING_EVALUATION_SYSTEM_PROMPT,
+    output_config: { format: { type: "json_schema", schema: WRITING_EVALUATION_SCHEMA } },
+    messages: [{ role: "user", content: `Transcrição do atendimento:\n\n${transcript}` }],
+  });
+
+  if (response.stop_reason === "refusal") {
+    throw new Error("A IA não conseguiu avaliar este atendimento.");
+  }
+  const textBlock = response.content.find((b) => b.type === "text");
+  if (!textBlock || textBlock.type !== "text") {
+    throw new Error("Resposta da IA sem conteúdo.");
+  }
+  return JSON.parse(textBlock.text) as WritingEvaluation;
+}
+
+async function evaluateConversationWritingOpenAi(apiKey: string, model: string, transcript: string): Promise<WritingEvaluation> {
+  const res = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      instructions: WRITING_EVALUATION_SYSTEM_PROMPT,
+      input: `Transcrição do atendimento:\n\n${transcript}`,
+      text: { format: { type: "json_schema", name: "writing_evaluation", schema: WRITING_EVALUATION_SCHEMA, strict: true } },
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Falha ao avaliar atendimento com a OpenAI: ${await res.text()}`);
+  }
+  const data = await res.json();
+  const text = data.output_text ?? data.output?.find((o: { type: string }) => o.type === "message")?.content?.[0]?.text;
+  if (!text) throw new Error("Resposta da IA sem conteúdo.");
+  return JSON.parse(text) as WritingEvaluation;
+}
+
+export async function evaluateConversationWriting(tenantId: string, transcript: string): Promise<WritingEvaluation> {
+  const creds = await resolveCredentials(tenantId);
+  if (!creds) throw new Error("IA não configurada. Cadastre uma chave em Integrações → Inteligência Artificial.");
+  return creds.provider === "ANTHROPIC"
+    ? evaluateConversationWritingAnthropic(creds.apiKey, creds.model, transcript)
+    : evaluateConversationWritingOpenAi(creds.apiKey, creds.model, transcript);
+}

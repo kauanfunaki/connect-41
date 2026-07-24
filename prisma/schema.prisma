@@ -427,6 +427,7 @@ model Tenant {
   chatwootConnections  ChatwootConnection[]
   bpoCredentials       BpoCredential[]
   bpoCredentialViews   BpoCredentialView[]
+  chatwootAgentLinks   ChatwootAgentLink[]
 
   @@map("tenants")
 }
@@ -591,6 +592,7 @@ model User {
   linkedPerson           Person?
   bpoCredentialsCreated  BpoCredential[]
   bpoCredentialViews     BpoCredentialView[]
+  chatwootAgentLinks     ChatwootAgentLink[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -845,20 +847,20 @@ model Folder {
 }
 
 model Pipeline {
-  id         String             @id @default(uuid())
-  tenantId   String
-  sectorCode String             @db.VarChar(40)
-  spaceId    String
-  folderId   String?
-  name       String             @db.VarChar(120)
-  description String?           @db.Text
-  color      String?            @db.VarChar(7)
-  startDate  DateTime?
-  endDate    DateTime?
-  entityType PipelineEntityType
-  active     Boolean            @default(true)
-  createdAt  DateTime           @default(now())
-  updatedAt  DateTime           @updatedAt
+  id          String             @id @default(uuid())
+  tenantId    String
+  sectorCode  String             @db.VarChar(40)
+  spaceId     String
+  folderId    String?
+  name        String             @db.VarChar(120)
+  description String?            @db.Text
+  color       String?            @db.VarChar(7)
+  startDate   DateTime?
+  endDate     DateTime?
+  entityType  PipelineEntityType
+  active      Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 
   tenant               Tenant                @relation(fields: [tenantId], references: [id])
   space                Space                 @relation(fields: [spaceId], references: [id])
@@ -874,9 +876,9 @@ model Pipeline {
 }
 
 model PipelineStage {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   pipelineId String
-  name       String   @db.VarChar(80)
+  name       String    @db.VarChar(80)
   order      Int
   color      String?   @db.VarChar(7) // hex, ex: #1A5FA8
   isTerminal Boolean   @default(false)
@@ -892,33 +894,33 @@ model PipelineStage {
 }
 
 model PipelineItem {
-  id           String              @id @default(uuid())
-  tenantId     String
-  pipelineId   String
-  stageId      String
+  id                   String              @id @default(uuid())
+  tenantId             String
+  pipelineId           String
+  stageId              String
   // Opcional — nem toda tarefa está associada a uma empresa/pessoa específica
   // (ex.: tarefa interna do setor). Quando nulo, `title` é obrigatório.
-  entityType   PipelineEntityType?
-  entityId     String? // Company.id ou Person.id (referência por string, sem FK Prisma — relação polimórfica)
+  entityType           PipelineEntityType?
+  entityId             String? // Company.id ou Person.id (referência por string, sem FK Prisma — relação polimórfica)
   // Título próprio, opcional quando há entidade — item de topo com entidade
   // normalmente usa o nome da entidade (entityName resolvido em runtime) como
   // título; subtarefa e tarefa sem entidade sempre têm título próprio.
-  title        String?             @db.VarChar(200)
+  title                String?             @db.VarChar(200)
   // Subtarefa: mesma tabela (PipelineItem) com parentItemId apontando pro item
   // "mãe" — reaproveita status/prioridade/prazo/responsável/tags/atividades/
   // anexos que já existem pra qualquer PipelineItem, sem duplicar modelo. Só
   // 1 nível (subtarefa de subtarefa não é permitido, controlado na action).
-  parentItemId String?
+  parentItemId         String?
   // Ordem manual dentro do (pipelineId, stageId, parentItemId) — drag-and-drop
   // de reordenar na tabela de tarefas (mesmo mecanismo do ChecklistItem.order).
-  order        Int                 @default(0)
-  priority     Int                 @default(0)
-  startDate    DateTime?
-  dueDate      DateTime?
-  description  String?             @db.Text
+  order                Int                 @default(0)
+  priority             Int                 @default(0)
+  startDate            DateTime?
+  dueDate              DateTime?
+  description          String?             @db.Text
   // Estimativa manual de esforço, em minutos — opcional (item nunca obriga
   // controle de tempo). Tempo efetivamente gasto vem da soma de TimeEntry.
-  estimateMinutes Int?
+  estimateMinutes      Int?
   // Cronômetro ao vivo — só 1 usuário por vez rastreando tempo num item;
   // "Parar" converte em TimeEntry e limpa os dois campos.
   activeTimerUserId    String?
@@ -926,10 +928,10 @@ model PipelineItem {
   // Recorrência — só marca a intenção/frequência no item (mostra o ícone na
   // UI); a geração automática de novas ocorrências fica pra uma extensão
   // futura, não duplicar o motor de RecurringObligation aqui.
-  recurring           Boolean             @default(false)
-  recurrenceFrequency RecurringFrequency?
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
+  recurring            Boolean             @default(false)
+  recurrenceFrequency  RecurringFrequency?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
 
   tenant      Tenant                 @relation(fields: [tenantId], references: [id])
   pipeline    Pipeline               @relation(fields: [pipelineId], references: [id])
@@ -1544,6 +1546,7 @@ model ChatwootConversation {
   chatwootConversationId Int
   contactLinkId          String?
   inboxId                Int
+  assigneeId             Int? // meta.assignee.id do Chatwoot — chave real pro vínculo com User (assigneeLabel é só nome de exibição)
   assigneeLabel          String?   @db.VarChar(120)
   teamLabel              String?   @db.VarChar(120)
   status                 String    @db.VarChar(30)
@@ -1551,18 +1554,25 @@ model ChatwootConversation {
   labels                 Json?
   channel                String    @db.VarChar(60)
   lastActivityAt         DateTime?
+  // Marcado quando o status transiciona PARA "resolved" (upsertConversation em
+  // sync.ts); limpo se a conversa reabrir. Gatilho da Avaliação de Atendimentos
+  // (ver ConversationEvaluation) — sem isso não daria pra saber quando o
+  // atendimento realmente terminou (lastActivityAt reflete qualquer atividade).
+  resolvedAt             DateTime?
   unreadCount            Int       @default(0)
   lastMessagePreview     String?   @db.VarChar(280)
   messageCount           Int? // total de mensagens do atendimento — calculado 1x via paginação da API (ver countAllMessages) e mantido por incremento no webhook message_created; null = ainda não calculado
   syncedAt               DateTime  @default(now())
 
-  connection  ChatwootConnection   @relation(fields: [connectionId], references: [id])
-  contactLink ChatwootContactLink? @relation(fields: [contactLinkId], references: [id])
+  connection  ChatwootConnection      @relation(fields: [connectionId], references: [id])
+  contactLink ChatwootContactLink?    @relation(fields: [contactLinkId], references: [id])
   messages    ChatwootMessage[]
+  evaluation  ConversationEvaluation?
 
   @@unique([tenantId, connectionId, chatwootConversationId])
   @@index([tenantId, contactLinkId])
   @@index([tenantId, status, lastActivityAt])
+  @@index([tenantId, resolvedAt])
   @@map("chatwoot_conversations")
 }
 
@@ -1592,6 +1602,52 @@ model ChatwootMessage {
   @@unique([tenantId, conversationId, chatwootMessageId])
   @@index([tenantId, conversationId, chatwootCreatedAt])
   @@map("chatwoot_messages")
+}
+
+// Vínculo manual entre um agente do Chatwoot (chatwootAgentId, vem de
+// meta.assignee.id) e um User do Connect 41 — mesmo padrão do
+// Person.linkedUserId: associa a uma conta já existente, não gerencia
+// login/permissões aqui (isso continua exclusivo de /admin/usuarios). Sem
+// vínculo, o painel de Avaliação de Atendimentos agrupa pelo nome cru
+// (chatwootAgentName).
+model ChatwootAgentLink {
+  id                String   @id @default(uuid())
+  tenantId          String
+  chatwootAgentId   Int
+  chatwootAgentName String   @db.VarChar(120) // cache do nome, pro caso de renomeação no Chatwoot
+  linkedUserId      String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tenant     Tenant @relation(fields: [tenantId], references: [id])
+  linkedUser User?  @relation(fields: [linkedUserId], references: [id])
+
+  @@unique([tenantId, chatwootAgentId])
+  @@index([tenantId, linkedUserId])
+  @@map("chatwoot_agent_links")
+}
+
+// Nota de 0-100 de um atendimento (1:1 com ChatwootConversation), gerada pela
+// IA quando a conversa é resolvida (ver src/lib/chatwoot/evaluation.ts).
+// Escrita+SLA apenas — CSAT foi cogitado e descartado (ver
+// Backlog-Avaliacao-Atendimentos-2026-07-24.md no vault: o Chatwoot não expõe
+// endpoint de pesquisa de satisfação, e uma pesquisa via mensagem livre
+// esbarrava no Away Message nativo do Chatwoot disparando pro cliente ao
+// responder fora do horário comercial).
+model ConversationEvaluation {
+  id             String   @id @default(uuid())
+  tenantId       String
+  conversationId String   @unique
+  score          Int // 0-100 = writingScore + slaScore
+  writingScore   Int // 0-50 — português/educação, avaliado pela IA
+  slaScore       Int // 0-50 — tempo até 1ª resposta + até resolução
+  reasoning      String   @db.Text // justificativa curta da IA, pra auditoria/transparência no drill-down
+  evaluatedAt    DateTime @default(now())
+
+  conversation ChatwootConversation @relation(fields: [conversationId], references: [id])
+
+  @@index([tenantId, evaluatedAt])
+  @@map("conversation_evaluations")
 }
 
 // Dedup de webhook — mesmo padrão de AlertDispatch (chave única evita

@@ -5,6 +5,7 @@ import type { ChatwootApiConversation, ChatwootApiMessage, ChatwootAttachment } 
 export type NormalizedConversation = {
   chatwootConversationId: number;
   inboxId: number;
+  assigneeId: number | null;
   assigneeLabel: string | null;
   teamLabel: string | null;
   status: string;
@@ -22,6 +23,7 @@ export function normalizeConversation(raw: ChatwootApiConversation): NormalizedC
   return {
     chatwootConversationId: raw.id,
     inboxId: raw.inbox_id,
+    assigneeId: raw.meta?.assignee?.id ?? null,
     assigneeLabel: raw.meta?.assignee?.name ?? null,
     teamLabel: raw.meta?.team?.name ?? null,
     status: raw.status,

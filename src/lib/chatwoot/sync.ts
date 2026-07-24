@@ -42,10 +42,30 @@ export async function upsertConversation(
     contactLinkId = link.id;
   }
 
+  // Cacheia nome do agente pra existir algo pra vincular em Avaliação de
+  // Atendimentos assim que a conversa aparece — nunca toca linkedUserId (só
+  // o usuário vincula manualmente, ver src/app/(app)/avaliacoes/actions.ts).
+  if (normalized.assigneeId != null) {
+    await prisma.chatwootAgentLink.upsert({
+      where: { tenantId_chatwootAgentId: { tenantId, chatwootAgentId: normalized.assigneeId } },
+      create: { tenantId, chatwootAgentId: normalized.assigneeId, chatwootAgentName: normalized.assigneeLabel ?? `Agente ${normalized.assigneeId}` },
+      update: { chatwootAgentName: normalized.assigneeLabel ?? undefined },
+    });
+  }
+
   const existing = await prisma.chatwootConversation.findUnique({
     where: { tenantId_connectionId_chatwootConversationId: { tenantId, connectionId, chatwootConversationId: normalized.chatwootConversationId } },
-    select: { id: true, messageCount: true },
+    select: { id: true, messageCount: true, status: true, resolvedAt: true },
   });
+
+  // resolvedAt marca a transição PARA "resolved" — gatilho da Avaliação de
+  // Atendimentos (ver src/lib/chatwoot/evaluation.ts). Se a conversa reabrir
+  // (reopened/status muda de "resolved" pra outro), limpa: só reavalia quando
+  // for resolvida de novo. lastActivityAt é usado como estimativa do momento
+  // da resolução (mais preciso que "agora" numa reconciliação em lote).
+  const wasResolved = existing?.status === "resolved";
+  const isResolved = normalized.status === "resolved";
+  const resolvedAt = isResolved ? (wasResolved ? existing?.resolvedAt ?? normalized.lastActivityAt ?? new Date() : normalized.lastActivityAt ?? new Date()) : null;
 
   // Total de mensagens é calculado uma única vez (1ª sincronização da
   // conversa) via paginação da API — depois disso, mantido só por incremento
@@ -68,6 +88,7 @@ export async function upsertConversation(
       chatwootConversationId: normalized.chatwootConversationId,
       contactLinkId,
       inboxId: normalized.inboxId,
+      assigneeId: normalized.assigneeId,
       assigneeLabel: normalized.assigneeLabel,
       teamLabel: normalized.teamLabel,
       status: normalized.status,
@@ -75,18 +96,21 @@ export async function upsertConversation(
       labels: normalized.labels,
       channel: normalized.channel,
       lastActivityAt: normalized.lastActivityAt,
+      resolvedAt,
       unreadCount: normalized.unreadCount,
       lastMessagePreview: normalized.lastMessagePreview,
       messageCount: messageCount ?? null,
     },
     update: {
       contactLinkId,
+      assigneeId: normalized.assigneeId,
       assigneeLabel: normalized.assigneeLabel,
       teamLabel: normalized.teamLabel,
       status: normalized.status,
       priority: normalized.priority,
       labels: normalized.labels,
       lastActivityAt: normalized.lastActivityAt,
+      resolvedAt,
       unreadCount: normalized.unreadCount,
       lastMessagePreview: normalized.lastMessagePreview,
       ...(messageCount !== undefined && messageCount !== null ? { messageCount } : {}),

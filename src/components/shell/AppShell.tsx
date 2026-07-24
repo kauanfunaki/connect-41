@@ -23,6 +23,7 @@ import {
   Menu,
   X,
   MessageCircle,
+  Gauge,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { NotificationBell } from "@/components/shell/NotificationBell";
@@ -140,6 +141,7 @@ export function AppShell({
           <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
           <NavItem href="/tarefas" icon={<ListTodo size={16} />} label="Tarefas" />
           <NavItem href="/conversas" icon={<MessageCircle size={16} />} label="Conversas" />
+          <NavItem href="/avaliacao-atendimentos" icon={<Gauge size={16} />} label="Avaliação de Atendimentos" />
           <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />
           {canManageMeetings && (
             <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />
