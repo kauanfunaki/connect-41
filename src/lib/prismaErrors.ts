@@ -18,3 +18,9 @@ export function isPrismaUniqueError(err: unknown): boolean {
 export function isPrismaForeignKeyError(err: unknown): boolean {
   return code(err) === "P2003";
 }
+
+// P2021 — tabela referenciada pelo schema não existe no banco. Sinal
+// específico de migration pendente (schema do client à frente do banco real).
+export function isPrismaMissingTableError(err: unknown): boolean {
+  return code(err) === "P2021";
+}

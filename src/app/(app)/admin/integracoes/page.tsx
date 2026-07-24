@@ -190,7 +190,7 @@ export default async function IntegracoesPage({
             href="/admin/atendentes"
             className="inline-flex items-center gap-1.5 mt-3 text-[12.5px] font-medium text-brand hover:underline"
           >
-            <Headset size={13} /> Gerenciar vínculo de atendentes (Avaliação de Atendimentos)
+            <Headset size={13} /> Gerenciar vínculos de acesso (contas e atendentes)
           </Link>
         </div>
       )}

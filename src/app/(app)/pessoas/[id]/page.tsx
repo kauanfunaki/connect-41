@@ -15,12 +15,11 @@ import {
   FileSpreadsheet,
 } from "lucide-react";
 import { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
-import { excluirPessoa, vincularUsuarioPessoa } from "../actions";
+import { excluirPessoa } from "../actions";
 import { BackButton } from "@/components/shared/BackButton";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PersonHeader } from "@/components/pessoas/PersonHeader";
 import { PersonDetailTabs } from "@/components/pessoas/PersonDetailTabs";
-import { LinkedUserSelector } from "@/components/pessoas/LinkedUserSelector";
 import { AdmissaoCard } from "@/components/pessoas/AdmissaoCard";
 import { CompanyHistorySection } from "@/components/empresas/CompanyHistorySection";
 import { OperationsLinkList, type OperationLink } from "@/components/shared/OperationsLinkList";
@@ -111,13 +110,9 @@ export default async function PessoaPage({
 
   const deleteAction = excluirPessoa.bind(null, id);
 
-  const linkableUsers = person.isInternal
-    ? await prisma.user.findMany({
-        where: { tenantId: ctx.tenantId },
-        orderBy: { name: "asc" },
-        select: { id: true, name: true, email: true },
-      })
-    : [];
+  const linkedUser = person.isInternal && person.linkedUserId
+    ? await prisma.user.findFirst({ where: { id: person.linkedUserId }, select: { name: true, email: true } })
+    : null;
 
   const personSectors = await getPersonSectors(ctx.tenantId, id);
   const customFields = await getApplicableCustomFields(ctx, "PERSON", id, personSectors);
@@ -213,20 +208,20 @@ export default async function PessoaPage({
         </div>
       </div>
 
-      {/* Conta de acesso — só funcionários internos */}
+      {/* Conta de acesso — só funcionários internos. Somente leitura aqui: o
+          vínculo (e o de atendente Chatwoot, se houver) é editado numa tela só
+          em Admin → Vínculos de Acesso. */}
       {person.isInternal && (
         <div className="bg-surface border border-border rounded-lg p-5">
           <h2 className="text-[14px] font-semibold text-fg mb-4">Conta de acesso</h2>
-          <p className="text-[11px] text-fg-muted mb-2">
-            Login, senha e permissões são gerenciados em Admin → Usuários. Aqui só vincula qual conta pertence a esta pessoa.
+          <p className="text-[13px] text-fg">
+            {linkedUser ? `${linkedUser.name} (${linkedUser.email})` : "Não vinculada"}
           </p>
-          <LinkedUserSelector
-            personId={id}
-            linkedUserId={person.linkedUserId}
-            users={linkableUsers}
-            canEdit={canEdit}
-            action={vincularUsuarioPessoa}
-          />
+          {canEdit && (
+            <Link href="/admin/atendentes" className="text-[11.5px] text-brand hover:underline mt-2 inline-block">
+              Gerenciar vínculo em Admin → Vínculos de Acesso
+            </Link>
+          )}
         </div>
       )}
 

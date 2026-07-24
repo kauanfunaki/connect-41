@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ListTree, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { StageDot, type StageDotType } from "@/components/kanban/StageDot";
+import { useConfirm } from "@/components/ui/useConfirm";
 
 export type SubtaskData = {
   id: string;
@@ -38,6 +39,7 @@ export function SubtasksSection({ canAct, canDelete, basePath, pipelineId, subta
   const [title, setTitle] = useState("");
   const [open, setOpen] = useState(subtasks.length > 0);
   const [, startTransition] = useTransition();
+  const { dialog, requestConfirm } = useConfirm();
 
   const done = subtasks.filter((s) => s.isTerminal).length;
   const pct = subtasks.length > 0 ? Math.round((done / subtasks.length) * 100) : 0;
@@ -111,11 +113,12 @@ export function SubtasksSection({ canAct, canDelete, basePath, pipelineId, subta
             {canDelete && (
               <button
                 type="button"
-                onClick={() => {
-                  if (confirm(`Remover a subtarefa "${s.title}"? Esta ação não pode ser desfeita.`)) {
-                    startTransition(() => deleteAction(s.id));
-                  }
-                }}
+                onClick={() =>
+                  requestConfirm(
+                    { title: `Remover a subtarefa "${s.title}"?`, description: "Esta ação não pode ser desfeita.", destructive: true, confirmLabel: "Remover" },
+                    () => deleteAction(s.id)
+                  )
+                }
                 className="text-fg-muted hover:text-danger p-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                 aria-label="Remover subtarefa"
               >
@@ -143,6 +146,7 @@ export function SubtasksSection({ canAct, canDelete, basePath, pipelineId, subta
           </button>
         </div>
       )}
+      {dialog}
     </div>
   );
 }

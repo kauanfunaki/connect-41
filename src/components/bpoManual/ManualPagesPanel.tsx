@@ -5,6 +5,7 @@ import { FileText, Plus, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { useConfirm } from "@/components/ui/useConfirm";
 import type { ManualPageState } from "@/app/(app)/bpo-manual/actions";
 
 export type ManualPageData = { id: string; title: string; content: string | null; createdByName: string };
@@ -64,6 +65,7 @@ export function ManualPagesPanel({ canAct, canDelete, pages, createAction, updat
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [, startTransition] = useTransition();
+  const { dialog, requestConfirm } = useConfirm();
 
   const activePage = pages.find((p) => p.id === activeId) ?? null;
 
@@ -79,9 +81,10 @@ export function ManualPagesPanel({ canAct, canDelete, pages, createAction, updat
   }
 
   function handleDelete(pageId: string, title: string) {
-    if (!confirm(`Excluir "${title}"? Esta ação não pode ser desfeita.`)) return;
-    startTransition(() => deleteAction(pageId));
-    if (activeId === pageId) setActiveId(pages.find((p) => p.id !== pageId)?.id ?? null);
+    requestConfirm({ title: `Excluir "${title}"?`, description: "Esta ação não pode ser desfeita.", destructive: true, confirmLabel: "Excluir" }, async () => {
+      await deleteAction(pageId);
+      if (activeId === pageId) setActiveId(pages.find((p) => p.id !== pageId)?.id ?? null);
+    });
   }
 
   if (pages.length === 0 && !canAct) {
@@ -159,6 +162,7 @@ export function ManualPagesPanel({ canAct, canDelete, pages, createAction, updat
           </div>
         )}
       </div>
+      {dialog}
     </div>
   );
 }

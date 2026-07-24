@@ -6,6 +6,7 @@ import { MentionTextarea, type MentionUser } from "@/components/transferencias/M
 import { Input } from "@/components/ui/Input";
 import { renderRichText } from "@/lib/richText";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
+import { useConfirm } from "@/components/ui/useConfirm";
 
 export type FeedReply = {
   id: string;
@@ -284,12 +285,13 @@ function Comment({
 }) {
   const [replying, setReplying] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [, startTransition] = useTransition();
+  const { dialog, requestConfirm } = useConfirm();
 
   function confirmDelete(id: string) {
-    if (confirm("Excluir este comentário? Esta ação não pode ser desfeita.")) {
-      startTransition(() => deleteAction(id));
-    }
+    requestConfirm(
+      { title: "Excluir este comentário?", description: "Esta ação não pode ser desfeita.", destructive: true, confirmLabel: "Excluir" },
+      () => deleteAction(id)
+    );
   }
 
   return (
@@ -375,6 +377,7 @@ function Comment({
           </div>
         )}
       </div>
+      {dialog}
     </div>
   );
 }

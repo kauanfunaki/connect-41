@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast";
+import { useConfirm } from "@/components/ui/useConfirm";
 import type { BpoCredencialState } from "@/app/(app)/bpo-senhas/actions";
 
 export type CredentialRow = {
@@ -194,8 +195,8 @@ function PasswordCell({ credentialId, revealAction }: { credentialId: string; re
 export function BpoCredentialsList({ credentials, companies, canManage, createAction, updateAction, deleteAction, revealAction }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [, startTransition] = useTransition();
   const toast = useToast();
+  const { dialog, requestConfirm } = useConfirm();
   const editingRow = credentials.find((c) => c.id === editingId) ?? null;
 
   // Filtro só no cliente — lista inteira já vem carregada da página (sem
@@ -208,11 +209,13 @@ export function BpoCredentialsList({ credentials, companies, canManage, createAc
     : credentials;
 
   function handleDelete(row: CredentialRow) {
-    if (!confirm(`Excluir a credencial "${row.title}"? Esta ação não pode ser desfeita.`)) return;
-    startTransition(async () => {
-      await deleteAction(row.id);
-      toast.success("Credencial excluída.");
-    });
+    requestConfirm(
+      { title: `Excluir a credencial "${row.title}"?`, description: "Esta ação não pode ser desfeita.", destructive: true, confirmLabel: "Excluir" },
+      async () => {
+        await deleteAction(row.id);
+        toast.success("Credencial excluída.");
+      }
+    );
   }
 
   return (
@@ -299,6 +302,7 @@ export function BpoCredentialsList({ credentials, companies, canManage, createAc
       {editingRow && (
         <EditCredentialModal row={editingRow} companies={companies} updateAction={updateAction} onClose={() => setEditingId(null)} />
       )}
+      {dialog}
     </div>
   );
 }

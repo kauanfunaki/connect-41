@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { TrainingParticipantState } from "@/app/(app)/treinamentos/[id]/turmas/[classId]/actions";
 import { TrainingParticipantStatus } from "@/generated/prisma/enums";
 import { Select } from "@/components/ui/Select";
+import { useConfirm } from "@/components/ui/useConfirm";
 
 const STATUS_LABEL: Record<TrainingParticipantStatus, string> = {
   PLANEJADO: "Planejado",
@@ -45,6 +46,7 @@ type Props = {
 export function ParticipanteRow({ participante, updateAction, removeAction, canManage }: Props) {
   const [state, formAction, isPending] = useActionState(updateAction, null);
   const [status, setStatus] = useState(participante.status);
+  const { dialog, requestConfirm } = useConfirm();
 
   return (
     <div className="py-2.5 border-b border-border last:border-0">
@@ -79,9 +81,7 @@ export function ParticipanteRow({ participante, updateAction, removeAction, canM
           </button>
           <button
             type="button"
-            onClick={() => {
-              if (confirm("Remover este participante da turma?")) removeAction();
-            }}
+            onClick={() => requestConfirm({ title: "Remover este participante da turma?", destructive: true, confirmLabel: "Remover" }, removeAction)}
             className="h-9 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
           >
             Remover
@@ -90,6 +90,7 @@ export function ParticipanteRow({ participante, updateAction, removeAction, canM
       )}
 
       {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
+      {dialog}
     </div>
   );
 }

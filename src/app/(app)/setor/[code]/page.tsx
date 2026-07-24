@@ -125,9 +125,13 @@ export default async function SectorHubPage({
           {canCreateSpace && <NewSpaceButton action={criarEspaco.bind(null, code)} />}
         </div>
         {spaces.length === 0 ? (
-          <p className="text-[13px] text-fg-muted">
-            Nenhum espaço criado ainda — um espaço agrupa pastas e listas (kanbans) deste setor.
-          </p>
+          <div className="bg-surface border border-border rounded-2xl">
+            <EmptyState
+              icon={<LayoutGrid />}
+              title="Nenhum espaço criado ainda"
+              description="Um espaço agrupa pastas e listas (kanbans) deste setor."
+            />
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {spaces.map((s, i) => (

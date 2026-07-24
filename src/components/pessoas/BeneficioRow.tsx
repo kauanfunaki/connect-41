@@ -5,6 +5,7 @@ import type { BenefitAssignmentState } from "@/app/(app)/pessoas/[id]/beneficios
 import { BenefitStatus } from "@/generated/prisma/enums";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { useConfirm } from "@/components/ui/useConfirm";
 
 const STATUS_LABEL: Record<BenefitStatus, string> = {
   ATIVO:     "Ativo",
@@ -44,6 +45,7 @@ type Props = {
 export function BeneficioRow({ beneficio, updateAction, removeAction, canManage }: Props) {
   const [state, formAction, isPending] = useActionState(updateAction, null);
   const [status, setStatus] = useState(beneficio.status);
+  const { dialog, requestConfirm } = useConfirm();
 
   return (
     <div className="py-3 border-b border-border last:border-0">
@@ -87,9 +89,7 @@ export function BeneficioRow({ beneficio, updateAction, removeAction, canManage 
           </button>
           <button
             type="button"
-            onClick={() => {
-              if (confirm("Remover este benefício do colaborador?")) removeAction();
-            }}
+            onClick={() => requestConfirm({ title: "Remover este benefício do colaborador?", destructive: true, confirmLabel: "Remover" }, removeAction)}
             className="h-9 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
           >
             Remover
@@ -98,6 +98,7 @@ export function BeneficioRow({ beneficio, updateAction, removeAction, canManage 
       )}
 
       {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
+      {dialog}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { PayrollEntryState } from "@/app/(app)/empresas/[id]/folha/[competencyId]/actions";
 import { PayrollStatus } from "@/generated/prisma/enums";
 import { Select } from "@/components/ui/Select";
+import { useConfirm } from "@/components/ui/useConfirm";
 
 const STATUS_LABEL: Record<PayrollStatus, string> = {
   PENDENTE:       "Pendente",
@@ -44,6 +45,7 @@ type Props = {
 export function PayrollEntryRow({ entry, updateAction, removeAction, canManage }: Props) {
   const [state, formAction, isPending] = useActionState(updateAction, null);
   const [status, setStatus] = useState(entry.status);
+  const { dialog, requestConfirm } = useConfirm();
 
   return (
     <div className="py-2.5 border-b border-border last:border-0">
@@ -81,9 +83,7 @@ export function PayrollEntryRow({ entry, updateAction, removeAction, canManage }
           </button>
           <button
             type="button"
-            onClick={() => {
-              if (confirm("Remover este lançamento?")) removeAction();
-            }}
+            onClick={() => requestConfirm({ title: "Remover este lançamento?", destructive: true, confirmLabel: "Remover" }, removeAction)}
             className="h-9 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
           >
             Remover
@@ -92,6 +92,7 @@ export function PayrollEntryRow({ entry, updateAction, removeAction, canManage }
       )}
 
       {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
+      {dialog}
     </div>
   );
 }

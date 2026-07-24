@@ -11,6 +11,7 @@ import { Select } from "@/components/ui/Select";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import type { CompanyStatus } from "@/generated/prisma/enums";
 import { formatCnpj } from "@/lib/format";
+import { useConfirm } from "@/components/ui/useConfirm";
 
 type Row = {
   id: string;
@@ -55,6 +56,7 @@ export function EmpresasTable({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<CompanyStatus>("ACTIVE");
   const [, startTransition] = useTransition();
+  const { dialog, requestConfirm } = useConfirm();
 
   const allSelected = companies.length > 0 && selected.size === companies.length;
 
@@ -80,12 +82,17 @@ export function EmpresasTable({
   }
 
   function applyDelete() {
-    if (!confirm(`Excluir ${selected.size} empresa(s) selecionada(s)? Esta ação não pode ser desfeita.`)) return;
-    const ids = Array.from(selected);
-    setSelected(new Set());
-    startTransition(() => {
-      excluirEmpresasEmMassa(ids);
-    });
+    requestConfirm(
+      { title: `Excluir ${selected.size} empresa(s) selecionada(s)?`, description: "Esta ação não pode ser desfeita.", destructive: true, confirmLabel: "Excluir" },
+      () => {
+        const ids = Array.from(selected);
+        setSelected(new Set());
+        startTransition(() => {
+          excluirEmpresasEmMassa(ids);
+        });
+        return Promise.resolve();
+      }
+    );
   }
 
   return (
@@ -185,6 +192,7 @@ export function EmpresasTable({
           </button>
         )}
       </BulkActionBar>
+      {dialog}
     </>
   );
 }
