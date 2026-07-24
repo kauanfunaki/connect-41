@@ -4,13 +4,11 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ListsTable, type ListRow } from "@/components/kanban/ListsTable";
 import { NewListButton } from "@/components/kanban/NewListButton";
-import { SpaceDocumentsList } from "@/components/kanban/SpaceDocumentsList";
 import { criarListaSimples } from "@/app/(app)/kanban/spaces-actions";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedSpaceWhere } from "@/lib/auth/scope";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
-import { getFolderDocuments } from "@/lib/canvasAggregation";
 
 function toListRow(p: {
   id: string; name: string; color: string | null; startDate: Date | null; endDate: Date | null;
@@ -45,17 +43,14 @@ export default async function SectorFolderPage({ params }: { params: Promise<{ c
 
   const canCreate = canManageSector(ctx, folder.space.sectorCode);
 
-  const [lists, documents] = await Promise.all([
-    prisma.pipeline.findMany({
-      where: { folderId },
-      orderBy: { name: "asc" },
-      select: {
-        id: true, name: true, color: true, startDate: true, endDate: true,
-        items: { where: { parentItemId: null }, select: { stage: { select: { isTerminal: true } } } },
-      },
-    }),
-    getFolderDocuments(ctx.tenantId, folderId),
-  ]);
+  const lists = await prisma.pipeline.findMany({
+    where: { folderId },
+    orderBy: { name: "asc" },
+    select: {
+      id: true, name: true, color: true, startDate: true, endDate: true,
+      items: { where: { parentItemId: null }, select: { stage: { select: { isTerminal: true } } } },
+    },
+  });
 
   const createListAction = criarListaSimples.bind(null, folder.space.id, folderId);
 
@@ -87,11 +82,6 @@ export default async function SectorFolderPage({ params }: { params: Promise<{ c
         ) : (
           <ListsTable lists={lists.map(toListRow)} basePath="/kanban" />
         )}
-      </div>
-
-      <div className="mt-6">
-        <h2 className="text-[13px] font-semibold text-fg mb-2.5">Documentos</h2>
-        <SpaceDocumentsList documents={documents} />
       </div>
     </PageContainer>
   );

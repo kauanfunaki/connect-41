@@ -3,12 +3,11 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { DescriptionEditor } from "@/components/kanban/DescriptionEditor";
 import { ActivityFeed, type FeedItem, type TaskMentionCandidate } from "@/components/kanban/ActivityFeed";
-import { DocumentsSection } from "@/components/documents/DocumentsSection";
+import { TaskAttachmentsSection } from "@/components/kanban/TaskAttachmentsSection";
 import { listDocuments } from "@/lib/documents";
 import { SubtasksSection } from "@/components/kanban/SubtasksSection";
 import { ChecklistSection } from "@/components/kanban/ChecklistSection";
 import { LinkedItemsSection } from "@/components/kanban/LinkedItemsSection";
-import { CanvasModal } from "@/components/kanban/CanvasModal";
 import { TaskFieldsPanel } from "@/components/kanban/TaskFieldsPanel";
 import { CompletionBanner } from "@/components/kanban/CompletionBanner";
 import { DeleteTaskButton } from "@/components/kanban/DeleteTaskButton";
@@ -37,9 +36,6 @@ import {
   pararCronometro,
   criarLinkItem,
   removerLinkItem,
-  criarCanvas,
-  atualizarCanvas,
-  excluirCanvas,
 } from "@/app/(app)/kanban/actions";
 import { boardPath } from "@/lib/kanbanPaths";
 import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
@@ -106,7 +102,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
   const canDelete = canManageSector(ctx, pipeline.sectorCode);
   const canAct = canActOnSector(ctx, pipeline.sectorCode);
 
-  const [entity, activities, sectorTags, sectorUsers, documents, activeTimerUser, otherItems, canvasPages] = await Promise.all([
+  const [entity, activities, sectorTags, sectorUsers, documents, activeTimerUser, otherItems] = await Promise.all([
     !item.entityId
       ? Promise.resolve(null)
       : item.entityType === "COMPANY"
@@ -133,11 +129,6 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
       where: { pipelineId: id, tenantId, id: { not: itemId } },
       select: { id: true, title: true, entityId: true, entityType: true },
       take: 200,
-    }),
-    prisma.canvasPage.findMany({
-      where: { pipelineItemId: itemId, tenantId },
-      orderBy: { createdAt: "asc" },
-      include: { createdBy: { select: { name: true } } },
     }),
   ]);
 
@@ -223,9 +214,6 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
   const stopTimerAction = pararCronometro.bind(null, id, itemId);
   const createLinkAction = criarLinkItem.bind(null, id, itemId);
   const deleteLinkAction = removerLinkItem.bind(null, id, itemId);
-  const createCanvasAction = criarCanvas.bind(null, id, itemId);
-  const updateCanvasAction = atualizarCanvas.bind(null, id, itemId);
-  const deleteCanvasAction = excluirCanvas.bind(null, id, itemId);
 
   const taskCandidates: TaskMentionCandidate[] = otherItems.map((o) => ({ id: o.id, name: nameFor(o), href: `${basePath}/itens/${o.id}` }));
 
@@ -419,30 +407,21 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
               reorderAction={reorderChecklistAction}
             />
 
-            <CanvasModal
-              canAct={canAct}
-              pages={canvasPages.map((p) => ({ id: p.id, title: p.title, content: p.content, createdByName: p.createdBy.name }))}
-              createAction={createCanvasAction}
-              updateAction={updateCanvasAction}
-              deleteAction={deleteCanvasAction}
+            <TaskAttachmentsSection
+              entityId={itemId}
+              canUpload={canAct}
+              documents={documents.map((d) => ({
+                id: d.id,
+                fileName: d.fileName,
+                category: d.category,
+                sensitive: d.sensitive,
+                uploadedByName: d.uploadedBy.name,
+                createdAtLabel: formatInstantDate(d.createdAt),
+                expiresAtLabel: d.expiresAt ? formatCalendarDate(d.expiresAt) : null,
+                expired: d.expiresAt != null && d.expiresAt < new Date(),
+              }))}
             />
           </div>
-
-          <DocumentsSection
-            entityType="PIPELINE_ITEM"
-            entityId={itemId}
-            canUpload={canAct}
-            documents={documents.map((d) => ({
-              id: d.id,
-              fileName: d.fileName,
-              category: d.category,
-              sensitive: d.sensitive,
-              uploadedByName: d.uploadedBy.name,
-              createdAtLabel: formatInstantDate(d.createdAt),
-              expiresAtLabel: d.expiresAt ? formatCalendarDate(d.expiresAt) : null,
-              expired: d.expiresAt != null && d.expiresAt < new Date(),
-            }))}
-          />
         </div>
         <ActivityFeed
           items={feedItems}

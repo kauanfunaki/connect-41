@@ -13,6 +13,7 @@ import {
   BarChart3,
   IdCard,
   LayoutGrid,
+  BookOpen,
 } from "lucide-react";
 import { getAuthContext, canViewSector, canManageSector } from "@/lib/auth/context";
 import { getTenantModuleStates } from "@/lib/modules";
@@ -36,6 +37,7 @@ const MODULE_ICONS: Record<string, React.ReactNode> = {
   dprh_avaliacoes: <Star size={20} />,
   gestao_cargos_salarios: <IdCard size={20} />,
   gestao_indicadores_rh: <BarChart3 size={20} />,
+  bpo_manual: <BookOpen size={20} />,
 };
 
 export default async function SectorHubPage({

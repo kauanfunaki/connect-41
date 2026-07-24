@@ -68,10 +68,26 @@ export default async function ConversasPage({
   const deDate = de ? new Date(`${de}T00:00:00`) : null;
   const ateDate = ate ? new Date(new Date(`${ate}T00:00:00`).getTime() + 24 * 60 * 60 * 1000) : null;
 
+  // Agrupado por LABEL (não pelo valor cru) — "Channel::Api" e "unknown" caem
+  // os dois em "WhatsApp" (ver labels.ts), e sem agrupar apareciam dois
+  // botões "WhatsApp" repetidos na barra de filtros.
+  const rawChannels = await prisma.chatwootConversation.findMany({
+    where: scopedChatwootConversationWhere(ctx),
+    distinct: ["channel"],
+    select: { channel: true },
+    take: 20,
+  });
+  const channelGroups = new Map<string, string[]>();
+  for (const { channel } of rawChannels) {
+    const label = channelLabel(channel);
+    channelGroups.set(label, [...(channelGroups.get(label) ?? []), channel]);
+  }
+  const channelLabels = [...channelGroups.keys()];
+
   const convWhere = {
     ...scopedChatwootConversationWhere(ctx),
     ...(status ? { status } : {}),
-    ...(canal ? { channel: canal } : {}),
+    ...(canal && channelGroups.has(canal) ? { channel: { in: channelGroups.get(canal)! } } : {}),
     ...(atendente ? { assigneeLabel: atendente } : {}),
     ...(deDate || ateDate
       ? { lastActivityAt: { ...(deDate ? { gte: deDate } : {}), ...(ateDate ? { lt: ateDate } : {}) } }
@@ -109,12 +125,6 @@ export default async function ConversasPage({
       // Conversas sem contato identificado no Chatwoot — agrupadas num card próprio.
       prisma.chatwootConversation.findMany({ where: { ...convWhere, contactLinkId: null }, orderBy: { lastActivityAt: "desc" }, take: 50 }),
       prisma.chatwootConversation.findMany({
-        where: scopedChatwootConversationWhere(ctx),
-        distinct: ["channel"],
-        select: { channel: true },
-        take: 20,
-      }),
-      prisma.chatwootConversation.findMany({
         where: { ...scopedChatwootConversationWhere(ctx), assigneeLabel: { not: null } },
         distinct: ["assigneeLabel"],
         select: { assigneeLabel: true },
@@ -131,12 +141,11 @@ export default async function ConversasPage({
   let links: Awaited<ReturnType<typeof loadConversasData>>[0] = [];
   let totalContacts = 0;
   let orphanConversations: Awaited<ReturnType<typeof loadConversasData>>[2] = [];
-  let channels: Awaited<ReturnType<typeof loadConversasData>>[3] = [];
-  let assignees: Awaited<ReturnType<typeof loadConversasData>>[4] = [];
+  let assignees: Awaited<ReturnType<typeof loadConversasData>>[3] = [];
   let loadError = false;
 
   try {
-    [links, totalContacts, orphanConversations, channels, assignees] = await loadConversasData();
+    [links, totalContacts, orphanConversations, assignees] = await loadConversasData();
   } catch (err) {
     console.error("[conversas:page] falha ao consultar atendimentos — migration pendente ou Chatwoot indisponível?", err);
     loadError = true;
@@ -245,17 +254,17 @@ export default async function ConversasPage({
             );
           })}
         </div>
-        {channels.length > 1 && (
+        {channelLabels.length > 1 && (
           <div className="flex items-center gap-1 border-l border-border pl-2">
-            {channels.map((c) => (
+            {channelLabels.map((label) => (
               <Link
-                key={c.channel}
-                href={buildUrl({ canal: c.channel === canal ? undefined : c.channel, page: "1" })}
+                key={label}
+                href={buildUrl({ canal: label === canal ? undefined : label, page: "1" })}
                 className={`inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
-                  c.channel === canal ? "bg-surface-2 text-fg border border-border-strong" : "text-fg-muted hover:text-fg hover:bg-surface-2"
+                  label === canal ? "bg-surface-2 text-fg border border-border-strong" : "text-fg-muted hover:text-fg hover:bg-surface-2"
                 }`}
               >
-                {channelLabel(c.channel)}
+                {label}
               </Link>
             ))}
           </div>

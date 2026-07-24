@@ -45,7 +45,15 @@ export function GlobalSearch() {
   useEffect(() => {
     if (!open) return;
     function onClickOutside(e: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+      // mobileExpanded também precisa resetar aqui — Ctrl+K liga ele pra
+      // garantir foco mesmo em telas maiores (ver atalho abaixo), e sem
+      // resetar no clique-fora ele ficava true pra sempre (só o botão X do
+      // modo mobile, escondido em telas grandes, resetava), sumindo o hint
+      // "Ctrl+K" de vez (condição abaixo exige !mobileExpanded).
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setMobileExpanded(false);
+      }
     }
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);

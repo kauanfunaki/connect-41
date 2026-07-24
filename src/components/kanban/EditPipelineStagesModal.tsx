@@ -82,6 +82,17 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
 
       <Modal open={open} onClose={() => setOpen(false)} title="Editar lista" maxWidth="max-w-lg">
         <div className="space-y-3">
+          {/* Cabeçalho — sem isso "Título do estágio" (nome livre) e "Status
+              da bolinha" (tipo que rege a cor/estado do StageDot) pareciam o
+              mesmo tipo de campo, confundindo o usuário. */}
+          <div className="flex items-center gap-2 px-0.5">
+            <span className="w-[13px] flex-shrink-0" />
+            <span className="w-9 flex-shrink-0" />
+            <span className="flex-1 min-w-0 text-[11px] font-medium text-fg-muted">Título do estágio</span>
+            <span className="w-[150px] flex-shrink-0 text-[11px] font-medium text-fg-muted">Status da bolinha</span>
+            <span className="w-3.5 flex-shrink-0" />
+            <span className="w-[27px] flex-shrink-0" />
+          </div>
           <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
             {rows.map((row, i) => (
               <div key={row.id ?? `new-${i}`} className="flex items-center gap-2">

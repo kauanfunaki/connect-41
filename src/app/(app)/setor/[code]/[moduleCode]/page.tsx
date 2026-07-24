@@ -18,6 +18,7 @@ const MODULE_ROUTES: Record<string, string> = {
   gestao_indicadores_rh:  "/indicadores-rh",
   bpo_tarefas:            "/bpo-financeiro",
   bpo_senhas:             "/bpo-senhas",
+  bpo_manual:             "/bpo-manual",
 };
 
 export default async function SectorModulePage({

@@ -95,6 +95,13 @@ export const MODULE_CATALOG: ModuleDef[] = [
     description: "Credenciais de portais, bancos e sistemas de clientes centralizadas com auditoria de acesso",
     defaultEnabled: true,
   },
+  {
+    code: "bpo_manual",
+    label: "Manual",
+    sectorCode: "bpo",
+    description: "Instruções internas escritas pelos colaboradores para alinhamento em ausências e férias",
+    defaultEnabled: true,
+  },
 ];
 
 export function getModuleDef(code: string): ModuleDef | undefined {

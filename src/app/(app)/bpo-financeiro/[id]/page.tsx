@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { BoardView } from "@/components/kanban/BoardView";
 import { DuplicatePipelineButton } from "@/components/kanban/DuplicatePipelineButton";
+import { EditPipelineStagesModal } from "@/components/kanban/EditPipelineStagesModal";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { moverItem, reordenarItem, duplicarPipeline, renomearEstagio, criarTarefaRapida, atualizarPrioridadeResponsavel, concluirTarefa, reabrirTarefa } from "@/app/(app)/kanban/actions";
+import { moverItem, reordenarItem, duplicarPipeline, renomearEstagio, atualizarEstagios, criarTarefaRapida, atualizarPrioridadeResponsavel, concluirTarefa, reabrirTarefa } from "@/app/(app)/kanban/actions";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedPipelineWhere, scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
 
@@ -43,7 +44,7 @@ export default async function BpoBoardPage({
             orderBy: [{ order: "asc" }, { createdAt: "asc" }],
             select: {
               id: true, title: true, priority: true, dueDate: true, recurring: true, stageId: true,
-              stage: { select: { name: true, isTerminal: true } },
+              stage: { select: { name: true, isTerminal: true, type: true } },
               tags: { include: { tag: { select: { id: true, name: true, color: true } } } },
               assignees: { include: { user: { select: { id: true, name: true } } } },
             },
@@ -178,6 +179,10 @@ export default async function BpoBoardPage({
         </div>
         {canAddItem && (
           <div className="flex items-center gap-2">
+            <EditPipelineStagesModal
+              initialStages={pipeline.stages.map((s) => ({ id: s.id, name: s.name, color: s.color ?? "#586577", type: s.type }))}
+              action={atualizarEstagios.bind(null, id)}
+            />
             {duplicateEntities.length > 0 && (
               <DuplicatePipelineButton
                 action={duplicarPipeline.bind(null, id)}
@@ -200,7 +205,7 @@ export default async function BpoBoardPage({
         <BoardView
           pipelineId={id}
           basePath={basePath}
-          stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name, color: s.color, isTerminal: s.isTerminal }))}
+          stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name, color: s.color, isTerminal: s.isTerminal, type: s.type }))}
           items={items}
           canAct={canAddItem}
           moveAction={moverItem}

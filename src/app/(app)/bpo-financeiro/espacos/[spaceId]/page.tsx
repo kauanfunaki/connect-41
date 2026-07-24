@@ -6,12 +6,10 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ListsTable, type ListRow } from "@/components/kanban/ListsTable";
 import { NewFolderButton } from "@/components/kanban/NewFolderButton";
 import { NewListButton } from "@/components/kanban/NewListButton";
-import { SpaceDocumentsList } from "@/components/kanban/SpaceDocumentsList";
 import { criarPasta, criarListaSimples } from "@/app/(app)/kanban/spaces-actions";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedSpaceWhere } from "@/lib/auth/scope";
-import { getSpaceDocuments } from "@/lib/canvasAggregation";
 
 function toListRow(p: {
   id: string; name: string; color: string | null; startDate: Date | null; endDate: Date | null;
@@ -42,7 +40,7 @@ export default async function SpacePage({ params }: { params: Promise<{ spaceId:
     items: { where: { parentItemId: null }, select: { stage: { select: { isTerminal: true } } } },
   } as const;
 
-  const [folders, looseLists, documents] = await Promise.all([
+  const [folders, looseLists] = await Promise.all([
     prisma.folder.findMany({
       where: { spaceId },
       orderBy: { order: "asc" },
@@ -53,7 +51,6 @@ export default async function SpacePage({ params }: { params: Promise<{ spaceId:
       orderBy: { name: "asc" },
       select: pipelineSelect,
     }),
-    getSpaceDocuments(ctx.tenantId, spaceId),
   ]);
 
   const createFolderAction = criarPasta.bind(null, spaceId);
@@ -111,11 +108,6 @@ export default async function SpacePage({ params }: { params: Promise<{ spaceId:
         ) : (
           <ListsTable lists={looseLists.map(toListRow)} basePath="/bpo-financeiro" />
         )}
-      </div>
-
-      <div className="mt-6">
-        <h2 className="text-[13px] font-semibold text-fg mb-2.5">Documentos</h2>
-        <SpaceDocumentsList documents={documents} />
       </div>
     </PageContainer>
   );

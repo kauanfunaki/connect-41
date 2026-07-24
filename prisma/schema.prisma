@@ -946,7 +946,6 @@ model PipelineItem {
   tags        PipelineItemTag[]
   checklist   ChecklistItem[]
   timeEntries TimeEntry[]
-  canvasPages CanvasPage[]
   candidatura Candidatura?
   meetings    Meeting[]
 
@@ -960,21 +959,26 @@ model PipelineItem {
 // Documento "canvas" — página em branco (não é upload de arquivo), sempre
 // vinculada a uma tarefa. Agregada na UI do Espaço/Pasta dona da Lista dessa
 // tarefa, pra ficar visível pra quem não abriu a tarefa específica.
+// Manual/Instruções internas — biblioteca por setor (não mais por tarefa: até
+// 2026-07 vivia dentro do detalhamento de PipelineItem via CanvasModal, mas
+// isso confundia o usuário e dificultava achar o conteúdo depois — virou
+// módulo próprio, ex. "Manual" ao lado de "Tarefas do BPO"/"Repositório de
+// Senhas" (ver src/app/(app)/bpo-manual). Sem dado de produção na forma
+// antiga (feature nunca chegou a ser commitada), pivô direto sem migração.
 model CanvasPage {
-  id             String   @id @default(uuid())
-  tenantId       String
-  pipelineItemId String
-  title          String   @db.VarChar(160)
-  content        String?  @db.Text // HTML do RichTextEditor, sanitizado no servidor
-  createdById    String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id          String   @id @default(uuid())
+  tenantId    String
+  sectorCode  String   @db.VarChar(40)
+  title       String   @db.VarChar(160)
+  content     String?  @db.Text // HTML do RichTextEditor, sanitizado no servidor
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  tenant       Tenant       @relation(fields: [tenantId], references: [id])
-  pipelineItem PipelineItem @relation(fields: [pipelineItemId], references: [id], onDelete: Cascade)
-  createdBy    User         @relation(fields: [createdById], references: [id])
+  tenant    Tenant @relation(fields: [tenantId], references: [id])
+  createdBy User   @relation(fields: [createdById], references: [id])
 
-  @@index([tenantId, pipelineItemId])
+  @@index([tenantId, sectorCode])
   @@map("canvas_pages")
 }
 

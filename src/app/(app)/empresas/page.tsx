@@ -54,7 +54,7 @@ export default async function EmpresasPage({
 
   const where = {
     ...(await scopedCompanyWhere(ctx)),
-    ...(search ? { name: { contains: search } } : {}),
+    ...(search ? { OR: [{ name: { contains: search } }, { externalId: { contains: search } }] } : {}),
     ...(statusFilter ? { status: statusFilter } : {}),
   };
 
@@ -108,7 +108,7 @@ export default async function EmpresasPage({
       <div className="flex items-center gap-3 mb-4">
         {/* Search */}
         <div className="flex-1 max-w-xs">
-          <DebouncedSearchInput placeholder="Buscar por nome…" />
+          <DebouncedSearchInput placeholder="Buscar por nome ou ID…" />
         </div>
 
         {/* Status tabs */}

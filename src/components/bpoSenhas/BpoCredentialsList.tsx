@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
-import { Eye, EyeOff, Copy, Pencil, Trash2, Plus, KeyRound } from "lucide-react";
+import { Eye, EyeOff, Copy, Pencil, Trash2, Plus, KeyRound, Search } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
@@ -193,9 +193,19 @@ function PasswordCell({ credentialId, revealAction }: { credentialId: string; re
 
 export function BpoCredentialsList({ credentials, companies, canManage, createAction, updateAction, deleteAction, revealAction }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const [, startTransition] = useTransition();
   const toast = useToast();
   const editingRow = credentials.find((c) => c.id === editingId) ?? null;
+
+  // Filtro só no cliente — lista inteira já vem carregada da página (sem
+  // paginação/busca no servidor, mesmo espírito de listas pequenas do BPO).
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredCredentials = normalizedSearch
+    ? credentials.filter((c) =>
+        [c.title, c.companyName, c.username].some((field) => field?.toLowerCase().includes(normalizedSearch))
+      )
+    : credentials;
 
   function handleDelete(row: CredentialRow) {
     if (!confirm(`Excluir a credencial "${row.title}"? Esta ação não pode ser desfeita.`)) return;
@@ -207,11 +217,20 @@ export function BpoCredentialsList({ credentials, companies, canManage, createAc
 
   return (
     <div className="space-y-4">
-      {canManage && (
-        <div className="flex justify-end">
-          <NewCredentialModal companies={companies} createAction={createAction} />
-        </div>
-      )}
+      <div className="flex items-center justify-between gap-3">
+        {credentials.length > 0 ? (
+          <Input
+            icon={<Search />}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por título, empresa ou usuário…"
+            className="w-full max-w-xs"
+          />
+        ) : (
+          <span />
+        )}
+        {canManage && <NewCredentialModal companies={companies} createAction={createAction} />}
+      </div>
 
       {credentials.length === 0 ? (
         <div className="bg-surface border border-border rounded-2xl">
@@ -220,6 +239,10 @@ export function BpoCredentialsList({ credentials, companies, canManage, createAc
             title="Nenhuma credencial cadastrada ainda"
             description={canManage ? "Cadastre a primeira credencial do setor." : "Peça ao coordenador do BPO pra cadastrar a primeira credencial."}
           />
+        </div>
+      ) : filteredCredentials.length === 0 ? (
+        <div className="bg-surface border border-border rounded-2xl">
+          <EmptyState icon={<KeyRound />} title="Nenhuma credencial encontrada" description="Tente ajustar a busca." />
         </div>
       ) : (
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
@@ -236,7 +259,7 @@ export function BpoCredentialsList({ credentials, companies, canManage, createAc
               </tr>
             </thead>
             <tbody>
-              {credentials.map((row) => (
+              {filteredCredentials.map((row) => (
                 <tr key={row.id} className="border-b border-border last:border-0 hover:bg-surface-hover transition-colors">
                   <td className="px-4 py-3 font-medium text-fg">
                     {row.title}
