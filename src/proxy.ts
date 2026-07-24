@@ -49,6 +49,11 @@ const PUBLIC_PATHS = [
   // expirado) internamente; token inexistente é rate-limited por IP.
   "/admissao/",
   "/api/admissao/",
+  // Teste comportamental (DISC) self-service — candidato não tem login. Mesmo
+  // padrão da admissão digital: página e rota de submit validam o token do
+  // AssessmentLink internamente; token inexistente é rate-limited por IP.
+  "/teste/",
+  "/api/teste/",
   // Webhook do Chatwoot — chamado pelo próprio Chatwoot, sem sessão de
   // usuário. A autenticação de verdade é a assinatura HMAC
   // (X-Chatwoot-Signature), verificada dentro da rota contra o segredo da

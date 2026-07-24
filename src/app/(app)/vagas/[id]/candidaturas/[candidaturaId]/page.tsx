@@ -8,12 +8,14 @@ import { BackButton } from "@/components/shared/BackButton";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
 import { ScorecardForm } from "@/components/vagas/ScorecardForm";
 import { MeetingsSection } from "@/components/kanban/MeetingsSection";
+import { TesteDiscCard } from "@/components/teste/TesteDiscCard";
 import { STAGE_LABEL, type Stage } from "@/lib/recruitmentFunnel";
 import { CRITERIA, RECOMMENDATION_LABEL, consolidateScorecards, scorecardAverage } from "@/lib/scorecard";
 import { formatInstantDate } from "@/lib/format";
 import { canManageMeetings } from "@/lib/integrations/oauth";
 import { salvarScorecard, excluirScorecard } from "./actions";
 import { agendarEntrevista, excluirEntrevista } from "./meeting-actions";
+import type { DiscScores, DiscDimension } from "@/lib/disc";
 
 export default async function CandidaturaScorecardPage({
   params,
@@ -37,6 +39,11 @@ export default async function CandidaturaScorecardPage({
         orderBy: { startAt: "desc" },
         include: { attendees: { include: { user: { select: { id: true, name: true } } } } },
       },
+      assessmentLinks: {
+        where: { candidaturaId },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
     },
   });
   if (!candidatura) notFound();
@@ -44,6 +51,21 @@ export default async function CandidaturaScorecardPage({
   const canAct = canActOnSector(ctx, candidatura.vaga.sectorCode);
   const consolidation = consolidateScorecards(candidatura.scorecards);
   const myScorecard = candidatura.scorecards.find((s) => s.evaluator.id === ctx.userId);
+
+  const testeLink = candidatura.assessmentLinks[0];
+  const initialTesteLink =
+    testeLink?.status === "PENDENTE"
+      ? { status: "PENDENTE" as const, token: testeLink.token, expiresAtLabel: formatInstantDate(testeLink.expiresAt) }
+      : testeLink?.status === "RESPONDIDO"
+        ? {
+            status: "RESPONDIDO" as const,
+            id: testeLink.id,
+            scores: testeLink.scores as unknown as DiscScores,
+            primaryProfile: testeLink.primaryProfile as DiscDimension,
+            secondaryProfile: testeLink.secondaryProfile as DiscDimension | null,
+            submittedAtLabel: testeLink.submittedAt ? formatInstantDate(testeLink.submittedAt) : "—",
+          }
+        : null;
 
   const canSchedule = canManageMeetings(ctx);
   const [oauthAccounts, allUsers] = await Promise.all([
@@ -101,6 +123,16 @@ export default async function CandidaturaScorecardPage({
           deleteAction={excluirEntrevista.bind(null, vagaId, candidaturaId)}
         />
       )}
+
+      {/* Teste DISC */}
+      <div className="mb-4">
+        <TesteDiscCard
+          personId={candidatura.person.id}
+          candidaturaId={candidaturaId}
+          initialLink={initialTesteLink}
+          canManage={canAct}
+        />
+      </div>
 
       {/* Consolidado */}
       {consolidation.count > 0 && (

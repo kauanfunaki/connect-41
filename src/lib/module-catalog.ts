@@ -26,6 +26,13 @@ export const MODULE_CATALOG: ModuleDef[] = [
     defaultEnabled: true,
   },
   {
+    code: "recrutamento_testes",
+    label: "Testes",
+    sectorCode: "recrutamento",
+    description: "Testes comportamentais e de perfil aplicados a candidatos",
+    defaultEnabled: true,
+  },
+  {
     code: "dprh_colaboradores",
     label: "Colaboradores",
     sectorCode: "dprh",
