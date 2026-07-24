@@ -3,11 +3,13 @@ import { Columns3 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityTimeline, type ActivityEntry } from "@/components/shared/ActivityTimeline";
+import { boardPath } from "@/lib/kanbanPaths";
 
 type PipelineEntry = {
   id: string;
   pipelineId: string;
   pipelineName: string;
+  pipelineSectorCode: string;
   stageName: string;
 };
 
@@ -34,7 +36,7 @@ export function CompanyHistorySection({ pipelineItems, activities, entityLabel =
             {pipelineItems.map((p) => (
               <Link
                 key={p.id}
-                href={`/kanban/${p.pipelineId}/itens/${p.id}`}
+                href={`${boardPath({ id: p.pipelineId, sectorCode: p.pipelineSectorCode })}/itens/${p.id}`}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[length:var(--fs-helper)] font-medium bg-surface-hover border border-border text-fg-secondary hover:text-fg hover:border-border-strong transition-colors"
               >
                 {p.pipelineName}

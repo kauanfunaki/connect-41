@@ -54,7 +54,7 @@ export default async function EmpresaPage({
     listDocuments(ctx.tenantId, "COMPANY", id),
     prisma.pipelineItem.findMany({
       where: { tenantId: ctx.tenantId, entityType: "COMPANY", entityId: id },
-      include: { pipeline: { select: { id: true, name: true } }, stage: { select: { name: true } } },
+      include: { pipeline: { select: { id: true, name: true, sectorCode: true } }, stage: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
     }),
     prisma.activity.findMany({
@@ -183,6 +183,7 @@ export default async function EmpresaPage({
               id: p.id,
               pipelineId: p.pipeline.id,
               pipelineName: p.pipeline.name,
+              pipelineSectorCode: p.pipeline.sectorCode,
               stageName: p.stage.name,
             }))}
             activities={activities.map((a) => ({

@@ -7,6 +7,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPipelineWhere } from "@/lib/auth/scope";
+import { boardPath } from "@/lib/kanbanPaths";
 
 export default async function KanbanListPage() {
   const ctx = await getAuthContext();
@@ -70,7 +71,7 @@ export default async function KanbanListPage() {
                 {list.map((p, i) => (
                   <Link
                     key={p.id}
-                    href={`/kanban/${p.id}`}
+                    href={boardPath(p)}
                     style={{ animationDelay: `${Math.min(i, 8) * 35}ms` }}
                     className="reveal-in bg-surface border border-border rounded-lg p-4 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform]"
                   >

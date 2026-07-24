@@ -4,8 +4,8 @@ import { getPrisma } from "@/lib/prisma";
 import { ItemForm } from "@/components/kanban/ItemForm";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { criarItem } from "@/app/(app)/kanban/actions";
-import { getAuthContext, canManageSector } from "@/lib/auth/context";
-import { scopedPipelineWhere, scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
+import { getAuthContext, canManageSector, canViewSector } from "@/lib/auth/context";
+import { scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
 import { getSectorUsers } from "@/lib/sectorUsers";
 
 export default async function NovoItemBpoPage({
@@ -15,9 +15,12 @@ export default async function NovoItemBpoPage({
 }) {
   const { id } = await params;
   const ctx = await getAuthContext();
+  // Ver bpo-financeiro/[id]/page.tsx — findFirst({sectorCode:"bpo", ...scopedPipelineWhere})
+  // deixa o spread sobrescrever o "bpo" literal, checagem explícita corrige.
+  if (!canViewSector(ctx, "bpo")) notFound();
 
   const prisma = getPrisma();
-  const pipeline = await prisma.pipeline.findFirst({ where: { id, sectorCode: "bpo", ...scopedPipelineWhere(ctx) } });
+  const pipeline = await prisma.pipeline.findFirst({ where: { id, tenantId: ctx.tenantId, sectorCode: "bpo" } });
   if (!pipeline) notFound();
   if (!canManageSector(ctx, pipeline.sectorCode)) notFound();
 

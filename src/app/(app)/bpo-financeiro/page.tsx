@@ -1,23 +1,28 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import { LayoutGrid } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { NewSpaceButton } from "@/components/kanban/NewSpaceButton";
 import { criarEspaco } from "@/app/(app)/kanban/spaces-actions";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canManageSector } from "@/lib/auth/context";
-import { scopedSpaceWhere } from "@/lib/auth/scope";
+import { getAuthContext, canManageSector, canViewSector } from "@/lib/auth/context";
 
 // Home do módulo dedicado do BPO Financeiro — agora navega por Espaço, não
 // lista Pipelines direto (estrutura Espaço → Pasta → Lista). Se só existe 1
 // espaço no setor, pula direto pra ele.
 export default async function BpoFinanceiroHomePage() {
   const ctx = await getAuthContext();
+  // Checagem explícita em vez de `{ ...scopedSpaceWhere(ctx), sectorCode: "bpo" }`:
+  // o "bpo" literal por último sobrescrevia a chave sectorCode de
+  // scopedSpaceWhere, derrubando o filtro `{in: ctx.sectors}` — qualquer
+  // usuário autenticado do tenant via essa listagem, mesmo sem fazer parte
+  // do setor bpo (ver mesmo bug corrigido nos outros arquivos deste módulo).
+  if (!canViewSector(ctx, "bpo")) notFound();
 
   const prisma = getPrisma();
   const spaces = await prisma.space.findMany({
-    where: { ...scopedSpaceWhere(ctx), sectorCode: "bpo" },
+    where: { tenantId: ctx.tenantId, sectorCode: "bpo" },
     orderBy: { order: "asc" },
     include: { _count: { select: { pipelines: true, folders: true } } },
   });

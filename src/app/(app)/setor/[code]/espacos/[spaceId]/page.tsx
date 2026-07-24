@@ -8,8 +8,7 @@ import { NewFolderButton } from "@/components/kanban/NewFolderButton";
 import { NewListButton } from "@/components/kanban/NewListButton";
 import { criarPasta, criarListaSimples } from "@/app/(app)/kanban/spaces-actions";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canManageSector } from "@/lib/auth/context";
-import { scopedSpaceWhere } from "@/lib/auth/scope";
+import { getAuthContext, canManageSector, canViewSector } from "@/lib/auth/context";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 
 function toListRow(p: {
@@ -32,10 +31,16 @@ function toListRow(p: {
 export default async function SectorSpacePage({ params }: { params: Promise<{ code: string; spaceId: string }> }) {
   const { code, spaceId } = await params;
   const ctx = await getAuthContext();
+  // Checagem explícita em vez de `{ sectorCode: code, ...scopedSpaceWhere(ctx) }`:
+  // scopedSpaceWhere devolve a própria chave sectorCode (um filtro `{in:...}`
+  // pra quem não é full-access, ou nenhum filtro pra quem é) — espalhada por
+  // último, ela sobrescreve o `code` literal em vez de combinar com ele,
+  // deixando abrir o espaço de um setor sob a URL de outro setor.
+  if (!canViewSector(ctx, code)) notFound();
 
   const prisma = getPrisma();
   const [space, { labels: sectorLabels }] = await Promise.all([
-    prisma.space.findFirst({ where: { id: spaceId, sectorCode: code, ...scopedSpaceWhere(ctx) } }),
+    prisma.space.findFirst({ where: { id: spaceId, tenantId: ctx.tenantId, sectorCode: code } }),
     getSectorMaps(ctx.tenantId),
   ]);
   if (!space) notFound();

@@ -8,8 +8,7 @@ import { NewFolderButton } from "@/components/kanban/NewFolderButton";
 import { NewListButton } from "@/components/kanban/NewListButton";
 import { criarPasta, criarListaSimples } from "@/app/(app)/kanban/spaces-actions";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canManageSector } from "@/lib/auth/context";
-import { scopedSpaceWhere } from "@/lib/auth/scope";
+import { getAuthContext, canManageSector, canViewSector } from "@/lib/auth/context";
 
 function toListRow(p: {
   id: string; name: string; color: string | null; startDate: Date | null; endDate: Date | null;
@@ -29,9 +28,15 @@ function toListRow(p: {
 export default async function SpacePage({ params }: { params: Promise<{ spaceId: string }> }) {
   const { spaceId } = await params;
   const ctx = await getAuthContext();
+  // Checagem explícita em vez de `{ sectorCode: "bpo", ...scopedSpaceWhere(ctx) }`:
+  // o spread sobrescreve a chave sectorCode literal com a de scopedSpaceWhere
+  // (um filtro `{in:...}` ou nenhum filtro pra full-access), deixando um
+  // usuário full-access ou de outro setor abrir o espaço de OUTRO setor sob
+  // a URL /bpo-financeiro.
+  if (!canViewSector(ctx, "bpo")) notFound();
 
   const prisma = getPrisma();
-  const space = await prisma.space.findFirst({ where: { id: spaceId, ...scopedSpaceWhere(ctx) } });
+  const space = await prisma.space.findFirst({ where: { id: spaceId, tenantId: ctx.tenantId, sectorCode: "bpo" } });
   if (!space) notFound();
 
   const canCreate = canManageSector(ctx, space.sectorCode);

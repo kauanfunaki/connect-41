@@ -517,6 +517,10 @@ export async function alternarObservadorItem(pipelineId: string, itemId: string,
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
   if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
 
+  // Mesmo fix de alternarTagItem/alternarResponsavelItem.
+  const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId, pipelineId }, select: { id: true } });
+  if (!item) return;
+
   try {
     if (marcado) {
       await prisma.pipelineItemWatcher.upsert({
@@ -572,10 +576,14 @@ export async function atualizarPrazoPrioridade(
     recurring && ["DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY"].includes(frequencyRaw) ? (frequencyRaw as RecurringFrequency) : null;
 
   try {
-    const before = await prisma.pipelineItem.findUnique({
-      where: { id: itemId },
+    // findFirst com tenantId+pipelineId (não findUnique só por id) — sem isso,
+    // um itemId de OUTRO tenant passava a validação (que só checava o
+    // pipelineId do chamador) e tinha seu prazo/prioridade sobrescritos.
+    const before = await prisma.pipelineItem.findFirst({
+      where: { id: itemId, tenantId, pipelineId },
       select: { dueDate: true, priority: true },
     });
+    if (!before) return { error: "Item não encontrado." };
 
     await prisma.pipelineItem.update({
       where: { id: itemId },
@@ -643,7 +651,10 @@ export async function atualizarDescricao(
   const description = sanitized.replace(/<[^>]+>/g, "").trim() ? sanitized : "";
 
   try {
-    const before = await prisma.pipelineItem.findUnique({ where: { id: itemId }, select: { description: true } });
+    // findFirst com tenantId+pipelineId — mesmo fix de atualizarPrazoPrioridade
+    // (findUnique só por id deixava sobrescrever descrição de item de outro tenant).
+    const before = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId, pipelineId }, select: { description: true } });
+    if (!before) return { error: "Item não encontrado." };
 
     await prisma.pipelineItem.update({
       where: { id: itemId },
@@ -681,6 +692,11 @@ export async function alternarTagItem(
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
   if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+
+  // Sem isso, um itemId de outro tenant/pipeline passava (só o pipelineId do
+  // chamador era checado acima) e ganhava/perdia tag de fora do escopo dele.
+  const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId, pipelineId }, select: { id: true } });
+  if (!item) return;
 
   try {
     if (marcado) {
@@ -730,6 +746,10 @@ export async function alternarResponsavelItem(
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
   if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
 
+  // Mesmo fix de alternarTagItem — valida que itemId é mesmo desse pipeline/tenant.
+  const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId, pipelineId }, select: { id: true } });
+  if (!item) return;
+
   try {
     if (marcado) {
       await prisma.pipelineItemAssignee.upsert({
@@ -774,6 +794,11 @@ export async function atualizarPrioridadeResponsavel(pipelineId: string, itemId:
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
   if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+
+  // Mesmo fix de alternarTagItem — sem isso dava pra reescrever a prioridade
+  // de um responsável em item de outro tenant/pipeline.
+  const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId, pipelineId }, select: { id: true } });
+  if (!item) return;
 
   try {
     await prisma.pipelineItemAssignee.update({
@@ -859,6 +884,12 @@ export async function criarLinkItem(pipelineId: string, itemId: string, linkedIt
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
   if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+
+  // itemId (origem) também precisa ser validado — só o linkedItemId (alvo) era
+  // checado, então dava pra criar um PipelineItemLink apontando pra um item de
+  // outro tenant como "origem" (poluição cross-tenant do vínculo).
+  const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId, pipelineId }, select: { id: true } });
+  if (!item) return;
 
   const linked = await prisma.pipelineItem.findFirst({ where: { id: linkedItemId, tenantId } });
   if (!linked) return;
@@ -1238,6 +1269,11 @@ export async function atualizarEstimativa(pipelineId: string, itemId: string, mi
   const trimmed = minutesRaw.trim();
   const minutes = trimmed ? parseInt(trimmed, 10) : null;
   if (trimmed && (!Number.isInteger(minutes) || minutes! < 0)) return;
+
+  // Mesmo fix de atualizarDescricao — sem isso dava pra reescrever a
+  // estimativa de um item de outro tenant/pipeline.
+  const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId, pipelineId }, select: { id: true } });
+  if (!item) return;
 
   try {
     await prisma.pipelineItem.update({ where: { id: itemId }, data: { estimateMinutes: minutes } });

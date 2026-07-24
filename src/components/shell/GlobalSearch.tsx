@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
+import { boardPath } from "@/lib/kanbanPaths";
 
 type DocumentEntityType = "PERSON" | "COMPANY" | "VAGA" | "PIPELINE_ITEM";
 
@@ -10,7 +11,7 @@ type SearchResults = {
   companies: { id: string; name: string }[];
   people: { id: string; name: string }[];
   candidatos: { id: string; name: string }[];
-  pipelines: { id: string; name: string }[];
+  pipelines: { id: string; name: string; sectorCode: string }[];
   vagas: { id: string; name: string }[];
   documentos: { id: string; name: string; entityType: DocumentEntityType; entityId: string }[];
   tarefas: { id: string; name: string; href: string }[];
@@ -180,7 +181,14 @@ export function GlobalSearch() {
                   />
                   <ResultGroup label="Pessoas" items={results.people} onSelect={(id) => go(`/pessoas/${id}`)} />
                   <ResultGroup label="Candidatos" items={results.candidatos} onSelect={(id) => go(`/candidatos/${id}`)} />
-                  <ResultGroup label="Kanban" items={results.pipelines} onSelect={(id) => go(`/kanban/${id}`)} />
+                  <ResultGroup
+                    label="Kanban"
+                    items={results.pipelines}
+                    onSelect={(id) => {
+                      const p = results.pipelines.find((x) => x.id === id);
+                      if (p) go(boardPath(p));
+                    }}
+                  />
                   <ResultGroup
                     label="Tarefas"
                     items={results.tarefas}

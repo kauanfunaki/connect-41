@@ -6,8 +6,7 @@ import { ListsTable, type ListRow } from "@/components/kanban/ListsTable";
 import { NewListButton } from "@/components/kanban/NewListButton";
 import { criarListaSimples } from "@/app/(app)/kanban/spaces-actions";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canManageSector } from "@/lib/auth/context";
-import { scopedSpaceWhere } from "@/lib/auth/scope";
+import { getAuthContext, canManageSector, canViewSector } from "@/lib/auth/context";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 
 function toListRow(p: {
@@ -30,11 +29,14 @@ function toListRow(p: {
 export default async function SectorFolderPage({ params }: { params: Promise<{ code: string; folderId: string }> }) {
   const { code, folderId } = await params;
   const ctx = await getAuthContext();
+  // Checagem explícita — ver setor/[code]/espacos/[spaceId]/page.tsx (spread
+  // de scopedSpaceWhere sobrescrevia a chave sectorCode literal).
+  if (!canViewSector(ctx, code)) notFound();
 
   const prisma = getPrisma();
   const [folder, { labels: sectorLabels }] = await Promise.all([
     prisma.folder.findFirst({
-      where: { id: folderId, space: { sectorCode: code, ...scopedSpaceWhere(ctx) } },
+      where: { id: folderId, space: { tenantId: ctx.tenantId, sectorCode: code } },
       include: { space: { select: { id: true, name: true, sectorCode: true } } },
     }),
     getSectorMaps(ctx.tenantId),

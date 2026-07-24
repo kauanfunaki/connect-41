@@ -16,6 +16,7 @@ import { getAuthContext, canWrite, isFullWrite, isFullAccess } from "@/lib/auth/
 import { scopedCompanyWhere, scopedPersonWhere, scopedPipelineWhere, scopedHandoffWhere } from "@/lib/auth/scope";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getSectorsWithEnabledModules } from "@/lib/modules";
+import { boardPath } from "@/lib/kanbanPaths";
 import { formatCalendarDate, formatInstantDate, formatInstantTime } from "@/lib/format";
 
 const ACTIVITY_LABEL: Record<string, string> = {
@@ -151,7 +152,9 @@ export default async function HomePage() {
       take: 12,
       include: {
         user: { select: { id: true, name: true } },
-        pipelineItem: { select: { id: true, pipelineId: true, entityId: true, entityType: true } },
+        pipelineItem: {
+          select: { id: true, pipelineId: true, entityId: true, entityType: true, pipeline: { select: { sectorCode: true } } },
+        },
       },
     }),
     prisma.activity.findMany({
@@ -233,6 +236,7 @@ export default async function HomePage() {
     userName: string;
     entityId: string | null;
     pipelineId: string;
+    pipelineSectorCode: string;
     pipelineItemId: string;
     label: string;
     count: number;
@@ -249,6 +253,7 @@ export default async function HomePage() {
         userName: a.user.name,
         entityId: a.pipelineItem.entityId,
         pipelineId: a.pipelineItem.pipelineId,
+        pipelineSectorCode: a.pipelineItem.pipeline.sectorCode,
         pipelineItemId: a.pipelineItem.id,
         label: ACTIVITY_LABEL[a.type] ?? "atualizou",
         count: 1,
@@ -408,7 +413,7 @@ export default async function HomePage() {
                   return (
                     <Link
                       key={item.id}
-                      href={`/kanban/${item.pipelineId}/itens/${item.id}`}
+                      href={`${boardPath({ id: item.pipelineId, sectorCode: item.pipeline.sectorCode })}/itens/${item.id}`}
                       className="flex items-center justify-between gap-3 py-2 group"
                     >
                       <span className="text-[length:var(--fs-body)] text-fg group-hover:text-brand transition-colors truncate min-w-0">
@@ -516,7 +521,7 @@ export default async function HomePage() {
             ) : (
               <div className="space-y-3">
                 {activityGroups.map((g) => (
-                  <Link key={g.id} href={`/kanban/${g.pipelineId}/itens/${g.pipelineItemId}`} className="flex items-start gap-2.5 group">
+                  <Link key={g.id} href={`${boardPath({ id: g.pipelineId, sectorCode: g.pipelineSectorCode })}/itens/${g.pipelineItemId}`} className="flex items-start gap-2.5 group">
                     <span className="w-6 h-6 rounded-full bg-brand-subtle text-brand text-[10px] font-semibold flex items-center justify-center flex-shrink-0 mt-0.5">
                       {g.userName.trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join("").toUpperCase()}
                     </span>

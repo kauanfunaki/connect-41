@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
       where: { ...scopedPipelineWhere(ctx), name: { contains: q } },
       orderBy: { name: "asc" },
       take: LIMIT,
-      select: { id: true, name: true },
+      select: { id: true, name: true, sectorCode: true },
     }),
     prisma.vaga.findMany({
       where: { ...scopedVagaWhere(ctx), title: { contains: q } },

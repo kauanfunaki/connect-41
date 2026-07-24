@@ -6,8 +6,8 @@ import { DuplicatePipelineButton } from "@/components/kanban/DuplicatePipelineBu
 import { EditPipelineStagesModal } from "@/components/kanban/EditPipelineStagesModal";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { moverItem, reordenarItem, duplicarPipeline, renomearEstagio, atualizarEstagios, criarTarefaRapida, atualizarPrioridadeResponsavel, concluirTarefa, reabrirTarefa } from "@/app/(app)/kanban/actions";
-import { getAuthContext, canManageSector } from "@/lib/auth/context";
-import { scopedPipelineWhere, scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
+import { getAuthContext, canManageSector, canViewSector } from "@/lib/auth/context";
+import { scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
 
 function daysSince(d: Date): number {
   return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000));
@@ -24,10 +24,19 @@ export default async function BpoBoardPage({
 }) {
   const { id } = await params;
   const ctx = await getAuthContext();
+  // Checagem explícita em vez de `{ sectorCode: "bpo", ...scopedPipelineWhere(ctx) }`:
+  // scopedPipelineWhere devolve a PRÓPRIA chave sectorCode (um filtro `{in:...}`
+  // pra quem não é full-access, ou nenhum filtro de setor pra quem é) — como
+  // objeto espalhado por último, ela SOBRESCREVE o "bpo" literal em vez de
+  // combinar com ele, deixando um usuário full-access ou de outro setor
+  // (que tenha "bpo" numa lista de setores múltiplos) enxergar pipeline de
+  // qualquer setor por esta URL dedicada. tenantId+sectorCode diretos evitam
+  // a colisão de chave.
+  if (!canViewSector(ctx, "bpo")) notFound();
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({
-    where: { id, sectorCode: "bpo", ...scopedPipelineWhere(ctx) },
+    where: { id, tenantId: ctx.tenantId, sectorCode: "bpo" },
     include: {
       space: { select: { id: true, name: true } },
       folder: { select: { id: true, name: true } },

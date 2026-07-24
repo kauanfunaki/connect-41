@@ -6,8 +6,7 @@ import { ListsTable, type ListRow } from "@/components/kanban/ListsTable";
 import { NewListButton } from "@/components/kanban/NewListButton";
 import { criarListaSimples } from "@/app/(app)/kanban/spaces-actions";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canManageSector } from "@/lib/auth/context";
-import { scopedSpaceWhere } from "@/lib/auth/scope";
+import { getAuthContext, canManageSector, canViewSector } from "@/lib/auth/context";
 
 function toListRow(p: {
   id: string; name: string; color: string | null; startDate: Date | null; endDate: Date | null;
@@ -27,10 +26,13 @@ function toListRow(p: {
 export default async function FolderPage({ params }: { params: Promise<{ folderId: string }> }) {
   const { folderId } = await params;
   const ctx = await getAuthContext();
+  // Checagem explícita — ver bpo-financeiro/espacos/[spaceId]/page.tsx (spread
+  // de scopedSpaceWhere sobrescrevia a chave sectorCode literal).
+  if (!canViewSector(ctx, "bpo")) notFound();
 
   const prisma = getPrisma();
   const folder = await prisma.folder.findFirst({
-    where: { id: folderId, space: scopedSpaceWhere(ctx) },
+    where: { id: folderId, space: { tenantId: ctx.tenantId, sectorCode: "bpo" } },
     include: { space: { select: { id: true, name: true, sectorCode: true } } },
   });
   if (!folder) notFound();

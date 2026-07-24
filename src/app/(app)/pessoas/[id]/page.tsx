@@ -96,7 +96,7 @@ export default async function PessoaPage({
     listDocuments(ctx.tenantId, "PERSON", id),
     prisma.pipelineItem.findMany({
       where: { tenantId: ctx.tenantId, entityType: "PERSON", entityId: id },
-      include: { pipeline: { select: { id: true, name: true } }, stage: { select: { name: true } } },
+      include: { pipeline: { select: { id: true, name: true, sectorCode: true } }, stage: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
     }),
     prisma.activity.findMany({
@@ -378,6 +378,7 @@ export default async function PessoaPage({
         id: p.id,
         pipelineId: p.pipeline.id,
         pipelineName: p.pipeline.name,
+        pipelineSectorCode: p.pipeline.sectorCode,
         stageName: p.stage.name,
       }))}
       activities={historyActivities.map((a) => ({
