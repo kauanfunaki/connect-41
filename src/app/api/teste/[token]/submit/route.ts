@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { hit, clientIp } from "@/lib/rateLimit";
 import { notifyUser } from "@/lib/notifications";
 import { validateDiscAnswers, scoreDisc } from "@/lib/disc";
+import { validateQuizAnswers, scoreQuiz } from "@/lib/quiz";
 import { stageIndex } from "@/lib/recruitmentFunnel";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
@@ -12,7 +13,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   const prisma = getPrisma();
   const link = await prisma.assessmentLink.findUnique({
     where: { token },
-    select: { id: true, tenantId: true, personId: true, candidaturaId: true, status: true, expiresAt: true, createdById: true },
+    select: {
+      id: true,
+      tenantId: true,
+      personId: true,
+      candidaturaId: true,
+      status: true,
+      expiresAt: true,
+      createdById: true,
+      type: true,
+      templateId: true,
+    },
   });
 
   if (!link) {
@@ -39,24 +50,61 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   } catch {
     return NextResponse.json({ error: "Respostas inválidas." }, { status: 400 });
   }
-  const answers = validateDiscAnswers(rawAnswers);
-  if (!answers) {
-    return NextResponse.json({ error: "Respostas incompletas ou inválidas. Responda todos os blocos e tente novamente." }, { status: 400 });
+
+  // Notificação é compartilhada pelos dois tipos — só a mensagem muda.
+  let notifyMessage: string;
+
+  if (link.type === "DISC") {
+    const answers = validateDiscAnswers(rawAnswers);
+    if (!answers) {
+      return NextResponse.json({ error: "Respostas incompletas ou inválidas. Responda todos os blocos e tente novamente." }, { status: 400 });
+    }
+
+    const result = scoreDisc(answers);
+
+    await prisma.assessmentLink.update({
+      where: { id: link.id },
+      data: {
+        status: "RESPONDIDO",
+        submittedAt: new Date(),
+        answers,
+        scores: result.scores,
+        primaryProfile: result.primaryProfile,
+        secondaryProfile: result.secondaryProfile,
+      },
+    });
+
+    const person = await prisma.person.findUnique({ where: { id: link.personId }, select: { name: true } });
+    notifyMessage = `${person?.name ?? "Candidato"} respondeu o teste DISC — perfil ${result.primaryProfile}.`;
+  } else {
+    const template = await prisma.assessmentTemplate.findUnique({
+      where: { id: link.templateId! },
+      select: { name: true, questions: { select: { id: true, options: true, correctIndex: true } } },
+    });
+    if (!template) {
+      return NextResponse.json({ error: "O modelo deste teste não está mais disponível." }, { status: 500 });
+    }
+
+    const answers = validateQuizAnswers(rawAnswers, template.questions);
+    if (!answers) {
+      return NextResponse.json({ error: "Respostas incompletas ou inválidas. Responda todas as perguntas e tente novamente." }, { status: 400 });
+    }
+
+    const result = scoreQuiz(answers, template.questions);
+
+    await prisma.assessmentLink.update({
+      where: { id: link.id },
+      data: {
+        status: "RESPONDIDO",
+        submittedAt: new Date(),
+        answers,
+        scores: result,
+      },
+    });
+
+    const person = await prisma.person.findUnique({ where: { id: link.personId }, select: { name: true } });
+    notifyMessage = `${person?.name ?? "Candidato"} respondeu o teste "${template.name}" — ${result.pct}% de acertos.`;
   }
-
-  const result = scoreDisc(answers);
-
-  await prisma.assessmentLink.update({
-    where: { id: link.id },
-    data: {
-      status: "RESPONDIDO",
-      submittedAt: new Date(),
-      answers,
-      scores: result.scores,
-      primaryProfile: result.primaryProfile,
-      secondaryProfile: result.secondaryProfile,
-    },
-  });
 
   // Se o teste veio de uma candidatura, avança o funil pra "Teste" (mesmo
   // padrão de meeting-actions.ts ao agendar entrevista → "Entrevista").
@@ -74,11 +122,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   // resolve PERSON sempre para /pessoas/:id, que hoje só renderiza
   // Person.type === COLABORADOR (candidatos vivem em /candidatos/:id) — um
   // link ali pra um candidato daria 404. Cai no fallback seguro /notificacoes.
-  const person = await prisma.person.findUnique({ where: { id: link.personId }, select: { name: true } });
   await notifyUser(link.createdById, {
     tenantId: link.tenantId,
-    type: "TESTE_DISC_RESPONDIDO",
-    message: `${person?.name ?? "Candidato"} respondeu o teste DISC — perfil ${result.primaryProfile}.`,
+    type: "TESTE_RESPONDIDO",
+    message: notifyMessage,
   });
 
   return NextResponse.json({ ok: true });

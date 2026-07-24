@@ -43,7 +43,7 @@ export default async function TestesPage({
 
   const canCreate = canWrite(ctx.role) && canActOnSector(ctx, SECTOR);
 
-  const [links, total, candidatos] = await Promise.all([
+  const [links, total, candidatos, templates] = await Promise.all([
     prisma.assessmentLink.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -52,12 +52,20 @@ export default async function TestesPage({
       include: {
         person: { select: { id: true, name: true } },
         candidatura: { select: { id: true, vaga: { select: { id: true, title: true } } } },
+        template: { select: { name: true } },
       },
     }),
     prisma.assessmentLink.count({ where }),
     canCreate
       ? prisma.person.findMany({
           where: { type: "CANDIDATO", ...(await scopedPersonWhere(ctx)) },
+          orderBy: { name: "asc" },
+          select: { id: true, name: true },
+        })
+      : Promise.resolve([]),
+    canCreate
+      ? prisma.assessmentTemplate.findMany({
+          where: { tenantId: ctx.tenantId, sectorCode: SECTOR, active: true },
           orderBy: { name: "asc" },
           select: { id: true, name: true },
         })
@@ -81,9 +89,14 @@ export default async function TestesPage({
             {total} teste{total !== 1 ? "s" : ""}
           </p>
         </div>
+        {canCreate && (
+          <Link href="/testes/templates" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
+            Modelos de teste
+          </Link>
+        )}
       </div>
 
-      {canCreate && <NovoTesteForm candidatos={candidatos} />}
+      {canCreate && <NovoTesteForm candidatos={candidatos} templates={templates} />}
 
       <div className="flex items-center gap-1 mb-4">
         {(["PENDENTE", "RESPONDIDO"] as AssessmentLinkStatus[]).map((s) => (
@@ -111,7 +124,7 @@ export default async function TestesPage({
           <EmptyState
             icon={<ClipboardList />}
             title="Nenhum teste encontrado"
-            description="Ajuste os filtros ou envie o primeiro teste DISC pra um candidato acima."
+            description="Ajuste os filtros ou envie o primeiro teste pra um candidato acima."
           />
         </div>
       ) : (
@@ -124,15 +137,21 @@ export default async function TestesPage({
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${STATUS_STYLE[l.status]}`}>
                     {STATUS_LABEL[l.status]}
                   </span>
-                  {l.primaryProfile && (
+                  {l.status === "RESPONDIDO" && l.type === "DISC" && l.primaryProfile && (
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border bg-brand/10 text-brand border-brand/25">
                       Perfil {l.primaryProfile}
                       {l.secondaryProfile ?? ""}
                     </span>
                   )}
+                  {l.status === "RESPONDIDO" && l.type === "MULTIPLA_ESCOLHA" && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border bg-brand/10 text-brand border-brand/25">
+                      {(l.scores as { pct: number } | null)?.pct ?? 0}% de acertos
+                    </span>
+                  )}
                 </div>
                 <p className="text-[12px] text-fg-muted">
-                  DISC{l.candidatura ? ` · ${l.candidatura.vaga.title}` : ""} · enviado em {formatInstantDate(l.createdAt)}
+                  {l.type === "DISC" ? "DISC" : l.template?.name ?? "Múltipla escolha"}
+                  {l.candidatura ? ` · ${l.candidatura.vaga.title}` : ""} · enviado em {formatInstantDate(l.createdAt)}
                 </p>
               </div>
             </Link>

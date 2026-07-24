@@ -8,7 +8,7 @@ import { BackButton } from "@/components/shared/BackButton";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
 import { ScorecardForm } from "@/components/vagas/ScorecardForm";
 import { MeetingsSection } from "@/components/kanban/MeetingsSection";
-import { TesteDiscCard } from "@/components/teste/TesteDiscCard";
+import { TesteCard } from "@/components/teste/TesteCard";
 import { STAGE_LABEL, type Stage } from "@/lib/recruitmentFunnel";
 import { CRITERIA, RECOMMENDATION_LABEL, consolidateScorecards, scorecardAverage } from "@/lib/scorecard";
 import { formatInstantDate } from "@/lib/format";
@@ -16,6 +16,7 @@ import { canManageMeetings } from "@/lib/integrations/oauth";
 import { salvarScorecard, excluirScorecard } from "./actions";
 import { agendarEntrevista, excluirEntrevista } from "./meeting-actions";
 import type { DiscScores, DiscDimension } from "@/lib/disc";
+import type { QuizScores } from "@/lib/quiz";
 
 export default async function CandidaturaScorecardPage({
   params,
@@ -43,6 +44,7 @@ export default async function CandidaturaScorecardPage({
         where: { candidaturaId },
         orderBy: { createdAt: "desc" },
         take: 1,
+        include: { template: { select: { name: true } } },
       },
     },
   });
@@ -56,24 +58,41 @@ export default async function CandidaturaScorecardPage({
   const initialTesteLink =
     testeLink?.status === "PENDENTE"
       ? { status: "PENDENTE" as const, token: testeLink.token, expiresAtLabel: formatInstantDate(testeLink.expiresAt) }
-      : testeLink?.status === "RESPONDIDO"
+      : testeLink?.status === "RESPONDIDO" && testeLink.type === "DISC"
         ? {
             status: "RESPONDIDO" as const,
             id: testeLink.id,
+            type: "DISC" as const,
             scores: testeLink.scores as unknown as DiscScores,
             primaryProfile: testeLink.primaryProfile as DiscDimension,
             secondaryProfile: testeLink.secondaryProfile as DiscDimension | null,
             submittedAtLabel: testeLink.submittedAt ? formatInstantDate(testeLink.submittedAt) : "—",
           }
-        : null;
+        : testeLink?.status === "RESPONDIDO"
+          ? {
+              status: "RESPONDIDO" as const,
+              id: testeLink.id,
+              type: "MULTIPLA_ESCOLHA" as const,
+              scores: testeLink.scores as unknown as QuizScores,
+              templateName: testeLink.template?.name ?? "Modelo excluído",
+              submittedAtLabel: testeLink.submittedAt ? formatInstantDate(testeLink.submittedAt) : "—",
+            }
+          : null;
 
   const canSchedule = canManageMeetings(ctx);
-  const [oauthAccounts, allUsers] = await Promise.all([
+  const [oauthAccounts, allUsers, templates] = await Promise.all([
     canSchedule
       ? prisma.oAuthAccount.findMany({ where: { tenantId: ctx.tenantId, userId: ctx.userId }, select: { provider: true } })
       : Promise.resolve([]),
     canSchedule
       ? prisma.user.findMany({ where: { tenantId: ctx.tenantId, active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } })
+      : Promise.resolve([]),
+    canAct
+      ? prisma.assessmentTemplate.findMany({
+          where: { tenantId: ctx.tenantId, sectorCode: "recrutamento", active: true },
+          orderBy: { name: "asc" },
+          select: { id: true, name: true },
+        })
       : Promise.resolve([]),
   ]);
   const hasGoogle = oauthAccounts.some((a) => a.provider === "GOOGLE");
@@ -124,13 +143,14 @@ export default async function CandidaturaScorecardPage({
         />
       )}
 
-      {/* Teste DISC */}
+      {/* Teste */}
       <div className="mb-4">
-        <TesteDiscCard
+        <TesteCard
           personId={candidatura.person.id}
           candidaturaId={candidaturaId}
           initialLink={initialTesteLink}
           canManage={canAct}
+          templates={templates}
         />
       </div>
 

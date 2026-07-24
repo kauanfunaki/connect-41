@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { ClipboardList } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { gerarLinkTeste } from "@/app/(app)/testes/actions";
-import { DiscBars } from "./DiscBars";
+import { AssessmentResult } from "./AssessmentResult";
+import { TestTypeSelect, type TemplateOption, type TestTypeValue } from "./TestTypeSelect";
 import type { DiscScores, DiscDimension } from "@/lib/disc";
+import type { QuizScores } from "@/lib/quiz";
 
 type LinkState =
   | null
@@ -14,9 +16,18 @@ type LinkState =
   | {
       status: "RESPONDIDO";
       id: string;
+      type: "DISC";
       scores: DiscScores;
       primaryProfile: DiscDimension;
       secondaryProfile: DiscDimension | null;
+      submittedAtLabel: string;
+    }
+  | {
+      status: "RESPONDIDO";
+      id: string;
+      type: "MULTIPLA_ESCOLHA";
+      scores: QuizScores;
+      templateName: string;
       submittedAtLabel: string;
     };
 
@@ -25,11 +36,13 @@ type Props = {
   candidaturaId: string | null;
   initialLink: LinkState;
   canManage: boolean;
+  templates: TemplateOption[];
 };
 
-export function TesteDiscCard({ personId, candidaturaId, initialLink, canManage }: Props) {
+export function TesteCard({ personId, candidaturaId, initialLink, canManage, templates }: Props) {
   const router = useRouter();
   const [link, setLink] = useState<LinkState>(initialLink);
+  const [testType, setTestType] = useState<TestTypeValue>({ type: "DISC" });
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -43,7 +56,12 @@ export function TesteDiscCard({ personId, candidaturaId, initialLink, canManage 
     setEmailNote(null);
     setPending(true);
     try {
-      const result = await gerarLinkTeste(personId, candidaturaId);
+      const result = await gerarLinkTeste(
+        personId,
+        candidaturaId,
+        testType.type,
+        testType.type === "MULTIPLA_ESCOLHA" ? testType.templateId : null
+      );
       if ("error" in result) {
         setError(result.error);
         return;
@@ -74,23 +92,26 @@ export function TesteDiscCard({ personId, candidaturaId, initialLink, canManage 
     <div className="bg-surface border border-border rounded-lg p-5">
       <div className="flex items-center gap-2 mb-1">
         <ClipboardList size={16} className="text-brand" />
-        <h2 className="text-[14px] font-semibold text-fg">Teste DISC</h2>
+        <h2 className="text-[14px] font-semibold text-fg">Teste</h2>
       </div>
 
       {!link && (
         <>
-          <p className="text-[13px] text-fg-muted mb-3">
-            Envie um link para o candidato responder o teste de perfil comportamental (DISC) sozinho.
-          </p>
+          <p className="text-[13px] text-fg-muted mb-3">Envie um link para o candidato responder um teste sozinho.</p>
           {canManage && (
-            <button
-              type="button"
-              onClick={handleGerar}
-              disabled={pending}
-              className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
-            >
-              {pending ? "Gerando…" : "Enviar teste DISC"}
-            </button>
+            <div className="space-y-3">
+              <div className="max-w-xs">
+                <TestTypeSelect templates={templates} value={testType} onChange={setTestType} id={`teste-type-${personId}`} />
+              </div>
+              <button
+                type="button"
+                onClick={handleGerar}
+                disabled={pending}
+                className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+              >
+                {pending ? "Gerando…" : "Enviar teste"}
+              </button>
+            </div>
           )}
         </>
       )}
@@ -129,13 +150,24 @@ export function TesteDiscCard({ personId, candidaturaId, initialLink, canManage 
       {link?.status === "RESPONDIDO" && (
         <>
           <p className="text-[12px] text-fg-muted mb-3">Respondido em {link.submittedAtLabel}.</p>
-          <DiscBars
-            scores={link.scores}
-            primaryProfile={link.primaryProfile}
-            secondaryProfile={link.secondaryProfile}
-            compact
-            detailHref={`/testes/${link.id}`}
-          />
+          {link.type === "DISC" ? (
+            <AssessmentResult
+              type="DISC"
+              scores={link.scores}
+              primaryProfile={link.primaryProfile}
+              secondaryProfile={link.secondaryProfile}
+              compact
+              detailHref={`/testes/${link.id}`}
+            />
+          ) : (
+            <AssessmentResult
+              type="MULTIPLA_ESCOLHA"
+              scores={link.scores}
+              templateName={link.templateName}
+              compact
+              detailHref={`/testes/${link.id}`}
+            />
+          )}
         </>
       )}
 
