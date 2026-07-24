@@ -20,7 +20,7 @@ export function Tabs({ tabs, active, onChange, className = "" }: Props) {
   return (
     <div
       role="tablist"
-      className={`scroll-x flex items-center gap-1 border-b border-border overflow-x-auto ${className}`.trim()}
+      className={`scroll-x-hidden flex items-center gap-1 border-b border-border overflow-x-auto ${className}`.trim()}
     >
       {tabs.map((t) => {
         const isActive = t.key === active;

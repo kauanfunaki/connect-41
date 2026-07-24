@@ -32,14 +32,24 @@ export type DocumentItem = {
   expired: boolean;
 };
 
+const IMAGE_EXT = new Set(["jpg", "jpeg", "png", "webp", "gif"]);
+function isImageFile(fileName: string): boolean {
+  return IMAGE_EXT.has(fileName.split(".").pop()?.toLowerCase() ?? "");
+}
+
 type Props = {
   entityType: DocumentEntityType;
   entityId: string;
   documents: DocumentItem[];
   canUpload: boolean;
+  // Grade compacta de miniaturas pras imagens, em vez de uma linha cheia de
+  // metadados por arquivo — usada no detalhamento de tarefa, onde anexar
+  // várias imagens (ex.: prints de comprovante) deixava a tela poluída.
+  // Empresa/Pessoa continuam com a lista cheia (default).
+  compact?: boolean;
 };
 
-export function DocumentsSection({ entityType, entityId, documents, canUpload }: Props) {
+export function DocumentsSection({ entityType, entityId, documents, canUpload, compact = false }: Props) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +80,9 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload }:
     }
   }
 
+  const images = compact ? documents.filter((d) => isImageFile(d.fileName)) : [];
+  const otherDocs = compact ? documents.filter((d) => !isImageFile(d.fileName)) : documents;
+
   return (
     <div className="bg-surface border border-border rounded-lg p-5">
       <h2 className="text-[14px] font-semibold text-fg mb-4">Documentos</h2>
@@ -77,35 +90,59 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload }:
       {documents.length === 0 ? (
         <p className="text-[13px] text-fg-muted mb-4">Nenhum documento anexado ainda.</p>
       ) : (
-        <div className="divide-y divide-border mb-4">
-          {documents.map((d) => (
-            <div key={d.id} className="flex items-center justify-between py-2.5">
-              <div>
+        <>
+          {images.length > 0 && (
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mb-4">
+              {images.map((d) => (
                 <a
+                  key={d.id}
                   href={`/api/documents/${d.id}`}
-                  className="text-[13px] text-brand hover:underline"
+                  target="_blank"
+                  rel="noreferrer"
+                  title={`${d.fileName} · ${d.uploadedByName} em ${d.createdAtLabel}`}
+                  className="group relative aspect-square rounded-md overflow-hidden border border-border hover:border-border-strong transition-colors"
                 >
-                  {d.fileName}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/api/documents/${d.id}`} alt={d.fileName} className="w-full h-full object-cover" />
+                  {d.sensitive && (
+                    <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-warning border border-canvas" title="Sensível" />
+                  )}
                 </a>
-                <p className="text-[11px] text-fg-muted mt-0.5">
-                  {CATEGORY_LABEL[d.category]} · enviado por {d.uploadedByName} em {d.createdAtLabel}
-                  {d.sensitive && " · sensível"}
-                </p>
-              </div>
-              {d.expiresAtLabel && (
-                <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border flex-shrink-0 ${
-                    d.expired
-                      ? "bg-danger/10 text-danger border-danger/25"
-                      : "bg-warning/10 text-warning border-warning/25"
-                  }`}
-                >
-                  {d.expired ? `Vencido em ${d.expiresAtLabel}` : `Vence em ${d.expiresAtLabel}`}
-                </span>
-              )}
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+          {otherDocs.length > 0 && (
+            <div className="divide-y divide-border mb-4">
+              {otherDocs.map((d) => (
+                <div key={d.id} className="flex items-center justify-between py-2.5">
+                  <div>
+                    <a
+                      href={`/api/documents/${d.id}`}
+                      className="text-[13px] text-brand hover:underline"
+                    >
+                      {d.fileName}
+                    </a>
+                    <p className="text-[11px] text-fg-muted mt-0.5">
+                      {CATEGORY_LABEL[d.category]} · enviado por {d.uploadedByName} em {d.createdAtLabel}
+                      {d.sensitive && " · sensível"}
+                    </p>
+                  </div>
+                  {d.expiresAtLabel && (
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border flex-shrink-0 ${
+                        d.expired
+                          ? "bg-danger/10 text-danger border-danger/25"
+                          : "bg-warning/10 text-warning border-warning/25"
+                      }`}
+                    >
+                      {d.expired ? `Vencido em ${d.expiresAtLabel}` : `Vence em ${d.expiresAtLabel}`}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {canUpload && (

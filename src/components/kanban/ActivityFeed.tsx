@@ -147,14 +147,16 @@ function Composer({
 }) {
   const [value, setValue] = useState(defaultValue);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [mentionedTasks, setMentionedTasks] = useState<TaskMentionCandidate[]>([]);
   const [isPending, startTransition] = useTransition();
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function submit() {
-    if (!value.trim() && attachments.length === 0) return;
+    if (!value.trim() && attachments.length === 0 && mentionedTasks.length === 0) return;
     const attachmentText = attachments.map((a) => `[${a.fileName}](${a.url})`).join(" ");
-    const content = [value.trim(), attachmentText].filter(Boolean).join(" ");
+    const mentionText = mentionedTasks.map((t) => `[${t.name}](${t.href})`).join(" ");
+    const content = [value.trim(), attachmentText, mentionText].filter(Boolean).join(" ");
     const form = new FormData();
     form.set("content", content);
     if (parentActivityId) form.set("parentActivityId", parentActivityId);
@@ -162,6 +164,7 @@ function Composer({
       onSubmit(form);
       setValue("");
       setAttachments([]);
+      setMentionedTasks([]);
     });
   }
 
@@ -197,10 +200,24 @@ function Composer({
         onChange={setValue}
         users={mentionUsers}
       />
-      {attachments.length > 0 && (
+      {(attachments.length > 0 || mentionedTasks.length > 0) && (
         <div className="flex flex-wrap gap-1.5">
           {attachments.map((a) => (
             <AttachmentChip key={a.id} attachment={a} onRemove={() => setAttachments((prev) => prev.filter((x) => x.id !== a.id))} />
+          ))}
+          {mentionedTasks.map((t) => (
+            <span key={t.id} className="inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-md border border-border bg-surface-hover text-[12px] text-fg-secondary">
+              <LinkIcon size={11} className="text-fg-muted flex-shrink-0" />
+              <span className="truncate max-w-[160px]">{t.name}</span>
+              <button
+                type="button"
+                onClick={() => setMentionedTasks((prev) => prev.filter((x) => x.id !== t.id))}
+                aria-label="Remover menção"
+                className="text-fg-muted hover:text-danger flex-shrink-0"
+              >
+                <X size={12} />
+              </button>
+            </span>
           ))}
         </div>
       )}
@@ -215,7 +232,10 @@ function Composer({
           <Paperclip size={15} />
         </button>
         <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="hidden" onChange={handleFile} />
-        <TaskMentionPicker candidates={taskCandidates} onPick={(c) => setValue((v) => `${v}${v ? " " : ""}[${c.name}](${c.href})`)} />
+        <TaskMentionPicker
+          candidates={taskCandidates}
+          onPick={(c) => setMentionedTasks((prev) => (prev.some((x) => x.id === c.id) ? prev : [...prev, c]))}
+        />
 
         <div className="flex-1" />
         {onCancel && (
@@ -226,7 +246,7 @@ function Composer({
         <button
           type="button"
           onClick={submit}
-          disabled={isPending || uploading || (!value.trim() && attachments.length === 0)}
+          disabled={isPending || uploading || (!value.trim() && attachments.length === 0 && mentionedTasks.length === 0)}
           className="h-8 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
         >
           {isPending ? "Salvando…" : uploading ? "Enviando…" : submitLabel}
