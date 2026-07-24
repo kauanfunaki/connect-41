@@ -14,6 +14,7 @@ import {
   IdCard,
   LayoutGrid,
   BookOpen,
+  ClipboardList,
 } from "lucide-react";
 import { getAuthContext, canViewSector, canManageSector } from "@/lib/auth/context";
 import { getTenantModuleStates } from "@/lib/modules";
@@ -29,6 +30,7 @@ import { criarEspaco } from "@/app/(app)/kanban/spaces-actions";
 const MODULE_ICONS: Record<string, React.ReactNode> = {
   recrutamento_vagas: <Briefcase size={20} />,
   recrutamento_candidatos: <UserSearch size={20} />,
+  recrutamento_testes: <ClipboardList size={20} />,
   dprh_colaboradores: <Users size={20} />,
   dprh_afastamentos: <Stethoscope size={20} />,
   dprh_horas_extras: <Clock size={20} />,

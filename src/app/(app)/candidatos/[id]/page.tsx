@@ -12,7 +12,9 @@ import { extrairDadosCurriculo } from "./ai-actions";
 import { formatCalendarDate, formatInstantDate, maskCpf, formatPhone, formatCep } from "@/lib/format";
 import { TagToggleList } from "@/components/kanban/TagToggleList";
 import { alternarTagPessoa } from "../actions";
+import { TesteDiscCard } from "@/components/teste/TesteDiscCard";
 import type { ProcessoSeletivoStatus } from "@/generated/prisma/enums";
+import type { DiscScores, DiscDimension } from "@/lib/disc";
 
 const CANDIDATURA_STATUS_LABEL: Record<ProcessoSeletivoStatus, string> = {
   EM_ANDAMENTO: "Em andamento",
@@ -53,6 +55,26 @@ export default async function CandidatoPage({
     orderBy: { createdAt: "desc" },
     include: { vaga: { select: { id: true, title: true, company: { select: { name: true } } } } },
   });
+
+  // DISC é traço da pessoa, reaproveitável entre candidaturas — mostra o link
+  // mais recente independente de qual candidatura o gerou.
+  const testeLink = await prisma.assessmentLink.findFirst({
+    where: { tenantId: ctx.tenantId, personId: id },
+    orderBy: { createdAt: "desc" },
+  });
+  const initialTesteLink =
+    testeLink?.status === "PENDENTE"
+      ? { status: "PENDENTE" as const, token: testeLink.token, expiresAtLabel: formatInstantDate(testeLink.expiresAt) }
+      : testeLink?.status === "RESPONDIDO"
+        ? {
+            status: "RESPONDIDO" as const,
+            id: testeLink.id,
+            scores: testeLink.scores as unknown as DiscScores,
+            primaryProfile: testeLink.primaryProfile as DiscDimension,
+            secondaryProfile: testeLink.secondaryProfile as DiscDimension | null,
+            submittedAtLabel: testeLink.submittedAt ? formatInstantDate(testeLink.submittedAt) : "—",
+          }
+        : null;
 
   const deleteAction = excluirCandidato.bind(null, id);
 
@@ -118,6 +140,11 @@ export default async function CandidatoPage({
           selectedIds={person.tags.map((t) => t.tagId)}
           toggleAction={alternarTagPessoa.bind(null, id)}
         />
+      </div>
+
+      {/* Teste DISC */}
+      <div className="mb-4">
+        <TesteDiscCard personId={id} candidaturaId={null} initialLink={initialTesteLink} canManage={canEdit} />
       </div>
 
       {/* Identificação */}

@@ -40,6 +40,16 @@ export function scopedSpaceWhere(ctx: AuthContext) {
   return { tenantId: ctx.tenantId, sectorCode: { in: ctx.sectors } };
 }
 
+// AssessmentLink (Testes) é setor-scoped como Vaga/Space — campo sectorCode
+// próprio, não derivado de Candidatura→Vaga, porque Person não é setor-scoped
+// (atravessa DP e Recrutamento) e o teste pode ser gerado direto da ficha do
+// candidato, sem candidatura.
+export function scopedAssessmentLinkWhere(ctx: AuthContext) {
+  if (isFullAccess(ctx.role)) return { tenantId: ctx.tenantId };
+  if (ctx.sectors.length === 0) return { tenantId: ctx.tenantId, sectorCode: "__none__" };
+  return { tenantId: ctx.tenantId, sectorCode: { in: ctx.sectors } };
+}
+
 // Handoff: ADMIN/SUPER_ADMIN/READONLY (gerência geral) enxergam tudo; quem
 // abriu a transferência (controladoria) sempre a enxerga; e membros de
 // qualquer setor envolvido (origem ou destino, via handoff_sectors) também.

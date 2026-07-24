@@ -218,6 +218,17 @@ enum AdmissaoLinkStatus {
   CONCLUIDO // DP conferiu e concluiu a admissão (Person → ATIVO)
 }
 
+// Discriminador extensível — hoje só DISC é funcional, mas o módulo de Testes
+// nasce pronto pra outros tipos (raciocínio lógico, situacional, técnico...).
+enum AssessmentType {
+  DISC
+}
+
+enum AssessmentLinkStatus {
+  PENDENTE // link gerado, aguardando preenchimento pelo candidato
+  RESPONDIDO // candidato submeteu; pontuação calculada automaticamente (sem revisão humana)
+}
+
 enum DependenteRelationship {
   CONJUGE
   COMPANHEIRO
@@ -374,6 +385,7 @@ model Tenant {
   notifications        Notification[]
   pushSubscriptions    PushSubscription[]
   admissaoLinks        AdmissaoLink[]
+  assessmentLinks      AssessmentLink[]
   dependentes          Dependente[]
   customFields         CustomField[]
   customValues         CustomValue[]
@@ -588,6 +600,7 @@ model User {
   clientDocumentsCreated ClientDocument[]
   recurringObligations   RecurringObligation[]
   admissaoLinksCreated   AdmissaoLink[]
+  assessmentLinksCreated AssessmentLink[]
   interviewScorecards    InterviewScorecard[]
   linkedPerson           Person?
   bpoCredentialsCreated  BpoCredential[]
@@ -792,6 +805,7 @@ model Person {
   evaluations          Evaluation[]
   chatwootContactLinks ChatwootContactLink[]
   admissaoLinks        AdmissaoLink[]
+  assessmentLinks      AssessmentLink[]
   dependentes          Dependente[]
   tags                 PersonTag[]
 
@@ -1285,13 +1299,14 @@ model Candidatura {
   createdAt        DateTime               @default(now())
   updatedAt        DateTime               @updatedAt
 
-  tenant       Tenant               @relation(fields: [tenantId], references: [id])
-  vaga         Vaga                 @relation(fields: [vagaId], references: [id])
-  person       Person               @relation(fields: [personId], references: [id])
-  pipelineItem PipelineItem?        @relation(fields: [pipelineItemId], references: [id])
-  exames       ExameAdmissional[]
-  scorecards   InterviewScorecard[]
-  meetings     Meeting[]
+  tenant          Tenant               @relation(fields: [tenantId], references: [id])
+  vaga            Vaga                 @relation(fields: [vagaId], references: [id])
+  person          Person               @relation(fields: [personId], references: [id])
+  pipelineItem    PipelineItem?        @relation(fields: [pipelineItemId], references: [id])
+  exames          ExameAdmissional[]
+  scorecards      InterviewScorecard[]
+  meetings        Meeting[]
+  assessmentLinks AssessmentLink[]
 
   @@unique([vagaId, personId])
   @@index([tenantId, vagaId])
@@ -2305,6 +2320,41 @@ model AdmissaoLink {
 
   @@index([tenantId, personId])
   @@map("admissao_links")
+}
+
+// Link tokenizado para o candidato responder um teste (DISC hoje, extensível
+// depois) sozinho, sem login — mesmo molde do AdmissaoLink. sectorCode é
+// próprio (não derivado de Candidatura→Vaga) porque Person não é setor-
+// escopado (atravessa DP e Recrutamento) e o teste pode ser gerado direto da
+// ficha do candidato, sem candidatura (candidaturaId null). Sem tabela de
+// resultado separada — é 1:1 estrito, o próprio link vira o registro da
+// resposta uma vez respondido (answers/scores nulos até lá).
+model AssessmentLink {
+  id               String               @id @default(uuid())
+  tenantId         String
+  personId         String
+  candidaturaId    String?
+  sectorCode       String               @db.VarChar(40)
+  type             AssessmentType       @default(DISC)
+  token            String               @unique @db.VarChar(64)
+  status           AssessmentLinkStatus @default(PENDENTE)
+  expiresAt        DateTime
+  submittedAt      DateTime?
+  answers          Json?
+  scores           Json?
+  primaryProfile   String?              @db.VarChar(4)
+  secondaryProfile String?              @db.VarChar(4)
+  createdById      String
+  createdAt        DateTime             @default(now())
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  person      Person       @relation(fields: [personId], references: [id], onDelete: Cascade)
+  candidatura Candidatura? @relation(fields: [candidaturaId], references: [id])
+  createdBy   User         @relation(fields: [createdById], references: [id])
+
+  @@index([tenantId, personId])
+  @@index([tenantId, sectorCode, status])
+  @@map("assessment_links")
 }
 
 // Dependente de um colaborador (IRRF, salário-família, plano de saúde). Coletado

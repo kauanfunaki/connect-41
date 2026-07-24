@@ -8,6 +8,7 @@ import { getModuleDef } from "@/lib/module-catalog";
 const MODULE_ROUTES: Record<string, string> = {
   recrutamento_vagas: "/vagas",
   recrutamento_candidatos: "/candidatos",
+  recrutamento_testes:     "/testes",
   dprh_colaboradores:     "/colaboradores",
   dprh_afastamentos:      "/afastamentos",
   dprh_horas_extras:      "/horas-extras",
