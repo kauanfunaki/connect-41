@@ -98,6 +98,20 @@ export async function getConversation(
   return request(creds, `/api/v1/accounts/${creds.accountId}/conversations/${conversationId}`);
 }
 
+// O `meta.sender` devolvido pela LISTAGEM de conversas é uma representação
+// reduzida/cacheada do contato — não reflete de forma confiável um nome
+// atualizado no Chatwoot depois que a conversa parou de ter atividade nova.
+// Este endpoint busca o Contact de verdade (mesmo dado que o painel do
+// Chatwoot mostra) — usado como fallback quando o nome do cache está vazio.
+export type ChatwootApiContact = { id: number; name: string | null; email: string | null; phone_number: string | null };
+
+export async function getContact(
+  creds: ChatwootCredentials,
+  contactId: number
+): Promise<{ payload: ChatwootApiContact }> {
+  return request(creds, `/api/v1/accounts/${creds.accountId}/contacts/${contactId}`);
+}
+
 export async function listMessages(
   creds: ChatwootCredentials,
   conversationId: number,

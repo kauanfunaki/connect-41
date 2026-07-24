@@ -13,10 +13,11 @@ const csp = [
   // script-src, que funciona mas fica implícito; explícito documenta a intenção.
   "worker-src 'self'",
   "font-src 'self' data:",
-  // brasilapi.com.br: autocompletar dados da empresa a partir do CNPJ
-  // (EmpresaForm.tsx) — sem essa origem liberada, o fetch falha silenciosamente
-  // bloqueado pela CSP (a falha de rede já é tratada como best-effort no form).
-  "connect-src 'self' https://brasilapi.com.br",
+  // brasilapi.com.br: autocompletar dados da empresa a partir do CNPJ; viacep.com.br:
+  // autocompletar endereço a partir do CEP (ambos em EmpresaForm.tsx) — sem essas
+  // origens liberadas, o fetch falha silenciosamente bloqueado pela CSP (a falha de
+  // rede já é tratada como best-effort no form).
+  "connect-src 'self' https://brasilapi.com.br https://viacep.com.br",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "object-src 'none'",

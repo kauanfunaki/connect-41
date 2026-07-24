@@ -88,6 +88,13 @@ export const MODULE_CATALOG: ModuleDef[] = [
     description: "Quadro dedicado do BPO Financeiro — fechamento por competência, carteira de clientes e pendências",
     defaultEnabled: true,
   },
+  {
+    code: "bpo_senhas",
+    label: "Repositório de Senhas",
+    sectorCode: "bpo",
+    description: "Credenciais de portais, bancos e sistemas de clientes centralizadas com auditoria de acesso",
+    defaultEnabled: true,
+  },
 ];
 
 export function getModuleDef(code: string): ModuleDef | undefined {

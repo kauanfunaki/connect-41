@@ -32,6 +32,7 @@ async function pessoaData(form: FormData, ctx: Awaited<ReturnType<typeof getAuth
     // Pessoas só cadastra colaboradores — candidatos entram pelo módulo de Recrutamento.
     type:             PersonType.COLABORADOR,
     currentCompanyId: pick(form, "currentCompanyId"),
+    isInternal:       form.get("isInternal") === "true",
 
     // Dados trabalhistas
     rg:               pick(form, "rg"),
@@ -209,4 +210,34 @@ export async function inativarPessoasEmMassa(ids: string[]): Promise<void> {
   });
 
   revalidatePath("/pessoas");
+}
+
+// Vincula/desvincula um funcionário interno (Person.isInternal=true) à conta
+// de acesso (User) correspondente — gestão de dados gerais fica em Pessoas,
+// gestão de acesso continua exclusivamente em /admin/usuarios (não cria nem
+// edita o User por aqui, só associa um já existente).
+export async function vincularUsuarioPessoa(personId: string, userId: string | null): Promise<void> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || !canWriteEntity(ctx)) return;
+
+  const prisma = getPrisma();
+  const person = await prisma.person.findFirst({
+    where: { id: personId, isInternal: true, ...(await scopedPersonWhere(ctx)) },
+    select: { id: true },
+  });
+  if (!person) return;
+
+  if (userId) {
+    const user = await prisma.user.findFirst({ where: { id: userId, tenantId: ctx.tenantId }, select: { id: true } });
+    if (!user) return;
+  }
+
+  try {
+    await prisma.person.update({ where: { id: personId }, data: { linkedUserId: userId } });
+  } catch (err) {
+    console.error("[vincularUsuarioPessoa]", err);
+    return;
+  }
+
+  revalidatePath(`/pessoas/${personId}`);
 }

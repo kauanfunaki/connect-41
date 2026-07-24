@@ -15,11 +15,12 @@ import {
   FileSpreadsheet,
 } from "lucide-react";
 import { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
-import { excluirPessoa } from "../actions";
+import { excluirPessoa, vincularUsuarioPessoa } from "../actions";
 import { BackButton } from "@/components/shared/BackButton";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PersonHeader } from "@/components/pessoas/PersonHeader";
 import { PersonDetailTabs } from "@/components/pessoas/PersonDetailTabs";
+import { LinkedUserSelector } from "@/components/pessoas/LinkedUserSelector";
 import { AdmissaoCard } from "@/components/pessoas/AdmissaoCard";
 import { CompanyHistorySection } from "@/components/empresas/CompanyHistorySection";
 import { OperationsLinkList, type OperationLink } from "@/components/shared/OperationsLinkList";
@@ -109,6 +110,14 @@ export default async function PessoaPage({
   if (!person) notFound();
 
   const deleteAction = excluirPessoa.bind(null, id);
+
+  const linkableUsers = person.isInternal
+    ? await prisma.user.findMany({
+        where: { tenantId: ctx.tenantId },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, email: true },
+      })
+    : [];
 
   const personSectors = await getPersonSectors(ctx.tenantId, id);
   const customFields = await getApplicableCustomFields(ctx, "PERSON", id, personSectors);
@@ -203,6 +212,23 @@ export default async function PessoaPage({
           <InfoRow label="Telefone" value={formatPhone(person.phone)} />
         </div>
       </div>
+
+      {/* Conta de acesso — só funcionários internos */}
+      {person.isInternal && (
+        <div className="bg-surface border border-border rounded-lg p-5">
+          <h2 className="text-[14px] font-semibold text-fg mb-4">Conta de acesso</h2>
+          <p className="text-[11px] text-fg-muted mb-2">
+            Login, senha e permissões são gerenciados em Admin → Usuários. Aqui só vincula qual conta pertence a esta pessoa.
+          </p>
+          <LinkedUserSelector
+            personId={id}
+            linkedUserId={person.linkedUserId}
+            users={linkableUsers}
+            canEdit={canEdit}
+            action={vincularUsuarioPessoa}
+          />
+        </div>
+      )}
 
       {/* Endereço */}
       {fullAddress && (

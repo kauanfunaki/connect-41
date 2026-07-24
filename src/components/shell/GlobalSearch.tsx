@@ -55,6 +55,21 @@ export function GlobalSearch() {
     if (mobileExpanded) inputRef.current?.focus();
   }, [mobileExpanded]);
 
+  // Atalho Ctrl+K / Cmd+K — foca a busca de qualquer lugar do app (convenção
+  // comum tipo Linear/GitHub/Slack). Primeiro atalho global do app.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setMobileExpanded(true);
+        setOpen(true);
+        inputRef.current?.focus();
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   useEffect(() => {
     if (query.trim().length < 2) return;
     const controller = new AbortController();
@@ -127,6 +142,11 @@ export function GlobalSearch() {
               placeholder="Buscar empresas, pessoas, kanban…"
               className="w-full h-full bg-transparent text-[15px] text-fg placeholder:text-fg-muted outline-none border-none"
             />
+            {!mobileExpanded && !open && !query && (
+              <kbd className="hidden sm:inline-flex items-center gap-0.5 flex-shrink-0 px-1.5 py-0.5 rounded-md border border-border text-[11px] text-fg-muted font-sans">
+                Ctrl+K
+              </kbd>
+            )}
             {mobileExpanded && (
               <button
                 type="button"

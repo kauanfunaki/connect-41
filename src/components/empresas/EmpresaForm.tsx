@@ -242,6 +242,44 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
     fetchCnpjData(clean);
   }, [values.cnpj]);
 
+  // CEP é a fonte mais confiável pra endereço — mesmo depois do autopreenchimento
+  // por CNPJ (que às vezes vem com logradouro vazio ou inconsistente com o CEP),
+  // a busca por CEP roda em seguida e sobrescreve Logradouro/Bairro/Cidade/UF.
+  const lastFetchedCepRef = useRef<string | null>(null);
+
+  async function fetchCepData(clean: string) {
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+      if (!res.ok) return;
+      const d = await res.json();
+      if (d.erro) return;
+
+      const form = formRef.current;
+      if (!form) return;
+
+      const set = (name: string, value: string | undefined) => {
+        if (!value) return;
+        const el = form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | null;
+        if (el) el.value = value;
+        setValues((prev) => ({ ...prev, [name]: value }));
+      };
+
+      set("addressStreet", d.logradouro);
+      set("neighborhood",  d.bairro);
+      set("city",          d.localidade);
+      set("stateCode",     d.uf);
+    } catch {
+      // falha silenciosa — usuário preenche manualmente
+    }
+  }
+
+  useEffect(() => {
+    const clean = values.zipCode?.replace(/\D/g, "") ?? "";
+    if (clean.length !== 8 || clean === lastFetchedCepRef.current) return;
+    lastFetchedCepRef.current = clean;
+    fetchCepData(clean);
+  }, [values.zipCode]);
+
   return (
     <div className="bg-surface border border-border rounded-2xl overflow-hidden">
       <Stepper steps={steps} onStepClick={(i) => i <= maxStepReached && goTo(i)} />
@@ -315,12 +353,9 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
         {/* ── 2. Endereço ───────────────────────────────── */}
         <div data-step={1} className={step === 1 ? "" : "hidden"}>
           <FormSection title="Endereço">
-            <FieldGrid columns="sm:grid-cols-[1fr_80px]">
-              <CampoForm label="CEP" htmlFor="zipCode">
+            <FieldGrid columns="sm:grid-cols-[200px]">
+              <CampoForm label="CEP" htmlFor="zipCode" helper="Preenche Logradouro, Bairro, Cidade e UF automaticamente.">
                 <Input id="zipCode" name="zipCode" type="text" value={values.zipCode} placeholder="00000-000" maxLength={9} />
-              </CampoForm>
-              <CampoForm label="UF" htmlFor="stateCode">
-                <Input id="stateCode" name="stateCode" type="text" value={values.stateCode} placeholder="PR" maxLength={2} className="uppercase" />
               </CampoForm>
             </FieldGrid>
             <FieldGrid columns="sm:grid-cols-[1fr_120px]">
@@ -339,9 +374,12 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
                 <Input id="neighborhood" name="neighborhood" type="text" value={values.neighborhood} placeholder="Bairro" />
               </CampoForm>
             </FieldGrid>
-            <FieldGrid>
+            <FieldGrid columns="sm:grid-cols-[1fr_80px]">
               <CampoForm label="Cidade" htmlFor="city">
                 <Input id="city" name="city" type="text" value={values.city} placeholder="Curitiba" />
+              </CampoForm>
+              <CampoForm label="UF" htmlFor="stateCode">
+                <Input id="stateCode" name="stateCode" type="text" value={values.stateCode} placeholder="PR" maxLength={2} className="uppercase" />
               </CampoForm>
             </FieldGrid>
           </FormSection>

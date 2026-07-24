@@ -5,6 +5,7 @@ import { PersonType } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { PessoasTable } from "@/components/pessoas/PessoasTable";
+import { PessoasTabsBar, type PessoasTab } from "@/components/pessoas/PessoasTabsBar";
 import { CompanyFilterSelect } from "@/components/shared/CompanyFilterSelect";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { CadastrosTabsBar } from "@/components/shared/CadastrosTabsBar";
@@ -19,11 +20,13 @@ const PER_PAGE = 20;
 export default async function PessoasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; companyId?: string; page?: string }>;
+  searchParams: Promise<{ search?: string; companyId?: string; page?: string; tab?: string }>;
 }) {
-  const { search, companyId, page } = await searchParams;
+  const { search, companyId, page, tab } = await searchParams;
   const ctx = await getAuthContext();
   const canCreate = canWrite(ctx.role);
+  const activeTab: PessoasTab = tab === "internos" ? "internos" : "clientes";
+  const isInternos = activeTab === "internos";
 
   const prisma = getPrisma();
   const pageNum = Math.max(1, parseInt(page ?? "1"));
@@ -31,8 +34,9 @@ export default async function PessoasPage({
   const where = {
     ...(await scopedPersonWhere(ctx)),
     type: PersonType.COLABORADOR,
+    isInternal: isInternos,
     ...(search ? { name: { contains: search } } : {}),
-    ...(companyId ? { currentCompanyId: companyId } : {}),
+    ...(!isInternos && companyId ? { currentCompanyId: companyId } : {}),
   };
 
   const [people, total, companies] = await Promise.all([
@@ -41,7 +45,7 @@ export default async function PessoasPage({
       orderBy: { name: "asc" },
       skip: (pageNum - 1) * PER_PAGE,
       take: PER_PAGE,
-      include: { currentCompany: { select: { id: true, name: true } } },
+      include: { currentCompany: { select: { id: true, name: true } }, linkedUser: { select: { id: true, name: true } } },
     }),
     prisma.person.count({ where }),
     prisma.company.findMany({
@@ -55,7 +59,7 @@ export default async function PessoasPage({
 
   function buildUrl(params: Record<string, string | undefined>) {
     const q = new URLSearchParams();
-    const merged = { search, companyId, page, ...params };
+    const merged = { search, companyId, page, tab, ...params };
     for (const [k, v] of Object.entries(merged)) {
       if (v) q.set(k, v);
     }
@@ -72,12 +76,14 @@ export default async function PessoasPage({
         <div>
           <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Pessoas</h1>
           <p className="text-[13px] text-fg-muted mt-0.5">
-            {total} colaborador{total !== 1 ? "es" : ""} cadastrado{total !== 1 ? "s" : ""}
+            {isInternos
+              ? `${total} funcionário${total !== 1 ? "s" : ""} interno${total !== 1 ? "s" : ""} cadastrado${total !== 1 ? "s" : ""}`
+              : `${total} colaborador${total !== 1 ? "es" : ""} cadastrado${total !== 1 ? "s" : ""}`}
           </p>
         </div>
         {canCreate && (
           <Link
-            href="/pessoas/nova"
+            href={isInternos ? "/pessoas/nova?internal=1" : "/pessoas/nova"}
             className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
           >
             + Nova Pessoa
@@ -85,15 +91,17 @@ export default async function PessoasPage({
         )}
       </div>
 
+      <PessoasTabsBar active={activeTab} />
+
       {/* Filters */}
       <div className="flex items-center gap-3 mb-4">
         <div className="flex-1 max-w-xs">
           <DebouncedSearchInput placeholder="Buscar por nome…" />
         </div>
 
-        <CompanyFilterSelect companies={companies} value={companyId ?? ""} />
+        {!isInternos && <CompanyFilterSelect companies={companies} value={companyId ?? ""} />}
 
-        {companyId && (
+        {!isInternos && companyId && (
           <Link href={buildUrl({ companyId: undefined, page: "1" })} className="text-[12px] text-fg-muted hover:text-fg">
             Limpar
           </Link>
@@ -130,7 +138,9 @@ export default async function PessoasPage({
             companyName: p.currentCompany?.name ?? null,
             companyId: p.currentCompany?.id ?? null,
             createdAtLabel: formatInstantDate(p.createdAt),
+            linkedUserName: p.linkedUser?.name ?? null,
           }))}
+          showLinkedUser={isInternos}
           canCreate={canCreate}
           inativarPessoasEmMassa={inativarPessoasEmMassa}
         />

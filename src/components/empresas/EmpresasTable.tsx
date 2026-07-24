@@ -12,18 +12,18 @@ import { AvatarImage } from "@/components/shared/AvatarImage";
 import type { CompanyStatus } from "@/generated/prisma/enums";
 import { formatCnpj } from "@/lib/format";
 
-type Tag = { sectorCode: string; label: string; color: string; responsibleName: string };
-
 type Row = {
   id: string;
   name: string;
+  externalId: string | null;
   cnpj: string | null;
   status: CompanyStatus;
   email: string | null;
   taxRegime: string | null;
   createdAtLabel: string;
   logoUrl: string | null;
-  tags: Tag[];
+  city: string | null;
+  stateCode: string | null;
 };
 
 type Props = {
@@ -104,10 +104,11 @@ export function EmpresasTable({
                   </th>
                 )}
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
+                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">ID</th>
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">CNPJ</th>
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Regime</th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Responsáveis</th>
+                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Localização</th>
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Criada em</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -131,28 +132,14 @@ export function EmpresasTable({
                       {c.name}
                     </Link>
                   </td>
+                  <td className="px-4 py-3 text-fg-secondary tnum">{c.externalId ?? "—"}</td>
                   <td className="px-4 py-3 text-fg-secondary tnum">{formatCnpj(c.cnpj)}</td>
                   <td className="px-4 py-3">
                     <StatusDot color={statusColor[c.status]} label={statusLabel[c.status]} />
                   </td>
                   <td className="px-4 py-3 text-fg-secondary">{c.taxRegime ?? "—"}</td>
-                  <td className="px-4 py-3">
-                    {c.tags.length === 0 ? (
-                      <span className="text-fg-muted">—</span>
-                    ) : (
-                      <div className="flex flex-wrap gap-1">
-                        {c.tags.map((t) => (
-                          <span
-                            key={t.sectorCode}
-                            title={`${t.label}: ${t.responsibleName}`}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-surface-hover text-fg-secondary border border-border whitespace-nowrap"
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: t.color }} />
-                            {t.label}: {t.responsibleName}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                  <td className="px-4 py-3 text-fg-secondary">
+                    {c.city && c.stateCode ? `${c.city}/${c.stateCode}` : c.city ?? c.stateCode ?? "—"}
                   </td>
                   <td className="px-4 py-3 text-fg-secondary tnum">{c.createdAtLabel}</td>
                   <td className="px-4 py-3 text-right">

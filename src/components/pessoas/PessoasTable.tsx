@@ -22,15 +22,17 @@ type Row = {
   companyName: string | null;
   companyId: string | null;
   createdAtLabel: string;
+  linkedUserName: string | null;
 };
 
 type Props = {
   people: Row[];
   canCreate: boolean;
+  showLinkedUser?: boolean;
   inativarPessoasEmMassa: (ids: string[]) => Promise<void>;
 };
 
-export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Props) {
+export function PessoasTable({ people, canCreate, showLinkedUser = false, inativarPessoasEmMassa }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -81,7 +83,9 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">CPF</th>
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">E-mail</th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Empresa</th>
+                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                  {showLinkedUser ? "Conta de acesso" : "Empresa"}
+                </th>
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Criada em</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -114,7 +118,9 @@ export function PessoasTable({ people, canCreate, inativarPessoasEmMassa }: Prop
                   <td className="px-4 py-3 text-fg-secondary tnum">{maskCpf(p.cpf)}</td>
                   <td className="px-4 py-3 text-fg-secondary">{p.email ?? "—"}</td>
                   <td className="px-4 py-3 text-fg-secondary">
-                    {p.companyId ? (
+                    {showLinkedUser ? (
+                      p.linkedUserName ?? <span className="text-fg-muted">Não vinculado</span>
+                    ) : p.companyId ? (
                       <Link href={`/empresas/${p.companyId}`} className="hover:text-brand transition-colors">
                         {p.companyName}
                       </Link>

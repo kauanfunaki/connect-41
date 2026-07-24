@@ -425,6 +425,8 @@ model Tenant {
   alertDispatches      AlertDispatch[]
   recurringObligations RecurringObligation[]
   chatwootConnections  ChatwootConnection[]
+  bpoCredentials       BpoCredential[]
+  bpoCredentialViews   BpoCredentialView[]
 
   @@map("tenants")
 }
@@ -586,6 +588,9 @@ model User {
   recurringObligations   RecurringObligation[]
   admissaoLinksCreated   AdmissaoLink[]
   interviewScorecards    InterviewScorecard[]
+  linkedPerson           Person?
+  bpoCredentialsCreated  BpoCredential[]
+  bpoCredentialViews     BpoCredentialView[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -638,7 +643,7 @@ model Company {
   name                  String        @db.VarChar(180) // Razão Social
   tradeName             String?       @db.VarChar(180) // Nome Fantasia
   cnpj                  String?       @db.VarChar(18)
-  taxRegime             String?       @db.VarChar(60) // Regime Tributário
+  taxRegime             String?       @db.VarChar(100) // Regime Tributário — algumas opções (ex: "Simples Nacional - Comércio ou Serviço - Com Pró-labore - Com Funcionários") passam de 60 chars, causavam P2000 ao salvar
   externalId            String?       @db.VarChar(60) // ID manual do sistema de domínio (ex: Acessorias) — sem sincronização
   foundationDate        DateTime? // Data de abertura da empresa
   cnaePrincipal         String?       @db.VarChar(20) // Código CNAE principal, ex: 6920-6/01
@@ -683,6 +688,7 @@ model Company {
   clientDocuments      ClientDocument[]
   recurringObligations RecurringObligation[]
   chatwootContactLinks ChatwootContactLink[]
+  bpoCredentials       BpoCredential[]
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -724,6 +730,15 @@ model Person {
   type             PersonType @default(CANDIDATO)
   active           Boolean    @default(true)
   currentCompanyId String?
+  // true = funcionário interno (RH da própria 41), false = colaborador/candidato
+  // de empresa cliente. Frente separada da conta de acesso ao sistema (User) —
+  // ver linkedUserId abaixo.
+  isInternal       Boolean    @default(false)
+  // FK opcional pro User de acesso ao sistema (login/permissões) — só faz
+  // sentido quando isInternal=true. Gestão de dados gerais (nome, endereço,
+  // documentos) fica aqui em Person; gestão de acesso (senha, e-mail,
+  // permissões) continua exclusivamente em /admin/usuarios (User).
+  linkedUserId     String?    @unique
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
 
@@ -759,6 +774,7 @@ model Person {
   currentCompany Company?    @relation(fields: [currentCompanyId], references: [id])
   cargo          Cargo?      @relation(fields: [cargoId], references: [id])
   department     Department? @relation(fields: [departmentId], references: [id])
+  linkedUser     User?       @relation(fields: [linkedUserId], references: [id])
 
   candidaturas         Candidatura[]
   exames               ExameAdmissional[]
@@ -780,6 +796,7 @@ model Person {
   @@unique([tenantId, cpf])
   @@index([tenantId])
   @@index([tenantId, type])
+  @@index([tenantId, isInternal])
   @@map("people")
 }
 
@@ -2397,4 +2414,48 @@ model MeetingAttendee {
 
   @@id([meetingId, userId])
   @@map("meeting_attendees")
+}
+
+// Repositório de Senhas do BPO — centraliza credenciais que hoje ficam
+// espalhadas em .txt (login de portais, bancos, sistemas de clientes).
+// Empresa é opcional (permite credencial geral do setor, sem cliente
+// específico). Senha nunca em texto puro — mesmo padrão de criptografia de
+// TenantSmtpConfig.passwordEnc (ver src/lib/crypto.ts).
+model BpoCredential {
+  id          String   @id @default(uuid())
+  tenantId    String
+  companyId   String?
+  title       String   @db.VarChar(120)
+  username    String?  @db.VarChar(180)
+  passwordEnc String   @db.Text
+  url         String?  @db.VarChar(255)
+  notes       String?  @db.Text
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant    Tenant              @relation(fields: [tenantId], references: [id])
+  company   Company?            @relation(fields: [companyId], references: [id])
+  createdBy User                @relation(fields: [createdById], references: [id])
+  views     BpoCredentialView[]
+
+  @@index([tenantId, companyId])
+  @@map("bpo_credentials")
+}
+
+// Auditoria de acesso — quem revelou/copiou a senha e quando. Não impede
+// acesso de ninguém do setor, só dá rastreabilidade (informação sensível).
+model BpoCredentialView {
+  id           String   @id @default(uuid())
+  tenantId     String
+  credentialId String
+  userId       String
+  viewedAt     DateTime @default(now())
+
+  tenant     Tenant        @relation(fields: [tenantId], references: [id])
+  credential BpoCredential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+  user       User          @relation(fields: [userId], references: [id])
+
+  @@index([credentialId])
+  @@map("bpo_credential_views")
 }

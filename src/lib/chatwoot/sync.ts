@@ -9,10 +9,20 @@
 // de Conversas) e mantido depois via webhook.
 import { getPrisma } from "@/lib/prisma";
 import { resolveConnectionCredentials } from "./connection";
-import { listConversations, countAllMessages, type ChatwootCredentials } from "./client";
+import { listConversations, countAllMessages, getContact, type ChatwootCredentials } from "./client";
 import { normalizeConversation } from "./mappers";
 import { findLinkCandidates, resolveLink, normalizePhoneBR } from "./linking";
 import { ChatwootError } from "./errors";
+import { digitsOnly } from "@/lib/validation/common";
+
+// Nome "sem valor real" — vazio, ou o próprio telefone repetido como nome
+// (comum em contato criado automaticamente pela Evolution API sem push name).
+function isRealName(name: string | null, phone: string | null): boolean {
+  if (!name || !name.trim()) return false;
+  const nameDigits = digitsOnly(name);
+  if (nameDigits && phone && nameDigits === digitsOnly(phone)) return false;
+  return true;
+}
 
 const MAX_PAGES_PER_CALL = 5;
 
@@ -28,7 +38,7 @@ export async function upsertConversation(
 ): Promise<{ id: string; created: boolean }> {
   let contactLinkId: string | null = null;
   if (normalized.contact) {
-    const link = await upsertContactLink(prisma, tenantId, connectionId, normalized.contact);
+    const link = await upsertContactLink(prisma, tenantId, connectionId, normalized.contact, creds);
     contactLinkId = link.id;
   }
 
@@ -99,14 +109,29 @@ export async function upsertContactLink(
   prisma: ReturnType<typeof getPrisma>,
   tenantId: string,
   connectionId: string,
-  contact: { chatwootContactId: number; name: string | null; email: string | null; phone: string | null }
+  contact: { chatwootContactId: number; name: string | null; email: string | null; phone: string | null },
+  creds?: ChatwootCredentials
 ) {
   const existing = await prisma.chatwootContactLink.findUnique({
     where: { tenantId_connectionId_chatwootContactId: { tenantId, connectionId, chatwootContactId: contact.chatwootContactId } },
   });
 
+  // O nome que vem junto da listagem de conversas (meta.sender) é reduzido/
+  // cacheado e pode ficar vazio ou desatualizado mesmo quando o Contact já
+  // tem nome de verdade no Chatwoot — busca o Contact completo como fallback
+  // (só quando necessário, pra não multiplicar chamada por conversa).
+  let contactName = contact.name;
+  if (!isRealName(contactName, contact.phone) && creds) {
+    try {
+      const full = await getContact(creds, contact.chatwootContactId);
+      if (isRealName(full.payload.name, contact.phone)) contactName = full.payload.name;
+    } catch (err) {
+      console.error("[chatwoot:sync] falha ao buscar contato completo", contact.chatwootContactId, err);
+    }
+  }
+
   const cacheFields = {
-    chatwootName: contact.name,
+    chatwootName: contactName,
     chatwootEmail: contact.email,
     chatwootPhoneE164: normalizePhoneBR(contact.phone) ?? contact.phone,
   };

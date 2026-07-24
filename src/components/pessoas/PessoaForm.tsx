@@ -38,6 +38,7 @@ export type PessoaDefaultValues = {
   phone?: string;
   birthDate?: string; // ISO date string YYYY-MM-DD
   currentCompanyId?: string;
+  isInternal?: boolean;
 
   rg?: string;
   pis?: string;
@@ -82,6 +83,10 @@ type Props = {
   departments: DepartmentOption[];
   canEditSensitive: boolean;
   customFields?: CustomFieldInput[];
+  // Só relevante na criação (via /pessoas/nova?internal=1) — na edição, o
+  // valor de verdade vem de defaultValues.isInternal (não editável aqui, é
+  // decidido na criação e não tem UI de "converter" depois).
+  defaultIsInternal?: boolean;
 };
 
 export function PessoaForm({
@@ -93,6 +98,7 @@ export function PessoaForm({
   departments,
   canEditSensitive,
   customFields = [],
+  defaultIsInternal = false,
 }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -199,6 +205,7 @@ export function PessoaForm({
 
       <form ref={formRef} action={formAction} noValidate onChange={onFormChange} className="px-6 py-5">
         {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
+        <input type="hidden" name="isInternal" value={String(defaultValues?.isInternal ?? defaultIsInternal)} />
 
         {state?.error && (
           <p className="mb-4 text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-lg px-3 py-2">

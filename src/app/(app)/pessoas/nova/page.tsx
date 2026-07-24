@@ -8,7 +8,12 @@ import { criarPessoa } from "../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 
-export default async function NovaPessoaPage() {
+export default async function NovaPessoaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ internal?: string }>;
+}) {
+  const { internal } = await searchParams;
   const ctx = await getAuthContext();
   if (!canWrite(ctx.role)) notFound();
 
@@ -48,15 +53,18 @@ export default async function NovaPessoaPage() {
 
       <BackButton className="mb-3" />
 
-      <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em] mb-6">Nova Pessoa</h1>
+      <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em] mb-6">
+        {internal === "1" ? "Novo Funcionário Interno" : "Nova Pessoa"}
+      </h1>
 
       <PessoaForm
         action={criarPessoa}
-        cancelHref="/pessoas"
+        cancelHref={internal === "1" ? "/pessoas?tab=internos" : "/pessoas"}
         companies={companies}
         cargos={cargos}
         departments={departments}
         canEditSensitive={canEditSensitive}
+        defaultIsInternal={internal === "1"}
       />
     </PageContainer>
   );

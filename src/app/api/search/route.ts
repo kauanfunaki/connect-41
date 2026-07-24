@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { scopedCompanyWhere, scopedPersonWhere, scopedPipelineWhere, scopedVagaWhere } from "@/lib/auth/scope";
 import { boardPath } from "@/lib/kanbanPaths";
+import { digitsOnly } from "@/lib/validation/common";
 
 const LIMIT = 5;
 
@@ -16,9 +17,17 @@ export async function GET(req: NextRequest) {
   }
 
   const prisma = getPrisma();
+  const cnpjDigits = digitsOnly(q);
   const [companies, people, candidatos, pipelines, vagas, documentos, tarefaItems] = await Promise.all([
     prisma.company.findMany({
-      where: { ...(await scopedCompanyWhere(ctx)), name: { contains: q } },
+      where: {
+        ...(await scopedCompanyWhere(ctx)),
+        OR: [
+          { name: { contains: q } },
+          { externalId: { contains: q } },
+          ...(cnpjDigits ? [{ cnpj: { contains: cnpjDigits } }] : []),
+        ],
+      },
       orderBy: { name: "asc" },
       take: LIMIT,
       select: { id: true, name: true },
