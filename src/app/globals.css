@@ -357,6 +357,18 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   .kanban-card-enter, .reveal-in { animation: none; }
 }
 
+/* ----- Painel lateral (SlideOver) — entra deslizando da borda direita ----- */
+@keyframes slide-over-in {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+.slide-over-in {
+  animation: slide-over-in 0.22s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .slide-over-in { animation: none; }
+}
+
 /* ----- Skeleton de loading (tabelas) ----- */
 @keyframes c41-skeleton { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 .c41-skeleton {
