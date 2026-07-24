@@ -4,15 +4,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Select } from "@/components/ui/Select";
+import { TestTypeSelect, type TemplateOption, type TestTypeValue } from "@/components/teste/TestTypeSelect";
 import { gerarLinkTeste } from "@/app/(app)/testes/actions";
 
 type PersonOption = { id: string; name: string };
 
-type Props = { candidatos: PersonOption[] };
+type Props = { candidatos: PersonOption[]; templates: TemplateOption[] };
 
-export function NovoTesteForm({ candidatos }: Props) {
+export function NovoTesteForm({ candidatos, templates }: Props) {
   const router = useRouter();
   const [personId, setPersonId] = useState("");
+  const [testType, setTestType] = useState<TestTypeValue>({ type: "DISC" });
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,7 +24,12 @@ export function NovoTesteForm({ candidatos }: Props) {
     setError(null);
     setPending(true);
     try {
-      const result = await gerarLinkTeste(personId, null);
+      const result = await gerarLinkTeste(
+        personId,
+        null,
+        testType.type,
+        testType.type === "MULTIPLA_ESCOLHA" ? testType.templateId : null
+      );
       if ("error" in result) {
         setError(result.error);
         return;
@@ -46,12 +53,15 @@ export function NovoTesteForm({ candidatos }: Props) {
           </Select>
         </CampoForm>
       </div>
+      <div className="w-56">
+        <TestTypeSelect templates={templates} value={testType} onChange={setTestType} id="novo-teste-type" />
+      </div>
       <button
         type="submit"
         disabled={pending || !personId}
         className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
       >
-        {pending ? "Enviando…" : "+ Novo teste DISC"}
+        {pending ? "Enviando…" : "+ Novo teste"}
       </button>
       {error && <p className="text-[13px] text-danger w-full">{error}</p>}
     </form>

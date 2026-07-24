@@ -222,6 +222,7 @@ enum AdmissaoLinkStatus {
 // nasce pronto pra outros tipos (raciocínio lógico, situacional, técnico...).
 enum AssessmentType {
   DISC
+  MULTIPLA_ESCOLHA
 }
 
 enum AssessmentLinkStatus {
@@ -386,6 +387,7 @@ model Tenant {
   pushSubscriptions        PushSubscription[]
   admissaoLinks            AdmissaoLink[]
   assessmentLinks          AssessmentLink[]
+  assessmentTemplates      AssessmentTemplate[]
   dependentes              Dependente[]
   customFields             CustomField[]
   customValues             CustomValue[]
@@ -578,35 +580,36 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  tenant                 Tenant                 @relation(fields: [tenantId], references: [id])
-  sectors                UserSector[]
-  assignedItems          PipelineItemAssignee[]
-  watchedItems           PipelineItemWatcher[]
-  timeEntries            TimeEntry[]
-  canvasPages            CanvasPage[]
-  activities             Activity[]
-  handoffs               Handoff[]              @relation("HandoffRequester")
-  handoffSectorsAssigned HandoffSector[]        @relation("HandoffSectorAssignee")
-  handoffViews           HandoffView[]
-  notifications          Notification[]
-  pushSubscriptions      PushSubscription[]
-  tenantAccess           UserTenantAccess[]
-  uploadedDocuments      Document[]
-  evaluationsGiven       Evaluation[]
-  auditLogs              AuditLog[]
-  responsibleFor         CompanyService[]       @relation("CompanyServiceResponsible")
-  oauthAccounts          OAuthAccount[]
-  meetingsCreated        Meeting[]              @relation("MeetingCreatedBy")
-  meetingAttendances     MeetingAttendee[]
-  clientDocumentsCreated ClientDocument[]
-  recurringObligations   RecurringObligation[]
-  admissaoLinksCreated   AdmissaoLink[]
-  assessmentLinksCreated AssessmentLink[]
-  interviewScorecards    InterviewScorecard[]
-  linkedPerson           Person?
-  bpoCredentialsCreated  BpoCredential[]
-  bpoCredentialViews     BpoCredentialView[]
-  chatwootAgentLinks     ChatwootAgentLink[]
+  tenant                     Tenant                 @relation(fields: [tenantId], references: [id])
+  sectors                    UserSector[]
+  assignedItems              PipelineItemAssignee[]
+  watchedItems               PipelineItemWatcher[]
+  timeEntries                TimeEntry[]
+  canvasPages                CanvasPage[]
+  activities                 Activity[]
+  handoffs                   Handoff[]              @relation("HandoffRequester")
+  handoffSectorsAssigned     HandoffSector[]        @relation("HandoffSectorAssignee")
+  handoffViews               HandoffView[]
+  notifications              Notification[]
+  pushSubscriptions          PushSubscription[]
+  tenantAccess               UserTenantAccess[]
+  uploadedDocuments          Document[]
+  evaluationsGiven           Evaluation[]
+  auditLogs                  AuditLog[]
+  responsibleFor             CompanyService[]       @relation("CompanyServiceResponsible")
+  oauthAccounts              OAuthAccount[]
+  meetingsCreated            Meeting[]              @relation("MeetingCreatedBy")
+  meetingAttendances         MeetingAttendee[]
+  clientDocumentsCreated     ClientDocument[]
+  recurringObligations       RecurringObligation[]
+  admissaoLinksCreated       AdmissaoLink[]
+  assessmentLinksCreated     AssessmentLink[]
+  assessmentTemplatesCreated AssessmentTemplate[]
+  interviewScorecards        InterviewScorecard[]
+  linkedPerson               Person?
+  bpoCredentialsCreated      BpoCredential[]
+  bpoCredentialViews         BpoCredentialView[]
+  chatwootAgentLinks         ChatwootAgentLink[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -2358,6 +2361,7 @@ model AssessmentLink {
   candidaturaId    String?
   sectorCode       String               @db.VarChar(40)
   type             AssessmentType       @default(DISC)
+  templateId       String? // só MULTIPLA_ESCOLHA — null pro DISC (word bank fixo em código)
   token            String               @unique @db.VarChar(64)
   status           AssessmentLinkStatus @default(PENDENTE)
   expiresAt        DateTime
@@ -2369,14 +2373,57 @@ model AssessmentLink {
   createdById      String
   createdAt        DateTime             @default(now())
 
-  tenant      Tenant       @relation(fields: [tenantId], references: [id])
-  person      Person       @relation(fields: [personId], references: [id], onDelete: Cascade)
-  candidatura Candidatura? @relation(fields: [candidaturaId], references: [id])
-  createdBy   User         @relation(fields: [createdById], references: [id])
+  tenant      Tenant              @relation(fields: [tenantId], references: [id])
+  person      Person              @relation(fields: [personId], references: [id], onDelete: Cascade)
+  candidatura Candidatura?        @relation(fields: [candidaturaId], references: [id])
+  template    AssessmentTemplate? @relation(fields: [templateId], references: [id])
+  createdBy   User                @relation(fields: [createdById], references: [id])
 
   @@index([tenantId, personId])
   @@index([tenantId, sectorCode, status])
   @@map("assessment_links")
+}
+
+// Modelo reutilizável de teste de múltipla escolha (Português, Matemática...),
+// criado/editado pelo admin — em contraste com DISC, cujo banco de perguntas é
+// fixo em código. Perguntas em tabela filha (editadas incrementalmente, como
+// Dependente) — não em Json, que aqui serve só pra "options" (sem necessidade
+// de query própria por opção individual).
+model AssessmentTemplate {
+  id          String   @id @default(uuid())
+  tenantId    String
+  sectorCode  String   @db.VarChar(40) // fixo "recrutamento" hoje, mesmo padrão de AssessmentLink
+  name        String   @db.VarChar(120)
+  description String?  @db.VarChar(400)
+  // Arquivar (não excluir) quando já usado — ver excluirTemplate/arquivarTemplate.
+  active      Boolean  @default(true)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant    Tenant                       @relation(fields: [tenantId], references: [id])
+  createdBy User                         @relation(fields: [createdById], references: [id])
+  questions AssessmentTemplateQuestion[]
+  links     AssessmentLink[]
+
+  @@index([tenantId, sectorCode, active])
+  @@map("assessment_templates")
+}
+
+model AssessmentTemplateQuestion {
+  id           String   @id @default(uuid())
+  tenantId     String
+  templateId   String
+  order        Int
+  text         String   @db.VarChar(500)
+  options      Json // string[]
+  correctIndex Int
+  createdAt    DateTime @default(now())
+
+  template AssessmentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId, order])
+  @@map("assessment_template_questions")
 }
 
 // Dependente de um colaborador (IRRF, salário-família, plano de saúde). Coletado

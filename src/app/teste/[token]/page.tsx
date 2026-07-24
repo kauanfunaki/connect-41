@@ -2,8 +2,9 @@ import { headers } from "next/headers";
 import { getPrisma } from "@/lib/prisma";
 import { hit, clientIp } from "@/lib/rateLimit";
 import { DiscForm } from "@/components/teste/DiscForm";
+import { QuizForm } from "@/components/teste/QuizForm";
 
-export const metadata = { title: "Teste comportamental" };
+export const metadata = { title: "Teste" };
 
 function TokenInvalido({ titulo, texto }: { titulo: string; texto: string }) {
   return (
@@ -41,17 +42,38 @@ export default async function TestePage({ params }: { params: Promise<{ token: s
     return <TokenInvalido titulo="Link expirado" texto="Este link de teste expirou. Solicite um novo ao recrutador." />;
   }
 
+  // MULTIPLA_ESCOLHA busca o template à parte — select só id/text/options nas
+  // perguntas, NUNCA correctIndex (não pode vazar o gabarito pro público).
+  let quizQuestions: { id: string; text: string; options: string[] }[] | null = null;
+  let quizTemplateName: string | null = null;
+  if (link.type === "MULTIPLA_ESCOLHA") {
+    const template = await prisma.assessmentTemplate.findUnique({
+      where: { id: link.templateId! },
+      select: {
+        name: true,
+        questions: { orderBy: { order: "asc" }, select: { id: true, text: true, options: true } },
+      },
+    });
+    if (!template) {
+      return <TokenInvalido titulo="Teste indisponível" texto="O modelo deste teste não está mais disponível. Solicite um novo ao recrutador." />;
+    }
+    quizTemplateName = template.name;
+    quizQuestions = template.questions.map((q) => ({ id: q.id, text: q.text, options: q.options as string[] }));
+  }
+
   return (
     <div className="min-h-screen py-10 px-4">
       <div className="max-w-2xl mx-auto">
         <header className="mb-6">
           <h1 className="text-[22px] font-semibold text-fg tracking-[-0.01em]">Olá, {link.person.name}!</h1>
           <p className="text-[13px] text-fg-muted mt-1">
-            {link.tenant.name} convidou você a responder um teste de perfil comportamental (DISC). Leva cerca de 10 minutos.
+            {link.tenant.name} convidou você a responder{" "}
+            {link.type === "DISC" ? "um teste de perfil comportamental (DISC)" : `o teste "${quizTemplateName}"`}. Leva
+            poucos minutos.
           </p>
         </header>
 
-        <DiscForm token={token} />
+        {link.type === "DISC" ? <DiscForm token={token} /> : <QuizForm token={token} questions={quizQuestions!} />}
 
         <p className="text-[11px] text-fg-muted mt-6 text-center">
           Processo conduzido por {link.tenant.name}. Suas respostas são usadas apenas para este processo seletivo (LGPD).

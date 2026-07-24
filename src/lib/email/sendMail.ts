@@ -211,17 +211,21 @@ export async function sendAdmissaoEmail(input: SendAdmissaoEmailInput): Promise<
   }
 }
 
-export type SendTesteDiscEmailInput = {
+export type SendTesteEmailInput = {
   tenantId: string;
   to: string;
   personName: string;
   token: string;
+  // Nome do teste pra citar no e-mail — omitido (DISC) usa a copy padrão de
+  // perfil comportamental; um template de múltipla escolha passa o próprio nome.
+  testName?: string;
 };
 
-// Convite do teste DISC — o candidato abre o link e responde sozinho. SMTP é
-// por tenant e pode não estar configurado; quem gera o link trata isso como
-// best-effort (o caminho principal é copiar o link e enviar por onde preferir).
-export async function sendTesteDiscEmail(input: SendTesteDiscEmailInput): Promise<SmtpResult> {
+// Convite de teste (DISC ou modelo de múltipla escolha) — o candidato abre o
+// link e responde sozinho. SMTP é por tenant e pode não estar configurado;
+// quem gera o link trata isso como best-effort (o caminho principal é copiar
+// o link e enviar por onde preferir).
+export async function sendTesteEmail(input: SendTesteEmailInput): Promise<SmtpResult> {
   const transport = await getTenantTransport(input.tenantId);
   if (!transport) {
     return { ok: false, error: "Nenhuma configuração de SMTP cadastrada para este workspace." };
@@ -230,13 +234,16 @@ export async function sendTesteDiscEmail(input: SendTesteDiscEmailInput): Promis
 
   const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
   const testeUrl = `${baseUrl}/teste/${input.token}`;
+  const descricaoTeste = input.testName
+    ? `o teste "${escapeHtml(input.testName)}"`
+    : "um teste de perfil comportamental (DISC)";
 
   const html = `
     <div style="font-family: Arial, Helvetica, sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
       <p style="font-size: 14px; line-height: 1.5;">Olá, ${escapeHtml(input.personName)}!</p>
       <p style="font-size: 14px; line-height: 1.5;">
-        Como parte do processo seletivo, pedimos que você responda um teste de perfil comportamental (DISC)
-        pelo link seguro abaixo. Leva cerca de 10 minutos.
+        Como parte do processo seletivo, pedimos que você responda ${descricaoTeste}
+        pelo link seguro abaixo. Leva poucos minutos.
       </p>
       <p style="margin: 24px 0;">
         <a href="${testeUrl}" style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500;">
@@ -255,12 +262,12 @@ export async function sendTesteDiscEmail(input: SendTesteDiscEmailInput): Promis
     await transporter.sendMail({
       from: `"${config.fromName}" <${config.fromEmail}>`,
       to: input.to,
-      subject: "Teste de perfil comportamental — Connect",
+      subject: "Teste do processo seletivo — Connect",
       html,
     });
     return { ok: true };
   } catch (err) {
-    console.error("[sendTesteDiscEmail]", err);
+    console.error("[sendTesteEmail]", err);
     return { ok: false, error: "Falha ao enviar e-mail. Verifique a configuração de SMTP." };
   }
 }

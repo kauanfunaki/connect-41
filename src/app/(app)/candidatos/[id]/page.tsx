@@ -12,9 +12,10 @@ import { extrairDadosCurriculo } from "./ai-actions";
 import { formatCalendarDate, formatInstantDate, maskCpf, formatPhone, formatCep } from "@/lib/format";
 import { TagToggleList } from "@/components/kanban/TagToggleList";
 import { alternarTagPessoa } from "../actions";
-import { TesteDiscCard } from "@/components/teste/TesteDiscCard";
+import { TesteCard } from "@/components/teste/TesteCard";
 import type { ProcessoSeletivoStatus } from "@/generated/prisma/enums";
 import type { DiscScores, DiscDimension } from "@/lib/disc";
+import type { QuizScores } from "@/lib/quiz";
 
 const CANDIDATURA_STATUS_LABEL: Record<ProcessoSeletivoStatus, string> = {
   EM_ANDAMENTO: "Em andamento",
@@ -56,25 +57,45 @@ export default async function CandidatoPage({
     include: { vaga: { select: { id: true, title: true, company: { select: { name: true } } } } },
   });
 
-  // DISC é traço da pessoa, reaproveitável entre candidaturas — mostra o link
+  // Teste é traço da pessoa, reaproveitável entre candidaturas — mostra o link
   // mais recente independente de qual candidatura o gerou.
-  const testeLink = await prisma.assessmentLink.findFirst({
-    where: { tenantId: ctx.tenantId, personId: id },
-    orderBy: { createdAt: "desc" },
-  });
+  const [testeLink, templates] = await Promise.all([
+    prisma.assessmentLink.findFirst({
+      where: { tenantId: ctx.tenantId, personId: id },
+      orderBy: { createdAt: "desc" },
+      include: { template: { select: { name: true } } },
+    }),
+    canEdit
+      ? prisma.assessmentTemplate.findMany({
+          where: { tenantId: ctx.tenantId, sectorCode: "recrutamento", active: true },
+          orderBy: { name: "asc" },
+          select: { id: true, name: true },
+        })
+      : Promise.resolve([]),
+  ]);
   const initialTesteLink =
     testeLink?.status === "PENDENTE"
       ? { status: "PENDENTE" as const, token: testeLink.token, expiresAtLabel: formatInstantDate(testeLink.expiresAt) }
-      : testeLink?.status === "RESPONDIDO"
+      : testeLink?.status === "RESPONDIDO" && testeLink.type === "DISC"
         ? {
             status: "RESPONDIDO" as const,
             id: testeLink.id,
+            type: "DISC" as const,
             scores: testeLink.scores as unknown as DiscScores,
             primaryProfile: testeLink.primaryProfile as DiscDimension,
             secondaryProfile: testeLink.secondaryProfile as DiscDimension | null,
             submittedAtLabel: testeLink.submittedAt ? formatInstantDate(testeLink.submittedAt) : "—",
           }
-        : null;
+        : testeLink?.status === "RESPONDIDO"
+          ? {
+              status: "RESPONDIDO" as const,
+              id: testeLink.id,
+              type: "MULTIPLA_ESCOLHA" as const,
+              scores: testeLink.scores as unknown as QuizScores,
+              templateName: testeLink.template?.name ?? "Modelo excluído",
+              submittedAtLabel: testeLink.submittedAt ? formatInstantDate(testeLink.submittedAt) : "—",
+            }
+          : null;
 
   const deleteAction = excluirCandidato.bind(null, id);
 
@@ -142,9 +163,9 @@ export default async function CandidatoPage({
         />
       </div>
 
-      {/* Teste DISC */}
+      {/* Teste */}
       <div className="mb-4">
-        <TesteDiscCard personId={id} candidaturaId={null} initialLink={initialTesteLink} canManage={canEdit} />
+        <TesteCard personId={id} candidaturaId={null} initialLink={initialTesteLink} canManage={canEdit} templates={templates} />
       </div>
 
       {/* Identificação */}

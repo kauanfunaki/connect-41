@@ -6,10 +6,11 @@ import { scopedAssessmentLinkWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
-import { DiscBars } from "@/components/teste/DiscBars";
+import { AssessmentResult } from "@/components/teste/AssessmentResult";
 import { formatInstantDate } from "@/lib/format";
 import { excluirLinkTeste } from "../actions";
 import type { DiscScores, DiscDimension } from "@/lib/disc";
+import type { QuizScores } from "@/lib/quiz";
 
 export default async function TesteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -21,6 +22,7 @@ export default async function TesteDetailPage({ params }: { params: Promise<{ id
     include: {
       person: { select: { id: true, name: true } },
       candidatura: { select: { id: true, vaga: { select: { id: true, title: true } } } },
+      template: { select: { name: true } },
     },
   });
   if (!link) notFound();
@@ -47,7 +49,7 @@ export default async function TesteDetailPage({ params }: { params: Promise<{ id
           </Link>
         </h1>
         <p className="text-[13px] text-fg-muted mt-0.5">
-          Teste DISC
+          Teste {link.type === "DISC" ? "DISC" : link.template?.name}
           {link.candidatura && (
             <>
               {" · "}
@@ -76,11 +78,20 @@ export default async function TesteDetailPage({ params }: { params: Promise<{ id
             <p className="text-[12px] text-fg-muted mb-4">
               Respondido em {link.submittedAt ? formatInstantDate(link.submittedAt) : "—"}.
             </p>
-            <DiscBars
-              scores={link.scores as unknown as DiscScores}
-              primaryProfile={link.primaryProfile! as DiscDimension}
-              secondaryProfile={link.secondaryProfile as DiscDimension | null}
-            />
+            {link.type === "DISC" ? (
+              <AssessmentResult
+                type="DISC"
+                scores={link.scores as unknown as DiscScores}
+                primaryProfile={link.primaryProfile! as DiscDimension}
+                secondaryProfile={link.secondaryProfile as DiscDimension | null}
+              />
+            ) : (
+              <AssessmentResult
+                type="MULTIPLA_ESCOLHA"
+                scores={link.scores as unknown as QuizScores}
+                templateName={link.template?.name ?? "Modelo excluído"}
+              />
+            )}
           </>
         )}
       </div>
