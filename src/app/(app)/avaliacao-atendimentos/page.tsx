@@ -1,19 +1,21 @@
-import Link from "next/link";
-import { Gauge, MessageCircle } from "lucide-react";
+import { Gauge } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullAccess } from "@/lib/auth/context";
 import { isChatwootConfigured } from "@/lib/chatwoot/connection";
 import { formatInstantDate } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { AgentUserSelector } from "@/components/avaliacaoAtendimentos/AgentUserSelector";
+import { AgentCard } from "@/components/avaliacaoAtendimentos/AgentCard";
 import { vincularAgenteChatwoot } from "./actions";
 
 // Painel agregado de Avaliação de Atendimentos (nota 0-100 = Escrita 0-50 +
 // SLA 0-50, ver src/lib/chatwoot/evaluation.ts) — mesma RBAC de /conversas:
 // qualquer usuário do tenant visualiza, só isFullAccess gerencia o vínculo
 // agente<->User. CSAT foi descartado nesta v1 (ver
-// Backlog-Avaliacao-Atendimentos-2026-07-24.md no vault Obsidian).
+// Backlog-Avaliacao-Atendimentos-2026-07-24.md no vault Obsidian). Redesenho
+// 2026-07-24: grid de cards por atendente (era lista), anel de nota +
+// sub-notas revelados só ao clicar no card, drill-down de conversa num
+// painel lateral (era truncado inline).
 export default async function AvaliacaoAtendimentosPage() {
   const ctx = await getAuthContext();
   const prisma = getPrisma();
@@ -54,7 +56,7 @@ export default async function AvaliacaoAtendimentosPage() {
       }),
       prisma.chatwootAgentLink.findMany({
         where: { tenantId: ctx.tenantId },
-        include: { linkedUser: { select: { id: true, name: true, email: true } } },
+        include: { linkedUser: { select: { id: true, name: true, email: true, photoUrl: true } } },
       }),
       prisma.user.findMany({ where: { tenantId: ctx.tenantId }, orderBy: { name: "asc" }, select: { id: true, name: true, email: true } }),
     ]);
@@ -96,7 +98,7 @@ export default async function AvaliacaoAtendimentosPage() {
     writingSum: number;
     slaSum: number;
     count: number;
-    recent: typeof evaluations;
+    evaluations: typeof evaluations;
   };
 
   const groups = new Map<string, AgentGroup>();
@@ -110,7 +112,7 @@ export default async function AvaliacaoAtendimentosPage() {
       existing.writingSum += ev.writingScore;
       existing.slaSum += ev.slaScore;
       existing.count += 1;
-      if (existing.recent.length < 5) existing.recent.push(ev);
+      existing.evaluations.push(ev);
     } else {
       groups.set(key, {
         key,
@@ -121,13 +123,15 @@ export default async function AvaliacaoAtendimentosPage() {
         writingSum: ev.writingScore,
         slaSum: ev.slaScore,
         count: 1,
-        recent: [ev],
+        evaluations: [ev],
       });
     }
   }
 
   const agentGroups = [...groups.values()].sort((a, b) => b.scoreSum / b.count - a.scoreSum / a.count);
   const totalAvg = evaluations.length > 0 ? evaluations.reduce((s, e) => s + e.score, 0) / evaluations.length : null;
+  const totalWriting = evaluations.length > 0 ? evaluations.reduce((s, e) => s + e.writingScore, 0) / evaluations.length : null;
+  const totalSla = evaluations.length > 0 ? evaluations.reduce((s, e) => s + e.slaScore, 0) / evaluations.length : null;
 
   return (
     <PageContainer>
@@ -135,7 +139,6 @@ export default async function AvaliacaoAtendimentosPage() {
         <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Avaliação de Atendimentos</h1>
         <p className="text-[13px] text-fg-muted mt-0.5">
           Nota de 0-100 (Escrita + SLA) por atendimento resolvido no Chatwoot — gerada automaticamente pela IA.
-          {totalAvg != null && ` Média geral: ${totalAvg.toFixed(0)}.`}
         </p>
       </div>
 
@@ -148,77 +151,58 @@ export default async function AvaliacaoAtendimentosPage() {
           />
         </div>
       ) : (
-        <div className="space-y-3">
-          {agentGroups.map((group) => {
-            const agentLink = group.assigneeId != null ? agentLinkByAgentId.get(group.assigneeId) : undefined;
-            const avgScore = group.scoreSum / group.count;
-            const avgWriting = group.writingSum / group.count;
-            const avgSla = group.slaSum / group.count;
-            const linkedLabel = agentLink?.linkedUser ? `${agentLink.linkedUser.name} (${agentLink.linkedUser.email})` : null;
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border border border-border rounded-xl overflow-hidden mb-6">
+            <StatTile label="Atendimentos avaliados" value={evaluations.length} />
+            <StatTile label="Nota média" value={totalAvg != null ? Math.round(totalAvg) : "—"} />
+            <StatTile label="Escrita média" value={totalWriting != null ? `${Math.round(totalWriting)}/50` : "—"} />
+            <StatTile label="SLA médio" value={totalSla != null ? `${Math.round(totalSla)}/50` : "—"} />
+          </div>
 
-            return (
-              <div key={group.key} className="bg-surface border border-border rounded-2xl px-4 py-3">
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-                  <div className="min-w-0">
-                    <p className="text-[13.5px] font-medium text-fg truncate">
-                      {agentLink?.linkedUser?.name ?? group.label}
-                    </p>
-                    <p className="text-[11.5px] text-fg-muted truncate">
-                      {group.count} atendimento{group.count !== 1 ? "s" : ""} avaliado{group.count !== 1 ? "s" : ""}
-                      {linkedLabel && !agentLink?.linkedUser?.name ? ` · ${linkedLabel}` : ""}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <ScorePill label="Nota" value={avgScore} max={100} />
-                    <ScorePill label="Escrita" value={avgWriting} max={50} />
-                    <ScorePill label="SLA" value={avgSla} max={50} />
-                  </div>
-                </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {agentGroups.map((group) => {
+              const agentLink = group.assigneeId != null ? agentLinkByAgentId.get(group.assigneeId) : undefined;
+              const linkedUser = agentLink?.linkedUser ?? null;
 
-                {agentLink && (
-                  <div className="mb-2 max-w-xs">
-                    <label className="block text-[11px] text-fg-muted mb-1">Vínculo com usuário</label>
-                    <AgentUserSelector
-                      agentLinkId={agentLink.id}
-                      linkedUserId={agentLink.linkedUserId}
-                      users={users}
-                      canEdit={canManageLinks}
-                      action={vincularAgenteChatwoot}
-                    />
-                  </div>
-                )}
-
-                <div className="border-t border-border pt-2 mt-2 space-y-1.5">
-                  {group.recent.map((ev) => (
-                    <div key={ev.id} className="flex items-start justify-between gap-3 text-[12px]">
-                      <div className="min-w-0">
-                        <Link
-                          href={`/conversas?id=${ev.conversation.id}`}
-                          className="text-fg hover:text-brand transition-colors inline-flex items-center gap-1"
-                        >
-                          <MessageCircle size={12} />
-                          {formatInstantDate(ev.evaluatedAt)}
-                        </Link>
-                        <p className="text-fg-muted truncate max-w-md">{ev.reasoning}</p>
-                      </div>
-                      <span className="text-fg-muted flex-shrink-0 tabular-nums">{ev.score}/100</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              return (
+                <AgentCard
+                  key={group.key}
+                  label={linkedUser?.name ?? group.label}
+                  subLabel={linkedUser ? group.label : null}
+                  avatarUrl={linkedUser?.photoUrl ?? null}
+                  avgScore={group.scoreSum / group.count}
+                  avgWriting={group.writingSum / group.count}
+                  avgSla={group.slaSum / group.count}
+                  count={group.count}
+                  evaluations={group.evaluations.map((ev) => ({
+                    id: ev.id,
+                    conversationLocalId: ev.conversation.id,
+                    score: ev.score,
+                    writingScore: ev.writingScore,
+                    slaScore: ev.slaScore,
+                    reasoning: ev.reasoning,
+                    evaluatedAtLabel: formatInstantDate(ev.evaluatedAt),
+                  }))}
+                  agentLinkId={agentLink?.id ?? null}
+                  linkedUserId={agentLink?.linkedUserId ?? null}
+                  users={users}
+                  canManageLinks={canManageLinks}
+                  linkAction={vincularAgenteChatwoot}
+                />
+              );
+            })}
+          </div>
+        </>
       )}
     </PageContainer>
   );
 }
 
-function ScorePill({ label, value, max }: { label: string; value: number; max: number }) {
+function StatTile({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="text-center">
-      <p className="text-[15px] font-semibold text-fg tabular-nums">{value.toFixed(0)}</p>
-      <p className="text-[10.5px] text-fg-muted">{label} /{max}</p>
+    <div className="bg-surface px-4 py-3">
+      <p className="text-[20px] font-semibold text-fg tabular-nums leading-none">{value}</p>
+      <p className="text-[11px] text-fg-muted mt-1.5">{label}</p>
     </div>
   );
 }
