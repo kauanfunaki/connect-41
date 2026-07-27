@@ -12,7 +12,13 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   return output;
 }
 
-type Status = "unsupported" | "loading" | "subscribed" | "unsubscribed" | "denied";
+type Status = "unsupported" | "unconfigured" | "loading" | "subscribed" | "unsubscribed" | "denied";
+
+// A chave pública VAPID é embutida no bundle em tempo de build. Ausente = o
+// ambiente nunca vai conseguir assinar push, então o estado é detectado na
+// montagem: antes o botão "Ativar" aparecia normalmente e só depois do clique
+// dizia que não estava configurado, o que parecia bug do botão.
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
 export function PushNotificationToggle() {
   const [status, setStatus] = useState<Status>("loading");
@@ -24,6 +30,10 @@ export function PushNotificationToggle() {
     async function setup() {
       if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
         if (!cancelled) setStatus("unsupported");
+        return;
+      }
+      if (!VAPID_PUBLIC_KEY) {
+        if (!cancelled) setStatus("unconfigured");
         return;
       }
       if (Notification.permission === "denied") {
@@ -47,9 +57,9 @@ export function PushNotificationToggle() {
 
   async function handleSubscribe() {
     setError(null);
-    const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    const publicKey = VAPID_PUBLIC_KEY;
     if (!publicKey) {
-      setError("Notificações push não configuradas neste ambiente.");
+      setStatus("unconfigured");
       return;
     }
     try {
@@ -98,15 +108,17 @@ export function PushNotificationToggle() {
       <div>
         <p className="text-[13px] font-medium text-fg">Notificações no navegador</p>
         <p className="text-[12px] text-fg-muted mt-0.5">
-          {status === "denied"
-            ? "Bloqueadas nas configurações do navegador."
-            : status === "subscribed"
-              ? "Ativadas neste navegador."
-              : "Receba um aviso mesmo com o Connect fechado."}
+          {status === "unconfigured"
+            ? "Indisponível neste ambiente: faltam as chaves VAPID (NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY e VAPID_SUBJECT). Um administrador precisa configurá-las no servidor."
+            : status === "denied"
+              ? "Bloqueadas nas configurações do navegador."
+              : status === "subscribed"
+                ? "Ativadas neste navegador."
+                : "Receba um aviso mesmo com o Connect fechado."}
         </p>
         {error && <p className="text-[12px] text-danger mt-1">{error}</p>}
       </div>
-      {status !== "denied" && status !== "loading" && (
+      {status !== "denied" && status !== "loading" && status !== "unconfigured" && (
         <button
           type="button"
           onClick={status === "subscribed" ? handleUnsubscribe : handleSubscribe}

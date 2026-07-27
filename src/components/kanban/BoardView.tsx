@@ -147,8 +147,9 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
           </button>
         </div>
 
-        <div className="w-48">
+        <div className="w-56">
           <Input
+            compact
             icon={<Search size={14} />}
             value={search}
             onChange={(e) => setSearch(e.target.value)}

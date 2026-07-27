@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, CheckSquare, GripVertical, Pencil, Trash2, X } from "lucide-react";
+import { Check, GripVertical, Pencil, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 
 export type ChecklistItemData = { id: string; text: string; done: boolean };
@@ -98,7 +98,6 @@ function ChecklistRow({
 
 export function ChecklistSection({ canAct, items, createAction, toggleAction, editAction, deleteAction, reorderAction }: Props) {
   const [newText, setNewText] = useState("");
-  const [open, setOpen] = useState(items.length > 0);
   const [dragId, setDragId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
@@ -129,31 +128,12 @@ export function ChecklistSection({ canAct, items, createAction, toggleAction, ed
     });
   }
 
-  if (items.length === 0 && !open) {
-    if (!canAct) return null;
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors"
-      >
-        <CheckSquare size={13} /> Criar checklist
-      </button>
-    );
-  }
-
+  // Cartão e cabeçalho vêm do DetailSection que envolve esta seção.
   return (
-    <div className="bg-surface border border-border rounded-lg p-5">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-[13px] font-semibold text-fg">Checklist</h2>
-        {items.length > 0 ? (
-          <span className="text-[11px] text-fg-muted tnum">{done}/{items.length} · {pct}%</span>
-        ) : (
-          <button type="button" onClick={() => setOpen(false)} aria-label="Fechar" className="text-fg-muted hover:text-fg p-0.5">
-            <X size={14} />
-          </button>
-        )}
-      </div>
+    <div>
+      {items.length === 0 && (
+        <p className="text-[12px] text-fg-muted italic mb-2">Checklist vazia.</p>
+      )}
 
       {items.length > 0 && (
         <div className="h-1.5 rounded-full bg-surface-hover overflow-hidden mb-3">

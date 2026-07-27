@@ -8,6 +8,7 @@ import { listDocuments } from "@/lib/documents";
 import { SubtasksSection } from "@/components/kanban/SubtasksSection";
 import { ChecklistSection } from "@/components/kanban/ChecklistSection";
 import { LinkedItemsSection } from "@/components/kanban/LinkedItemsSection";
+import { DetailSection } from "@/components/kanban/DetailSection";
 import { TaskFieldsPanel } from "@/components/kanban/TaskFieldsPanel";
 import { CompletionBanner } from "@/components/kanban/CompletionBanner";
 import { DeleteTaskButton } from "@/components/kanban/DeleteTaskButton";
@@ -336,7 +337,9 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
       />
 
       <div
-        className={`grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 items-stretch ${
+        // Coluna de comentários de 380px → 420px: a barra de rolagem do feed
+        // encostava no texto das mensagens e no campo de comentário.
+        className={`grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-4 items-stretch ${
           isModal ? "flex-1 min-h-0 lg:[grid-template-rows:minmax(0,1fr)]" : ""
         }`}
       >
@@ -375,62 +378,97 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
 
           <DescriptionEditor canAct={canAct} description={item.description} action={descricaoAction} />
 
-          <div className="flex flex-col gap-2">
-            {!item.parentItemId && (
-              <SubtasksSection
-                canAct={canAct}
-                canDelete={canDelete}
-                basePath={basePath}
-                pipelineId={id}
-                subtasks={subtasks.map((s) => ({
-                  id: s.id,
-                  title: s.title ?? "(sem título)",
-                  stageName: s.stage.name,
-                  stageColor: s.stage.color,
-                  isTerminal: s.stage.isTerminal,
-                  stageType: s.stage.type,
-                  priority: s.priority,
-                }))}
-                createAction={createSubtaskAction}
-                deleteAction={deleteSubtaskAction}
-                concluirAction={concluirTarefa}
-                reabrirAction={reabrirTarefa}
-              />
+          {/* Rodapé do detalhamento — quatro seções colapsáveis sem cartão nem
+              borda em volta, no formato do ClickUp. Cada uma só aparece se
+              tiver conteúdo ou se o usuário puder criar algo ali. */}
+          <div className="flex flex-col">
+            {!item.parentItemId && (subtasks.length > 0 || canAct) && (
+              <DetailSection
+                title="Subtarefas"
+                summary={
+                  subtasks.length > 0
+                    ? `${subtasks.filter((s) => s.stage.isTerminal).length}/${subtasks.length}`
+                    : undefined
+                }
+              >
+                <SubtasksSection
+                  canAct={canAct}
+                  canDelete={canDelete}
+                  basePath={basePath}
+                  pipelineId={id}
+                  subtasks={subtasks.map((s) => ({
+                    id: s.id,
+                    title: s.title ?? "(sem título)",
+                    stageName: s.stage.name,
+                    stageColor: s.stage.color,
+                    isTerminal: s.stage.isTerminal,
+                    stageType: s.stage.type,
+                    priority: s.priority,
+                  }))}
+                  createAction={createSubtaskAction}
+                  deleteAction={deleteSubtaskAction}
+                  concluirAction={concluirTarefa}
+                  reabrirAction={reabrirTarefa}
+                />
+              </DetailSection>
             )}
 
-            <LinkedItemsSection
-              canAct={canAct}
-              basePath={basePath}
-              links={relatedItems.map((r) => ({ id: r.id, name: nameFor(r) }))}
-              candidates={taskCandidates}
-              createAction={createLinkAction}
-              deleteAction={deleteLinkAction}
-            />
+            {(relatedItems.length > 0 || canAct) && (
+              <DetailSection
+                title="Tarefas relacionadas"
+                summary={relatedItems.length > 0 ? relatedItems.length : undefined}
+              >
+                <LinkedItemsSection
+                  canAct={canAct}
+                  basePath={basePath}
+                  links={relatedItems.map((r) => ({ id: r.id, name: nameFor(r) }))}
+                  candidates={taskCandidates}
+                  createAction={createLinkAction}
+                  deleteAction={deleteLinkAction}
+                />
+              </DetailSection>
+            )}
 
-            <ChecklistSection
-              canAct={canAct}
-              items={checklistItems.map((c) => ({ id: c.id, text: c.text, done: c.done }))}
-              createAction={createChecklistAction}
-              toggleAction={toggleChecklistAction}
-              editAction={editChecklistAction}
-              deleteAction={deleteChecklistAction}
-              reorderAction={reorderChecklistAction}
-            />
+            {(checklistItems.length > 0 || canAct) && (
+              <DetailSection
+                title="Checklist"
+                summary={
+                  checklistItems.length > 0
+                    ? `${checklistItems.filter((c) => c.done).length}/${checklistItems.length}`
+                    : undefined
+                }
+              >
+                <ChecklistSection
+                  canAct={canAct}
+                  items={checklistItems.map((c) => ({ id: c.id, text: c.text, done: c.done }))}
+                  createAction={createChecklistAction}
+                  toggleAction={toggleChecklistAction}
+                  editAction={editChecklistAction}
+                  deleteAction={deleteChecklistAction}
+                  reorderAction={reorderChecklistAction}
+                />
+              </DetailSection>
+            )}
 
-            <TaskAttachmentsSection
-              entityId={itemId}
-              canUpload={canAct}
-              documents={documents.map((d) => ({
-                id: d.id,
-                fileName: d.fileName,
-                category: d.category,
-                sensitive: d.sensitive,
-                uploadedByName: d.uploadedBy.name,
-                createdAtLabel: formatInstantDate(d.createdAt),
-                expiresAtLabel: d.expiresAt ? formatCalendarDate(d.expiresAt) : null,
-                expired: d.expiresAt != null && d.expiresAt < new Date(),
-              }))}
-            />
+            {(documents.length > 0 || canAct) && (
+              <DetailSection title="Anexos" summary={documents.length > 0 ? documents.length : undefined}>
+                <TaskAttachmentsSection
+                  entityId={itemId}
+                  canUpload={canAct}
+                  documents={documents.map((d) => ({
+                    id: d.id,
+                    fileName: d.fileName,
+                    category: d.category,
+                    sensitive: d.sensitive,
+                    uploadedByName: d.uploadedBy.name,
+                    uploadedByPhotoUrl: d.uploadedBy.photoUrl,
+                    createdAtLabel: formatInstantDate(d.createdAt),
+                    expiresAtLabel: d.expiresAt ? formatCalendarDate(d.expiresAt) : null,
+                    expired: d.expiresAt != null && d.expiresAt < new Date(),
+                  }))}
+                />
+              </DetailSection>
+            )}
           </div>
         </div>
         <ActivityFeed

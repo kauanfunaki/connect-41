@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useRef, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { PessoaState } from "@/app/(app)/pessoas/actions";
 import { PersonEmploymentStatus } from "@/generated/prisma/enums";
@@ -29,7 +29,16 @@ const STATUS_LABEL: Record<PersonEmploymentStatus, string> = Object.fromEntries(
   STATUS_OPTIONS.map((o) => [o.value, o.label])
 ) as Record<PersonEmploymentStatus, string>;
 
-const STEP_LABELS = ["Dados pessoais", "Endereço", "Vínculo profissional", "Dados complementares", "Documentos", "Revisão"];
+// "interno" = colaborador da própria 41 (tem vínculo empregatício e conta de
+// acesso). "cliente" = pessoa de uma empresa cliente (contato, sócio,
+// responsável) — não tem CTPS, jornada nem folha, e pedir esses campos numa
+// mesma tela pra todo mundo era o que deixava os dois cadastros idênticos.
+export type PessoaKind = "interno" | "cliente";
+
+const STEP_LABELS: Record<PessoaKind, string[]> = {
+  interno: ["Dados pessoais", "Endereço", "Vínculo profissional", "Dados complementares", "Documentos", "Revisão"],
+  cliente: ["Dados de contato", "Endereço", "Empresa vinculada", "Informações adicionais", "Documentos", "Revisão"],
+};
 
 export type PessoaDefaultValues = {
   id?: string;
@@ -90,6 +99,11 @@ type Props = {
   defaultIsInternal?: boolean;
 };
 
+// Campos que só existem pra quem tem vínculo empregatício com a 41.
+function isEmploymentField(kind: PessoaKind): boolean {
+  return kind === "interno";
+}
+
 export function PessoaForm({
   action,
   cancelHref,
@@ -110,6 +124,11 @@ export function PessoaForm({
   const [stepError, setStepError] = useState<number | null>(null);
   const isEditing = Boolean(defaultValues?.id);
   const [isInternal, setIsInternal] = useState(defaultValues?.isInternal ?? defaultIsInternal);
+  // O tipo acompanha o toggle: marcar/desmarcar "Funcionário interno" troca o
+  // formulário na hora, sem precisar sair e voltar.
+  const kind: PessoaKind = isInternal ? "interno" : "cliente";
+  const showEmployment = isEmploymentField(kind);
+  const stepLabels = STEP_LABELS[kind];
 
   const [values, setValues] = useState<Record<string, string>>(() => ({
     name: defaultValues?.name ?? "",
@@ -149,7 +168,7 @@ export function PessoaForm({
   const companyId = values.currentCompanyId;
   const cargosDaEmpresa = cargos.filter((c) => c.companyId === companyId);
   const departamentosDaEmpresa = departments.filter((d) => d.companyId === companyId);
-  const lastStep = STEP_LABELS.length - 1;
+  const lastStep = stepLabels.length - 1;
 
   function onFormChange(e: React.FormEvent<HTMLFormElement>) {
     const target = e.target as HTMLInputElement | HTMLSelectElement;
@@ -168,7 +187,17 @@ export function PessoaForm({
     setStepError(null);
   }
 
-  function next() {
+  // preventDefault é obrigatório aqui, não decorativo: o clique em "Avançar"
+  // dispara o setState, o React aplica a atualização de forma síncrona (evento
+  // discreto) e o MESMO nó do DOM passa a ser o botão de submit da última
+  // etapa — aí o navegador executa a ação padrão do clique sobre o nó já
+  // convertido e envia o formulário. Era isso que fazia o passo 6 (Revisão)
+  // piscar e o registro ser criado sem o usuário revisar nada. O `key`
+  // distinto nos dois botões (ver navegação, no fim do arquivo) evita a
+  // reutilização do nó; o preventDefault cancela a ação padrão de qualquer
+  // jeito.
+  function next(e: React.MouseEvent<HTMLButtonElement>) {
+    e.preventDefault();
     if (!validateStep(step)) {
       setStepError(step);
       return;
@@ -188,14 +217,56 @@ export function PessoaForm({
 
   const steps = useMemo(
     () =>
-      STEP_LABELS.map((label, i): StepStatus => {
+      stepLabels.map((label, i): StepStatus => {
         if (i === stepError) return "error";
         if (i === step) return "current";
         if (i <= maxStepReached) return "done";
         return "upcoming";
-      }).map((status, i) => ({ label: STEP_LABELS[i], status })),
-    [step, stepError, maxStepReached]
+      }).map((status, i) => ({ label: stepLabels[i], status })),
+    [step, stepError, maxStepReached, stepLabels]
   );
+
+  // Autopreenchimento por CEP (ViaCEP), mesma fonte e mesmo gatilho do
+  // EmpresaForm: dispara quando o CEP fica com 8 dígitos e não repete a busca
+  // pro mesmo CEP. Escreve tanto no nó do form quanto em `values` — este
+  // último é o que alimenta os campos e a etapa de Revisão.
+  const lastFetchedCepRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const clean = values.zipCode?.replace(/\D/g, "") ?? "";
+    if (clean.length !== 8 || clean === lastFetchedCepRef.current) return;
+    lastFetchedCepRef.current = clean;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+        if (!res.ok) return;
+        const d = await res.json();
+        if (d.erro || cancelled) return;
+
+        const form = formRef.current;
+        if (!form) return;
+        const set = (name: string, value: string | undefined) => {
+          if (!value) return;
+          const el = form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | null;
+          if (el) el.value = value;
+          setValues((prev) => ({ ...prev, [name]: value }));
+        };
+
+        set("addressStreet", d.logradouro);
+        set("neighborhood", d.bairro);
+        set("city", d.localidade);
+        set("stateCode", d.uf);
+      } catch {
+        // falha silenciosa — usuário preenche manualmente
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [values.zipCode]);
 
   const companyLabel = companies.find((c) => c.id === companyId)?.name;
   const cargoLabel = cargos.find((c) => c.id === values.cargoId)?.name;
@@ -228,7 +299,7 @@ export function PessoaForm({
             </FieldGrid>
             <FieldGrid columns="sm:grid-cols-2">
               <CampoForm label="RG" htmlFor="rg">
-                <Input id="rg" name="rg" type="text" value={values.rg} />
+                <Input id="rg" name="rg" type="text" value={values.rg} placeholder="00.000.000-0" maxLength={14} />
               </CampoForm>
               <CampoForm label="Data de Nascimento" htmlFor="birthDate">
                 <Input id="birthDate" name="birthDate" type="date" value={values.birthDate} />
@@ -256,43 +327,52 @@ export function PessoaForm({
         </div>
 
         {/* ── 2. Endereço ───────────────────────────────── */}
+        {/* Mesmo layout e mesmo autopreenchimento por CEP do formulário de
+            Empresa (src/components/empresas/EmpresaForm.tsx) — os dois
+            cadastros pedem o mesmo endereço e não havia motivo pra divergir. */}
         <div data-step={1} className={step === 1 ? "" : "hidden"}>
           <FormSection title="Endereço">
-            <FieldGrid columns="sm:grid-cols-[1fr_80px]">
-              <CampoForm label="CEP" htmlFor="zipCode">
-                <Input id="zipCode" name="zipCode" type="text" value={values.zipCode} />
-              </CampoForm>
-              <CampoForm label="UF" htmlFor="stateCode">
-                <Input id="stateCode" name="stateCode" type="text" maxLength={2} value={values.stateCode} className="uppercase" />
+            <FieldGrid columns="sm:grid-cols-[200px]">
+              <CampoForm label="CEP" htmlFor="zipCode" helper="Preenche Logradouro, Bairro, Cidade e UF automaticamente.">
+                <Input id="zipCode" name="zipCode" type="text" value={values.zipCode} placeholder="00000-000" maxLength={9} />
               </CampoForm>
             </FieldGrid>
             <FieldGrid columns="sm:grid-cols-[1fr_120px]">
               <CampoForm label="Logradouro" htmlFor="addressStreet">
-                <Input id="addressStreet" name="addressStreet" type="text" value={values.addressStreet} />
+                <Input id="addressStreet" name="addressStreet" type="text" value={values.addressStreet} placeholder="Rua / Av. / Estrada…" />
               </CampoForm>
               <CampoForm label="Número" htmlFor="addressNumber">
-                <Input id="addressNumber" name="addressNumber" type="text" value={values.addressNumber} />
+                <Input id="addressNumber" name="addressNumber" type="text" value={values.addressNumber} placeholder="123" />
               </CampoForm>
             </FieldGrid>
             <FieldGrid>
               <CampoForm label="Complemento" htmlFor="addressComplement">
-                <Input id="addressComplement" name="addressComplement" type="text" value={values.addressComplement} />
+                <Input id="addressComplement" name="addressComplement" type="text" value={values.addressComplement} placeholder="Apto, bloco, casa…" />
               </CampoForm>
               <CampoForm label="Bairro" htmlFor="neighborhood">
-                <Input id="neighborhood" name="neighborhood" type="text" value={values.neighborhood} />
+                <Input id="neighborhood" name="neighborhood" type="text" value={values.neighborhood} placeholder="Bairro" />
               </CampoForm>
             </FieldGrid>
-            <FieldGrid>
+            <FieldGrid columns="sm:grid-cols-[1fr_80px]">
               <CampoForm label="Cidade" htmlFor="city">
-                <Input id="city" name="city" type="text" value={values.city} />
+                <Input id="city" name="city" type="text" value={values.city} placeholder="Curitiba" />
+              </CampoForm>
+              <CampoForm label="UF" htmlFor="stateCode">
+                <Input id="stateCode" name="stateCode" type="text" value={values.stateCode} placeholder="PR" maxLength={2} className="uppercase" />
               </CampoForm>
             </FieldGrid>
           </FormSection>
         </div>
 
-        {/* ── 3. Vínculo profissional ────────────────────── */}
+        {/* ── 3. Vínculo profissional / Empresa vinculada ── */}
         <div data-step={2} className={step === 2 ? "" : "hidden"}>
-          <FormSection title="Vínculo profissional">
+          <FormSection title={stepLabels[2]}>
+            {!showEmployment && (
+              <p className="text-[length:var(--fs-helper)] text-fg-muted">
+                Para contatos de empresas clientes, guardamos só a empresa, o cargo e o departamento —
+                jornada, admissão e folha só existem para colaboradores internos.
+              </p>
+            )}
             <FieldGrid columns="sm:grid-cols-3">
               <CampoForm label="Empresa" htmlFor="currentCompanyId">
                 <Select id="currentCompanyId" name="currentCompanyId" value={values.currentCompanyId}>
@@ -319,59 +399,82 @@ export function PessoaForm({
                 </Select>
               </CampoForm>
             </FieldGrid>
-            <FieldGrid columns="sm:grid-cols-3">
-              <CampoForm label="Status" htmlFor="employmentStatus">
-                <Select id="employmentStatus" name="employmentStatus" value={values.employmentStatus}>
-                  {STATUS_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </Select>
-              </CampoForm>
-              <CampoForm label="Data de Admissão" htmlFor="admissionDate">
-                <Input id="admissionDate" name="admissionDate" type="date" value={values.admissionDate} />
-              </CampoForm>
-              <CampoForm label="Data de Demissão" htmlFor="dismissalDate">
-                <Input id="dismissalDate" name="dismissalDate" type="date" value={values.dismissalDate} />
-              </CampoForm>
-            </FieldGrid>
-            <FieldGrid columns="sm:grid-cols-3">
-              <CampoForm label="Jornada" htmlFor="workShift">
-                <Input id="workShift" name="workShift" type="text" placeholder="ex: 08h-18h" value={values.workShift} />
-              </CampoForm>
-              <CampoForm label="Carga Horária Semanal" htmlFor="weeklyWorkHours">
-                <Input id="weeklyWorkHours" name="weeklyWorkHours" type="number" step="0.5" value={values.weeklyWorkHours} />
-              </CampoForm>
-              <CampoForm label="Carga Horária Mensal" htmlFor="monthlyWorkHours">
-                <Input id="monthlyWorkHours" name="monthlyWorkHours" type="number" step="0.5" value={values.monthlyWorkHours} />
-              </CampoForm>
-            </FieldGrid>
+            {showEmployment && (
+              <>
+                <FieldGrid columns="sm:grid-cols-3">
+                  <CampoForm label="Status" htmlFor="employmentStatus">
+                    <Select id="employmentStatus" name="employmentStatus" value={values.employmentStatus}>
+                      {STATUS_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </Select>
+                  </CampoForm>
+                  <CampoForm label="Data de Admissão" htmlFor="admissionDate">
+                    <Input id="admissionDate" name="admissionDate" type="date" value={values.admissionDate} />
+                  </CampoForm>
+                  <CampoForm label="Data de Demissão" htmlFor="dismissalDate">
+                    <Input id="dismissalDate" name="dismissalDate" type="date" value={values.dismissalDate} />
+                  </CampoForm>
+                </FieldGrid>
+                <FieldGrid columns="sm:grid-cols-3">
+                  <CampoForm label="Jornada" htmlFor="workShift">
+                    <Input id="workShift" name="workShift" type="text" placeholder="ex: 08h-18h" value={values.workShift} />
+                  </CampoForm>
+                  <CampoForm label="Carga Horária Semanal" htmlFor="weeklyWorkHours">
+                    <Input id="weeklyWorkHours" name="weeklyWorkHours" type="number" step="0.5" value={values.weeklyWorkHours} />
+                  </CampoForm>
+                  <CampoForm label="Carga Horária Mensal" htmlFor="monthlyWorkHours">
+                    <Input id="monthlyWorkHours" name="monthlyWorkHours" type="number" step="0.5" value={values.monthlyWorkHours} />
+                  </CampoForm>
+                </FieldGrid>
+              </>
+            )}
           </FormSection>
         </div>
 
         {/* ── 4. Dados complementares ────────────────────── */}
         <div data-step={3} className={step === 3 ? "" : "hidden"}>
-          <FormSection title="Dados complementares">
-            <FieldGrid columns="sm:grid-cols-3">
-              <CampoForm label="Escolaridade" htmlFor="education">
-                <Input id="education" name="education" type="text" value={values.education} />
-              </CampoForm>
-              <CampoForm label="PIS" htmlFor="pis">
-                <Input id="pis" name="pis" type="text" value={values.pis} />
-              </CampoForm>
-              <CampoForm label="CTPS" htmlFor="ctps">
-                <Input id="ctps" name="ctps" type="text" value={values.ctps} />
-              </CampoForm>
-            </FieldGrid>
-            <FieldGrid>
-              <CampoForm label="CTPS Série" htmlFor="ctpsSerie">
-                <Input id="ctpsSerie" name="ctpsSerie" type="text" value={values.ctpsSerie} />
-              </CampoForm>
-            </FieldGrid>
-            <CampoForm label="Observações" htmlFor="notes" helper="Anotações livres sobre a pessoa — visível só internamente.">
+          <FormSection title={stepLabels[3]}>
+            {showEmployment ? (
+              <>
+                <FieldGrid columns="sm:grid-cols-3">
+                  <CampoForm label="Escolaridade" htmlFor="education">
+                    <Input id="education" name="education" type="text" value={values.education} placeholder="ex: Ensino superior completo" />
+                  </CampoForm>
+                  <CampoForm label="PIS" htmlFor="pis">
+                    <Input id="pis" name="pis" type="text" value={values.pis} placeholder="000.00000.00-0" />
+                  </CampoForm>
+                  <CampoForm label="CTPS" htmlFor="ctps">
+                    <Input id="ctps" name="ctps" type="text" value={values.ctps} placeholder="0000000" />
+                  </CampoForm>
+                </FieldGrid>
+                <FieldGrid>
+                  <CampoForm label="CTPS Série" htmlFor="ctpsSerie">
+                    <Input id="ctpsSerie" name="ctpsSerie" type="text" value={values.ctpsSerie} placeholder="000-0" />
+                  </CampoForm>
+                </FieldGrid>
+              </>
+            ) : (
+              <FieldGrid>
+                <CampoForm label="Escolaridade" htmlFor="education">
+                  <Input id="education" name="education" type="text" value={values.education} placeholder="ex: Ensino superior completo" />
+                </CampoForm>
+              </FieldGrid>
+            )}
+
+            <CampoForm
+              label="Observações"
+              htmlFor="notes"
+              helper={
+                showEmployment
+                  ? "Anotações livres sobre o colaborador — visível só internamente."
+                  : "Anotações livres sobre o contato — visível só internamente."
+              }
+            >
               <Textarea id="notes" name="notes" rows={3} value={values.notes} />
             </CampoForm>
 
-            {canEditSensitive ? (
+            {!showEmployment ? null : canEditSensitive ? (
               <>
                 <h4 className="text-[12.5px] font-semibold text-fg-muted uppercase tracking-wider pt-1">
                   Dados bancários e salário
@@ -402,11 +505,11 @@ export function PessoaForm({
               </p>
             )}
 
-            {/* TODO: Benefícios e Observações — sem campo correspondente no formulário atual
-                (Benefícios já existe como cadastro próprio na ficha da pessoa, após criada). */}
-            <p className="text-[length:var(--fs-helper)] text-fg-muted italic">
-              Benefícios: gerenciados na ficha da pessoa depois de criada. Observações: ainda não existe campo pra isso.
-            </p>
+            {showEmployment && (
+              <p className="text-[length:var(--fs-helper)] text-fg-muted italic">
+                Benefícios são gerenciados na ficha do colaborador depois de criada.
+              </p>
+            )}
 
             <CustomFieldsSection fields={customFields} />
           </FormSection>
@@ -414,7 +517,7 @@ export function PessoaForm({
 
         {/* ── 5. Documentos ──────────────────────────────── */}
         <div data-step={4} className={step === 4 ? "" : "hidden"}>
-          <FormSection title="Documentos">
+          <FormSection title={stepLabels[4]}>
             {isEditing ? (
               <p className="text-[length:var(--fs-body)] text-fg-secondary">
                 A lista de documentos e o upload ficam na ficha da pessoa, na aba própria de Documentos.
@@ -456,26 +559,41 @@ export function PessoaForm({
               ]}
             />
             <ReviewBlock
-              title="Vínculo profissional"
+              title={stepLabels[2]}
               onEdit={() => goTo(2)}
-              items={[
-                { label: "Empresa", value: companyLabel },
-                { label: "Cargo", value: cargoLabel },
-                { label: "Departamento", value: departmentLabel },
-                { label: "Status", value: STATUS_LABEL[values.employmentStatus as PersonEmploymentStatus] },
-                { label: "Admissão", value: values.admissionDate },
-                { label: "Jornada", value: values.workShift },
-              ]}
+              items={
+                showEmployment
+                  ? [
+                      { label: "Empresa", value: companyLabel },
+                      { label: "Cargo", value: cargoLabel },
+                      { label: "Departamento", value: departmentLabel },
+                      { label: "Status", value: STATUS_LABEL[values.employmentStatus as PersonEmploymentStatus] },
+                      { label: "Admissão", value: values.admissionDate },
+                      { label: "Jornada", value: values.workShift },
+                    ]
+                  : [
+                      { label: "Empresa", value: companyLabel },
+                      { label: "Cargo", value: cargoLabel },
+                      { label: "Departamento", value: departmentLabel },
+                    ]
+              }
             />
             <ReviewBlock
-              title="Dados complementares"
+              title={stepLabels[3]}
               onEdit={() => goTo(3)}
-              items={[
-                { label: "Escolaridade", value: values.education },
-                { label: "PIS", value: values.pis },
-                { label: "CTPS", value: values.ctps },
-                { label: "Observações", value: values.notes },
-              ]}
+              items={
+                showEmployment
+                  ? [
+                      { label: "Escolaridade", value: values.education },
+                      { label: "PIS", value: values.pis },
+                      { label: "CTPS", value: values.ctps },
+                      { label: "Observações", value: values.notes },
+                    ]
+                  : [
+                      { label: "Escolaridade", value: values.education },
+                      { label: "Observações", value: values.notes },
+                    ]
+              }
             />
           </FormSection>
         </div>
@@ -497,11 +615,11 @@ export function PessoaForm({
               Cancelar
             </Link>
             {step < lastStep ? (
-              <Button type="button" onClick={next}>
+              <Button key="next" type="button" onClick={next}>
                 Avançar →
               </Button>
             ) : (
-              <Button type="submit" loading={isPending}>
+              <Button key="submit" type="submit" loading={isPending}>
                 Confirmar e salvar
               </Button>
             )}

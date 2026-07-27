@@ -2,7 +2,9 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FileText } from "lucide-react";
 import type { DocumentEntityType, DocumentCategory } from "@/generated/prisma/enums";
+import { AvatarImage } from "@/components/shared/AvatarImage";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
@@ -27,6 +29,8 @@ export type DocumentItem = {
   category: DocumentCategory;
   sensitive: boolean;
   uploadedByName: string;
+  /** Só usado no modo compacto (cartão de anexo). Ausente cai nas iniciais. */
+  uploadedByPhotoUrl?: string | null;
   createdAtLabel: string;
   expiresAtLabel: string | null;
   expired: boolean;
@@ -36,6 +40,21 @@ const IMAGE_EXT = new Set(["jpg", "jpeg", "png", "webp", "gif"]);
 function isImageFile(fileName: string): boolean {
   return IMAGE_EXT.has(fileName.split(".").pop()?.toLowerCase() ?? "");
 }
+
+function fileExt(fileName: string): string {
+  return fileName.split(".").pop()?.toUpperCase() ?? "";
+}
+
+// Cor por tipo — só o suficiente pra bater o olho e reconhecer o arquivo, sem
+// virar semáforo. PDF vermelho é a convenção que todo mundo já lê.
+const EXT_COLOR: Record<string, string> = {
+  PDF: "var(--c41-danger)",
+  DOC: "#2563EB",
+  DOCX: "#2563EB",
+  XLS: "var(--c41-success)",
+  XLSX: "var(--c41-success)",
+  CSV: "var(--c41-success)",
+};
 
 type Props = {
   entityType: DocumentEntityType;
@@ -83,9 +102,11 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
   const images = compact ? documents.filter((d) => isImageFile(d.fileName)) : [];
   const otherDocs = compact ? documents.filter((d) => !isImageFile(d.fileName)) : documents;
 
+  // No modo compacto quem desenha o cartão e o título é o DetailSection que
+  // envolve a seção no detalhamento de tarefa.
   return (
-    <div className="bg-surface border border-border rounded-lg p-5">
-      <h2 className="text-[14px] font-semibold text-fg mb-4">Documentos</h2>
+    <div className={compact ? "" : "bg-surface border border-border rounded-lg p-5"}>
+      {!compact && <h2 className="text-[14px] font-semibold text-fg mb-4">Documentos</h2>}
 
       {documents.length === 0 ? (
         <p className="text-[13px] text-fg-muted mb-4">Nenhum documento anexado ainda.</p>
@@ -111,7 +132,60 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
               ))}
             </div>
           )}
-          {otherDocs.length > 0 && (
+          {/* Compacto: cartão por arquivo (ícone grande, nome embaixo e avatar
+              de quem anexou à direita do nome), no formato dos anexos do
+              ClickUp — a lista corrida de metadados espremia o nome do arquivo
+              e não deixava reconhecer o anexo de relance. */}
+          {compact && otherDocs.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+              {otherDocs.map((d) => {
+                const ext = fileExt(d.fileName);
+                return (
+                  <a
+                    key={d.id}
+                    href={`/api/documents/${d.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={`${d.fileName} · ${CATEGORY_LABEL[d.category]} · ${d.uploadedByName} em ${d.createdAtLabel}`}
+                    className="group block rounded-lg border border-border bg-surface-hover overflow-hidden hover:border-border-strong transition-colors"
+                  >
+                    <div className="relative h-20 flex flex-col items-center justify-center gap-1">
+                      <FileText size={26} style={{ color: EXT_COLOR[ext] ?? "var(--c41-fg-muted)" }} />
+                      {ext && (
+                        <span className="text-[9px] font-semibold tracking-wide" style={{ color: EXT_COLOR[ext] ?? "var(--c41-fg-muted)" }}>
+                          {ext}
+                        </span>
+                      )}
+                      {d.sensitive && (
+                        <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-warning" title="Sensível" />
+                      )}
+                      {d.expiresAtLabel && (
+                        <span
+                          className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-medium ${
+                            d.expired ? "bg-danger/15 text-danger" : "bg-warning/15 text-warning"
+                          }`}
+                        >
+                          {d.expired ? "Vencido" : "Vence"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 px-2 py-1.5 border-t border-border bg-surface">
+                      <span className="flex-1 min-w-0 text-[11px] text-fg truncate">{d.fileName}</span>
+                      <AvatarImage
+                        src={d.uploadedByPhotoUrl ?? null}
+                        name={d.uploadedByName}
+                        size={18}
+                        bordered={false}
+                        fontSize={8}
+                      />
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          )}
+
+          {!compact && otherDocs.length > 0 && (
             <div className="divide-y divide-border mb-4">
               {otherDocs.map((d) => (
                 <div key={d.id} className="flex items-center justify-between py-2.5">
@@ -146,7 +220,7 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
       )}
 
       {canUpload && (
-        <form ref={formRef} onSubmit={handleSubmit} className="flex items-end gap-3 flex-wrap border-t border-border pt-4">
+        <form ref={formRef} onSubmit={handleSubmit} className={`flex items-end gap-3 flex-wrap ${compact ? "" : "border-t border-border pt-4"}`}>
           <div className="w-44">
             <CampoForm label="Categoria" htmlFor="category">
               <Select id="category" name="category" defaultValue="OUTRO">

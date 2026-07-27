@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Link2, Trash2, X } from "lucide-react";
+import { Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { getRecentLinkedIds, pushRecentLinkedId } from "@/lib/kanbanRecentLinks";
 
@@ -20,24 +20,11 @@ type Props = {
 
 // "Vincular itens ou adicionar dependências" — só registra a relação entre
 // duas tarefas (sem bloquear nada automaticamente).
+// Cartão e cabeçalho vêm do DetailSection que envolve esta seção.
 export function LinkedItemsSection({ canAct, basePath, links, candidates, createAction, deleteAction }: Props) {
   const [query, setQuery] = useState("");
   const [picking, setPicking] = useState(false);
-  const [open, setOpen] = useState(links.length > 0);
   const [, startTransition] = useTransition();
-
-  if (!open && links.length === 0) {
-    if (!canAct) return null;
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors"
-      >
-        <Link2 size={13} /> Vincular itens ou adicionar dependências
-      </button>
-    );
-  }
 
   const available = candidates.filter((c) => !links.some((l) => l.id === c.id));
   const matches = query.trim()
@@ -49,15 +36,10 @@ export function LinkedItemsSection({ canAct, basePath, links, candidates, create
   const showingRecents = !query.trim() && matches.length > 0;
 
   return (
-    <div className="bg-surface border border-border rounded-lg p-5">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-[13px] font-semibold text-fg">Tarefas relacionadas</h2>
-        {links.length === 0 && (
-          <button type="button" onClick={() => setOpen(false)} aria-label="Fechar" className="text-fg-muted hover:text-fg p-0.5">
-            <X size={14} />
-          </button>
-        )}
-      </div>
+    <div>
+      {links.length === 0 && (
+        <p className="text-[12px] text-fg-muted italic mb-2">Nenhuma tarefa vinculada.</p>
+      )}
 
       {links.length > 0 && (
         <div className="divide-y divide-border mb-3">
@@ -84,7 +66,7 @@ export function LinkedItemsSection({ canAct, basePath, links, candidates, create
         picking ? (
           <div className="relative">
             <div className="flex items-center gap-2">
-              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar tarefa…" autoFocus />
+              <Input compact value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar tarefa…" autoFocus />
               <button type="button" onClick={() => { setPicking(false); setQuery(""); }} className="text-fg-muted hover:text-fg p-1.5 flex-shrink-0">
                 <X size={14} />
               </button>

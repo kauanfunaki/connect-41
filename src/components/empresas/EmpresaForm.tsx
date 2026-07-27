@@ -141,7 +141,11 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
     setStepError(null);
   }
 
-  function next() {
+  // Ver a nota em PessoaForm.next: sem preventDefault, o nó do DOM do
+  // "Avançar" vira o botão de submit na última etapa antes de o navegador
+  // rodar a ação padrão do clique, e o formulário é enviado sozinho.
+  function next(e: React.MouseEvent<HTMLButtonElement>) {
+    e.preventDefault();
     if (!validateStep(step)) {
       setStepError(step);
       return;
@@ -552,12 +556,12 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
                     Salvar alterações
                   </Button>
                 )}
-                <Button type="button" onClick={next}>
+                <Button key="next" type="button" onClick={next}>
                   Avançar →
                 </Button>
               </>
             ) : (
-              <Button type="submit" loading={isPending}>
+              <Button key="submit" type="submit" loading={isPending}>
                 Confirmar e salvar
               </Button>
             )}

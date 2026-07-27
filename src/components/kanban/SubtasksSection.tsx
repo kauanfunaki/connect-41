@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ListTree, Trash2, X } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { StageDot, type StageDotType } from "@/components/kanban/StageDot";
 import { useConfirm } from "@/components/ui/useConfirm";
@@ -35,9 +35,10 @@ const PRIORITY_COLOR: Record<number, string> = {
   2: "var(--c41-danger)",
 };
 
+// O cartão e o cabeçalho ficam por conta do DetailSection que envolve esta
+// seção no detalhamento — aqui sobrou só o conteúdo.
 export function SubtasksSection({ canAct, canDelete, basePath, pipelineId, subtasks, createAction, deleteAction, concluirAction, reabrirAction }: Props) {
   const [title, setTitle] = useState("");
-  const [open, setOpen] = useState(subtasks.length > 0);
   const [, startTransition] = useTransition();
   const { dialog, requestConfirm } = useConfirm();
 
@@ -51,31 +52,11 @@ export function SubtasksSection({ canAct, canDelete, basePath, pipelineId, subta
     setTitle("");
   }
 
-  if (subtasks.length === 0 && !open) {
-    if (!canAct) return null;
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors"
-      >
-        <ListTree size={13} /> Adicionar subtarefa
-      </button>
-    );
-  }
-
   return (
-    <div className="bg-surface border border-border rounded-lg p-5">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-[13px] font-semibold text-fg">Subtarefas</h2>
-        {subtasks.length > 0 ? (
-          <span className="text-[11px] text-fg-muted tnum">{done}/{subtasks.length} concluídas · {pct}%</span>
-        ) : (
-          <button type="button" onClick={() => setOpen(false)} aria-label="Fechar" className="text-fg-muted hover:text-fg p-0.5">
-            <X size={14} />
-          </button>
-        )}
-      </div>
+    <div>
+      {subtasks.length === 0 && (
+        <p className="text-[12px] text-fg-muted italic mb-2">Nenhuma subtarefa ainda.</p>
+      )}
 
       {subtasks.length > 0 && (
         <div className="h-1.5 rounded-full bg-surface-hover overflow-hidden mb-3">
@@ -130,8 +111,9 @@ export function SubtasksSection({ canAct, canDelete, basePath, pipelineId, subta
       </div>
 
       {canAct && (
-        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
+        <div className="flex items-center gap-2 mt-3">
           <Input
+            compact
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addSubtask()}
@@ -140,7 +122,7 @@ export function SubtasksSection({ canAct, canDelete, basePath, pipelineId, subta
           <button
             type="button"
             onClick={addSubtask}
-            className="h-9 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors flex-shrink-0"
+            className="h-8 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors flex-shrink-0"
           >
             Adicionar
           </button>

@@ -306,13 +306,28 @@ export default async function HomePage() {
   // Kanban por estágio + movimentações — únicos gráficos mantidos (visão do
   // workspace, só admin/coordenador); cortados os que tinham pouco sinal
   // (donut de 1 categoria, paleta arco-íris fora dos tokens).
-  const stageCounts = new Map<string, { value: number; color: string }>();
+  // Agrupa por (kanban, estágio) e mostra só os 5 maiores. Antes agrupava só
+  // pelo NOME do estágio: "A Fazer" de dez quadros virava uma barra só (número
+  // sem dono, impossível de agir em cima), e workspaces com muitos estágios
+  // distintos viravam uma parede de barras. O nome do kanban vira sublabel pra
+  // a barra dizer de onde veio.
+  const STAGE_CHART_LIMIT = 5;
+  const stageCounts = new Map<string, { label: string; sublabel: string; value: number; color: string }>();
   for (const item of openPipelineItemsRaw) {
-    const key = item.stage.name;
+    const key = `${item.pipelineId}::${item.stage.name}`;
     const prev = stageCounts.get(key);
-    stageCounts.set(key, { value: (prev?.value ?? 0) + 1, color: item.stage.color ?? "#586577" });
+    stageCounts.set(key, {
+      label: item.stage.name,
+      sublabel: item.pipeline.name,
+      value: (prev?.value ?? 0) + 1,
+      color: item.stage.color ?? "#586577",
+    });
   }
-  const stageChartData = Array.from(stageCounts.entries()).map(([label, v]) => ({ label, value: v.value, color: v.color }));
+  const stageChartAll = Array.from(stageCounts.entries())
+    .map(([key, v]) => ({ key, ...v }))
+    .sort((a, b) => b.value - a.value);
+  const stageChartData = stageChartAll.slice(0, STAGE_CHART_LIMIT);
+  const stageChartHiddenCount = stageChartAll.length - stageChartData.length;
 
   const dayBuckets = new Map<string, number>();
   for (let i = 13; i >= 0; i--) {
@@ -473,8 +488,16 @@ export default async function HomePage() {
         <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Visão do workspace</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
-            <p className="text-[11px] font-medium text-fg-muted uppercase tracking-wide mb-2.5">Cards por estágio</p>
+            <p className="text-[11px] font-medium text-fg-muted uppercase tracking-wide mb-2.5">
+              Top {STAGE_CHART_LIMIT} · cards por estágio
+            </p>
             <HorizontalBarChart data={stageChartData} emptyLabel="Nenhum card em aberto nos seus kanbans." />
+            {stageChartHiddenCount > 0 && (
+              <p className="text-[11px] text-fg-muted mt-2.5">
+                + {stageChartHiddenCount} outro{stageChartHiddenCount !== 1 ? "s" : ""} estágio
+                {stageChartHiddenCount !== 1 ? "s" : ""} com menos cards
+              </p>
+            )}
           </div>
           <div>
             <p className="text-[11px] font-medium text-fg-muted uppercase tracking-wide mb-2.5">Movimentações (14 dias)</p>

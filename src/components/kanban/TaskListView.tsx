@@ -746,7 +746,11 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
   return (
     <div
       ref={scrollRef}
-      className="scroll-y bg-surface border border-border rounded-2xl p-2 h-full overflow-y-auto"
+      // Sem padding no topo: o padding do container ficava ACIMA do <thead>
+      // sticky, então as linhas rolavam por dentro dessa faixa de 8px e
+      // apareciam recortadas por cima do cabeçalho. Agora o respiro superior
+      // vive no próprio <th> (pt-2), que gruda junto.
+      className="scroll-y bg-surface border border-border rounded-2xl px-2 pb-2 h-full overflow-y-auto"
     >
       <div className="md:hidden">
         {byStage.map(({ stage, items: stageItems }) => (
@@ -769,13 +773,17 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
       </div>
 
       <table className="hidden md:table w-full border-collapse">
-        <thead className="sticky top-0 bg-surface z-10">
+        {/* O fundo precisa estar em cada <th>, não no <thead>: background em
+            thead/tr não pinta de forma confiável com position:sticky, e as
+            linhas apareciam por trás do cabeçalho ao rolar. A borda inferior
+            fecha visualmente a faixa fixa. */}
+        <thead className="sticky top-0 z-10">
           <tr className="text-left">
-            <th className="w-14" />
-            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide pb-1.5 px-2">Tarefa</th>
-            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide pb-1.5 px-2 w-44">Tags</th>
-            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide pb-1.5 px-2 w-24">Responsáveis</th>
-            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide pb-1.5 px-2 w-24 text-right">Prazo</th>
+            <th className="w-14 bg-surface pt-2 pb-1.5 border-b border-border" />
+            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-surface pt-2 pb-1.5 px-2 border-b border-border">Tarefa</th>
+            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-surface pt-2 pb-1.5 px-2 w-44 border-b border-border">Tags</th>
+            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-surface pt-2 pb-1.5 px-2 w-24 border-b border-border">Responsáveis</th>
+            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-surface pt-2 pb-1.5 px-2 w-24 text-right border-b border-border">Prazo</th>
           </tr>
         </thead>
         {byStage.map(({ stage, items: stageItems }) => (

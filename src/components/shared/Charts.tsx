@@ -3,7 +3,15 @@
 // var(--c41-*) e funcionam em light/dark automaticamente. Tooltip nativo via
 // <title>, sem JS extra.
 
-type BarDatum = { label: string; value: number; color?: string };
+type BarDatum = {
+  /** Identidade da barra. Obrigatório quando dois itens podem repetir o mesmo `label`. */
+  key?: string;
+  label: string;
+  /** Segunda linha menor sob o rótulo — ex.: de qual kanban vem aquele estágio. */
+  sublabel?: string;
+  value: number;
+  color?: string;
+};
 
 // Barras horizontais — cards do Kanban por estágio, pendências por prioridade etc.
 export function HorizontalBarChart({
@@ -23,9 +31,13 @@ export function HorizontalBarChart({
   return (
     <div className="space-y-2.5">
       {data.map((d) => (
-        <div key={d.label} className="flex items-center gap-3">
-          <span className="text-[12px] text-fg-secondary w-[104px] truncate flex-shrink-0" title={d.label}>
-            {d.label}
+        <div key={d.key ?? d.label} className="flex items-center gap-3">
+          <span
+            className="w-[124px] flex-shrink-0 min-w-0"
+            title={d.sublabel ? `${d.label} · ${d.sublabel}` : d.label}
+          >
+            <span className="block text-[12px] text-fg-secondary truncate">{d.label}</span>
+            {d.sublabel && <span className="block text-[10.5px] text-fg-muted truncate">{d.sublabel}</span>}
           </span>
           <div className="flex-1 h-2 rounded-full bg-surface-2 overflow-hidden">
             <div

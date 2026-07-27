@@ -463,11 +463,15 @@ export function ActivityFeed({ items, canAct, mentionUsers, pipelineItemId, task
           onChange={(e) => setSearch(e.target.value || " ")}
           placeholder="Pesquisar no chat desta tarefa…"
           autoFocus
+          compact
           className="mb-3 flex-shrink-0"
         />
       )}
 
-      <div className="scroll-y flex-1 overflow-y-auto min-h-0">
+      {/* pr-3 abre a folga entre a barra de rolagem e o texto das mensagens —
+          a barra encostava no conteúdo e o feed parecia apertado; o -mr-2
+          devolve parte do espaço ao card pra não estreitar as mensagens. */}
+      <div className="scroll-y flex-1 overflow-y-auto min-h-0 pr-3 -mr-2">
         {items.length === 0 ? (
           <p className="text-[length:var(--fs-helper)] text-fg-muted">Nenhuma atividade registrada ainda.</p>
         ) : (

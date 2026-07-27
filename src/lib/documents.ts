@@ -10,6 +10,8 @@ export async function listDocuments(
   return prisma.document.findMany({
     where: { tenantId, entityType, entityId },
     orderBy: { createdAt: "desc" },
-    include: { uploadedBy: { select: { id: true, name: true } } },
+    // photoUrl alimenta o avatar do responsável no cartão de anexo do
+    // detalhamento de tarefa (DocumentsSection em modo compacto).
+    include: { uploadedBy: { select: { id: true, name: true, photoUrl: true } } },
   });
 }
