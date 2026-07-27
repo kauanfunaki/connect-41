@@ -2,37 +2,44 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { WeekCalendar } from "@/components/agenda/WeekCalendar";
+import { AgendaCalendar } from "@/components/agenda/AgendaCalendar";
 import { criarReuniaoAvulsa, editarReuniaoAvulsa, excluirReuniaoAvulsa } from "./actions";
 import {
   saoPauloParts,
   saoPauloDateTimeToUtc,
-  mondayOfWeek,
-  weekDayKeys,
-  addDaysToKey,
-  monthYearLabel,
+  agendaDayKeys,
+  parseAgendaView,
+  parseAgendaDate,
 } from "@/lib/agenda";
 import { redirect } from "next/navigation";
 
-// Agenda semanal interativa — substitui a antiga lista "próximas/passadas".
-// Reunião pode ser criada direto por aqui (clique num horário vazio ou botão
-// "Nova reunião"), sem precisar passar por um item de Kanban primeiro:
-// Meeting.pipelineItemId já é opcional no schema, a única mudança foi uma
-// action nova (criarReuniaoAvulsa) que não exige esse vínculo.
+const VIEW_HELPER: Record<string, string> = {
+  dia: "As reuniões do dia — clique num horário vazio para agendar direto por aqui.",
+  semana: "Suas reuniões da semana — clique num horário vazio para agendar direto por aqui.",
+  mes: "O mês inteiro de relance — clique num dia para agendar ou abrir a visão de dia.",
+};
+
+// Agenda interativa em três visões (dia, semana e mês). Visão e data de
+// referência vivem na URL (?view=&date=), então link direto, voltar/avançar do
+// navegador e o "+N mais" da visão mensal funcionam sem estado de cliente.
+// Reunião pode ser criada direto por aqui (clique num horário/dia vazio ou
+// botão "Nova reunião"), sem passar por um item de Kanban primeiro:
+// Meeting.pipelineItemId já é opcional no schema.
 export default async function AgendaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ week?: string }>;
+  searchParams: Promise<{ view?: string; date?: string }>;
 }) {
-  const { week } = await searchParams;
+  const { view: viewRaw, date: dateRaw } = await searchParams;
   const ctx = await getAuthContext();
   if (!canManageMeetings(ctx)) redirect("/home");
 
-  const mondayKey = mondayOfWeek(week);
-  const days = weekDayKeys(mondayKey);
+  const view = parseAgendaView(viewRaw);
+  const dateKey = parseAgendaDate(dateRaw);
+  const days = agendaDayKeys(view, dateKey);
   const todayKey = saoPauloParts(new Date()).dateKey;
   const rangeStart = saoPauloDateTimeToUtc(days[0], 0, 0);
-  const rangeEnd = saoPauloDateTimeToUtc(days[6], 23, 59);
+  const rangeEnd = saoPauloDateTimeToUtc(days[days.length - 1], 23, 59);
 
   const prisma = getPrisma();
   const [meetingsRaw, oauthAccounts, allUsers, companies] = await Promise.all([
@@ -77,24 +84,20 @@ export default async function AgendaPage({
     createdByUserId: m.createdByUserId,
   }));
 
-  const weekDays = days.map((dateKey) => ({ dateKey, isToday: dateKey === todayKey }));
+  const calendarDays = days.map((key) => ({ dateKey: key, isToday: key === todayKey }));
 
   return (
     <PageContainer>
       <div className="mb-6">
         <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em]">Agenda</h1>
-        <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
-          Suas reuniões da semana — clique num horário vazio para agendar direto por aqui.
-        </p>
+        <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">{VIEW_HELPER[view]}</p>
       </div>
 
-      <WeekCalendar
-        weekDays={weekDays}
+      <AgendaCalendar
+        view={view}
+        dateKey={dateKey}
+        days={calendarDays}
         meetings={meetings}
-        monthYearLabel={monthYearLabel(mondayKey)}
-        prevHref={`/agenda?week=${addDaysToKey(mondayKey, -7)}`}
-        nextHref={`/agenda?week=${addDaysToKey(mondayKey, 7)}`}
-        todayHref="/agenda"
         createAction={criarReuniaoAvulsa}
         editAction={editarReuniaoAvulsa}
         deleteAction={excluirReuniaoAvulsa}

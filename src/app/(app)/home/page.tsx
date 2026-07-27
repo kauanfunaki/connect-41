@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import {
   Building2,
@@ -10,6 +11,7 @@ import {
 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { QuickCreateMenu } from "@/components/shared/QuickCreateMenu";
+import { CustomizeHomeButton } from "@/components/home/CustomizeHomeButton";
 import { HorizontalBarChart, TrendChart } from "@/components/shared/Charts";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite, isFullWrite, isFullAccess } from "@/lib/auth/context";
@@ -18,6 +20,8 @@ import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getSectorsWithEnabledModules } from "@/lib/modules";
 import { boardPath } from "@/lib/kanbanPaths";
 import { formatCalendarDate, formatInstantDate, formatInstantTime } from "@/lib/format";
+import { parseHomeWidgets, visibleWidgets, type HomeWidgetKey } from "@/lib/homeWidgets";
+import { salvarWidgetsHome, restaurarWidgetsHome } from "./actions";
 
 const ACTIVITY_LABEL: Record<string, string> = {
   NOTE: "adicionou uma nota em",
@@ -122,6 +126,7 @@ export default async function HomePage() {
     activityCreatedDates,
     upcomingMeetings,
     incomingHandoffsRaw,
+    homePreference,
   ] = await Promise.all([
     ctx.userId ? prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true } }) : Promise.resolve(null),
     prisma.tenant.findUnique({ where: { id: ctx.tenantId }, select: { name: true } }),
@@ -183,7 +188,22 @@ export default async function HomePage() {
           },
         })
       : Promise.resolve([]),
+    // Leitura tolerante a falha de propósito: a Home é a primeira tela depois
+    // do login e a tabela `user_preferences` só passa a existir depois do
+    // `prisma db push`. Sem o catch, esquecer o push derrubaria a Home do time
+    // inteiro por causa de uma preferência cosmética — assim ela só volta ao
+    // layout padrão e o erro fica no log do servidor.
+    ctx.userId
+      ? prisma.userPreference
+          .findUnique({ where: { userId: ctx.userId }, select: { homeWidgets: true } })
+          .catch((err: unknown) => {
+            console.error("[HomePage] preferência de widgets indisponível", err);
+            return null;
+          })
+      : Promise.resolve(null),
   ]);
+
+  const selectedWidgets = parseHomeWidgets(homePreference?.homeWidgets);
 
   // "Meu dia" — itens atribuídos a mim (qualquer prazo) unidos com todo item
   // com prazo definido no meu escopo (inclui vencidos, que a versão antiga
@@ -311,31 +331,13 @@ export default async function HomePage() {
   const pendingForMe = vencidosCount + hojeCount + incomingHandoffsRaw.length;
   const nextMeeting = upcomingMeetings[0] && upcomingMeetings[0].startAt <= todayEnd ? upcomingMeetings[0] : null;
 
-  return (
-    <PageContainer>
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
-        <div>
-          <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em]">
-            {firstName ? `Olá, ${firstName}` : "Início"}
-          </h1>
-          <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
-            {pendingForMe > 0
-              ? `${pendingForMe} pendência${pendingForMe !== 1 ? "s" : ""} precisa${pendingForMe !== 1 ? "m" : ""} de você`
-              : <>Aqui está um resumo do workspace {tenant?.name ? <span className="text-fg font-medium">{tenant.name}</span> : ""}</>}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <p className="text-[length:var(--fs-helper)] text-fg-muted tnum">{today}</p>
-          <QuickCreateMenu
-            canCreateCompany={canCreateCompany}
-            canCreatePerson={canCreatePerson}
-            canCreateTransfer={canCreateTransfer}
-          />
-        </div>
-      </div>
-
-      {/* Indicadores */}
+  // Cada bloco da Home vira uma entrada deste mapa; o que entra na tela e em
+  // que ordem é decidido logo abaixo por visibleWidgets(), a partir do que o
+  // usuário escolheu em "Personalizar". Bloco sem dado (ex.: nenhuma reunião
+  // hoje) continua sendo null como antes — a preferência só decide se ele
+  // *pode* aparecer, não força um card vazio.
+  const widgetNodes: Record<HomeWidgetKey, React.ReactNode> = {
+    indicadores: (
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         <StatCard
           href="/empresas"
@@ -371,209 +373,274 @@ export default async function HomePage() {
           delay={120}
         />
       </div>
+    ),
 
-      {/* Próxima reunião de hoje */}
-      {nextMeeting && (
-        <div className="flex items-center justify-between gap-3 bg-brand-subtle border border-brand/20 rounded-2xl px-4 py-3 mb-4">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <Video size={16} className="text-brand flex-shrink-0" />
-            <p className="text-[length:var(--fs-body)] text-fg truncate">
-              <span className="font-medium">{nextMeeting.title}</span>
-              <span className="text-fg-muted">
-                {" · "}
-                {formatMeetingWhen(nextMeeting.startAt, todayStart, todayEnd)}
-                {" · "}
-                {PROVIDER_LABEL[nextMeeting.provider] ?? nextMeeting.provider}
-              </span>
-            </p>
+    "proxima-reuniao": nextMeeting && (
+      <div className="flex items-center justify-between gap-3 bg-brand-subtle border border-brand/20 rounded-2xl px-4 py-3 mb-4">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <Video size={16} className="text-brand flex-shrink-0" />
+          <p className="text-[length:var(--fs-body)] text-fg truncate">
+            <span className="font-medium">{nextMeeting.title}</span>
+            <span className="text-fg-muted">
+              {" · "}
+              {formatMeetingWhen(nextMeeting.startAt, todayStart, todayEnd)}
+              {" · "}
+              {PROVIDER_LABEL[nextMeeting.provider] ?? nextMeeting.provider}
+            </span>
+          </p>
+        </div>
+        <a
+          href={nextMeeting.meetingUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 flex-shrink-0 h-8 px-3 rounded-full bg-brand text-on-brand text-[12.5px] font-medium hover:bg-brand-hover transition-colors"
+        >
+          Entrar <ExternalLink size={12} />
+        </a>
+      </div>
+    ),
+
+    "meu-dia": (
+      <div className="bg-surface border border-border rounded-2xl p-5">
+        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Meu dia</h2>
+        {meuDiaItems.length === 0 ? (
+          <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhum item com prazo ou atribuído a você.</p>
+        ) : (
+          <div className="space-y-1">
+            {meuDiaItems.map((item) => {
+              const badge = classifyDueDate(item.dueDate, todayStart, todayEnd);
+              return (
+                <Link
+                  key={item.id}
+                  href={`${boardPath({ id: item.pipelineId, sectorCode: item.pipeline.sectorCode })}/itens/${item.id}`}
+                  className="flex items-center justify-between gap-3 py-2 group"
+                >
+                  <span className="text-[length:var(--fs-body)] text-fg group-hover:text-brand transition-colors truncate min-w-0">
+                    {item.title ?? (item.entityId ? entityNames[item.entityId] : null) ?? "(sem título)"}
+                    <span className="text-fg-muted font-normal">
+                      {" · "}
+                      {sectorLabels[item.pipeline.sectorCode] ?? item.pipeline.sectorCode}
+                      {" · "}
+                      {item.stage.name}
+                    </span>
+                  </span>
+                  {badge ? (
+                    <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full ${badge.className}`}>
+                      {badge.label}
+                    </span>
+                  ) : (
+                    <span className="flex-shrink-0 text-[length:var(--fs-helper)] text-fg-muted">Sem prazo</span>
+                  )}
+                </Link>
+              );
+            })}
           </div>
-          <a
-            href={nextMeeting.meetingUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 flex-shrink-0 h-8 px-3 rounded-full bg-brand text-on-brand text-[12.5px] font-medium hover:bg-brand-hover transition-colors"
-          >
-            Entrar <ExternalLink size={12} />
-          </a>
+        )}
+      </div>
+    ),
+
+    transferencias: (
+      <div className="bg-surface border border-border rounded-2xl p-5">
+        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Transferências a revisar</h2>
+        {incomingHandoffsRaw.length === 0 ? (
+          <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhuma transferência aguardando o seu setor.</p>
+        ) : (
+          <div className="space-y-3">
+            {incomingHandoffsRaw.map((h) => (
+              <div key={h.id} className="flex items-center justify-between gap-3">
+                <p className="text-[length:var(--fs-body)] text-fg truncate min-w-0">
+                  {sectorLabels[h.fromSector] ?? h.fromSector} →{" "}
+                  {h.sectors.map((s) => sectorLabels[s.sectorCode] ?? s.sectorCode).join(", ")}
+                  {" · "}
+                  <span className="font-medium">{entityNames[h.entityId] ?? "(removido)"}</span>
+                  <span className="text-fg-muted">{" · "}{h.requester.name} · {formatRelativeTime(h.createdAt)}</span>
+                </p>
+                <Link
+                  href={`/transferencias/${h.id}`}
+                  className="flex-shrink-0 text-[12.5px] font-medium text-brand border border-brand/30 rounded-full px-3 py-1 hover:bg-brand-subtle transition-colors"
+                >
+                  Revisar
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    ),
+
+    workspace: (
+      <div className="bg-surface border border-border rounded-2xl p-5">
+        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Visão do workspace</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div>
+            <p className="text-[11px] font-medium text-fg-muted uppercase tracking-wide mb-2.5">Cards por estágio</p>
+            <HorizontalBarChart data={stageChartData} emptyLabel="Nenhum card em aberto nos seus kanbans." />
+          </div>
+          <div>
+            <p className="text-[11px] font-medium text-fg-muted uppercase tracking-wide mb-2.5">Movimentações (14 dias)</p>
+            <TrendChart data={trendData} />
+          </div>
+        </div>
+      </div>
+    ),
+
+    agenda: (
+      <div className="bg-surface border border-border rounded-2xl p-5">
+        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Agenda</h2>
+        {upcomingMeetings.length === 0 ? (
+          <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhuma reunião agendada.</p>
+        ) : (
+          <div className="space-y-2.5">
+            {upcomingMeetings.map((m) => (
+              <a
+                key={m.id}
+                href={m.meetingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between gap-2 group"
+              >
+                <span className="text-[length:var(--fs-body)] text-fg group-hover:text-brand transition-colors truncate min-w-0">
+                  {m.title}
+                </span>
+                <span className="text-[length:var(--fs-helper)] text-fg-muted tnum flex-shrink-0">
+                  {formatMeetingWhen(m.startAt, todayStart, todayEnd)}
+                </span>
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    ),
+
+    atividade: (
+      <div className="bg-surface border border-border rounded-2xl p-5">
+        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Atividade</h2>
+        {activityGroups.length === 0 ? (
+          <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhuma atividade registrada ainda.</p>
+        ) : (
+          <div className="space-y-3">
+            {activityGroups.map((g) => (
+              <Link key={g.id} href={`${boardPath({ id: g.pipelineId, sectorCode: g.pipelineSectorCode })}/itens/${g.pipelineItemId}`} className="flex items-start gap-2.5 group">
+                <span className="w-6 h-6 rounded-full bg-brand-subtle text-brand text-[10px] font-semibold flex items-center justify-center flex-shrink-0 mt-0.5">
+                  {g.userName.trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join("").toUpperCase()}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[length:var(--fs-body)] text-fg-secondary leading-snug">
+                    <span className="font-medium text-fg group-hover:text-brand transition-colors">{g.userName}</span>{" "}
+                    {g.count > 1 ? (
+                      `fez ${g.count} alterações em `
+                    ) : (
+                      `${g.label} `
+                    )}
+                    <span className="font-medium">{(g.entityId ? entityNames[g.entityId] : null) ?? "(tarefa)"}</span>
+                  </p>
+                  <p className="text-[length:var(--fs-helper)] text-fg-muted">{formatRelativeTime(g.createdAt)}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    ),
+
+    setores: sectorWidgets.length > 0 && (
+      <div className="bg-surface border border-border rounded-2xl p-5">
+        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">
+          {sectorWidgets.length > 1 ? "Seus setores" : "Seu setor"}
+        </h2>
+        <div className="flex flex-col gap-2">
+          {sectorWidgets.map((s) => (
+            <Link
+              key={s.code}
+              href={`/setor/${s.code}`}
+              className="group flex items-center justify-between gap-2 bg-surface-hover border border-border rounded-xl px-3.5 py-2.5 hover:border-border-strong transition-colors"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.color }} />
+                <div className="min-w-0">
+                  <p className="text-[13px] font-medium text-fg truncate">{s.label}</p>
+                  <p className="text-[11px] text-fg-muted">
+                    {s.openCount} aberto{s.openCount !== 1 ? "s" : ""}
+                    {s.overdueCount > 0 && <span className="text-danger"> · {s.overdueCount} atrasado{s.overdueCount !== 1 ? "s" : ""}</span>}
+                  </p>
+                </div>
+              </div>
+              <ChevronRight size={15} className="text-fg-muted flex-shrink-0 group-hover:text-fg transition-colors" />
+            </Link>
+          ))}
+        </div>
+      </div>
+    ),
+  };
+
+  const restrictedOpts = { showRestricted: showWorkspaceOverview };
+  const topWidgets = visibleWidgets("top", selectedWidgets, restrictedOpts);
+  const mainWidgets = visibleWidgets("main", selectedWidgets, restrictedOpts);
+  const sideWidgets = visibleWidgets("side", selectedWidgets, restrictedOpts);
+  // Com uma das colunas vazia o grid de duas colunas jogaria a sobrevivente na
+  // faixa larga (ou estreita) errada — nesse caso a Home vira coluna única.
+  const twoColumns = mainWidgets.length > 0 && sideWidgets.length > 0;
+
+  return (
+    <PageContainer>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
+        <div>
+          <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em]">
+            {firstName ? `Olá, ${firstName}` : "Início"}
+          </h1>
+          <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
+            {pendingForMe > 0
+              ? `${pendingForMe} pendência${pendingForMe !== 1 ? "s" : ""} precisa${pendingForMe !== 1 ? "m" : ""} de você`
+              : <>Aqui está um resumo do workspace {tenant?.name ? <span className="text-fg font-medium">{tenant.name}</span> : ""}</>}
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <p className="hidden sm:block text-[length:var(--fs-helper)] text-fg-muted tnum">{today}</p>
+          <CustomizeHomeButton
+            selected={selectedWidgets}
+            showRestricted={showWorkspaceOverview}
+            saveAction={salvarWidgetsHome}
+            resetAction={restaurarWidgetsHome}
+          />
+          <QuickCreateMenu
+            canCreateCompany={canCreateCompany}
+            canCreatePerson={canCreatePerson}
+            canCreateTransfer={canCreateTransfer}
+          />
+        </div>
+      </div>
+
+      {topWidgets.map((key) => (
+        <Fragment key={key}>{widgetNodes[key]}</Fragment>
+      ))}
+
+      {/* Corpo: coluna principal (meu trabalho) + coluna lateral */}
+      {(mainWidgets.length > 0 || sideWidgets.length > 0) && (
+        <div className={`grid gap-4 ${twoColumns ? "grid-cols-1 lg:grid-cols-[1.7fr_1fr]" : "grid-cols-1"}`}>
+          {mainWidgets.length > 0 && (
+            <div className="flex flex-col gap-4 min-w-0">
+              {mainWidgets.map((key) => (
+                <Fragment key={key}>{widgetNodes[key]}</Fragment>
+              ))}
+            </div>
+          )}
+
+          {sideWidgets.length > 0 && (
+            <div className="flex flex-col gap-4 min-w-0">
+              {sideWidgets.map((key) => (
+                <Fragment key={key}>{widgetNodes[key]}</Fragment>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Corpo: coluna principal (meu trabalho) + coluna lateral */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1.7fr_1fr] gap-4">
-        <div className="flex flex-col gap-4 min-w-0">
-          {/* Meu dia */}
-          <div className="bg-surface border border-border rounded-2xl p-5">
-            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Meu dia</h2>
-            {meuDiaItems.length === 0 ? (
-              <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhum item com prazo ou atribuído a você.</p>
-            ) : (
-              <div className="space-y-1">
-                {meuDiaItems.map((item) => {
-                  const badge = classifyDueDate(item.dueDate, todayStart, todayEnd);
-                  return (
-                    <Link
-                      key={item.id}
-                      href={`${boardPath({ id: item.pipelineId, sectorCode: item.pipeline.sectorCode })}/itens/${item.id}`}
-                      className="flex items-center justify-between gap-3 py-2 group"
-                    >
-                      <span className="text-[length:var(--fs-body)] text-fg group-hover:text-brand transition-colors truncate min-w-0">
-                        {item.title ?? (item.entityId ? entityNames[item.entityId] : null) ?? "(sem título)"}
-                        <span className="text-fg-muted font-normal">
-                          {" · "}
-                          {sectorLabels[item.pipeline.sectorCode] ?? item.pipeline.sectorCode}
-                          {" · "}
-                          {item.stage.name}
-                        </span>
-                      </span>
-                      {badge ? (
-                        <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full ${badge.className}`}>
-                          {badge.label}
-                        </span>
-                      ) : (
-                        <span className="flex-shrink-0 text-[length:var(--fs-helper)] text-fg-muted">Sem prazo</span>
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Transferências a revisar */}
-          <div className="bg-surface border border-border rounded-2xl p-5">
-            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Transferências a revisar</h2>
-            {incomingHandoffsRaw.length === 0 ? (
-              <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhuma transferência aguardando o seu setor.</p>
-            ) : (
-              <div className="space-y-3">
-                {incomingHandoffsRaw.map((h) => (
-                  <div key={h.id} className="flex items-center justify-between gap-3">
-                    <p className="text-[length:var(--fs-body)] text-fg truncate min-w-0">
-                      {sectorLabels[h.fromSector] ?? h.fromSector} →{" "}
-                      {h.sectors.map((s) => sectorLabels[s.sectorCode] ?? s.sectorCode).join(", ")}
-                      {" · "}
-                      <span className="font-medium">{entityNames[h.entityId] ?? "(removido)"}</span>
-                      <span className="text-fg-muted">{" · "}{h.requester.name} · {formatRelativeTime(h.createdAt)}</span>
-                    </p>
-                    <Link
-                      href={`/transferencias/${h.id}`}
-                      className="flex-shrink-0 text-[12.5px] font-medium text-brand border border-brand/30 rounded-full px-3 py-1 hover:bg-brand-subtle transition-colors"
-                    >
-                      Revisar
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Visão do workspace — só admin/coordenador */}
-          {showWorkspaceOverview && (
-            <div className="bg-surface border border-border rounded-2xl p-5">
-              <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Visão do workspace</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div>
-                  <p className="text-[11px] font-medium text-fg-muted uppercase tracking-wide mb-2.5">Cards por estágio</p>
-                  <HorizontalBarChart data={stageChartData} emptyLabel="Nenhum card em aberto nos seus kanbans." />
-                </div>
-                <div>
-                  <p className="text-[11px] font-medium text-fg-muted uppercase tracking-wide mb-2.5">Movimentações (14 dias)</p>
-                  <TrendChart data={trendData} />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-4 min-w-0">
-          {/* Agenda */}
-          <div className="bg-surface border border-border rounded-2xl p-5">
-            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Agenda</h2>
-            {upcomingMeetings.length === 0 ? (
-              <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhuma reunião agendada.</p>
-            ) : (
-              <div className="space-y-2.5">
-                {upcomingMeetings.map((m) => (
-                  <a
-                    key={m.id}
-                    href={m.meetingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-between gap-2 group"
-                  >
-                    <span className="text-[length:var(--fs-body)] text-fg group-hover:text-brand transition-colors truncate min-w-0">
-                      {m.title}
-                    </span>
-                    <span className="text-[length:var(--fs-helper)] text-fg-muted tnum flex-shrink-0">
-                      {formatMeetingWhen(m.startAt, todayStart, todayEnd)}
-                    </span>
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Atividade */}
-          <div className="bg-surface border border-border rounded-2xl p-5">
-            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Atividade</h2>
-            {activityGroups.length === 0 ? (
-              <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhuma atividade registrada ainda.</p>
-            ) : (
-              <div className="space-y-3">
-                {activityGroups.map((g) => (
-                  <Link key={g.id} href={`${boardPath({ id: g.pipelineId, sectorCode: g.pipelineSectorCode })}/itens/${g.pipelineItemId}`} className="flex items-start gap-2.5 group">
-                    <span className="w-6 h-6 rounded-full bg-brand-subtle text-brand text-[10px] font-semibold flex items-center justify-center flex-shrink-0 mt-0.5">
-                      {g.userName.trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join("").toUpperCase()}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-[length:var(--fs-body)] text-fg-secondary leading-snug">
-                        <span className="font-medium text-fg group-hover:text-brand transition-colors">{g.userName}</span>{" "}
-                        {g.count > 1 ? (
-                          `fez ${g.count} alterações em `
-                        ) : (
-                          `${g.label} `
-                        )}
-                        <span className="font-medium">{(g.entityId ? entityNames[g.entityId] : null) ?? "(tarefa)"}</span>
-                      </p>
-                      <p className="text-[length:var(--fs-helper)] text-fg-muted">{formatRelativeTime(g.createdAt)}</p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Seus setores */}
-          {sectorWidgets.length > 0 && (
-            <div className="bg-surface border border-border rounded-2xl p-5">
-              <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">
-                {sectorWidgets.length > 1 ? "Seus setores" : "Seu setor"}
-              </h2>
-              <div className="flex flex-col gap-2">
-                {sectorWidgets.map((s) => (
-                  <Link
-                    key={s.code}
-                    href={`/setor/${s.code}`}
-                    className="group flex items-center justify-between gap-2 bg-surface-hover border border-border rounded-xl px-3.5 py-2.5 hover:border-border-strong transition-colors"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.color }} />
-                      <div className="min-w-0">
-                        <p className="text-[13px] font-medium text-fg truncate">{s.label}</p>
-                        <p className="text-[11px] text-fg-muted">
-                          {s.openCount} aberto{s.openCount !== 1 ? "s" : ""}
-                          {s.overdueCount > 0 && <span className="text-danger"> · {s.overdueCount} atrasado{s.overdueCount !== 1 ? "s" : ""}</span>}
-                        </p>
-                      </div>
-                    </div>
-                    <ChevronRight size={15} className="text-fg-muted flex-shrink-0 group-hover:text-fg transition-colors" />
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      {topWidgets.length === 0 && mainWidgets.length === 0 && sideWidgets.length === 0 && (
+        <p className="text-[length:var(--fs-body)] text-fg-muted">
+          Todos os blocos estão ocultos. Use <span className="text-fg font-medium">Personalizar</span> para trazer algum de volta.
+        </p>
+      )}
     </PageContainer>
   );
 }

@@ -163,28 +163,16 @@ export function AppShell({
           )}
         </nav>
 
-        {/* Footer: configurações */}
+        {/* Footer: configurações. Admin cai na administração do workspace;
+            todo mundo tem /configuracoes (conta própria) no menu de perfil. */}
         <div className="border-t border-border px-3 py-3 flex-shrink-0">
-          {canOpenAdmin ? (
-            <Link
-              href="/admin"
-              className="flex items-center gap-2.5 px-2.5 py-2 -ml-3 pl-[calc(0.625rem+0.75rem)] rounded-lg text-[14px] font-medium text-fg-secondary hover:text-fg transition-colors"
-            >
-              <Settings size={16} className="flex-shrink-0" />
-              Configurações
-            </Link>
-          ) : (
-            // TODO: sem tela de configurações pra usuário comum ainda — só o visual, sem rota.
-            <button
-              type="button"
-              title="Em breve"
-              disabled
-              className="w-full flex items-center gap-2.5 px-2.5 py-2 -ml-3 pl-[calc(0.625rem+0.75rem)] rounded-lg text-[14px] font-medium text-fg-muted opacity-60 cursor-not-allowed"
-            >
-              <Settings size={16} className="flex-shrink-0" />
-              Configurações
-            </button>
-          )}
+          <Link
+            href={canOpenAdmin ? "/admin" : "/configuracoes"}
+            className="flex items-center gap-2.5 px-2.5 py-2 -ml-3 pl-[calc(0.625rem+0.75rem)] rounded-lg text-[14px] font-medium text-fg-secondary hover:text-fg transition-colors"
+          >
+            <Settings size={16} className="flex-shrink-0" />
+            Configurações
+          </Link>
         </div>
       </aside>
 

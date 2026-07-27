@@ -12,7 +12,9 @@ type Props = {
   label?: string;
 };
 
-export function NewSpaceButton({ action, label = "+ Novo Espaço" }: Props) {
+// O "+" vem do ícone <Plus>, nunca do texto — o label default carregava um
+// "+ " que somava com o ícone e renderizava "＋ + Novo Espaço".
+export function NewSpaceButton({ action, label = "Novo Espaço" }: Props) {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(action, null);
   const submitted = useRef(false);
@@ -33,7 +35,7 @@ export function NewSpaceButton({ action, label = "+ Novo Espaço" }: Props) {
       >
         <Plus size={14} /> {label}
       </button>
-      <Modal open={open} onClose={() => setOpen(false)} title={label.replace("+ ", "")}>
+      <Modal open={open} onClose={() => setOpen(false)} title={label}>
         <form
           action={(form) => {
             submitted.current = true;

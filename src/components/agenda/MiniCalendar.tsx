@@ -3,11 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
-import { saoPauloParts, addDaysToKey, mondayOfWeek } from "@/lib/agenda";
+import { saoPauloParts, addDaysToKey, mondayOfWeek, type AgendaView } from "@/lib/agenda";
 
 type Props = {
-  // Segunda-feira da semana exibida na grade grande — marca a semana atual no mini.
-  currentWeekMonday: string;
+  /** Visão ativa — o mini navega mantendo-a e destaca o período correspondente. */
+  view: AgendaView;
+  /** Dias exibidos na grade grande (1, 7 ou 42) — ficam destacados no mini. */
+  selectedKeys: string[];
+  /** Data de referência da grade grande, usada pra abrir o mini no mês certo. */
+  referenceKey: string;
 };
 
 const MONTH_LABEL = [
@@ -21,15 +25,15 @@ function keyOf(year: number, month: number, day: number): string {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-// Mini-calendário mensal pra pular direto pra qualquer semana sem depender das
+// Mini-calendário mensal pra pular direto pra qualquer data sem depender das
 // setinhas — abre como popover a partir de um botão no cabeçalho, então não
-// ocupa espaço nem muda o layout da grade semanal.
-export function MiniCalendar({ currentWeekMonday }: Props) {
+// ocupa espaço nem muda o layout da grade.
+export function MiniCalendar({ view, selectedKeys, referenceKey }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  const [initYear, initMonth] = currentWeekMonday.split("-").map(Number);
+  const [initYear, initMonth] = referenceKey.split("-").map(Number);
   const [viewYear, setViewYear] = useState(initYear);
   const [viewMonth, setViewMonth] = useState(initMonth); // 1–12
 
@@ -59,9 +63,11 @@ export function MiniCalendar({ currentWeekMonday }: Props) {
   }, [open]);
 
   const todayKey = saoPauloParts(new Date()).dateKey;
-  const currentWeekKeys = useMemo(
-    () => new Set(Array.from({ length: 7 }, (_, i) => addDaysToKey(currentWeekMonday, i))),
-    [currentWeekMonday]
+  // No mês a grade grande cobre as 6 semanas inteiras — destacar tudo isso no
+  // mini só pintaria o calendário inteiro, então lá o destaque some.
+  const highlightKeys = useMemo(
+    () => (view === "mes" ? new Set<string>() : new Set(selectedKeys)),
+    [view, selectedKeys]
   );
 
   // 6 semanas fixas a partir da segunda-feira que contém o dia 1º do mês —
@@ -82,7 +88,7 @@ export function MiniCalendar({ currentWeekMonday }: Props) {
 
   function pick(dateKey: string) {
     setOpen(false);
-    router.push(`/agenda?week=${mondayOfWeek(dateKey)}`);
+    router.push(`/agenda?view=${view}&date=${dateKey}`);
   }
 
   return (
@@ -90,8 +96,8 @@ export function MiniCalendar({ currentWeekMonday }: Props) {
       <button
         type="button"
         onClick={toggleOpen}
-        aria-label="Escolher semana no calendário"
-        title="Escolher semana"
+        aria-label="Escolher data no calendário"
+        title="Escolher data"
         className={`w-7 h-7 flex items-center justify-center rounded-md transition-colors ${
           open ? "text-fg bg-surface-hover" : "text-fg-muted hover:text-fg hover:bg-surface-hover"
         }`}
@@ -135,7 +141,7 @@ export function MiniCalendar({ currentWeekMonday }: Props) {
               const [, m, d] = dateKey.split("-").map(Number);
               const inMonth = m === viewMonth;
               const isToday = dateKey === todayKey;
-              const inCurrentWeek = currentWeekKeys.has(dateKey);
+              const highlighted = highlightKeys.has(dateKey);
               return (
                 <button
                   key={dateKey}
@@ -144,7 +150,7 @@ export function MiniCalendar({ currentWeekMonday }: Props) {
                   className={`h-7 rounded-md text-[11.5px] tnum transition-colors ${
                     isToday
                       ? "bg-brand text-on-brand font-semibold"
-                      : inCurrentWeek
+                      : highlighted
                         ? "bg-brand-subtle text-brand font-medium hover:bg-brand/15"
                         : inMonth
                           ? "text-fg hover:bg-surface-hover"

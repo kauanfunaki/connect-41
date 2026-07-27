@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronRight, ChevronDown, Repeat } from "lucide-react";
 import { formatCalendarDate } from "@/lib/format";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { StageDot, type StageDotType } from "@/components/kanban/StageDot";
 
 export type AssigneeRow = { id: string; name: string; priority: number };
@@ -249,6 +250,243 @@ function Row({
   );
 }
 
+// Card equivalente a <Row>, usado no lugar da tabela em telas estreitas: as
+// mesmas informações empilhadas, sem colunas fixas que espremiam título e
+// responsáveis a poucos pixels. Arrastar não é opção no toque (HTML5 drag não
+// dispara em touch), então mover de estágio aqui é um select — é o que
+// substitui o drag-and-drop da tabela, não um extra.
+function TaskCard({
+  item, basePath, depth = 0, canAct, priorityAction, pipelineId, concluirAction, reabrirAction, stages, moveAction,
+}: {
+  item: TaskRow | SubtaskRow;
+  basePath: string;
+  depth?: number;
+  canAct: boolean;
+  priorityAction: Props["priorityAction"];
+  pipelineId: string;
+  concluirAction: Props["concluirAction"];
+  reabrirAction: Props["reabrirAction"];
+  stages: StageOption[];
+  moveAction: Props["moveAction"];
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [, startTransition] = useTransition();
+  const hasSubtasks = "subtasks" in item && item.subtasks && item.subtasks.length > 0;
+  const dueDate = item.dueDate;
+  const assignees = item.assignees ?? [];
+  const stage = stages.find((s) => s.id === item.stageId);
+  const isTerminal = "isTerminal" in item ? item.isTerminal : (stage?.isTerminal ?? false);
+  const stageColor = stage?.color ?? "var(--c41-fg-muted)";
+  const stageType = resolveStageType(isTerminal, stage?.type);
+  const tags = item.tags ?? [];
+
+  return (
+    <>
+      <div
+        style={depth > 0 ? { marginLeft: depth * 14 } : undefined}
+        className="bg-surface border border-border rounded-xl px-3 py-2.5 space-y-2"
+      >
+        <div className="flex items-start gap-2">
+          <button
+            type="button"
+            disabled={!canAct}
+            onClick={() =>
+              startTransition(() =>
+                isTerminal ? reabrirAction(pipelineId, item.id) : concluirAction(pipelineId, item.id)
+              )
+            }
+            aria-label={isTerminal ? "Reabrir tarefa" : "Concluir tarefa"}
+            title={stage?.name ?? ""}
+            className="group/dot flex-shrink-0 mt-0.5 disabled:cursor-default"
+          >
+            <StageDot color={stageColor} type={stageType} showCheckOnHover />
+          </button>
+
+          <Link
+            href={`${basePath}/itens/${item.id}`}
+            className={`flex-1 min-w-0 text-[13px] leading-snug ${isTerminal ? "text-fg-muted" : "text-fg"}`}
+          >
+            {item.entityName}
+          </Link>
+
+          {hasSubtasks && (
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              className="flex items-center gap-1 flex-shrink-0 text-fg-muted hover:text-fg"
+              aria-label={expanded ? "Recolher subtarefas" : "Expandir subtarefas"}
+            >
+              <span className="text-[11px] tnum">
+                {(item as TaskRow).subtasks!.filter((s) => s.isTerminal).length}/{(item as TaskRow).subtasks!.length}
+              </span>
+              <ChevronRight size={14} className={`transition-transform ${expanded ? "rotate-90" : ""}`} />
+            </button>
+          )}
+        </div>
+
+        {tags.length > 0 && (
+          <div className="flex items-center gap-1 flex-wrap">
+            {tags.map((t) => (
+              <span
+                key={t.id}
+                className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                style={{ background: `${t.color}1A`, color: t.color }}
+              >
+                {t.name}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {(assignees.length > 0 || dueDate) && (
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center -space-x-1.5">
+              {assignees.slice(0, 4).map((a) => (
+                <AssigneeAvatar key={a.id} a={a} itemId={item.id} canAct={canAct} priorityAction={priorityAction} />
+              ))}
+            </div>
+            {dueDate && (
+              <span className={`inline-flex items-center gap-1 text-[11px] tnum ${isOverdue(dueDate) ? "text-danger font-semibold" : "text-fg-muted"}`}>
+                {item.recurring && <Repeat size={10} />}
+                {formatCalendarDate(new Date(dueDate), { day: "2-digit", month: "short" })}
+              </span>
+            )}
+          </div>
+        )}
+
+        {canAct && (
+          <Select
+            aria-label="Mover para outro status"
+            value={item.stageId}
+            onChange={(e) => {
+              const newStageId = e.target.value;
+              if (newStageId !== item.stageId) startTransition(() => moveAction(item.id, newStageId));
+            }}
+            className="w-full"
+          >
+            {stages.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </Select>
+        )}
+      </div>
+
+      {expanded && hasSubtasks && (item as TaskRow).subtasks!.map((s) => (
+        <TaskCard
+          key={s.id}
+          item={s}
+          basePath={basePath}
+          depth={depth + 1}
+          canAct={canAct}
+          priorityAction={priorityAction}
+          pipelineId={pipelineId}
+          concluirAction={concluirAction}
+          reabrirAction={reabrirAction}
+          stages={stages}
+          moveAction={moveAction}
+        />
+      ))}
+    </>
+  );
+}
+
+// Cabeçalho do grupo (colapsar, bolinha, nome renomeável inline, contagem) —
+// idêntico na tabela e nos cards, então mora aqui em vez de duplicado nos dois.
+function StageGroupHeader({
+  stage, count, collapsed, onToggleCollapsed, canAct, renameStageAction,
+}: {
+  stage: StageOption;
+  count: number;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
+  canAct: boolean;
+  renameStageAction: Props["renameStageAction"];
+}) {
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState(stage.name);
+  const [, startTransition] = useTransition();
+
+  function saveName() {
+    setEditingName(false);
+    if (nameValue.trim() && nameValue.trim() !== stage.name) {
+      startTransition(() => renameStageAction(stage.id, nameValue.trim()));
+    } else {
+      setNameValue(stage.name);
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <button type="button" onClick={onToggleCollapsed} className="text-fg-muted hover:text-fg flex-shrink-0">
+        <ChevronDown size={13} className={`transition-transform ${collapsed ? "-rotate-90" : ""}`} />
+      </button>
+      <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: stage.color ?? "#586577" }} />
+      {editingName && canAct ? (
+        <Input
+          value={nameValue}
+          onChange={(e) => setNameValue(e.target.value)}
+          onBlur={saveName}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") saveName();
+            if (e.key === "Escape") { setNameValue(stage.name); setEditingName(false); }
+          }}
+          autoFocus
+          className="h-6 w-40 text-[12px]"
+        />
+      ) : (
+        <h3
+          onClick={() => canAct && setEditingName(true)}
+          className={`text-[12px] font-semibold text-fg-secondary uppercase tracking-wide ${canAct ? "cursor-text hover:text-fg" : ""}`}
+        >
+          {stage.name}
+        </h3>
+      )}
+      <span className="text-[11px] text-fg-muted tnum">{count}</span>
+    </div>
+  );
+}
+
+// Criação rápida por status — mesmo comportamento nas duas visões.
+function AddTaskInline({ stageId, createTaskAction }: { stageId: string; createTaskAction: Props["createTaskAction"] }) {
+  const [adding, setAdding] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [, startTransition] = useTransition();
+
+  function addTask() {
+    const title = newTitle.trim();
+    if (!title) { setAdding(false); return; }
+    startTransition(() => createTaskAction(stageId, title));
+    setNewTitle("");
+  }
+
+  if (adding) {
+    return (
+      <Input
+        value={newTitle}
+        onChange={(e) => setNewTitle(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") addTask();
+          if (e.key === "Escape") { setAdding(false); setNewTitle(""); }
+        }}
+        onBlur={() => { if (!newTitle.trim()) setAdding(false); }}
+        autoFocus
+        placeholder="Nome da tarefa…"
+        className="h-8 max-w-xs"
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setAdding(true)}
+      className="text-[12px] text-fg-muted hover:text-fg transition-colors"
+    >
+      + Adicionar Tarefa
+    </button>
+  );
+}
+
 function StageGroup({
   stage, items, basePath, canAct, renameStageAction, createTaskAction, priorityAction, pipelineId, concluirAction, reabrirAction, stages,
   dragId, onDragStartRow, onDragEndRow, onDropStage, onDropOnRow,
@@ -271,28 +509,7 @@ function StageGroup({
   onDropOnRow: (targetId: string) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
-  const [editingName, setEditingName] = useState(false);
-  const [nameValue, setNameValue] = useState(stage.name);
-  const [adding, setAdding] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
   const [dragOver, setDragOver] = useState(false);
-  const [, startTransition] = useTransition();
-
-  function saveName() {
-    setEditingName(false);
-    if (nameValue.trim() && nameValue.trim() !== stage.name) {
-      startTransition(() => renameStageAction(stage.id, nameValue.trim()));
-    } else {
-      setNameValue(stage.name);
-    }
-  }
-
-  function addTask() {
-    const title = newTitle.trim();
-    if (!title) { setAdding(false); return; }
-    startTransition(() => createTaskAction(stage.id, title));
-    setNewTitle("");
-  }
 
   return (
     <tbody
@@ -307,33 +524,14 @@ function StageGroup({
     >
       <tr className="border-t border-border first:border-t-0">
         <td colSpan={5} className="pt-3 pb-1.5 px-2">
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={() => setCollapsed((v) => !v)} className="text-fg-muted hover:text-fg flex-shrink-0">
-              <ChevronDown size={13} className={`transition-transform ${collapsed ? "-rotate-90" : ""}`} />
-            </button>
-            <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: stage.color ?? "#586577" }} />
-            {editingName && canAct ? (
-              <Input
-                value={nameValue}
-                onChange={(e) => setNameValue(e.target.value)}
-                onBlur={saveName}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") saveName();
-                  if (e.key === "Escape") { setNameValue(stage.name); setEditingName(false); }
-                }}
-                autoFocus
-                className="h-6 w-40 text-[12px]"
-              />
-            ) : (
-              <h3
-                onClick={() => canAct && setEditingName(true)}
-                className={`text-[12px] font-semibold text-fg-secondary uppercase tracking-wide ${canAct ? "cursor-text hover:text-fg" : ""}`}
-              >
-                {stage.name}
-              </h3>
-            )}
-            <span className="text-[11px] text-fg-muted tnum">{items.length}</span>
-          </div>
+          <StageGroupHeader
+            stage={stage}
+            count={items.length}
+            collapsed={collapsed}
+            onToggleCollapsed={() => setCollapsed((v) => !v)}
+            canAct={canAct}
+            renameStageAction={renameStageAction}
+          />
         </td>
       </tr>
 
@@ -368,34 +566,72 @@ function StageGroup({
           {canAct && (
             <tr>
               <td colSpan={5} className="px-2 py-1.5" style={{ paddingLeft: "34px" }}>
-                {adding ? (
-                  <Input
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") addTask();
-                      if (e.key === "Escape") { setAdding(false); setNewTitle(""); }
-                    }}
-                    onBlur={() => { if (!newTitle.trim()) setAdding(false); }}
-                    autoFocus
-                    placeholder="Nome da tarefa…"
-                    className="h-8 max-w-xs"
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setAdding(true)}
-                    className="text-[12px] text-fg-muted hover:text-fg transition-colors"
-                  >
-                    + Adicionar Tarefa
-                  </button>
-                )}
+                <AddTaskInline stageId={stage.id} createTaskAction={createTaskAction} />
               </td>
             </tr>
           )}
         </>
       )}
     </tbody>
+  );
+}
+
+function StageGroupCards({
+  stage, items, basePath, canAct, renameStageAction, createTaskAction, priorityAction, pipelineId, concluirAction, reabrirAction, stages, moveAction,
+}: {
+  stage: StageOption;
+  items: TaskRow[];
+  basePath: string;
+  canAct: boolean;
+  renameStageAction: Props["renameStageAction"];
+  createTaskAction: Props["createTaskAction"];
+  priorityAction: Props["priorityAction"];
+  pipelineId: string;
+  concluirAction: Props["concluirAction"];
+  reabrirAction: Props["reabrirAction"];
+  stages: StageOption[];
+  moveAction: Props["moveAction"];
+}) {
+  const [collapsed, setCollapsed] = useState(false);
+
+  return (
+    <div className="pt-3 first:pt-0">
+      <div className="px-1 pb-2">
+        <StageGroupHeader
+          stage={stage}
+          count={items.length}
+          collapsed={collapsed}
+          onToggleCollapsed={() => setCollapsed((v) => !v)}
+          canAct={canAct}
+          renameStageAction={renameStageAction}
+        />
+      </div>
+
+      {!collapsed && (
+        <div className="space-y-2">
+          {items.map((item) => (
+            <TaskCard
+              key={item.id}
+              item={item}
+              basePath={basePath}
+              canAct={canAct}
+              priorityAction={priorityAction}
+              pipelineId={pipelineId}
+              concluirAction={concluirAction}
+              reabrirAction={reabrirAction}
+              stages={stages}
+              moveAction={moveAction}
+            />
+          ))}
+
+          {canAct && (
+            <div className="px-1 pt-0.5">
+              <AddTaskInline stageId={stage.id} createTaskAction={createTaskAction} />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -409,6 +645,11 @@ const MAX_SCROLL_SPEED = 18;
 // criação rápida por status. Mudar o status de uma tarefa é feito arrastando
 // a linha pra outro grupo (mesma linguagem do quadro Kanban); soltar em cima
 // de outra tarefa do MESMO grupo reordena (troca adjacente, igual ao checklist).
+//
+// Abaixo de md a tabela vira lista de cards (StageGroupCards): as 5 colunas
+// fixas somavam ~340px de largura reservada e esmagavam o título no celular.
+// Os cards perdem o drag-and-drop — que já não funcionava no toque — e ganham
+// um select de status no lugar.
 export function TaskListView({ basePath, pipelineId, stages, items, canAct, renameStageAction, createTaskAction, priorityAction, moveAction, reorderAction, concluirAction, reabrirAction }: Props) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -507,7 +748,27 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
       ref={scrollRef}
       className="scroll-y bg-surface border border-border rounded-2xl p-2 h-full overflow-y-auto"
     >
-      <table className="w-full border-collapse">
+      <div className="md:hidden">
+        {byStage.map(({ stage, items: stageItems }) => (
+          <StageGroupCards
+            key={stage.id}
+            stage={stage}
+            items={stageItems}
+            basePath={basePath}
+            canAct={canAct}
+            renameStageAction={renameStageAction}
+            createTaskAction={createTaskAction}
+            priorityAction={priorityAction}
+            pipelineId={pipelineId}
+            concluirAction={concluirAction}
+            reabrirAction={reabrirAction}
+            stages={stages}
+            moveAction={moveAction}
+          />
+        ))}
+      </div>
+
+      <table className="hidden md:table w-full border-collapse">
         <thead className="sticky top-0 bg-surface z-10">
           <tr className="text-left">
             <th className="w-14" />

@@ -2,22 +2,18 @@
 
 import { useState } from "react";
 import { Sun, Moon } from "lucide-react";
+import { applyTheme, readTheme, type Theme } from "@/lib/theme";
 
 export function ThemeToggle() {
   // O servidor não tem acesso ao DOM, então sempre renderiza assumindo "light";
   // no client o valor real (vindo do cookie, já aplicado no <html> antes do
   // hidrate) pode ser "dark" — daí o suppressHydrationWarning abaixo, padrão
   // recomendado pra widgets de tema (o client sempre vence, de propósito).
-  const [theme, setTheme] = useState<"light" | "dark">(() =>
-    typeof document !== "undefined" && document.documentElement.getAttribute("data-theme") === "dark"
-      ? "dark"
-      : "light"
-  );
+  const [theme, setTheme] = useState<Theme>(readTheme);
 
-  function apply(next: "light" | "dark") {
+  function apply(next: Theme) {
     setTheme(next);
-    document.documentElement.setAttribute("data-theme", next);
-    document.cookie = `theme=${next}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+    applyTheme(next);
   }
 
   return (

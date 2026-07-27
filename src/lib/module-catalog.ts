@@ -104,7 +104,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
   },
   {
     code: "bpo_manual",
-    label: "Manual",
+    label: "Repositório de Manuais",
     sectorCode: "bpo",
     description: "Instruções internas escritas pelos colaboradores para alinhamento em ausências e férias",
     defaultEnabled: true,

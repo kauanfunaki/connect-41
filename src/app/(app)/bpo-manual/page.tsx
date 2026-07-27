@@ -37,7 +37,7 @@ export default async function BpoManualPage() {
       <BackButton className="mb-3" />
 
       <div className="mb-6">
-        <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em]">Manual</h1>
+        <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em]">Repositório de Manuais</h1>
         <p className="text-[13px] text-fg-muted mt-1">
           Instruções internas do setor — escritas pelos colaboradores para alinhamento em ausências e férias.
         </p>
@@ -49,7 +49,13 @@ export default async function BpoManualPage() {
         documents={documents.map((d) => ({
           id: d.id,
           title: d.title,
-          pages: d.pages.map((p) => ({ id: p.id, title: p.title, content: p.content, createdByName: p.createdBy.name })),
+          pages: d.pages.map((p) => ({
+            id: p.id,
+            title: p.title,
+            content: p.content,
+            createdByName: p.createdBy.name,
+            updatedAt: p.updatedAt.toISOString(),
+          })),
         }))}
         createDocumentAction={criarDocumentoManual}
         renameDocumentAction={renomearDocumentoManual}

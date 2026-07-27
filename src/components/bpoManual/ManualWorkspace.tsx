@@ -1,14 +1,21 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { ChevronDown, ChevronRight, FileText, Folder, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, FileText, Folder, Pencil, Plus, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useConfirm } from "@/components/ui/useConfirm";
+import { formatInstantDate } from "@/lib/format";
 import type { ManualPageState } from "@/app/(app)/bpo-manual/actions";
 
-export type ManualPageData = { id: string; title: string; content: string | null; createdByName: string };
+export type ManualPageData = {
+  id: string;
+  title: string;
+  content: string | null;
+  createdByName: string;
+  updatedAt: string; // ISO
+};
 export type ManualDocumentData = { id: string; title: string; pages: ManualPageData[] };
 
 type Props = {
@@ -23,7 +30,86 @@ type Props = {
   deletePageAction: (pageId: string) => Promise<void>;
 };
 
-function PageEditor({ page, canAct, updatePageAction }: { page: ManualPageData; canAct: boolean; updatePageAction: Props["updatePageAction"] }) {
+// Tipografia do conteúdo em leitura — deliberadamente mais generosa que a do
+// editor (parágrafos espaçados, títulos com respiro), no espírito de uma
+// página de documentação e não de um campo de formulário.
+const READING_CLASS =
+  "text-[15px] text-fg leading-[1.75] " +
+  "[&_p]:my-3 [&_p:first-child]:mt-0 " +
+  // h1 e pre não têm botão na toolbar, mas a allowlist do sanitizador aceita
+  // (src/lib/clientDocuments.ts) — colar de fora traz os dois.
+  "[&_h1]:text-[24px] [&_h1]:font-semibold [&_h1]:mt-8 [&_h1]:mb-2 [&_h1]:tracking-[-0.01em] " +
+  "[&_h2]:text-[20px] [&_h2]:font-semibold [&_h2]:mt-7 [&_h2]:mb-2 [&_h2]:tracking-[-0.01em] " +
+  "[&_h3]:text-[16px] [&_h3]:font-semibold [&_h3]:mt-5 [&_h3]:mb-1.5 " +
+  "[&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-3 [&_li]:my-1 " +
+  "[&_a]:text-brand [&_a]:underline " +
+  "[&_strong]:font-semibold [&_u]:underline [&_s]:line-through " +
+  "[&_blockquote]:border-l-2 [&_blockquote]:border-border-strong [&_blockquote]:pl-4 [&_blockquote]:text-fg-secondary " +
+  "[&_code]:bg-surface-hover [&_code]:rounded [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[13px] " +
+  "[&_pre]:bg-surface-hover [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:text-[13px]";
+
+// Largura de leitura confortável, no espírito do Notion — texto corrido em
+// 1440px de tela vira uma linha longa demais pra acompanhar.
+const CANVAS_CLASS = "mx-auto w-full max-w-[720px] px-6 py-10";
+
+// Leitura: a página é uma folha em branco com título e conteúdo, sem caixas
+// nem campos de formulário à vista. Editar é um modo separado (PageEditor) —
+// antes o manual ficava permanentemente em modo de edição, então "salvar" não
+// mudava nada na tela e não havia como só *ler* um procedimento.
+function PageCanvas({
+  page, canAct, onEdit,
+}: {
+  page: ManualPageData;
+  canAct: boolean;
+  onEdit: () => void;
+}) {
+  return (
+    <div className="h-full overflow-y-auto scroll-y relative">
+      {canAct && (
+        <button
+          type="button"
+          onClick={onEdit}
+          className="absolute top-4 right-4 z-10 inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border bg-surface text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors"
+        >
+          <Pencil size={12} /> Editar
+        </button>
+      )}
+
+      <article className={CANVAS_CLASS}>
+        <h1 className="text-[32px] font-semibold text-fg tracking-[-0.02em] leading-tight">{page.title}</h1>
+        <p className="text-[12px] text-fg-muted mt-2 mb-8">
+          Criado por {page.createdByName} · atualizado em{" "}
+          {formatInstantDate(new Date(page.updatedAt), { day: "2-digit", month: "short", year: "numeric" })}
+        </p>
+
+        {page.content ? (
+          <div className={READING_CLASS} dangerouslySetInnerHTML={{ __html: page.content }} />
+        ) : canAct ? (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="text-[15px] text-fg-muted italic hover:text-fg-secondary transition-colors"
+          >
+            Página em branco — clique para escrever.
+          </button>
+        ) : (
+          <p className="text-[15px] text-fg-muted italic">Esta página ainda não tem conteúdo.</p>
+        )}
+      </article>
+    </div>
+  );
+}
+
+// Edição: mesma medida e mesma escala de título da leitura, pra trocar de modo
+// não deslocar o texto na tela. Salvar com sucesso volta pro modo leitura.
+function PageEditor({
+  page, updatePageAction, onDone, onCancel,
+}: {
+  page: ManualPageData;
+  updatePageAction: Props["updatePageAction"];
+  onDone: () => void;
+  onCancel: () => void;
+}) {
   const formRef = useRef<HTMLFormElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -35,27 +121,46 @@ function PageEditor({ page, canAct, updatePageAction }: { page: ManualPageData; 
     startTransition(async () => {
       const res = await updatePageAction(page.id, null, form);
       if (res?.error) setError(res.error);
+      else onDone();
     });
   }
 
   return (
-    <form key={page.id} ref={formRef} className="flex flex-col gap-3 h-full min-h-0">
-      <Input name="title" defaultValue={page.title} disabled={!canAct} placeholder="Título da página" className="flex-shrink-0 text-[15px] font-medium" />
-      <p className="text-[11px] text-fg-muted flex-shrink-0 -mt-1.5">Criado por {page.createdByName}</p>
-      <div className="flex-1 min-h-0 overflow-y-auto">
+    <form ref={formRef} className="h-full overflow-y-auto scroll-y">
+      <div className={CANVAS_CLASS}>
+        {/* eslint-disable-next-line no-restricted-syntax -- título da página, não campo de formulário: precisa ter exatamente a mesma caixa do <h1> do modo leitura pra trocar de modo não deslocar o texto. O Input do DS tem altura, borda e fundo fixos. */}
+        <input
+          name="title"
+          defaultValue={page.title}
+          placeholder="Título da página"
+          aria-label="Título da página"
+          className="w-full bg-transparent border-0 outline-none text-[32px] font-semibold text-fg tracking-[-0.02em] leading-tight placeholder:text-fg-muted"
+        />
+        <p className="text-[12px] text-fg-muted mt-2 mb-6">Criado por {page.createdByName}</p>
+
         <RichTextEditor name="content" defaultValue={page.content ?? ""} />
+
+        {error && <p className="text-[12px] text-danger mt-2">{error}</p>}
+
+        <div className="flex items-center gap-2 mt-4">
+          <button
+            type="button"
+            onClick={save}
+            disabled={isPending}
+            className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+          >
+            {isPending ? "Salvando…" : "Salvar"}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isPending}
+            className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors"
+          >
+            Cancelar
+          </button>
+        </div>
       </div>
-      {error && <p className="text-[12px] text-danger flex-shrink-0">{error}</p>}
-      {canAct && (
-        <button
-          type="button"
-          onClick={save}
-          disabled={isPending}
-          className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors flex-shrink-0 self-start"
-        >
-          {isPending ? "Salvando…" : "Salvar"}
-        </button>
-      )}
     </form>
   );
 }
@@ -70,6 +175,10 @@ export function ManualWorkspace({
 }: Props) {
   const firstDoc = documents[0];
   const [activePageId, setActivePageId] = useState<string | null>(firstDoc?.pages[0]?.id ?? null);
+  // Página abre sempre em leitura; editar é uma escolha explícita. A exceção é
+  // a página recém-criada, que nasce vazia — mostrar uma folha em branco
+  // "somente leitura" logo depois de criá-la seria só um passo a mais.
+  const [editingPageId, setEditingPageId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(firstDoc ? [firstDoc.id] : []));
   const [creatingDoc, setCreatingDoc] = useState(false);
   const [newDocTitle, setNewDocTitle] = useState("");
@@ -82,6 +191,13 @@ export function ManualWorkspace({
 
   const activeDoc = documents.find((d) => d.pages.some((p) => p.id === activePageId));
   const activePage = activeDoc?.pages.find((p) => p.id === activePageId) ?? null;
+
+  // Trocar de página sempre sai da edição — senão o modo "grudava" e a página
+  // seguinte abria em edição sem ninguém ter pedido.
+  function selectPage(pageId: string | null) {
+    setActivePageId(pageId);
+    setEditingPageId(null);
+  }
 
   function toggleExpanded(docId: string) {
     setExpanded((prev) => {
@@ -108,7 +224,10 @@ export function ManualWorkspace({
     if (!title) return;
     startTransition(async () => {
       const res = await createPageAction(documentId, title);
-      if ("id" in res) setActivePageId(res.id);
+      if ("id" in res) {
+        setActivePageId(res.id);
+        setEditingPageId(res.id);
+      }
     });
     setNewPageTitle("");
     setCreatingPageFor(null);
@@ -131,7 +250,7 @@ export function ManualWorkspace({
       },
       async () => {
         await deleteDocumentAction(doc.id);
-        if (doc.pages.some((p) => p.id === activePageId)) setActivePageId(null);
+        if (doc.pages.some((p) => p.id === activePageId)) selectPage(null);
       }
     );
   }
@@ -139,7 +258,7 @@ export function ManualWorkspace({
   function handleDeletePage(page: ManualPageData) {
     requestConfirm({ title: `Excluir "${page.title}"?`, description: "Esta ação não pode ser desfeita.", destructive: true, confirmLabel: "Excluir" }, async () => {
       await deletePageAction(page.id);
-      if (activePageId === page.id) setActivePageId(null);
+      if (activePageId === page.id) selectPage(null);
     });
   }
 
@@ -152,7 +271,9 @@ export function ManualWorkspace({
   }
 
   return (
-    <div className="bg-surface border border-border rounded-lg flex h-[70vh] min-h-[420px]">
+    // overflow-hidden pro canto arredondado recortar a área de rolagem da
+    // página à direita, que agora rola por conta própria.
+    <div className="bg-surface border border-border rounded-lg overflow-hidden flex h-[78vh] min-h-[520px]">
       <div className="w-72 flex-shrink-0 flex flex-col border-r border-border p-3">
         <div className="flex-1 min-h-0 overflow-y-auto space-y-0.5">
           {documents.map((doc) => {
@@ -213,7 +334,7 @@ export function ManualWorkspace({
                       <div key={p.id} className="group flex items-center gap-1">
                         <button
                           type="button"
-                          onClick={() => setActivePageId(p.id)}
+                          onClick={() => selectPage(p.id)}
                           className={`flex-1 min-w-0 flex items-center gap-1.5 text-left px-2 py-1 rounded-md text-[12.5px] transition-colors truncate ${
                             activePageId === p.id ? "bg-brand-subtle text-brand font-medium" : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
                           }`}
@@ -287,9 +408,24 @@ export function ManualWorkspace({
         )}
       </div>
 
-      <div className="flex-1 min-w-0 p-4">
+      <div className="flex-1 min-w-0 min-h-0">
         {activePage ? (
-          <PageEditor key={activePage.id} page={activePage} canAct={canAct} updatePageAction={updatePageAction} />
+          editingPageId === activePage.id && canAct ? (
+            <PageEditor
+              key={`edit-${activePage.id}`}
+              page={activePage}
+              updatePageAction={updatePageAction}
+              onDone={() => setEditingPageId(null)}
+              onCancel={() => setEditingPageId(null)}
+            />
+          ) : (
+            <PageCanvas
+              key={`read-${activePage.id}`}
+              page={activePage}
+              canAct={canAct}
+              onEdit={() => setEditingPageId(activePage.id)}
+            />
+          )
         ) : (
           <div className="h-full flex items-center justify-center text-[13px] text-fg-muted text-center px-6">
             {documents.length === 0

@@ -612,6 +612,7 @@ model User {
   bpoCredentialsCreated      BpoCredential[]
   bpoCredentialViews         BpoCredentialView[]
   chatwootAgentLinks         ChatwootAgentLink[]
+  preference                 UserPreference?
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -2646,6 +2647,29 @@ model BpoCredential {
 
   @@index([tenantId, companyId])
   @@map("bpo_credentials")
+}
+
+// Preferências pessoais do usuário — uma linha por usuário, criada sob demanda
+// (upsert) na primeira vez que ele personaliza alguma coisa. Ausência de linha
+// = tudo no padrão, então nunca é preciso backfill.
+//
+// homeWidgets guarda a personalização da Home como JSON: lista ordenada de
+// chaves de widget visíveis (ex.: ["meu-dia","agenda"]). Ordem e visibilidade
+// no mesmo campo porque só fazem sentido juntas — quem não está na lista está
+// oculto. Widget novo lançado depois entra escondido pra quem já personalizou
+// e visível pra quem nunca mexeu; ver DEFAULT_HOME_WIDGETS em
+// src/lib/homeWidgets.ts, que também valida/sanea o JSON na leitura.
+model UserPreference {
+  userId      String   @id
+  tenantId    String
+  homeWidgets String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("user_preferences")
 }
 
 // Auditoria de acesso — quem revelou/copiou a senha e quando. Não impede

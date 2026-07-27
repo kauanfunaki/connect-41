@@ -95,6 +95,10 @@ export function ProfileMenu({ name, roleLabel, photoUrl: initialPhotoUrl }: Prop
 
       {error && <p className="px-2 py-1 text-[12px] text-danger">{error}</p>}
 
+      <DropdownItem onClick={() => router.push("/configuracoes")}>
+        Configurações da conta
+      </DropdownItem>
+
       <DropdownSeparator />
       <DropdownItem danger onClick={handleLogout}>
         Sair
