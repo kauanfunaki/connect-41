@@ -4,30 +4,57 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { CandidatosTable } from "@/components/candidatos/CandidatosTable";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
+import { Pagination } from "@/components/shared/Pagination";
+import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
+import { FilterSelect } from "@/components/shared/FilterSelect";
 import { formatInstantDate } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { inativarCandidatosEmMassa } from "./actions";
 
 const PER_PAGE = 20;
 
+// Inativados em massa continuavam poluindo a lista (a coluna Status existia,
+// o filtro não) — por isso o default é "ativos", com saída explícita.
+const STATUS_FILTERS = [
+  { value: "ativos", label: "Ativos" },
+  { value: "inativos", label: "Inativos" },
+  { value: "todos", label: "Todos" },
+] as const;
+
 export default async function CandidatosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; page?: string; tag?: string }>;
+  searchParams: Promise<{ search?: string; page?: string; tag?: string; status?: string }>;
 }) {
-  const { search, page, tag } = await searchParams;
+  const { search, page, tag, status } = await searchParams;
   const ctx = await getAuthContext();
   const canCreate = canWrite(ctx.role);
 
   const prisma = getPrisma();
   const pageNum = Math.max(1, parseInt(page ?? "1"));
 
+  const statusFilter = STATUS_FILTERS.some((s) => s.value === status) ? status! : "ativos";
+  const activeWhere =
+    statusFilter === "todos" ? {} : { active: statusFilter === "ativos" };
+
+  // Busca agora cobre e-mail e CPF além do nome — o banco de talentos era
+  // pesquisável só por nome, mas o recrutador chega pelo contato com frequência.
+  const searchTerm = search?.trim();
+  const searchWhere = searchTerm
+    ? {
+        OR: [
+          { name: { contains: searchTerm } },
+          { email: { contains: searchTerm } },
+          { cpf: { contains: searchTerm.replace(/\D/g, "") || searchTerm } },
+        ],
+      }
+    : {};
+
   const where = {
     tenantId: ctx.tenantId,
     type: "CANDIDATO" as const,
-    ...(search ? { name: { contains: search } } : {}),
+    ...activeWhere,
+    ...searchWhere,
     ...(tag ? { tags: { some: { tagId: tag } } } : {}),
   };
 
@@ -54,7 +81,7 @@ export default async function CandidatosPage({
 
   function buildUrl(params: Record<string, string | undefined>) {
     const q = new URLSearchParams();
-    const merged = { search, page, tag, ...params };
+    const merged = { search, page, tag, status, ...params };
     for (const [k, v] of Object.entries(merged)) {
       if (v) q.set(k, v);
     }
@@ -80,34 +107,46 @@ export default async function CandidatosPage({
         )}
       </div>
 
-      <div className="flex items-center gap-3 mb-4">
-        <form method="GET" action="/candidatos" className="flex items-center gap-2 flex-wrap">
-          <Input
-            name="search"
-            defaultValue={search ?? ""}
-            placeholder="Buscar por nome…"
-            className="w-full max-w-xs"
-          />
-          <Select name="tag" defaultValue={tag ?? ""} className="w-44">
-            <option value="">Todas as tags</option>
-            {allTags.map((t) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </Select>
-          <button
-            type="submit"
-            className="h-9 px-4 rounded-md border border-border-strong bg-surface-hover text-fg text-[13px] font-medium hover:border-brand transition-colors"
-          >
-            Filtrar
-          </button>
-        </form>
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
+        <div className="w-full max-w-xs">
+          <DebouncedSearchInput placeholder="Buscar por nome, e-mail ou CPF…" />
+        </div>
+
+        <FilterSelect
+          paramName="tag"
+          value={tag ?? ""}
+          emptyLabel="Todas as tags"
+          options={allTags.map((t) => ({ id: t.id, name: t.name }))}
+          className="w-44"
+        />
+
+        <div className="flex items-center gap-1" role="group" aria-label="Filtrar por situação">
+          {STATUS_FILTERS.map((s) => (
+            <Link
+              key={s.value}
+              href={buildUrl({ status: s.value, page: undefined })}
+              aria-current={statusFilter === s.value ? "true" : undefined}
+              className={`inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
+                statusFilter === s.value
+                  ? "bg-surface-2 text-fg border border-border-strong"
+                  : "text-fg-muted hover:text-fg hover:bg-surface-2"
+              }`}
+            >
+              {s.label}
+            </Link>
+          ))}
+        </div>
       </div>
 
       {candidatos.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
           <EmptyState
             icon={<UserSearch />}
-            title={search ? "Nenhum candidato encontrado com esse filtro." : "Nenhum candidato cadastrado ainda."}
+            title={
+              searchTerm || tag || statusFilter !== "ativos"
+                ? "Nenhum candidato encontrado com esses filtros."
+                : "Nenhum candidato cadastrado ainda."
+            }
           />
         </div>
       ) : (
@@ -127,31 +166,7 @@ export default async function CandidatosPage({
         />
       )}
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <span className="text-[12px] text-fg-muted">
-            Página {pageNum} de {totalPages}
-          </span>
-          <div className="flex gap-1">
-            {pageNum > 1 && (
-              <Link
-                href={buildUrl({ page: String(pageNum - 1) })}
-                className="h-8 px-3 rounded-md text-[12px] text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors flex items-center"
-              >
-                ← Anterior
-              </Link>
-            )}
-            {pageNum < totalPages && (
-              <Link
-                href={buildUrl({ page: String(pageNum + 1) })}
-                className="h-8 px-3 rounded-md text-[12px] text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors flex items-center"
-              >
-                Próxima →
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
+      <Pagination page={pageNum} totalPages={totalPages} buildHref={(p) => buildUrl({ page: String(p) })} />
     </PageContainer>
   );
 }

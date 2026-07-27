@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { UFS } from "@/lib/ufs";
 
 type Props = {
   slug: string;
@@ -71,7 +73,12 @@ export function ApplyForm({ slug, vagaId }: Props) {
           <Input id="city" name="city" type="text" maxLength={80} />
         </CampoForm>
         <CampoForm label="UF" htmlFor="stateCode">
-          <Input id="stateCode" name="stateCode" type="text" maxLength={2} placeholder="SC" />
+          <Select id="stateCode" name="stateCode" defaultValue="">
+            <option value="">Selecione</option>
+            {UFS.map((uf) => (
+              <option key={uf.value} value={uf.value}>{uf.label}</option>
+            ))}
+          </Select>
         </CampoForm>
       </div>
 

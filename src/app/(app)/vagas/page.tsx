@@ -9,22 +9,9 @@ import { CompanyFilterSelect } from "@/components/shared/CompanyFilterSelect";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Pagination } from "@/components/shared/Pagination";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { VAGA_STATUS_LABEL, VAGA_STATUS_STYLE, VAGA_STATUS_ORDER } from "@/lib/vagaStatus";
 
 const PER_PAGE = 30;
-
-const STATUS_LABEL: Record<VagaStatus, string> = {
-  ABERTA:       "Aberta",
-  EM_ANDAMENTO: "Em andamento",
-  ENCERRADA:    "Encerrada",
-  CANCELADA:    "Cancelada",
-};
-
-const STATUS_STYLE: Record<VagaStatus, string> = {
-  ABERTA:       "bg-brand/10 text-brand border-brand/25",
-  EM_ANDAMENTO: "bg-warning/10 text-warning border-warning/25",
-  ENCERRADA:    "bg-success/10 text-success border-success/25",
-  CANCELADA:    "bg-surface-2 text-fg-muted border-border",
-};
 
 export default async function VagasPage({
   searchParams,
@@ -99,29 +86,36 @@ export default async function VagasPage({
         )}
       </div>
 
-      <div className="flex items-center gap-3 mb-4">
-        <div className="flex items-center gap-1">
-          {(["ABERTA", "EM_ANDAMENTO", "ENCERRADA", "CANCELADA"] as VagaStatus[]).map((s) => (
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
+        {/* "Todas" é um chip de verdade e fica ativo quando não há filtro — antes
+            nenhum chip aparecia selecionado nesse estado, e a única saída era um
+            link "Limpar" que só existia depois de filtrar. */}
+        <div className="flex items-center gap-1 flex-wrap" role="group" aria-label="Filtrar por status">
+          <Link
+            href={buildUrl({ status: undefined, page: undefined })}
+            aria-current={!statusFilter ? "true" : undefined}
+            className={`inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
+              !statusFilter
+                ? "bg-surface-2 text-fg border border-border-strong"
+                : "text-fg-muted hover:text-fg hover:bg-surface-2"
+            }`}
+          >
+            Todas
+          </Link>
+          {VAGA_STATUS_ORDER.map((s) => (
             <Link
               key={s}
               href={buildUrl({ status: s, page: undefined })}
+              aria-current={statusFilter === s ? "true" : undefined}
               className={`inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
                 statusFilter === s
                   ? "bg-surface-2 text-fg border border-border-strong"
                   : "text-fg-muted hover:text-fg hover:bg-surface-2"
               }`}
             >
-              {STATUS_LABEL[s]}
+              {VAGA_STATUS_LABEL[s]}
             </Link>
           ))}
-          {statusFilter && (
-            <Link
-              href={buildUrl({ status: undefined, page: undefined })}
-              className="text-[12px] text-fg-muted hover:text-fg ml-1"
-            >
-              Limpar
-            </Link>
-          )}
         </div>
 
         <CompanyFilterSelect companies={companies} value={companyId ?? ""} />
@@ -156,8 +150,8 @@ export default async function VagasPage({
               <div>
                 <div className="flex items-center gap-2 mb-0.5">
                   <p className="text-[13px] text-fg font-medium">{v.title}</p>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${STATUS_STYLE[v.status]}`}>
-                    {STATUS_LABEL[v.status]}
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${VAGA_STATUS_STYLE[v.status]}`}>
+                    {VAGA_STATUS_LABEL[v.status]}
                   </span>
                 </div>
                 <p className="text-[12px] text-fg-muted">

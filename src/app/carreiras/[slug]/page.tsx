@@ -35,7 +35,7 @@ export default async function CarreirasPage({ params }: { params: Promise<{ slug
         <header className="mb-8 text-center">
           {tenant.logoUrl && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={tenant.logoUrl} alt="" className="h-12 mx-auto mb-4 object-contain" />
+            <img src={tenant.logoUrl} alt={tenant.name} className="h-12 mx-auto mb-4 object-contain" />
           )}
           <h1 className="text-[22px] font-semibold text-fg tracking-[-0.01em]">Trabalhe Conosco</h1>
           <p className="text-[13px] text-fg-muted mt-1">

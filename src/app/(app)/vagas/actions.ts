@@ -79,13 +79,14 @@ export async function atualizarVaga(_prev: VagaState, form: FormData): Promise<V
   redirect(`/vagas/${id}`);
 }
 
-export async function encerrarVaga(id: string): Promise<void> {
+export async function encerrarVaga(id: string): Promise<{ error: string } | null> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId) return;
+  if (!ctx.tenantId) return { error: "Não autenticado" };
 
   const prisma = getPrisma();
   const existing = await prisma.vaga.findFirst({ where: { id, ...scopedVagaWhere(ctx) } });
-  if (!existing || !canManageSector(ctx, existing.sectorCode)) return;
+  if (!existing) return { error: "Vaga não encontrada ou fora do seu escopo." };
+  if (!canManageSector(ctx, existing.sectorCode)) return { error: "Sem permissão para encerrar esta vaga." };
 
   await prisma.vaga.update({
     where: { id },
@@ -93,6 +94,30 @@ export async function encerrarVaga(id: string): Promise<void> {
   });
 
   revalidatePath(`/vagas/${id}`);
+  revalidatePath("/vagas");
+  return null;
+}
+
+// Contrapartida de encerrarVaga — encerrar era irreversível pela UI, o que
+// tornava um clique acidental caro demais. Limpa closedAt e devolve a vaga
+// para ABERTA (não EM_ANDAMENTO: quem reabre decide o andamento depois).
+export async function reabrirVaga(id: string): Promise<{ error: string } | null> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { error: "Não autenticado" };
+
+  const prisma = getPrisma();
+  const existing = await prisma.vaga.findFirst({ where: { id, ...scopedVagaWhere(ctx) } });
+  if (!existing) return { error: "Vaga não encontrada ou fora do seu escopo." };
+  if (!canManageSector(ctx, existing.sectorCode)) return { error: "Sem permissão para reabrir esta vaga." };
+
+  await prisma.vaga.update({
+    where: { id },
+    data: { status: VagaStatus.ABERTA, closedAt: null },
+  });
+
+  revalidatePath(`/vagas/${id}`);
+  revalidatePath("/vagas");
+  return null;
 }
 
 export async function excluirVaga(id: string): Promise<void> {
