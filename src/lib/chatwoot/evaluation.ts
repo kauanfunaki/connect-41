@@ -29,6 +29,19 @@ const RESOLUTION_THRESHOLDS: [minutes: number, points: number][] = [
   [1440, 5],
 ];
 
+// Chave de agrupamento por atendente na Avaliação de Atendimentos — por NOME
+// (normalizado), não pelo id numérico do Chatwoot. O id de um mesmo agente
+// pode mudar entre re-sincronizações (agente removido/reconvidado no
+// Chatwoot), o que duplicava o card da mesma pessoa (duas "Débora", dois
+// "Wellington") quando o agrupamento priorizava o id. O nome é o dado estável
+// do ponto de vista de quem está olhando o painel.
+export function agentGroupKey(assigneeId: number | null, assigneeLabel: string | null): string {
+  const normalizedLabel = assigneeLabel?.trim().toLowerCase();
+  if (normalizedLabel) return `label:${normalizedLabel}`;
+  if (assigneeId != null) return `id:${assigneeId}`;
+  return "sem-atendente";
+}
+
 function scoreByThreshold(minutes: number | null, thresholds: [number, number][]): number {
   if (minutes == null) return 0;
   for (const [maxMinutes, points] of thresholds) {

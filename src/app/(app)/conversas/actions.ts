@@ -5,6 +5,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullAccess } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { ensureMessagesLoaded, loadOlderMessages } from "@/lib/chatwoot/conversations";
+import { agentGroupKey } from "@/lib/chatwoot/evaluation";
 import { summarizeAgentEvaluations } from "@/lib/ai";
 import { formatInstantDate } from "@/lib/format";
 
@@ -124,8 +125,8 @@ export async function desvincularContatoChatwoot(contactLinkId: string): Promise
 
 // Resumo consolidado de um atendente — sob demanda (nunca automático, custo
 // de IA só quando o usuário pede). groupKey replica a mesma chave de
-// agrupamento da view de Avaliação (id:<assigneeId> ou label:<assigneeLabel>)
-// — refeito aqui a partir do banco, nunca confiando em avaliações que o
+// agrupamento da view de Avaliação (agentGroupKey, por nome normalizado) —
+// refeito aqui a partir do banco, nunca confiando em avaliações que o
 // cliente diga que pertencem ao grupo.
 export async function gerarResumoAgente(groupKey: string, agentLabel: string): Promise<{ error: string } | { ok: true }> {
   const ctx = await getAuthContext();
@@ -146,15 +147,7 @@ export async function gerarResumoAgente(groupKey: string, agentLabel: string): P
   });
 
   const matching = evaluations
-    .filter((ev) => {
-      const key =
-        ev.conversation.assigneeId != null
-          ? `id:${ev.conversation.assigneeId}`
-          : ev.conversation.assigneeLabel
-            ? `label:${ev.conversation.assigneeLabel}`
-            : "sem-atendente";
-      return key === groupKey;
-    })
+    .filter((ev) => agentGroupKey(ev.conversation.assigneeId, ev.conversation.assigneeLabel) === groupKey)
     .slice(0, MAX_EVALUATIONS_FOR_SUMMARY);
 
   if (matching.length === 0) return { error: "Nenhuma avaliação encontrada para este atendente." };

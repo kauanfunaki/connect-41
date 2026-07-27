@@ -4,27 +4,18 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullAccess } from "@/lib/auth/context";
 import { scopedChatwootConversationWhere } from "@/lib/auth/scope";
 import { isChatwootConfigured } from "@/lib/chatwoot/connection";
+import { agentGroupKey } from "@/lib/chatwoot/evaluation";
 import { channelLabel, statusLabel } from "@/lib/chatwoot/labels";
 import { formatInstantDate } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
 import { AtendimentosAccordion } from "@/components/conversas/AtendimentosAccordion";
 import { VincularContato } from "@/components/conversas/VincularContato";
+import { ConversasFilterBar } from "@/components/conversas/ConversasFilterBar";
 import { AgentCard } from "@/components/avaliacaoAtendimentos/AgentCard";
 import { gerarResumoAgente } from "./actions";
 
 const PER_PAGE = 15; // contatos por página (cada um pode ter N atendimentos)
-
-// Mesma semântica de cor do badge de status em AtendimentosAccordion.tsx —
-// aqui só a cor do "pontinho", já que o botão inteiro já fica destacado quando ativo.
-const STATUS_TABS = [
-  { value: "open", label: "Abertas", dot: "bg-success" },
-  { value: "pending", label: "Pendentes", dot: "bg-warning" },
-  { value: "resolved", label: "Resolvidas", dot: "bg-fg-muted" },
-  { value: "snoozed", label: "Adiadas", dot: "bg-brand" },
-];
 
 type SearchParams = {
   search?: string; status?: string; canal?: string; atendente?: string;
@@ -120,6 +111,18 @@ type Ctx = Awaited<ReturnType<typeof getAuthContext>>;
 async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: SearchParams }) {
   const { search, status, canal, atendente, de, ate, page, id } = params;
   const prisma = getPrisma();
+
+  // "Abrir conversa em Conversas" (vindo da Avaliação) manda ?id=X — busca
+  // dedicada e independente dos filtros/paginação da lista abaixo, porque o
+  // atendimento em questão podia estar em outra página ou ser filtrado pelos
+  // parâmetros atuais, fazendo o link cair de volta na lista genérica sem
+  // nunca abrir a conversa pedida.
+  const focusedConversation = id
+    ? await prisma.chatwootConversation.findFirst({
+        where: { id, ...scopedChatwootConversationWhere(ctx) },
+        include: { contactLink: { include: { person: { select: { id: true, name: true } }, company: { select: { id: true, name: true } } } } },
+      })
+    : null;
 
   // Filtro de período sobre a data do atendimento (lastActivityAt). `ate` é
   // inclusivo — soma 1 dia e usa lt.
@@ -244,84 +247,51 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
 
   return (
     <>
+      {id && (
+        <div className="bg-surface border border-brand/30 rounded-2xl px-4 py-3 mb-4">
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <p className="text-[12px] font-medium text-brand">Atendimento aberto</p>
+            <Link href="/conversas" className="text-[11.5px] text-fg-muted hover:text-fg transition-colors">
+              ← Voltar à lista
+            </Link>
+          </div>
+          {focusedConversation ? (
+            <AtendimentosAccordion atendimentos={[toResumo(focusedConversation)]} defaultOpenId={id} />
+          ) : (
+            <p className="text-[13px] text-fg-muted py-2">Atendimento não encontrado ou fora do seu escopo.</p>
+          )}
+        </div>
+      )}
+
       <p className="text-[12px] text-fg-muted -mt-3 mb-3">
         {totalContacts} contato{totalContacts !== 1 ? "s" : ""}, {totalAtendimentos} atendimento{totalAtendimentos !== 1 ? "s" : ""} nesta página.
       </p>
 
-      {/* Filtros: busca + período + status + canal */}
-      <form method="GET" action="/conversas" className="flex flex-wrap items-end gap-3 mb-3">
-        <div className="flex-1 min-w-[220px] max-w-xs">
-          <label htmlFor="search" className="block text-[11.5px] text-fg-muted mb-1">Busca</label>
-          <Input id="search" name="search" defaultValue={search ?? ""} placeholder="Contato, empresa ou mensagem…" />
-        </div>
-        <div>
-          <label htmlFor="de" className="block text-[11.5px] text-fg-muted mb-1">De</label>
-          <Input id="de" name="de" type="date" defaultValue={de ?? ""} className="w-36" />
-        </div>
-        <div>
-          <label htmlFor="ate" className="block text-[11.5px] text-fg-muted mb-1">Até</label>
-          <Input id="ate" name="ate" type="date" defaultValue={ate ?? ""} className="w-36" />
-        </div>
-        {assignees.length > 0 && (
-          <div>
-            <label htmlFor="atendente" className="block text-[11.5px] text-fg-muted mb-1">Atendente</label>
-            <Select id="atendente" name="atendente" defaultValue={atendente ?? ""} className="w-44">
-              <option value="">Todos</option>
-              {assignees.map((a) => (
-                <option key={a.assigneeLabel} value={a.assigneeLabel!}>{a.assigneeLabel}</option>
-              ))}
-            </Select>
-          </div>
-        )}
-        {status && <input type="hidden" name="status" value={status} />}
-        {canal && <input type="hidden" name="canal" value={canal} />}
-        <button
-          type="submit"
-          className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
-        >
-          Filtrar
-        </button>
-        {(search || de || ate || status || canal || atendente) && (
-          <Link href="/conversas" className="h-9 px-3 rounded-md text-[12.5px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center">
-            Limpar
-          </Link>
-        )}
-      </form>
+      {/* Filtros: busca + botão "Filtros" (período/atendente/status em popover, mesmo padrão da lista de tarefas por setor) + canal */}
+      <ConversasFilterBar
+        search={search ?? ""}
+        status={status ?? ""}
+        atendente={atendente ?? ""}
+        de={de ?? ""}
+        ate={ate ?? ""}
+        assignees={assignees.map((a) => a.assigneeLabel!)}
+      />
 
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <div className="flex items-center gap-1">
-          {STATUS_TABS.map((tab) => {
-            const isActive = tab.value === status;
-            return (
-              <Link
-                key={tab.value}
-                href={buildUrl({ status: isActive ? undefined : tab.value, page: "1" })}
-                className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
-                  isActive ? "bg-surface-2 text-fg border border-border-strong" : "text-fg-muted hover:text-fg hover:bg-surface-2"
-                }`}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${tab.dot}`} />
-                {tab.label}
-              </Link>
-            );
-          })}
+      {channelLabels.length > 1 && (
+        <div className="flex items-center gap-1 mb-4">
+          {channelLabels.map((label) => (
+            <Link
+              key={label}
+              href={buildUrl({ canal: label === canal ? undefined : label, page: "1" })}
+              className={`inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
+                label === canal ? "bg-surface-2 text-fg border border-border-strong" : "text-fg-muted hover:text-fg hover:bg-surface-2"
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
         </div>
-        {channelLabels.length > 1 && (
-          <div className="flex items-center gap-1 border-l border-border pl-2">
-            {channelLabels.map((label) => (
-              <Link
-                key={label}
-                href={buildUrl({ canal: label === canal ? undefined : label, page: "1" })}
-                className={`inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
-                  label === canal ? "bg-surface-2 text-fg border border-border-strong" : "text-fg-muted hover:text-fg hover:bg-surface-2"
-                }`}
-              >
-                {label}
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
+      )}
 
       {links.length === 0 && orphanConversations.length === 0 ? (
         <div className="bg-surface border border-border rounded-2xl">
@@ -475,7 +445,10 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
   type AgentGroup = {
     key: string;
     label: string;
-    assigneeId: number | null;
+    // Um mesmo atendente pode ter mais de um chatwootAgentId ao longo do
+    // tempo (re-sincronização no Chatwoot) — guarda todos os vistos neste
+    // grupo pra conseguir achar o vínculo de conta em qualquer um deles.
+    assigneeIds: Set<number>;
     assigneeLabel: string | null;
     scoreSum: number;
     writingSum: number;
@@ -488,7 +461,7 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
   for (const ev of evaluations) {
     const assigneeId = ev.conversation.assigneeId;
     const assigneeLabel = ev.conversation.assigneeLabel;
-    const key = assigneeId != null ? `id:${assigneeId}` : assigneeLabel ? `label:${assigneeLabel}` : "sem-atendente";
+    const key = agentGroupKey(assigneeId, assigneeLabel);
     const existing = groups.get(key);
     if (existing) {
       existing.scoreSum += ev.score;
@@ -496,11 +469,12 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
       existing.slaSum += ev.slaScore;
       existing.count += 1;
       existing.evaluations.push(ev);
+      if (assigneeId != null) existing.assigneeIds.add(assigneeId);
     } else {
       groups.set(key, {
         key,
         label: assigneeLabel ?? "Sem atendente",
-        assigneeId,
+        assigneeIds: new Set(assigneeId != null ? [assigneeId] : []),
         assigneeLabel,
         scoreSum: ev.score,
         writingSum: ev.writingScore,
@@ -539,7 +513,7 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {agentGroups.map((group) => {
-          const agentLink = group.assigneeId != null ? agentLinkByAgentId.get(group.assigneeId) : undefined;
+          const agentLink = [...group.assigneeIds].map((id) => agentLinkByAgentId.get(id)).find((l) => l != null);
           const linkedUser = agentLink?.linkedUser ?? null;
           const summaryRow = summaryByGroupKey.get(group.key);
 
