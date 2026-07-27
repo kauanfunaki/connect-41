@@ -31,5 +31,5 @@ export function TaskAttachmentsSection({ entityId, documents, canUpload }: Props
     );
   }
 
-  return <DocumentsSection entityType="PIPELINE_ITEM" entityId={entityId} documents={documents} canUpload={canUpload} />;
+  return <DocumentsSection entityType="PIPELINE_ITEM" entityId={entityId} documents={documents} canUpload={canUpload} compact />;
 }

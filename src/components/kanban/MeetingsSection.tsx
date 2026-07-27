@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/Select";
 import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
 import { AttendeePicker } from "@/components/shared/AttendeePicker";
 import { formatInstantDateTime } from "@/lib/format";
+import { useConfirm } from "@/components/ui/useConfirm";
 
 type MeetingRow = {
   id: string;
@@ -39,6 +40,7 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(scheduleAction, null);
   const hasAnyProvider = hasGoogle || hasMicrosoft;
+  const { dialog, requestConfirm } = useConfirm();
 
   return (
     <div className="bg-surface border border-border rounded-2xl p-5 mt-4">
@@ -124,7 +126,12 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
                   {canSchedule && (
                     <button
                       type="button"
-                      onClick={() => confirm("Remover esta reunião da lista? (não cancela no provedor)") && deleteAction(m.id)}
+                      onClick={() =>
+                        requestConfirm(
+                          { title: "Remover esta reunião da lista?", description: "Não cancela no provedor.", destructive: true, confirmLabel: "Remover" },
+                          () => deleteAction(m.id)
+                        )
+                      }
                       className="text-fg-muted hover:text-danger transition-colors"
                       title="Remover"
                     >
@@ -142,6 +149,7 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
           ))}
         </div>
       )}
+      {dialog}
     </div>
   );
 }

@@ -259,9 +259,15 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
     }));
 
   const title = item.title ?? entity?.name ?? "(removido)";
+  // Sem breadcrumb = dentro do modal (KanbanItemModal já reserva uma altura
+  // fixa pro painel) — nesse caso o cabeçalho fica fixo e só o corpo (grid de
+  // duas colunas) ocupa o espaço restante, permitindo que cada coluna role de
+  // forma independente em vez de uma rolagem única do modal inteiro (que
+  // obrigava rolar até o fim só pra alcançar a caixa de comentário).
+  const isModal = !showBreadcrumb;
 
   return (
-    <div>
+    <div className={isModal ? "flex flex-col h-full min-h-0" : undefined}>
       {showBreadcrumb && (
         <div className="flex items-center gap-2 mb-4">
           <Link href="/kanban" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
@@ -329,8 +335,12 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
         reabrirAction={reabrirAction}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 items-stretch">
-        <div className="flex flex-col gap-4 min-w-0">
+      <div
+        className={`grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 items-stretch ${
+          isModal ? "flex-1 min-h-0 lg:[grid-template-rows:minmax(0,1fr)]" : ""
+        }`}
+      >
+        <div className={`flex flex-col gap-4 min-w-0 ${isModal ? "lg:overflow-y-auto lg:min-h-0" : ""}`}>
           <TaskFieldsPanel
             canAct={canAct}
             itemId={itemId}

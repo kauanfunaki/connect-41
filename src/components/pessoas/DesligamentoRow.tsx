@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import type { TerminationState } from "@/app/(app)/pessoas/[id]/desligamento/actions";
 import { TerminationType, TerminationStatus } from "@/generated/prisma/enums";
 import { Select } from "@/components/ui/Select";
+import { useConfirm } from "@/components/ui/useConfirm";
 
 const TYPE_LABEL: Record<TerminationType, string> = {
   VOLUNTARIO:       "Voluntário",
@@ -53,6 +54,7 @@ type Props = {
 export function DesligamentoRow({ desligamento, updateAction, removeAction, canManage }: Props) {
   const [state, formAction, isPending] = useActionState(updateAction, null);
   const [status, setStatus] = useState(desligamento.status);
+  const { dialog, requestConfirm } = useConfirm();
 
   return (
     <div className="py-3 border-b border-border last:border-0">
@@ -91,9 +93,7 @@ export function DesligamentoRow({ desligamento, updateAction, removeAction, canM
           </button>
           <button
             type="button"
-            onClick={() => {
-              if (confirm("Remover este registro de desligamento?")) removeAction();
-            }}
+            onClick={() => requestConfirm({ title: "Remover este registro de desligamento?", destructive: true, confirmLabel: "Remover" }, removeAction)}
             className="h-9 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
           >
             Remover
@@ -102,6 +102,7 @@ export function DesligamentoRow({ desligamento, updateAction, removeAction, canM
       )}
 
       {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
+      {dialog}
     </div>
   );
 }

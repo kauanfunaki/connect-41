@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { formatCalendarDate } from "@/lib/format";
 import { ApplyForm } from "@/components/carreiras/ApplyForm";
+import { SimpleMarkdown } from "@/components/shared/SimpleMarkdown";
 
 export const metadata = { title: "Vaga" };
 
@@ -57,7 +58,7 @@ export default async function VagaPublicaPage({
 
         {vaga.publicDescription && (
           <div className="bg-surface border border-border rounded-lg p-5 mb-6">
-            <p className="text-[13.5px] text-fg leading-relaxed whitespace-pre-wrap">{vaga.publicDescription}</p>
+            <SimpleMarkdown text={vaga.publicDescription} className="text-[13.5px] text-fg leading-relaxed" />
           </div>
         )}
 

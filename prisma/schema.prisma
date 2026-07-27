@@ -429,7 +429,8 @@ model Tenant {
   spaces                   Space[]
   folders                  Folder[]
   pipelineItemLinks        PipelineItemLink[]
-  canvasPages              CanvasPage[]
+  manualDocuments          ManualDocument[]
+  manualPages              ManualPage[]
   auditLogs                AuditLog[]
   oauthAccounts            OAuthAccount[]
   meetings                 Meeting[]
@@ -585,7 +586,8 @@ model User {
   assignedItems              PipelineItemAssignee[]
   watchedItems               PipelineItemWatcher[]
   timeEntries                TimeEntry[]
-  canvasPages                CanvasPage[]
+  manualDocuments            ManualDocument[]
+  manualPages                ManualPage[]
   activities                 Activity[]
   handoffs                   Handoff[]              @relation("HandoffRequester")
   handoffSectorsAssigned     HandoffSector[]        @relation("HandoffSectorAssignee")
@@ -983,21 +985,45 @@ model PipelineItem {
 // módulo próprio, ex. "Manual" ao lado de "Tarefas do BPO"/"Repositório de
 // Senhas" (ver src/app/(app)/bpo-manual). Sem dado de produção na forma
 // antiga (feature nunca chegou a ser commitada), pivô direto sem migração.
-model CanvasPage {
+// Estrutura em dois níveis (Documento > Página), ao estilo Notion/ClickUp —
+// era uma lista única de páginas sem agrupamento (CanvasPage), o que não
+// deixava criar mais de um "documento": só dava pra adicionar páginas numa
+// coleção só.
+model ManualDocument {
   id          String   @id @default(uuid())
   tenantId    String
   sectorCode  String   @db.VarChar(40)
   title       String   @db.VarChar(160)
-  content     String?  @db.Text // HTML do RichTextEditor, sanitizado no servidor
+  icon        String?  @db.VarChar(8) // emoji opcional, mesmo espírito de identidade visual leve de outros módulos
   createdById String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  tenant    Tenant @relation(fields: [tenantId], references: [id])
-  createdBy User   @relation(fields: [createdById], references: [id])
+  tenant    Tenant       @relation(fields: [tenantId], references: [id])
+  createdBy User         @relation(fields: [createdById], references: [id])
+  pages     ManualPage[]
 
   @@index([tenantId, sectorCode])
-  @@map("canvas_pages")
+  @@map("manual_documents")
+}
+
+model ManualPage {
+  id          String   @id @default(uuid())
+  tenantId    String
+  documentId  String
+  title       String   @db.VarChar(160)
+  content     String?  @db.Text // HTML do RichTextEditor, sanitizado no servidor
+  order       Int      @default(0)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant     Tenant         @relation(fields: [tenantId], references: [id])
+  document   ManualDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdBy  User           @relation(fields: [createdById], references: [id])
+
+  @@index([tenantId, documentId])
+  @@map("manual_pages")
 }
 
 // Vínculo/dependência entre duas tarefas (independente de subtarefa) — só

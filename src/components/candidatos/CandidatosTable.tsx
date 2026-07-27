@@ -7,6 +7,7 @@ import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { maskCpf } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { useConfirm } from "@/components/ui/useConfirm";
 
 type Row = {
   id: string;
@@ -28,6 +29,7 @@ type Props = {
 export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMassa }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [, startTransition] = useTransition();
+  const { dialog, requestConfirm } = useConfirm();
 
   const allSelected = candidatos.length > 0 && selected.size === candidatos.length;
 
@@ -45,11 +47,13 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
   }
 
   function applyInativar() {
-    if (!confirm(`Inativar ${selected.size} candidato(s) selecionado(s)?`)) return;
-    const ids = Array.from(selected);
-    setSelected(new Set());
-    startTransition(() => {
-      inativarCandidatosEmMassa(ids);
+    requestConfirm({ title: `Inativar ${selected.size} candidato(s) selecionado(s)?`, confirmLabel: "Inativar" }, () => {
+      const ids = Array.from(selected);
+      setSelected(new Set());
+      startTransition(() => {
+        inativarCandidatosEmMassa(ids);
+      });
+      return Promise.resolve();
     });
   }
 
@@ -147,6 +151,7 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
           Inativar
         </button>
       </BulkActionBar>
+      {dialog}
     </>
   );
 }

@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import type { ScheduleState } from "@/app/(app)/pessoas/[id]/escala/actions";
 import { ScheduleStatus } from "@/generated/prisma/enums";
 import { Select } from "@/components/ui/Select";
+import { useConfirm } from "@/components/ui/useConfirm";
 
 const STATUS_LABEL: Record<ScheduleStatus, string> = {
   PLANEJADA:  "Planejada",
@@ -42,6 +43,7 @@ type Props = {
 export function EscalaRow({ escala, updateAction, removeAction, canManage }: Props) {
   const [state, formAction, isPending] = useActionState(updateAction, null);
   const [status, setStatus] = useState(escala.status);
+  const { dialog, requestConfirm } = useConfirm();
 
   return (
     <div className="py-3 border-b border-border last:border-0">
@@ -79,9 +81,7 @@ export function EscalaRow({ escala, updateAction, removeAction, canManage }: Pro
           </button>
           <button
             type="button"
-            onClick={() => {
-              if (confirm("Remover este dia da escala?")) removeAction();
-            }}
+            onClick={() => requestConfirm({ title: "Remover este dia da escala?", destructive: true, confirmLabel: "Remover" }, removeAction)}
             className="h-9 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
           >
             Remover
@@ -90,6 +90,7 @@ export function EscalaRow({ escala, updateAction, removeAction, canManage }: Pro
       )}
 
       {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
+      {dialog}
     </div>
   );
 }

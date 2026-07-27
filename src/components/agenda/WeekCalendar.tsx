@@ -7,6 +7,7 @@ import { CreateMeetingDialog } from "./CreateMeetingDialog";
 import { EditMeetingDialog } from "./EditMeetingDialog";
 import { MiniCalendar } from "./MiniCalendar";
 import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
+import { useConfirm } from "@/components/ui/useConfirm";
 import { saoPauloParts, weekdayLabel, dayNumber, toSaoPauloDateTimeLocal } from "@/lib/agenda";
 import { formatInstantTime } from "@/lib/format";
 import type { MeetingState } from "@/app/(app)/agenda/actions";
@@ -294,6 +295,7 @@ function MeetingBlock({
   const [editing, setEditing] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const canEdit = meeting.createdByUserId === currentUserId;
+  const { dialog: confirmDialog, requestConfirm } = useConfirm();
 
   useEffect(() => {
     if (!open) return;
@@ -381,9 +383,7 @@ function MeetingBlock({
             )}
             <button
               type="button"
-              onClick={() => {
-                if (confirm("Excluir esta reunião?")) deleteAction(meeting.id);
-              }}
+              onClick={() => requestConfirm({ title: "Excluir esta reunião?", destructive: true, confirmLabel: "Excluir" }, () => deleteAction(meeting.id))}
               className="text-[12px] text-danger hover:underline ml-auto"
             >
               Excluir
@@ -391,6 +391,7 @@ function MeetingBlock({
           </div>
         </div>
       )}
+      {confirmDialog}
 
       {editing && (
         <EditMeetingDialog

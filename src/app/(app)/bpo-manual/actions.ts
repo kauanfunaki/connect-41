@@ -9,14 +9,68 @@ const SECTOR = "bpo";
 
 export type ManualPageState = { error: string } | null;
 
-// Manual/Instruções do setor — página em branco (não é upload de arquivo),
-// pensada como referência escrita pelos próprios colaboradores pra
-// alinhamento interno (ex: cobertura em férias/ausência). Era por tarefa
-// (CanvasPage.pipelineItemId) até 2026-07-24; virou biblioteca do setor
-// (ver Backlog-Avaliacao-Atendimentos... não, ver histórico da sessão —
-// motivo: ficava difícil de localizar dentro do detalhamento de uma tarefa
-// específica).
-export async function criarPaginaManual(titleRaw: string): Promise<{ error: string } | { id: string }> {
+// Manual/Instruções do setor — biblioteca em dois níveis (Documento > Página),
+// escrita pelos próprios colaboradores (não upload de arquivo) pra
+// alinhamento em caso de ausência/férias de alguém. Virou módulo próprio em
+// 2026-07-24 (antes vivia dentro do detalhamento de uma tarefa via
+// CanvasModal); a estrutura de dois níveis veio na sequência, já que só dava
+// pra criar páginas dentro de uma coleção única (nenhum jeito de começar um
+// segundo "documento").
+export async function criarDocumentoManual(titleRaw: string): Promise<{ error: string } | { id: string }> {
+  const ctx = await getAuthContext();
+  const { tenantId, userId } = ctx;
+  const title = titleRaw.trim();
+  if (!tenantId || !userId) return { error: "Não autenticado" };
+  if (!canActOnSector(ctx, SECTOR)) return { error: "Sem permissão para criar documento." };
+  if (!title) return { error: "Título é obrigatório" };
+
+  const prisma = getPrisma();
+  try {
+    const doc = await prisma.manualDocument.create({
+      data: { tenantId, sectorCode: SECTOR, title, createdById: userId },
+    });
+    revalidatePath("/bpo-manual");
+    return { id: doc.id };
+  } catch (err) {
+    console.error("[criarDocumentoManual]", err);
+    return { error: "Erro ao criar documento." };
+  }
+}
+
+export async function renomearDocumentoManual(documentId: string, titleRaw: string): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  const title = titleRaw.trim();
+  if (!tenantId || !title || !canActOnSector(ctx, SECTOR)) return;
+
+  const prisma = getPrisma();
+  try {
+    await prisma.manualDocument.update({ where: { id: documentId, tenantId, sectorCode: SECTOR }, data: { title } });
+  } catch (err) {
+    console.error("[renomearDocumentoManual]", err);
+    return;
+  }
+
+  revalidatePath("/bpo-manual");
+}
+
+export async function excluirDocumentoManual(documentId: string): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  if (!tenantId || !canManageSector(ctx, SECTOR)) return;
+
+  const prisma = getPrisma();
+  try {
+    await prisma.manualDocument.delete({ where: { id: documentId, tenantId, sectorCode: SECTOR } });
+  } catch (err) {
+    console.error("[excluirDocumentoManual]", err);
+    return;
+  }
+
+  revalidatePath("/bpo-manual");
+}
+
+export async function criarPaginaManual(documentId: string, titleRaw: string): Promise<{ error: string } | { id: string }> {
   const ctx = await getAuthContext();
   const { tenantId, userId } = ctx;
   const title = titleRaw.trim();
@@ -25,9 +79,13 @@ export async function criarPaginaManual(titleRaw: string): Promise<{ error: stri
   if (!title) return { error: "Título é obrigatório" };
 
   const prisma = getPrisma();
+  const doc = await prisma.manualDocument.findFirst({ where: { id: documentId, tenantId, sectorCode: SECTOR }, select: { id: true } });
+  if (!doc) return { error: "Documento não encontrado." };
+
   try {
-    const page = await prisma.canvasPage.create({
-      data: { tenantId, sectorCode: SECTOR, title, createdById: userId },
+    const lastPage = await prisma.manualPage.findFirst({ where: { documentId }, orderBy: { order: "desc" }, select: { order: true } });
+    const page = await prisma.manualPage.create({
+      data: { tenantId, documentId, title, createdById: userId, order: (lastPage?.order ?? -1) + 1 },
     });
     revalidatePath("/bpo-manual");
     return { id: page.id };
@@ -51,7 +109,7 @@ export async function atualizarPaginaManual(pageId: string, _prev: ManualPageSta
 
   const prisma = getPrisma();
   try {
-    await prisma.canvasPage.update({ where: { id: pageId, tenantId, sectorCode: SECTOR }, data: { title, content: content || null } });
+    await prisma.manualPage.update({ where: { id: pageId, tenantId }, data: { title, content: content || null } });
   } catch (err) {
     console.error("[atualizarPaginaManual]", err);
     return { error: "Erro ao salvar página." };
@@ -68,7 +126,7 @@ export async function excluirPaginaManual(pageId: string): Promise<void> {
 
   const prisma = getPrisma();
   try {
-    await prisma.canvasPage.delete({ where: { id: pageId, tenantId, sectorCode: SECTOR } });
+    await prisma.manualPage.delete({ where: { id: pageId, tenantId } });
   } catch (err) {
     console.error("[excluirPaginaManual]", err);
     return;

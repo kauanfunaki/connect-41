@@ -5,6 +5,7 @@ import type { ExameState } from "@/app/(app)/pessoas/[id]/exames/actions";
 import { ExameAdmissionalStatus } from "@/generated/prisma/enums";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { useConfirm } from "@/components/ui/useConfirm";
 
 const STATUS_LABEL: Record<ExameAdmissionalStatus, string> = {
   SOLICITADO:             "Solicitado",
@@ -48,6 +49,7 @@ type Props = {
 export function ExameRow({ exame, updateAction, removeAction, canManage }: Props) {
   const [state, formAction, isPending] = useActionState(updateAction, null);
   const [status, setStatus] = useState(exame.status);
+  const { dialog, requestConfirm } = useConfirm();
 
   return (
     <div className="py-3 border-b border-border last:border-0">
@@ -91,9 +93,7 @@ export function ExameRow({ exame, updateAction, removeAction, canManage }: Props
           </button>
           <button
             type="button"
-            onClick={() => {
-              if (confirm("Remover este exame?")) removeAction();
-            }}
+            onClick={() => requestConfirm({ title: "Remover este exame?", destructive: true, confirmLabel: "Remover" }, removeAction)}
             className="h-9 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
           >
             Remover
@@ -102,6 +102,7 @@ export function ExameRow({ exame, updateAction, removeAction, canManage }: Props
       )}
 
       {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
+      {dialog}
     </div>
   );
 }

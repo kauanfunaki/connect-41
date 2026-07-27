@@ -10,6 +10,7 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
 import { Stepper, type StepStatus } from "@/components/ui/Stepper";
@@ -83,9 +84,9 @@ type Props = {
   departments: DepartmentOption[];
   canEditSensitive: boolean;
   customFields?: CustomFieldInput[];
-  // Só relevante na criação (via /pessoas/nova?internal=1) — na edição, o
-  // valor de verdade vem de defaultValues.isInternal (não editável aqui, é
-  // decidido na criação e não tem UI de "converter" depois).
+  // Valor inicial do toggle "Funcionário interno" — pré-marcado quando a
+  // pessoa já é interna (edição) ou quando veio de /pessoas/nova?internal=1
+  // (criação a partir da aba Internos). Editável no próprio formulário.
   defaultIsInternal?: boolean;
 };
 
@@ -108,6 +109,7 @@ export function PessoaForm({
   const [maxStepReached, setMaxStepReached] = useState(0);
   const [stepError, setStepError] = useState<number | null>(null);
   const isEditing = Boolean(defaultValues?.id);
+  const [isInternal, setIsInternal] = useState(defaultValues?.isInternal ?? defaultIsInternal);
 
   const [values, setValues] = useState<Record<string, string>>(() => ({
     name: defaultValues?.name ?? "",
@@ -205,7 +207,7 @@ export function PessoaForm({
 
       <form ref={formRef} action={formAction} noValidate onChange={onFormChange} className="px-6 py-5">
         {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
-        <input type="hidden" name="isInternal" value={String(defaultValues?.isInternal ?? defaultIsInternal)} />
+        <input type="hidden" name="isInternal" value={String(isInternal)} />
 
         {state?.error && (
           <p className="mb-4 text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-lg px-3 py-2">
@@ -244,6 +246,12 @@ export function PessoaForm({
                 />
               </CampoForm>
             </FieldGrid>
+            <Checkbox
+              id="isInternal-toggle"
+              checked={isInternal}
+              onChange={(e) => setIsInternal(e.target.checked)}
+              label="Funcionário interno (tem conta de acesso ao Connect)"
+            />
           </FormSection>
         </div>
 

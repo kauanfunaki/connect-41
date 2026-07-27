@@ -4,19 +4,22 @@ import { getPrisma } from "@/lib/prisma";
 import { resolveConnectionCredentials } from "./connection";
 import { listMessages } from "./client";
 import { normalizeMessage } from "./mappers";
+import { isPrismaMissingTableError } from "@/lib/prismaErrors";
 
 const MESSAGES_PAGE_SIZE = 20;
 
 // Consulta defensiva das tabelas do Chatwoot — usada nas fichas de Empresa e
 // Pessoa (aba "Conversas"), que podem ser renderizadas antes de a migration
-// do Chatwoot ter sido aplicada em produção, ou com a conexão desconfigurada.
-// Sem isso, um erro do Prisma (tabela inexistente) derruba a ficha inteira
-// (error boundary) em vez de só a aba de conversas ficar vazia.
+// do Chatwoot ter sido aplicada em produção. Só engole especificamente
+// "tabela não existe" (P2021 — migration pendente); qualquer outro erro é
+// relançado, pra não confundir uma falha real de banco com "nenhuma conversa
+// ainda" (catch genérico escondia isso antes).
 export async function safeFindConversations<T>(query: () => Promise<T[]>): Promise<T[]> {
   try {
     return await query();
   } catch (err) {
-    console.error("[chatwoot:conversations] falha ao consultar atendimentos — migration pendente ou Chatwoot indisponível?", err);
+    if (!isPrismaMissingTableError(err)) throw err;
+    console.error("[chatwoot:conversations] tabela do Chatwoot ainda não existe — migration pendente", err);
     return [];
   }
 }

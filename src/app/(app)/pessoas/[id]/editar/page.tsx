@@ -90,6 +90,7 @@ export default async function EditarPessoaPage({
             phone:            person.phone           ?? undefined,
             birthDate:        toDateInput(person.birthDate),
             currentCompanyId: person.currentCompanyId ?? undefined,
+            isInternal:       person.isInternal,
 
             rg:               person.rg        ?? undefined,
             pis:              person.pis       ?? undefined,

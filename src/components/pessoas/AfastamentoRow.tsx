@@ -5,6 +5,7 @@ import type { AbsenceState } from "@/app/(app)/pessoas/[id]/afastamentos/actions
 import { AbsenceType, AbsenceStatus } from "@/generated/prisma/enums";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { useConfirm } from "@/components/ui/useConfirm";
 
 const TYPE_LABEL: Record<AbsenceType, string> = {
   FALTA:             "Falta",
@@ -58,6 +59,7 @@ type Props = {
 export function AfastamentoRow({ afastamento, updateAction, removeAction, canManage, canViewMedical }: Props) {
   const [state, formAction, isPending] = useActionState(updateAction, null);
   const [status, setStatus] = useState(afastamento.status);
+  const { dialog, requestConfirm } = useConfirm();
 
   return (
     <div className="py-3 border-b border-border last:border-0">
@@ -102,9 +104,7 @@ export function AfastamentoRow({ afastamento, updateAction, removeAction, canMan
           </button>
           <button
             type="button"
-            onClick={() => {
-              if (confirm("Remover este registro?")) removeAction();
-            }}
+            onClick={() => requestConfirm({ title: "Remover este registro?", destructive: true, confirmLabel: "Remover" }, removeAction)}
             className="h-9 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
           >
             Remover
@@ -113,6 +113,7 @@ export function AfastamentoRow({ afastamento, updateAction, removeAction, canMan
       )}
 
       {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
+      {dialog}
     </div>
   );
 }

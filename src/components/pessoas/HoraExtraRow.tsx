@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import type { OvertimeState } from "@/app/(app)/pessoas/[id]/horas-extras/actions";
 import { DayType, OvertimeStatus } from "@/generated/prisma/enums";
 import { Select } from "@/components/ui/Select";
+import { useConfirm } from "@/components/ui/useConfirm";
 
 const DAY_TYPE_LABEL: Record<DayType, string> = {
   UTIL: "Dia útil", FOLGA: "Folga", DOMINGO: "Domingo", FERIADO: "Feriado", NOTURNO: "Noturno",
@@ -46,6 +47,7 @@ type Props = {
 export function HoraExtraRow({ entry, updateAction, removeAction, canManage }: Props) {
   const [state, formAction, isPending] = useActionState(updateAction, null);
   const [status, setStatus] = useState(entry.status);
+  const { dialog, requestConfirm } = useConfirm();
 
   return (
     <div className="py-3 border-b border-border last:border-0">
@@ -84,9 +86,7 @@ export function HoraExtraRow({ entry, updateAction, removeAction, canManage }: P
           </button>
           <button
             type="button"
-            onClick={() => {
-              if (confirm("Remover este lançamento?")) removeAction();
-            }}
+            onClick={() => requestConfirm({ title: "Remover este lançamento?", destructive: true, confirmLabel: "Remover" }, removeAction)}
             className="h-9 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
           >
             Remover
@@ -95,6 +95,7 @@ export function HoraExtraRow({ entry, updateAction, removeAction, canManage }: P
       )}
 
       {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
+      {dialog}
     </div>
   );
 }

@@ -18,6 +18,7 @@ import {
   Settings2,
   EyeOff,
   Repeat,
+  Headset,
 } from "lucide-react";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
@@ -105,7 +106,8 @@ export default async function AdminPage() {
   if (isAdmin) {
     cards.push(
       { href: "/admin/feriados", icon: <CalendarDays size={20} />, title: "Feriados", description: "Catálogo de feriados usado na Escala de Trabalho" },
-      { href: "/admin/competencias", icon: <Target size={20} />, title: "Competências", description: "Catálogo usado nas avaliações de desempenho" }
+      { href: "/admin/competencias", icon: <Target size={20} />, title: "Competências", description: "Catálogo usado nas avaliações de desempenho" },
+      { href: "/admin/atendentes", icon: <Headset size={20} />, title: "Vínculos de Acesso", description: "Conta de acesso e atendente Chatwoot de cada colaborador interno" }
     );
   }
 

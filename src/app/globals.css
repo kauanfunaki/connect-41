@@ -345,6 +345,17 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   background: var(--c41-scrollbar-thumb-active);
 }
 
+/* Barra de abas: rolável no mobile (muitas abas cabem via touch/trackpad),
+   mas sem trilha de scrollbar visível — a rolagem é um fallback de segurança,
+   não uma affordance que precise aparecer o tempo todo em telas largas. */
+.scroll-x-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scroll-x-hidden::-webkit-scrollbar {
+  display: none;
+}
+
 /* ----- Kanban: entrada suave dos cards (um único momento de reveal, sem exagero) ----- */
 @keyframes kanban-card-in {
   from { opacity: 0; transform: translateY(3px); }
