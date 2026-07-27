@@ -1,25 +1,20 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { VagaStatus, VagaPrioridade } from "@/generated/prisma/enums";
+import { VagaPrioridade } from "@/generated/prisma/enums";
+import { VAGA_STATUS_LABEL, VAGA_STATUS_STYLE } from "@/lib/vagaStatus";
 import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
+import { ConfirmActionButton } from "@/components/ui/ConfirmActionButton";
 import { AddCandidatoForm } from "@/components/vagas/AddCandidatoForm";
 import { RecruitmentFunnel, type FunnelCard } from "@/components/vagas/RecruitmentFunnel";
 import { computeFunnelConversion, type Stage } from "@/lib/recruitmentFunnel";
 import { formatInstantDate } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { excluirVaga, encerrarVaga } from "../actions";
+import { excluirVaga, encerrarVaga, reabrirVaga } from "../actions";
 import { adicionarCandidato, moverEtapaCandidatura, encerrarCandidatura } from "./actions";
-
-const STATUS_LABEL: Record<VagaStatus, string> = {
-  ABERTA:       "Aberta",
-  EM_ANDAMENTO: "Em andamento",
-  ENCERRADA:    "Encerrada",
-  CANCELADA:    "Cancelada",
-};
 
 const PRIORITY_LABEL: Record<VagaPrioridade, string> = {
   BAIXA: "Baixa",
@@ -69,6 +64,7 @@ export default async function VagaPage({
 
   const deleteAction = excluirVaga.bind(null, id);
   const encerrarAction = encerrarVaga.bind(null, id);
+  const reabrirAction = reabrirVaga.bind(null, id);
   const addCandidatoAction = adicionarCandidato.bind(null, id);
   const moverEtapaAction = moverEtapaCandidatura.bind(null, id);
   const encerrarCandidaturaAction = encerrarCandidatura.bind(null, id);
@@ -102,8 +98,8 @@ export default async function VagaPage({
         <div>
           <div className="flex items-center gap-3 mb-1">
             <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">{vaga.title}</h1>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border bg-surface-2 text-fg-secondary border-border">
-              {STATUS_LABEL[vaga.status]}
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${VAGA_STATUS_STYLE[vaga.status]}`}>
+              {VAGA_STATUS_LABEL[vaga.status]}
             </span>
           </div>
           <p className="text-[13px] text-fg-muted">
@@ -119,15 +115,24 @@ export default async function VagaPage({
             >
               Editar
             </Link>
-            {vaga.status !== "ENCERRADA" && (
-              <form action={encerrarAction}>
-                <button
-                  type="submit"
-                  className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors"
-                >
-                  Encerrar Vaga
-                </button>
-              </form>
+            {vaga.status !== "ENCERRADA" ? (
+              <ConfirmActionButton
+                action={encerrarAction}
+                label="Encerrar Vaga"
+                title={`Encerrar "${vaga.title}"?`}
+                description="A vaga sai das listagens ativas e do portal público. Os candidatos e o histórico do funil são preservados, e você pode reabrir a vaga depois."
+                confirmLabel="Encerrar"
+                successMessage="Vaga encerrada."
+              />
+            ) : (
+              <ConfirmActionButton
+                action={reabrirAction}
+                label="Reabrir Vaga"
+                title={`Reabrir "${vaga.title}"?`}
+                description="A vaga volta para o status Aberta e reaparece nas listagens. Se ela estava publicada no portal, volta a ficar visível."
+                confirmLabel="Reabrir"
+                successMessage="Vaga reaberta."
+              />
             )}
             <DeleteButton action={deleteAction} nome={vaga.title} />
           </div>
@@ -227,7 +232,7 @@ export default async function VagaPage({
                 <div className="space-y-1.5">
                   {encerrados.map((c) => (
                     <div key={c.id} className="flex items-center justify-between text-[12px]">
-                      <Link href={`/pessoas/${c.person.id}`} className="text-fg-secondary hover:text-brand transition-colors">
+                      <Link href={`/candidatos/${c.person.id}`} className="text-fg-secondary hover:text-brand transition-colors">
                         {c.person.name}
                       </Link>
                       <span className="text-fg-muted">

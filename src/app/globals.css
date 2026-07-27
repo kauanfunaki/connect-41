@@ -43,7 +43,12 @@
   --c41-border-strong:   #D3CFDC;
   --c41-fg:              #1C1A22;
   --c41-fg-secondary:    #514C5C;
-  --c41-fg-muted:        #8B8695;
+  /* Era #8B8695, que rende só 3.53:1 sobre branco e 3.20:1 sobre o canvas —
+     reprova WCAG AA (4.5:1) e é a cor de quase todo texto secundário do app,
+     boa parte dele em 11-12px. Este tom mantém o mesmo matiz roxo-acinzentado
+     e passa em todas as superfícies claras (pior caso 5.07:1 no canvas).
+     O valor do tema escuro não muda: lá o original já rende 5.17:1. */
+  --c41-fg-muted:        #6B6577;
   --c41-brand:           var(--c41-brand-600);
   --c41-brand-hover:     var(--c41-brand-700);
   --c41-brand-subtle:    rgba(36,61,161,.08);

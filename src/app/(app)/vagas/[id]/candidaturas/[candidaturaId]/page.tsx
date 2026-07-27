@@ -113,7 +113,7 @@ export default async function CandidaturaScorecardPage({
 
       <div className="mb-6">
         <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">
-          <Link href={`/pessoas/${candidatura.person.id}`} className="hover:text-brand transition-colors">
+          <Link href={`/candidatos/${candidatura.person.id}`} className="hover:text-brand transition-colors">
             {candidatura.person.name}
           </Link>
         </h1>

@@ -74,7 +74,7 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
               const id = e.dataTransfer.getData("text/plain");
               if (id) handleDrop(stage, id);
             }}
-            className={`flex-shrink-0 w-56 rounded-lg border p-2.5 transition-colors ${
+            className={`flex-shrink-0 w-64 rounded-lg border p-2.5 transition-colors ${
               isDragOver ? "border-brand bg-brand/5" : "border-border bg-surface-2"
             }`}
           >
@@ -103,29 +103,49 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
                     <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand/10 text-brand text-[10px] font-semibold flex items-center justify-center">
                       {initials(c.personName)}
                     </span>
-                    <Link href={`/pessoas/${c.personId}`} className="text-[13px] text-fg hover:text-brand transition-colors truncate">
+                    <Link href={`/candidatos/${c.personId}`} className="text-[13px] text-fg hover:text-brand transition-colors truncate">
                       {c.personName}
                     </Link>
                   </div>
-                  <div className="flex items-center gap-2 mt-1.5 pl-8 flex-wrap">
-                    {c.origin && <span className="text-[10px] text-fg-muted">via {c.origin}</span>}
-                    {c.hasResume && (
-                      <a href={`/api/resumes/${c.id}`} className="text-[10px] text-brand hover:underline">Currículo</a>
-                    )}
-                    <Link href={`/vagas/${vagaId}/candidaturas/${c.id}`} className="text-[10px] text-brand hover:underline">
+                  {c.origin && <p className="text-[11px] text-fg-muted mt-1.5 pl-8">via {c.origin}</p>}
+
+                  {/* Ações eram links de 10px sem padding, encostados um no
+                      outro — no toque, um erro de alvo reprovava o candidato.
+                      Agora são alvos de 32px com separação e rótulo legível. */}
+                  <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                    <Link
+                      href={`/vagas/${vagaId}/candidaturas/${c.id}`}
+                      className="inline-flex items-center h-8 px-2 rounded-md text-[12px] font-medium text-brand hover:bg-brand/8 transition-colors"
+                    >
                       Avaliar{c.scorecardCount > 0 ? ` (${c.scorecardCount})` : ""}
                     </Link>
+                    {c.hasResume && (
+                      <a
+                        href={`/api/resumes/${c.id}`}
+                        className="inline-flex items-center h-8 px-2 rounded-md text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors"
+                      >
+                        Currículo
+                      </a>
+                    )}
+                    {canManage && !isContratado && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleEncerrar(c.id, "REPROVADO")}
+                          className="inline-flex items-center h-8 px-2 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
+                        >
+                          Reprovar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleEncerrar(c.id, "DESISTENTE")}
+                          className="inline-flex items-center h-8 px-2 rounded-md text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors"
+                        >
+                          Desistiu
+                        </button>
+                      </>
+                    )}
                   </div>
-                  {canManage && !isContratado && (
-                    <div className="flex gap-2 mt-2 pl-8">
-                      <button type="button" onClick={() => handleEncerrar(c.id, "REPROVADO")} className="text-[10px] text-danger hover:underline">
-                        Reprovar
-                      </button>
-                      <button type="button" onClick={() => handleEncerrar(c.id, "DESISTENTE")} className="text-[10px] text-fg-muted hover:underline">
-                        Desistiu
-                      </button>
-                    </div>
-                  )}
                 </div>
               ))}
               {stageCards.length === 0 && (
