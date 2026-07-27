@@ -32,38 +32,48 @@ export default async function BpoManualPage() {
     include: { pages: { orderBy: { order: "asc" }, include: { createdBy: { select: { name: true } } } } },
   });
 
+  // Altura fechada, sem rolagem de página: o cabeçalho fica fixo e o workspace
+  // ocupa exatamente o que sobra. Antes o card tinha altura própria (78vh) que,
+  // somada ao cabeçalho e ao padding, estourava a viewport e criava uma segunda
+  // barra de rolagem — a da página inteira — por cima das rolagens internas da
+  // árvore de documentos e do canvas. Mesmo padrão do quadro de Kanban.
   return (
-    <PageContainer>
-      <BackButton className="mb-3" />
+    <PageContainer className="h-full flex flex-col">
+      <BackButton className="mb-3 flex-shrink-0" />
 
-      <div className="mb-6">
+      <div className="mb-6 flex-shrink-0">
         <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em]">Repositório de Manuais</h1>
         <p className="text-[13px] text-fg-muted mt-1">
           Instruções internas do setor — escritas pelos colaboradores para alinhamento em ausências e férias.
         </p>
       </div>
 
-      <ManualWorkspace
-        canAct={canAct}
-        canDelete={canDelete}
-        documents={documents.map((d) => ({
-          id: d.id,
-          title: d.title,
-          pages: d.pages.map((p) => ({
-            id: p.id,
-            title: p.title,
-            content: p.content,
-            createdByName: p.createdBy.name,
-            updatedAt: p.updatedAt.toISOString(),
-          })),
-        }))}
-        createDocumentAction={criarDocumentoManual}
-        renameDocumentAction={renomearDocumentoManual}
-        deleteDocumentAction={excluirDocumentoManual}
-        createPageAction={criarPaginaManual}
-        updatePageAction={atualizarPaginaManual}
-        deletePageAction={excluirPaginaManual}
-      />
+      {/* flex-1 min-h-0 é o que dá ao workspace uma altura definida igual ao
+          espaço restante — sem o min-h-0 o filho rolável estoura o container
+          em vez de rolar por dentro. */}
+      <div className="flex-1 min-h-0">
+        <ManualWorkspace
+          canAct={canAct}
+          canDelete={canDelete}
+          documents={documents.map((d) => ({
+            id: d.id,
+            title: d.title,
+            pages: d.pages.map((p) => ({
+              id: p.id,
+              title: p.title,
+              content: p.content,
+              createdByName: p.createdBy.name,
+              updatedAt: p.updatedAt.toISOString(),
+            })),
+          }))}
+          createDocumentAction={criarDocumentoManual}
+          renameDocumentAction={renomearDocumentoManual}
+          deleteDocumentAction={excluirDocumentoManual}
+          createPageAction={criarPaginaManual}
+          updatePageAction={atualizarPaginaManual}
+          deletePageAction={excluirPaginaManual}
+        />
+      </div>
     </PageContainer>
   );
 }

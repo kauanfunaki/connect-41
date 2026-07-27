@@ -208,19 +208,33 @@ export function ManualWorkspace({
     });
   }
 
+  // Fechar e criar são passos separados de propósito: o campo some SEMPRE que
+  // perde o foco (ou no Esc), tendo texto ou não. Antes o submit saía cedo
+  // quando o título estava vazio e nunca chegava a fechar — clicar fora
+  // deixava o input aberto pra sempre, sem jeito óbvio de cancelar.
+  function closeCreateDocument() {
+    setNewDocTitle("");
+    setCreatingDoc(false);
+  }
+
   function submitCreateDocument() {
     const title = newDocTitle.trim();
+    closeCreateDocument();
     if (!title) return;
     startTransition(async () => {
       const res = await createDocumentAction(title);
       if ("id" in res) setExpanded((prev) => new Set(prev).add(res.id));
     });
-    setNewDocTitle("");
-    setCreatingDoc(false);
+  }
+
+  function closeCreatePage() {
+    setNewPageTitle("");
+    setCreatingPageFor(null);
   }
 
   function submitCreatePage(documentId: string) {
     const title = newPageTitle.trim();
+    closeCreatePage();
     if (!title) return;
     startTransition(async () => {
       const res = await createPageAction(documentId, title);
@@ -229,8 +243,6 @@ export function ManualWorkspace({
         setEditingPageId(res.id);
       }
     });
-    setNewPageTitle("");
-    setCreatingPageFor(null);
   }
 
   function submitRenameDocument(docId: string) {
@@ -271,9 +283,11 @@ export function ManualWorkspace({
   }
 
   return (
-    // overflow-hidden pro canto arredondado recortar a área de rolagem da
-    // página à direita, que agora rola por conta própria.
-    <div className="bg-surface border border-border rounded-lg overflow-hidden flex h-[78vh] min-h-[520px]">
+    // h-full (não uma altura em vh): o pai já reserva exatamente o espaço que
+    // sobra da viewport, então o card nunca empurra a página e a única rolagem
+    // é a interna — árvore de documentos à esquerda, canvas à direita.
+    // overflow-hidden pro canto arredondado recortar essas áreas de rolagem.
+    <div className="bg-surface border border-border rounded-lg overflow-hidden flex h-full min-h-0">
       <div className="w-72 flex-shrink-0 flex flex-col border-r border-border p-3">
         <div className="flex-1 min-h-0 overflow-y-auto space-y-0.5">
           {documents.map((doc) => {
@@ -362,7 +376,10 @@ export function ManualWorkspace({
                           value={newPageTitle}
                           onChange={(e) => setNewPageTitle(e.target.value)}
                           onBlur={() => submitCreatePage(doc.id)}
-                          onKeyDown={(e) => e.key === "Enter" && submitCreatePage(doc.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") submitCreatePage(doc.id);
+                            if (e.key === "Escape") closeCreatePage();
+                          }}
                           placeholder="Título da página…"
                           className="w-full !h-7 px-2 text-[12.5px]"
                         />
@@ -391,7 +408,10 @@ export function ManualWorkspace({
                 value={newDocTitle}
                 onChange={(e) => setNewDocTitle(e.target.value)}
                 onBlur={submitCreateDocument}
-                onKeyDown={(e) => e.key === "Enter" && submitCreateDocument()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") submitCreateDocument();
+                  if (e.key === "Escape") closeCreateDocument();
+                }}
                 placeholder="Título do documento…"
                 className="w-full !h-8 px-2 text-[13px]"
               />
