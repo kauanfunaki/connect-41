@@ -54,6 +54,26 @@ export async function renomearDocumentoManual(documentId: string, titleRaw: stri
   revalidatePath("/bpo-manual");
 }
 
+// Emoji do documento (aparece na árvore da sidebar, estilo ícone de página do
+// Notion) — campo já existia no schema (ManualDocument.icon), só faltava um
+// jeito de escrever nele. iconRaw vazio/null limpa o ícone.
+export async function atualizarIconeDocumento(documentId: string, iconRaw: string | null): Promise<void> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  if (!tenantId || !canActOnSector(ctx, SECTOR)) return;
+
+  const icon = iconRaw?.trim() || null;
+  const prisma = getPrisma();
+  try {
+    await prisma.manualDocument.update({ where: { id: documentId, tenantId, sectorCode: SECTOR }, data: { icon } });
+  } catch (err) {
+    console.error("[atualizarIconeDocumento]", err);
+    return;
+  }
+
+  revalidatePath("/bpo-manual");
+}
+
 export async function excluirDocumentoManual(documentId: string): Promise<void> {
   const ctx = await getAuthContext();
   const { tenantId } = ctx;

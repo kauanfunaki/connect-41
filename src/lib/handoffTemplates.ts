@@ -894,3 +894,59 @@ export function matchSectorsForTemplate(
   }
   return matched;
 }
+
+// Linha de marcador de bloco por setor dentro da descrição — "Demanda fiscal:",
+// "Demanda — Contábil:", "Instruções — Contábil:", "Entrega — Contábil:" etc.
+// Só reconhece esses prefixos (não qualquer linha terminada em ":", que
+// pegaria "Telefone:"/"Observações:" também) e exige que o texto depois do
+// prefixo bata com um setor de verdade do tenant.
+const SECTOR_MARKER_RE = /^(?:Demanda|Instru(?:ção|ções)|Entrega)\s*(?:[—-]\s*)?(.+?):\s*$/i;
+
+function matchSectorLabel(raw: string, sectorOptions: { value: string; label: string }[]): string | null {
+  const norm = normalize(raw);
+  for (const option of sectorOptions) {
+    const code = normalize(option.value);
+    const label = normalize(option.label);
+    if (norm.includes(code) || code.includes(norm) || norm.includes(label) || label.includes(norm)) return option.value;
+  }
+  return null;
+}
+
+// Separa a descrição de um modelo em texto geral + um bloco por setor,
+// disparado pelas linhas "Demanda X:"/"Instruções — X:" que os próprios
+// modelos já usam. Antes essas linhas só serviam pra bater sectorHints e
+// marcar os checkboxes — o texto que vinha depois delas ficava preso no
+// campo "Descrição" geral, nunca chegava no campo de instrução do setor.
+export function splitDescriptionBySector(
+  description: string,
+  sectorOptions: { value: string; label: string }[]
+): { general: string; bySector: Record<string, string> } {
+  const lines = description.split("\n");
+  const blocks: { sectorValue: string | null; lines: string[] }[] = [{ sectorValue: null, lines: [] }];
+
+  for (const line of lines) {
+    const match = line.trim().match(SECTOR_MARKER_RE);
+    const sectorValue = match ? matchSectorLabel(match[1], sectorOptions) : null;
+    if (sectorValue) {
+      blocks.push({ sectorValue, lines: [] });
+      continue; // a própria linha de marcador não entra no texto do setor
+    }
+    blocks[blocks.length - 1].lines.push(line);
+  }
+
+  const general = blocks
+    .filter((b) => b.sectorValue === null)
+    .map((b) => b.lines.join("\n").trim())
+    .filter(Boolean)
+    .join("\n\n");
+
+  const bySector: Record<string, string> = {};
+  for (const b of blocks) {
+    if (!b.sectorValue) continue;
+    const text = b.lines.join("\n").trim();
+    if (!text) continue;
+    bySector[b.sectorValue] = bySector[b.sectorValue] ? `${bySector[b.sectorValue]}\n\n${text}` : text;
+  }
+
+  return { general, bySector };
+}

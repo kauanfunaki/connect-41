@@ -109,7 +109,7 @@ export function PushNotificationToggle() {
         <p className="text-[13px] font-medium text-fg">Notificações no navegador</p>
         <p className="text-[12px] text-fg-muted mt-0.5">
           {status === "unconfigured"
-            ? "Indisponível neste ambiente: faltam as chaves VAPID (NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY e VAPID_SUBJECT). Um administrador precisa configurá-las no servidor."
+            ? "Indisponível neste ambiente: faltam as chaves VAPID (NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY e VAPID_SUBJECT). Um administrador precisa configurá-las no servidor e gerar um novo build — NEXT_PUBLIC_VAPID_PUBLIC_KEY fica embutida no código enviado ao navegador, então só reiniciar o container não é suficiente."
             : status === "denied"
               ? "Bloqueadas nas configurações do navegador."
               : status === "subscribed"

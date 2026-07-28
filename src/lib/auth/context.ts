@@ -1,5 +1,7 @@
+import { cache } from "react";
 import { headers } from "next/headers";
 import type { UserRole } from "@/generated/prisma/enums";
+import { getPrisma } from "@/lib/prisma";
 
 export interface AuthContext {
   userId: string;
@@ -7,17 +9,38 @@ export interface AuthContext {
   homeTenantId: string;
   role: UserRole;
   sectors: string[];
+  // true quando a assinatura do tenant está PAST_DUE/CANCELED — bloqueia
+  // canActOnSector/canManageSector (ver abaixo). Só se aplica a tenants
+  // SELF_SERVICE, mesmo critério do seatLimit em src/lib/subscriptions.ts:
+  // tenants MANAGED têm contrato/cobrança tratados manualmente pela 41 Tech e
+  // nunca devem ser travados por um status que a equipe ainda não atualizou.
+  subscriptionReadOnly: boolean;
 }
+
+// cache() por requisição: getAuthContext() é chamado uma vez por server
+// action/página, mas várias vezes dentro da árvore de uma mesma requisição
+// (layout + página + componentes aninhados) — sem isso cada chamada bateria
+// no banco de novo só pra saber o status da assinatura.
+const getSubscriptionReadOnly = cache(async (tenantId: string): Promise<boolean> => {
+  if (!tenantId) return false;
+  const prisma = getPrisma();
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { managementMode: true } });
+  if (tenant?.managementMode !== "SELF_SERVICE") return false;
+  const subscription = await prisma.subscription.findUnique({ where: { tenantId }, select: { status: true } });
+  return subscription?.status === "PAST_DUE" || subscription?.status === "CANCELED";
+});
 
 export async function getAuthContext(): Promise<AuthContext> {
   const h = await headers();
   const tenantId = h.get("x-tenant-id") ?? "";
+  const subscriptionReadOnly = await getSubscriptionReadOnly(tenantId);
   return {
     userId: h.get("x-user-id") ?? "",
     tenantId,
     homeTenantId: h.get("x-home-tenant-id") ?? tenantId,
     role: (h.get("x-user-role") ?? "SECTOR_USER") as UserRole,
     sectors: h.get("x-user-sectors")?.split(",").filter(Boolean) ?? [],
+    subscriptionReadOnly,
   };
 }
 
@@ -41,12 +64,14 @@ export function canAct(role: UserRole): boolean {
 }
 
 export function canManageSector(ctx: AuthContext, sectorCode: string): boolean {
+  if (ctx.subscriptionReadOnly) return false;
   if (isFullWrite(ctx.role)) return true;
   if (ctx.role === "READONLY") return false;
   return ctx.role === "SECTOR_ADMIN" && ctx.sectors.includes(sectorCode);
 }
 
 export function canActOnSector(ctx: AuthContext, sectorCode: string): boolean {
+  if (ctx.subscriptionReadOnly) return false;
   if (isFullAccess(ctx.role)) return ctx.role !== "READONLY";
   return ctx.sectors.includes(sectorCode);
 }

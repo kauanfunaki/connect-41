@@ -83,6 +83,7 @@ export default async function AppLayout({
         profileName={me?.name ?? "Usuário"}
         profileRoleLabel={ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role}
         profilePhotoUrl={me?.photoUrl ?? null}
+        subscriptionReadOnly={ctx.subscriptionReadOnly}
       >
         <SessionKeeper />
         <MeetingAlertOverlay />

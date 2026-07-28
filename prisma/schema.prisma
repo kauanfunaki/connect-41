@@ -536,6 +536,12 @@ model SubscriptionPlan {
   basePrice      Decimal        @default(0) @db.Decimal(10, 2) // usado quando billingType = FLAT_MONTHLY
   pricePerUser   Decimal?       @db.Decimal(10, 2) // usado quando billingType = PER_USER_MONTHLY
   setupFee       Decimal        @default(0) @db.Decimal(10, 2)
+  // Códigos de módulo (MODULE_CATALOG) que este plano libera — null significa
+  // "sem restrição por plano" (mantém compat com planos criados antes desta
+  // coluna existir). Quando definido, um módulo só fica disponível pro tenant
+  // se: 1) o plano permite E 2) TenantModule/defaultEnabled também permite —
+  // o plano é o teto, TenantModule só pode restringir mais, nunca liberar além dele.
+  allowedModuleCodes Json?
   active         Boolean        @default(true)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
@@ -1014,6 +1020,7 @@ model ManualPage {
   documentId  String
   title       String   @db.VarChar(160)
   content     String?  @db.Text // HTML do RichTextEditor, sanitizado no servidor
+  coverImageUrl String? @db.VarChar(255) // capa estilo Notion, mesmo padrão de upload do logo de empresa
   order       Int      @default(0)
   createdById String
   createdAt   DateTime @default(now())

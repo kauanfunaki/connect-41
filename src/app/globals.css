@@ -13,10 +13,10 @@
 :root {
   color-scheme: light;
 
-  /* marca — azul 41 Tech (âncora #243DA1) */
-  --c41-brand-50:#EEF0FB; --c41-brand-100:#D6DBF4; --c41-brand-200:#AFB9E9;
-  --c41-brand-300:#8090DC; --c41-brand-400:#5468CE; --c41-brand-500:#3450C9;
-  --c41-brand-600:#243DA1; --c41-brand-700:#1B2F80; --c41-brand-800:#152667; --c41-brand-900:#101C4D;
+  /* marca — azul 41 Tech (âncora #1F5EEA, rebrand Connect 41) */
+  --c41-brand-50:#F1F5FE; --c41-brand-100:#DEE8FC; --c41-brand-200:#BED0F9;
+  --c41-brand-300:#8FAFF5; --c41-brand-400:#5C8BF0; --c41-brand-500:#3B73ED;
+  --c41-brand-600:#1F5EEA; --c41-brand-700:#134ECD; --c41-brand-800:#1241A5; --c41-brand-900:#12347D;
 
   /* semânticas */
   --c41-success-dark:#3FCC8F; --c41-success-light:#1E9A63;
@@ -51,7 +51,7 @@
   --c41-fg-muted:        #6B6577;
   --c41-brand:           var(--c41-brand-600);
   --c41-brand-hover:     var(--c41-brand-700);
-  --c41-brand-subtle:    rgba(36,61,161,.08);
+  --c41-brand-subtle:    rgba(31,94,234,.08);
   --c41-on-brand:        #FFFFFF;
   --c41-success:         var(--c41-success-light);
   --c41-success-bg:      rgba(30,154,99,.10);
@@ -61,8 +61,8 @@
   --c41-danger-bg:       rgba(201,58,80,.10);
   --c41-info:            var(--c41-info-light);
   --c41-info-bg:         rgba(44,111,190,.10);
-  --c41-focus-ring:      rgba(36,61,161,.35);
-  --c41-selected-bg:     rgba(36,61,161,.08);
+  --c41-focus-ring:      rgba(31,94,234,.35);
+  --c41-selected-bg:     rgba(31,94,234,.08);
   --c41-disabled-op:     .45;
   --c41-shadow-sm:       0 2px 8px rgba(20,15,30,.07);
   --c41-shadow-lg:       0 20px 48px rgba(20,15,30,.14);
@@ -91,7 +91,7 @@
      que já usava esse degrau por causa desse mesmo problema de visibilidade. */
   --c41-brand:           var(--c41-brand-400);
   --c41-brand-hover:     var(--c41-brand-500);
-  --c41-brand-subtle:    rgba(67,92,201,.20);
+  --c41-brand-subtle:    rgba(92,139,240,.20);
   --c41-on-brand:        #FFFFFF;
   --c41-success:         var(--c41-success-dark);
   --c41-success-bg:      rgba(63,204,143,.14);
@@ -101,8 +101,8 @@
   --c41-danger-bg:       rgba(235,100,120,.14);
   --c41-info:            var(--c41-info-dark);
   --c41-info-bg:         rgba(91,159,227,.14);
-  --c41-focus-ring:      rgba(67,92,201,.45);
-  --c41-selected-bg:     rgba(36,61,161,.22);
+  --c41-focus-ring:      rgba(92,139,240,.45);
+  --c41-selected-bg:     rgba(31,94,234,.22);
   --c41-disabled-op:     .42;
   --c41-shadow-sm:       0 2px 8px rgba(0,0,0,.45);
   --c41-shadow-lg:       0 20px 48px rgba(0,0,0,.55);
@@ -129,7 +129,7 @@
     --c41-fg-muted:        #8B8695;
     --c41-brand:           var(--c41-brand-400);
     --c41-brand-hover:     var(--c41-brand-500);
-    --c41-brand-subtle:    rgba(67,92,201,.20);
+    --c41-brand-subtle:    rgba(92,139,240,.20);
     --c41-on-brand:        #FFFFFF;
     --c41-success:         var(--c41-success-dark);
     --c41-success-bg:      rgba(63,204,143,.14);
@@ -139,8 +139,8 @@
     --c41-danger-bg:       rgba(235,100,120,.14);
     --c41-info:            var(--c41-info-dark);
     --c41-info-bg:         rgba(91,159,227,.14);
-    --c41-focus-ring:      rgba(67,92,201,.45);
-    --c41-selected-bg:     rgba(36,61,161,.22);
+    --c41-focus-ring:      rgba(92,139,240,.45);
+    --c41-selected-bg:     rgba(31,94,234,.22);
     --c41-disabled-op:     .42;
     --c41-shadow-sm:       0 2px 8px rgba(0,0,0,.45);
     --c41-shadow-lg:       0 20px 48px rgba(0,0,0,.55);

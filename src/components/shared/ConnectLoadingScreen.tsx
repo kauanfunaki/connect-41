@@ -102,7 +102,7 @@ export const CONNECT_LOADING_STYLES = `
   --cls-border: var(--c41-border, #E4E1EA);
   --cls-fg: var(--c41-fg, #1C1A22);
   --cls-fg-muted: var(--c41-fg-muted, #8B8695);
-  --cls-primary: var(--c41-brand, #243DA1);
+  --cls-primary: var(--c41-brand, #1F5EEA);
   position: fixed;
   inset: 0;
   width: 100%;
@@ -124,7 +124,7 @@ export const CONNECT_LOADING_STYLES = `
   /* mais claro que o --c41-brand padrão do app (brand-500) — aqui o azul
      precisa se destacar sozinho num fundo escuro, sem texto/borda ao redor
      pra ajudar no contraste, então usamos um degrau mais claro da escala. */
-  --cls-primary: var(--c41-brand-400, #5468CE);
+  --cls-primary: var(--c41-brand-400, #5C8BF0);
 }
 
 .connect-loading-card {

@@ -8,8 +8,9 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { useConfirm } from "@/components/ui/useConfirm";
 import { HANDOFF_PRIORITY_OPTIONS } from "@/lib/handoffs";
-import { HANDOFF_TEMPLATES, renderHandoffTemplate, matchSectorsForTemplate } from "@/lib/handoffTemplates";
+import { HANDOFF_TEMPLATES, renderHandoffTemplate, matchSectorsForTemplate, splitDescriptionBySector } from "@/lib/handoffTemplates";
 import { formatCnpj } from "@/lib/format";
 import { MentionTextarea, type MentionUser } from "@/components/transferencias/MentionTextarea";
 
@@ -51,6 +52,7 @@ export function HandoffForm({
   const [descriptionValue, setDescriptionValue] = useState("");
   const [instructions, setInstructions] = useState<Record<string, string>>({});
   const entityOptions = entityType === "COMPANY" ? companies : people;
+  const { dialog: templateConfirmDialog, requestConfirm: requestTemplateConfirm } = useConfirm();
 
   function toggleSector(code: string, checked: boolean) {
     setSelectedSectors((prev) => (checked ? [...prev, code] : prev.filter((c) => c !== code)));
@@ -66,24 +68,38 @@ export function HandoffForm({
     return { name: found?.name, cnpj: found?.cnpj ? formatCnpj(found.cnpj) : null };
   }
 
-  function applyTemplate(key: string) {
-    if (key && (messageValue.trim() || descriptionValue.trim())) {
-      if (!window.confirm("Já existe texto em Informações gerais ou Descrição. Substituir pelo modelo selecionado?")) {
-        return;
-      }
-    }
+  // Preenche Informações gerais/Descrição/Instrução por setor a partir do
+  // modelo. A descrição do modelo costuma trazer blocos "Demanda X:"/
+  // "Instruções — X:" — splitDescriptionBySector tira esses blocos da
+  // descrição geral e joga cada um na instrução do setor correspondente, em
+  // vez de deixar tudo empilhado só no campo "Descrição".
+  function doApplyTemplate(key: string) {
     setTemplateKey(key);
     if (!key) return;
 
     const rendered = renderHandoffTemplate(key, currentEntity());
-    setMessageValue(rendered.message);
-    setDescriptionValue(rendered.description);
-
-    // Auto-seleciona os setores de destino que o modelo referencia
-    // explicitamente (ex: "Demanda — Fiscal:") — o usuário ainda pode marcar
-    // ou desmarcar manualmente depois, isso só poupa o passo repetitivo.
     const matchedSectors = matchSectorsForTemplate(key, toSectorOptions);
     if (matchedSectors.length > 0) setSelectedSectors(matchedSectors);
+
+    const { general, bySector } = splitDescriptionBySector(rendered.description, toSectorOptions);
+    setMessageValue(rendered.message);
+    setDescriptionValue(general);
+    setInstructions((prev) => ({ ...prev, ...bySector }));
+  }
+
+  function applyTemplate(key: string) {
+    if (key && (messageValue.trim() || descriptionValue.trim())) {
+      requestTemplateConfirm(
+        {
+          title: "Substituir pelo modelo selecionado?",
+          description: "Já existe texto em Informações gerais ou Descrição — isso vai sobrescrever o conteúdo atual.",
+          confirmLabel: "Substituir",
+        },
+        async () => doApplyTemplate(key)
+      );
+      return;
+    }
+    doApplyTemplate(key);
   }
 
   // Se a empresa for trocada depois de um modelo já aplicado, reaplica com a
@@ -93,8 +109,10 @@ export function HandoffForm({
     if (!templateKey) return;
     const found = entityOptions.find((e) => e.id === id);
     const rendered = renderHandoffTemplate(templateKey, { name: found?.name, cnpj: found?.cnpj ? formatCnpj(found.cnpj) : null });
+    const { general, bySector } = splitDescriptionBySector(rendered.description, toSectorOptions);
     setMessageValue(rendered.message);
-    setDescriptionValue(rendered.description);
+    setDescriptionValue(general);
+    setInstructions((prev) => ({ ...prev, ...bySector }));
   }
 
   const destinationOptions = toSectorOptions.filter((s) => s.value !== fromSector);
@@ -281,6 +299,7 @@ export function HandoffForm({
           Cancelar
         </Link>
       </div>
+      {templateConfirmDialog}
     </form>
   );
 }

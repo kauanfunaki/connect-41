@@ -8,6 +8,7 @@ import {
   criarDocumentoManual,
   renomearDocumentoManual,
   excluirDocumentoManual,
+  atualizarIconeDocumento,
   criarPaginaManual,
   atualizarPaginaManual,
   excluirPaginaManual,
@@ -58,10 +59,12 @@ export default async function BpoManualPage() {
           documents={documents.map((d) => ({
             id: d.id,
             title: d.title,
+            icon: d.icon,
             pages: d.pages.map((p) => ({
               id: p.id,
               title: p.title,
               content: p.content,
+              coverImageUrl: p.coverImageUrl,
               createdByName: p.createdBy.name,
               updatedAt: p.updatedAt.toISOString(),
             })),
@@ -69,6 +72,7 @@ export default async function BpoManualPage() {
           createDocumentAction={criarDocumentoManual}
           renameDocumentAction={renomearDocumentoManual}
           deleteDocumentAction={excluirDocumentoManual}
+          updateDocumentIconAction={atualizarIconeDocumento}
           createPageAction={criarPaginaManual}
           updatePageAction={atualizarPaginaManual}
           deletePageAction={excluirPaginaManual}

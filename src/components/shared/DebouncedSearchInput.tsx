@@ -9,14 +9,14 @@ type Props = {
   paramName?: string;
   placeholder?: string;
   className?: string;
-  /** Repassa a variante enxuta do Input — usar quando o campo vive numa barra de ferramentas. */
+  /** Repassa a variante enxuta do Input — default true porque este componente só é usado em barra de ferramentas acima de listagem, nunca em formulário. */
   compact?: boolean;
 };
 
 // Filtra a listagem enquanto o usuário digita (debounce de 350ms), sem
 // precisar apertar Enter — atualiza a URL via router.replace preservando os
 // demais filtros ativos (status, empresa, etc.) já presentes na query string.
-export function DebouncedSearchInput({ paramName = "search", placeholder, className, compact = false }: Props) {
+export function DebouncedSearchInput({ paramName = "search", placeholder, className, compact = true }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();

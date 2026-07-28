@@ -62,6 +62,7 @@ type Props = {
   profileName: string;
   profileRoleLabel: string;
   profilePhotoUrl: string | null;
+  subscriptionReadOnly?: boolean;
   children: React.ReactNode;
 };
 
@@ -79,6 +80,7 @@ export function AppShell({
   profileName,
   profileRoleLabel,
   profilePhotoUrl,
+  subscriptionReadOnly = false,
   children,
 }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -198,6 +200,13 @@ export function AppShell({
             <ProfileMenu name={profileName} roleLabel={profileRoleLabel} photoUrl={profilePhotoUrl} />
           </div>
         </header>
+
+        {subscriptionReadOnly && (
+          <div className="flex-shrink-0 bg-danger/10 border-b border-danger/20 px-4 py-2 text-[13px] text-danger flex items-center justify-center gap-2 text-center">
+            Assinatura pendente — este workspace está em modo somente leitura.{" "}
+            <Link href="/assinatura" className="underline font-medium hover:no-underline">Regularizar assinatura</Link>
+          </div>
+        )}
 
         {/* Page content */}
         <main className="scroll-y flex-1 overflow-y-auto">

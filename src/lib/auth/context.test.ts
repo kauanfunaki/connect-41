@@ -10,8 +10,8 @@ import {
   type AuthContext,
 } from "./context";
 
-function ctx(role: AuthContext["role"], sectors: string[] = []): AuthContext {
-  return { userId: "u1", tenantId: "t1", homeTenantId: "t1", role, sectors };
+function ctx(role: AuthContext["role"], sectors: string[] = [], subscriptionReadOnly = false): AuthContext {
+  return { userId: "u1", tenantId: "t1", homeTenantId: "t1", role, sectors, subscriptionReadOnly };
 }
 
 describe("predicados de papel", () => {
@@ -60,5 +60,11 @@ describe("predicados por setor", () => {
     expect(canViewSector(ctx("READONLY"), "fiscal")).toBe(true);
     expect(canViewSector(ctx("SECTOR_USER", ["dprh"]), "dprh")).toBe(true);
     expect(canViewSector(ctx("SECTOR_USER", ["dprh"]), "fiscal")).toBe(false);
+  });
+
+  it("subscriptionReadOnly bloqueia canActOnSector/canManageSector mesmo pra admin", () => {
+    expect(canActOnSector(ctx("ADMIN", [], true), "fiscal")).toBe(false);
+    expect(canManageSector(ctx("ADMIN", [], true), "fiscal")).toBe(false);
+    expect(canActOnSector(ctx("ADMIN", [], false), "fiscal")).toBe(true);
   });
 });

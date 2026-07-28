@@ -5,6 +5,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import type { ManagementMode, BillingType } from "@/generated/prisma/enums";
+import { Prisma } from "@/generated/prisma/client";
 
 export type PlanoState = { error: string } | null;
 
@@ -39,6 +40,30 @@ export async function criarPlano(_prev: PlanoState, form: FormData): Promise<Pla
 
   revalidatePath("/admin/planos");
   return null;
+}
+
+// null = plano libera todos os módulos do catálogo (sem restrição comercial) —
+// TenantModule continua sendo o ajuste fino por tenant dentro do que o plano permite.
+export async function atualizarModulosPlano(planId: string, moduleCodes: string[] | null): Promise<void> {
+  const ctx = await getAuthContext();
+  if (ctx.role !== "SUPER_ADMIN") return;
+
+  const prisma = getPrisma();
+  await prisma.subscriptionPlan.update({
+    where: { id: planId },
+    data: { allowedModuleCodes: moduleCodes === null ? Prisma.DbNull : moduleCodes },
+  });
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "subscription_plan.update_modules",
+    entityType: "SubscriptionPlan",
+    entityId: planId,
+    metadata: { moduleCodes },
+  });
+
+  revalidatePath("/admin/planos");
 }
 
 export async function alternarPlano(id: string, active: boolean): Promise<void> {

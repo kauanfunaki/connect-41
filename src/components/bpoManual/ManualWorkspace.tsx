@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { ChevronDown, ChevronRight, FileText, Folder, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, FileText, Folder, ImagePlus, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -13,10 +13,11 @@ export type ManualPageData = {
   id: string;
   title: string;
   content: string | null;
+  coverImageUrl: string | null;
   createdByName: string;
   updatedAt: string; // ISO
 };
-export type ManualDocumentData = { id: string; title: string; pages: ManualPageData[] };
+export type ManualDocumentData = { id: string; title: string; icon: string | null; pages: ManualPageData[] };
 
 type Props = {
   canAct: boolean;
@@ -25,10 +26,52 @@ type Props = {
   createDocumentAction: (title: string) => Promise<{ error: string } | { id: string }>;
   renameDocumentAction: (documentId: string, title: string) => Promise<void>;
   deleteDocumentAction: (documentId: string) => Promise<void>;
+  updateDocumentIconAction: (documentId: string, icon: string | null) => Promise<void>;
   createPageAction: (documentId: string, title: string) => Promise<{ error: string } | { id: string }>;
   updatePageAction: (pageId: string, prev: ManualPageState, form: FormData) => Promise<ManualPageState>;
   deletePageAction: (pageId: string) => Promise<void>;
 };
+
+// Paleta curta de ícones comuns pra manual/procedimento — não é um picker de
+// emoji completo (sem lib nova), só o suficiente pra dar identidade visual
+// rápida aos documentos na árvore, no espírito do ícone de página do Notion.
+const ICON_CHOICES = [
+  "📘", "📗", "📙", "📕", "📓", "📒", "🗂️", "🗃️", "📁", "🧾",
+  "🧭", "🛠️", "⚙️", "💼", "📊", "✅", "🔔", "📌", "🚀", "🧩",
+  "🔒", "👥", "💡", "📞", "🧮", "🖥️", "📅", "🎯", "📬", "💰",
+];
+
+function IconPicker({ value, onChange, onClose }: { value: string | null; onChange: (icon: string | null) => void; onClose: () => void }) {
+  return (
+    <>
+      {/* backdrop transparente só pra capturar o clique-fora e fechar o popover */}
+      <div className="fixed inset-0 z-10" onClick={onClose} />
+      <div className="absolute z-20 top-full left-0 mt-1 w-60 rounded-md border border-border bg-surface shadow-lg p-2">
+        <div className="grid grid-cols-6 gap-0.5">
+          {ICON_CHOICES.map((icon) => (
+            <button
+              key={icon}
+              type="button"
+              onClick={() => { onChange(icon); onClose(); }}
+              className={`w-8 h-8 flex items-center justify-center rounded text-[17px] leading-none hover:bg-surface-hover ${value === icon ? "bg-brand-subtle" : ""}`}
+            >
+              {icon}
+            </button>
+          ))}
+        </div>
+        {value && (
+          <button
+            type="button"
+            onClick={() => { onChange(null); onClose(); }}
+            className="mt-1.5 w-full flex items-center gap-1.5 text-[12px] text-fg-muted hover:text-danger px-1.5 py-1 rounded hover:bg-surface-hover transition-colors"
+          >
+            <X size={12} /> Remover ícone
+          </button>
+        )}
+      </div>
+    </>
+  );
+}
 
 // Tipografia do conteúdo em leitura — deliberadamente mais generosa que a do
 // editor (parágrafos espaçados, títulos com respiro), no espírito de uma
@@ -75,6 +118,11 @@ function PageCanvas({
         </button>
       )}
 
+      {page.coverImageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element -- imagem servida por rota própria (src/app/api/manual-covers), não candidata a otimização do next/image
+        <img src={page.coverImageUrl} alt="" className="w-full h-48 object-cover" />
+      )}
+
       <article className={CANVAS_CLASS}>
         <h1 className="text-[32px] font-semibold text-fg tracking-[-0.02em] leading-tight">{page.title}</h1>
         <p className="text-[12px] text-fg-muted mt-2 mb-8">
@@ -111,8 +159,14 @@ function PageEditor({
   onCancel: () => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  // Capa sobe direto pro servidor ao escolher o arquivo (mesmo padrão do logo
+  // de empresa) — não fica pendente do botão "Salvar" do resto da página.
+  const [coverUrl, setCoverUrl] = useState(page.coverImageUrl);
+  const [coverPending, setCoverPending] = useState(false);
+  const [coverError, setCoverError] = useState<string | null>(null);
 
   function save() {
     if (!formRef.current) return;
@@ -125,9 +179,79 @@ function PageEditor({
     });
   }
 
+  async function handleCoverFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setCoverPending(true);
+    setCoverError(null);
+    try {
+      const form = new FormData();
+      form.append("cover", file);
+      const res = await fetch(`/api/bpo-manual/pages/${page.id}/cover`, { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) setCoverError(data.error ?? "Erro ao enviar capa.");
+      else setCoverUrl(data.coverImageUrl);
+    } catch {
+      setCoverError("Erro ao enviar capa.");
+    } finally {
+      setCoverPending(false);
+    }
+  }
+
+  async function handleRemoveCover() {
+    setCoverPending(true);
+    setCoverError(null);
+    try {
+      await fetch(`/api/bpo-manual/pages/${page.id}/cover`, { method: "DELETE" });
+      setCoverUrl(null);
+    } finally {
+      setCoverPending(false);
+    }
+  }
+
   return (
     <form ref={formRef} className="h-full overflow-y-auto scroll-y">
+      <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleCoverFile} />
+
+      {coverUrl ? (
+        <div className="relative group">
+          {/* eslint-disable-next-line @next/next/no-img-element -- imagem servida por rota própria (src/app/api/manual-covers) */}
+          <img src={coverUrl} alt="" className="w-full h-48 object-cover" />
+          <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={coverPending}
+              className="h-7 px-2.5 rounded-md bg-surface/90 border border-border text-[12px] text-fg-secondary hover:text-fg disabled:opacity-60"
+            >
+              Trocar
+            </button>
+            <button
+              type="button"
+              onClick={handleRemoveCover}
+              disabled={coverPending}
+              className="h-7 px-2.5 rounded-md bg-surface/90 border border-border text-[12px] text-fg-secondary hover:text-danger disabled:opacity-60"
+            >
+              Remover
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <div className={CANVAS_CLASS}>
+        {!coverUrl && (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={coverPending}
+            className="inline-flex items-center gap-1.5 text-[12px] text-fg-muted hover:text-fg-secondary mb-3 disabled:opacity-60"
+          >
+            <ImagePlus size={13} /> {coverPending ? "Enviando…" : "Adicionar capa"}
+          </button>
+        )}
+        {coverError && <p className="text-[12px] text-danger mb-2">{coverError}</p>}
+
         {/* eslint-disable-next-line no-restricted-syntax -- título da página, não campo de formulário: precisa ter exatamente a mesma caixa do <h1> do modo leitura pra trocar de modo não deslocar o texto. O Input do DS tem altura, borda e fundo fixos. */}
         <input
           name="title"
@@ -138,7 +262,7 @@ function PageEditor({
         />
         <p className="text-[12px] text-fg-muted mt-2 mb-6">Criado por {page.createdByName}</p>
 
-        <RichTextEditor name="content" defaultValue={page.content ?? ""} />
+        <RichTextEditor name="content" defaultValue={page.content ?? ""} blockDragHandle />
 
         {error && <p className="text-[12px] text-danger mt-2">{error}</p>}
 
@@ -170,7 +294,7 @@ function PageEditor({
 // diferente do modelo anterior de uma lista única de páginas onde só dava
 // pra adicionar mais conteúdo, nunca começar um segundo documento.
 export function ManualWorkspace({
-  canAct, canDelete, documents, createDocumentAction, renameDocumentAction, deleteDocumentAction,
+  canAct, canDelete, documents, createDocumentAction, renameDocumentAction, deleteDocumentAction, updateDocumentIconAction,
   createPageAction, updatePageAction, deletePageAction,
 }: Props) {
   const firstDoc = documents[0];
@@ -186,8 +310,13 @@ export function ManualWorkspace({
   const [newPageTitle, setNewPageTitle] = useState("");
   const [renamingDocId, setRenamingDocId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [iconPickerFor, setIconPickerFor] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const { dialog, requestConfirm } = useConfirm();
+
+  function submitDocumentIcon(docId: string, icon: string | null) {
+    startTransition(() => updateDocumentIconAction(docId, icon));
+  }
 
   const activeDoc = documents.find((d) => d.pages.some((p) => p.id === activePageId));
   const activePage = activeDoc?.pages.find((p) => p.id === activePageId) ?? null;
@@ -303,7 +432,30 @@ export function ManualWorkspace({
                   >
                     {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                   </button>
-                  <Folder size={14} className="text-fg-muted flex-shrink-0" />
+                  <div className="relative flex-shrink-0">
+                    {canAct ? (
+                      <button
+                        type="button"
+                        onClick={() => setIconPickerFor(iconPickerFor === doc.id ? null : doc.id)}
+                        className="w-[18px] h-[18px] flex items-center justify-center rounded text-[14px] leading-none hover:bg-surface-hover"
+                        title="Escolher ícone"
+                        aria-label="Escolher ícone do documento"
+                      >
+                        {doc.icon ?? <Folder size={14} className="text-fg-muted" />}
+                      </button>
+                    ) : doc.icon ? (
+                      <span className="w-[18px] h-[18px] flex items-center justify-center text-[14px] leading-none">{doc.icon}</span>
+                    ) : (
+                      <Folder size={14} className="text-fg-muted" />
+                    )}
+                    {iconPickerFor === doc.id && (
+                      <IconPicker
+                        value={doc.icon}
+                        onChange={(icon) => submitDocumentIcon(doc.id, icon)}
+                        onClose={() => setIconPickerFor(null)}
+                      />
+                    )}
+                  </div>
                   {renamingDocId === doc.id ? (
                     <Input
                       autoFocus

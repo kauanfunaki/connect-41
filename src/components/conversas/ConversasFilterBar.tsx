@@ -69,6 +69,7 @@ export function ConversasFilterBar({ search: initialSearch, status, atendente, d
     <div className="flex flex-wrap items-center gap-3 mb-4">
       <form onSubmit={handleSearchSubmit} className="flex-1 min-w-[220px] max-w-xs">
         <Input
+          compact
           icon={<Search size={14} />}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
