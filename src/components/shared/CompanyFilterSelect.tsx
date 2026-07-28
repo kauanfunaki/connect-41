@@ -6,16 +6,17 @@ type Props = {
   companies: { id: string; name: string }[];
   value: string;
   paramName?: string;
+  className?: string;
 };
 
 // Select que navega direto ao trocar de valor — usado pra filtrar listas
 // (Vagas, Pessoas) por empresa-cliente sem precisar de um botão "Aplicar".
-export function CompanyFilterSelect({ companies, value, paramName = "companyId" }: Props) {
+export function CompanyFilterSelect({ companies, value, paramName = "companyId", className = "w-auto" }: Props) {
   return (
     <Select
       name={paramName}
       defaultValue={value}
-      className="w-auto"
+      className={className}
       onChange={(e) => {
         const url = new URL(window.location.href);
         if (e.target.value) url.searchParams.set(paramName, e.target.value);

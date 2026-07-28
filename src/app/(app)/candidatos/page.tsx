@@ -7,6 +7,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Pagination } from "@/components/shared/Pagination";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { FilterSelect } from "@/components/shared/FilterSelect";
+import { FilterButton, FilterButtonSection } from "@/components/ui/FilterButton";
 import { formatInstantDate } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { inativarCandidatosEmMassa } from "./actions";
@@ -78,6 +79,7 @@ export default async function CandidatosPage({
   ]);
 
   const totalPages = Math.ceil(total / PER_PAGE);
+  const activeFilterCount = (tag ? 1 : 0) + (statusFilter !== "ativos" ? 1 : 0);
 
   function buildUrl(params: Record<string, string | undefined>) {
     const q = new URLSearchParams();
@@ -112,30 +114,39 @@ export default async function CandidatosPage({
           <DebouncedSearchInput placeholder="Buscar por nome, e-mail ou CPF…" />
         </div>
 
-        <FilterSelect
-          paramName="tag"
-          value={tag ?? ""}
-          emptyLabel="Todas as tags"
-          options={allTags.map((t) => ({ id: t.id, name: t.name }))}
-          className="w-44"
-        />
+        <FilterButton activeCount={activeFilterCount} width={240}>
+          {({ close }) => (
+            <div className="space-y-3">
+              <FilterButtonSection label="Tag">
+                <FilterSelect
+                  paramName="tag"
+                  value={tag ?? ""}
+                  emptyLabel="Todas as tags"
+                  options={allTags.map((t) => ({ id: t.id, name: t.name }))}
+                  className="w-full"
+                />
+              </FilterButtonSection>
 
-        <div className="flex items-center gap-1" role="group" aria-label="Filtrar por situação">
-          {STATUS_FILTERS.map((s) => (
-            <Link
-              key={s.value}
-              href={buildUrl({ status: s.value, page: undefined })}
-              aria-current={statusFilter === s.value ? "true" : undefined}
-              className={`inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
-                statusFilter === s.value
-                  ? "bg-surface-2 text-fg border border-border-strong"
-                  : "text-fg-muted hover:text-fg hover:bg-surface-2"
-              }`}
-            >
-              {s.label}
-            </Link>
-          ))}
-        </div>
+              <FilterButtonSection label="Situação">
+                <div className="space-y-0.5" role="group" aria-label="Filtrar por situação">
+                  {STATUS_FILTERS.map((s) => (
+                    <Link
+                      key={s.value}
+                      href={buildUrl({ status: s.value, page: undefined })}
+                      onClick={close}
+                      aria-current={statusFilter === s.value ? "true" : undefined}
+                      className={`block px-2.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
+                        statusFilter === s.value ? "bg-brand-subtle text-brand" : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
+                      }`}
+                    >
+                      {s.label}
+                    </Link>
+                  ))}
+                </div>
+              </FilterButtonSection>
+            </div>
+          )}
+        </FilterButton>
       </div>
 
       {candidatos.length === 0 ? (

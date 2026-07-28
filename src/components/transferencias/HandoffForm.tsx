@@ -13,6 +13,7 @@ import { HANDOFF_PRIORITY_OPTIONS } from "@/lib/handoffs";
 import { HANDOFF_TEMPLATES, renderHandoffTemplate, matchSectorsForTemplate, splitDescriptionBySector } from "@/lib/handoffTemplates";
 import { formatCnpj } from "@/lib/format";
 import { MentionTextarea, type MentionUser } from "@/components/transferencias/MentionTextarea";
+import { SectorAssigneePicker } from "@/components/transferencias/SectorAssigneePicker";
 
 type EntityOption = { id: string; name: string; cnpj?: string | null };
 
@@ -27,6 +28,8 @@ type Props = {
   companies?: EntityOption[];
   people?: EntityOption[];
   mentionUsers?: MentionUser[];
+  /** Membros elegíveis como responsável por setor de destino (setor + admins do tenant). */
+  assigneeOptionsBySector?: Record<string, MentionUser[]>;
 };
 
 // Uma transferência, N setores de destino: informações gerais valem pra todos
@@ -41,6 +44,7 @@ export function HandoffForm({
   companies = [],
   people = [],
   mentionUsers = [],
+  assigneeOptionsBySector = {},
 }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const [entityType, setEntityType] = useState<EntityType>(fixedEntity?.entityType ?? "COMPANY");
@@ -279,6 +283,9 @@ export function HandoffForm({
                 onChange={(e) => setInstructions((prev) => ({ ...prev, [s.value]: e.target.value }))}
                 placeholder={`O que o setor ${s.label} precisa fazer nesta transferência…`}
               />
+              <div className="mt-2">
+                <SectorAssigneePicker name={`assignee_${s.value}`} options={assigneeOptionsBySector[s.value] ?? []} />
+              </div>
             </CampoForm>
           ))}
         </div>

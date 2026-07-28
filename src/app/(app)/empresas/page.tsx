@@ -5,6 +5,7 @@ import { CadastrosTabsBar } from "@/components/shared/CadastrosTabsBar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
+import { FilterButton } from "@/components/ui/FilterButton";
 import { getPrisma } from "@/lib/prisma";
 import { CompanyStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -111,25 +112,33 @@ export default async function EmpresasPage({
           <DebouncedSearchInput placeholder="Buscar por nome ou ID…" />
         </div>
 
-        {/* Status tabs */}
-        <div className="flex items-center gap-1">
-          {FILTER_TABS.map((tab) => {
-            const isActive = tab.value === statusFilter;
-            return (
+        <FilterButton activeCount={statusFilter ? 1 : 0} width={200}>
+          {({ close }) => (
+            <div className="space-y-0.5">
               <Link
-                key={tab.value}
-                href={buildUrl({ status: tab.value, page: "1" })}
-                className={`inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
-                  isActive
-                    ? "bg-surface-2 text-fg border border-border-strong"
-                    : "text-fg-muted hover:text-fg hover:bg-surface-2"
+                href={buildUrl({ status: undefined, page: "1" })}
+                onClick={close}
+                className={`block px-2.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
+                  !statusFilter ? "bg-brand-subtle text-brand" : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
                 }`}
               >
-                {tab.label}
+                Todos os status
               </Link>
-            );
-          })}
-        </div>
+              {FILTER_TABS.map((tab) => (
+                <Link
+                  key={tab.value}
+                  href={buildUrl({ status: tab.value, page: "1" })}
+                  onClick={close}
+                  className={`block px-2.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
+                    tab.value === statusFilter ? "bg-brand-subtle text-brand" : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
+                  }`}
+                >
+                  {tab.label}
+                </Link>
+              ))}
+            </div>
+          )}
+        </FilterButton>
       </div>
 
       {/* Table */}

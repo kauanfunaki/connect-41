@@ -1,16 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ExternalLink, Pencil } from "lucide-react";
+import { Building2, Calendar, ExternalLink, Pencil, Trash2, Users, Video } from "lucide-react";
 import { EditMeetingDialog } from "./EditMeetingDialog";
 import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
+import { initialsFromName } from "@/components/shared/AvatarImage";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { toSaoPauloDateTimeLocal } from "@/lib/agenda";
-import { formatInstantTime } from "@/lib/format";
+import { formatInstantDate, formatInstantTime } from "@/lib/format";
 import { PROVIDER_LABEL, type MeetingActions, type MeetingRow } from "./types";
 
 function formatTime(d: Date): string {
   return formatInstantTime(d, { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatDayLabel(d: Date): string {
+  return formatInstantDate(d, { weekday: "short", day: "2-digit", month: "short" });
 }
 
 type Props = {
@@ -106,38 +111,77 @@ export function MeetingItem({ meeting, actions, variant, top = 0, height = 0 }: 
       {trigger}
 
       {open && (
-        <div className="absolute z-20 top-full left-0 mt-1 w-64 bg-surface-elevated border border-border-strong rounded-xl shadow-[var(--c41-shadow-lg)] p-3 space-y-2">
-          <p className="text-[13px] font-medium text-fg">{meeting.title}</p>
-          <p className="text-[12px] text-fg-muted">
-            {formatTime(start)}–{formatTime(end)} · {PROVIDER_LABEL[meeting.provider]}
-          </p>
-          {meeting.company && (
-            <p className="text-[12px] text-fg-secondary">
-              Empresa:{" "}
-              <span className="text-fg">
-                {meeting.company.name}
-                {meeting.company.externalId && ` · ID ${meeting.company.externalId}`}
+        <div className="absolute z-20 top-full left-0 mt-1.5 w-72 bg-surface-elevated border border-border-strong rounded-xl shadow-[var(--c41-shadow-lg)] overflow-hidden">
+          <div className="h-1" style={{ background: accent }} />
+
+          <div className="p-3.5 space-y-3">
+            <div>
+              <p className="text-[14px] font-semibold text-fg leading-snug">{meeting.title}</p>
+              <span
+                className="inline-flex items-center gap-1 mt-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium"
+                style={{ color: accent, background: isGoogle ? "var(--c41-brand-subtle)" : "rgba(124,92,191,0.14)" }}
+              >
+                {PROVIDER_LABEL[meeting.provider]}
               </span>
-            </p>
-          )}
-          {meeting.clientName && (
-            <p className="text-[12px] text-fg-secondary">
-              Cliente(s): <span className="text-fg">{meeting.clientName}</span>
-            </p>
-          )}
-          {meeting.attendees.length > 0 && (
-            <p className="text-[12px] text-fg-secondary">Com {meeting.attendees.map((a) => a.name).join(", ")}</p>
-          )}
-          <div className="flex items-center gap-3 pt-1 flex-wrap">
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-[12px] text-fg-secondary">
+                <Calendar size={13} className="text-fg-muted flex-shrink-0" />
+                <span className="capitalize">{formatDayLabel(start)}</span>
+                <span className="text-fg-muted">·</span>
+                <span className="tnum">{formatTime(start)}–{formatTime(end)}</span>
+              </div>
+
+              {meeting.company && (
+                <div className="flex items-start gap-2 text-[12px] text-fg-secondary">
+                  <Building2 size={13} className="text-fg-muted flex-shrink-0 mt-0.5" />
+                  <span>
+                    <span className="text-fg font-medium">{meeting.company.name}</span>
+                    {meeting.company.externalId && <span className="text-fg-muted"> · ID {meeting.company.externalId}</span>}
+                  </span>
+                </div>
+              )}
+
+              {meeting.clientName && (
+                <div className="flex items-start gap-2 text-[12px] text-fg-secondary">
+                  <Users size={13} className="text-fg-muted flex-shrink-0 mt-0.5" />
+                  <span className="text-fg">{meeting.clientName}</span>
+                </div>
+              )}
+
+              {meeting.attendees.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="flex -space-x-1.5 flex-shrink-0">
+                    {meeting.attendees.slice(0, 4).map((a) => (
+                      <span
+                        key={a.id}
+                        title={a.name}
+                        className="w-5 h-5 rounded-full bg-brand-subtle text-brand border border-surface-elevated flex items-center justify-center text-[9px] font-semibold"
+                      >
+                        {initialsFromName(a.name)}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-[11.5px] text-fg-muted truncate">
+                    {meeting.attendees.map((a) => a.name).join(", ")}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 px-2.5 py-2 border-t border-border bg-surface-hover/40">
             <a
               href={meeting.meetingUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[12px] text-brand hover:underline"
+              className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[12px] font-medium hover:bg-surface-hover transition-colors"
+              style={{ color: accent }}
             >
-              Entrar <ExternalLink size={12} />
+              <Video size={12} /> Entrar <ExternalLink size={10} />
             </a>
-            <CopyLinkButton url={meeting.meetingUrl} />
+            <CopyLinkButton url={meeting.meetingUrl} className="h-7 px-2.5 rounded-md hover:bg-surface-hover" />
             {canEdit && (
               <button
                 type="button"
@@ -145,7 +189,7 @@ export function MeetingItem({ meeting, actions, variant, top = 0, height = 0 }: 
                   setEditing(true);
                   setOpen(false);
                 }}
-                className="inline-flex items-center gap-1 text-[12px] text-fg-secondary hover:text-fg transition-colors"
+                className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors"
               >
                 <Pencil size={11} /> Editar
               </button>
@@ -158,9 +202,9 @@ export function MeetingItem({ meeting, actions, variant, top = 0, height = 0 }: 
                   () => actions.deleteAction(meeting.id)
                 )
               }
-              className="text-[12px] text-danger hover:underline ml-auto"
+              className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[12px] text-danger hover:bg-danger-bg transition-colors ml-auto"
             >
-              Excluir
+              <Trash2 size={11} /> Excluir
             </button>
           </div>
         </div>

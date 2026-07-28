@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import type { ClientDocumentState } from "@/app/(app)/empresas/[id]/documentos-cliente/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
-import { Textarea } from "@/components/ui/Textarea";
+import { EmailChipsInput } from "@/components/documentosCliente/EmailChipsInput";
 
 type Props = {
   action: (prev: ClientDocumentState, form: FormData) => Promise<ClientDocumentState>;
@@ -35,8 +35,8 @@ export function SendDocumentForm({ action, documentId, companyId, companyEmail }
         label={companyEmail ? `Enviar para ${companyEmail} (e-mail cadastrado da empresa)` : "Empresa sem e-mail cadastrado"}
       />
 
-      <CampoForm label="E-mails avulsos" htmlFor="extraEmails" helper="Um por linha ou separados por vírgula — ex.: contador@empresa.com, socio@empresa.com">
-        <Textarea id="extraEmails" name="extraEmails" placeholder="contador@empresa.com" />
+      <CampoForm label="E-mails avulsos" htmlFor="extraEmails" helper="Digite um e-mail e aperte Enter ou vírgula para adicionar.">
+        <EmailChipsInput id="extraEmails" name="extraEmails" />
       </CampoForm>
 
       <button

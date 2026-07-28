@@ -7,7 +7,11 @@ import type { CalendarDay, MeetingActions, MeetingRow } from "./types";
 
 const START_HOUR = 7;
 const END_HOUR = 21; // exclusivo — última linha é 20:00–21:00
-const ROW_HEIGHT = 48;
+// 48px sobrava tanto que a visão de semana (mesma grade da de dia) só cabia na
+// tela rolando: o eixo inteiro (14h) passava da altura disponível assim que a
+// barra de rolagem horizontal das 7 colunas aparecia. 40px devolve ~112px e a
+// grade cabe sem rolar em qualquer viewport razoável, igual dia/mês.
+const ROW_HEIGHT = 40;
 const HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 const TOTAL_MIN = (END_HOUR - START_HOUR) * 60;
 

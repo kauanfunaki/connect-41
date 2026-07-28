@@ -61,6 +61,29 @@ export async function criarHandoff(
       : await prisma.person.findFirst({ where: { id: entityId, ...scope } });
   if (!entity) return { error: "Empresa/Pessoa não encontrada ou fora do seu escopo." };
 
+  // Responsável por setor (opcional) — mesma regra de elegibilidade de
+  // atribuirResponsavelSetor: precisa ser membro DO PRÓPRIO setor de destino
+  // ou ADMIN/SUPER_ADMIN. Ignora silenciosamente um id inválido/inelegível em
+  // vez de barrar a criação inteira da transferência por causa disso.
+  const assigneeBySector: Record<string, string | null> = {};
+  for (const sectorCode of toSectors) {
+    const raw = (form.get(`assignee_${sectorCode}`) as string)?.trim();
+    if (!raw) {
+      assigneeBySector[sectorCode] = null;
+      continue;
+    }
+    const eligible = await prisma.user.findFirst({
+      where: {
+        id: raw,
+        tenantId: ctx.tenantId,
+        active: true,
+        OR: [{ role: { in: ["SUPER_ADMIN", "ADMIN"] } }, { sectors: { some: { sectorCode } } }],
+      },
+      select: { id: true },
+    });
+    assigneeBySector[sectorCode] = eligible?.id ?? null;
+  }
+
   let handoffId: string;
   try {
     const created = await prisma.handoff.create({
@@ -78,6 +101,7 @@ export async function criarHandoff(
             tenantId: ctx.tenantId,
             sectorCode,
             instruction: (form.get(`instruction_${sectorCode}`) as string)?.trim() || null,
+            assignedTo: assigneeBySector[sectorCode],
           })),
         },
       },
@@ -108,6 +132,21 @@ export async function criarHandoff(
         entityId,
       })
     )
+  );
+
+  // Responsável já definido na criação (mesmo aviso que atribuirResponsavelSetor manda quando isso acontece depois).
+  await Promise.all(
+    Object.entries(assigneeBySector)
+      .filter(([, userId]) => userId && userId !== ctx.userId)
+      .map(([, userId]) =>
+        notifyUser(userId as string, {
+          tenantId: ctx.tenantId,
+          type: "HANDOFF_ASSIGNED",
+          message: "Você foi definido como responsável por uma transferência",
+          entityType,
+          entityId,
+        })
+      )
   );
 
   // "@Nome Completo" em Informações gerais/Descrição/instruções por setor

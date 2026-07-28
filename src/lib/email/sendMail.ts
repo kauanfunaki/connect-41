@@ -42,6 +42,51 @@ async function getTenantTransport(tenantId: string) {
   return { transporter, config };
 }
 
+// Casco HTML compartilhado — table-based (não div solta) pra renderizar
+// direito em clientes de e-mail antigos (Outlook/Gmail via tabela), com
+// <head>/meta de verdade em vez de só um <div> flutuando sem <html>. Usado
+// hoje só no e-mail de Documentos para Cliente (o único reportado como
+// "parecendo amador"); os demais e-mails transacionais deste arquivo ainda
+// usam o template antigo — dá pra migrar depois se fizer sentido.
+function emailShell(bodyHtml: string): string {
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title></title>
+  </head>
+  <body style="margin:0; padding:0; background:#F1F3FA;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F1F3FA;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px; width:100%; background:#FFFFFF; border-radius:12px; overflow:hidden; border:1px solid #E1E5F0; font-family:Arial,Helvetica,sans-serif;">
+            <tr>
+              <td style="background:#1F5EEA; padding:18px 28px;">
+                <span style="font-size:16px; font-weight:700; color:#FFFFFF; letter-spacing:-0.2px;">Connect</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px;">
+                ${bodyHtml}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 28px; border-top:1px solid #E1E5F0; background:#F8F9FC;">
+                <p style="margin:0; font-size:11px; color:#7B81A0; line-height:1.5; font-family:Arial,Helvetica,sans-serif;">
+                  Este e-mail foi enviado automaticamente pelo Connect. Se você não esperava esta mensagem, pode ignorá-la com segurança.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
 export type SendClientDocumentEmailInput = {
   tenantId: string;
   to: string;
@@ -70,26 +115,34 @@ export async function sendClientDocumentEmail(input: SendClientDocumentEmailInpu
   const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
   const viewUrl = `${baseUrl}/d/${input.viewToken}`;
 
-  const html = `
-    <div style="font-family: Arial, Helvetica, sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
-      <p style="font-size: 14px; line-height: 1.5;">Olá,</p>
-      <p style="font-size: 14px; line-height: 1.5;">
-        <strong>${escapeHtml(input.senderName)}</strong> enviou um novo documento para
-        <strong>${escapeHtml(input.companyName)}</strong>:
-      </p>
-      <p style="font-size: 15px; font-weight: 600; margin: 16px 0;">${escapeHtml(input.documentTitle)}</p>
-      <p style="margin: 24px 0;">
-        <a href="${viewUrl}" style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500;">
-          Visualizar documento
-        </a>
-      </p>
-      ${input.hasAttachment ? `<p style="font-size: 13px; color: #555;">O documento inclui um arquivo anexo, disponível para download na página de visualização.</p>` : ""}
-      <p style="font-size: 12px; color: #888; margin-top: 32px;">
-        Se o botão acima não funcionar, copie e cole este link no navegador:<br />
-        <span style="word-break: break-all;">${viewUrl}</span>
-      </p>
-    </div>
-  `;
+  const html = emailShell(`
+    <p style="font-size:14px; line-height:1.6; color:#171A2B; margin:0 0 12px; font-family:Arial,Helvetica,sans-serif;">Olá,</p>
+    <p style="font-size:14px; line-height:1.6; color:#171A2B; margin:0 0 18px; font-family:Arial,Helvetica,sans-serif;">
+      <strong>${escapeHtml(input.senderName)}</strong> enviou um novo documento para
+      <strong>${escapeHtml(input.companyName)}</strong>:
+    </p>
+    <p style="font-size:16px; font-weight:600; color:#171A2B; margin:0 0 22px; padding:14px 16px; background:#F1F3FA; border-radius:8px; border-left:3px solid #1F5EEA; font-family:Arial,Helvetica,sans-serif;">
+      ${escapeHtml(input.documentTitle)}
+    </p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+      <tr>
+        <td style="border-radius:8px; background:#1F5EEA;">
+          <a href="${viewUrl}" style="display:inline-block; padding:12px 24px; font-size:14px; font-weight:600; color:#FFFFFF; text-decoration:none; font-family:Arial,Helvetica,sans-serif;">
+            Visualizar documento
+          </a>
+        </td>
+      </tr>
+    </table>
+    ${
+      input.hasAttachment
+        ? `<p style="font-size:13px; color:#4B5170; margin:0 0 18px; font-family:Arial,Helvetica,sans-serif;">📎 O documento inclui um arquivo anexo, disponível para download na página de visualização.</p>`
+        : ""
+    }
+    <p style="font-size:12px; color:#7B81A0; margin:20px 0 0; padding-top:16px; border-top:1px solid #E1E5F0; font-family:Arial,Helvetica,sans-serif;">
+      Se o botão acima não funcionar, copie e cole este link no navegador:<br />
+      <span style="word-break:break-all; color:#4B5170;">${viewUrl}</span>
+    </p>
+  `);
 
   try {
     await transporter.sendMail({

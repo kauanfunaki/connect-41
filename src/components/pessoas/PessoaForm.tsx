@@ -118,11 +118,14 @@ export function PessoaForm({
   const [state, formAction, isPending] = useActionState(action, null);
   const formRef = useRef<HTMLFormElement>(null);
   const [step, setStep] = useState(0);
+  const isEditing = Boolean(defaultValues?.id);
   // Etapa mais distante já alcançada — permite pular pra frente de volta pra
   // uma etapa já preenchida, mesmo depois de voltar pra uma etapa anterior.
-  const [maxStepReached, setMaxStepReached] = useState(0);
+  // Editando uma pessoa já cadastrada, todos os passos já têm dado — começa
+  // liberado (mesmo critério do EmpresaForm), sem navegação sequencial forçada.
+  // (6 passos nos dois "kind"s — interno/cliente só trocam o rótulo, não a contagem.)
+  const [maxStepReached, setMaxStepReached] = useState(isEditing ? 5 : 0);
   const [stepError, setStepError] = useState<number | null>(null);
-  const isEditing = Boolean(defaultValues?.id);
   const [isInternal, setIsInternal] = useState(defaultValues?.isInternal ?? defaultIsInternal);
   // O tipo acompanha o toggle: marcar/desmarcar "Funcionário interno" troca o
   // formulário na hora, sem precisar sair e voltar.
@@ -213,6 +216,21 @@ export function PessoaForm({
   function back() {
     setStepError(null);
     setStep((s) => Math.max(s - 1, 0));
+  }
+
+  // Salvar direto de qualquer passo (edição): valida todos os passos e, se
+  // algum estiver inválido, navega até ele em vez de submeter — evita ter que
+  // avançar até a revisão só pra salvar uma alteração pontual.
+  function saveNow() {
+    for (let i = 0; i <= lastStep; i++) {
+      if (!validateStep(i)) {
+        setStep(i);
+        setStepError(i);
+        return;
+      }
+    }
+    setStepError(null);
+    formRef.current?.requestSubmit();
   }
 
   const steps = useMemo(
@@ -320,7 +338,15 @@ export function PessoaForm({
             <Checkbox
               id="isInternal-toggle"
               checked={isInternal}
-              onChange={(e) => setIsInternal(e.target.checked)}
+              onChange={(e) => {
+                const nowInternal = e.target.checked;
+                setIsInternal(nowInternal);
+                // Empresa/Cargo/Departamento somem do form pra colaborador interno —
+                // limpa pra não submeter um vínculo de empresa escondido e esquecido.
+                if (nowInternal) {
+                  setValues((prev) => ({ ...prev, currentCompanyId: "", cargoId: "", departmentId: "" }));
+                }
+              }}
               label="Funcionário interno (tem conta de acesso ao Connect)"
             />
           </FormSection>
@@ -367,38 +393,45 @@ export function PessoaForm({
         {/* ── 3. Vínculo profissional / Empresa vinculada ── */}
         <div data-step={2} className={step === 2 ? "" : "hidden"}>
           <FormSection title={stepLabels[2]}>
-            {!showEmployment && (
+            {!showEmployment ? (
               <p className="text-[length:var(--fs-helper)] text-fg-muted">
                 Para contatos de empresas clientes, guardamos só a empresa, o cargo e o departamento —
                 jornada, admissão e folha só existem para colaboradores internos.
               </p>
+            ) : (
+              <p className="text-[length:var(--fs-helper)] text-fg-muted">
+                Colaborador interno é da própria equipe do workspace, não de uma empresa cliente —
+                por isso não pede empresa/cargo/departamento aqui.
+              </p>
             )}
-            <FieldGrid columns="sm:grid-cols-3">
-              <CampoForm label="Empresa" htmlFor="currentCompanyId">
-                <Select id="currentCompanyId" name="currentCompanyId" value={values.currentCompanyId}>
-                  <option value="">Nenhuma</option>
-                  {companies.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </Select>
-              </CampoForm>
-              <CampoForm label="Cargo" htmlFor="cargoId">
-                <Select id="cargoId" name="cargoId" value={values.cargoId} disabled={!companyId}>
-                  <option value="">{companyId ? "Nenhum" : "Selecione uma empresa"}</option>
-                  {cargosDaEmpresa.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </Select>
-              </CampoForm>
-              <CampoForm label="Departamento" htmlFor="departmentId">
-                <Select id="departmentId" name="departmentId" value={values.departmentId} disabled={!companyId}>
-                  <option value="">{companyId ? "Nenhum" : "Selecione uma empresa"}</option>
-                  {departamentosDaEmpresa.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </Select>
-              </CampoForm>
-            </FieldGrid>
+            {!showEmployment && (
+              <FieldGrid columns="sm:grid-cols-3">
+                <CampoForm label="Empresa" htmlFor="currentCompanyId">
+                  <Select id="currentCompanyId" name="currentCompanyId" value={values.currentCompanyId}>
+                    <option value="">Nenhuma</option>
+                    {companies.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </Select>
+                </CampoForm>
+                <CampoForm label="Cargo" htmlFor="cargoId">
+                  <Select id="cargoId" name="cargoId" value={values.cargoId} disabled={!companyId}>
+                    <option value="">{companyId ? "Nenhum" : "Selecione uma empresa"}</option>
+                    {cargosDaEmpresa.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </Select>
+                </CampoForm>
+                <CampoForm label="Departamento" htmlFor="departmentId">
+                  <Select id="departmentId" name="departmentId" value={values.departmentId} disabled={!companyId}>
+                    <option value="">{companyId ? "Nenhum" : "Selecione uma empresa"}</option>
+                    {departamentosDaEmpresa.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </Select>
+                </CampoForm>
+              </FieldGrid>
+            )}
             {showEmployment && (
               <>
                 <FieldGrid columns="sm:grid-cols-3">
@@ -564,9 +597,6 @@ export function PessoaForm({
               items={
                 showEmployment
                   ? [
-                      { label: "Empresa", value: companyLabel },
-                      { label: "Cargo", value: cargoLabel },
-                      { label: "Departamento", value: departmentLabel },
                       { label: "Status", value: STATUS_LABEL[values.employmentStatus as PersonEmploymentStatus] },
                       { label: "Admissão", value: values.admissionDate },
                       { label: "Jornada", value: values.workShift },
@@ -615,9 +645,16 @@ export function PessoaForm({
               Cancelar
             </Link>
             {step < lastStep ? (
-              <Button key="next" type="button" onClick={next}>
-                Avançar →
-              </Button>
+              <>
+                {isEditing && (
+                  <Button type="button" variant="secondary" loading={isPending} onClick={saveNow}>
+                    Salvar alterações
+                  </Button>
+                )}
+                <Button key="next" type="button" onClick={next}>
+                  Avançar →
+                </Button>
+              </>
             ) : (
               <Button key="submit" type="submit" loading={isPending}>
                 Confirmar e salvar

@@ -8,6 +8,7 @@ import { criarHandoff } from "../actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
+import { getSectorUsers } from "@/lib/sectorUsers";
 import type { EntityType } from "@/generated/prisma/enums";
 
 export default async function NovoHandoffPage({
@@ -43,6 +44,13 @@ export default async function NovoHandoffPage({
     select: { id: true, name: true },
   });
 
+  // Elegíveis a responsável por setor de destino — não dá pra saber de
+  // antemão quais setores o usuário vai marcar no form, então busca pra
+  // todos os setores possíveis (mesma lista que os checkboxes de destino usam).
+  const assigneeOptionsBySector = Object.fromEntries(
+    await Promise.all(allSectorOptions.map(async (s) => [s.value, await getSectorUsers(ctx.tenantId, s.value)] as const))
+  );
+
   // Modo 1: entidade pré-selecionada (veio do botão "Solicitar Handoff" na ficha)
   if (entityId) {
     const entityType = entityTypeRaw === "PERSON" ? "PERSON" : "COMPANY";
@@ -66,6 +74,7 @@ export default async function NovoHandoffPage({
           cancelHref={backHref}
           fixedEntity={{ entityType: entityType as EntityType, entityId: entity.id, entityName: entity.name, entityCnpj }}
           mentionUsers={mentionUsers}
+          assigneeOptionsBySector={assigneeOptionsBySector}
         />
       </FormShell>
     );
@@ -95,6 +104,7 @@ export default async function NovoHandoffPage({
         companies={companies}
         people={people}
         mentionUsers={mentionUsers}
+        assigneeOptionsBySector={assigneeOptionsBySector}
       />
     </FormShell>
   );

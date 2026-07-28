@@ -12,6 +12,7 @@ import { CadastrosTabsBar } from "@/components/shared/CadastrosTabsBar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
+import { FilterButton } from "@/components/ui/FilterButton";
 import { formatInstantDate } from "@/lib/format";
 import { inativarPessoasEmMassa } from "./actions";
 
@@ -99,12 +100,24 @@ export default async function PessoasPage({
           <DebouncedSearchInput placeholder="Buscar por nome…" />
         </div>
 
-        {!isInternos && <CompanyFilterSelect companies={companies} value={companyId ?? ""} />}
-
-        {!isInternos && companyId && (
-          <Link href={buildUrl({ companyId: undefined, page: "1" })} className="text-[12px] text-fg-muted hover:text-fg">
-            Limpar
-          </Link>
+        {!isInternos && (
+          <FilterButton activeCount={companyId ? 1 : 0} width={260}>
+            {({ close }) => (
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold text-fg-muted uppercase tracking-[0.04em] px-1">Empresa</p>
+                <CompanyFilterSelect companies={companies} value={companyId ?? ""} className="w-full" />
+                {companyId && (
+                  <Link
+                    href={buildUrl({ companyId: undefined, page: "1" })}
+                    onClick={close}
+                    className="block text-[12px] text-fg-muted hover:text-fg px-1"
+                  >
+                    Limpar filtro
+                  </Link>
+                )}
+              </div>
+            )}
+          </FilterButton>
         )}
       </div>
 
