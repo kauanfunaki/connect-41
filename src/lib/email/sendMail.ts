@@ -58,10 +58,18 @@ async function getTenantTransport(tenantId: string) {
 //     Connect" lado a lado), independente do CSS.
 //   - Outlook.com descarta @media (prefers-color-scheme), então a troca por
 //     tema nunca chegava a acontecer.
-// Por isso: uma logo só (a clara, wordmark navy sobre fundo claro), cores de
-// fundo repetidas no atributo `bgcolor` além do CSS (o motor do Word ignora
-// background em CSS mas respeita o atributo), e `color-scheme: light` no meta
-// pra o Apple Mail não auto-inverter um layout que assume fundo claro.
+// Por isso: uma logo só, cores de fundo repetidas no atributo `bgcolor` além
+// do CSS (o motor do Word ignora background em CSS mas respeita o atributo), e
+// `color-scheme: light` no meta pra o Apple Mail não auto-inverter um layout
+// que assume fundo claro.
+//
+// O `bgcolor`, porém, NÃO segura o "Alternar tela de fundo" do Outlook: esse
+// botão inverte a mensagem inteira à força. E o Outlook não inverte imagens —
+// então o wordmark navy sumia sobre o card escurecido. Daí a logo do e-mail
+// ser um asset próprio (`logo-horizontal-email.png`, wordmark no azul da
+// marca em vez de navy): fica legível tanto no fundo claro quanto no escuro,
+// sem depender de detectar o tema. Não dá pra reaproveitar as variantes
+// light/dark do app aqui — cada uma só funciona num dos dois fundos.
 function emailShell(bodyHtml: string, eyebrow: string): string {
   const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
   const year = new Date().getFullYear();
@@ -95,7 +103,7 @@ function emailShell(bodyHtml: string, eyebrow: string): string {
           <table role="presentation" width="520" cellpadding="0" cellspacing="0" class="email-card" bgcolor="#FFFFFF" style="max-width:520px; width:100%; border-radius:14px; overflow:hidden; border:1px solid; background-color:#FFFFFF; font-family:Arial,Helvetica,sans-serif;">
             <tr>
               <td align="center" class="email-card" bgcolor="#FFFFFF" style="padding:36px 28px 20px; background-color:#FFFFFF;">
-                <img src="${baseUrl}/brand/logo-horizontal-light.png" height="28" alt="Connect" style="display:block; border:0; outline:none; height:28px; width:auto;" />
+                <img src="${baseUrl}/brand/logo-horizontal-email.png" height="28" alt="Connect" style="display:block; border:0; outline:none; height:28px; width:auto;" />
                 <p class="email-text-muted" style="margin:12px 0 0; font-size:13px; font-family:Arial,Helvetica,sans-serif;">${escapeHtml(eyebrow)}</p>
               </td>
             </tr>
@@ -177,13 +185,17 @@ export async function sendClientDocumentEmail(input: SendClientDocumentEmailInpu
       </tr>
     </table>
 
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <!-- Espaçamento como linha vazia, não margin: o motor do Word (Outlook
+           desktop) ignora margin em <table>, e era por isso que o botão ficava
+           colado no cartão do documento. -->
+      <tr><td height="24" style="height:24px; line-height:24px; font-size:0;">&nbsp;</td></tr>
       <tr>
         <td align="center">
           <!--[if mso]>
           <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${viewUrl}" style="height:44px;v-text-anchor:middle;width:220px;" arcsize="18%" strokecolor="#1F5EEA" fillcolor="#1F5EEA">
           <w:anchorlock/>
-          <center style="color:#FFFFFF;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;">Visualizar documento</center>
+          <center style="color:#FFFFFF; mso-style-textfill-fill-color:#FFFFFF; mso-style-textfill-fill-alpha:100%; font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;">Visualizar documento</center>
           </v:roundrect>
           <![endif]-->
           <!--[if !mso]><!-->
@@ -191,7 +203,7 @@ export async function sendClientDocumentEmail(input: SendClientDocumentEmailInpu
             <tr>
               <td align="center" bgcolor="#1F5EEA" style="border-radius:8px; background-color:#1F5EEA;">
                 <a href="${viewUrl}" style="display:inline-block; padding:13px 30px; font-family:Arial,Helvetica,sans-serif; font-size:14px; font-weight:bold; line-height:18px; color:#FFFFFF; text-decoration:none; border-radius:8px;">
-                  <span style="color:#FFFFFF; text-decoration:none;">Visualizar documento</span>
+                  <span style="color:#FFFFFF; mso-style-textfill-fill-color:#FFFFFF; mso-style-textfill-fill-alpha:100%; text-decoration:none;">Visualizar documento</span>
                 </a>
               </td>
             </tr>
@@ -199,6 +211,7 @@ export async function sendClientDocumentEmail(input: SendClientDocumentEmailInpu
           <!--<![endif]-->
         </td>
       </tr>
+      <tr><td height="24" style="height:24px; line-height:24px; font-size:0;">&nbsp;</td></tr>
     </table>
     ${
       input.hasAttachment
