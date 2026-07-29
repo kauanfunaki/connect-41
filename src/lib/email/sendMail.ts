@@ -49,12 +49,12 @@ async function getTenantTransport(tenantId: string) {
 // os demais e-mails transacionais deste arquivo ainda usam o template antigo
 // — dá pra migrar depois se fizer sentido.
 //
-// A logo vai como um único <img> PNG (public/brand/logo-horizontal-light.png,
-// rasterizado do SVG oficial) — não SVG (suporte inconsistente entre
-// clientes de e-mail, principalmente Outlook desktop) e não ícone+texto
-// separados (pedido explícito: a logo por inteiro, não uma reconstrução em
-// HTML). `eyebrow` é o subtítulo abaixo da logo (varia por e-mail — aqui só
-// "Compartilhamento de documentos" usa isso).
+// Alguns clientes de e-mail (ex.: várias combinações de Gmail/Outlook.com)
+// reescrevem cores no dark mode por conta própria e IGNORAM color-scheme —
+// então em vez de brigar pra forçar modo claro, o template assume os dois
+// temas de verdade: classes CSS com @media (prefers-color-scheme: dark)
+// trocam fundo/texto/borda, e a logo tem duas versões (clara/escura) que se
+// alternam por CSS, igual ao <html class="dark"> do app em si.
 function emailShell(bodyHtml: string, eyebrow: string): string {
   const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
   const year = new Date().getFullYear();
@@ -65,45 +65,59 @@ function emailShell(bodyHtml: string, eyebrow: string): string {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <!-- Trava o e-mail em modo claro — sem isso, Apple Mail/Outlook.com/Gmail
-         reinterpretam as cores em dark mode e invertem fundo branco -> escuro,
-         o que também derruba o fundo do botão (vira link azul sublinhado cru). -->
-    <meta name="color-scheme" content="light" />
-    <meta name="supported-color-schemes" content="light" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="supported-color-schemes" content="light dark" />
     <title></title>
-    <!--[if mso]>
     <style type="text/css">
-      table { border-collapse: collapse; }
-      .fallback-font { font-family: Arial, Helvetica, sans-serif !important; }
-    </style>
-    <![endif]-->
-    <style type="text/css">
-      :root { color-scheme: light; supported-color-schemes: light; }
       body, table, td, p, a, span { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+      .logo-dark { display: none; }
+      .email-bg { background: #F1F3FA; }
+      .email-card { background: #FFFFFF; border-color: #E4E8F2 !important; }
+      .email-divider { border-color: #EDF0F7 !important; }
+      .email-footer { background: #FAFBFD; }
+      .email-text { color: #171A2B !important; }
+      .email-text-strong { color: #0B1F42 !important; }
+      .email-text-muted { color: #7B81A0 !important; }
+      .email-text-faint { color: #9AA1B5 !important; }
+      .doc-card { background: #F7F9FC !important; border-color: #E9ECF5 !important; }
+      @media (prefers-color-scheme: dark) {
+        .logo-light { display: none; }
+        .logo-dark { display: block !important; }
+        .email-bg { background: #0F1015 !important; }
+        .email-card { background: #1A1B22 !important; border-color: #2A2C36 !important; }
+        .email-divider { border-color: #2A2C36 !important; }
+        .email-footer { background: #16171D !important; }
+        .email-text { color: #F1F2F6 !important; }
+        .email-text-strong { color: #F5F7FB !important; }
+        .email-text-muted { color: #9098AC !important; }
+        .email-text-faint { color: #767C90 !important; }
+        .doc-card { background: #22242C !important; border-color: #2E3038 !important; }
+      }
     </style>
   </head>
-  <body style="margin:0; padding:0; background:#F1F3FA;" bgcolor="#F1F3FA">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F1F3FA;" bgcolor="#F1F3FA">
+  <body class="email-bg" style="margin:0; padding:0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="email-bg">
       <tr>
         <td align="center" style="padding:40px 16px;">
-          <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px; width:100%; background:#FFFFFF; border-radius:14px; overflow:hidden; border:1px solid #E4E8F2; font-family:Arial,Helvetica,sans-serif;" bgcolor="#FFFFFF">
+          <table role="presentation" width="520" cellpadding="0" cellspacing="0" class="email-card" style="max-width:520px; width:100%; border-radius:14px; overflow:hidden; border:1px solid; font-family:Arial,Helvetica,sans-serif;">
             <tr>
-              <td align="center" style="padding:36px 28px 20px;" bgcolor="#FFFFFF">
-                <img src="${baseUrl}/brand/logo-horizontal-light.png" height="28" alt="Connect" style="display:block; border:0; outline:none; height:28px; width:auto;" />
-                <p style="margin:12px 0 0; font-size:13px; color:#7B81A0 !important; font-family:Arial,Helvetica,sans-serif;">${escapeHtml(eyebrow)}</p>
+              <td align="center" class="email-card" style="padding:36px 28px 20px;">
+                <img src="${baseUrl}/brand/logo-horizontal-light.png" height="28" alt="Connect" class="logo-light" style="display:block; border:0; outline:none; height:28px; width:auto;" />
+                <img src="${baseUrl}/brand/logo-horizontal-dark.png" height="28" alt="Connect" class="logo-dark" style="display:none; border:0; outline:none; height:28px; width:auto;" />
+                <p class="email-text-muted" style="margin:12px 0 0; font-size:13px; font-family:Arial,Helvetica,sans-serif;">${escapeHtml(eyebrow)}</p>
               </td>
             </tr>
             <tr>
-              <td style="padding:0 28px;" bgcolor="#FFFFFF"><div style="border-top:1px solid #EDF0F7; line-height:1px; font-size:1px;">&nbsp;</div></td>
+              <td class="email-card" style="padding:0 28px;"><div class="email-divider" style="border-top:1px solid; line-height:1px; font-size:1px;">&nbsp;</div></td>
             </tr>
             <tr>
-              <td style="padding:28px;" bgcolor="#FFFFFF">
+              <td class="email-card" style="padding:28px;">
                 ${bodyHtml}
               </td>
             </tr>
             <tr>
-              <td align="center" style="padding:18px 28px; border-top:1px solid #EDF0F7; background:#FAFBFD;" bgcolor="#FAFBFD">
-                <p style="margin:0; font-size:11px; color:#9AA1B5 !important; line-height:1.6; font-family:Arial,Helvetica,sans-serif;">
+              <td align="center" class="email-footer email-divider" style="padding:18px 28px; border-top:1px solid;">
+                <p class="email-text-faint" style="margin:0; font-size:11px; line-height:1.6; font-family:Arial,Helvetica,sans-serif;">
                   Este e-mail foi enviado automaticamente pelo Connect.<br />
                   © ${year} Connect
                 </p>
@@ -145,24 +159,28 @@ export async function sendClientDocumentEmail(input: SendClientDocumentEmailInpu
   const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
   const viewUrl = `${baseUrl}/d/${input.viewToken}`;
 
+  // Botão como imagem pré-renderizada (texto "Visualizar documento" já
+  // desenhado em branco sobre azul), não texto real dentro de <a>/<span> —
+  // alguns clientes de e-mail recolorem texto de link à força mesmo com
+  // color:#fff!important em cascata dupla, e imagem não sofre essa reescrita.
+  // O <v:roundrect> é só o fallback do Outlook desktop (não renderiza <img>
+  // com cantos arredondados direito via VML de qualquer forma).
   const html = emailShell(
     `
-    <p style="font-size:14px; line-height:1.6; color:#171A2B !important; margin:0 0 16px; font-family:Arial,Helvetica,sans-serif;">
+    <p class="email-text" style="font-size:14px; line-height:1.6; margin:0 0 16px; font-family:Arial,Helvetica,sans-serif;">
       <strong>${escapeHtml(input.senderName)}</strong> compartilhou um novo documento com você em nome de
       <strong>${escapeHtml(input.companyName)}</strong>.
     </p>
 
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px; background:#F7F9FC; border:1px solid #E9ECF5; border-radius:10px;" bgcolor="#F7F9FC">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="doc-card" style="margin:0 0 24px; border:1px solid; border-radius:10px;">
       <tr>
         <td style="padding:16px 18px;">
-          <p style="margin:0 0 4px; font-size:10.5px; font-weight:700; letter-spacing:0.06em; color:#8993AD !important; text-transform:uppercase; font-family:Arial,Helvetica,sans-serif;">Documento</p>
-          <p style="margin:0 0 3px; font-size:15px; font-weight:700; color:#0B1F42 !important; font-family:Arial,Helvetica,sans-serif;">${escapeHtml(input.documentTitle)}</p>
-          <p style="margin:0; font-size:12.5px; color:#7B81A0 !important; font-family:Arial,Helvetica,sans-serif;">Disponível para visualização</p>
+          <p class="email-text-muted" style="margin:0 0 4px; font-size:10.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; font-family:Arial,Helvetica,sans-serif;">Documento</p>
+          <p class="email-text-strong" style="margin:0 0 3px; font-size:15px; font-weight:700; font-family:Arial,Helvetica,sans-serif;">${escapeHtml(input.documentTitle)}</p>
+          <p class="email-text-muted" style="margin:0; font-size:12.5px; font-family:Arial,Helvetica,sans-serif;">Disponível para visualização</p>
         </td>
       </tr>
     </table>
-
-    <div style="height:8px; line-height:8px; font-size:8px;">&nbsp;</div>
 
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
       <tr>
@@ -174,30 +192,24 @@ export async function sendClientDocumentEmail(input: SendClientDocumentEmailInpu
           </v:roundrect>
           <![endif]-->
           <!--[if !mso]><!-->
-          <table role="presentation" cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="border-radius:8px; background:#1F5EEA;" bgcolor="#1F5EEA">
-                <a href="${viewUrl}" style="display:inline-block; padding:12px 28px; font-size:14px; font-weight:600; text-decoration:none !important; font-family:Arial,Helvetica,sans-serif; border-radius:8px; background:#1F5EEA;">
-                  <span style="color:#FFFFFF !important; mso-line-height-rule:exactly;">Visualizar documento</span>
-                </a>
-              </td>
-            </tr>
-          </table>
+          <a href="${viewUrl}" style="display:inline-block; text-decoration:none; line-height:0;">
+            <img src="${baseUrl}/brand/email-btn-view-document.png" width="220" height="40" alt="Visualizar documento" style="display:block; border:0; outline:none;" />
+          </a>
           <!--<![endif]-->
         </td>
       </tr>
     </table>
     ${
       input.hasAttachment
-        ? `<p style="font-size:12px; color:#8993AD !important; margin:0 0 24px; text-align:center; font-family:Arial,Helvetica,sans-serif;">📎 Este documento possui um arquivo anexo, disponível para download na página de visualização.</p>`
+        ? `<p class="email-text-muted" style="font-size:12px; margin:0 0 24px; text-align:center; font-family:Arial,Helvetica,sans-serif;">📎 Este documento possui um arquivo anexo, disponível para download na página de visualização.</p>`
         : ""
     }
 
-    <div style="border-top:1px solid #EDF0F7; margin:0 0 18px; line-height:1px; font-size:1px;">&nbsp;</div>
+    <div class="email-divider" style="border-top:1px solid; margin:0 0 18px; line-height:1px; font-size:1px;">&nbsp;</div>
 
-    <p style="font-size:12px; color:#7B81A0 !important; margin:0; font-family:Arial,Helvetica,sans-serif;">
+    <p class="email-text-muted" style="font-size:12px; margin:0; font-family:Arial,Helvetica,sans-serif;">
       Caso o botão não funcione, copie e cole este link no navegador:<br />
-      <span style="word-break:break-all; color:#4B5170 !important;">${viewUrl}</span>
+      <span style="word-break:break-all;">${viewUrl}</span>
     </p>
   `,
     "Compartilhamento de documentos"
