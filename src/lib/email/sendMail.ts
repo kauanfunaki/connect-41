@@ -59,44 +59,59 @@ function emailShell(bodyHtml: string, eyebrow: string): string {
   const year = new Date().getFullYear();
 
   return `<!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <!-- Trava o e-mail em modo claro — sem isso, Apple Mail/Outlook.com/Gmail
+         reinterpretam as cores em dark mode e invertem fundo branco -> escuro,
+         o que também derruba o fundo do botão (vira link azul sublinhado cru). -->
+    <meta name="color-scheme" content="light" />
+    <meta name="supported-color-schemes" content="light" />
     <title></title>
+    <!--[if mso]>
+    <style type="text/css">
+      table { border-collapse: collapse; }
+      .fallback-font { font-family: Arial, Helvetica, sans-serif !important; }
+    </style>
+    <![endif]-->
+    <style type="text/css">
+      :root { color-scheme: light; supported-color-schemes: light; }
+      body, table, td, p, a, span { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    </style>
   </head>
-  <body style="margin:0; padding:0; background:#F1F3FA;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F1F3FA;">
+  <body style="margin:0; padding:0; background:#F1F3FA;" bgcolor="#F1F3FA">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F1F3FA;" bgcolor="#F1F3FA">
       <tr>
         <td align="center" style="padding:40px 16px;">
-          <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px; width:100%; background:#FFFFFF; border-radius:14px; overflow:hidden; border:1px solid #E4E8F2; font-family:Arial,Helvetica,sans-serif;">
+          <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px; width:100%; background:#FFFFFF; border-radius:14px; overflow:hidden; border:1px solid #E4E8F2; font-family:Arial,Helvetica,sans-serif;" bgcolor="#FFFFFF">
             <tr>
-              <td align="center" style="padding:36px 28px 20px;">
+              <td align="center" style="padding:36px 28px 20px;" bgcolor="#FFFFFF">
                 <table role="presentation" cellpadding="0" cellspacing="0">
                   <tr>
                     <td style="vertical-align:middle; padding-right:8px;">
-                      <img src="${baseUrl}/icons/icon-192.png" width="26" height="26" alt="" style="display:block; border-radius:7px;" />
+                      <img src="${baseUrl}/icons/icon-192.png" width="26" height="26" alt="Connect" style="display:block; border-radius:7px; border:0; outline:none;" />
                     </td>
                     <td style="vertical-align:middle;">
-                      <span style="font-size:19px; font-weight:700; color:#0B1F42; letter-spacing:-0.3px;">Connect</span>
+                      <span style="font-size:19px; font-weight:700; color:#0B1F42 !important; letter-spacing:-0.3px;">Connect</span>
                     </td>
                   </tr>
                 </table>
-                <p style="margin:10px 0 0; font-size:13px; color:#7B81A0; font-family:Arial,Helvetica,sans-serif;">${escapeHtml(eyebrow)}</p>
+                <p style="margin:10px 0 0; font-size:13px; color:#7B81A0 !important; font-family:Arial,Helvetica,sans-serif;">${escapeHtml(eyebrow)}</p>
               </td>
             </tr>
             <tr>
-              <td style="padding:0 28px;"><div style="border-top:1px solid #EDF0F7;"></div></td>
+              <td style="padding:0 28px;" bgcolor="#FFFFFF"><div style="border-top:1px solid #EDF0F7; line-height:1px; font-size:1px;">&nbsp;</div></td>
             </tr>
             <tr>
-              <td style="padding:28px;">
+              <td style="padding:28px;" bgcolor="#FFFFFF">
                 ${bodyHtml}
               </td>
             </tr>
             <tr>
-              <td align="center" style="padding:18px 28px; border-top:1px solid #EDF0F7; background:#FAFBFD;">
-                <p style="margin:0; font-size:11px; color:#9AA1B5; line-height:1.6; font-family:Arial,Helvetica,sans-serif;">
+              <td align="center" style="padding:18px 28px; border-top:1px solid #EDF0F7; background:#FAFBFD;" bgcolor="#FAFBFD">
+                <p style="margin:0; font-size:11px; color:#9AA1B5 !important; line-height:1.6; font-family:Arial,Helvetica,sans-serif;">
                   Este e-mail foi enviado automaticamente pelo Connect.<br />
                   © ${year} Connect
                 </p>
@@ -140,17 +155,17 @@ export async function sendClientDocumentEmail(input: SendClientDocumentEmailInpu
 
   const html = emailShell(
     `
-    <p style="font-size:14px; line-height:1.6; color:#171A2B; margin:0 0 16px; font-family:Arial,Helvetica,sans-serif;">
+    <p style="font-size:14px; line-height:1.6; color:#171A2B !important; margin:0 0 16px; font-family:Arial,Helvetica,sans-serif;">
       <strong>${escapeHtml(input.senderName)}</strong> compartilhou um novo documento com você em nome de
       <strong>${escapeHtml(input.companyName)}</strong>.
     </p>
 
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px; background:#F7F9FC; border:1px solid #E9ECF5; border-radius:10px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px; background:#F7F9FC; border:1px solid #E9ECF5; border-radius:10px;" bgcolor="#F7F9FC">
       <tr>
         <td style="padding:16px 18px;">
-          <p style="margin:0 0 4px; font-size:10.5px; font-weight:700; letter-spacing:0.06em; color:#8993AD; text-transform:uppercase; font-family:Arial,Helvetica,sans-serif;">Documento</p>
-          <p style="margin:0 0 3px; font-size:15px; font-weight:700; color:#0B1F42; font-family:Arial,Helvetica,sans-serif;">${escapeHtml(input.documentTitle)}</p>
-          <p style="margin:0; font-size:12.5px; color:#7B81A0; font-family:Arial,Helvetica,sans-serif;">Disponível para visualização</p>
+          <p style="margin:0 0 4px; font-size:10.5px; font-weight:700; letter-spacing:0.06em; color:#8993AD !important; text-transform:uppercase; font-family:Arial,Helvetica,sans-serif;">Documento</p>
+          <p style="margin:0 0 3px; font-size:15px; font-weight:700; color:#0B1F42 !important; font-family:Arial,Helvetica,sans-serif;">${escapeHtml(input.documentTitle)}</p>
+          <p style="margin:0; font-size:12.5px; color:#7B81A0 !important; font-family:Arial,Helvetica,sans-serif;">Disponível para visualização</p>
         </td>
       </tr>
     </table>
@@ -158,29 +173,37 @@ export async function sendClientDocumentEmail(input: SendClientDocumentEmailInpu
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
       <tr>
         <td align="center">
+          <!--[if mso]>
+          <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${viewUrl}" style="height:44px;v-text-anchor:middle;width:220px;" arcsize="18%" strokecolor="#1F5EEA" fillcolor="#1F5EEA">
+          <w:anchorlock/>
+          <center style="color:#FFFFFF;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;">Visualizar documento</center>
+          </v:roundrect>
+          <![endif]-->
+          <!--[if !mso]><!-->
           <table role="presentation" cellpadding="0" cellspacing="0">
             <tr>
-              <td style="border-radius:8px; background:#1F5EEA;">
-                <a href="${viewUrl}" style="display:inline-block; padding:12px 28px; font-size:14px; font-weight:600; color:#FFFFFF; text-decoration:none; font-family:Arial,Helvetica,sans-serif;">
+              <td style="border-radius:8px; background:#1F5EEA;" bgcolor="#1F5EEA">
+                <a href="${viewUrl}" style="display:inline-block; padding:12px 28px; font-size:14px; font-weight:600; color:#FFFFFF !important; text-decoration:none !important; font-family:Arial,Helvetica,sans-serif; border-radius:8px; background:#1F5EEA;">
                   Visualizar documento
                 </a>
               </td>
             </tr>
           </table>
+          <!--<![endif]-->
         </td>
       </tr>
     </table>
     ${
       input.hasAttachment
-        ? `<p style="font-size:12px; color:#8993AD; margin:0 0 24px; text-align:center; font-family:Arial,Helvetica,sans-serif;">📎 Este documento possui um arquivo anexo, disponível para download na página de visualização.</p>`
+        ? `<p style="font-size:12px; color:#8993AD !important; margin:0 0 24px; text-align:center; font-family:Arial,Helvetica,sans-serif;">📎 Este documento possui um arquivo anexo, disponível para download na página de visualização.</p>`
         : ""
     }
 
-    <div style="border-top:1px solid #EDF0F7; margin:0 0 18px;"></div>
+    <div style="border-top:1px solid #EDF0F7; margin:0 0 18px; line-height:1px; font-size:1px;">&nbsp;</div>
 
-    <p style="font-size:12px; color:#7B81A0; margin:0; font-family:Arial,Helvetica,sans-serif;">
+    <p style="font-size:12px; color:#7B81A0 !important; margin:0; font-family:Arial,Helvetica,sans-serif;">
       Caso o botão não funcione, copie e cole este link no navegador:<br />
-      <span style="word-break:break-all; color:#4B5170;">${viewUrl}</span>
+      <span style="word-break:break-all; color:#4B5170 !important;">${viewUrl}</span>
     </p>
   `,
     "Compartilhamento de documentos"
