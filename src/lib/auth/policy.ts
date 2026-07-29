@@ -16,6 +16,7 @@ import { canWrite, isFullWrite, type AuthContext } from "@/lib/auth/context";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reservado para a versão restrita por setor (ver comentário abaixo)
 export function canWriteEntity(ctx: AuthContext, _entitySectors: string[] = []): boolean {
+  if (ctx.subscriptionReadOnly) return false;
   return canWrite(ctx.role);
 
   // Versão restrita por setor (trocar quando/se for decidido apertar):
