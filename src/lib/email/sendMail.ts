@@ -49,11 +49,12 @@ async function getTenantTransport(tenantId: string) {
 // os demais e-mails transacionais deste arquivo ainda usam o template antigo
 // — dá pra migrar depois se fizer sentido.
 //
-// A logo vai como <img> (ícone PNG real de public/icons, não SVG — suporte a
-// SVG inline é inconsistente entre clientes de e-mail, principalmente
-// Outlook desktop) + "Connect" como texto de verdade ao lado, não texto
-// dentro de imagem. `eyebrow` é o subtítulo abaixo da logo (varia por
-// e-mail — aqui só "Compartilhamento de documentos" usa isso).
+// A logo vai como um único <img> PNG (public/brand/logo-horizontal-light.png,
+// rasterizado do SVG oficial) — não SVG (suporte inconsistente entre
+// clientes de e-mail, principalmente Outlook desktop) e não ícone+texto
+// separados (pedido explícito: a logo por inteiro, não uma reconstrução em
+// HTML). `eyebrow` é o subtítulo abaixo da logo (varia por e-mail — aqui só
+// "Compartilhamento de documentos" usa isso).
 function emailShell(bodyHtml: string, eyebrow: string): string {
   const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
   const year = new Date().getFullYear();
@@ -88,17 +89,8 @@ function emailShell(bodyHtml: string, eyebrow: string): string {
           <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px; width:100%; background:#FFFFFF; border-radius:14px; overflow:hidden; border:1px solid #E4E8F2; font-family:Arial,Helvetica,sans-serif;" bgcolor="#FFFFFF">
             <tr>
               <td align="center" style="padding:36px 28px 20px;" bgcolor="#FFFFFF">
-                <table role="presentation" cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td style="vertical-align:middle; padding-right:8px;">
-                      <img src="${baseUrl}/icons/icon-192.png" width="26" height="26" alt="Connect" style="display:block; border-radius:7px; border:0; outline:none;" />
-                    </td>
-                    <td style="vertical-align:middle;">
-                      <span style="font-size:19px; font-weight:700; color:#0B1F42 !important; letter-spacing:-0.3px;">Connect</span>
-                    </td>
-                  </tr>
-                </table>
-                <p style="margin:10px 0 0; font-size:13px; color:#7B81A0 !important; font-family:Arial,Helvetica,sans-serif;">${escapeHtml(eyebrow)}</p>
+                <img src="${baseUrl}/brand/logo-horizontal-light.png" height="28" alt="Connect" style="display:block; border:0; outline:none; height:28px; width:auto;" />
+                <p style="margin:12px 0 0; font-size:13px; color:#7B81A0 !important; font-family:Arial,Helvetica,sans-serif;">${escapeHtml(eyebrow)}</p>
               </td>
             </tr>
             <tr>
@@ -170,6 +162,8 @@ export async function sendClientDocumentEmail(input: SendClientDocumentEmailInpu
       </tr>
     </table>
 
+    <div style="height:8px; line-height:8px; font-size:8px;">&nbsp;</div>
+
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
       <tr>
         <td align="center">
@@ -183,8 +177,8 @@ export async function sendClientDocumentEmail(input: SendClientDocumentEmailInpu
           <table role="presentation" cellpadding="0" cellspacing="0">
             <tr>
               <td style="border-radius:8px; background:#1F5EEA;" bgcolor="#1F5EEA">
-                <a href="${viewUrl}" style="display:inline-block; padding:12px 28px; font-size:14px; font-weight:600; color:#FFFFFF !important; text-decoration:none !important; font-family:Arial,Helvetica,sans-serif; border-radius:8px; background:#1F5EEA;">
-                  Visualizar documento
+                <a href="${viewUrl}" style="display:inline-block; padding:12px 28px; font-size:14px; font-weight:600; text-decoration:none !important; font-family:Arial,Helvetica,sans-serif; border-radius:8px; background:#1F5EEA;">
+                  <span style="color:#FFFFFF !important; mso-line-height-rule:exactly;">Visualizar documento</span>
                 </a>
               </td>
             </tr>
