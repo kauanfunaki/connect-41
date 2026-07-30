@@ -597,6 +597,7 @@ model User {
   activities                 Activity[]
   handoffs                   Handoff[]              @relation("HandoffRequester")
   handoffSectorsAssigned     HandoffSector[]        @relation("HandoffSectorAssignee")
+  handoffSectorAssignees     HandoffSectorAssignee[]
   handoffViews               HandoffView[]
   notifications              Notification[]
   pushSubscriptions          PushSubscription[]
@@ -2274,10 +2275,31 @@ model HandoffSector {
   tenant   Tenant  @relation(fields: [tenantId], references: [id])
   handoff  Handoff @relation(fields: [handoffId], references: [id], onDelete: Cascade)
   assignee User?   @relation("HandoffSectorAssignee", fields: [assignedTo], references: [id])
+  assignees HandoffSectorAssignee[]
 
   @@unique([handoffId, sectorCode])
   @@index([tenantId, sectorCode, status])
   @@map("handoff_sectors")
+}
+
+// Responsáveis de um setor dentro de uma transferência. Substitui o
+// `HandoffSector.assignedTo` (um único usuário), que não dava conta de repassar
+// a demanda a mais de uma pessoa do mesmo setor. Mesmo formato de
+// PipelineItemAssignee.
+//
+// `assignedTo` foi MANTIDO por enquanto e segue populado com o primeiro
+// responsável: é o que os dados antigos usam e o que a migration copia para cá.
+// Remover exige backfill verificado + limpar as leituras restantes.
+model HandoffSectorAssignee {
+  handoffSectorId String
+  userId          String
+  createdAt       DateTime @default(now())
+
+  handoffSector HandoffSector @relation(fields: [handoffSectorId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([handoffSectorId, userId])
+  @@map("handoff_sector_assignees")
 }
 
 // Registro de quem visualizou o detalhe de uma transferência — @@unique

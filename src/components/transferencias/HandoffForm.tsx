@@ -72,11 +72,20 @@ export function HandoffForm({
     return { name: found?.name, cnpj: found?.cnpj ? formatCnpj(found.cnpj) : null };
   }
 
-  // Preenche Informações gerais/Descrição/Instrução por setor a partir do
-  // modelo. A descrição do modelo costuma trazer blocos "Demanda X:"/
-  // "Instruções — X:" — splitDescriptionBySector tira esses blocos da
-  // descrição geral e joga cada um na instrução do setor correspondente, em
-  // vez de deixar tudo empilhado só no campo "Descrição".
+  // O modelo preenche APENAS Descrição e as instruções por setor.
+  // "Informações adicionais" (campo `message`) ficou reservado pro que o
+  // solicitante quiser acrescentar por conta própria, então nunca é
+  // sobrescrito por modelo — antes ele recebia o resumo do template e o
+  // usuário não tinha onde escrever algo além do padrão.
+  //
+  // splitDescriptionBySector tira da descrição os blocos "Demanda X:"/
+  // "Instruções — X:" e joga cada um na instrução do setor correspondente; o
+  // que sobra (o modelo inteiro menos a parte de cada setor) fica na Descrição,
+  // junto do resumo que antes ia pra Informações gerais.
+  function composeDescription(message: string, general: string): string {
+    return [message.trim(), general.trim()].filter(Boolean).join("\n\n");
+  }
+
   function doApplyTemplate(key: string) {
     setTemplateKey(key);
     if (!key) return;
@@ -86,17 +95,16 @@ export function HandoffForm({
     if (matchedSectors.length > 0) setSelectedSectors(matchedSectors);
 
     const { general, bySector } = splitDescriptionBySector(rendered.description, toSectorOptions);
-    setMessageValue(rendered.message);
-    setDescriptionValue(general);
+    setDescriptionValue(composeDescription(rendered.message, general));
     setInstructions((prev) => ({ ...prev, ...bySector }));
   }
 
   function applyTemplate(key: string) {
-    if (key && (messageValue.trim() || descriptionValue.trim())) {
+    if (key && descriptionValue.trim()) {
       requestTemplateConfirm(
         {
           title: "Substituir pelo modelo selecionado?",
-          description: "Já existe texto em Informações gerais ou Descrição — isso vai sobrescrever o conteúdo atual.",
+          description: "Já existe texto em Descrição — isso vai sobrescrever o conteúdo atual. Informações adicionais não é afetado.",
           confirmLabel: "Substituir",
         },
         async () => doApplyTemplate(key)
@@ -114,8 +122,7 @@ export function HandoffForm({
     const found = entityOptions.find((e) => e.id === id);
     const rendered = renderHandoffTemplate(templateKey, { name: found?.name, cnpj: found?.cnpj ? formatCnpj(found.cnpj) : null });
     const { general, bySector } = splitDescriptionBySector(rendered.description, toSectorOptions);
-    setMessageValue(rendered.message);
-    setDescriptionValue(general);
+    setDescriptionValue(composeDescription(rendered.message, general));
     setInstructions((prev) => ({ ...prev, ...bySector }));
   }
 
@@ -127,7 +134,7 @@ export function HandoffForm({
       <CampoForm
         label="Modelo de solicitação"
         htmlFor="handoffTemplate"
-        helper="Preenche Informações gerais e Descrição com o padrão de texto (e os setores de destino, quando o modelo já indica quais) — os placeholders entre colchetes ficam para você completar."
+        helper="Preenche a Descrição e as instruções por setor com o padrão de texto (e os setores de destino, quando o modelo já indica quais) — os placeholders entre colchetes ficam para você completar."
       >
         <Select id="handoffTemplate" value={templateKey} onChange={(e) => applyTemplate(e.target.value)}>
           <option value="">Nenhum (escrever manualmente)</option>
@@ -240,15 +247,15 @@ export function HandoffForm({
       </CampoForm>
 
       <CampoForm
-        label="Informações gerais"
+        label="Informações adicionais"
         htmlFor="message"
-        helper="Resumo válido para todos os setores selecionados."
+        helper="Opcional — só se você quiser acrescentar algo além do que já está na Descrição."
       >
         <Textarea
           id="message"
           name="message"
           rows={3}
-          placeholder="Resumo curto para quem vai receber a transferência…"
+          placeholder="Algo a acrescentar além do modelo? (opcional)"
           value={messageValue}
           onChange={(e) => setMessageValue(e.target.value)}
         />

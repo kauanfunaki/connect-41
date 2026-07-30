@@ -14,13 +14,15 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
 
 type Status = "unsupported" | "unconfigured" | "loading" | "subscribed" | "unsubscribed" | "denied";
 
-// A chave pública VAPID é embutida no bundle em tempo de build. Ausente = o
-// ambiente nunca vai conseguir assinar push, então o estado é detectado na
-// montagem: antes o botão "Ativar" aparecia normalmente e só depois do clique
-// dizia que não estava configurado, o que parecia bug do botão.
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-
-export function PushNotificationToggle() {
+// A chave chega por prop, vinda de um Server Component (getVapidPublicKey em
+// src/lib/vapid.ts) — e NÃO de process.env.NEXT_PUBLIC_* lido aqui. Ler aqui
+// significa inlinar em tempo de build, e o build roda no Docker sem as env
+// vars do EasyPanel; ver o comentário em src/lib/vapid.ts. Ausente = o
+// ambiente não consegue assinar push, e o estado é detectado na montagem:
+// antes o botão "Ativar" aparecia normalmente e só depois do clique dizia que
+// não estava configurado, o que parecia bug do botão.
+export function PushNotificationToggle({ publicKey }: { publicKey: string | null }) {
+  const VAPID_PUBLIC_KEY = publicKey;
   const [status, setStatus] = useState<Status>("loading");
   const [error, setError] = useState<string | null>(null);
 
@@ -53,7 +55,7 @@ export function PushNotificationToggle() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [VAPID_PUBLIC_KEY]);
 
   async function handleSubscribe() {
     setError(null);
@@ -109,7 +111,7 @@ export function PushNotificationToggle() {
         <p className="text-[13px] font-medium text-fg">Notificações no navegador</p>
         <p className="text-[12px] text-fg-muted mt-0.5">
           {status === "unconfigured"
-            ? "Indisponível neste ambiente: faltam as chaves VAPID (NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY e VAPID_SUBJECT). Um administrador precisa configurá-las no servidor e gerar um novo build — NEXT_PUBLIC_VAPID_PUBLIC_KEY fica embutida no código enviado ao navegador, então só reiniciar o container não é suficiente."
+            ? "Indisponível neste ambiente: faltam as chaves VAPID (VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY e VAPID_SUBJECT). Um administrador precisa configurá-las nas variáveis de ambiente do servidor e reiniciar — não é necessário rebuild."
             : status === "denied"
               ? "Bloqueadas nas configurações do navegador."
               : status === "subscribed"

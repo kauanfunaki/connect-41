@@ -111,7 +111,7 @@ export function MeetingItem({ meeting, actions, variant, top = 0, height = 0 }: 
       {trigger}
 
       {open && (
-        <div className="absolute z-20 top-full left-0 mt-1.5 w-72 bg-surface-elevated border border-border-strong rounded-xl shadow-[var(--c41-shadow-lg)] overflow-hidden">
+        <div className="absolute z-20 top-full left-0 mt-1.5 w-80 bg-surface-elevated border border-border-strong rounded-xl shadow-[var(--c41-shadow-lg)] overflow-hidden">
           <div className="h-1" style={{ background: accent }} />
 
           <div className="p-3.5 space-y-3">
@@ -171,7 +171,10 @@ export function MeetingItem({ meeting, actions, variant, top = 0, height = 0 }: 
             </div>
           </div>
 
-          <div className="flex items-center gap-1 px-2.5 py-2 border-t border-border bg-surface-hover/40">
+          {/* flex-wrap, não uma linha só: com Entrar + Copiar link + Editar +
+              Excluir os rótulos passam da largura do popover e o último ficava
+              cortado (só a lixeira e o "E" de Excluir apareciam). */}
+          <div className="flex flex-wrap items-center gap-1 px-2.5 py-2 border-t border-border bg-surface-hover/40">
             <a
               href={meeting.meetingUrl}
               target="_blank"
@@ -202,7 +205,7 @@ export function MeetingItem({ meeting, actions, variant, top = 0, height = 0 }: 
                   () => actions.deleteAction(meeting.id)
                 )
               }
-              className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[12px] text-danger hover:bg-danger-bg transition-colors ml-auto"
+              className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[12px] text-danger hover:bg-danger-bg transition-colors"
             >
               <Trash2 size={11} /> Excluir
             </button>

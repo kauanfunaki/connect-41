@@ -2,8 +2,10 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import type { PessoaState } from "@/app/(app)/pessoas/actions";
-import { PersonEmploymentStatus } from "@/generated/prisma/enums";
+import { useRouter } from "next/navigation";
+import type { PessoaCreateState } from "@/app/(app)/pessoas/actions";
+import { PersonEmploymentStatus, type DocumentCategory } from "@/generated/prisma/enums";
+import { CATEGORY_LABEL, CATEGORY_OPTIONS } from "@/lib/document-categories";
 import { CustomFieldsSection, type CustomFieldInput } from "@/components/shared/CustomFieldsSection";
 import { FormSection } from "@/components/ui/FormSection";
 import { FieldGrid } from "@/components/ui/FieldGrid";
@@ -85,7 +87,9 @@ type CargoOption = { id: string; name: string; companyId: string };
 type DepartmentOption = { id: string; name: string; companyId: string };
 
 type Props = {
-  action: (prev: PessoaState, form: FormData) => Promise<PessoaState>;
+  // Aceita tanto atualizarPessoa (ActionState) quanto criarPessoa, que devolve
+  // `createdId` a mais pra disparar o upload dos documentos represados.
+  action: (prev: PessoaCreateState, form: FormData) => Promise<PessoaCreateState>;
   cancelHref: string;
   defaultValues?: PessoaDefaultValues;
   companies: CompanyOption[];
@@ -116,9 +120,71 @@ export function PessoaForm({
   defaultIsInternal = false,
 }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
+  const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [step, setStep] = useState(0);
   const isEditing = Boolean(defaultValues?.id);
+
+  // Documentos represados: no cadastro novo não existe entityId antes de a
+  // pessoa ser criada, então os File ficam em memória e sobem logo depois que
+  // criarPessoa devolve o id (ver o comentário em criarPessoa).
+  const pendingFileRef = useRef<HTMLInputElement>(null);
+  const [pendingCategory, setPendingCategory] = useState<DocumentCategory>("OUTRO");
+  const [pendingDocs, setPendingDocs] = useState<{ file: File; category: DocumentCategory }[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  function addPendingDoc() {
+    const file = pendingFileRef.current?.files?.[0];
+    if (!file) return;
+    setPendingDocs((prev) => [...prev, { file, category: pendingCategory }]);
+    if (pendingFileRef.current) pendingFileRef.current.value = "";
+  }
+
+  // criarPessoa não redireciona mais — devolve createdId pra que os documentos
+  // represados subam antes de sair da tela. A pessoa já existe neste ponto, então
+  // falha de upload não desfaz o cadastro: avisa e mantém o usuário aqui, com os
+  // arquivos ainda na lista pra tentar de novo ou seguir sem eles.
+  const createdId = state && "createdId" in state ? state.createdId : null;
+  const uploadStartedRef = useRef(false);
+
+  useEffect(() => {
+    if (!createdId || uploadStartedRef.current) return;
+    uploadStartedRef.current = true;
+
+    (async () => {
+      if (pendingDocs.length === 0) {
+        router.push(`/pessoas/${createdId}`);
+        return;
+      }
+      setIsUploading(true);
+      try {
+        for (const doc of pendingDocs) {
+          const body = new FormData();
+          body.set("file", doc.file);
+          body.set("category", doc.category);
+          body.set("entityType", "PERSON");
+          body.set("entityId", createdId);
+          const res = await fetch("/api/documents", { method: "POST", body });
+          if (!res.ok) {
+            const payload = await res.json().catch(() => null);
+            throw new Error(payload?.error ?? "Erro ao enviar documento.");
+          }
+        }
+        router.push(`/pessoas/${createdId}`);
+      } catch (err) {
+        setUploadError(
+          `A pessoa foi cadastrada, mas houve erro ao enviar os documentos: ${
+            err instanceof Error ? err.message : "erro desconhecido"
+          }. Você pode anexá-los na ficha dela.`
+        );
+        setStep(4);
+        uploadStartedRef.current = false;
+      } finally {
+        setIsUploading(false);
+      }
+    })();
+  }, [createdId, pendingDocs, router]);
   // Etapa mais distante já alcançada — permite pular pra frente de volta pra
   // uma etapa já preenchida, mesmo depois de voltar pra uma etapa anterior.
   // Editando uma pessoa já cadastrada, todos os passos já têm dado — começa
@@ -298,7 +364,7 @@ export function PessoaForm({
         {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
         <input type="hidden" name="isInternal" value={String(isInternal)} />
 
-        {state?.error && (
+        {state && "error" in state && (
           <p className="mb-4 text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-lg px-3 py-2">
             {state.error}
           </p>
@@ -556,10 +622,62 @@ export function PessoaForm({
                 A lista de documentos e o upload ficam na ficha da pessoa, na aba própria de Documentos.
               </p>
             ) : (
-              <p className="text-[length:var(--fs-body)] text-fg-muted italic">
-                O upload de documentos fica disponível depois que a pessoa é criada (a etapa final deste
-                cadastro salva o registro; o upload é feito em seguida, na ficha da pessoa).
-              </p>
+              <div className="space-y-3">
+                <p className="text-[length:var(--fs-body)] text-fg-secondary">
+                  Os arquivos ficam aguardando aqui e são enviados assim que a pessoa for criada, na
+                  última etapa.
+                </p>
+
+                <div className="flex items-end gap-3 flex-wrap">
+                  <CampoForm label="Arquivo" htmlFor="pendingDocFile">
+                    <input
+                      id="pendingDocFile"
+                      ref={pendingFileRef}
+                      type="file"
+                      className="text-[13px] text-fg-secondary file:mr-3 file:h-8 file:px-3 file:rounded-md file:border file:border-border-strong file:bg-surface-hover file:text-fg file:text-[12px] file:font-medium hover:file:border-brand file:cursor-pointer"
+                    />
+                  </CampoForm>
+                  <CampoForm label="Categoria" htmlFor="pendingDocCategory">
+                    <Select
+                      id="pendingDocCategory"
+                      value={pendingCategory}
+                      onChange={(e) => setPendingCategory(e.target.value as DocumentCategory)}
+                      className="w-44"
+                    >
+                      {CATEGORY_OPTIONS.map((c) => (
+                        <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>
+                      ))}
+                    </Select>
+                  </CampoForm>
+                  <Button type="button" variant="secondary" onClick={addPendingDoc}>
+                    Adicionar
+                  </Button>
+                </div>
+
+                {pendingDocs.length === 0 ? (
+                  <p className="text-[13px] text-fg-muted">Nenhum documento adicionado ainda.</p>
+                ) : (
+                  <ul className="border border-border rounded-md divide-y divide-border">
+                    {pendingDocs.map((d, i) => (
+                      <li key={i} className="flex items-center justify-between gap-3 px-3 py-2">
+                        <span className="text-[13px] text-fg truncate">
+                          {d.file.name}
+                          <span className="text-fg-muted"> · {CATEGORY_LABEL[d.category]}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setPendingDocs((prev) => prev.filter((_, j) => j !== i))}
+                          className="text-[12px] text-danger hover:underline flex-shrink-0"
+                        >
+                          Remover
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {uploadError && <p className="text-[12px] text-danger">{uploadError}</p>}
+              </div>
             )}
           </FormSection>
         </div>
@@ -656,7 +774,9 @@ export function PessoaForm({
                 </Button>
               </>
             ) : (
-              <Button key="submit" type="submit" loading={isPending}>
+              // Segue em "carregando" durante o upload dos documentos
+              // represados — a navegação pra ficha só acontece depois deles.
+              <Button key="submit" type="submit" loading={isPending || isUploading}>
                 Confirmar e salvar
               </Button>
             )}

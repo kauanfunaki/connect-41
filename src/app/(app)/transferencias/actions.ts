@@ -65,23 +65,26 @@ export async function criarHandoff(
   // atribuirResponsavelSetor: precisa ser membro DO PRÓPRIO setor de destino
   // ou ADMIN/SUPER_ADMIN. Ignora silenciosamente um id inválido/inelegível em
   // vez de barrar a criação inteira da transferência por causa disso.
-  const assigneeBySector: Record<string, string | null> = {};
+  // Multi-seleção: o picker envia um hidden por responsável, daí getAll.
+  const assigneesBySector: Record<string, string[]> = {};
   for (const sectorCode of toSectors) {
-    const raw = (form.get(`assignee_${sectorCode}`) as string)?.trim();
-    if (!raw) {
-      assigneeBySector[sectorCode] = null;
+    const raw = (form.getAll(`assignee_${sectorCode}`) as string[])
+      .map((v) => v.trim())
+      .filter(Boolean);
+    if (raw.length === 0) {
+      assigneesBySector[sectorCode] = [];
       continue;
     }
-    const eligible = await prisma.user.findFirst({
+    const eligible = await prisma.user.findMany({
       where: {
-        id: raw,
+        id: { in: raw },
         tenantId: ctx.tenantId,
         active: true,
         OR: [{ role: { in: ["SUPER_ADMIN", "ADMIN"] } }, { sectors: { some: { sectorCode } } }],
       },
       select: { id: true },
     });
-    assigneeBySector[sectorCode] = eligible?.id ?? null;
+    assigneesBySector[sectorCode] = eligible.map((u) => u.id);
   }
 
   let handoffId: string;
@@ -101,7 +104,12 @@ export async function criarHandoff(
             tenantId: ctx.tenantId,
             sectorCode,
             instruction: (form.get(`instruction_${sectorCode}`) as string)?.trim() || null,
-            assignedTo: assigneeBySector[sectorCode],
+            // assignedTo (coluna antiga, um só) segue preenchido com o primeiro
+            // da lista enquanto as leituras dele não forem todas migradas.
+            assignedTo: assigneesBySector[sectorCode][0] ?? null,
+            assignees: {
+              create: assigneesBySector[sectorCode].map((userId) => ({ userId })),
+            },
           })),
         },
       },
@@ -134,22 +142,26 @@ export async function criarHandoff(
     )
   );
 
-  // Responsável já definido na criação (mesmo aviso que atribuirResponsavelSetor manda quando isso acontece depois).
+  // Responsáveis já definidos na criação (mesmo aviso que atribuirResponsavelSetor
+  // manda quando isso acontece depois). Com multi-seleção são vários por setor, e
+  // a mesma pessoa pode responder por mais de um setor — daí o Set, pra não
+  // mandar duas notificações iguais.
+  const notifiedAssignees = new Set(
+    Object.values(assigneesBySector).flat().filter((userId) => userId !== ctx.userId)
+  );
   await Promise.all(
-    Object.entries(assigneeBySector)
-      .filter(([, userId]) => userId && userId !== ctx.userId)
-      .map(([, userId]) =>
-        notifyUser(userId as string, {
-          tenantId: ctx.tenantId,
-          type: "HANDOFF_ASSIGNED",
-          message: "Você foi definido como responsável por uma transferência",
-          entityType,
-          entityId,
-        })
-      )
+    [...notifiedAssignees].map((userId) =>
+      notifyUser(userId, {
+        tenantId: ctx.tenantId,
+        type: "HANDOFF_ASSIGNED",
+        message: "Você foi definido como responsável por uma transferência",
+        entityType,
+        entityId,
+      })
+    )
   );
 
-  // "@Nome Completo" em Informações gerais/Descrição/instruções por setor
+  // "@Nome Completo" em Informações adicionais/Descrição/instruções por setor
   // vira uma notificação de verdade pra pessoa referenciada — não é só texto
   // solto (ver src/lib/handoffMentions.ts e MentionTextarea).
   const instructionTexts = toSectors.map((sectorCode) => form.get(`instruction_${sectorCode}`) as string | null);
@@ -267,7 +279,16 @@ export async function atribuirResponsavelSetor(
   }
 
   try {
-    await prisma.handoffSector.update({ where: { id: sector.id }, data: { assignedTo: userId } });
+    // Mantém as duas representações em sincronia: a coluna antiga (um só) e a
+    // tabela de responsáveis. Esta action continua sendo de troca única — quem
+    // define vários é o formulário de criação — então a lista é substituída.
+    await prisma.$transaction([
+      prisma.handoffSector.update({ where: { id: sector.id }, data: { assignedTo: userId } }),
+      prisma.handoffSectorAssignee.deleteMany({ where: { handoffSectorId: sector.id } }),
+      ...(userId
+        ? [prisma.handoffSectorAssignee.create({ data: { handoffSectorId: sector.id, userId } })]
+        : []),
+    ]);
   } catch (err) {
     console.error("[atribuirResponsavelSetor]", err);
     return { error: "Erro ao atribuir responsável. Tente novamente." };

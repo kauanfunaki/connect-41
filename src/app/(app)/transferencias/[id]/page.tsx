@@ -37,7 +37,13 @@ export default async function HandoffDetailPage({
       requester: { select: { name: true } },
       sectors: {
         orderBy: { createdAt: "asc" },
-        include: { assignee: { select: { id: true, name: true } } },
+        include: {
+          assignee: { select: { id: true, name: true } },
+          assignees: {
+            orderBy: { createdAt: "asc" },
+            include: { user: { select: { id: true, name: true } } },
+          },
+        },
       },
     },
   });
@@ -120,7 +126,7 @@ export default async function HandoffDetailPage({
       </Card>
 
       <Card className="p-5 mb-4">
-        <h2 className="text-[14px] font-semibold text-fg mb-2">Informações gerais</h2>
+        <h2 className="text-[14px] font-semibold text-fg mb-2">Informações adicionais</h2>
         {handoff.message ? (
           <p className="text-[length:var(--fs-body)] text-fg-secondary whitespace-pre-wrap">{handoff.message}</p>
         ) : (
@@ -138,7 +144,12 @@ export default async function HandoffDetailPage({
       <div className="space-y-3 mb-4">
         {handoff.sectors.map((s) => {
           const canManage = canManageSector(ctx, s.sectorCode);
-          const canUpdateStatus = (canManage || s.assignedTo === ctx.userId) && ctx.role !== "READONLY";
+          // Qualquer um dos responsáveis pode mexer no status, não só o da
+          // coluna antiga `assignedTo` (que guarda apenas o primeiro).
+          const assigneeIds = s.assignees.map((a) => a.user.id);
+          const isAssignee = assigneeIds.includes(ctx.userId) || s.assignedTo === ctx.userId;
+          const canUpdateStatus = (canManage || isAssignee) && ctx.role !== "READONLY";
+          const assigneeNames = s.assignees.map((a) => a.user.name);
           return (
             <Card key={s.id} className="p-5">
               <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
@@ -162,16 +173,30 @@ export default async function HandoffDetailPage({
                 <p className="text-[length:var(--fs-body)] text-fg-muted italic mb-3">Sem instrução específica para este setor.</p>
               )}
 
-              <div className="flex items-center gap-2 pt-3 border-t border-border">
-                <span className="text-[12px] text-fg-muted">Responsável:</span>
+              <div className="flex items-center gap-2 pt-3 border-t border-border flex-wrap">
+                <span className="text-[12px] text-fg-muted">
+                  {assigneeNames.length > 1 ? "Responsáveis:" : "Responsável:"}
+                </span>
                 {canManage ? (
-                  <AssigneeSelect
-                    action={atribuirResponsavelSetor.bind(null, s.id)}
-                    options={assigneeOptionsBySector[s.sectorCode] ?? []}
-                    currentAssigneeId={s.assignee?.id ?? null}
-                  />
+                  <>
+                    {/* AssigneeSelect troca por UM responsável (substitui a
+                        lista). Com vários definidos na criação, os nomes ficam
+                        visíveis ao lado pra não sumirem da tela. */}
+                    <AssigneeSelect
+                      action={atribuirResponsavelSetor.bind(null, s.id)}
+                      options={assigneeOptionsBySector[s.sectorCode] ?? []}
+                      currentAssigneeId={s.assignee?.id ?? null}
+                    />
+                    {assigneeNames.length > 1 && (
+                      <span className="text-[12px] text-fg-muted">
+                        + {assigneeNames.slice(1).join(", ")}
+                      </span>
+                    )}
+                  </>
                 ) : (
-                  <span className="text-[12px] text-fg">{s.assignee?.name ?? "Sem responsável"}</span>
+                  <span className="text-[12px] text-fg">
+                    {assigneeNames.length > 0 ? assigneeNames.join(", ") : "Sem responsável"}
+                  </span>
                 )}
                 {/* Só faz sentido mostrar a data de finalização quando o setor de
                     fato finalizou — dados migrados do modelo antigo podiam ter

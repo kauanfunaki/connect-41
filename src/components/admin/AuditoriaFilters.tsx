@@ -30,6 +30,7 @@ export function AuditoriaFilters({ users, actions, entityTypes, userId, action, 
   return (
     <div className="flex items-center gap-3 mb-4 flex-wrap">
       <Select
+        compact
         className="w-auto min-w-[160px]"
         defaultValue={userId}
         onChange={(e) => navigate("userId", e.target.value)}
@@ -41,6 +42,7 @@ export function AuditoriaFilters({ users, actions, entityTypes, userId, action, 
       </Select>
 
       <Select
+        compact
         className="w-auto min-w-[160px]"
         defaultValue={action}
         onChange={(e) => navigate("action", e.target.value)}
@@ -52,6 +54,7 @@ export function AuditoriaFilters({ users, actions, entityTypes, userId, action, 
       </Select>
 
       <Select
+        compact
         className="w-auto min-w-[160px]"
         defaultValue={entityType}
         onChange={(e) => navigate("entityType", e.target.value)}

@@ -1,4 +1,4 @@
-// Modelos de texto para os campos "Informações gerais" e "Descrição" da
+// Modelos de texto para o campo "Descrição" (e as instruções por setor) da
 // Transferência — mesmos padrões usados no Acessórias, portados como
 // referência de conteúdo (não são dados de tenant, não têm tela de edição —
 // lista fixa em código, como TAX_REGIME_OPTIONS em EmpresaForm.tsx).
@@ -62,8 +62,6 @@ O cliente confirmou que deseja prosseguir com a baixa do CNPJ.`,
 - não realizar cobrança adicional, quando aplicável;
 - após a conclusão, verificar se haverá abertura de uma nova empresa.
 
-Responsável pelo processo: [RESPONSÁVEL]
-
 Anexos ou comprovações:
 
 - [DOCUMENTO OU CONFIRMAÇÃO]
@@ -93,8 +91,6 @@ A empresa encontra-se [INAPTA, SUSPENSA, COM OMISSÃO DE DECLARAÇÕES OU OUTRA 
 - levantar débitos e pendências fiscais;
 - acompanhar a regularização da situação cadastral.
 
-Responsável fiscal: [RESPONSÁVEL]
-
 Demanda contábil:
 
 - verificar declarações contábeis pendentes;
@@ -102,15 +98,11 @@ Demanda contábil:
 - solicitar documentos necessários;
 - analisar balanços, demonstrativos e movimentos pendentes.
 
-Responsável contábil: [RESPONSÁVEL]
-
 Demanda societária:
 
 - iniciar a baixa após a conclusão da regularização;
 - acompanhar o encerramento nos órgãos competentes;
 - após a baixa, iniciar a abertura de [NOVA EMPRESA OU MEI], quando aplicável.
-
-Responsável societário: [RESPONSÁVEL]
 
 Valor acordado:
 
@@ -162,8 +154,6 @@ Documentos recebidos:
 - autorização ou confirmação da solicitação;
 - demais documentos aplicáveis.
 
-Responsável pelo processo: [RESPONSÁVEL]
-
 Observações:
 
 [INFORMAÇÕES COMPLEMENTARES]`,
@@ -208,8 +198,6 @@ Breve resumo do cliente:
 - solicitar os documentos contábeis necessários;
 - orientar o cliente quanto ao envio periódico da documentação.
 
-Responsável contábil: [RESPONSÁVEL]
-
 Instruções — Fiscal:
 
 - levantar débitos e pendências fiscais;
@@ -218,16 +206,12 @@ Instruções — Fiscal:
 - identificar documentos fiscais pendentes;
 - orientar o cliente sobre o envio dos documentos fiscais.
 
-Responsável fiscal: [RESPONSÁVEL]
-
 Instruções — Societário:
 
 - verificar alterações cadastrais ou societárias pendentes;
 - confirmar a situação das procurações;
 - verificar inscrições, licenças e cadastros;
 - registrar demandas societárias identificadas.
-
-Responsável societário: [RESPONSÁVEL]
 
 Instruções — Departamento Pessoal:
 
@@ -236,8 +220,6 @@ Instruções — Departamento Pessoal:
 - verificar admissões, rescisões e afastamentos;
 - verificar folhas e obrigações trabalhistas pendentes;
 - registrar quando não houver funcionários ou folha ativa.
-
-Responsável pelo departamento pessoal: [RESPONSÁVEL]
 
 Instruções — Onboarding:
 
@@ -248,8 +230,6 @@ Instruções — Onboarding:
 - orientar sobre os fluxos e prazos de envio de documentos;
 - acompanhar o início da prestação dos serviços.
 
-Responsável pelo onboarding: [RESPONSÁVEL]
-
 Instruções — Customer Success:
 
 - acompanhar de perto o início da operação;
@@ -257,8 +237,6 @@ Instruções — Customer Success:
 - reforçar orientações sobre organização documental;
 - acompanhar dificuldades de adaptação;
 - registrar os principais riscos identificados.
-
-Responsável por Customer Success: [RESPONSÁVEL]
 
 Observações gerais:
 
@@ -296,9 +274,7 @@ Observações:
 - validar as atividades informadas;
 - confirmar os dados dos sócios;
 - verificar se existem empresas relacionadas;
-- confirmar as informações faltantes antes do início do processo.
-
-Responsável: [RESPONSÁVEL]`,
+- confirmar as informações faltantes antes do início do processo.`,
   },
   {
     key: "SETUP_ABERTURA",
@@ -410,8 +386,6 @@ Instruções do setor:
 - identificar documentos ainda pendentes;
 - confirmar as responsabilidades do setor.
 
-Responsável: [RESPONSÁVEL]
-
 Observações importantes:
 
 [OBSERVAÇÕES]`,
@@ -444,8 +418,6 @@ Documentos ou anexos:
 - aprovação do cliente;
 - confirmação da solicitação;
 - documentos relacionados à atividade.
-
-Responsável: [RESPONSÁVEL]
 
 Observações:
 
@@ -487,8 +459,6 @@ Documentos ou anexos:
 - confirmação do cliente;
 - autorização para alteração;
 - documentos complementares.
-
-Responsável: [RESPONSÁVEL]
 
 Observações:
 
@@ -538,8 +508,6 @@ Documentos ou anexos:
 - confirmação da solicitação;
 - documentação complementar.
 
-Responsável: [RESPONSÁVEL]
-
 Observações:
 
 [OBSERVAÇÕES]`,
@@ -575,11 +543,6 @@ Documentos disponíveis:
 - documentos dos sócios;
 - demais documentos aplicáveis.
 
-Responsáveis envolvidos:
-
-- [RESPONSÁVEL]
-- [RESPONSÁVEL]
-
 Observações:
 
 [INFORMAÇÕES COMPLEMENTARES]`,
@@ -610,7 +573,6 @@ Realizar a baixa e o encerramento formal da empresa.`,
 
 Data de início: [DATA]
 Previsão de conclusão: [DATA]
-Responsável: [RESPONSÁVEL]
 
 Observações:
 
@@ -646,11 +608,6 @@ Confirmar com o cliente se as empresas pendentes também deverão ser encerradas
 - salvar os documentos finais após cada conclusão;
 - comunicar os responsáveis conforme os processos forem finalizados.
 
-Responsáveis envolvidos:
-
-- [RESPONSÁVEL]
-- [RESPONSÁVEL]
-
 Observações:
 
 [INFORMAÇÕES COMPLEMENTARES]`,
@@ -685,8 +642,6 @@ Demanda municipal:
 - prosseguir com a emissão ou regularização do alvará;
 - registrar protocolos, orientações e prazos recebidos.
 
-Responsável pela demanda municipal: [RESPONSÁVEL]
-
 Demanda estadual:
 
 - entrar em contato com a Secretaria da Fazenda;
@@ -695,8 +650,6 @@ Demanda estadual:
 - informar sobre o processo de regularização em andamento;
 - solicitar a retomada da emissão de documentos fiscais, quando cabível;
 - acompanhar o processo até a regularização.
-
-Responsável pela demanda estadual: [RESPONSÁVEL]
 
 Atualizações — registrar:
 
@@ -734,42 +687,30 @@ Breve resumo:
 - [AÇÃO]
 - [AÇÃO]
 
-Responsável fiscal: [RESPONSÁVEL]
-
 Demanda — Contábil:
 
 - [AÇÃO]
 - [AÇÃO]
-
-Responsável contábil: [RESPONSÁVEL]
 
 Demanda — Societário:
 
 - [AÇÃO]
 - [AÇÃO]
 
-Responsável societário: [RESPONSÁVEL]
-
 Demanda — Departamento Pessoal:
 
 - [AÇÃO]
 - [AÇÃO]
-
-Responsável pelo departamento pessoal: [RESPONSÁVEL]
 
 Demanda — Onboarding:
 
 - [AÇÃO]
 - [AÇÃO]
 
-Responsável pelo onboarding: [RESPONSÁVEL]
-
 Demanda — Customer Success:
 
 - [AÇÃO]
 - [AÇÃO]
-
-Responsável por Customer Success: [RESPONSÁVEL]
 
 Ordem de execução:
 
@@ -810,15 +751,11 @@ Fechamento financeiro da competência concluído pelo BPO. Segue a entrega para 
 - pendências identificadas na conciliação: [DESCRIÇÃO OU "NENHUMA"];
 - lançamentos que exigem atenção contábil: [DESCRIÇÃO].
 
-Responsável contábil: [RESPONSÁVEL]
-
 Entrega — Fiscal:
 
 - XML e relatórios de notas fiscais da competência;
 - guias de imposto pagas no período: [LISTA];
 - pendências de emissão ou apuração: [DESCRIÇÃO OU "NENHUMA"].
-
-Responsável fiscal: [RESPONSÁVEL]
 
 Situação de acesso bancário:
 
@@ -829,8 +766,6 @@ Demais entregas da competência (quando aplicável):
 - relatório operacional para o cliente;
 - planilha de fechamento de RH;
 - base Omie atualizada.
-
-Responsável pelo fechamento (BPO): [RESPONSÁVEL]
 
 Observações:
 

@@ -10,6 +10,7 @@ import { PerfilForm } from "@/components/configuracoes/PerfilForm";
 import { AlterarSenhaForm } from "@/components/configuracoes/AlterarSenhaForm";
 import { TemaSelector } from "@/components/configuracoes/TemaSelector";
 import { PushNotificationToggle } from "@/components/notificacoes/PushNotificationToggle";
+import { getVapidPublicKey } from "@/lib/vapid";
 import { atualizarMeuPerfil, alterarMinhaSenha } from "./actions";
 
 // Configurações da conta do próprio usuário — o que antes era só um botão
@@ -76,7 +77,7 @@ export default async function ConfiguracoesPage() {
       </Secao>
 
       <Secao titulo="Notificações">
-        <PushNotificationToggle />
+        <PushNotificationToggle publicKey={getVapidPublicKey()} />
         <Link
           href="/notificacoes"
           className="group flex items-center justify-between gap-2 bg-surface-hover border border-border rounded-xl px-3.5 py-2.5 hover:border-border-strong transition-colors"

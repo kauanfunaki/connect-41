@@ -2,10 +2,20 @@ import { describe, it, expect } from "vitest";
 import { HANDOFF_TEMPLATES, getHandoffTemplate, renderHandoffTemplate, matchSectorsForTemplate } from "./handoffTemplates";
 
 describe("HANDOFF_TEMPLATES", () => {
-  it("tem 15 modelos, todos com key e label únicos", () => {
-    expect(HANDOFF_TEMPLATES).toHaveLength(15);
-    expect(new Set(HANDOFF_TEMPLATES.map((t) => t.key)).size).toBe(15);
-    expect(new Set(HANDOFF_TEMPLATES.map((t) => t.label)).size).toBe(15);
+  it("tem 16 modelos, todos com key e label únicos", () => {
+    expect(HANDOFF_TEMPLATES).toHaveLength(16);
+    expect(new Set(HANDOFF_TEMPLATES.map((t) => t.key)).size).toBe(16);
+    expect(new Set(HANDOFF_TEMPLATES.map((t) => t.label)).size).toBe(16);
+  });
+
+  // O responsável por setor passou a ser definido pelo SectorAssigneePicker, e
+  // os campos "Responsável X: [RESPONSÁVEL]" dos modelos viraram ruído que
+  // ninguém preenchia. Sobrou só o item de lista de NOVO_CLIENTE_CONSTITUIDO,
+  // que descreve o responsável comercial DO CLIENTE, não quem recebe a demanda.
+  it("não traz mais campos de responsável nos modelos", () => {
+    const comPlaceholder = HANDOFF_TEMPLATES.filter((t) => t.description.includes("[RESPONSÁVEL]"));
+    expect(comPlaceholder.map((t) => t.key)).toEqual(["NOVO_CLIENTE_CONSTITUIDO"]);
+    expect(HANDOFF_TEMPLATES.some((t) => /^Responsáve(l|is)[^\n:]*: \[RESPONSÁVEL\]$/m.test(t.description))).toBe(false);
   });
 
   it("todo modelo tem message e description não vazios", () => {
@@ -31,9 +41,9 @@ describe("renderHandoffTemplate", () => {
     expect(result.message).toContain("[CNPJ]");
   });
 
-  it("mantém demais placeholders intactos (responsável, prazo etc.) na description", () => {
+  it("mantém demais placeholders intactos (documentos, observações etc.) na description", () => {
     const result = renderHandoffTemplate("BAIXA_CNPJ", { name: "Acme Ltda" });
-    expect(result.description).toContain("[RESPONSÁVEL]");
+    expect(result.description).toContain("[DOCUMENTO OU CONFIRMAÇÃO]");
     expect(result.message).toContain("[SOLICITANTE OU CANAL]");
   });
 

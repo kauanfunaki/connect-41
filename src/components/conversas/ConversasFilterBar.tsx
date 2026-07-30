@@ -140,7 +140,7 @@ export function ConversasFilterBar({ search: initialSearch, status, atendente, d
         {activeKey === "atendente" && (
           <div>
             <p className="text-[11px] font-medium text-fg-muted mb-1">Atendente</p>
-            <Select autoFocus value={atendente} onChange={(e) => apply({ atendente: e.target.value || undefined })}>
+            <Select compact autoFocus value={atendente} onChange={(e) => apply({ atendente: e.target.value || undefined })}>
               <option value="">Todos</option>
               {assignees.map((a) => (
                 <option key={a} value={a}>{a}</option>
@@ -152,7 +152,7 @@ export function ConversasFilterBar({ search: initialSearch, status, atendente, d
         {activeKey === "status" && (
           <div>
             <p className="text-[11px] font-medium text-fg-muted mb-1">Status</p>
-            <Select autoFocus value={status} onChange={(e) => apply({ status: e.target.value || undefined })}>
+            <Select compact autoFocus value={status} onChange={(e) => apply({ status: e.target.value || undefined })}>
               {STATUS_OPTIONS.map((s) => (
                 <option key={s.value} value={s.value}>{s.label}</option>
               ))}

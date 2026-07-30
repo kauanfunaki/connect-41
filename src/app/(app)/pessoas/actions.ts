@@ -17,6 +17,12 @@ import { logAudit } from "@/lib/audit";
 
 export type PessoaState = ActionState;
 
+// Só criarPessoa devolve `createdId` — sinaliza ao formulário que a pessoa
+// existe e que ele pode subir os documentos represados e navegar. Tipo à parte
+// para não alargar o retorno de atualizarPessoa/excluirPessoa, que continuam
+// no ActionState comum.
+export type PessoaCreateState = ActionState | { createdId: string };
+
 async function pessoaData(form: FormData, ctx: Awaited<ReturnType<typeof getAuthContext>>) {
   const [canBank, canSalary] = await Promise.all([
     canViewSensitiveField(ctx, "DADOS_BANCARIOS"),
@@ -74,9 +80,9 @@ async function pessoaData(form: FormData, ctx: Awaited<ReturnType<typeof getAuth
 }
 
 export async function criarPessoa(
-  _prev: PessoaState,
+  _prev: PessoaCreateState,
   form: FormData
-): Promise<PessoaState> {
+): Promise<PessoaCreateState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
   if (!canWriteEntity(ctx)) return { error: "Sem permissão para criar pessoas." };
@@ -109,11 +115,17 @@ export async function criarPessoa(
     metadata: { name: data.name },
   });
 
-  redirect(`/pessoas/${id}`);
+  // Devolve o id em vez de redirecionar aqui: a etapa "Documentos" do formulário
+  // segura os arquivos escolhidos em memória (não existe entityId antes de a
+  // pessoa existir) e precisa do id pra subir os anexos logo depois. Quem navega
+  // pra ficha é o próprio formulário, terminado o upload.
+  return { createdId: id };
 }
 
 export async function atualizarPessoa(
-  _prev: PessoaState,
+  // Prev vem tipado como PessoaCreateState só porque as duas actions dividem o
+  // mesmo formulário; o valor é ignorado aqui e o retorno segue no ActionState.
+  _prev: PessoaCreateState,
   form: FormData
 ): Promise<PessoaState> {
   const ctx = await getAuthContext();

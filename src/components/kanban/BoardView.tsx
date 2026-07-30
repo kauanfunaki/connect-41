@@ -217,6 +217,7 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
           <div>
             <p className="text-[11px] font-medium text-fg-muted mb-1">Responsável</p>
             <Select
+              compact
               autoFocus
               value={assigneeFilter}
               onChange={(e) => { setAssigneeFilter(e.target.value); setFilterModalOpen(false); setActiveFilterKey(null); }}
@@ -234,6 +235,7 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
           <div>
             <p className="text-[11px] font-medium text-fg-muted mb-1">Criador</p>
             <Select
+              compact
               autoFocus
               value={creatorFilter}
               onChange={(e) => { setCreatorFilter(e.target.value); setFilterModalOpen(false); setActiveFilterKey(null); }}
@@ -250,6 +252,7 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
           <div>
             <p className="text-[11px] font-medium text-fg-muted mb-1">Etiqueta</p>
             <Select
+              compact
               autoFocus
               value={tagFilter}
               onChange={(e) => { setTagFilter(e.target.value); setFilterModalOpen(false); setActiveFilterKey(null); }}
@@ -266,6 +269,7 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
           <div>
             <p className="text-[11px] font-medium text-fg-muted mb-1">Prioridade</p>
             <Select
+              compact
               autoFocus
               value={priorityFilter}
               onChange={(e) => { setPriorityFilter(e.target.value); setFilterModalOpen(false); setActiveFilterKey(null); }}
@@ -281,6 +285,7 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
           <div>
             <p className="text-[11px] font-medium text-fg-muted mb-1">Prazo</p>
             <Select
+              compact
               autoFocus
               value={dueFilter}
               onChange={(e) => { setDueFilter(e.target.value); setFilterModalOpen(false); setActiveFilterKey(null); }}

@@ -4,12 +4,15 @@
 // assinatura do banco quando o navegador confirma que ela expirou.
 import webpush from "web-push";
 import { getPrisma } from "@/lib/prisma";
+import { getVapidPublicKey } from "@/lib/vapid";
 
 let configured = false;
 
 function ensureConfigured(): boolean {
   if (configured) return true;
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  // Mesma chave que o cliente recebe — ver src/lib/vapid.ts para o porquê de
+  // VAPID_PUBLIC_KEY (runtime) ter virado a variável preferida.
+  const publicKey = getVapidPublicKey();
   const privateKey = process.env.VAPID_PRIVATE_KEY;
   const subject = process.env.VAPID_SUBJECT;
   if (!publicKey || !privateKey || !subject) return false;

@@ -14,6 +14,7 @@ type Props = {
 export function CompanyFilterSelect({ companies, value, paramName = "companyId", className = "w-auto" }: Props) {
   return (
     <Select
+      compact
       name={paramName}
       defaultValue={value}
       className={className}

@@ -23,6 +23,7 @@ export function FilterSelect({ paramName, value, emptyLabel, options, className,
 
   return (
     <Select
+      compact
       aria-label={ariaLabel ?? emptyLabel}
       value={value}
       className={className ?? "w-auto"}

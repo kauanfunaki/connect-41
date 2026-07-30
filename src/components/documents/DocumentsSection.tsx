@@ -10,18 +10,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 
-const CATEGORY_LABEL: Record<DocumentCategory, string> = {
-  ADMISSAO:    "Admissão",
-  ASO:         "ASO",
-  CURRICULO:   "Currículo",
-  ATESTADO:    "Atestado",
-  CERTIFICADO: "Certificado",
-  RECIBO:      "Recibo",
-  CONTRATO:    "Contrato",
-  OUTRO:       "Outro",
-};
-
-const CATEGORY_OPTIONS = Object.keys(CATEGORY_LABEL) as DocumentCategory[];
+import { CATEGORY_LABEL, CATEGORY_OPTIONS } from "@/lib/document-categories";
 
 export type DocumentItem = {
   id: string;
