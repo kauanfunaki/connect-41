@@ -38,6 +38,14 @@ export function AssinaturaRow({ tenant, subscription, plans, activeUsers }: Prop
 
   const plan = plans.find((p) => p.id === subscription?.planId);
 
+  // Espelha getSubscriptionReadOnly (src/lib/auth/context.ts): o bloqueio só
+  // vale para SELF_SERVICE. Num tenant MANAGED, marcar PAST_DUE/CANCELED não
+  // faz absolutamente nada — o que parecia bug, mas é a regra (cobrança de
+  // MANAGED é tratada manualmente). Explicitado aqui pra não ser um no-op mudo.
+  const statusLocks = subscription?.status === "PAST_DUE" || subscription?.status === "CANCELED";
+  const readOnlyActive = statusLocks && tenant.managementMode === "SELF_SERVICE";
+  const readOnlyInert = statusLocks && tenant.managementMode === "MANAGED";
+
   if (editing) {
     return (
       <form action={formAction} className="px-4 py-3 bg-surface-hover space-y-2">
@@ -128,6 +136,17 @@ export function AssinaturaRow({ tenant, subscription, plans, activeUsers }: Prop
             " · sem assinatura configurada"
           )}
         </p>
+        {readOnlyActive && (
+          <p className="text-[11px] text-danger mt-1">
+            Somente leitura ativo — este workspace não consegue criar nem editar.
+          </p>
+        )}
+        {readOnlyInert && (
+          <p className="text-[11px] text-warning mt-1">
+            Status de inadimplência sem efeito: somente leitura só se aplica a workspaces
+            em Autoatendimento. Mude o modo de gestão para bloquear de fato.
+          </p>
+        )}
       </div>
       <button
         type="button"

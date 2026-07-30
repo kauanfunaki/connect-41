@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
+import { reissueAccessTokenForSelf } from "@/lib/auth/sessions";
 
 export type WorkspaceState = { error: string } | null;
 
@@ -49,6 +50,10 @@ export async function criarWorkspace(_prev: WorkspaceState, form: FormData): Pro
     return { error: "Erro ao criar workspace. Tente novamente." };
   }
 
+  // Sem isto o workspace recém-criado fica inacessível: a concessão está no
+  // banco, mas o access token em uso ainda carrega a lista antiga de tenants.
+  await reissueAccessTokenForSelf(ctx.userId);
+
   revalidatePath("/admin/workspaces");
   redirect(`/admin/workspaces/${id}`);
 }
@@ -69,6 +74,10 @@ export async function concederAcesso(tenantId: string, userId: string): Promise<
     return;
   }
 
+  // Concedendo pra si mesmo, o token precisa ser reemitido na hora. Pra outro
+  // usuário não dá — o acesso dele entra no próximo refresh (até 15min).
+  if (userId === ctx.userId) await reissueAccessTokenForSelf(ctx.userId);
+
   revalidatePath(`/admin/workspaces/${tenantId}`);
 }
 
@@ -85,6 +94,10 @@ export async function revogarAcesso(tenantId: string, userId: string): Promise<v
     console.error("[revogarAcesso]", err);
     return;
   }
+
+  // Revogando o próprio acesso, reemitir também tira o tenant do token — senão
+  // ele continuaria autorizando a troca até o access token expirar.
+  if (userId === ctx.userId) await reissueAccessTokenForSelf(ctx.userId);
 
   revalidatePath(`/admin/workspaces/${tenantId}`);
 }

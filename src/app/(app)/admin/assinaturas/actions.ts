@@ -91,6 +91,10 @@ export async function salvarAssinatura(_prev: AssinaturaState, form: FormData): 
     metadata: { planId, status, managementMode },
   });
 
-  revalidatePath("/admin/assinaturas");
+  // "layout" a partir da raiz, não só esta página: o banner de somente-leitura
+  // é renderizado pelo layout de (app), então revalidar apenas /admin/assinaturas
+  // deixava o resto do app com o estado antigo até o cache expirar — mudar o
+  // status pra PAST_DUE não acendia o banner em lugar nenhum.
+  revalidatePath("/", "layout");
   return null;
 }
