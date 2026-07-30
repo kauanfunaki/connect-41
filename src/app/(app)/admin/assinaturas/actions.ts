@@ -4,9 +4,12 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
+import { countActiveUsers } from "@/lib/subscriptions";
 import type { ManagementMode, SubscriptionStatus } from "@/generated/prisma/enums";
 
-export type AssinaturaState = { error: string } | null;
+// `needsSeatConfirm` faz o formulário revelar o checkbox de confirmação — o
+// salvamento não é proibido, só exige um "sim, é isso mesmo" explícito.
+export type AssinaturaState = { error: string; needsSeatConfirm?: boolean } | null;
 
 function toDecimal(raw: FormDataEntryValue | null): number | null {
   if (raw == null || raw === "") return null;
@@ -36,6 +39,20 @@ export async function salvarAssinatura(_prev: AssinaturaState, form: FormData): 
   const prisma = getPrisma();
   const plan = await prisma.subscriptionPlan.findUnique({ where: { id: planId } });
   if (!plan) return { error: "Plano não encontrado." };
+
+  // Definir um seatLimit abaixo do headcount atual não é bloqueado (pode ser
+  // downgrade combinado, com desativação de usuários logo em seguida), mas
+  // passava batido sem aviso nenhum — e o efeito é o tenant já nascer estourado,
+  // sem conseguir adicionar ninguém. Exige confirmação explícita.
+  if (managementMode === "SELF_SERVICE" && seatLimit != null) {
+    const activeUsers = await countActiveUsers(tenantId);
+    if (seatLimit < activeUsers && form.get("confirmSeatBelowHeadcount") !== "on") {
+      return {
+        error: `Este workspace tem ${activeUsers} usuários ativos e o limite informado é ${seatLimit}. Nenhum usuário será desativado automaticamente, mas não será possível adicionar novos até ficar dentro do limite.`,
+        needsSeatConfirm: true,
+      };
+    }
+  }
 
   const existing = await prisma.subscription.findUnique({ where: { tenantId } });
 

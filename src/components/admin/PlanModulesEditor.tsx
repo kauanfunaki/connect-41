@@ -3,6 +3,24 @@
 import { useState, useTransition } from "react";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { MODULE_CATALOG } from "@/lib/module-catalog";
+import { DEFAULT_SECTOR_LABELS } from "@/lib/sector-constants";
+
+// Módulos agrupados por setor — só o nome do módulo ("Repositório de Senhas")
+// não diz de qual frente ele é na hora de montar um plano. A ordem de setores
+// segue a primeira aparição no catálogo, pra listagem ficar estável.
+const MODULES_BY_SECTOR = MODULE_CATALOG.reduce<{ sectorCode: string; modules: typeof MODULE_CATALOG }[]>(
+  (groups, m) => {
+    const group = groups.find((g) => g.sectorCode === m.sectorCode);
+    if (group) group.modules.push(m);
+    else groups.push({ sectorCode: m.sectorCode, modules: [m] });
+    return groups;
+  },
+  []
+);
+
+function sectorLabelOf(code: string): string {
+  return DEFAULT_SECTOR_LABELS[code] ?? code.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 type Props = {
   planId: string;
@@ -58,14 +76,23 @@ export function PlanModulesEditor({ planId, allowedModuleCodes, action }: Props)
           />
 
           {restricted && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1.5 max-h-56 overflow-y-auto pl-1">
-              {MODULE_CATALOG.map((m) => (
-                <Checkbox
-                  key={m.code}
-                  checked={selected.has(m.code)}
-                  onChange={() => toggle(m.code)}
-                  label={m.label}
-                />
+            <div className="space-y-3 max-h-56 overflow-y-auto pl-1">
+              {MODULES_BY_SECTOR.map((group) => (
+                <div key={group.sectorCode}>
+                  <p className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-fg-muted mb-1">
+                    {sectorLabelOf(group.sectorCode)}
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1.5">
+                    {group.modules.map((m) => (
+                      <Checkbox
+                        key={m.code}
+                        checked={selected.has(m.code)}
+                        onChange={() => toggle(m.code)}
+                        label={m.label}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           )}

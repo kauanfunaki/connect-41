@@ -102,6 +102,12 @@ export function AssinaturaRow({ tenant, subscription, plans, activeUsers }: Prop
           </button>
         </div>
         {state?.error && <p className="text-[12px] text-danger">{state.error}</p>}
+        {state?.needsSeatConfirm && (
+          <Checkbox
+            name="confirmSeatBelowHeadcount"
+            label="Confirmo o limite abaixo do número de usuários ativos"
+          />
+        )}
       </form>
     );
   }

@@ -21,3 +21,12 @@ export const DEFAULT_SECTORS = [
   { code: "corretora", label: "Corretora", color: "#0891B2" },
   { code: "gestao", label: "Gestão", color: "#586577" },
 ];
+
+// Label canônico por código de setor. Serve para telas GLOBAIS (não escopadas a
+// um tenant), como o editor de módulos de um plano — ali não dá pra usar
+// getSectorMaps, que lê a tabela `sectors` de um tenant específico, porque o
+// plano vale para todos. Em tela de tenant, continue usando getSectorMaps: o
+// admin pode ter renomeado o setor, e aí o label de lá é o correto.
+export const DEFAULT_SECTOR_LABELS: Record<string, string> = Object.fromEntries(
+  DEFAULT_SECTORS.map((s) => [s.code, s.label])
+);

@@ -6,6 +6,7 @@ import { ROLE_LABELS } from "@/lib/roles";
 import { getSectorMaps } from "@/lib/sectors";
 import { UsuariosTable } from "@/components/admin/UsuariosTable";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { canAddUser } from "@/lib/subscriptions";
 import { alternarAtivoUsuario, alternarAtivoEmMassa, atribuirSetorEmMassa } from "./actions";
 
 export default async function UsuariosPage() {
@@ -20,6 +21,10 @@ export default async function UsuariosPage() {
     include: { sectors: true },
   });
 
+  // Checado aqui, não só no submit: antes o limite de seats só aparecia depois
+  // de preencher o formulário inteiro e tentar salvar.
+  const seatCheck = await canAddUser(ctx.tenantId);
+
   return (
     <PageContainer>
       <div className="flex items-center justify-between mb-6">
@@ -29,13 +34,29 @@ export default async function UsuariosPage() {
             {users.length} usuário{users.length !== 1 ? "s" : ""} cadastrado{users.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <Link
-          href="/admin/usuarios/novo"
-          className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
-        >
-          + Novo Usuário
-        </Link>
+        {seatCheck.allowed ? (
+          <Link
+            href="/admin/usuarios/novo"
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+          >
+            + Novo Usuário
+          </Link>
+        ) : (
+          <span
+            title={seatCheck.reason}
+            aria-disabled="true"
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-surface-2 text-fg-muted text-[13px] font-medium cursor-not-allowed select-none"
+          >
+            + Novo Usuário
+          </span>
+        )}
       </div>
+
+      {!seatCheck.allowed && (
+        <div className="mb-4 rounded-md border border-warning/30 bg-warning-bg px-3 py-2">
+          <p className="text-[12.5px] text-fg">{seatCheck.reason}</p>
+        </div>
+      )}
 
       <UsuariosTable
         users={users.map((u) => ({
