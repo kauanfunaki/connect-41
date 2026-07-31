@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { Tag as TagIcon } from "lucide-react";
@@ -37,12 +38,12 @@ export default async function TagsPage() {
       <PageHeader
         title="Tags"
         subtitle={<>{tags.length} tag{tags.length !== 1 ? "s" : ""} cadastrada{tags.length !== 1 ? "s" : ""} — reutilizáveis em todos os kanbans do mesmo setor</>}
-        action={<><Link
+        action={<><Button
           href="/admin/tags/novo"
-          className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+          variant="primary" className="font-medium"
         >
           + Nova Tag
-        </Link></>}
+        </Button></>}
       />
       {Object.keys(grouped).length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
@@ -51,12 +52,12 @@ export default async function TagsPage() {
             title="Nenhuma tag cadastrada"
             description="Cadastre tags reutilizáveis para marcar itens de kanban do mesmo setor."
             action={
-              <Link
+              <Button
                 href="/admin/tags/novo"
-                className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+                variant="primary" className="font-medium"
               >
                 + Nova Tag
-              </Link>
+              </Button>
             }
           />
         </div>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Briefcase } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -74,12 +75,12 @@ export default async function VagasPage({
         title="Vagas"
         subtitle={<>{total} vaga{total !== 1 ? "s" : ""}</>}
         action={<>{canCreateAny && (
-          <Link
+          <Button
             href="/vagas/novo"
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+            variant="primary" className="font-medium"
           >
             + Nova Vaga
-          </Link>
+          </Button>
         )}</>}
       />
       <div className="flex items-center gap-3 mb-4 flex-wrap">
@@ -125,12 +126,12 @@ export default async function VagasPage({
             description="Ajuste os filtros ou cadastre a primeira vaga do setor."
             action={
               canCreateAny && (
-                <Link
+                <Button
                   href="/vagas/novo"
-                  className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+                  variant="primary" className="font-medium"
                 >
                   + Nova Vaga
-                </Link>
+                </Button>
               )
             }
           />

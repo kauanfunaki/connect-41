@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { UserSearch } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -96,12 +96,12 @@ export default async function CandidatosPage({
         title="Candidatos"
         subtitle={<>{total} candidato{total !== 1 ? "s" : ""} no banco de talentos</>}
         action={<>{canCreate && (
-          <Link
+          <Button
             href="/candidatos/nova"
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+            variant="primary" className="font-medium"
           >
             + Novo Candidato
-          </Link>
+          </Button>
         )}</>}
       />
       <div className="flex items-center gap-3 mb-4 flex-wrap">

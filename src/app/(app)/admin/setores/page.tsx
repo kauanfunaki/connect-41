@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -16,12 +17,12 @@ export default async function SetoresPage() {
       <PageHeader
         title="Setores"
         subtitle={<>{sectors.length} setor{sectors.length !== 1 ? "es" : ""} cadastrado{sectors.length !== 1 ? "s" : ""}</>}
-        action={<><Link
+        action={<><Button
           href="/admin/setores/novo"
-          className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+          variant="primary" className="font-medium"
         >
           + Novo Setor
-        </Link></>}
+        </Button></>}
       />
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         <div className="divide-y divide-border">

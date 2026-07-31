@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { MessageCircle, Building2, User, HelpCircle, Gauge, Settings } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -47,12 +48,12 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
           }
           action={
             isFullAccess(ctx.role) ? (
-              <Link
+              <Button
                 href="/admin/integracoes"
-                className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors inline-flex items-center"
+                variant="primary" className="font-medium"
               >
                 Ir para Integrações
-              </Link>
+              </Button>
             ) : undefined
           }
         />

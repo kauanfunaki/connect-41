@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import { FileText } from "lucide-react";
 import type { DocumentEntityType, DocumentCategory } from "@/generated/prisma/enums";
@@ -231,13 +232,13 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
           <div className="pb-2">
             <Checkbox name="sensitive" value="true" label="Documento sensível" />
           </div>
-          <button
+          <Button
             type="submit"
             disabled={isUploading}
-            className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+            variant="primary" className="font-medium disabled:opacity-60"
           >
             {isUploading ? "Enviando…" : "Anexar"}
-          </button>
+         </Button>
         </form>
       )}
 

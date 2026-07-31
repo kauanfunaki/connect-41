@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+import { Button } from "@/components/ui/Button";
 import { Eye, EyeOff, Copy, Pencil, Trash2, Plus, KeyRound, Search } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -90,25 +91,25 @@ function NewCredentialModal({ companies, createAction }: { companies: CompanyOpt
 
   return (
     <>
-      <button
+      <Button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+        variant="primary" className="font-medium"
       >
         <Plus size={15} /> Nova credencial
-      </button>
+     </Button>
       <Modal open={open} onClose={() => setOpen(false)} title="Nova credencial" maxWidth="max-w-md">
         <form action={formAction} className="space-y-4">
           <CredentialFormFields companies={companies} />
           {state?.error && <p className="text-[12px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{state.error}</p>}
           <div className="flex items-center gap-2 pt-1">
-            <button
+            <Button
               type="submit"
               disabled={isPending}
-              className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+              variant="primary" className="font-medium disabled:opacity-60"
             >
               {isPending ? "Salvando…" : "Criar"}
-            </button>
+           </Button>
             <button type="button" onClick={() => setOpen(false)} className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg transition-colors">
               Cancelar
             </button>
@@ -137,13 +138,13 @@ function EditCredentialModal({
         <CredentialFormFields companies={companies} defaults={row} />
         {state?.error && <p className="text-[12px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{state.error}</p>}
         <div className="flex items-center gap-2 pt-1">
-          <button
+          <Button
             type="submit"
             disabled={isPending}
-            className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+            variant="primary" className="font-medium disabled:opacity-60"
           >
             {isPending ? "Salvando…" : "Salvar"}
-          </button>
+         </Button>
           <button type="button" onClick={onClose} className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg transition-colors">
             Cancelar
           </button>

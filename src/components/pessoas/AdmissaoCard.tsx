@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import { UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/Input";
@@ -83,14 +84,14 @@ export function AdmissaoCard({ personId, initialLink, canManage }: Props) {
             Gere um link para o colaborador preencher os próprios dados e enviar os documentos — sem digitação manual.
           </p>
           {canManage && (
-            <button
+            <Button
               type="button"
               onClick={handleGerar}
               disabled={pending}
-              className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+              variant="primary" className="font-medium disabled:opacity-60"
             >
               {pending ? "Gerando…" : "Gerar link de admissão"}
-            </button>
+           </Button>
           )}
         </>
       )}

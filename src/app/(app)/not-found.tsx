@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { FileQuestion } from "lucide-react";
 
 // 404 dentro do shell autenticado — cobre notFound() disparado por
@@ -14,12 +14,12 @@ export default function AppNotFound() {
         <p className="text-[13px] text-fg-muted max-w-[360px]">
           O registro ou a rota que você tentou abrir não existe ou foi removido.
         </p>
-        <Link
+        <Button
           href="/home"
-          className="inline-flex items-center h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors mt-1"
+          variant="primary" className="font-medium mt-1"
         >
           Voltar ao início
-        </Link>
+        </Button>
       </div>
     </div>
   );

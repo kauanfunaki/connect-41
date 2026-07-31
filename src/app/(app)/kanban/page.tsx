@@ -33,12 +33,12 @@ export default async function KanbanListPage() {
         title="Kanban"
         subtitle={<>{pipelines.length} kanban{pipelines.length !== 1 ? "s" : ""} configurado{pipelines.length !== 1 ? "s" : ""}</>}
         action={<>{canCreate && (
-          <Link
+          <Button
             href="/kanban/novo"
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+            variant="primary" className="font-medium"
           >
             + Novo Kanban
-          </Link>
+          </Button>
         )}</>}
       />
       {pipelines.length === 0 ? (

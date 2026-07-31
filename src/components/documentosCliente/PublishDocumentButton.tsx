@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   action: () => Promise<void>;
@@ -19,13 +20,13 @@ export function PublishDocumentButton({ action }: Props) {
   }
 
   return (
-    <button
+    <Button
       type="button"
       onClick={handleClick}
       disabled={isPending}
-      className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+      variant="primary" className="font-medium disabled:opacity-60"
     >
       {isPending ? "Publicando…" : "Publicar"}
-    </button>
+   </Button>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import type { ObligationState } from "@/app/(app)/admin/obrigacoes/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
@@ -118,13 +119,13 @@ export function AddObrigacaoForm({ action, companies, pipelines, users }: Props)
           {FREQUENCY_HINTS[frequency]}
           {selected ? ` Kanban: "${selected.name}" (${selected.sectorLabel}).` : ""}
         </p>
-        <button
+        <Button
           type="submit"
           disabled={isPending}
-          className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors flex-shrink-0"
+          variant="primary" className="font-medium disabled:opacity-60 flex-shrink-0"
         >
           {isPending ? "Cadastrando…" : "Cadastrar Obrigação"}
-        </button>
+       </Button>
       </div>
       {state?.error && <p className="text-[13px] text-danger">{state.error}</p>}
     </form>

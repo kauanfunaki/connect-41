@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Button } from "@/components/ui/Button";
 import { Pencil, GripVertical, Trash2, Plus } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
@@ -148,14 +149,14 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
           {error && <p className="text-[12px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{error}</p>}
 
           <div className="flex items-center gap-2 pt-2">
-            <button
+            <Button
               type="button"
               onClick={save}
               disabled={isPending}
-              className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+              variant="primary" className="font-medium disabled:opacity-60"
             >
               {isPending ? "Salvando…" : "Salvar"}
-            </button>
+           </Button>
             <button
               type="button"
               onClick={() => setOpen(false)}

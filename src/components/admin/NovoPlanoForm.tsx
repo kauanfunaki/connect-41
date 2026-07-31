@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { criarPlano, type PlanoState } from "@/app/(app)/admin/planos/actions";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -12,13 +13,13 @@ export function NovoPlanoForm() {
 
   return (
     <div>
-      <button
+      <Button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+        variant="primary" className="font-medium"
       >
         {open ? "Cancelar" : "+ Novo plano"}
-      </button>
+     </Button>
 
       {open && (
         <form action={formAction} className="mt-4 p-4 bg-surface border border-border rounded-lg space-y-3 max-w-xl">
@@ -71,13 +72,13 @@ export function NovoPlanoForm() {
             />
           </div>
 
-          <button
+          <Button
             type="submit"
             disabled={isPending}
-            className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+            variant="primary" className="font-medium disabled:opacity-60"
           >
             {isPending ? "Criando…" : "Criar plano"}
-          </button>
+         </Button>
 
           {state?.error && <p className="text-[12px] text-danger">{state.error}</p>}
         </form>

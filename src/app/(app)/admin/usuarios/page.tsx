@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -32,12 +32,12 @@ export default async function UsuariosPage() {
         title="Usuários"
         subtitle={<>{users.length} usuário{users.length !== 1 ? "s" : ""} cadastrado{users.length !== 1 ? "s" : ""}</>}
         action={<>{seatCheck.allowed ? (
-          <Link
+          <Button
             href="/admin/usuarios/novo"
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+            variant="primary" className="font-medium"
           >
             + Novo Usuário
-          </Link>
+          </Button>
         ) : (
           <span
             title={seatCheck.reason}

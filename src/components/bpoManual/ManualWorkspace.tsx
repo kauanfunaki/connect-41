@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { Button } from "@/components/ui/Button";
 import { ChevronDown, ChevronRight, FileText, Folder, ImagePlus, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
@@ -267,14 +268,14 @@ function PageEditor({
         {error && <p className="text-[12px] text-danger mt-2">{error}</p>}
 
         <div className="flex items-center gap-2 mt-4">
-          <button
+          <Button
             type="button"
             onClick={save}
             disabled={isPending}
-            className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+            variant="primary" className="font-medium disabled:opacity-60"
           >
             {isPending ? "Salvando…" : "Salvar"}
-          </button>
+         </Button>
           <button
             type="button"
             onClick={onCancel}

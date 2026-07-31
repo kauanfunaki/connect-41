@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { useDialog } from "@/components/ui/useDialog";
 import Cropper, { type Area } from "react-easy-crop";
 import { getCroppedImageBlob } from "@/lib/imageCrop";
@@ -149,14 +150,14 @@ function CropperDialog({
           >
             Cancelar
           </button>
-          <button
+          <Button
             type="button"
             onClick={handleConfirm}
             disabled={isProcessing || !croppedAreaPixels}
-            className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+            variant="primary" className="font-medium disabled:opacity-60"
           >
             {isProcessing ? "Aplicando…" : "Aplicar"}
-          </button>
+         </Button>
         </div>
       </div>
     </div>

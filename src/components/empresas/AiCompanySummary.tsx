@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Button } from "@/components/ui/Button";
 import { Sparkles } from "lucide-react";
 import type { AiSummaryState } from "@/app/(app)/empresas/[id]/ai-actions";
 
@@ -27,15 +28,15 @@ export function AiCompanySummary({ action }: Props) {
             Consolida reuniões, transferências, kanban e documentos num briefing pré-reunião.
           </p>
         </div>
-        <button
+        <Button
           type="button"
           onClick={handleClick}
           disabled={isPending}
-          className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors flex-shrink-0"
+          variant="primary" className="font-medium disabled:opacity-60 flex-shrink-0"
         >
           <Sparkles size={14} />
           {isPending ? "Gerando…" : "Gerar Resumo"}
-        </button>
+       </Button>
       </div>
 
       {state && "error" in state && (

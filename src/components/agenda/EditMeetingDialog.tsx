@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useCallback, useEffect, useId, useRef } from "react";
+import { Button } from "@/components/ui/Button";
 import { useDialog } from "@/components/ui/useDialog";
 import { X } from "lucide-react";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -132,13 +133,13 @@ export function EditMeetingDialog({ action, meeting, allUsers, companies, onClos
             >
               Cancelar
             </button>
-            <button
+            <Button
               type="submit"
               disabled={isPending}
-              className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+              variant="primary" className="font-medium disabled:opacity-60"
             >
               {isPending ? "Salvando…" : "Salvar alterações"}
-            </button>
+           </Button>
           </div>
         </form>
       </div>

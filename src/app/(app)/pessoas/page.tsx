@@ -79,12 +79,12 @@ export default async function PessoasPage({
               ? `${total} funcionário${total !== 1 ? "s" : ""} interno${total !== 1 ? "s" : ""} cadastrado${total !== 1 ? "s" : ""}`
               : `${total} colaborador${total !== 1 ? "es" : ""} cadastrado${total !== 1 ? "s" : ""}`}</>}
         action={<>{canCreate && (
-          <Link
+          <Button
             href={isInternos ? "/pessoas/nova?internal=1" : "/pessoas/nova"}
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+            variant="primary" className="font-medium"
           >
             + Nova Pessoa
-          </Link>
+          </Button>
         )}</>}
       />
       <PessoasTabsBar active={activeTab} />

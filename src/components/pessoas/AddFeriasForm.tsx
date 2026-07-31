@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { Button } from "@/components/ui/Button";
 import type { VacationState } from "@/app/(app)/pessoas/[id]/ferias/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -50,13 +51,13 @@ export function AddFeriasForm({ action }: Props) {
             <Input id="notes" name="notes" type="text" />
           </CampoForm>
         </div>
-        <button
+        <Button
           type="submit"
           disabled={isPending}
-          className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors flex-shrink-0"
+          variant="primary" className="font-medium disabled:opacity-60 flex-shrink-0"
         >
           {isPending ? "Programando…" : "Programar Férias"}
-        </button>
+       </Button>
       </div>
       {state?.error && <p className="text-[13px] text-danger">{state.error}</p>}
     </form>

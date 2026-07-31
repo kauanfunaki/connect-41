@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { FileQuestion } from "lucide-react";
 
 // 404 global — cobre rotas que não batem em nenhum segmento (fora do shell
@@ -14,12 +14,12 @@ export default function NotFound() {
         <p className="text-[13px] text-fg-muted">
           O endereço que você tentou acessar não existe.
         </p>
-        <Link
+        <Button
           href="/home"
-          className="inline-flex items-center h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors mt-1"
+          variant="primary" className="font-medium mt-1"
         >
           Ir para o início
-        </Link>
+        </Button>
       </div>
     </div>
   );

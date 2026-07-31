@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { FileQuestion } from "lucide-react";
@@ -35,12 +36,12 @@ export default async function TemplatesPage() {
       <PageHeader
         title="Modelos de teste"
         subtitle={<>{templates.length} modelo{templates.length !== 1 ? "s" : ""} — testes de múltipla escolha reutilizáveis (Português, Matemática...)</>}
-        action={<><Link
+        action={<><Button
           href="/testes/templates/novo"
-          className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+          variant="primary" className="font-medium"
         >
           + Novo modelo
-        </Link></>}
+        </Button></>}
       />
       {templates.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
@@ -49,12 +50,12 @@ export default async function TemplatesPage() {
             title="Nenhum modelo cadastrado"
             description="Crie um modelo de teste (ex: Português Básico) pra reaproveitar em vários candidatos."
             action={
-              <Link
+              <Button
                 href="/testes/templates/novo"
-                className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+                variant="primary" className="font-medium"
               >
                 + Novo modelo
-              </Link>
+              </Button>
             }
           />
         </div>

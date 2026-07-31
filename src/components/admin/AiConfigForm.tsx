@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useActionState } from "react";
+import { Button } from "@/components/ui/Button";
 import { salvarConfigIA, removerConfigIA, testarChaveIA, type AiConfigState } from "@/app/(app)/admin/integracoes/ai-actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
@@ -106,14 +107,14 @@ export function AiConfigForm({ hasConfig, defaultValues }: Props) {
           >
             {isPending ? "Salvando…" : "Salvar"}
           </button>
-          <button
+          <Button
             type="button"
             onClick={handleTest}
             disabled={isTesting}
-            className="h-9 px-4 rounded-md border border-border-strong text-fg text-[13px] font-medium hover:bg-surface-hover disabled:opacity-60 transition-colors"
+            variant="secondary" className="font-medium disabled:opacity-60"
           >
             {isTesting ? "Testando…" : "Testar chave"}
-          </button>
+         </Button>
         </div>
       </form>
 

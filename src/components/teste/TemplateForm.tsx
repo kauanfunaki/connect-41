@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
@@ -148,13 +149,13 @@ export function TemplateForm({ action, defaults, cancelHref }: Props) {
       </button>
 
       <div className="flex items-center gap-3 pt-2 border-t border-border">
-        <button
+        <Button
           type="submit"
           disabled={isPending}
-          className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+          variant="primary" className="font-medium disabled:opacity-60"
         >
           {isPending ? "Salvando…" : defaults ? "Atualizar modelo" : "Criar modelo"}
-        </button>
+       </Button>
         <a href={cancelHref} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Cancelar
         </a>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { Button } from "@/components/ui/Button";
 import type { AbsenceState } from "@/app/(app)/pessoas/[id]/afastamentos/actions";
 import { AbsenceType } from "@/generated/prisma/enums";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -66,13 +67,13 @@ export function AddAfastamentoForm({ action, canEditMedical }: Props) {
             <Input id="notes" name="notes" type="text" />
           </CampoForm>
         </div>
-        <button
+        <Button
           type="submit"
           disabled={isPending}
-          className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors flex-shrink-0"
+          variant="primary" className="font-medium disabled:opacity-60 flex-shrink-0"
         >
           {isPending ? "Registrando…" : "Registrar Ausência"}
-        </button>
+       </Button>
       </div>
       {state?.error && <p className="text-[13px] text-danger">{state.error}</p>}
     </form>

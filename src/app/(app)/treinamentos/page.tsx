@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { GraduationCap } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -23,12 +24,12 @@ export default async function TreinamentosPage() {
         title="Treinamentos"
         subtitle={<>{treinamentos.length} treinamento{treinamentos.length !== 1 ? "s" : ""} cadastrado{treinamentos.length !== 1 ? "s" : ""}</>}
         action={<>{canManage && (
-          <Link
+          <Button
             href="/treinamentos/novo"
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+            variant="primary" className="font-medium"
           >
             + Novo Treinamento
-          </Link>
+          </Button>
         )}</>}
       />
       {treinamentos.length === 0 ? (
@@ -39,12 +40,12 @@ export default async function TreinamentosPage() {
             description="Cadastre treinamentos e organize turmas para os colaboradores."
             action={
               canManage && (
-                <Link
+                <Button
                   href="/treinamentos/novo"
-                  className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+                  variant="primary" className="font-medium"
                 >
                   + Novo Treinamento
-                </Link>
+                </Button>
               )
             }
           />

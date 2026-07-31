@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { Button } from "@/components/ui/Button";
 import type { ImportPayrollCsvState } from "@/app/(app)/empresas/[id]/folha/[competencyId]/actions";
 
 type Props = {
@@ -60,13 +61,13 @@ export function ImportarFolhaCsvForm({ action }: Props) {
             className="text-[12px] text-fg file:mr-3 file:h-9 file:px-3 file:rounded-md file:border file:border-border-strong file:bg-surface-hover file:text-fg file:text-[12px] file:font-medium file:cursor-pointer file:border-solid hover:file:border-brand file:transition-colors"
           />
         </div>
-        <button
+        <Button
           type="submit"
           disabled={isPending}
-          className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+          variant="primary" className="font-medium disabled:opacity-60"
         >
           {isPending ? "Importando…" : "Importar"}
-        </button>
+       </Button>
       </form>
 
       {state && "error" in state && (

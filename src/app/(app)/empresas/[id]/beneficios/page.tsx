@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
 import { Gift } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -68,12 +69,12 @@ export default async function BeneficiosPage({
         subtitle={`${beneficios.length} benefício${beneficios.length !== 1 ? "s" : ""} cadastrado${beneficios.length !== 1 ? "s" : ""} nesta empresa`}
         action={
           canManage && (
-            <Link
+            <Button
               href={novoHref}
-              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+              variant="primary" className="font-medium"
             >
               + Novo Benefício
-            </Link>
+            </Button>
           )
         }
       />
@@ -86,12 +87,12 @@ export default async function BeneficiosPage({
             description="Cadastre os benefícios oferecidos aos colaboradores desta empresa, como vale-refeição, plano de saúde ou auxílio-transporte."
             action={
               canManage && (
-                <Link
+                <Button
                   href={novoHref}
-                  className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+                  variant="primary" className="font-medium"
                 >
                   + Cadastrar benefício
-                </Link>
+                </Button>
               )
             }
           />

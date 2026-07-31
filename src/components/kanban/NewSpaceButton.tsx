@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { Plus } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -28,13 +29,13 @@ export function NewSpaceButton({ action, label = "Novo Espaço" }: Props) {
 
   return (
     <>
-      <button
+      <Button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+        variant="primary" className="font-medium"
       >
         <Plus size={14} /> {label}
-      </button>
+     </Button>
       <Modal open={open} onClose={() => setOpen(false)} title={label}>
         <form
           action={(form) => {

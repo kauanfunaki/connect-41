@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { Button } from "@/components/ui/Button";
 import type { ScorecardState } from "@/app/(app)/vagas/[id]/candidaturas/[candidaturaId]/actions";
 import { CRITERIA } from "@/lib/scorecard";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -53,13 +54,13 @@ export function ScorecardForm({ action, defaults }: Props) {
         <Textarea id="notes" name="notes" rows={3} defaultValue={defaults?.notes ?? ""} placeholder="Pontos fortes, ressalvas, contexto da entrevista…" />
       </CampoForm>
 
-      <button
+      <Button
         type="submit"
         disabled={isPending}
-        className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+        variant="primary" className="font-medium disabled:opacity-60"
       >
         {isPending ? "Salvando…" : defaults ? "Atualizar meu parecer" : "Salvar parecer"}
-      </button>
+     </Button>
 
       {state?.error && <p className="text-[13px] text-danger">{state.error}</p>}
     </form>

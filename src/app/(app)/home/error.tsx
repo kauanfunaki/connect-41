@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { Button } from "@/components/ui/Button";
 import { AlertTriangle } from "lucide-react";
 
 export default function HomeError({
@@ -24,13 +25,13 @@ export default function HomeError({
         <p className="text-[13px] text-fg-muted max-w-[360px]">
           Algo deu errado ao montar o dashboard. Tente novamente — se persistir, os módulos continuam acessíveis pela barra lateral.
         </p>
-        <button
+        <Button
           type="button"
           onClick={reset}
-          className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors mt-1"
+          variant="primary" className="font-medium mt-1"
         >
           Tentar novamente
-        </button>
+       </Button>
       </div>
     </div>
   );

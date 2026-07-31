@@ -91,12 +91,12 @@ export default async function EmpresasPage({
         title="Empresas"
         subtitle={<>{total} empresa{total !== 1 ? "s" : ""} cadastrada{total !== 1 ? "s" : ""}</>}
         action={<>{canCreate && (
-          <Link
+          <Button
             href="/empresas/nova"
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+            variant="primary" className="font-medium"
           >
             + Nova Empresa
-          </Link>
+          </Button>
         )}</>}
       />
       {/* Filters */}

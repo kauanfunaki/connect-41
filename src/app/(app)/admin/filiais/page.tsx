@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { Building2 } from "lucide-react";
@@ -19,12 +20,12 @@ export default async function FiliaisPage() {
         title="Filiais"
         subtitle={<>{branches.length} filial{branches.length !== 1 ? "is" : ""} cadastrada{branches.length !== 1 ? "s" : ""} —
             organizacional apenas, não isola dados entre elas.</>}
-        action={<><Link
+        action={<><Button
           href="/admin/filiais/novo"
-          className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+          variant="primary" className="font-medium"
         >
           + Nova Filial
-        </Link></>}
+        </Button></>}
       />
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {branches.length === 0 ? (
@@ -33,12 +34,12 @@ export default async function FiliaisPage() {
             title="Nenhuma filial cadastrada"
             description="Cadastre as filiais do tenant — é só organizacional, não isola dados entre elas."
             action={
-              <Link
+              <Button
                 href="/admin/filiais/novo"
-                className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+                variant="primary" className="font-medium"
               >
                 + Nova Filial
-              </Link>
+              </Button>
             }
           />
         ) : (

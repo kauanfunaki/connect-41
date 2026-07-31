@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { Button } from "@/components/ui/Button";
 import type { EvaluationCycleState } from "@/app/(app)/avaliacoes/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
@@ -29,13 +30,13 @@ export function AddCicloForm({ action }: Props) {
           <Input id="endDate" name="endDate" type="date" />
         </CampoForm>
       </div>
-      <button
+      <Button
         type="submit"
         disabled={isPending}
-        className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+        variant="primary" className="font-medium disabled:opacity-60"
       >
         {isPending ? "Criando…" : "Criar Ciclo"}
-      </button>
+     </Button>
       {state?.error && <p className="text-[13px] text-danger w-full">{state.error}</p>}
     </form>
   );

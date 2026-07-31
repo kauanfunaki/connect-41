@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
 import { Clock } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -52,12 +53,12 @@ export default async function TurnosPage({
         subtitle={`${turnos.length} turno${turnos.length !== 1 ? "s" : ""} cadastrado${turnos.length !== 1 ? "s" : ""} nesta empresa`}
         action={
           canManage && (
-            <Link
+            <Button
               href={novoHref}
-              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+              variant="primary" className="font-medium"
             >
               + Novo Turno
-            </Link>
+            </Button>
           )
         }
       />
@@ -70,12 +71,12 @@ export default async function TurnosPage({
             description="Cadastre os turnos de trabalho desta empresa para vincular colaboradores e organizar a escala."
             action={
               canManage && (
-                <Link
+                <Button
                   href={novoHref}
-                  className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+                  variant="primary" className="font-medium"
                 >
                   + Cadastrar turno
-                </Link>
+                </Button>
               )
             }
           />

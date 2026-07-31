@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { Plus } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -22,13 +23,13 @@ export function NewListButton({ action }: Props) {
 
   return (
     <>
-      <button
+      <Button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+        variant="primary" className="font-medium"
       >
         <Plus size={14} /> Nova lista
-      </button>
+     </Button>
       <Modal open={open} onClose={() => setOpen(false)} title="Nova lista">
         <form action={formAction} className="space-y-3">
           <CampoForm label="Nome" htmlFor="list-name" required>

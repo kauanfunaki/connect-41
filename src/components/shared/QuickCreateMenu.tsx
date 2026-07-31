@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { Plus } from "lucide-react";
 import { Dropdown } from "@/components/ui/Dropdown";
 
@@ -21,14 +22,14 @@ export function QuickCreateMenu({ canCreateCompany, canCreatePerson, canCreateTr
       align="right"
       width={200}
       trigger={({ toggle }) => (
-        <button
+        <Button
           type="button"
           onClick={toggle}
-          className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
+          variant="primary" className="rounded-full font-medium"
         >
           <Plus size={14} />
           Criar
-        </button>
+       </Button>
       )}
     >
       <div className="flex flex-col gap-0.5">

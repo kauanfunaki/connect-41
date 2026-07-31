@@ -374,23 +374,120 @@ com `/empresas`, que já era assim.
 
 ---
 
-## Etapa 6 — `Button` nos 331 `<button>` crus
+## Etapa 6 — `Button` — EM ANDAMENTO (iniciada 31/07/2026)
 
-**Objetivo:** a maior massa de inconsistência do app. 168 arquivos escrevem
-`<button className="h-8 px-3 rounded-[10px] text-[13px] …">` à mão; `Button`
-já define 4 variantes × 2 tamanhos e é importado em 9 arquivos.
+O plano previa "331 botões, 168 arquivos, começar por módulo (kanban →
+admin → pessoas)". A checagem prévia que o próprio plano mandou fazer —
+"conferir se as 4 variantes cobrem os casos reais" — revelou um problema mais
+sério do que "faltam variantes": **duas das quatro variantes existentes
+estavam descrevendo o botão errado.** Isso mudou o método por completo: não dá
+para migrar por módulo até o componente estar calibrado, senão cada módulo
+herdaria o mesmo defeito.
 
-**Como:** estritamente por módulo, começando pelas maiores massas —
-`kanban` (175 px cravados / 31 arquivos) → `admin` (106/29) →
-`pessoas` (96/23) → `teste` (43/8) → resto.
+### Achado 1 — `Button.secondary` era o inverso do "Cancelar" real
 
-**Antes de começar:** conferir se as 4 variantes cobrem os casos reais. Pela
-amostragem, faltam pelo menos dois: botão só-ícone (→ é `IconButton`, Etapa 4)
-e botão-link/`<a>`. Se faltarem, estender `Button` **primeiro** — senão a
-campanha gera 20 exceções `className` que recriam o problema.
+Medição de 327 `<button>` cravados no app (fora de `ui/Button.tsx`):
 
-**Risco:** médio. **Tamanho:** grande — é a etapa que deve ser fatiada em
-várias sessões, nunca feita de uma vez.
+- Só **89** têm `className` estática que casa uma variante inteira — o resto é
+  botão com estado (ativo/selecionado/pendente), que não é conversão mecânica,
+  é decisão de design por botão.
+- Desses, o "secondary" declarado (`bg-surface-hover … hover:bg-surface`, fundo
+  cinza permanente) **não bate com nenhum "Cancelar" real do app.** O
+  `FormFooter`, o `ConfirmDialog` e a maioria dos formulários usam
+  `border border-border-strong text-fg hover:bg-surface-hover` — sem fundo em
+  repouso, ganha fundo só no hover. É o oposto do que a variante fazia.
+
+### Achado 2 — `Button.danger` tinha 3 linguagens visuais concorrentes no app
+
+- A do componente: fundo+borda sólidos, vira vermelho cheio no hover.
+- Uma "outline" (`border-danger/30`, sem fundo, tinge levemente no hover) — que
+  por acaso é **exatamente** o estilo de `ui/DeleteButton.tsx`, componente da
+  biblioteca com 10 consumidores.
+- A do `ConfirmDialog` (fundo `bg-danger` sólido + texto branco).
+
+Nenhuma das três batia com as outras duas. **Confirmado com o usuário**: seguir
+o mesmo método das Etapas 1/2 — o componente se calibra pela convenção já
+estabelecida, não o contrário. `danger` foi decidido por mim, sem nova
+pergunta, aplicando a mesma regra que o usuário já tinha validado: a variante
+com base real na biblioteca (`DeleteButton`) venceu sobre a variante sem
+nenhum consumidor prévio.
+
+### Achado 3 — o tamanho `md` também estava calibrado errado
+
+`h-9` no app real é dominantemente `px-4 text-[13px]` (69 de ~75 ocorrências
+estáticas medidas). `Button` declarava `px-[18px] text-[length:var(--fs-button)]`
+(18px / 15px) — um tamanho que **nunca foi observado em uso**, porque só 9
+arquivos usavam o componente antes desta sessão.
+
+### `Button.tsx` recalibrado
+
+```tsx
+primary:   bg-brand text-on-brand hover:bg-brand-hover        (sem mudança)
+secondary: border border-border-strong text-fg hover:bg-surface-hover
+ghost:     bg-transparent text-fg-secondary hover:bg-surface-hover hover:text-fg (sem mudança)
+danger:    border border-danger/30 text-danger hover:bg-danger/8
+
+xs: h-7 px-2.5 text-[length:var(--fs-ui)]
+sm: h-8 px-3   text-[length:var(--fs-ui)]
+md: h-9 px-4   text-[length:var(--fs-ui)]   (era px-[18px] + --fs-button)
+```
+
+Os 5 consumidores pré-existentes de `variant="secondary"` (botões
+"Voltar"/"Salvar rascunho" em `EmpresaForm`/`PessoaForm`) mudam de aparência —
+de pílula cinza pra outline. É a direção correta pela decisão do usuário:
+são exatamente os botões que deveriam ter sido assim desde o início. Nenhum
+consumidor de `danger` existia ainda.
+
+### `href` — o buraco que o plano já esperava
+
+`Button` agora aceita `href: string` e renderiza `<Link>` com a mesma
+aparência, via union type discriminada (`ButtonProps | LinkProps`) — sem isso,
+os ~85 `<Link>` estilizados como botão continuariam fora do alcance da
+biblioteca. Tipo construído com `Omit<T, keyof CommonProps>` pra evitar colidir
+`className`/`variant`/`size` no spread de atributos nativos.
+
+### Conversão mecânica aplicada nesta rodada
+
+Só os call-sites com `className` **estática** casando variante + tamanho +
+`text-[13px]` inteiros — critério propositalmente restritivo, porque só nesse
+caso a troca é garantidamente zero-mudança-visual:
+
+| | Convertidos |
+|---|---|
+| `<button>` → `<Button>` | 46, em 43 arquivos |
+| `<Link>` → `<Button href>` | 35, em 24 arquivos |
+| **Total** | **81 em 62 arquivos** |
+
+**Verificação:** `tsc` limpo · `eslint --max-warnings 0` limpo · `vitest` 125
+testes · `build` compilado (78 páginas).
+
+### Um bug do próprio script, pego e corrigido na hora
+
+O primeiro script de conversão calculava o fim de `</button>` com um regex que
+parava antes do `>` de fechamento (`\b` casa depois de "button", não depois de
+">"), deixando um `>` órfão em todo call-site convertido — 43 arquivos
+quebrados ao mesmo tempo, todos com o mesmo sintoma (`</Button>>`). Pego pelo
+`tsc` antes de qualquer verificação de mais alto nível. Como nada estava
+commitado (confirmado via `git status` antes de tocar em qualquer arquivo),
+corrigi com uma substituição de texto simples nos 43 arquivos, sem precisar de
+`git checkout`. O script do `<Link>`, escrito depois com o fechamento de tag
+corrigido, converteu os 35 call-sites de primeira, sem erro.
+
+### O que ainda falta (deliberadamente fora desta rodada)
+
+Dos 327 `<button>` originais, **238 não foram tocados** — são majoritariamente
+botões com estado (chip de tag selecionável, toggle ativo/inativo, linha de
+tabela em edição), que não têm uma variante estática única: a aparência muda
+conforme uma condição do React, não conforme uma classe fixa. Migrar esses é
+trabalho de **decisão de design por botão**, não campanha mecânica — cada um
+precisa ser lido e ou (a) expresso como `<Button>` com props condicionais
+(`variant={ativo ? "primary" : "ghost"}`), ou (b) reconhecido como um controle
+que não é um "botão genérico" e não deve virar `Button` de jeito nenhum (ex.:
+chip de filtro, célula de tabela clicável).
+
+Recomendação: próxima sessão retoma por módulo como o plano original previa
+(`kanban` primeiro, maior massa), mas módulo a módulo revisando cada botão de
+estado — não há mais atalho mecânico depois que a fatia estática acabou.
 
 ---
 
@@ -423,7 +520,7 @@ ou depois.
 | 3 · A11y (diálogo + rótulo) ✅ | 22 | baixo | pequena | independente |
 | 4 · Componentes órfãos ✅ | 3 + 8 telas | médio | média | destravou 6 |
 | 5 · PageHeader ✅ | 91 páginas | médio (visual) | média | — |
-| 6 · Button | 168 arquivos | médio | **grande** | — |
+| 6 · Button — 🔶 parcial (81/327) | 62 de ~200 arquivos | médio | **grande** | — |
 | 7 · Card, estados, grid | ~200 pontos | baixo | grande | — |
 
 **Regra de execução:** as etapas 5, 6 e 7 são **por módulo, um commit por

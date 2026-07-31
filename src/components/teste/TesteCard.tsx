@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import { ClipboardList } from "lucide-react";
 import { Input } from "@/components/ui/Input";
@@ -103,14 +104,14 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
               <div className="max-w-xs">
                 <TestTypeSelect templates={templates} value={testType} onChange={setTestType} id={`teste-type-${personId}`} />
               </div>
-              <button
+              <Button
                 type="button"
                 onClick={handleGerar}
                 disabled={pending}
-                className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+                variant="primary" className="font-medium disabled:opacity-60"
               >
                 {pending ? "Gerando…" : "Enviar teste"}
-              </button>
+             </Button>
             </div>
           )}
         </>

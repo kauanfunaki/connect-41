@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useActionState } from "react";
+import { Button } from "@/components/ui/Button";
 import {
   salvarConexaoChatwoot,
   removerConexaoChatwoot,
@@ -111,14 +112,14 @@ export function ChatwootConfigForm({ hasConfig, defaultValues, webhookUrl, lastS
           >
             {isPending ? "Salvando…" : "Salvar"}
           </button>
-          <button
+          <Button
             type="button"
             onClick={handleTest}
             disabled={isTesting}
-            className="h-9 px-4 rounded-md border border-border-strong text-fg text-[13px] font-medium hover:bg-surface-hover disabled:opacity-60 transition-colors"
+            variant="secondary" className="font-medium disabled:opacity-60"
           >
             {isTesting ? "Testando…" : "Testar conexão"}
-          </button>
+         </Button>
         </div>
       </form>
 

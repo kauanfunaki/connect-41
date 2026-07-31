@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { Button } from "@/components/ui/Button";
 import type { ExameState } from "@/app/(app)/pessoas/[id]/exames/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
@@ -28,13 +29,13 @@ export function AddExameForm({ action }: Props) {
           <Input id="notes" name="notes" type="text" />
         </CampoForm>
       </div>
-      <button
+      <Button
         type="submit"
         disabled={isPending}
-        className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+        variant="primary" className="font-medium disabled:opacity-60"
       >
         {isPending ? "Registrando…" : "Solicitar Exame"}
-      </button>
+     </Button>
       {state?.error && <p className="text-[13px] text-danger">{state.error}</p>}
     </form>
   );
