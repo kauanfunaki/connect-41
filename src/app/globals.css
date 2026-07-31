@@ -200,22 +200,49 @@
   --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px; --radius-xl: 16px;
 }
 
-/* ----- Escala tipográfica (papéis, não zoom global) ----- */
+/* ==========================================================================
+   Escala tipográfica — primitivos + papéis
+   --------------------------------------------------------------------------
+   Dois níveis, deliberadamente separados:
+
+   • CONTEÚDO (--fs-body, 15px) — o que a pessoa lê: corpo de tabela, título de
+     item na Home, mensagem de transferência, feed de atividade, descrição de
+     tarefa. É também o font-size do <body>, então todo texto sem classe
+     explícita herda daqui.
+   • UI DENSA (--fs-ui, 13px) — o que emoldura: label, metadado, linha de
+     listagem compacta, chrome. É o tamanho de fato dominante no app (~700
+     ocorrências cravadas em px), que até aqui não tinha token nenhum.
+
+   Nunca use um valor fora dos primitivos abaixo. Ao migrar um `text-[Npx]`
+   cravado, arredonde para o degrau mais próximo:
+     8·9·10·10.5·11·11.5 → 11   |   12·12.5 → 12   |   13·13.5 → 13
+     14·14.5 → 14   |   15 → 15   |   16·17 → 16   |   18·20 → 18
+     22·23·24·26 → 22   |   28·30·32 → 30
+   ========================================================================== */
 :root {
-  --fs-display:30px;      /* título de página */
-  --fs-section:18px;      /* título de seção/card */
-  --fs-card-title:16px;
-  --fs-metric:30px;       /* valor de métrica */
-  --fs-body:15px;         /* texto de tabela/corpo */
-  --fs-label:14px;        /* label de formulário/sidebar */
-  --fs-input:16px;        /* texto de input */
-  --fs-helper:13px;       /* helper text */
-  --fs-search:15px;       /* busca da topbar */
-  --fs-badge:12.5px;      /* badge/status */
-  --fs-button:15px;
-  --fs-kanban-title:14px;
-  --fs-kanban-meta:12px;
-  --fs-dropdown:14px;
+  /* primitivos — 9 degraus, nada fora disto */
+  --fs-1:11px;  --fs-2:12px;  --fs-3:13px;  --fs-4:14px;  --fs-5:15px;
+  --fs-6:16px;  --fs-7:18px;  --fs-8:22px;  --fs-9:30px;
+
+  /* papéis */
+  --fs-micro:       var(--fs-1);  /* header de tabela, badge pequeno */
+  --fs-badge:       var(--fs-2);  /* badge/status — era 12.5px */
+  --fs-kanban-meta: var(--fs-2);
+  --fs-ui:          var(--fs-3);  /* nível denso: label, meta, linha compacta */
+  --fs-helper:      var(--fs-3);  /* helper text */
+  --fs-label:       var(--fs-4);  /* label de formulário/sidebar */
+  --fs-dropdown:    var(--fs-4);
+  --fs-kanban-title:var(--fs-4);
+  --fs-search:      var(--fs-4);  /* busca da topbar — era 15px */
+  --fs-body:        var(--fs-5);  /* conteúdo de leitura + base do <body> */
+  --fs-button:      var(--fs-5);
+  --fs-card-title:  var(--fs-6);
+  --fs-input:       var(--fs-6);  /* 16px — não baixar: abaixo disso o iOS dá
+                                     zoom ao focar o campo */
+  --fs-section:     var(--fs-7);  /* título de seção/card */
+  --fs-title:       var(--fs-8);  /* título intermediário (destino dos 22-26px) */
+  --fs-metric:      var(--fs-9);  /* valor de métrica */
+  --fs-display:     var(--fs-9);  /* título de página */
 }
 
 /* ----- Base ----- */
