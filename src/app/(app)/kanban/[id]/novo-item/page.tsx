@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -62,7 +63,7 @@ export default async function NovoItemPage({
       </div>
       <PageHeader title={<>Adicionar {pipeline.entityType === "COMPANY" ? "Empresa" : "Pessoa"} ao Kanban</>} />
 
-      <div className="bg-surface border border-border rounded-lg p-6">
+      <Card className="p-6">
         <ItemForm
           action={criarItem}
           pipelineId={id}
@@ -72,7 +73,7 @@ export default async function NovoItemPage({
           sectorUsers={sectorUsers}
           cancelHref={`/kanban/${id}`}
         />
-      </div>
+      </Card>
     </PageContainer>
   );
 }

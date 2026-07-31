@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { TagForm } from "@/components/admin/TagForm";
@@ -28,9 +29,9 @@ export default async function NovaTagPage() {
       </div>
       <PageHeader title="Nova Tag" />
 
-      <div className="bg-surface border border-border rounded-lg p-6">
+      <Card className="p-6">
         <TagForm action={criarTag} cancelHref="/admin/tags" sectorOptions={sectorOptions} />
-      </div>
+      </Card>
     </PageContainer>
   );
 }

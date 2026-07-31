@@ -68,7 +68,7 @@ export function TimeGrid({ days, meetings, actions, onSlotClick }: Props) {
               key={d.dateKey}
               className={`text-center py-2.5 border-l border-border ${d.isToday ? "bg-brand-subtle" : ""}`}
             >
-              <p className="text-[10.5px] font-medium text-fg-muted uppercase tracking-wide">{weekdayLabel(d.dateKey)}</p>
+              <p className="text-[length:var(--fs-micro)] font-medium text-fg-muted uppercase tracking-wide">{weekdayLabel(d.dateKey)}</p>
               <p className={`text-[15px] font-semibold tnum ${d.isToday ? "text-brand" : "text-fg"}`}>{dayNumber(d.dateKey)}</p>
             </div>
           ))}

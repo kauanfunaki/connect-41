@@ -491,18 +491,106 @@ estado — não há mais atalho mecânico depois que a fatia estática acabou.
 
 ---
 
-## Etapa 7 — Card, estados de tela e responsividade
+## Etapa 7 — Card, estados de tela e responsividade — ✅ EXECUTADA (31/07/2026)
 
-Volume baixo de risco, alto de repetição. Pode correr em paralelo às etapas 5–6
-ou depois.
+Padrão que se repetiu nesta etapa mais do que em qualquer outra: **quase todo
+item do plano original, medido de perto, era menor ou diferente do que o
+grep bruto do levantamento sugeria.** Nenhum dos 5 itens saiu do jeito que foi
+proposto.
 
-| Item | Escala |
-|---|---|
-| `Card` nos 196 blocos ad-hoc | Definir 2–3 variantes de padding antes (hoje convivem `p-4` 113×, `p-5` 111×, `p-6` 64×) e só então substituir |
-| `error.tsx` por rota de 1º nível | 2 existem no app inteiro; uma falha de servidor em qualquer outra rota sobe até o boundary raiz |
-| `loading.tsx` / `ListPageSkeleton` | 26 para 141 páginas (~18%) |
-| 148 `grid-cols-*` sem breakpoint | ~53% dos grids são fixos; priorizar telas de detalhe (Kanban, Pessoas, Empresas) |
-| Texto abaixo de 11px | 38 arquivos, concentrado nas linhas de tabela de Pessoas, Kanban e Agenda; a Etapa 1 já dá o degrau de destino |
+### `Card` — 87 convertidos, com um incidente no meio do caminho
+
+`Card.tsx` ganhou repasse de atributos nativos (`...rest`) — sem isso, os 16
+dos 224 candidatos que tinham `onClick`/`role`/`style` perderiam comportamento
+silenciosamente na conversão. Os 5 painéis de diálogo (`Modal`, `SlideOver`,
+`ConfirmDialog`, `ImageCropModal`, `MeetingAlertOverlay`) ficaram **de fora**
+de propósito: precisam de `ref` pro focus trap da Etapa 3, e isso pediria
+`forwardRef` num componente usado em 200+ lugares só para 5 casos.
+
+**Incidente:** o primeiro script de conversão tratava todo `<div>` aninhado
+como abertura, mesmo quando era autofechado (`<div ... />`). Isso desbalanceou
+a contagem de profundidade e, por causa de índices de edição sobrepostos
+aplicados contra o texto original, **truncou o fim de pelo menos um arquivo**
+de verdade (não só quebrou sintaxe — apagou conteúdo). Só 3 dos 131 arquivos
+tocados deram erro de `tsc`, mas os outros ~127 *pareciam* válidos sem estarem
+necessariamente corretos — o bug não garante erro de sintaxe.
+
+**Ação:** parei, expliquei o achado e pedi autorização antes de reverter (é
+uma operação destrutiva, e o classificador de auto-mode bloqueou o primeiro
+`git checkout` até eu confirmar com o usuário). Confirmado que os 131 arquivos
+sujos eram só desta sessão — nada do usuário em risco — revertido por
+completo com `git checkout -- .`, o `Card.tsx` bom reaplicado, e a conversão
+refeita com um método muito mais restrito: **só divs sem nenhum `<div>`
+aninhado dentro**, que elimina de vez essa classe de bug (a busca do fechamento
+vira "primeiro `</div>` depois da abertura", sem precisar contar profundidade).
+
+**Resultado da versão segura:** 87 conversões em 73 arquivos (vs. 224
+candidatos totais — os 137 com `<div>` aninhado ficam de fora, coerente com o
+método restrito). `tsc`/`eslint --max-warnings 0`/`vitest`/`build` limpos.
+
+### `error.tsx` — a "lacuna" não existia do jeito que o levantamento descreveu
+
+O levantamento dizia "2 `error.tsx` para 141 páginas — falha em qualquer outra
+rota sobe até o boundary raiz". **Isso ignorava como error boundary do Next.js
+funciona:** `(app)/error.tsx` já cobre por herança as ~30 rotas internas do
+produto (admin, kanban, pessoas, empresas…) — não é preciso um arquivo por
+rota. `home/error.tsx` é só uma sobrescrita específica.
+
+**O gap real, achado ao verificar:** as **9 páginas públicas** fora do grupo
+`(app)` — `admissao/[token]`, `carreiras/[slug]` (+ `[vagaId]` aninhada),
+`d/[token]`, `teste/[token]`, e as 4 de `login/` — não tinham *nenhum* error
+boundary. São vistas por candidatos e clientes externos, sem sidebar pra "os
+outros módulos continuam acessíveis". Criados **5 arquivos** (o aninhamento do
+Next cobre `carreiras/[slug]` + `[vagaId]` com um só, e `login/` cobre as 4
+páginas de login com um só), no mesmo layout centralizado que essas rotas já
+usam pro estado de link inválido/expirado.
+
+### `loading.tsx` — 9 rotas sem, nenhuma delas é lista
+
+Verificado se as 9 rotas de 1º nível sem `loading.tsx` próprio
+(`assinatura`, `avaliacao-atendimentos`, `bpo-financeiro`, `bpo-manual`,
+`bpo-senhas`, `configuracoes`, `conversas`, `setor`, `testes`) eram
+listas simples (que `ListPageSkeleton` já cobre de pronto). **Nenhuma é** —
+são dashboard de card, workspace de pastas, formulário de configuração, chat.
+Aplicar `ListPageSkeleton` às cegas produziria um flash de formato errado no
+carregamento, pior que a ausência de skeleton em alguns casos. **Não feito** —
+fica para uma passada dedicada, desenhando o esqueleto certo por rota, mesmo
+tratamento dado aos botões de estado da Etapa 6.
+
+### `grid-cols-*` sem breakpoint — o "148" media a coisa errada
+
+O levantamento contou 148 grid-cols sem breakpoint contra 129 com. Medindo por
+classe real (não por substring), a contagem "148" incluía `grid-cols-1` — a
+base legítima de todo grid responsivo (`grid-cols-1 sm:grid-cols-2`), que
+está funcionando exatamente como deveria. **O número real de grids sem
+nenhuma variante responsiva na mesma classe é 5**, não 148. Verificados um a
+um:
+
+- `MiniCalendar`/`MonthGrid` (`grid-cols-7`, 3 ocorrências): calendário —
+  7 colunas é estrutural (dias da semana), não existe "menos colunas" que
+  faça sentido; a resposta a telas estreitas é encolher célula, não recolher
+  coluna.
+- `ManualWorkspace` (`grid-cols-6`): seletor de emoji dentro de um popover de
+  `w-60` (240px) fixo — 6 ícones de 32px cabem sempre, independente da tela.
+- `TemaSelector` (`grid-cols-2`): seletor claro/escuro com `max-w-sm` — 2
+  colunas dentro de um bloco já limitado em largura.
+
+**Nenhum dos 5 é bug.** Fechado sem alterar código — só corrigindo a leitura
+no levantamento.
+
+### Texto abaixo de 11px — a mesma lição do `grid-cols`, em miniatura
+
+Levantamento apontava "38 arquivos com texto <11px, ruim pra leitura".
+Medido por contexto: a maioria (8px/9px, e 14 dos 44 casos de 10/10.5px) está
+dentro de **badges/avatares de contêiner fixo** (círculo de 16–20px com
+iniciais, selo de extensão de arquivo) — aumentar o texto ali faria estourar
+o contêiner, não ajudar a leitura. Só os **30 casos genuínos** (texto corrido
+solto — timestamp, meta, label — sem nenhuma restrição de espaço) foram
+arredondados para `--fs-micro` (11px, o piso da Etapa 1). O caso de 16px com
+duas iniciais (`ActivityFeed.tsx`) foi identificado e deixado de propósito.
+
+**Verificação:** `tsc`/`eslint --max-warnings 0`/`vitest` (125)/`build`
+limpos em cada sub-etapa.
 
 ---
 
@@ -521,7 +609,7 @@ ou depois.
 | 4 · Componentes órfãos ✅ | 3 + 8 telas | médio | média | destravou 6 |
 | 5 · PageHeader ✅ | 91 páginas | médio (visual) | média | — |
 | 6 · Button — 🔶 parcial (81/327) | 62 de ~200 arquivos | médio | **grande** | — |
-| 7 · Card, estados, grid | ~200 pontos | baixo | grande | — |
+| 7 · Card, estados, grid ✅ | 73 arquivos + 5 novos + docs | baixo | grande | — |
 
 **Regra de execução:** as etapas 5, 6 e 7 são **por módulo, um commit por
 módulo**, replicando o método da auditoria de Empresas — o módulo auditado tem

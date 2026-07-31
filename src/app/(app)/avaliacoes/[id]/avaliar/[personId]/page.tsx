@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { Star } from "lucide-react";
@@ -44,15 +45,15 @@ export default async function AvaliarColaboradorPage({
       <PageHeader title={`Avaliar ${person.name}`} />
 
       {competencies.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<Star />}
             title="Nenhuma competência cadastrada ainda."
             description="Cadastre em Admin → Competências antes de avaliar."
           />
-        </div>
+        </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg p-6">
+        <Card className="p-6">
           <EvaluationForm
             action={action}
             competencies={competencies}
@@ -65,7 +66,7 @@ export default async function AvaliarColaboradorPage({
                 : undefined,
             }}
           />
-        </div>
+        </Card>
       )}
     </PageContainer>
   );

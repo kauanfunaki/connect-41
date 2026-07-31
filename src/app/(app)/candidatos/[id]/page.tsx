@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -152,7 +153,7 @@ export default async function CandidatoPage({
       </div>
 
       {/* Tags / Skills — banco de talentos */}
-      <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+      <Card className="p-5 mb-4">
         <h2 className="text-[14px] font-semibold text-fg mb-1">Tags / Habilidades</h2>
         <p className="text-[12px] text-fg-muted mb-3">
           Torna o candidato pesquisável no banco de talentos, mesmo que não avance nesta vaga.
@@ -162,7 +163,7 @@ export default async function CandidatoPage({
           selectedIds={person.tags.map((t) => t.tagId)}
           toggleAction={alternarTagPessoa.bind(null, id)}
         />
-      </div>
+      </Card>
 
       {/* Teste */}
       <div className="mb-4">
@@ -274,7 +275,7 @@ function InfoRow({
 }) {
   return (
     <div>
-      <p className="text-[10px] text-fg-muted mb-0.5">{label}</p>
+      <p className="text-[length:var(--fs-micro)] text-fg-muted mb-0.5">{label}</p>
       <p className={`text-[13px] text-fg ${mono ? "tnum" : ""}`}>{value ?? "—"}</p>
     </div>
   );

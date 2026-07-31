@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ClipboardList } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -116,13 +117,13 @@ export default async function TestesPage({
       </div>
 
       {links.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<ClipboardList />}
             title="Nenhum teste encontrado"
             description="Ajuste os filtros ou envie o primeiro teste pra um candidato acima."
           />
-        </div>
+        </Card>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">
           {links.map((l) => (

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
@@ -46,7 +47,7 @@ export default async function TagsPage() {
         </Button></>}
       />
       {Object.keys(grouped).length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<TagIcon />}
             title="Nenhuma tag cadastrada"
@@ -60,7 +61,7 @@ export default async function TagsPage() {
               </Button>
             }
           />
-        </div>
+        </Card>
       ) : (
         <div className="space-y-6">
           {Object.entries(grouped).map(([sectorCode, list]) => (

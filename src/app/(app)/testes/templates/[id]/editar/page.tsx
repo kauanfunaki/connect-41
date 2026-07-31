@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -30,7 +31,7 @@ export default async function EditarTemplatePage({ params }: { params: Promise<{
       </div>
       <PageHeader title="Editar modelo de teste" />
 
-      <div className="bg-surface border border-border rounded-lg p-6">
+      <Card className="p-6">
         <TemplateForm
           action={atualizarTemplate}
           cancelHref="/testes/templates"
@@ -45,7 +46,7 @@ export default async function EditarTemplatePage({ params }: { params: Promise<{
             })),
           }}
         />
-      </div>
+      </Card>
     </PageContainer>
   );
 }

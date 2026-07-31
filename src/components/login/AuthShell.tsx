@@ -21,7 +21,7 @@ export function AuthShell({
 
           {children}
 
-          <p className="text-[10px] text-fg-muted mt-8 text-center">
+          <p className="text-[length:var(--fs-micro)] text-fg-muted mt-8 text-center">
             Connect
           </p>
         </div>

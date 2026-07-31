@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirect, notFound } from "next/navigation";
 import { LayoutGrid } from "lucide-react";
@@ -43,13 +44,13 @@ export default async function BpoFinanceiroHomePage() {
         action={<>{canCreate && <NewSpaceButton action={createSpaceAction} />}</>}
       />
       {spaces.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<LayoutGrid />}
             title="Nenhum espaço criado ainda"
             description="Um espaço agrupa pastas e listas — ex.: um espaço por grande cliente ou por linha de trabalho."
           />
-        </div>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {spaces.map((s, i) => (

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { GraduationCap } from "lucide-react";
@@ -33,7 +34,7 @@ export default async function TreinamentosPage() {
         )}</>}
       />
       {treinamentos.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<GraduationCap />}
             title="Nenhum treinamento cadastrado"
@@ -49,7 +50,7 @@ export default async function TreinamentosPage() {
               )
             }
           />
-        </div>
+        </Card>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">
           {treinamentos.map((t) => (

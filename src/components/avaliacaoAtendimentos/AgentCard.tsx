@@ -121,12 +121,12 @@ export function AgentCard({
               <div className="flex items-center gap-5 mt-3">
                 <div className="text-center">
                   <p className="text-[15px] font-semibold text-fg tabular-nums">{avgWriting.toFixed(0)}<span className="text-[11px] text-fg-muted">/50</span></p>
-                  <p className="text-[10.5px] text-fg-muted">Escrita</p>
+                  <p className="text-[length:var(--fs-micro)] text-fg-muted">Escrita</p>
                 </div>
                 <div className="w-px h-8 bg-border" />
                 <div className="text-center">
                   <p className="text-[15px] font-semibold text-fg tabular-nums">{avgSla.toFixed(0)}<span className="text-[11px] text-fg-muted">/50</span></p>
-                  <p className="text-[10.5px] text-fg-muted">SLA</p>
+                  <p className="text-[length:var(--fs-micro)] text-fg-muted">SLA</p>
                 </div>
               </div>
               {linkedUserLabel && <p className="text-[11px] text-fg-muted mt-2">Vinculado a {linkedUserLabel}</p>}

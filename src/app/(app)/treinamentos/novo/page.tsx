@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -19,9 +20,9 @@ export default async function NovoTreinamentoPage() {
       </div>
       <PageHeader title="Novo Treinamento" />
 
-      <div className="bg-surface border border-border rounded-lg p-6">
+      <Card className="p-6">
         <TrainingForm action={criarTreinamento} cancelHref="/treinamentos" />
-      </div>
+      </Card>
     </PageContainer>
   );
 }

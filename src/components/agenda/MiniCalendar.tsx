@@ -133,7 +133,7 @@ export function MiniCalendar({ view, selectedKeys, referenceKey }: Props) {
 
           <div className="grid grid-cols-7 gap-y-0.5">
             {WEEKDAY_INITIALS.map((w, i) => (
-              <span key={i} className="text-center text-[10px] font-medium text-fg-muted uppercase py-0.5">
+              <span key={i} className="text-center text-[length:var(--fs-micro)] font-medium text-fg-muted uppercase py-0.5">
                 {w}
               </span>
             ))}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Columns3 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -42,14 +43,14 @@ export default async function KanbanListPage() {
         )}</>}
       />
       {pipelines.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<Columns3 />}
             title="Nenhum kanban cadastrado ainda"
             description="Crie o primeiro kanban do setor pra começar a organizar o funil."
             action={canCreate ? <Link href="/kanban/novo"><Button>+ Novo Kanban</Button></Link> : undefined}
           />
-        </div>
+        </Card>
       ) : (
         <div className="space-y-6">
           {Object.entries(grouped).map(([sectorCode, list]) => (

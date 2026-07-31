@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
@@ -44,7 +45,7 @@ export default async function TemplatesPage() {
         </Button></>}
       />
       {templates.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<FileQuestion />}
             title="Nenhum modelo cadastrado"
@@ -58,7 +59,7 @@ export default async function TemplatesPage() {
               </Button>
             }
           />
-        </div>
+        </Card>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">
           {templates.map((t) => (

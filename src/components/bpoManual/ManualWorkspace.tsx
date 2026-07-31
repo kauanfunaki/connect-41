@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { ChevronDown, ChevronRight, FileText, Folder, ImagePlus, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
@@ -406,9 +407,9 @@ export function ManualWorkspace({
 
   if (documents.length === 0 && !canAct) {
     return (
-      <div className="bg-surface border border-border rounded-lg">
+      <Card>
         <EmptyState icon={<FileText />} title="Nenhum documento ainda" description="Peça ao coordenador do BPO pra criar o primeiro documento do manual." />
-      </div>
+      </Card>
     );
   }
 

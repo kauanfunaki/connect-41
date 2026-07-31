@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -222,7 +223,7 @@ export default async function CandidaturaScorecardPage({
 
       {/* Meu parecer */}
       {canAct && (
-        <div className="bg-surface border border-border rounded-lg p-5">
+        <Card className="p-5">
           <h2 className="text-[14px] font-semibold text-fg mb-3">{myScorecard ? "Editar meu parecer" : "Adicionar meu parecer"}</h2>
           <ScorecardForm
             action={salvarScorecard.bind(null, vagaId, candidaturaId)}
@@ -239,7 +240,7 @@ export default async function CandidaturaScorecardPage({
                 : undefined
             }
           />
-        </div>
+        </Card>
       )}
     </PageContainer>
   );

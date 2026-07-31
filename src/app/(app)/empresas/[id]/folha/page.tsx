@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { notFound } from "next/navigation";
 import { Wallet } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -72,15 +73,15 @@ export default async function FolhaPage({
       {canManage && <AbrirCompetenciaForm action={abrirCompetencia} companyId={companyId} />}
 
       {competencias.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<Wallet />}
             title="Nenhuma competência aberta"
             description={canManage ? "Abra a primeira competência acima para começar a conferir os lançamentos de folha." : "Nenhuma competência de folha foi aberta ainda para esta empresa."}
           />
-        </div>
+        </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+        <Card className="divide-y divide-border">
           {competencias.map((c) => (
             <Link
               key={c.id}
@@ -93,7 +94,7 @@ export default async function FolhaPage({
               </span>
             </Link>
           ))}
-        </div>
+        </Card>
       )}
     </PageContainer>
   );

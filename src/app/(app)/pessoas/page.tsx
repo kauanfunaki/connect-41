@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Users } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -100,7 +101,7 @@ export default async function PessoasPage({
 
       {/* Table */}
       {people.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<Users />}
             title={search || companyId ? "Nenhuma pessoa encontrada" : "Nenhuma pessoa cadastrada ainda"}
@@ -115,7 +116,7 @@ export default async function PessoasPage({
               ) : undefined
             }
           />
-        </div>
+        </Card>
       ) : (
         <PessoasTable
           people={people.map((p) => ({

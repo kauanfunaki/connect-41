@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Star } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -29,15 +30,15 @@ export default async function CompetenciasPage() {
       <AddCompetenciaForm action={criarCompetencia} />
 
       {competencias.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<Star />}
             title="Nenhuma competência cadastrada"
             description="Use o formulário acima para cadastrar as competências usadas nas avaliações de desempenho."
           />
-        </div>
+        </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+        <Card className="divide-y divide-border">
           {competencias.map((c) => (
             <CompetenciaRow
               key={c.id}
@@ -46,7 +47,7 @@ export default async function CompetenciasPage() {
               deleteAction={excluirCompetencia.bind(null, c.id)}
             />
           ))}
-        </div>
+        </Card>
       )}
     </PageContainer>
   );

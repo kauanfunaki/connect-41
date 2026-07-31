@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { UserSearch } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -121,7 +122,7 @@ export default async function CandidatosPage({
       </div>
 
       {candidatos.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<UserSearch />}
             title={
@@ -130,7 +131,7 @@ export default async function CandidatosPage({
                 : "Nenhum candidato cadastrado ainda."
             }
           />
-        </div>
+        </Card>
       ) : (
         <CandidatosTable
           candidatos={candidatos.map((c) => ({

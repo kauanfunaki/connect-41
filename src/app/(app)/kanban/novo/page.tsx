@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { PipelineForm } from "@/components/kanban/PipelineForm";
@@ -29,9 +30,9 @@ export default async function NovoKanbanPage() {
       </div>
       <PageHeader title="Novo Kanban" />
 
-      <div className="bg-surface border border-border rounded-lg p-6">
+      <Card className="p-6">
         <PipelineForm action={criarPipeline} sectorOptions={sectorOptions} />
-      </div>
+      </Card>
     </PageContainer>
   );
 }

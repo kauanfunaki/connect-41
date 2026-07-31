@@ -77,7 +77,7 @@ export function MeetingItem({ meeting, actions, variant, top = 0, height = 0 }: 
           {meeting.title}
         </p>
         {height > 30 && (
-          <p className="text-[10px] text-fg-muted truncate leading-tight">
+          <p className="text-[length:var(--fs-micro)] text-fg-muted truncate leading-tight">
             {meeting.company ? meeting.company.name : formatTime(start)}
           </p>
         )}
@@ -93,8 +93,8 @@ export function MeetingItem({ meeting, actions, variant, top = 0, height = 0 }: 
         className="w-full flex items-center gap-1 px-1 py-[3px] rounded text-left hover:bg-surface-hover transition-colors"
       >
         <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: accent }} />
-        <span className="text-[10.5px] text-fg-muted tnum flex-shrink-0">{formatTime(start)}</span>
-        <span className="text-[10.5px] text-fg truncate min-w-0">{meeting.title}</span>
+        <span className="text-[length:var(--fs-micro)] text-fg-muted tnum flex-shrink-0">{formatTime(start)}</span>
+        <span className="text-[length:var(--fs-micro)] text-fg truncate min-w-0">{meeting.title}</span>
       </button>
     );
 

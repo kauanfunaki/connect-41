@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { CandidatoForm } from "@/components/candidatos/CandidatoForm";
@@ -21,9 +22,9 @@ export default async function NovoCandidatoPage() {
       </div>
       <PageHeader title="Novo Candidato" />
 
-      <div className="bg-surface border border-border rounded-lg p-6">
+      <Card className="p-6">
         <CandidatoForm action={criarCandidato} cancelHref="/candidatos" />
-      </div>
+      </Card>
     </PageContainer>
   );
 }

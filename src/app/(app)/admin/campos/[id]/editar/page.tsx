@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -31,7 +32,7 @@ export default async function EditarCampoPage({
       </div>
       <PageHeader title="Editar Campo" />
 
-      <div className="bg-surface border border-border rounded-lg p-6">
+      <Card className="p-6">
         <CampoForm
           action={atualizarCampo}
           cancelHref="/admin/campos"
@@ -47,7 +48,7 @@ export default async function EditarCampoPage({
             order: field.order,
           }}
         />
-      </div>
+      </Card>
     </PageContainer>
   );
 }

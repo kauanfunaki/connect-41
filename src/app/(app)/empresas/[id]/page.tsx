@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { excluirEmpresa, adicionarServico, atribuirResponsavelServico } from "../actions";
@@ -163,7 +164,7 @@ export default async function EmpresaPage({
           />
         }
         conversations={
-          <div className="bg-surface border border-border rounded-lg px-4 py-2">
+          <Card className="px-4 py-2">
             <AtendimentosAccordion
               atendimentos={conversations.map((c) => ({
                 id: c.id,
@@ -175,7 +176,7 @@ export default async function EmpresaPage({
                 messageCount: c.messageCount,
               }))}
             />
-          </div>
+          </Card>
         }
         history={
           <CompanyHistorySection

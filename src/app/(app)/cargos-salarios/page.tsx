@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { IdCard } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -54,13 +55,13 @@ export default async function CargosSalariosPage({
       />
 
       {cargos.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<IdCard />}
             title="Nenhum cargo cadastrado ainda."
             description="Cadastre cargos na ficha de cada empresa."
           />
-        </div>
+        </Card>
       ) : (
         <div className="bg-surface border border-border rounded-lg overflow-hidden">
           <div className="scroll-x overflow-x-auto">

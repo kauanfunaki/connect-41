@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Stethoscope } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -27,9 +28,9 @@ export default async function AfastamentosPage() {
       />
 
       {absences.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState icon={<Stethoscope />} title="Nenhum afastamento ativo" description="Afastamentos lançados na ficha de cada pessoa aparecem aqui enquanto estiverem ativos." />
-        </div>
+        </Card>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">
           {absences.map((a) => (

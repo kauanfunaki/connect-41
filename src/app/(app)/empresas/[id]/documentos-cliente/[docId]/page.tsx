@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { Eye, Download, PenLine } from "lucide-react";
@@ -104,10 +105,10 @@ export default async function DocumentoClienteDetailPage({
           </div>
 
           {canManage && document.status === "PUBLISHED" && (
-            <div className="bg-surface border border-border rounded-lg p-6">
+            <Card className="p-6">
               <h2 className="text-[14px] font-semibold text-fg mb-4">Enviar por e-mail</h2>
               <SendDocumentForm action={enviarDocumento} documentId={document.id} companyId={companyId} companyEmail={company.email} />
-            </div>
+            </Card>
           )}
         </div>
 

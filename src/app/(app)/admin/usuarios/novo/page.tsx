@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { UsuarioForm } from "@/components/admin/UsuarioForm";
@@ -56,14 +57,14 @@ export default async function NovoUsuarioPage() {
       </div>
       <PageHeader title="Novo Usuário" />
 
-      <div className="bg-surface border border-border rounded-lg p-6">
+      <Card className="p-6">
         <UsuarioForm
           action={criarUsuario}
           cancelHref="/admin/usuarios"
           roleOptions={roleOptions}
           sectorOptions={sectorOptions}
         />
-      </div>
+      </Card>
     </PageContainer>
   );
 }

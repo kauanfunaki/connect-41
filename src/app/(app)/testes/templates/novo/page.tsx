@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
@@ -23,9 +24,9 @@ export default async function NovoTemplatePage() {
       </div>
       <PageHeader title="Novo modelo de teste" />
 
-      <div className="bg-surface border border-border rounded-lg p-6">
+      <Card className="p-6">
         <TemplateForm action={criarTemplate} cancelHref="/testes/templates" />
-      </div>
+      </Card>
     </PageContainer>
   );
 }

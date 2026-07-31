@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { CalendarClock } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -39,9 +40,9 @@ export default async function EscalasPage() {
       />
 
       {Object.keys(grouped).length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState icon={<CalendarClock />} title="Nenhuma escala montada" description="Escalas montadas na ficha de cada pessoa para os próximos 30 dias aparecem aqui." />
-        </div>
+        </Card>
       ) : (
         <div className="space-y-4">
           {Object.entries(grouped).map(([date, items]) => (

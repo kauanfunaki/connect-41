@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -62,9 +63,9 @@ export default async function TreinamentoPage({
       </div>
 
       {training.description && (
-        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+        <Card className="p-5 mb-4">
           <p className="text-[13px] text-fg whitespace-pre-wrap">{training.description}</p>
-        </div>
+        </Card>
       )}
 
       <div className="bg-surface border border-border rounded-lg p-5">

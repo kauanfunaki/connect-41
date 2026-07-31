@@ -108,7 +108,7 @@ export default async function SalarioPage({
 function InfoRow({ label, value, mono }: { label: string; value: string | null | undefined; mono?: boolean }) {
   return (
     <div>
-      <p className="text-[10px] text-fg-muted mb-0.5">{label}</p>
+      <p className="text-[length:var(--fs-micro)] text-fg-muted mb-0.5">{label}</p>
       <p className={`text-[13px] text-fg ${mono ? "tnum" : ""}`}>{value ?? "—"}</p>
     </div>
   );

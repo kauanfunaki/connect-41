@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getAuthContext } from "@/lib/auth/context";
@@ -21,9 +22,9 @@ export default async function NovoWorkspacePage() {
       </div>
       <PageHeader title="Novo Workspace" />
 
-      <div className="bg-surface border border-border rounded-lg p-6">
+      <Card className="p-6">
         <WorkspaceForm action={criarWorkspace} cancelHref="/admin/workspaces" />
-      </div>
+      </Card>
     </PageContainer>
   );
 }

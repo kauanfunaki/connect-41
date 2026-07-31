@@ -149,7 +149,7 @@ export function HandoffForm({
           <input type="hidden" name="entityType" value={fixedEntity.entityType} />
           <input type="hidden" name="entityId" value={fixedEntity.entityId} />
           <div>
-            <p className="text-[10px] text-fg-muted mb-0.5">
+            <p className="text-[length:var(--fs-micro)] text-fg-muted mb-0.5">
               {fixedEntity.entityType === "COMPANY" ? "Empresa" : "Pessoa"}
             </p>
             <p className="text-[14px] text-fg font-medium">{fixedEntity.entityName}</p>

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -39,7 +40,7 @@ export default async function PermissoesSensiveisPage() {
           Sem concessão explícita, o acesso é negado — inclusive para Admin. Toda mudança fica na auditoria."
       />
 
-      <div className="bg-surface border border-border rounded-lg overflow-x-auto">
+      <Card className="overflow-x-auto">
         <table className="w-full min-w-[560px]">
           <thead>
             <tr className="border-b border-border">
@@ -71,7 +72,7 @@ export default async function PermissoesSensiveisPage() {
             ))}
           </tbody>
         </table>
-      </div>
+      </Card>
 
       <p className="text-[12px] text-fg-muted mt-3">
         Suporte (SUPER_ADMIN) sempre tem acesso — não aparece na matriz.

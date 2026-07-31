@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
 import { Briefcase } from "lucide-react";
@@ -64,7 +65,7 @@ export default async function CargosPage({
       />
 
       {cargos.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<Briefcase />}
             title="Nenhum cargo cadastrado"
@@ -80,7 +81,7 @@ export default async function CargosPage({
               )
             }
           />
-        </div>
+        </Card>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">
           {cargos.map((c) => (

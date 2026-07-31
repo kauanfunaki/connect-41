@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
 import { Network } from "lucide-react";
@@ -64,7 +65,7 @@ export default async function DepartamentosPage({
       />
 
       {departments.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<Network />}
             title="Nenhum departamento cadastrado"
@@ -80,7 +81,7 @@ export default async function DepartamentosPage({
               )
             }
           />
-        </div>
+        </Card>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">
           {departments.map((d) => (

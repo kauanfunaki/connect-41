@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -49,10 +50,10 @@ export default async function WorkspaceDetailPage({
         <p className="text-[13px] text-fg-muted mt-0.5 font-mono">{tenant.cnpj ? formatCnpj(tenant.cnpj) : tenant.slug}</p>
       </div>
 
-      <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+      <Card className="p-5 mb-4">
         <h2 className="text-[13px] font-semibold text-fg mb-3">Foto do workspace</h2>
         <WorkspaceLogoUpload tenantId={tenant.id} tenantName={tenant.name} logoUrl={tenant.logoUrl} />
-      </div>
+      </Card>
 
       <div className="bg-surface border border-border rounded-lg p-5">
         <h2 className="text-[13px] font-semibold text-fg mb-1">Acesso de Super Admins</h2>

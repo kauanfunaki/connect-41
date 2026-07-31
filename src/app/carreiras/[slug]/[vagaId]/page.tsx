@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { formatCalendarDate } from "@/lib/format";
@@ -62,10 +63,10 @@ export default async function VagaPublicaPage({
           </div>
         )}
 
-        <div className="bg-surface border border-border rounded-lg p-5">
+        <Card className="p-5">
           <h2 className="text-[15px] font-semibold text-fg mb-4">Candidatar-se</h2>
           <ApplyForm slug={slug} vagaId={vaga.id} />
-        </div>
+        </Card>
 
         <p className="text-[11px] text-fg-muted mt-6 text-center">
           Processo seletivo conduzido por {tenant.name}.

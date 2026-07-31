@@ -44,7 +44,7 @@ export function MonthGrid({ days, meetings, actions, monthKey, onDayClick }: Pro
       <div className="grid grid-cols-7 border-b border-border">
         {WEEKDAY_HEADER.map((label) => (
           <div key={label} className="text-center py-2 border-l border-border first:border-l-0">
-            <p className="text-[10.5px] font-medium text-fg-muted uppercase tracking-wide">{label}</p>
+            <p className="text-[length:var(--fs-micro)] font-medium text-fg-muted uppercase tracking-wide">{label}</p>
           </div>
         ))}
       </div>
@@ -94,7 +94,7 @@ export function MonthGrid({ days, meetings, actions, monthKey, onDayClick }: Pro
                 {overflow > 0 && (
                   <Link
                     href={`/agenda?view=dia&date=${d.dateKey}`}
-                    className="block px-1 text-[10.5px] font-medium text-fg-muted hover:text-brand transition-colors"
+                    className="block px-1 text-[length:var(--fs-micro)] font-medium text-fg-muted hover:text-brand transition-colors"
                   >
                     +{overflow} mais
                   </Link>
@@ -115,7 +115,7 @@ export function MonthGrid({ days, meetings, actions, monthKey, onDayClick }: Pro
                       style={{ background: m.provider === "GOOGLE" ? "var(--c41-brand)" : "#7C5CBF" }}
                     />
                   ))}
-                  {dayMeetings.length > 4 && <span className="text-[9px] text-fg-muted tnum">+{dayMeetings.length - 4}</span>}
+                  {dayMeetings.length > 4 && <span className="text-[length:var(--fs-micro)] text-fg-muted tnum">+{dayMeetings.length - 4}</span>}
                 </Link>
               )}
             </div>

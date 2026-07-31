@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import {
@@ -193,10 +194,10 @@ export default async function PessoaPage({
       </div>
 
       {person.notes && (
-        <div className="bg-surface border border-border rounded-lg p-5 lg:col-span-2">
+        <Card className="p-5 lg:col-span-2">
           <h2 className="text-[14px] font-semibold text-fg mb-2">Observações</h2>
           <p className="text-[13px] text-fg-secondary whitespace-pre-wrap">{person.notes}</p>
-        </div>
+        </Card>
       )}
 
       {/* Contato */}
@@ -212,7 +213,7 @@ export default async function PessoaPage({
           vínculo (e o de atendente Chatwoot, se houver) é editado numa tela só
           em Admin → Vínculos de Acesso. */}
       {person.isInternal && (
-        <div className="bg-surface border border-border rounded-lg p-5">
+        <Card className="p-5">
           <h2 className="text-[14px] font-semibold text-fg mb-4">Conta de acesso</h2>
           <p className="text-[13px] text-fg">
             {linkedUser ? `${linkedUser.name} (${linkedUser.email})` : "Não vinculada"}
@@ -222,7 +223,7 @@ export default async function PessoaPage({
               Gerenciar vínculo em Admin → Vínculos de Acesso
             </Link>
           )}
-        </div>
+        </Card>
       )}
 
       {/* Endereço */}
@@ -250,7 +251,7 @@ export default async function PessoaPage({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           {person.currentCompany ? (
             <div>
-              <p className="text-[10px] text-fg-muted mb-0.5">Empresa atual</p>
+              <p className="text-[length:var(--fs-micro)] text-fg-muted mb-0.5">Empresa atual</p>
               <Link
                 href={`/empresas/${person.currentCompany.id}`}
                 className="text-[13px] text-brand hover:underline"
@@ -426,7 +427,7 @@ export default async function PessoaPage({
         documents={documentsContent}
         documentsCount={documents.length}
         conversations={
-          <div className="bg-surface border border-border rounded-lg px-4 py-2">
+          <Card className="px-4 py-2">
             <AtendimentosAccordion
               atendimentos={conversations.map((c) => ({
                 id: c.id,
@@ -438,7 +439,7 @@ export default async function PessoaPage({
                 messageCount: c.messageCount,
               }))}
             />
-          </div>
+          </Card>
         }
         conversationsCount={conversations.length}
         history={historyContent}
@@ -458,7 +459,7 @@ function InfoRow({
 }) {
   return (
     <div>
-      <p className="text-[10px] text-fg-muted mb-0.5">{label}</p>
+      <p className="text-[length:var(--fs-micro)] text-fg-muted mb-0.5">{label}</p>
       <p className={`text-[13px] text-fg ${mono ? "tnum" : ""}`}>{value ?? "—"}</p>
     </div>
   );

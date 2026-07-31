@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -61,7 +62,7 @@ export default async function TesteDetailPage({ params }: { params: Promise<{ id
           )}</>}
       />
 
-      <div className="bg-surface border border-border rounded-lg p-5">
+      <Card className="p-5">
         {link.status === "PENDENTE" ? (
           <>
             <p className="text-[13px] text-fg-muted mb-3">
@@ -91,7 +92,7 @@ export default async function TesteDetailPage({ params }: { params: Promise<{ id
             )}
           </>
         )}
-      </div>
+      </Card>
     </PageContainer>
   );
 }

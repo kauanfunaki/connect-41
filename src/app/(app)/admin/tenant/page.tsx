@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -25,7 +26,7 @@ export default async function TenantPage() {
         subtitle="Dados do workspace da 41 Tech no Connect."
       />
 
-      <div className="bg-surface border border-border rounded-lg p-6">
+      <Card className="p-6">
         <TenantForm
           action={atualizarTenant}
           isSuperAdmin={ctx.role === "SUPER_ADMIN"}
@@ -37,7 +38,7 @@ export default async function TenantPage() {
             active: tenant.active,
           }}
         />
-      </div>
+      </Card>
 
       <h2 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-1 mt-10">
         E-mail (SMTP)
@@ -46,7 +47,7 @@ export default async function TenantPage() {
         Usado para enviar documentos a clientes com prova de recebimento. Cada workspace usa sua própria conta de e-mail.
       </p>
 
-      <div className="bg-surface border border-border rounded-lg p-6">
+      <Card className="p-6">
         <SmtpConfigForm
           hasConfig={!!smtpConfig}
           defaultValues={
@@ -62,7 +63,7 @@ export default async function TenantPage() {
               : undefined
           }
         />
-      </div>
+      </Card>
     </PageContainer>
   );
 }

@@ -110,7 +110,7 @@ export default async function EsocialS2200Page({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
               {g.fields.map((f) => (
                 <div key={f.label}>
-                  <p className="text-[10px] text-fg-muted mb-0.5">
+                  <p className="text-[length:var(--fs-micro)] text-fg-muted mb-0.5">
                     {f.label} <span className="text-fg-muted/60">· {f.ref}</span>
                   </p>
                   {f.restricted ? (

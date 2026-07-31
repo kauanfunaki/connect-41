@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -31,7 +32,7 @@ export default async function EditarSetorPage({
       </div>
       <PageHeader title="Editar Setor" />
 
-      <div className="bg-surface border border-border rounded-lg p-6">
+      <Card className="p-6">
         <SetorForm
           action={atualizarSetor}
           cancelHref="/admin/setores"
@@ -44,7 +45,7 @@ export default async function EditarSetorPage({
             order: sector.order,
           }}
         />
-      </div>
+      </Card>
     </PageContainer>
   );
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { ScrollText } from "lucide-react";
@@ -178,12 +179,12 @@ export default async function AuditoriaPage({
       </form>
 
       {logs.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<ScrollText />}
             title={hasFilters ? "Nenhuma ação encontrada com esses filtros." : "Nenhuma ação registrada ainda."}
           />
-        </div>
+        </Card>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">
           {logs.map((log) => {

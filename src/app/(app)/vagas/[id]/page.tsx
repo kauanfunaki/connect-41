@@ -160,13 +160,13 @@ export default async function VagaPage({
         </div>
         {vaga.notes && (
           <div className="mt-3 pt-3 border-t border-border">
-            <p className="text-[10px] text-fg-muted mb-0.5">Observações</p>
+            <p className="text-[length:var(--fs-micro)] text-fg-muted mb-0.5">Observações</p>
             <p className="text-[13px] text-fg whitespace-pre-wrap">{vaga.notes}</p>
           </div>
         )}
         {vaga.isPublic && tenantSlug && (
           <div className="mt-3 pt-3 border-t border-border">
-            <p className="text-[10px] text-fg-muted mb-0.5">Portal público</p>
+            <p className="text-[length:var(--fs-micro)] text-fg-muted mb-0.5">Portal público</p>
             <a
               href={`${publicBaseUrl}/carreiras/${tenantSlug}/${vaga.id}`}
               target="_blank"
@@ -200,12 +200,12 @@ export default async function VagaPage({
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-5">
               {funnelStats.stages.map((s) => (
                 <div key={s.stage} className="rounded-lg border border-border bg-surface-2 p-2.5">
-                  <p className="text-[10px] text-fg-muted uppercase tracking-wide truncate">{s.label}</p>
+                  <p className="text-[length:var(--fs-micro)] text-fg-muted uppercase tracking-wide truncate">{s.label}</p>
                   <p className="text-[18px] font-semibold text-fg tnum">{s.conversionPct}%</p>
                   <div className="h-1 rounded-full bg-border mt-1 overflow-hidden">
                     <div className="h-full bg-brand rounded-full" style={{ width: `${s.conversionPct}%` }} />
                   </div>
-                  <p className="text-[10px] text-fg-muted mt-1">{s.reached} alcançaram</p>
+                  <p className="text-[length:var(--fs-micro)] text-fg-muted mt-1">{s.reached} alcançaram</p>
                 </div>
               ))}
             </div>
@@ -257,7 +257,7 @@ export default async function VagaPage({
 function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
   return (
     <div>
-      <p className="text-[10px] text-fg-muted mb-0.5">{label}</p>
+      <p className="text-[length:var(--fs-micro)] text-fg-muted mb-0.5">{label}</p>
       <p className="text-[13px] text-fg">{value ?? "—"}</p>
     </div>
   );

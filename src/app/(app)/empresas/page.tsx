@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Building2 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -111,7 +112,7 @@ export default async function EmpresasPage({
 
       {/* Table */}
       {companies.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<Building2 />}
             title={search || statusFilter ? "Nenhuma empresa encontrada" : "Nenhuma empresa cadastrada ainda"}
@@ -126,7 +127,7 @@ export default async function EmpresasPage({
               ) : undefined
             }
           />
-        </div>
+        </Card>
       ) : (
         <EmpresasTable
           companies={companies.map((c) => ({

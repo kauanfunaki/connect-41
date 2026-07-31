@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Star } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -30,13 +31,13 @@ export default async function AvaliacoesPage() {
       {canManage && <AddCicloForm action={criarCiclo} />}
 
       {ciclos.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<Star />}
             title="Nenhum ciclo de avaliação criado"
             description={canManage ? "Use o formulário acima para abrir o primeiro ciclo de avaliação de desempenho." : "Nenhum ciclo de avaliação foi aberto ainda."}
           />
-        </div>
+        </Card>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">
           {ciclos.map((c) => (

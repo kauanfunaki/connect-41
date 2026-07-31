@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Card } from "@/components/ui/Card";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
@@ -53,7 +54,7 @@ export default async function EditarDocumentoClientePage({
             Este documento já foi enviado a pelo menos um destinatário e não pode mais ser editado — o link de visualização precisa sempre mostrar o mesmo conteúdo que foi de fato recebido. Crie um novo documento se precisar alterar o conteúdo.
           </div>
         ) : (
-          <div className="bg-surface border border-border rounded-lg p-6">
+          <Card className="p-6">
             <ClientDocumentForm
               action={atualizarDocumento}
               companyId={company.id}
@@ -61,7 +62,7 @@ export default async function EditarDocumentoClientePage({
               cancelHref={`/empresas/${companyId}/documentos-cliente`}
               defaultValues={{ title: document.title, bodyHtml: document.bodyHtml, fileName: document.fileName, requiresSignature: document.requiresSignature }}
             />
-          </div>
+          </Card>
         )}
       </div>
     </PageContainer>

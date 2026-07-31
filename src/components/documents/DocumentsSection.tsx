@@ -142,7 +142,7 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
                     <div className="relative h-20 flex flex-col items-center justify-center gap-1">
                       <FileText size={26} style={{ color: EXT_COLOR[ext] ?? "var(--c41-fg-muted)" }} />
                       {ext && (
-                        <span className="text-[9px] font-semibold tracking-wide" style={{ color: EXT_COLOR[ext] ?? "var(--c41-fg-muted)" }}>
+                        <span className="text-[length:var(--fs-micro)] font-semibold tracking-wide" style={{ color: EXT_COLOR[ext] ?? "var(--c41-fg-muted)" }}>
                           {ext}
                         </span>
                       )}

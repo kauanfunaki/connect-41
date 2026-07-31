@@ -366,7 +366,7 @@ function Comment({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-[11px] text-fg font-medium">{r.userName}</p>
-                    <span className="font-mono text-[10px] text-fg-muted whitespace-nowrap flex-shrink-0">
+                    <span className="font-mono text-[length:var(--fs-micro)] text-fg-muted whitespace-nowrap flex-shrink-0">
                       {r.createdAtLabel}{r.edited && " · editado"}
                     </span>
                   </div>
@@ -374,7 +374,7 @@ function Comment({
                     {r.content ? renderRichText(r.content, mentionUsers) : null}
                   </p>
                   {r.canModify && (
-                    <button type="button" onClick={() => confirmDelete(r.id)} className="text-[10px] text-fg-muted hover:text-danger transition-colors mt-0.5">Excluir</button>
+                    <button type="button" onClick={() => confirmDelete(r.id)} className="text-[length:var(--fs-micro)] text-fg-muted hover:text-danger transition-colors mt-0.5">Excluir</button>
                   )}
                 </div>
               </div>

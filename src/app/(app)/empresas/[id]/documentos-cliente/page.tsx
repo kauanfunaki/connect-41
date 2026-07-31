@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
 import { FileText } from "lucide-react";
@@ -65,7 +66,7 @@ export default async function DocumentosClientePage({
       />
 
       {documentos.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<FileText />}
             title="Nenhum documento criado"
@@ -81,7 +82,7 @@ export default async function DocumentosClientePage({
               )
             }
           />
-        </div>
+        </Card>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">
           {documentos.map((d) => {

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Clock } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -25,11 +26,11 @@ export default async function HorasExtrasPage() {
       />
 
       {entries.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState icon={<Clock />} title="Nenhum lançamento pendente" description="Lançamentos de horas extras aguardando aprovação aparecem aqui." />
-        </div>
+        </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+        <Card className="divide-y divide-border">
           {entries.map((o) => (
             <Link
               key={o.id}
@@ -43,7 +44,7 @@ export default async function HorasExtrasPage() {
               </span>
             </Link>
           ))}
-        </div>
+        </Card>
       )}
     </PageContainer>
   );

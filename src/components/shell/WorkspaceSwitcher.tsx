@@ -30,7 +30,7 @@ export function WorkspaceSwitcher({ tenants, currentTenantId }: Props) {
     <>
       <AvatarImage src={current?.logoUrl ?? null} name={currentName} size={32} shape="lg" fontSize={13} />
       <span className="min-w-0 flex-1 text-left leading-tight">
-        <span className="block text-[10px] font-semibold text-fg-muted uppercase tracking-wider">Workspace</span>
+        <span className="block text-[length:var(--fs-micro)] font-semibold text-fg-muted uppercase tracking-wider">Workspace</span>
         <span className="block text-[13px] font-medium text-fg truncate">{currentName}</span>
       </span>
       {canSwitch && <ChevronDown size={14} className="text-fg-muted flex-shrink-0" />}

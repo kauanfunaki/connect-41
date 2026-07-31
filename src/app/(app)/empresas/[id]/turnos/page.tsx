@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
 import { Clock } from "lucide-react";
@@ -64,7 +65,7 @@ export default async function TurnosPage({
       />
 
       {turnos.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<Clock />}
             title="Nenhum turno cadastrado"
@@ -80,7 +81,7 @@ export default async function TurnosPage({
               )
             }
           />
-        </div>
+        </Card>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">
           {turnos.map((t) => (

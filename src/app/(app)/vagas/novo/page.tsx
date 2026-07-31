@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -44,7 +45,7 @@ export default async function NovaVagaPage() {
       </div>
       <PageHeader title="Nova Vaga" />
 
-      <div className="bg-surface border border-border rounded-lg p-6">
+      <Card className="p-6">
         <VagaForm
           action={criarVaga}
           cancelHref="/vagas"
@@ -53,7 +54,7 @@ export default async function NovaVagaPage() {
           users={users}
           sectorOptions={allowedSectors}
         />
-      </div>
+      </Card>
     </PageContainer>
   );
 }

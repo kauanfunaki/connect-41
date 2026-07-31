@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import {
@@ -81,13 +82,13 @@ export default async function SectorHubPage({
       />
 
       {modules.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<LayoutGrid size={20} />}
             title="Nenhum módulo ativo para este setor"
             description="Módulos são ativados pelo administrador em Configurações."
           />
-        </div>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {modules.map((m) => (
@@ -122,13 +123,13 @@ export default async function SectorHubPage({
           {canCreateSpace && <NewSpaceButton action={criarEspaco.bind(null, code)} />}
         </div>
         {spaces.length === 0 ? (
-          <div className="bg-surface border border-border rounded-lg">
+          <Card>
             <EmptyState
               icon={<LayoutGrid />}
               title="Nenhum espaço criado ainda"
               description="Um espaço agrupa pastas e listas (kanbans) deste setor."
             />
-          </div>
+          </Card>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {spaces.map((s, i) => (

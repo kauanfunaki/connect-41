@@ -75,7 +75,7 @@ export function LinkedItemsSection({ canAct, basePath, links, candidates, create
             {matches.length > 0 && (
               <div className="mt-1 bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] max-h-48 overflow-y-auto">
                 {showingRecents && (
-                  <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-fg-muted">Recentes</p>
+                  <p className="px-3 pt-2 pb-1 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Recentes</p>
                 )}
                 {matches.map((c) => (
                   <button

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { CampoForm } from "@/components/admin/CampoForm";
@@ -28,9 +29,9 @@ export default async function NovoCampoPage() {
       </div>
       <PageHeader title="Novo Campo" />
 
-      <div className="bg-surface border border-border rounded-lg p-6">
+      <Card className="p-6">
         <CampoForm action={criarCampo} cancelHref="/admin/campos" sectorOptions={sectorOptions} />
-      </div>
+      </Card>
     </PageContainer>
   );
 }

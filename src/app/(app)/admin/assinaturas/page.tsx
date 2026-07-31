@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Building2 } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -43,11 +44,11 @@ export default async function AssinaturasPage() {
       </div>
 
       {tenants.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState icon={<Building2 />} title="Nenhum tenant cadastrado" />
-        </div>
+        </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+        <Card className="divide-y divide-border">
           {tenants.map((t) => (
             <AssinaturaRow
               key={t.id}
@@ -69,7 +70,7 @@ export default async function AssinaturasPage() {
               activeUsers={activeUsersByTenant.get(t.id) ?? 0}
             />
           ))}
-        </div>
+        </Card>
       )}
     </PageContainer>
   );

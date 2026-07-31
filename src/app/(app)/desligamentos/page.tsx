@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { UserMinus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -35,11 +36,11 @@ export default async function DesligamentosPage() {
       />
 
       {terminations.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState icon={<UserMinus />} title="Nenhum desligamento em andamento" description="Desligamentos iniciados na ficha de cada pessoa aparecem aqui enquanto estiverem em andamento." />
-        </div>
+        </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+        <Card className="divide-y divide-border">
           {terminations.map((t) => (
             <Link
               key={t.id}
@@ -52,7 +53,7 @@ export default async function DesligamentosPage() {
               </span>
             </Link>
           ))}
-        </div>
+        </Card>
       )}
     </PageContainer>
   );

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -45,7 +46,7 @@ export default async function EditarCandidatoPage({
       </div>
       <PageHeader title="Editar Candidato" />
 
-      <div className="bg-surface border border-border rounded-lg p-6">
+      <Card className="p-6">
         <CandidatoForm
           action={atualizarCandidato}
           cancelHref={`/candidatos/${id}`}
@@ -68,7 +69,7 @@ export default async function EditarCandidatoPage({
             stateCode:         person.stateCode ?? undefined,
           }}
         />
-      </div>
+      </Card>
     </PageContainer>
   );
 }

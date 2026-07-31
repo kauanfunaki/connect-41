@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { CreditCard } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -37,9 +38,9 @@ export default async function AssinaturaPage() {
       />
 
       {!subscription ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState icon={<CreditCard />} title="Nenhuma assinatura configurada ainda." description="Fale com a 41 Tech." />
-        </div>
+        </Card>
       ) : (
         <div className="space-y-4">
           <div className="bg-surface border border-border rounded-lg p-5">
@@ -77,20 +78,20 @@ export default async function AssinaturaPage() {
             </div>
           )}
 
-          <div className="bg-surface border border-border rounded-lg p-5">
+          <Card className="p-5">
             <p className="text-[11px] text-fg-muted uppercase tracking-wide mb-1">Implantação</p>
             <p className="text-[13px] text-fg">
               {subscription.setupFeePaidAt
                 ? `Paga em ${formatInstantDate(subscription.setupFeePaidAt)}`
                 : `Pendente${subscription.setupFeeAmount ? ` — ${fmt(subscription.setupFeeAmount)}` : ""}`}
             </p>
-          </div>
+          </Card>
 
-          <div className="bg-surface border border-border rounded-lg p-5">
+          <Card className="p-5">
             <p className="text-[13px] text-fg-muted">
               Precisa de mais usuários ou trocar de plano? Entre em contato com a 41 Tech.
             </p>
-          </div>
+          </Card>
         </div>
       )}
     </PageContainer>

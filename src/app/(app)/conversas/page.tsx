@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { MessageCircle, Building2, User, HelpCircle, Gauge, Settings } from "lucide-react";
@@ -296,13 +297,13 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
       )}
 
       {links.length === 0 && orphanConversations.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<MessageCircle />}
             title="Nenhum atendimento encontrado"
             description="Tente ajustar a busca ou os filtros, ou aguarde a próxima sincronização."
           />
-        </div>
+        </Card>
       ) : (
         <div className="space-y-3">
           {links.map((link) => {
@@ -494,13 +495,13 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
 
   if (agentGroups.length === 0) {
     return (
-      <div className="bg-surface border border-border rounded-lg">
+      <Card>
         <EmptyState
           icon={<Gauge />}
           title="Nenhuma avaliação ainda"
           description="As avaliações são geradas automaticamente quando um atendimento é resolvido no Chatwoot. Aguarde a próxima rodada da rotina de avaliação."
         />
-      </div>
+      </Card>
     );
   }
 

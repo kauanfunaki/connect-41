@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Eye, EyeOff, Copy, Pencil, Trash2, Plus, KeyRound, Search } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
@@ -237,17 +238,17 @@ export function BpoCredentialsList({ credentials, companies, canManage, createAc
       </div>
 
       {credentials.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<KeyRound />}
             title="Nenhuma credencial cadastrada ainda"
             description={canManage ? "Cadastre a primeira credencial do setor." : "Peça ao coordenador do BPO pra cadastrar a primeira credencial."}
           />
-        </div>
+        </Card>
       ) : filteredCredentials.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState icon={<KeyRound />} title="Nenhuma credencial encontrada" description="Tente ajustar a busca." />
-        </div>
+        </Card>
       ) : (
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         <div className="scroll-x overflow-x-auto">

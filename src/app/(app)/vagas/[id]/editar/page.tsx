@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -53,7 +54,7 @@ export default async function EditarVagaPage({
       </div>
       <PageHeader title="Editar Vaga" />
 
-      <div className="bg-surface border border-border rounded-lg p-6">
+      <Card className="p-6">
         <VagaForm
           action={atualizarVaga}
           cancelHref={`/vagas/${id}`}
@@ -75,7 +76,7 @@ export default async function EditarVagaPage({
             publicDescription: vaga.publicDescription ?? undefined,
           }}
         />
-      </div>
+      </Card>
     </PageContainer>
   );
 }

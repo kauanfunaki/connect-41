@@ -37,7 +37,7 @@ export function HorizontalBarChart({
             title={d.sublabel ? `${d.label} · ${d.sublabel}` : d.label}
           >
             <span className="block text-[12px] text-fg-secondary truncate">{d.label}</span>
-            {d.sublabel && <span className="block text-[10.5px] text-fg-muted truncate">{d.sublabel}</span>}
+            {d.sublabel && <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate">{d.sublabel}</span>}
           </span>
           <div className="flex-1 h-2 rounded-full bg-surface-2 overflow-hidden">
             <div
@@ -177,7 +177,7 @@ export function TrendChart({
           />
         ))}
       </div>
-      <div className="flex justify-between mt-1.5 text-[10px] text-fg-muted">
+      <div className="flex justify-between mt-1.5 text-[length:var(--fs-micro)] text-fg-muted">
         <span>{data[0].label}</span>
         <span>{data[data.length - 1].label}</span>
       </div>
@@ -217,7 +217,7 @@ export function MiniBarChart({
     <div className="flex items-end gap-2 h-24">
       {data.map((d, i) => (
         <div key={d.label} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end min-w-0">
-          <span className="text-[10px] text-fg-muted tnum">{d.value}</span>
+          <span className="text-[length:var(--fs-micro)] text-fg-muted tnum">{d.value}</span>
           <div
             className="w-full rounded-t-[3px] transition-[height] duration-500"
             style={{
@@ -226,7 +226,7 @@ export function MiniBarChart({
             }}
             title={`${d.label}: ${d.value}`}
           />
-          <span className="text-[10px] text-fg-muted truncate w-full text-center">{d.label}</span>
+          <span className="text-[length:var(--fs-micro)] text-fg-muted truncate w-full text-center">{d.label}</span>
         </div>
       ))}
     </div>

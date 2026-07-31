@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
@@ -56,7 +57,7 @@ function Section({
       {items.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg py-8 text-center text-[13px] text-fg-muted">{empty}</div>
       ) : (
-        <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+        <Card className="divide-y divide-border">
           {items.map((v) => (
             <Link
               key={v.id}
@@ -70,7 +71,7 @@ function Section({
               </span>
             </Link>
           ))}
-        </div>
+        </Card>
       )}
     </div>
   );

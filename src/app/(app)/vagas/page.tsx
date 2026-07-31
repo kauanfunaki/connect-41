@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Briefcase } from "lucide-react";
@@ -119,7 +120,7 @@ export default async function VagasPage({
       </div>
 
       {vagas.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<Briefcase />}
             title="Nenhuma vaga encontrada"
@@ -135,7 +136,7 @@ export default async function VagasPage({
               )
             }
           />
-        </div>
+        </Card>
       ) : (
         <div className="bg-surface border border-border rounded-lg divide-y divide-border">
           {vagas.map((v) => (

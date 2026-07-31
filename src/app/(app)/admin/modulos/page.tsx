@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { LayoutGrid } from "lucide-react";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -31,13 +32,13 @@ export default async function ModulosPage() {
       />
 
       {modules.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg">
+        <Card>
           <EmptyState
             icon={<LayoutGrid />}
             title="Nenhum módulo no catálogo ainda."
             description="Os módulos de setor (Recrutamento, RH/DP…) aparecem aqui quando forem construídos."
           />
-        </div>
+        </Card>
       ) : (
         <div className="space-y-6">
           {Object.entries(grouped).map(([sectorCode, list]) => (
