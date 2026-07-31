@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -123,7 +124,7 @@ export default async function CandidatoPage({
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">{person.name}</h1>
+      <PageHeader title={person.name} />
             <span
               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${
                 person.active

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { CalendarClock } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -65,14 +66,12 @@ export default async function ObrigacoesPage() {
 
   return (
     <PageContainer>
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Obrigações Recorrentes</h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">
-          DAS, DCTF, folha, título bancário diário, contas a receber semanais e afins — o Connect
+      <PageHeader
+        title="Obrigações Recorrentes"
+        subtitle="DAS, DCTF, folha, título bancário diário, contas a receber semanais e afins — o Connect
           gera automaticamente o item de kanban na frequência escolhida (diária, semanal, quinzenal
-          ou mensal), com vencimento prorrogado para o próximo dia útil.
-        </p>
-      </div>
+          ou mensal), com vencimento prorrogado para o próximo dia útil."
+      />
 
       <AddObrigacaoForm
         action={criarObrigacao}

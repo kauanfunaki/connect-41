@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { MessageCircle, Building2, User, HelpCircle, Gauge, Settings } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullAccess } from "@/lib/auth/context";
@@ -65,7 +66,7 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
     <PageContainer>
       <div className="flex items-start justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Conversas</h1>
+      <PageHeader title="Conversas" />
           <p className="text-[13px] text-fg-muted mt-0.5">
             {view === "avaliacao"
               ? "Nota de 0-100 (Escrita + SLA) por atendimento resolvido no Chatwoot — gerada automaticamente pela IA."

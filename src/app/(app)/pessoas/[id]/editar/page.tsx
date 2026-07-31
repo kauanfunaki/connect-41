@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PersonType } from "@/generated/prisma/enums";
@@ -71,8 +72,7 @@ export default async function EditarPessoaPage({
         <span className="text-[13px] text-fg">Editar</span>
       </div>
       <BackButton className="mb-3" />
-
-      <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em] mb-6">Editar Pessoa</h1>
+      <PageHeader title="Editar Pessoa" />
 
         <PessoaForm
           action={atualizarPessoa}

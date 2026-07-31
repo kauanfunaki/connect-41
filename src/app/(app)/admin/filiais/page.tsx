@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { Building2 } from "lucide-react";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -14,22 +15,17 @@ export default async function FiliaisPage() {
 
   return (
     <PageContainer>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Filiais</h1>
-          <p className="text-[13px] text-fg-muted mt-0.5">
-            {branches.length} filial{branches.length !== 1 ? "is" : ""} cadastrada{branches.length !== 1 ? "s" : ""} —
-            organizacional apenas, não isola dados entre elas.
-          </p>
-        </div>
-        <Link
+      <PageHeader
+        title="Filiais"
+        subtitle={<>{branches.length} filial{branches.length !== 1 ? "is" : ""} cadastrada{branches.length !== 1 ? "s" : ""} —
+            organizacional apenas, não isola dados entre elas.</>}
+        action={<><Link
           href="/admin/filiais/novo"
           className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
         >
           + Nova Filial
-        </Link>
-      </div>
-
+        </Link></>}
+      />
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {branches.length === 0 ? (
           <EmptyState

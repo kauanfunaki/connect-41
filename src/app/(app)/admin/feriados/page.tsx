@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { CalendarDays } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -22,12 +23,10 @@ export default async function FeriadosPage() {
 
   return (
     <PageContainer>
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Feriados</h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">
-          {feriados.length} feriado{feriados.length !== 1 ? "s" : ""} cadastrado{feriados.length !== 1 ? "s" : ""}
-        </p>
-      </div>
+      <PageHeader
+        title="Feriados"
+        subtitle={<>{feriados.length} feriado{feriados.length !== 1 ? "s" : ""} cadastrado{feriados.length !== 1 ? "s" : ""}</>}
+      />
 
       <ImportFeriadosButton action={importarFeriadosNacionais} />
       <p className="text-[11px] text-fg-muted mb-5">

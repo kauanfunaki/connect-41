@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Users2 } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullAccess } from "@/lib/auth/context";
@@ -38,14 +39,12 @@ export default async function AdminAtendentesPage() {
 
   return (
     <PageContainer variant="narrow">
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Vínculos de Acesso</h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">
-          Para cada colaborador interno: qual conta de acesso (User) é dele e, se aplicável, qual agente do Chatwoot é
+      <PageHeader
+        title="Vínculos de Acesso"
+        subtitle={<>Para cada colaborador interno: qual conta de acesso (User) é dele e, se aplicável, qual agente do Chatwoot é
           essa mesma pessoa — usado para mostrar nome/foto reais em{" "}
-          <span className="font-medium text-fg">Avaliação de Atendimentos</span>. Configuração de uma vez só.
-        </p>
-      </div>
+          <span className="font-medium text-fg">Avaliação de Atendimentos</span>. Configuração de uma vez só.</>}
+      />
 
       {people.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">

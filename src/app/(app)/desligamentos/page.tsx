@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { UserMinus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
@@ -28,12 +29,10 @@ export default async function DesligamentosPage() {
 
   return (
     <PageContainer>
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Desligamentos em Andamento</h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">
-          {terminations.length} desligamento{terminations.length !== 1 ? "s" : ""} em processo
-        </p>
-      </div>
+      <PageHeader
+        title="Desligamentos em Andamento"
+        subtitle={<>{terminations.length} desligamento{terminations.length !== 1 ? "s" : ""} em processo</>}
+      />
 
       {terminations.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { ArrowRight, UserPlus, UserMinus, Palmtree } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
@@ -53,12 +54,10 @@ export default async function ColaboradoresPage() {
 
   return (
     <PageContainer>
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Colaboradores</h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">
-          Admissões, rescisões e férias — ciclo de vida do colaborador em um só lugar.
-        </p>
-      </div>
+      <PageHeader
+        title="Colaboradores"
+        subtitle="Admissões, rescisões e férias — ciclo de vida do colaborador em um só lugar."
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {sections.map((s) => (

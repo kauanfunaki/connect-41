@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -42,14 +43,11 @@ export default async function TesteDetailPage({ params }: { params: Promise<{ id
         <span className="text-[13px] text-fg truncate">{link.person.name}</span>
       </div>
 
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">
-          <Link href={`/candidatos/${link.person.id}`} className="hover:text-brand transition-colors">
+      <PageHeader
+        title={<><Link href={`/candidatos/${link.person.id}`} className="hover:text-brand transition-colors">
             {link.person.name}
-          </Link>
-        </h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">
-          Teste {link.type === "DISC" ? "DISC" : link.template?.name}
+          </Link></>}
+        subtitle={<>Teste {link.type === "DISC" ? "DISC" : link.template?.name}
           {link.candidatura && (
             <>
               {" · "}
@@ -60,9 +58,8 @@ export default async function TesteDetailPage({ params }: { params: Promise<{ id
                 {link.candidatura.vaga.title}
               </Link>
             </>
-          )}
-        </p>
-      </div>
+          )}</>}
+      />
 
       <div className="bg-surface border border-border rounded-lg p-5">
         {link.status === "PENDENTE" ? (

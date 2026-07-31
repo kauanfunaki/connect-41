@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Columns3 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -28,23 +29,18 @@ export default async function KanbanListPage() {
 
   return (
     <PageContainer>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Kanban</h1>
-          <p className="text-[13px] text-fg-muted mt-0.5">
-            {pipelines.length} kanban{pipelines.length !== 1 ? "s" : ""} configurado{pipelines.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-        {canCreate && (
+      <PageHeader
+        title="Kanban"
+        subtitle={<>{pipelines.length} kanban{pipelines.length !== 1 ? "s" : ""} configurado{pipelines.length !== 1 ? "s" : ""}</>}
+        action={<>{canCreate && (
           <Link
             href="/kanban/novo"
             className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
           >
             + Novo Kanban
           </Link>
-        )}
-      </div>
-
+        )}</>}
+      />
       {pipelines.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
           <EmptyState

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { UserPlus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
@@ -33,12 +34,10 @@ export default async function AdmissoesPage() {
 
   return (
     <PageContainer>
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Admissões em Andamento</h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">
-          {people.length} colaborador{people.length !== 1 ? "es" : ""} em processo de admissão
-        </p>
-      </div>
+      <PageHeader
+        title="Admissões em Andamento"
+        subtitle={<>{people.length} colaborador{people.length !== 1 ? "es" : ""} em processo de admissão</>}
+      />
 
       {people.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">

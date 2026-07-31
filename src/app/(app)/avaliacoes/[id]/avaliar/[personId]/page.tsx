@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { Star } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -40,8 +41,7 @@ export default async function AvaliarColaboradorPage({
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg">{person.name}</span>
       </div>
-
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Avaliar {person.name}</h1>
+      <PageHeader title={`Avaliar ${person.name}`} />
 
       {competencies.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">

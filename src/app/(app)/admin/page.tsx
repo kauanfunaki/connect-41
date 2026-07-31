@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import {
   ArrowRight,
@@ -113,10 +114,10 @@ export default async function AdminPage() {
 
   return (
     <PageContainer>
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Administração</h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">Configurações do tenant e catálogos compartilhados.</p>
-      </div>
+      <PageHeader
+        title="Administração"
+        subtitle="Configurações do tenant e catálogos compartilhados."
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {cards.map((c) => (

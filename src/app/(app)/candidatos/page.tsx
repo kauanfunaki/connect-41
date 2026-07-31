@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { UserSearch } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -91,23 +92,18 @@ export default async function CandidatosPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Candidatos</h1>
-          <p className="text-[13px] text-fg-muted mt-0.5">
-            {total} candidato{total !== 1 ? "s" : ""} no banco de talentos
-          </p>
-        </div>
-        {canCreate && (
+      <PageHeader
+        title="Candidatos"
+        subtitle={<>{total} candidato{total !== 1 ? "s" : ""} no banco de talentos</>}
+        action={<>{canCreate && (
           <Link
             href="/candidatos/nova"
             className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
           >
             + Novo Candidato
           </Link>
-        )}
-      </div>
-
+        )}</>}
+      />
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         <div className="w-full max-w-xs">
           <DebouncedSearchInput placeholder="Buscar por nome, e-mail ou CPF…" />

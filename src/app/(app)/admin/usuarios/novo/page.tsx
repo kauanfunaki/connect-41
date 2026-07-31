@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { UsuarioForm } from "@/components/admin/UsuarioForm";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -53,8 +54,7 @@ export default async function NovoUsuarioPage() {
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg">Novo Usuário</span>
       </div>
-
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Novo Usuário</h1>
+      <PageHeader title="Novo Usuário" />
 
       <div className="bg-surface border border-border rounded-lg p-6">
         <UsuarioForm

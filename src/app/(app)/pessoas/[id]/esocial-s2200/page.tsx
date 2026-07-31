@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -76,12 +77,10 @@ export default async function EsocialS2200Page({
       </div>
       <BackButton className="mb-3" />
 
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">eSocial S-2200 — rascunho</h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">
-          Cadastramento Inicial do Vínculo e Admissão. Mapeamento dos dados coletados para conferência.
-        </p>
-      </div>
+      <PageHeader
+        title="eSocial S-2200 — rascunho"
+        subtitle="Cadastramento Inicial do Vínculo e Admissão. Mapeamento dos dados coletados para conferência."
+      />
 
       {/* Aviso honesto: não é transmissão oficial */}
       <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 mb-4">

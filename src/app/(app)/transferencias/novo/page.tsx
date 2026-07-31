@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -128,10 +129,7 @@ function FormShell({
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg">Solicitar Transferência</span>
       </div>
-
-      <h1 className="text-[length:var(--fs-display)] font-display font-semibold text-fg tracking-[-0.01em] mb-6">
-        Solicitar Transferência
-      </h1>
+      <PageHeader title="Solicitar Transferência" />
 
       <Card className="p-6">{children}</Card>
     </PageContainer>

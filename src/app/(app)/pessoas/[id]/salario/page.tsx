@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -64,8 +65,7 @@ export default async function SalarioPage({
         <span className="text-[13px] text-fg">Salário</span>
       </div>
       <BackButton className="mb-3" />
-
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Dados Bancários e Salário</h1>
+      <PageHeader title="Dados Bancários e Salário" />
 
       <div className="bg-surface border border-border rounded-lg p-5 mb-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">

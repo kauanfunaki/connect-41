@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { ItemForm } from "@/components/kanban/ItemForm";
@@ -59,10 +60,7 @@ export default async function NovoItemPage({
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg">Novo Item</span>
       </div>
-
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">
-        Adicionar {pipeline.entityType === "COMPANY" ? "Empresa" : "Pessoa"} ao Kanban
-      </h1>
+      <PageHeader title={<>Adicionar {pipeline.entityType === "COMPANY" ? "Empresa" : "Pessoa"} ao Kanban</>} />
 
       <div className="bg-surface border border-border rounded-lg p-6">
         <ItemForm

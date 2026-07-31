@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -80,18 +81,11 @@ export default async function CompetenciaPage({
       </div>
       <BackButton className="mb-3" />
 
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">
-            {MONTH_LABEL[competencia.month - 1]}/{competencia.year} — {company.name}
-          </h1>
-          <p className="text-[13px] text-fg-muted mt-0.5">
-            {competencia.entries.length} lançamento{competencia.entries.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-        {canManage && <DeleteButton action={deleteAction} nome={`competência ${MONTH_LABEL[competencia.month - 1]}/${competencia.year}`} />}
-      </div>
-
+      <PageHeader
+        title={<>{MONTH_LABEL[competencia.month - 1]}/{competencia.year} — {company.name}</>}
+        subtitle={<>{competencia.entries.length} lançamento{competencia.entries.length !== 1 ? "s" : ""}</>}
+        action={<>{canManage && <DeleteButton action={deleteAction} nome={`competência ${MONTH_LABEL[competencia.month - 1]}/${competencia.year}`} />}</>}
+      />
       {canManage && (
         <div className="mb-4">
           <CompetenciaStatusForm action={atualizarStatusAction} currentStatus={competencia.status} />

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { ArrowRightLeft, ArrowRight } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps } from "@/lib/sectors";
@@ -73,25 +74,18 @@ export default async function HandoffsPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[length:var(--fs-display)] font-display font-semibold text-fg tracking-[-0.01em]">
-            Transferências
-          </h1>
-          <p className="text-[length:var(--fs-helper)] text-fg-muted mt-0.5">
-            Solicitações de transferência de acompanhamento entre setores
-          </p>
-        </div>
-        {canCreate && (
+      <PageHeader
+        title="Transferências"
+        subtitle="Solicitações de transferência de acompanhamento entre setores"
+        action={<>{canCreate && (
           <Link
             href="/transferencias/novo"
             className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
           >
             + Nova Transferência
           </Link>
-        )}
-      </div>
-
+        )}</>}
+      />
       <div className="flex items-center gap-1 mb-4">
         {FILTER_TABS.map((tab) => {
           const isActive = tab.value === statusFilter;

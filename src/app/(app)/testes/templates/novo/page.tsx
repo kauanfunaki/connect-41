@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -20,8 +21,7 @@ export default async function NovoTemplatePage() {
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg">Novo</span>
       </div>
-
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Novo modelo de teste</h1>
+      <PageHeader title="Novo modelo de teste" />
 
       <div className="bg-surface border border-border rounded-lg p-6">
         <TemplateForm action={criarTemplate} cancelHref="/testes/templates" />

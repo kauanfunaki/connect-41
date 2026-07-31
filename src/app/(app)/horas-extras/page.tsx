@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Clock } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
@@ -18,12 +19,10 @@ export default async function HorasExtrasPage() {
 
   return (
     <PageContainer>
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Horas Extras Pendentes</h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">
-          {entries.length} lançamento{entries.length !== 1 ? "s" : ""} aguardando aprovação
-        </p>
-      </div>
+      <PageHeader
+        title="Horas Extras Pendentes"
+        subtitle={<>{entries.length} lançamento{entries.length !== 1 ? "s" : ""} aguardando aprovação</>}
+      />
 
       {entries.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">

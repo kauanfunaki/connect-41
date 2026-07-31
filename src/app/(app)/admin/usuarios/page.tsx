@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -27,14 +28,10 @@ export default async function UsuariosPage() {
 
   return (
     <PageContainer>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Usuários</h1>
-          <p className="text-[13px] text-fg-muted mt-0.5">
-            {users.length} usuário{users.length !== 1 ? "s" : ""} cadastrado{users.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-        {seatCheck.allowed ? (
+      <PageHeader
+        title="Usuários"
+        subtitle={<>{users.length} usuário{users.length !== 1 ? "s" : ""} cadastrado{users.length !== 1 ? "s" : ""}</>}
+        action={<>{seatCheck.allowed ? (
           <Link
             href="/admin/usuarios/novo"
             className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
@@ -49,9 +46,8 @@ export default async function UsuariosPage() {
           >
             + Novo Usuário
           </span>
-        )}
-      </div>
-
+        )}</>}
+      />
       {!seatCheck.allowed && (
         <div className="mb-4 rounded-md border border-warning/30 bg-warning-bg px-3 py-2">
           <p className="text-[12.5px] text-fg">{seatCheck.reason}</p>

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { TenantForm } from "@/components/admin/TenantForm";
@@ -19,12 +20,10 @@ export default async function TenantPage() {
 
   return (
     <PageContainer variant="narrow">
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-1">
-        Empresa (Tenant)
-      </h1>
-      <p className="text-[13px] text-fg-muted mb-6">
-        Dados do workspace da 41 Tech no Connect.
-      </p>
+      <PageHeader
+        title="Empresa (Tenant)"
+        subtitle="Dados do workspace da 41 Tech no Connect."
+      />
 
       <div className="bg-surface border border-border rounded-lg p-6">
         <TenantForm

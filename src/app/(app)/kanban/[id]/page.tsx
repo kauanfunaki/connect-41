@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps } from "@/lib/sectors";
@@ -172,7 +173,7 @@ export default async function KanbanBoardPage({
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em]">{pipeline.name}</h1>
+      <PageHeader title={pipeline.name} />
           <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
             {sectorLabels[pipeline.sectorCode] ?? pipeline.sectorCode} ·{" "}
             {pipeline.entityType === "COMPANY" ? "Empresas" : "Pessoas"}

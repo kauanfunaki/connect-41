@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { LayoutGrid } from "lucide-react";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getTenantModuleStates } from "@/lib/modules";
@@ -24,12 +25,10 @@ export default async function ModulosPage() {
 
   return (
     <PageContainer>
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Módulos</h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">
-          Blocos de funcionalidade que podem ser ligados ou desligados por cliente.
-        </p>
-      </div>
+      <PageHeader
+        title="Módulos"
+        subtitle="Blocos de funcionalidade que podem ser ligados ou desligados por cliente."
+      />
 
       {modules.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">

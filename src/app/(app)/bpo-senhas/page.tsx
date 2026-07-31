@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
@@ -34,7 +35,7 @@ export default async function BpoSenhasPage() {
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em]">Repositório de Senhas</h1>
+      <PageHeader title="Repositório de Senhas" />
           <p className="text-[13px] text-fg-muted mt-1">
             Credenciais de portais, bancos e sistemas de clientes — centralizadas com auditoria de acesso.
           </p>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { BoardView } from "@/components/kanban/BoardView";
@@ -181,7 +182,7 @@ export default async function BpoBoardPage({
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em]">{pipeline.name}</h1>
+      <PageHeader title={pipeline.name} />
           <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
             {pipeline.space.name}{pipeline.folder ? ` · ${pipeline.folder.name}` : ""} · {pipeline.entityType === "COMPANY" ? "Empresas" : "Pessoas"}
           </p>

@@ -1,4 +1,5 @@
 import { getPrisma } from "@/lib/prisma";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getAuthContext } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -89,7 +90,7 @@ export default async function AgendaPage({
   return (
     <PageContainer>
       <div className="mb-6">
-        <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em]">Agenda</h1>
+      <PageHeader title="Agenda" />
         <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">{VIEW_HELPER[view]}</p>
       </div>
 

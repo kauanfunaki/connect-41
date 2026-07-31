@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { CreditCard } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -30,10 +31,10 @@ export default async function AssinaturaPage() {
 
   return (
     <PageContainer variant="narrow">
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Minha Assinatura</h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">Plano contratado e uso atual.</p>
-      </div>
+      <PageHeader
+        title="Minha Assinatura"
+        subtitle="Plano contratado e uso atual."
+      />
 
       {!subscription ? (
         <div className="bg-surface border border-border rounded-lg">

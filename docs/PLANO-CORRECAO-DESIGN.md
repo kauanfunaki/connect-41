@@ -309,19 +309,68 @@ padding de antes (`px-4 py-3.5`, o do `StatCard` vivo).
 
 ---
 
-## Etapa 5 — `PageHeader` nas 101 páginas
+## Etapa 5 — `PageHeader` ✅ EXECUTADA (31/07/2026)
 
-**Objetivo:** o maior ganho de consistência percebida por unidade de esforço.
-Cabeçalho é a primeira coisa que o olho encontra em toda tela; hoje 101 páginas
-montam `<h1>` + subtítulo + ação à mão, cada uma com seu tamanho e espaçamento.
+**Resultado: 119 das 141 páginas usam `PageHeader`** (eram 18). Restam 5 `<h1>`
+crus, todos deliberados (ver abaixo).
 
-`PageHeader` já tem a API certa (`title` / `subtitle` / `action`) e já é usado
-em 18 arquivos. É substituição, não construção.
+### A decisão de tamanho
 
-**Como:** por módulo, na ordem `kanban` → `admin` → `pessoas` → resto —
-mesma ordem do mapa de calor. Um commit por módulo, revisável.
+A medição contradisse o plano, que dizia "101 páginas, cada uma com seu tamanho".
+Não havia dispersão — havia **dois grupos**:
 
-**Risco:** baixo. **Tamanho:** sessão média, dividida por módulo.
+| Tamanho do `<h1>` | Páginas |
+|---|---|
+| `text-[16px]` | **85** |
+| `--fs-display` (30px) | 17 |
+| 18 / 20 / 22px | 8 |
+
+Ou seja: **Empresas rodava títulos a 30px e todo o resto a 16px.** Não era
+inconsistência dentro de módulo — era entre módulos, herdada da auditoria de
+20/07, que converteu só Empresas e classificou 16px como bug ("peso visual de
+título de card, não de página").
+
+Adotar `PageHeader` como estava dobrava o título em 85 telas. **Confirmado com
+o usuário antes de aplicar:** seguir a direção de 20/07, 30px em tudo — o
+tamanho já está em produção na Home e em Empresas, e com corpo a 13px um
+título de 16px praticamente não cria hierarquia.
+
+### Mudanças na API do `PageHeader`
+
+Duas ampliações foram necessárias, ambas descobertas pelo compilador:
+
+- **`subtitle: string` → `React.ReactNode`** — a maioria dos subtítulos
+  interpola contagem e pluralização (`{total} {total === 1 ? "ação" : "ações"}
+  registradas neste workspace`), que não é string.
+- **`title: string` → `React.ReactNode`** — em `testes/[id]` e
+  `vagas/[id]/candidaturas/[id]` o título é o nome da pessoa dentro de um
+  `<Link>` clicável.
+
+### As 5 páginas que ficaram de fora (de propósito)
+
+`carreiras/[slug]`, `carreiras/[slug]/[vagaId]`, `admissao/[token]`,
+`d/[token]`, `teste/[token]` — todas **públicas**, fora do `(app)` e fora do
+shell autenticado. Têm design próprio (títulos a 22px, centralizados) e não
+devem herdar o cabeçalho interno do produto.
+
+### Método
+
+Transformação por script em 3 formas de cabeçalho (wrapper flex com ação ·
+wrapper simples · `<h1>` solto), em 4 passadas, na ordem do mapa de calor:
+`admin` (28 arquivos) → `kanban`+`pessoas` (14) → resto (37) → passada final
+permissiva para as variantes multi-linha (11).
+
+**Verificação:** `tsc` limpo · `eslint --max-warnings 0` limpo · `vitest` 125
+testes · `build` compilado.
+
+**Dois reparos manuais** que o `tsc` pegou: 3 títulos com `<Link>` (resolvidos
+alargando `title`) e o cabeçalho da Home, onde o `action` tinha um `<div>`
+aninhado e o regex fechou no lugar errado.
+
+**Efeito visual: grande e intencional.** 85 páginas com título de 16→30px, mais
+o espaçamento do bloco padronizado em `mb-7`. É a etapa que mais muda a
+aparência do app — vale conferir `/admin`, `/kanban` e `/pessoas` lado a lado
+com `/empresas`, que já era assim.
 
 ---
 
@@ -373,7 +422,7 @@ ou depois.
 | 2 · Raios + docs ✅ | 94 | baixo | pequena | destravou 4 |
 | 3 · A11y (diálogo + rótulo) ✅ | 22 | baixo | pequena | independente |
 | 4 · Componentes órfãos ✅ | 3 + 8 telas | médio | média | destravou 6 |
-| 5 · PageHeader | 101 páginas | baixo | média | — |
+| 5 · PageHeader ✅ | 91 páginas | médio (visual) | média | — |
 | 6 · Button | 168 arquivos | médio | **grande** | — |
 | 7 · Card, estados, grid | ~200 pontos | baixo | grande | — |
 

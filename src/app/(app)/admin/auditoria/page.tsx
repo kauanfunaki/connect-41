@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { ScrollText } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -141,13 +142,11 @@ export default async function AuditoriaPage({
 
   return (
     <PageContainer>
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Auditoria</h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">
-          {total} {total === 1 ? "ação registrada" : "ações registradas"} neste workspace — criação, edição e
-          exclusão em Empresas, Pessoas, Transferências e Configurações.
-        </p>
-      </div>
+      <PageHeader
+        title="Auditoria"
+        subtitle={<>{total} {total === 1 ? "ação registrada" : "ações registradas"} neste workspace — criação, edição e
+          exclusão em Empresas, Pessoas, Transferências e Configurações.</>}
+      />
 
       <AuditoriaFilters
         users={users.map((u) => ({ value: u.id, label: u.name }))}

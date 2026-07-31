@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { GraduationCap } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -18,23 +19,18 @@ export default async function TreinamentosPage() {
 
   return (
     <PageContainer>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Treinamentos</h1>
-          <p className="text-[13px] text-fg-muted mt-0.5">
-            {treinamentos.length} treinamento{treinamentos.length !== 1 ? "s" : ""} cadastrado{treinamentos.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-        {canManage && (
+      <PageHeader
+        title="Treinamentos"
+        subtitle={<>{treinamentos.length} treinamento{treinamentos.length !== 1 ? "s" : ""} cadastrado{treinamentos.length !== 1 ? "s" : ""}</>}
+        action={<>{canManage && (
           <Link
             href="/treinamentos/novo"
             className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
           >
             + Novo Treinamento
           </Link>
-        )}
-      </div>
-
+        )}</>}
+      />
       {treinamentos.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
           <EmptyState

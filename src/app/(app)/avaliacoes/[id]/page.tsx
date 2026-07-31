@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -49,7 +50,7 @@ export default async function CicloPage({
 
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">{ciclo.name}</h1>
+      <PageHeader title={ciclo.name} />
           <p className="text-[13px] text-fg-muted mt-0.5">
             {formatCalendarDate(ciclo.startDate)}
             {ciclo.endDate && ` — ${formatCalendarDate(ciclo.endDate)}`}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { CandidatoForm } from "@/components/candidatos/CandidatoForm";
@@ -42,8 +43,7 @@ export default async function EditarCandidatoPage({
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg">Editar</span>
       </div>
-
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Editar Candidato</h1>
+      <PageHeader title="Editar Candidato" />
 
       <div className="bg-surface border border-border rounded-lg p-6">
         <CandidatoForm

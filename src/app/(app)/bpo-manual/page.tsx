@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
@@ -43,7 +44,7 @@ export default async function BpoManualPage() {
       <BackButton className="mb-3 flex-shrink-0" />
 
       <div className="mb-6 flex-shrink-0">
-        <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em]">Repositório de Manuais</h1>
+      <PageHeader title="Repositório de Manuais" />
         <p className="text-[13px] text-fg-muted mt-1">
           Instruções internas do setor — escritas pelos colaboradores para alinhamento em ausências e férias.
         </p>

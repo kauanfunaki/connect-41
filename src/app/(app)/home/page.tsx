@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { PageHeader } from "@/components/ui/PageHeader";
 import Link from "next/link";
 import {
   Building2,
@@ -608,32 +609,28 @@ export default async function HomePage() {
   return (
     <PageContainer>
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
-        <div>
-          <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em]">
-            {firstName ? `Olá, ${firstName}` : "Início"}
-          </h1>
-          <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
-            {pendingForMe > 0
+      <PageHeader
+        title={firstName ? `Olá, ${firstName}` : "Início"}
+        subtitle={<>{pendingForMe > 0
               ? `${pendingForMe} pendência${pendingForMe !== 1 ? "s" : ""} precisa${pendingForMe !== 1 ? "m" : ""} de você`
-              : <>Aqui está um resumo do workspace {tenant?.name ? <span className="text-fg font-medium">{tenant.name}</span> : ""}</>}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <p className="hidden sm:block text-[length:var(--fs-helper)] text-fg-muted tnum">{today}</p>
-          <CustomizeHomeButton
-            selected={selectedWidgets}
-            showRestricted={showWorkspaceOverview}
-            saveAction={salvarWidgetsHome}
-            resetAction={restaurarWidgetsHome}
-          />
-          <QuickCreateMenu
-            canCreateCompany={canCreateCompany}
-            canCreatePerson={canCreatePerson}
-            canCreateTransfer={canCreateTransfer}
-          />
-        </div>
-      </div>
+              : <>Aqui está um resumo do workspace {tenant?.name ? <span className="text-fg font-medium">{tenant.name}</span> : ""}</>}</>}
+        action={
+          <div className="flex items-center gap-3">
+            <p className="hidden sm:block text-[length:var(--fs-helper)] text-fg-muted tnum">{today}</p>
+            <CustomizeHomeButton
+              selected={selectedWidgets}
+              showRestricted={showWorkspaceOverview}
+              saveAction={salvarWidgetsHome}
+              resetAction={restaurarWidgetsHome}
+            />
+            <QuickCreateMenu
+              canCreateCompany={canCreateCompany}
+              canCreatePerson={canCreatePerson}
+              canCreateTransfer={canCreateTransfer}
+            />
+          </div>
+        }
+      />
 
       {topWidgets.map((key) => (
         <Fragment key={key}>{widgetNodes[key]}</Fragment>

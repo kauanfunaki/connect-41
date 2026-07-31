@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { Eye, Download, PenLine } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -60,7 +61,7 @@ export default async function DocumentoClienteDetailPage({
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">{document.title}</h1>
+      <PageHeader title={document.title} />
             <Badge variant={document.status === "PUBLISHED" ? "success" : "warning"}>
               {document.status === "PUBLISHED" ? "Publicado" : "Rascunho"}
             </Badge>

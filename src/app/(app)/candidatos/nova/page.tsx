@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { CandidatoForm } from "@/components/candidatos/CandidatoForm";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -18,8 +19,7 @@ export default async function NovoCandidatoPage() {
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg">Novo Candidato</span>
       </div>
-
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Novo Candidato</h1>
+      <PageHeader title="Novo Candidato" />
 
       <div className="bg-surface border border-border rounded-lg p-6">
         <CandidatoForm action={criarCandidato} cancelHref="/candidatos" />

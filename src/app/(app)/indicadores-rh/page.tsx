@@ -1,4 +1,5 @@
 import { getAuthContext } from "@/lib/auth/context";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getIndicadoresRH } from "@/lib/indicadoresRH";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { ExportIndicadoresButtons } from "@/components/indicadoresRH/ExportIndicadoresButtons";
@@ -11,7 +12,7 @@ export default async function IndicadoresRhPage() {
     <PageContainer>
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Indicadores de RH</h1>
+      <PageHeader title="Indicadores de RH" />
           <p className="text-[13px] text-fg-muted mt-0.5">
             Consequência dos dados operacionais lançados nos módulos de RH/DP e Recrutamento.
           </p>

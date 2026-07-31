@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
@@ -111,16 +112,12 @@ export default async function CandidaturaScorecardPage({
       </div>
       <BackButton className="mb-3" />
 
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">
-          <Link href={`/candidatos/${candidatura.person.id}`} className="hover:text-brand transition-colors">
+      <PageHeader
+        title={<><Link href={`/candidatos/${candidatura.person.id}`} className="hover:text-brand transition-colors">
             {candidatura.person.name}
-          </Link>
-        </h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">
-          Pareceres de entrevista · etapa atual: {STAGE_LABEL[candidatura.stage as Stage]}
-        </p>
-      </div>
+          </Link></>}
+        subtitle={<>Pareceres de entrevista · etapa atual: {STAGE_LABEL[candidatura.stage as Stage]}</>}
+      />
 
       {/* Entrevistas */}
       {canSchedule && (

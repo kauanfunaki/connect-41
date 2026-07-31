@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
@@ -44,7 +45,7 @@ export default async function WorkspaceDetailPage({
       </div>
 
       <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">{tenant.name}</h1>
+      <PageHeader title={tenant.name} />
         <p className="text-[13px] text-fg-muted mt-0.5 font-mono">{tenant.cnpj ? formatCnpj(tenant.cnpj) : tenant.slug}</p>
       </div>
 

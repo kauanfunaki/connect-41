@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { Video, Check, Sparkles, MessageCircle, Headset } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -57,13 +58,11 @@ export default async function IntegracoesPage({
 
   return (
     <PageContainer variant="narrow">
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Integrações</h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">
-          Conecte sua conta pessoal para agendar reuniões (Google Meet / Microsoft Teams) direto
-          dos itens do Kanban. Só coordenadores e administradores veem esta tela.
-        </p>
-      </div>
+      <PageHeader
+        title="Integrações"
+        subtitle="Conecte sua conta pessoal para agendar reuniões (Google Meet / Microsoft Teams) direto
+          dos itens do Kanban. Só coordenadores e administradores veem esta tela."
+      />
 
       {error && (
         <p className="mb-4 text-[13px] text-danger bg-danger-bg border border-danger/30 rounded-lg px-3 py-2">

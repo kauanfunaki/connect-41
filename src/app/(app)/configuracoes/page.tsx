@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -36,7 +37,7 @@ export default async function ConfiguracoesPage() {
   return (
     <PageContainer variant="narrow">
       <div className="mb-6">
-        <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em]">Configurações</h1>
+      <PageHeader title="Configurações" />
         <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
           Sua conta e suas preferências neste workspace.
         </p>

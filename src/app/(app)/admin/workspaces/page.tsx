@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
@@ -15,21 +16,16 @@ export default async function WorkspacesPage() {
 
   return (
     <PageContainer variant="narrow">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Workspaces</h1>
-          <p className="text-[13px] text-fg-muted mt-0.5">
-            {tenants.length} workspace{tenants.length !== 1 ? "s" : ""} cadastrado{tenants.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-        <Link
+      <PageHeader
+        title="Workspaces"
+        subtitle={<>{tenants.length} workspace{tenants.length !== 1 ? "s" : ""} cadastrado{tenants.length !== 1 ? "s" : ""}</>}
+        action={<><Link
           href="/admin/workspaces/novo"
           className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
         >
           + Novo Workspace
-        </Link>
-      </div>
-
+        </Link></>}
+      />
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         <div className="divide-y divide-border">
           {tenants.map((t) => (

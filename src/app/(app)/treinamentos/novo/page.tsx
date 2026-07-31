@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { TrainingForm } from "@/components/treinamentos/TrainingForm";
@@ -16,8 +17,7 @@ export default async function NovoTreinamentoPage() {
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg">Novo</span>
       </div>
-
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Novo Treinamento</h1>
+      <PageHeader title="Novo Treinamento" />
 
       <div className="bg-surface border border-border rounded-lg p-6">
         <TrainingForm action={criarTreinamento} cancelHref="/treinamentos" />

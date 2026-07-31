@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { redirect, notFound } from "next/navigation";
 import { LayoutGrid } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -36,16 +37,11 @@ export default async function BpoFinanceiroHomePage() {
 
   return (
     <PageContainer>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">BPO Financeiro</h1>
-          <p className="text-[13px] text-fg-muted mt-0.5">
-            Espaços do setor — cada um agrupa pastas e listas de clientes/processos.
-          </p>
-        </div>
-        {canCreate && <NewSpaceButton action={createSpaceAction} />}
-      </div>
-
+      <PageHeader
+        title="BPO Financeiro"
+        subtitle="Espaços do setor — cada um agrupa pastas e listas de clientes/processos."
+        action={<>{canCreate && <NewSpaceButton action={createSpaceAction} />}</>}
+      />
       {spaces.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
           <EmptyState

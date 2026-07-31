@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -71,7 +72,7 @@ export default async function SectorFolderPage({ params }: { params: Promise<{ c
       </div>
 
       <div className="flex items-center justify-between mb-6 mt-1">
-        <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em]">{folder.name}</h1>
+      <PageHeader title={folder.name} />
         {canCreate && <NewListButton action={createListAction} />}
       </div>
 

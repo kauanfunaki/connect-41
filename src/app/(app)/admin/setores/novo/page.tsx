@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { SetorForm } from "@/components/admin/SetorForm";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -18,8 +19,7 @@ export default async function NovoSetorPage() {
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg">Novo Setor</span>
       </div>
-
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Novo Setor</h1>
+      <PageHeader title="Novo Setor" />
 
       <div className="bg-surface border border-border rounded-lg p-6">
         <SetorForm action={criarSetor} cancelHref="/admin/setores" />

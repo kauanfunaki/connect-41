@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { ListChecks } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -43,21 +44,16 @@ export default async function CamposPage() {
 
   return (
     <PageContainer>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Campos Customizados</h1>
-          <p className="text-[13px] text-fg-muted mt-0.5">
-            {fields.length} campo{fields.length !== 1 ? "s" : ""} configurado{fields.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-        <Link
+      <PageHeader
+        title="Campos Customizados"
+        subtitle={<>{fields.length} campo{fields.length !== 1 ? "s" : ""} configurado{fields.length !== 1 ? "s" : ""}</>}
+        action={<><Link
           href="/admin/campos/novo"
           className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
         >
           + Novo Campo
-        </Link>
-      </div>
-
+        </Link></>}
+      />
       {Object.keys(grouped).length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
           <EmptyState

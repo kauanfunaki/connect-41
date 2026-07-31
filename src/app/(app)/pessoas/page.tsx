@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Users } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { PersonType } from "@/generated/prisma/enums";
@@ -72,25 +73,20 @@ export default async function PessoasPage({
 
       <div id="cadastros-content">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Pessoas</h1>
-          <p className="text-[13px] text-fg-muted mt-0.5">
-            {isInternos
+      <PageHeader
+        title="Pessoas"
+        subtitle={<>{isInternos
               ? `${total} funcionário${total !== 1 ? "s" : ""} interno${total !== 1 ? "s" : ""} cadastrado${total !== 1 ? "s" : ""}`
-              : `${total} colaborador${total !== 1 ? "es" : ""} cadastrado${total !== 1 ? "s" : ""}`}
-          </p>
-        </div>
-        {canCreate && (
+              : `${total} colaborador${total !== 1 ? "es" : ""} cadastrado${total !== 1 ? "s" : ""}`}</>}
+        action={<>{canCreate && (
           <Link
             href={isInternos ? "/pessoas/nova?internal=1" : "/pessoas/nova"}
             className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
           >
             + Nova Pessoa
           </Link>
-        )}
-      </div>
-
+        )}</>}
+      />
       <PessoasTabsBar active={activeTab} />
 
       {/* Filters */}

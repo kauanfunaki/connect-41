@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -57,8 +58,7 @@ export default async function BeneficiosPessoaPage({
         <span className="text-[13px] text-fg">Benefícios</span>
       </div>
       <BackButton className="mb-3" />
-
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Benefícios</h1>
+      <PageHeader title="Benefícios" />
 
       <div className="bg-surface border border-border rounded-lg p-5">
         {beneficios.length === 0 ? (

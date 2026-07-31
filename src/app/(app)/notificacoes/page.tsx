@@ -1,4 +1,5 @@
 import { Bell } from "lucide-react";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { NotificationItem } from "@/components/shell/NotificationItem";
@@ -26,16 +27,11 @@ export default async function NotificacoesPage() {
 
   return (
     <PageContainer variant="narrow">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Notificações</h1>
-          <p className="text-[13px] text-fg-muted mt-0.5">
-            {unreadCount > 0 ? `${unreadCount} não lida${unreadCount !== 1 ? "s" : ""}` : "Tudo em dia"}
-          </p>
-        </div>
-        {unreadCount > 0 && <MarkAllReadButton action={marcarTodasLidas} />}
-      </div>
-
+      <PageHeader
+        title="Notificações"
+        subtitle={<>{unreadCount > 0 ? `${unreadCount} não lida${unreadCount !== 1 ? "s" : ""}` : "Tudo em dia"}</>}
+        action={<>{unreadCount > 0 && <MarkAllReadButton action={marcarTodasLidas} />}</>}
+      />
       <PushNotificationToggle publicKey={getVapidPublicKey()} />
 
       <div className="bg-surface border border-border rounded-lg overflow-hidden">

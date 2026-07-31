@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { TagForm } from "@/components/admin/TagForm";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -25,8 +26,7 @@ export default async function NovaTagPage() {
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg">Nova Tag</span>
       </div>
-
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Nova Tag</h1>
+      <PageHeader title="Nova Tag" />
 
       <div className="bg-surface border border-border rounded-lg p-6">
         <TagForm action={criarTag} cancelHref="/admin/tags" sectorOptions={sectorOptions} />

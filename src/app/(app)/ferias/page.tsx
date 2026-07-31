@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -22,12 +23,10 @@ export default async function FeriasPage() {
 
   return (
     <PageContainer>
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Férias</h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">
-          {vacations.length} registro{vacations.length !== 1 ? "s" : ""} em aberto
-        </p>
-      </div>
+      <PageHeader
+        title="Férias"
+        subtitle={<>{vacations.length} registro{vacations.length !== 1 ? "s" : ""} em aberto</>}
+      />
 
       <Section title={`Vencidas (${vencidas.length})`} items={vencidas} empty="Nenhuma férias vencida." danger />
       <Section title={`A vencer / Programadas (${aVencer.length})`} items={aVencer} empty="Nenhuma férias a vencer." />

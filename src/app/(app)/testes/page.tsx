@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { ClipboardList } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite, canActOnSector } from "@/lib/auth/context";
@@ -82,20 +83,15 @@ export default async function TestesPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Testes</h1>
-          <p className="text-[13px] text-fg-muted mt-0.5">
-            {total} teste{total !== 1 ? "s" : ""}
-          </p>
-        </div>
-        {canCreate && (
+      <PageHeader
+        title="Testes"
+        subtitle={<>{total} teste{total !== 1 ? "s" : ""}</>}
+        action={<>{canCreate && (
           <Link href="/testes/templates" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
             Modelos de teste
           </Link>
-        )}
-      </div>
-
+        )}</>}
+      />
       {canCreate && <NovoTesteForm candidatos={candidatos} templates={templates} />}
 
       <div className="flex items-center gap-1 mb-4">

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Building2 } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
@@ -31,7 +32,7 @@ export default async function AssinaturasPage() {
     <PageContainer>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Assinaturas</h1>
+      <PageHeader title="Assinaturas" />
           <p className="text-[13px] text-fg-muted mt-0.5">
             Plano, modo de gestão e status de cobrança de cada cliente.
           </p>

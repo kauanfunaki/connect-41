@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -47,13 +48,10 @@ export default async function TurmaPage({
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg">{formatCalendarDate(trainingClass.date)}</span>
       </div>
-
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-1">
-        {trainingClass.training.name} — {formatCalendarDate(trainingClass.date)}
-      </h1>
-      <p className="text-[13px] text-fg-muted mb-6">
-        {[trainingClass.shift, trainingClass.instructor].filter(Boolean).join(" · ") || "Sem turno/instrutor definidos"}
-      </p>
+      <PageHeader
+        title={<>{trainingClass.training.name} — {formatCalendarDate(trainingClass.date)}</>}
+        subtitle={[trainingClass.shift, trainingClass.instructor].filter(Boolean).join(" · ") || "Sem turno/instrutor definidos"}
+      />
 
       <div className="bg-surface border border-border rounded-lg p-5">
         <h2 className="text-[14px] font-semibold text-fg mb-3">

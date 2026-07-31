@@ -1,6 +1,10 @@
 type Props = {
-  title: string;
-  subtitle?: string;
+  /** Normalmente string. Aceita ReactNode porque em algumas telas o título é
+   *  o próprio nome da pessoa/candidato envolvido em <Link>. */
+  title: React.ReactNode;
+  /** ReactNode, não string: a maioria dos subtítulos do app interpola
+   *  contagem e pluralização ("{n} ações registradas neste workspace"). */
+  subtitle?: React.ReactNode;
   action?: React.ReactNode;
 };
 

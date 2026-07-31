@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { Briefcase, Building2, ChevronRight } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -30,7 +31,7 @@ export default async function NovaPessoaPage({
     return (
       <PageContainer variant="narrow">
         <BackButton className="mb-3" />
-        <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em] mb-1">Nova Pessoa</h1>
+      <PageHeader title="Nova Pessoa" />
         <p className="text-[length:var(--fs-helper)] text-fg-muted mb-6">
           Que tipo de cadastro é este? O formulário muda conforme a escolha.
         </p>
@@ -88,10 +89,7 @@ export default async function NovaPessoaPage({
       </div>
 
       <BackButton className="mb-3" />
-
-      <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em] mb-6">
-        {kind === "interno" ? "Novo Funcionário Interno" : "Novo Cliente / Contato"}
-      </h1>
+      <PageHeader title={kind === "interno" ? "Novo Funcionário Interno" : "Novo Cliente / Contato"} />
 
       <PessoaForm
         action={criarPessoa}

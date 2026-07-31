@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { TagForm } from "@/components/admin/TagForm";
@@ -28,8 +29,7 @@ export default async function EditarTagPage({
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg">Editar</span>
       </div>
-
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Editar Tag</h1>
+      <PageHeader title="Editar Tag" />
 
       <div className="bg-surface border border-border rounded-lg p-6">
         <TagForm

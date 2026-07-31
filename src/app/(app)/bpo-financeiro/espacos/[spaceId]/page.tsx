@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { Folder as FolderIcon } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -72,7 +73,7 @@ export default async function SpacePage({ params }: { params: Promise<{ spaceId:
       </div>
 
       <div className="flex items-center justify-between mb-6 mt-1">
-        <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em]">{space.name}</h1>
+      <PageHeader title={space.name} />
         {canCreate && (
           <div className="flex items-center gap-2">
             <NewFolderButton action={createFolderAction} />

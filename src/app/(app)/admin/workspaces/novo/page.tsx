@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getAuthContext } from "@/lib/auth/context";
 import { WorkspaceForm } from "@/components/admin/WorkspaceForm";
@@ -18,8 +19,7 @@ export default async function NovoWorkspacePage() {
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg">Novo Workspace</span>
       </div>
-
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Novo Workspace</h1>
+      <PageHeader title="Novo Workspace" />
 
       <div className="bg-surface border border-border rounded-lg p-6">
         <WorkspaceForm action={criarWorkspace} cancelHref="/admin/workspaces" />

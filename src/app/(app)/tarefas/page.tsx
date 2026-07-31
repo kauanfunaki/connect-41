@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { ArrowRightLeft, Columns3, ListTodo, Video } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullAccess } from "@/lib/auth/context";
@@ -126,23 +127,16 @@ export default async function TarefasPage() {
 
   return (
     <PageContainer>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[length:var(--fs-display)] font-display font-semibold text-fg tracking-[-0.01em]">
-            Tarefas
-          </h1>
-          <p className="text-[length:var(--fs-helper)] text-fg-muted mt-0.5">
-            Suas obrigações em aberto: transferências, cards de kanban e reuniões
-          </p>
-        </div>
-        <Link
+      <PageHeader
+        title="Tarefas"
+        subtitle="Suas obrigações em aberto: transferências, cards de kanban e reuniões"
+        action={<><Link
           href="/kanban"
           className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md border border-border text-[13px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors"
         >
           <Columns3 size={14} /> Ver quadros
-        </Link>
-      </div>
-
+        </Link></>}
+      />
       <div className="grid grid-cols-1 lg:grid-cols-[1.7fr_1fr] gap-4">
         <div className="flex flex-col gap-4 min-w-0">
           {/* Transferências sob minha responsabilidade */}

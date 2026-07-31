@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { FileQuestion } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -31,21 +32,16 @@ export default async function TemplatesPage() {
         <span className="text-[13px] text-fg">Modelos</span>
       </div>
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Modelos de teste</h1>
-          <p className="text-[13px] text-fg-muted mt-0.5">
-            {templates.length} modelo{templates.length !== 1 ? "s" : ""} — testes de múltipla escolha reutilizáveis (Português, Matemática...)
-          </p>
-        </div>
-        <Link
+      <PageHeader
+        title="Modelos de teste"
+        subtitle={<>{templates.length} modelo{templates.length !== 1 ? "s" : ""} — testes de múltipla escolha reutilizáveis (Português, Matemática...)</>}
+        action={<><Link
           href="/testes/templates/novo"
           className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
         >
           + Novo modelo
-        </Link>
-      </div>
-
+        </Link></>}
+      />
       {templates.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
           <EmptyState

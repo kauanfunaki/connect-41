@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { FilialForm } from "@/components/admin/FilialForm";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -18,8 +19,7 @@ export default async function NovaFilialPage() {
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg">Nova Filial</span>
       </div>
-
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Nova Filial</h1>
+      <PageHeader title="Nova Filial" />
 
       <div className="bg-surface border border-border rounded-lg p-6">
         <FilialForm action={criarFilial} cancelHref="/admin/filiais" />

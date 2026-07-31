@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Building2 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { CadastrosTabsBar } from "@/components/shared/CadastrosTabsBar";
@@ -86,25 +87,18 @@ export default async function EmpresasPage({
 
       <div id="cadastros-content">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">
-            Empresas
-          </h1>
-          <p className="text-[13px] text-fg-muted mt-0.5">
-            {total} empresa{total !== 1 ? "s" : ""} cadastrada{total !== 1 ? "s" : ""}
-          </p>
-        </div>
-        {canCreate && (
+      <PageHeader
+        title="Empresas"
+        subtitle={<>{total} empresa{total !== 1 ? "s" : ""} cadastrada{total !== 1 ? "s" : ""}</>}
+        action={<>{canCreate && (
           <Link
             href="/empresas/nova"
             className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
           >
             + Nova Empresa
           </Link>
-        )}
-      </div>
-
+        )}</>}
+      />
       {/* Filters */}
       <div className="flex items-center gap-3 mb-4">
         {/* Search */}

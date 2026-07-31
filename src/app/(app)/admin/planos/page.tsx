@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Package } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
@@ -24,13 +25,11 @@ export default async function PlanosPage() {
 
   return (
     <PageContainer>
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Planos</h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">
-          Catálogo comercial — frente 1 (gerenciado pela 41 Tech, valor fixo) e frente 2
-          (autoatendimento, por usuário). Implantação é cobrada nos dois cenários.
-        </p>
-      </div>
+      <PageHeader
+        title="Planos"
+        subtitle="Catálogo comercial — frente 1 (gerenciado pela 41 Tech, valor fixo) e frente 2
+          (autoatendimento, por usuário). Implantação é cobrada nos dois cenários."
+      />
 
       <NovoPlanoForm />
 

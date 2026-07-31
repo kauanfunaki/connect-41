@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -32,13 +33,11 @@ export default async function PermissoesSensiveisPage() {
 
   return (
     <PageContainer>
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Permissões de Campos Sensíveis</h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">
-          Quem pode ver salário, dados bancários, dados médicos e documentos pessoais.
-          Sem concessão explícita, o acesso é negado — inclusive para Admin. Toda mudança fica na auditoria.
-        </p>
-      </div>
+      <PageHeader
+        title="Permissões de Campos Sensíveis"
+        subtitle="Quem pode ver salário, dados bancários, dados médicos e documentos pessoais.
+          Sem concessão explícita, o acesso é negado — inclusive para Admin. Toda mudança fica na auditoria."
+      />
 
       <div className="bg-surface border border-border rounded-lg overflow-x-auto">
         <table className="w-full min-w-[560px]">

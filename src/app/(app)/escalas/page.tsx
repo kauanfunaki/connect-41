@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { CalendarClock } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
@@ -32,12 +33,10 @@ export default async function EscalasPage() {
 
   return (
     <PageContainer>
-      <div className="mb-6">
-        <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Escala — Próximos 30 dias</h1>
-        <p className="text-[13px] text-fg-muted mt-0.5">
-          {entries.length} lançamento{entries.length !== 1 ? "s" : ""} de escala
-        </p>
-      </div>
+      <PageHeader
+        title="Escala — Próximos 30 dias"
+        subtitle={<>{entries.length} lançamento{entries.length !== 1 ? "s" : ""} de escala</>}
+      />
 
       {Object.keys(grouped).length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">

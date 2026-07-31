@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { CampoForm } from "@/components/admin/CampoForm";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -25,8 +26,7 @@ export default async function NovoCampoPage() {
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg">Novo Campo</span>
       </div>
-
-      <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em] mb-6">Novo Campo</h1>
+      <PageHeader title="Novo Campo" />
 
       <div className="bg-surface border border-border rounded-lg p-6">
         <CampoForm action={criarCampo} cancelHref="/admin/campos" sectorOptions={sectorOptions} />

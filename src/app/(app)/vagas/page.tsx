@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Briefcase } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { VagaStatus } from "@/generated/prisma/enums";
@@ -69,23 +70,18 @@ export default async function VagasPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[16px] font-semibold text-fg tracking-[-0.01em]">Vagas</h1>
-          <p className="text-[13px] text-fg-muted mt-0.5">
-            {total} vaga{total !== 1 ? "s" : ""}
-          </p>
-        </div>
-        {canCreateAny && (
+      <PageHeader
+        title="Vagas"
+        subtitle={<>{total} vaga{total !== 1 ? "s" : ""}</>}
+        action={<>{canCreateAny && (
           <Link
             href="/vagas/novo"
             className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
           >
             + Nova Vaga
           </Link>
-        )}
-      </div>
-
+        )}</>}
+      />
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         {/* "Todas" é um chip de verdade e fica ativo quando não há filtro — antes
             nenhum chip aparecia selecionado nesse estado, e a única saída era um
