@@ -9,7 +9,7 @@ type Props = {
 // de ações fixa no rodapé (sticky-actions da spec).
 export function FormShell({ title, subtitle, children, actions }: Props) {
   return (
-    <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+    <div className="bg-surface border border-border rounded-lg overflow-hidden">
       {title && (
         <div className="px-6 py-5 border-b border-border">
           <h3 className="font-display text-[length:var(--fs-section)] font-semibold text-fg">{title}</h3>

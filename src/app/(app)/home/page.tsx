@@ -391,7 +391,7 @@ export default async function HomePage() {
     ),
 
     "proxima-reuniao": nextMeeting && (
-      <div className="flex items-center justify-between gap-3 bg-brand-subtle border border-brand/20 rounded-2xl px-4 py-3 mb-4">
+      <div className="flex items-center justify-between gap-3 bg-brand-subtle border border-brand/20 rounded-lg px-4 py-3 mb-4">
         <div className="flex items-center gap-2.5 min-w-0">
           <Video size={16} className="text-brand flex-shrink-0" />
           <p className="text-[length:var(--fs-body)] text-fg truncate">
@@ -416,7 +416,7 @@ export default async function HomePage() {
     ),
 
     "meu-dia": (
-      <div className="bg-surface border border-border rounded-2xl p-5">
+      <div className="bg-surface border border-border rounded-lg p-5">
         <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Meu dia</h2>
         {meuDiaItems.length === 0 ? (
           <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhum item com prazo ou atribuído a você.</p>
@@ -455,7 +455,7 @@ export default async function HomePage() {
     ),
 
     transferencias: (
-      <div className="bg-surface border border-border rounded-2xl p-5">
+      <div className="bg-surface border border-border rounded-lg p-5">
         <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Transferências a revisar</h2>
         {incomingHandoffsRaw.length === 0 ? (
           <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhuma transferência aguardando o seu setor.</p>
@@ -484,7 +484,7 @@ export default async function HomePage() {
     ),
 
     workspace: (
-      <div className="bg-surface border border-border rounded-2xl p-5">
+      <div className="bg-surface border border-border rounded-lg p-5">
         <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Visão do workspace</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
@@ -508,7 +508,7 @@ export default async function HomePage() {
     ),
 
     agenda: (
-      <div className="bg-surface border border-border rounded-2xl p-5">
+      <div className="bg-surface border border-border rounded-lg p-5">
         <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Agenda</h2>
         {upcomingMeetings.length === 0 ? (
           <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhuma reunião agendada.</p>
@@ -536,7 +536,7 @@ export default async function HomePage() {
     ),
 
     atividade: (
-      <div className="bg-surface border border-border rounded-2xl p-5">
+      <div className="bg-surface border border-border rounded-lg p-5">
         <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Atividade</h2>
         {activityGroups.length === 0 ? (
           <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhuma atividade registrada ainda.</p>
@@ -567,7 +567,7 @@ export default async function HomePage() {
     ),
 
     setores: sectorWidgets.length > 0 && (
-      <div className="bg-surface border border-border rounded-2xl p-5">
+      <div className="bg-surface border border-border rounded-lg p-5">
         <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">
           {sectorWidgets.length > 1 ? "Seus setores" : "Seu setor"}
         </h2>
@@ -576,7 +576,7 @@ export default async function HomePage() {
             <Link
               key={s.code}
               href={`/setor/${s.code}`}
-              className="group flex items-center justify-between gap-2 bg-surface-hover border border-border rounded-xl px-3.5 py-2.5 hover:border-border-strong transition-colors"
+              className="group flex items-center justify-between gap-2 bg-surface-hover border border-border rounded-lg px-3.5 py-2.5 hover:border-border-strong transition-colors"
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.color }} />
@@ -689,7 +689,7 @@ function StatCard({
     <Link
       href={href}
       style={{ animationDelay: `${delay}ms` }}
-      className="reveal-in bg-surface border border-border rounded-2xl px-4 py-3.5 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform] flex flex-col gap-2"
+      className="reveal-in bg-surface border border-border rounded-lg px-4 py-3.5 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform] flex flex-col gap-2"
     >
       <div className="flex items-center gap-2">
         <span

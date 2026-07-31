@@ -40,7 +40,7 @@ export default async function NovoTurnoPage({
       <PageHeader title="Novo Turno" subtitle={company.name} />
 
       <div className="w-full max-w-[720px]">
-        <div className="bg-surface border border-border rounded-2xl p-6">
+        <div className="bg-surface border border-border rounded-lg p-6">
           <WorkShiftForm action={criarTurno} companyId={companyId} cancelHref={`/empresas/${companyId}/turnos`} />
         </div>
       </div>

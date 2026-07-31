@@ -22,7 +22,7 @@ export function Select({ error = false, compact = false, className = "", disable
     <div className={`relative ${className}`.trim()}>
       <select
         disabled={disabled}
-        className={`c41-select w-full ${sizeClass} pl-3 pr-8 rounded-[10px] border bg-input-bg text-fg outline-none transition-colors appearance-none cursor-pointer ${
+        className={`c41-select w-full ${sizeClass} pl-3 pr-8 rounded-md border bg-input-bg text-fg outline-none transition-colors appearance-none cursor-pointer ${
           error
             ? "border-danger focus:shadow-[0_0_0_3px_var(--c41-danger-bg)]"
             : "border-border-strong focus:border-brand focus:shadow-[0_0_0_3px_var(--c41-focus-ring)]"

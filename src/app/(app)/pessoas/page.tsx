@@ -104,7 +104,7 @@ export default async function PessoasPage({
 
       {/* Table */}
       {people.length === 0 ? (
-        <div className="bg-surface border border-border rounded-2xl">
+        <div className="bg-surface border border-border rounded-lg">
           <EmptyState
             icon={<Users />}
             title={search || companyId ? "Nenhuma pessoa encontrada" : "Nenhuma pessoa cadastrada ainda"}

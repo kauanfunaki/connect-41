@@ -106,7 +106,7 @@ export function MiniCalendar({ view, selectedKeys, referenceKey }: Props) {
       </button>
 
       {open && (
-        <div className="absolute z-40 top-full left-0 mt-1.5 w-[248px] bg-surface-elevated border border-border-strong rounded-xl shadow-[var(--c41-shadow-lg)] p-3">
+        <div className="absolute z-40 top-full left-0 mt-1.5 w-[248px] bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] p-3">
           <div className="flex items-center justify-between mb-2">
             <p className="text-[12.5px] font-semibold text-fg">
               {MONTH_LABEL[viewMonth - 1]} de {viewYear}

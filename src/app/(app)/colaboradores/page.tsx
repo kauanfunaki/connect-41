@@ -65,9 +65,9 @@ export default async function ColaboradoresPage() {
           <Link
             key={s.href}
             href={s.href}
-            className="group bg-surface border border-border rounded-2xl p-5 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
+            className="group bg-surface border border-border rounded-lg p-5 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
           >
-            <span className="inline-flex w-10 h-10 rounded-xl items-center justify-center mb-4 bg-brand-500/10 text-brand-500">
+            <span className="inline-flex w-10 h-10 rounded-lg items-center justify-center mb-4 bg-brand-500/10 text-brand-500">
               {s.icon}
             </span>
             <div className="flex items-center justify-between gap-2">

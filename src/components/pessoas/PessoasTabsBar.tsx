@@ -35,7 +35,7 @@ export function PessoasTabsBar({ active }: { active: PessoasTab }) {
     <div
       role="tablist"
       aria-label="Tipo de pessoa"
-      className="inline-flex items-center gap-0.5 p-[3px] mb-4 rounded-[10px] bg-surface-hover border border-border"
+      className="inline-flex items-center gap-0.5 p-[3px] mb-4 rounded-md bg-surface-hover border border-border"
     >
       {TABS.map((t) => {
         const isActive = t.key === active;

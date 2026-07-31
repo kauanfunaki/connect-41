@@ -144,10 +144,10 @@ export function MeetingAlertOverlay() {
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="meeting-alert-title"
-        className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl"
+        className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-xl"
       >
         <div className="flex items-center gap-3 mb-4">
-          <span className="w-11 h-11 rounded-xl bg-brand-subtle border border-brand/20 flex items-center justify-center text-brand flex-shrink-0">
+          <span className="w-11 h-11 rounded-lg bg-brand-subtle border border-brand/20 flex items-center justify-center text-brand flex-shrink-0">
             <Video size={20} />
           </span>
           <div className="min-w-0">
@@ -184,7 +184,7 @@ export function MeetingAlertOverlay() {
             type="button"
             onClick={handleOk}
             disabled={pending}
-            className="flex-1 h-10 rounded-[10px] bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+            className="flex-1 h-10 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
           >
             {pending ? "Registrando…" : "OK, estou ciente"}
           </button>
@@ -192,7 +192,7 @@ export function MeetingAlertOverlay() {
             href={alert.meetingUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 h-10 px-4 rounded-[10px] border border-border-strong text-[13px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors"
+            className="inline-flex items-center gap-1.5 h-10 px-4 rounded-md border border-border-strong text-[13px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors"
           >
             Entrar <ExternalLink size={13} />
           </a>

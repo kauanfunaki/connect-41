@@ -35,7 +35,7 @@ export function TemaSelector() {
             aria-checked={active}
             onClick={() => apply(o.value)}
             suppressHydrationWarning
-            className={`flex items-center gap-2.5 px-3.5 h-11 rounded-xl border text-[13px] font-medium transition-colors ${
+            className={`flex items-center gap-2.5 px-3.5 h-11 rounded-lg border text-[13px] font-medium transition-colors ${
               active
                 ? "border-brand bg-brand-subtle text-brand"
                 : "border-border-strong bg-surface-hover text-fg-secondary hover:text-fg hover:border-brand/40"

@@ -49,11 +49,11 @@ export default async function EditarDocumentoClientePage({
 
       <div className="w-full max-w-[860px]">
         {alreadySent ? (
-          <div className="bg-surface border border-border rounded-2xl p-6 text-[13px] text-fg-muted">
+          <div className="bg-surface border border-border rounded-lg p-6 text-[13px] text-fg-muted">
             Este documento já foi enviado a pelo menos um destinatário e não pode mais ser editado — o link de visualização precisa sempre mostrar o mesmo conteúdo que foi de fato recebido. Crie um novo documento se precisar alterar o conteúdo.
           </div>
         ) : (
-          <div className="bg-surface border border-border rounded-2xl p-6">
+          <div className="bg-surface border border-border rounded-lg p-6">
             <ClientDocumentForm
               action={atualizarDocumento}
               companyId={company.id}

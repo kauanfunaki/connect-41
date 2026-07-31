@@ -111,7 +111,7 @@ export function MeetingItem({ meeting, actions, variant, top = 0, height = 0 }: 
       {trigger}
 
       {open && (
-        <div className="absolute z-20 top-full left-0 mt-1.5 w-80 bg-surface-elevated border border-border-strong rounded-xl shadow-[var(--c41-shadow-lg)] overflow-hidden">
+        <div className="absolute z-20 top-full left-0 mt-1.5 w-80 bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] overflow-hidden">
           <div className="h-1" style={{ background: accent }} />
 
           <div className="p-3.5 space-y-3">

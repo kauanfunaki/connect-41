@@ -117,7 +117,7 @@ export default async function EmpresasPage({
 
       {/* Table */}
       {companies.length === 0 ? (
-        <div className="bg-surface border border-border rounded-2xl">
+        <div className="bg-surface border border-border rounded-lg">
           <EmptyState
             icon={<Building2 />}
             title={search || statusFilter ? "Nenhuma empresa encontrada" : "Nenhuma empresa cadastrada ainda"}

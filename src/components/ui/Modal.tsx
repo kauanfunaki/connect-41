@@ -33,7 +33,7 @@ export function Modal({ open, onClose, title, maxWidth = "max-w-md", children }:
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className={`relative w-full ${maxWidth} bg-surface-elevated border border-border-strong rounded-2xl shadow-[var(--c41-shadow-lg)] max-h-[calc(100vh-2rem)] overflow-y-auto`}>
+      <div className={`relative w-full ${maxWidth} bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] max-h-[calc(100vh-2rem)] overflow-y-auto`}>
         <div className="flex items-center justify-between px-5 pt-5 pb-2">
           {title && <h2 className="text-[15px] font-semibold text-fg">{title}</h2>}
           <button

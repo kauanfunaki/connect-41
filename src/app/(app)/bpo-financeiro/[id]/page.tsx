@@ -202,7 +202,7 @@ export default async function BpoBoardPage({
             )}
             <Link
               href={`${basePath}/novo-item`}
-              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[10px] bg-brand text-on-brand text-[length:var(--fs-button)] font-semibold hover:bg-brand-hover transition-colors"
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-brand text-on-brand text-[length:var(--fs-button)] font-semibold hover:bg-brand-hover transition-colors"
             >
               + Item
             </Link>

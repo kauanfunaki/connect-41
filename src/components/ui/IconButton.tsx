@@ -11,7 +11,7 @@ export function IconButton({ active = false, hasDot = false, className = "", chi
   return (
     <button
       type="button"
-      className={`relative w-[38px] h-[38px] inline-flex items-center justify-center rounded-[10px] border transition-colors disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed ${
+      className={`relative w-[38px] h-[38px] inline-flex items-center justify-center rounded-md border transition-colors disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed ${
         active
           ? "bg-surface border-border-strong text-fg shadow-sm"
           : "bg-surface-hover border-border text-fg-secondary hover:text-fg hover:border-border-strong"

@@ -248,7 +248,7 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
   return (
     <>
       {id && (
-        <div className="bg-surface border border-brand/30 rounded-2xl px-4 py-3 mb-4">
+        <div className="bg-surface border border-brand/30 rounded-lg px-4 py-3 mb-4">
           <div className="flex items-center justify-between gap-2 mb-1">
             <p className="text-[12px] font-medium text-brand">Atendimento aberto</p>
             <Link href="/conversas" className="text-[11.5px] text-fg-muted hover:text-fg transition-colors">
@@ -294,7 +294,7 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
       )}
 
       {links.length === 0 && orphanConversations.length === 0 ? (
-        <div className="bg-surface border border-border rounded-2xl">
+        <div className="bg-surface border border-border rounded-lg">
           <EmptyState
             icon={<MessageCircle />}
             title="Nenhum atendimento encontrado"
@@ -309,7 +309,7 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
             const linkedLabel = link.person?.name ?? link.company?.name ?? null;
             const linkedHref = link.person ? `/pessoas/${link.person.id}` : link.company ? `/empresas/${link.company.id}` : null;
             return (
-              <div key={link.id} className="bg-surface border border-border rounded-2xl px-4 py-3">
+              <div key={link.id} className="bg-surface border border-border rounded-lg px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="w-8 h-8 rounded-full bg-brand-subtle text-brand flex items-center justify-center flex-shrink-0">
@@ -338,7 +338,7 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
           })}
 
           {orphanConversations.length > 0 && (
-            <div className="bg-surface border border-border rounded-2xl px-4 py-3">
+            <div className="bg-surface border border-border rounded-lg px-4 py-3">
               <div className="flex items-center gap-2 mb-1">
                 <span className="w-8 h-8 rounded-full bg-surface-hover text-fg-muted flex items-center justify-center flex-shrink-0">
                   <HelpCircle size={15} />
@@ -492,7 +492,7 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
 
   if (agentGroups.length === 0) {
     return (
-      <div className="bg-surface border border-border rounded-2xl">
+      <div className="bg-surface border border-border rounded-lg">
         <EmptyState
           icon={<Gauge />}
           title="Nenhuma avaliação ainda"
@@ -504,7 +504,7 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
 
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border border border-border rounded-xl overflow-hidden mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border border border-border rounded-lg overflow-hidden mb-6">
         <StatTile label="Atendimentos avaliados" value={evaluations.length} />
         <StatTile label="Nota média" value={totalAvg != null ? Math.round(totalAvg) : "—"} />
         <StatTile label="Escrita média" value={totalWriting != null ? `${Math.round(totalWriting)}/50` : "—"} />

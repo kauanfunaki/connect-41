@@ -59,7 +59,7 @@ function ChecklistRow({
         disabled={!canAct}
         onClick={() => startTransition(() => toggleAction(item.id, !item.done))}
         aria-label={item.done ? "Desmarcar" : "Concluir"}
-        className={`w-[18px] h-[18px] rounded-[5px] border flex items-center justify-center flex-shrink-0 transition-colors ${
+        className={`w-[18px] h-[18px] rounded-sm border flex items-center justify-center flex-shrink-0 transition-colors ${
           item.done ? "bg-brand border-brand text-on-brand" : "border-border-strong hover:border-brand"
         }`}
       >

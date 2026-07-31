@@ -40,7 +40,7 @@ export default async function NovoCargoPage({
       <PageHeader title="Novo Cargo" subtitle={company.name} />
 
       <div className="w-full max-w-[720px]">
-        <div className="bg-surface border border-border rounded-2xl p-6">
+        <div className="bg-surface border border-border rounded-lg p-6">
           <CargoForm action={criarCargo} companyId={companyId} cancelHref={`/empresas/${companyId}/cargos`} />
         </div>
       </div>

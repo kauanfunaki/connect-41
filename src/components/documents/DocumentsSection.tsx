@@ -221,7 +221,7 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
           </div>
           <div className="space-y-1.5">
             <label htmlFor="file" className="block text-[length:var(--fs-label)] font-medium text-fg">Arquivo</label>
-            <input id="file" name="file" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" required className="text-[12px] text-fg file:mr-3 file:h-9 file:px-3 file:rounded-[10px] file:border file:border-border-strong file:bg-surface-hover file:text-fg file:text-[12px] file:font-medium file:cursor-pointer file:border-solid hover:file:border-brand file:transition-colors" />
+            <input id="file" name="file" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" required className="text-[12px] text-fg file:mr-3 file:h-9 file:px-3 file:rounded-md file:border file:border-border-strong file:bg-surface-hover file:text-fg file:text-[12px] file:font-medium file:cursor-pointer file:border-solid hover:file:border-brand file:transition-colors" />
           </div>
           <div className="w-40">
             <CampoForm label="Vencimento (opcional)" htmlFor="expiresAt">

@@ -197,7 +197,15 @@
   --font-mono: var(--font-ibm-plex-mono), ui-monospace, Consolas, monospace;
   --font-display: var(--font-space-grotesk), var(--font-ibm-plex-sans), system-ui, sans-serif;
 
-  --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px; --radius-xl: 16px;
+  /* Raio — 3 degraus, e só. Antes existia --radius-xl, mas valia 16px igual
+     ao lg: `rounded-lg`, `rounded-xl` e `rounded-2xl` (default do Tailwind)
+     renderizavam o MESMO valor em 348 call-sites, três nomes para uma coisa
+     só. Ficou um nome por valor. Não use rounded-xl/2xl/3xl: não estão no
+     @theme e caem no default do Tailwind, fora desta escala.
+       sm  6px — chip, checkbox, elemento miúdo
+       md 10px — input, botão, controle
+       lg 16px — card, modal, painel */
+  --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px;
 }
 
 /* ==========================================================================

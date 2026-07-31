@@ -114,7 +114,7 @@ export function CustomizeHomeButton({ selected, showRestricted, saveAction, rese
         onClick={openModal}
         title="Personalizar Home"
         aria-label="Personalizar Home"
-        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[10px] border border-border-strong bg-surface-hover text-fg-secondary text-[13px] font-medium hover:text-fg hover:border-brand transition-colors"
+        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-border-strong bg-surface-hover text-fg-secondary text-[13px] font-medium hover:text-fg hover:border-brand transition-colors"
       >
         <SlidersHorizontal size={14} />
         <span className="hidden sm:inline">Personalizar</span>
@@ -137,7 +137,7 @@ export function CustomizeHomeButton({ selected, showRestricted, saveAction, rese
                 <p className="text-[11px] font-semibold text-fg-muted uppercase tracking-wider mb-2">
                   {SLOT_LABEL[slot]}
                 </p>
-                <div className="border border-border rounded-xl divide-y divide-border overflow-hidden">
+                <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
                   {slotEntries.map((entry, index) => {
                     const def = HOME_WIDGETS.find((w) => w.key === entry.key)!;
                     return (

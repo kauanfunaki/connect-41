@@ -18,10 +18,10 @@ export default function LoadingKanbanBoard() {
           <div className="c41-skeleton w-40 h-6" />
           <div className="c41-skeleton w-28 h-3.5" />
         </div>
-        <div className="c41-skeleton w-32 h-9 rounded-[10px]" />
+        <div className="c41-skeleton w-32 h-9 rounded-md" />
       </div>
 
-      <div className="flex-1 min-h-0 bg-surface border border-border rounded-2xl p-2 space-y-2">
+      <div className="flex-1 min-h-0 bg-surface border border-border rounded-lg p-2 space-y-2">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="flex items-center gap-2 px-2 py-2">
             <div className="c41-skeleton w-[7px] h-[7px] rounded-full" />

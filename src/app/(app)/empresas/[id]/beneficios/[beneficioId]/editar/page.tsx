@@ -43,7 +43,7 @@ export default async function EditarBeneficioPage({
       <PageHeader title="Editar Benefício" subtitle={company.name} />
 
       <div className="w-full max-w-[720px]">
-        <div className="bg-surface border border-border rounded-2xl p-6">
+        <div className="bg-surface border border-border rounded-lg p-6">
           <BenefitCatalogForm
             action={atualizarBeneficio}
             companyId={companyId}

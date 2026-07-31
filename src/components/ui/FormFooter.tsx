@@ -17,7 +17,7 @@ export function FormFooter({ cancelHref, pending, submitLabel = "Salvar", cancel
     <div className="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-border">
       <Link
         href={cancelHref}
-        className="h-9 px-4 rounded-[10px] border border-border-strong text-[length:var(--fs-button)] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors inline-flex items-center"
+        className="h-9 px-4 rounded-md border border-border-strong text-[length:var(--fs-button)] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors inline-flex items-center"
       >
         {cancelLabel}
       </Link>

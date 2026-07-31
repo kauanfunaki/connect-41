@@ -31,7 +31,7 @@ export function Dropdown({ trigger, children, align = "left", width = 240 }: Pro
           style={{ width }}
           className={`scroll-y absolute top-[calc(100%+10px)] ${
             align === "right" ? "right-0" : "left-0"
-          } bg-surface-elevated border border-border-strong rounded-2xl shadow-[var(--c41-shadow-lg)] p-3 z-20 max-h-[360px] overflow-y-auto text-[length:var(--fs-dropdown)]`}
+          } bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] p-3 z-20 max-h-[360px] overflow-y-auto text-[length:var(--fs-dropdown)]`}
         >
           {typeof children === "function" ? children({ close: () => setOpen(false) }) : children}
         </div>

@@ -52,7 +52,7 @@ export function EmailChipsInput({ name, id, placeholder = "contador@empresa.com"
   return (
     <div>
       <div
-        className={`flex flex-wrap items-center gap-1.5 min-h-9 w-full px-2.5 py-1.5 rounded-[10px] border bg-input-bg transition-colors focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)] ${
+        className={`flex flex-wrap items-center gap-1.5 min-h-9 w-full px-2.5 py-1.5 rounded-md border bg-input-bg transition-colors focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)] ${
           error ? "border-danger" : "border-border-strong"
         }`}
       >

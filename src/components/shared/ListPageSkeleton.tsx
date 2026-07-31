@@ -12,7 +12,7 @@ export function ListPageSkeleton({ rows = 5 }: { rows?: number }) {
         <div className="c41-skeleton w-72 h-3.5" />
       </div>
 
-      <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+      <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {Array.from({ length: rows }).map((_, i) => (
           <div key={i} className="flex items-center gap-6 px-4 py-4 border-b border-border last:border-0">
             <div className="c41-skeleton w-44 h-3.5" />

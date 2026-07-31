@@ -25,7 +25,7 @@ const DOC_FIELDS: { field: string; label: string }[] = [
 ];
 
 const fileInputClass =
-  "text-[12px] text-fg file:mr-3 file:h-9 file:px-3 file:rounded-[10px] file:border file:border-border-strong file:bg-surface-hover file:text-fg file:text-[12px] file:font-medium file:cursor-pointer file:border-solid hover:file:border-brand file:transition-colors";
+  "text-[12px] text-fg file:mr-3 file:h-9 file:px-3 file:rounded-md file:border file:border-border-strong file:bg-surface-hover file:text-fg file:text-[12px] file:font-medium file:cursor-pointer file:border-solid hover:file:border-brand file:transition-colors";
 
 const RELATIONSHIP_OPTIONS: { value: string; label: string }[] = [
   { value: "FILHO", label: "Filho(a)" },

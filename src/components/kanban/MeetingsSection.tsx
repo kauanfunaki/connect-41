@@ -43,7 +43,7 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
   const { dialog, requestConfirm } = useConfirm();
 
   return (
-    <div className="bg-surface border border-border rounded-2xl p-5 mt-4">
+    <div className="bg-surface border border-border rounded-lg p-5 mt-4">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-[14px] font-semibold text-fg flex items-center gap-1.5">
           <Video size={14} className="text-fg-muted" />

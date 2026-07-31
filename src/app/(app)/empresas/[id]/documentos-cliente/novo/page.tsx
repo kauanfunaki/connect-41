@@ -40,7 +40,7 @@ export default async function NovoDocumentoClientePage({
       <PageHeader title="Novo Documento" subtitle="Criado como rascunho — publique e envie quando estiver pronto." />
 
       <div className="w-full max-w-[860px]">
-        <div className="bg-surface border border-border rounded-2xl p-6">
+        <div className="bg-surface border border-border rounded-lg p-6">
           <ClientDocumentForm
             action={criarDocumento}
             companyId={company.id}

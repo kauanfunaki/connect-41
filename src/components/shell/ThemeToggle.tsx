@@ -20,7 +20,7 @@ export function ThemeToggle() {
     <div
       role="radiogroup"
       aria-label="Tema"
-      className="inline-flex items-center gap-0.5 p-[3px] rounded-[10px] bg-surface-hover border border-border"
+      className="inline-flex items-center gap-0.5 p-[3px] rounded-md bg-surface-hover border border-border"
     >
       <button
         type="button"

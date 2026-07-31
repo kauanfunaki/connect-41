@@ -38,7 +38,7 @@ export function WorkspaceSwitcher({ tenants, currentTenantId }: Props) {
   );
 
   const cardClass =
-    "w-full flex items-center justify-center gap-2.5 px-2.5 py-2 rounded-xl bg-surface border border-border transition-colors";
+    "w-full flex items-center justify-center gap-2.5 px-2.5 py-2 rounded-lg bg-surface border border-border transition-colors";
 
   if (!canSwitch) {
     // TODO: com um único tenant acessível, o seletor fica só visual (sem troca real).

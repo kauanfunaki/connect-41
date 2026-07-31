@@ -23,7 +23,7 @@ export function NotificationBell({ unreadCount, notifications }: Props) {
           type="button"
           onClick={toggle}
           title="Notificações"
-          className={`relative w-[38px] h-[38px] inline-flex items-center justify-center rounded-[10px] border transition-colors ${
+          className={`relative w-[38px] h-[38px] inline-flex items-center justify-center rounded-md border transition-colors ${
             open
               ? "bg-surface border-border-strong text-fg shadow-sm"
               : "bg-surface-hover border-border text-fg-secondary hover:text-fg hover:border-border-strong"

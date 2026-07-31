@@ -24,7 +24,7 @@ export function Input({ error = false, icon, prefix, suffix, compact = false, cl
   if (prefix || suffix) {
     return (
       <div
-        className={`flex items-stretch w-full ${compact ? "h-8" : "h-9"} rounded-[10px] border bg-input-bg overflow-hidden transition-colors ${
+        className={`flex items-stretch w-full ${compact ? "h-8" : "h-9"} rounded-md border bg-input-bg overflow-hidden transition-colors ${
           error
             ? "border-danger focus-within:shadow-[0_0_0_3px_var(--c41-danger-bg)]"
             : "border-border-strong focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)]"
@@ -54,7 +54,7 @@ export function Input({ error = false, icon, prefix, suffix, compact = false, cl
     <input
       disabled={disabled}
       readOnly={readOnly}
-      className={`w-full ${sizeClass} ${icon ? "pl-9" : "px-3"} pr-3 rounded-[10px] border bg-input-bg text-fg placeholder:text-fg-muted outline-none transition-colors ${
+      className={`w-full ${sizeClass} ${icon ? "pl-9" : "px-3"} pr-3 rounded-md border bg-input-bg text-fg placeholder:text-fg-muted outline-none transition-colors ${
         error
           ? "border-danger focus:shadow-[0_0_0_3px_var(--c41-danger-bg)]"
           : "border-border-strong focus:border-brand focus:shadow-[0_0_0_3px_var(--c41-focus-ring)]"

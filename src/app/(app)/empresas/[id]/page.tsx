@@ -163,7 +163,7 @@ export default async function EmpresaPage({
           />
         }
         conversations={
-          <div className="bg-surface border border-border rounded-2xl px-4 py-2">
+          <div className="bg-surface border border-border rounded-lg px-4 py-2">
             <AtendimentosAccordion
               atendimentos={conversations.map((c) => ({
                 id: c.id,

@@ -72,7 +72,7 @@ export default async function FolderPage({ params }: { params: Promise<{ folderI
       <div>
         <h2 className="text-[13px] font-semibold text-fg mb-2.5">Listas</h2>
         {lists.length === 0 ? (
-          <div className="bg-surface border border-border rounded-2xl">
+          <div className="bg-surface border border-border rounded-lg">
             <EmptyState title="Nenhuma lista nesta pasta ainda" description="Crie a primeira lista pra começar a organizar as tarefas." />
           </div>
         ) : (

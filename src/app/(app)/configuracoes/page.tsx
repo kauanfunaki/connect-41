@@ -80,7 +80,7 @@ export default async function ConfiguracoesPage() {
         <PushNotificationToggle publicKey={getVapidPublicKey()} />
         <Link
           href="/notificacoes"
-          className="group flex items-center justify-between gap-2 bg-surface-hover border border-border rounded-xl px-3.5 py-2.5 hover:border-border-strong transition-colors"
+          className="group flex items-center justify-between gap-2 bg-surface-hover border border-border rounded-lg px-3.5 py-2.5 hover:border-border-strong transition-colors"
         >
           <span className="text-[13px] text-fg">Ver todas as notificações</span>
           <ChevronRight size={15} className="text-fg-muted group-hover:text-fg transition-colors" />
@@ -105,7 +105,7 @@ function Secao({ titulo, descricao, children }: { titulo: string; descricao?: st
     <section className="mb-8">
       <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-1">{titulo}</h2>
       {descricao && <p className="text-[length:var(--fs-helper)] text-fg-muted mb-3">{descricao}</p>}
-      <div className={`bg-surface border border-border rounded-2xl p-5 space-y-3 ${descricao ? "" : "mt-3"}`}>
+      <div className={`bg-surface border border-border rounded-lg p-5 space-y-3 ${descricao ? "" : "mt-3"}`}>
         {children}
       </div>
     </section>

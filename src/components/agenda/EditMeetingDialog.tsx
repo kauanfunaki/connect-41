@@ -67,7 +67,7 @@ export function EditMeetingDialog({ action, meeting, allUsers, companies, onClos
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-meeting-title"
-        className="w-full max-w-md rounded-2xl border border-border bg-surface p-5 shadow-[var(--c41-shadow-lg)]"
+        className="w-full max-w-md rounded-lg border border-border bg-surface p-5 shadow-[var(--c41-shadow-lg)]"
       >
         <div className="flex items-center justify-between mb-4">
           <h2 id="edit-meeting-title" className="text-[length:var(--fs-section)] font-semibold text-fg">

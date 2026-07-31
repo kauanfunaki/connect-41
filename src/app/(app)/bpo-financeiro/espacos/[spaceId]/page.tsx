@@ -107,7 +107,7 @@ export default async function SpacePage({ params }: { params: Promise<{ spaceId:
       <div>
         <h2 className="text-[13px] font-semibold text-fg mb-2.5">Listas</h2>
         {looseLists.length === 0 ? (
-          <div className="bg-surface border border-border rounded-2xl">
+          <div className="bg-surface border border-border rounded-lg">
             <EmptyState title="Nenhuma lista solta neste espaço" description="Listas fora de pasta aparecem aqui." />
           </div>
         ) : (

@@ -14,7 +14,7 @@ export default function LoadingTransferencias() {
         ))}
       </div>
 
-      <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+      <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="flex items-center gap-6 px-4 py-4 border-b border-border last:border-0">
             <div className="c41-skeleton w-40 h-3.5" />

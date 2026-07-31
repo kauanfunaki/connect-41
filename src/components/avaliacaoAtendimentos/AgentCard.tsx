@@ -76,7 +76,7 @@ export function AgentCard({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group text-left bg-surface border border-border rounded-2xl p-5 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
+        className="group text-left bg-surface border border-border rounded-lg p-5 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
       >
         <AvatarImage src={avatarUrl} name={label} size={44} bordered={false} className="mb-3" />
         <p className="text-[14px] font-semibold text-fg truncate">{label}</p>

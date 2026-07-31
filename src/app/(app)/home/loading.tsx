@@ -13,7 +13,7 @@ export default function LoadingHome() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
         {[0, 1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="bg-surface border border-border rounded-2xl px-4 py-4 h-[92px]">
+          <div key={i} className="bg-surface border border-border rounded-lg px-4 py-4 h-[92px]">
             <div className="w-8 h-8 rounded-lg bg-surface-2 mb-2.5" />
             <div className="h-4 w-10 bg-surface-2 rounded mb-1.5" />
             <div className="h-2.5 w-16 bg-surface-2 rounded" />
@@ -23,7 +23,7 @@ export default function LoadingHome() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="bg-surface border border-border rounded-2xl p-5 h-[180px]">
+          <div key={i} className="bg-surface border border-border rounded-lg p-5 h-[180px]">
             <div className="h-4 w-40 bg-surface-2 rounded mb-4" />
             <div className="h-24 bg-surface-2 rounded" />
           </div>
@@ -32,7 +32,7 @@ export default function LoadingHome() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {[0, 1].map((i) => (
-          <div key={i} className="bg-surface border border-border rounded-2xl p-5 h-[160px]">
+          <div key={i} className="bg-surface border border-border rounded-lg p-5 h-[160px]">
             <div className="h-4 w-32 bg-surface-2 rounded mb-4" />
             <div className="h-3 w-full bg-surface-2 rounded mb-2.5" />
             <div className="h-3 w-full bg-surface-2 rounded mb-2.5" />

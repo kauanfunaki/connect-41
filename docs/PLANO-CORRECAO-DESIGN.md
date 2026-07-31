@@ -73,31 +73,66 @@ Conferência visual pendente com o usuário.
 
 ---
 
-## Etapa 2 — Consertar a escala de raio e a documentação divergente
+## Etapa 2 — Escala de raio + documentação ✅ EXECUTADA (31/07/2026)
 
-**Objetivo:** eliminar a contradição entre as duas fontes que ensinam o padrão.
+**Arquivos:** 94 arquivos (`globals.css`, `ds-bundle/README.md`, 92 `.tsx`).
 
-**Arquivos:** `globals.css`, `ds-bundle/README.md`, `ui/Card.tsx`,
-`ui/Modal.tsx`, `ui/FormShell.tsx`, `ui/MetricCard.tsx`.
+### Correção de escopo feita durante a execução
 
-**O que fazer:**
+O plano dizia "4 componentes usam `rounded-2xl`" e propunha diferenciar
+`--radius-lg` para 14px. A medição real mostrou um problema maior e diferente:
 
-1. `--radius-lg` e `--radius-xl` hoje são **ambos 16px** — a escala tem 3
-   degraus fingindo ter 4. Definir: `sm 6` · `md 10` · `lg 14` · `xl 16`.
-2. Trocar `rounded-2xl` (fora do `@theme`, cai no default do Tailwind) por
-   `rounded-xl` nos 4 componentes que o usam.
-3. Substituir os 34 `rounded-[10px]` cravados por `rounded-md` — é o mesmo
-   valor, escrito à mão.
-4. Corrigir a tabela de raios do `ds-bundle/README.md`, que documenta
-   `4/6/8/12px` quando o real é `6/10/16/16px`, e o trecho de tipografia, que
-   contradiz o `--fs-body`.
-5. Recompilar o bundle — o marcador `ds-bundle/_ds_needs_recompile` está
-   pendente no repositório.
+| Classe | Valor renderizado | Call-sites |
+|---|---|---|
+| `rounded-lg` | `--radius-lg` = **16px** | 240 |
+| `rounded-xl` | `--radius-xl` = **16px** | 26 |
+| `rounded-2xl` | default do Tailwind = **16px** | 82 |
+| `rounded-sm` | `--radius-sm` = 6px | **0** |
 
-**Risco:** baixo (item 1 muda `rounded-lg` de 16→14px em 240 call-sites — é
-sutil, mas é mudança visual real; se preferir risco zero, manter 16 e apenas
-documentar que a escala tem 3 degraus).
-**Tamanho:** sessão pequena.
+**Três nomes de classe para um único valor, em 348 call-sites.** A escala real
+do app tem dois valores (10px e 16px); o resto era ruído de nomenclatura.
+
+Isso inverteu a decisão do item 1. Baixar `lg` para 14px teria *criado* uma
+distinção entre 240 e 108 call-sites que hoje são visualmente idênticos — uma
+diferença que ninguém desenhou e que a análise estática não consegue atribuir
+("esse é `lg` porque devia ser menor" vs. "alguém digitou `lg`"). O certo é o
+oposto: **unificar os nomes e preservar os valores.**
+
+### O que foi feito
+
+1. `rounded-2xl` (82) → `rounded-lg` — mesmo 16px, zero mudança visual
+2. `rounded-xl` (26) → `rounded-lg` — mesmo 16px, zero mudança visual
+3. `rounded-[10px]` (34) → `rounded-md` — mesmo 10px, zero mudança visual
+4. `rounded-[5px]` (1, checkbox do Checklist) → `rounded-sm` — 5px → 6px, +1px
+   numa caixa de 18px; revive o token `sm`, que estava com zero usos
+5. `--radius-xl` **removido** do `@theme` (ficou sem consumidores). Escala final
+   de 3 degraus honestos, documentada em comentário no CSS:
+   `sm 6px` chip/checkbox · `md 10px` input/botão · `lg 16px` card/modal/painel
+6. `ds-bundle/README.md`: tabela de raios corrigida (documentava `4/6/8/12px`)
+   e seção de tipografia reescrita com os dois níveis (`--fs-body` 15px
+   conteúdo × `--fs-ui` 13px UI densa) e a escala primitiva de 9 degraus da
+   Etapa 1. O snippet de exemplo passou a usar tokens em vez de px cravado.
+
+**Resultado:** `rounded-md` 406 · `rounded-lg` 348 · `rounded-full` 129 ·
+`rounded-sm` 1 · **zero** raios arbitrários.
+
+### Mudança visual
+
+Um pixel, num único elemento (o checkbox do Checklist do Kanban, 5→6px). Todo
+o resto é renomeação com valor idêntico.
+
+**Verificação:** `tsc` limpo · `eslint --max-warnings 0` limpo · `vitest`
+125 testes · `npm run build` compilado, 78 páginas estáticas geradas.
+
+### Não feito
+
+- **Recompilar `ds-bundle/_ds_bundle.css`** (marcador `_ds_needs_recompile`
+  segue pendente). É artefato gerado pela `design-sync-cli`, que não está
+  disponível como ferramenta nesta sessão — o `DesignSync` publica num projeto
+  claude.ai/design, não recompila o bundle local. Precisa rodar o CLI à mão.
+- 5 usos de `rounded-r`/`rounded-t` (direcionais sem tamanho) caem no default
+  do Tailwind, fora da escala. Pré-existentes e visualmente irrelevantes;
+  ficam para a Etapa 7.
 
 ---
 
@@ -217,7 +252,7 @@ ou depois.
 | Etapa | Arquivos | Risco | Tamanho | Trava |
 |---|---|---|---|---|
 | 1 · Escala tipográfica ✅ | 1 | baixo | pequena | **destravou 5, 6, 7** |
-| 2 · Raios + docs | 6 | baixo | pequena | destrava 4 |
+| 2 · Raios + docs ✅ | 94 | baixo | pequena | destravou 4 |
 | 3 · A11y (modal, rótulo, img) | ~30 | baixo | pequena/média | independente |
 | 4 · Componentes órfãos | 3 + telas-piloto | médio | média | destrava 6 |
 | 5 · PageHeader | 101 páginas | baixo | média | — |

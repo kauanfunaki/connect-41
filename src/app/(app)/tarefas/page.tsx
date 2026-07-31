@@ -146,7 +146,7 @@ export default async function TarefasPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[1.7fr_1fr] gap-4">
         <div className="flex flex-col gap-4 min-w-0">
           {/* Transferências sob minha responsabilidade */}
-          <div className="bg-surface border border-border rounded-2xl p-5">
+          <div className="bg-surface border border-border rounded-lg p-5">
             <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5 flex items-center gap-2">
               <ArrowRightLeft size={15} className="text-fg-muted" /> Transferências em aberto
             </h2>
@@ -162,7 +162,7 @@ export default async function TarefasPage() {
                   <Link
                     key={i.id}
                     href={`/transferencias/${i.handoff.id}`}
-                    className="block group border border-border rounded-xl px-4 py-3 hover:border-border-strong hover:bg-surface-hover transition-colors"
+                    className="block group border border-border rounded-lg px-4 py-3 hover:border-border-strong hover:bg-surface-hover transition-colors"
                   >
                     <div className="flex items-center gap-2 flex-wrap mb-1.5">
                       <SectorChip
@@ -194,7 +194,7 @@ export default async function TarefasPage() {
           </div>
 
           {/* Cards de kanban atribuídos a mim */}
-          <div className="bg-surface border border-border rounded-2xl p-5">
+          <div className="bg-surface border border-border rounded-lg p-5">
             <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5 flex items-center gap-2">
               <Columns3 size={15} className="text-fg-muted" /> Meus cards de kanban
             </h2>
@@ -228,7 +228,7 @@ export default async function TarefasPage() {
         </div>
 
         {/* Próximas reuniões */}
-        <div className="bg-surface border border-border rounded-2xl p-5 h-fit">
+        <div className="bg-surface border border-border rounded-lg p-5 h-fit">
           <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5 flex items-center gap-2">
             <Video size={15} className="text-fg-muted" /> Próximas reuniões
           </h2>

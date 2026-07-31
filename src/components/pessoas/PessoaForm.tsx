@@ -357,7 +357,7 @@ export function PessoaForm({
   const departmentLabel = departments.find((d) => d.id === values.departmentId)?.name;
 
   return (
-    <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+    <div className="bg-surface border border-border rounded-lg overflow-hidden">
       <Stepper steps={steps} onStepClick={(i) => i <= maxStepReached && goTo(i)} />
 
       <form ref={formRef} action={formAction} noValidate onChange={onFormChange} className="px-6 py-5">
@@ -758,7 +758,7 @@ export function PessoaForm({
           <div className="flex items-center gap-3">
             <Link
               href={cancelHref}
-              className="h-9 px-4 rounded-[10px] border border-border-strong text-[length:var(--fs-button)] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors inline-flex items-center"
+              className="h-9 px-4 rounded-md border border-border-strong text-[length:var(--fs-button)] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors inline-flex items-center"
             >
               Cancelar
             </Link>

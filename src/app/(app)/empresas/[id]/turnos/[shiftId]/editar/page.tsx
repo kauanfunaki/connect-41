@@ -43,7 +43,7 @@ export default async function EditarTurnoPage({
       <PageHeader title="Editar Turno" subtitle={company.name} />
 
       <div className="w-full max-w-[720px]">
-        <div className="bg-surface border border-border rounded-2xl p-6">
+        <div className="bg-surface border border-border rounded-lg p-6">
           <WorkShiftForm
             action={atualizarTurno}
             companyId={companyId}

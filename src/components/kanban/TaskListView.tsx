@@ -284,7 +284,7 @@ function TaskCard({
     <>
       <div
         style={depth > 0 ? { marginLeft: depth * 14 } : undefined}
-        className="bg-surface border border-border rounded-xl px-3 py-2.5 space-y-2"
+        className="bg-surface border border-border rounded-lg px-3 py-2.5 space-y-2"
       >
         <div className="flex items-start gap-2">
           <button
@@ -750,7 +750,7 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
       // sticky, então as linhas rolavam por dentro dessa faixa de 8px e
       // apareciam recortadas por cima do cabeçalho. Agora o respiro superior
       // vive no próprio <th> (pt-2), que gruda junto.
-      className="scroll-y bg-surface border border-border rounded-2xl px-2 pb-2 h-full overflow-y-auto"
+      className="scroll-y bg-surface border border-border rounded-lg px-2 pb-2 h-full overflow-y-auto"
     >
       <div className="md:hidden">
         {byStage.map(({ stage, items: stageItems }) => (

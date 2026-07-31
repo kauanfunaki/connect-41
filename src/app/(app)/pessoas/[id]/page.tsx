@@ -426,7 +426,7 @@ export default async function PessoaPage({
         documents={documentsContent}
         documentsCount={documents.length}
         conversations={
-          <div className="bg-surface border border-border rounded-2xl px-4 py-2">
+          <div className="bg-surface border border-border rounded-lg px-4 py-2">
             <AtendimentosAccordion
               atendimentos={conversations.map((c) => ({
                 id: c.id,

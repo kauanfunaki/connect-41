@@ -236,7 +236,7 @@ export function BpoCredentialsList({ credentials, companies, canManage, createAc
       </div>
 
       {credentials.length === 0 ? (
-        <div className="bg-surface border border-border rounded-2xl">
+        <div className="bg-surface border border-border rounded-lg">
           <EmptyState
             icon={<KeyRound />}
             title="Nenhuma credencial cadastrada ainda"
@@ -244,7 +244,7 @@ export function BpoCredentialsList({ credentials, companies, canManage, createAc
           />
         </div>
       ) : filteredCredentials.length === 0 ? (
-        <div className="bg-surface border border-border rounded-2xl">
+        <div className="bg-surface border border-border rounded-lg">
           <EmptyState icon={<KeyRound />} title="Nenhuma credencial encontrada" description="Tente ajustar a busca." />
         </div>
       ) : (

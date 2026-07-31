@@ -65,7 +65,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
   }
 
   return (
-    <div className="scroll-x bg-surface border border-border rounded-2xl p-4 h-full overflow-x-auto flex gap-3">
+    <div className="scroll-x bg-surface border border-border rounded-lg p-4 h-full overflow-x-auto flex gap-3">
       {stages.map((stage) => {
         const color = stage.color ?? FALLBACK_COLOR;
         const stageItems = items.filter((i) => i.stageId === stage.id);
@@ -84,7 +84,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
               const itemId = e.dataTransfer.getData("text/plain");
               if (itemId) handleDrop(stage.id, itemId);
             }}
-            className={`flex-1 min-w-[268px] max-w-[340px] flex flex-col rounded-xl border transition-[outline-color,background-color] duration-150 ${
+            className={`flex-1 min-w-[268px] max-w-[340px] flex flex-col rounded-lg border transition-[outline-color,background-color] duration-150 ${
               isDragOver ? "bg-brand-subtle outline outline-2 outline-dashed outline-brand -outline-offset-2 border-transparent" : "border-border bg-canvas"
             }`}
           >
@@ -106,7 +106,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
             <div className="scroll-y flex-1 overflow-y-auto p-2.5 space-y-2 min-h-[100px]">
               {stageItems.length === 0 && (
                 <div
-                  className={`h-16 rounded-xl border-[1.5px] border-dashed flex items-center justify-center text-[12px] transition-colors ${
+                  className={`h-16 rounded-lg border-[1.5px] border-dashed flex items-center justify-center text-[12px] transition-colors ${
                     isDragOver ? "border-brand text-brand" : "border-border-strong text-fg-muted"
                   }`}
                 >
@@ -131,7 +131,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                       borderLeftColor: color,
                       animationDelay: `${Math.min(i, 8) * 25}ms`,
                     }}
-                    className={`kanban-card-enter group block bg-surface border border-l-[3px] rounded-xl pl-3 pr-3 py-3 cursor-grab active:cursor-grabbing transition-[border-color,box-shadow,opacity,background-color] duration-150 hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] ${
+                    className={`kanban-card-enter group block bg-surface border border-l-[3px] rounded-lg pl-3 pr-3 py-3 cursor-grab active:cursor-grabbing transition-[border-color,box-shadow,opacity,background-color] duration-150 hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] ${
                       selectedId === item.id
                         ? "border-brand shadow-[0_0_0_3px_var(--c41-brand-subtle)]"
                         : "border-border hover:border-border-strong"

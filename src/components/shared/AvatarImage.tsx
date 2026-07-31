@@ -9,7 +9,7 @@ export function initialsFromName(name: string): string {
   return (first + second).toUpperCase() || "?";
 }
 
-const SHAPE_CLASS = { circle: "rounded-full", lg: "rounded-lg", xl: "rounded-xl" } as const;
+const SHAPE_CLASS = { circle: "rounded-full", lg: "rounded-lg", xl: "rounded-lg" } as const;
 
 type Props = {
   src: string | null;

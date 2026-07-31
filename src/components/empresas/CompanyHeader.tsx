@@ -114,7 +114,7 @@ export function CompanyHeader({
   }
 
   return (
-    <div className="bg-surface border border-border rounded-2xl p-6 mb-5">
+    <div className="bg-surface border border-border rounded-lg p-6 mb-5">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-start gap-4 min-w-0">
           <div className="relative flex-shrink-0 group">
@@ -127,7 +127,7 @@ export function CompanyHeader({
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingLogo}
                   title={logoUrl ? "Trocar foto" : "Adicionar foto"}
-                  className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/45 text-white opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity disabled:opacity-100 disabled:cursor-wait"
+                  className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/45 text-white opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity disabled:opacity-100 disabled:cursor-wait"
                 >
                   <Camera size={16} />
                 </button>

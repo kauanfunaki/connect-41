@@ -166,7 +166,7 @@ export function RichTextEditor({ name, defaultValue = "", blockDragHandle = fals
   return (
     <div
       ref={wrapperRef}
-      className="relative border border-border-strong rounded-[10px] bg-input-bg overflow-hidden focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)]"
+      className="relative border border-border-strong rounded-md bg-input-bg overflow-hidden focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)]"
     >
       <div className="flex items-center gap-1 border-b border-border px-2 py-1.5">
         {editor && (

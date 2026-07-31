@@ -46,7 +46,7 @@ export default async function KanbanListPage() {
       </div>
 
       {pipelines.length === 0 ? (
-        <div className="bg-surface border border-border rounded-2xl">
+        <div className="bg-surface border border-border rounded-lg">
           <EmptyState
             icon={<Columns3 />}
             title="Nenhum kanban cadastrado ainda"

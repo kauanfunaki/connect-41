@@ -97,10 +97,10 @@ export default async function SectorHubPage({
             <Link
               key={m.code}
               href={`/setor/${code}/${m.code}`}
-              className="group bg-surface border border-border rounded-2xl p-5 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
+              className="group bg-surface border border-border rounded-lg p-5 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
             >
               <span
-                className="inline-flex w-10 h-10 rounded-xl items-center justify-center mb-4"
+                className="inline-flex w-10 h-10 rounded-lg items-center justify-center mb-4"
                 style={{ background: `${sectorColor}1A`, color: sectorColor }}
               >
                 {MODULE_ICONS[m.code] ?? <LayoutGrid size={20} />}
@@ -125,7 +125,7 @@ export default async function SectorHubPage({
           {canCreateSpace && <NewSpaceButton action={criarEspaco.bind(null, code)} />}
         </div>
         {spaces.length === 0 ? (
-          <div className="bg-surface border border-border rounded-2xl">
+          <div className="bg-surface border border-border rounded-lg">
             <EmptyState
               icon={<LayoutGrid />}
               title="Nenhum espaço criado ainda"

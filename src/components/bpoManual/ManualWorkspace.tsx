@@ -405,7 +405,7 @@ export function ManualWorkspace({
 
   if (documents.length === 0 && !canAct) {
     return (
-      <div className="bg-surface border border-border rounded-2xl">
+      <div className="bg-surface border border-border rounded-lg">
         <EmptyState icon={<FileText />} title="Nenhum documento ainda" description="Peça ao coordenador do BPO pra criar o primeiro documento do manual." />
       </div>
     );

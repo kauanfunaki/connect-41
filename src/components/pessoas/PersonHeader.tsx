@@ -44,7 +44,7 @@ type Props = {
 };
 
 // Header de detalhe de pessoa — mesma "família visual" do CompanyHeader
-// (card rounded-2xl, avatar à esquerda, metadados com ícones, ações à direita).
+// (card rounded-lg, avatar à esquerda, metadados com ícones, ações à direita).
 export function PersonHeader({
   id,
   name,
@@ -70,7 +70,7 @@ export function PersonHeader({
   }
 
   return (
-    <div className="bg-surface border border-border rounded-2xl p-6 mb-5">
+    <div className="bg-surface border border-border rounded-lg p-6 mb-5">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-start gap-4 min-w-0">
           <AvatarImage src={photoUrl} name={name} size={56} shape="circle" fontSize={20} />

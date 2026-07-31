@@ -123,9 +123,9 @@ export default async function AdminPage() {
           <Link
             key={c.href}
             href={c.href}
-            className="group bg-surface border border-border rounded-2xl p-5 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
+            className="group bg-surface border border-border rounded-lg p-5 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
           >
-            <span className="inline-flex w-10 h-10 rounded-xl items-center justify-center mb-4 bg-brand-subtle text-brand">
+            <span className="inline-flex w-10 h-10 rounded-lg items-center justify-center mb-4 bg-brand-subtle text-brand">
               {c.icon}
             </span>
 

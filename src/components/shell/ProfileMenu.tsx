@@ -65,7 +65,7 @@ export function ProfileMenu({ name, roleLabel, photoUrl: initialPhotoUrl }: Prop
           type="button"
           onClick={toggle}
           aria-expanded={open}
-          className={`flex items-center gap-2.5 h-[38px] pl-1 pr-1 sm:pr-3 rounded-[10px] bg-surface-hover border transition-colors ${
+          className={`flex items-center gap-2.5 h-[38px] pl-1 pr-1 sm:pr-3 rounded-md bg-surface-hover border transition-colors ${
             open ? "border-border-strong" : "border-border hover:border-border-strong"
           }`}
         >

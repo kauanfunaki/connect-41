@@ -16,10 +16,10 @@ export default function LoadingPessoas() {
           <div className="c41-skeleton w-32 h-6" />
           <div className="c41-skeleton w-48 h-3.5" />
         </div>
-        <div className="c41-skeleton w-32 h-9 rounded-[10px]" />
+        <div className="c41-skeleton w-32 h-9 rounded-md" />
       </div>
 
-      <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+      <div className="bg-surface border border-border rounded-lg overflow-hidden">
         <div className="border-b border-border bg-table-header-bg h-11" />
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="flex items-center gap-6 px-4 py-3 border-b border-border last:border-0">

@@ -23,7 +23,7 @@ export function MetricCard({ href, label, value, highlight = false, delay = 0 }:
   );
 
   const cls =
-    "reveal-in bg-surface border border-border rounded-2xl px-[18px] py-4 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform] flex flex-col gap-2";
+    "reveal-in bg-surface border border-border rounded-lg px-[18px] py-4 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform] flex flex-col gap-2";
 
   if (href) {
     return (

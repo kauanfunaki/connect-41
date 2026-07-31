@@ -17,7 +17,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, Props>(function Textarea
       ref={ref}
       disabled={disabled}
       readOnly={readOnly}
-      className={`w-full min-h-[76px] px-3 py-2.5 rounded-[10px] border bg-input-bg text-[length:var(--fs-input)] text-fg placeholder:text-fg-muted outline-none transition-colors resize-none ${
+      className={`w-full min-h-[76px] px-3 py-2.5 rounded-md border bg-input-bg text-[length:var(--fs-input)] text-fg placeholder:text-fg-muted outline-none transition-colors resize-none ${
         error
           ? "border-danger focus:shadow-[0_0_0_3px_var(--c41-danger-bg)]"
           : "border-border-strong focus:border-brand focus:shadow-[0_0_0_3px_var(--c41-focus-ring)]"

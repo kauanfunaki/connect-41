@@ -228,7 +228,7 @@ export function HandoffForm({
         required
         helper="Preenchido automaticamente quando o modelo escolhido já indica os setores — ajuste manualmente se precisar."
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 border border-border rounded-[10px] px-3.5 py-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 border border-border rounded-md px-3.5 py-3">
           {destinationOptions.map((s) => (
             <Checkbox
               key={s.value}

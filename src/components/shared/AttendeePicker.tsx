@@ -84,7 +84,7 @@ export function AttendeePicker({ users, name = "attendeeIds", label = "Responsá
           className="h-8 text-[12px]"
         />
         {open && (
-          <div className="absolute z-20 top-[calc(100%+4px)] left-0 right-0 max-h-[176px] overflow-y-auto bg-surface-elevated border border-border-strong rounded-xl shadow-[var(--c41-shadow-lg)] p-1.5">
+          <div className="absolute z-20 top-[calc(100%+4px)] left-0 right-0 max-h-[176px] overflow-y-auto bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] p-1.5">
             {availableUsers.length === 0 ? (
               <p className="text-[12px] text-fg-muted px-2 py-1.5">
                 {normalizedQuery ? "Nenhum responsável encontrado." : "Todos já foram adicionados."}

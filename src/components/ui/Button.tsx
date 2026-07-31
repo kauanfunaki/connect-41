@@ -34,7 +34,7 @@ export function Button({
     <button
       type={rest.type ?? "button"}
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-[10px] font-semibold transition-colors disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed ${VARIANT_CLASS[variant]} ${SIZE_CLASS[size]} ${className}`.trim()}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-md font-semibold transition-colors disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed ${VARIANT_CLASS[variant]} ${SIZE_CLASS[size]} ${className}`.trim()}
       {...rest}
     >
       {loading ? "Salvando…" : children}
