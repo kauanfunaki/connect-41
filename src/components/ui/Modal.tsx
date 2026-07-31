@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import { X } from "lucide-react";
+import { IconButton } from "@/components/ui/IconButton";
 import { useDialog } from "@/components/ui/useDialog";
 
 type Props = {
@@ -38,14 +39,9 @@ export function Modal({ open, onClose, title, maxWidth = "max-w-md", children }:
       >
         <div className="flex items-center justify-between px-5 pt-5 pb-2">
           {title && <h2 id={titleId} className="text-[15px] font-semibold text-fg">{title}</h2>}
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Fechar"
-            className="ml-auto w-8 h-8 inline-flex items-center justify-center rounded-lg text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors"
-          >
+          <IconButton onClick={onClose} aria-label="Fechar" className="ml-auto">
             <X size={16} />
-          </button>
+          </IconButton>
         </div>
         <div className="px-5 pb-5">{children}</div>
       </div>

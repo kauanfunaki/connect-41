@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import { X, ArrowLeft } from "lucide-react";
+import { IconButton } from "@/components/ui/IconButton";
 import { useDialog } from "@/components/ui/useDialog";
 
 type Props = {
@@ -51,14 +52,9 @@ export function SlideOver({ open, onClose, title, onBack, width = "max-w-md", ch
           ) : (
             title && <h2 id={titleId} className="text-[15px] font-semibold text-fg">{title}</h2>
           )}
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Fechar"
-            className="ml-auto w-8 h-8 inline-flex items-center justify-center rounded-lg text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors flex-shrink-0"
-          >
+          <IconButton onClick={onClose} aria-label="Fechar" className="ml-auto">
             <X size={16} />
-          </button>
+          </IconButton>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">{children}</div>
       </div>

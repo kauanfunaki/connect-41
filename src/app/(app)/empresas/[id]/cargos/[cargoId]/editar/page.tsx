@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { CargoForm } from "@/components/empresas/CargoForm";
+import { FormShell } from "@/components/ui/FormShell";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -43,7 +44,7 @@ export default async function EditarCargoPage({
       <PageHeader title="Editar Cargo" subtitle={company.name} />
 
       <div className="w-full max-w-[720px]">
-        <div className="bg-surface border border-border rounded-lg p-6">
+        <FormShell>
           <CargoForm
             action={atualizarCargo}
             companyId={companyId}
@@ -60,7 +61,7 @@ export default async function EditarCargoPage({
               salaryRangeMax: cargo.salaryRangeMax?.toString(),
             }}
           />
-        </div>
+        </FormShell>
       </div>
     </PageContainer>
   );

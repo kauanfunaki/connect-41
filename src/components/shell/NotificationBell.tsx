@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { Dropdown, DropdownSeparator } from "@/components/ui/Dropdown";
+import { IconButton } from "@/components/ui/IconButton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { NotificationItem } from "@/components/shell/NotificationItem";
 
@@ -19,15 +20,13 @@ export function NotificationBell({ unreadCount, notifications }: Props) {
       align="right"
       width={340}
       trigger={({ open, toggle }) => (
-        <button
-          type="button"
+        <IconButton
+          variant="framed"
+          size="lg"
+          active={open}
           onClick={toggle}
-          title="Notificações" aria-label="Notificações"
-          className={`relative w-[38px] h-[38px] inline-flex items-center justify-center rounded-md border transition-colors ${
-            open
-              ? "bg-surface border-border-strong text-fg shadow-sm"
-              : "bg-surface-hover border-border text-fg-secondary hover:text-fg hover:border-border-strong"
-          }`}
+          title="Notificações"
+          aria-label="Notificações"
         >
           <Bell size={17} />
           {unreadCount > 0 && (
@@ -35,7 +34,7 @@ export function NotificationBell({ unreadCount, notifications }: Props) {
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}
-        </button>
+        </IconButton>
       )}
     >
       <div className="flex items-center justify-between px-1 pb-2 mb-1 border-b border-border">

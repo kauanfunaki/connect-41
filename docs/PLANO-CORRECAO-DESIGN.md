@@ -228,27 +228,84 @@ do diálogo, ESC fecha (menos nos casos acima), foco volta ao gatilho.
 
 ---
 
-## Etapa 4 — Ressuscitar os componentes órfãos
+## Etapa 4 — Componentes órfãos ✅ EXECUTADA (31/07/2026)
 
-**Objetivo:** três componentes bem construídos têm **zero** consumidores. Não
-são código morto a deletar — são padrão pronto que ninguém sabe que existe.
+A regra "se o encaixe não for bom, o componente é que muda" foi acionada nos
+**três** casos. Nenhum dos órfãos estava sem consumidor por desconhecimento —
+cada um tinha um motivo estrutural diferente.
 
-> Correção ao levantamento: eu havia sugerido que `FormShell` fosse removido
-> por redundância. Lendo o arquivo, não é — ele traz cabeçalho com borda e
-> **barra de ações sticky no rodapé**, que nenhum dos 60 formulários do app tem
-> hoje. É para adotar, não para apagar.
+### `IconButton` — servia exatamente um lugar ✅
 
-| Componente | Onde aplicar |
+Estava fixo em 38×38 com moldura obrigatória, e o comentário dele pregava
+"nunca ícone solto sem fundo/borda própria". A medição contradisse as duas
+coisas:
+
+| | Botões só-ícone |
 |---|---|
-| `IconButton` | 38×38 com estados `active`/`hasDot` — topbar (`shell/`) e ações de card. É o padrão que os botões-ícone crus tentam imitar à mão. |
-| `MetricCard` | blocos de métrica da Home e dos dashboards de setor/RH |
-| `FormShell` | os 60 arquivos `*Form.tsx`, começando pelos multi-step (`EmpresaForm`, `PessoaForm`) |
+| Com moldura (o que o componente fazia) | 24 |
+| **Sem moldura** (ícone discreto, aparece no hover) | **33** |
 
-Fazer como **prova de conceito em 2–3 telas primeiro**. Se o encaixe não for
-bom, o componente é que precisa mudar — não force a adoção.
+E os com moldura vão de `w-4` (16px) a `w-9` (36px) mais o 38px. O componente
+cabia num único call-site: o `NotificationBell`, de onde tinha sido extraído.
 
-**Risco:** médio (muda aparência real onde aplicado).
-**Tamanho:** sessão média.
+Ganhou `size` (`sm` 28 · `md` 32 · `lg` 38 — o `md` casa com `<Button size="sm">`)
+e `variant` (`framed` para controle permanente de topbar, `ghost` para ação
+secundária dentro de conteúdo — que é o padrão dominante do app e agora é o
+default). Adotado em `NotificationBell` (framed/lg), `Modal`, `SlideOver` e
+`DeleteTaskButton` (ghost/md).
+
+**Não** forcei os outros ~50 botões-ícone: eles somam 8 tamanhos e 2
+tratamentos visuais diferentes, e uniformizá-los é decisão de design, não
+refatoração — fica para uma passada dedicada.
+
+### `MetricCard` — não estava morto, estava superado ✅
+
+A Home tinha um `StatCard` **local** que era superconjunto dele: mesmo layout,
+mas com ícone e sublinha de apoio, e já em uso 4×. O da biblioteca ficou parado
+enquanto a versão real evoluía dentro de `home/page.tsx`.
+
+Consolidados num só, no slot da biblioteca: `icon`, `sub` e `href` opcionais,
+cobrindo tanto o card da Home quanto o caso simples. As 42 linhas duplicadas
+saíram da Home, que agora importa `ui/MetricCard`. Fica disponível para os
+dashboards de setor/RH.
+
+### `FormShell` — tem um defeito de contrato ⚠️
+
+Correção da correção: no plano eu disse que o valor dele era a "barra de ações
+sticky no rodapé". Lendo com atenção, **essa é justamente a parte que não
+funciona**. O `actions` é renderizado como irmão de `children`, fora dele:
+
+```tsx
+<div className="bg-surface …">
+  <div>{children}</div>          {/* aqui entra o <form> */}
+  {actions && <div className="sticky …">{actions}</div>}   {/* fora do form */}
+</div>
+```
+
+Um `<button type="submit">` em `actions` fica **fora do `<form>`** — e os 60
+formulários do app são `<form action={serverAction}>`. A prop é inutilizável
+como está; precisaria de `form="id"` ou de o próprio FormShell renderizar o
+`<form>`.
+
+O que ele resolve de verdade é o **casco**: o wrapper
+`bg-surface border border-border rounded-lg p-6` está duplicado à mão em ~10
+páginas de novo/editar. Adotado nesse papel como piloto em `cargos/novo` e
+`cargos/[cargoId]/editar`, com o `FormFooter` seguindo dentro do `<form>`, onde
+sempre esteve.
+
+**Pendente de decisão:** ou o `actions` é consertado (FormShell passa a
+renderizar o `<form>`), ou é removido da API e o componente vira um casco puro
+— aí ele se sobrepõe ao `Card`, e talvez o certo seja `Card` + `FormFooter`.
+Não decidi sozinho porque muda a API de um componente da biblioteca.
+
+**Verificação:** `tsc` limpo · `eslint --max-warnings 0` limpo · `vitest` 125
+testes · `build` compilado.
+
+**Mudança visual real** (primeira etapa com isso): os botões de fechar de
+`Modal`/`SlideOver` e o menu do `DeleteTaskButton` passaram de `rounded-lg`
+(16px) para `rounded-md` (10px) — 16px num quadrado de 32px era quase pílula,
+e 10px é a convenção de botão-ícone do app. O card da Home ficou com o mesmo
+padding de antes (`px-4 py-3.5`, o do `StatCard` vivo).
 
 ---
 
@@ -315,7 +372,7 @@ ou depois.
 | 1 · Escala tipográfica ✅ | 1 | baixo | pequena | **destravou 5, 6, 7** |
 | 2 · Raios + docs ✅ | 94 | baixo | pequena | destravou 4 |
 | 3 · A11y (diálogo + rótulo) ✅ | 22 | baixo | pequena | independente |
-| 4 · Componentes órfãos | 3 + telas-piloto | médio | média | destrava 6 |
+| 4 · Componentes órfãos ✅ | 3 + 8 telas | médio | média | destravou 6 |
 | 5 · PageHeader | 101 páginas | baixo | média | — |
 | 6 · Button | 168 arquivos | médio | **grande** | — |
 | 7 · Card, estados, grid | ~200 pontos | baixo | grande | — |

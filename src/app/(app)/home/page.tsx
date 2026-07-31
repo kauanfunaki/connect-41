@@ -10,6 +10,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { MetricCard } from "@/components/ui/MetricCard";
 import { QuickCreateMenu } from "@/components/shared/QuickCreateMenu";
 import { CustomizeHomeButton } from "@/components/home/CustomizeHomeButton";
 import { HorizontalBarChart, TrendChart } from "@/components/shared/Charts";
@@ -354,7 +355,7 @@ export default async function HomePage() {
   const widgetNodes: Record<HomeWidgetKey, React.ReactNode> = {
     indicadores: (
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-        <StatCard
+        <MetricCard
           href="/empresas"
           icon={<Building2 size={16} />}
           label="Empresas ativas"
@@ -362,7 +363,7 @@ export default async function HomePage() {
           delay={0}
           sub={newCompaniesThisMonth > 0 ? `+${newCompaniesThisMonth} este mês` : undefined}
         />
-        <StatCard
+        <MetricCard
           href="/kanban"
           icon={<Clock size={16} />}
           label="Vencidos / hoje"
@@ -371,7 +372,7 @@ export default async function HomePage() {
           highlight={vencidosCount + hojeCount > 0}
           sub={vencidosCount > 0 ? `${vencidosCount} vencido${vencidosCount !== 1 ? "s" : ""}` : undefined}
         />
-        <StatCard
+        <MetricCard
           href="/transferencias?status=NEW"
           icon={<ArrowRightLeft size={16} />}
           label="Transferências"
@@ -380,7 +381,7 @@ export default async function HomePage() {
           highlight={pendingHandoffsCount > 0}
           sub={pendingHandoffsCount > 0 ? "em aberto" : undefined}
         />
-        <StatCard
+        <MetricCard
           href="/pessoas"
           icon={<Users size={16} />}
           label="Pessoas cadastradas"
@@ -668,45 +669,3 @@ export default async function HomePage() {
   );
 }
 
-function StatCard({
-  href,
-  icon,
-  label,
-  value,
-  highlight,
-  delay = 0,
-  sub,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  highlight?: boolean;
-  delay?: number;
-  sub?: string;
-}) {
-  return (
-    <Link
-      href={href}
-      style={{ animationDelay: `${delay}ms` }}
-      className="reveal-in bg-surface border border-border rounded-lg px-4 py-3.5 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform] flex flex-col gap-2"
-    >
-      <div className="flex items-center gap-2">
-        <span
-          className={`inline-flex w-7 h-7 rounded-lg items-center justify-center flex-shrink-0 ${
-            highlight ? "bg-warning/10 text-warning" : "bg-brand-subtle text-brand"
-          }`}
-        >
-          {icon}
-        </span>
-        <p className="text-[length:var(--fs-helper)] text-fg-muted truncate">{label}</p>
-      </div>
-      <div className="flex items-baseline gap-2">
-        <p className={`font-display text-[length:var(--fs-metric)] font-semibold tnum leading-none ${highlight ? "text-warning" : "text-fg"}`}>
-          {value}
-        </p>
-        {sub && <span className="text-[11px] text-fg-muted truncate">{sub}</span>}
-      </div>
-    </Link>
-  );
-}
