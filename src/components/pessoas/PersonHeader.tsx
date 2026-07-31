@@ -95,7 +95,7 @@ export function PersonHeader({
                 <button
                   type="button"
                   onClick={copyCpf}
-                  title="Copiar CPF"
+                  title="Copiar CPF" aria-label="Copiar CPF"
                   className="inline-flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted hover:text-fg tnum transition-colors"
                 >
                   {copied ? <Check size={13} className="text-success" /> : <Copy size={13} />}

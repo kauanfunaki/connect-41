@@ -45,7 +45,7 @@ export function PessoasTabsBar({ active }: { active: PessoasTab }) {
             type="button"
             role="tab"
             aria-selected={isActive}
-            title={t.hint}
+            title={t.hint} aria-label={t.hint}
             onClick={() => !isActive && onChange(t.key)}
             className={`inline-flex items-center gap-1.5 h-8 px-3.5 rounded-lg text-[13px] font-medium transition-colors ${
               isActive

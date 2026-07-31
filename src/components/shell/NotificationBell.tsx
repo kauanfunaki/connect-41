@@ -22,7 +22,7 @@ export function NotificationBell({ unreadCount, notifications }: Props) {
         <button
           type="button"
           onClick={toggle}
-          title="Notificações"
+          title="Notificações" aria-label="Notificações"
           className={`relative w-[38px] h-[38px] inline-flex items-center justify-center rounded-md border transition-colors ${
             open
               ? "bg-surface border-border-strong text-fg shadow-sm"

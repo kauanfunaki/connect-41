@@ -477,7 +477,7 @@ export function ManualWorkspace({
                         }
                       }}
                       className="flex-1 min-w-0 text-left text-[13px] font-medium text-fg truncate py-1"
-                      title={canAct ? "Clique para renomear" : doc.title}
+                      title={canAct ? "Clique para renomear" : doc.title} aria-label={canAct ? "Clique para renomear" : doc.title}
                     >
                       {doc.title}
                     </button>

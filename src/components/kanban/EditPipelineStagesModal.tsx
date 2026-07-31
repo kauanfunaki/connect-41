@@ -97,7 +97,7 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
             {rows.map((row, i) => (
               <div key={row.id ?? `new-${i}`} className="flex items-center gap-2">
                 <div className="flex flex-col flex-shrink-0">
-                  <button type="button" disabled={i === 0} onClick={() => move(i, "up")} className="text-fg-muted hover:text-fg disabled:opacity-30 disabled:hover:text-fg-muted">
+                  <button type="button" disabled={i === 0} onClick={() => move(i, "up")} aria-label="Mover estágio para cima" className="text-fg-muted hover:text-fg disabled:opacity-30 disabled:hover:text-fg-muted">
                     <GripVertical size={13} />
                   </button>
                 </div>

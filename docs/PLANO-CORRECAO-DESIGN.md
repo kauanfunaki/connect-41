@@ -136,34 +136,95 @@ o resto é renomeação com valor idêntico.
 
 ---
 
-## Etapa 3 — Acessibilidade de diálogo e de rótulo
+## Etapa 3 — Acessibilidade ✅ EXECUTADA (31/07/2026)
 
-**Objetivo:** os dois defeitos funcionais de a11y. Alto retorno porque a
-correção é por componente, não por call-site.
+### 3a — Semântica de diálogo ✅ (8 componentes, não 2)
 
-### 3a — `Modal` e `SlideOver` (2 arquivos, corrige todos os consumidores)
+Criado `src/components/ui/useDialog.ts`: fecha no ESC, prende o Tab dentro do
+painel, move o foco pra dentro ao abrir, devolve o foco ao gatilho ao fechar e
+trava o scroll do `<body>`.
 
-Falta em ambos: `role="dialog"`, `aria-modal="true"`, `aria-labelledby`
-apontando para o título, focus trap, retorno de foco ao elemento que abriu, e
-lock de scroll do `<body>`. Hoje só há ESC e clique-fora — o Tab escapa para a
-página atrás e leitor de tela não anuncia como diálogo.
+O plano previa 2 arquivos (`Modal`, `SlideOver`). A busca por overlays
+(`fixed inset-0` + `bg-black/`) achou **7 diálogos**, cinco deles feitos à mão
+fora da biblioteca. Todos receberam `role`/`aria-modal`/`tabIndex={-1}`/
+`aria-labelledby` e o hook:
 
-### 3b — Rótulo de botão só-ícone
+| Componente | Antes | Depois |
+|---|---|---|
+| `ui/Modal` | só ESC + clique-fora | completo |
+| `ui/SlideOver` | só ESC | completo |
+| `ui/ConfirmDialog` | `alertdialog`, foco inicial, ESC | + trap, scroll lock, retorno de foco |
+| `agenda/CreateMeetingDialog` | `dialog`, ESC | + trap, scroll lock, retorno de foco |
+| `agenda/EditMeetingDialog` | `dialog`, ESC | idem |
+| `kanban/KanbanItemModal` | só ESC, sem `role` | completo |
+| `shared/ImageCropModal` | nada | completo |
+| `shell/MeetingAlertOverlay` | `alertdialog` | + trap, scroll lock |
 
-195 `title=` contra 66 `aria-label` no app inteiro, sobre 331 botões em sua
-maioria só-ícone. `title` não é lido de forma confiável por leitor de tela nem
-existe em toque. Adicionar `aria-label` onde só há `title` — mecânico, sem
-efeito visual.
+Três detalhes de comportamento preservados de propósito:
 
-### 3c — `<img>` → `next/image`
+- **ESC não fecha durante ação em voo** (`ConfirmDialog`, os dois de reunião,
+  `ImageCropModal`) — a pessoa perderia o retorno de algo já disparado no
+  servidor.
+- **`MeetingAlertOverlay` não fecha no ESC** — exige ciência explícita no
+  botão. Entrou no hook só pelo trap/scroll lock.
+- **`ConfirmDialog` foca o botão de confirmar**, não o primeiro controle
+  (que seria "Cancelar"): num diálogo de confirmação a ação esperada é o Enter.
 
-15 ocorrências cruas, 1 arquivo usando `next/image`. Migrar com `alt`
-obrigatório.
+O `onClose` fica numa ref dentro do hook, fora das dependências do efeito —
+senão qualquer consumidor com handler inline (ou que troca de handler conforme
+o estado, como o `ConfirmDialog` quando `pending` muda) remontaria o efeito,
+reabrindo o scroll e roubando o foco de onde a pessoa estava.
 
-**Risco:** baixo (3b e 3c são aditivos). **Tamanho:** 3a sessão pequena; 3b
-sessão média.
-**Verificação:** navegação por teclado nos modais (Tab não deve sair do
-diálogo; ESC fecha; foco volta ao gatilho).
+Corrigido de quebra: `ConfirmDialog`, `CreateMeetingDialog`, `EditMeetingDialog`
+e `MeetingAlertOverlay` usavam `id` **fixo** no título (`"confirm-title"`,
+`"meeting-alert-title"`…). Dois na mesma tela gerariam `id` duplicado e
+`aria-labelledby` apontando pro lugar errado. Agora usam `useId()`.
+
+### 3b — Rótulo de botão ✅
+
+**O levantamento errou a métrica aqui.** Ele comparou 195 `title=` contra 66
+`aria-label` *no app inteiro* e concluiu que a maioria dos 331 botões estava sem
+nome acessível. Comparar totais de elementos diferentes não mede nada: a maior
+parte daqueles `title=` está em `div`/`span`/`td`, não em botão.
+
+Medido de verdade, com um scanner que casa `<button>` respeitando aninhamento e
+chaves:
+
+| Situação | Botões |
+|---|---|
+| Só-ícone, sem nome acessível nenhum | **5** |
+| Com `title=` e sem `aria-label` | **20** |
+| **Total corrigido** | **25** (de 331) |
+
+Os 5 sem nome ganharam `aria-label` descritivo (`"Desvincular tarefa"`,
+`"Cancelar busca"`, `"Fechar"`, `"Mover estágio para cima"`, e um par
+`aria-label`/`aria-expanded` dinâmico no colapsar/expandir de lista). Os 20 com
+`title` tiveram o valor espelhado em `aria-label`.
+
+### 3c — `<img>` → `next/image` ❌ NÃO FEITO (premissa errada)
+
+O plano justificava a migração por "risco de `alt` ausente". **Não há risco:
+os 15 `<img>` têm `alt`.** Verificado um a um. Além disso o repositório tem 13
+`eslint-disable @next/next/no-img-element` — a escolha por `<img>` cru foi
+deliberada, não descuido.
+
+Sem ganho de a11y, sobra o ganho de performance — que é outra etapa e não é
+trivial aqui:
+
+- **2 são impossíveis**: as do `ConnectLoadingScreen` estão dentro de uma
+  *string* de HTML (tela pré-hidratação, usa `class=`, não `className=`).
+- **6 são SVG de marca** — `next/image` não otimiza SVG.
+- **As 7 restantes são URLs dinâmicas** (logo de tenant, capa de manual, anexo,
+  avatar) sem dimensão intrínseca conhecida: exigiriam `fill` + pai posicionado,
+  e `remotePatterns` no `next.config.ts`. Hoje a CSP já limita imagens a
+  `img-src 'self' data: blob:`.
+
+**Recomendação:** tirar da Etapa 3 (acessibilidade) e avaliar na Etapa 7 como
+item de performance, se valer a pena.
+
+**Verificação:** `tsc` limpo · `eslint --max-warnings 0` limpo · `vitest` 125
+testes · `build` compilado. **Falta conferir com teclado**: Tab não deve sair
+do diálogo, ESC fecha (menos nos casos acima), foco volta ao gatilho.
 
 ---
 
@@ -253,7 +314,7 @@ ou depois.
 |---|---|---|---|---|
 | 1 · Escala tipográfica ✅ | 1 | baixo | pequena | **destravou 5, 6, 7** |
 | 2 · Raios + docs ✅ | 94 | baixo | pequena | destravou 4 |
-| 3 · A11y (modal, rótulo, img) | ~30 | baixo | pequena/média | independente |
+| 3 · A11y (diálogo + rótulo) ✅ | 22 | baixo | pequena | independente |
 | 4 · Componentes órfãos | 3 + telas-piloto | médio | média | destrava 6 |
 | 5 · PageHeader | 101 páginas | baixo | média | — |
 | 6 · Button | 168 arquivos | médio | **grande** | — |

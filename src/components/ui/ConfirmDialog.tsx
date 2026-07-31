@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useId, useRef } from "react";
+import { useDialog } from "@/components/ui/useDialog";
 
 type Props = {
   open: boolean;
@@ -30,16 +31,21 @@ export function ConfirmDialog({
   onCancel,
 }: Props) {
   const confirmRef = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
 
+  // ESC não cancela enquanto a ação está em voo — a pessoa perderia o retorno
+  // (inclusive a mensagem de erro) de algo que já foi disparado no servidor.
+  const handleClose = useCallback(() => {
+    if (!pending) onCancel();
+  }, [pending, onCancel]);
+  const panelRef = useDialog(open, handleClose);
+
+  // O foco inicial aqui é o botão de confirmar, não o primeiro controle do
+  // painel (que seria "Cancelar") — sobrepõe o padrão do useDialog de
+  // propósito: num diálogo de confirmação a ação esperada é o Enter.
   useEffect(() => {
-    if (!open) return;
-    confirmRef.current?.focus();
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape" && !pending) onCancel();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, pending, onCancel]);
+    if (open) confirmRef.current?.focus();
+  }, [open]);
 
   if (!open) return null;
 
@@ -51,12 +57,14 @@ export function ConfirmDialog({
       }}
     >
       <div
+        ref={panelRef}
         role="alertdialog"
         aria-modal="true"
-        aria-labelledby="confirm-title"
+        tabIndex={-1}
+        aria-labelledby={titleId}
         className="w-full max-w-sm rounded-lg border border-border bg-surface p-5 shadow-lg"
       >
-        <h2 id="confirm-title" className="text-[15px] font-semibold text-fg mb-1.5">
+        <h2 id={titleId} className="text-[15px] font-semibold text-fg mb-1.5">
           {title}
         </h2>
         {description && <p className="text-[13px] text-fg-secondary mb-3">{description}</p>}

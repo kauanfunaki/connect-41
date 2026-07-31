@@ -52,6 +52,7 @@ export function LinkedItemsSection({ canAct, basePath, links, candidates, create
                 <button
                   type="button"
                   onClick={() => startTransition(() => deleteAction(l.id))}
+                  aria-label="Desvincular tarefa"
                   className="text-fg-muted hover:text-danger p-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <Trash2 size={13} />
@@ -67,7 +68,7 @@ export function LinkedItemsSection({ canAct, basePath, links, candidates, create
           <div className="relative">
             <div className="flex items-center gap-2">
               <Input compact value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar tarefa…" autoFocus />
-              <button type="button" onClick={() => { setPicking(false); setQuery(""); }} className="text-fg-muted hover:text-fg p-1.5 flex-shrink-0">
+              <button type="button" onClick={() => { setPicking(false); setQuery(""); }} aria-label="Cancelar busca" className="text-fg-muted hover:text-fg p-1.5 flex-shrink-0">
                 <X size={14} />
               </button>
             </div>

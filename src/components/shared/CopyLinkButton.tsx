@@ -19,7 +19,7 @@ export function CopyLinkButton({ url, className = "" }: { url: string; className
     <button
       type="button"
       onClick={handleCopy}
-      title="Copiar link da reunião"
+      title="Copiar link da reunião" aria-label="Copiar link da reunião"
       className={`inline-flex items-center gap-1 text-[12px] text-fg-muted hover:text-fg transition-colors ${className}`.trim()}
     >
       {copied ? <Check size={12} className="text-success" /> : <Copy size={12} />}

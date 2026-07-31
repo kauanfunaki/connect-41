@@ -66,7 +66,7 @@ function AssigneeAvatar({ a, itemId, canAct, priorityAction }: { a: AssigneeRow;
     <span className="relative">
       <button
         type="button"
-        title={`${a.name} · ${PRIORITY_LABEL[a.priority] ?? "Normal"}`}
+        title={`${a.name} · ${PRIORITY_LABEL[a.priority] ?? "Normal"}`} aria-label={`${a.name} · ${PRIORITY_LABEL[a.priority] ?? "Normal"}`}
         onClick={(e) => {
           if (!canAct) return;
           e.preventDefault();
@@ -417,7 +417,7 @@ function StageGroupHeader({
 
   return (
     <div className="flex items-center gap-2">
-      <button type="button" onClick={onToggleCollapsed} className="text-fg-muted hover:text-fg flex-shrink-0">
+      <button type="button" onClick={onToggleCollapsed} aria-label={collapsed ? "Expandir lista" : "Recolher lista"} aria-expanded={!collapsed} className="text-fg-muted hover:text-fg flex-shrink-0">
         <ChevronDown size={13} className={`transition-transform ${collapsed ? "-rotate-90" : ""}`} />
       </button>
       <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: stage.color ?? "#586577" }} />

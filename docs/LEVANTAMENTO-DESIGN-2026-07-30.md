@@ -147,12 +147,19 @@ O que falta:
   de foco ao fechar, nem lock de scroll do body. Leitor de tela não anuncia
   como modal e o Tab escapa para a página atrás. Mesmo diagnóstico vale para
   `ui/SlideOver` (só ESC).
-- **Rótulo de ação por `title=`, não por `aria-label`.** 195 `title=` contra 66
-  `aria-label` no app todo, sobre 331 botões — a maior parte deles só-ícone.
-  `title` não é lido de forma confiável por leitor de tela e não aparece em
-  toque. Cada botão só-ícone sem `aria-label` é um controle sem nome acessível.
-- **15 `<img>` crus** contra 1 arquivo usando `next/image` — sem otimização e
-  com risco de `alt` ausente.
+- ~~**Rótulo de ação por `title=`, não por `aria-label`.** 195 `title=` contra
+  66 `aria-label` no app todo, sobre 331 botões — a maior parte deles
+  só-ícone.~~ **Métrica errada, corrigida na Etapa 3** (31/07): comparar totais
+  de `title=` e `aria-label` no app inteiro não mede nada, porque a maioria
+  daqueles `title=` está em `div`/`span`/`td`, não em botão. Medido com um
+  scanner que casa `<button>` de verdade: **5** botões só-ícone sem nome
+  acessível e **20** com `title` sem `aria-label` — 25 de 331, não ~195. Todos
+  corrigidos.
+- ~~**15 `<img>` crus** contra 1 arquivo usando `next/image` — sem otimização e
+  com risco de `alt` ausente.~~ **Sem risco de `alt`:** os 15 têm `alt`
+  (verificado um a um na Etapa 3), e há 13 `eslint-disable no-img-element` —
+  a escolha foi deliberada. Sobra só o ângulo de performance, movido pra
+  Etapa 7.
 
 ### 3.4 Layout e responsividade
 

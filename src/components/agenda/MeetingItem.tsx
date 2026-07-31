@@ -89,7 +89,7 @@ export function MeetingItem({ meeting, actions, variant, top = 0, height = 0 }: 
           e.stopPropagation();
           setOpen((v) => !v);
         }}
-        title={`${formatTime(start)} · ${meeting.title}`}
+        title={`${formatTime(start)} · ${meeting.title}`} aria-label={`${formatTime(start)} · ${meeting.title}`}
         className="w-full flex items-center gap-1 px-1 py-[3px] rounded text-left hover:bg-surface-hover transition-colors"
       >
         <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: accent }} />

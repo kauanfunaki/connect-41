@@ -26,7 +26,7 @@ export function ThemeToggle() {
         type="button"
         role="radio"
         aria-checked={theme === "light"}
-        title="Tema claro"
+        title="Tema claro" aria-label="Tema claro"
         onClick={() => apply("light")}
         suppressHydrationWarning
         className={`w-[30px] h-[30px] inline-flex items-center justify-center rounded-lg transition-colors ${
@@ -39,7 +39,7 @@ export function ThemeToggle() {
         type="button"
         role="radio"
         aria-checked={theme === "dark"}
-        title="Tema escuro"
+        title="Tema escuro" aria-label="Tema escuro"
         onClick={() => apply("dark")}
         suppressHydrationWarning
         className={`w-[30px] h-[30px] inline-flex items-center justify-center rounded-lg transition-colors ${

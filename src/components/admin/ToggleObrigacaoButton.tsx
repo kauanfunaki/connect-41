@@ -24,7 +24,7 @@ export function ToggleObrigacaoButton({ action, ativo, nome }: Props) {
       <button
         type="button"
         onClick={handleClick}
-        title={ativo ? "Clique para desativar" : "Clique para reativar"}
+        title={ativo ? "Clique para desativar" : "Clique para reativar"} aria-label={ativo ? "Clique para desativar" : "Clique para reativar"}
         className={`c41-toggle-active ${ativo ? "is-on" : ""}`}
       >
         {ativo ? "Ativa" : "Inativa"}

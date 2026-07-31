@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useDialog } from "@/components/ui/useDialog";
 import { X } from "lucide-react";
 
 type Props = {
@@ -14,13 +15,8 @@ type Props = {
 export function KanbanItemModal({ children }: Props) {
   const router = useRouter();
 
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") router.back();
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [router]);
+  const close = useCallback(() => router.back(), [router]);
+  const panelRef = useDialog(true, close);
 
   return (
     <div
@@ -29,7 +25,7 @@ export function KanbanItemModal({ children }: Props) {
         if (e.target === e.currentTarget) router.back();
       }}
     >
-      <div className="relative w-full min-h-full sm:min-h-0 sm:max-w-[94vw] xl:max-w-[1400px] sm:my-8 bg-canvas sm:border sm:border-border sm:rounded-lg shadow-[var(--c41-shadow-lg)] sm:h-[calc(100vh-4rem)] overflow-y-auto lg:overflow-hidden">
+      <div ref={panelRef} role="dialog" aria-modal="true" tabIndex={-1} aria-label="Detalhe do item" className="relative w-full min-h-full sm:min-h-0 sm:max-w-[94vw] xl:max-w-[1400px] sm:my-8 bg-canvas sm:border sm:border-border sm:rounded-lg shadow-[var(--c41-shadow-lg)] sm:h-[calc(100vh-4rem)] overflow-y-auto lg:overflow-hidden">
         <button
           type="button"
           onClick={() => router.back()}

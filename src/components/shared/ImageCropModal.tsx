@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useDialog } from "@/components/ui/useDialog";
 import Cropper, { type Area } from "react-easy-crop";
 import { getCroppedImageBlob } from "@/lib/imageCrop";
 
@@ -62,6 +63,13 @@ function CropperDialog({
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const titleId = useId();
+  // ESC/clique-fora não cancelam durante o processamento do recorte.
+  const handleClose = useCallback(() => {
+    if (!isProcessing) onCancel();
+  }, [isProcessing, onCancel]);
+  const panelRef = useDialog(true, handleClose);
+
   const onCropComplete = useCallback((_area: Area, areaPixels: Area) => {
     setCroppedAreaPixels(areaPixels);
   }, []);
@@ -87,8 +95,15 @@ function CropperDialog({
         if (e.target === e.currentTarget && !isProcessing) onCancel();
       }}
     >
-      <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-5 shadow-lg">
-        <h2 className="text-[15px] font-semibold text-fg mb-1.5">Ajustar imagem</h2>
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
+        aria-labelledby={titleId}
+        className="w-full max-w-sm rounded-lg border border-border bg-surface p-5 shadow-lg"
+      >
+        <h2 id={titleId} className="text-[15px] font-semibold text-fg mb-1.5">Ajustar imagem</h2>
         <p className="text-[13px] text-fg-secondary mb-3">Arraste para posicionar e use o zoom para enquadrar.</p>
 
         <div className="relative w-full h-[280px] bg-canvas rounded-md overflow-hidden">

@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useCallback, useEffect, useId, useRef } from "react";
+import { useDialog } from "@/components/ui/useDialog";
 import Link from "next/link";
 import { X } from "lucide-react";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -39,13 +40,11 @@ export function CreateMeetingDialog({ action, initialStart, initialEnd, hasGoogl
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPending, state]);
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape" && !isPending) onClose();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+  const titleId = useId();
+  const handleClose = useCallback(() => {
+    if (!isPending) onClose();
   }, [isPending, onClose]);
+  const panelRef = useDialog(true, handleClose);
 
   return (
     <div
@@ -55,13 +54,15 @@ export function CreateMeetingDialog({ action, initialStart, initialEnd, hasGoogl
       }}
     >
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="create-meeting-title"
+        tabIndex={-1}
+        aria-labelledby={titleId}
         className="w-full max-w-md rounded-lg border border-border bg-surface p-5 shadow-[var(--c41-shadow-lg)]"
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 id="create-meeting-title" className="text-[length:var(--fs-section)] font-semibold text-fg">
+          <h2 id={titleId} className="text-[length:var(--fs-section)] font-semibold text-fg">
             Nova reunião
           </h2>
           <button

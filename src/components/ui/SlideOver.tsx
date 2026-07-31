@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useId } from "react";
 import { X, ArrowLeft } from "lucide-react";
+import { useDialog } from "@/components/ui/useDialog";
 
 type Props = {
   open: boolean;
@@ -18,14 +19,8 @@ type Props = {
 // Usado quando o conteúdo é navegação dentro do próprio painel (lista <->
 // detalhe) em vez de um formulário único — ver Modal.tsx pra esse outro caso.
 export function SlideOver({ open, onClose, title, onBack, width = "max-w-md", children }: Props) {
-  useEffect(() => {
-    if (!open) return;
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open, onClose]);
+  const panelRef = useDialog(open, onClose);
+  const titleId = useId();
 
   if (!open) return null;
 
@@ -37,6 +32,11 @@ export function SlideOver({ open, onClose, title, onBack, width = "max-w-md", ch
       }}
     >
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
+        {...(title ? { "aria-labelledby": titleId } : { "aria-label": "Painel lateral" })}
         className={`fixed inset-y-0 right-0 w-full ${width} bg-surface-elevated border-l border-border-strong shadow-[var(--c41-shadow-lg)] flex flex-col slide-over-in`}
       >
         <div className="flex items-center gap-2 px-5 pt-5 pb-3 border-b border-border flex-shrink-0">
@@ -49,7 +49,7 @@ export function SlideOver({ open, onClose, title, onBack, width = "max-w-md", ch
               <ArrowLeft size={15} /> Voltar
             </button>
           ) : (
-            title && <h2 className="text-[15px] font-semibold text-fg">{title}</h2>
+            title && <h2 id={titleId} className="text-[15px] font-semibold text-fg">{title}</h2>
           )}
           <button
             type="button"

@@ -57,7 +57,7 @@ function TaskMentionPicker({ candidates, onPick }: { candidates: TaskMentionCand
         type="button"
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => setOpen((v) => !v)}
-        title="Mencionar tarefa"
+        title="Mencionar tarefa" aria-label="Mencionar tarefa"
         className="text-fg-muted hover:text-fg p-1.5 rounded-md hover:bg-surface-hover transition-colors"
       >
         <LinkIcon size={15} />
@@ -226,7 +226,7 @@ function Composer({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          title="Anexar arquivo ou imagem"
+          title="Anexar arquivo ou imagem" aria-label="Anexar arquivo ou imagem"
           className="text-fg-muted hover:text-fg p-1.5 rounded-md hover:bg-surface-hover transition-colors disabled:opacity-60"
         >
           <Paperclip size={15} />
@@ -439,7 +439,7 @@ export function ActivityFeed({ items, canAct, mentionUsers, pipelineItemId, task
             <button
               type="button"
               onClick={() => setSearch((s) => (s === "" ? " " : ""))}
-              title="Pesquisar"
+              title="Pesquisar" aria-label="Pesquisar"
               className="text-fg-muted hover:text-fg p-1 rounded-md hover:bg-surface-hover transition-colors"
             >
               <Search size={14} />

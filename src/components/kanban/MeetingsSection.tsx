@@ -133,7 +133,7 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
                         )
                       }
                       className="text-fg-muted hover:text-danger transition-colors"
-                      title="Remover"
+                      title="Remover" aria-label="Remover"
                     >
                       <Trash2 size={13} />
                     </button>

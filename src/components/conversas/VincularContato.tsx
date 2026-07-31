@@ -87,7 +87,7 @@ export function VincularContato({ contactLinkId, linkedLabel, canManage }: Props
           type="button"
           onClick={handleUnlink}
           disabled={isSaving}
-          title="Desvincular"
+          title="Desvincular" aria-label="Desvincular"
           className="text-fg-muted hover:text-danger disabled:opacity-60 transition-colors"
         >
           <Link2Off size={13} />
@@ -112,7 +112,7 @@ export function VincularContato({ contactLinkId, linkedLabel, canManage }: Props
         <div className="absolute right-0 top-9 z-20 w-72 bg-surface border border-border-strong rounded-lg shadow-lg p-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[12px] font-medium text-fg">Vincular a pessoa ou empresa</span>
-            <button type="button" onClick={() => setOpen(false)} className="text-fg-muted hover:text-fg">
+            <button type="button" onClick={() => setOpen(false)} aria-label="Fechar" className="text-fg-muted hover:text-fg">
               <X size={14} />
             </button>
           </div>

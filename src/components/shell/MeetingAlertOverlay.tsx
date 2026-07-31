@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useId, useRef, useState, useTransition } from "react";
+import { useDialog } from "@/components/ui/useDialog";
 import { Video, Clock, Building2, Users, ExternalLink } from "lucide-react";
 import {
   buscarAlertasReuniao,
@@ -125,6 +126,12 @@ export function MeetingAlertOverlay() {
     };
   }, [alerts, beep]);
 
+  // Sem fechar no ESC de propósito: este alerta exige ciência explícita no
+  // botão. O hook entra aqui só pelo trap de foco, o scroll lock e a devolução
+  // do foco ao sair.
+  const titleId = useId();
+  const panelRef = useDialog(alerts.length > 0, () => {});
+
   if (alerts.length === 0) return null;
 
   const alert = alerts[0];
@@ -141,9 +148,11 @@ export function MeetingAlertOverlay() {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div
+        ref={panelRef}
         role="alertdialog"
         aria-modal="true"
-        aria-labelledby="meeting-alert-title"
+        tabIndex={-1}
+        aria-labelledby={titleId}
         className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-xl"
       >
         <div className="flex items-center gap-3 mb-4">
@@ -154,7 +163,7 @@ export function MeetingAlertOverlay() {
             <p className="text-[11px] font-semibold text-brand uppercase tracking-wider">
               {startsInMin > 0 ? `Reunião em ${startsInMin} min` : "Reunião em andamento"}
             </p>
-            <h2 id="meeting-alert-title" className="text-[16px] font-display font-semibold text-fg truncate">
+            <h2 id={titleId} className="text-[16px] font-display font-semibold text-fg truncate">
               {alert.title}
             </h2>
           </div>

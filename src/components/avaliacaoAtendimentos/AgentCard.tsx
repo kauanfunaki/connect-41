@@ -161,7 +161,7 @@ export function AgentCard({
                           key={ex.conversationId}
                           type="button"
                           onClick={() => openExample(ex.conversationId)}
-                          title={ex.note}
+                          title={ex.note} aria-label={ex.note}
                           className="inline-flex items-center gap-1 h-6 px-2 rounded-md border border-border text-[11px] text-fg-secondary hover:text-fg hover:border-border-strong hover:bg-surface transition-colors"
                         >
                           Exemplo {i + 1}

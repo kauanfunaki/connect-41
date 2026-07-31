@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useId } from "react";
 import { X } from "lucide-react";
+import { useDialog } from "@/components/ui/useDialog";
 
 type Props = {
   open: boolean;
@@ -15,14 +16,8 @@ type Props = {
 // fora, ou botão "X". Usado por fluxos de criação rápida (Nova lista, Novo
 // espaço/pasta) e reaproveitável por outros modais futuros do app.
 export function Modal({ open, onClose, title, maxWidth = "max-w-md", children }: Props) {
-  useEffect(() => {
-    if (!open) return;
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open, onClose]);
+  const panelRef = useDialog(open, onClose);
+  const titleId = useId();
 
   if (!open) return null;
 
@@ -33,9 +28,16 @@ export function Modal({ open, onClose, title, maxWidth = "max-w-md", children }:
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className={`relative w-full ${maxWidth} bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] max-h-[calc(100vh-2rem)] overflow-y-auto`}>
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
+        {...(title ? { "aria-labelledby": titleId } : { "aria-label": "Diálogo" })}
+        className={`relative w-full ${maxWidth} bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] max-h-[calc(100vh-2rem)] overflow-y-auto`}
+      >
         <div className="flex items-center justify-between px-5 pt-5 pb-2">
-          {title && <h2 className="text-[15px] font-semibold text-fg">{title}</h2>}
+          {title && <h2 id={titleId} className="text-[15px] font-semibold text-fg">{title}</h2>}
           <button
             type="button"
             onClick={onClose}
