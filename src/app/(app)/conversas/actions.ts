@@ -6,6 +6,7 @@ import { getAuthContext, isFullAccess } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { ensureMessagesLoaded, loadOlderMessages } from "@/lib/chatwoot/conversations";
 import { agentGroupKey } from "@/lib/chatwoot/evaluation";
+import { resolveHandlersForConversations } from "@/lib/chatwoot/handlers";
 import { summarizeAgentEvaluations } from "@/lib/ai";
 import { formatInstantDate } from "@/lib/format";
 
@@ -146,8 +147,20 @@ export async function gerarResumoAgente(groupKey: string, agentLabel: string): P
     },
   });
 
+  // Precisa resolver o responsável real pelo mesmo caminho da view — se aqui
+  // continuasse usando `assigneeLabel` cru, o resumo de um atendente sairia
+  // sobre as conversas de outro (ou não acharia nenhuma, já que a chave vem da
+  // tela e a tela agora agrupa por quem escreveu).
+  const handlers = await resolveHandlersForConversations(
+    ctx.tenantId,
+    evaluations.map((ev) => ({ id: ev.conversation.id, assigneeLabel: ev.conversation.assigneeLabel })),
+  );
+
   const matching = evaluations
-    .filter((ev) => agentGroupKey(ev.conversation.assigneeId, ev.conversation.assigneeLabel) === groupKey)
+    .filter((ev) => {
+      const label = handlers.get(ev.conversation.id)?.label ?? ev.conversation.assigneeLabel;
+      return agentGroupKey(ev.conversation.assigneeId, label) === groupKey;
+    })
     .slice(0, MAX_EVALUATIONS_FOR_SUMMARY);
 
   if (matching.length === 0) return { error: "Nenhuma avaliação encontrada para este atendente." };

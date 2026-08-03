@@ -81,8 +81,8 @@ export function AgendaCalendar({
   }
 
   return (
-    <div className="bg-surface border border-border rounded-lg overflow-hidden">
-      <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border flex-wrap">
+    <div className="bg-surface border border-border rounded-lg overflow-hidden h-full flex flex-col min-h-0">
+      <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border flex-wrap flex-shrink-0">
         <div className="flex items-center gap-3 flex-wrap">
           <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">{agendaTitle(view, dateKey)}</h2>
           <div className="flex items-center gap-1">
@@ -138,17 +138,19 @@ export function AgendaCalendar({
         </div>
       </div>
 
-      {view === "mes" ? (
-        <MonthGrid
-          days={days}
-          meetings={meetings}
-          actions={actions}
-          monthKey={dateKey}
-          onDayClick={(day) => openDialogFor(day, defaultSlotHour())}
-        />
-      ) : (
-        <TimeGrid days={days} meetings={meetings} actions={actions} onSlotClick={openDialogFor} />
-      )}
+      <div className="flex-1 min-h-0">
+        {view === "mes" ? (
+          <MonthGrid
+            days={days}
+            meetings={meetings}
+            actions={actions}
+            monthKey={dateKey}
+            onDayClick={(day) => openDialogFor(day, defaultSlotHour())}
+          />
+        ) : (
+          <TimeGrid days={days} meetings={meetings} actions={actions} onSlotClick={openDialogFor} />
+        )}
+      </div>
 
       {dialogSlot && (
         <CreateMeetingDialog

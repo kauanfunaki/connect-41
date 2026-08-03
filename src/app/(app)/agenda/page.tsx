@@ -88,26 +88,29 @@ export default async function AgendaPage({
   const calendarDays = days.map((key) => ({ dateKey: key, isToday: key === todayKey }));
 
   return (
-    <PageContainer>
-      <div className="mb-6">
-      <PageHeader title="Agenda" />
-        <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">{VIEW_HELPER[view]}</p>
+    // A Agenda é uma tela de relance: o calendário se ajusta à altura que sobra
+    // em vez de a página rolar. Mesmo arranjo de /kanban/[id] e /bpo-manual.
+    <PageContainer className="h-full flex flex-col">
+      <div className="flex-shrink-0">
+        <PageHeader title="Agenda" subtitle={VIEW_HELPER[view]} />
       </div>
 
-      <AgendaCalendar
-        view={view}
-        dateKey={dateKey}
-        days={calendarDays}
-        meetings={meetings}
-        createAction={criarReuniaoAvulsa}
-        editAction={editarReuniaoAvulsa}
-        deleteAction={excluirReuniaoAvulsa}
-        hasGoogle={hasGoogle}
-        hasMicrosoft={hasMicrosoft}
-        allUsers={allUsers}
-        companies={companies}
-        currentUserId={ctx.userId}
-      />
+      <div className="flex-1 min-h-0">
+        <AgendaCalendar
+          view={view}
+          dateKey={dateKey}
+          days={calendarDays}
+          meetings={meetings}
+          createAction={criarReuniaoAvulsa}
+          editAction={editarReuniaoAvulsa}
+          deleteAction={excluirReuniaoAvulsa}
+          hasGoogle={hasGoogle}
+          hasMicrosoft={hasMicrosoft}
+          allUsers={allUsers}
+          companies={companies}
+          currentUserId={ctx.userId}
+        />
+      </div>
     </PageContainer>
   );
 }

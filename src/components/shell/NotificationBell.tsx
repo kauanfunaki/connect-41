@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Bell } from "lucide-react";
-import { Dropdown, DropdownSeparator } from "@/components/ui/Dropdown";
+import { Dropdown } from "@/components/ui/Dropdown";
 import { IconButton } from "@/components/ui/IconButton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { NotificationItem } from "@/components/shell/NotificationItem";
@@ -37,9 +37,22 @@ export function NotificationBell({ unreadCount, notifications }: Props) {
         </IconButton>
       )}
     >
-      <div className="flex items-center justify-between px-1 pb-2 mb-1 border-b border-border">
-        <p className="text-[12px] font-semibold text-fg-muted uppercase tracking-wider">Notificações</p>
-        {unreadCount > 0 && <span className="text-[11px] font-semibold text-brand-hover">{unreadCount} não lidas</span>}
+      {/* "Ver todas" no cabeçalho, ao lado do título — não no rodapé. Embaixo
+          da lista ele só aparecia depois de rolar todas as notificações, que é
+          justamente o caminho que esse atalho existe pra encurtar. */}
+      <div className="flex items-center justify-between gap-2 px-1 pb-2 mb-1 border-b border-border">
+        <div className="flex items-baseline gap-2 min-w-0">
+          <p className="text-[12px] font-semibold text-fg-muted uppercase tracking-wider">Notificações</p>
+          {unreadCount > 0 && (
+            <span className="text-[11px] font-semibold text-brand-hover flex-shrink-0">{unreadCount} não lidas</span>
+          )}
+        </div>
+        <Link
+          href="/notificacoes"
+          className="flex-shrink-0 px-1.5 py-0.5 -mr-1 rounded-md text-[12px] font-semibold text-brand-hover hover:bg-surface-hover transition-colors"
+        >
+          Ver todas
+        </Link>
       </div>
 
       {notifications.length === 0 ? (
@@ -58,14 +71,6 @@ export function NotificationBell({ unreadCount, notifications }: Props) {
           ))}
         </div>
       )}
-
-      <DropdownSeparator />
-      <Link
-        href="/notificacoes"
-        className="block w-full text-center px-2 py-2 rounded-lg text-[13px] font-semibold text-brand-hover hover:bg-surface-hover transition-colors"
-      >
-        Ver todas
-      </Link>
     </Dropdown>
   );
 }

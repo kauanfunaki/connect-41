@@ -36,12 +36,10 @@ export default async function ConfiguracoesPage() {
 
   return (
     <PageContainer variant="narrow">
-      <div className="mb-6">
-      <PageHeader title="Configurações" />
-        <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
-          Sua conta e suas preferências neste workspace.
-        </p>
-      </div>
+      <PageHeader
+        title="Configurações"
+        subtitle="Sua conta e suas preferências neste workspace."
+      />
 
       <Secao titulo="Perfil">
         <PerfilForm

@@ -172,15 +172,16 @@ export default async function KanbanBoardPage({
         <span className="text-[13px] text-fg">{pipeline.name}</span>
       </div>
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
-      <PageHeader title={pipeline.name} />
-          <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
+      <PageHeader
+        title={pipeline.name}
+        subtitle={
+          <>
             {sectorLabels[pipeline.sectorCode] ?? pipeline.sectorCode} ·{" "}
             {pipeline.entityType === "COMPANY" ? "Empresas" : "Pessoas"}
-          </p>
-        </div>
-        {canAddItem && (
+          </>
+        }
+        action={
+          canAddItem && (
           <div className="flex items-center gap-2">
             <EditPipelineStagesModal
               initialStages={pipeline.stages.map((s) => ({ id: s.id, name: s.name, color: s.color ?? "#586577", type: s.type }))}
@@ -201,8 +202,9 @@ export default async function KanbanBoardPage({
               + Item
             </Button>
           </div>
-        )}
-      </div>
+          )
+        }
+      />
 
       <div className="flex-1 min-h-0">
         <BoardView

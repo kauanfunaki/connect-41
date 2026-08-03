@@ -40,8 +40,12 @@ export function MonthGrid({ days, meetings, actions, monthKey, onDayClick }: Pro
   }, [meetings]);
 
   return (
-    <div>
-      <div className="grid grid-cols-7 border-b border-border">
+    // Mesma regra da grade de horas: as 6 semanas dividem a altura disponível
+    // em vez de somarem alturas mínimas fixas, senão o mês estoura a viewport e
+    // devolve a rolagem à página. No celular a altura mínima continua valendo —
+    // 6 linhas de 1fr numa tela de 700px dariam células sem uso.
+    <div className="h-full flex flex-col">
+      <div className="grid grid-cols-7 border-b border-border flex-shrink-0">
         {WEEKDAY_HEADER.map((label) => (
           <div key={label} className="text-center py-2 border-l border-border first:border-l-0">
             <p className="text-[length:var(--fs-micro)] font-medium text-fg-muted uppercase tracking-wide">{label}</p>
@@ -49,7 +53,7 @@ export function MonthGrid({ days, meetings, actions, monthKey, onDayClick }: Pro
         ))}
       </div>
 
-      <div className="grid grid-cols-7">
+      <div className="grid grid-cols-7 flex-1 min-h-0 sm:grid-rows-6">
         {days.map((d) => {
           const dayMeetings = meetingsByDay.get(d.dateKey) ?? [];
           const outside = !isSameMonth(d.dateKey, monthKey);
@@ -58,7 +62,7 @@ export function MonthGrid({ days, meetings, actions, monthKey, onDayClick }: Pro
           return (
             <div
               key={d.dateKey}
-              className={`group relative border-l border-t border-border [&:nth-child(7n+1)]:border-l-0 min-h-[66px] sm:min-h-[104px] p-1 sm:p-1.5 ${
+              className={`group relative border-l border-t border-border [&:nth-child(7n+1)]:border-l-0 min-h-[66px] sm:min-h-0 sm:overflow-hidden p-1 sm:p-1.5 ${
                 outside ? "bg-surface-hover/40" : ""
               }`}
             >

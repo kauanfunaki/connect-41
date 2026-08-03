@@ -7,13 +7,16 @@ import type { CalendarDay, MeetingActions, MeetingRow } from "./types";
 
 const START_HOUR = 7;
 const END_HOUR = 21; // exclusivo — última linha é 20:00–21:00
-// 48px sobrava tanto que a visão de semana (mesma grade da de dia) só cabia na
-// tela rolando: o eixo inteiro (14h) passava da altura disponível assim que a
-// barra de rolagem horizontal das 7 colunas aparecia. 40px devolve ~112px e a
-// grade cabe sem rolar em qualquer viewport razoável, igual dia/mês.
-const ROW_HEIGHT = 40;
+// A grade não tem mais altura de linha fixa: as 14 horas dividem em partes
+// iguais o espaço que sobra da viewport (`1fr` cada). Com pixel fixo, qualquer
+// tela mais baixa que a soma das linhas empurrava a página inteira pra rolagem
+// — e a Agenda é uma tela de relance, não de rolar. Como consequência, posição
+// e altura de reunião viram percentual do eixo, não pixel.
 const HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 const TOTAL_MIN = (END_HOUR - START_HOUR) * 60;
+const ROWS_TEMPLATE = `repeat(${HOURS.length}, minmax(0, 1fr))`;
+// Abaixo disso a reunião não comporta título + segunda linha.
+const COMPACT_UNDER_MIN = 45;
 
 function pad(n: number): string {
   return String(n).padStart(2, "0");
@@ -35,7 +38,7 @@ type Props = {
 // existe um DayGrid separado: seria o mesmo componente com um número fixo.
 export function TimeGrid({ days, meetings, actions, onSlotClick }: Props) {
   const meetingsByDay = useMemo(() => {
-    const map = new Map<string, (MeetingRow & { top: number; height: number })[]>();
+    const map = new Map<string, (MeetingRow & { top: string; height: string; compact: boolean })[]>();
     for (const m of meetings) {
       const start = new Date(m.startAt);
       const end = new Date(m.endAt);
@@ -44,10 +47,14 @@ export function TimeGrid({ days, meetings, actions, onSlotClick }: Props) {
       const startMin = clamp((sp.hour - START_HOUR) * 60 + sp.minute, 0, TOTAL_MIN);
       const rawEndMin = ep.dateKey === sp.dateKey ? (ep.hour - START_HOUR) * 60 + ep.minute : TOTAL_MIN;
       const endMin = clamp(rawEndMin, startMin + 15, TOTAL_MIN);
-      const top = (startMin / 60) * ROW_HEIGHT;
-      const height = Math.max(22, ((endMin - startMin) / 60) * ROW_HEIGHT - 2);
+      const durationMin = endMin - startMin;
       const list = map.get(sp.dateKey) ?? [];
-      list.push({ ...m, top, height });
+      list.push({
+        ...m,
+        top: `${(startMin / TOTAL_MIN) * 100}%`,
+        height: `${(durationMin / TOTAL_MIN) * 100}%`,
+        compact: durationMin < COMPACT_UNDER_MIN,
+      });
       map.set(sp.dateKey, list);
     }
     return map;
@@ -59,10 +66,19 @@ export function TimeGrid({ days, meetings, actions, onSlotClick }: Props) {
   const minWidth = days.length === 1 ? 280 : 780;
 
   return (
-    <div className="overflow-x-auto">
-      <div style={{ minWidth }}>
-        <div className="grid border-b border-border" style={{ gridTemplateColumns: gridTemplate }}>
-          <div />
+    <div className="overflow-x-auto h-full">
+      <div style={{ minWidth }} className="h-full flex flex-col">
+        <div className="grid border-b border-border flex-shrink-0" style={{ gridTemplateColumns: gridTemplate }}>
+          {/* O rótulo da primeira hora mora AQUI, no cabeçalho, e não na coluna
+              de horas: como todo rótulo se centra na linha que abre a sua hora,
+              a linha do 7:00 é justamente esta borda inferior do cabeçalho.
+              Renderizado na coluna de horas ele precisaria vazar 8px pra cima,
+              onde o `overflow-x-auto` do container recorta. */}
+          <div className="relative">
+            <span className="absolute right-2 bottom-0 translate-y-1/2 text-[length:var(--fs-micro)] text-fg-muted tnum">
+              {START_HOUR}:00
+            </span>
+          </div>
           {days.map((d) => (
             <div
               key={d.dateKey}
@@ -74,31 +90,29 @@ export function TimeGrid({ days, meetings, actions, onSlotClick }: Props) {
           ))}
         </div>
 
-        <div className="grid" style={{ gridTemplateColumns: gridTemplate }}>
-          <div>
-            {/* Cada rótulo flutua centralizado sobre a linha que separa esta
-                hora da anterior (-top-2) — funciona porque sempre há uma
-                linha acima. A primeira hora (7:00) não tem linha acima: com
-                o mesmo deslocamento, o rótulo vazava pra cima da grade,
-                cruzando a borda do cabeçalho dos dias. */}
+        <div className="grid flex-1 min-h-0" style={{ gridTemplateColumns: gridTemplate }}>
+          {/* Cada rótulo se centra na linha que abre a sua hora (-top-2). O da
+              primeira hora saiu daqui pro cabeçalho — ver comentário acima. */}
+          <div className="grid" style={{ gridTemplateRows: ROWS_TEMPLATE }}>
             {HOURS.map((h, i) => (
-              <div key={h} style={{ height: ROW_HEIGHT }} className="relative">
-                <span className={`absolute right-2 text-[10.5px] text-fg-muted tnum ${i === 0 ? "top-0.5" : "-top-2"}`}>
-                  {h}:00
-                </span>
+              <div key={h} className="relative">
+                {i > 0 && (
+                  <span className="absolute right-2 -top-2 text-[length:var(--fs-micro)] text-fg-muted tnum">
+                    {h}:00
+                  </span>
+                )}
               </div>
             ))}
           </div>
 
           {days.map((d) => (
-            <div key={d.dateKey} className="relative border-l border-border">
+            <div key={d.dateKey} className="relative border-l border-border grid" style={{ gridTemplateRows: ROWS_TEMPLATE }}>
               {HOURS.map((h) => (
                 <button
                   key={h}
                   type="button"
                   onClick={() => onSlotClick(d.dateKey, h)}
-                  style={{ height: ROW_HEIGHT }}
-                  className="w-full border-b border-border/60 hover:bg-surface-hover transition-colors block"
+                  className="w-full border-b border-border/60 hover:bg-surface-hover transition-colors block last:border-b-0"
                   aria-label={`Criar reunião ${weekdayLabel(d.dateKey)} ${dayNumber(d.dateKey)} às ${h}:00`}
                 />
               ))}
@@ -106,7 +120,15 @@ export function TimeGrid({ days, meetings, actions, onSlotClick }: Props) {
               {d.isToday && <NowIndicator />}
 
               {(meetingsByDay.get(d.dateKey) ?? []).map((m) => (
-                <MeetingItem key={m.id} meeting={m} actions={actions} variant="block" top={m.top} height={m.height} />
+                <MeetingItem
+                  key={m.id}
+                  meeting={m}
+                  actions={actions}
+                  variant="block"
+                  top={m.top}
+                  height={m.height}
+                  compact={m.compact}
+                />
               ))}
             </div>
           ))}
@@ -129,7 +151,7 @@ export function defaultSlotHour(): number {
 // Agenda — só aparece na coluna de hoje e dentro da janela de horas visível.
 // Recalcula a cada 30s (client-side; sem refetch de servidor).
 function NowIndicator() {
-  const [top, setTop] = useState<number | null>(null);
+  const [top, setTop] = useState<string | null>(null);
 
   useEffect(() => {
     function update() {
@@ -139,7 +161,7 @@ function NowIndicator() {
         setTop(null);
         return;
       }
-      setTop((min / 60) * ROW_HEIGHT);
+      setTop(`${(min / TOTAL_MIN) * 100}%`);
     }
     update();
     const id = setInterval(update, 30_000);

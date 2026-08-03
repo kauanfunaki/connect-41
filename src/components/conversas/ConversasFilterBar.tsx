@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarClock, ListFilter, Search, UserCheck, Gauge } from "lucide-react";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
+import { FilterButton, FilterButtonSection } from "@/components/ui/FilterButton";
 
 const STATUS_OPTIONS = [
   { value: "", label: "Todo status" },
@@ -24,20 +25,24 @@ type Props = {
   assignees: string[];
 };
 
-type FilterKey = "periodo" | "atendente" | "status";
-
-// Mesmo padrão do botão "Filtros" (BoardView.tsx, lista de tarefas por
-// setor): categorias colapsadas dentro de um Modal, em vez de um formulário
-// sempre visível com um campo por filtro. /conversas é renderizado no
-// servidor com os filtros na URL — aqui só a interação muda (popover em vez
-// de formulário inline), a navegação continua sendo uma troca de querystring.
+// Usa o FilterButton compartilhado — o mesmo de /empresas, /pessoas e
+// /candidatos. Antes esta tela tinha um botão próprio que abria um Modal com
+// as categorias em duas etapas (escolher "Período"/"Atendente"/"Status" e só
+// então ver o campo): mesma palavra, outra mecânica, e um diálogo em cima da
+// tela pra três campos. O painel ancorado mostra os três de uma vez.
+//
+// A busca por texto fica fora do painel de propósito (é "ao vivo", não combina
+// com o padrão aplicar/fechar do filtro estruturado), igual às outras telas.
 export function ConversasFilterBar({ search: initialSearch, status, atendente, de, ate, assignees }: Props) {
   const router = useRouter();
   const [search, setSearch] = useState(initialSearch);
-  const [open, setOpen] = useState(false);
-  const [activeKey, setActiveKey] = useState<FilterKey | null>(null);
-  const [deValue, setDeValue] = useState(de);
-  const [ateValue, setAteValue] = useState(ate);
+  // Rascunho local: só vira URL no "Aplicar". As datas não têm um momento
+  // óbvio de "terminei de digitar", então aplicar a cada tecla recarregaria a
+  // lista no meio de uma data pela metade.
+  const [draftStatus, setDraftStatus] = useState(status);
+  const [draftAtendente, setDraftAtendente] = useState(atendente);
+  const [draftDe, setDraftDe] = useState(de);
+  const [draftAte, setDraftAte] = useState(ate);
 
   const activeFilterCount = [status, atendente, de, ate].filter(Boolean).length;
 
@@ -48,22 +53,31 @@ export function ConversasFilterBar({ search: initialSearch, status, atendente, d
     return `/conversas?${q.toString()}`;
   }
 
-  function apply(extra: Record<string, string | undefined>) {
-    router.push(buildUrl({ page: undefined, ...extra }));
-    setOpen(false);
-    setActiveKey(null);
-  }
-
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
     router.push(buildUrl({ page: undefined }));
   }
 
-  const filterDefs: { key: FilterKey; label: string; icon: React.ReactNode; active: boolean }[] = [
-    { key: "periodo", label: "Período", icon: <CalendarClock size={13} />, active: Boolean(de || ate) },
-    { key: "atendente", label: "Atendente", icon: <UserCheck size={13} />, active: Boolean(atendente) },
-    { key: "status", label: "Status", icon: <Gauge size={13} />, active: Boolean(status) },
-  ];
+  function applyDraft(close: () => void) {
+    close();
+    router.push(
+      buildUrl({
+        page: undefined,
+        status: draftStatus || undefined,
+        atendente: draftAtendente || undefined,
+        de: draftDe || undefined,
+        ate: draftAte || undefined,
+      }),
+    );
+  }
+
+  function clearAll() {
+    setDraftStatus("");
+    setDraftAtendente("");
+    setDraftDe("");
+    setDraftAte("");
+    router.push(buildUrl({ page: undefined, status: undefined, atendente: undefined, de: undefined, ate: undefined }));
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -77,89 +91,73 @@ export function ConversasFilterBar({ search: initialSearch, status, atendente, d
         />
       </form>
 
-      <button
-        type="button"
-        onClick={() => { setActiveKey(null); setOpen(true); }}
-        className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-md border text-[12.5px] font-medium transition-colors flex-shrink-0 ${
-          activeFilterCount > 0 ? "border-brand/40 bg-brand/[0.06] text-fg" : "border-border text-fg-secondary hover:text-fg hover:bg-surface-hover"
-        }`}
-      >
-        <ListFilter size={14} /> Filtros
-        {activeFilterCount > 0 && <span className="tnum">({activeFilterCount})</span>}
-      </button>
+      <FilterButton activeCount={activeFilterCount} width={280}>
+        {({ close }) => (
+          <div className="space-y-3">
+            <FilterButtonSection label="Período">
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  compact
+                  type="date"
+                  aria-label="De"
+                  value={draftDe}
+                  onChange={(e) => setDraftDe(e.target.value)}
+                />
+                <Input
+                  compact
+                  type="date"
+                  aria-label="Até"
+                  value={draftAte}
+                  onChange={(e) => setDraftAte(e.target.value)}
+                />
+              </div>
+            </FilterButtonSection>
 
-      {activeFilterCount > 0 && (
-        <button
-          type="button"
-          onClick={() => apply({ status: undefined, atendente: undefined, de: undefined, ate: undefined })}
-          className="text-[12.5px] text-fg-muted hover:text-fg transition-colors"
-        >
-          Limpar filtros
-        </button>
-      )}
+            <FilterButtonSection label="Atendente">
+              <Select
+                compact
+                aria-label="Atendente"
+                value={draftAtendente}
+                onChange={(e) => setDraftAtendente(e.target.value)}
+              >
+                <option value="">Todos</option>
+                {assignees.map((a) => (
+                  <option key={a} value={a}>{a}</option>
+                ))}
+              </Select>
+            </FilterButtonSection>
 
-      <Modal open={open} onClose={() => { setOpen(false); setActiveKey(null); }} title="Filtros" maxWidth="max-w-sm">
-        <div className="flex items-center gap-1 mb-3 flex-wrap">
-          {filterDefs.map((f) => (
-            <button
-              key={f.key}
-              type="button"
-              onClick={() => setActiveKey((k) => (k === f.key ? null : f.key))}
-              className={`inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border text-[12px] font-medium transition-colors ${
-                f.active || activeKey === f.key
-                  ? "border-brand/40 bg-brand/[0.06] text-fg"
-                  : "border-border text-fg-secondary hover:text-fg hover:bg-surface-hover"
-              }`}
-            >
-              {f.icon}
-              {f.label}
-            </button>
-          ))}
-        </div>
+            <FilterButtonSection label="Status">
+              <Select
+                compact
+                aria-label="Status"
+                value={draftStatus}
+                onChange={(e) => setDraftStatus(e.target.value)}
+              >
+                {STATUS_OPTIONS.map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </Select>
+            </FilterButtonSection>
 
-        {activeKey === "periodo" && (
-          <div className="space-y-2">
-            <div>
-              <p className="text-[11px] font-medium text-fg-muted mb-1">De</p>
-              <Input type="date" autoFocus value={deValue} onChange={(e) => setDeValue(e.target.value)} />
+            <div className="flex items-center gap-2 pt-1">
+              <Button type="button" size="sm" onClick={() => applyDraft(close)}>
+                Aplicar
+              </Button>
+              {activeFilterCount > 0 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => { close(); clearAll(); }}
+                >
+                  Limpar
+                </Button>
+              )}
             </div>
-            <div>
-              <p className="text-[11px] font-medium text-fg-muted mb-1">Até</p>
-              <Input type="date" value={ateValue} onChange={(e) => setAteValue(e.target.value)} />
-            </div>
-            <button
-              type="button"
-              onClick={() => apply({ de: deValue || undefined, ate: ateValue || undefined })}
-              className="h-8 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover transition-colors"
-            >
-              Aplicar
-            </button>
           </div>
         )}
-
-        {activeKey === "atendente" && (
-          <div>
-            <p className="text-[11px] font-medium text-fg-muted mb-1">Atendente</p>
-            <Select compact autoFocus value={atendente} onChange={(e) => apply({ atendente: e.target.value || undefined })}>
-              <option value="">Todos</option>
-              {assignees.map((a) => (
-                <option key={a} value={a}>{a}</option>
-              ))}
-            </Select>
-          </div>
-        )}
-
-        {activeKey === "status" && (
-          <div>
-            <p className="text-[11px] font-medium text-fg-muted mb-1">Status</p>
-            <Select compact autoFocus value={status} onChange={(e) => apply({ status: e.target.value || undefined })}>
-              {STATUS_OPTIONS.map((s) => (
-                <option key={s.value} value={s.value}>{s.label}</option>
-              ))}
-            </Select>
-          </div>
-        )}
-      </Modal>
+      </FilterButton>
     </div>
   );
 }

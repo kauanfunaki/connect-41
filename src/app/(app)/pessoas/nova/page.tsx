@@ -31,10 +31,10 @@ export default async function NovaPessoaPage({
     return (
       <PageContainer variant="narrow">
         <BackButton className="mb-3" />
-      <PageHeader title="Nova Pessoa" />
-        <p className="text-[length:var(--fs-helper)] text-fg-muted mb-6">
-          Que tipo de cadastro é este? O formulário muda conforme a escolha.
-        </p>
+        <PageHeader
+          title="Nova Pessoa"
+          subtitle="Que tipo de cadastro é este? O formulário muda conforme a escolha."
+        />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <TipoCard

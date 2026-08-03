@@ -1,9 +1,8 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { ChevronDown, ChevronRight, FileText, Folder, ImagePlus, Pencil, Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronRight, FileText, Folder, ImagePlus, Plus, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -75,9 +74,9 @@ function IconPicker({ value, onChange, onClose }: { value: string | null; onChan
   );
 }
 
-// Tipografia do conteúdo em leitura — deliberadamente mais generosa que a do
-// editor (parágrafos espaçados, títulos com respiro), no espírito de uma
-// página de documentação e não de um campo de formulário.
+// Tipografia do conteúdo — a MESMA em leitura e em escrita. Antes existiam
+// duas: a de leitura aqui e a do campo de formulário dentro do RichTextEditor,
+// então entrar em edição reposicionava todo o texto na tela.
 const READING_CLASS =
   "text-[15px] text-fg leading-[1.75] " +
   "[&_p]:my-3 [&_p:first-child]:mt-0 " +
@@ -97,142 +96,107 @@ const READING_CLASS =
 // 1440px de tela vira uma linha longa demais pra acompanhar.
 const CANVAS_CLASS = "mx-auto w-full max-w-[720px] px-6 py-10";
 
-// Leitura: a página é uma folha em branco com título e conteúdo, sem caixas
-// nem campos de formulário à vista. Editar é um modo separado (PageEditor) —
-// antes o manual ficava permanentemente em modo de edição, então "salvar" não
-// mudava nada na tela e não havia como só *ler* um procedimento.
-function PageCanvas({
-  page, canAct, onEdit,
-}: {
-  page: ManualPageData;
-  canAct: boolean;
-  onEdit: () => void;
-}) {
+// Separação visual entre blocos: cada filho de nível 1 do documento ganha uma
+// faixa própria que acende no hover. Antes os blocos eram indistinguíveis —
+// parágrafos coladas num texto corrido, sem nada indicando onde um termina e o
+// outro começa, o que também tornava o puxador de arrastar difícil de
+// entender (ele aparecia sem que se enxergasse a unidade que ia se mover).
+const BLOCK_SEPARATION_CLASS =
+  "[&>*]:relative [&>*]:rounded-md [&>*]:px-2 [&>*]:-mx-2 [&>*]:transition-colors [&>*:hover]:bg-surface-hover/50";
+
+// Quanto tempo sem digitar antes de gravar. Curto o bastante pra ninguém
+// perder trabalho ao fechar a aba, longo o bastante pra não gravar por letra.
+const AUTOSAVE_DELAY_MS = 1200;
+
+type SaveStatus = "idle" | "saving" | "saved" | "error";
+
+function SaveIndicator({ status, error }: { status: SaveStatus; error: string | null }) {
+  if (status === "idle") return null;
+  if (status === "error") {
+    return <span className="text-[12px] text-danger">{error ?? "Erro ao salvar"}</span>;
+  }
   return (
-    <div className="h-full overflow-y-auto scroll-y relative">
-      {canAct && (
-        <button
-          type="button"
-          onClick={onEdit}
-          className="absolute top-4 right-4 z-10 inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border bg-surface text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors"
-        >
-          <Pencil size={12} /> Editar
-        </button>
-      )}
-
-      {page.coverImageUrl && (
-        // eslint-disable-next-line @next/next/no-img-element -- imagem servida por rota própria (src/app/api/manual-covers), não candidata a otimização do next/image
-        <img src={page.coverImageUrl} alt="" className="w-full h-48 object-cover" />
-      )}
-
-      <article className={CANVAS_CLASS}>
-        <h1 className="text-[32px] font-semibold text-fg tracking-[-0.02em] leading-tight">{page.title}</h1>
-        <p className="text-[12px] text-fg-muted mt-2 mb-8">
-          Criado por {page.createdByName} · atualizado em{" "}
-          {formatInstantDate(new Date(page.updatedAt), { day: "2-digit", month: "short", year: "numeric" })}
-        </p>
-
-        {page.content ? (
-          <div className={READING_CLASS} dangerouslySetInnerHTML={{ __html: page.content }} />
-        ) : canAct ? (
-          <button
-            type="button"
-            onClick={onEdit}
-            className="text-[15px] text-fg-muted italic hover:text-fg-secondary transition-colors"
-          >
-            Página em branco — clique para escrever.
-          </button>
-        ) : (
-          <p className="text-[15px] text-fg-muted italic">Esta página ainda não tem conteúdo.</p>
-        )}
-      </article>
-    </div>
+    <span className="text-[12px] text-fg-muted">
+      {status === "saving" ? "Salvando…" : "Salvo"}
+    </span>
   );
 }
 
-// Edição: mesma medida e mesma escala de título da leitura, pra trocar de modo
-// não deslocar o texto na tela. Salvar com sucesso volta pro modo leitura.
-function PageEditor({
-  page, updatePageAction, onDone, onCancel,
+// Controles da capa. Ficam disponíveis SEMPRE (não atrás de um modo de
+// edição): a capa grava sozinha na hora em que o arquivo é escolhido, então
+// exigir "entrar em edição" e depois "descer a tela e salvar o documento" era
+// um caminho inventado — nenhuma dessas duas etapas tinha efeito sobre ela.
+function CoverControls({
+  pageId, coverUrl, onChange, canAct,
 }: {
-  page: ManualPageData;
-  updatePageAction: Props["updatePageAction"];
-  onDone: () => void;
-  onCancel: () => void;
+  pageId: string;
+  coverUrl: string | null;
+  onChange: (url: string | null) => void;
+  canAct: boolean;
 }) {
-  const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  // Capa sobe direto pro servidor ao escolher o arquivo (mesmo padrão do logo
-  // de empresa) — não fica pendente do botão "Salvar" do resto da página.
-  const [coverUrl, setCoverUrl] = useState(page.coverImageUrl);
-  const [coverPending, setCoverPending] = useState(false);
-  const [coverError, setCoverError] = useState<string | null>(null);
 
-  function save() {
-    if (!formRef.current) return;
-    setError(null);
-    const form = new FormData(formRef.current);
-    startTransition(async () => {
-      const res = await updatePageAction(page.id, null, form);
-      if (res?.error) setError(res.error);
-      else onDone();
-    });
-  }
-
-  async function handleCoverFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    setCoverPending(true);
-    setCoverError(null);
+    setPending(true);
+    setError(null);
     try {
       const form = new FormData();
       form.append("cover", file);
-      const res = await fetch(`/api/bpo-manual/pages/${page.id}/cover`, { method: "POST", body: form });
+      const res = await fetch(`/api/bpo-manual/pages/${pageId}/cover`, { method: "POST", body: form });
       const data = await res.json();
-      if (!res.ok) setCoverError(data.error ?? "Erro ao enviar capa.");
-      else setCoverUrl(data.coverImageUrl);
+      if (!res.ok) setError(data.error ?? "Erro ao enviar capa.");
+      else onChange(data.coverImageUrl);
     } catch {
-      setCoverError("Erro ao enviar capa.");
+      setError("Erro ao enviar capa.");
     } finally {
-      setCoverPending(false);
+      setPending(false);
     }
   }
 
-  async function handleRemoveCover() {
-    setCoverPending(true);
-    setCoverError(null);
+  async function handleRemove() {
+    setPending(true);
+    setError(null);
     try {
-      await fetch(`/api/bpo-manual/pages/${page.id}/cover`, { method: "DELETE" });
-      setCoverUrl(null);
+      await fetch(`/api/bpo-manual/pages/${pageId}/cover`, { method: "DELETE" });
+      onChange(null);
     } finally {
-      setCoverPending(false);
+      setPending(false);
     }
+  }
+
+  if (!canAct) {
+    return coverUrl ? (
+      // eslint-disable-next-line @next/next/no-img-element -- imagem servida por rota própria (src/app/api/bpo-manual), não candidata a otimização do next/image
+      <img src={coverUrl} alt="" className="w-full h-48 object-cover" />
+    ) : null;
   }
 
   return (
-    <form ref={formRef} className="h-full overflow-y-auto scroll-y">
-      <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleCoverFile} />
+    <>
+      <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFile} />
 
       {coverUrl ? (
         <div className="relative group">
-          {/* eslint-disable-next-line @next/next/no-img-element -- imagem servida por rota própria (src/app/api/manual-covers) */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- imagem servida por rota própria (src/app/api/bpo-manual) */}
           <img src={coverUrl} alt="" className="w-full h-48 object-cover" />
-          <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              disabled={coverPending}
+              disabled={pending}
               className="h-7 px-2.5 rounded-md bg-surface/90 border border-border text-[12px] text-fg-secondary hover:text-fg disabled:opacity-60"
             >
-              Trocar
+              Trocar capa
             </button>
             <button
               type="button"
-              onClick={handleRemoveCover}
-              disabled={coverPending}
+              onClick={handleRemove}
+              disabled={pending}
               className="h-7 px-2.5 rounded-md bg-surface/90 border border-border text-[12px] text-fg-secondary hover:text-danger disabled:opacity-60"
             >
               Remover
@@ -241,53 +205,136 @@ function PageEditor({
         </div>
       ) : null}
 
-      <div className={CANVAS_CLASS}>
-        {!coverUrl && (
+      {error && <p className="text-[12px] text-danger px-6 pt-2">{error}</p>}
+
+      {!coverUrl && (
+        <div className={`${CANVAS_CLASS} !py-0 !pt-6`}>
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={coverPending}
-            className="inline-flex items-center gap-1.5 text-[12px] text-fg-muted hover:text-fg-secondary mb-3 disabled:opacity-60"
+            disabled={pending}
+            className="inline-flex items-center gap-1.5 text-[12px] text-fg-muted hover:text-fg-secondary disabled:opacity-60"
           >
-            <ImagePlus size={13} /> {coverPending ? "Enviando…" : "Adicionar capa"}
-          </button>
-        )}
-        {coverError && <p className="text-[12px] text-danger mb-2">{coverError}</p>}
-
-        {/* eslint-disable-next-line no-restricted-syntax -- título da página, não campo de formulário: precisa ter exatamente a mesma caixa do <h1> do modo leitura pra trocar de modo não deslocar o texto. O Input do DS tem altura, borda e fundo fixos. */}
-        <input
-          name="title"
-          defaultValue={page.title}
-          placeholder="Título da página"
-          aria-label="Título da página"
-          className="w-full bg-transparent border-0 outline-none text-[32px] font-semibold text-fg tracking-[-0.02em] leading-tight placeholder:text-fg-muted"
-        />
-        <p className="text-[12px] text-fg-muted mt-2 mb-6">Criado por {page.createdByName}</p>
-
-        <RichTextEditor name="content" defaultValue={page.content ?? ""} blockDragHandle />
-
-        {error && <p className="text-[12px] text-danger mt-2">{error}</p>}
-
-        <div className="flex items-center gap-2 mt-4">
-          <Button
-            type="button"
-            onClick={save}
-            disabled={isPending}
-            variant="primary" className="font-medium disabled:opacity-60"
-          >
-            {isPending ? "Salvando…" : "Salvar"}
-         </Button>
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={isPending}
-            className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors"
-          >
-            Cancelar
+            <ImagePlus size={13} /> {pending ? "Enviando…" : "Adicionar capa"}
           </button>
         </div>
-      </div>
-    </form>
+      )}
+    </>
+  );
+}
+
+// A página é uma folha só: título e conteúdo no fluxo, sem caixa de formulário
+// à vista e sem modo de edição separado. Quem pode escrever, escreve clicando
+// direto no texto — igual ao título, que já funcionava assim.
+//
+// O modo "Editar" anterior misturava duas coisas que não têm nada a ver: a
+// capa (que grava sozinha, na hora) e o texto (que exigia rolar até o rodapé
+// pra achar "Salvar"). Aqui a capa tem controles próprios e o texto grava
+// sozinho, com o estado da gravação visível no topo.
+function PageCanvas({
+  page, canAct, updatePageAction,
+}: {
+  page: ManualPageData;
+  canAct: boolean;
+  updatePageAction: Props["updatePageAction"];
+}) {
+  const [coverUrl, setCoverUrl] = useState(page.coverImageUrl);
+  const [status, setStatus] = useState<SaveStatus>("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  // O que está pendente de gravação. Ref, não state: é lido dentro do timer e
+  // não deve provocar render a cada tecla.
+  const draftRef = useRef({ title: page.title, content: page.content ?? "" });
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const save = useCallback(async () => {
+    const { title, content } = draftRef.current;
+    if (!title.trim()) {
+      setStatus("error");
+      setError("Título é obrigatório");
+      return;
+    }
+    setStatus("saving");
+    setError(null);
+    const form = new FormData();
+    form.append("title", title);
+    form.append("content", content);
+    const res = await updatePageAction(page.id, null, form);
+    if (res?.error) {
+      setStatus("error");
+      setError(res.error);
+    } else {
+      setStatus("saved");
+    }
+  }, [page.id, updatePageAction]);
+
+  const scheduleSave = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(save, AUTOSAVE_DELAY_MS);
+  }, [save]);
+
+  // Grava o que estiver pendente ao sair da página (trocar de página no menu
+  // desmonta este componente, porque a chave inclui o id). Sem isso, escrever
+  // e clicar noutra página em menos de AUTOSAVE_DELAY_MS perderia o texto.
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        void save();
+      }
+    };
+  }, [save]);
+
+  return (
+    <div className="h-full overflow-y-auto scroll-y relative">
+      {canAct && (
+        <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+          <SaveIndicator status={status} error={error} />
+        </div>
+      )}
+
+      <CoverControls pageId={page.id} coverUrl={coverUrl} onChange={setCoverUrl} canAct={canAct} />
+
+      <article className={CANVAS_CLASS}>
+        {canAct ? (
+          // eslint-disable-next-line no-restricted-syntax -- título da página, não campo de formulário: precisa ter exatamente a mesma caixa do <h1> de leitura. O Input do DS tem altura, borda e fundo fixos.
+          <input
+            defaultValue={page.title}
+            placeholder="Título da página"
+            aria-label="Título da página"
+            onChange={(e) => {
+              draftRef.current.title = e.target.value;
+              scheduleSave();
+            }}
+            className="w-full bg-transparent border-0 outline-none text-[32px] font-semibold text-fg tracking-[-0.02em] leading-tight placeholder:text-fg-muted"
+          />
+        ) : (
+          <h1 className="text-[32px] font-semibold text-fg tracking-[-0.02em] leading-tight">{page.title}</h1>
+        )}
+
+        <p className="text-[12px] text-fg-muted mt-2 mb-8">
+          Criado por {page.createdByName} · atualizado em{" "}
+          {formatInstantDate(new Date(page.updatedAt), { day: "2-digit", month: "short", year: "numeric" })}
+        </p>
+
+        {canAct ? (
+          <RichTextEditor
+            chrome="bare"
+            blockDragHandle
+            defaultValue={page.content ?? ""}
+            contentClass={`${READING_CLASS} ${BLOCK_SEPARATION_CLASS} min-h-[240px]`}
+            onChange={(html) => {
+              draftRef.current.content = html;
+              scheduleSave();
+            }}
+          />
+        ) : page.content ? (
+          <div className={READING_CLASS} dangerouslySetInnerHTML={{ __html: page.content }} />
+        ) : (
+          <p className="text-[15px] text-fg-muted italic">Esta página ainda não tem conteúdo.</p>
+        )}
+      </article>
+    </div>
   );
 }
 
@@ -301,10 +348,6 @@ export function ManualWorkspace({
 }: Props) {
   const firstDoc = documents[0];
   const [activePageId, setActivePageId] = useState<string | null>(firstDoc?.pages[0]?.id ?? null);
-  // Página abre sempre em leitura; editar é uma escolha explícita. A exceção é
-  // a página recém-criada, que nasce vazia — mostrar uma folha em branco
-  // "somente leitura" logo depois de criá-la seria só um passo a mais.
-  const [editingPageId, setEditingPageId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(firstDoc ? [firstDoc.id] : []));
   const [creatingDoc, setCreatingDoc] = useState(false);
   const [newDocTitle, setNewDocTitle] = useState("");
@@ -323,11 +366,8 @@ export function ManualWorkspace({
   const activeDoc = documents.find((d) => d.pages.some((p) => p.id === activePageId));
   const activePage = activeDoc?.pages.find((p) => p.id === activePageId) ?? null;
 
-  // Trocar de página sempre sai da edição — senão o modo "grudava" e a página
-  // seguinte abria em edição sem ninguém ter pedido.
   function selectPage(pageId: string | null) {
     setActivePageId(pageId);
-    setEditingPageId(null);
   }
 
   function toggleExpanded(docId: string) {
@@ -369,10 +409,7 @@ export function ManualWorkspace({
     if (!title) return;
     startTransition(async () => {
       const res = await createPageAction(documentId, title);
-      if ("id" in res) {
-        setActivePageId(res.id);
-        setEditingPageId(res.id);
-      }
+      if ("id" in res) setActivePageId(res.id);
     });
   }
 
@@ -584,22 +621,14 @@ export function ManualWorkspace({
 
       <div className="flex-1 min-w-0 min-h-0">
         {activePage ? (
-          editingPageId === activePage.id && canAct ? (
-            <PageEditor
-              key={`edit-${activePage.id}`}
-              page={activePage}
-              updatePageAction={updatePageAction}
-              onDone={() => setEditingPageId(null)}
-              onCancel={() => setEditingPageId(null)}
-            />
-          ) : (
-            <PageCanvas
-              key={`read-${activePage.id}`}
-              page={activePage}
-              canAct={canAct}
-              onEdit={() => setEditingPageId(activePage.id)}
-            />
-          )
+          // A chave por id remonta o canvas ao trocar de página — é o que
+          // dispara a gravação do rascunho pendente na limpeza do efeito.
+          <PageCanvas
+            key={activePage.id}
+            page={activePage}
+            canAct={canAct}
+            updatePageAction={updatePageAction}
+          />
         ) : (
           <div className="h-full flex items-center justify-center text-[13px] text-fg-muted text-center px-6">
             {documents.length === 0

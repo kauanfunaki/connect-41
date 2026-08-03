@@ -8,6 +8,7 @@ import { getAuthContext, isFullAccess } from "@/lib/auth/context";
 import { scopedChatwootConversationWhere } from "@/lib/auth/scope";
 import { isChatwootConfigured } from "@/lib/chatwoot/connection";
 import { agentGroupKey } from "@/lib/chatwoot/evaluation";
+import { resolveHandlersForConversations } from "@/lib/chatwoot/handlers";
 import { channelLabel, statusLabel } from "@/lib/chatwoot/labels";
 import { formatInstantDate } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -460,10 +461,19 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
     evaluations: typeof evaluations;
   };
 
+  // Quem atendeu de verdade, deduzido das mensagens enviadas ao cliente. O
+  // campo `assignee` do Chatwoot não serve pra isso: a recepção recebe todas as
+  // conversas e reatribui, e conversas ficavam creditadas a quem nunca escreveu
+  // uma linha. Ver src/lib/chatwoot/attribution.ts.
+  const handlers = await resolveHandlersForConversations(
+    ctx.tenantId,
+    evaluations.map((ev) => ({ id: ev.conversation.id, assigneeLabel: ev.conversation.assigneeLabel })),
+  );
+
   const groups = new Map<string, AgentGroup>();
   for (const ev of evaluations) {
     const assigneeId = ev.conversation.assigneeId;
-    const assigneeLabel = ev.conversation.assigneeLabel;
+    const assigneeLabel = handlers.get(ev.conversation.id)?.label ?? ev.conversation.assigneeLabel;
     const key = agentGroupKey(assigneeId, assigneeLabel);
     const existing = groups.get(key);
     if (existing) {

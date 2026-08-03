@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarClock, Columns3, Flag, List, ListFilter, Search, Tag, User, UserCheck } from "lucide-react";
+import { Columns3, List, Search } from "lucide-react";
 import { KanbanBoard } from "@/components/kanban/KanbanBoard";
 import { TaskListView, type TaskRow, type StageOption } from "@/components/kanban/TaskListView";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
-import { Modal } from "@/components/ui/Modal";
+import { FilterButton, FilterButtonSection } from "@/components/ui/FilterButton";
 
 type Item = TaskRow & {
   tags?: { id: string; name: string; color: string }[];
@@ -63,8 +63,6 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
   const [tagFilter, setTagFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
   const [dueFilter, setDueFilter] = useState("");
-  const [filterModalOpen, setFilterModalOpen] = useState(false);
-  const [activeFilterKey, setActiveFilterKey] = useState<string | null>(null);
 
   const allAssignees = useMemo(() => {
     const map = new Map<string, string>();
@@ -115,14 +113,6 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
 
   const activeFilterCount = [search, assigneeFilter, creatorFilter, tagFilter, priorityFilter, dueFilter].filter(Boolean).length;
 
-  const filterDefs = [
-    { key: "assignee", label: "Responsável", icon: <User size={14} />, show: allAssignees.length > 0, active: !!assigneeFilter },
-    { key: "creator", label: "Criador", icon: <UserCheck size={14} />, show: allCreators.length > 0, active: !!creatorFilter },
-    { key: "tag", label: "Etiqueta", icon: <Tag size={14} />, show: allTags.length > 0, active: !!tagFilter },
-    { key: "priority", label: "Prioridade", icon: <Flag size={14} />, show: true, active: !!priorityFilter },
-    { key: "due", label: "Prazo", icon: <CalendarClock size={14} />, show: true, active: !!dueFilter },
-  ].filter((f) => f.show);
-
   return (
     <div className="h-full flex flex-col min-h-0">
       <div className="flex items-center gap-2 mb-3 flex-wrap flex-shrink-0">
@@ -157,20 +147,64 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
           />
         </div>
 
-        <button
-          type="button"
-          onClick={() => { setActiveFilterKey(null); setFilterModalOpen(true); }}
-          className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-md border text-[12px] font-medium transition-colors flex-shrink-0 ${
-            activeFilterCount - (search ? 1 : 0) > 0
-              ? "border-brand/40 bg-brand/[0.06] text-fg"
-              : "border-border text-fg-secondary hover:text-fg hover:bg-surface-hover"
-          }`}
-        >
-          <ListFilter size={14} /> Filtros
-          {activeFilterCount - (search ? 1 : 0) > 0 && (
-            <span className="tnum">({activeFilterCount - (search ? 1 : 0)})</span>
-          )}
-        </button>
+        {/* Painel ancorado compartilhado (o mesmo de /empresas e /conversas).
+            Antes era um botão próprio abrindo um Modal com as categorias em
+            duas etapas — escolher "Responsável", só então ver o campo. Aqui os
+            filtros são estado de cliente e aplicam na hora, então não há
+            "Aplicar": mostrar todos de uma vez é estritamente melhor. */}
+        <FilterButton activeCount={activeFilterCount - (search ? 1 : 0)} align="left" width={240}>
+          <div className="space-y-3">
+            {allAssignees.length > 0 && (
+              <FilterButtonSection label="Responsável">
+                <Select compact aria-label="Responsável" value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)}>
+                  <option value="">Todo responsável</option>
+                  <option value={NO_ASSIGNEE}>Sem responsável</option>
+                  {allAssignees.map((a) => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </Select>
+              </FilterButtonSection>
+            )}
+
+            {allCreators.length > 0 && (
+              <FilterButtonSection label="Criador">
+                <Select compact aria-label="Criador" value={creatorFilter} onChange={(e) => setCreatorFilter(e.target.value)}>
+                  <option value="">Todo criador</option>
+                  {allCreators.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </Select>
+              </FilterButtonSection>
+            )}
+
+            {allTags.length > 0 && (
+              <FilterButtonSection label="Etiqueta">
+                <Select compact aria-label="Etiqueta" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
+                  <option value="">Toda etiqueta</option>
+                  {allTags.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </Select>
+              </FilterButtonSection>
+            )}
+
+            <FilterButtonSection label="Prioridade">
+              <Select compact aria-label="Prioridade" value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
+                {Object.entries(PRIORITY_LABEL).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </Select>
+            </FilterButtonSection>
+
+            <FilterButtonSection label="Prazo">
+              <Select compact aria-label="Prazo" value={dueFilter} onChange={(e) => setDueFilter(e.target.value)}>
+                {DUE_FILTERS.map((f) => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </Select>
+            </FilterButtonSection>
+          </div>
+        </FilterButton>
 
         {activeFilterCount > 0 && (
           <button
@@ -188,115 +222,6 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
           {filtered.length} de {items.length}
         </span>
       </div>
-
-      <Modal
-        open={filterModalOpen}
-        onClose={() => { setFilterModalOpen(false); setActiveFilterKey(null); }}
-        title="Filtros"
-        maxWidth="max-w-sm"
-      >
-        <div className="flex items-center gap-1 mb-3 flex-wrap">
-          {filterDefs.map((f) => (
-            <button
-              key={f.key}
-              type="button"
-              onClick={() => setActiveFilterKey((k) => (k === f.key ? null : f.key))}
-              className={`inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border text-[12px] font-medium transition-colors ${
-                f.active || activeFilterKey === f.key
-                  ? "border-brand/40 bg-brand/[0.06] text-fg"
-                  : "border-border text-fg-secondary hover:text-fg hover:bg-surface-hover"
-              }`}
-            >
-              {f.icon}
-              {f.label}
-            </button>
-          ))}
-        </div>
-
-        {activeFilterKey === "assignee" && (
-          <div>
-            <p className="text-[11px] font-medium text-fg-muted mb-1">Responsável</p>
-            <Select
-              compact
-              autoFocus
-              value={assigneeFilter}
-              onChange={(e) => { setAssigneeFilter(e.target.value); setFilterModalOpen(false); setActiveFilterKey(null); }}
-            >
-              <option value="">Todo responsável</option>
-              <option value={NO_ASSIGNEE}>Sem responsável</option>
-              {allAssignees.map((a) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </Select>
-          </div>
-        )}
-
-        {activeFilterKey === "creator" && (
-          <div>
-            <p className="text-[11px] font-medium text-fg-muted mb-1">Criador</p>
-            <Select
-              compact
-              autoFocus
-              value={creatorFilter}
-              onChange={(e) => { setCreatorFilter(e.target.value); setFilterModalOpen(false); setActiveFilterKey(null); }}
-            >
-              <option value="">Todo criador</option>
-              {allCreators.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </Select>
-          </div>
-        )}
-
-        {activeFilterKey === "tag" && (
-          <div>
-            <p className="text-[11px] font-medium text-fg-muted mb-1">Etiqueta</p>
-            <Select
-              compact
-              autoFocus
-              value={tagFilter}
-              onChange={(e) => { setTagFilter(e.target.value); setFilterModalOpen(false); setActiveFilterKey(null); }}
-            >
-              <option value="">Toda etiqueta</option>
-              {allTags.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </Select>
-          </div>
-        )}
-
-        {activeFilterKey === "priority" && (
-          <div>
-            <p className="text-[11px] font-medium text-fg-muted mb-1">Prioridade</p>
-            <Select
-              compact
-              autoFocus
-              value={priorityFilter}
-              onChange={(e) => { setPriorityFilter(e.target.value); setFilterModalOpen(false); setActiveFilterKey(null); }}
-            >
-              {Object.entries(PRIORITY_LABEL).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </Select>
-          </div>
-        )}
-
-        {activeFilterKey === "due" && (
-          <div>
-            <p className="text-[11px] font-medium text-fg-muted mb-1">Prazo</p>
-            <Select
-              compact
-              autoFocus
-              value={dueFilter}
-              onChange={(e) => { setDueFilter(e.target.value); setFilterModalOpen(false); setActiveFilterKey(null); }}
-            >
-              {DUE_FILTERS.map((f) => (
-                <option key={f.value} value={f.value}>{f.label}</option>
-              ))}
-            </Select>
-          </div>
-        )}
-      </Modal>
 
       <div className="flex-1 min-h-0">
         {view === "board" ? (

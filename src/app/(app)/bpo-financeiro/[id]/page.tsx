@@ -181,14 +181,11 @@ export default async function BpoBoardPage({
         <span className="text-[13px] text-fg">{pipeline.name}</span>
       </div>
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
-      <PageHeader title={pipeline.name} />
-          <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
-            {pipeline.space.name}{pipeline.folder ? ` · ${pipeline.folder.name}` : ""} · {pipeline.entityType === "COMPANY" ? "Empresas" : "Pessoas"}
-          </p>
-        </div>
-        {canAddItem && (
+      <PageHeader
+        title={pipeline.name}
+        subtitle={`${pipeline.space.name}${pipeline.folder ? ` · ${pipeline.folder.name}` : ""} · ${pipeline.entityType === "COMPANY" ? "Empresas" : "Pessoas"}`}
+        action={
+          canAddItem && (
           <div className="flex items-center gap-2">
             <EditPipelineStagesModal
               initialStages={pipeline.stages.map((s) => ({ id: s.id, name: s.name, color: s.color ?? "#586577", type: s.type }))}
@@ -209,8 +206,9 @@ export default async function BpoBoardPage({
               + Item
             </Button>
           </div>
-        )}
-      </div>
+          )
+        }
+      />
 
       <div className="flex-1 min-h-0">
         <BoardView

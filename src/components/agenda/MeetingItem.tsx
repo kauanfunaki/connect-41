@@ -26,16 +26,26 @@ type Props = {
    * "chip" = linha compacta dentro da célula do mês, que não tem eixo de horas.
    */
   variant: "block" | "chip";
-  /** Só em "block": posição/altura calculadas pela grade de horas. */
-  top?: number;
-  height?: number;
+  /**
+   * Só em "block": posição/altura na grade de horas, já como valor CSS
+   * (percentual). A grade divide a altura disponível entre as horas em vez de
+   * fixar pixels por linha, então a posição precisa ser relativa.
+   */
+  top?: string;
+  height?: string;
+  /**
+   * Só em "block": reunião curta demais pra caber duas linhas de texto.
+   * Vem da duração em minutos, não da altura renderizada — a altura em pixels
+   * agora depende do tamanho da janela, mas "meia hora é apertado" não.
+   */
+  compact?: boolean;
 };
 
 // Uma reunião renderizada no calendário. O visual muda entre a grade de horas
 // e a célula do mês, mas o comportamento (popover com detalhes, entrar, copiar
 // link, editar, excluir) é o mesmo — por isso um componente só, em vez de um
 // bloco e um chip com popovers duplicados.
-export function MeetingItem({ meeting, actions, variant, top = 0, height = 0 }: Props) {
+export function MeetingItem({ meeting, actions, variant, top, height, compact = false }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -76,7 +86,7 @@ export function MeetingItem({ meeting, actions, variant, top = 0, height = 0 }: 
         <p className="text-[11px] font-medium truncate leading-tight" style={{ color: accent }}>
           {meeting.title}
         </p>
-        {height > 30 && (
+        {!compact && (
           <p className="text-[length:var(--fs-micro)] text-fg-muted truncate leading-tight">
             {meeting.company ? meeting.company.name : formatTime(start)}
           </p>
@@ -100,7 +110,7 @@ export function MeetingItem({ meeting, actions, variant, top = 0, height = 0 }: 
 
   const positioning =
     variant === "block"
-      ? ({ position: "absolute", top, height, left: 2, right: 2 } as const)
+      ? ({ position: "absolute", top, height, minHeight: 16, left: 2, right: 2 } as const)
       : undefined;
 
   return (

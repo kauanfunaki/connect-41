@@ -7,6 +7,7 @@ import { formatCalendarDate } from "@/lib/format";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { StageDot, type StageDotType } from "@/components/kanban/StageDot";
+import { readableTextOn } from "@/lib/color";
 
 export type AssigneeRow = { id: string; name: string; priority: number };
 export type SubtaskRow = {
@@ -46,6 +47,19 @@ type Props = {
   concluirAction: (pipelineId: string, itemId: string) => Promise<void>;
   reabrirAction: (pipelineId: string, itemId: string) => Promise<void>;
 };
+
+// Escala de indentação da árvore. Antes só existia `depth * 20` aplicado aos
+// itens, o que deixava três problemas: o cabeçalho de status nascia no mesmo
+// x dos itens (nada indicava que um está dentro do outro), a coluna de 56px
+// não comportava o recuo do primeiro nível de subtarefa — que ficava espremido
+// contra a bolinha — e cada nível novo herdava esse aperto.
+const ITEM_INDENT = 16; // item de 1º nível, medido a partir do cabeçalho de status
+const DEPTH_STEP = 20; // cada nível de subtarefa
+// Coluna da bolinha: precisa comportar recuo + chevron + bolinha no nível mais
+// fundo que a tela usa na prática (2). 96px cobre com folga.
+const DOT_COL = "w-24";
+// Alinha "+ Adicionar Tarefa" e o alvo de soltar com o texto dos itens.
+const CONTENT_OFFSET = 96;
 
 const PRIORITY_LABEL: Record<number, string> = { 0: "Normal", 1: "Alta", 2: "Urgente" };
 const PRIORITY_COLOR: Record<number, string> = {
@@ -141,10 +155,12 @@ function Row({
         onDragEnd={onDragEndRow}
         onDragOver={onDropOnRow ? (e) => { e.preventDefault(); e.stopPropagation(); } : undefined}
         onDrop={onDropOnRow ? (e) => { e.preventDefault(); e.stopPropagation(); onDropOnRow(item.id); } : undefined}
-        className={`group hover:bg-surface-hover transition-colors ${dragging ? "opacity-40" : ""} ${canAct ? "cursor-grab active:cursor-grabbing" : ""}`}
+        // A linha divisória vive nos <td>, não no <tr>: com `border-collapse`
+        // a borda declarada na linha não pinta de forma confiável.
+        className={`group hover:bg-surface-hover transition-colors [&>td]:border-b [&>td]:border-border/50 ${dragging ? "opacity-40" : ""} ${canAct ? "cursor-grab active:cursor-grabbing" : ""}`}
       >
-        <td className="py-2 pl-2 pr-1 w-14">
-          <div className="flex items-center gap-1" style={{ paddingLeft: `${depth * 20}px` }}>
+        <td className={`py-2 pl-2 pr-1 ${DOT_COL}`}>
+          <div className="flex items-center gap-1" style={{ paddingLeft: `${ITEM_INDENT + depth * DEPTH_STEP}px` }}>
             {hasSubtasks ? (
               <button
                 type="button"
@@ -193,18 +209,27 @@ function Row({
           </div>
         </td>
 
+        {/* Uma tag só + contador. Antes eram duas com `flex-wrap`, e a segunda
+            caía pra linha de baixo dentro de uma coluna de 176px — a linha
+            inteira crescia de altura só por causa disso, quebrando o ritmo da
+            lista. O contador guarda o resto sem custar altura nenhuma. */}
         <td className="py-2 pr-2 w-44">
           {tags.length > 0 && (
-            <div className="flex items-center gap-1 flex-wrap">
-              {tags.slice(0, 2).map((t) => (
+            <div className="flex items-center gap-1 min-w-0">
+              <span
+                className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full truncate"
+                style={{ background: `${tags[0].color}1A`, color: tags[0].color }}
+              >
+                {tags[0].name}
+              </span>
+              {tags.length > 1 && (
                 <span
-                  key={t.id}
-                  className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full"
-                  style={{ background: `${t.color}1A`, color: t.color }}
+                  className="inline-flex items-center flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-surface-hover text-fg-muted tnum"
+                  title={tags.slice(1).map((t) => t.name).join(", ")}
                 >
-                  {t.name}
+                  +{tags.length - 1}
                 </span>
-              ))}
+              )}
             </div>
           )}
         </td>
@@ -415,12 +440,18 @@ function StageGroupHeader({
     }
   }
 
+  // O status vira um badge preenchido com a própria cor, no padrão do ClickUp.
+  // Antes era uma bolinha de 7px + texto cinza: a cor escolhida pro status mal
+  // aparecia e os itens abaixo pesavam mais na tela do que o agrupamento que os
+  // contém. A cor do texto sai do contraste real contra o fundo (readableTextOn)
+  // — fixar branco quebraria em status amarelo/verde-claro.
+  const badgeColor = stage.color ?? "#586577";
+
   return (
     <div className="flex items-center gap-2">
       <button type="button" onClick={onToggleCollapsed} aria-label={collapsed ? "Expandir lista" : "Recolher lista"} aria-expanded={!collapsed} className="text-fg-muted hover:text-fg flex-shrink-0">
         <ChevronDown size={13} className={`transition-transform ${collapsed ? "-rotate-90" : ""}`} />
       </button>
-      <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: stage.color ?? "#586577" }} />
       {editingName && canAct ? (
         <Input
           value={nameValue}
@@ -436,7 +467,8 @@ function StageGroupHeader({
       ) : (
         <h3
           onClick={() => canAct && setEditingName(true)}
-          className={`text-[12px] font-semibold text-fg-secondary uppercase tracking-wide ${canAct ? "cursor-text hover:text-fg" : ""}`}
+          style={{ background: badgeColor, color: readableTextOn(badgeColor) }}
+          className={`inline-flex items-center h-[22px] px-2 rounded-md text-[11px] font-semibold uppercase tracking-wide ${canAct ? "cursor-text" : ""}`}
         >
           {stage.name}
         </h3>
@@ -557,7 +589,7 @@ function StageGroup({
 
           {items.length === 0 && dragId && (
             <tr>
-              <td colSpan={5} className="h-8" style={{ paddingLeft: "34px" }}>
+              <td colSpan={5} className="h-8" style={{ paddingLeft: CONTENT_OFFSET }}>
                 <p className="text-[11px] text-fg-muted">Solte aqui para mover</p>
               </td>
             </tr>
@@ -565,7 +597,7 @@ function StageGroup({
 
           {canAct && (
             <tr>
-              <td colSpan={5} className="px-2 py-1.5" style={{ paddingLeft: "34px" }}>
+              <td colSpan={5} className="py-1.5" style={{ paddingLeft: CONTENT_OFFSET }}>
                 <AddTaskInline stageId={stage.id} createTaskAction={createTaskAction} />
               </td>
             </tr>
@@ -779,7 +811,7 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
             fecha visualmente a faixa fixa. */}
         <thead className="sticky top-0 z-10">
           <tr className="text-left">
-            <th className="w-14 bg-surface pt-2 pb-1.5 border-b border-border" />
+            <th className={`${DOT_COL} bg-surface pt-2 pb-1.5 border-b border-border`} />
             <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-surface pt-2 pb-1.5 px-2 border-b border-border">Tarefa</th>
             <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-surface pt-2 pb-1.5 px-2 w-44 border-b border-border">Tags</th>
             <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-surface pt-2 pb-1.5 px-2 w-24 border-b border-border">Responsáveis</th>
