@@ -75,7 +75,7 @@ export function TimeGrid({ days, meetings, actions, onSlotClick }: Props) {
               Renderizado na coluna de horas ele precisaria vazar 8px pra cima,
               onde o `overflow-x-auto` do container recorta. */}
           <div className="relative">
-            <span className="absolute right-2 bottom-0 translate-y-1/2 text-[length:var(--fs-micro)] text-fg-muted tnum">
+            <span className="absolute right-2 bottom-0 translate-y-1/2 text-[length:var(--fs-micro)] text-fg-muted tnum leading-none">
               {START_HOUR}:00
             </span>
           </div>
@@ -91,13 +91,19 @@ export function TimeGrid({ days, meetings, actions, onSlotClick }: Props) {
         </div>
 
         <div className="grid flex-1 min-h-0" style={{ gridTemplateColumns: gridTemplate }}>
-          {/* Cada rótulo se centra na linha que abre a sua hora (-top-2). O da
-              primeira hora saiu daqui pro cabeçalho — ver comentário acima. */}
+          {/* Cada rótulo se centra na linha que abre a sua hora. O da primeira
+              hora saiu daqui pro cabeçalho — ver comentário acima.
+
+              `top-0 -translate-y-1/2` centra de verdade, seja qual for a
+              altura da linha do texto. O `-top-2` de antes era um chute de
+              -8px: com o rótulo em ~13px de altura, o certo seriam ~6,5px, e
+              a sobra deixava estes rótulos um pouco acima da linha — perto do
+              7:00, que agora está centrado exatamente, a diferença aparecia. */}
           <div className="grid" style={{ gridTemplateRows: ROWS_TEMPLATE }}>
             {HOURS.map((h, i) => (
               <div key={h} className="relative">
                 {i > 0 && (
-                  <span className="absolute right-2 -top-2 text-[length:var(--fs-micro)] text-fg-muted tnum">
+                  <span className="absolute right-2 top-0 -translate-y-1/2 text-[length:var(--fs-micro)] text-fg-muted tnum leading-none">
                     {h}:00
                   </span>
                 )}

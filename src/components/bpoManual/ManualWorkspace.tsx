@@ -246,14 +246,22 @@ function PageCanvas({
   // não deve provocar render a cada tecla.
   const draftRef = useRef({ title: page.title, content: page.content ?? "" });
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Existe alteração ainda não gravada? Sem esta trava, qualquer caminho que
+  // chame save() regrava o mesmo conteúdo — inclusive a saída da página.
+  const dirtyRef = useRef(false);
 
   const save = useCallback(async () => {
+    if (!dirtyRef.current) return;
     const { title, content } = draftRef.current;
     if (!title.trim()) {
       setStatus("error");
       setError("Título é obrigatório");
       return;
     }
+    // Baixa a bandeira ANTES de enviar: uma tecla digitada durante o await
+    // levanta de novo e garante uma segunda gravação, em vez de ser engolida
+    // por este ciclo.
+    dirtyRef.current = false;
     setStatus("saving");
     setError(null);
     const form = new FormData();
@@ -261,6 +269,7 @@ function PageCanvas({
     form.append("content", content);
     const res = await updatePageAction(page.id, null, form);
     if (res?.error) {
+      dirtyRef.current = true;
       setStatus("error");
       setError(res.error);
     } else {
@@ -268,22 +277,38 @@ function PageCanvas({
     }
   }, [page.id, updatePageAction]);
 
+  // `save` troca de identidade sempre que a Server Action chega nova do
+  // servidor — e ela chega nova a cada `revalidatePath`, ou seja, a cada
+  // gravação. Guardar a função numa ref é o que permite o efeito de saída
+  // depender de [] e rodar só na desmontagem de verdade. Com [save] nas
+  // dependências, a limpeza disparava a cada re-render e virava um laço:
+  // grava → revalida → re-renderiza → limpeza grava de novo, para sempre.
+  // Era isso que fazia a etiqueta piscar entre "Salvando…" e "Salvo".
+  const saveRef = useRef(save);
+  useEffect(() => {
+    saveRef.current = save;
+  });
+
   const scheduleSave = useCallback(() => {
+    dirtyRef.current = true;
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(save, AUTOSAVE_DELAY_MS);
-  }, [save]);
+    timerRef.current = setTimeout(() => {
+      // Zerar aqui importa: o guarda da saída testa `timerRef.current`, e sem
+      // isso ele ficava não-nulo pra sempre depois da primeira tecla.
+      timerRef.current = null;
+      void saveRef.current();
+    }, AUTOSAVE_DELAY_MS);
+  }, []);
 
   // Grava o que estiver pendente ao sair da página (trocar de página no menu
-  // desmonta este componente, porque a chave inclui o id). Sem isso, escrever
-  // e clicar noutra página em menos de AUTOSAVE_DELAY_MS perderia o texto.
+  // desmonta este componente, porque a chave é o id). Sem isso, escrever e
+  // clicar noutra página em menos de AUTOSAVE_DELAY_MS perderia o texto.
   useEffect(() => {
     return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        void save();
-      }
+      if (timerRef.current) clearTimeout(timerRef.current);
+      void saveRef.current();
     };
-  }, [save]);
+  }, []);
 
   return (
     <div className="h-full overflow-y-auto scroll-y relative">

@@ -18,15 +18,10 @@
 
 export type AttributionMessage = {
   senderLabel: string | null;
-  /** `sender.type` do Chatwoot: "user" = atendente, "contact" = cliente. */
-  senderType: string;
   /** "incoming" | "outgoing" | "activity" (ver mappers.ts). */
   messageType: string;
   isPrivate: boolean;
-  /**
-   * Ordem da mensagem na conversa (chatwootMessageId serve). Usado só pra
-   * desempatar quem falou por último quando dois atendentes empatam em volume.
-   */
+  /** Ordem da mensagem na conversa (`chatwootMessageId` serve). */
   sequence: number;
 };
 
@@ -40,52 +35,44 @@ export type ResolvedHandler = {
   source: "messages" | "assignee" | "unknown";
 };
 
+// Em "outgoing" o remetente já é, por definição do Chatwoot, alguém do lado do
+// atendimento — o cliente só produz "incoming". Não dá pra exigir também
+// `senderType === "user"`: esse campo vem de `sender.type`, que a API nem
+// sempre preenche (`mappers.ts` cai em "unknown"), e quando o filtro rejeita
+// tudo a atribuição inteira silenciosamente volta pro `assignee` errado.
 function isAgentReply(m: AttributionMessage): boolean {
-  return (
-    m.messageType === "outgoing" &&
-    m.senderType.toLowerCase() === "user" &&
-    !m.isPrivate &&
-    !!m.senderLabel?.trim()
-  );
+  return m.messageType === "outgoing" && !m.isPrivate && !!m.senderLabel?.trim();
 }
 
 /**
- * Atendente responsável por uma conversa.
+ * Atendente responsável por uma conversa: **quem respondeu ao cliente por
+ * último**.
  *
- * Vence quem mais respondeu ao cliente. O desempate é a resposta mais recente
- * — numa conversa dividida meio a meio, quem fechou o atendimento é a escolha
- * mais defensável (e é determinístico, não depende da ordem de chegada).
+ * A primeira versão contava volume, e volume é o critério errado nesta
+ * operação. A recepção abre TODA conversa com um bloco fixo de saudação
+ * ("Boa tarde, tudo bem?" / "Como posso lhe ajudar?" / "Fico no aguardo") —
+ * três mensagens antes de o cliente sequer falar. Num atendimento resolvido em
+ * duas mensagens, a recepcionista ganharia no placar sem ter tratado nada.
+ *
+ * Quem fecha o atendimento é quem o conduziu. Isso também sobrevive ao padrão
+ * de reatribuição automática do Chatwoot: depois de resolvida, a conversa
+ * volta pra fila da recepção ("Atribuído a X por Sistema de Automação"), o que
+ * envenena o campo `assignee` mas não muda quem falou por último.
  */
 export function resolveConversationHandler(
   messages: AttributionMessage[],
   assigneeLabel: string | null,
 ): ResolvedHandler {
-  const byLabel = new Map<string, { count: number; lastSequence: number }>();
+  let last: { label: string; sequence: number } | null = null;
 
   for (const message of messages) {
     if (!isAgentReply(message)) continue;
-    const label = message.senderLabel!.trim();
-    const existing = byLabel.get(label);
-    if (existing) {
-      existing.count += 1;
-      existing.lastSequence = Math.max(existing.lastSequence, message.sequence);
-    } else {
-      byLabel.set(label, { count: 1, lastSequence: message.sequence });
+    if (last === null || message.sequence > last.sequence) {
+      last = { label: message.senderLabel!.trim(), sequence: message.sequence };
     }
   }
 
-  let winner: { label: string; count: number; lastSequence: number } | null = null;
-  for (const [label, stats] of byLabel) {
-    if (
-      winner === null ||
-      stats.count > winner.count ||
-      (stats.count === winner.count && stats.lastSequence > winner.lastSequence)
-    ) {
-      winner = { label, ...stats };
-    }
-  }
-
-  if (winner) return { label: winner.label, source: "messages" };
+  if (last) return { label: last.label, source: "messages" };
   if (assigneeLabel?.trim()) return { label: assigneeLabel.trim(), source: "assignee" };
   return { label: null, source: "unknown" };
 }

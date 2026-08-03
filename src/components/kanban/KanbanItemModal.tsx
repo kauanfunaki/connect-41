@@ -25,7 +25,13 @@ export function KanbanItemModal({ children }: Props) {
         if (e.target === e.currentTarget) router.back();
       }}
     >
-      <div ref={panelRef} role="dialog" aria-modal="true" tabIndex={-1} aria-label="Detalhe do item" className="relative w-full min-h-full sm:min-h-0 sm:max-w-[94vw] xl:max-w-[1400px] sm:my-8 bg-canvas sm:border sm:border-border sm:rounded-lg shadow-[var(--c41-shadow-lg)] sm:h-[calc(100vh-4rem)] overflow-y-auto lg:overflow-hidden">
+      {/* Sem `my-8`: o respiro já vem do `p-8` do container. Com os dois, o
+          painel ganhava 32px de padding + 32px de margem em cima (64px, do
+          tamanho da topbar) e a altura `100vh-4rem` consumia todo o resto —
+          sobrava zero embaixo, e o modal encostava na borda inferior da tela.
+          Agora os 4rem descontados são exatamente o padding do container, o
+          que deixa 32px em cima e 32px embaixo. */}
+      <div ref={panelRef} role="dialog" aria-modal="true" tabIndex={-1} aria-label="Detalhe do item" className="relative w-full min-h-full sm:min-h-0 sm:max-w-[94vw] xl:max-w-[1400px] bg-canvas sm:border sm:border-border sm:rounded-lg shadow-[var(--c41-shadow-lg)] sm:h-[calc(100vh-4rem)] overflow-y-auto lg:overflow-hidden">
         <button
           type="button"
           onClick={() => router.back()}

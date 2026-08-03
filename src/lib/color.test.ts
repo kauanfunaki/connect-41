@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { contrastRatio, parseHexColor, readableTextOn, relativeLuminance } from "./color";
+import {
+  contrastRatio,
+  contrastWithWhite,
+  darkenUntilReadableOnWhiteText,
+  parseHexColor,
+  readableTextOn,
+  relativeLuminance,
+} from "./color";
 
 const DARK_TEXT = "#16181D";
 const LIGHT_TEXT = "#FFFFFF";
@@ -79,6 +86,46 @@ describe("readableTextOn", () => {
       const ratio = contrastRatio(relativeLuminance(bg)!, relativeLuminance(readableTextOn(bg))!);
       expect(ratio, `contraste insuficiente em ${bg}`).toBeGreaterThanOrEqual(4.5);
     }
+  });
+});
+
+describe("darkenUntilReadableOnWhiteText", () => {
+  // As cores que apareceram com letra preta na lista de tarefas.
+  const CORES_DE_STATUS = ["#1F5EEA", "#586577", "#E02D3C", "#FFD400", "#7BE3A1", "#FFB27A", "#FFFFFF"];
+
+  it("garante 4,5:1 contra branco em toda cor de status", () => {
+    for (const bg of CORES_DE_STATUS) {
+      const ajustada = darkenUntilReadableOnWhiteText(bg);
+      expect(contrastWithWhite(ajustada)!, `contraste insuficiente em ${bg} → ${ajustada}`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it("não mexe numa cor que já passa", () => {
+    expect(darkenUntilReadableOnWhiteText("#1F5EEA")).toBe("#1F5EEA");
+  });
+
+  it("escurece de fato as cores claras", () => {
+    for (const bg of ["#FFD400", "#7BE3A1", "#FFFFFF"]) {
+      expect(contrastWithWhite(bg)!).toBeLessThan(4.5); // premissa: entram reprovadas
+      expect(darkenUntilReadableOnWhiteText(bg)).not.toBe(bg);
+    }
+  });
+
+  // Escurecer proporcionalmente preserva a matiz — um amarelo tem que virar
+  // mostarda, não cinza. Se o canal dominante deixasse de dominar, o usuário
+  // não reconheceria mais a cor que escolheu.
+  it("preserva a matiz ao escurecer", () => {
+    const amarelo = parseHexColor(darkenUntilReadableOnWhiteText("#FFD400"))!;
+    expect(amarelo.r).toBeGreaterThan(amarelo.b);
+    expect(amarelo.g).toBeGreaterThan(amarelo.b);
+
+    const verde = parseHexColor(darkenUntilReadableOnWhiteText("#7BE3A1"))!;
+    expect(verde.g).toBeGreaterThan(verde.r);
+    expect(verde.g).toBeGreaterThan(verde.b);
+  });
+
+  it("devolve a entrada quando não é hex", () => {
+    expect(darkenUntilReadableOnWhiteText("var(--c41-fg-muted)")).toBe("var(--c41-fg-muted)");
   });
 
   it("cai no texto claro quando a cor não é hex", () => {

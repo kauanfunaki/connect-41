@@ -76,3 +76,50 @@ export function readableTextOn(background: string): string {
 
   return onDark > onLight * DARK_TEXT_MARGIN ? DARK_TEXT : LIGHT_TEXT;
 }
+
+function toHex({ r, g, b }: Rgb): string {
+  return `#${[r, g, b].map((c) => Math.round(c).toString(16).padStart(2, "0")).join("")}`.toUpperCase();
+}
+
+/** Contraste de um fundo contra o texto branco. */
+export function contrastWithWhite(background: string): number | null {
+  const luminance = relativeLuminance(background);
+  if (luminance === null) return null;
+  return contrastRatio(luminance, 1);
+}
+
+// Piso da WCAG AA para texto normal.
+const MIN_CONTRAST = 4.5;
+
+/**
+ * Escurece um fundo até o texto BRANCO ter contraste suficiente por cima dele.
+ *
+ * Existe porque badge de status é um caso onde a cor não pode ditar a cor da
+ * fonte: alternar entre texto claro e escuro conforme o status deixava a lista
+ * visualmente remendada (um "A FAZER" cinza e um "AGUARDANDO CLIENTE" âmbar
+ * ficavam com letra preta no meio de vizinhos de letra branca). Fixar o branco
+ * e ajustar o fundo dá um conjunto uniforme — e a cor escolhida pelo usuário
+ * continua reconhecível, só num tom mais fechado.
+ *
+ * Escurece multiplicando os canais, o que preserva a matiz (um amarelo vira
+ * mostarda, não cinza). Devolve a cor original quando ela já passa, e quando a
+ * entrada não é hex (não há o que calcular).
+ */
+export function darkenUntilReadableOnWhiteText(background: string): string {
+  const rgb = parseHexColor(background);
+  if (!rgb) return background;
+
+  let current = rgb;
+  // 40 passos de 4% cobrem do branco puro até ~19% do valor original, bem além
+  // do necessário pra qualquer matiz; o limite existe só pra não iterar solto.
+  for (let step = 0; step < 40; step += 1) {
+    const luminance =
+      0.2126 * channelToLinear(current.r) +
+      0.7152 * channelToLinear(current.g) +
+      0.0722 * channelToLinear(current.b);
+    if (contrastRatio(luminance, 1) >= MIN_CONTRAST) break;
+    current = { r: current.r * 0.96, g: current.g * 0.96, b: current.b * 0.96 };
+  }
+
+  return toHex(current);
+}

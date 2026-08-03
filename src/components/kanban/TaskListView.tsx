@@ -7,7 +7,7 @@ import { formatCalendarDate } from "@/lib/format";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { StageDot, type StageDotType } from "@/components/kanban/StageDot";
-import { readableTextOn } from "@/lib/color";
+import { darkenUntilReadableOnWhiteText } from "@/lib/color";
 
 export type AssigneeRow = { id: string; name: string; priority: number };
 export type SubtaskRow = {
@@ -443,9 +443,14 @@ function StageGroupHeader({
   // O status vira um badge preenchido com a própria cor, no padrão do ClickUp.
   // Antes era uma bolinha de 7px + texto cinza: a cor escolhida pro status mal
   // aparecia e os itens abaixo pesavam mais na tela do que o agrupamento que os
-  // contém. A cor do texto sai do contraste real contra o fundo (readableTextOn)
-  // — fixar branco quebraria em status amarelo/verde-claro.
-  const badgeColor = stage.color ?? "#586577";
+  // contém.
+  //
+  // A fonte é SEMPRE branca e o fundo é que se ajusta. Escolher a cor do texto
+  // pelo contraste (readableTextOn) dava letra preta em status claros —
+  // "A FAZER" cinza e "AGUARDANDO CLIENTE" âmbar saíam de letra preta no meio
+  // de vizinhos de letra branca, e a lista ficava remendada. Fixar o branco e
+  // fechar o tom do fundo mantém o conjunto uniforme sem perder a cor.
+  const badgeColor = darkenUntilReadableOnWhiteText(stage.color ?? "#586577");
 
   return (
     <div className="flex items-center gap-2">
@@ -467,7 +472,7 @@ function StageGroupHeader({
       ) : (
         <h3
           onClick={() => canAct && setEditingName(true)}
-          style={{ background: badgeColor, color: readableTextOn(badgeColor) }}
+          style={{ background: badgeColor, color: "#FFFFFF" }}
           className={`inline-flex items-center h-[22px] px-2 rounded-md text-[11px] font-semibold uppercase tracking-wide ${canAct ? "cursor-text" : ""}`}
         >
           {stage.name}

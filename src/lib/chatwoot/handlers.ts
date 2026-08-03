@@ -28,7 +28,6 @@ export async function resolveHandlersForConversations(
     select: {
       conversationId: true,
       senderLabel: true,
-      senderType: true,
       messageType: true,
       isPrivate: true,
       chatwootMessageId: true,
@@ -40,7 +39,6 @@ export async function resolveHandlersForConversations(
     const list = byConversation.get(m.conversationId) ?? [];
     list.push({
       senderLabel: m.senderLabel,
-      senderType: m.senderType,
       messageType: m.messageType,
       isPrivate: m.isPrivate,
       sequence: m.chatwootMessageId,
