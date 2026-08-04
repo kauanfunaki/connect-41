@@ -2,6 +2,7 @@ import { getPrisma } from "@/lib/prisma";
 import { isFullWrite, type AuthContext } from "@/lib/auth/context";
 import { refreshGoogleToken } from "@/lib/integrations/google";
 import { refreshMicrosoftToken } from "@/lib/integrations/microsoft";
+import { isTokenExpiringSoon } from "@/lib/integrations/tokenExpiry";
 import type { MeetingProvider } from "@/generated/prisma/enums";
 
 // Só coordenadores (SECTOR_ADMIN) e admins conectam a própria conta — usuários
@@ -31,7 +32,9 @@ export function getPublicOrigin(provider: MeetingProvider): string {
 }
 
 // Retorna um access token válido para o usuário+provider, renovando via
-// refresh_token se estiver vencido (ou a 2min de vencer, margem de segurança).
+// refresh_token se estiver vencido (ou perto — ver TOKEN_EXPIRY_MARGIN_MS).
+// Devolve null quando não há conta conectada ou quando a renovação é recusada;
+// getMeetingIntegrationHealth usa esse null pra avisar na tela.
 export async function getValidAccessToken(
   tenantId: string,
   userId: string,
@@ -41,8 +44,7 @@ export async function getValidAccessToken(
   const account = await prisma.oAuthAccount.findFirst({ where: { tenantId, userId, provider } });
   if (!account) return null;
 
-  const expiringSoon = account.expiresAt.getTime() - Date.now() < 2 * 60 * 1000;
-  if (!expiringSoon) return account.accessToken;
+  if (!isTokenExpiringSoon(account.expiresAt)) return account.accessToken;
 
   // Renovação pode falhar (token revogado no provedor, credenciais trocadas
   // no Cloud Console etc.) — não deixar propagar: isso derrubaria a página

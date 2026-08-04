@@ -144,7 +144,10 @@ async function checkHandoffsParados(tenantId: string, today: Date): Promise<numb
       createdAt: { lte: limit },
       handoff: { views: { none: {} } },
     },
-    include: { handoff: { select: { entityType: true, entityId: true, createdAt: true } } },
+    include: {
+      handoff: { select: { entityType: true, entityId: true, createdAt: true } },
+      assignees: { select: { userId: true } },
+    },
   });
 
   let sent = 0;
@@ -153,14 +156,18 @@ async function checkHandoffsParados(tenantId: string, today: Date): Promise<numb
     if (!(await tryDispatch(tenantId, key, today))) continue;
     const dias = daysBetween(hs.handoff.createdAt, today);
     const message = `Transferência parada há ${dias} dia(s) sem visualização no setor ${hs.sectorCode}.`;
-    if (hs.assignedTo) {
-      await notifyUser(hs.assignedTo, {
-        tenantId,
-        type: "HANDOFF_STALE",
-        message,
-        entityType: hs.handoff.entityType,
-        entityId: hs.handoff.entityId,
-      });
+    if (hs.assignees.length > 0) {
+      // Um aviso por responsável — com `assignedTo` só o primeiro era avisado,
+      // e os demais designados nunca ficavam sabendo que a transferência parou.
+      for (const { userId } of hs.assignees) {
+        await notifyUser(userId, {
+          tenantId,
+          type: "HANDOFF_STALE",
+          message,
+          entityType: hs.handoff.entityType,
+          entityId: hs.handoff.entityId,
+        });
+      }
     } else {
       await notifySector(hs.sectorCode, {
         tenantId,

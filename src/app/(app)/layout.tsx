@@ -84,6 +84,7 @@ export default async function AppLayout({
         profileRoleLabel={ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role}
         profilePhotoUrl={me?.photoUrl ?? null}
         subscriptionReadOnly={ctx.subscriptionReadOnly}
+        canSelfRegularizeSubscription={ctx.canSelfRegularizeSubscription}
       >
         <SessionKeeper />
         <MeetingAlertOverlay />

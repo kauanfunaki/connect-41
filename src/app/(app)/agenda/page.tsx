@@ -1,7 +1,10 @@
+import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getAuthContext } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
+import { getMeetingIntegrationHealth } from "@/lib/integrations/health";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { AgendaCalendar } from "@/components/agenda/AgendaCalendar";
 import { criarReuniaoAvulsa, editarReuniaoAvulsa, excluirReuniaoAvulsa } from "./actions";
@@ -72,6 +75,19 @@ export default async function AgendaPage({
   const hasGoogle = oauthAccounts.some((a) => a.provider === "GOOGLE");
   const hasMicrosoft = oauthAccounts.some((a) => a.provider === "MICROSOFT");
 
+  // Aviso de conta vencida: sem isto o usuário só descobria ao tentar criar a
+  // reunião e receber o erro. Só custa rede quando o token já está vencendo.
+  const [googleHealth, microsoftHealth] = await Promise.all([
+    hasGoogle ? getMeetingIntegrationHealth(ctx.tenantId, ctx.userId, "GOOGLE") : Promise.resolve("NOT_CONNECTED" as const),
+    hasMicrosoft
+      ? getMeetingIntegrationHealth(ctx.tenantId, ctx.userId, "MICROSOFT")
+      : Promise.resolve("NOT_CONNECTED" as const),
+  ]);
+  const contasVencidas = [
+    googleHealth === "NEEDS_RECONNECT" ? "Google" : null,
+    microsoftHealth === "NEEDS_RECONNECT" ? "Microsoft" : null,
+  ].filter((v): v is string => v !== null);
+
   const meetings = meetingsRaw.map((m) => ({
     id: m.id,
     provider: m.provider,
@@ -93,6 +109,19 @@ export default async function AgendaPage({
     <PageContainer className="h-full flex flex-col">
       <div className="flex-shrink-0">
         <PageHeader title="Agenda" subtitle={VIEW_HELPER[view]} />
+
+        {contasVencidas.length > 0 && (
+          <div className="mb-4 flex items-start gap-2 text-[length:var(--fs-helper)] text-danger bg-danger-bg border border-danger/30 rounded-lg px-3 py-2">
+            <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
+            <p>
+              Sua conta {contasVencidas.join(" e ")} expirou — reuniões novas não vão gerar link até
+              você reconectar.{" "}
+              <Link href="/admin/integracoes" className="underline font-medium hover:no-underline">
+                Reconectar agora
+              </Link>
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 min-h-0">

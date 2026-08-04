@@ -40,16 +40,16 @@ export default async function TarefasPage() {
       ? {
           tenantId: ctx.tenantId,
           status: { not: "DONE" },
-          OR: [{ sectorCode: { in: ctx.sectors } }, { assignedTo: ctx.userId }],
+          OR: [{ sectorCode: { in: ctx.sectors } }, { assignees: { some: { userId: ctx.userId } } }],
         }
-      : { tenantId: ctx.tenantId, status: { not: "DONE" }, assignedTo: ctx.userId };
+      : { tenantId: ctx.tenantId, status: { not: "DONE" }, assignees: { some: { userId: ctx.userId } } };
 
   const now = new Date();
   const [instrucoesRaw, meusCards, reunioes] = await Promise.all([
     prisma.handoffSector.findMany({
       where: instrucaoWhere,
       include: {
-        assignee: { select: { name: true } },
+        assignees: { include: { user: { select: { name: true } } } },
         handoff: {
           select: {
             id: true,
@@ -179,7 +179,9 @@ export default async function TarefasPage() {
                     <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
                       De {sectorLabels[i.handoff.fromSector] ?? i.handoff.fromSector} · {i.handoff.requester.name} ·{" "}
                       {formatInstantDate(i.handoff.createdAt, { day: "2-digit", month: "short" })} ·{" "}
-                      {i.assignee ? `Responsável: ${i.assignee.name}` : "Sem responsável"}
+                      {i.assignees.length > 0
+                        ? `${i.assignees.length > 1 ? "Responsáveis" : "Responsável"}: ${i.assignees.map((a) => a.user.name).join(", ")}`
+                        : "Sem responsável"}
                     </p>
                   </Link>
                 ))}

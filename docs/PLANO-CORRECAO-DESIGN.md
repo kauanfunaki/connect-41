@@ -269,7 +269,7 @@ cobrindo tanto o card da Home quanto o caso simples. As 42 linhas duplicadas
 saíram da Home, que agora importa `ui/MetricCard`. Fica disponível para os
 dashboards de setor/RH.
 
-### `FormShell` — tem um defeito de contrato ⚠️
+### `FormShell` — tinha um defeito de contrato, foi removido ✅
 
 Correção da correção: no plano eu disse que o valor dele era a "barra de ações
 sticky no rodapé". Lendo com atenção, **essa é justamente a parte que não
@@ -293,10 +293,17 @@ páginas de novo/editar. Adotado nesse papel como piloto em `cargos/novo` e
 `cargos/[cargoId]/editar`, com o `FormFooter` seguindo dentro do `<form>`, onde
 sempre esteve.
 
-**Pendente de decisão:** ou o `actions` é consertado (FormShell passa a
-renderizar o `<form>`), ou é removido da API e o componente vira um casco puro
-— aí ele se sobrepõe ao `Card`, e talvez o certo seja `Card` + `FormFooter`.
-Não decidi sozinho porque muda a API de um componente da biblioteca.
+**Decidido (2026-08-04):** componente removido. Na releitura, as três props
+(`title`, `subtitle`, `actions`) estavam sem nenhum consumidor — as duas páginas
+piloto usavam `<FormShell>` pelado, o que é literalmente
+`<Card className="px-6 py-5">`. Consertar o `actions` exigiria FormShell
+renderizar o `<form>` e `CargoForm` devolver `pending`/`state` pra fora, um
+refactor sem demanda. Ficou `Card` + `FormFooter` (que já rodava dentro do
+`<form>`, onde sempre esteve), e `src/components/ui/FormShell.tsx` foi apagado.
+
+Efeito colateral bom: some a colisão de nome com o `FormShell` **local** de
+`transferencias/novo/page.tsx`, que é outro componente (`backHref`/`backLabel`)
+e continua onde está.
 
 **Verificação:** `tsc` limpo · `eslint --max-warnings 0` limpo · `vitest` 125
 testes · `build` compilado.

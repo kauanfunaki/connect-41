@@ -63,6 +63,7 @@ type Props = {
   profileRoleLabel: string;
   profilePhotoUrl: string | null;
   subscriptionReadOnly?: boolean;
+  canSelfRegularizeSubscription?: boolean;
   children: React.ReactNode;
 };
 
@@ -81,6 +82,7 @@ export function AppShell({
   profileRoleLabel,
   profilePhotoUrl,
   subscriptionReadOnly = false,
+  canSelfRegularizeSubscription = false,
   children,
 }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -204,7 +206,13 @@ export function AppShell({
         {subscriptionReadOnly && (
           <div className="flex-shrink-0 bg-danger/10 border-b border-danger/20 px-4 py-2 text-[13px] text-danger flex items-center justify-center gap-2 text-center">
             Assinatura pendente — este workspace está em modo somente leitura.{" "}
-            <Link href="/assinatura" className="underline font-medium hover:no-underline">Regularizar assinatura</Link>
+            {/* Em MANAGED a tela /assinatura dá 404 (é a 41 Tech quem administra),
+                então o link viraria um beco sem saída — vira instrução de contato. */}
+            {canSelfRegularizeSubscription ? (
+              <Link href="/assinatura" className="underline font-medium hover:no-underline">Regularizar assinatura</Link>
+            ) : (
+              <span className="font-medium">Entre em contato com a 41 Tech.</span>
+            )}
           </div>
         )}
 

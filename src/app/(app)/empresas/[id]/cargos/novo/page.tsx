@@ -3,7 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { CargoForm } from "@/components/empresas/CargoForm";
-import { FormShell } from "@/components/ui/FormShell";
+import { Card } from "@/components/ui/Card";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -41,9 +41,9 @@ export default async function NovoCargoPage({
       <PageHeader title="Novo Cargo" subtitle={company.name} />
 
       <div className="w-full max-w-[720px]">
-        <FormShell>
+        <Card className="px-6 py-5">
           <CargoForm action={criarCargo} companyId={companyId} cancelHref={`/empresas/${companyId}/cargos`} />
-        </FormShell>
+        </Card>
       </div>
     </PageContainer>
   );

@@ -144,10 +144,10 @@ export default async function HandoffDetailPage({
       <div className="space-y-3 mb-4">
         {handoff.sectors.map((s) => {
           const canManage = canManageSector(ctx, s.sectorCode);
-          // Qualquer um dos responsáveis pode mexer no status, não só o da
-          // coluna antiga `assignedTo` (que guarda apenas o primeiro).
-          const assigneeIds = s.assignees.map((a) => a.user.id);
-          const isAssignee = assigneeIds.includes(ctx.userId) || s.assignedTo === ctx.userId;
+          // Qualquer um dos responsáveis pode mexer no status. O fallback pra
+          // coluna antiga `assignedTo` saiu: a migration 20260730120000 copiou
+          // todo assignedTo não-nulo pra cá, então ela não tem nada a mais.
+          const isAssignee = s.assignees.some((a) => a.user.id === ctx.userId);
           const canUpdateStatus = (canManage || isAssignee) && ctx.role !== "READONLY";
           const assigneeNames = s.assignees.map((a) => a.user.name);
           return (

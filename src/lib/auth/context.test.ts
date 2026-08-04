@@ -11,7 +11,15 @@ import {
 } from "./context";
 
 function ctx(role: AuthContext["role"], sectors: string[] = [], subscriptionReadOnly = false): AuthContext {
-  return { userId: "u1", tenantId: "t1", homeTenantId: "t1", role, sectors, subscriptionReadOnly };
+  return {
+    userId: "u1",
+    tenantId: "t1",
+    homeTenantId: "t1",
+    role,
+    sectors,
+    subscriptionReadOnly,
+    canSelfRegularizeSubscription: true,
+  };
 }
 
 describe("predicados de papel", () => {

@@ -200,11 +200,17 @@ export async function atualizarStatusSetor(
   const prisma = getPrisma();
   const sector = await prisma.handoffSector.findFirst({
     where: { id: handoffSectorId, tenantId: ctx.tenantId },
-    include: { handoff: { select: { id: true, requestedBy: true, entityType: true, entityId: true } } },
+    include: {
+      handoff: { select: { id: true, requestedBy: true, entityType: true, entityId: true } },
+      assignees: { select: { userId: true } },
+    },
   });
   if (!sector) return { error: "Transferência não encontrada." };
 
-  const allowed = canManageSector(ctx, sector.sectorCode) || sector.assignedTo === ctx.userId;
+  // Todos os responsáveis do setor podem mexer no status, não só o primeiro:
+  // ler `assignedTo` aqui deixava o 2º..Nº designado sem permissão.
+  const allowed =
+    canManageSector(ctx, sector.sectorCode) || sector.assignees.some((a) => a.userId === ctx.userId);
   if (!allowed || ctx.role === "READONLY") {
     return { error: "Sem permissão para atualizar a situação deste setor." };
   }

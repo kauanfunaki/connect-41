@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
-import { Video, Check, Sparkles, MessageCircle, Headset } from "lucide-react";
+import { Video, Check, Sparkles, MessageCircle, Headset, AlertTriangle } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
+import { getMeetingIntegrationHealth } from "@/lib/integrations/health";
 import { isGoogleConfigured } from "@/lib/integrations/google";
 import { isMicrosoftConfigured } from "@/lib/integrations/microsoft";
 import { formatInstantDate } from "@/lib/format";
@@ -40,6 +41,14 @@ export default async function IntegracoesPage({
   const accounts = await prisma.oAuthAccount.findMany({ where: { tenantId: ctx.tenantId, userId: ctx.userId } });
   const google = accounts.find((a) => a.provider === "GOOGLE");
   const microsoft = accounts.find((a) => a.provider === "MICROSOFT");
+
+  // "Conectado" era otimista: bastava a linha existir. Uma conta com o token
+  // vencido e renovação recusada aparecia verde e só falhava na hora de criar
+  // a reunião — que é justamente o que este aviso evita.
+  const [googleHealth, microsoftHealth] = await Promise.all([
+    getMeetingIntegrationHealth(ctx.tenantId, ctx.userId, "GOOGLE"),
+    getMeetingIntegrationHealth(ctx.tenantId, ctx.userId, "MICROSOFT"),
+  ]);
 
   // Config de IA é segredo tenant-wide (não pessoal, como as contas de
   // reunião acima) — só quem administra o tenant todo (ADMIN/SUPER_ADMIN) vê e mexe.
@@ -88,6 +97,10 @@ export default async function IntegracoesPage({
                   Indisponível — credenciais do Google não configuradas no servidor (GOOGLE_CLIENT_ID/SECRET)
                   {google ? ". Uma conexão salva existe, mas não pode ser usada até isso ser configurado." : ""}
                 </p>
+              ) : google && googleHealth === "NEEDS_RECONNECT" ? (
+                <p className="text-[12px] text-danger flex items-center gap-1">
+                  <AlertTriangle size={12} /> Conexão expirada{google.accountEmail ? ` (${google.accountEmail})` : ""} — reconecte para voltar a agendar
+                </p>
               ) : google ? (
                 <p className="text-[12px] text-success flex items-center gap-1">
                   <Check size={12} /> Conectado {google.accountEmail ? `como ${google.accountEmail}` : ""}
@@ -121,6 +134,10 @@ export default async function IntegracoesPage({
                 <p className="text-[12px] text-fg-muted">
                   Indisponível — credenciais da Microsoft não configuradas no servidor (MICROSOFT_CLIENT_ID/SECRET)
                   {microsoft ? ". Uma conexão salva existe, mas não pode ser usada até isso ser configurado." : ""}
+                </p>
+              ) : microsoft && microsoftHealth === "NEEDS_RECONNECT" ? (
+                <p className="text-[12px] text-danger flex items-center gap-1">
+                  <AlertTriangle size={12} /> Conexão expirada{microsoft.accountEmail ? ` (${microsoft.accountEmail})` : ""} — reconecte para voltar a agendar
                 </p>
               ) : microsoft ? (
                 <p className="text-[12px] text-success flex items-center gap-1">
