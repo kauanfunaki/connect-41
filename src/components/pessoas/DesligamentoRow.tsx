@@ -1,18 +1,21 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import type { TerminationState } from "@/app/(app)/pessoas/[id]/desligamento/actions";
 import { TerminationType, TerminationStatus } from "@/generated/prisma/enums";
 import { Select } from "@/components/ui/Select";
 import { useConfirm } from "@/components/ui/useConfirm";
 
 const TYPE_LABEL: Record<TerminationType, string> = {
-  VOLUNTARIO:       "Voluntário",
-  INVOLUNTARIO:     "Involuntário",
-  TERMINO_CONTRATO: "Término de contrato",
-  EXPERIENCIA:      "Experiência",
-  JUSTA_CAUSA:      "Justa causa",
-  SEM_JUSTA_CAUSA:  "Sem justa causa",
+  VOLUNTARIO:        "Voluntário",
+  INVOLUNTARIO:      "Involuntário",
+  TERMINO_CONTRATO:  "Término de contrato",
+  EXPERIENCIA:       "Experiência",
+  JUSTA_CAUSA:       "Justa causa",
+  SEM_JUSTA_CAUSA:   "Sem justa causa",
+  ACORDO_484A:       "Acordo entre as partes (art. 484-A)",
+  RESCISAO_INDIRETA: "Rescisão indireta",
 };
 
 const STATUS_LABEL: Record<TerminationStatus, string> = {
@@ -42,16 +45,19 @@ export type DesligamentoItem = {
   reason: string | null;
   requestedAtLabel: string;
   finalizedAtLabel: string | null;
+  /** Resumo da conferência do TRCT, quando já foi iniciada. */
+  conferencia: { pendentes: number; divergentes: number; progressoPct: number } | null;
 };
 
 type Props = {
   desligamento: DesligamentoItem;
+  conferenciaHref: string;
   updateAction: (prev: TerminationState, form: FormData) => Promise<TerminationState>;
   removeAction: () => Promise<void>;
   canManage: boolean;
 };
 
-export function DesligamentoRow({ desligamento, updateAction, removeAction, canManage }: Props) {
+export function DesligamentoRow({ desligamento, conferenciaHref, updateAction, removeAction, canManage }: Props) {
   const [state, formAction, isPending] = useActionState(updateAction, null);
   const [status, setStatus] = useState(desligamento.status);
   const { dialog, requestConfirm } = useConfirm();
@@ -69,6 +75,33 @@ export function DesligamentoRow({ desligamento, updateAction, removeAction, canM
         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${STATUS_STYLE[desligamento.status]}`}>
           {STATUS_LABEL[desligamento.status]}
         </span>
+      </div>
+
+      {/* Entrada da conferência do TRCT — o status acima é o andamento do
+          desligamento; isto é a checagem item a item do que a contabilidade
+          mandou. */}
+      <div className="flex items-center gap-2 mt-2 flex-wrap">
+        <Link
+          href={conferenciaHref}
+          className="inline-flex items-center h-8 px-3 rounded-md border border-border text-[12px] font-medium text-brand hover:bg-brand/8 transition-colors"
+        >
+          Conferência do TRCT
+        </Link>
+        {desligamento.conferencia && (
+          <>
+            <span className="text-[12px] text-fg-muted tnum">{desligamento.conferencia.progressoPct}% tratado</span>
+            {desligamento.conferencia.divergentes > 0 && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-danger/10 text-danger border border-danger/25">
+                {desligamento.conferencia.divergentes} divergência(s)
+              </span>
+            )}
+            {desligamento.conferencia.pendentes > 0 && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-surface-2 text-fg-muted border border-border">
+                {desligamento.conferencia.pendentes} pendente(s)
+              </span>
+            )}
+          </>
+        )}
       </div>
 
       {canManage && (

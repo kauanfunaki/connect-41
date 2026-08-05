@@ -26,6 +26,14 @@ export default async function NovoCargoPage({
   });
   if (!company) notFound();
 
+  // Sugestão de família já usada no tenant — mesma razão da tela de edição.
+  const familias = await prisma.cargo.findMany({
+    where: { tenantId: ctx.tenantId, family: { not: null } },
+    select: { family: true },
+    distinct: ["family"],
+    orderBy: { family: "asc" },
+  });
+
   return (
     <PageContainer>
       <Breadcrumb
@@ -42,7 +50,12 @@ export default async function NovoCargoPage({
 
       <div className="w-full max-w-[720px]">
         <Card className="px-6 py-5">
-          <CargoForm action={criarCargo} companyId={companyId} cancelHref={`/empresas/${companyId}/cargos`} />
+          <CargoForm
+            action={criarCargo}
+            companyId={companyId}
+            cancelHref={`/empresas/${companyId}/cargos`}
+            familiasExistentes={familias.map((f) => f.family!).filter(Boolean)}
+          />
         </Card>
       </div>
     </PageContainer>

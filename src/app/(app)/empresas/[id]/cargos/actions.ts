@@ -6,6 +6,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
+import { CargoSeniority } from "@/generated/prisma/enums";
 
 export type CargoState = { error: string } | null;
 
@@ -14,9 +15,19 @@ function pick(form: FormData, key: string): string | null {
 }
 
 function cargoData(form: FormData) {
+  const seniorityRaw = pick(form, "seniority");
   return {
     name:                   (form.get("name") as string)?.trim(),
     area:                   pick(form, "area"),
+    // Família é normalizada (trim + capitalização preservada) mas não
+    // padronizada por catálogo — a matriz agrupa por texto exato, então a
+    // consistência é responsabilidade de quem cadastra. O relatório de
+    // nomenclatura ajuda a achar divergência.
+    family:                 pick(form, "family"),
+    seniority:
+      seniorityRaw && (Object.values(CargoSeniority) as string[]).includes(seniorityRaw)
+        ? (seniorityRaw as CargoSeniority)
+        : null,
     description:            pick(form, "description"),
     technicalRequirements:  pick(form, "technicalRequirements"),
     behavioralRequirements: pick(form, "behavioralRequirements"),
