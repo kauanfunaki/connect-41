@@ -113,11 +113,78 @@ export function darkenUntilReadableOnWhiteText(background: string): string {
   // 40 passos de 4% cobrem do branco puro até ~19% do valor original, bem além
   // do necessário pra qualquer matiz; o limite existe só pra não iterar solto.
   for (let step = 0; step < 40; step += 1) {
-    const luminance =
-      0.2126 * channelToLinear(current.r) +
-      0.7152 * channelToLinear(current.g) +
-      0.0722 * channelToLinear(current.b);
-    if (contrastRatio(luminance, 1) >= MIN_CONTRAST) break;
+    if (contrastRatio(luminanceOf(current), 1) >= MIN_CONTRAST) break;
+    current = { r: current.r * 0.96, g: current.g * 0.96, b: current.b * 0.96 };
+  }
+
+  return toHex(current);
+}
+
+function luminanceOf({ r, g, b }: Rgb): number {
+  return 0.2126 * channelToLinear(r) + 0.7152 * channelToLinear(g) + 0.0722 * channelToLinear(b);
+}
+
+// ─── Cor de acento escolhida pelo usuário (estágio de lista) ────────────────
+
+// Fundos onde uma cor de acento aparece: `--c41-surface` no tema claro e no
+// escuro. A bolinha de estágio (StageDot) desenha a cor como borda/preenchimento
+// direto sobre eles, sem pílula por trás — então uma cor perto do preto some no
+// tema escuro e uma perto do branco some no claro.
+const SURFACE_LIGHT_LUMINANCE = 1; // #FFFFFF
+const SURFACE_DARK_LUMINANCE = 0.011; // #1C1A22
+
+// Piso de contraste exigido contra os dois fundos.
+//
+// A WCAG pede 3:1 para elemento gráfico, mas 3:1 contra o fundo escuro reprova
+// duas cores da própria paleta do app (#586577, o cinza padrão, fica em 2.90;
+// #4F46E5 em 2.74) — o limiar rígido brigaria com o Design System em vez de
+// corrigir o problema real. 2.5:1 passa toda a paleta atual intacta e ainda
+// barra o que de fato quebra a leitura: preto (1.22 contra o fundo escuro),
+// quase-preto (~1.0) e branco/amarelo puro (~1.0 contra o claro).
+const MIN_ACCENT_CONTRAST = 2.5;
+
+/** A cor é legível sobre a superfície dos dois temas? */
+export function isUsableAccent(color: string): boolean {
+  const luminance = relativeLuminance(color);
+  if (luminance === null) return true; // não-hex: sem o que calcular
+
+  return (
+    contrastRatio(luminance, SURFACE_LIGHT_LUMINANCE) >= MIN_ACCENT_CONTRAST &&
+    contrastRatio(luminance, SURFACE_DARK_LUMINANCE) >= MIN_ACCENT_CONTRAST
+  );
+}
+
+/**
+ * Puxa uma cor de acento para dentro da faixa legível nos dois temas.
+ *
+ * Corrigir em vez de recusar é deliberado: o usuário escolhe no `<input
+ * type="color">` arrastando o cursor, e um "cor inválida" no meio do arrasto é
+ * pior que entregar o tom mais próximo que funciona. Quem escolhe preto recebe
+ * um chumbo; quem escolhe amarelo-limão recebe mostarda — a intenção de matiz
+ * sobrevive, a ilegibilidade não.
+ *
+ * Escurecer multiplica os canais (preserva a matiz); clarear mistura com
+ * branco, porque multiplicar nunca tira o preto puro do lugar.
+ */
+export function normalizeAccentColor(color: string): string {
+  const rgb = parseHexColor(color);
+  if (!rgb) return color;
+
+  let current = rgb;
+
+  // Escura demais para o tema escuro → clareia.
+  for (let step = 0; step < 40; step += 1) {
+    if (contrastRatio(luminanceOf(current), SURFACE_DARK_LUMINANCE) >= MIN_ACCENT_CONTRAST) break;
+    current = {
+      r: current.r + (255 - current.r) * 0.06,
+      g: current.g + (255 - current.g) * 0.06,
+      b: current.b + (255 - current.b) * 0.06,
+    };
+  }
+
+  // Clara demais para o tema claro → escurece.
+  for (let step = 0; step < 40; step += 1) {
+    if (contrastRatio(luminanceOf(current), SURFACE_LIGHT_LUMINANCE) >= MIN_ACCENT_CONTRAST) break;
     current = { r: current.r * 0.96, g: current.g * 0.96, b: current.b * 0.96 };
   }
 

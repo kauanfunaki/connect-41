@@ -17,7 +17,6 @@ const MODULE_ROUTES: Record<string, string> = {
   dprh_avaliacoes:        "/avaliacoes",
   gestao_cargos_salarios: "/cargos-salarios",
   gestao_indicadores_rh:  "/indicadores-rh",
-  bpo_tarefas:            "/bpo-financeiro",
   bpo_senhas:             "/bpo-senhas",
   bpo_manual:             "/bpo-manual",
 };

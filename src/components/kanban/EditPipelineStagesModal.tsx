@@ -7,6 +7,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { StageDot, type StageDotType } from "@/components/kanban/StageDot";
+import { isUsableAccent, normalizeAccentColor } from "@/lib/color";
 import type { EditStagesState, StageInput } from "@/app/(app)/kanban/actions";
 
 const DEFAULT_COLORS = ["#586577", "#2E6FB8", "#C8860D", "#1E8E5A", "#C5374B"];
@@ -31,16 +32,29 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<Row[]>(initialStages);
   const [error, setError] = useState<string | null>(null);
+  const [colorAdjusted, setColorAdjusted] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function openModal() {
     setRows(initialStages);
     setError(null);
+    setColorAdjusted(false);
     setOpen(true);
   }
 
   function update(i: number, patch: Partial<Row>) {
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+  }
+
+  // A bolinha do estágio é desenhada direto sobre a superfície da lista, sem
+  // pílula por trás — cor quase preta some no tema escuro, quase branca some no
+  // claro. Em vez de recusar (o usuário está arrastando o cursor no seletor,
+  // um erro no meio do arrasto só atrapalha), puxa pro tom legível mais
+  // próximo e avisa o que aconteceu.
+  function updateColor(i: number, picked: string) {
+    const safe = normalizeAccentColor(picked);
+    if (!isUsableAccent(picked)) setColorAdjusted(true);
+    update(i, { color: safe });
   }
 
   function addRow() {
@@ -105,7 +119,7 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
                 <input
                   type="color"
                   value={row.color}
-                  onChange={(e) => update(i, { color: e.target.value })}
+                  onChange={(e) => updateColor(i, e.target.value)}
                   className="w-9 h-9 rounded-md border border-border bg-canvas cursor-pointer flex-shrink-0"
                 />
                 <Input
@@ -145,6 +159,13 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
           >
             <Plus size={13} /> Adicionar estágio
           </button>
+
+          {colorAdjusted && (
+            <p className="text-[12px] text-fg-secondary bg-surface-hover border border-border rounded-md px-3 py-2">
+              A cor escolhida foi ajustada para o tom legível mais próximo — cores
+              quase pretas somem no tema escuro e quase brancas somem no claro.
+            </p>
+          )}
 
           {error && <p className="text-[12px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{error}</p>}
 

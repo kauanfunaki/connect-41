@@ -444,8 +444,39 @@ model Tenant {
   bpoCredentialViews       BpoCredentialView[]
   chatwootAgentLinks       ChatwootAgentLink[]
   agentEvaluationSummaries AgentEvaluationSummary[]
+  sectorTaskViews          SectorTaskView[]
 
   @@map("tenants")
+}
+
+// Quais blocos a tela /tarefas monta para cada setor.
+//
+// Diferente da personalização da Home (UserPreference.homeWidgets), que é
+// preferência pessoal e cada um mexe na sua: aqui a configuração é do
+// workspace e só o SUPER_ADMIN edita. A razão é que o conteúdo de /tarefas não
+// é gosto, é a definição do que conta como obrigação daquele setor — hoje todo
+// mundo vê reuniões, transferências e cards de kanban, mas conforme cada setor
+// ganha os próprios módulos, um setor pode não usar nenhum dos três.
+//
+// Ausência de linha = padrão do catálogo (tudo visível), então um setor novo
+// nasce funcionando sem ninguém precisar configurar nada. Quem pertence a mais
+// de um setor vê a UNIÃO dos blocos dos seus setores.
+model SectorTaskView {
+  id         String   @id @default(uuid())
+  tenantId   String
+  sectorCode String   @db.VarChar(40)
+  // JSON com as chaves visíveis, ex. ["transferencias","reunioes"]. Texto e
+  // não tabela de junção pelo mesmo motivo de homeWidgets: o catálogo vive em
+  // código, e chave desconhecida é descartada na leitura.
+  widgets    String   @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, sectorCode])
+  @@index([tenantId])
+  @@map("sector_task_views")
 }
 
 // Acesso de um SUPER_ADMIN a um tenant além do seu próprio (User.tenantId) —

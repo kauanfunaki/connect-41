@@ -29,7 +29,7 @@ type Props = {
   items: Item[];
   moveAction: (itemId: string, newStageId: string) => Promise<void>;
   /** Base do link do card — default `/kanban/{pipelineId}`. Setores com módulo
-   * dedicado (ex. BPO em /bpo-financeiro) passam a própria base aqui. */
+   * dedicado passariam a própria base aqui — hoje não há nenhum. */
   basePath?: string;
 };
 

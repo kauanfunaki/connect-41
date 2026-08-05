@@ -36,7 +36,7 @@ export function CompanyHistorySection({ pipelineItems, activities, entityLabel =
             {pipelineItems.map((p) => (
               <Link
                 key={p.id}
-                href={`${boardPath({ id: p.pipelineId, sectorCode: p.pipelineSectorCode })}/itens/${p.id}`}
+                href={`${boardPath({ id: p.pipelineId })}/itens/${p.id}`}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[length:var(--fs-helper)] font-medium bg-surface-hover border border-border text-fg-secondary hover:text-fg hover:border-border-strong transition-colors"
               >
                 {p.pipelineName}

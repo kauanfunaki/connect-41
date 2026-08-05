@@ -5,7 +5,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ListsTable, type ListRow } from "@/components/kanban/ListsTable";
 import { NewListButton } from "@/components/kanban/NewListButton";
-import { criarListaSimples } from "@/app/(app)/kanban/spaces-actions";
+import { criarListaSimples, excluirLista } from "@/app/(app)/kanban/spaces-actions";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canManageSector, canViewSector } from "@/lib/auth/context";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
@@ -25,8 +25,7 @@ function toListRow(p: {
   };
 }
 
-// Equivalente genérico de src/app/(app)/bpo-financeiro/pastas/[folderId]/page.tsx
-// para setores sem módulo dedicado.
+// Pasta de um Espaço, para qualquer setor (a rota dedicada do BPO saiu em 2026-08-05).
 export default async function SectorFolderPage({ params }: { params: Promise<{ code: string; folderId: string }> }) {
   const { code, folderId } = await params;
   const ctx = await getAuthContext();
@@ -83,7 +82,11 @@ export default async function SectorFolderPage({ params }: { params: Promise<{ c
             <EmptyState title="Nenhuma lista nesta pasta ainda" description="Crie a primeira lista pra começar a organizar as tarefas." />
           </div>
         ) : (
-          <ListsTable lists={lists.map(toListRow)} basePath="/kanban" />
+          <ListsTable
+            lists={lists.map(toListRow)}
+            basePath="/kanban"
+            deleteAction={canCreate ? excluirLista : undefined}
+          />
         )}
       </div>
     </PageContainer>

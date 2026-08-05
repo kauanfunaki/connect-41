@@ -8,7 +8,7 @@ import { BoardView } from "@/components/kanban/BoardView";
 import { DuplicatePipelineButton } from "@/components/kanban/DuplicatePipelineButton";
 import { EditPipelineStagesModal } from "@/components/kanban/EditPipelineStagesModal";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { moverItem, reordenarItem, duplicarPipeline, renomearEstagio, atualizarEstagios, criarTarefaRapida, atualizarPrioridadeResponsavel, concluirTarefa, reabrirTarefa } from "../actions";
+import { moverItem, reordenarItem, duplicarPipeline, renomearEstagio, atualizarEstagios, criarTarefaRapida, atualizarPrioridadeResponsavel, concluirTarefa, reabrirTarefa, excluirItem } from "../actions";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedPipelineWhere, scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
 
@@ -220,6 +220,7 @@ export default async function KanbanBoardPage({
           priorityAction={atualizarPrioridadeResponsavel.bind(null, id)}
           concluirAction={concluirTarefa}
           reabrirAction={reabrirTarefa}
+          deleteAction={canAddItem ? excluirItem.bind(null, id) : undefined}
         />
       </div>
     </PageContainer>

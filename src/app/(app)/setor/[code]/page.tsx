@@ -22,11 +22,11 @@ import { getAuthContext, canViewSector, canManageSector } from "@/lib/auth/conte
 import { getTenantModuleStates } from "@/lib/modules";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getPrisma } from "@/lib/prisma";
-import { hasDedicatedRoute } from "@/lib/kanbanPaths";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { NewSpaceButton } from "@/components/kanban/NewSpaceButton";
-import { criarEspaco } from "@/app/(app)/kanban/spaces-actions";
+import { DeleteEntityMenu } from "@/components/kanban/DeleteEntityMenu";
+import { criarEspaco, excluirEspaco } from "@/app/(app)/kanban/spaces-actions";
 
 // Ícone por módulo — identidade visual dos cards do hub setorial.
 const MODULE_ICONS: Record<string, React.ReactNode> = {
@@ -64,11 +64,6 @@ export default async function SectorHubPage({
       include: { _count: { select: { pipelines: true, folders: true } } },
     }),
   ]);
-
-  // Setores com módulo dedicado (ex. BPO) usam as próprias rotas de
-  // Espaço/Pasta (com o basePath correto pras Listas); os demais usam a
-  // rota genérica de setor.
-  const spacesBasePath = hasDedicatedRoute(code) ? "/bpo-financeiro" : `/setor/${code}`;
 
   const modules = allModules.filter((m) => m.sectorCode === code && m.enabled);
   const sectorColor = sectorColors[code] ?? "#586577";
@@ -133,20 +128,31 @@ export default async function SectorHubPage({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {spaces.map((s, i) => (
-              <Link
+              // O menu "…" é irmão do <Link>, não filho: <button> dentro de <a>
+              // é inválido e o clique navegaria junto.
+              <div
                 key={s.id}
-                href={`${spacesBasePath}/espacos/${s.id}`}
                 style={{ animationDelay: `${Math.min(i, 8) * 35}ms` }}
-                className="reveal-in bg-surface border border-border rounded-lg p-4 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform]"
+                className="reveal-in relative"
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: s.color }} />
-                  <p className="text-[13px] font-medium text-fg">{s.name}</p>
-                </div>
-                <p className="text-[12px] text-fg-muted">
-                  {s._count.folders} {s._count.folders === 1 ? "pasta" : "pastas"} · {s._count.pipelines} {s._count.pipelines === 1 ? "lista" : "listas"}
-                </p>
-              </Link>
+                <Link
+                  href={`/setor/${code}/espacos/${s.id}`}
+                  className="block bg-surface border border-border rounded-lg p-4 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform]"
+                >
+                  <div className="flex items-center gap-2 mb-1 pr-6">
+                    <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: s.color }} />
+                    <p className="text-[13px] font-medium text-fg">{s.name}</p>
+                  </div>
+                  <p className="text-[12px] text-fg-muted">
+                    {s._count.folders} {s._count.folders === 1 ? "pasta" : "pastas"} · {s._count.pipelines} {s._count.pipelines === 1 ? "lista" : "listas"}
+                  </p>
+                </Link>
+                {canCreateSpace && (
+                  <div className="absolute top-2.5 right-2.5">
+                    <DeleteEntityMenu kind="espaço" name={s.name} action={excluirEspaco.bind(null, s.id)} />
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )}

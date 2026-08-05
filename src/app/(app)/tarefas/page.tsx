@@ -4,7 +4,10 @@ import { ArrowRightLeft, Columns3, ListTodo, Video } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullAccess } from "@/lib/auth/context";
 import { scopedPipelineWhere } from "@/lib/auth/scope";
-import { getSectorMaps } from "@/lib/sectors";
+import { getSectorMaps, getActiveSectors } from "@/lib/sectors";
+import { parseTaskWidgets, visibleTaskWidgets, type TaskWidgetKey } from "@/lib/taskWidgets";
+import { ConfigurarTarefasButton } from "@/components/tarefas/ConfigurarTarefasButton";
+import { salvarWidgetsSetor, restaurarWidgetsSetor } from "./actions";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Badge } from "@/components/ui/Badge";
 import { SectorChip } from "@/components/ui/SectorChip";
@@ -21,14 +24,38 @@ import { boardPath } from "@/lib/kanbanPaths";
 
 const PRIORITY_ORDER: Record<HandoffPriority, number> = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
 
-// Tela de Tarefas: as obrigações de quem está logado, num lugar só —
-// instruções de transferência do(s) seu(s) setor(es), cards de kanban
-// atribuídos a você e as próximas reuniões. Primeiro passo da reformulação
-// do Kanban em "Tarefas" (a visão de quadros continua em /kanban).
+// Tela de Tarefas: as obrigações de quem está logado, num lugar só.
+//
+// QUAIS blocos aparecem é configurado pelo SUPER_ADMIN, por setor
+// (SectorTaskView / src/lib/taskWidgets.ts). Transferências, cards de kanban e
+// reuniões servem todo mundo hoje, mas deixam de descrever o trabalho de um
+// setor assim que ele ganha módulos próprios — daí a tela não ser fixa. Setor
+// sem configuração mostra tudo, e quem está em mais de um setor vê a união.
 export default async function TarefasPage() {
   const ctx = await getAuthContext();
   const prisma = getPrisma();
-  const { labels: sectorLabels, colors: sectorColors } = await getSectorMaps(ctx.tenantId);
+  const [{ labels: sectorLabels, colors: sectorColors }, taskViews] = await Promise.all([
+    getSectorMaps(ctx.tenantId),
+    prisma.sectorTaskView.findMany({
+      where: { tenantId: ctx.tenantId },
+      select: { sectorCode: true, widgets: true },
+    }),
+  ]);
+
+  const configBySector: Record<string, TaskWidgetKey[]> = {};
+  for (const v of taskViews) configBySector[v.sectorCode] = parseTaskWidgets(v.widgets);
+
+  const visiveis = new Set(visibleTaskWidgets(ctx.sectors, configBySector));
+  const mostraTransferencias = visiveis.has("transferencias");
+  const mostraCards = visiveis.has("cards-kanban");
+  const mostraReunioes = visiveis.has("reunioes");
+
+  // Só o SUPER_ADMIN configura — o gate de verdade está na action; esconder o
+  // botão é só para não oferecer o que vai ser recusado.
+  const podeConfigurar = ctx.role === "SUPER_ADMIN";
+  const setoresParaConfigurar = podeConfigurar
+    ? (await getActiveSectors(ctx.tenantId)).map((s) => ({ code: s.code, label: s.label }))
+    : [];
 
   // Instruções de transferência em aberto que são responsabilidade minha:
   // - colaborador: as designadas pra mim;
@@ -44,27 +71,31 @@ export default async function TarefasPage() {
         }
       : { tenantId: ctx.tenantId, status: { not: "DONE" }, assignees: { some: { userId: ctx.userId } } };
 
+  // Bloco escondido não consulta o banco: a configuração do setor deixa de ser
+  // só visual e vira menos trabalho por request.
   const now = new Date();
   const [instrucoesRaw, meusCards, reunioes] = await Promise.all([
-    prisma.handoffSector.findMany({
-      where: instrucaoWhere,
-      include: {
-        assignees: { include: { user: { select: { name: true } } } },
-        handoff: {
-          select: {
-            id: true,
-            fromSector: true,
-            priority: true,
-            message: true,
-            entityType: true,
-            entityId: true,
-            createdAt: true,
-            requester: { select: { name: true } },
+    mostraTransferencias
+      ? prisma.handoffSector.findMany({
+          where: instrucaoWhere,
+          include: {
+            assignees: { include: { user: { select: { name: true } } } },
+            handoff: {
+              select: {
+                id: true,
+                fromSector: true,
+                priority: true,
+                message: true,
+                entityType: true,
+                entityId: true,
+                createdAt: true,
+                requester: { select: { name: true } },
+              },
+            },
           },
-        },
-      },
-    }),
-    ctx.userId
+        })
+      : Promise.resolve([]),
+    mostraCards && ctx.userId
       ? prisma.pipelineItem.findMany({
           where: {
             tenantId: ctx.tenantId,
@@ -85,7 +116,7 @@ export default async function TarefasPage() {
           },
         })
       : Promise.resolve([]),
-    ctx.userId
+    mostraReunioes && ctx.userId
       ? prisma.meeting.findMany({
           where: {
             tenantId: ctx.tenantId,
@@ -129,17 +160,40 @@ export default async function TarefasPage() {
     <PageContainer>
       <PageHeader
         title="Tarefas"
-        subtitle="Suas obrigações em aberto: transferências, cards de kanban e reuniões"
-        action={<><Link
-          href="/kanban"
-          className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md border border-border text-[13px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors"
-        >
-          <Columns3 size={14} /> Ver quadros
-        </Link></>}
+        subtitle="Suas obrigações em aberto, conforme o que cada setor acompanha aqui"
+        action={
+          <div className="flex items-center gap-2">
+            {podeConfigurar && (
+              <ConfigurarTarefasButton
+                sectors={setoresParaConfigurar}
+                configBySector={configBySector}
+                saveAction={salvarWidgetsSetor}
+                resetAction={restaurarWidgetsSetor}
+              />
+            )}
+            <Link
+              href="/kanban"
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md border border-border text-[13px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors"
+            >
+              <Columns3 size={14} /> Ver quadros
+            </Link>
+          </div>
+        }
       />
+
+      {visiveis.size === 0 ? (
+        <div className="bg-surface border border-border rounded-lg p-5">
+          <EmptyState
+            icon={<ListTodo />}
+            title="Nada configurado para o seu setor"
+            description="O super admin ainda não definiu quais obrigações aparecem aqui para o seu setor."
+          />
+        </div>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-[1.7fr_1fr] gap-4">
         <div className="flex flex-col gap-4 min-w-0">
           {/* Transferências sob minha responsabilidade */}
+          {mostraTransferencias && (
           <div className="bg-surface border border-border rounded-lg p-5">
             <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5 flex items-center gap-2">
               <ArrowRightLeft size={15} className="text-fg-muted" /> Transferências em aberto
@@ -188,8 +242,10 @@ export default async function TarefasPage() {
               </div>
             )}
           </div>
+          )}
 
           {/* Cards de kanban atribuídos a mim */}
+          {mostraCards && (
           <div className="bg-surface border border-border rounded-lg p-5">
             <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5 flex items-center gap-2">
               <Columns3 size={15} className="text-fg-muted" /> Meus cards de kanban
@@ -201,7 +257,7 @@ export default async function TarefasPage() {
                 {meusCards.map((c) => (
                   <Link
                     key={c.id}
-                    href={`${boardPath({ id: c.pipelineId, sectorCode: c.pipeline.sectorCode })}/itens/${c.id}`}
+                    href={`${boardPath({ id: c.pipelineId })}/itens/${c.id}`}
                     className="flex items-center justify-between gap-3 py-2 group"
                   >
                     <span className="text-[length:var(--fs-body)] text-fg group-hover:text-brand transition-colors truncate min-w-0">
@@ -221,9 +277,11 @@ export default async function TarefasPage() {
               </div>
             )}
           </div>
+          )}
         </div>
 
         {/* Próximas reuniões */}
+        {mostraReunioes && (
         <div className="bg-surface border border-border rounded-lg p-5 h-fit">
           <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5 flex items-center gap-2">
             <Video size={15} className="text-fg-muted" /> Próximas reuniões
@@ -253,7 +311,9 @@ export default async function TarefasPage() {
             </div>
           )}
         </div>
+        )}
       </div>
+      )}
     </PageContainer>
   );
 }

@@ -429,7 +429,7 @@ export default async function HomePage() {
               return (
                 <Link
                   key={item.id}
-                  href={`${boardPath({ id: item.pipelineId, sectorCode: item.pipeline.sectorCode })}/itens/${item.id}`}
+                  href={`${boardPath({ id: item.pipelineId })}/itens/${item.id}`}
                   className="flex items-center justify-between gap-3 py-2 group"
                 >
                   <span className="text-[length:var(--fs-body)] text-fg group-hover:text-brand transition-colors truncate min-w-0">
@@ -545,7 +545,7 @@ export default async function HomePage() {
         ) : (
           <div className="space-y-3">
             {activityGroups.map((g) => (
-              <Link key={g.id} href={`${boardPath({ id: g.pipelineId, sectorCode: g.pipelineSectorCode })}/itens/${g.pipelineItemId}`} className="flex items-start gap-2.5 group">
+              <Link key={g.id} href={`${boardPath({ id: g.pipelineId })}/itens/${g.pipelineItemId}`} className="flex items-start gap-2.5 group">
                 <span className="w-6 h-6 rounded-full bg-brand-subtle text-brand text-[10px] font-semibold flex items-center justify-center flex-shrink-0 mt-0.5">
                   {g.userName.trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join("").toUpperCase()}
                 </span>

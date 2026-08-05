@@ -7,7 +7,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ListsTable, type ListRow } from "@/components/kanban/ListsTable";
 import { NewFolderButton } from "@/components/kanban/NewFolderButton";
 import { NewListButton } from "@/components/kanban/NewListButton";
-import { criarPasta, criarListaSimples } from "@/app/(app)/kanban/spaces-actions";
+import { DeleteEntityMenu } from "@/components/kanban/DeleteEntityMenu";
+import { criarPasta, criarListaSimples, excluirPasta, excluirLista } from "@/app/(app)/kanban/spaces-actions";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canManageSector, canViewSector } from "@/lib/auth/context";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
@@ -27,8 +28,9 @@ function toListRow(p: {
   };
 }
 
-// Equivalente genérico de src/app/(app)/bpo-financeiro/espacos/[spaceId]/page.tsx
-// para setores sem módulo dedicado — Listas aqui abrem no /kanban/{id} comum.
+// Espaço de um setor: Pastas + Listas soltas. Listas abrem no /kanban/{id}.
+// Foi o "equivalente genérico" do Espaço do BPO até 2026-08-05, quando a rota
+// dedicada /bpo-financeiro saiu e esta passou a atender todos os setores.
 export default async function SectorSpacePage({ params }: { params: Promise<{ code: string; spaceId: string }> }) {
   const { code, spaceId } = await params;
   const ctx = await getAuthContext();
@@ -95,17 +97,23 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {folders.map((f) => (
-              <Link
-                key={f.id}
-                href={`/setor/${code}/pastas/${f.id}`}
-                className="flex items-center gap-2.5 bg-surface border border-border rounded-lg px-4 py-3 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform]"
-              >
-                <FolderIcon size={16} className="text-fg-muted flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-[13px] font-medium text-fg truncate">{f.name}</p>
-                  <p className="text-[11px] text-fg-muted">{f._count.pipelines} {f._count.pipelines === 1 ? "lista" : "listas"}</p>
-                </div>
-              </Link>
+              <div key={f.id} className="relative">
+                <Link
+                  href={`/setor/${code}/pastas/${f.id}`}
+                  className="flex items-center gap-2.5 bg-surface border border-border rounded-lg px-4 py-3 pr-10 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform]"
+                >
+                  <FolderIcon size={16} className="text-fg-muted flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-medium text-fg truncate">{f.name}</p>
+                    <p className="text-[11px] text-fg-muted">{f._count.pipelines} {f._count.pipelines === 1 ? "lista" : "listas"}</p>
+                  </div>
+                </Link>
+                {canCreate && (
+                  <div className="absolute top-1/2 -translate-y-1/2 right-2.5">
+                    <DeleteEntityMenu kind="pasta" name={f.name} action={excluirPasta.bind(null, f.id)} />
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )}
@@ -118,7 +126,11 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
             <EmptyState title="Nenhuma lista solta neste espaço" description="Listas fora de pasta aparecem aqui." />
           </div>
         ) : (
-          <ListsTable lists={looseLists.map(toListRow)} basePath="/kanban" />
+          <ListsTable
+            lists={looseLists.map(toListRow)}
+            basePath="/kanban"
+            deleteAction={canCreate ? excluirLista : undefined}
+          />
         )}
       </div>
     </PageContainer>
