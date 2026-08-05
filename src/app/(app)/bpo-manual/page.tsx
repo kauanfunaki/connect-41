@@ -20,7 +20,7 @@ const SECTOR = "bpo";
 // Manual/Instruções internas do BPO — biblioteca em dois níveis (Documento >
 // Página) escrita pelos próprios colaboradores (não upload de arquivo) pra
 // alinhamento em caso de ausência/férias de alguém. Módulo próprio, ao lado
-// de /bpo-financeiro (Tarefas do BPO) e /bpo-senhas (Repositório de Senhas).
+// dos Espaços do setor em /setor/bpo e de /bpo-senhas (Repositório de Senhas).
 export default async function BpoManualPage() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !canActOnSector(ctx, SECTOR)) notFound();

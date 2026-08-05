@@ -89,13 +89,6 @@ export const MODULE_CATALOG: ModuleDef[] = [
     defaultEnabled: true,
   },
   {
-    code: "bpo_tarefas",
-    label: "Tarefas do BPO",
-    sectorCode: "bpo",
-    description: "Quadro dedicado do BPO Financeiro — fechamento por competência, carteira de clientes e pendências",
-    defaultEnabled: true,
-  },
-  {
     code: "bpo_senhas",
     label: "Repositório de Senhas",
     sectorCode: "bpo",

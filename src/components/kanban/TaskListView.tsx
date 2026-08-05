@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { StageDot, type StageDotType } from "@/components/kanban/StageDot";
 import { darkenUntilReadableOnWhiteText } from "@/lib/color";
+import { RowActionsMenu } from "@/components/kanban/RowActionsMenu";
 
 export type AssigneeRow = { id: string; name: string; priority: number };
 export type SubtaskRow = {
@@ -46,6 +47,9 @@ type Props = {
   reorderAction: (itemId: string, direction: "up" | "down") => Promise<void>;
   concluirAction: (pipelineId: string, itemId: string) => Promise<void>;
   reabrirAction: (pipelineId: string, itemId: string) => Promise<void>;
+  /** Exclui a tarefa (ou subtarefa — subtarefa cai em cascata pelo parentItemId).
+   * Ausente = sem opção de excluir, para quem não administra o setor. */
+  deleteAction?: (itemId: string) => Promise<void>;
 };
 
 // Escala de indentação da árvore. Antes só existia `depth * 20` aplicado aos
@@ -119,7 +123,7 @@ function AssigneeAvatar({ a, itemId, canAct, priorityAction }: { a: AssigneeRow;
 }
 
 function Row({
-  item, basePath, depth = 0, canAct, priorityAction, pipelineId, concluirAction, reabrirAction, stages, dragId, onDragStartRow, onDragEndRow, onDropOnRow,
+  item, basePath, depth = 0, canAct, priorityAction, pipelineId, concluirAction, reabrirAction, stages, deleteAction, dragId, onDragStartRow, onDragEndRow, onDropOnRow,
 }: {
   item: TaskRow | SubtaskRow;
   basePath: string;
@@ -130,6 +134,7 @@ function Row({
   concluirAction: Props["concluirAction"];
   reabrirAction: Props["reabrirAction"];
   stages: StageOption[];
+  deleteAction?: Props["deleteAction"];
   dragId: string | null;
   onDragStartRow: (id: string) => void;
   onDragEndRow: () => void;
@@ -244,13 +249,22 @@ function Row({
           )}
         </td>
 
-        <td className="py-2 pr-2 w-24 text-right">
-          {dueDate && (
-            <span className={`inline-flex items-center gap-1 text-[11px] tnum ${isOverdue(dueDate) ? "text-danger font-semibold" : "text-fg-muted"}`}>
-              {item.recurring && <Repeat size={10} />}
-              {formatCalendarDate(new Date(dueDate), { day: "2-digit", month: "short" })}
-            </span>
-          )}
+        {/* Prazo e menu dividem a última célula de propósito: as tabelas desta
+            tela declaram colSpan={5} em vários pontos (cabeçalho de status,
+            alvo de soltar, "+ Adicionar Tarefa"), e uma 6ª coluna obrigaria a
+            revisar todos eles para ganhar 24px. */}
+        <td className="py-2 pr-2 w-28 text-right">
+          <div className="flex items-center justify-end gap-1">
+            {dueDate && (
+              <span className={`inline-flex items-center gap-1 text-[11px] tnum ${isOverdue(dueDate) ? "text-danger font-semibold" : "text-fg-muted"}`}>
+                {item.recurring && <Repeat size={10} />}
+                {formatCalendarDate(new Date(dueDate), { day: "2-digit", month: "short" })}
+              </span>
+            )}
+            {canAct && deleteAction && (
+              <RowActionsMenu name={item.entityName} onDelete={() => deleteAction(item.id)} />
+            )}
+          </div>
         </td>
       </tr>
 
@@ -266,6 +280,7 @@ function Row({
           concluirAction={concluirAction}
           reabrirAction={reabrirAction}
           stages={stages}
+          deleteAction={deleteAction}
           dragId={dragId}
           onDragStartRow={onDragStartRow}
           onDragEndRow={onDragEndRow}
@@ -281,7 +296,7 @@ function Row({
 // dispara em touch), então mover de estágio aqui é um select — é o que
 // substitui o drag-and-drop da tabela, não um extra.
 function TaskCard({
-  item, basePath, depth = 0, canAct, priorityAction, pipelineId, concluirAction, reabrirAction, stages, moveAction,
+  item, basePath, depth = 0, canAct, priorityAction, pipelineId, concluirAction, reabrirAction, stages, moveAction, deleteAction,
 }: {
   item: TaskRow | SubtaskRow;
   basePath: string;
@@ -293,6 +308,7 @@ function TaskCard({
   reabrirAction: Props["reabrirAction"];
   stages: StageOption[];
   moveAction: Props["moveAction"];
+  deleteAction?: Props["deleteAction"];
 }) {
   const [expanded, setExpanded] = useState(false);
   const [, startTransition] = useTransition();
@@ -346,6 +362,10 @@ function TaskCard({
               </span>
               <ChevronRight size={14} className={`transition-transform ${expanded ? "rotate-90" : ""}`} />
             </button>
+          )}
+
+          {canAct && deleteAction && (
+            <RowActionsMenu name={item.entityName} onDelete={() => deleteAction(item.id)} />
           )}
         </div>
 
@@ -409,6 +429,7 @@ function TaskCard({
           reabrirAction={reabrirAction}
           stages={stages}
           moveAction={moveAction}
+          deleteAction={deleteAction}
         />
       ))}
     </>
@@ -525,7 +546,7 @@ function AddTaskInline({ stageId, createTaskAction }: { stageId: string; createT
 }
 
 function StageGroup({
-  stage, items, basePath, canAct, renameStageAction, createTaskAction, priorityAction, pipelineId, concluirAction, reabrirAction, stages,
+  stage, items, basePath, canAct, renameStageAction, createTaskAction, priorityAction, pipelineId, concluirAction, reabrirAction, stages, deleteAction,
   dragId, onDragStartRow, onDragEndRow, onDropStage, onDropOnRow,
 }: {
   stage: StageOption;
@@ -539,6 +560,7 @@ function StageGroup({
   concluirAction: Props["concluirAction"];
   reabrirAction: Props["reabrirAction"];
   stages: StageOption[];
+  deleteAction?: Props["deleteAction"];
   dragId: string | null;
   onDragStartRow: (id: string) => void;
   onDragEndRow: () => void;
@@ -585,6 +607,7 @@ function StageGroup({
               concluirAction={concluirAction}
               reabrirAction={reabrirAction}
               stages={stages}
+              deleteAction={deleteAction}
               dragId={dragId}
               onDragStartRow={onDragStartRow}
               onDragEndRow={onDragEndRow}
@@ -614,7 +637,7 @@ function StageGroup({
 }
 
 function StageGroupCards({
-  stage, items, basePath, canAct, renameStageAction, createTaskAction, priorityAction, pipelineId, concluirAction, reabrirAction, stages, moveAction,
+  stage, items, basePath, canAct, renameStageAction, createTaskAction, priorityAction, pipelineId, concluirAction, reabrirAction, stages, moveAction, deleteAction,
 }: {
   stage: StageOption;
   items: TaskRow[];
@@ -628,6 +651,7 @@ function StageGroupCards({
   reabrirAction: Props["reabrirAction"];
   stages: StageOption[];
   moveAction: Props["moveAction"];
+  deleteAction?: Props["deleteAction"];
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -658,6 +682,7 @@ function StageGroupCards({
               reabrirAction={reabrirAction}
               stages={stages}
               moveAction={moveAction}
+              deleteAction={deleteAction}
             />
           ))}
 
@@ -687,7 +712,7 @@ const MAX_SCROLL_SPEED = 18;
 // fixas somavam ~340px de largura reservada e esmagavam o título no celular.
 // Os cards perdem o drag-and-drop — que já não funcionava no toque — e ganham
 // um select de status no lugar.
-export function TaskListView({ basePath, pipelineId, stages, items, canAct, renameStageAction, createTaskAction, priorityAction, moveAction, reorderAction, concluirAction, reabrirAction }: Props) {
+export function TaskListView({ basePath, pipelineId, stages, items, canAct, renameStageAction, createTaskAction, priorityAction, moveAction, reorderAction, concluirAction, reabrirAction, deleteAction }: Props) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -805,6 +830,7 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
             reabrirAction={reabrirAction}
             stages={stages}
             moveAction={moveAction}
+            deleteAction={deleteAction}
           />
         ))}
       </div>
@@ -820,7 +846,7 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
             <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-surface pt-2 pb-1.5 px-2 border-b border-border">Tarefa</th>
             <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-surface pt-2 pb-1.5 px-2 w-44 border-b border-border">Tags</th>
             <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-surface pt-2 pb-1.5 px-2 w-24 border-b border-border">Responsáveis</th>
-            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-surface pt-2 pb-1.5 px-2 w-24 text-right border-b border-border">Prazo</th>
+            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-surface pt-2 pb-1.5 px-2 w-28 text-right border-b border-border">Prazo</th>
           </tr>
         </thead>
         {byStage.map(({ stage, items: stageItems }) => (
@@ -837,6 +863,7 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
             concluirAction={concluirAction}
             reabrirAction={reabrirAction}
             stages={stages}
+            deleteAction={deleteAction}
             dragId={dragId}
             onDragStartRow={setDragId}
             onDragEndRow={() => setDragId(null)}

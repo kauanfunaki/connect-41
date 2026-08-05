@@ -6,6 +6,7 @@ import type { PipelineState } from "@/app/(app)/kanban/actions";
 import { CampoForm as Field } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { normalizeAccentColor } from "@/lib/color";
 
 const DEFAULT_COLORS = ["#586577", "#2E6FB8", "#C8860D", "#1E8E5A", "#C5374B"];
 
@@ -94,7 +95,7 @@ export function PipelineForm({ action, sectorOptions }: Props) {
                 type="color"
                 name="stageColor"
                 value={stage.color}
-                onChange={(e) => updateStage(i, "color", e.target.value)}
+                onChange={(e) => updateStage(i, "color", normalizeAccentColor(e.target.value))}
                 className="w-9 h-9 rounded-md border border-border bg-canvas cursor-pointer flex-shrink-0"
               />
               <div className="flex-1">

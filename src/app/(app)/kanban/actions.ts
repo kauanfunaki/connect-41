@@ -10,6 +10,7 @@ import { boardPath } from "@/lib/kanbanPaths";
 import { findMentionedUserIds } from "@/lib/handoffMentions";
 import { notifyUser } from "@/lib/notifications";
 import { sanitizeDocumentHtml } from "@/lib/clientDocuments";
+import { normalizeAccentColor } from "@/lib/color";
 
 export type PipelineState = { error: string } | null;
 
@@ -50,7 +51,7 @@ export async function criarPipeline(
   const stageNames = form.getAll("stageName") as string[];
   const stageColors = form.getAll("stageColor") as string[];
   const stages = stageNames
-    .map((n, i) => ({ name: n.trim(), color: stageColors[i] || null }))
+    .map((n, i) => ({ name: n.trim(), color: stageColors[i] ? normalizeAccentColor(stageColors[i]) : null }))
     .filter((s) => s.name);
 
   if (stages.length === 0) return { error: "Adicione ao menos um estágio" };
@@ -93,7 +94,7 @@ export async function criarPipeline(
     return { error: "Erro ao criar kanban. Tente novamente." };
   }
 
-  redirect(boardPath({ id, sectorCode }));
+  redirect(boardPath({ id }));
 }
 
 export async function criarItem(
@@ -232,7 +233,12 @@ export async function atualizarEstagios(pipelineId: string, stages: StageInput[]
   const { tenantId } = ctx;
   if (!tenantId) return { error: "Não autenticado" };
 
-  const cleaned = stages.map((s) => ({ ...s, name: s.name.trim() })).filter((s) => s.name);
+  // A cor passa pela guarda de contraste aqui, não só no modal: o modal corrige
+  // enquanto o usuário escolhe, mas a action é o que de fato grava — e ela
+  // também atende o board, onde a cor pode chegar por outro caminho.
+  const cleaned = stages
+    .map((s) => ({ ...s, name: s.name.trim(), color: normalizeAccentColor(s.color) }))
+    .filter((s) => s.name);
   if (cleaned.length === 0) return { error: "Adicione ao menos um estágio" };
 
   const prisma = getPrisma();
@@ -1474,7 +1480,7 @@ export async function duplicarPipeline(
     return { error: "Erro ao duplicar kanban. Tente novamente." };
   }
 
-  redirect(boardPath({ id: newPipelineId, sectorCode: source.sectorCode }));
+  redirect(boardPath({ id: newPipelineId }));
 }
 
 // Documentos (canvas) por tarefa — removido em 2026-07-24, virou módulo

@@ -3,6 +3,8 @@ import {
   contrastRatio,
   contrastWithWhite,
   darkenUntilReadableOnWhiteText,
+  isUsableAccent,
+  normalizeAccentColor,
   parseHexColor,
   readableTextOn,
   relativeLuminance,
@@ -130,5 +132,61 @@ describe("darkenUntilReadableOnWhiteText", () => {
 
   it("cai no texto claro quando a cor não é hex", () => {
     expect(readableTextOn("var(--c41-fg-muted)")).toBe(LIGHT_TEXT);
+  });
+});
+
+describe("normalizeAccentColor / isUsableAccent", () => {
+  // Toda cor que o app já usa como estágio ou setor tem que sobreviver intacta —
+  // se a guarda mexesse nelas, ela estaria brigando com o Design System em vez
+  // de proteger o usuário de si mesmo.
+  const PALETA_DO_APP = [
+    "#586577", "#2E6FB8", "#C8860D", "#1E8E5A", "#C5374B",
+    "#2563EB", "#CA8A04", "#059669", "#7C5CBF", "#0E9384",
+    "#4F46E5", "#B7791F", "#E15A2B", "#0891B2",
+  ];
+
+  it("não altera nenhuma cor da paleta do app", () => {
+    for (const cor of PALETA_DO_APP) {
+      expect(isUsableAccent(cor)).toBe(true);
+      expect(normalizeAccentColor(cor)).toBe(cor.toUpperCase());
+    }
+  });
+
+  it("reprova e clareia cores escuras demais para o tema escuro", () => {
+    for (const cor of ["#000000", "#111111", "#16181D", "#1A2340"]) {
+      expect(isUsableAccent(cor)).toBe(false);
+      const corrigida = normalizeAccentColor(cor);
+      expect(corrigida).not.toBe(cor);
+      expect(isUsableAccent(corrigida)).toBe(true);
+    }
+  });
+
+  it("reprova e escurece cores claras demais para o tema claro", () => {
+    for (const cor of ["#FFFFFF", "#FFFF00", "#F0FFF4"]) {
+      expect(isUsableAccent(cor)).toBe(false);
+      const corrigida = normalizeAccentColor(cor);
+      expect(corrigida).not.toBe(cor);
+      expect(isUsableAccent(corrigida)).toBe(true);
+    }
+  });
+
+  // Um azul-marinho quase preto deve sair azul, não cinza — a correção só
+  // levanta a luminância, não descarta a escolha do usuário.
+  it("preserva a matiz ao clarear", () => {
+    const azul = parseHexColor(normalizeAccentColor("#050A2E"))!;
+    expect(azul.b).toBeGreaterThan(azul.r);
+    expect(azul.b).toBeGreaterThan(azul.g);
+  });
+
+  it("é idempotente", () => {
+    for (const cor of ["#000000", "#FFFF00", "#586577"]) {
+      const uma = normalizeAccentColor(cor);
+      expect(normalizeAccentColor(uma)).toBe(uma);
+    }
+  });
+
+  it("devolve a entrada quando não é hex", () => {
+    expect(normalizeAccentColor("var(--c41-fg-muted)")).toBe("var(--c41-fg-muted)");
+    expect(isUsableAccent("var(--c41-fg-muted)")).toBe(true);
   });
 });

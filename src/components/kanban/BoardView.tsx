@@ -31,6 +31,8 @@ type Props = {
   priorityAction: (itemId: string, userId: string, priority: number) => Promise<void>;
   concluirAction: (pipelineId: string, itemId: string) => Promise<void>;
   reabrirAction: (pipelineId: string, itemId: string) => Promise<void>;
+  /** Só a visão de lista oferece excluir; o quadro Kanban continua sem. */
+  deleteAction?: (itemId: string) => Promise<void>;
 };
 
 const PRIORITY_LABEL: Record<string, string> = { "": "Toda prioridade", "0": "Normal", "1": "Alta", "2": "Urgente" };
@@ -55,7 +57,7 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, " ");
 }
 
-export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAction, reorderAction, renameStageAction, createTaskAction, priorityAction, concluirAction, reabrirAction }: Props) {
+export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAction, reorderAction, renameStageAction, createTaskAction, priorityAction, concluirAction, reabrirAction, deleteAction }: Props) {
   const [view, setView] = useState<"board" | "list">("list");
   const [search, setSearch] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState("");
@@ -240,6 +242,7 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
             reorderAction={reorderAction}
             concluirAction={concluirAction}
             reabrirAction={reabrirAction}
+            deleteAction={deleteAction}
           />
         )}
       </div>
