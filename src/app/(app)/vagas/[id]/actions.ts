@@ -63,22 +63,27 @@ export async function adicionarCandidato(
 // Move a candidatura entre etapas do funil (drag-and-drop). Soltar em
 // CONTRATADO dispara a contratação (status + promoção), reaproveitando a mesma
 // lógica do controle de status.
+// Retorna erro em vez de void: o board aplica a mudança de forma otimista, e
+// sem retorno ele não tinha como desfazer quando a ação falhava — o candidato
+// aparecia na etapa nova mesmo com o banco intacto.
 export async function moverEtapaCandidatura(
   vagaId: string,
   candidaturaId: string,
   stage: RecruitmentStage
-): Promise<void> {
+): Promise<{ error: string } | null> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId) return;
-  if (!Object.values(RecruitmentStage).includes(stage)) return;
+  if (!ctx.tenantId) return { error: "Não autenticado" };
+  if (!Object.values(RecruitmentStage).includes(stage)) return { error: "Etapa inválida." };
 
   const prisma = getPrisma();
   const candidatura = await prisma.candidatura.findFirst({
     where: { id: candidaturaId, tenantId: ctx.tenantId, vagaId },
     include: { vaga: true },
   });
-  if (!candidatura) return;
-  if (!canActOnSector(ctx, candidatura.vaga.sectorCode)) return;
+  if (!candidatura) return { error: "Candidatura não encontrada ou fora do seu escopo." };
+  if (!canActOnSector(ctx, candidatura.vaga.sectorCode)) {
+    return { error: "Sem permissão para mover candidatos nesta vaga." };
+  }
 
   try {
     if (stage === "CONTRATADO" && candidatura.status !== "CONTRATADO") {
@@ -92,11 +97,12 @@ export async function moverEtapaCandidatura(
     }
   } catch (err) {
     console.error("[moverEtapaCandidatura]", err);
-    return;
+    return { error: "Não foi possível mover o candidato. Tente novamente." };
   }
 
   revalidatePath(`/vagas/${vagaId}`);
-  revalidatePath(`/pessoas/${candidatura.personId}`);
+  revalidatePath(`/candidatos/${candidatura.personId}`);
+  return null;
 }
 
 // Encerra a candidatura (reprovação/desistência). Mantém o `stage` atual de
@@ -106,18 +112,20 @@ export async function encerrarCandidatura(
   candidaturaId: string,
   outcome: "REPROVADO" | "DESISTENTE",
   reason: string | null
-): Promise<void> {
+): Promise<{ error: string } | null> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId) return;
-  if (outcome !== "REPROVADO" && outcome !== "DESISTENTE") return;
+  if (!ctx.tenantId) return { error: "Não autenticado" };
+  if (outcome !== "REPROVADO" && outcome !== "DESISTENTE") return { error: "Desfecho inválido." };
 
   const prisma = getPrisma();
   const candidatura = await prisma.candidatura.findFirst({
     where: { id: candidaturaId, tenantId: ctx.tenantId, vagaId },
     include: { vaga: { select: { sectorCode: true } } },
   });
-  if (!candidatura) return;
-  if (!canActOnSector(ctx, candidatura.vaga.sectorCode)) return;
+  if (!candidatura) return { error: "Candidatura não encontrada ou fora do seu escopo." };
+  if (!canActOnSector(ctx, candidatura.vaga.sectorCode)) {
+    return { error: "Sem permissão para encerrar candidaturas nesta vaga." };
+  }
 
   const cleanReason = reason?.trim() || null;
   try {
@@ -131,10 +139,11 @@ export async function encerrarCandidatura(
     });
   } catch (err) {
     console.error("[encerrarCandidatura]", err);
-    return;
+    return { error: "Não foi possível encerrar a candidatura. Tente novamente." };
   }
 
   revalidatePath(`/vagas/${vagaId}`);
+  return null;
 }
 
 export async function removerCandidatura(vagaId: string, candidaturaId: string): Promise<void> {

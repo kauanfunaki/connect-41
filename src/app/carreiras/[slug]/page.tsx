@@ -1,9 +1,35 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { formatCalendarDate } from "@/lib/format";
+import { publicUrl } from "@/lib/jobPostingSchema";
 
-export const metadata = { title: "Vagas abertas" };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const prisma = getPrisma();
+  const tenant = await prisma.tenant.findUnique({
+    where: { slug },
+    select: { name: true, active: true },
+  });
+  if (!tenant || !tenant.active) return { title: "Vagas abertas" };
+
+  const title = `Trabalhe Conosco — ${tenant.name}`;
+  const description = `Confira as vagas abertas na ${tenant.name} e candidate-se online.`;
+  const url = publicUrl(`/carreiras/${slug}`);
+
+  return {
+    title,
+    description,
+    ...(url ? { alternates: { canonical: url } } : {}),
+    openGraph: { type: "website", title, description, ...(url ? { url } : {}), siteName: title, locale: "pt_BR" },
+    twitter: { card: "summary", title, description },
+  };
+}
 
 export default async function CarreirasPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

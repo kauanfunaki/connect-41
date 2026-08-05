@@ -14,6 +14,8 @@ type Props = {
   error?: string | null;
   onConfirm: () => void;
   onCancel: () => void;
+  /** Campo extra antes dos botões (ex: motivo da reprovação no funil). */
+  children?: React.ReactNode;
 };
 
 // Diálogo de confirmação temático — substitui o confirm() nativo, que quebra o
@@ -29,6 +31,7 @@ export function ConfirmDialog({
   error = null,
   onConfirm,
   onCancel,
+  children,
 }: Props) {
   const confirmRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
@@ -68,6 +71,8 @@ export function ConfirmDialog({
           {title}
         </h2>
         {description && <p className="text-[13px] text-fg-secondary mb-3">{description}</p>}
+
+        {children && <div className="mb-3">{children}</div>}
 
         {error && (
           <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2 mb-3">
