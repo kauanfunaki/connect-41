@@ -6,6 +6,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { logAudit } from "@/lib/audit";
 import { getRescisaoItem } from "@/lib/rescisaoChecklist";
+import { calcularSnapshotItem } from "@/lib/rescisao/referencia";
 import { NoticeType, TerminationCheckStatus } from "@/generated/prisma/enums";
 
 export type ConferenciaState = { error: string } | null;
@@ -68,6 +69,11 @@ export async function salvarItemConferencia(
     return { error: "Descreva a divergência encontrada para poder cobrar a correção." };
   }
 
+  // Snapshot do cálculo de referência. RECALCULA NO SERVIDOR de propósito —
+  // aceitar o valor num campo oculto do form significaria auditar um número
+  // que veio do cliente, o que não é auditoria nenhuma.
+  const snapshot = await calcularSnapshotItem(ctx.tenantId, personId, terminationId, itemKey);
+
   const prisma = getPrisma();
   try {
     await prisma.terminationCheck.upsert({
@@ -79,6 +85,7 @@ export async function salvarItemConferencia(
         status,
         informedValue,
         note,
+        ...snapshot,
         checkedById: ctx.userId,
         checkedAt: new Date(),
       },
@@ -86,6 +93,7 @@ export async function salvarItemConferencia(
         status,
         informedValue,
         note,
+        ...snapshot,
         checkedById: ctx.userId,
         checkedAt: new Date(),
       },
@@ -134,11 +142,44 @@ export async function salvarDadosRescisao(
   const noticeType =
     noticeRaw && (Object.values(NoticeType) as string[]).includes(noticeRaw) ? (noticeRaw as NoticeType) : null;
 
+  // Insumos que destravam cálculos que ficariam NAO_CALCULAVEL. Campo vazio
+  // continua null de propósito — "não informado" é diferente de "zero", e o
+  // motor trata os dois de formas diferentes.
+  const parseValor = (key: string): number | null | { error: string } => {
+    const raw = ((form.get(key) as string) ?? "").trim();
+    if (!raw) return null;
+    const parsed = Number(raw.replace(/\./g, "").replace(",", "."));
+    if (!Number.isFinite(parsed) || parsed < 0) return { error: `Valor inválido em ${key}.` };
+    return parsed;
+  };
+
+  const fgtsBalance = parseValor("fgtsBalanceInformed");
+  if (fgtsBalance && typeof fgtsBalance === "object") return { error: "Saldo do FGTS inválido." };
+  const decimoAdiantado = parseValor("thirteenthAdvancePaid");
+  if (decimoAdiantado && typeof decimoAdiantado === "object") return { error: "Adiantamento de 13º inválido." };
+
+  const faltasRaw = ((form.get("unjustifiedAbsences") as string) ?? "").trim();
+  let unjustifiedAbsences: number | null = null;
+  if (faltasRaw) {
+    const n = parseInt(faltasRaw, 10);
+    if (!Number.isInteger(n) || n < 0) return { error: "Número de faltas inválido." };
+    unjustifiedAbsences = n;
+  }
+
+  const apprentice = form.get("apprentice") === "true";
+
   const prisma = getPrisma();
   try {
     await prisma.termination.update({
       where: { id: terminationId },
-      data: { terminationDate, noticeType },
+      data: {
+        terminationDate,
+        noticeType,
+        fgtsBalanceInformed: fgtsBalance as number | null,
+        thirteenthAdvancePaid: decimoAdiantado as number | null,
+        unjustifiedAbsences,
+        apprentice,
+      },
     });
   } catch (err) {
     console.error("[salvarDadosRescisao]", err);

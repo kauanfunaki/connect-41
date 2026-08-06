@@ -15,12 +15,35 @@ export type CheckState = {
   checkedAtLabel: string | null;
 };
 
+/** Referência calculada pelo motor — opcional: itens de prazo/doc não têm. */
+export type ReferenciaProps = {
+  situacao: "CALCULADO" | "NAO_DEVIDA" | "NAO_CALCULAVEL" | "DESABILITADA_CONFIG";
+  valor: number | null;
+  valorLabel: string | null;
+  formula: string | null;
+  fundamento: string | null;
+  motivo: string | null;
+  premissas: string[];
+  confianca: "ALTA" | "MEDIA" | "BAIXA";
+  /** Diferença informado − calculado, quando os dois existem. */
+  delta: number | null;
+  deltaLabel: string | null;
+  divergente: boolean;
+};
+
 type Props = {
   item: RescisaoCheckItem;
   current: CheckState | null;
+  referencia?: ReferenciaProps;
   action: (prev: ConferenciaState, form: FormData) => Promise<ConferenciaState>;
   canEdit: boolean;
 };
+
+const CONFIANCA_LABEL = {
+  ALTA: "confiança alta",
+  MEDIA: "confiança média",
+  BAIXA: "confiança baixa",
+} as const;
 
 const STATUS_OPTIONS = [
   { value: "PENDENTE", label: "Pendente" },
@@ -43,12 +66,29 @@ const STATUS_LABEL: Record<CheckState["status"], string> = {
   NAO_APLICAVEL: "Não se aplica",
 };
 
-export function ItemConferenciaRow({ item, current, action, canEdit }: Props) {
+export function ItemConferenciaRow({ item, current, referencia, action, canEdit }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const [open, setOpen] = useState(false);
-  const [status, setStatus] = useState<CheckState["status"]>(current?.status ?? "PENDENTE");
 
-  const efetivo = current?.status ?? "PENDENTE";
+  // Divergência só existe quando já há valor informado (veio de um salvamento
+  // anterior). A sugestão vale enquanto ninguém tiver decidido o status —
+  // depois disso, respeita o que o humano escolheu. É sugestão, não gravação:
+  // nada persiste sem submit.
+  const statusAtual = current?.status ?? "PENDENTE";
+  const sugereDivergente = referencia?.divergente === true && statusAtual === "PENDENTE";
+  const [status, setStatus] = useState<CheckState["status"]>(
+    sugereDivergente ? "DIVERGENTE" : statusAtual
+  );
+  const [valorInformado, setValorInformado] = useState(current?.informedValue ?? "");
+
+  const efetivo = statusAtual;
+
+  const notaSugerida =
+    sugereDivergente && referencia?.valorLabel && current?.informedValue
+      ? `Informado R$ ${current.informedValue}; referência ${referencia.valorLabel}${
+          referencia.deltaLabel ? ` (diferença de ${referencia.deltaLabel})` : ""
+        }.`
+      : "";
 
   return (
     <div className="py-3">
@@ -63,6 +103,28 @@ export function ItemConferenciaRow({ item, current, action, canEdit }: Props) {
             </span>
             {current?.informedValue && (
               <span className="text-[12px] text-fg-secondary tnum">R$ {current.informedValue}</span>
+            )}
+
+            {/* Referência do motor — sempre em tom mudo, pra nunca competir
+                visualmente com o valor que a contabilidade informou. */}
+            {referencia?.situacao === "CALCULADO" && referencia.valorLabel && (
+              <span className="text-[12px] text-fg-muted tnum" title={referencia.formula ?? undefined}>
+                ref. {referencia.valorLabel}
+              </span>
+            )}
+            {referencia?.divergente && referencia.deltaLabel && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border bg-danger/10 text-danger border-danger/25 tnum">
+                Δ {referencia.deltaLabel}
+              </span>
+            )}
+            {referencia && referencia.situacao !== "CALCULADO" && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border bg-surface-2 text-fg-muted border-border">
+                {referencia.situacao === "NAO_DEVIDA"
+                  ? "não devida"
+                  : referencia.situacao === "DESABILITADA_CONFIG"
+                    ? "desabilitada"
+                    : "sem referência"}
+              </span>
             )}
           </div>
           {item.hint && <p className="text-[12px] text-fg-muted mt-0.5">{item.hint}</p>}
@@ -85,6 +147,46 @@ export function ItemConferenciaRow({ item, current, action, canEdit }: Props) {
           </button>
         )}
       </div>
+
+      {/* Base do cálculo: o número sozinho é inauditável — o conferente
+          precisa ver COMO chegou ali antes de aceitar ou contestar. */}
+      {open && canEdit && referencia && (
+        <div className="mt-3 rounded-md border border-border bg-surface-2 px-4 py-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap mb-1">
+            <p className="text-[12px] font-semibold text-fg">Base do cálculo de referência</p>
+            <span className="text-[11px] text-fg-muted">{CONFIANCA_LABEL[referencia.confianca]}</span>
+          </div>
+
+          {referencia.formula ? (
+            <p className="text-[12px] text-fg-secondary tnum">{referencia.formula}</p>
+          ) : (
+            <p className="text-[12px] text-fg-secondary">{referencia.motivo}</p>
+          )}
+
+          {referencia.fundamento && (
+            <p className="text-[11px] text-fg-muted mt-1">Fundamento: {referencia.fundamento}</p>
+          )}
+          {referencia.premissas.length > 0 && (
+            <ul className="mt-1.5 space-y-0.5">
+              {referencia.premissas.map((p, i) => (
+                <li key={i} className="text-[11px] text-fg-muted">
+                  · {p}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {referencia.situacao === "CALCULADO" && referencia.valorLabel && item.hasValue && (
+            <button
+              type="button"
+              onClick={() => setValorInformado(referencia.valorLabel!.replace("R$ ", ""))}
+              className="mt-2 text-[12px] text-brand hover:underline"
+            >
+              Usar {referencia.valorLabel} como valor informado
+            </button>
+          )}
+        </div>
+      )}
 
       {open && canEdit && (
         <form action={formAction} className="mt-3 grid grid-cols-1 sm:grid-cols-[160px_160px_1fr] gap-3 items-start">
@@ -116,7 +218,8 @@ export function ItemConferenciaRow({ item, current, action, canEdit }: Props) {
                 name="informedValue"
                 type="text"
                 inputMode="decimal"
-                defaultValue={current?.informedValue ?? ""}
+                value={valorInformado}
+                onChange={(e) => setValorInformado(e.target.value)}
                 placeholder="0,00"
               />
             </div>
@@ -130,7 +233,7 @@ export function ItemConferenciaRow({ item, current, action, canEdit }: Props) {
               id={`note-${item.key}`}
               name="note"
               rows={2}
-              defaultValue={current?.note ?? ""}
+              defaultValue={current?.note ?? notaSugerida}
               maxLength={1000}
               placeholder={
                 status === "DIVERGENTE" ? "O que divergiu e qual o valor esperado…" : "Anotação da conferência (opcional)"

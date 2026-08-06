@@ -19,7 +19,14 @@ import {
   statusPrazoPagamento,
 } from "@/lib/rescisaoChecklist";
 import { formatCalendarDate, formatInstantDate } from "@/lib/format";
+import { calcularReferencia, avaliarDivergencia } from "@/lib/rescisao/referencia";
+import type { ReferenciaProps } from "@/components/rescisao/ItemConferenciaRow";
 import { salvarItemConferencia, salvarDadosRescisao } from "./actions";
+
+function brl(v: number | null): string | null {
+  if (v == null) return null;
+  return `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+}
 
 export default async function ConferenciaRescisaoPage({
   params,
@@ -79,6 +86,32 @@ export default async function ConferenciaRescisaoPage({
     ])
   );
 
+  // Referência recalculada a cada render — nunca mostra número velho. O
+  // snapshot congelado vive no TerminationCheck e serve só pra auditoria.
+  const referencia = await calcularReferencia(ctx.tenantId, id, terminationId);
+  const toleranciaPct = referencia?.config.valores.toleranciaPct ?? 1;
+
+  function referenciaDoItem(itemKey: string): ReferenciaProps | undefined {
+    const verba = referencia?.calculo.verbas[itemKey];
+    if (!verba) return undefined;
+    const informadoRaw = checkByKey.get(itemKey)?.informedValue ?? null;
+    const informado = informadoRaw ? Number(informadoRaw.replace(/\./g, "").replace(",", ".")) : null;
+    const { divergente, delta } = avaliarDivergencia(informado, verba, toleranciaPct);
+    return {
+      situacao: verba.situacao,
+      valor: verba.valor,
+      valorLabel: brl(verba.valor),
+      formula: verba.formula,
+      fundamento: verba.fundamento,
+      motivo: verba.motivo,
+      premissas: verba.premissas,
+      confianca: verba.confianca,
+      delta,
+      deltaLabel: brl(delta),
+      divergente,
+    };
+  }
+
   const resumo = resumirConferencia(termination.checks.map((c) => ({ itemKey: c.itemKey, status: c.status })));
   const prazo = termination.terminationDate ? statusPrazoPagamento(termination.terminationDate, new Date()) : null;
 
@@ -121,6 +154,10 @@ export default async function ConferenciaRescisaoPage({
               ? termination.terminationDate.toISOString().slice(0, 10)
               : "",
             noticeType: termination.noticeType ?? "",
+            fgtsBalanceInformed: termination.fgtsBalanceInformed?.toString() ?? "",
+            thirteenthAdvancePaid: termination.thirteenthAdvancePaid?.toString() ?? "",
+            unjustifiedAbsences: termination.unjustifiedAbsences?.toString() ?? "",
+            apprentice: termination.apprentice,
           }}
           canEdit={canEdit}
         />
@@ -155,6 +192,65 @@ export default async function ConferenciaRescisaoPage({
           </p>
         )}
       </Card>
+
+      {/* Cálculo de referência — o disclaimer é o ponto: o sistema não apura,
+          ele oferece um número pra comparar. */}
+      {referencia && (
+        <Card className="p-5 mb-4">
+          <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
+            <h2 className="text-[14px] font-semibold text-fg">Cálculo de referência</h2>
+            <span className="text-[11px] text-fg-muted">motor v{referencia.calculo.motorVersao}</span>
+          </div>
+          <p className="text-[12px] text-fg-muted mb-3">
+            Valor de referência para conferência — <strong className="text-fg-secondary">não é apuração oficial</strong>.
+            Compare com o que a contabilidade enviou e registre a divergência quando houver.
+          </p>
+
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-success/10 text-success border border-success/25 tnum">
+              Proventos: {brl(referencia.calculo.totalProventos)}
+            </span>
+            {referencia.calculo.totalDescontos > 0 && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-danger/10 text-danger border border-danger/25 tnum">
+                Descontos: {brl(referencia.calculo.totalDescontos)}
+              </span>
+            )}
+            <span className="text-[11px] text-fg-muted">
+              INSS/IRRF não entram no cálculo — sem eles não há líquido a apresentar.
+            </span>
+          </div>
+
+          {referencia.calculo.inputsFaltantes.length > 0 && (
+            <div className="rounded-md border border-warning/25 bg-warning/8 px-3 py-2 mb-3">
+              <p className="text-[12px] font-medium text-fg mb-1">Faltam insumos para calcular tudo:</p>
+              <ul className="space-y-0.5">
+                {referencia.calculo.inputsFaltantes.map((i, idx) => (
+                  <li key={idx} className="text-[12px] text-fg-secondary">
+                    · {i}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-3 flex-wrap pt-2 border-t border-border">
+            <p className="text-[11px] text-fg-muted">
+              Médias em {referencia.config.valores.mediaMeses} meses · tolerância de{" "}
+              {referencia.config.valores.toleranciaPct}%
+              {referencia.config.valores.cctNome ? ` · CCT: ${referencia.config.valores.cctNome}` : ""}
+            </p>
+            <Link href="/admin/rescisao" className="text-[12px] text-brand hover:underline">
+              Configurar cálculo
+            </Link>
+          </div>
+
+          {referencia.config.valores.cctObservacoes && (
+            <p className="text-[12px] text-fg-secondary mt-2 whitespace-pre-wrap">
+              {referencia.config.valores.cctObservacoes}
+            </p>
+          )}
+        </Card>
+      )}
 
       {/* Resumo */}
       <Card className="p-5 mb-4">
@@ -253,6 +349,7 @@ export default async function ConferenciaRescisaoPage({
                 key={item.key}
                 item={item}
                 current={checkByKey.get(item.key) ?? null}
+                referencia={referenciaDoItem(item.key)}
                 action={salvarItemConferencia.bind(null, id, terminationId, item.key)}
                 canEdit={canEdit}
               />

@@ -11,6 +11,7 @@ import {
   Puzzle,
   Tag,
   CalendarDays,
+  Scale,
   Target,
   ScrollText,
   Video,
@@ -146,6 +147,7 @@ export default async function AdminPage() {
     cards.push(
       { group: "catalogos", href: "/admin/feriados", icon: <CalendarDays size={20} />, title: "Feriados", description: "Catálogo de feriados usado na Escala de Trabalho" },
       { group: "catalogos", href: "/admin/competencias", icon: <Target size={20} />, title: "Competências", description: "Catálogo usado nas avaliações de desempenho" },
+      { group: "catalogos", href: "/admin/rescisao", icon: <Scale size={20} />, title: "Cálculo de Rescisão", description: "Padrão do escritório para a conferência do TRCT" },
       { group: "integracoes", href: "/admin/atendentes", icon: <Headset size={20} />, title: "Vínculos de Acesso", description: "Conta de acesso e atendente Chatwoot de cada colaborador interno" }
     );
   }
