@@ -65,6 +65,10 @@ type Props = {
   // continua ali.
   activeSector: Sector | null;
   activeSectorModules: SectorModule[];
+  // Config de runtime do endereço por setor — vem do layout, não de env no
+  // cliente (ver ContextSwitcher).
+  appDomain: string | null;
+  sectorHostSuffix: string;
   canOpenAdmin: boolean;
   canManageMeetings: boolean;
   unreadCount: number;
@@ -86,6 +90,8 @@ export function AppShell({
   sectors,
   activeSector,
   activeSectorModules,
+  appDomain,
+  sectorHostSuffix,
   canOpenAdmin,
   canManageMeetings,
   unreadCount,
@@ -147,6 +153,8 @@ export function AppShell({
           currentTenantId={tenantId}
           sectors={sectors}
           activeSector={activeSector?.code ?? null}
+          appDomain={appDomain}
+          sectorHostSuffix={sectorHostSuffix}
         />
 
         {/* Nav */}

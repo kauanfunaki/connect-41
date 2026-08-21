@@ -8,6 +8,7 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorsWithEnabledModules, getEnabledModuleCodes } from "@/lib/modules";
 import { getModulesForSector, getModuleRoute } from "@/lib/module-catalog";
+import { baseDomain, hostSuffix } from "@/lib/auth/activeSector";
 import { canManageMeetings } from "@/lib/integrations/oauth";
 import { formatInstantDateTime } from "@/lib/format";
 
@@ -101,6 +102,8 @@ export default async function AppLayout({
         sectors={visibleSectors}
         activeSector={activeSector}
         activeSectorModules={activeSectorModules}
+        appDomain={baseDomain()}
+        sectorHostSuffix={hostSuffix()}
         canOpenAdmin={canOpenAdmin}
         canManageMeetings={canManageMeetings(ctx)}
         unreadCount={unreadCount}

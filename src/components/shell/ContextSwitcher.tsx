@@ -3,7 +3,7 @@
 import { ChevronDown } from "lucide-react";
 import { Dropdown, DropdownItem, DropdownSeparator } from "@/components/ui/Dropdown";
 import { AvatarImage } from "@/components/shared/AvatarImage";
-import { COOKIE_SETOR_ATIVO } from "@/lib/auth/activeSector";
+import { COOKIE_SETOR_ATIVO, sectorHost } from "@/lib/auth/activeSector";
 
 // Substitui o WorkspaceSwitcher. Antes o controle respondia só "em qual
 // escritório estou"; agora responde "ONDE EU ESTOU", que são dois eixos:
@@ -28,6 +28,17 @@ type Props = {
   sectors: Sector[];
   /** `null` = "Todos os setores". */
   activeSector: string | null;
+  /**
+   * Domínio-base e sufixo do host de setor, vindos do layout (Server
+   * Component) — NÃO de `process.env` aqui.
+   *
+   * Ler env em componente de cliente exigiria prefixo `NEXT_PUBLIC_`, que é
+   * gravado no bundle na hora do BUILD; o Dockerfile roda `npm run build` sem
+   * essas variáveis, então o valor chegaria `undefined` no navegador mesmo
+   * definido no ambiente. Por prop, o valor é o de runtime.
+   */
+  appDomain: string | null;
+  sectorHostSuffix: string;
 };
 
 const TODOS = "__todos__";
@@ -40,36 +51,43 @@ const UM_MES = 60 * 60 * 24 * 30;
 // O cookie continua sendo gravado mesmo assim: ele é a memória do último setor
 // usado, para quem chega pelo endereço neutro. Por isso vai com `domain`, para
 // atravessar os subdomínios.
-const DOMINIO = process.env.NEXT_PUBLIC_APP_DOMAIN?.trim().toLowerCase() || null;
-
-function gravarSetor(code: string | null): void {
+function gravarSetor(code: string | null, DOMINIO: string | null): void {
   const escopo = DOMINIO ? `; domain=.${DOMINIO}` : "";
   const valor = code ?? "";
   const idade = code ? UM_MES : 0;
   document.cookie = `${COOKIE_SETOR_ATIVO}=${valor}; path=/${escopo}; max-age=${idade}; samesite=lax`;
 }
 
-function destino(code: string | null): string {
+function destino(code: string | null, DOMINIO: string | null, SUFIXO: string): string {
   if (!DOMINIO) return "/home";
-  const sub = code ?? "app";
-  return `${window.location.protocol}//${sub}.${DOMINIO}/home`;
+  return `${window.location.protocol}//${sectorHost(code, DOMINIO, SUFIXO)}/home`;
 }
 
-function trocarTenant(tenantId: string): void {
+// Estas duas ficam FORA do componente de propósito: escrevem em
+// `document.cookie` e `window.location`, e a regra de imutabilidade do
+// compilador do React proíbe isso dentro do corpo do componente.
+function trocarTenant(tenantId: string, dominio: string | null, sufixo: string): void {
   document.cookie = `active_tenant_id=${tenantId}; path=/; max-age=${UM_MES}; samesite=lax`;
   // Trocar de escritório zera o setor: os códigos de setor são por tenant, e
   // manter o anterior levaria a um setor que pode não existir no destino.
-  gravarSetor(null);
-  window.location.href = destino(null);
+  gravarSetor(null, dominio);
+  window.location.href = destino(null, dominio, sufixo);
 }
 
-function trocarSetor(code: string): void {
+function trocarSetor(code: string, dominio: string | null, sufixo: string): void {
   const alvo = code === TODOS ? null : code;
-  gravarSetor(alvo);
-  window.location.href = destino(alvo);
+  gravarSetor(alvo, dominio);
+  window.location.href = destino(alvo, dominio, sufixo);
 }
 
-export function ContextSwitcher({ tenants, currentTenantId, sectors, activeSector }: Props) {
+export function ContextSwitcher({
+  tenants,
+  currentTenantId,
+  sectors,
+  activeSector,
+  appDomain,
+  sectorHostSuffix,
+}: Props) {
   const tenantAtual = tenants.find((t) => t.id === currentTenantId);
   const nomeTenant = tenantAtual?.name ?? "—";
   const setorAtual = activeSector ? sectors.find((s) => s.code === activeSector) : null;
@@ -136,11 +154,11 @@ export function ContextSwitcher({ tenants, currentTenantId, sectors, activeSecto
       >
         {podeTrocarSetor && (
           <>
-            <DropdownItem onClick={() => trocarSetor(TODOS)}>
+            <DropdownItem onClick={() => trocarSetor(TODOS, appDomain, sectorHostSuffix)}>
               <span className={!activeSector ? "text-brand font-semibold" : ""}>Todos os setores</span>
             </DropdownItem>
             {sectors.map((s) => (
-              <DropdownItem key={s.code} onClick={() => trocarSetor(s.code)}>
+              <DropdownItem key={s.code} onClick={() => trocarSetor(s.code, appDomain, sectorHostSuffix)}>
                 <span className="flex items-center gap-2 min-w-0">
                   <span
                     aria-hidden
@@ -160,7 +178,7 @@ export function ContextSwitcher({ tenants, currentTenantId, sectors, activeSecto
 
         {podeTrocarTenant &&
           tenants.map((t) => (
-            <DropdownItem key={t.id} onClick={() => t.id !== currentTenantId && trocarTenant(t.id)}>
+            <DropdownItem key={t.id} onClick={() => t.id !== currentTenantId && trocarTenant(t.id, appDomain, sectorHostSuffix)}>
               <span className="flex items-center gap-2 min-w-0">
                 <AvatarImage src={t.logoUrl} name={t.name} size={20} shape="lg" fontSize={10} />
                 <span className={`truncate ${t.id === currentTenantId ? "text-brand font-semibold" : ""}`}>
