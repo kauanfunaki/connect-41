@@ -283,35 +283,6 @@ enum TerminationType {
   EXPERIENCIA
   JUSTA_CAUSA
   SEM_JUSTA_CAUSA
-<<<<<<< HEAD
-  ACORDO_484A // art. 484-A CLT — acordo entre as partes
-  RESCISAO_INDIRETA // art. 483 CLT — falta grave do empregador
-}
-
-// ─── Cálculo de rescisão ─────────────────────────────────────────────────────
-// Estes enums e os modelos *RescisaoConfig/TerminationCheck existiam SÓ no banco
-// de produção até 2026-08-21 (drift registrado no Quadro em 05/08). Foram trazidos
-// para o repo com a nomenclatura da casa; o banco não muda, porque no MySQL o
-// ENUM é inline na coluna — o nome do enum é só do lado do Prisma.
-
-enum TerminationNoticeType {
-  INDENIZADO
-  TRABALHADO
-  DISPENSADO
-  NAO_APLICAVEL
-}
-
-enum TerminationCheckStatus {
-  PENDENTE
-  CONFERIDO
-  DIVERGENTE
-  NAO_APLICAVEL
-}
-
-// Um enum só para tenant e empresa: o `db pull` gerou um par duplicado por coluna
-// (limitação do MySQL, que não tem tipo nomeado), mas os valores são idênticos e o
-// DDL emitido é o mesmo.
-=======
   // Acrescentados ao FIM de propósito: em ENUM do MariaDB a posição define o
   // ordinal armazenado, então append preserva as linhas existentes.
   // Sem ACORDO_484A um acordo era registrado como SEM_JUSTA_CAUSA e geraria
@@ -323,7 +294,6 @@ enum TerminationCheckStatus {
 
 // Grau de insalubridade (CLT art. 192) — o percentual de cada grau é fixo em
 // lei; o que varia por empresa é o grau apurado no laudo (LTCAT/PPRA).
->>>>>>> aa367b8bc0467c69336233d05172755560675bd4
 enum InsalubridadeGrau {
   NENHUM
   MINIMO
@@ -331,47 +301,19 @@ enum InsalubridadeGrau {
   MAXIMO
 }
 
-<<<<<<< HEAD
-=======
 // Base de incidência da insalubridade. A Súmula Vinculante 4 do STF deixou o
 // tema em aberto, e CCT/decisão judicial mudam a base na prática.
->>>>>>> aa367b8bc0467c69336233d05172755560675bd4
 enum InsalubridadeBase {
   SALARIO_MINIMO
   SALARIO_BASE
   PISO_CATEGORIA
 }
 
-<<<<<<< HEAD
-enum MediaBaseFerias {
-  PERIODO_AQUISITIVO
-  ANO_CIVIL
-  ULTIMOS_N_MESES
-}
-
-enum MediaBaseDecimoTerceiro {
-  PERIODO_AQUISITIVO
-  ANO_CIVIL
-  ULTIMOS_N_MESES
-}
-
-enum CargoSeniority {
-  ESTAGIO
-  APRENDIZ
-  JUNIOR
-  PLENO
-  SENIOR
-  ESPECIALISTA
-  COORDENACAO
-  GERENCIA
-  DIRETORIA
-=======
 // Janela usada para apurar médias de variáveis (horas extras, adicionais).
 enum MediaBase {
   PERIODO_AQUISITIVO
   ANO_CIVIL
   ULTIMOS_N_MESES
->>>>>>> aa367b8bc0467c69336233d05172755560675bd4
 }
 
 enum TerminationStatus {
@@ -565,9 +507,6 @@ model Tenant {
   chatwootAgentLinks       ChatwootAgentLink[]
   agentEvaluationSummaries AgentEvaluationSummary[]
   sectorTaskViews          SectorTaskView[]
-  rescisaoConfig           TenantRescisaoConfig?
-  companyRescisaoConfigs   CompanyRescisaoConfig[]
-  terminationChecks        TerminationCheck[]
 
   @@map("tenants")
 }
@@ -776,8 +715,6 @@ model User {
   chatwootAgentLinks         ChatwootAgentLink[]
   preference                 UserPreference?
 
-  terminationChecks TerminationCheck[] @relation("TerminationCheckCheckedBy")
-
   @@unique([tenantId, email])
   @@index([tenantId])
   @@map("users")
@@ -876,7 +813,6 @@ model Company {
   recurringObligations RecurringObligation[]
   chatwootContactLinks ChatwootContactLink[]
   bpoCredentials       BpoCredential[]
-  rescisaoConfig       CompanyRescisaoConfig?
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -1426,26 +1362,18 @@ model Cargo {
   companyId              String
   name                   String          @db.VarChar(120)
   area                   String?         @db.VarChar(80)
-<<<<<<< HEAD
-=======
   // Família de cargos — agrupa a mesma trilha de carreira em níveis
   // diferentes ("Analista Contábil" jr/pleno/sênior compartilham a família
   // "Contábil"). Texto livre de propósito: cada tenant nomeia sua estrutura,
   // e um catálogo fechado engessaria a implantação.
   family                 String?         @db.VarChar(80)
   seniority              CargoSeniority?
->>>>>>> aa367b8bc0467c69336233d05172755560675bd4
   description            String?         @db.Text
   technicalRequirements  String?         @db.Text
   behavioralRequirements String?         @db.Text
   salaryRangeMin         Decimal?        @db.Decimal(12, 2)
   salaryRangeMid         Decimal?        @db.Decimal(12, 2)
   salaryRangeMax         Decimal?        @db.Decimal(12, 2)
-<<<<<<< HEAD
-  family                 String?         @db.VarChar(80)
-  seniority              CargoSeniority?
-=======
->>>>>>> aa367b8bc0467c69336233d05172755560675bd4
   active                 Boolean         @default(true)
   createdAt              DateTime        @default(now())
   updatedAt              DateTime        @updatedAt
@@ -2062,18 +1990,6 @@ model Termination {
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
 
-<<<<<<< HEAD
-  // Campos do cálculo de rescisão — existiam só em produção até 2026-08-21.
-  terminationDate       DateTime?
-  noticeType            TerminationNoticeType?
-  fgtsBalanceInformed   Decimal?               @db.Decimal(12, 2)
-  thirteenthAdvancePaid Decimal?               @db.Decimal(12, 2)
-  unjustifiedAbsences   Int?
-  noticeWorkedDays      Int?
-  apprentice            Boolean                @default(false)
-
-=======
->>>>>>> aa367b8bc0467c69336233d05172755560675bd4
   tenant Tenant             @relation(fields: [tenantId], references: [id])
   person Person             @relation(fields: [personId], references: [id])
   checks TerminationCheck[]
@@ -3021,93 +2937,4 @@ model BpoCredentialView {
 
   @@index([credentialId])
   @@map("bpo_credential_views")
-}
-
-// ─── Cálculo de rescisão ─────────────────────────────────────────────────────
-// Trazidos do banco de produção para o repo em 2026-08-21. Nomes de modelo e de
-// campo de relação seguem o padrão da casa (PascalCase + @@map, relação no
-// singular); TODA coluna mantém o nome exato que já está em produção, porque
-// renomear coluna é a única mudança aqui que geraria DDL.
-
-// Padrão do escritório: uma linha por tenant, é o fallback de toda empresa que
-// não tiver configuração própria.
-model TenantRescisaoConfig {
-  id                       String                  @id @default(uuid())
-  tenantId                 String                  @unique
-  insalubridadeGrau        InsalubridadeGrau       @default(NENHUM)
-  insalubridadeBase        InsalubridadeBase       @default(SALARIO_MINIMO)
-  periculosidadeAplica     Boolean                 @default(false)
-  periculosidadeIntegral   Boolean                 @default(false)
-  mediaMeses               Int                     @default(12)
-  mediaBaseFerias          MediaBaseFerias         @default(PERIODO_AQUISITIVO)
-  mediaBaseDecimoTerceiro  MediaBaseDecimoTerceiro @default(ANO_CIVIL)
-  tercoApresentadoSeparado Boolean                 @default(true)
-  verbasDesabilitadas      Json?
-  descontosPadrao          Json?
-  toleranciaPct            Decimal                 @default(1.00) @db.Decimal(5, 2)
-  cctNome                  String?                 @db.VarChar(180)
-  cctObservacoes           String?                 @db.Text
-  updatedAt                DateTime                @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-
-  @@map("tenant_rescisao_configs")
-}
-
-// Sobreposição por empresa. Campo nulo aqui significa "usa o do tenant" — é por
-// isso que tudo é opcional, ao contrário do modelo acima.
-model CompanyRescisaoConfig {
-  id                       String                   @id @default(uuid())
-  tenantId                 String
-  companyId                String                   @unique
-  insalubridadeGrau        InsalubridadeGrau?
-  insalubridadeBase        InsalubridadeBase?
-  periculosidadeAplica     Boolean?
-  periculosidadeIntegral   Boolean?
-  mediaMeses               Int?
-  mediaBaseFerias          MediaBaseFerias?
-  mediaBaseDecimoTerceiro  MediaBaseDecimoTerceiro?
-  tercoApresentadoSeparado Boolean?
-  verbasDesabilitadas      Json?
-  descontosPadrao          Json?
-  toleranciaPct            Decimal?                 @db.Decimal(5, 2)
-  cctNome                  String?                  @db.VarChar(180)
-  cctObservacoes           String?                  @db.Text
-  updatedAt                DateTime                 @updatedAt
-
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  tenant  Tenant  @relation(fields: [tenantId], references: [id])
-
-  @@index([tenantId])
-  @@map("company_rescisao_configs")
-}
-
-// Conferência item a item da rescisão: o que o sistema calculou contra o que veio
-// informado, com a versão do cálculo que produziu o número — é o que permite
-// reconferir uma rescisão antiga sem que uma mudança de regra a invalide.
-model TerminationCheck {
-  id                 String                 @id @default(uuid())
-  tenantId           String
-  terminationId      String
-  itemKey            String                 @db.VarChar(60)
-  status             TerminationCheckStatus @default(PENDENTE)
-  informedValue      Decimal?               @db.Decimal(12, 2)
-  calculatedValue    Decimal?               @db.Decimal(12, 2)
-  calculationBasis   String?                @db.Text
-  calculationVersion String?                @db.VarChar(20)
-  calculatedAt       DateTime?
-  note               String?                @db.Text
-  checkedById        String?
-  checkedAt          DateTime?
-  createdAt          DateTime               @default(now())
-  updatedAt          DateTime               @updatedAt
-
-  tenant      Tenant      @relation(fields: [tenantId], references: [id])
-  termination Termination @relation(fields: [terminationId], references: [id], onDelete: Cascade)
-  checkedBy   User?       @relation("TerminationCheckCheckedBy", fields: [checkedById], references: [id])
-
-  @@unique([terminationId, itemKey])
-  @@index([checkedById], map: "termination_checks_checkedById_fkey")
-  @@index([tenantId, status])
-  @@map("termination_checks")
 }
