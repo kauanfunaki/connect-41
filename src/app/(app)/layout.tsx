@@ -6,7 +6,8 @@ import { getSectorMaps } from "@/lib/sectors";
 import { ROLE_LABELS } from "@/lib/roles";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getPrisma } from "@/lib/prisma";
-import { getSectorsWithEnabledModules } from "@/lib/modules";
+import { getSectorsWithEnabledModules, getEnabledModuleCodes } from "@/lib/modules";
+import { getModulesForSector, getModuleRoute } from "@/lib/module-catalog";
 import { canManageMeetings } from "@/lib/integrations/oauth";
 import { formatInstantDateTime } from "@/lib/format";
 
@@ -25,6 +26,28 @@ export default async function AppLayout({
   const visibleSectors = sectors
     .filter((s) => sectorsWithModules.has(s))
     .map((s) => ({ code: s, label: sectorLabels[s] ?? s, color: sectorColors[s] ?? "#586577" }));
+
+  // Setor ativo (subworkspace). Resolvido em getAuthContext a partir do host e
+  // do cookie; aqui só se completa com label e cor do cadastro do tenant.
+  //
+  // Um código que não existe neste tenant cai em "Todos" — o proxy não tem como
+  // conferir existência sem ir ao banco, e conferir aqui é de graça porque os
+  // setores já foram carregados.
+  const activeSector =
+    ctx.activeSector && sectorLabels[ctx.activeSector]
+      ? {
+          code: ctx.activeSector,
+          label: sectorLabels[ctx.activeSector]!,
+          color: sectorColors[ctx.activeSector] ?? "#586577",
+        }
+      : null;
+
+  const enabledModules = activeSector ? await getEnabledModuleCodes(tenantId) : new Set<string>();
+  const activeSectorModules = activeSector
+    ? getModulesForSector(activeSector.code)
+        .filter((m) => enabledModules.has(m.code))
+        .map((m) => ({ code: m.code, label: m.label, href: getModuleRoute(m.code) ?? `/setor/${activeSector.code}/${m.code}` }))
+    : [];
 
   const prisma = getPrisma();
   const [unreadCount, me, accessibleTenants, recentNotifications] = await Promise.all([
@@ -76,6 +99,8 @@ export default async function AppLayout({
         tenantId={tenantId}
         accessibleTenants={accessibleTenants}
         sectors={visibleSectors}
+        activeSector={activeSector}
+        activeSectorModules={activeSectorModules}
         canOpenAdmin={canOpenAdmin}
         canManageMeetings={canManageMeetings(ctx)}
         unreadCount={unreadCount}

@@ -1,4 +1,18 @@
-import { isFullAccess, type AuthContext } from "@/lib/auth/context";
+import { isFullAccess, scopedSectors, type AuthContext } from "@/lib/auth/context";
+
+// Filtro de setor de uma consulta, já considerando o SETOR ATIVO (subworkspace).
+// Sem setor ativo o resultado é idêntico ao que era antes: tenant inteiro para
+// full access, setores da pessoa para os demais.
+//
+// `__none__` é sentinela para "não pode ver nada" — sem ele, um `in: []` do
+// Prisma devolveria zero linhas por acidente em vez de por decisão, e a
+// diferença some no dia em que alguém "otimizar" o array vazio.
+function sectorWhere(ctx: AuthContext) {
+  const codes = scopedSectors(ctx);
+  if (codes === null) return { tenantId: ctx.tenantId };
+  if (codes.length === 0) return { tenantId: ctx.tenantId, sectorCode: "__none__" };
+  return { tenantId: ctx.tenantId, sectorCode: { in: codes } };
+}
 
 // Conversas do Chatwoot são conhecimento geral do tenant, igual Empresas/Pessoas
 // (RBAC opção A — ver docs/CHATWOOT_INTEGRATION_FEASIBILITY.md §16): qualquer
@@ -21,23 +35,17 @@ export async function scopedPersonWhere(ctx: AuthContext) {
 }
 
 export function scopedPipelineWhere(ctx: AuthContext) {
-  if (isFullAccess(ctx.role)) return { tenantId: ctx.tenantId };
-  if (ctx.sectors.length === 0) return { tenantId: ctx.tenantId, sectorCode: "__none__" };
-  return { tenantId: ctx.tenantId, sectorCode: { in: ctx.sectors } };
+  return sectorWhere(ctx);
 }
 
 // Vaga é setor-scoped como Pipeline (mesmo campo sectorCode livre, sem FK).
 export function scopedVagaWhere(ctx: AuthContext) {
-  if (isFullAccess(ctx.role)) return { tenantId: ctx.tenantId };
-  if (ctx.sectors.length === 0) return { tenantId: ctx.tenantId, sectorCode: "__none__" };
-  return { tenantId: ctx.tenantId, sectorCode: { in: ctx.sectors } };
+  return sectorWhere(ctx);
 }
 
 // Space é setor-scoped como Pipeline/Vaga (mesmo campo sectorCode livre, sem FK).
 export function scopedSpaceWhere(ctx: AuthContext) {
-  if (isFullAccess(ctx.role)) return { tenantId: ctx.tenantId };
-  if (ctx.sectors.length === 0) return { tenantId: ctx.tenantId, sectorCode: "__none__" };
-  return { tenantId: ctx.tenantId, sectorCode: { in: ctx.sectors } };
+  return sectorWhere(ctx);
 }
 
 // AssessmentLink (Testes) é setor-scoped como Vaga/Space — campo sectorCode
@@ -45,11 +53,16 @@ export function scopedSpaceWhere(ctx: AuthContext) {
 // (atravessa DP e Recrutamento) e o teste pode ser gerado direto da ficha do
 // candidato, sem candidatura.
 export function scopedAssessmentLinkWhere(ctx: AuthContext) {
-  if (isFullAccess(ctx.role)) return { tenantId: ctx.tenantId };
-  if (ctx.sectors.length === 0) return { tenantId: ctx.tenantId, sectorCode: "__none__" };
-  return { tenantId: ctx.tenantId, sectorCode: { in: ctx.sectors } };
+  return sectorWhere(ctx);
 }
 
+// Handoff NÃO acompanha o setor ativo — de propósito, e isto não é descuido.
+//
+// Transferência é setor↔setor por natureza: se ela sumisse ao trocar o setor
+// ativo, o handoff que chega de outro setor ficaria invisível e a transferência
+// morreria parada, sem ninguém receber erro. Escopo de handoff continua sendo
+// só UserSector ∩ RBAC.
+//
 // Handoff: ADMIN/SUPER_ADMIN/READONLY (gerência geral) enxergam tudo; quem
 // abriu a transferência (controladoria) sempre a enxerga; e membros de
 // qualquer setor envolvido (origem ou destino, via handoff_sectors) também.

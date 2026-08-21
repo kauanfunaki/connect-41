@@ -7,6 +7,7 @@ import {
   canManageSector,
   canActOnSector,
   canViewSector,
+  scopedSectors,
   type AuthContext,
 } from "./context";
 
@@ -19,6 +20,7 @@ function ctx(role: AuthContext["role"], sectors: string[] = [], subscriptionRead
     sectors,
     subscriptionReadOnly,
     canSelfRegularizeSubscription: true,
+    activeSector: null,
   };
 }
 
@@ -74,5 +76,55 @@ describe("predicados por setor", () => {
     expect(canActOnSector(ctx("ADMIN", [], true), "fiscal")).toBe(false);
     expect(canManageSector(ctx("ADMIN", [], true), "fiscal")).toBe(false);
     expect(canActOnSector(ctx("ADMIN", [], false), "fiscal")).toBe(true);
+  });
+});
+
+// ── Setor ativo é filtro de visão, NUNCA permissão ────────────────────────────
+// Se algum dia alguém fizer canActOnSector olhar ctx.activeSector, quem tem dois
+// setores passa a receber "sem permissão" ao trocar o seletor. Estes testes
+// existem para essa mudança não passar em silêncio.
+describe("setor ativo não afeta permissão", () => {
+  function comSetorAtivo(base: AuthContext, activeSector: string | null): AuthContext {
+    return { ...base, activeSector };
+  }
+
+  it("canActOnSector ignora o setor ativo", () => {
+    const base = ctx("SECTOR_USER", ["bpo", "fiscal"]);
+    for (const ativo of [null, "bpo", "fiscal"]) {
+      const c = comSetorAtivo(base, ativo);
+      expect(canActOnSector(c, "bpo")).toBe(true);
+      expect(canActOnSector(c, "fiscal")).toBe(true);
+      expect(canActOnSector(c, "contabil")).toBe(false);
+    }
+  });
+
+  it("canViewSector ignora o setor ativo", () => {
+    const base = ctx("SECTOR_USER", ["bpo", "fiscal"]);
+    for (const ativo of [null, "bpo", "fiscal"]) {
+      const c = comSetorAtivo(base, ativo);
+      expect(canViewSector(c, "fiscal")).toBe(true);
+    }
+  });
+
+  it("canManageSector ignora o setor ativo", () => {
+    const base = ctx("SECTOR_ADMIN", ["bpo", "fiscal"]);
+    for (const ativo of [null, "bpo", "fiscal"]) {
+      const c = comSetorAtivo(base, ativo);
+      expect(canManageSector(c, "fiscal")).toBe(true);
+    }
+  });
+});
+
+describe("scopedSectors", () => {
+  it("setor ativo restringe a leitura", () => {
+    expect(scopedSectors({ ...ctx("SECTOR_USER", ["bpo", "fiscal"]), activeSector: "bpo" })).toEqual(["bpo"]);
+  });
+
+  it("Todos, sem full access, é a união dos setores da pessoa", () => {
+    expect(scopedSectors(ctx("SECTOR_USER", ["bpo", "fiscal"]))).toEqual(["bpo", "fiscal"]);
+  });
+
+  it("Todos, com full access, é sem filtro", () => {
+    expect(scopedSectors(ctx("ADMIN"))).toBeNull();
   });
 });

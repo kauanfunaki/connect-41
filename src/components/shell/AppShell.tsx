@@ -29,10 +29,11 @@ import { NotificationBell } from "@/components/shell/NotificationBell";
 import { ProfileMenu } from "@/components/shell/ProfileMenu";
 import { GlobalSearch } from "@/components/shell/GlobalSearch";
 import { NavItem, SectorNavItem, CadastrosNavItem } from "@/components/shell/NavLink";
-import { WorkspaceSwitcher } from "@/components/shell/WorkspaceSwitcher";
+import { ContextSwitcher } from "@/components/shell/ContextSwitcher";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
 type Sector = { code: string; label: string; color: string };
+type SectorModule = { code: string; label: string; href: string };
 
 // Ícone linear por setor (identidade visual; cor do setor continua vindo do dot).
 const SECTOR_ICONS: Record<string, React.ReactNode> = {
@@ -55,6 +56,15 @@ type Props = {
   tenantId: string;
   accessibleTenants: Tenant[];
   sectors: Sector[];
+  // Subworkspace: quando há setor ativo, a sidebar é a DELE — identidade no
+  // topo e os módulos daquele setor. `null` = "Todos os setores", e aí o menu
+  // é o de sempre (navegação global + lista de setores).
+  //
+  // Acrescentar um modo em vez de substituir a interface é o que deixa o
+  // caminho de volta pronto: se o modo setorial der problema, o antigo
+  // continua ali.
+  activeSector: Sector | null;
+  activeSectorModules: SectorModule[];
   canOpenAdmin: boolean;
   canManageMeetings: boolean;
   unreadCount: number;
@@ -74,6 +84,8 @@ export function AppShell({
   tenantId,
   accessibleTenants,
   sectors,
+  activeSector,
+  activeSectorModules,
   canOpenAdmin,
   canManageMeetings,
   unreadCount,
@@ -130,39 +142,86 @@ export function AppShell({
           </button>
         </div>
 
-        <WorkspaceSwitcher tenants={accessibleTenants} currentTenantId={tenantId} />
+        <ContextSwitcher
+          tenants={accessibleTenants}
+          currentTenantId={tenantId}
+          sectors={sectors}
+          activeSector={activeSector?.code ?? null}
+        />
 
         {/* Nav */}
         <nav
           onClick={() => setMobileOpen(false)}
           className="scroll-y flex-1 overflow-y-auto px-3 py-4 space-y-0.5"
         >
-          <p className="px-2.5 pb-1.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wider">
-            Geral
-          </p>
-          <NavItem href="/home" icon={<Home size={16} />} label="Início" />
-          <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
-          <NavItem href="/tarefas" icon={<ListTodo size={16} />} label="Tarefas" />
-          <NavItem href="/conversas" icon={<MessageCircle size={16} />} label="Conversas" />
-          <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />
-          {canManageMeetings && (
-            <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />
-          )}
-
-          {sectors.length > 0 && (
+          {activeSector ? (
             <>
-              <p className="px-2.5 pt-4 pb-1.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wider">
-                Meus Setores
-              </p>
-              {sectors.map((s) => (
-                <SectorNavItem
-                  key={s.code}
-                  href={`/setor/${s.code}`}
-                  label={s.label}
-                  color={s.color}
-                  icon={SECTOR_ICONS[s.code]}
+              {/* Identidade do setor: é o que faz a pessoa SENTIR que está no app
+                  dela, e não ler um rótulo. A cor vem do cadastro (Sector.color),
+                  escolhida pelo admin. */}
+              <p className="flex items-center gap-2 px-2.5 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
+                <span
+                  aria-hidden
+                  className="inline-block size-2 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: activeSector.color }}
                 />
+                <span className="truncate">{activeSector.label}</span>
+              </p>
+              <NavItem href="/home" icon={<Home size={16} />} label="Início" />
+              <SectorNavItem
+                href={`/setor/${activeSector.code}`}
+                label="Espaços"
+                color={activeSector.color}
+                icon={SECTOR_ICONS[activeSector.code] ?? <LayoutGrid size={16} />}
+              />
+              {activeSectorModules.map((m) => (
+                <NavItem key={m.code} href={m.href} icon={<LayoutGrid size={16} />} label={m.label} />
               ))}
+
+              {/* Transversais. NUNCA somem por causa do setor ativo: transferência
+                  é setor↔setor por natureza, e cadastro é do tenant. Isolar os
+                  dois mataria a razão de existir do Connect. */}
+              <p className="px-2.5 pt-4 pb-1.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wider">
+                Geral
+              </p>
+              <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
+              <NavItem href="/tarefas" icon={<ListTodo size={16} />} label="Tarefas" />
+              <NavItem href="/conversas" icon={<MessageCircle size={16} />} label="Conversas" />
+              <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />
+              {canManageMeetings && (
+                <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />
+              )}
+            </>
+          ) : (
+            <>
+              <p className="px-2.5 pb-1.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wider">
+                Geral
+              </p>
+              <NavItem href="/home" icon={<Home size={16} />} label="Início" />
+              <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
+              <NavItem href="/tarefas" icon={<ListTodo size={16} />} label="Tarefas" />
+              <NavItem href="/conversas" icon={<MessageCircle size={16} />} label="Conversas" />
+              <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />
+              {canManageMeetings && (
+                <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />
+              )}
+
+              {sectors.length > 0 && (
+                <>
+                  <p className="px-2.5 pt-4 pb-1.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wider">
+                    Meus Setores
+                  </p>
+                  {sectors.map((s) => (
+                    <SectorNavItem
+                      key={s.code}
+                      href={`/setor/${s.code}`}
+                      label={s.label}
+                      color={s.color}
+                      icon={SECTOR_ICONS[s.code]}
+                    />
+                  ))}
+                </>
+              )}
             </>
           )}
         </nav>

@@ -291,8 +291,14 @@ export default async function HomePage() {
     getSectorMaps(ctx.tenantId),
     getSectorsWithEnabledModules(ctx.tenantId),
   ]);
+  // Com setor ativo, o widget mostra só ele — a Home do BPO não lista onze
+  // setores dos quais dez não são dele.
   const visibleSectorCodes = (
-    isFullWrite(ctx.role) || ctx.role === "READONLY" ? Array.from(sectorsWithModules) : ctx.sectors
+    ctx.activeSector
+      ? [ctx.activeSector]
+      : isFullWrite(ctx.role) || ctx.role === "READONLY"
+        ? Array.from(sectorsWithModules)
+        : ctx.sectors
   ).filter((code) => sectorsWithModules.has(code));
   const sectorWidgets = visibleSectorCodes.map((code) => {
     const items = openPipelineItemsRaw.filter((i) => i.pipeline.sectorCode === code);

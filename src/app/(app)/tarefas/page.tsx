@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ArrowRightLeft, Columns3, ListTodo, Video } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, isFullAccess } from "@/lib/auth/context";
+import { getAuthContext, isFullAccess, scopedSectors } from "@/lib/auth/context";
 import { scopedPipelineWhere } from "@/lib/auth/scope";
 import { getSectorMaps, getActiveSectors } from "@/lib/sectors";
 import { parseTaskWidgets, visibleTaskWidgets, type TaskWidgetKey } from "@/lib/taskWidgets";
@@ -45,7 +45,11 @@ export default async function TarefasPage() {
   const configBySector: Record<string, TaskWidgetKey[]> = {};
   for (const v of taskViews) configBySector[v.sectorCode] = parseTaskWidgets(v.widgets);
 
-  const visiveis = new Set(visibleTaskWidgets(ctx.sectors, configBySector));
+  // Com setor ativo, quem manda é a configuração DAQUELE setor; em "Todos",
+  // continua sendo a união dos setores da pessoa — o comportamento anterior.
+  // (`scopedSectors` devolve null para full access em "Todos"; aí cai em
+  // ctx.sectors, e lista vazia já significa "widgets padrão" lá dentro.)
+  const visiveis = new Set(visibleTaskWidgets(scopedSectors(ctx) ?? ctx.sectors, configBySector));
   const mostraTransferencias = visiveis.has("transferencias");
   const mostraCards = visiveis.has("cards-kanban");
   const mostraReunioes = visiveis.has("reunioes");

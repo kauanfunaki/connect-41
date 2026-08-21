@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import type { UserRole } from "@/generated/prisma/enums";
 import { getPrisma } from "@/lib/prisma";
 import { isSubscriptionReadOnly, canSelfRegularize } from "@/lib/subscription-policy";
+import { HEADER_SETOR_ATIVO, resolveActiveSector, sectorScope } from "@/lib/auth/activeSector";
 
 export interface AuthContext {
   userId: string;
@@ -20,6 +21,14 @@ export interface AuthContext {
   // Só SELF_SERVICE enxerga /assinatura — usado pra decidir se o banner de
   // somente leitura oferece o link de regularizar ou manda falar com a 41 Tech.
   canSelfRegularizeSubscription: boolean;
+  // Subworkspace: em qual setor a pessoa está agora. `null` = "Todos os
+  // setores", que é sempre a união do que ela já podia ver — nunca mais.
+  //
+  // É FILTRO DE VISÃO PADRÃO, NÃO PERMISSÃO. canViewSector/canActOnSector/
+  // canManageSector continuam decidindo sozinhos, a partir de `sectors` e
+  // `role`; nenhum deles olha para cá. Quem tem dois setores não pode receber
+  // "sem permissão" por causa do seletor — só ver menos por padrão.
+  activeSector: string | null;
 }
 
 // cache() por requisição: getAuthContext() é chamado uma vez por server
@@ -45,15 +54,34 @@ export async function getAuthContext(): Promise<AuthContext> {
   const h = await headers();
   const tenantId = h.get("x-tenant-id") ?? "";
   const subscription = await getSubscriptionState(tenantId);
+  const role = (h.get("x-user-role") ?? "SECTOR_USER") as UserRole;
+  const sectors = h.get("x-user-sectors")?.split(",").filter(Boolean) ?? [];
   return {
     userId: h.get("x-user-id") ?? "",
     tenantId,
     homeTenantId: h.get("x-home-tenant-id") ?? tenantId,
-    role: (h.get("x-user-role") ?? "SECTOR_USER") as UserRole,
-    sectors: h.get("x-user-sectors")?.split(",").filter(Boolean) ?? [],
+    role,
+    sectors,
     subscriptionReadOnly: subscription.readOnly,
     canSelfRegularizeSubscription: subscription.canSelfRegularize,
+    activeSector: resolveActiveSector({
+      hint: h.get(HEADER_SETOR_ATIVO),
+      userSectors: sectors,
+      isFullAccess: isFullAccess(role),
+    }),
   };
+}
+
+/**
+ * Códigos de setor que devem filtrar uma consulta neste contexto. `null`
+ * significa sem filtro — só acontece para quem é full access e está em "Todos
+ * os setores".
+ *
+ * Use para ESCOPO DE LEITURA. Para autorizar escrita continue usando
+ * canActOnSector/canManageSector, que não olham o setor ativo.
+ */
+export function scopedSectors(ctx: AuthContext): string[] | null {
+  return sectorScope(ctx.activeSector, ctx.sectors, isFullAccess(ctx.role));
 }
 
 // SUPER_ADMIN e ADMIN enxergam/gerenciam tudo do tenant; READONLY enxerga tudo mas nunca escreve.

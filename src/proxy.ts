@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import type { AccessTokenPayload } from "@/lib/auth/types";
+import { COOKIE_SETOR_ATIVO, HEADER_SETOR_ATIVO, resolveSectorHint } from "@/lib/auth/activeSector";
 
 // jose usa Web Crypto API — funciona tanto no runtime Node quanto no Edge
 // (ao contrário de jsonwebtoken). Mantido mesmo após a migração pra Proxy
@@ -71,6 +72,9 @@ const IDENTITY_HEADERS = [
   "x-user-role",
   "x-user-sectors",
   "x-home-tenant-id",
+  // Setor ativo é só filtro de visão, não permissão — mas ainda assim não pode
+  // vir do cliente: quem o define é este proxy, a partir do host e do cookie.
+  HEADER_SETOR_ATIVO,
 ];
 
 function stripIdentityHeaders(headers: Headers): void {
@@ -102,6 +106,16 @@ function applyIdentityHeaders(headers: Headers, payload: AccessTokenPayload, req
   headers.set("x-user-role", payload.role);
   headers.set("x-user-sectors", effectiveTenantId === payload.tenantId ? payload.sectors.join(",") : "");
   headers.set("x-home-tenant-id", payload.tenantId);
+
+  // Candidato a setor ativo — o subdomínio ganha do cookie, para link
+  // compartilhado abrir no setor certo em vez do último que o destinatário
+  // usou. Só candidato: quem valida contra os setores da pessoa é
+  // resolveActiveSector(), em getAuthContext.
+  const hint = resolveSectorHint(
+    req.headers.get("host"),
+    req.cookies.get(COOKIE_SETOR_ATIVO)?.value ?? null,
+  );
+  if (hint) headers.set(HEADER_SETOR_ATIVO, hint);
 }
 
 // Renova o access token via /api/auth/refresh quando ele já expirou mas o

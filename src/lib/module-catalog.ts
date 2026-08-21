@@ -111,3 +111,27 @@ export function getModuleDef(code: string): ModuleDef | undefined {
 export function getModulesForSector(sectorCode: string): ModuleDef[] {
   return MODULE_CATALOG.filter((m) => m.sectorCode === sectorCode);
 }
+
+// Rota real de cada módulo. Viveu dentro de
+// src/app/(app)/setor/[code]/[moduleCode]/page.tsx até 2026-08-21, quando a
+// sidebar setorial passou a precisar da mesma informação — duas cópias de um
+// de-para é como um módulo novo aparece no menu e não abre.
+export const MODULE_ROUTES: Record<string, string> = {
+  recrutamento_vagas:      "/vagas",
+  recrutamento_candidatos: "/candidatos",
+  recrutamento_testes:     "/testes",
+  dprh_colaboradores:      "/colaboradores",
+  dprh_afastamentos:       "/afastamentos",
+  dprh_horas_extras:       "/horas-extras",
+  dprh_escalas:            "/escalas",
+  dprh_treinamentos:       "/treinamentos",
+  dprh_avaliacoes:         "/avaliacoes",
+  gestao_cargos_salarios:  "/cargos-salarios",
+  gestao_indicadores_rh:   "/indicadores-rh",
+  bpo_senhas:              "/bpo-senhas",
+  bpo_manual:              "/bpo-manual",
+};
+
+export function getModuleRoute(code: string): string | undefined {
+  return MODULE_ROUTES[code];
+}

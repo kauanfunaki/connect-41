@@ -11,6 +11,7 @@ function ctx(role: AuthContext["role"], subscriptionReadOnly = false): AuthConte
     sectors: [],
     subscriptionReadOnly,
     canSelfRegularizeSubscription: true,
+    activeSector: null,
   };
 }
 

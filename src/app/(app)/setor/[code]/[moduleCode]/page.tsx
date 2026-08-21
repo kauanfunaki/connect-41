@@ -1,25 +1,12 @@
 import { notFound, redirect } from "next/navigation";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled } from "@/lib/modules";
-import { getModuleDef } from "@/lib/module-catalog";
+import { getModuleDef, MODULE_ROUTES } from "@/lib/module-catalog";
 
 // Dispatcher fino: cada módulo real vive na sua própria rota (ex: /vagas);
 // esta página só existe pra o link montado em /setor/[code] ter destino.
-const MODULE_ROUTES: Record<string, string> = {
-  recrutamento_vagas: "/vagas",
-  recrutamento_candidatos: "/candidatos",
-  recrutamento_testes:     "/testes",
-  dprh_colaboradores:     "/colaboradores",
-  dprh_afastamentos:      "/afastamentos",
-  dprh_horas_extras:      "/horas-extras",
-  dprh_escalas:           "/escalas",
-  dprh_treinamentos:      "/treinamentos",
-  dprh_avaliacoes:        "/avaliacoes",
-  gestao_cargos_salarios: "/cargos-salarios",
-  gestao_indicadores_rh:  "/indicadores-rh",
-  bpo_senhas:             "/bpo-senhas",
-  bpo_manual:             "/bpo-manual",
-};
+// O de-para mora em src/lib/module-catalog.ts, porque a sidebar setorial usa o
+// mesmo mapa.
 
 export default async function SectorModulePage({
   params,
