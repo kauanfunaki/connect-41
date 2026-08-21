@@ -29,6 +29,15 @@ export default async function EditarCargoPage({
   const cargo = await prisma.cargo.findFirst({ where: { id: cargoId, tenantId: ctx.tenantId, companyId } });
   if (!cargo) notFound();
 
+  // Famílias já em uso no tenant viram sugestão no campo — evita "Contábil" e
+  // "Contabil" convivendo e quebrando o agrupamento da matriz.
+  const familias = await prisma.cargo.findMany({
+    where: { tenantId: ctx.tenantId, family: { not: null } },
+    select: { family: true },
+    distinct: ["family"],
+    orderBy: { family: "asc" },
+  });
+
   return (
     <PageContainer>
       <Breadcrumb
@@ -49,10 +58,13 @@ export default async function EditarCargoPage({
             action={atualizarCargo}
             companyId={companyId}
             cancelHref={`/empresas/${companyId}/cargos`}
+            familiasExistentes={familias.map((f) => f.family!).filter(Boolean)}
             defaultValues={{
               id: cargo.id,
               name: cargo.name,
               area: cargo.area ?? undefined,
+              family: cargo.family ?? undefined,
+              seniority: cargo.seniority ?? undefined,
               description: cargo.description ?? undefined,
               technicalRequirements: cargo.technicalRequirements ?? undefined,
               behavioralRequirements: cargo.behavioralRequirements ?? undefined,

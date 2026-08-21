@@ -7,6 +7,8 @@
 // acknowledgedAt + polling no client), que é mais preciso que um cron diário.
 import { getPrisma } from "@/lib/prisma";
 import { notifySector, notifyUser } from "@/lib/notifications";
+import { statusPrazoPagamento } from "@/lib/rescisaoChecklist";
+import { calcularValidade } from "@/lib/relatoriosRH";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -17,6 +19,8 @@ const HANDOFF_STALE_DAYS = 3;
 const DOCUMENT_WARNING_DAYS = 30;
 const ADMISSAO_PENDENTE_DAYS = 5; // link gerado, colaborador ainda não preencheu
 const ADMISSAO_CONFERENCIA_DAYS = 2; // colaborador preencheu, DP ainda não concluiu
+const RESCISAO_WARNING_DAYS = 3; // antecedência do prazo do art. 477 §6
+const TRAINING_WARNING_DAYS = 30; // reciclagem de treinamento vencendo
 
 const VACATION_OPEN_STATUSES = ["PLANEJADA", "SOLICITADA", "EM_ANALISE", "APROVADA", "PROGRAMADA", "EM_GOZO"] as const;
 const EXAM_RESOLVED_STATUSES = ["ASO_APTO", "ASO_INAPTO", "ASO_APTO_COM_RESTRICAO"] as const;
@@ -252,6 +256,98 @@ async function checkAdmissoesParadas(tenantId: string, today: Date): Promise<num
 
 type TenantResult = { tenantId: string; sent: number; errors: string[] };
 
+// Prazo legal de pagamento da rescisão (CLT art. 477 §6). É o passivo mais
+// caro do ciclo de desligamento e o único prazo aqui que gera multa automática
+// ao empregador, então avisa com antecedência e volta a avisar quando estoura.
+async function checkRescisoesPrazo(tenantId: string, today: Date): Promise<number> {
+  const prisma = getPrisma();
+
+  const terminations = await prisma.termination.findMany({
+    where: {
+      tenantId,
+      terminationDate: { not: null },
+      status: { notIn: ["FINALIZADO", "CANCELADO"] },
+    },
+    select: {
+      id: true,
+      terminationDate: true,
+      personId: true,
+      person: { select: { name: true } },
+    },
+  });
+
+  let sent = 0;
+  for (const t of terminations) {
+    if (!t.terminationDate) continue;
+    const { dueDate, diasRestantes, status } = statusPrazoPagamento(t.terminationDate, today);
+    // Avisa a 3 dias, no dia, e enquanto estiver vencido.
+    if (!(status === "VENCIDO" || diasRestantes <= RESCISAO_WARNING_DAYS)) continue;
+
+    const key = `RESCISAO_PRAZO:${t.id}:${status === "VENCIDO" ? "vencido" : diasRestantes}`;
+    if (!(await tryDispatch(tenantId, key, today))) continue;
+
+    const message =
+      status === "VENCIDO"
+        ? `Prazo de pagamento da rescisão de ${t.person.name} venceu há ${Math.abs(diasRestantes)} dia(s).`
+        : diasRestantes === 0
+          ? `Prazo de pagamento da rescisão de ${t.person.name} vence hoje.`
+          : `Prazo de pagamento da rescisão de ${t.person.name} vence em ${diasRestantes} dia(s) (${dueDate.toISOString().slice(0, 10)}).`;
+
+    await notifySector("dprh", { tenantId, type: "RESCISAO_PRAZO", message, entityType: "PERSON", entityId: t.personId });
+    sent++;
+  }
+  return sent;
+}
+
+// Reciclagem de treinamento vencendo. O enum TrainingParticipantStatus já tinha
+// VENCIDO, mas nada calculava — dependia de alguém marcar à mão, então na
+// prática ninguém era avisado. A validade vem de Training.validityMonths
+// contada a partir da data da turma.
+async function checkTreinamentosVencendo(tenantId: string, today: Date): Promise<number> {
+  const prisma = getPrisma();
+
+  const participants = await prisma.trainingParticipant.findMany({
+    where: {
+      tenantId,
+      status: { in: ["REALIZADO", "CONCLUIDO"] },
+      class: { training: { validityMonths: { not: null } } },
+      // Colaborador desligado não precisa reciclar.
+      person: { active: true, employmentStatus: { not: "DESLIGADO" } },
+    },
+    select: {
+      id: true,
+      personId: true,
+      person: { select: { name: true } },
+      class: { select: { date: true, training: { select: { name: true, validityMonths: true } } } },
+    },
+  });
+
+  let sent = 0;
+  for (const p of participants) {
+    const validadeAte = calcularValidade(p.class.date, p.class.training.validityMonths);
+    if (!validadeAte) continue;
+
+    const dias = daysBetween(today, validadeAte);
+    if (dias > TRAINING_WARNING_DAYS) continue;
+
+    // Vencido notifica uma vez só (não todo dia, pra sempre); dentro da janela
+    // notifica por marco de dias restantes.
+    const key = `TRAINING_EXPIRING:${p.id}:${dias < 0 ? "vencido" : dias}`;
+    if (!(await tryDispatch(tenantId, key, today))) continue;
+
+    const message =
+      dias < 0
+        ? `Treinamento "${p.class.training.name}" de ${p.person.name} está vencido desde ${validadeAte.toISOString().slice(0, 10)}.`
+        : dias === 0
+          ? `Treinamento "${p.class.training.name}" de ${p.person.name} vence hoje.`
+          : `Treinamento "${p.class.training.name}" de ${p.person.name} vence em ${dias} dia(s).`;
+
+    await notifySector("dprh", { tenantId, type: "TRAINING_EXPIRING", message, entityType: "PERSON", entityId: p.personId });
+    sent++;
+  }
+  return sent;
+}
+
 async function runForTenant(tenantId: string, today: Date): Promise<TenantResult> {
   const checks: Array<[string, () => Promise<number>]> = [
     ["vacations", () => checkVacationsExpiring(tenantId, today)],
@@ -260,6 +356,8 @@ async function runForTenant(tenantId: string, today: Date): Promise<TenantResult
     ["handoffs", () => checkHandoffsParados(tenantId, today)],
     ["documentos", () => checkDocumentosVencendo(tenantId, today)],
     ["admissoes", () => checkAdmissoesParadas(tenantId, today)],
+    ["rescisoes", () => checkRescisoesPrazo(tenantId, today)],
+    ["treinamentos", () => checkTreinamentosVencendo(tenantId, today)],
   ];
 
   let sent = 0;

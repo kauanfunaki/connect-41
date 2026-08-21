@@ -9,6 +9,7 @@ import { scopedPersonWhere } from "@/lib/auth/scope";
 import { AddDesligamentoForm } from "@/components/pessoas/AddDesligamentoForm";
 import { DesligamentoRow } from "@/components/pessoas/DesligamentoRow";
 import { formatInstantDate } from "@/lib/format";
+import { resumirConferencia } from "@/lib/rescisaoChecklist";
 import { criarDesligamento, atualizarDesligamento, excluirDesligamento } from "./actions";
 
 export default async function DesligamentoPage({
@@ -30,6 +31,7 @@ export default async function DesligamentoPage({
   const terminations = await prisma.termination.findMany({
     where: { tenantId: ctx.tenantId, personId: id },
     orderBy: { requestedAt: "desc" },
+    include: { checks: { select: { itemKey: true, status: true } } },
   });
 
   const criarDesligamentoAction = criarDesligamento.bind(null, id);
@@ -55,22 +57,33 @@ export default async function DesligamentoPage({
           <p className="text-[13px] text-fg-muted mb-3">Nenhum desligamento registrado.</p>
         ) : (
           <div>
-            {terminations.map((t) => (
-              <DesligamentoRow
-                key={t.id}
-                desligamento={{
-                  id: t.id,
-                  type: t.type,
-                  status: t.status,
-                  reason: t.reason,
-                  requestedAtLabel: formatInstantDate(t.requestedAt),
-                  finalizedAtLabel: t.finalizedAt ? formatInstantDate(t.finalizedAt) : null,
-                }}
-                updateAction={atualizarDesligamento.bind(null, id, t.id)}
-                removeAction={excluirDesligamento.bind(null, id, t.id)}
-                canManage={canEdit}
-              />
-            ))}
+            {terminations.map((t) => {
+              const resumo = t.checks.length > 0 ? resumirConferencia(t.checks) : null;
+              return (
+                <DesligamentoRow
+                  key={t.id}
+                  desligamento={{
+                    id: t.id,
+                    type: t.type,
+                    status: t.status,
+                    reason: t.reason,
+                    requestedAtLabel: formatInstantDate(t.requestedAt),
+                    finalizedAtLabel: t.finalizedAt ? formatInstantDate(t.finalizedAt) : null,
+                    conferencia: resumo
+                      ? {
+                          pendentes: resumo.pendentes,
+                          divergentes: resumo.divergentes,
+                          progressoPct: resumo.progressoPct,
+                        }
+                      : null,
+                  }}
+                  conferenciaHref={`/pessoas/${id}/desligamento/${t.id}/conferencia`}
+                  updateAction={atualizarDesligamento.bind(null, id, t.id)}
+                  removeAction={excluirDesligamento.bind(null, id, t.id)}
+                  canManage={canEdit}
+                />
+              );
+            })}
           </div>
         )}
 

@@ -4,13 +4,17 @@ import { useActionState } from "react";
 import type { CargoState } from "@/app/(app)/empresas/[id]/cargos/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { SENIORITY_ORDER, SENIORITY_LABEL } from "@/lib/cargoMatriz";
 
 export type CargoDefaultValues = {
   id?: string;
   name?: string;
   area?: string;
+  family?: string;
+  seniority?: string;
   description?: string;
   technicalRequirements?: string;
   behavioralRequirements?: string;
@@ -24,9 +28,11 @@ type Props = {
   companyId: string;
   cancelHref: string;
   defaultValues?: CargoDefaultValues;
+  /** Famílias já usadas no tenant — sugestão pra não criar variação de grafia. */
+  familiasExistentes?: string[];
 };
 
-export function CargoForm({ action, companyId, cancelHref, defaultValues }: Props) {
+export function CargoForm({ action, companyId, cancelHref, defaultValues, familiasExistentes = [] }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
 
   return (
@@ -46,6 +52,43 @@ export function CargoForm({ action, companyId, cancelHref, defaultValues }: Prop
         </CampoForm>
         <CampoForm label="Área" htmlFor="area">
           <Input id="area" name="area" type="text" defaultValue={defaultValues?.area ?? ""} />
+        </CampoForm>
+      </div>
+
+      {/* Família + senioridade formam a trilha de carreira usada pela matriz
+          em /cargos-salarios. Ambos opcionais: cargo sem classificação continua
+          válido, só cai no grupo "sem família". */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <CampoForm
+          label="Família de cargos"
+          htmlFor="family"
+          helper="Agrupa a mesma trilha em níveis diferentes (ex: Contábil, Fiscal, Atendimento)."
+        >
+          <Input
+            id="family"
+            name="family"
+            type="text"
+            list="familias-existentes"
+            defaultValue={defaultValues?.family ?? ""}
+            placeholder="ex: Contábil"
+          />
+          {familiasExistentes.length > 0 && (
+            <datalist id="familias-existentes">
+              {familiasExistentes.map((f) => (
+                <option key={f} value={f} />
+              ))}
+            </datalist>
+          )}
+        </CampoForm>
+        <CampoForm label="Nível de senioridade" htmlFor="seniority">
+          <Select id="seniority" name="seniority" defaultValue={defaultValues?.seniority ?? ""}>
+            <option value="">Não definido</option>
+            {SENIORITY_ORDER.map((s) => (
+              <option key={s} value={s}>
+                {SENIORITY_LABEL[s]}
+              </option>
+            ))}
+          </Select>
         </CampoForm>
       </div>
 

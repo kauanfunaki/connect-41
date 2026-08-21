@@ -15,6 +15,10 @@ const TYPE_LABEL: Record<TerminationType, string> = {
   EXPERIENCIA:       "Experiência",
   JUSTA_CAUSA:       "Justa causa",
   SEM_JUSTA_CAUSA:   "Sem justa causa",
+  // Sem estes dois, um acordo era registrado como "sem justa causa" e o
+  // cálculo geraria multa de FGTS de 40% onde a lei manda 20%.
+  ACORDO_484A:       "Acordo entre as partes (art. 484-A)",
+  RESCISAO_INDIRETA: "Rescisão indireta",
 };
 const TYPE_OPTIONS = Object.keys(TYPE_LABEL) as TerminationType[];
 
