@@ -283,6 +283,68 @@ enum TerminationType {
   EXPERIENCIA
   JUSTA_CAUSA
   SEM_JUSTA_CAUSA
+  ACORDO_484A // art. 484-A CLT — acordo entre as partes
+  RESCISAO_INDIRETA // art. 483 CLT — falta grave do empregador
+}
+
+// ─── Cálculo de rescisão ─────────────────────────────────────────────────────
+// Estes enums e os modelos *RescisaoConfig/TerminationCheck existiam SÓ no banco
+// de produção até 2026-08-21 (drift registrado no Quadro em 05/08). Foram trazidos
+// para o repo com a nomenclatura da casa; o banco não muda, porque no MySQL o
+// ENUM é inline na coluna — o nome do enum é só do lado do Prisma.
+
+enum TerminationNoticeType {
+  INDENIZADO
+  TRABALHADO
+  DISPENSADO
+  NAO_APLICAVEL
+}
+
+enum TerminationCheckStatus {
+  PENDENTE
+  CONFERIDO
+  DIVERGENTE
+  NAO_APLICAVEL
+}
+
+// Um enum só para tenant e empresa: o `db pull` gerou um par duplicado por coluna
+// (limitação do MySQL, que não tem tipo nomeado), mas os valores são idênticos e o
+// DDL emitido é o mesmo.
+enum InsalubridadeGrau {
+  NENHUM
+  MINIMO
+  MEDIO
+  MAXIMO
+}
+
+enum InsalubridadeBase {
+  SALARIO_MINIMO
+  SALARIO_BASE
+  PISO_CATEGORIA
+}
+
+enum MediaBaseFerias {
+  PERIODO_AQUISITIVO
+  ANO_CIVIL
+  ULTIMOS_N_MESES
+}
+
+enum MediaBaseDecimoTerceiro {
+  PERIODO_AQUISITIVO
+  ANO_CIVIL
+  ULTIMOS_N_MESES
+}
+
+enum CargoSeniority {
+  ESTAGIO
+  APRENDIZ
+  JUNIOR
+  PLENO
+  SENIOR
+  ESPECIALISTA
+  COORDENACAO
+  GERENCIA
+  DIRETORIA
 }
 
 enum TerminationStatus {
@@ -445,6 +507,9 @@ model Tenant {
   chatwootAgentLinks       ChatwootAgentLink[]
   agentEvaluationSummaries AgentEvaluationSummary[]
   sectorTaskViews          SectorTaskView[]
+  rescisaoConfig           TenantRescisaoConfig?
+  companyRescisaoConfigs   CompanyRescisaoConfig[]
+  terminationChecks        TerminationCheck[]
 
   @@map("tenants")
 }
@@ -560,22 +625,22 @@ model TenantModule {
 // SUPER_ADMIN) — cada plano já fixa o modo de gestão (frente 1 vs frente 2 do
 // levantamento comercial) e como é cobrado.
 model SubscriptionPlan {
-  id             String         @id @default(uuid())
-  name           String         @db.VarChar(80)
-  managementMode ManagementMode
-  billingType    BillingType
-  basePrice      Decimal        @default(0) @db.Decimal(10, 2) // usado quando billingType = FLAT_MONTHLY
-  pricePerUser   Decimal?       @db.Decimal(10, 2) // usado quando billingType = PER_USER_MONTHLY
-  setupFee       Decimal        @default(0) @db.Decimal(10, 2)
+  id                 String         @id @default(uuid())
+  name               String         @db.VarChar(80)
+  managementMode     ManagementMode
+  billingType        BillingType
+  basePrice          Decimal        @default(0) @db.Decimal(10, 2) // usado quando billingType = FLAT_MONTHLY
+  pricePerUser       Decimal?       @db.Decimal(10, 2) // usado quando billingType = PER_USER_MONTHLY
+  setupFee           Decimal        @default(0) @db.Decimal(10, 2)
   // Códigos de módulo (MODULE_CATALOG) que este plano libera — null significa
   // "sem restrição por plano" (mantém compat com planos criados antes desta
   // coluna existir). Quando definido, um módulo só fica disponível pro tenant
   // se: 1) o plano permite E 2) TenantModule/defaultEnabled também permite —
   // o plano é o teto, TenantModule só pode restringir mais, nunca liberar além dele.
   allowedModuleCodes Json?
-  active         Boolean        @default(true)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  active             Boolean        @default(true)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
 
   subscriptions Subscription[]
 
@@ -618,7 +683,7 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  tenant                     Tenant                 @relation(fields: [tenantId], references: [id])
+  tenant                     Tenant                  @relation(fields: [tenantId], references: [id])
   sectors                    UserSector[]
   assignedItems              PipelineItemAssignee[]
   watchedItems               PipelineItemWatcher[]
@@ -626,8 +691,8 @@ model User {
   manualDocuments            ManualDocument[]
   manualPages                ManualPage[]
   activities                 Activity[]
-  handoffs                   Handoff[]              @relation("HandoffRequester")
-  handoffSectorsAssigned     HandoffSector[]        @relation("HandoffSectorAssignee")
+  handoffs                   Handoff[]               @relation("HandoffRequester")
+  handoffSectorsAssigned     HandoffSector[]         @relation("HandoffSectorAssignee")
   handoffSectorAssignees     HandoffSectorAssignee[]
   handoffViews               HandoffView[]
   notifications              Notification[]
@@ -636,9 +701,9 @@ model User {
   uploadedDocuments          Document[]
   evaluationsGiven           Evaluation[]
   auditLogs                  AuditLog[]
-  responsibleFor             CompanyService[]       @relation("CompanyServiceResponsible")
+  responsibleFor             CompanyService[]        @relation("CompanyServiceResponsible")
   oauthAccounts              OAuthAccount[]
-  meetingsCreated            Meeting[]              @relation("MeetingCreatedBy")
+  meetingsCreated            Meeting[]               @relation("MeetingCreatedBy")
   meetingAttendances         MeetingAttendee[]
   clientDocumentsCreated     ClientDocument[]
   recurringObligations       RecurringObligation[]
@@ -651,6 +716,8 @@ model User {
   bpoCredentialViews         BpoCredentialView[]
   chatwootAgentLinks         ChatwootAgentLink[]
   preference                 UserPreference?
+
+  terminationChecks TerminationCheck[] @relation("TerminationCheckCheckedBy")
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -749,6 +816,7 @@ model Company {
   recurringObligations RecurringObligation[]
   chatwootContactLinks ChatwootContactLink[]
   bpoCredentials       BpoCredential[]
+  rescisaoConfig       CompanyRescisaoConfig?
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -1047,20 +1115,20 @@ model ManualDocument {
 }
 
 model ManualPage {
-  id          String   @id @default(uuid())
-  tenantId    String
-  documentId  String
-  title       String   @db.VarChar(160)
-  content     String?  @db.Text // HTML do RichTextEditor, sanitizado no servidor
-  coverImageUrl String? @db.VarChar(255) // capa estilo Notion, mesmo padrão de upload do logo de empresa
-  order       Int      @default(0)
-  createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(uuid())
+  tenantId      String
+  documentId    String
+  title         String   @db.VarChar(160)
+  content       String?  @db.Text // HTML do RichTextEditor, sanitizado no servidor
+  coverImageUrl String?  @db.VarChar(255) // capa estilo Notion, mesmo padrão de upload do logo de empresa
+  order         Int      @default(0)
+  createdById   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  tenant     Tenant         @relation(fields: [tenantId], references: [id])
-  document   ManualDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  createdBy  User           @relation(fields: [createdById], references: [id])
+  tenant    Tenant         @relation(fields: [tenantId], references: [id])
+  document  ManualDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdBy User           @relation(fields: [createdById], references: [id])
 
   @@index([tenantId, documentId])
   @@map("manual_pages")
@@ -1293,20 +1361,22 @@ model Department {
 
 // Catálogo de cargos por empresa-cliente (não compartilhado entre empresas do tenant).
 model Cargo {
-  id                     String   @id @default(uuid())
+  id                     String          @id @default(uuid())
   tenantId               String
   companyId              String
-  name                   String   @db.VarChar(120)
-  area                   String?  @db.VarChar(80)
-  description            String?  @db.Text
-  technicalRequirements  String?  @db.Text
-  behavioralRequirements String?  @db.Text
-  salaryRangeMin         Decimal? @db.Decimal(12, 2)
-  salaryRangeMid         Decimal? @db.Decimal(12, 2)
-  salaryRangeMax         Decimal? @db.Decimal(12, 2)
-  active                 Boolean  @default(true)
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  name                   String          @db.VarChar(120)
+  area                   String?         @db.VarChar(80)
+  description            String?         @db.Text
+  technicalRequirements  String?         @db.Text
+  behavioralRequirements String?         @db.Text
+  salaryRangeMin         Decimal?        @db.Decimal(12, 2)
+  salaryRangeMid         Decimal?        @db.Decimal(12, 2)
+  salaryRangeMax         Decimal?        @db.Decimal(12, 2)
+  family                 String?         @db.VarChar(80)
+  seniority              CargoSeniority?
+  active                 Boolean         @default(true)
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
 
   tenant        Tenant         @relation(fields: [tenantId], references: [id])
   company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -1905,8 +1975,18 @@ model Termination {
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-  person Person @relation(fields: [personId], references: [id])
+  // Campos do cálculo de rescisão — existiam só em produção até 2026-08-21.
+  terminationDate       DateTime?
+  noticeType            TerminationNoticeType?
+  fgtsBalanceInformed   Decimal?               @db.Decimal(12, 2)
+  thirteenthAdvancePaid Decimal?               @db.Decimal(12, 2)
+  unjustifiedAbsences   Int?
+  noticeWorkedDays      Int?
+  apprentice            Boolean                @default(false)
+
+  tenant Tenant             @relation(fields: [tenantId], references: [id])
+  person Person             @relation(fields: [personId], references: [id])
+  checks TerminationCheck[]
 
   @@index([tenantId, personId])
   @@map("terminations")
@@ -2303,9 +2383,9 @@ model HandoffSector {
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
 
-  tenant   Tenant  @relation(fields: [tenantId], references: [id])
-  handoff  Handoff @relation(fields: [handoffId], references: [id], onDelete: Cascade)
-  assignee User?   @relation("HandoffSectorAssignee", fields: [assignedTo], references: [id])
+  tenant    Tenant                  @relation(fields: [tenantId], references: [id])
+  handoff   Handoff                 @relation(fields: [handoffId], references: [id], onDelete: Cascade)
+  assignee  User?                   @relation("HandoffSectorAssignee", fields: [assignedTo], references: [id])
   assignees HandoffSectorAssignee[]
 
   @@unique([handoffId, sectorCode])
@@ -2747,4 +2827,93 @@ model BpoCredentialView {
 
   @@index([credentialId])
   @@map("bpo_credential_views")
+}
+
+// ─── Cálculo de rescisão ─────────────────────────────────────────────────────
+// Trazidos do banco de produção para o repo em 2026-08-21. Nomes de modelo e de
+// campo de relação seguem o padrão da casa (PascalCase + @@map, relação no
+// singular); TODA coluna mantém o nome exato que já está em produção, porque
+// renomear coluna é a única mudança aqui que geraria DDL.
+
+// Padrão do escritório: uma linha por tenant, é o fallback de toda empresa que
+// não tiver configuração própria.
+model TenantRescisaoConfig {
+  id                       String                  @id @default(uuid())
+  tenantId                 String                  @unique
+  insalubridadeGrau        InsalubridadeGrau       @default(NENHUM)
+  insalubridadeBase        InsalubridadeBase       @default(SALARIO_MINIMO)
+  periculosidadeAplica     Boolean                 @default(false)
+  periculosidadeIntegral   Boolean                 @default(false)
+  mediaMeses               Int                     @default(12)
+  mediaBaseFerias          MediaBaseFerias         @default(PERIODO_AQUISITIVO)
+  mediaBaseDecimoTerceiro  MediaBaseDecimoTerceiro @default(ANO_CIVIL)
+  tercoApresentadoSeparado Boolean                 @default(true)
+  verbasDesabilitadas      Json?
+  descontosPadrao          Json?
+  toleranciaPct            Decimal                 @default(1.00) @db.Decimal(5, 2)
+  cctNome                  String?                 @db.VarChar(180)
+  cctObservacoes           String?                 @db.Text
+  updatedAt                DateTime                @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("tenant_rescisao_configs")
+}
+
+// Sobreposição por empresa. Campo nulo aqui significa "usa o do tenant" — é por
+// isso que tudo é opcional, ao contrário do modelo acima.
+model CompanyRescisaoConfig {
+  id                       String                   @id @default(uuid())
+  tenantId                 String
+  companyId                String                   @unique
+  insalubridadeGrau        InsalubridadeGrau?
+  insalubridadeBase        InsalubridadeBase?
+  periculosidadeAplica     Boolean?
+  periculosidadeIntegral   Boolean?
+  mediaMeses               Int?
+  mediaBaseFerias          MediaBaseFerias?
+  mediaBaseDecimoTerceiro  MediaBaseDecimoTerceiro?
+  tercoApresentadoSeparado Boolean?
+  verbasDesabilitadas      Json?
+  descontosPadrao          Json?
+  toleranciaPct            Decimal?                 @db.Decimal(5, 2)
+  cctNome                  String?                  @db.VarChar(180)
+  cctObservacoes           String?                  @db.Text
+  updatedAt                DateTime                 @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@map("company_rescisao_configs")
+}
+
+// Conferência item a item da rescisão: o que o sistema calculou contra o que veio
+// informado, com a versão do cálculo que produziu o número — é o que permite
+// reconferir uma rescisão antiga sem que uma mudança de regra a invalide.
+model TerminationCheck {
+  id                 String                 @id @default(uuid())
+  tenantId           String
+  terminationId      String
+  itemKey            String                 @db.VarChar(60)
+  status             TerminationCheckStatus @default(PENDENTE)
+  informedValue      Decimal?               @db.Decimal(12, 2)
+  calculatedValue    Decimal?               @db.Decimal(12, 2)
+  calculationBasis   String?                @db.Text
+  calculationVersion String?                @db.VarChar(20)
+  calculatedAt       DateTime?
+  note               String?                @db.Text
+  checkedById        String?
+  checkedAt          DateTime?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  termination Termination @relation(fields: [terminationId], references: [id], onDelete: Cascade)
+  checkedBy   User?       @relation("TerminationCheckCheckedBy", fields: [checkedById], references: [id])
+
+  @@unique([terminationId, itemKey])
+  @@index([checkedById], map: "termination_checks_checkedById_fkey")
+  @@index([tenantId, status])
+  @@map("termination_checks")
 }
