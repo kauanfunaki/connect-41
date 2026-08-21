@@ -3,6 +3,14 @@ import { getPrisma } from "@/lib/prisma";
 import { verifyRefresh, signAccess, signRefresh } from "@/lib/auth/jwt";
 import { getAccessibleTenantIds } from "@/lib/auth/tenantAccess";
 import crypto from "crypto";
+import {
+  ACCESS_COOKIE,
+  ACCESS_MAX_AGE,
+  REFRESH_COOKIE,
+  REFRESH_MAX_AGE,
+  accessCookieOptions,
+  refreshCookieOptions,
+} from "@/lib/auth/cookies";
 
 export const dynamic = "force-dynamic";
 
@@ -60,24 +68,11 @@ export async function POST(req: NextRequest) {
     accessibleTenants,
   });
 
-  const isProduction = process.env.NODE_ENV === "production";
   const res = NextResponse.json({ accessToken });
 
-  res.cookies.set("access_token", accessToken, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 15,
-  });
+  res.cookies.set(ACCESS_COOKIE, accessToken, accessCookieOptions(ACCESS_MAX_AGE));
 
-  res.cookies.set("refresh_token", newRaw, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: "lax",
-    path: "/api/auth",
-    maxAge: 60 * 60 * 24 * 7,
-  });
+  res.cookies.set(REFRESH_COOKIE, newRaw, refreshCookieOptions(REFRESH_MAX_AGE));
 
   return res;
 }

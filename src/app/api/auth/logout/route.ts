@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
 import { verifyRefresh } from "@/lib/auth/jwt";
 import crypto from "crypto";
+import { ACCESS_COOKIE, REFRESH_COOKIE, accessCookieOptions, refreshCookieOptions } from "@/lib/auth/cookies";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +26,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const isProduction = process.env.NODE_ENV === "production";
   const res = NextResponse.json({ ok: true });
-  res.cookies.set("access_token", "", { httpOnly: true, secure: isProduction, sameSite: "lax", path: "/", maxAge: 0 });
-  res.cookies.set("refresh_token", "", { httpOnly: true, secure: isProduction, sameSite: "lax", path: "/api/auth", maxAge: 0 });
+  // maxAge 0 com AS MESMAS opções da gravação — inclusive `domain`. Atributo
+  // diferente não apaga o cookie, cria outro.
+  res.cookies.set(ACCESS_COOKIE, "", accessCookieOptions(0));
+  res.cookies.set(REFRESH_COOKIE, "", refreshCookieOptions(0));
   return res;
 }

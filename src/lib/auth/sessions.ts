@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { getPrisma } from "@/lib/prisma";
 import { signAccess } from "@/lib/auth/jwt";
 import { getAccessibleTenantIds } from "@/lib/auth/tenantAccess";
+import { ACCESS_COOKIE, ACCESS_MAX_AGE, accessCookieOptions } from "@/lib/auth/cookies";
 
 // Revoga todos os refresh tokens ativos de um usuário. Chamar quando a senha é
 // trocada ou a conta é desativada — assim, combinado com o access token curto
@@ -46,11 +47,5 @@ export async function reissueAccessTokenForSelf(userId: string): Promise<void> {
   });
 
   const store = await cookies();
-  store.set("access_token", accessToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 15,
-  });
+  store.set(ACCESS_COOKIE, accessToken, accessCookieOptions(ACCESS_MAX_AGE));
 }

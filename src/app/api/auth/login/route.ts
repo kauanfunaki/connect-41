@@ -5,6 +5,14 @@ import { signAccess, signRefresh } from "@/lib/auth/jwt";
 import { getAccessibleTenantIds } from "@/lib/auth/tenantAccess";
 import { hit, reset, clientIp } from "@/lib/rateLimit";
 import crypto from "crypto";
+import {
+  ACCESS_COOKIE,
+  ACCESS_MAX_AGE,
+  REFRESH_COOKIE,
+  REFRESH_MAX_AGE,
+  accessCookieOptions,
+  refreshCookieOptions,
+} from "@/lib/auth/cookies";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +71,6 @@ export async function POST(req: NextRequest) {
       data: { id: jti, userId: user.id, tokenHash, expiresAt },
     });
 
-    const isProduction = process.env.NODE_ENV === "production";
 
     const res = NextResponse.json({
       accessToken,
@@ -78,21 +85,9 @@ export async function POST(req: NextRequest) {
     });
 
     // access_token em cookie httpOnly para que o middleware de navegação consiga ler
-    res.cookies.set("access_token", accessToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 15, // 15 minutos (igual ao JWT_ACCESS_TTL)
-    });
+    res.cookies.set(ACCESS_COOKIE, accessToken, accessCookieOptions(ACCESS_MAX_AGE));
 
-    res.cookies.set("refresh_token", rawRefresh, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: "lax",
-      path: "/api/auth",
-      maxAge: 60 * 60 * 24 * 7,
-    });
+    res.cookies.set(REFRESH_COOKIE, rawRefresh, refreshCookieOptions(REFRESH_MAX_AGE));
 
     return res;
   } catch (err) {

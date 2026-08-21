@@ -6,6 +6,7 @@ import { getAccessibleTenantIds } from "@/lib/auth/tenantAccess";
 import { hit, reset, clientIp } from "@/lib/rateLimit";
 import { renderConnectLoadingScreenHTML } from "@/components/shared/ConnectLoadingScreen";
 import crypto from "crypto";
+import { ACCESS_COOKIE, REFRESH_COOKIE, accessCookieOptions, refreshCookieOptions } from "@/lib/auth/cookies";
 
 export const dynamic = "force-dynamic";
 
@@ -113,26 +114,15 @@ export async function POST(req: NextRequest) {
       data: { id: jti, userId: user.id, tokenHash, expiresAt: new Date(Date.now() + refreshMaxAge * 1000) },
     });
 
-    const isProduction = process.env.NODE_ENV === "production";
     const theme = req.cookies.get("theme")?.value === "dark" ? "dark" : "light";
 
     // Cookie setado na mesma resposta que entrega o HTML de redirect.
     // O browser processa Set-Cookie antes de executar o meta-refresh.
     const res = htmlSuccessRedirect(next ?? "/home", theme);
-    res.cookies.set("access_token", accessToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: "lax",
-      path: "/",
-      maxAge: accessMaxAge,
-    });
-    res.cookies.set("refresh_token", rawRefresh, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: "lax",
-      path: "/api/auth",
-      maxAge: refreshMaxAge,
-    });
+    res.cookies.set(ACCESS_COOKIE, accessToken, accessCookieOptions(accessMaxAge));
+    // `refreshMaxAge` varia aqui por causa do "lembrar-me" (30 dias) — por isso
+    // não usa a constante.
+    res.cookies.set(REFRESH_COOKIE, rawRefresh, refreshCookieOptions(refreshMaxAge));
 
     return res;
   } catch (err) {
