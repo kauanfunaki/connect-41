@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRightLeft, ArrowRight, Eye } from "lucide-react";
+import { ArrowRightLeft, ArrowRight, Eye, Lock } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps } from "@/lib/sectors";
 import { getSectorUsers } from "@/lib/sectorUsers";
-import { getAuthContext, canManageSector } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, isFullAccess } from "@/lib/auth/context";
 import { scopedHandoffWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
@@ -16,6 +16,7 @@ import { SectorStatusSelect } from "@/components/transferencias/SectorStatusSele
 import { atualizarStatusSetor, atribuirResponsavelSetor, registrarVisualizacao } from "../actions";
 import {
   aggregateHandoffStatus,
+  canReadSectorInstruction,
   HANDOFF_STATUS_LABEL,
   HANDOFF_STATUS_BADGE,
   HANDOFF_PRIORITY_LABEL,
@@ -150,12 +151,23 @@ export default async function HandoffDetailPage({
           const isAssignee = s.assignees.some((a) => a.user.id === ctx.userId);
           const canUpdateStatus = (canManage || isAssignee) && ctx.role !== "READONLY";
           const assigneeNames = s.assignees.map((a) => a.user.name);
+          // Instrução é dirigida a UM setor — ver a transferência não dá
+          // direito de ler o que foi dito a outro. O card fica, o texto não.
+          const podeLerInstrucao = canReadSectorInstruction({
+            fullAccess: isFullAccess(ctx.role),
+            userId: ctx.userId,
+            requestedBy: handoff.requestedBy,
+            userSectors: ctx.sectors,
+            sectorCode: s.sectorCode,
+            isAssignee,
+          });
+          const sectorLabel = sectorLabels[s.sectorCode] ?? s.sectorCode;
           return (
             <Card key={s.id} className="p-5">
               <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
                 <div className="flex items-center gap-2 flex-wrap">
                   <SectorChip
-                    label={sectorLabels[s.sectorCode] ?? s.sectorCode}
+                    label={sectorLabel}
                     color={sectorColors[s.sectorCode] ?? "#586577"}
                   />
                   {!canUpdateStatus && (
@@ -167,7 +179,12 @@ export default async function HandoffDetailPage({
                 )}
               </div>
 
-              {s.instruction ? (
+              {!podeLerInstrucao ? (
+                <p className="text-[length:var(--fs-body)] text-fg-muted italic mb-3 flex items-center gap-1.5">
+                  <Lock size={14} aria-hidden className="shrink-0" />
+                  Instrução restrita ao setor {sectorLabel}.
+                </p>
+              ) : s.instruction ? (
                 <p className="text-[length:var(--fs-body)] text-fg-secondary whitespace-pre-wrap mb-3">{s.instruction}</p>
               ) : (
                 <p className="text-[length:var(--fs-body)] text-fg-muted italic mb-3">Sem instrução específica para este setor.</p>

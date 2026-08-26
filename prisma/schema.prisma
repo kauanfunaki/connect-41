@@ -436,6 +436,7 @@ model Tenant {
   subscription             Subscription?
   users                    User[]
   companies                Company[]
+  clientGroups             ClientGroup[]
   people                   Person[]
   pipelines                Pipeline[]
   pipelineItems            PipelineItem[]
@@ -759,6 +760,37 @@ model PasswordResetToken {
 
 // ─── Entidades Centrais ───────────────────────────────────────────────────────
 
+// O "cliente" do escritório, um nível acima da empresa: um cliente pode ter
+// N CNPJs. O caso medido é o grupo BLD — 5 estabelecimentos sob a raiz
+// 17122471, uma controladoria só, confirmado na base do SPED em 2026-08-21.
+// Sem este nível, o usuário do portal teria de ser escopado a uma lista solta
+// de Company, e o agrupamento viraria configuração manual.
+//
+// O protótipo do Marcos chegou no mesmo desenho por outro caminho: lá `Client`
+// agrupa `Company` e a tabela `User` tem `clientId`. Nome aqui é `ClientGroup`
+// e não `Client` porque `ClientDocument*` já usa o prefixo `Client` com outro
+// sentido — documento enviado a UM CNPJ.
+model ClientGroup {
+  id       String @id @default(uuid())
+  tenantId String
+  name     String @db.VarChar(180)
+  // Raiz do CNPJ (8 dígitos) quando o grupo é um CNPJ raiz com N
+  // estabelecimentos. É dica de agrupamento e origem do backfill, NÃO
+  // identidade: holding com raízes diferentes também é um grupo, e cliente
+  // pessoa física não tem nenhuma. Por isso é opcional e não é única.
+  cnpjRoot String? @db.VarChar(8)
+  active   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+  companies Company[]
+
+  @@index([tenantId])
+  @@map("client_groups")
+}
+
 model Company {
   id                    String        @id @default(uuid())
   tenantId              String
@@ -793,11 +825,19 @@ model Company {
   source                String?       @db.VarChar(80)
   responsibleUserId     String?
   branchId              String?
+  // Opcional no schema de propósito: exigir NOT NULL obrigaria o backfill a
+  // rodar DENTRO da migration, e um backfill que falha no meio deixa o
+  // `migrate deploy` morto com o schema pela metade em produção. O script
+  // `scripts/backfill-client-groups.ts` preenche 100% depois, fora da janela
+  // de DDL. SetNull, nunca Cascade: apagar um grupo não pode apagar as
+  // empresas do cliente.
+  clientGroupId         String?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
-  tenant Tenant  @relation(fields: [tenantId], references: [id])
-  branch Branch? @relation(fields: [branchId], references: [id])
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  branch      Branch?      @relation(fields: [branchId], references: [id])
+  clientGroup ClientGroup? @relation(fields: [clientGroupId], references: [id], onDelete: SetNull)
 
   services             CompanyService[]
   people               Person[]
@@ -816,6 +856,7 @@ model Company {
 
   @@index([tenantId])
   @@index([tenantId, status])
+  @@index([tenantId, clientGroupId])
   @@map("companies")
 }
 

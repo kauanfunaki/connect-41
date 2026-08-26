@@ -43,3 +43,40 @@ export function aggregateHandoffStatus(statuses: HandoffSectorStatus[]): Handoff
   if (statuses.every((s) => s === "NEW")) return "NEW";
   return "IN_PROGRESS";
 }
+
+// Quem pode LER a instrução escrita para um setor.
+//
+// A instrução é conteúdo dirigido a UM setor — diferente da mensagem da
+// transferência, que é para todos os envolvidos. Ver a transferência não dá
+// direito de ler o que foi dito a outro setor. Achado na conferência ao vivo
+// de 2026-08-24: quem estava no setor X lia a instrução do setor Y, porque a
+// tela de detalhe só tinha guarda para EDITAR (canManageSector/isAssignee),
+// nenhuma para ler.
+//
+// O card do setor continua visível para todo mundo, de propósito: escondê-lo
+// faria o status agregado depender de um setor invisível na tela, e quem
+// acompanha não entenderia por que a transferência não fecha.
+//
+// Usa os setores da PESSOA (`userSectors`), não o setor ativo do subworkspace:
+// trocar de subworkspace muda o que se lista, não o que se tem direito de ler
+// — mesma razão pela qual `scopedHandoffWhere` também ignora o setor ativo.
+export function canReadSectorInstruction(params: {
+  /** Papel dá visão geral do tenant (ADMIN, SUPER_ADMIN, READONLY). */
+  fullAccess: boolean;
+  /** Id de quem está olhando. Null = sessão sem usuário. */
+  userId: string | null;
+  /** Quem abriu a transferência — escreveu as instruções, então lê todas. */
+  requestedBy: string;
+  /** Setores da pessoa (UserSector), não o setor ativo. */
+  userSectors: string[];
+  /** Setor do card. */
+  sectorCode: string;
+  /** Responsável designado pode ser de fora do setor — e precisa da instrução. */
+  isAssignee: boolean;
+}): boolean {
+  const { fullAccess, userId, requestedBy, userSectors, sectorCode, isAssignee } = params;
+  if (fullAccess) return true;
+  if (userId !== null && userId === requestedBy) return true;
+  if (userSectors.includes(sectorCode)) return true;
+  return isAssignee;
+}
