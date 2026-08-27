@@ -3,12 +3,45 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
+// Nome do banco deste projeto. A guarda abaixo existe porque `dotenv/config`
+// **não sobrescreve** variável que já esteja no ambiente: uma `$env:DATABASE_URL`
+// deixada de outro projeto na mesma sessão de terminal ganha do `.env` daqui, sem
+// aviso nenhum. Em 2026-08-27 isso apontou o Prisma do Connect para o banco
+// `ebook_forge` do sambu_ebook; só não virou estrago porque a URL estava
+// malformada e o Prisma recusou com P1013. Com uma URL válida, um
+// `migrate deploy` teria aplicado as migrations do Connect no banco errado.
+const BANCO_ESPERADO = "connect41";
+
+function conferirBanco(url: string | undefined): string | undefined {
+  if (!url) return url;
+
+  let alvo: string;
+  try {
+    // pathname de "mysql://user:senha@host:3330/connect41" é "/connect41".
+    alvo = new URL(url).pathname.replace(/^\//, "").split("?")[0];
+  } catch {
+    // URL inválida não é problema desta guarda — o próprio Prisma recusa (P1013)
+    // com mensagem melhor do que a que daríamos aqui.
+    return url;
+  }
+
+  if (alvo && alvo !== BANCO_ESPERADO) {
+    throw new Error(
+      `DATABASE_URL aponta para o banco "${alvo}", mas este projeto é o "${BANCO_ESPERADO}".\n` +
+        `Causa provável: existe uma DATABASE_URL no ambiente do terminal, de outro projeto, e o\n` +
+        `dotenv não sobrescreve variável já definida. Limpe com:  Remove-Item Env:DATABASE_URL\n` +
+        `(ou abra um terminal novo) e rode de novo.`
+    );
+  }
+  return url;
+}
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: conferirBanco(process.env["DATABASE_URL"]),
   },
 });
