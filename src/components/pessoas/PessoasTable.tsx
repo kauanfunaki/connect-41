@@ -29,12 +29,14 @@ type Props = {
   people: Row[];
   canCreate: boolean;
   showLinkedUser?: boolean;
-  inativarPessoasEmMassa: (ids: string[]) => Promise<void>;
+  definirAtivoPessoasEmMassa: (ids: string[], ativo: boolean) => Promise<void>;
 };
 
-export function PessoasTable({ people, canCreate, showLinkedUser = false, inativarPessoasEmMassa }: Props) {
+export function PessoasTable({ people, canCreate, showLinkedUser = false, definirAtivoPessoasEmMassa }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  // Um diálogo só, servindo a ação em massa e a da linha — duas confirmações separadas
+  // divergiriam no texto na primeira alteração.
+  const [confirmAlvo, setConfirmAlvo] = useState<{ tipo: "massa" } | { tipo: "linha"; row: Row } | null>(null);
   const [pending, startTransition] = useTransition();
   const toast = useToast();
 
@@ -53,14 +55,37 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, inativ
     });
   }
 
-  function applyInativar() {
-    const count = selected.size;
-    const ids = Array.from(selected);
+  /** Executa o que o diálogo estava confirmando — inativação, em massa ou de uma linha. */
+  function confirmarInativacao() {
+    if (!confirmAlvo) return;
+    const ids = confirmAlvo.tipo === "massa" ? Array.from(selected) : [confirmAlvo.row.id];
+    const aviso =
+      confirmAlvo.tipo === "massa"
+        ? `${ids.length} pessoa(s) inativada(s).`
+        : `${confirmAlvo.row.name} inativado(a).`;
     startTransition(async () => {
-      await inativarPessoasEmMassa(ids);
+      await definirAtivoPessoasEmMassa(ids, false);
       setSelected(new Set());
-      setConfirmOpen(false);
-      toast.success(`${count} pessoa(s) inativada(s).`);
+      setConfirmAlvo(null);
+      toast.success(aviso);
+    });
+  }
+
+  /**
+   * Inativar/reativar direto na linha, sem passar pela seleção.
+   *
+   * Reativar não pergunta — é inofensivo e o resultado fica visível na hora. Inativar
+   * tira a pessoa da listagem padrão, então passa pela mesma confirmação da ação em
+   * massa: sumir da tela sem aviso faria parecer que o registro foi apagado.
+   */
+  function toggleAtivo(row: Row) {
+    if (row.active) {
+      setConfirmAlvo({ tipo: "linha", row });
+      return;
+    }
+    startTransition(async () => {
+      await definirAtivoPessoasEmMassa([row.id], true);
+      toast.success(`${row.name} reativado(a).`);
     });
   }
 
@@ -131,9 +156,18 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, inativ
                   <td className="px-4 py-3 text-fg-secondary tnum">{p.createdAtLabel}</td>
                   <td className="px-4 py-3 text-right">
                     {canCreate && (
-                      <Link href={`/pessoas/${p.id}/editar`} className="text-[13px] font-medium text-fg-muted hover:text-fg transition-colors">
-                        Editar
-                      </Link>
+                      <span className="inline-flex items-center gap-3 whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => toggleAtivo(p)}
+                          className="text-[13px] font-medium text-fg-muted hover:text-fg transition-colors"
+                        >
+                          {p.active ? "Inativar" : "Reativar"}
+                        </button>
+                        <Link href={`/pessoas/${p.id}/editar`} className="text-[13px] font-medium text-fg-muted hover:text-fg transition-colors">
+                          Editar
+                        </Link>
+                      </span>
                     )}
                   </td>
                 </tr>
@@ -147,7 +181,7 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, inativ
       <BulkActionBar count={selected.size} onClear={() => setSelected(new Set())}>
         <button
           type="button"
-          onClick={() => setConfirmOpen(true)}
+          onClick={() => setConfirmAlvo({ tipo: "massa" })}
           className="h-8 px-3 rounded-md border border-danger/30 text-[13px] font-semibold text-danger hover:bg-danger-bg transition-colors"
         >
           Inativar
@@ -155,14 +189,18 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, inativ
       </BulkActionBar>
 
       <ConfirmDialog
-        open={confirmOpen}
-        title={`Inativar ${selected.size} pessoa(s)?`}
-        description="As pessoas selecionadas serão arquivadas (não excluídas) e deixam de aparecer como ativas."
+        open={confirmAlvo !== null}
+        title={
+          confirmAlvo?.tipo === "linha"
+            ? `Inativar ${confirmAlvo.row.name}?`
+            : `Inativar ${selected.size} pessoa(s)?`
+        }
+        description="Fica arquivada (não é excluída) e sai da listagem padrão — para ver de novo, filtre por inativos. Dá para reativar depois."
         confirmLabel="Inativar"
         destructive
         pending={pending}
-        onConfirm={applyInativar}
-        onCancel={() => setConfirmOpen(false)}
+        onConfirm={confirmarInativacao}
+        onCancel={() => setConfirmAlvo(null)}
       />
     </>
   );

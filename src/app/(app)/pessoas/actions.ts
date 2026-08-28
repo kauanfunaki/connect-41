@@ -211,14 +211,21 @@ export async function excluirPessoa(id: string): Promise<PessoaState> {
   redirect("/pessoas");
 }
 
-export async function inativarPessoasEmMassa(ids: string[]): Promise<void> {
+/**
+ * Liga/desliga pessoas em massa.
+ *
+ * Substituiu `inativarPessoasEmMassa`, que só sabia inativar: com a listagem passando a
+ * esconder inativos por padrão, sem caminho de volta a pessoa sumia da tela e não havia
+ * como trazê-la de novo pela interface.
+ */
+export async function definirAtivoPessoasEmMassa(ids: string[], ativo: boolean): Promise<void> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !canWriteEntity(ctx) || ids.length === 0) return;
 
   const prisma = getPrisma();
   await prisma.person.updateMany({
     where: { id: { in: ids }, type: PersonType.COLABORADOR, ...(await scopedPersonWhere(ctx)) },
-    data: { active: false },
+    data: { active: ativo },
   });
 
   revalidatePath("/pessoas");

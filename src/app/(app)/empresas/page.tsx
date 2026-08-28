@@ -14,6 +14,14 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { EmpresasTable } from "@/components/empresas/EmpresasTable";
 import { formatInstantDate } from "@/lib/format";
+import {
+  resolveCompanyStatusFilter,
+  companyStatusWhere,
+  estaOcultandoInativas,
+  valorSelecionado,
+  STATUS_OCULTOS_POR_PADRAO,
+  STATUS_TODOS,
+} from "@/lib/companyStatusFilter";
 import { atualizarStatusEmMassa, excluirEmpresasEmMassa } from "./actions";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
@@ -30,8 +38,11 @@ const STATUS_COLOR: Record<CompanyStatus, string> = {
   CHURNED:  "var(--c41-danger)",
 };
 
+// PROSPECT entrou na lista: sem ele, empresa em prospecção só era alcançável pelo
+// "todos os status", e agora que o padrão esconde as inativas ficaria ainda mais escondida.
 const FILTER_TABS: { value: CompanyStatus; label: string }[] = [
   { value: "ACTIVE",   label: "Ativo" },
+  { value: "PROSPECT", label: "Prospecto" },
   { value: "INACTIVE", label: "Inativo" },
   { value: "CHURNED",  label: "Cancelado" },
 ];
@@ -50,16 +61,28 @@ export default async function EmpresasPage({
 
   const prisma = getPrisma();
   const pageNum = Math.max(1, parseInt(page ?? "1"));
-  const statusFilter =
-    status && Object.values(CompanyStatus).includes(status as CompanyStatus)
-      ? (status as CompanyStatus)
-      : undefined;
+  // Sem `?status=`, a listagem esconde inativas e canceladas — ver src/lib/companyStatusFilter.ts.
+  const statusFiltro = resolveCompanyStatusFilter(status);
+  const ocultandoInativas = estaOcultandoInativas(statusFiltro);
+  const statusFilter = valorSelecionado(statusFiltro);
 
   const where = {
     ...(await scopedCompanyWhere(ctx)),
     ...(search ? { OR: [{ name: { contains: search } }, { externalId: { contains: search } }] } : {}),
-    ...(statusFilter ? { status: statusFilter } : {}),
+    ...companyStatusWhere(statusFiltro),
   };
+
+  // Quantas estão escondidas agora — a tela avisa em vez de deixar o usuário achar
+  // que a base encolheu.
+  const ocultas = ocultandoInativas
+    ? await prisma.company.count({
+        where: {
+          ...(await scopedCompanyWhere(ctx)),
+          ...(search ? { OR: [{ name: { contains: search } }, { externalId: { contains: search } }] } : {}),
+          status: { in: STATUS_OCULTOS_POR_PADRAO },
+        },
+      })
+    : 0;
 
   const [companies, total] = await Promise.all([
     prisma.company.findMany({
@@ -109,6 +132,17 @@ export default async function EmpresasPage({
 
         <EmpresasFilterButton search={search} page={page} statusFilter={statusFilter} tabs={FILTER_TABS} />
       </div>
+
+      {/* Esconder sem avisar faria a base parecer menor do que é. */}
+      {ocultas > 0 && (
+        <p className="text-[12px] text-fg-muted mb-4">
+          {ocultas} empresa{ocultas !== 1 ? "s" : ""} inativa{ocultas !== 1 ? "s" : ""} ou cancelada
+          {ocultas !== 1 ? "s" : ""} fora desta lista.{" "}
+          <Link href={buildUrl({ status: STATUS_TODOS, page: "1" })} className="text-brand hover:underline font-medium">
+            Mostrar todas
+          </Link>
+        </p>
+      )}
 
       {/* Table */}
       {companies.length === 0 ? (

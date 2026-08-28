@@ -15,16 +15,23 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { formatInstantDate } from "@/lib/format";
-import { inativarPessoasEmMassa } from "./actions";
+import {
+  resolvePersonActiveFilter,
+  personActiveWhere,
+  estaOcultandoInativos,
+  situacaoSelecionada,
+  SITUACAO_TODOS,
+} from "@/lib/personActiveFilter";
+import { definirAtivoPessoasEmMassa } from "./actions";
 
 const PER_PAGE = 20;
 
 export default async function PessoasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; companyId?: string; page?: string; tab?: string }>;
+  searchParams: Promise<{ search?: string; companyId?: string; page?: string; tab?: string; situacao?: string }>;
 }) {
-  const { search, companyId, page, tab } = await searchParams;
+  const { search, companyId, page, tab, situacao } = await searchParams;
   const ctx = await getAuthContext();
   const canCreate = canWrite(ctx.role);
   const activeTab: PessoasTab = tab === "internos" ? "internos" : "clientes";
@@ -32,14 +39,24 @@ export default async function PessoasPage({
 
   const prisma = getPrisma();
   const pageNum = Math.max(1, parseInt(page ?? "1"));
+  // Sem `?situacao=`, a listagem traz só quem está ativo — ver src/lib/personActiveFilter.ts.
+  const situacaoFiltro = resolvePersonActiveFilter(situacao);
+  const ocultandoInativos = estaOcultandoInativos(situacaoFiltro);
 
-  const where = {
+  const baseWhere = {
     ...(await scopedPersonWhere(ctx)),
     type: PersonType.COLABORADOR,
     isInternal: isInternos,
     ...(search ? { name: { contains: search } } : {}),
     ...(!isInternos && companyId ? { currentCompanyId: companyId } : {}),
   };
+
+  const where = { ...baseWhere, ...personActiveWhere(situacaoFiltro) };
+
+  // Quantos ficaram de fora — a tela avisa em vez de deixar parecer que sumiram.
+  const ocultos = ocultandoInativos
+    ? await prisma.person.count({ where: { ...baseWhere, active: false } })
+    : 0;
 
   const [people, total, companies] = await Promise.all([
     prisma.person.findMany({
@@ -61,7 +78,7 @@ export default async function PessoasPage({
 
   function buildUrl(params: Record<string, string | undefined>) {
     const q = new URLSearchParams();
-    const merged = { search, companyId, page, tab, ...params };
+    const merged = { search, companyId, page, tab, situacao, ...params };
     for (const [k, v] of Object.entries(merged)) {
       if (v) q.set(k, v);
     }
@@ -96,8 +113,26 @@ export default async function PessoasPage({
           <DebouncedSearchInput placeholder="Buscar por nome…" />
         </div>
 
-        {!isInternos && <PessoasFilterButton search={search} companyId={companyId} companies={companies} />}
+        {/* Passou a aparecer também na aba Internos: o filtro de situação vale para os
+            dois lados, só o de empresa é exclusivo de Clientes. */}
+        <PessoasFilterButton
+          search={search}
+          companyId={companyId}
+          companies={companies}
+          tab={tab}
+          situacao={situacaoSelecionada(situacaoFiltro)}
+          mostrarEmpresa={!isInternos}
+        />
       </div>
+
+      {ocultos > 0 && (
+        <p className="text-[12px] text-fg-muted mb-4">
+          {ocultos} pessoa{ocultos !== 1 ? "s" : ""} inativa{ocultos !== 1 ? "s" : ""} fora desta lista.{" "}
+          <Link href={buildUrl({ situacao: SITUACAO_TODOS, page: "1" })} className="text-brand hover:underline font-medium">
+            Mostrar todas
+          </Link>
+        </p>
+      )}
 
       {/* Table */}
       {people.length === 0 ? (
@@ -133,7 +168,7 @@ export default async function PessoasPage({
           }))}
           showLinkedUser={isInternos}
           canCreate={canCreate}
-          inativarPessoasEmMassa={inativarPessoasEmMassa}
+          definirAtivoPessoasEmMassa={definirAtivoPessoasEmMassa}
         />
       )}
 

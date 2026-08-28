@@ -81,6 +81,61 @@ export function EmpresasTable({
     });
   }
 
+  // Status que contam como "fora de operação" — quem está assim volta com "Reativar".
+  const FORA_DE_OPERACAO: CompanyStatus[] = ["INACTIVE", "CHURNED"];
+
+  /**
+   * Inativar/reativar direto na linha, sem passar pela seleção e pelo seletor de status.
+   * Reaproveita a action em massa com um id só: a regra de permissão e de escopo por
+   * tenant já mora lá, e duplicá-la numa action nova seria criar um segundo lugar para
+   * errar.
+   */
+  function toggleAtivo(row: Row) {
+    const inativando = !FORA_DE_OPERACAO.includes(row.status);
+    const alvo: CompanyStatus = inativando ? "INACTIVE" : "ACTIVE";
+
+    const aplicar = () => {
+      startTransition(() => {
+        atualizarStatusEmMassa([row.id], alvo);
+      });
+      return Promise.resolve();
+    };
+
+    // Reativar é inofensivo e não pergunta. Inativar tira a empresa da listagem
+    // padrão, então confirma — senão some da tela sem a pessoa entender por quê.
+    if (!inativando) {
+      void aplicar();
+      return;
+    }
+    requestConfirm(
+      {
+        title: `Inativar ${row.name}?`,
+        description: "Ela sai da listagem padrão e passa a aparecer só no filtro de inativos. Dá para reativar depois.",
+        confirmLabel: "Inativar",
+      },
+      aplicar
+    );
+  }
+
+  function inativarSelecionadas() {
+    const quantas = selected.size;
+    requestConfirm(
+      {
+        title: `Inativar ${quantas} empresa${quantas !== 1 ? "s" : ""}?`,
+        description: "Elas saem da listagem padrão e passam a aparecer só no filtro de inativos. Dá para reativar depois.",
+        confirmLabel: "Inativar",
+      },
+      () => {
+        const ids = Array.from(selected);
+        setSelected(new Set());
+        startTransition(() => {
+          atualizarStatusEmMassa(ids, "INACTIVE");
+        });
+        return Promise.resolve();
+      }
+    );
+  }
+
   function applyDelete() {
     requestConfirm(
       { title: `Excluir ${selected.size} empresa(s) selecionada(s)?`, description: "Esta ação não pode ser desfeita.", destructive: true, confirmLabel: "Excluir" },
@@ -149,11 +204,20 @@ export function EmpresasTable({
                     {c.city && c.stateCode ? `${c.city}/${c.stateCode}` : c.city ?? c.stateCode ?? "—"}
                   </td>
                   <td className="px-4 py-3 text-fg-secondary tnum">{c.createdAtLabel}</td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
                     {canCreate && (
-                      <Link href={`/empresas/${c.id}/editar`} className="text-[13px] font-medium text-fg-muted hover:text-fg transition-colors">
-                        Editar
-                      </Link>
+                      <span className="inline-flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => toggleAtivo(c)}
+                          className="text-[13px] font-medium text-fg-muted hover:text-fg transition-colors"
+                        >
+                          {FORA_DE_OPERACAO.includes(c.status) ? "Reativar" : "Inativar"}
+                        </button>
+                        <Link href={`/empresas/${c.id}/editar`} className="text-[13px] font-medium text-fg-muted hover:text-fg transition-colors">
+                          Editar
+                        </Link>
+                      </span>
                     )}
                   </td>
                 </tr>
@@ -165,6 +229,14 @@ export function EmpresasTable({
       </div>
 
       <BulkActionBar count={selected.size} onClear={() => setSelected(new Set())}>
+        {/* Atalho para o caso comum. O seletor ao lado continua, para os outros status. */}
+        <button
+          type="button"
+          onClick={inativarSelecionadas}
+          className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors"
+        >
+          Inativar
+        </button>
         <div className="w-40">
           <Select
             value={bulkStatus}

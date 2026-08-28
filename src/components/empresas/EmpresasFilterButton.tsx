@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FilterButton } from "@/components/ui/FilterButton";
+import { STATUS_TODOS } from "@/lib/companyStatusFilter";
 
 type Tab = { value: string; label: string };
 
@@ -31,6 +32,8 @@ export function EmpresasFilterButton({ search, page, statusFilter, tabs }: Props
     <FilterButton activeCount={statusFilter ? 1 : 0} width={200}>
       {({ close }) => (
         <div className="space-y-0.5">
+          {/* Sem parâmetro = padrão da listagem (esconde inativas e canceladas).
+              Ver "todos" virou escolha explícita, no fim da lista. */}
           <Link
             href={buildUrl(undefined)}
             onClick={close}
@@ -38,7 +41,7 @@ export function EmpresasFilterButton({ search, page, statusFilter, tabs }: Props
               !statusFilter ? "bg-brand-subtle text-brand" : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
             }`}
           >
-            Todos os status
+            Em operação <span className="text-fg-muted font-normal">(padrão)</span>
           </Link>
           {tabs.map((tab) => (
             <Link
@@ -52,6 +55,19 @@ export function EmpresasFilterButton({ search, page, statusFilter, tabs }: Props
               {tab.label}
             </Link>
           ))}
+          <div className="pt-1 mt-1 border-t border-border">
+            <Link
+              href={buildUrl(STATUS_TODOS)}
+              onClick={close}
+              className={`block px-2.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
+                statusFilter === STATUS_TODOS
+                  ? "bg-brand-subtle text-brand"
+                  : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
+              }`}
+            >
+              Todos, incluindo inativos
+            </Link>
+          </div>
         </div>
       )}
     </FilterButton>

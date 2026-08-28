@@ -54,3 +54,7 @@ next-env.d.ts
 /.design-sync/node_modules
 
 prisma/schema.dbpull.bak.prisma
+# Dumps de banco — contêm dado real de cliente, nunca versionar
+*.sql.gz
+backup-*.sql
+*.dump
