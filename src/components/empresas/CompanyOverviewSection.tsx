@@ -33,6 +33,7 @@ type Props = {
     cnaePrincipal: string | null;
     cnaeSecundarios: string | null;
     source: string | null;
+    clientGroup: { id: string; name: string } | null;
     createdAt: Date;
     updatedAt: Date;
   };
@@ -57,6 +58,7 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
         <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">Identificação</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="Razão Social" value={company.name} />
+          <InfoRow label="Cliente" value={company.clientGroup?.name ?? null} />
           <InfoRow label="Nome Fantasia" value={company.tradeName} />
           <InfoRow label="CNPJ" value={formatCnpj(company.cnpj)} mono />
           <InfoRow label="Regime Tributário" value={company.taxRegime} />

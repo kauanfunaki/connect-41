@@ -14,6 +14,8 @@ import { BackButton } from "@/components/shared/BackButton";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { CompanyHeader } from "@/components/empresas/CompanyHeader";
 import { CompanyDetailTabs } from "@/components/empresas/CompanyDetailTabs";
+import { CompanyFiliaisSection } from "@/components/empresas/CompanyFiliaisSection";
+import type { CompanyStatus } from "@/generated/prisma/enums";
 import { CompanyOverviewSection } from "@/components/empresas/CompanyOverviewSection";
 import { ServicesSection } from "@/components/empresas/ServicesSection";
 import { CompanyPeopleSection } from "@/components/empresas/CompanyPeopleSection";
@@ -25,6 +27,20 @@ import { AtendimentosAccordion } from "@/components/conversas/AtendimentosAccord
 import { channelLabel, statusLabel } from "@/lib/chatwoot/labels";
 import { safeFindConversations } from "@/lib/chatwoot/conversations";
 import { gerarResumoEmpresa } from "./ai-actions";
+
+const STATUS_LABEL: Record<CompanyStatus, string> = {
+  PROSPECT: "Prospecto",
+  ACTIVE:   "Ativo",
+  INACTIVE: "Inativo",
+  CHURNED:  "Cancelado",
+};
+
+const STATUS_COLOR: Record<CompanyStatus, string> = {
+  PROSPECT: "var(--c41-warning)",
+  ACTIVE:   "var(--c41-success)",
+  INACTIVE: "var(--c41-fg-muted)",
+  CHURNED:  "var(--c41-danger)",
+};
 
 export default async function EmpresaPage({
   params,
@@ -42,6 +58,12 @@ export default async function EmpresaPage({
     include: {
       services: { orderBy: { createdAt: "asc" } },
       people: { orderBy: { name: "asc" }, take: 10 },
+      clientGroup: { select: { id: true, name: true } },
+      parent: { select: { id: true, name: true, cnpj: true } },
+      filiais: {
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, cnpj: true, status: true, city: true, stateCode: true },
+      },
     },
   });
 
@@ -126,6 +148,7 @@ export default async function EmpresaPage({
 
       <CompanyDetailTabs
         peopleCount={company.people.length}
+        filiaisCount={company.filiais.length}
         documentsCount={documents.length}
         conversationsCount={conversations.length}
         overview={
@@ -143,6 +166,14 @@ export default async function EmpresaPage({
               assignAction={atribuirResponsavelServico}
             />
           </div>
+        }
+        filiais={
+          <CompanyFiliaisSection
+            matriz={company.parent}
+            filiais={company.filiais}
+            statusLabel={STATUS_LABEL}
+            statusColor={STATUS_COLOR}
+          />
         }
         people={<CompanyPeopleSection companyId={company.id} people={company.people} />}
         operations={<CompanyOperationsSection companyId={company.id} />}

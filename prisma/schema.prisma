@@ -454,7 +454,6 @@ model Tenant {
   sectors                  Sector[]
   tenantModules            TenantModule[]
   tags                     Tag[]
-  branches                 Branch[]
   accessGrants             UserTenantAccess[]
   departments              Department[]
   cargos                   Cargo[]
@@ -561,22 +560,6 @@ model UserTenantAccess {
 // Filial de um tenant — puramente organizacional (etiqueta/contexto), não isola
 // dados: uma Empresa pode ser marcada com a filial que a atende, mas continua
 // visível/editável normalmente por qualquer usuário do tenant com acesso a ela.
-model Branch {
-  id        String   @id @default(uuid())
-  tenantId  String
-  name      String   @db.VarChar(120)
-  active    Boolean  @default(true)
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant    Tenant    @relation(fields: [tenantId], references: [id])
-  companies Company[]
-
-  @@index([tenantId])
-  @@map("branches")
-}
-
 // Setor/cargo cadastrável — referenciado por código (string livre, sem FK) em
 // UserSector, CompanyService, Pipeline, Handoff. O código não muda após criado
 // pois já pode estar espalhado nesses registros; label/cor/ordem são editáveis.
@@ -823,7 +806,15 @@ model Company {
   status                CompanyStatus @default(PROSPECT)
   source                String?       @db.VarChar(80)
   responsibleUserId     String?
-  branchId              String?
+  // Matriz desta filial. Hierarquia EXPLÍCITA, não derivada da raiz do CNPJ:
+  // a raiz resolve o caso comum (0001 é matriz, 0002+ são filiais) e falha nos
+  // que existem de verdade — filial sem CNPJ próprio ainda em abertura, e
+  // holding cuja matriz tem outra raiz. Nulo = é matriz, ou é empresa sem
+  // filial nenhuma; as duas coisas se parecem e é de propósito.
+  //
+  // SetNull, nunca Cascade: apagar a matriz não pode apagar as filiais junto —
+  // elas viram matrizes soltas, o que é recuperável, ao contrário de sumir.
+  parentCompanyId       String?
   // Opcional no schema de propósito: exigir NOT NULL obrigaria o backfill a
   // rodar DENTRO da migration, e um backfill que falha no meio deixa o
   // `migrate deploy` morto com o schema pela metade em produção. O script
@@ -835,7 +826,8 @@ model Company {
   updatedAt             DateTime      @updatedAt
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id])
-  branch      Branch?      @relation(fields: [branchId], references: [id])
+  parent      Company?     @relation("CompanyFiliais", fields: [parentCompanyId], references: [id], onDelete: SetNull)
+  filiais     Company[]    @relation("CompanyFiliais")
   clientGroup ClientGroup? @relation(fields: [clientGroupId], references: [id], onDelete: SetNull)
 
   services             CompanyService[]

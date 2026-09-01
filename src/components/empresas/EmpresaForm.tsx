@@ -72,8 +72,8 @@ export type EmpresaDefaultValues = {
   website?: string;
   status?: CompanyStatus;
   source?: string;
-  branchId?: string;
   clientGroupId?: string;
+  parentCompanyId?: string;
 };
 
 type Props = {
@@ -81,8 +81,8 @@ type Props = {
   cancelHref: string;
   defaultValues?: EmpresaDefaultValues;
   customFields?: CustomFieldInput[];
-  branchOptions?: { value: string; label: string }[];
   clientGroupOptions?: { value: string; label: string }[];
+  matrizOptions?: { value: string; label: string }[];
 };
 
 export function EmpresaForm({
@@ -90,8 +90,8 @@ export function EmpresaForm({
   cancelHref,
   defaultValues,
   customFields = [],
-  branchOptions = [],
   clientGroupOptions = [],
+  matrizOptions = [],
 }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const [fetching, setFetching] = useState(false);
@@ -129,8 +129,8 @@ export function EmpresaForm({
     cnaePrincipal: defaultValues?.cnaePrincipal ?? "",
     cnaeSecundarios: defaultValues?.cnaeSecundarios ?? "",
     source: defaultValues?.source ?? "",
-    branchId: defaultValues?.branchId ?? "",
     clientGroupId: defaultValues?.clientGroupId ?? "",
+    parentCompanyId: defaultValues?.parentCompanyId ?? "",
     clientGroupNewName: "",
   }));
 
@@ -201,9 +201,9 @@ export function EmpresaForm({
     [step, stepError, maxStepReached]
   );
 
-  const branchLabel = branchOptions.find((b) => b.value === values.branchId)?.label;
   // Na revisão o cliente aparece pelo nome, não pelo uuid — inclusive quando é
   // um que ainda vai ser criado no submit.
+  const matrizLabel = matrizOptions.find((m) => m.value === values.parentCompanyId)?.label;
   const clientLabel =
     values.clientGroupId === NOVO_CLIENTE
       ? values.clientGroupNewName
@@ -366,7 +366,23 @@ export function EmpresaForm({
                   <option value={NOVO_CLIENTE}>+ Novo cliente…</option>
                 </Select>
               </CampoForm>
-              {values.clientGroupId === NOVO_CLIENTE ? (
+              <CampoForm
+                label="Empresa matriz"
+                htmlFor="parentCompanyId"
+                helper="Preencha só se esta empresa for filial de outra já cadastrada."
+              >
+                <Select id="parentCompanyId" name="parentCompanyId" value={values.parentCompanyId}>
+                  <option value="">Nenhuma — é matriz</option>
+                  {matrizOptions.map((m) => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                </Select>
+              </CampoForm>
+            </FieldGrid>
+            {/* Linha própria: aparecer e sumir dentro da grade acima empurraria
+                a "Empresa matriz" de lugar a cada troca do select. */}
+            {values.clientGroupId === NOVO_CLIENTE && (
+              <FieldGrid>
                 <CampoForm label="Nome do novo cliente" htmlFor="clientGroupNewName" required>
                   <Input
                     id="clientGroupNewName"
@@ -378,10 +394,8 @@ export function EmpresaForm({
                     placeholder="Ex: Grupo Aurora"
                   />
                 </CampoForm>
-              ) : (
-                <div aria-hidden="true" />
-              )}
-            </FieldGrid>
+              </FieldGrid>
+            )}
             <FieldGrid>
               <CampoForm label="Regime Tributário" htmlFor="taxRegime">
                 <Select id="taxRegime" name="taxRegime" value={values.taxRegime}>
@@ -498,16 +512,6 @@ export function EmpresaForm({
               <CampoForm label="Origem / Fonte" htmlFor="source">
                 <Input id="source" name="source" type="text" value={values.source} placeholder="Indicação, evento, site…" />
               </CampoForm>
-              {branchOptions.length > 0 && (
-                <CampoForm label="Filial" htmlFor="branchId">
-                  <Select id="branchId" name="branchId" value={values.branchId}>
-                    <option value="">Nenhuma</option>
-                    {branchOptions.map((b) => (
-                      <option key={b.value} value={b.value}>{b.label}</option>
-                    ))}
-                  </Select>
-                </CampoForm>
-              )}
             </FieldGrid>
             {defaultValues?.id ? (
               <p className="text-[length:var(--fs-helper)] text-fg-muted italic">
@@ -535,6 +539,7 @@ export function EmpresaForm({
                 { label: "Razão Social", value: values.name },
                 { label: "Nome Fantasia", value: values.tradeName },
                 { label: "Cliente", value: clientLabel },
+                { label: "Empresa matriz", value: matrizLabel },
                 { label: "Regime Tributário", value: values.taxRegime },
                 { label: "ID", value: values.externalId },
               ]}
@@ -577,7 +582,6 @@ export function EmpresaForm({
               onEdit={() => goTo(4)}
               items={[
                 { label: "Origem", value: values.source },
-                { label: "Filial", value: branchLabel },
               ]}
             />
           </FormSection>

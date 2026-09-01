@@ -52,9 +52,9 @@ const PER_PAGE = 20;
 export default async function EmpresasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; status?: string; page?: string }>;
+  searchParams: Promise<{ search?: string; status?: string; page?: string; cliente?: string }>;
 }) {
-  const { search, status, page } = await searchParams;
+  const { search, status, page, cliente } = await searchParams;
   const ctx = await getAuthContext();
   const canCreate = canWrite(ctx.role);
   const isSuperAdmin = ctx.role === "SUPER_ADMIN";
@@ -70,6 +70,8 @@ export default async function EmpresasPage({
     ...(await scopedCompanyWhere(ctx)),
     ...(search ? { OR: [{ name: { contains: search } }, { externalId: { contains: search } }] } : {}),
     ...companyStatusWhere(statusFiltro),
+    // Vem do link "N empresas" em /clientes.
+    ...(cliente ? { clientGroupId: cliente } : {}),
   };
 
   // Quantas estão escondidas agora — a tela avisa em vez de deixar o usuário achar
@@ -102,7 +104,7 @@ export default async function EmpresasPage({
 
   function buildUrl(params: Record<string, string | undefined>) {
     const q = new URLSearchParams();
-    const merged = { search, status, page, ...params };
+    const merged = { search, status, page, cliente, ...params };
     for (const [k, v] of Object.entries(merged)) {
       if (v) q.set(k, v);
     }
@@ -182,6 +184,7 @@ export default async function EmpresasPage({
             stateCode: c.stateCode,
             clientGroupId: c.clientGroup?.id ?? null,
             clientGroupName: c.clientGroup?.name ?? null,
+            parentCompanyId: c.parentCompanyId,
           }))}
           canCreate={canCreate}
           isSuperAdmin={isSuperAdmin}

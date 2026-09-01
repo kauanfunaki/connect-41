@@ -5,8 +5,7 @@ import {
   ArrowRight,
   ShieldCheck,
   Layers,
-  Blocks,
-  Building,
+  Blocks,
   Globe,
   Puzzle,
   Tag,
@@ -74,7 +73,6 @@ export default async function AdminPage() {
       { group: "workspace", href: "/admin/usuarios", icon: <ShieldCheck size={20} />, title: "Usuários", description: "Contas, papéis e acesso a setores" },
       { group: "workspace", href: "/admin/setores", icon: <Layers size={20} />, title: "Setores", description: "Catálogo de setores/cargos do tenant" },
       { group: "workspace", href: "/admin/modulos", icon: <Blocks size={20} />, title: "Módulos", description: "Ativação de módulos plugáveis por setor" },
-      { group: "workspace", href: "/admin/filiais", icon: <Building size={20} />, title: "Filiais", description: "Etiqueta organizacional para Empresas" },
       { group: "workspace", href: "/admin/tenant", icon: <Settings2 size={20} />, title: "Empresa (Tenant)", description: "Dados do workspace e configuração de e-mail (SMTP)" },
       { group: "workspace", href: "/admin/permissoes-sensiveis", icon: <EyeOff size={20} />, title: "Campos Sensíveis", description: "Quem vê salário, dados bancários, médicos e documentos" },
       { group: "catalogos", href: "/admin/obrigacoes", icon: <Repeat size={20} />, title: "Obrigações Recorrentes", description: "DAS, DCTF, folha — itens de kanban gerados todo mês" }

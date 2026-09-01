@@ -6,16 +6,16 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { EmpresaForm } from "@/components/empresas/EmpresaForm";
 import { criarEmpresa } from "../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
-import { getActiveBranchOptions } from "@/lib/branches";
 import { getActiveClientGroupOptions } from "@/lib/clientGroupsDb";
+import { getMatrizOptions } from "@/lib/companyHierarchyDb";
 
 export default async function NovaEmpresaPage() {
   const ctx = await getAuthContext();
   if (!canWrite(ctx.role)) notFound();
 
-  const [branchOptions, clientGroupOptions] = await Promise.all([
-    getActiveBranchOptions(ctx.tenantId),
+  const [clientGroupOptions, matrizOptions] = await Promise.all([
     getActiveClientGroupOptions(ctx.tenantId),
+    getMatrizOptions(ctx.tenantId),
   ]);
 
   return (
@@ -29,8 +29,8 @@ export default async function NovaEmpresaPage() {
       <EmpresaForm
         action={criarEmpresa}
         cancelHref="/empresas"
-        branchOptions={branchOptions}
         clientGroupOptions={clientGroupOptions}
+        matrizOptions={matrizOptions}
       />
     </PageContainer>
   );

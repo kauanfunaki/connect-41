@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { LayoutGrid, Users, Briefcase, FileText, History, MessageCircle } from "lucide-react";
+import { LayoutGrid, Users, Briefcase, FileText, History, MessageCircle, Network } from "lucide-react";
 import { Tabs } from "@/components/ui/Tabs";
 
 type Props = {
   overview: React.ReactNode;
   people: React.ReactNode;
   peopleCount: number;
+  filiais: React.ReactNode;
+  filiaisCount: number;
   operations: React.ReactNode;
   documents: React.ReactNode;
   documentsCount: number;
@@ -21,6 +23,8 @@ export function CompanyDetailTabs({
   overview,
   people,
   peopleCount,
+  filiais,
+  filiaisCount,
   operations,
   documents,
   documentsCount,
@@ -31,7 +35,7 @@ export function CompanyDetailTabs({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const validTabs = ["overview", "people", "operations", "documents", "conversations", "history"];
+  const validTabs = ["overview", "filiais", "people", "operations", "documents", "conversations", "history"];
   const tabFromUrl = searchParams.get("tab");
   const [active, setActive] = useState(
     tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : "overview"
@@ -39,6 +43,7 @@ export function CompanyDetailTabs({
 
   const tabs = [
     { key: "overview", label: "Visão Geral", icon: <LayoutGrid /> },
+    { key: "filiais", label: `Filiais${filiaisCount ? ` (${filiaisCount})` : ""}`, icon: <Network /> },
     { key: "people", label: `Pessoas${peopleCount ? ` (${peopleCount})` : ""}`, icon: <Users /> },
     { key: "operations", label: "RH & Operação", icon: <Briefcase /> },
     { key: "documents", label: `Documentos${documentsCount ? ` (${documentsCount})` : ""}`, icon: <FileText /> },
@@ -56,6 +61,7 @@ export function CompanyDetailTabs({
       <Tabs tabs={tabs} active={active} onChange={handleChange} className="mb-5" />
       <div>
         {active === "overview" && overview}
+        {active === "filiais" && filiais}
         {active === "people" && people}
         {active === "operations" && operations}
         {active === "documents" && documents}

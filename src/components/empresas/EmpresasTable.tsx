@@ -2,7 +2,7 @@
 
 import { Fragment, useState, useTransition } from "react";
 import Link from "next/link";
-import { Building2 } from "lucide-react";
+import { Building2, ChevronRight } from "lucide-react";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -12,6 +12,7 @@ import { AvatarImage } from "@/components/shared/AvatarImage";
 import type { CompanyStatus } from "@/generated/prisma/enums";
 import { formatCnpj } from "@/lib/format";
 import { agruparPorCliente } from "@/lib/clientGroups";
+import { montarArvore } from "@/lib/companyHierarchy";
 import { useConfirm } from "@/components/ui/useConfirm";
 
 type Row = {
@@ -28,6 +29,7 @@ type Row = {
   stateCode: string | null;
   clientGroupId: string | null;
   clientGroupName: string | null;
+  parentCompanyId: string | null;
 };
 
 type Props = {
@@ -62,9 +64,103 @@ export function EmpresasTable({
   const colunas = canCreate ? 9 : 8;
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Filiais começam recolhidas: a listagem existe para varrer clientes, e abrir
+  // tudo por padrão devolveria a tabela plana que a árvore veio substituir.
+  const [expandidas, setExpandidas] = useState<Set<string>>(new Set());
+
+  function toggleExpandir(id: string) {
+    setExpandidas((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
   const [bulkStatus, setBulkStatus] = useState<CompanyStatus>("ACTIVE");
   const [, startTransition] = useTransition();
   const { dialog, requestConfirm } = useConfirm();
+
+  // Uma linha só, usada pela matriz e pela filial. Extraída porque são as
+  // mesmas 8 colunas — o que muda é o recuo, a setinha e a marca de filial.
+  function linhaEmpresa(c: Row, qtdFiliais: number, ehFilial: boolean) {
+    return (
+      <tr
+        key={c.id}
+        className={`border-b border-border last:border-0 transition-colors ${
+          selected.has(c.id) ? "bg-selected-bg" : "hover:bg-surface-hover"
+        }`}
+      >
+        {canCreate && (
+          <td className="px-4 py-3">
+            <Checkbox checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} />
+          </td>
+        )}
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-1.5" style={ehFilial ? { paddingLeft: 22 } : undefined}>
+            {qtdFiliais > 0 ? (
+              <button
+                type="button"
+                onClick={() => toggleExpandir(c.id)}
+                aria-expanded={expandidas.has(c.id)}
+                aria-label={`${expandidas.has(c.id) ? "Recolher" : "Expandir"} as filiais de ${c.name}`}
+                className="shrink-0 p-0.5 rounded text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors"
+              >
+                <ChevronRight
+                  size={14}
+                  className={`transition-transform ${expandidas.has(c.id) ? "rotate-90" : ""}`}
+                />
+              </button>
+            ) : (
+              // Espaço reservado mesmo sem filial: sem ele, os nomes das
+              // empresas com e sem filial ficam desalinhados na coluna.
+              <span className="w-[22px] shrink-0" aria-hidden="true" />
+            )}
+            <Link
+              href={`/empresas/${c.id}`}
+              className="flex items-center gap-2.5 font-medium text-fg hover:text-brand transition-colors"
+            >
+              <AvatarImage src={c.logoUrl} name={c.name} size={28} shape="lg" fontSize={11} />
+              {c.name}
+            </Link>
+            {qtdFiliais > 0 && (
+              <span className="ml-1 shrink-0 text-[11.5px] text-fg-muted tnum">
+                {qtdFiliais} {qtdFiliais === 1 ? "filial" : "filiais"}
+              </span>
+            )}
+            {ehFilial && (
+              <span className="ml-1 shrink-0 text-[11.5px] text-fg-muted">filial</span>
+            )}
+          </div>
+        </td>
+        <td className="px-4 py-3 text-fg-secondary tnum">{c.externalId ?? "—"}</td>
+        <td className="px-4 py-3 text-fg-secondary tnum">{formatCnpj(c.cnpj)}</td>
+        <td className="px-4 py-3">
+          <StatusDot color={statusColor[c.status]} label={statusLabel[c.status]} />
+        </td>
+        <td className="px-4 py-3 text-fg-secondary">{c.taxRegime ?? "—"}</td>
+        <td className="px-4 py-3 text-fg-secondary">
+          {c.city && c.stateCode ? `${c.city}/${c.stateCode}` : c.city ?? c.stateCode ?? "—"}
+        </td>
+        <td className="px-4 py-3 text-fg-secondary tnum">{c.createdAtLabel}</td>
+        <td className="px-4 py-3 text-right whitespace-nowrap">
+          {canCreate && (
+            <span className="inline-flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => toggleAtivo(c)}
+                className="text-[13px] font-medium text-fg-muted hover:text-fg transition-colors"
+              >
+                {FORA_DE_OPERACAO.includes(c.status) ? "Reativar" : "Inativar"}
+              </button>
+              <Link href={`/empresas/${c.id}/editar`} className="text-[13px] font-medium text-fg-muted hover:text-fg transition-colors">
+                Editar
+              </Link>
+            </span>
+          )}
+        </td>
+      </tr>
+    );
+  }
 
   const allSelected = companies.length > 0 && selected.size === companies.length;
 
@@ -196,51 +292,12 @@ export function EmpresasTable({
                       </span>
                     </td>
                   </tr>
-                  {bloco.empresas.map((c) => (
-                <tr
-                  key={c.id}
-                  className={`border-b border-border last:border-0 transition-colors ${
-                    selected.has(c.id) ? "bg-selected-bg" : "hover:bg-surface-hover"
-                  }`}
-                >
-                  {canCreate && (
-                    <td className="px-4 py-3">
-                      <Checkbox checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} />
-                    </td>
-                  )}
-                  <td className="px-4 py-3">
-                    <Link href={`/empresas/${c.id}`} className="flex items-center gap-2.5 font-medium text-fg hover:text-brand transition-colors">
-                      <AvatarImage src={c.logoUrl} name={c.name} size={28} shape="lg" fontSize={11} />
-                      {c.name}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-fg-secondary tnum">{c.externalId ?? "—"}</td>
-                  <td className="px-4 py-3 text-fg-secondary tnum">{formatCnpj(c.cnpj)}</td>
-                  <td className="px-4 py-3">
-                    <StatusDot color={statusColor[c.status]} label={statusLabel[c.status]} />
-                  </td>
-                  <td className="px-4 py-3 text-fg-secondary">{c.taxRegime ?? "—"}</td>
-                  <td className="px-4 py-3 text-fg-secondary">
-                    {c.city && c.stateCode ? `${c.city}/${c.stateCode}` : c.city ?? c.stateCode ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-fg-secondary tnum">{c.createdAtLabel}</td>
-                  <td className="px-4 py-3 text-right whitespace-nowrap">
-                    {canCreate && (
-                      <span className="inline-flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => toggleAtivo(c)}
-                          className="text-[13px] font-medium text-fg-muted hover:text-fg transition-colors"
-                        >
-                          {FORA_DE_OPERACAO.includes(c.status) ? "Reativar" : "Inativar"}
-                        </button>
-                        <Link href={`/empresas/${c.id}/editar`} className="text-[13px] font-medium text-fg-muted hover:text-fg transition-colors">
-                          Editar
-                        </Link>
-                      </span>
-                    )}
-                  </td>
-                </tr>
+                  {montarArvore(bloco.empresas).map((no) => (
+                    <Fragment key={no.matriz.id}>
+                      {linhaEmpresa(no.matriz, no.filiais.length, false)}
+                      {expandidas.has(no.matriz.id) &&
+                        no.filiais.map((f) => linhaEmpresa(f, 0, true))}
+                    </Fragment>
                   ))}
                 </Fragment>
               ))}

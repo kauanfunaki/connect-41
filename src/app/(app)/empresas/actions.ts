@@ -13,6 +13,7 @@ import { isPrismaForeignKeyError } from "@/lib/prismaErrors";
 import { isValidCNPJ, digitsOnly } from "@/lib/validation/common";
 import { logAudit } from "@/lib/audit";
 import { cnpjRoot, lerEscolhaDeCliente } from "@/lib/clientGroups";
+import { validarMatriz } from "@/lib/companyHierarchyDb";
 
 export type EmpresaState = { error: string } | null;
 
@@ -41,7 +42,7 @@ function companyData(form: FormData) {
     website:               pick(form, "website"),
     status:                (form.get("status") as CompanyStatus) ?? CompanyStatus.PROSPECT,
     source:                pick(form, "source"),
-    branchId:              pick(form, "branchId"),
+    parentCompanyId:       pick(form, "parentCompanyId"),
   };
 }
 
@@ -129,8 +130,11 @@ export async function criarEmpresa(
   const validationError = await validateCompany(data, ctx.tenantId);
   if (validationError) return { error: validationError };
 
+  const matrizError = await validarMatriz(ctx.tenantId, null, data.parentCompanyId);
+  if (matrizError) return { error: matrizError };
+
   // Depois de validar a empresa: um cliente novo não deve ser criado se o
-  // cadastro vai ser recusado por CNPJ inválido ou duplicado.
+  // cadastro vai ser recusado por CNPJ inválido, duplicado ou matriz inválida.
   const cliente = await resolverClientGroupId(form, ctx.tenantId, data.cnpj);
   if ("error" in cliente) return { error: cliente.error };
 
@@ -179,6 +183,9 @@ export async function atualizarEmpresa(
     select: { id: true },
   });
   if (!existing) return { error: "Empresa não encontrada ou fora do seu escopo." };
+
+  const matrizError = await validarMatriz(ctx.tenantId, id, data.parentCompanyId);
+  if (matrizError) return { error: matrizError };
 
   const cliente = await resolverClientGroupId(form, ctx.tenantId, data.cnpj);
   if ("error" in cliente) return { error: cliente.error };

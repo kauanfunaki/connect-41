@@ -9,8 +9,8 @@ import { atualizarEmpresa } from "../../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { getCompanySectors, getApplicableCustomFields } from "@/lib/customFields";
-import { getActiveBranchOptions } from "@/lib/branches";
 import { getActiveClientGroupOptions } from "@/lib/clientGroupsDb";
+import { getMatrizOptions } from "@/lib/companyHierarchyDb";
 
 export default async function EditarEmpresaPage({
   params,
@@ -30,8 +30,8 @@ export default async function EditarEmpresaPage({
 
   const companySectors = await getCompanySectors(ctx.tenantId, id);
   const customFields = await getApplicableCustomFields(ctx, "COMPANY", id, companySectors);
-  const branchOptions = await getActiveBranchOptions(ctx.tenantId);
   const clientGroupOptions = await getActiveClientGroupOptions(ctx.tenantId);
+  const matrizOptions = await getMatrizOptions(ctx.tenantId, id);
 
   return (
     <PageContainer>
@@ -51,8 +51,8 @@ export default async function EditarEmpresaPage({
           action={atualizarEmpresa}
           cancelHref={`/empresas/${id}`}
           customFields={customFields}
-          branchOptions={branchOptions}
           clientGroupOptions={clientGroupOptions}
+          matrizOptions={matrizOptions}
           defaultValues={{
             id,
             name:                  company.name,
@@ -78,8 +78,8 @@ export default async function EditarEmpresaPage({
             website:               company.website               ?? undefined,
             status:                company.status,
             source:                company.source                ?? undefined,
-            branchId:              company.branchId               ?? undefined,
             clientGroupId:         company.clientGroupId          ?? undefined,
+            parentCompanyId:       company.parentCompanyId        ?? undefined,
           }}
         />
     </PageContainer>

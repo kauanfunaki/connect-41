@@ -6,10 +6,13 @@ import type { CadastrosTab } from "@/lib/cadastrosNav";
 
 const TABS: TabItem[] = [
   { key: "empresas", label: "Empresas", panelId: "cadastros-content" },
+  // Clientes fica entre Empresas e Pessoas de propósito: é o nível ACIMA da
+  // empresa, e a ordem da barra desenha essa hierarquia.
+  { key: "clientes", label: "Clientes", panelId: "cadastros-content" },
   { key: "pessoas", label: "Pessoas", panelId: "cadastros-content" },
 ];
 
-// Barra de abas do topo de /empresas e /pessoas — troca de aba navega para a
+// Barra de abas do topo de /empresas, /clientes e /pessoas — troca de aba navega para a
 // listagem correspondente (rotas continuam as mesmas de sempre).
 export function CadastrosTabsBar({ active }: { active: CadastrosTab }) {
   const router = useRouter();
