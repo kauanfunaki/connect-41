@@ -87,7 +87,11 @@ export default async function EmpresasPage({
   const [companies, total] = await Promise.all([
     prisma.company.findMany({
       where,
-      orderBy: { name: "asc" },
+      // A listagem é agrupada por cliente: ordenar pelo nome do grupo antes do
+      // nome da empresa é o que mantém as empresas de um mesmo cliente
+      // adjacentes, sem o que o agrupamento da tela viraria confete.
+      orderBy: [{ clientGroup: { name: "asc" } }, { name: "asc" }],
+      include: { clientGroup: { select: { id: true, name: true } } },
       skip: (pageNum - 1) * PER_PAGE,
       take: PER_PAGE,
     }),
@@ -176,6 +180,8 @@ export default async function EmpresasPage({
             logoUrl: c.logoUrl,
             city: c.city,
             stateCode: c.stateCode,
+            clientGroupId: c.clientGroup?.id ?? null,
+            clientGroupName: c.clientGroup?.name ?? null,
           }))}
           canCreate={canCreate}
           isSuperAdmin={isSuperAdmin}

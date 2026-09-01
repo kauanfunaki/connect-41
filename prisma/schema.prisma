@@ -690,7 +690,6 @@ model User {
   manualPages                ManualPage[]
   activities                 Activity[]
   handoffs                   Handoff[]               @relation("HandoffRequester")
-  handoffSectorsAssigned     HandoffSector[]         @relation("HandoffSectorAssignee")
   handoffSectorAssignees     HandoffSectorAssignee[]
   handoffViews               HandoffView[]
   notifications              Notification[]
@@ -2529,14 +2528,12 @@ model HandoffSector {
   sectorCode  String              @db.VarChar(40)
   instruction String?             @db.Text
   status      HandoffSectorStatus @default(NEW)
-  assignedTo  String?
   resolvedAt  DateTime?
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
 
   tenant    Tenant                  @relation(fields: [tenantId], references: [id])
   handoff   Handoff                 @relation(fields: [handoffId], references: [id], onDelete: Cascade)
-  assignee  User?                   @relation("HandoffSectorAssignee", fields: [assignedTo], references: [id])
   assignees HandoffSectorAssignee[]
 
   @@unique([handoffId, sectorCode])
@@ -2549,9 +2546,10 @@ model HandoffSector {
 // a demanda a mais de uma pessoa do mesmo setor. Mesmo formato de
 // PipelineItemAssignee.
 //
-// `assignedTo` foi MANTIDO por enquanto e segue populado com o primeiro
-// responsável: é o que os dados antigos usam e o que a migration copia para cá.
-// Remover exige backfill verificado + limpar as leituras restantes.
+// `assignedTo` foi DROPADO em 2026-09-01 (migration 20260901120000): a
+// migration 20260730120000 já havia copiado todo valor não-nulo para cá, então
+// a coluna não guardava nada a mais. Onde antes se lia o "responsável único",
+// leia `assignees[0]` — a lista vem ordenada por createdAt.
 model HandoffSectorAssignee {
   handoffSectorId String
   userId          String

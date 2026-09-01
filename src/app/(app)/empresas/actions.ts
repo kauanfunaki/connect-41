@@ -12,6 +12,7 @@ import { pick, pickDate } from "@/lib/forms";
 import { isPrismaForeignKeyError } from "@/lib/prismaErrors";
 import { isValidCNPJ, digitsOnly } from "@/lib/validation/common";
 import { logAudit } from "@/lib/audit";
+import { cnpjRoot, lerEscolhaDeCliente } from "@/lib/clientGroups";
 
 export type EmpresaState = { error: string } | null;
 
@@ -66,6 +67,56 @@ async function validateCompany(
   return null;
 }
 
+/**
+ * Resolve o cliente escolhido no formulário para um `clientGroupId` real,
+ * criando o grupo quando o usuário pediu um novo.
+ *
+ * O cliente é obrigatório desde 2026-09-01: sem ele a empresa nasce órfã e a
+ * consulta do portal volta a precisar de `OR company.id in (...)` espalhado,
+ * que é justamente o que o `ClientGroup` veio resolver.
+ *
+ * A checagem de tenant não é cerimônia: `clientGroupId` chega do formulário,
+ * ou seja, do cliente, e o Prisma não expressa "grupo e empresa do mesmo
+ * tenant" como constraint (seria FK composta entre duas tabelas). Sem esta
+ * consulta, um id de outro tenant faria a empresa atravessar a fronteira de
+ * acesso.
+ */
+async function resolverClientGroupId(
+  form: FormData,
+  tenantId: string,
+  cnpj: string | null
+): Promise<{ clientGroupId: string } | { error: string }> {
+  const escolha = lerEscolhaDeCliente(
+    form.get("clientGroupId") as string | null,
+    form.get("clientGroupNewName") as string | null
+  );
+
+  if (escolha.tipo === "ausente") {
+    return { error: "Cliente é obrigatório. Escolha um existente ou crie um novo." };
+  }
+
+  const prisma = getPrisma();
+
+  if (escolha.tipo === "existente") {
+    const grupo = await prisma.clientGroup.findFirst({
+      where: { id: escolha.clientGroupId, tenantId },
+      select: { id: true },
+    });
+    if (!grupo) return { error: "Cliente não encontrado." };
+    return { clientGroupId: grupo.id };
+  }
+
+  // Grupo novo: guarda a raiz do CNPJ da empresa que o está criando. Se uma
+  // filial da mesma raiz for cadastrada depois, o campo já diz a qual grupo ela
+  // pertence — é dica de agrupamento, não identidade (holding tem raízes
+  // diferentes e cliente pessoa física não tem nenhuma).
+  const novo = await prisma.clientGroup.create({
+    data: { tenantId, name: escolha.name, cnpjRoot: cnpjRoot(cnpj) },
+    select: { id: true },
+  });
+  return { clientGroupId: novo.id };
+}
+
 export async function criarEmpresa(
   _prev: EmpresaState,
   form: FormData
@@ -78,11 +129,18 @@ export async function criarEmpresa(
   const validationError = await validateCompany(data, ctx.tenantId);
   if (validationError) return { error: validationError };
 
+  // Depois de validar a empresa: um cliente novo não deve ser criado se o
+  // cadastro vai ser recusado por CNPJ inválido ou duplicado.
+  const cliente = await resolverClientGroupId(form, ctx.tenantId, data.cnpj);
+  if ("error" in cliente) return { error: cliente.error };
+
   const prisma = getPrisma();
   let id: string;
 
   try {
-    const company = await prisma.company.create({ data: { tenantId: ctx.tenantId, ...data } });
+    const company = await prisma.company.create({
+      data: { tenantId: ctx.tenantId, ...data, clientGroupId: cliente.clientGroupId },
+    });
     id = company.id;
   } catch (err) {
     console.error("[criarEmpresa]", err);
@@ -122,8 +180,14 @@ export async function atualizarEmpresa(
   });
   if (!existing) return { error: "Empresa não encontrada ou fora do seu escopo." };
 
+  const cliente = await resolverClientGroupId(form, ctx.tenantId, data.cnpj);
+  if ("error" in cliente) return { error: cliente.error };
+
   try {
-    await prisma.company.update({ where: { id }, data });
+    await prisma.company.update({
+      where: { id },
+      data: { ...data, clientGroupId: cliente.clientGroupId },
+    });
   } catch (err) {
     console.error("[atualizarEmpresa]", err);
     return { error: "Erro ao atualizar empresa." };

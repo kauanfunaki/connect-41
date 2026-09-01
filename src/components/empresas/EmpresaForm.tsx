@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { Stepper, type StepStatus } from "@/components/ui/Stepper";
 import { ReviewBlock } from "@/components/ui/ReviewBlock";
 import { formatCnpj, formatPhone, formatCep } from "@/lib/format";
+import { NOVO_CLIENTE } from "@/lib/clientGroups";
 
 const STATUS_OPTIONS: { value: CompanyStatus; label: string }[] = [
   { value: "ACTIVE",   label: "Ativo" },
@@ -72,6 +73,7 @@ export type EmpresaDefaultValues = {
   status?: CompanyStatus;
   source?: string;
   branchId?: string;
+  clientGroupId?: string;
 };
 
 type Props = {
@@ -80,9 +82,17 @@ type Props = {
   defaultValues?: EmpresaDefaultValues;
   customFields?: CustomFieldInput[];
   branchOptions?: { value: string; label: string }[];
+  clientGroupOptions?: { value: string; label: string }[];
 };
 
-export function EmpresaForm({ action, cancelHref, defaultValues, customFields = [], branchOptions = [] }: Props) {
+export function EmpresaForm({
+  action,
+  cancelHref,
+  defaultValues,
+  customFields = [],
+  branchOptions = [],
+  clientGroupOptions = [],
+}: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const [fetching, setFetching] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -120,6 +130,8 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
     cnaeSecundarios: defaultValues?.cnaeSecundarios ?? "",
     source: defaultValues?.source ?? "",
     branchId: defaultValues?.branchId ?? "",
+    clientGroupId: defaultValues?.clientGroupId ?? "",
+    clientGroupNewName: "",
   }));
 
   const lastStep = STEP_LABELS.length - 1;
@@ -190,6 +202,12 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
   );
 
   const branchLabel = branchOptions.find((b) => b.value === values.branchId)?.label;
+  // Na revisão o cliente aparece pelo nome, não pelo uuid — inclusive quando é
+  // um que ainda vai ser criado no submit.
+  const clientLabel =
+    values.clientGroupId === NOVO_CLIENTE
+      ? values.clientGroupNewName
+      : clientGroupOptions.find((c) => c.value === values.clientGroupId)?.label ?? "";
 
   const lastFetchedCnpjRef = useRef<string | null>(null);
 
@@ -332,6 +350,37 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
               <CampoForm label="Nome Fantasia" htmlFor="tradeName">
                 <Input id="tradeName" name="tradeName" type="text" value={values.tradeName} placeholder="Como é conhecida" />
               </CampoForm>
+            </FieldGrid>
+            <FieldGrid>
+              <CampoForm
+                label="Cliente"
+                htmlFor="clientGroupId"
+                required
+                helper="Agrupa as empresas de um mesmo cliente. Uma empresa só já é um cliente."
+              >
+                <Select id="clientGroupId" name="clientGroupId" required value={values.clientGroupId}>
+                  <option value="">Selecionar…</option>
+                  {clientGroupOptions.map((c) => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                  <option value={NOVO_CLIENTE}>+ Novo cliente…</option>
+                </Select>
+              </CampoForm>
+              {values.clientGroupId === NOVO_CLIENTE ? (
+                <CampoForm label="Nome do novo cliente" htmlFor="clientGroupNewName" required>
+                  <Input
+                    id="clientGroupNewName"
+                    name="clientGroupNewName"
+                    type="text"
+                    required
+                    maxLength={180}
+                    value={values.clientGroupNewName}
+                    placeholder="Ex: Grupo Aurora"
+                  />
+                </CampoForm>
+              ) : (
+                <div aria-hidden="true" />
+              )}
             </FieldGrid>
             <FieldGrid>
               <CampoForm label="Regime Tributário" htmlFor="taxRegime">
@@ -485,6 +534,7 @@ export function EmpresaForm({ action, cancelHref, defaultValues, customFields = 
                 { label: "Status", value: STATUS_LABEL[values.status as CompanyStatus] },
                 { label: "Razão Social", value: values.name },
                 { label: "Nome Fantasia", value: values.tradeName },
+                { label: "Cliente", value: clientLabel },
                 { label: "Regime Tributário", value: values.taxRegime },
                 { label: "ID", value: values.externalId },
               ]}

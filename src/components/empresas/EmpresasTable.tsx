@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import Link from "next/link";
 import { Building2 } from "lucide-react";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
@@ -11,6 +11,7 @@ import { Select } from "@/components/ui/Select";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import type { CompanyStatus } from "@/generated/prisma/enums";
 import { formatCnpj } from "@/lib/format";
+import { agruparPorCliente } from "@/lib/clientGroups";
 import { useConfirm } from "@/components/ui/useConfirm";
 
 type Row = {
@@ -25,6 +26,8 @@ type Row = {
   logoUrl: string | null;
   city: string | null;
   stateCode: string | null;
+  clientGroupId: string | null;
+  clientGroupName: string | null;
 };
 
 type Props = {
@@ -53,6 +56,11 @@ export function EmpresasTable({
   atualizarStatusEmMassa,
   excluirEmpresasEmMassa,
 }: Props) {
+  // A consulta já vem ordenada por (cliente, empresa) — aqui é só quebrar em
+  // blocos para desenhar o cabeçalho de cada cliente.
+  const blocos = agruparPorCliente(companies);
+  const colunas = canCreate ? 9 : 8;
+
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<CompanyStatus>("ACTIVE");
   const [, startTransition] = useTransition();
@@ -176,7 +184,19 @@ export function EmpresasTable({
               </tr>
             </thead>
             <tbody>
-              {companies.map((c) => (
+              {blocos.map((bloco, i) => (
+                <Fragment key={`${bloco.clientGroupId ?? "sem-cliente"}-${i}`}>
+                  <tr className="border-b border-border bg-surface-2">
+                    <td colSpan={colunas} className="px-4 py-2">
+                      <span className="text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                        {bloco.label}
+                      </span>
+                      <span className="ml-2 text-[11.5px] text-fg-muted tnum">
+                        {bloco.empresas.length} empresa{bloco.empresas.length !== 1 ? "s" : ""}
+                      </span>
+                    </td>
+                  </tr>
+                  {bloco.empresas.map((c) => (
                 <tr
                   key={c.id}
                   className={`border-b border-border last:border-0 transition-colors ${
@@ -221,6 +241,8 @@ export function EmpresasTable({
                     )}
                   </td>
                 </tr>
+                  ))}
+                </Fragment>
               ))}
             </tbody>
           </table>

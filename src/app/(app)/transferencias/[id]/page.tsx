@@ -39,7 +39,6 @@ export default async function HandoffDetailPage({
       sectors: {
         orderBy: { createdAt: "asc" },
         include: {
-          assignee: { select: { id: true, name: true } },
           assignees: {
             orderBy: { createdAt: "asc" },
             include: { user: { select: { id: true, name: true } } },
@@ -145,9 +144,9 @@ export default async function HandoffDetailPage({
       <div className="space-y-3 mb-4">
         {handoff.sectors.map((s) => {
           const canManage = canManageSector(ctx, s.sectorCode);
-          // Qualquer um dos responsáveis pode mexer no status. O fallback pra
-          // coluna antiga `assignedTo` saiu: a migration 20260730120000 copiou
-          // todo assignedTo não-nulo pra cá, então ela não tem nada a mais.
+          // Qualquer um dos responsáveis pode mexer no status. A coluna antiga
+          // `assignedTo` foi dropada: a migration 20260730120000 copiou todo
+          // assignedTo não-nulo pra cá, então ela não tinha nada a mais.
           const isAssignee = s.assignees.some((a) => a.user.id === ctx.userId);
           const canUpdateStatus = (canManage || isAssignee) && ctx.role !== "READONLY";
           const assigneeNames = s.assignees.map((a) => a.user.name);
@@ -198,11 +197,14 @@ export default async function HandoffDetailPage({
                   <>
                     {/* AssigneeSelect troca por UM responsável (substitui a
                         lista). Com vários definidos na criação, os nomes ficam
-                        visíveis ao lado pra não sumirem da tela. */}
+                        visíveis ao lado pra não sumirem da tela.
+                        O selecionado é o primeiro da lista, que é exatamente o
+                        que a coluna `assignedTo` guardava antes de ser dropada
+                        — `assignees` vem ordenado por createdAt. */}
                     <AssigneeSelect
                       action={atribuirResponsavelSetor.bind(null, s.id)}
                       options={assigneeOptionsBySector[s.sectorCode] ?? []}
-                      currentAssigneeId={s.assignee?.id ?? null}
+                      currentAssigneeId={s.assignees[0]?.user.id ?? null}
                     />
                     {assigneeNames.length > 1 && (
                       <span className="text-[12px] text-fg-muted">

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { cnpjRoot, mesmoTenant, planejarGrupos, type EmpresaParaAgrupar } from "./clientGroups";
+import {
+  agruparPorCliente,
+  cnpjRoot,
+  lerEscolhaDeCliente,
+  mesmoTenant,
+  NOVO_CLIENTE,
+  planejarGrupos,
+  type EmpresaParaAgrupar,
+} from "./clientGroups";
 
 const emp = (id: string, name: string, cnpj: string | null): EmpresaParaAgrupar => ({ id, name, cnpj });
 
@@ -106,5 +114,79 @@ describe("mesmoTenant", () => {
   it("barra empresa entrando em grupo de outro tenant", () => {
     expect(mesmoTenant({ tenantId: "t1" }, { tenantId: "t2" })).toBe(false);
     expect(mesmoTenant({ tenantId: "t1" }, { tenantId: "t1" })).toBe(true);
+  });
+});
+
+describe("lerEscolhaDeCliente", () => {
+  it("id preenchido é cliente existente", () => {
+    expect(lerEscolhaDeCliente("grp-1", null)).toEqual({ tipo: "existente", clientGroupId: "grp-1" });
+  });
+
+  it("sentinela com nome é cliente novo", () => {
+    expect(lerEscolhaDeCliente(NOVO_CLIENTE, "  Grupo Aurora  ")).toEqual({
+      tipo: "novo",
+      name: "Grupo Aurora",
+    });
+  });
+
+  it("sentinela sem nome é ausente — escolher e não digitar é não ter escolhido", () => {
+    expect(lerEscolhaDeCliente(NOVO_CLIENTE, "   ")).toEqual({ tipo: "ausente" });
+    expect(lerEscolhaDeCliente(NOVO_CLIENTE, null)).toEqual({ tipo: "ausente" });
+  });
+
+  it("nada escolhido é ausente", () => {
+    expect(lerEscolhaDeCliente("", "Ignorado")).toEqual({ tipo: "ausente" });
+    expect(lerEscolhaDeCliente(null, null)).toEqual({ tipo: "ausente" });
+  });
+
+  it("corta o nome em 180 para não estourar o VarChar", () => {
+    const escolha = lerEscolhaDeCliente(NOVO_CLIENTE, "a".repeat(250));
+    expect(escolha).toEqual({ tipo: "novo", name: "a".repeat(180) });
+  });
+});
+
+describe("agruparPorCliente", () => {
+  const linha = (id: string, grupo: string | null, nome: string | null = grupo) => ({
+    id,
+    clientGroupId: grupo,
+    clientGroupName: nome,
+  });
+
+  it("junta empresas adjacentes do mesmo cliente", () => {
+    const blocos = agruparPorCliente([
+      linha("a", "g1", "Grupo Aurora"),
+      linha("b", "g1", "Grupo Aurora"),
+      linha("c", "g2", "Beta"),
+    ]);
+    expect(blocos.map((b) => [b.label, b.empresas.length])).toEqual([
+      ["Grupo Aurora", 2],
+      ["Beta", 1],
+    ]);
+  });
+
+  it("preserva a ordem recebida — quem ordena é a consulta", () => {
+    const blocos = agruparPorCliente([
+      linha("a", "g2", "Beta"),
+      linha("b", "g1", "Grupo Aurora"),
+    ]);
+    expect(blocos.map((b) => b.label)).toEqual(["Beta", "Grupo Aurora"]);
+  });
+
+  it("empresa sem cliente ganha rótulo próprio em vez de sumir", () => {
+    const blocos = agruparPorCliente([linha("a", null, null)]);
+    expect(blocos).toEqual([{ clientGroupId: null, label: "Sem cliente", empresas: [linha("a", null, null)] }]);
+  });
+
+  it("mesmo cliente não-adjacente vira dois blocos — reordenar brigaria com a paginação", () => {
+    const blocos = agruparPorCliente([
+      linha("a", "g1", "Aurora"),
+      linha("b", "g2", "Beta"),
+      linha("c", "g1", "Aurora"),
+    ]);
+    expect(blocos).toHaveLength(3);
+  });
+
+  it("lista vazia não gera bloco", () => {
+    expect(agruparPorCliente([])).toEqual([]);
   });
 });

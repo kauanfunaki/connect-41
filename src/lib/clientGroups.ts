@@ -110,3 +110,82 @@ export function mesmoTenant(
 ): boolean {
   return grupo.tenantId === empresa.tenantId;
 }
+
+/**
+ * Sentinela do `<select>` de cliente para "não é nenhum dos existentes, vou
+ * digitar o nome de um novo". Não colide com id real: `ClientGroup.id` é uuid.
+ */
+export const NOVO_CLIENTE = "__novo__";
+
+/** O que o formulário de empresa disse sobre o cliente. */
+export type EscolhaDeCliente =
+  | { tipo: "existente"; clientGroupId: string }
+  | { tipo: "novo"; name: string }
+  | { tipo: "ausente" };
+
+/**
+ * Lê a dupla de campos do formulário (o select e o nome do novo) e diz o que o
+ * usuário quis. Separado da action porque é a regra que decide se o cadastro
+ * passa ou não — e desde 2026-09-01 o cliente é OBRIGATÓRIO na empresa, então
+ * `ausente` é erro de validação, não um caminho feliz.
+ *
+ * "Novo" com nome em branco cai em `ausente` de propósito: escolher a opção e
+ * não digitar nada é o mesmo que não ter escolhido, e criar um grupo sem nome
+ * seria pior que recusar.
+ */
+export function lerEscolhaDeCliente(
+  clientGroupId: string | null | undefined,
+  novoNome: string | null | undefined
+): EscolhaDeCliente {
+  const id = clientGroupId?.trim() ?? "";
+  if (id === NOVO_CLIENTE) {
+    const name = novoNome?.trim() ?? "";
+    // VarChar(180) na coluna — cortar aqui evita P2000 no insert.
+    return name ? { tipo: "novo", name: name.slice(0, 180) } : { tipo: "ausente" };
+  }
+  return id ? { tipo: "existente", clientGroupId: id } : { tipo: "ausente" };
+}
+
+/** Empresa já pronta para exibição, no mínimo que o agrupamento da tela precisa. */
+export type EmpresaAgrupavel = {
+  clientGroupId: string | null;
+  clientGroupName: string | null;
+};
+
+export type BlocoDeCliente<T> = {
+  /** `null` só para empresa sem cliente — não deve existir, mas a tela não some com ela. */
+  clientGroupId: string | null;
+  label: string;
+  empresas: T[];
+};
+
+/**
+ * Quebra a página de empresas em blocos por cliente, **preservando a ordem
+ * recebida**.
+ *
+ * Não ordena de propósito: quem ordena é a consulta, por
+ * `[{ clientGroup: { name } }, { name }]`, e reordenar aqui faria a tela
+ * discordar da paginação — a página 2 começaria por um cliente que a página 1
+ * já mostrou.
+ *
+ * Um cliente que cai na virada da página aparece nas duas, com o cabeçalho
+ * repetido. É o comportamento normal de agrupamento paginado: o alternativo
+ * seria paginar por cliente, o que quebraria a contagem, o filtro de status e
+ * a seleção em massa, que são todos por empresa.
+ */
+export function agruparPorCliente<T extends EmpresaAgrupavel>(empresas: T[]): BlocoDeCliente<T>[] {
+  const blocos: BlocoDeCliente<T>[] = [];
+  for (const e of empresas) {
+    const ultimo = blocos[blocos.length - 1];
+    if (ultimo && ultimo.clientGroupId === e.clientGroupId) {
+      ultimo.empresas.push(e);
+      continue;
+    }
+    blocos.push({
+      clientGroupId: e.clientGroupId,
+      label: e.clientGroupName ?? "Sem cliente",
+      empresas: [e],
+    });
+  }
+  return blocos;
+}

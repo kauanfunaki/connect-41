@@ -104,9 +104,6 @@ export async function criarHandoff(
             tenantId: ctx.tenantId,
             sectorCode,
             instruction: (form.get(`instruction_${sectorCode}`) as string)?.trim() || null,
-            // assignedTo (coluna antiga, um só) segue preenchido com o primeiro
-            // da lista enquanto as leituras dele não forem todas migradas.
-            assignedTo: assigneesBySector[sectorCode][0] ?? null,
             assignees: {
               create: assigneesBySector[sectorCode].map((userId) => ({ userId })),
             },
@@ -285,11 +282,9 @@ export async function atribuirResponsavelSetor(
   }
 
   try {
-    // Mantém as duas representações em sincronia: a coluna antiga (um só) e a
-    // tabela de responsáveis. Esta action continua sendo de troca única — quem
-    // define vários é o formulário de criação — então a lista é substituída.
+    // Esta action é de troca única — quem define vários é o formulário de
+    // criação — então a lista é substituída inteira.
     await prisma.$transaction([
-      prisma.handoffSector.update({ where: { id: sector.id }, data: { assignedTo: userId } }),
       prisma.handoffSectorAssignee.deleteMany({ where: { handoffSectorId: sector.id } }),
       ...(userId
         ? [prisma.handoffSectorAssignee.create({ data: { handoffSectorId: sector.id, userId } })]
