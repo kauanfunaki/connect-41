@@ -14,6 +14,7 @@ import { formatCnpj } from "@/lib/format";
 import { agruparPorCliente } from "@/lib/clientGroups";
 import { montarArvore } from "@/lib/companyHierarchy";
 import { nomeExibicao, razaoSocialSecundaria } from "@/lib/companyName";
+import { resumirRegime } from "@/lib/taxRegime";
 import { useConfirm } from "@/components/ui/useConfirm";
 
 type Row = {
@@ -148,12 +149,24 @@ export function EmpresasTable({
         <td className="px-4 py-3 whitespace-nowrap">
           <StatusDot color={statusColor[c.status]} label={statusLabel[c.status]} />
         </td>
-        <td className="px-4 py-3 text-fg-secondary">{c.taxRegime ?? "—"}</td>
-        <td className="px-4 py-3 text-fg-secondary">
+        {/* Resumido e sem quebra: o rótulo do Acessórias chega a 73 caracteres
+            e esticava a linha em seis, empurrando as ações para fora da tela.
+            O texto inteiro fica no title. */}
+        <td className="px-4 py-3 text-fg-secondary whitespace-nowrap" title={c.taxRegime ?? undefined}>
+          {resumirRegime(c.taxRegime) ?? "—"}
+        </td>
+        <td className="px-4 py-3 text-fg-secondary whitespace-nowrap">
           {c.city && c.stateCode ? `${c.city}/${c.stateCode}` : c.city ?? c.stateCode ?? "—"}
         </td>
         <td className="px-4 py-3 text-fg-secondary tnum whitespace-nowrap">{c.createdAtLabel}</td>
-        <td className="px-4 py-3 text-right whitespace-nowrap">
+        {/* Sticky à direita: com 8 colunas a tabela rola na horizontal, e as
+            ações eram a primeira coisa a sumir — "Editar" nem chegava a
+            aparecer. Presas aqui, ficam alcançáveis em qualquer rolagem. */}
+        <td
+          className={`px-4 py-3 text-right whitespace-nowrap sticky right-0 border-l border-border ${
+            selected.has(c.id) ? "bg-selected-bg" : "bg-surface"
+          }`}
+        >
           {canCreate && (
             <span className="inline-flex items-center gap-3">
               <button
@@ -272,10 +285,10 @@ export function EmpresasTable({
           <EmptyState icon={<Building2 />} title="Nenhuma empresa encontrada" />
         ) : (
           <div className="scroll-x overflow-x-auto">
-          {/* A coluna Nome ganhou hierarquia (setinha, recuo, apelido + razão social),
-                então 860px passou a espremer as colunas seguintes até quebrarem
-                em duas linhas quando um cliente era expandido. */}
-          <table className="w-full min-w-[1040px] text-[length:var(--fs-body)]">
+          {/* 940px: a coluna Nome carrega hierarquia (setinha, recuo, apelido +
+                razão social) e as demais não quebram mais, porque o regime
+                agora entra resumido. */}
+          <table className="w-full min-w-[940px] text-[length:var(--fs-body)]">
             <thead>
               <tr className="border-b border-border bg-table-header-bg">
                 {canCreate && (
@@ -290,14 +303,14 @@ export function EmpresasTable({
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Regime</th>
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Localização</th>
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Criada em</th>
-                <th className="px-4 py-3" />
+                <th className="px-4 py-3 sticky right-0 bg-table-header-bg border-l border-border" />
               </tr>
             </thead>
             <tbody>
               {blocos.map((bloco, i) => (
                 <Fragment key={`${bloco.clientGroupId ?? "sem-cliente"}-${i}`}>
                   <tr className="border-b border-border bg-surface-2">
-                    <td colSpan={colunas} className="px-4 py-2">
+                    <td colSpan={colunas - 1} className="px-4 py-2">
                       <span className="text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
                         {bloco.label}
                       </span>
@@ -305,6 +318,10 @@ export function EmpresasTable({
                         {bloco.empresas.length} empresa{bloco.empresas.length !== 1 ? "s" : ""}
                       </span>
                     </td>
+                    {/* Célula vazia no lugar da coluna de ações, que é sticky:
+                        sem ela, o retângulo preso à direita passaria por cima da
+                        faixa do cliente ao rolar na horizontal. */}
+                    <td className="sticky right-0 bg-surface-2 border-l border-border" />
                   </tr>
                   {montarArvore(bloco.empresas).map((no) => (
                     <Fragment key={no.matriz.id}>

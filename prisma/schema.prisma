@@ -851,6 +851,16 @@ model Company {
   chatwootContactLinks ChatwootContactLink[]
   bpoCredentials       BpoCredential[]
 
+  // Casar documento fiscal com empresa pelo CNPJ do XML exige que o par seja
+  // único: com duas empresas do mesmo tenant sob o mesmo CNPJ o casamento é
+  // ambíguo, sem critério de desempate. É também o que impede a importação do
+  // Acessórias de duplicar tudo se o script rodar duas vezes.
+  //
+  // Vale por tenant, não global: dois escritórios podem atender a mesma
+  // empresa, e isso não é conflito. NULL não conflita com NULL no MySQL, então
+  // empresa sem CNPJ continua possível — o que fazer com ela é decisão do
+  // módulo fiscal, não desta constraint.
+  @@unique([tenantId, cnpj])
   @@index([tenantId])
   @@index([tenantId, status])
   @@index([tenantId, clientGroupId])

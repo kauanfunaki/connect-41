@@ -1,0 +1,18 @@
+-- Índice único de (tenantId, cnpj) em `companies` — o primeiro item da Fase 1.
+--
+-- O módulo fiscal casa documento com empresa pelo CNPJ do XML. Sem unique, duas
+-- empresas do mesmo tenant podem dividir o CNPJ e o casamento fica ambíguo, sem
+-- critério de desempate. Também é o que impede a importação do Acessórias (384
+-- empresas) de duplicar tudo caso o script rode duas vezes.
+--
+-- Conferido em 2026-09-02 antes de escrever: `SELECT tenantId, cnpj, COUNT(*)
+-- ... HAVING n > 1` devolveu **zero linhas**. Os 3 CNPJs inválidos que existem
+-- em produção (12 dígitos, 13 dígitos e um só de zeros) são valores distintos
+-- entre si e não violam o índice; as 2 empresas com CNPJ nulo também não, porque
+-- o MySQL não considera NULL igual a NULL num unique. Nada precisa ser limpo
+-- antes — a validação de CNPJ no cadastro, que já existe desde a Fase 0, cuida
+-- de não deixar entrar mais inválido.
+--
+-- Único por TENANT, não global: dois escritórios atenderem a mesma empresa é
+-- situação normal, não conflito.
+CREATE UNIQUE INDEX `companies_tenantId_cnpj_key` ON `companies`(`tenantId`, `cnpj`);
