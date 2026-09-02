@@ -15,6 +15,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { CompanyHeader } from "@/components/empresas/CompanyHeader";
 import { CompanyDetailTabs } from "@/components/empresas/CompanyDetailTabs";
 import { CompanyFiliaisSection } from "@/components/empresas/CompanyFiliaisSection";
+import { nomeExibicao, razaoSocialSecundaria } from "@/lib/companyName";
 import type { CompanyStatus } from "@/generated/prisma/enums";
 import { CompanyOverviewSection } from "@/components/empresas/CompanyOverviewSection";
 import { ServicesSection } from "@/components/empresas/ServicesSection";
@@ -59,10 +60,10 @@ export default async function EmpresaPage({
       services: { orderBy: { createdAt: "asc" } },
       people: { orderBy: { name: "asc" }, take: 10 },
       clientGroup: { select: { id: true, name: true } },
-      parent: { select: { id: true, name: true, cnpj: true } },
+      parent: { select: { id: true, name: true, displayName: true, cnpj: true } },
       filiais: {
         orderBy: { name: "asc" },
-        select: { id: true, name: true, cnpj: true, status: true, city: true, stateCode: true },
+        select: { id: true, name: true, displayName: true, cnpj: true, status: true, city: true, stateCode: true },
       },
     },
   });
@@ -132,8 +133,8 @@ export default async function EmpresaPage({
 
       <CompanyHeader
         id={company.id}
-        name={company.name}
-        tradeName={company.tradeName}
+        name={nomeExibicao(company)}
+        tradeName={razaoSocialSecundaria(company) ?? company.tradeName}
         cnpj={company.cnpj}
         status={company.status}
         city={company.city}

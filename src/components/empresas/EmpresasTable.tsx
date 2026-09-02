@@ -13,11 +13,13 @@ import type { CompanyStatus } from "@/generated/prisma/enums";
 import { formatCnpj } from "@/lib/format";
 import { agruparPorCliente } from "@/lib/clientGroups";
 import { montarArvore } from "@/lib/companyHierarchy";
+import { nomeExibicao, razaoSocialSecundaria } from "@/lib/companyName";
 import { useConfirm } from "@/components/ui/useConfirm";
 
 type Row = {
   id: string;
   name: string;
+  displayName: string | null;
   externalId: string | null;
   cnpj: string | null;
   status: CompanyStatus;
@@ -95,7 +97,7 @@ export function EmpresasTable({
             <Checkbox checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} />
           </td>
         )}
-        <td className="px-4 py-3">
+        <td className="px-4 py-3 min-w-[260px]">
           <div className="flex items-center gap-1.5" style={ehFilial ? { paddingLeft: 22 } : undefined}>
             {qtdFiliais > 0 ? (
               <button
@@ -117,13 +119,22 @@ export function EmpresasTable({
             )}
             <Link
               href={`/empresas/${c.id}`}
-              className="flex items-center gap-2.5 font-medium text-fg hover:text-brand transition-colors"
+              className="flex items-center gap-2.5 min-w-0 font-medium text-fg hover:text-brand transition-colors"
             >
-              <AvatarImage src={c.logoUrl} name={c.name} size={28} shape="lg" fontSize={11} />
-              {c.name}
+              <AvatarImage src={c.logoUrl} name={nomeExibicao(c)} size={28} shape="lg" fontSize={11} />
+              <span className="flex flex-col min-w-0">
+                <span className="truncate">{nomeExibicao(c)}</span>
+                {/* Razão social só quando acrescenta: com apelido em branco ela
+                    JÁ é o nome de cima, e repetir é ruído. */}
+                {razaoSocialSecundaria(c) && (
+                  <span className="truncate text-[11.5px] font-normal text-fg-muted">
+                    {razaoSocialSecundaria(c)}
+                  </span>
+                )}
+              </span>
             </Link>
             {qtdFiliais > 0 && (
-              <span className="ml-1 shrink-0 text-[11.5px] text-fg-muted tnum">
+              <span className="ml-1 shrink-0 text-[11.5px] text-fg-muted tnum whitespace-nowrap">
                 {qtdFiliais} {qtdFiliais === 1 ? "filial" : "filiais"}
               </span>
             )}
@@ -132,16 +143,16 @@ export function EmpresasTable({
             )}
           </div>
         </td>
-        <td className="px-4 py-3 text-fg-secondary tnum">{c.externalId ?? "—"}</td>
-        <td className="px-4 py-3 text-fg-secondary tnum">{formatCnpj(c.cnpj)}</td>
-        <td className="px-4 py-3">
+        <td className="px-4 py-3 text-fg-secondary tnum whitespace-nowrap">{c.externalId ?? "—"}</td>
+        <td className="px-4 py-3 text-fg-secondary tnum whitespace-nowrap">{formatCnpj(c.cnpj)}</td>
+        <td className="px-4 py-3 whitespace-nowrap">
           <StatusDot color={statusColor[c.status]} label={statusLabel[c.status]} />
         </td>
         <td className="px-4 py-3 text-fg-secondary">{c.taxRegime ?? "—"}</td>
         <td className="px-4 py-3 text-fg-secondary">
           {c.city && c.stateCode ? `${c.city}/${c.stateCode}` : c.city ?? c.stateCode ?? "—"}
         </td>
-        <td className="px-4 py-3 text-fg-secondary tnum">{c.createdAtLabel}</td>
+        <td className="px-4 py-3 text-fg-secondary tnum whitespace-nowrap">{c.createdAtLabel}</td>
         <td className="px-4 py-3 text-right whitespace-nowrap">
           {canCreate && (
             <span className="inline-flex items-center gap-3">
@@ -261,7 +272,10 @@ export function EmpresasTable({
           <EmptyState icon={<Building2 />} title="Nenhuma empresa encontrada" />
         ) : (
           <div className="scroll-x overflow-x-auto">
-          <table className="w-full min-w-[860px] text-[length:var(--fs-body)]">
+          {/* A coluna Nome ganhou hierarquia (setinha, recuo, apelido + razão social),
+                então 860px passou a espremer as colunas seguintes até quebrarem
+                em duas linhas quando um cliente era expandido. */}
+          <table className="w-full min-w-[1040px] text-[length:var(--fs-body)]">
             <thead>
               <tr className="border-b border-border bg-table-header-bg">
                 {canCreate && (

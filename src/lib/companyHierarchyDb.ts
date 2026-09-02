@@ -3,6 +3,7 @@
 
 import { getPrisma } from "@/lib/prisma";
 import { criaCiclo } from "@/lib/companyHierarchy";
+import { nomeExibicao } from "@/lib/companyName";
 
 /**
  * Empresas que podem ser matriz de `excludeId`, para o `<select>` do cadastro.
@@ -20,13 +21,13 @@ export async function getMatrizOptions(
   const empresas = await prisma.company.findMany({
     where: { tenantId, ...(excludeId ? { id: { not: excludeId } } : {}) },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, cnpj: true },
+    select: { id: true, name: true, displayName: true, cnpj: true },
   });
   return empresas.map((e) => ({
     value: e.id,
     // O CNPJ no rótulo não é enfeite: matriz e filial costumam ter razão social
     // idêntica, e sem ele o select fica com duas linhas iguais.
-    label: e.cnpj ? `${e.name} — ${e.cnpj}` : e.name,
+    label: e.cnpj ? `${nomeExibicao(e)} — ${e.cnpj}` : nomeExibicao(e),
   }));
 }
 

@@ -20,7 +20,7 @@ export function CompanyPeopleSection({ companyId, people }: Props) {
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">Pessoas vinculadas</h2>
         <Link
-          href={`/pessoas?companyId=${companyId}`}
+          href={`/colaboradores-clientes?companyId=${companyId}`}
           className="text-[length:var(--fs-helper)] text-brand hover:underline"
         >
           Ver todas

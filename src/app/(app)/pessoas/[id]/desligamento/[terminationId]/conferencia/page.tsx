@@ -40,7 +40,7 @@ export default async function ConferenciaRescisaoPage({
   const prisma = getPrisma();
   const person = await prisma.person.findFirst({
     where: { id, ...(await scopedPersonWhere(ctx)) },
-    select: { id: true, name: true },
+    select: { id: true, name: true, isInternal: true },
   });
   if (!person) notFound();
 
@@ -120,7 +120,9 @@ export default async function ConferenciaRescisaoPage({
   return (
     <PageContainer>
       <div className="flex items-center gap-2 mb-6 flex-wrap">
-        <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Cadastros</Link>
+        <Link href={person.isInternal ? "/pessoas" : "/colaboradores-clientes"} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
+          {person.isInternal ? "Cadastros" : "Colaboradores de clientes"}
+        </Link>
         <span className="text-fg-muted">/</span>
         <Link href={`/pessoas/${id}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate max-w-[200px]">
           {person.name}

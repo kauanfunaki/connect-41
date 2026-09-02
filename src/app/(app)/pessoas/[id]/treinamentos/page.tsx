@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -30,7 +31,7 @@ export default async function TreinamentosPessoaPage({
   const prisma = getPrisma();
   const person = await prisma.person.findFirst({
     where: { id, type: "COLABORADOR", ...(await scopedPersonWhere(ctx)) },
-    select: { id: true, name: true },
+    select: { id: true, name: true, isInternal: true },
   });
   if (!person) notFound();
 
@@ -42,17 +43,12 @@ export default async function TreinamentosPessoaPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Cadastros</Link>
-        <span className="text-fg-muted">/</span>
-        <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Pessoas</Link>
-        <span className="text-fg-muted">/</span>
-        <Link href={`/pessoas/${id}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate max-w-[200px]">
-          {person.name}
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Treinamentos</span>
-      </div>
+      <PessoaBreadcrumb
+        isInternal={person.isInternal}
+        personId={id}
+        personName={person.name}
+        atual="Treinamentos"
+      />
       <BackButton className="mb-3" />
       <PageHeader title="Treinamentos" />
 

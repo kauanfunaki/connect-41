@@ -57,6 +57,7 @@ export default async function EditarEmpresaPage({
             id,
             name:                  company.name,
             tradeName:             company.tradeName             ?? undefined,
+            displayName:           company.displayName           ?? undefined,
             cnpj:                  company.cnpj                 ?? undefined,
             taxRegime:             company.taxRegime             ?? undefined,
             externalId:            company.externalId            ?? undefined,

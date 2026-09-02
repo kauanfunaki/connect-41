@@ -388,16 +388,22 @@ export default async function PessoaPage({
     />
   );
 
+  const listaDeOrigem = person.isInternal
+    ? { href: "/pessoas", raiz: "Cadastros", label: "Pessoas" }
+    : { href: "/colaboradores-clientes", raiz: "Recrutamento", label: "Colaboradores de clientes" };
+
   return (
     <PageContainer>
-      {/* Breadcrumb */}
+      {/* Breadcrumb — a lista de origem depende de quem é a pessoa. Colaborador
+          de cliente saiu de /pessoas em 2026-09-02; mandar todo mundo para lá
+          levaria a uma lista onde metade das fichas não aparece. */}
       <div className="flex items-center gap-2 mb-5">
-        <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Cadastros
+        <Link href={listaDeOrigem.href} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
+          {listaDeOrigem.raiz}
         </Link>
         <span className="text-fg-muted">/</span>
-        <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Pessoas
+        <Link href={listaDeOrigem.href} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
+          {listaDeOrigem.label}
         </Link>
         <span className="text-fg-muted">/</span>
         <span className="text-[13px] text-fg truncate">{person.name}</span>

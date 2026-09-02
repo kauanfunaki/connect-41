@@ -173,6 +173,7 @@ export default async function EmpresasPage({
           companies={companies.map((c) => ({
             id: c.id,
             name: c.name,
+            displayName: c.displayName,
             externalId: c.externalId,
             cnpj: c.cnpj,
             status: c.status,

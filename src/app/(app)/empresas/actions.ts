@@ -21,6 +21,7 @@ function companyData(form: FormData) {
   return {
     name:                  (form.get("name") as string)?.trim(),
     tradeName:             pick(form, "tradeName"),
+    displayName:           pick(form, "displayName"),
     cnpj:                  digitsOnly(pick(form, "cnpj")),
     taxRegime:             pick(form, "taxRegime"),
     externalId:            pick(form, "externalId"),

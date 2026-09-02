@@ -4,11 +4,13 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { formatCnpj } from "@/lib/format";
+import { nomeExibicao } from "@/lib/companyName";
 import type { CompanyStatus } from "@/generated/prisma/enums";
 
 type Empresa = {
   id: string;
   name: string;
+  displayName: string | null;
   cnpj: string | null;
   status: CompanyStatus;
   city: string | null;
@@ -17,7 +19,7 @@ type Empresa = {
 
 type Props = {
   /** A matriz desta empresa, quando ela própria é filial. */
-  matriz: { id: string; name: string; cnpj: string | null } | null;
+  matriz: { id: string; name: string; displayName: string | null; cnpj: string | null } | null;
   filiais: Empresa[];
   statusLabel: Record<CompanyStatus, string>;
   statusColor: Record<CompanyStatus, string>;
@@ -44,7 +46,7 @@ export function CompanyFiliaisSection({ matriz, filiais, statusLabel, statusColo
         <Card className="p-5">
           <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3">Esta empresa é filial de</h2>
           <Link href={`/empresas/${matriz.id}`} className="font-medium text-fg hover:text-brand transition-colors">
-            {matriz.name}
+            {nomeExibicao(matriz)}
           </Link>
           {matriz.cnpj && (
             <span className="ml-2 text-[length:var(--fs-helper)] text-fg-muted tnum">{formatCnpj(matriz.cnpj)}</span>
@@ -72,7 +74,7 @@ export function CompanyFiliaisSection({ matriz, filiais, statusLabel, statusColo
                   <tr key={f.id} className="border-b border-border last:border-0 hover:bg-surface-hover transition-colors">
                     <td className="px-5 py-3">
                       <Link href={`/empresas/${f.id}`} className="font-medium text-fg hover:text-brand transition-colors">
-                        {f.name}
+                        {nomeExibicao(f)}
                       </Link>
                     </td>
                     <td className="px-5 py-3 text-fg-secondary tnum">{formatCnpj(f.cnpj)}</td>

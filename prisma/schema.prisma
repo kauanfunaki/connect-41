@@ -779,6 +779,12 @@ model Company {
   // Identificação
   name                  String        @db.VarChar(180) // Razão Social
   tradeName             String?       @db.VarChar(180) // Nome Fantasia
+  // Como a empresa é chamada NO SISTEMA. Existe porque razão social não
+  // distingue estabelecimento: matriz e filial da BLD têm a mesma, e a
+  // listagem ficava com duas linhas idênticas. Aqui vai "BLD MOGI - SP".
+  // Opcional, com fallback para a razão social — ver `nomeExibicao()` em
+  // src/lib/companyName.ts, que é por onde toda tela deve passar.
+  displayName           String?       @db.VarChar(180)
   cnpj                  String?       @db.VarChar(18)
   taxRegime             String?       @db.VarChar(100) // Regime Tributário — algumas opções (ex: "Simples Nacional - Comércio ou Serviço - Com Pró-labore - Com Funcionários") passam de 60 chars, causavam P2000 ao salvar
   externalId            String?       @db.VarChar(60) // ID manual do sistema de domínio (ex: Acessorias) — sem sincronização

@@ -26,6 +26,13 @@ export const MODULE_CATALOG: ModuleDef[] = [
     defaultEnabled: true,
   },
   {
+    code: "recrutamento_colaboradores_clientes",
+    label: "Colaboradores de clientes",
+    sectorCode: "recrutamento",
+    description: "Pessoas que trabalham nas empresas clientes — o cadastro que alimenta admissão, férias e rescisão do DP",
+    defaultEnabled: true,
+  },
+  {
     code: "recrutamento_testes",
     label: "Testes",
     sectorCode: "recrutamento",
@@ -120,6 +127,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   recrutamento_vagas:      "/vagas",
   recrutamento_candidatos: "/candidatos",
   recrutamento_testes:     "/testes",
+  recrutamento_colaboradores_clientes: "/colaboradores-clientes",
   dprh_colaboradores:      "/colaboradores",
   dprh_afastamentos:       "/afastamentos",
   dprh_horas_extras:       "/horas-extras",

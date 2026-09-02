@@ -13,6 +13,7 @@ type Props = {
   company: {
     name: string;
     tradeName: string | null;
+    displayName: string | null;
     cnpj: string | null;
     taxRegime: string | null;
     externalId: string | null;
@@ -60,6 +61,7 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
           <InfoRow label="Razão Social" value={company.name} />
           <InfoRow label="Cliente" value={company.clientGroup?.name ?? null} />
           <InfoRow label="Nome Fantasia" value={company.tradeName} />
+          <InfoRow label="Nome no sistema" value={company.displayName} />
           <InfoRow label="CNPJ" value={formatCnpj(company.cnpj)} mono />
           <InfoRow label="Regime Tributário" value={company.taxRegime} />
           <InfoRow label="ID" value={company.externalId} mono />

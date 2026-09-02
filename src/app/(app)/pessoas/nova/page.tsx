@@ -46,8 +46,8 @@ export default async function NovaPessoaPage({
           <TipoCard
             href="/pessoas/nova?tipo=cliente"
             icon={<Building2 size={20} />}
-            title="Cliente / contato"
-            description="Pessoa ligada a uma empresa cliente — sócio, responsável ou contato. Sem dados de folha."
+            title="Colaborador de cliente"
+            description="Pessoa que trabalha numa empresa cliente. Entra na lista do Recrutamento e alimenta admissão, férias e rescisão do DP."
           />
         </div>
       </PageContainer>
@@ -89,11 +89,11 @@ export default async function NovaPessoaPage({
       </div>
 
       <BackButton className="mb-3" />
-      <PageHeader title={kind === "interno" ? "Novo Funcionário Interno" : "Novo Cliente / Contato"} />
+      <PageHeader title={kind === "interno" ? "Novo Funcionário Interno" : "Novo Colaborador de Cliente"} />
 
       <PessoaForm
         action={criarPessoa}
-        cancelHref={kind === "interno" ? "/pessoas?tab=internos" : "/pessoas"}
+        cancelHref={kind === "interno" ? "/pessoas" : "/colaboradores-clientes"}
         companies={companies}
         cargos={cargos}
         departments={departments}

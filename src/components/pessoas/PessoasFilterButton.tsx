@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { FilterButton } from "@/components/ui/FilterButton";
 import { CompanyFilterSelect } from "@/components/shared/CompanyFilterSelect";
 import { SITUACAO_TODOS, SITUACAO_INATIVOS } from "@/lib/personActiveFilter";
@@ -10,12 +11,11 @@ type Company = { id: string; name: string };
 type Props = {
   search?: string;
   companyId?: string;
-  companies: Company[];
-  /** Aba ativa (`clientes` | `internos`). Precisa entrar na URL, senão filtrar joga o usuário de volta para Clientes. */
-  tab?: string;
+  /** Opcional: /pessoas só lista interno da 41, que não tem empresa cliente. */
+  companies?: Company[];
   /** Valor atual de `?situacao=` — "" quando é o padrão (só ativos). */
   situacao?: string;
-  /** O filtro por empresa só faz sentido na aba Clientes. */
+  /** O filtro por empresa só faz sentido onde a pessoa tem empresa cliente. */
   mostrarEmpresa?: boolean;
 };
 
@@ -31,21 +31,23 @@ const SITUACOES: { value: string; label: string }[] = [
 export function PessoasFilterButton({
   search,
   companyId,
-  companies,
-  tab,
+  companies = [],
   situacao,
   mostrarEmpresa = true,
 }: Props) {
+  // Serve /pessoas e /colaboradores-clientes desde 2026-09-02 — com a rota
+  // fixa, filtrar em uma delas jogava o usuário na outra.
+  const pathname = usePathname();
+
   function buildUrl(next: { companyId?: string; situacao?: string }) {
     const q = new URLSearchParams();
     if (search) q.set("search", search);
-    if (tab) q.set("tab", tab);
     const empresa = "companyId" in next ? next.companyId : companyId;
     const sit = "situacao" in next ? next.situacao : situacao;
     if (empresa) q.set("companyId", empresa);
     if (sit) q.set("situacao", sit);
     q.set("page", "1");
-    return `/pessoas?${q.toString()}`;
+    return `${pathname}?${q.toString()}`;
   }
 
   // O padrão (só ativos) não conta como filtro aplicado — senão o badge ficaria

@@ -7,7 +7,6 @@ import { PersonType } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { PessoasTable } from "@/components/pessoas/PessoasTable";
-import { PessoasTabsBar, type PessoasTab } from "@/components/pessoas/PessoasTabsBar";
 import { PessoasFilterButton } from "@/components/pessoas/PessoasFilterButton";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { CadastrosTabsBar } from "@/components/shared/CadastrosTabsBar";
@@ -29,13 +28,11 @@ const PER_PAGE = 20;
 export default async function PessoasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; companyId?: string; page?: string; tab?: string; situacao?: string }>;
+  searchParams: Promise<{ search?: string; page?: string; situacao?: string }>;
 }) {
-  const { search, companyId, page, tab, situacao } = await searchParams;
+  const { search, page, situacao } = await searchParams;
   const ctx = await getAuthContext();
   const canCreate = canWrite(ctx.role);
-  const activeTab: PessoasTab = tab === "internos" ? "internos" : "clientes";
-  const isInternos = activeTab === "internos";
 
   const prisma = getPrisma();
   const pageNum = Math.max(1, parseInt(page ?? "1"));
@@ -46,9 +43,11 @@ export default async function PessoasPage({
   const baseWhere = {
     ...(await scopedPersonWhere(ctx)),
     type: PersonType.COLABORADOR,
-    isInternal: isInternos,
+    // Só a equipe da própria 41. O pessoal das empresas clientes saiu daqui em
+    // 2026-09-02 para /colaboradores-clientes: Cadastros é módulo geral, usado
+    // por todos os setores, e a lista de colaborador de cliente é do DP.
+    isInternal: true,
     ...(search ? { name: { contains: search } } : {}),
-    ...(!isInternos && companyId ? { currentCompanyId: companyId } : {}),
   };
 
   const where = { ...baseWhere, ...personActiveWhere(situacaoFiltro) };
@@ -58,7 +57,7 @@ export default async function PessoasPage({
     ? await prisma.person.count({ where: { ...baseWhere, active: false } })
     : 0;
 
-  const [people, total, companies] = await Promise.all([
+  const [people, total] = await Promise.all([
     prisma.person.findMany({
       where,
       orderBy: { name: "asc" },
@@ -67,18 +66,13 @@ export default async function PessoasPage({
       include: { currentCompany: { select: { id: true, name: true } }, linkedUser: { select: { id: true, name: true } } },
     }),
     prisma.person.count({ where }),
-    prisma.company.findMany({
-      where: { tenantId: ctx.tenantId, status: "ACTIVE" },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    }),
   ]);
 
   const totalPages = Math.ceil(total / PER_PAGE);
 
   function buildUrl(params: Record<string, string | undefined>) {
     const q = new URLSearchParams();
-    const merged = { search, companyId, page, tab, situacao, ...params };
+    const merged = { search, page, situacao, ...params };
     for (const [k, v] of Object.entries(merged)) {
       if (v) q.set(k, v);
     }
@@ -93,19 +87,16 @@ export default async function PessoasPage({
       {/* Header */}
       <PageHeader
         title="Pessoas"
-        subtitle={<>{isInternos
-              ? `${total} funcionário${total !== 1 ? "s" : ""} interno${total !== 1 ? "s" : ""} cadastrado${total !== 1 ? "s" : ""}`
-              : `${total} colaborador${total !== 1 ? "es" : ""} cadastrado${total !== 1 ? "s" : ""}`}</>}
+        subtitle={<>{`${total} funcionário${total !== 1 ? "s" : ""} interno${total !== 1 ? "s" : ""} da 41`}</>}
         action={<>{canCreate && (
           <Button
-            href={isInternos ? "/pessoas/nova?internal=1" : "/pessoas/nova"}
+            href="/pessoas/nova?internal=1"
             variant="primary" className="font-medium"
           >
             + Nova Pessoa
           </Button>
         )}</>}
       />
-      <PessoasTabsBar active={activeTab} />
 
       {/* Filters */}
       <div className="flex items-center gap-3 mb-4">
@@ -113,15 +104,11 @@ export default async function PessoasPage({
           <DebouncedSearchInput placeholder="Buscar por nome…" />
         </div>
 
-        {/* Passou a aparecer também na aba Internos: o filtro de situação vale para os
-            dois lados, só o de empresa é exclusivo de Clientes. */}
+        {/* Sem filtro de empresa: interno da 41 não tem empresa cliente. */}
         <PessoasFilterButton
           search={search}
-          companyId={companyId}
-          companies={companies}
-          tab={tab}
           situacao={situacaoSelecionada(situacaoFiltro)}
-          mostrarEmpresa={!isInternos}
+          mostrarEmpresa={false}
         />
       </div>
 
@@ -139,15 +126,15 @@ export default async function PessoasPage({
         <Card>
           <EmptyState
             icon={<Users />}
-            title={search || companyId ? "Nenhuma pessoa encontrada" : "Nenhuma pessoa cadastrada ainda"}
+            title={search ? "Nenhuma pessoa encontrada" : "Nenhuma pessoa cadastrada ainda"}
             description={
-              search || companyId
-                ? "Tente ajustar a busca ou os filtros."
-                : "Comece cadastrando a primeira pessoa do tenant."
+              search
+                ? "Tente ajustar a busca."
+                : "São os funcionários da própria 41. O pessoal das empresas clientes fica em Colaboradores de clientes."
             }
             action={
-              !search && !companyId && canCreate ? (
-                <Link href="/pessoas/nova"><Button>+ Nova Pessoa</Button></Link>
+              !search && canCreate ? (
+                <Link href="/pessoas/nova?internal=1"><Button>+ Nova Pessoa</Button></Link>
               ) : undefined
             }
           />
@@ -166,7 +153,7 @@ export default async function PessoasPage({
             createdAtLabel: formatInstantDate(p.createdAt),
             linkedUserName: p.linkedUser?.name ?? null,
           }))}
-          showLinkedUser={isInternos}
+          showLinkedUser
           canCreate={canCreate}
           definirAtivoPessoasEmMassa={definirAtivoPessoasEmMassa}
         />

@@ -51,6 +51,7 @@ export type EmpresaDefaultValues = {
   id?: string;
   name?: string;
   tradeName?: string;
+  displayName?: string;
   cnpj?: string;
   taxRegime?: string;
   externalId?: string;
@@ -110,6 +111,7 @@ export function EmpresaForm({
     status: defaultValues?.status ?? "ACTIVE",
     name: defaultValues?.name ?? "",
     tradeName: defaultValues?.tradeName ?? "",
+    displayName: defaultValues?.displayName ?? "",
     taxRegime: defaultValues?.taxRegime ?? "",
     externalId: defaultValues?.externalId ?? "",
     foundationDate: defaultValues?.foundationDate ?? "",
@@ -353,6 +355,23 @@ export function EmpresaForm({
             </FieldGrid>
             <FieldGrid>
               <CampoForm
+                label="Nome no sistema"
+                htmlFor="displayName"
+                helper="Como esta empresa aparece nas listas. Útil quando matriz e filiais dividem a mesma razão social — ex: “BLD MOGI - SP”. Em branco, usa a Razão Social."
+              >
+                <Input
+                  id="displayName"
+                  name="displayName"
+                  type="text"
+                  maxLength={180}
+                  value={values.displayName}
+                  placeholder={values.name || "BLD MOGI - SP"}
+                />
+              </CampoForm>
+              <div aria-hidden="true" />
+            </FieldGrid>
+            <FieldGrid>
+              <CampoForm
                 label="Cliente"
                 htmlFor="clientGroupId"
                 required
@@ -538,6 +557,7 @@ export function EmpresaForm({
                 { label: "Status", value: STATUS_LABEL[values.status as CompanyStatus] },
                 { label: "Razão Social", value: values.name },
                 { label: "Nome Fantasia", value: values.tradeName },
+                { label: "Nome no sistema", value: values.displayName },
                 { label: "Cliente", value: clientLabel },
                 { label: "Empresa matriz", value: matrizLabel },
                 { label: "Regime Tributário", value: values.taxRegime },
