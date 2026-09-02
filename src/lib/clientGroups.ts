@@ -153,10 +153,18 @@ export type EmpresaAgrupavel = {
 };
 
 export type BlocoDeCliente<T> = {
-  /** `null` só para empresa sem cliente — não deve existir, mas a tela não some com ela. */
+  /** `null` quando as empresas do bloco não têm cliente. */
   clientGroupId: string | null;
   label: string;
   empresas: T[];
+  /**
+   * Se a tela deve desenhar a faixa com o nome do cliente.
+   *
+   * Falso para empresa sem cliente: desde 02/09 o cliente é opcional e existe
+   * só quando junta empresas de um mesmo dono, então a maioria não tem — e uma
+   * faixa "Sem cliente" repetida a cada empresa é ruído, não informação.
+   */
+  mostrarCabecalho: boolean;
 };
 
 /**
@@ -183,8 +191,9 @@ export function agruparPorCliente<T extends EmpresaAgrupavel>(empresas: T[]): Bl
     }
     blocos.push({
       clientGroupId: e.clientGroupId,
-      label: e.clientGroupName ?? "Sem cliente",
+      label: e.clientGroupName ?? "",
       empresas: [e],
+      mostrarCabecalho: e.clientGroupId !== null,
     });
   }
   return blocos;

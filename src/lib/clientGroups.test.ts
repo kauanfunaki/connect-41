@@ -172,9 +172,17 @@ describe("agruparPorCliente", () => {
     expect(blocos.map((b) => b.label)).toEqual(["Beta", "Grupo Aurora"]);
   });
 
-  it("empresa sem cliente ganha rótulo próprio em vez de sumir", () => {
+  it("empresa sem cliente entra sem faixa — cliente é opcional desde 02/09", () => {
     const blocos = agruparPorCliente([linha("a", null, null)]);
-    expect(blocos).toEqual([{ clientGroupId: null, label: "Sem cliente", empresas: [linha("a", null, null)] }]);
+    expect(blocos).toHaveLength(1);
+    expect(blocos[0].mostrarCabecalho).toBe(false);
+    expect(blocos[0].empresas).toHaveLength(1);
+  });
+
+  it("bloco com cliente desenha a faixa", () => {
+    const blocos = agruparPorCliente([linha("a", "g1", "Grupo Aurora")]);
+    expect(blocos[0].mostrarCabecalho).toBe(true);
+    expect(blocos[0].label).toBe("Grupo Aurora");
   });
 
   it("mesmo cliente não-adjacente vira dois blocos — reordenar brigaria com a paginação", () => {

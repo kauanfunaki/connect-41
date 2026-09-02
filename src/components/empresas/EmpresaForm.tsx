@@ -15,6 +15,7 @@ import { Stepper, type StepStatus } from "@/components/ui/Stepper";
 import { ReviewBlock } from "@/components/ui/ReviewBlock";
 import { formatCnpj, formatPhone, formatCep } from "@/lib/format";
 import { NOVO_CLIENTE } from "@/lib/clientGroups";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 
 const STATUS_OPTIONS: { value: CompanyStatus; label: string }[] = [
   { value: "ACTIVE",   label: "Ativo" },
@@ -374,28 +375,37 @@ export function EmpresaForm({
               <CampoForm
                 label="Cliente"
                 htmlFor="clientGroupId"
-                required
-                helper="Agrupa as empresas de um mesmo cliente. Uma empresa só já é um cliente."
+                helper="Só quando este cliente tem mais de uma empresa. Empresa sozinha não precisa."
               >
-                <Select id="clientGroupId" name="clientGroupId" required value={values.clientGroupId}>
-                  <option value="">Selecionar…</option>
-                  {clientGroupOptions.map((c) => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
-                  ))}
-                  <option value={NOVO_CLIENTE}>+ Novo cliente…</option>
-                </Select>
+                {/* Mesmo motivo da matriz: são 340 clientes. O "+ Novo
+                    cliente" entra como primeira opção da lista. */}
+                <SearchableSelect
+                  id="clientGroupId"
+                  name="clientGroupId"
+                  options={[{ value: NOVO_CLIENTE, label: "+ Novo cliente…" }, ...clientGroupOptions]}
+                  defaultValue={values.clientGroupId}
+                  vazioLabel="Nenhum"
+                  placeholder="Buscar cliente…"
+                  onChange={(v) => setValues((prev) => ({ ...prev, clientGroupId: v }))}
+                />
               </CampoForm>
               <CampoForm
                 label="Empresa matriz"
                 htmlFor="parentCompanyId"
                 helper="Preencha só se esta empresa for filial de outra já cadastrada."
               >
-                <Select id="parentCompanyId" name="parentCompanyId" value={values.parentCompanyId}>
-                  <option value="">Nenhuma — é matriz</option>
-                  {matrizOptions.map((m) => (
-                    <option key={m.value} value={m.value}>{m.label}</option>
-                  ))}
-                </Select>
+                {/* Busca em vez de <select>: depois da importação do Acessórias
+                    são 396 opções, e a lista nativa obrigava a adivinhar a
+                    inicial e rolar até achar. */}
+                <SearchableSelect
+                  id="parentCompanyId"
+                  name="parentCompanyId"
+                  options={matrizOptions}
+                  defaultValue={values.parentCompanyId}
+                  vazioLabel="Nenhuma — é matriz"
+                  placeholder="Buscar por nome ou CNPJ…"
+                  onChange={(v) => setValues((prev) => ({ ...prev, parentCompanyId: v }))}
+                />
               </CampoForm>
             </FieldGrid>
             {/* Linha própria: aparecer e sumir dentro da grade acima empurraria

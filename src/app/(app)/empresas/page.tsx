@@ -85,6 +85,13 @@ export default async function EmpresasPage({
       })
     : 0;
 
+  // Nome do cliente filtrado: sem ele o chip diria só "filtro ativo", e o
+  // usuário não saberia por qual cliente está filtrando nem por que a busca
+  // não acha uma empresa que ele sabe que existe.
+  const clienteFiltrado = cliente
+    ? await prisma.clientGroup.findFirst({ where: { id: cliente, tenantId: ctx.tenantId }, select: { name: true } })
+    : null;
+
   const [companies, total] = await Promise.all([
     prisma.company.findMany({
       where,
@@ -120,7 +127,12 @@ export default async function EmpresasPage({
       {/* Header */}
       <PageHeader
         title="Empresas"
-        subtitle={<>{total} empresa{total !== 1 ? "s" : ""} cadastrada{total !== 1 ? "s" : ""}</>}
+        subtitle={
+          <>
+            {total} empresa{total !== 1 ? "s" : ""}
+            {cliente ? " neste cliente" : " cadastrada" + (total !== 1 ? "s" : "")}
+          </>
+        }
         action={<>{canCreate && (
           <Button
             href="/empresas/nova"
@@ -139,6 +151,27 @@ export default async function EmpresasPage({
 
         <EmpresasFilterButton search={search} page={page} statusFilter={statusFilter} tabs={FILTER_TABS} />
       </div>
+
+      {/* Filtro por cliente vem de um link de /clientes. Sem uma saída visível,
+          o usuário buscava outra empresa, não achava, e concluía que ela não
+          existe — o filtro continuava ativo na URL, invisível. */}
+      {cliente && (
+        <div className="flex items-center gap-2 mb-4">
+          <span className="inline-flex items-center gap-2 h-7 pl-3 pr-2 rounded-full bg-brand/10 text-brand text-[12px] font-medium">
+            Cliente: {clienteFiltrado?.name ?? "desconhecido"}
+            <Link
+              href={buildUrl({ cliente: undefined, page: "1" })}
+              aria-label="Remover filtro de cliente"
+              className="grid place-items-center w-4 h-4 rounded-full hover:bg-brand/20 transition-colors"
+            >
+              ×
+            </Link>
+          </span>
+          <span className="text-[12px] text-fg-muted">
+            A busca e os filtros só enxergam as empresas deste cliente.
+          </span>
+        </div>
+      )}
 
       {/* Esconder sem avisar faria a base parecer menor do que é. */}
       {ocultas > 0 && (

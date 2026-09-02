@@ -70,12 +70,14 @@ async function validateCompany(
 }
 
 /**
- * Resolve o cliente escolhido no formulário para um `clientGroupId` real,
- * criando o grupo quando o usuário pediu um novo.
+ * Resolve o cliente escolhido no formulário para um `clientGroupId`, criando o
+ * grupo quando o usuário pediu um novo. Devolve `null` quando não foi escolhido.
  *
- * O cliente é obrigatório desde 2026-09-01: sem ele a empresa nasce órfã e a
- * consulta do portal volta a precisar de `OR company.id in (...)` espalhado,
- * que é justamente o que o `ClientGroup` veio resolver.
+ * **Opcional desde 2026-09-02**, revertendo a decisão de 01/09. O motivo:
+ * obrigatório + criação automática 1:1 produziu 315 clientes que eram cópia do
+ * nome da própria empresa — não agrupavam nada e enchiam a listagem de faixas
+ * inúteis. Cliente passa a existir só quando de fato junta empresas de um mesmo
+ * dono, que é para o que ele serve.
  *
  * A checagem de tenant não é cerimônia: `clientGroupId` chega do formulário,
  * ou seja, do cliente, e o Prisma não expressa "grupo e empresa do mesmo
@@ -87,15 +89,13 @@ async function resolverClientGroupId(
   form: FormData,
   tenantId: string,
   cnpj: string | null
-): Promise<{ clientGroupId: string } | { error: string }> {
+): Promise<{ clientGroupId: string | null } | { error: string }> {
   const escolha = lerEscolhaDeCliente(
     form.get("clientGroupId") as string | null,
     form.get("clientGroupNewName") as string | null
   );
 
-  if (escolha.tipo === "ausente") {
-    return { error: "Cliente é obrigatório. Escolha um existente ou crie um novo." };
-  }
+  if (escolha.tipo === "ausente") return { clientGroupId: null };
 
   const prisma = getPrisma();
 

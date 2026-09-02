@@ -97,8 +97,15 @@ export function EmpresasTable({
             <Checkbox checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} />
           </td>
         )}
-        <td className="px-4 py-3 min-w-[260px]">
-          <div className="flex items-center gap-1.5" style={ehFilial ? { paddingLeft: 22 } : undefined}>
+        {/* `max-width: 0` com largura percentual é o que faz o `truncate` dos
+            filhos valer numa tabela: sem limite superior a célula cresce com o
+            conteúdo, e o nome da filial (recuado, com badge) devolvia a rolagem
+            horizontal ao expandir. */}
+        <td className="px-4 py-3 w-[38%] max-w-0">
+          <div
+            className="flex items-center gap-1.5 min-w-0"
+            style={ehFilial ? { paddingLeft: 22 } : undefined}
+          >
             {qtdFiliais > 0 ? (
               <button
                 type="button"
@@ -141,9 +148,7 @@ export function EmpresasTable({
                 {qtdFiliais} {qtdFiliais === 1 ? "filial" : "filiais"}
               </span>
             )}
-            {ehFilial && (
-              <span className="ml-1 shrink-0 text-[11.5px] text-fg-muted">filial</span>
-            )}
+            {ehFilial && <span className="ml-1 shrink-0 text-[11.5px] text-fg-muted">filial</span>}
           </div>
         </td>
         <td className="px-4 py-3 text-fg-secondary tnum whitespace-nowrap">{formatCnpj(c.cnpj)}</td>
@@ -308,20 +313,22 @@ export function EmpresasTable({
             <tbody>
               {blocos.map((bloco, i) => (
                 <Fragment key={`${bloco.clientGroupId ?? "sem-cliente"}-${i}`}>
-                  <tr className="border-b border-border bg-surface-2">
-                    <td colSpan={colunas - 1} className="px-4 py-2">
-                      <span className="text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
-                        {bloco.label}
-                      </span>
-                      <span className="ml-2 text-[11.5px] text-fg-muted tnum">
-                        {bloco.empresas.length} empresa{bloco.empresas.length !== 1 ? "s" : ""}
-                      </span>
-                    </td>
-                    {/* Célula vazia no lugar da coluna de ações, que é sticky:
-                        sem ela, o retângulo preso à direita passaria por cima da
-                        faixa do cliente ao rolar na horizontal. */}
-                    <td className="sticky right-0 bg-surface-2" />
-                  </tr>
+                  {bloco.mostrarCabecalho && (
+                    <tr className="border-b border-border bg-surface-2">
+                      <td colSpan={colunas - 1} className="px-4 py-2">
+                        <span className="text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                          {bloco.label}
+                        </span>
+                        <span className="ml-2 text-[11.5px] text-fg-muted tnum">
+                          {bloco.empresas.length} empresa{bloco.empresas.length !== 1 ? "s" : ""}
+                        </span>
+                      </td>
+                      {/* Célula vazia no lugar da coluna de ações, que é sticky:
+                          sem ela, o retângulo preso à direita passaria por cima
+                          da faixa do cliente ao rolar na horizontal. */}
+                      <td className="sticky right-0 bg-surface-2" />
+                    </tr>
+                  )}
                   {montarArvore(bloco.empresas).map((no) => (
                     <Fragment key={no.matriz.id}>
                       {linhaEmpresa(no.matriz, no.filiais.length, false)}
