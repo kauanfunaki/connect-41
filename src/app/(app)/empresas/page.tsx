@@ -13,7 +13,6 @@ import { CompanyStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { EmpresasTable } from "@/components/empresas/EmpresasTable";
-import { formatInstantDate } from "@/lib/format";
 import {
   resolveCompanyStatusFilter,
   companyStatusWhere,
@@ -89,9 +88,11 @@ export default async function EmpresasPage({
   const [companies, total] = await Promise.all([
     prisma.company.findMany({
       where,
-      // A listagem é agrupada por cliente: ordenar pelo nome do grupo antes do
-      // nome da empresa é o que mantém as empresas de um mesmo cliente
-      // adjacentes, sem o que o agrupamento da tela viraria confete.
+      // Alfabética em dois níveis: o bloco pelo nome do cliente, e as empresas
+      // dentro dele pela razão social — que é o que a tela mostra, já que
+      // `displayName` só existe em filial e repete o nome com o sufixo.
+      // Ordenar pelo grupo primeiro é o que mantém as empresas de um mesmo
+      // cliente adjacentes; sem isso o agrupamento da tela viraria confete.
       orderBy: [{ clientGroup: { name: "asc" } }, { name: "asc" }],
       include: { clientGroup: { select: { id: true, name: true } } },
       skip: (pageNum - 1) * PER_PAGE,
@@ -179,7 +180,6 @@ export default async function EmpresasPage({
             status: c.status,
             email: c.email,
             taxRegime: c.taxRegime,
-            createdAtLabel: formatInstantDate(c.createdAt),
             logoUrl: c.logoUrl,
             city: c.city,
             stateCode: c.stateCode,

@@ -26,7 +26,6 @@ type Row = {
   status: CompanyStatus;
   email: string | null;
   taxRegime: string | null;
-  createdAtLabel: string;
   logoUrl: string | null;
   city: string | null;
   stateCode: string | null;
@@ -64,7 +63,7 @@ export function EmpresasTable({
   // A consulta já vem ordenada por (cliente, empresa) — aqui é só quebrar em
   // blocos para desenhar o cabeçalho de cada cliente.
   const blocos = agruparPorCliente(companies);
-  const colunas = canCreate ? 9 : 8;
+  const colunas = canCreate ? 7 : 6;
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   // Filiais começam recolhidas: a listagem existe para varrer clientes, e abrir
@@ -126,10 +125,13 @@ export function EmpresasTable({
               <span className="flex flex-col min-w-0">
                 <span className="truncate">{nomeExibicao(c)}</span>
                 {/* Razão social só quando acrescenta: com apelido em branco ela
-                    JÁ é o nome de cima, e repetir é ruído. */}
-                {razaoSocialSecundaria(c) && (
+                    JÁ é o nome de cima, e repetir é ruído. O ID do Acessórias
+                    vem junto, que é como se cruza com o sistema de origem. */}
+                {(razaoSocialSecundaria(c) || c.externalId) && (
                   <span className="truncate text-[11.5px] font-normal text-fg-muted">
                     {razaoSocialSecundaria(c)}
+                    {razaoSocialSecundaria(c) && c.externalId ? " · " : ""}
+                    {c.externalId ? <span className="tnum">#{c.externalId}</span> : null}
                   </span>
                 )}
               </span>
@@ -144,7 +146,6 @@ export function EmpresasTable({
             )}
           </div>
         </td>
-        <td className="px-4 py-3 text-fg-secondary tnum whitespace-nowrap">{c.externalId ?? "—"}</td>
         <td className="px-4 py-3 text-fg-secondary tnum whitespace-nowrap">{formatCnpj(c.cnpj)}</td>
         <td className="px-4 py-3 whitespace-nowrap">
           <StatusDot color={statusColor[c.status]} label={statusLabel[c.status]} />
@@ -158,12 +159,11 @@ export function EmpresasTable({
         <td className="px-4 py-3 text-fg-secondary whitespace-nowrap">
           {c.city && c.stateCode ? `${c.city}/${c.stateCode}` : c.city ?? c.stateCode ?? "—"}
         </td>
-        <td className="px-4 py-3 text-fg-secondary tnum whitespace-nowrap">{c.createdAtLabel}</td>
-        {/* Sticky à direita: com 8 colunas a tabela rola na horizontal, e as
-            ações eram a primeira coisa a sumir — "Editar" nem chegava a
-            aparecer. Presas aqui, ficam alcançáveis em qualquer rolagem. */}
+        {/* Sticky de seguro: com 6 colunas a tabela cabe, mas em tela estreita
+            as ações eram a primeira coisa a sair. Sem borda, porque agora ela
+            apareceria o tempo todo sem haver rolagem. */}
         <td
-          className={`px-4 py-3 text-right whitespace-nowrap sticky right-0 border-l border-border ${
+          className={`px-4 py-3 text-right whitespace-nowrap sticky right-0 ${
             selected.has(c.id) ? "bg-selected-bg" : "bg-surface"
           }`}
         >
@@ -285,10 +285,7 @@ export function EmpresasTable({
           <EmptyState icon={<Building2 />} title="Nenhuma empresa encontrada" />
         ) : (
           <div className="scroll-x overflow-x-auto">
-          {/* 940px: a coluna Nome carrega hierarquia (setinha, recuo, apelido +
-                razão social) e as demais não quebram mais, porque o regime
-                agora entra resumido. */}
-          <table className="w-full min-w-[940px] text-[length:var(--fs-body)]">
+          <table className="w-full min-w-[720px] text-[length:var(--fs-body)]">
             <thead>
               <tr className="border-b border-border bg-table-header-bg">
                 {canCreate && (
@@ -296,14 +293,16 @@ export function EmpresasTable({
                     <Checkbox checked={allSelected} onChange={toggleAll} />
                   </th>
                 )}
+                {/* Oito colunas não cabiam sem rolagem horizontal, e rolar para
+                    ver um campo é pior que não ter o campo. "Criada em" saiu (a
+                    data de cadastro não decide nada numa lista operacional) e o
+                    ID do Acessórias desceu para a segunda linha do nome. */}
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">ID</th>
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">CNPJ</th>
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Regime</th>
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Localização</th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Criada em</th>
-                <th className="px-4 py-3 sticky right-0 bg-table-header-bg border-l border-border" />
+                <th className="px-4 py-3 sticky right-0 bg-table-header-bg" />
               </tr>
             </thead>
             <tbody>
@@ -321,7 +320,7 @@ export function EmpresasTable({
                     {/* Célula vazia no lugar da coluna de ações, que é sticky:
                         sem ela, o retângulo preso à direita passaria por cima da
                         faixa do cliente ao rolar na horizontal. */}
-                    <td className="sticky right-0 bg-surface-2 border-l border-border" />
+                    <td className="sticky right-0 bg-surface-2" />
                   </tr>
                   {montarArvore(bloco.empresas).map((no) => (
                     <Fragment key={no.matriz.id}>

@@ -128,6 +128,19 @@ export type PlanoDeImportacao = {
   clientesExistentes: { id: string; cnpjRoot: string }[];
   filiais: { cnpjFilial: string; cnpjMatriz: string }[];
   filiaisSemMatriz: { cnpj: string; name: string }[];
+  /**
+   * Raízes de CNPJ que já têm MAIS DE UM cliente no tenant.
+   *
+   * Aconteceu de verdade em 02/09 e passou em silêncio: a raiz 17122471 tinha
+   * "Gabriel BLD" (com a matriz dentro) e um "BLD LOGISTICA LTDA" vazio. O
+   * `Map` por raiz ficava com o último, então as 20 filiais entraram num
+   * cliente e a matriz continuou no outro — e a listagem, que agrupa por
+   * cliente antes de montar a árvore, mostrou os dois em blocos separados.
+   *
+   * Agora é reportado: escolher em silêncio entre dois clientes plausíveis não
+   * é decisão de script.
+   */
+  raizesAmbiguas: { cnpjRoot: string; clientes: string[] }[];
   contatos: ContatoPlanejado[];
 };
 
@@ -194,17 +207,28 @@ export function planejarImportacao(
 
   // 3. Clientes, pela raiz do CNPJ. Reusa a regra que o backfill já usou.
   const paraAgrupar: EmpresaParaAgrupar[] = novas.map((e) => ({ id: e.cnpj, name: e.name, cnpj: e.cnpj }));
-  const raizesJaTem = new Map(
-    gruposExistentes.filter((g) => g.cnpjRoot).map((g) => [g.cnpjRoot!, g.id])
-  );
+  // Agrupa por raiz em vez de `new Map(...)` direto: o Map descarta o anterior
+  // quando a chave repete, que foi exatamente como a BLD se partiu em dois.
+  const gruposPorRaiz = new Map<string, { id: string; name: string }[]>();
+  for (const g of gruposExistentes) {
+    if (!g.cnpjRoot) continue;
+    const lista = gruposPorRaiz.get(g.cnpjRoot) ?? [];
+    lista.push({ id: g.id, name: g.name });
+    gruposPorRaiz.set(g.cnpjRoot, lista);
+  }
+  const raizesAmbiguas = [...gruposPorRaiz.entries()]
+    .filter(([, l]) => l.length > 1)
+    .map(([cnpjRoot, l]) => ({ cnpjRoot, clientes: l.map((g) => g.name) }));
   const clientesNovos: { name: string; cnpjRoot: string; empresas: string[] }[] = [];
   const clientesExistentes: { id: string; cnpjRoot: string }[] = [];
 
   for (const g of planejarGrupos(paraAgrupar)) {
     if (!g.cnpjRoot) continue;
-    const jaTem = raizesJaTem.get(g.cnpjRoot);
-    if (jaTem) {
-      clientesExistentes.push({ id: jaTem, cnpjRoot: g.cnpjRoot });
+    const candidatos = gruposPorRaiz.get(g.cnpjRoot);
+    if (candidatos && candidatos.length > 0) {
+      // Com mais de um candidato a escolha é arbitrária; `raizesAmbiguas` avisa
+      // para alguém unificar antes de rodar, em vez de descobrir na tela depois.
+      clientesExistentes.push({ id: candidatos[0].id, cnpjRoot: g.cnpjRoot });
       continue;
     }
     clientesNovos.push({
@@ -260,6 +284,7 @@ export function planejarImportacao(
     clientesExistentes,
     filiais,
     filiaisSemMatriz,
+    raizesAmbiguas,
     contatos,
   };
 }

@@ -90,6 +90,14 @@ async function main() {
     log("");
   }
 
+  if (plano.raizesAmbiguas.length > 0) {
+    log(`AVISO — ${plano.raizesAmbiguas.length} raiz(es) de CNPJ com mais de um cliente cadastrado.`);
+    log("A empresa vai para o primeiro, e o resultado é arbitrário: unifique em /clientes antes de");
+    log("rodar, senão matriz e filiais podem cair em blocos diferentes na listagem.");
+    for (const r of plano.raizesAmbiguas) log(`   raiz ${r.cnpjRoot}: ${r.clientes.join(" | ")}`);
+    log("");
+  }
+
   if (plano.filiaisSemMatriz.length > 0) {
     log(`${plano.filiaisSemMatriz.length} filial(is) cuja matriz 0001 não está no arquivo — entram soltas:`);
     for (const f of plano.filiaisSemMatriz.slice(0, 10)) log(`   ${f.cnpj} ${f.name}`);
