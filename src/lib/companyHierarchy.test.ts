@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { criaCiclo, montarArvore, PROFUNDIDADE_MAXIMA } from "./companyHierarchy";
+import { criaCiclo, idsDaPagina, montarArvore, PROFUNDIDADE_MAXIMA } from "./companyHierarchy";
 
 const emp = (id: string, parentCompanyId: string | null = null) => ({ id, parentCompanyId });
 
@@ -76,5 +76,50 @@ describe("criaCiclo", () => {
     const matrizDe = new Map<string, string | null>();
     for (let i = 0; i < PROFUNDIDADE_MAXIMA + 5; i++) matrizDe.set(`n${i}`, `n${i + 1}`);
     expect(criaCiclo("alvo", "n0", matrizDe)).toBe(true);
+  });
+});
+
+describe("idsDaPagina", () => {
+  const arvore = (matriz: string, filiais: number) => [
+    emp(matriz),
+    ...Array.from({ length: filiais }, (_, i) => emp(`${matriz}-f${i}`, matriz)),
+  ];
+
+  it("traz a matriz e TODAS as filiais, mesmo passando do tamanho da página", () => {
+    const r = idsDaPagina(arvore("bld", 20), 1, 20);
+    expect(r.ids).toHaveLength(21);
+    expect(r.totalPaginas).toBe(1);
+  });
+
+  it("conta matrizes, não linhas — era o bug da BLD", () => {
+    // 2 empresas soltas + BLD com 20 filiais = 23 linhas, mas só 3 matrizes.
+    const lista = [emp("a"), emp("b"), ...arvore("bld", 20)];
+    const r = idsDaPagina(lista, 1, 20);
+    expect(r.totalRaizes).toBe(3);
+    expect(r.totalPaginas).toBe(1);
+    expect(r.ids).toHaveLength(23);
+  });
+
+  it("pagina por matriz e nunca parte um grupo entre páginas", () => {
+    const lista = [...Array.from({ length: 5 }, (_, i) => emp(`m${i}`)), ...arvore("bld", 3)];
+    const p1 = idsDaPagina(lista, 1, 3);
+    const p2 = idsDaPagina(lista, 2, 3);
+    expect(p1.totalPaginas).toBe(2);
+    // A BLD cai inteira na página 2, com as 3 filiais.
+    expect(p2.ids).toContain("bld");
+    expect(p2.ids.filter((id) => id.startsWith("bld-f"))).toHaveLength(3);
+    expect(p1.ids).not.toContain("bld");
+  });
+
+  it("filial cujo pai ficou fora do filtro conta como matriz", () => {
+    const r = idsDaPagina([emp("f1", "fora-do-filtro")], 1, 20);
+    expect(r.totalRaizes).toBe(1);
+    expect(r.ids).toEqual(["f1"]);
+  });
+
+  it("lista vazia devolve uma página, não zero", () => {
+    const r = idsDaPagina([], 1, 20);
+    expect(r.totalPaginas).toBe(1);
+    expect(r.ids).toEqual([]);
   });
 });

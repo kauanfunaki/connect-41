@@ -13,6 +13,7 @@ import { CompanyStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { EmpresasTable } from "@/components/empresas/EmpresasTable";
+import { idsDaPagina } from "@/lib/companyHierarchy";
 import {
   resolveCompanyStatusFilter,
   companyStatusWhere,
@@ -92,23 +93,29 @@ export default async function EmpresasPage({
     ? await prisma.clientGroup.findFirst({ where: { id: cliente, tenantId: ctx.tenantId }, select: { name: true } })
     : null;
 
-  const [companies, total] = await Promise.all([
-    prisma.company.findMany({
-      where,
-      // Alfabética em dois níveis: o bloco pelo nome do cliente, e as empresas
-      // dentro dele pela razão social — que é o que a tela mostra, já que
-      // `displayName` só existe em filial e repete o nome com o sufixo.
-      // Ordenar pelo grupo primeiro é o que mantém as empresas de um mesmo
-      // cliente adjacentes; sem isso o agrupamento da tela viraria confete.
-      orderBy: [{ clientGroup: { name: "asc" } }, { name: "asc" }],
-      include: { clientGroup: { select: { id: true, name: true } } },
-      skip: (pageNum - 1) * PER_PAGE,
-      take: PER_PAGE,
-    }),
+  // Alfabética em dois níveis: o bloco pelo nome do cliente, e as empresas
+  // dentro dele pela razão social — que é o que a tela mostra, já que
+  // `displayName` só existe em filial e repete o nome com o sufixo. Ordenar
+  // pelo grupo primeiro é o que mantém as empresas de um mesmo cliente
+  // adjacentes; sem isso o agrupamento da tela viraria confete.
+  const ordem = [{ clientGroup: { name: "asc" as const } }, { name: "asc" as const }];
+
+  // Duas consultas de propósito. A paginação conta MATRIZES, não linhas: com
+  // `take: PER_PAGE` direto, uma matriz de 21 filiais era cortada no meio e as
+  // remanescentes caíam soltas na página seguinte, sem matriz à vista. Esta
+  // primeira consulta é rasa (dois campos) e serve só para decidir quem entra.
+  const [esqueleto, total] = await Promise.all([
+    prisma.company.findMany({ where, orderBy: ordem, select: { id: true, parentCompanyId: true } }),
     prisma.company.count({ where }),
   ]);
 
-  const totalPages = Math.ceil(total / PER_PAGE);
+  const { ids, totalPaginas: totalPages } = idsDaPagina(esqueleto, pageNum, PER_PAGE);
+
+  const companies = await prisma.company.findMany({
+    where: { id: { in: ids } },
+    orderBy: ordem,
+    include: { clientGroup: { select: { id: true, name: true } } },
+  });
 
   function buildUrl(params: Record<string, string | undefined>) {
     const q = new URLSearchParams();

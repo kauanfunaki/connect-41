@@ -76,3 +76,43 @@ export function criaCiclo(
   // legítimo raríssimo é melhor que gravar um anel que trava a listagem.
   return true;
 }
+
+/**
+ * Decide quais empresas entram numa página, contando MATRIZES em vez de linhas.
+ *
+ * Paginar por linha quebra a árvore: com `PER_PAGE = 20` e uma matriz de 21
+ * filiais, o corte cai no meio do grupo e as filiais remanescentes aparecem
+ * soltas na página seguinte, como se não tivessem matriz. Foi o que aconteceu
+ * com a BLD.
+ *
+ * Aqui a página é medida em nós de topo, e as filiais vêm junto de graça — o
+ * que significa que uma página pode ter bem mais que `porPagina` linhas. É o
+ * preço certo: a alternativa é uma árvore partida, que mente sobre o dado.
+ *
+ * Recebe a lista JÁ ORDENADA e devolve o conjunto de ids da página mais o total
+ * de páginas, para a consulta seguinte buscar só o que interessa.
+ */
+export function idsDaPagina<T extends EmpresaNaArvore>(
+  empresas: T[],
+  pagina: number,
+  porPagina: number
+): { ids: string[]; totalPaginas: number; totalRaizes: number } {
+  const presentes = new Set(empresas.map((e) => e.id));
+
+  // Raiz é quem não tem matriz OU cuja matriz ficou fora do filtro atual — uma
+  // busca por "filial 20" traz a filial sem a matriz, e ela precisa aparecer.
+  const raizes = empresas.filter(
+    (e) => e.parentCompanyId === null || !presentes.has(e.parentCompanyId)
+  );
+
+  const totalPaginas = Math.max(1, Math.ceil(raizes.length / porPagina));
+  const inicio = (pagina - 1) * porPagina;
+  const daPagina = raizes.slice(inicio, inicio + porPagina);
+
+  const ids = new Set(daPagina.map((r) => r.id));
+  for (const e of empresas) {
+    if (e.parentCompanyId !== null && ids.has(e.parentCompanyId)) ids.add(e.id);
+  }
+
+  return { ids: [...ids], totalPaginas, totalRaizes: raizes.length };
+}
