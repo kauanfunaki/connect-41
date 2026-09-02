@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -86,13 +87,7 @@ export function ApplyForm({ slug, vagaId }: Props) {
         <label htmlFor="resume" className="block text-[length:var(--fs-label)] font-medium text-fg">
           Currículo (PDF, opcional)
         </label>
-        <input
-          id="resume"
-          name="resume"
-          type="file"
-          accept=".pdf"
-          className="text-[12px] text-fg file:mr-3 file:h-9 file:px-3 file:rounded-md file:border file:border-border-strong file:bg-surface-hover file:text-fg file:text-[12px] file:font-medium file:cursor-pointer file:border-solid hover:file:border-brand file:transition-colors"
-        />
+        <FileDropzoneField id="resume" name="resume" accept=".pdf" maxSizeMb={10} />
       </div>
 
       <Checkbox

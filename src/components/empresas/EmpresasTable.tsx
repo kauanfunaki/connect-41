@@ -97,11 +97,7 @@ export function EmpresasTable({
             <Checkbox checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} />
           </td>
         )}
-        {/* `max-width: 0` com largura percentual é o que faz o `truncate` dos
-            filhos valer numa tabela: sem limite superior a célula cresce com o
-            conteúdo, e o nome da filial (recuado, com badge) devolvia a rolagem
-            horizontal ao expandir. */}
-        <td className="px-4 py-3 w-[38%] max-w-0">
+        <td className="px-4 py-3">
           <div
             className="flex items-center gap-1.5 min-w-0"
             style={ehFilial ? { paddingLeft: 22 } : undefined}
@@ -158,10 +154,13 @@ export function EmpresasTable({
         {/* Resumido e sem quebra: o rótulo do Acessórias chega a 73 caracteres
             e esticava a linha em seis, empurrando as ações para fora da tela.
             O texto inteiro fica no title. */}
-        <td className="px-4 py-3 text-fg-secondary whitespace-nowrap" title={c.taxRegime ?? undefined}>
+        <td className="px-4 py-3 text-fg-secondary truncate" title={c.taxRegime ?? undefined}>
           {resumirRegime(c.taxRegime) ?? "—"}
         </td>
-        <td className="px-4 py-3 text-fg-secondary whitespace-nowrap">
+        <td
+          className="px-4 py-3 text-fg-secondary truncate"
+          title={c.city && c.stateCode ? `${c.city}/${c.stateCode}` : undefined}
+        >
           {c.city && c.stateCode ? `${c.city}/${c.stateCode}` : c.city ?? c.stateCode ?? "—"}
         </td>
         {/* Sticky de seguro: com 6 colunas a tabela cabe, mas em tela estreita
@@ -290,11 +289,25 @@ export function EmpresasTable({
           <EmptyState icon={<Building2 />} title="Nenhuma empresa encontrada" />
         ) : (
           <div className="scroll-x overflow-x-auto">
-          <table className="w-full min-w-[720px] text-[length:var(--fs-body)]">
+          {/* `table-fixed` + <colgroup>: com layout automático o navegador recalcula
+              TODAS as larguras quando o conteúdo muda, então expandir uma matriz
+              deslocava as colunas da tabela inteira. Larguras declaradas uma vez
+              deixam o expandir e o recolher inertes. */}
+          <table className="w-full table-fixed min-w-[980px] text-[length:var(--fs-body)]">
+            <colgroup>
+              {canCreate && <col className="w-11" />}
+              {/* Nome não declara largura: fica com o espaço que sobrar. */}
+              <col />
+              <col className="w-[150px]" />
+              <col className="w-[110px]" />
+              <col className="w-[190px]" />
+              <col className="w-[170px]" />
+              <col className="w-[130px]" />
+            </colgroup>
             <thead>
               <tr className="border-b border-border bg-table-header-bg">
                 {canCreate && (
-                  <th className="w-10 px-4 py-3">
+                  <th className="px-4 py-3">
                     <Checkbox checked={allSelected} onChange={toggleAll} />
                   </th>
                 )}

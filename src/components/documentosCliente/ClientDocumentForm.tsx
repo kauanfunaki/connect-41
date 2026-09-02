@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import type { ClientDocumentState } from "@/app/(app)/empresas/[id]/documentos-cliente/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
@@ -41,13 +42,7 @@ export function ClientDocumentForm({ action, companyId, documentId, cancelHref, 
         htmlFor="file"
         helper={defaultValues?.fileName ? `Arquivo atual: ${defaultValues.fileName}. Selecionar um novo substitui o anterior.` : "PDF, JPG, PNG ou WEBP — até 10MB."}
       >
-        <input
-          id="file"
-          name="file"
-          type="file"
-          accept=".jpg,.jpeg,.png,.webp,.pdf"
-          className="text-[12px] text-fg file:mr-3 file:h-9 file:px-3 file:rounded-md file:border file:border-border-strong file:bg-surface-hover file:text-fg file:text-[12px] file:font-medium file:cursor-pointer file:border-solid hover:file:border-brand file:transition-colors"
-        />
+        <FileDropzoneField id="file" name="file" accept=".jpg,.jpeg,.png,.webp,.pdf" maxSizeMb={20} />
       </CampoForm>
 
       <div className="border-t border-border pt-4">

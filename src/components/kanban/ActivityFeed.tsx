@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
+import { uploadComProgresso } from "@/lib/uploadComProgresso";
+import { aceitaArquivo, formatarBytes } from "@/lib/fileSize";
 import { FileSpreadsheet, FileText, Paperclip, Presentation, Search, LinkIcon, X } from "lucide-react";
 import { MentionTextarea, type MentionUser } from "@/components/transferencias/MentionTextarea";
 import { Input } from "@/components/ui/Input";
@@ -150,6 +152,9 @@ function Composer({
   const [mentionedTasks, setMentionedTasks] = useState<TaskMentionCandidate[]>([]);
   const [isPending, startTransition] = useTransition();
   const [uploading, setUploading] = useState(false);
+  const [uploadPct, setUploadPct] = useState(0);
+  const [uploadNome, setUploadNome] = useState<string | null>(null);
+  const [uploadErro, setUploadErro] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function submit() {
@@ -168,25 +173,51 @@ function Composer({
     });
   }
 
+  // Anexo de comentário fica no botão de clipe, não vira dropzone: aqui o
+  // arquivo é acessório do texto, e uma área de soltar grande roubaria a tela
+  // do campo que importa. O que faltava era saber o que está acontecendo —
+  // antes só havia um booleano, e arquivo grande parecia travado.
+  async function enviarArquivo(file: File) {
+    const problema = !aceitaArquivo(file.name, ANEXO_ACCEPT)
+      ? "Formato não aceito."
+      : file.size > ANEXO_MAX_MB * 1024 * 1024
+        ? `${formatarBytes(file.size)}, acima do limite de ${ANEXO_MAX_MB} MB.`
+        : null;
+    if (problema) {
+      setUploadErro(`${file.name}: ${problema}`);
+      return;
+    }
+
+    setUploadErro(null);
+    setUploading(true);
+    setUploadNome(file.name);
+    setUploadPct(0);
+
+    const form = new FormData();
+    form.set("file", file);
+    form.set("entityType", "PIPELINE_ITEM");
+    form.set("entityId", pipelineItemId);
+    form.set("category", "OUTRO");
+
+    const r = await uploadComProgresso("/api/documents", form, setUploadPct);
+
+    if (r.ok) {
+      const body = r.body as { id: string; fileName: string };
+      setAttachments((prev) => [
+        ...prev,
+        { id: body.id, fileName: body.fileName, url: `/api/documents/${body.id}` },
+      ]);
+    } else {
+      setUploadErro(r.erro);
+    }
+    setUploading(false);
+    setUploadNome(null);
+  }
+
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (!file) return;
-    setUploading(true);
-    try {
-      const form = new FormData();
-      form.set("file", file);
-      form.set("entityType", "PIPELINE_ITEM");
-      form.set("entityId", pipelineItemId);
-      form.set("category", "OUTRO");
-      const res = await fetch("/api/documents", { method: "POST", body: form });
-      const body = await res.json();
-      if (res.ok) {
-        setAttachments((prev) => [...prev, { id: body.id, fileName: body.fileName, url: `/api/documents/${body.id}` }]);
-      }
-    } finally {
-      setUploading(false);
-    }
+    if (file) await enviarArquivo(file);
   }
 
   return (
@@ -231,7 +262,28 @@ function Composer({
         >
           <Paperclip size={15} />
         </button>
-        <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="hidden" onChange={handleFile} />
+        <input ref={fileInputRef} type="file" accept={ANEXO_ACCEPT} className="hidden" onChange={handleFile} />
+        {uploading && uploadNome && (
+          <span className="flex items-center gap-2 min-w-0 max-w-[220px]">
+            <span className="truncate text-[11.5px] text-fg-muted" title={uploadNome}>
+              {uploadNome}
+            </span>
+            <span
+              className="h-1 w-14 shrink-0 overflow-hidden rounded-full bg-surface-2"
+              role="progressbar"
+              aria-valuenow={uploadPct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`Enviando ${uploadNome}`}
+            >
+              <span
+                className="block h-full rounded-full bg-brand transition-[width] duration-200"
+                style={{ width: `${uploadPct}%` }}
+              />
+            </span>
+            <span className="text-[11.5px] text-fg-muted tnum">{uploadPct}%</span>
+          </span>
+        )}
         <TaskMentionPicker
           candidates={taskCandidates}
           onPick={(c) => setMentionedTasks((prev) => (prev.some((x) => x.id === c.id) ? prev : [...prev, c]))}
@@ -252,6 +304,14 @@ function Composer({
           {isPending ? "Salvando…" : uploading ? "Enviando…" : submitLabel}
         </button>
       </div>
+
+      {/* Fora da barra de ações: ali o texto seria espremido entre os botões e
+          cortado justamente quando explica por que o anexo não subiu. */}
+      {uploadErro && (
+        <p className="text-[11.5px] text-danger px-1" role="alert">
+          {uploadErro}
+        </p>
+      )}
     </div>
   );
 }
@@ -417,6 +477,11 @@ function summarize(items: FeedItem[]): FeedItem[] {
 // Feed em ordem cronológica ascendente (mais antigo em cima, mais recente
 // embaixo, perto do campo de digitação) — items chega em ordem desc (mais
 // recente primeiro), por isso inverte aqui.
+// Precisa bater com o que /api/documents aceita — divergir daria erro só
+// depois do envio, com o arquivo já subindo.
+const ANEXO_ACCEPT = ".jpg,.jpeg,.png,.webp,.pdf";
+const ANEXO_MAX_MB = 20;
+
 export function ActivityFeed({ items, canAct, mentionUsers, pipelineItemId, taskCandidates, addNoteAction, editAction, deleteAction }: Props) {
   const [detailed, setDetailed] = useState(false);
   const [search, setSearch] = useState("");

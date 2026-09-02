@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { PessoaCreateState } from "@/app/(app)/pessoas/actions";
@@ -128,17 +129,22 @@ export function PessoaForm({
   // Documentos represados: no cadastro novo não existe entityId antes de a
   // pessoa ser criada, então os File ficam em memória e sobem logo depois que
   // criarPessoa devolve o id (ver o comentário em criarPessoa).
-  const pendingFileRef = useRef<HTMLInputElement>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  // Remonta o dropzone depois de adicionar à lista — ver addPendingDoc.
+  const [pendingFileKey, setPendingFileKey] = useState(0);
   const [pendingCategory, setPendingCategory] = useState<DocumentCategory>("OUTRO");
   const [pendingDocs, setPendingDocs] = useState<{ file: File; category: DocumentCategory }[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   function addPendingDoc() {
-    const file = pendingFileRef.current?.files?.[0];
-    if (!file) return;
-    setPendingDocs((prev) => [...prev, { file, category: pendingCategory }]);
-    if (pendingFileRef.current) pendingFileRef.current.value = "";
+    if (!pendingFile) return;
+    setPendingDocs((prev) => [...prev, { file: pendingFile, category: pendingCategory }]);
+    setPendingFile(null);
+    // Trocar a `key` remonta o dropzone zerado. O componente guarda o arquivo
+    // escolhido em estado próprio, e sem remontar ele continuaria exibindo o
+    // que acabou de ir para a lista.
+    setPendingFileKey((k) => k + 1);
   }
 
   // criarPessoa não redireciona mais — devolve createdId pra que os documentos
@@ -629,14 +635,19 @@ export function PessoaForm({
                 </p>
 
                 <div className="flex items-end gap-3 flex-wrap">
-                  <CampoForm label="Arquivo" htmlFor="pendingDocFile">
-                    <input
-                      id="pendingDocFile"
-                      ref={pendingFileRef}
-                      type="file"
-                      className="text-[13px] text-fg-secondary file:mr-3 file:h-8 file:px-3 file:rounded-md file:border file:border-border-strong file:bg-surface-hover file:text-fg file:text-[12px] file:font-medium hover:file:border-brand file:cursor-pointer"
-                    />
-                  </CampoForm>
+                  <div className="flex-1 min-w-[260px]">
+                    <CampoForm label="Arquivo" htmlFor="pendingDocFile">
+                      <FileDropzoneField
+                        key={pendingFileKey}
+                        id="pendingDocFile"
+                        name="pendingDocFile"
+                        accept=".jpg,.jpeg,.png,.webp,.pdf"
+                        maxSizeMb={20}
+                        compacto
+                        onFileChange={setPendingFile}
+                      />
+                    </CampoForm>
+                  </div>
                   <CampoForm label="Categoria" htmlFor="pendingDocCategory">
                     <Select
                       id="pendingDocCategory"

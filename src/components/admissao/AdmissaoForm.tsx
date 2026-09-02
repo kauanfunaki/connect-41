@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -23,9 +24,6 @@ const DOC_FIELDS: { field: string; label: string }[] = [
   { field: "doc_ctps", label: "Carteira de Trabalho" },
   { field: "doc_aso", label: "ASO (exame admissional)" },
 ];
-
-const fileInputClass =
-  "text-[12px] text-fg file:mr-3 file:h-9 file:px-3 file:rounded-md file:border file:border-border-strong file:bg-surface-hover file:text-fg file:text-[12px] file:font-medium file:cursor-pointer file:border-solid hover:file:border-brand file:transition-colors";
 
 const RELATIONSHIP_OPTIONS: { value: string; label: string }[] = [
   { value: "FILHO", label: "Filho(a)" },
@@ -273,7 +271,13 @@ export function AdmissaoForm({ token, defaults }: Props) {
           {DOC_FIELDS.map((d) => (
             <div key={d.field} className="space-y-1.5">
               <label htmlFor={d.field} className="block text-[length:var(--fs-label)] font-medium text-fg">{d.label}</label>
-              <input id={d.field} name={d.field} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className={fileInputClass} />
+              <FileDropzoneField
+                id={d.field}
+                name={d.field}
+                accept=".pdf,.jpg,.jpeg,.png,.webp"
+                maxSizeMb={10}
+                compacto
+              />
             </div>
           ))}
         </div>

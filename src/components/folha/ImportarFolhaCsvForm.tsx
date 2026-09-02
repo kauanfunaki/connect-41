@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import { Button } from "@/components/ui/Button";
 import type { ImportPayrollCsvState } from "@/app/(app)/empresas/[id]/folha/[competencyId]/actions";
 
@@ -52,14 +53,7 @@ export function ImportarFolhaCsvForm({ action }: Props) {
           <label htmlFor="folha-csv-file" className="block text-[length:var(--fs-label)] font-medium text-fg">
             Arquivo CSV
           </label>
-          <input
-            id="folha-csv-file"
-            name="file"
-            type="file"
-            accept=".csv,text/csv"
-            required
-            className="text-[12px] text-fg file:mr-3 file:h-9 file:px-3 file:rounded-md file:border file:border-border-strong file:bg-surface-hover file:text-fg file:text-[12px] file:font-medium file:cursor-pointer file:border-solid hover:file:border-brand file:transition-colors"
-          />
+          <FileDropzoneField id="folha-csv-file" name="file" accept=".csv" maxSizeMb={10} required />
         </div>
         <Button
           type="submit"
