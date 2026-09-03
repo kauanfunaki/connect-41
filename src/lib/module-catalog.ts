@@ -1,7 +1,6 @@
 // Catálogo de módulos — vive em código porque um módulo só existe quando a tela
 // dele existe de verdade. O que é dinâmico por tenant é só o "ligado/desligado"
-// (tabela TenantModule, ver src/lib/modules.ts). Nenhum módulo real ainda — este
-// array é o ponto de entrada para a Fase 2 (Recrutamento, RH/DP...).
+// (tabela TenantModule, ver src/lib/modules.ts).
 export type ModuleDef = {
   code: string;
   label: string;
@@ -109,6 +108,17 @@ export const MODULE_CATALOG: ModuleDef[] = [
     description: "Instruções internas escritas pelos colaboradores para alinhamento em ausências e férias",
     defaultEnabled: true,
   },
+  {
+    code: "fiscal_documentos",
+    label: "Documentos Fiscais",
+    sectorCode: "fiscal",
+    description: "Acervo de NF-e, NFC-e, CT-e e NFS-e por empresa e competência, com entrada de XML e destino no financeiro",
+    // Desligado por padrão, ao contrário dos outros: é o primeiro módulo do
+    // setor fiscal e depende de sincronização com o SPED para o acervo não
+    // nascer vazio. Ligar num tenant sem essa ponte entregaria uma tela que só
+    // sabe dizer "nenhum documento".
+    defaultEnabled: false,
+  },
 ];
 
 export function getModuleDef(code: string): ModuleDef | undefined {
@@ -138,6 +148,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   gestao_indicadores_rh:   "/indicadores-rh",
   bpo_senhas:              "/bpo-senhas",
   bpo_manual:              "/bpo-manual",
+  fiscal_documentos:       "/documentos-fiscais",
 };
 
 export function getModuleRoute(code: string): string | undefined {

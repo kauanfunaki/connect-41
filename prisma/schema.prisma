@@ -518,6 +518,7 @@ model Tenant {
   bpoCredentialViews       BpoCredentialView[]
   chatwootAgentLinks       ChatwootAgentLink[]
   chatwootSenderRoles      ChatwootSenderRole[]
+  fiscalDocuments          FiscalDocument[]
   agentEvaluationSummaries AgentEvaluationSummary[]
   sectorTaskViews          SectorTaskView[]
 
@@ -696,6 +697,7 @@ model User {
   auditLogs                  AuditLog[]
   responsibleFor             CompanyService[]        @relation("CompanyServiceResponsible")
   oauthAccounts              OAuthAccount[]
+  fiscalDocumentsUploaded    FiscalDocument[]
   meetingsCreated            Meeting[]               @relation("MeetingCreatedBy")
   meetingAttendances         MeetingAttendee[]
   clientDocumentsCreated     ClientDocument[]
@@ -871,6 +873,7 @@ model Company {
   recurringObligations RecurringObligation[]
   chatwootContactLinks ChatwootContactLink[]
   bpoCredentials       BpoCredential[]
+  fiscalDocuments      FiscalDocument[]
 
   // Casar documento fiscal com empresa pelo CNPJ do XML exige que o par seja
   // único: com duas empresas do mesmo tenant sob o mesmo CNPJ o casamento é
@@ -1924,12 +1927,123 @@ model ChatwootAgentLink {
 // endpoint de pesquisa de satisfação, e uma pesquisa via mensagem livre
 // esbarrava no Away Message nativo do Chatwoot disparando pro cliente ao
 // responder fora do horário comercial).
+// ─── Documentos Fiscais (Fase 2) ─────────────────────────────────────────────
+
+enum FiscalDocumentType {
+  NFE
+  NFCE
+  CTE
+  NFSE // sem chave de acesso nacional — ver dedupKey
+}
+
+// De onde o documento veio. É eixo próprio, e não um status, porque não muda com
+// o trabalho de ninguém: uma nota que entrou pelo SPED continua tendo entrado
+// pelo SPED depois de lançada.
+enum FiscalDocumentOrigin {
+  SPED // veio da base do SPED Generator
+  UPLOAD // alguém subiu o XML na tela de entrada
+}
+
+// O que a SEFAZ diz sobre o documento. Também não é workflow: quem cancela é o
+// emissor, lá fora, e o Connect só reflete.
+enum FiscalDocumentSituation {
+  AUTORIZADA
+  CANCELADA
+}
+
+// O único eixo que é trabalho nosso: o que o BPO decidiu fazer com o documento.
+//
+// Três eixos separados em vez de um status só (decisão de 2026-09-01): com um
+// campo, "cancelada" e "lançada" competiriam pela mesma coluna, e a nota
+// cancelada DEPOIS de lançada — que existe e é o caso que dói — não teria como
+// ser representada.
+enum FiscalDocumentDestination {
+  PENDENTE
+  LANCADO
+  IGNORADO
+}
+
 // As duas metades de um atendimento. Decidido em 2026-09-03: o mesmo
 // atendimento é avaliado duas vezes, porque são dois trabalhos diferentes
 // feitos por gente diferente, e uma nota só premiava ou punia os dois juntos.
 enum EvaluationSegment {
   TRIAGEM // da abertura até a barreira — trabalho da recepção
   TRATATIVA // da barreira até a resolução — trabalho do setor
+}
+
+/// Documento fiscal já emitido, espelhado no Connect.
+///
+/// O módulo **não emite** nada: ele reflete o acervo, aceita o que falta e vira
+/// lançamento — como o Omie. Emissão ficou em standby por decisão de 2026-08-21.
+model FiscalDocument {
+  id        String @id @default(uuid())
+  tenantId  String
+  companyId String
+
+  type FiscalDocumentType
+
+  /// Chave de acesso de 44 dígitos. Existe em NF-e/NFC-e/CT-e e **não** existe
+  /// em NFS-e, que é municipal e sem chave nacional. Por isso é opcional, e a
+  /// unicidade mora em `dedupKey`, nunca aqui.
+  accessKey String? @db.VarChar(44)
+
+  /// Chave canônica de deduplicação — o unique que de fato impede a mesma nota
+  /// entrar duas vezes.
+  ///
+  /// Para NF-e/NFC-e/CT-e é a própria chave de acesso; para NFS-e é
+  /// `NFSE:{CNPJ do prestador}:{série}:{número}:{competência}`, porque é o
+  /// menor conjunto que identifica a nota quando não há chave nacional.
+  ///
+  /// A garantia é do banco e não de um `findFirst` na aplicação: duas subidas
+  /// simultâneas do mesmo arquivo passam pela checagem e são barradas pelo
+  /// índice. Por tenant, não global — dois escritórios podem espelhar a mesma
+  /// nota do mesmo cliente, e isso não é conflito.
+  dedupKey String @db.VarChar(120)
+
+  number String  @db.VarChar(20)
+  series String? @db.VarChar(10)
+
+  /// Partes guardadas **só com dígitos**, que é a forma comparada com
+  /// `Company.cnpj` / `Company.cpf` — ver src/lib/companyTaxId.ts.
+  issuerName        String  @db.VarChar(180)
+  issuerDocument    String  @db.VarChar(14)
+  recipientName     String? @db.VarChar(180)
+  recipientDocument String? @db.VarChar(14)
+
+  /// Dinheiro é Decimal, nunca Float. O protótipo usa Float por limitação do
+  /// SQLite; aqui o centavo tem de fechar com o que o cliente pagou.
+  amount   Decimal  @db.Decimal(12, 2)
+  issuedAt DateTime
+
+  /// Competência "AAAA-MM" — string e não data, porque é agrupador de mês e não
+  /// instante. Derivada de `issuedAt`; guardada porque é o filtro mais usado da
+  /// tela e derivá-la em SQL impediria o índice.
+  competence String @db.VarChar(7)
+
+  origin      FiscalDocumentOrigin
+  situation   FiscalDocumentSituation   @default(AUTORIZADA)
+  destination FiscalDocumentDestination @default(PENDENTE)
+
+  /// Por que ficou de fora do financeiro. Sem isto, ninguém sabe o motivo três
+  /// meses depois — e "ignorado" vira lixo silencioso.
+  ignoredReason String? @db.VarChar(255)
+
+  /// Caminho do XML/PDF guardado, quando veio por upload.
+  filePath     String? @db.VarChar(255)
+  uploadedById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant     Tenant @relation(fields: [tenantId], references: [id])
+  company    Company @relation(fields: [companyId], references: [id])
+  uploadedBy User?   @relation(fields: [uploadedById], references: [id])
+
+  @@unique([tenantId, dedupKey])
+  @@index([tenantId, companyId, competence])
+  @@index([tenantId, companyId, destination])
+  @@index([tenantId, accessKey])
+  @@map("fiscal_documents")
 }
 
 model ConversationEvaluation {
