@@ -10,8 +10,9 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PersonAccessLinkRow } from "@/components/adminVinculos/PersonAccessLinkRow";
 import { vincularUsuarioPessoa } from "@/app/(app)/pessoas/actions";
-import { vincularAgenteChatwoot, definirRecepcaoAgente, definirAutomacaoAgente } from "./actions";
+import { vincularAgenteChatwoot, definirPapelDoRemetente } from "./actions";
 import { ToggleAgenteButton } from "@/components/adminVinculos/ToggleAgenteButton";
+import { normalizarNomeAtendente } from "@/lib/chatwoot/evaluation";
 
 // Tela única de vínculos de acesso: Pessoa (colaborador interno) <-> User
 // (login) <-> ChatwootAgentLink (atendente). Antes eram duas telas separadas
@@ -32,12 +33,46 @@ export default async function AdminAtendentesPage() {
     prisma.chatwootAgentLink.findMany({
       where: { tenantId: ctx.tenantId },
       orderBy: { chatwootAgentName: "asc" },
-      select: { id: true, chatwootAgentName: true, linkedUserId: true, isReception: true, isAutomation: true },
+      select: { id: true, chatwootAgentName: true, linkedUserId: true },
     }),
   ]);
 
   const canEdit = canWriteEntity(ctx);
-  const hasChatwoot = agentLinks.length > 0;
+
+  // Todo NOME que já apareceu como autor, não só os agentes sincronizados.
+  //
+  // `ChatwootAgentLink` só ganha linha para quem foi responsável por alguma
+  // conversa; quem escreve sem nunca ser responsável ficava invisível aqui —
+  // foi o caso da conta da automação, com centenas de mensagens e nenhuma
+  // linha. A lista passa a sair das mensagens, que é onde a autoria mora.
+  const [remetentes, papeis] = await Promise.all([
+    prisma.chatwootMessage.groupBy({
+      by: ["senderLabel"],
+      where: { conversation: { tenantId: ctx.tenantId }, messageType: "outgoing", isPrivate: false, senderLabel: { not: null } },
+      _count: { _all: true },
+    }),
+    prisma.chatwootSenderRole.findMany({
+      where: { tenantId: ctx.tenantId },
+      select: { senderName: true, isReception: true, isAutomation: true },
+    }),
+  ]);
+
+  const papelPorNome = new Map(papeis.map((p) => [p.senderName, p]));
+  const linhasDeRemetente = [
+    ...new Map(
+      [
+        ...remetentes.map((r) => ({ nome: r.senderLabel!, mensagens: r._count._all })),
+        // Agente sincronizado que ainda não escreveu também aparece, senão ele
+        // sumiria da tela no dia em que passasse a mandar mensagem.
+        ...agentLinks.map((a) => ({ nome: a.chatwootAgentName, mensagens: 0 })),
+      ].map((r) => {
+        const chave = normalizarNomeAtendente(r.nome) ?? r.nome;
+        return [chave, { ...r, chave }] as const;
+      })
+    ).values(),
+  ].sort((a, b) => b.mensagens - a.mensagens || a.nome.localeCompare(b.nome));
+
+  const hasChatwoot = linhasDeRemetente.length > 0;
 
   return (
     <PageContainer variant="narrow">
@@ -97,37 +132,45 @@ export default async function AdminAtendentesPage() {
               <span className="w-32 flex-shrink-0">Recepção</span>
               <span className="w-32 flex-shrink-0">Automação</span>
             </div>
-            {agentLinks.map((a) => (
-              <div key={a.id} className="flex items-center gap-4 px-4 py-2.5">
-                <span className="flex-1 text-[length:var(--fs-ui)] text-fg">{a.chatwootAgentName}</span>
-                <span className="w-32 flex-shrink-0">
-                  <ToggleAgenteButton
-                    nome={a.chatwootAgentName}
-                    ligado={a.isReception}
-                    rotuloLigado="Recepção"
-                    rotuloDesligado="Setor"
-                    canEdit={canEdit}
-                    action={async (ligado: boolean) => {
-                      "use server";
-                      await definirRecepcaoAgente(a.id, ligado);
-                    }}
-                  />
-                </span>
-                <span className="w-32 flex-shrink-0">
-                  <ToggleAgenteButton
-                    nome={a.chatwootAgentName}
-                    ligado={a.isAutomation}
-                    rotuloLigado="Automação"
-                    rotuloDesligado="Pessoa"
-                    canEdit={canEdit}
-                    action={async (ligado: boolean) => {
-                      "use server";
-                      await definirAutomacaoAgente(a.id, ligado);
-                    }}
-                  />
-                </span>
-              </div>
-            ))}
+            {linhasDeRemetente.map((r) => {
+              const papel = papelPorNome.get(r.chave);
+              return (
+                <div key={r.chave} className="flex items-center gap-4 px-4 py-2.5">
+                  <span className="flex-1 min-w-0">
+                    <span className="text-[length:var(--fs-ui)] text-fg">{r.nome}</span>
+                    <span className="ml-2 text-[length:var(--fs-micro)] text-fg-muted tnum">
+                      {r.mensagens > 0 ? `${r.mensagens} mensagens` : "sem mensagens ainda"}
+                    </span>
+                  </span>
+                  <span className="w-32 flex-shrink-0">
+                    <ToggleAgenteButton
+                      nome={r.nome}
+                      ligado={papel?.isReception ?? false}
+                      rotuloLigado="Recepção"
+                      rotuloDesligado="Setor"
+                      canEdit={canEdit}
+                      action={async (ligado: boolean) => {
+                        "use server";
+                        await definirPapelDoRemetente(r.nome, { isReception: ligado });
+                      }}
+                    />
+                  </span>
+                  <span className="w-32 flex-shrink-0">
+                    <ToggleAgenteButton
+                      nome={r.nome}
+                      ligado={papel?.isAutomation ?? false}
+                      rotuloLigado="Automação"
+                      rotuloDesligado="Pessoa"
+                      canEdit={canEdit}
+                      action={async (ligado: boolean) => {
+                        "use server";
+                        await definirPapelDoRemetente(r.nome, { isAutomation: ligado });
+                      }}
+                    />
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}

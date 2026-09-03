@@ -517,6 +517,7 @@ model Tenant {
   bpoCredentials           BpoCredential[]
   bpoCredentialViews       BpoCredentialView[]
   chatwootAgentLinks       ChatwootAgentLink[]
+  chatwootSenderRoles      ChatwootSenderRole[]
   agentEvaluationSummaries AgentEvaluationSummary[]
   sectorTaskViews          SectorTaskView[]
 
@@ -1853,6 +1854,43 @@ model ChatwootMessage {
 // login/permissões aqui (isso continua exclusivo de /admin/usuarios). Sem
 // vínculo, o painel de Avaliação de Atendimentos agrupa pelo nome cru
 // (chatwootAgentName).
+// Papel de um NOME que aparece como autor em conversas.
+//
+// Fica separado de `ChatwootAgentLink` porque os dois conjuntos não são o
+// mesmo: aquela tabela só ganha linha para quem já foi **responsável** por uma
+// conversa (o sync a preenche a partir de `assigneeId`). Quem escreve sem nunca
+// ser responsável não entra — foi o caso do dono do token da integração, com
+// 494 mensagens e nenhuma linha de agente, e por isso invisível na tela que
+// deveria marcá-lo.
+//
+// A chave é o nome porque é assim que o resto do pipeline trabalha: a autoria
+// vem do remetente da mensagem, e `normalizarNomeAtendente` é o que casa tudo.
+// Guardar o papel num id de agente que o autor pode não ter era o descasamento.
+model ChatwootSenderRole {
+  id         String  @id @default(uuid())
+  tenantId   String
+  /** Nome como aparece no remetente da mensagem, já normalizado (ver normalizarNomeAtendente). */
+  senderName String  @db.VarChar(120)
+  /** Faz triagem: a barreira entre triagem e tratativa é a 1ª resposta de quem NÃO está marcado. */
+  isReception Boolean @default(false)
+  /**
+   * Conta da automação/gateway, não de uma pessoa.
+   *
+   * Sem carimbo de autor no texto, a mensagem dela não é atendimento de
+   * ninguém (saudação, fora de horário, agradecimento final); com carimbo, é de
+   * quem está carimbado. Ver `autorEfetivo` em src/lib/chatwoot/segments.ts.
+   */
+  isAutomation Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, senderName])
+  @@map("chatwoot_sender_roles")
+}
+
 model ChatwootAgentLink {
   id                String   @id @default(uuid())
   tenantId          String
@@ -1868,20 +1906,6 @@ model ChatwootAgentLink {
   // por acaso respondeu antes — e a nota de tratativa dele viraria de triagem.
   // Marcação também sobrevive a férias, substituição e a uma segunda pessoa na
   // recepção, que a dedução não resolve.
-  isReception       Boolean  @default(false)
-  // Conta usada pela automação/gateway, não por uma pessoa.
-  //
-  // O dono do token da integração recebe a autoria de tudo que o sistema manda:
-  // saudação LGPD, aviso de fora de horário, pedido de avaliação, agradecimento
-  // final. Medido no 41 Tech em 2026-09-03: das 494 mensagens públicas no nome
-  // dele, ~347 são template de automação.
-  //
-  // As outras 147 são atendimento de verdade de OUTRAS pessoas, entregues por um
-  // gateway de WhatsApp que carimba o autor no começo do texto ("*Wellington:*
-  // ..."). Marcar a conta como automação liga as duas regras de uma vez: sem
-  // carimbo, a mensagem não é atendimento de ninguém; com carimbo, ela é de quem
-  // está carimbado. Ver `autorEfetivo` em src/lib/chatwoot/segments.ts.
-  isAutomation      Boolean  @default(false)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

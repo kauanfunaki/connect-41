@@ -154,18 +154,18 @@ export function computeSlaScore(janela: { inicio: Date; primeiraResposta: Date |
   );
 }
 
-/** Nomes marcados como recepção e como automação em `chatwoot_agent_links`. */
+/** Nomes marcados como recepção e como automação em `chatwoot_sender_roles`. */
 export async function papeisDosAgentes(
   tenantId: string
 ): Promise<{ recepcao: string[]; automacao: string[] }> {
   const prisma = getPrisma();
-  const linhas = await prisma.chatwootAgentLink.findMany({
+  const linhas = await prisma.chatwootSenderRole.findMany({
     where: { tenantId, OR: [{ isReception: true }, { isAutomation: true }] },
-    select: { chatwootAgentName: true, isReception: true, isAutomation: true },
+    select: { senderName: true, isReception: true, isAutomation: true },
   });
   return {
-    recepcao: linhas.filter((l) => l.isReception).map((l) => l.chatwootAgentName),
-    automacao: linhas.filter((l) => l.isAutomation).map((l) => l.chatwootAgentName),
+    recepcao: linhas.filter((l) => l.isReception).map((l) => l.senderName),
+    automacao: linhas.filter((l) => l.isAutomation).map((l) => l.senderName),
   };
 }
 
