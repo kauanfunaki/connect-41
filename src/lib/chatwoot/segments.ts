@@ -48,14 +48,59 @@ export type Segmento = {
   fim: Date;
 };
 
-function ehRespostaAoCliente(m: MensagemSegmentavel): boolean {
-  return m.messageType === "outgoing" && !!m.senderLabel?.trim();
+/**
+ * Carimbo de autor que o gateway de WhatsApp põe no começo do texto:
+ * `*Wellington:* ...`, `**Juliana Coelho:** ...`, `*Ana Cecilia :* ...`.
+ *
+ * Só é lido em mensagem de conta marcada como automação. Medido no 41 Tech:
+ * o carimbo aparece em 147 mensagens e **todas** são da conta do gateway —
+ * nenhum atendente humano escreve assim. Ler o carimbo em todo mundo abriria a
+ * porta para alguém citando um colega ("*Ana Cecilia:* ela disse que…") ser
+ * confundido com a própria.
+ *
+ * `Contact` e `Name` são descartados: vêm do cartão de contato encaminhado
+ * (`**Contact:** *Name:* …`), que não é pessoa atendendo.
+ */
+const CARIMBO_DE_AUTOR = /^\*{1,3}\s*([^*:\r\n]{2,40}?)\s*:\s*\*{1,3}\s*/;
+const CARIMBOS_QUE_NAO_SAO_PESSOA = new Set(["contact", "name", "contato", "nome"]);
+
+export function autorCarimbado(conteudo: string | null | undefined): string | null {
+  const achado = conteudo?.match(CARIMBO_DE_AUTOR);
+  if (!achado) return null;
+  const nome = achado[1]!.replace(/\s+/g, " ").trim();
+  if (!nome || CARIMBOS_QUE_NAO_SAO_PESSOA.has(nome.toLowerCase())) return null;
+  return nome;
 }
 
-function ultimoAtendente(mensagens: MensagemSegmentavel[]): string | null {
+/**
+ * Quem de fato escreveu a mensagem.
+ *
+ * Para conta de gente, é o remetente. Para conta de automação, é o autor
+ * carimbado no texto — e `null` quando não há carimbo, porque aí a mensagem é o
+ * sistema falando (saudação, aviso de fora de horário, pedido de avaliação,
+ * agradecimento final) e isso não é atendimento de ninguém.
+ *
+ * Devolver `null` é o ponto: sem isso, a conta dona do token da integração
+ * aparecia como responsável por atendimentos que nunca tocou, só porque foi a
+ * última a "falar" — a mensagem de encerramento é sempre a última.
+ */
+export function autorEfetivo(
+  m: MensagemSegmentavel,
+  ehDeAutomacao: (senderLabel: string | null) => boolean
+): string | null {
+  if (!ehDeAutomacao(m.senderLabel)) return m.senderLabel?.trim() || null;
+  return autorCarimbado(m.content);
+}
+
+function ultimoAtendente(
+  mensagens: MensagemSegmentavel[],
+  ehDeAutomacao: (senderLabel: string | null) => boolean
+): string | null {
   for (let i = mensagens.length - 1; i >= 0; i--) {
     const m = mensagens[i]!;
-    if (ehRespostaAoCliente(m)) return m.senderLabel!.trim();
+    if (m.messageType !== "outgoing") continue;
+    const autor = autorEfetivo(m, ehDeAutomacao);
+    if (autor) return autor;
   }
   return null;
 }
@@ -85,16 +130,30 @@ function ultimoAtendente(mensagens: MensagemSegmentavel[]): string | null {
 export function segmentarAtendimento(
   mensagens: MensagemSegmentavel[],
   nomesDaRecepcao: Iterable<string>,
-  resolvidoEm: Date
+  resolvidoEm: Date,
+  nomesDeAutomacao: Iterable<string> = []
 ): Segmento[] {
   if (mensagens.length === 0) return [];
 
-  const recepcao = new Set(
-    [...nomesDaRecepcao].map((n) => normalizarNomeAtendente(n)).filter((n): n is string => n !== null)
-  );
+  const conjunto = (nomes: Iterable<string>) =>
+    new Set([...nomes].map((n) => normalizarNomeAtendente(n)).filter((n): n is string => n !== null));
+
+  const recepcao = conjunto(nomesDaRecepcao);
+  const automacao = conjunto(nomesDeAutomacao);
+
+  const ehDeAutomacao = (senderLabel: string | null) => {
+    const nome = normalizarNomeAtendente(senderLabel);
+    return nome !== null && automacao.has(nome);
+  };
+
+  // A barreira olha o autor EFETIVO, não o remetente. Uma mensagem entregue
+  // pelo gateway no nome do Wellington abre a tratativa; a de encerramento, que
+  // não tem autor, não abre nada.
+  const ehRespostaAoCliente = (m: MensagemSegmentavel) =>
+    m.messageType === "outgoing" && autorEfetivo(m, ehDeAutomacao) !== null;
 
   const ehDaRecepcao = (m: MensagemSegmentavel) => {
-    const nome = normalizarNomeAtendente(m.senderLabel);
+    const nome = normalizarNomeAtendente(autorEfetivo(m, ehDeAutomacao));
     return nome !== null && recepcao.has(nome);
   };
 
@@ -103,7 +162,7 @@ export function segmentarAtendimento(
   // Ninguém de fora da recepção falou: ou ela resolveu sozinha, ou ninguém
   // respondeu. Nos dois casos não houve tratativa.
   if (indiceDaBarreira === -1) {
-    const atendente = ultimoAtendente(mensagens);
+    const atendente = ultimoAtendente(mensagens, ehDeAutomacao);
     if (atendente === null) return [];
     return [{ tipo: "TRIAGEM", mensagens, atendente, fim: resolvidoEm }];
   }
@@ -116,7 +175,7 @@ export function segmentarAtendimento(
 
   // Triagem só existe se a recepção realmente falou. Mensagem de cliente
   // sozinha antes do setor entrar não é trabalho de triagem — é fila.
-  const atendenteTriagem = ultimoAtendente(antes);
+  const atendenteTriagem = ultimoAtendente(antes, ehDeAutomacao);
   if (atendenteTriagem !== null) {
     segmentos.push({ tipo: "TRIAGEM", mensagens: antes, atendente: atendenteTriagem, fim: barreiraEm });
   }
@@ -124,7 +183,7 @@ export function segmentarAtendimento(
   segmentos.push({
     tipo: "TRATATIVA",
     mensagens: depois,
-    atendente: ultimoAtendente(depois),
+    atendente: ultimoAtendente(depois, ehDeAutomacao),
     fim: resolvidoEm,
   });
 
@@ -154,8 +213,10 @@ export function janelaDeSla(
       ? (segmento.mensagens.find((m) => m.messageType === "incoming") ?? primeira).chatwootCreatedAt
       : (mensagensAnteriores[mensagensAnteriores.length - 1] ?? primeira).chatwootCreatedAt;
 
+  // Aqui basta ser mensagem do atendimento: o segmento já foi montado com o
+  // autor efetivo, e a primeira saída dentro dele é a resposta que conta.
   const resposta = segmento.mensagens.find(
-    (m) => ehRespostaAoCliente(m) && m.chatwootCreatedAt >= inicio
+    (m) => m.messageType === "outgoing" && m.chatwootCreatedAt >= inicio
   );
 
   return { inicio, primeiraResposta: resposta?.chatwootCreatedAt ?? null, fim: segmento.fim };

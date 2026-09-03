@@ -137,3 +137,122 @@ describe("janelaDeSla", () => {
     expect(janelaDeSla({ tipo: "TRIAGEM", mensagens: [], atendente: null, fim: min(1) }, [])).toBeNull();
   });
 });
+
+// ── Conta de automação (2026-09-03) ─────────────────────────────────────────
+//
+// O dono do token da integração aparecia como responsável por atendimentos que
+// nunca tocou: o Chatwoot atribui a ele as mensagens do sistema, e a de
+// encerramento é sempre a última — então a regra "quem fecha conduziu" o
+// premiava. Parte das mensagens dele, porém, é atendimento real de outra
+// pessoa, entregue por gateway que carimba o autor no texto.
+const AUTOMACAO = ["Nathan Maciel"];
+
+describe("conta de automação", () => {
+  it("mensagem de encerramento não faz do sistema o atendente", () => {
+    const segs = segmentarAtendimento(
+      [
+        msg("cliente", null, 0),
+        msg("atende", "Juliana Coelho", 2),
+        msg("atende", "Ruli", 20, "segue a guia"),
+        msg("atende", "Nathan Maciel", 60, "*A 41 Contabilidade agradece seu contato!!!*"),
+      ],
+      RECEPCAO,
+      min(65),
+      AUTOMACAO
+    );
+    expect(segs.map((s) => s.tipo)).toEqual(["TRIAGEM", "TRATATIVA"]);
+    expect(segs[1]!.atendente).toBe("Ruli");
+  });
+
+  it("mensagem carimbada volta para quem de fato escreveu", () => {
+    const segs = segmentarAtendimento(
+      [
+        msg("cliente", null, 0),
+        msg("atende", "Juliana Coelho", 2),
+        msg("atende", "Nathan Maciel", 30, "*Wellington:* Ainda não saiu nada"),
+      ],
+      RECEPCAO,
+      min(40),
+      AUTOMACAO
+    );
+    expect(segs.map((s) => s.tipo)).toEqual(["TRIAGEM", "TRATATIVA"]);
+    expect(segs[1]!.atendente).toBe("Wellington");
+  });
+
+  it("carimbo com dois asteriscos e espaço sobrando também casa", () => {
+    const segs = segmentarAtendimento(
+      [msg("cliente", null, 0), msg("atende", "Nathan Maciel", 5, "**Ana Cecilia :** Pode ser via WhatsApp")],
+      RECEPCAO,
+      min(10),
+      AUTOMACAO
+    );
+    expect(segs[0]!.atendente).toBe("Ana Cecilia");
+  });
+
+  it("carimbo da própria recepção mantém a mensagem na triagem", () => {
+    const segs = segmentarAtendimento(
+      [
+        msg("cliente", null, 0),
+        msg("atende", "Nathan Maciel", 2, "**Juliana Coelho:** Combinado."),
+        msg("atende", "Katia", 30, "resolvido"),
+      ],
+      RECEPCAO,
+      min(40),
+      AUTOMACAO
+    );
+    expect(segs.map((s) => s.tipo)).toEqual(["TRIAGEM", "TRATATIVA"]);
+    expect(segs[0]!.atendente).toBe("Juliana Coelho");
+    expect(segs[1]!.atendente).toBe("Katia");
+  });
+
+  it("cartão de contato encaminhado não vira atendente", () => {
+    const segs = segmentarAtendimento(
+      [
+        msg("cliente", null, 0),
+        msg("atende", "Ruli", 5, "segue"),
+        msg("atende", "Nathan Maciel", 9, "**Contact:** *Name:* k2 Medicina e Segurança"),
+      ],
+      RECEPCAO,
+      min(20),
+      AUTOMACAO
+    );
+    expect(segs[0]!.atendente).toBe("Ruli");
+  });
+
+  it("só automação e nenhum carimbo: não há atendimento a avaliar", () => {
+    expect(
+      segmentarAtendimento(
+        [msg("cliente", null, 0), msg("atende", "Nathan Maciel", 1, "***Bem vindo(a)!***")],
+        RECEPCAO,
+        min(5),
+        AUTOMACAO
+      )
+    ).toEqual([]);
+  });
+
+  // Sem a marcação, o comportamento antigo continua — a conta é tratada como
+  // gente. É o que garante que marcar seja decisão, não efeito colateral.
+  it("sem marcar a conta como automação, nada muda", () => {
+    const segs = segmentarAtendimento(
+      [
+        msg("cliente", null, 0),
+        msg("atende", "Juliana Coelho", 2),
+        msg("atende", "Ruli", 20),
+        msg("atende", "Nathan Maciel", 60, "*A 41 Contabilidade agradece seu contato!!!*"),
+      ],
+      RECEPCAO,
+      min(65)
+    );
+    expect(segs[1]!.atendente).toBe("Nathan Maciel");
+  });
+
+  it("atendente humano citando colega não perde a autoria", () => {
+    const segs = segmentarAtendimento(
+      [msg("cliente", null, 0), msg("atende", "Ruli", 5, "*Ana Cecilia:* falou que já protocolou")],
+      RECEPCAO,
+      min(10),
+      AUTOMACAO
+    );
+    expect(segs[0]!.atendente).toBe("Ruli");
+  });
+});

@@ -72,3 +72,40 @@ export async function definirRecepcaoAgente(agentLinkId: string, isReception: bo
   revalidatePath("/admin/atendentes");
   revalidatePath("/conversas");
 }
+
+/**
+ * Marca (ou desmarca) um agente do Chatwoot como conta de automação.
+ *
+ * A conta dona do token da integração recebe a autoria de tudo que o sistema
+ * manda — saudação, fora de horário, pedido de avaliação, agradecimento final —
+ * e por isso era creditada como quem atendeu, já que a mensagem de encerramento
+ * é sempre a última. Marcada aqui, essas mensagens deixam de contar como
+ * atendimento, e as que trazem o autor carimbado no texto (gateway de WhatsApp)
+ * voltam para quem de fato escreveu. Ver `autorEfetivo` em
+ * src/lib/chatwoot/segments.ts.
+ */
+export async function definirAutomacaoAgente(agentLinkId: string, isAutomation: boolean): Promise<void> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || !isFullAccess(ctx.role)) return;
+
+  const prisma = getPrisma();
+  const agentLink = await prisma.chatwootAgentLink.findFirst({
+    where: { id: agentLinkId, tenantId: ctx.tenantId },
+    select: { id: true },
+  });
+  if (!agentLink) return;
+
+  await prisma.chatwootAgentLink.update({ where: { id: agentLinkId }, data: { isAutomation } });
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "chatwoot.agent.automation",
+    entityType: "ChatwootAgentLink",
+    entityId: agentLinkId,
+    metadata: { isAutomation },
+  });
+
+  revalidatePath("/admin/atendentes");
+  revalidatePath("/conversas");
+}

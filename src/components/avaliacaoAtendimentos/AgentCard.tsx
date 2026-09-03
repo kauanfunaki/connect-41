@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { MessageCircle, ChevronRight, Sparkles } from "lucide-react";
+import { MessageCircle, ChevronRight, Sparkles, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { SlideOver } from "@/components/ui/SlideOver";
@@ -38,6 +38,13 @@ type Props = {
   summary: AgentSummaryData | null;
   canGenerateSummary: boolean;
   generateSummaryAction: (groupKey: string, agentLabel: string) => Promise<{ error: string } | { ok: true }>;
+  /**
+   * Tirar um atendimento da avaliação. `null` para quem não é SUPER_ADMIN — a
+   * ação some da tela em vez de aparecer e falhar no clique.
+   */
+  excludeConversationAction:
+    | ((conversationId: string, excluir: boolean) => Promise<{ error: string } | { ok: true }>)
+    | null;
 };
 
 // Card recolhido (grid) que abre um painel lateral com o anel de nota +
@@ -47,12 +54,30 @@ type Props = {
 // pra não aparecer toda vez que alguém só quer ver a nota (ver Sessions).
 export function AgentCard({
   groupKey, label, linkedUserLabel, avatarUrl, avgScore, avgWriting, avgSla, count, evaluations,
-  summary, canGenerateSummary, generateSummaryAction,
+  summary, canGenerateSummary, generateSummaryAction, excludeConversationAction,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<EvaluationEntry | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [excluindo, setExcluindo] = useState(false);
+  const [erroExclusao, setErroExclusao] = useState<string | null>(null);
   const toast = useToast();
+
+  async function excluirAtendimento(conversationId: string) {
+    if (!excludeConversationAction) return;
+    setExcluindo(true);
+    setErroExclusao(null);
+    const res = await excludeConversationAction(conversationId, true);
+    setExcluindo(false);
+    if ("error" in res) {
+      setErroExclusao(res.error);
+      return;
+    }
+    // Fecha o detalhe: a nota que ele mostra acabou de deixar de existir, e
+    // manter o painel aberto exibindo um número apagado seria mentira.
+    setSelected(null);
+    toast.show("Atendimento tirado da avaliação.");
+  }
 
   function handleClose() {
     setOpen(false);
@@ -107,12 +132,25 @@ export function AgentCard({
               <h3 className="text-[12px] font-semibold text-fg-muted uppercase tracking-wide mb-1.5">Justificativa da IA</h3>
               <p className="text-[13.5px] text-fg leading-relaxed whitespace-pre-wrap">{selected.reasoning}</p>
             </div>
-            <Link
-              href={`/conversas?id=${selected.conversationLocalId}`}
-              className="inline-flex items-center gap-1.5 text-[13px] font-medium text-brand hover:underline"
-            >
-              <MessageCircle size={14} /> Abrir conversa em Conversas
-            </Link>
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <Link
+                href={`/conversas?id=${selected.conversationLocalId}`}
+                className="inline-flex items-center gap-1.5 text-[13px] font-medium text-brand hover:underline"
+              >
+                <MessageCircle size={14} /> Abrir conversa em Conversas
+              </Link>
+              {excludeConversationAction && (
+                <button
+                  type="button"
+                  disabled={excluindo}
+                  onClick={() => void excluirAtendimento(selected.conversationLocalId)}
+                  className="inline-flex items-center gap-1.5 text-[13px] font-medium text-danger hover:underline disabled:opacity-60"
+                >
+                  <EyeOff size={14} /> {excluindo ? "Tirando…" : "Tirar da avaliação"}
+                </button>
+              )}
+            </div>
+            {erroExclusao && <p className="text-[12.5px] text-danger">{erroExclusao}</p>}
           </div>
         ) : (
           <div className="space-y-5">

@@ -1788,6 +1788,15 @@ model ChatwootConversation {
   labels                 Json?
   channel                String    @db.VarChar(60)
   lastActivityAt         DateTime?
+  // Fora da Avaliação de Atendimentos por decisão de um SUPER_ADMIN.
+  //
+  // Existe para atendimento de teste, que entra na média e distorce a nota de
+  // quem por acaso apareceu nele. Não apaga a conversa nem as mensagens: só a
+  // tira da avaliação, e a avaliação existente é removida junto.
+  //
+  // Quem excluiu e quando ficam no log de auditoria (`chatwoot.conversation.excluded`),
+  // que é onde o resto do app já registra esse tipo de decisão.
+  excludedFromEvaluation Boolean   @default(false)
   // Marcado quando o status transiciona PARA "resolved" (upsertConversation em
   // sync.ts); limpo se a conversa reabrir. Gatilho da Avaliação de Atendimentos
   // (ver ConversationEvaluation) — sem isso não daria pra saber quando o
@@ -1860,6 +1869,19 @@ model ChatwootAgentLink {
   // Marcação também sobrevive a férias, substituição e a uma segunda pessoa na
   // recepção, que a dedução não resolve.
   isReception       Boolean  @default(false)
+  // Conta usada pela automação/gateway, não por uma pessoa.
+  //
+  // O dono do token da integração recebe a autoria de tudo que o sistema manda:
+  // saudação LGPD, aviso de fora de horário, pedido de avaliação, agradecimento
+  // final. Medido no 41 Tech em 2026-09-03: das 494 mensagens públicas no nome
+  // dele, ~347 são template de automação.
+  //
+  // As outras 147 são atendimento de verdade de OUTRAS pessoas, entregues por um
+  // gateway de WhatsApp que carimba o autor no começo do texto ("*Wellington:*
+  // ..."). Marcar a conta como automação liga as duas regras de uma vez: sem
+  // carimbo, a mensagem não é atendimento de ninguém; com carimbo, ela é de quem
+  // está carimbado. Ver `autorEfetivo` em src/lib/chatwoot/segments.ts.
+  isAutomation      Boolean  @default(false)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

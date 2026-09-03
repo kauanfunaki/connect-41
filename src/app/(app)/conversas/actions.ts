@@ -201,3 +201,56 @@ export async function gerarResumoAgente(groupKey: string, agentLabel: string): P
   revalidatePath("/conversas");
   return { ok: true };
 }
+
+/**
+ * Tira um atendimento da Avaliação de Atendimentos.
+ *
+ * Serve para conversa de teste, que entra na média e distorce a nota de quem
+ * por acaso apareceu nela. **Não apaga a conversa nem as mensagens** — só a
+ * exclui da avaliação, e remove a nota já gravada junto, porque deixar a nota
+ * viva faria a exclusão parecer feita sem mudar média nenhuma.
+ *
+ * **Só SUPER_ADMIN.** É mais restrito do que o resto desta tela (que aceita
+ * ADMIN) de propósito: quem exclui um atendimento muda a nota de outra pessoa,
+ * e isso não é operação de rotina de administração de tenant.
+ */
+export async function excluirConversaDaAvaliacao(
+  conversationId: string,
+  excluir: boolean
+): Promise<{ error: string } | { ok: true }> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || ctx.role !== "SUPER_ADMIN") {
+    return { error: "Só um SUPER_ADMIN pode tirar um atendimento da avaliação." };
+  }
+
+  const prisma = getPrisma();
+  const conversa = await prisma.chatwootConversation.findFirst({
+    where: { id: conversationId, tenantId: ctx.tenantId },
+    select: { id: true },
+  });
+  if (!conversa) return { error: "Atendimento não encontrado." };
+
+  await prisma.chatwootConversation.update({
+    where: { id: conversationId },
+    data: { excludedFromEvaluation: excluir },
+  });
+
+  // Ao excluir, a nota sai junto. Ao reincluir, ela NÃO volta sozinha: a
+  // avaliação é derivada e o cron a refaz na próxima passada, com a régua
+  // vigente — recriar aqui com a régua antiga seria pior.
+  if (excluir) {
+    await prisma.conversationEvaluation.deleteMany({ where: { conversationId } });
+  }
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "chatwoot.conversation.excluded",
+    entityType: "ChatwootConversation",
+    entityId: conversationId,
+    metadata: { excluded: excluir },
+  });
+
+  revalidatePath("/conversas");
+  return { ok: true };
+}

@@ -154,14 +154,19 @@ export function computeSlaScore(janela: { inicio: Date; primeiraResposta: Date |
   );
 }
 
-/** Nomes de quem faz triagem, marcados em `chatwoot_agent_links.isReception`. */
-export async function nomesDaRecepcao(tenantId: string): Promise<string[]> {
+/** Nomes marcados como recepção e como automação em `chatwoot_agent_links`. */
+export async function papeisDosAgentes(
+  tenantId: string
+): Promise<{ recepcao: string[]; automacao: string[] }> {
   const prisma = getPrisma();
   const linhas = await prisma.chatwootAgentLink.findMany({
-    where: { tenantId, isReception: true },
-    select: { chatwootAgentName: true },
+    where: { tenantId, OR: [{ isReception: true }, { isAutomation: true }] },
+    select: { chatwootAgentName: true, isReception: true, isAutomation: true },
   });
-  return linhas.map((l) => l.chatwootAgentName);
+  return {
+    recepcao: linhas.filter((l) => l.isReception).map((l) => l.chatwootAgentName),
+    automacao: linhas.filter((l) => l.isAutomation).map((l) => l.chatwootAgentName),
+  };
 }
 
 function buildTranscript(messages: { messageType: string; senderLabel: string | null; content: string | null }[]): string {
@@ -186,14 +191,22 @@ function buildTranscript(messages: { messageType: string; senderLabel: string | 
 export async function evaluateConversation(
   tenantId: string,
   conversationId: string,
-  recepcao?: string[]
+  papeis?: { recepcao: string[]; automacao: string[] }
 ): Promise<void> {
   const prisma = getPrisma();
   const conversation = await prisma.chatwootConversation.findFirst({
     where: { id: conversationId, tenantId },
-    select: { id: true, resolvedAt: true },
+    select: { id: true, resolvedAt: true, excludedFromEvaluation: true },
   });
   if (!conversation?.resolvedAt) return;
+
+  // Conversa tirada da avaliação por um SUPER_ADMIN (atendimento de teste).
+  // Apaga o que existir: deixar a nota antiga viva faria a exclusão parecer
+  // feita sem ter efeito nenhum na média.
+  if (conversation.excludedFromEvaluation) {
+    await prisma.conversationEvaluation.deleteMany({ where: { conversationId } });
+    return;
+  }
 
   await ensureMessagesLoaded(tenantId, conversationId);
 
@@ -205,11 +218,8 @@ export async function evaluateConversation(
   // Sem mensagem de verdade (só atividade/nota interna) — nada pra avaliar.
   if (messages.length === 0) return;
 
-  const segmentos = segmentarAtendimento(
-    messages,
-    recepcao ?? (await nomesDaRecepcao(tenantId)),
-    conversation.resolvedAt
-  );
+  const { recepcao, automacao } = papeis ?? (await papeisDosAgentes(tenantId));
+  const segmentos = segmentarAtendimento(messages, recepcao, conversation.resolvedAt, automacao);
 
   const avaliadoEm = new Date();
   const vistos: ("TRIAGEM" | "TRATATIVA")[] = [];
@@ -258,7 +268,7 @@ export async function runEvaluationForAllTenants(): Promise<EvaluationRunResult>
   const prisma = getPrisma();
 
   const candidates = await prisma.chatwootConversation.findMany({
-    where: { resolvedAt: { not: null } },
+    where: { resolvedAt: { not: null }, excludedFromEvaluation: false },
     orderBy: { resolvedAt: "desc" },
     take: MAX_CANDIDATES_SCANNED,
     select: { id: true, tenantId: true, resolvedAt: true, evaluations: { select: { evaluatedAt: true } } },
@@ -277,20 +287,20 @@ export async function runEvaluationForAllTenants(): Promise<EvaluationRunResult>
     })
     .slice(0, MAX_EVALUATIONS_PER_CALL);
 
-  // Uma leitura só dos nomes da recepção para o lote inteiro, em vez de uma por
-  // conversa. Cache por tenant porque o cron varre todos.
-  const recepcaoPorTenant = new Map<string, string[]>();
+  // Uma leitura só dos papéis por tenant para o lote inteiro, em vez de uma por
+  // conversa. Cache porque o cron varre todos os tenants.
+  const papeisPorTenant = new Map<string, { recepcao: string[]; automacao: string[] }>();
 
   let evaluated = 0;
   let failed = 0;
   for (const c of pending) {
     try {
-      let recepcao = recepcaoPorTenant.get(c.tenantId);
-      if (!recepcao) {
-        recepcao = await nomesDaRecepcao(c.tenantId);
-        recepcaoPorTenant.set(c.tenantId, recepcao);
+      let papeis = papeisPorTenant.get(c.tenantId);
+      if (!papeis) {
+        papeis = await papeisDosAgentes(c.tenantId);
+        papeisPorTenant.set(c.tenantId, papeis);
       }
-      await evaluateConversation(c.tenantId, c.id, recepcao);
+      await evaluateConversation(c.tenantId, c.id, papeis);
       evaluated++;
     } catch (err) {
       console.error("[chatwoot:evaluation] falha ao avaliar conversa", c.id, err);

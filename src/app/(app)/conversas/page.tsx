@@ -16,7 +16,7 @@ import { AtendimentosAccordion } from "@/components/conversas/AtendimentosAccord
 import { VincularContato } from "@/components/conversas/VincularContato";
 import { ConversasFilterBar } from "@/components/conversas/ConversasFilterBar";
 import { AgentCard } from "@/components/avaliacaoAtendimentos/AgentCard";
-import { gerarResumoAgente } from "./actions";
+import { gerarResumoAgente, excluirConversaDaAvaliacao } from "./actions";
 
 const PER_PAGE = 15; // contatos por página (cada um pode ter N atendimentos)
 
@@ -396,11 +396,17 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
 async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
   const prisma = getPrisma();
   const canManage = isFullAccess(ctx.role);
+  // Tirar atendimento da avaliação é mais restrito que administrar o tenant:
+  // muda a nota de outra pessoa, então é só SUPER_ADMIN.
+  const podeExcluir = ctx.role === "SUPER_ADMIN";
 
   async function loadData() {
     return Promise.all([
       prisma.conversationEvaluation.findMany({
-        where: { tenantId: ctx.tenantId },
+        // Conversa excluída não deveria ter avaliação (o motor apaga ao
+        // excluir), mas o filtro fica aqui como segunda linha: se uma sobrar
+        // por qualquer caminho, ela não entra na média de ninguém.
+        where: { tenantId: ctx.tenantId, conversation: { excludedFromEvaluation: false } },
         orderBy: { evaluatedAt: "desc" },
         // Dobrado desde a separação em segmentos: um atendimento rende até duas
         // linhas, e manter 500 cobriria metade das conversas de antes.
@@ -429,7 +435,7 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
         where: {
           tenantId: ctx.tenantId,
           segment: "TRIAGEM",
-          conversation: { evaluations: { none: { segment: "TRATATIVA" } } },
+          conversation: { excludedFromEvaluation: false, evaluations: { none: { segment: "TRATATIVA" } } },
         },
       }),
     ]);
@@ -595,6 +601,7 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
                     }
                     canGenerateSummary={canManage}
                     generateSummaryAction={gerarResumoAgente}
+                    excludeConversationAction={podeExcluir ? excluirConversaDaAvaliacao : null}
                   />
                 );
               })}
