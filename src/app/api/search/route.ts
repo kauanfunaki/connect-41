@@ -25,7 +25,11 @@ export async function GET(req: NextRequest) {
         OR: [
           { name: { contains: q } },
           { externalId: { contains: q } },
-          ...(cnpjDigits ? [{ cnpj: { contains: cnpjDigits } }] : []),
+          // Os dois documentos, porque quem digita números na busca não
+          // separa cliente PJ de PF na cabeça. O `contains` cobre busca por
+          // pedaço (raiz do CNPJ, começo do CPF), então não dá para trocar
+          // por igualdade mesmo agora que existem os índices únicos.
+          ...(cnpjDigits ? [{ cnpj: { contains: cnpjDigits } }, { cpf: { contains: cnpjDigits } }] : []),
         ],
       },
       orderBy: { name: "asc" },

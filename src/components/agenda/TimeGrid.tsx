@@ -68,12 +68,17 @@ export function TimeGrid({ days, meetings, actions, onSlotClick }: Props) {
   return (
     <div className="overflow-x-auto h-full">
       <div style={{ minWidth }} className="h-full flex flex-col">
-        <div className="grid border-b border-border flex-shrink-0" style={{ gridTemplateColumns: gridTemplate }}>
+        <div className="grid flex-shrink-0" style={{ gridTemplateColumns: gridTemplate }}>
           {/* O rótulo da primeira hora mora AQUI, no cabeçalho, e não na coluna
               de horas: como todo rótulo se centra na linha que abre a sua hora,
-              a linha do 7:00 é justamente esta borda inferior do cabeçalho.
-              Renderizado na coluna de horas ele precisaria vazar 8px pra cima,
-              onde o `overflow-x-auto` do container recorta. */}
+              a linha do 7:00 é justamente o fim do cabeçalho. Renderizado na
+              coluna de horas ele precisaria vazar 8px pra cima, onde o
+              `overflow-x-auto` do container recorta.
+
+              O `border-b` fica em cada célula de dia, e não neste grid: no
+              container ele atravessava também a coluna de horas e cortava o
+              "7:00" ao meio. Nenhum outro rótulo tem linha atrás — as
+              separadoras de hora só existem dentro das colunas de dia. */}
           <div className="relative">
             <span className="absolute right-2 bottom-0 translate-y-1/2 text-[length:var(--fs-micro)] text-fg-muted tnum leading-none">
               {START_HOUR}:00
@@ -82,7 +87,7 @@ export function TimeGrid({ days, meetings, actions, onSlotClick }: Props) {
           {days.map((d) => (
             <div
               key={d.dateKey}
-              className={`text-center py-2.5 border-l border-border ${d.isToday ? "bg-brand-subtle" : ""}`}
+              className={`text-center py-2.5 border-l border-b border-border ${d.isToday ? "bg-brand-subtle" : ""}`}
             >
               <p className="text-[length:var(--fs-micro)] font-medium text-fg-muted uppercase tracking-wide">{weekdayLabel(d.dateKey)}</p>
               <p className={`text-[15px] font-semibold tnum ${d.isToday ? "text-brand" : "text-fg"}`}>{dayNumber(d.dateKey)}</p>

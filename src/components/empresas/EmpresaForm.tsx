@@ -13,7 +13,7 @@ import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { Stepper, type StepStatus } from "@/components/ui/Stepper";
 import { ReviewBlock } from "@/components/ui/ReviewBlock";
-import { formatCnpj, formatPhone, formatCep } from "@/lib/format";
+import { formatCnpj, formatCpf, formatPhone, formatCep } from "@/lib/format";
 import { NOVO_CLIENTE } from "@/lib/clientGroups";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 
@@ -53,7 +53,9 @@ export type EmpresaDefaultValues = {
   name?: string;
   tradeName?: string;
   displayName?: string;
+  kind?: string;
   cnpj?: string;
+  cpf?: string;
   taxRegime?: string;
   externalId?: string;
   foundationDate?: string;
@@ -108,7 +110,9 @@ export function EmpresaForm({
   const [maxStepReached, setMaxStepReached] = useState(isEdit ? STEP_LABELS.length - 1 : 0);
   const [stepError, setStepError] = useState<number | null>(null);
   const [values, setValues] = useState<Record<string, string>>(() => ({
+    kind: defaultValues?.kind ?? "PESSOA_JURIDICA",
     cnpj: defaultValues?.cnpj ?? "",
+    cpf: defaultValues?.cpf ?? "",
     status: defaultValues?.status ?? "ACTIVE",
     name: defaultValues?.name ?? "",
     tradeName: defaultValues?.tradeName ?? "",
@@ -138,6 +142,11 @@ export function EmpresaForm({
   }));
 
   const lastStep = STEP_LABELS.length - 1;
+
+  // Pessoa física troca o documento pedido e o rótulo do nome. Fica derivado de
+  // `values`, e não em estado próprio, para que a troca no Select repinte a
+  // etapa inteira sem um segundo caminho de verdade.
+  const ehPF = values.kind === "PESSOA_FISICA";
 
   function onFormChange(e: React.FormEvent<HTMLFormElement>) {
     const target = e.target as HTMLInputElement | HTMLSelectElement;
@@ -321,8 +330,32 @@ export function EmpresaForm({
         {/* ── 1. Identificação ─────────────────────────── */}
         <div data-step={0} className={step === 0 ? "" : "hidden"}>
           <FormSection title="Identificação">
+            {/* O tipo governa tudo abaixo — qual documento se pede, como se
+                chama o nome —, então vem antes e sozinho, e não como mais um
+                campo par de outro. Cliente pessoa física é cliente igual:
+                muda o documento, não o que ele contrata nem o que recebe. */}
             <FieldGrid>
-              <CampoForm label="CNPJ" htmlFor="cnpj" helper="Os dados são preenchidos automaticamente ao completar os dígitos.">
+              <CampoForm label="Tipo de cadastro" htmlFor="kind">
+                <Select id="kind" name="kind" value={values.kind}>
+                  <option value="PESSOA_JURIDICA">Pessoa Jurídica</option>
+                  <option value="PESSOA_FISICA">Pessoa Física</option>
+                </Select>
+              </CampoForm>
+              <div aria-hidden="true" />
+            </FieldGrid>
+            <FieldGrid>
+              {ehPF ? (
+                <CampoForm label="CPF" htmlFor="cpf" helper="Sem CPF, o cadastro não recebe documento fiscal.">
+                  <Input
+                    id="cpf"
+                    name="cpf"
+                    type="text"
+                    value={values.cpf}
+                    placeholder="000.000.000-00"
+                  />
+                </CampoForm>
+              ) : (
+              <CampoForm label="CNPJ" htmlFor="cnpj" helper="Preenche os dados sozinho ao completar os dígitos. Sem CNPJ, o cadastro não recebe documento fiscal.">
                 <div className="relative">
                   <Input
                     id="cnpj"
@@ -338,6 +371,7 @@ export function EmpresaForm({
                   )}
                 </div>
               </CampoForm>
+              )}
               <CampoForm label="Status" htmlFor="status">
                 <Select id="status" name="status" value={values.status}>
                   {STATUS_OPTIONS.map((o) => (
@@ -347,12 +381,23 @@ export function EmpresaForm({
               </CampoForm>
             </FieldGrid>
             <FieldGrid>
-              <CampoForm label="Razão Social" htmlFor="name" required>
-                <Input id="name" name="name" type="text" required value={values.name} placeholder="Nome jurídico da empresa" />
+              <CampoForm label={ehPF ? "Nome" : "Razão Social"} htmlFor="name" required>
+                <Input
+                  id="name"
+                  name="name"
+                  type="text"
+                  required
+                  value={values.name}
+                  placeholder={ehPF ? "Nome completo" : "Nome jurídico da empresa"}
+                />
               </CampoForm>
+              {ehPF ? (
+                <div aria-hidden="true" />
+              ) : (
               <CampoForm label="Nome Fantasia" htmlFor="tradeName">
                 <Input id="tradeName" name="tradeName" type="text" value={values.tradeName} placeholder="Como é conhecida" />
               </CampoForm>
+              )}
             </FieldGrid>
             <FieldGrid>
               <CampoForm
@@ -506,31 +551,48 @@ export function EmpresaForm({
 
         {/* ── 4. Dados fiscais ──────────────────────────── */}
         <div data-step={3} className={step === 3 ? "" : "hidden"}>
+          {/* Inscrição Estadual, NIRE e CNAE são de pessoa jurídica: NIRE é o
+              número do registro na Junta Comercial, e CNAE classifica atividade
+              de empresa. Ficam fora do cadastro de PF.
+
+              Inscrição Municipal fica: autônomo tem, e é o que aparece na NFS-e
+              que ele presta.
+
+              Como as etapas são escondidas por CSS mas **desmontadas** quando a
+              condição é falsa, o campo que não renderiza não vai no FormData —
+              então trocar um cadastro de PJ para PF zera esses três, que é o
+              certo: eles não valem para o que ele virou. */}
           <FormSection title="Dados fiscais">
             <FieldGrid columns="sm:grid-cols-3">
-              <CampoForm label="Inscrição Estadual" htmlFor="stateRegistration">
-                <Input id="stateRegistration" name="stateRegistration" type="text" value={values.stateRegistration} placeholder="000.000.000-0" />
-              </CampoForm>
+              {!ehPF && (
+                <CampoForm label="Inscrição Estadual" htmlFor="stateRegistration">
+                  <Input id="stateRegistration" name="stateRegistration" type="text" value={values.stateRegistration} placeholder="000.000.000-0" />
+                </CampoForm>
+              )}
               <CampoForm label="Inscrição Municipal" htmlFor="municipalRegistration">
                 <Input id="municipalRegistration" name="municipalRegistration" type="text" value={values.municipalRegistration} placeholder="000000-0" />
               </CampoForm>
-              <CampoForm label="NIRE" htmlFor="nire">
-                <Input id="nire" name="nire" type="text" value={values.nire} placeholder="41300012345" />
-              </CampoForm>
+              {!ehPF && (
+                <CampoForm label="NIRE" htmlFor="nire">
+                  <Input id="nire" name="nire" type="text" value={values.nire} placeholder="41300012345" />
+                </CampoForm>
+              )}
             </FieldGrid>
             <FieldGrid columns="sm:grid-cols-3">
               <CampoForm label="Data de Abertura" htmlFor="foundationDate">
                 <Input id="foundationDate" name="foundationDate" type="date" value={values.foundationDate} />
               </CampoForm>
             </FieldGrid>
-            <FieldGrid>
-              <CampoForm label="CNAE Principal" htmlFor="cnaePrincipal" helper="Código da atividade principal, ex: 6920-6/01">
-                <Input id="cnaePrincipal" name="cnaePrincipal" type="text" value={values.cnaePrincipal} placeholder="0000-0/00" />
-              </CampoForm>
-              <CampoForm label="CNAEs Secundários" htmlFor="cnaeSecundarios" helper="Separe por vírgula, se houver mais de um">
-                <Input id="cnaeSecundarios" name="cnaeSecundarios" type="text" value={values.cnaeSecundarios} placeholder="0000-0/00, 0000-0/00" />
-              </CampoForm>
-            </FieldGrid>
+            {!ehPF && (
+              <FieldGrid>
+                <CampoForm label="CNAE Principal" htmlFor="cnaePrincipal" helper="Código da atividade principal, ex: 6920-6/01">
+                  <Input id="cnaePrincipal" name="cnaePrincipal" type="text" value={values.cnaePrincipal} placeholder="0000-0/00" />
+                </CampoForm>
+                <CampoForm label="CNAEs Secundários" htmlFor="cnaeSecundarios" helper="Separe por vírgula, se houver mais de um">
+                  <Input id="cnaeSecundarios" name="cnaeSecundarios" type="text" value={values.cnaeSecundarios} placeholder="0000-0/00, 0000-0/00" />
+                </CampoForm>
+              </FieldGrid>
+            )}
           </FormSection>
         </div>
 
@@ -563,9 +625,11 @@ export function EmpresaForm({
               title="Identificação"
               onEdit={() => goTo(0)}
               items={[
-                { label: "CNPJ", value: values.cnpj ? formatCnpj(values.cnpj) : "" },
+                ehPF
+                  ? { label: "CPF", value: values.cpf ? formatCpf(values.cpf) : "" }
+                  : { label: "CNPJ", value: values.cnpj ? formatCnpj(values.cnpj) : "" },
                 { label: "Status", value: STATUS_LABEL[values.status as CompanyStatus] },
-                { label: "Razão Social", value: values.name },
+                { label: ehPF ? "Nome" : "Razão Social", value: values.name },
                 { label: "Nome Fantasia", value: values.tradeName },
                 { label: "Nome no sistema", value: values.displayName },
                 { label: "Cliente", value: clientLabel },
@@ -599,12 +663,16 @@ export function EmpresaForm({
               title="Dados fiscais"
               onEdit={() => goTo(3)}
               items={[
-                { label: "Inscrição Estadual", value: values.stateRegistration },
+                ...(ehPF ? [] : [{ label: "Inscrição Estadual", value: values.stateRegistration }]),
                 { label: "Inscrição Municipal", value: values.municipalRegistration },
-                { label: "NIRE", value: values.nire },
+                ...(ehPF ? [] : [{ label: "NIRE", value: values.nire }]),
                 { label: "Data de Abertura", value: values.foundationDate },
-                { label: "CNAE Principal", value: values.cnaePrincipal },
-                { label: "CNAEs Secundários", value: values.cnaeSecundarios },
+                ...(ehPF
+                  ? []
+                  : [
+                      { label: "CNAE Principal", value: values.cnaePrincipal },
+                      { label: "CNAEs Secundários", value: values.cnaeSecundarios },
+                    ]),
               ]}
             />
             <ReviewBlock

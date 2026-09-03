@@ -10,7 +10,8 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PersonAccessLinkRow } from "@/components/adminVinculos/PersonAccessLinkRow";
 import { vincularUsuarioPessoa } from "@/app/(app)/pessoas/actions";
-import { vincularAgenteChatwoot } from "./actions";
+import { vincularAgenteChatwoot, definirRecepcaoAgente } from "./actions";
+import { ToggleRecepcaoButton } from "@/components/adminVinculos/ToggleRecepcaoButton";
 
 // Tela única de vínculos de acesso: Pessoa (colaborador interno) <-> User
 // (login) <-> ChatwootAgentLink (atendente). Antes eram duas telas separadas
@@ -31,7 +32,7 @@ export default async function AdminAtendentesPage() {
     prisma.chatwootAgentLink.findMany({
       where: { tenantId: ctx.tenantId },
       orderBy: { chatwootAgentName: "asc" },
-      select: { id: true, chatwootAgentName: true, linkedUserId: true },
+      select: { id: true, chatwootAgentName: true, linkedUserId: true, isReception: true },
     }),
   ]);
 
@@ -76,6 +77,35 @@ export default async function AdminAtendentesPage() {
             />
           ))}
         </div>
+      )}
+
+      {hasChatwoot && (
+        <section className="mt-10">
+          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">Recepção / triagem</h2>
+          <p className="text-[length:var(--fs-helper)] text-fg-muted mt-0.5 mb-4">
+            Quem recebe o atendimento antes de passar para o setor. É o que separa a nota de{" "}
+            <span className="font-medium text-fg">triagem</span> da nota de{" "}
+            <span className="font-medium text-fg">tratativa</span>: a barreira é a primeira resposta
+            ao cliente de alguém que não está marcado aqui. Vale para as próximas avaliações — o
+            histórico só muda quando a repontuação roda.
+          </p>
+          <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+            {agentLinks.map((a) => (
+              <div key={a.id} className="flex items-center gap-4 px-4 py-2.5">
+                <span className="flex-1 text-[length:var(--fs-ui)] text-fg">{a.chatwootAgentName}</span>
+                <ToggleRecepcaoButton
+                  nome={a.chatwootAgentName}
+                  ehRecepcao={a.isReception}
+                  canEdit={canEdit}
+                  action={async (isReception: boolean) => {
+                    "use server";
+                    await definirRecepcaoAgente(a.id, isReception);
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
       )}
     </PageContainer>
   );

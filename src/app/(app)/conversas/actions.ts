@@ -5,8 +5,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullAccess } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { ensureMessagesLoaded, loadOlderMessages } from "@/lib/chatwoot/conversations";
-import { agentGroupKey } from "@/lib/chatwoot/evaluation";
-import { resolveHandlersForConversations } from "@/lib/chatwoot/handlers";
+import { chaveDoAtendente, indexarVinculosPorNome, lerChaveDeSegmento } from "@/lib/chatwoot/evaluation";
 import { summarizeAgentEvaluations } from "@/lib/ai";
 import { formatInstantDate } from "@/lib/format";
 
@@ -133,9 +132,14 @@ export async function gerarResumoAgente(groupKey: string, agentLabel: string): P
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !isFullAccess(ctx.role)) return { error: "Sem permissão para gerar resumo." };
 
+  // A chave carrega o segmento: o resumo da triagem de alguém não pode sair
+  // sobre as conversas da tratativa dele.
+  const chave = lerChaveDeSegmento(groupKey);
+  if (!chave) return { error: "Atendente inválido." };
+
   const prisma = getPrisma();
   const evaluations = await prisma.conversationEvaluation.findMany({
-    where: { tenantId: ctx.tenantId },
+    where: { tenantId: ctx.tenantId, segment: chave.segmento },
     orderBy: { evaluatedAt: "desc" },
     take: 500,
     select: {
@@ -143,24 +147,25 @@ export async function gerarResumoAgente(groupKey: string, agentLabel: string): P
       writingScore: true,
       slaScore: true,
       reasoning: true,
-      conversation: { select: { id: true, assigneeId: true, assigneeLabel: true } },
+      handlerLabel: true,
+      conversation: { select: { id: true } },
     },
   });
 
-  // Precisa resolver o responsável real pelo mesmo caminho da view — se aqui
-  // continuasse usando `assigneeLabel` cru, o resumo de um atendente sairia
-  // sobre as conversas de outro (ou não acharia nenhuma, já que a chave vem da
-  // tela e a tela agora agrupa por quem escreveu).
-  const handlers = await resolveHandlersForConversations(
-    ctx.tenantId,
-    evaluations.map((ev) => ({ id: ev.conversation.id, assigneeLabel: ev.conversation.assigneeLabel })),
+  // A mesma indexação da view: sem ela, a chave `user:<id>` que a tela manda
+  // não casaria com nada aqui e o resumo sairia vazio para todo atendente
+  // vinculado a uma conta.
+  const vinculosPorNome = indexarVinculosPorNome(
+    await prisma.chatwootAgentLink.findMany({
+      where: { tenantId: ctx.tenantId },
+      select: { chatwootAgentName: true, linkedUserId: true },
+    })
   );
 
+  // `handlerLabel` já está gravado por segmento desde a avaliação — não é mais
+  // preciso reler as mensagens de 500 conversas para redescobrir quem atendeu.
   const matching = evaluations
-    .filter((ev) => {
-      const label = handlers.get(ev.conversation.id)?.label ?? ev.conversation.assigneeLabel;
-      return agentGroupKey(ev.conversation.assigneeId, label) === groupKey;
-    })
+    .filter((ev) => chaveDoAtendente(ev.handlerLabel, vinculosPorNome) === chave.chaveDoAtendente)
     .slice(0, MAX_EVALUATIONS_FOR_SUMMARY);
 
   if (matching.length === 0) return { error: "Nenhuma avaliação encontrada para este atendente." };

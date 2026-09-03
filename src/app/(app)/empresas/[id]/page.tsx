@@ -135,7 +135,9 @@ export default async function EmpresaPage({
         id={company.id}
         name={nomeExibicao(company)}
         tradeName={razaoSocialSecundaria(company) ?? company.tradeName}
+        kind={company.kind}
         cnpj={company.cnpj}
+        cpf={company.cpf}
         status={company.status}
         city={company.city}
         stateCode={company.stateCode}

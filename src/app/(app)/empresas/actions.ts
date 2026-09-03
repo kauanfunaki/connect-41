@@ -3,17 +3,18 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { CompanyStatus } from "@/generated/prisma/enums";
+import { CompanyStatus, CompanyKind } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { canWriteEntity } from "@/lib/auth/policy";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { getCompanySectors, getApplicableCustomFields, saveCustomFieldValues } from "@/lib/customFields";
 import { pick, pickDate } from "@/lib/forms";
 import { isPrismaForeignKeyError } from "@/lib/prismaErrors";
-import { isValidCNPJ, digitsOnly } from "@/lib/validation/common";
+import { isValidCNPJ, isValidCPF, digitsOnly } from "@/lib/validation/common";
 import { logAudit } from "@/lib/audit";
 import { cnpjRoot, lerEscolhaDeCliente } from "@/lib/clientGroups";
 import { validarMatriz } from "@/lib/companyHierarchyDb";
+import { rotuloDoDocumento } from "@/lib/companyTaxId";
 
 export type EmpresaState = { error: string } | null;
 
@@ -22,7 +23,9 @@ function companyData(form: FormData) {
     name:                  (form.get("name") as string)?.trim(),
     tradeName:             pick(form, "tradeName"),
     displayName:           pick(form, "displayName"),
+    kind:                  lerKind(form),
     cnpj:                  digitsOnly(pick(form, "cnpj")),
+    cpf:                   digitsOnly(pick(form, "cpf")),
     taxRegime:             pick(form, "taxRegime"),
     externalId:            pick(form, "externalId"),
     foundationDate:        pickDate(form, "foundationDate"),
@@ -47,26 +50,68 @@ function companyData(form: FormData) {
   };
 }
 
-// Valida razão social e CNPJ (dígito verificador). Sem constraint de unicidade no
-// banco ainda (há duplicatas legadas a limpar antes) — a checagem de duplicado é
-// feita no app, por tenant.
+// PJ é o default: formulário antigo, importador e qualquer chamada que não
+// mande o campo continuam cadastrando pessoa jurídica, que é o que sempre
+// foram.
+function lerKind(form: FormData): CompanyKind {
+  return (form.get("kind") as string) === CompanyKind.PESSOA_FISICA
+    ? CompanyKind.PESSOA_FISICA
+    : CompanyKind.PESSOA_JURIDICA;
+}
+
+/**
+ * Valida nome e o documento que corresponde ao tipo do cadastro.
+ *
+ * O unique `(tenantId, cnpj)` e o `(tenantId, cpf)` existem no banco desde
+ * 02/09 e 03/09 — esta checagem não está no lugar deles, está antes: a
+ * constraint devolveria P2002, e a tela precisa de uma frase que diga qual
+ * campo repetiu.
+ *
+ * Cada tipo olha só o seu documento. O outro é zerado em `normalizarDocumento`
+ * antes de gravar, para que um cadastro trocado de PJ para PF não deixe um CNPJ
+ * órfão ocupando o índice único.
+ */
 async function validateCompany(
   data: ReturnType<typeof companyData>,
   tenantId: string,
   ignoreId?: string
 ): Promise<string | null> {
-  if (!data.name) return "Razão Social é obrigatória.";
-  if (data.cnpj && !isValidCNPJ(data.cnpj)) return "CNPJ inválido.";
+  const ehPF = data.kind === CompanyKind.PESSOA_FISICA;
+  if (!data.name) return ehPF ? "Nome é obrigatório." : "Razão Social é obrigatória.";
 
-  if (data.cnpj) {
+  const documento = ehPF ? data.cpf : data.cnpj;
+  const rotulo = rotuloDoDocumento(data.kind);
+
+  if (documento) {
+    const valido = ehPF ? isValidCPF(documento) : isValidCNPJ(documento);
+    if (!valido) return `${rotulo} inválido.`;
+
     const prisma = getPrisma();
     const dup = await prisma.company.findFirst({
-      where: { tenantId, cnpj: data.cnpj, ...(ignoreId ? { id: { not: ignoreId } } : {}) },
+      where: {
+        tenantId,
+        ...(ehPF ? { cpf: documento } : { cnpj: documento }),
+        ...(ignoreId ? { id: { not: ignoreId } } : {}),
+      },
       select: { id: true },
     });
-    if (dup) return "Já existe uma empresa com este CNPJ.";
+    if (dup) return `Já existe um cadastro com este ${rotulo}.`;
   }
   return null;
+}
+
+/**
+ * Zera o documento que não pertence ao tipo escolhido.
+ *
+ * Sem isto, trocar um cadastro de PJ para PF guardaria o CNPJ antigo numa linha
+ * marcada como pessoa física: ela não seria casável por ele (ver
+ * `documentoDaEmpresa`), mas continuaria ocupando o par único `(tenant, CNPJ)` e
+ * impediria o cadastro legítimo daquele CNPJ por outra empresa.
+ */
+function normalizarDocumento<T extends { kind: CompanyKind; cnpj: string | null; cpf: string | null }>(data: T): T {
+  return data.kind === CompanyKind.PESSOA_FISICA
+    ? { ...data, cnpj: null }
+    : { ...data, cpf: null };
 }
 
 /**
@@ -127,7 +172,7 @@ export async function criarEmpresa(
   if (!ctx.tenantId) return { error: "Não autenticado" };
   if (!canWriteEntity(ctx)) return { error: "Sem permissão para criar empresas." };
 
-  const data = companyData(form);
+  const data = normalizarDocumento(companyData(form));
   const validationError = await validateCompany(data, ctx.tenantId);
   if (validationError) return { error: validationError };
 
@@ -173,7 +218,7 @@ export async function atualizarEmpresa(
   if (!canWriteEntity(ctx)) return { error: "Sem permissão para editar empresas." };
 
   const id = form.get("id") as string;
-  const data = companyData(form);
+  const data = normalizarDocumento(companyData(form));
   const validationError = await validateCompany(data, ctx.tenantId, id);
   if (validationError) return { error: validationError };
 

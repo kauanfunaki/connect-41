@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/Card";
 import { InfoRow } from "@/components/empresas/InfoRow";
-import { formatCalendarDate, formatInstantDate, formatCnpj, formatPhone, formatCep } from "@/lib/format";
+import { formatCalendarDate, formatInstantDate, formatDocumento, formatPhone, formatCep } from "@/lib/format";
+import { rotuloDoDocumento } from "@/lib/companyTaxId";
 
 type CustomFieldValue = {
   id: string;
@@ -14,7 +15,9 @@ type Props = {
     name: string;
     tradeName: string | null;
     displayName: string | null;
+    kind: "PESSOA_JURIDICA" | "PESSOA_FISICA";
     cnpj: string | null;
+    cpf: string | null;
     taxRegime: string | null;
     externalId: string | null;
     foundationDate: Date | null;
@@ -42,6 +45,7 @@ type Props = {
 };
 
 export function CompanyOverviewSection({ company, customFields }: Props) {
+  const ehPF = company.kind === "PESSOA_FISICA";
   const fullAddress = [
     company.addressStreet,
     company.addressNumber,
@@ -58,11 +62,15 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
       <Card className="p-5">
         <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">Identificação</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-          <InfoRow label="Razão Social" value={company.name} />
+          <InfoRow label={company.kind === "PESSOA_FISICA" ? "Nome" : "Razão Social"} value={company.name} />
           <InfoRow label="Cliente" value={company.clientGroup?.name ?? null} />
           <InfoRow label="Nome Fantasia" value={company.tradeName} />
           <InfoRow label="Nome no sistema" value={company.displayName} />
-          <InfoRow label="CNPJ" value={formatCnpj(company.cnpj)} mono />
+          <InfoRow
+            label={rotuloDoDocumento(company.kind)}
+            value={formatDocumento(company.kind, company.cnpj, company.cpf)}
+            mono
+          />
           <InfoRow label="Regime Tributário" value={company.taxRegime} />
           <InfoRow label="ID" value={company.externalId} mono />
           <InfoRow
@@ -97,15 +105,24 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
         </Card>
       )}
 
-      {(company.stateRegistration || company.municipalRegistration || company.nire || company.cnaePrincipal || company.cnaeSecundarios) && (
+      {(company.municipalRegistration ||
+        (!ehPF &&
+          (company.stateRegistration || company.nire || company.cnaePrincipal || company.cnaeSecundarios))) && (
         <Card className="p-5">
           <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">Dados Fiscais</h2>
+          {/* Os mesmos campos que o formulário não pede para PF não aparecem
+              aqui — senão a ficha de uma pessoa física mostraria quatro linhas
+              com "—" logo abaixo da única que ela pode ter. */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-3">
-            <InfoRow label="Inscrição Estadual" value={company.stateRegistration} mono />
+            {!ehPF && <InfoRow label="Inscrição Estadual" value={company.stateRegistration} mono />}
             <InfoRow label="Inscrição Municipal" value={company.municipalRegistration} mono />
-            <InfoRow label="NIRE" value={company.nire} mono />
-            <InfoRow label="CNAE Principal" value={company.cnaePrincipal} mono />
-            <InfoRow label="CNAEs Secundários" value={company.cnaeSecundarios} mono />
+            {!ehPF && (
+              <>
+                <InfoRow label="NIRE" value={company.nire} mono />
+                <InfoRow label="CNAE Principal" value={company.cnaePrincipal} mono />
+                <InfoRow label="CNAEs Secundários" value={company.cnaeSecundarios} mono />
+              </>
+            )}
           </div>
         </Card>
       )}

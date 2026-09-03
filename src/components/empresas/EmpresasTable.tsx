@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { Select } from "@/components/ui/Select";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import type { CompanyStatus } from "@/generated/prisma/enums";
-import { formatCnpj } from "@/lib/format";
+import { formatDocumento } from "@/lib/format";
 import { agruparPorCliente } from "@/lib/clientGroups";
 import { montarArvore } from "@/lib/companyHierarchy";
 import { nomeExibicao, razaoSocialSecundaria } from "@/lib/companyName";
@@ -22,7 +22,9 @@ type Row = {
   name: string;
   displayName: string | null;
   externalId: string | null;
+  kind: "PESSOA_JURIDICA" | "PESSOA_FISICA";
   cnpj: string | null;
+  cpf: string | null;
   status: CompanyStatus;
   email: string | null;
   taxRegime: string | null;
@@ -147,7 +149,7 @@ export function EmpresasTable({
             {ehFilial && <span className="ml-1 shrink-0 text-[11.5px] text-fg-muted">filial</span>}
           </div>
         </td>
-        <td className="px-4 py-3 text-fg-secondary tnum whitespace-nowrap">{formatCnpj(c.cnpj)}</td>
+        <td className="px-4 py-3 text-fg-secondary tnum whitespace-nowrap">{formatDocumento(c.kind, c.cnpj, c.cpf)}</td>
         <td className="px-4 py-3 whitespace-nowrap">
           <StatusDot color={statusColor[c.status]} label={statusLabel[c.status]} />
         </td>

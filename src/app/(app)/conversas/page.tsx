@@ -7,8 +7,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullAccess } from "@/lib/auth/context";
 import { scopedChatwootConversationWhere } from "@/lib/auth/scope";
 import { isChatwootConfigured } from "@/lib/chatwoot/connection";
-import { agentGroupKey } from "@/lib/chatwoot/evaluation";
-import { resolveHandlersForConversations } from "@/lib/chatwoot/handlers";
+import { chaveDoSegmento, indexarVinculosPorNome, normalizarNomeAtendente } from "@/lib/chatwoot/evaluation";
 import { channelLabel, statusLabel } from "@/lib/chatwoot/labels";
 import { formatInstantDate } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -403,15 +402,19 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
       prisma.conversationEvaluation.findMany({
         where: { tenantId: ctx.tenantId },
         orderBy: { evaluatedAt: "desc" },
-        take: 500,
+        // Dobrado desde a separação em segmentos: um atendimento rende até duas
+        // linhas, e manter 500 cobriria metade das conversas de antes.
+        take: 1000,
         select: {
           id: true,
+          segment: true,
+          handlerLabel: true,
           score: true,
           writingScore: true,
           slaScore: true,
           reasoning: true,
           evaluatedAt: true,
-          conversation: { select: { id: true, assigneeId: true, assigneeLabel: true } },
+          conversation: { select: { id: true } },
         },
       }),
       prisma.chatwootAgentLink.findMany({
@@ -419,15 +422,26 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
         include: { linkedUser: { select: { name: true, email: true, photoUrl: true } } },
       }),
       prisma.agentEvaluationSummary.findMany({ where: { tenantId: ctx.tenantId } }),
+      // Atendimento que a recepção resolveu sozinha: tem triagem e nenhuma
+      // tratativa. Contado por consulta, e não sobre a página carregada, porque
+      // o par pode cair fora do `take` e o número passaria a mentir.
+      prisma.conversationEvaluation.count({
+        where: {
+          tenantId: ctx.tenantId,
+          segment: "TRIAGEM",
+          conversation: { evaluations: { none: { segment: "TRATATIVA" } } },
+        },
+      }),
     ]);
   }
 
   let evaluations: Awaited<ReturnType<typeof loadData>>[0] = [];
   let agentLinks: Awaited<ReturnType<typeof loadData>>[1] = [];
   let summaries: Awaited<ReturnType<typeof loadData>>[2] = [];
+  let resolvidosNaTriagem = 0;
   let loadError = false;
   try {
-    [evaluations, agentLinks, summaries] = await loadData();
+    [evaluations, agentLinks, summaries, resolvidosNaTriagem] = await loadData();
   } catch (err) {
     console.error("[conversas:avaliacao] falha ao consultar avaliações — migration pendente?", err);
     loadError = true;
@@ -443,17 +457,22 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
     );
   }
 
-  const agentLinkByAgentId = new Map(agentLinks.map((l) => [l.chatwootAgentId, l]));
+  // Por NOME, não por id do agente: o card precisa do vínculo de quem escreveu,
+  // e o que se tem de quem escreveu é o nome guardado em `handlerLabel`.
+  // Indexar por `assigneeId` era o que fazia todo card exibir a recepção.
+  const vinculosPorNome = indexarVinculosPorNome(agentLinks);
+  const linkPorNome = new Map(
+    agentLinks.flatMap((l) => {
+      const n = normalizarNomeAtendente(l.chatwootAgentName);
+      return n ? ([[n, l]] as const) : [];
+    })
+  );
   const summaryByGroupKey = new Map(summaries.map((s) => [s.groupKey, s]));
 
   type AgentGroup = {
     key: string;
     label: string;
-    // Um mesmo atendente pode ter mais de um chatwootAgentId ao longo do
-    // tempo (re-sincronização no Chatwoot) — guarda todos os vistos neste
-    // grupo pra conseguir achar o vínculo de conta em qualquer um deles.
-    assigneeIds: Set<number>;
-    assigneeLabel: string | null;
+    handlerLabel: string | null;
     scoreSum: number;
     writingSum: number;
     slaSum: number;
@@ -461,49 +480,53 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
     evaluations: typeof evaluations;
   };
 
-  // Quem atendeu de verdade, deduzido das mensagens enviadas ao cliente. O
-  // campo `assignee` do Chatwoot não serve pra isso: a recepção recebe todas as
-  // conversas e reatribui, e conversas ficavam creditadas a quem nunca escreveu
-  // uma linha. Ver src/lib/chatwoot/attribution.ts.
-  const handlers = await resolveHandlersForConversations(
-    ctx.tenantId,
-    evaluations.map((ev) => ({ id: ev.conversation.id, assigneeLabel: ev.conversation.assigneeLabel })),
-  );
-
-  const groups = new Map<string, AgentGroup>();
-  for (const ev of evaluations) {
-    const assigneeId = ev.conversation.assigneeId;
-    const assigneeLabel = handlers.get(ev.conversation.id)?.label ?? ev.conversation.assigneeLabel;
-    const key = agentGroupKey(assigneeId, assigneeLabel);
-    const existing = groups.get(key);
-    if (existing) {
-      existing.scoreSum += ev.score;
-      existing.writingSum += ev.writingScore;
-      existing.slaSum += ev.slaScore;
-      existing.count += 1;
-      existing.evaluations.push(ev);
-      if (assigneeId != null) existing.assigneeIds.add(assigneeId);
-    } else {
-      groups.set(key, {
-        key,
-        label: assigneeLabel ?? "Sem atendente",
-        assigneeIds: new Set(assigneeId != null ? [assigneeId] : []),
-        assigneeLabel,
-        scoreSum: ev.score,
-        writingSum: ev.writingScore,
-        slaSum: ev.slaScore,
-        count: 1,
-        evaluations: [ev],
-      });
+  function agrupar(doSegmento: "TRIAGEM" | "TRATATIVA"): AgentGroup[] {
+    const groups = new Map<string, AgentGroup>();
+    for (const ev of evaluations) {
+      if (ev.segment !== doSegmento) continue;
+      const key = chaveDoSegmento(doSegmento, ev.handlerLabel, vinculosPorNome);
+      const existing = groups.get(key);
+      if (existing) {
+        existing.scoreSum += ev.score;
+        existing.writingSum += ev.writingScore;
+        existing.slaSum += ev.slaScore;
+        existing.count += 1;
+        existing.evaluations.push(ev);
+      } else {
+        groups.set(key, {
+          key,
+          label: ev.handlerLabel ?? "Sem atendente",
+          handlerLabel: ev.handlerLabel,
+          scoreSum: ev.score,
+          writingSum: ev.writingScore,
+          slaSum: ev.slaScore,
+          count: 1,
+          evaluations: [ev],
+        });
+      }
     }
+    return [...groups.values()].sort((a, b) => b.scoreSum / b.count - a.scoreSum / a.count);
   }
 
-  const agentGroups = [...groups.values()].sort((a, b) => b.scoreSum / b.count - a.scoreSum / a.count);
-  const totalAvg = evaluations.length > 0 ? evaluations.reduce((s, e) => s + e.score, 0) / evaluations.length : null;
-  const totalWriting = evaluations.length > 0 ? evaluations.reduce((s, e) => s + e.writingScore, 0) / evaluations.length : null;
-  const totalSla = evaluations.length > 0 ? evaluations.reduce((s, e) => s + e.slaScore, 0) / evaluations.length : null;
+  const secoes = [
+    {
+      tipo: "TRATATIVA" as const,
+      titulo: "Tratativa",
+      descricao: "Da transferência até a resolução — o trabalho do setor.",
+      grupos: agrupar("TRATATIVA"),
+    },
+    {
+      tipo: "TRIAGEM" as const,
+      titulo: "Triagem",
+      descricao:
+        resolvidosNaTriagem > 0
+          ? `Da abertura até o setor assumir — o trabalho da recepção. ${resolvidosNaTriagem} ${resolvidosNaTriagem === 1 ? "atendimento foi resolvido" : "atendimentos foram resolvidos"} sem sair da triagem.`
+          : "Da abertura até o setor assumir — o trabalho da recepção.",
+      grupos: agrupar("TRIAGEM"),
+    },
+  ].filter((s) => s.grupos.length > 0);
 
-  if (agentGroups.length === 0) {
+  if (secoes.length === 0) {
     return (
       <Card>
         <EmptyState
@@ -516,57 +539,70 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
   }
 
   return (
-    <>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border border border-border rounded-lg overflow-hidden mb-6">
-        <StatTile label="Atendimentos avaliados" value={evaluations.length} />
-        <StatTile label="Nota média" value={totalAvg != null ? Math.round(totalAvg) : "—"} />
-        <StatTile label="Escrita média" value={totalWriting != null ? `${Math.round(totalWriting)}/50` : "—"} />
-        <StatTile label="SLA médio" value={totalSla != null ? `${Math.round(totalSla)}/50` : "—"} />
-      </div>
+    <div className="space-y-10">
+      {secoes.map((secao) => {
+        const total = secao.grupos.reduce((s, g) => s + g.count, 0);
+        const soma = (campo: "scoreSum" | "writingSum" | "slaSum") =>
+          secao.grupos.reduce((s, g) => s + g[campo], 0);
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {agentGroups.map((group) => {
-          const agentLink = [...group.assigneeIds].map((id) => agentLinkByAgentId.get(id)).find((l) => l != null);
-          const linkedUser = agentLink?.linkedUser ?? null;
-          const summaryRow = summaryByGroupKey.get(group.key);
+        return (
+          <section key={secao.tipo}>
+            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">{secao.titulo}</h2>
+            <p className="text-[length:var(--fs-helper)] text-fg-muted mt-0.5 mb-4">{secao.descricao}</p>
 
-          return (
-            <AgentCard
-              key={group.key}
-              groupKey={group.key}
-              label={linkedUser?.name ?? group.label}
-              linkedUserLabel={linkedUser ? `${linkedUser.name} (${linkedUser.email})` : null}
-              avatarUrl={linkedUser?.photoUrl ?? null}
-              avgScore={group.scoreSum / group.count}
-              avgWriting={group.writingSum / group.count}
-              avgSla={group.slaSum / group.count}
-              count={group.count}
-              evaluations={group.evaluations.map((ev) => ({
-                id: ev.id,
-                conversationLocalId: ev.conversation.id,
-                score: ev.score,
-                writingScore: ev.writingScore,
-                slaScore: ev.slaScore,
-                reasoning: ev.reasoning,
-                evaluatedAtLabel: formatInstantDate(ev.evaluatedAt),
-              }))}
-              summary={
-                summaryRow
-                  ? {
-                      text: summaryRow.summary,
-                      generatedAtLabel: formatInstantDate(summaryRow.generatedAt),
-                      evaluationCount: summaryRow.evaluationCount,
-                      examples: summaryRow.exampleConversationIds as { conversationId: string; note: string }[],
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border border border-border rounded-lg overflow-hidden mb-4">
+              <StatTile label="Atendimentos avaliados" value={total} />
+              <StatTile label="Nota média" value={Math.round(soma("scoreSum") / total)} />
+              <StatTile label="Escrita média" value={`${Math.round(soma("writingSum") / total)}/50`} />
+              <StatTile label="SLA médio" value={`${Math.round(soma("slaSum") / total)}/50`} />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {secao.grupos.map((group) => {
+                const agentLink = linkPorNome.get(normalizarNomeAtendente(group.handlerLabel) ?? "");
+                const linkedUser = agentLink?.linkedUser ?? null;
+                const summaryRow = summaryByGroupKey.get(group.key);
+
+                return (
+                  <AgentCard
+                    key={group.key}
+                    groupKey={group.key}
+                    label={linkedUser?.name ?? group.label}
+                    linkedUserLabel={linkedUser ? `${linkedUser.name} (${linkedUser.email})` : null}
+                    avatarUrl={linkedUser?.photoUrl ?? null}
+                    avgScore={group.scoreSum / group.count}
+                    avgWriting={group.writingSum / group.count}
+                    avgSla={group.slaSum / group.count}
+                    count={group.count}
+                    evaluations={group.evaluations.map((ev) => ({
+                      id: ev.id,
+                      conversationLocalId: ev.conversation.id,
+                      score: ev.score,
+                      writingScore: ev.writingScore,
+                      slaScore: ev.slaScore,
+                      reasoning: ev.reasoning,
+                      evaluatedAtLabel: formatInstantDate(ev.evaluatedAt),
+                    }))}
+                    summary={
+                      summaryRow
+                        ? {
+                            text: summaryRow.summary,
+                            generatedAtLabel: formatInstantDate(summaryRow.generatedAt),
+                            evaluationCount: summaryRow.evaluationCount,
+                            examples: summaryRow.exampleConversationIds as { conversationId: string; note: string }[],
+                          }
+                        : null
                     }
-                  : null
-              }
-              canGenerateSummary={canManage}
-              generateSummaryAction={gerarResumoAgente}
-            />
-          );
-        })}
-      </div>
-    </>
+                    canGenerateSummary={canManage}
+                    generateSummaryAction={gerarResumoAgente}
+                  />
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
+    </div>
   );
 }
 

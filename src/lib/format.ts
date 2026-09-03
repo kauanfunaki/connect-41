@@ -40,6 +40,22 @@ export function formatCnpj(value: string | null | undefined): string {
   return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
 }
 
+export function formatCpf(value: string | null | undefined): string {
+  if (!value) return "—";
+  const digits = value.replace(/\D/g, "");
+  if (digits.length !== 11) return value;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+/** Formata pelo tipo do cadastro, sem o chamador precisar escolher a função. */
+export function formatDocumento(
+  kind: "PESSOA_JURIDICA" | "PESSOA_FISICA",
+  cnpj: string | null | undefined,
+  cpf: string | null | undefined
+): string {
+  return kind === "PESSOA_FISICA" ? formatCpf(cpf) : formatCnpj(cnpj);
+}
+
 export function formatPhone(value: string | null | undefined): string {
   if (!value) return "—";
   const digits = value.replace(/\D/g, "");

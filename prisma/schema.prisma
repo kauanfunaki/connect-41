@@ -41,6 +41,18 @@ enum CompanyStatus {
   CHURNED
 }
 
+// Cliente pessoa física mora em `Company`, e não numa entidade própria.
+// Decidido em 2026-09-03: o escritório presta o mesmo serviço para PF e PJ, e
+// tudo que o app pendura no cliente (serviços contratados, responsável por
+// setor, documentos, obrigações, reuniões, senhas) já aponta para `companyId`
+// em 13 modelos. Entidade separada obrigaria cada um deles a virar polimórfico
+// — inclusive o documento fiscal da Fase 2, que é justamente o bloco que
+// precisa sair barato.
+enum CompanyKind {
+  PESSOA_JURIDICA // identificada por CNPJ
+  PESSOA_FISICA // identificada por CPF, no lugar do CNPJ
+}
+
 enum ServiceStatus {
   PENDING
   ACTIVE
@@ -785,7 +797,15 @@ model Company {
   // Opcional, com fallback para a razão social — ver `nomeExibicao()` em
   // src/lib/companyName.ts, que é por onde toda tela deve passar.
   displayName           String?       @db.VarChar(180)
+  // PJ ou PF. O default cobre as 397 empresas existentes sem backfill: todas
+  // são pessoa jurídica. Quem lê isto para decidir rótulo de tela deve passar
+  // por src/lib/companyTaxId.ts, não comparar o enum na mão.
+  kind                  CompanyKind   @default(PESSOA_JURIDICA)
   cnpj                  String?       @db.VarChar(18)
+  // Documento do cliente pessoa física. Fica em coluna própria em vez de
+  // dividir a de CNPJ: guardar CPF num campo chamado `cnpj` cobra caro depois,
+  // e o casamento do XML fiscal precisa saber qual dos dois está lendo.
+  cpf                   String?       @db.VarChar(14)
   taxRegime             String?       @db.VarChar(100) // Regime Tributário — algumas opções (ex: "Simples Nacional - Comércio ou Serviço - Com Pró-labore - Com Funcionários") passam de 60 chars, causavam P2000 ao salvar
   externalId            String?       @db.VarChar(60) // ID manual do sistema de domínio (ex: Acessorias) — sem sincronização
   foundationDate        DateTime? // Data de abertura da empresa
@@ -858,9 +878,16 @@ model Company {
   //
   // Vale por tenant, não global: dois escritórios podem atender a mesma
   // empresa, e isso não é conflito. NULL não conflita com NULL no MySQL, então
-  // empresa sem CNPJ continua possível — o que fazer com ela é decisão do
-  // módulo fiscal, não desta constraint.
+  // empresa sem CNPJ continua possível. A regra sobre ela foi decidida em
+  // 2026-09-03 e vive em src/lib/companyTaxId.ts: empresa sem documento não
+  // recebe documento fiscal. A constraint garante a unicidade; quem garante a
+  // regra é o tipo, não o banco.
   @@unique([tenantId, cnpj])
+  // Mesmo desenho do CNPJ, para o cliente pessoa física. Dois índices únicos
+  // separados, e não um sobre um campo só de documento: o par (tenant, CPF) e
+  // o par (tenant, CNPJ) são espaços de identidade distintos, e um CPF nunca
+  // colide com um CNPJ por ter 11 dígitos contra 14.
+  @@unique([tenantId, cpf])
   @@index([tenantId])
   @@index([tenantId, status])
   @@index([tenantId, clientGroupId])
@@ -1774,7 +1801,7 @@ model ChatwootConversation {
   connection  ChatwootConnection      @relation(fields: [connectionId], references: [id])
   contactLink ChatwootContactLink?    @relation(fields: [contactLinkId], references: [id])
   messages    ChatwootMessage[]
-  evaluation  ConversationEvaluation?
+  evaluations ConversationEvaluation[]
 
   @@unique([tenantId, connectionId, chatwootConversationId])
   @@index([tenantId, contactLinkId])
@@ -1823,6 +1850,16 @@ model ChatwootAgentLink {
   chatwootAgentId   Int
   chatwootAgentName String   @db.VarChar(120) // cache do nome, pro caso de renomeação no Chatwoot
   linkedUserId      String?
+  // Quem faz triagem. Nesta operação todo atendimento entra pela recepção e só
+  // depois vai para o setor, então a barreira entre "triagem" e "tratativa" é a
+  // primeira resposta ao cliente de alguém que NÃO está marcado aqui.
+  //
+  // É marcação explícita, e não dedução de "quem respondeu primeiro": recepção
+  // é fato organizacional. Deduzir reclassificaria em silêncio o analista que
+  // por acaso respondeu antes — e a nota de tratativa dele viraria de triagem.
+  // Marcação também sobrevive a férias, substituição e a uma segunda pessoa na
+  // recepção, que a dedução não resolve.
+  isReception       Boolean  @default(false)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -1841,10 +1878,29 @@ model ChatwootAgentLink {
 // endpoint de pesquisa de satisfação, e uma pesquisa via mensagem livre
 // esbarrava no Away Message nativo do Chatwoot disparando pro cliente ao
 // responder fora do horário comercial).
+// As duas metades de um atendimento. Decidido em 2026-09-03: o mesmo
+// atendimento é avaliado duas vezes, porque são dois trabalhos diferentes
+// feitos por gente diferente, e uma nota só premiava ou punia os dois juntos.
+enum EvaluationSegment {
+  TRIAGEM // da abertura até a barreira — trabalho da recepção
+  TRATATIVA // da barreira até a resolução — trabalho do setor
+}
+
 model ConversationEvaluation {
   id             String   @id @default(uuid())
   tenantId       String
-  conversationId String   @unique
+  conversationId String
+  // Uma conversa rende até duas avaliações, uma por metade. Conversa que a
+  // recepção resolve sozinha rende só a TRIAGEM: nenhum setor tratou, e
+  // inventar uma TRATATIVA vazia mentiria no denominador de todo mundo.
+  segment        EvaluationSegment @default(TRATATIVA)
+  // Quem atendeu ESTE trecho, congelado no momento da avaliação.
+  //
+  // Antes a tela redescobria isso a cada render, relendo todas as mensagens de
+  // 500 conversas. Com dois segmentos isso deixa de ser só caro e passa a ser
+  // errado: o dono da metade não está em lugar nenhum da conversa — o campo
+  // `assignee` do Chatwoot é a recepção em 485 dos 500 atendimentos.
+  handlerLabel   String?  @db.VarChar(120)
   score          Int // 0-100 = writingScore + slaScore
   writingScore   Int // 0-50 — português/educação, avaliado pela IA
   slaScore       Int // 0-50 — tempo até 1ª resposta + até resolução
@@ -1853,7 +1909,9 @@ model ConversationEvaluation {
 
   conversation ChatwootConversation @relation(fields: [conversationId], references: [id])
 
+  @@unique([conversationId, segment])
   @@index([tenantId, evaluatedAt])
+  @@index([tenantId, segment])
   @@map("conversation_evaluations")
 }
 

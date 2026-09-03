@@ -8,7 +8,8 @@ import { StatusDot } from "@/components/shared/StatusDot";
 import { EntityOverflowMenu } from "@/components/ui/EntityOverflowMenu";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
-import { formatCnpj, formatPhone } from "@/lib/format";
+import { formatDocumento, formatPhone } from "@/lib/format";
+import { rotuloDoDocumento } from "@/lib/companyTaxId";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
   PROSPECT: "Prospecto",
@@ -28,7 +29,9 @@ type Props = {
   id: string;
   name: string;
   tradeName: string | null;
+  kind: "PESSOA_JURIDICA" | "PESSOA_FISICA";
   cnpj: string | null;
+  cpf: string | null;
   status: CompanyStatus;
   city: string | null;
   stateCode: string | null;
@@ -44,7 +47,9 @@ export function CompanyHeader({
   id,
   name,
   tradeName,
+  kind,
   cnpj,
+  cpf,
   status,
   city,
   stateCode,
@@ -63,9 +68,14 @@ export function CompanyHeader({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const location = [city, stateCode].filter(Boolean).join(" — ");
 
-  async function copyCnpj() {
-    if (!cnpj) return;
-    await navigator.clipboard.writeText(cnpj);
+  // Um documento só por cadastro: PJ tem CNPJ, PF tem CPF, e o outro é nulo
+  // por construção (ver `normalizarDocumento` em empresas/actions.ts).
+  const documento = kind === "PESSOA_FISICA" ? cpf : cnpj;
+  const rotuloDoc = rotuloDoDocumento(kind);
+
+  async function copyDocumento() {
+    if (!documento) return;
+    await navigator.clipboard.writeText(documento);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
@@ -164,15 +174,15 @@ export function CompanyHeader({
             {tradeName && <p className="text-[length:var(--fs-body)] text-fg-secondary mt-0.5">{tradeName}</p>}
 
             <div className="flex items-center gap-4 flex-wrap mt-2.5">
-              {cnpj && (
+              {documento && (
                 <button
                   type="button"
-                  onClick={copyCnpj}
-                  title="Copiar CNPJ" aria-label="Copiar CNPJ"
+                  onClick={copyDocumento}
+                  title={`Copiar ${rotuloDoc}`} aria-label={`Copiar ${rotuloDoc}`}
                   className="inline-flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted hover:text-fg tnum transition-colors"
                 >
                   {copied ? <Check size={13} className="text-success" /> : <Copy size={13} />}
-                  {formatCnpj(cnpj)}
+                  {formatDocumento(kind, cnpj, cpf)}
                 </button>
               )}
               {location && (
