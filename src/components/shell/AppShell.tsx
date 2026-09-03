@@ -284,7 +284,7 @@ export function AppShell({
         )}
 
         {/* Page content */}
-        <main className="scroll-y flex-1 overflow-y-auto">
+        <main className="scroll-y scroll-gutter-stable flex-1 overflow-y-auto">
           {children}
         </main>
       </div>

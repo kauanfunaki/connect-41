@@ -356,6 +356,17 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   scrollbar-width: thin;
   scrollbar-color: var(--c41-scrollbar-thumb) transparent;
 }
+
+/* Reserva o gutter da barra sempre, na área principal e só nela.
+
+   Sem isto, uma lista que cresce além da altura da tela (expandir a árvore de
+   filiais em /empresas, aplicar um filtro, virar a página) faz a barra do
+   <main> aparecer: o content box encolhe 9px e o PageContainer, que é
+   `mx-auto`, salta ~4px para a esquerda — a tela inteira parece se mover.
+
+   Não vai no `.scroll-y` genérico de propósito: em dropdown, sidebar e modal
+   o gutter reservado vira faixa vazia permanente num container estreito. */
+.scroll-gutter-stable { scrollbar-gutter: stable; }
 .c41-scrollbar::-webkit-scrollbar, .scroll-y::-webkit-scrollbar, .scroll-x::-webkit-scrollbar {
   width: 9px; height: 9px;
 }
