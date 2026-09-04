@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
-import { ArrowRight, Blocks, CalendarDays, CreditCard, EyeOff, Globe, Headset, Layers, Puzzle, Receipt, Repeat, Scale, ScrollText, Settings2, ShieldCheck, Tag, Target, Users2, Video } from "lucide-react";
+import { ArrowRight, Blocks, CalendarDays, CreditCard, EyeOff, Globe, Headset, Landmark, Layers, Puzzle, Receipt, Repeat, Scale, ScrollText, Settings2, ShieldCheck, Tag, Target, Users2, Video } from "lucide-react";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
 import { getPrisma } from "@/lib/prisma";
@@ -109,7 +109,8 @@ export default async function AdminPage() {
 
   cards.push(
     { group: "catalogos", href: "/admin/campos", icon: <Puzzle size={20} />, title: "Campos Customizados", description: "Campos extras por setor e entidade" },
-    { group: "catalogos", href: "/admin/tags", icon: <Tag size={20} />, title: "Tags", description: "Tags coloridas reaproveitáveis no Kanban" }
+    { group: "catalogos", href: "/admin/tags", icon: <Tag size={20} />, title: "Tags", description: "Tags coloridas reaproveitáveis no Kanban" },
+    { group: "catalogos", href: "/admin/plano-de-contas", icon: <Landmark size={20} />, title: "Plano de Contas", description: "Categorias que classificam o lançamento do documento fiscal" }
   );
 
   if (canManageMeetings(ctx)) {
