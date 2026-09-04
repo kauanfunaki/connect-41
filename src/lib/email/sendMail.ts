@@ -13,6 +13,46 @@ export type SmtpTestConfig = {
 
 export type SmtpResult = { ok: true } | { ok: false; error: string };
 
+/**
+ * Envia e registra o que o servidor de fato respondeu.
+ *
+ * `sendMail` devolve `accepted`, `rejected` e `response` — a resposta literal do
+ * relay — e o código descartava os três, retornando só `{ ok: true }`. Com isso
+ * "entregou" e "aceitou e descartou" ficam indistinguíveis no log, que é
+ * exatamente o buraco que fez a investigação de 2026-09-04 durar uma sessão
+ * inteira: o Connect mandava de `noreply@41tech.com.br`, domínio cujo DNS proíbe
+ * envio (`SPF -all` + `DMARC p=reject` + MX nulo), o relay local aceitava sem
+ * reclamar, o Gmail descartava do outro lado, e **não sobrava registro nenhum**
+ * de que a mensagem tinha morrido. Nem erro, nem bounce.
+ *
+ * Cuidado ao ler: `accepted`/`rejected` são o veredito do **próximo salto**, não
+ * da entrega final. Um relay que aceita tudo devolve `accepted` mesmo para
+ * endereço que vai quicar depois. O que isto separa é "nem saiu daqui" de "saiu
+ * e sumiu lá fora" — que era a pergunta sem resposta.
+ *
+ * Só registra: quem decide o que fazer com a falha continua sendo o `catch` de
+ * cada função.
+ */
+async function enviarComRegistro(
+  transporter: nodemailer.Transporter,
+  rotulo: string,
+  mensagem: Parameters<nodemailer.Transporter["sendMail"]>[0]
+): Promise<void> {
+  const info = await transporter.sendMail(mensagem);
+  console.info(
+    `[${rotulo}] enviado`,
+    JSON.stringify({
+      messageId: info.messageId,
+      accepted: info.accepted,
+      rejected: info.rejected,
+      response: info.response,
+      // O envelope diz de quem o relay ACHA que é a mensagem — é o endereço que
+      // o receptor confere contra o SPF, e nem sempre é igual ao cabeçalho From.
+      envelopeFrom: info.envelope?.from,
+    })
+  );
+}
+
 export async function verifySmtpConnection(config: SmtpTestConfig): Promise<SmtpResult> {
   const transporter = nodemailer.createTransport({
     host: config.host,
@@ -230,7 +270,7 @@ export async function sendClientDocumentEmail(input: SendClientDocumentEmailInpu
   );
 
   try {
-    await transporter.sendMail({
+    await enviarComRegistro(transporter, "sendClientDocumentEmail", {
       from: `"${config.fromName}" <${config.fromEmail}>`,
       to: input.to,
       subject: `Novo documento: ${input.documentTitle}`,
@@ -282,7 +322,7 @@ export async function sendPasswordResetEmail(input: SendPasswordResetEmailInput)
   `;
 
   try {
-    await transporter.sendMail({
+    await enviarComRegistro(transporter, "sendPasswordResetEmail", {
       from: `"${config.fromName}" <${config.fromEmail}>`,
       to: input.to,
       subject: "Redefinição de senha — Connect",
@@ -339,7 +379,7 @@ export async function sendAdmissaoEmail(input: SendAdmissaoEmailInput): Promise<
   `;
 
   try {
-    await transporter.sendMail({
+    await enviarComRegistro(transporter, "sendAdmissaoEmail", {
       from: `"${config.fromName}" <${config.fromEmail}>`,
       to: input.to,
       subject: "Admissão digital — Connect",
@@ -400,7 +440,7 @@ export async function sendTesteEmail(input: SendTesteEmailInput): Promise<SmtpRe
   `;
 
   try {
-    await transporter.sendMail({
+    await enviarComRegistro(transporter, "sendTesteEmail", {
       from: `"${config.fromName}" <${config.fromEmail}>`,
       to: input.to,
       subject: "Teste do processo seletivo — Connect",
@@ -456,7 +496,7 @@ export async function sendInterviewInviteEmail(input: SendInterviewInviteEmailIn
   `;
 
   try {
-    await transporter.sendMail({
+    await enviarComRegistro(transporter, "sendInterviewInviteEmail", {
       from: `"${config.fromName}" <${config.fromEmail}>`,
       to: input.to,
       subject: `Entrevista agendada — ${input.vagaTitle}`,
