@@ -88,8 +88,17 @@ export function AcervoTable({ documentos, total, pagina, porPagina, filtrosDaUrl
                     <p>{formatCalendarDate(d.issuedAt)}</p>
                     <p className="text-[length:var(--fs-micro)] text-fg-muted">{competenciaLegivel(d.competence)}</p>
                   </td>
-                  <td className="px-4 py-3 text-right text-fg tnum whitespace-nowrap">
-                    {MOEDA.format(Number(d.amount))}
+                  <td className="px-4 py-3 text-right tnum whitespace-nowrap">
+                    {/* Linha PARCIAL do índice do SPED vem sem valor. Mostrar
+                        R$ 0,00 mentiria sobre uma nota que existe — e zero soma
+                        no fechamento. */}
+                    {d.amount === null ? (
+                      <span className="text-fg-muted" title="Valor não veio do índice do SPED">
+                        sem valor
+                      </span>
+                    ) : (
+                      <span className="text-fg">{MOEDA.format(Number(d.amount))}</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-fg-secondary whitespace-nowrap">
                     {direcao === "PAGAR" ? "A pagar" : direcao === "RECEBER" ? "A receber" : "—"}

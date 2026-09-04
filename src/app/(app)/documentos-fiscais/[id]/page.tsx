@@ -12,6 +12,10 @@ import { obterDocumento } from "@/lib/fiscal/data";
 import { alcanceDaEquipe } from "../alcance";
 import { definirDestino } from "./actions";
 import { DestinoControl } from "@/components/fiscal/DestinoControl";
+import { LancamentoCard } from "@/components/fiscal/LancamentoCard";
+import { lancarDocumento, estornarLancamento } from "./lancar";
+import { podeLancar, vencimentoPresumido } from "@/lib/financeiro/lancamento";
+import { getPrisma } from "@/lib/prisma";
 import { direcaoDoLancamento, precisaDeEstorno } from "@/lib/fiscal/documentos";
 import { documentoDaEmpresa } from "@/lib/companyTaxId";
 import { nomeExibicao } from "@/lib/companyName";
@@ -55,6 +59,27 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
   });
   const estorno = precisaDeEstorno({ situacao: doc.situation, destino: doc.destination });
 
+  // O veredito é calculado aqui, no servidor, e não no componente: a mesma
+  // função que a action usa para recusar é a que a tela usa para explicar. Duas
+  // cópias da regra é como a tela oferece um botão que a action nega.
+  const veredito = podeLancar({
+    situacao: doc.situation,
+    destino: doc.destination,
+    removidoNaOrigem: doc.removedAtOrigin,
+    jaTemLancamento: doc.financeEntry !== null,
+    valor: doc.amount === null ? null : String(doc.amount),
+    direcao,
+  });
+
+  const categorias =
+    veredito.pode && !doc.financeEntry
+      ? await getPrisma().financeCategory.findMany({
+          where: { tenantId: ctx.tenantId, active: true, kind: direcao === "RECEBER" ? "RECEBER" : "PAGAR" },
+          orderBy: { name: "asc" },
+          select: { id: true, name: true },
+        })
+      : [];
+
   return (
     <PageContainer variant="narrow">
       <BackButton className="mb-3" />
@@ -69,6 +94,23 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
       <p className="text-[length:var(--fs-helper)] text-fg-muted mb-6">
         {nomeExibicao(doc.company)} · {competenciaLegivel(doc.competence)}
       </p>
+
+      {doc.removedAtOrigin && (
+        <Card className="p-4 mb-4 border-danger/40 bg-danger-bg">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle size={16} className="text-danger flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[length:var(--fs-ui)] font-semibold text-danger">Removido na origem</p>
+              <p className="text-[length:var(--fs-helper)] text-fg-secondary mt-0.5">
+                O índice do SPED deixou de ter este documento — em geral porque o Portal Nacional
+                passou a mostrá-lo como cancelado ou substituído. Ele saiu da listagem, mas a linha
+                fica aqui: se já tiver virado lançamento, alguém precisa decidir o estorno.
+                {doc.removedAtOriginAt ? ` Detectado em ${formatInstantDate(doc.removedAtOriginAt)}.` : ""}
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {estorno && (
         <Card className="p-4 mb-4 border-danger/40 bg-danger-bg">
@@ -92,10 +134,20 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="Tipo" value={TIPO_LABEL[doc.type]} />
           <InfoRow label="Emissão" value={formatCalendarDate(doc.issuedAt, { day: "2-digit", month: "long", year: "numeric" })} />
-          <InfoRow label="Valor total" value={MOEDA.format(Number(doc.amount))} />
+          <InfoRow
+            label="Valor total"
+            value={doc.amount === null ? "Não veio do índice" : MOEDA.format(Number(doc.amount))}
+          />
           <InfoRow label="Competência" value={competenciaLegivel(doc.competence)} />
           <InfoRow label="Chave de acesso" value={doc.accessKey} mono />
-          <InfoRow label="Origem" value={ORIGEM_LABEL[doc.origin]} />
+          <InfoRow
+            label="Origem"
+            value={
+              doc.origin === "SPED" && doc.completude === "PARCIAL"
+                ? `${ORIGEM_LABEL[doc.origin]} · linha parcial`
+                : ORIGEM_LABEL[doc.origin]
+            }
+          />
         </div>
       </Card>
 
@@ -129,6 +181,34 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
           podeDecidir={canManageSector(ctx, SECTOR)}
           action={definirDestino}
         />
+      </Card>
+
+      <LancamentoCard
+        documentoId={doc.id}
+        direcao={direcao === "RECEBER" ? "RECEBER" : "PAGAR"}
+        podeDecidir={canManageSector(ctx, SECTOR)}
+        categorias={categorias}
+        vencimentoPresumidoIso={vencimentoPresumido(doc.issuedAt).toISOString().slice(0, 10)}
+        impedimento={veredito.pode || doc.financeEntry ? null : veredito.explicacao}
+        lancamento={
+          doc.financeEntry
+            ? {
+                id: doc.financeEntry.id,
+                kind: doc.financeEntry.kind,
+                status: doc.financeEntry.status,
+                dueDateLabel: formatCalendarDate(doc.financeEntry.dueDate),
+                amountLabel: MOEDA.format(Number(doc.financeEntry.amount)),
+                categoria: doc.financeEntry.category?.name ?? null,
+                contraparte: doc.financeEntry.counterparty.name,
+              }
+            : null
+        }
+        lancarAction={lancarDocumento}
+        estornarAction={estornarLancamento}
+      />
+
+      <Card className="p-5 mt-4">
+        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-2">Registro</h2>
         {doc.uploadedBy && (
           <p className="text-[length:var(--fs-micro)] text-fg-muted mt-4">
             Subido por {doc.uploadedBy.name} em {formatInstantDate(doc.createdAt)}.

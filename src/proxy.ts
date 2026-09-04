@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ehCaminhoDoPortal, ehRotaPublicaDoPortal, PORTAL_COOKIE } from "@/lib/auth/portal";
 import { jwtVerify } from "jose";
 import type { AccessTokenPayload } from "@/lib/auth/types";
 import { COOKIE_SETOR_ATIVO, HEADER_SETOR_ATIVO, resolveSectorHint } from "@/lib/auth/activeSector";
@@ -9,6 +10,12 @@ import { COOKIE_SETOR_ATIVO, HEADER_SETOR_ATIVO, resolveSectorHint } from "@/lib
 async function verifyAccessEdge(token: string): Promise<AccessTokenPayload> {
   const secret = new TextEncoder().encode(process.env.JWT_ACCESS_SECRET ?? "");
   const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
+  // Token de portal não vale como sessão interna, mesmo assinado com o mesmo
+  // segredo. Espelha a recusa de `verifyAccess` em jwt.ts — o Edge precisa da
+  // mesma regra porque é ele quem decide antes.
+  if ((payload as { kind?: string }).kind === "portal") {
+    throw new Error("Token de portal não vale como sessão interna");
+  }
   return payload as unknown as AccessTokenPayload;
 }
 
@@ -150,6 +157,31 @@ export async function proxy(req: NextRequest) {
   stripIdentityHeaders(headers);
 
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+    return NextResponse.next({ request: { headers } });
+  }
+
+  // ── Portal do cliente ──────────────────────────────────────────────────────
+  //
+  // Caminho e cookie próprios, decididos ANTES de qualquer página rodar. As
+  // duas direções são fechadas aqui, e não em cada tela:
+  //
+  // - rota do portal exige o cookie do portal. Sessão interna não abre o portal
+  //   (o token interno não tem `kind: "portal"` e `verifyPortalAccess` recusa);
+  // - rota interna exige o cookie interno, e `verifyAccess` recusa um token de
+  //   portal mesmo que ele chegue no cookie certo.
+  //
+  // O proxy só confere presença; quem valida assinatura e `kind` é o layout do
+  // portal, em runtime Node — o Edge aqui não precisa saber mais que isso.
+  if (ehCaminhoDoPortal(pathname)) {
+    if (ehRotaPublicaDoPortal(pathname)) {
+      return NextResponse.next({ request: { headers } });
+    }
+    if (!req.cookies.get(PORTAL_COOKIE)?.value) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/portal/login";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
     return NextResponse.next({ request: { headers } });
   }
 

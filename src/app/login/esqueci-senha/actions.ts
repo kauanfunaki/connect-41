@@ -26,6 +26,28 @@ export async function solicitarRedefinicaoSenha(
   const prisma = getPrisma();
   const user = await prisma.user.findFirst({ where: { email, active: true } });
 
+  // Cliente do portal usa o MESMO formulário — foi a decisão de 2026-09-03, e
+  // evita que o cliente tenha de saber que existem duas telas de recuperação.
+  // A conta interna vence quando o e-mail existe nas duas: quem tem as duas é
+  // gente da 41 com um acesso de cliente, e o caminho interno é o que ela usa.
+  const portalUser = user
+    ? null
+    : await prisma.portalUser.findFirst({ where: { email, active: true } });
+
+  if (portalUser) {
+    const smtp = await prisma.tenantSmtpConfig.findUnique({ where: { tenantId: portalUser.tenantId } });
+    if (smtp) {
+      const token = await createPasswordResetToken(portalUser.id, "PORTAL_USER");
+      const sent = await sendPasswordResetEmail({
+        tenantId: portalUser.tenantId,
+        to: email,
+        resetToken: token,
+        destino: "portal",
+      });
+      if (sent.ok) return { success: true };
+    }
+  }
+
   if (user) {
     const smtpConfigured = await prisma.tenantSmtpConfig.findUnique({ where: { tenantId: user.tenantId } });
     if (smtpConfigured) {

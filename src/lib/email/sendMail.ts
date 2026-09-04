@@ -247,6 +247,8 @@ export type SendPasswordResetEmailInput = {
   tenantId: string;
   to: string;
   resetToken: string;
+  /** Cliente do portal redefine em `/portal/redefinir-senha`, não em `/login/...`. */
+  destino?: "interno" | "portal";
 };
 
 export async function sendPasswordResetEmail(input: SendPasswordResetEmailInput): Promise<SmtpResult> {
@@ -257,7 +259,8 @@ export async function sendPasswordResetEmail(input: SendPasswordResetEmailInput)
   const { transporter, config } = transport;
 
   const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
-  const resetUrl = `${baseUrl}/login/redefinir-senha?token=${input.resetToken}`;
+  const caminho = input.destino === "portal" ? "/portal/redefinir-senha" : "/login/redefinir-senha";
+  const resetUrl = `${baseUrl}${caminho}?token=${input.resetToken}`;
 
   const html = `
     <div style="font-family: Arial, Helvetica, sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">

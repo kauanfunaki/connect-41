@@ -519,6 +519,11 @@ model Tenant {
   chatwootAgentLinks       ChatwootAgentLink[]
   chatwootSenderRoles      ChatwootSenderRole[]
   fiscalDocuments          FiscalDocument[]
+  spedSyncStates           SpedSyncState[]
+  portalUsers              PortalUser[]
+  financeCategories        FinanceCategory[]
+  financeCounterparties    FinanceCounterparty[]
+  financeEntries           FinanceEntry[]
   agentEvaluationSummaries AgentEvaluationSummary[]
   sectorTaskViews          SectorTaskView[]
 
@@ -698,6 +703,8 @@ model User {
   responsibleFor             CompanyService[]        @relation("CompanyServiceResponsible")
   oauthAccounts              OAuthAccount[]
   fiscalDocumentsUploaded    FiscalDocument[]
+  financeEntriesCreated      FinanceEntry[]          @relation("FinanceEntryCreatedBy")
+  financeEntriesReviewed     FinanceEntry[]          @relation("FinanceEntryReviewedBy")
   meetingsCreated            Meeting[]               @relation("MeetingCreatedBy")
   meetingAttendances         MeetingAttendee[]
   clientDocumentsCreated     ClientDocument[]
@@ -743,9 +750,60 @@ model RefreshToken {
 
 // Token de redefinição de senha por e-mail — mesmo padrão do RefreshToken
 // (hash armazenado, nunca o token cru; de uso único via usedAt).
+/// De quem é o token de redefinição: conta interna ou cliente do portal.
+///
+/// Discriminador em vez de duas tabelas: expiração, uso único e limpeza são
+/// idênticos nos dois casos, e duplicar a tabela duplicaria as três regras.
+/// Sem ele, um token de portal devolveria um id que não existe em `users` — o
+/// consumo falharia por acidente em vez de por desenho.
+enum PasswordResetSubject {
+  USER
+  PORTAL_USER
+}
+
+/// Conta de acesso de um CLIENTE ao portal.
+///
+/// **Tabela separada de `User`, e não um papel novo nele** — decisão revista em
+/// 2026-09-03, depois de a primeira tentativa ter sido pelo papel.
+///
+/// O que a separação compra, e o papel não comprava:
+///
+/// 1. **Não existe papel para atribuir errado.** Com papel novo em `User`, um
+///    clique errado no cadastro daria acesso interno a um cliente. Aqui o pior
+///    caso de um erro é o cliente não conseguir entrar.
+/// 2. **`clientGroupId` é OBRIGATÓRIO.** Com o papel, ele teria de ser anulável
+///    (conta interna não tem grupo), e "conta de portal sem grupo" existiria
+///    como estado a defender. Aqui esse estado não é representável.
+/// 3. **Sessão própria.** O token do portal tem `kind: "portal"` e cookie
+///    próprio; o verificador interno o recusa e vice-versa. Uma sessão não vira
+///    a outra nem por engano de cookie.
+model PortalUser {
+  id            String @id @default(uuid())
+  tenantId      String
+  /// Sempre presente: é o que define o que esta conta enxerga.
+  clientGroupId String
+
+  name         String  @db.VarChar(120)
+  email        String  @db.VarChar(120)
+  passwordHash String  @db.VarChar(255)
+  active       Boolean @default(true)
+  lastLoginAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  clientGroup ClientGroup @relation(fields: [clientGroupId], references: [id])
+
+  @@unique([tenantId, email])
+  @@index([tenantId, clientGroupId])
+  @@map("portal_users")
+}
+
 model PasswordResetToken {
   id        String    @id @default(uuid())
   userId    String
+  subject   PasswordResetSubject @default(USER)
   tokenHash String    @db.VarChar(255)
   expiresAt DateTime
   usedAt    DateTime?
@@ -781,8 +839,9 @@ model ClientGroup {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant    Tenant    @relation(fields: [tenantId], references: [id])
-  companies Company[]
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  companies   Company[]
+  portalUsers PortalUser[]
 
   @@index([tenantId])
   @@map("client_groups")
@@ -874,6 +933,8 @@ model Company {
   chatwootContactLinks ChatwootContactLink[]
   bpoCredentials       BpoCredential[]
   fiscalDocuments      FiscalDocument[]
+  financeCounterparties FinanceCounterparty[]
+  financeEntries        FinanceEntry[]
 
   // Casar documento fiscal com empresa pelo CNPJ do XML exige que o par seja
   // único: com duas empresas do mesmo tenant sob o mesmo CNPJ o casamento é
@@ -1957,6 +2018,16 @@ enum FiscalDocumentSituation {
 // campo, "cancelada" e "lançada" competiriam pela mesma coluna, e a nota
 // cancelada DEPOIS de lançada — que existe e é o caso que dói — não teria como
 // ser representada.
+/// Quanto do documento o índice do SPED conseguiu montar.
+///
+/// `PARCIAL` anda junto com `amount = null`: a linha foi montada só do que a
+/// chave de acesso carrega. Por isso o valor é anulável — **`null` não é zero**,
+/// e mostrar R$ 0,00 seria mentir sobre uma nota que existe.
+enum FiscalDocumentCompletude {
+  COMPLETO
+  PARCIAL
+}
+
 enum FiscalDocumentDestination {
   PENDENTE
   LANCADO
@@ -2012,7 +2083,10 @@ model FiscalDocument {
 
   /// Dinheiro é Decimal, nunca Float. O protótipo usa Float por limitação do
   /// SQLite; aqui o centavo tem de fechar com o que o cliente pagou.
-  amount   Decimal  @db.Decimal(12, 2)
+  ///
+  /// Anulável por causa do índice do SPED: linha `PARCIAL` vem sem valor, e
+  /// gravar zero ali inventaria um número que ninguém apurou.
+  amount   Decimal? @db.Decimal(12, 2)
   issuedAt DateTime
 
   /// Competência "AAAA-MM" — string e não data, porque é agrupador de mês e não
@@ -2028,6 +2102,36 @@ model FiscalDocument {
   /// meses depois — e "ignorado" vira lixo silencioso.
   ignoredReason String? @db.VarChar(255)
 
+  completude FiscalDocumentCompletude @default(COMPLETO)
+
+  /// Identidade do documento **do lado do SPED**: o par (tipo, identificador).
+  ///
+  /// Guardado porque é o que as rotas unitária e de PDF pedem — sem ele não dá
+  /// para buscar o PDF de uma NFS-e, que não tem chave de acesso nacional.
+  /// Nulo em documento que entrou por upload.
+  spedTipo          String? @db.VarChar(8)
+  spedIdentificador String? @db.VarChar(120)
+
+  /// O documento saiu da origem — a lápide chegou no delta.
+  ///
+  /// **Marcado, não apagado.** O contrato diz que a projeção apaga, e da
+  /// listagem ele some mesmo. Mas a linha sobrevive por dois motivos: a
+  /// reimportação **ressuscita** o documento (`removido: false`), e virar uma
+  /// bandeira faz disso um `update` em vez de recriar do zero; e quando existir
+  /// lançamento (etapa 7), é esta linha que carrega o sinal de "documento de
+  /// origem cancelado" para alguém decidir o estorno.
+  ///
+  /// Só vale para documento de origem SPED: o que alguém subiu à mão não é do
+  /// índice para remover.
+  removedAtOrigin   Boolean   @default(false)
+  removedAtOriginAt DateTime?
+
+  /// O SPED tem XML guardado para renderizar o PDF.
+  ///
+  /// Primeira das duas defesas: `false` evita o pedido. A segunda é o 409
+  /// `sem_xml_armazenado`, para a corrida entre a sincronização e a realidade.
+  renderizavel Boolean @default(true)
+
   /// Caminho do XML/PDF guardado, quando veio por upload.
   filePath     String? @db.VarChar(255)
   uploadedById String?
@@ -2035,15 +2139,181 @@ model FiscalDocument {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant     Tenant @relation(fields: [tenantId], references: [id])
-  company    Company @relation(fields: [companyId], references: [id])
-  uploadedBy User?   @relation(fields: [uploadedById], references: [id])
+  tenant      Tenant        @relation(fields: [tenantId], references: [id])
+  company     Company       @relation(fields: [companyId], references: [id])
+  uploadedBy  User?         @relation(fields: [uploadedById], references: [id])
+  financeEntry FinanceEntry?
 
   @@unique([tenantId, dedupKey])
   @@index([tenantId, companyId, competence])
   @@index([tenantId, companyId, destination])
   @@index([tenantId, accessKey])
+  @@index([tenantId, spedTipo, spedIdentificador])
   @@map("fiscal_documents")
+}
+
+// ─── Financeiro (Fase 2 · etapa 7) ───────────────────────────────────────────
+
+enum FinanceEntryKind {
+  PAGAR
+  RECEBER
+}
+
+/// Estado de um lançamento.
+///
+/// `PROVISORIO` é o que dá sentido ao nome "lançamento provisório": nasce assim
+/// quando vem de um documento fiscal, e é o que separa **o que a máquina propôs**
+/// do que uma pessoa conferiu. Sem esse estado, "provisório" viraria só um
+/// lançamento como outro qualquer.
+enum FinanceEntryStatus {
+  PROVISORIO
+  CONFERIDO
+  PAGO
+  CANCELADO
+}
+
+/// Plano de contas do tenant — a classificação que o DRE consome.
+model FinanceCategory {
+  id       String           @id @default(uuid())
+  tenantId String
+  name     String           @db.VarChar(120)
+  kind     FinanceEntryKind
+  /// Agrupador do DRE (ex.: "Despesas operacionais"). Texto e não enum: o
+  /// escritório monta o próprio, e engessar aqui obrigaria migration a cada
+  /// linha nova de relatório.
+  dreGroup String?          @db.VarChar(120)
+  active   Boolean          @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant      Tenant         @relation(fields: [tenantId], references: [id])
+  entries     FinanceEntry[]
+  padraoDe    FinanceCounterparty[]
+
+  @@unique([tenantId, name, kind])
+  @@index([tenantId, kind])
+  @@map("finance_categories")
+}
+
+/// Fornecedor ou cliente **da empresa do cliente** — não do escritório.
+///
+/// Um modelo só para os dois papéis, e não `Vendor` + `Customer` separados como
+/// no protótipo: o mesmo CNPJ costuma ser as duas coisas (compra-se de quem se
+/// vende), e duas tabelas fariam disso duas fichas que envelhecem em separado.
+model FinanceCounterparty {
+  id        String  @id @default(uuid())
+  tenantId  String
+  companyId String
+  name      String  @db.VarChar(180)
+  /// CNPJ ou CPF, só dígitos — é assim que se casa com a ponta do documento.
+  document  String? @db.VarChar(14)
+
+  /// Categoria que a próxima nota deste fornecedor herda.
+  ///
+  /// É a regra "categoria herdada do fornecedor da 2ª nota em diante": a
+  /// primeira nota de um fornecedor exige alguém classificar; da segunda em
+  /// diante o lançamento já nasce classificado. É conceito de contas a PAGAR —
+  /// no recebimento a categoria é opcional.
+  defaultCategoryId String?
+
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  company         Company          @relation(fields: [companyId], references: [id])
+  defaultCategory FinanceCategory? @relation(fields: [defaultCategoryId], references: [id])
+  entries         FinanceEntry[]
+
+  @@unique([tenantId, companyId, document])
+  @@index([tenantId, companyId])
+  @@map("finance_counterparties")
+}
+
+/// Conta a pagar ou a receber **da empresa cliente**.
+///
+/// Um modelo com `kind`, e não `Payable` + `Receivable`: os campos são os
+/// mesmos, a diferença é o sinal. Duas tabelas idênticas dobrariam toda consulta
+/// de fluxo de caixa e todo relatório.
+model FinanceEntry {
+  id        String           @id @default(uuid())
+  tenantId  String
+  companyId String
+  kind      FinanceEntryKind
+  status    FinanceEntryStatus @default(PROVISORIO)
+
+  counterpartyId String
+  /// Obrigatória em PAGAR, opcional em RECEBER — é a classificação que o DRE
+  /// consome, e despesa sem classificação não fecha relatório. A regra vive em
+  /// src/lib/financeiro/lancamento.ts, não numa constraint: o banco não sabe
+  /// expressar "obrigatório só quando kind=PAGAR".
+  categoryId     String?
+
+  /// Competência "AAAA-MM", herdada do documento quando vem de um.
+  competence String   @db.VarChar(7)
+  dueDate    DateTime
+  paidAt     DateTime?
+  amount     Decimal  @db.Decimal(12, 2)
+  description String? @db.VarChar(255)
+
+  /// Documento fiscal que originou o lançamento. **1:1**: relançar o mesmo
+  /// documento duplicaria valor no financeiro, e o unique é quem impede.
+  fiscalDocumentId String? @unique
+
+  createdById  String?
+  /// Quem conferiu o provisório. Nulo enquanto ninguém olhou.
+  reviewedById String?
+  reviewedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant         Tenant              @relation(fields: [tenantId], references: [id])
+  company        Company             @relation(fields: [companyId], references: [id])
+  counterparty   FinanceCounterparty @relation(fields: [counterpartyId], references: [id])
+  category       FinanceCategory?    @relation(fields: [categoryId], references: [id])
+  fiscalDocument FiscalDocument?     @relation(fields: [fiscalDocumentId], references: [id])
+  createdBy      User?               @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id])
+  reviewedBy     User?               @relation("FinanceEntryReviewedBy", fields: [reviewedById], references: [id])
+
+  @@index([tenantId, companyId, competence])
+  @@index([tenantId, companyId, kind, status])
+  @@index([tenantId, dueDate])
+  @@map("finance_entries")
+}
+
+/// Onde a sincronização com o SPED parou, por raiz de CNPJ.
+///
+/// Guarda **uma coisa que importa**: o `cursor_retomada`, opaco em base64,
+/// devolvido verbatim. Nunca parsear, nunca converter — ele carrega o instante
+/// **e** o desempate por (tipo, identificador), e é isso que impede o problema
+/// medido do lado de lá: um delta que devia vir vazio trouxe 91.435 documentos,
+/// porque um lote carimba dezenas de milhares no mesmo segundo e o corte por
+/// instante é `>=` de propósito.
+///
+/// O `watermark` fica só para tela e log. **Não volta para a API** — tirar ele do
+/// caminho de entrada foi decisão deliberada do contrato: fuso deixa de ser
+/// classe de problema por construção.
+model SpedSyncState {
+  id       String @id @default(uuid())
+  tenantId String
+  /// Raiz do CNPJ, 8 dígitos. É a chave de contribuinte do lado do SPED, e é
+  /// obrigatória em toda rota de lá — esquecê-la é 422, nunca "todos".
+  cnpjRaiz String @db.VarChar(8)
+
+  cursorRetomada String? @db.Text
+  watermark      String? @db.VarChar(60)
+  lastRunAt      DateTime?
+  lastError      String?   @db.VarChar(500)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, cnpjRaiz])
+  @@map("sped_sync_states")
 }
 
 model ConversationEvaluation {

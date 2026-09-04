@@ -29,6 +29,10 @@ function whereDoFiltro(alcance: AlcanceFiscal, filtro: FiltroDoAcervo): Prisma.F
   const busca = filtro.busca?.trim();
   return {
     ...whereDoAlcance(alcance),
+    // Documento removido na origem sai da listagem — é o "a projeção apaga" do
+    // contrato. A linha continua no banco de propósito (ver `removedAtOrigin`
+    // no schema), e quem abre o link direto ainda a encontra, com o aviso.
+    removedAtOrigin: false,
     ...(filtro.companyId ? { companyId: filtro.companyId } : {}),
     ...(filtro.competencia ? { competence: filtro.competencia } : {}),
     ...(filtro.tipo ? { type: filtro.tipo } : {}),
@@ -85,6 +89,8 @@ export async function listarDocumentos(
         origin: true,
         situation: true,
         destination: true,
+        completude: true,
+        renderizavel: true,
         company: { select: { id: true, name: true, displayName: true, kind: true, cnpj: true, cpf: true } },
       },
     }),
@@ -105,6 +111,20 @@ export async function obterDocumento(alcance: AlcanceFiscal, id: string) {
     include: {
       company: { select: { id: true, name: true, displayName: true, kind: true, cnpj: true, cpf: true } },
       uploadedBy: { select: { name: true } },
+      // O lançamento vem junto: a tela precisa saber se já existe para oferecer
+      // "lançar" ou "estornar", e uma segunda consulta para isso seria uma
+      // chance a mais de as duas discordarem.
+      financeEntry: {
+        select: {
+          id: true,
+          kind: true,
+          status: true,
+          dueDate: true,
+          amount: true,
+          category: { select: { name: true } },
+          counterparty: { select: { name: true } },
+        },
+      },
     },
   });
 }
