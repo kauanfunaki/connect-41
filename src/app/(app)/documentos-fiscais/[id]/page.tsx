@@ -13,6 +13,8 @@ import { alcanceDaEquipe } from "../alcance";
 import { definirDestino } from "./actions";
 import { DestinoControl } from "@/components/fiscal/DestinoControl";
 import { LancamentoCard } from "@/components/fiscal/LancamentoCard";
+import { EditarDocumentoCard } from "@/components/fiscal/EditarDocumentoCard";
+import { editarDocumento, excluirDocumento } from "./editar";
 import { lancarDocumento, estornarLancamento } from "./lancar";
 import { podeLancar, vencimentoPresumido } from "@/lib/financeiro/lancamento";
 import { getPrisma } from "@/lib/prisma";
@@ -69,6 +71,14 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
     jaTemLancamento: doc.financeEntry !== null,
     valor: doc.amount === null ? null : String(doc.amount),
     direcao,
+  });
+
+  // Empresas do tenant para o seletor de correção: reatribuir o documento é a
+  // correção mais comum quando a importação casou com a empresa errada.
+  const empresas = await getPrisma().company.findMany({
+    where: { tenantId: ctx.tenantId, status: { in: ["ACTIVE", "PROSPECT"] } },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, displayName: true },
   });
 
   const categorias =
@@ -205,6 +215,25 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
         }
         lancarAction={lancarDocumento}
         estornarAction={estornarLancamento}
+      />
+
+      <EditarDocumentoCard
+        documentoId={doc.id}
+        acao={editarDocumento}
+        excluir={excluirDocumento.bind(null, doc.id)}
+        empresas={empresas.map((e) => ({ id: e.id, nome: nomeExibicao(e) }))}
+        bloqueado={doc.financeEntry !== null}
+        editadoEm={doc.editedAt ? formatInstantDate(doc.editedAt) : null}
+        valores={{
+          companyId: doc.companyId,
+          number: doc.number,
+          series: doc.series,
+          issuerName: doc.issuerName,
+          recipientName: doc.recipientName,
+          amount: doc.amount === null ? null : String(doc.amount),
+          issuedAt: doc.issuedAt.toISOString().slice(0, 10),
+          competence: doc.competence,
+        }}
       />
 
       <Card className="p-5 mt-4">

@@ -10,7 +10,7 @@ export const SECTOR_COLOR_PALETTE = [
 // de cada tenant. A partir daí o cadastro vive 100% na tabela `sectors`.
 export const DEFAULT_SECTORS = [
   { code: "tech", label: "Tech", color: "#2E6FB8" },
-  { code: "dprh", label: "DP / RH", color: "#7C5CBF" },
+  { code: "dp", label: "DP", color: "#7C5CBF" },
   { code: "recrutamento", label: "Recrutamento", color: "#1E8E5A" },
   { code: "societario", label: "Societário", color: "#C8860D" },
   { code: "financeiro", label: "Financeiro", color: "#0E9384" },

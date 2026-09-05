@@ -38,7 +38,7 @@ type SectorModule = { code: string; label: string; href: string };
 // Ícone linear por setor (identidade visual; cor do setor continua vindo do dot).
 const SECTOR_ICONS: Record<string, React.ReactNode> = {
   tech: <Columns3 size={16} />,
-  dprh: <UserRoundCog size={16} />,
+  dp: <UserRoundCog size={16} />,
   recrutamento: <UserSearch size={16} />,
   societario: <FileSignature size={16} />,
   financeiro: <WalletCards size={16} />,

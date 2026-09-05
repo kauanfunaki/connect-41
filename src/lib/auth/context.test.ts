@@ -54,22 +54,22 @@ describe("predicados de papel", () => {
 describe("predicados por setor", () => {
   it("canManageSector: admin do tenant sempre; sector_admin só no próprio setor", () => {
     expect(canManageSector(ctx("ADMIN"), "fiscal")).toBe(true);
-    expect(canManageSector(ctx("SECTOR_ADMIN", ["dprh"]), "dprh")).toBe(true);
-    expect(canManageSector(ctx("SECTOR_ADMIN", ["dprh"]), "fiscal")).toBe(false);
-    expect(canManageSector(ctx("READONLY"), "dprh")).toBe(false);
+    expect(canManageSector(ctx("SECTOR_ADMIN", ["dp"]), "dp")).toBe(true);
+    expect(canManageSector(ctx("SECTOR_ADMIN", ["dp"]), "fiscal")).toBe(false);
+    expect(canManageSector(ctx("READONLY"), "dp")).toBe(false);
   });
 
   it("canActOnSector: full access age em qualquer setor (menos readonly)", () => {
     expect(canActOnSector(ctx("ADMIN"), "fiscal")).toBe(true);
     expect(canActOnSector(ctx("READONLY"), "fiscal")).toBe(false);
-    expect(canActOnSector(ctx("SECTOR_USER", ["dprh"]), "dprh")).toBe(true);
-    expect(canActOnSector(ctx("SECTOR_USER", ["dprh"]), "fiscal")).toBe(false);
+    expect(canActOnSector(ctx("SECTOR_USER", ["dp"]), "dp")).toBe(true);
+    expect(canActOnSector(ctx("SECTOR_USER", ["dp"]), "fiscal")).toBe(false);
   });
 
   it("canViewSector: full access vê tudo; demais só setores atribuídos", () => {
     expect(canViewSector(ctx("READONLY"), "fiscal")).toBe(true);
-    expect(canViewSector(ctx("SECTOR_USER", ["dprh"]), "dprh")).toBe(true);
-    expect(canViewSector(ctx("SECTOR_USER", ["dprh"]), "fiscal")).toBe(false);
+    expect(canViewSector(ctx("SECTOR_USER", ["dp"]), "dp")).toBe(true);
+    expect(canViewSector(ctx("SECTOR_USER", ["dp"]), "fiscal")).toBe(false);
   });
 
   it("subscriptionReadOnly bloqueia canActOnSector/canManageSector mesmo pra admin", () => {

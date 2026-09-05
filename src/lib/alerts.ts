@@ -69,7 +69,7 @@ async function checkVacationsExpiring(tenantId: string, today: Date): Promise<nu
     const message = overdue
       ? `Férias de ${v.person.name} vencidas há ${dias} dia(s).`
       : `Férias de ${v.person.name} vencem em ${dias} dia(s).`;
-    await notifySector("dprh", { tenantId, type: "VACATION_EXPIRING", message, entityType: "PERSON", entityId: v.personId });
+    await notifySector("dp", { tenantId, type: "VACATION_EXPIRING", message, entityType: "PERSON", entityId: v.personId });
     sent++;
   }
   return sent;
@@ -97,7 +97,7 @@ async function checkProbationDeadlines(tenantId: string, today: Date): Promise<n
     const key = `PROBATION_DEADLINE:${p.id}:${dias}`;
     if (!(await tryDispatch(tenantId, key, today))) continue;
     const message = `Contrato de experiência de ${p.name} completa ${dias} dias.`;
-    await notifySector("dprh", { tenantId, type: "PROBATION_DEADLINE", message, entityType: "PERSON", entityId: p.id });
+    await notifySector("dp", { tenantId, type: "PROBATION_DEADLINE", message, entityType: "PERSON", entityId: p.id });
     sent++;
   }
   return sent;
@@ -125,7 +125,7 @@ async function checkExamesVencendo(tenantId: string, today: Date): Promise<numbe
     const message = overdue
       ? `ASO de ${e.person.name} vencido há ${dias} dia(s).`
       : `ASO de ${e.person.name} vence em ${dias} dia(s).`;
-    await notifySector("dprh", { tenantId, type: "EXAM_DUE", message, entityType: "PERSON", entityId: e.personId });
+    await notifySector("dp", { tenantId, type: "EXAM_DUE", message, entityType: "PERSON", entityId: e.personId });
     sent++;
   }
   return sent;
@@ -293,7 +293,7 @@ async function checkRescisoesPrazo(tenantId: string, today: Date): Promise<numbe
           ? `Prazo de pagamento da rescisão de ${t.person.name} vence hoje.`
           : `Prazo de pagamento da rescisão de ${t.person.name} vence em ${diasRestantes} dia(s) (${dueDate.toISOString().slice(0, 10)}).`;
 
-    await notifySector("dprh", { tenantId, type: "RESCISAO_PRAZO", message, entityType: "PERSON", entityId: t.personId });
+    await notifySector("dp", { tenantId, type: "RESCISAO_PRAZO", message, entityType: "PERSON", entityId: t.personId });
     sent++;
   }
   return sent;
@@ -342,7 +342,7 @@ async function checkTreinamentosVencendo(tenantId: string, today: Date): Promise
           ? `Treinamento "${p.class.training.name}" de ${p.person.name} vence hoje.`
           : `Treinamento "${p.class.training.name}" de ${p.person.name} vence em ${dias} dia(s).`;
 
-    await notifySector("dprh", { tenantId, type: "TRAINING_EXPIRING", message, entityType: "PERSON", entityId: p.personId });
+    await notifySector("dp", { tenantId, type: "TRAINING_EXPIRING", message, entityType: "PERSON", entityId: p.personId });
     sent++;
   }
   return sent;

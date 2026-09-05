@@ -2136,6 +2136,14 @@ model FiscalDocument {
   filePath     String? @db.VarChar(255)
   uploadedById String?
 
+  /// Marca que o documento foi corrigido a mao depois de importado.
+  ///
+  /// So a marca: quem, quando e o antes/depois vivem no AuditLog, que ja e o
+  /// sistema de registro disso. Serve para a tela poder avisar que o acervo
+  /// diverge do XML — sem isso a correcao fica invisivel e o numero passa a
+  /// mentir em silencio, que e exatamente o risco de deixar editar.
+  editedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

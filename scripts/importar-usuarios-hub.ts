@@ -44,7 +44,7 @@ const IGNORAR_EMAIL = new Set(["teste@41tech.local"]);
  *
  * Dois pontos que não são tradução direta:
  *
- * - **"Departamento Pessoal" e "Recursos Humanos" caem no mesmo `dprh`.** O
+ * - **"Departamento Pessoal" e "Recursos Humanos" caem no mesmo `dp`.** O
  *   Connect tem um setor só para os dois, rotulado "DP / RH". Não são setores
  *   distintos aqui.
  * - **"Sócios" vira `gestao`.** É o mais próximo que existe, e é como a Tatiane
@@ -56,8 +56,8 @@ const SETOR_HUB_PARA_CONNECT: Record<string, string> = {
   "BPO": "bpo",
   "Comercial": "comercial",
   "Contábil": "contabil",
-  "Departamento Pessoal": "dprh",
-  "Recursos Humanos": "dprh",
+  "Departamento Pessoal": "dp",
+  "Recursos Humanos": "dp",
   "Financeiro": "financeiro",
   "Fiscal": "fiscal",
   "Recrutamento": "recrutamento",

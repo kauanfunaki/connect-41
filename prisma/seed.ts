@@ -4,7 +4,7 @@ import { hashPassword } from "../src/lib/auth/password";
 
 const SECTORS = [
   "tech",
-  "dprh",
+  "dp",
   "recrutamento",
   "societario",
   "financeiro",
