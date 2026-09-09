@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 type Props = {
   action: () => Promise<void>;
   ativa: boolean;
@@ -13,16 +14,13 @@ type Props = {
  */
 export function ToggleCategoriaButton({ action, ativa }: Props) {
   return (
-    <button
-      type="button"
+    <Button
+      variant={ativa ? "secondary" : "success"}
+      size="sm"
       onClick={() => action()}
-      className={
-        ativa
-          ? "h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors flex-shrink-0"
-          : "h-8 px-3 rounded-md border border-success/30 text-[12px] font-medium text-success hover:bg-success/8 transition-colors flex-shrink-0"
-      }
+      className="flex-shrink-0"
     >
       {ativa ? "Desativar" : "Reativar"}
-    </button>
+    </Button>
   );
 }

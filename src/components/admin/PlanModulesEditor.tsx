@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { MODULE_CATALOG } from "@/lib/module-catalog";
 import { DEFAULT_SECTOR_LABELS } from "@/lib/sector-constants";
+import { Button } from "@/components/ui/Button";
 
 // Módulos agrupados por setor — só o nome do módulo ("Repositório de Senhas")
 // não diz de qual frente ele é na hora de montar um plano. A ordem de setores
@@ -59,13 +60,13 @@ export function PlanModulesEditor({ planId, allowedModuleCodes, action }: Props)
 
   return (
     <div className="mt-1.5">
-      <button
-        type="button"
+      <Button
+        variant="link"
         onClick={() => setOpen((v) => !v)}
-        className="text-[11px] text-brand hover:underline"
+        className="text-[11px]"
       >
         {open ? "Fechar módulos" : "Módulos deste plano"}
-      </button>
+      </Button>
 
       {open && (
         <div className="mt-2 border border-border rounded-md p-3 space-y-2.5 max-w-md">
@@ -98,14 +99,14 @@ export function PlanModulesEditor({ planId, allowedModuleCodes, action }: Props)
           )}
 
           <div className="flex items-center gap-2 pt-1">
-            <button
-              type="button"
+            <Button
+              variant="primary"
+              size="xs"
               onClick={save}
               disabled={isPending}
-              className="h-7 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
             >
               {isPending ? "Salvando…" : "Salvar"}
-            </button>
+            </Button>
             {saved && !isPending && <span className="text-[11px] text-success">Salvo.</span>}
           </div>
         </div>

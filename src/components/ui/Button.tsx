@@ -83,8 +83,12 @@ const SEM_CAIXA = new Set<Variant>(["link", "linkMuted"]);
 // os 18px/15px que este componente declarava (--fs-button, que ninguém
 // media até então).
 const SIZE_CLASS: Record<Size, string> = {
-  xs: "h-7 px-2.5 text-[length:var(--fs-ui)]",
-  sm: "h-8 px-3 text-[length:var(--fs-ui)]",
+  // xs e sm em 12px, e não nos 13px que este componente declarava: medido em
+  // 09/09, o app escreve `text-[12px]` em 56 dos 59 botões `h-8` e em 9 dos 12
+  // `h-7`. A medição original que o comentário abaixo cita só tinha coberto o
+  // `md` — onde 13px estava certo (54 contra 28).
+  xs: "h-7 px-2.5 text-[length:var(--fs-button-sm)]",
+  sm: "h-8 px-3 text-[length:var(--fs-button-sm)]",
   md: "h-9 px-4 text-[length:var(--fs-ui)]",
   // `lg` existe para formulário de página cheia — candidatura em /carreiras,
   // admissão, assinatura de documento, seletor de tema, DISC e quiz. São telas

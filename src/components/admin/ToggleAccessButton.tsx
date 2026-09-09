@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 type Props = {
   action: () => Promise<void>;
   hasAccess: boolean;
@@ -7,16 +8,13 @@ type Props = {
 
 export function ToggleAccessButton({ action, hasAccess }: Props) {
   return (
-    <button
-      type="button"
+    <Button
+      variant={hasAccess ? "danger" : "success"}
+      size="sm"
       onClick={() => action()}
-      className={
-        hasAccess
-          ? "h-8 px-3 rounded-md border border-danger/30 text-[12px] font-medium text-danger hover:bg-danger/8 transition-colors flex-shrink-0"
-          : "h-8 px-3 rounded-md border border-success/30 text-[12px] font-medium text-success hover:bg-success/8 transition-colors flex-shrink-0"
-      }
+      className="flex-shrink-0"
     >
       {hasAccess ? "Revogar acesso" : "Conceder acesso"}
-    </button>
+    </Button>
   );
 }

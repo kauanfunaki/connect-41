@@ -105,13 +105,14 @@ export function ChatwootConfigForm({ hasConfig, defaultValues, webhookUrl, lastS
         </CampoForm>
 
         <div className="flex items-center gap-3 pt-1">
-          <button
+          <Button
+            variant="primary"
+            size="md"
             type="submit"
             disabled={isPending}
-            className="h-9 px-5 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
           >
             {isPending ? "Salvando…" : "Salvar"}
-          </button>
+          </Button>
           <Button
             type="button"
             onClick={handleTest}
@@ -136,14 +137,14 @@ export function ChatwootConfigForm({ hasConfig, defaultValues, webhookUrl, lastS
       {hasConfig && (
         <div className="pt-3 border-t border-border">
           <div className="flex items-center gap-3">
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={handleSync}
               disabled={isSyncing}
-              className="h-8 px-3 rounded-md border border-border-strong text-fg text-[12.5px] font-medium hover:bg-surface-hover disabled:opacity-60 transition-colors"
             >
               {isSyncing ? "Sincronizando…" : "Sincronizar agora"}
-            </button>
+            </Button>
             {lastSyncAtLabel && <span className="text-[12px] text-fg-muted">Última sincronização: {lastSyncAtLabel}</span>}
           </div>
           {syncResult && (
@@ -156,13 +157,15 @@ export function ChatwootConfigForm({ hasConfig, defaultValues, webhookUrl, lastS
 
       {hasConfig && (
         <form action={removeAction} className="pt-1 border-t border-border">
-          <button
+          <Button
+            variant="danger"
+            size="sm"
+            className="mt-3"
             type="submit"
             disabled={isRemoving}
-            className="mt-3 h-8 px-3 rounded-md text-[12.5px] font-medium text-danger hover:bg-danger/8 disabled:opacity-60 transition-colors"
           >
             {isRemoving ? "Removendo…" : "Remover conexão"}
-          </button>
+          </Button>
         </form>
       )}
     </div>

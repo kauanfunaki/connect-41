@@ -94,13 +94,14 @@ export function SmtpConfigForm({ hasConfig, defaultValues }: Props) {
       </div>
 
       <div className="flex items-center gap-3 pt-2">
-        <button
+        <Button
+          variant="primary"
+          size="md"
           type="submit"
           disabled={isPending}
-          className="h-9 px-5 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
         >
           {isPending ? "Salvando…" : "Salvar"}
-        </button>
+        </Button>
         <Button
           type="button"
           onClick={handleTest}

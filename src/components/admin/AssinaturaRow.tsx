@@ -6,6 +6,7 @@ import { MANAGEMENT_MODE_LABEL, SUBSCRIPTION_STATUS_LABEL } from "@/lib/subscrip
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { Button } from "@/components/ui/Button";
 
 type Plan = { id: string; name: string; managementMode: "MANAGED" | "SELF_SERVICE" };
 
@@ -94,20 +95,21 @@ export function AssinaturaRow({ tenant, subscription, plans, activeUsers }: Prop
           placeholder="Observações (contrato, negociação…)"
         />
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="primary"
+            size="md"
             type="submit"
             disabled={isPending}
-            className="h-9 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
           >
             {isPending ? "Salvando…" : "Salvar"}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="secondary"
+            size="md"
             onClick={() => setEditing(false)}
-            className="h-9 px-3 rounded-md border border-border text-[12px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors"
           >
             Cancelar
-          </button>
+          </Button>
         </div>
         {state?.error && <p className="text-[12px] text-danger">{state.error}</p>}
         {state?.needsSeatConfirm && (
@@ -148,13 +150,13 @@ export function AssinaturaRow({ tenant, subscription, plans, activeUsers }: Prop
           </p>
         )}
       </div>
-      <button
-        type="button"
+      <Button
+        variant="linkMuted"
         onClick={() => setEditing(true)}
-        className="text-[12px] text-fg-muted hover:text-fg transition-colors flex-shrink-0"
+        className="text-[12px] flex-shrink-0"
       >
         {subscription ? "Editar" : "Configurar"}
-      </button>
+      </Button>
     </div>
   );
 }

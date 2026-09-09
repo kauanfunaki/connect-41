@@ -1,6 +1,7 @@
 "use client";
 
 import { Select } from "@/components/ui/Select";
+import { Button } from "@/components/ui/Button";
 
 type Option = { value: string; label: string };
 
@@ -66,13 +67,13 @@ export function AuditoriaFilters({ users, actions, entityTypes, userId, action, 
       </Select>
 
       {hasFilters && (
-        <button
-          type="button"
+        <Button
+          variant="linkMuted"
           onClick={() => { window.location.href = window.location.pathname; }}
-          className="text-[12px] text-fg-muted hover:text-fg transition-colors"
+          className="text-[12px]"
         >
           Limpar filtros
-        </button>
+        </Button>
       )}
     </div>
   );

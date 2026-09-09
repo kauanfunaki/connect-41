@@ -1,6 +1,7 @@
 "use client";
 
 import { useConfirm } from "@/components/ui/useConfirm";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   action: () => Promise<void>;
@@ -22,13 +23,14 @@ export function DisconnectButton({ action }: Props) {
 
   return (
     <>
-      <button
-        type="button"
+      <Button
+        variant="secondary"
+        size="md"
+        className="flex-shrink-0"
         onClick={handleClick}
-        className="h-9 px-3 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors flex-shrink-0"
       >
         Desconectar
-      </button>
+      </Button>
       {dialog}
     </>
   );

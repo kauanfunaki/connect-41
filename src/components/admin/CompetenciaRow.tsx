@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
 import { Input } from "@/components/ui/Input";
 import type { CompetencyState } from "@/app/(app)/admin/competencias/actions";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   competencia: { id: string; name: string; description: string | null };
@@ -39,20 +40,21 @@ export function CompetenciaRow({ competencia, updateAction, deleteAction }: Prop
           <div className="flex-1 min-w-[160px]">
             <Input name="description" defaultValue={competencia.description ?? ""} placeholder="Descrição" />
           </div>
-          <button
+          <Button
+            variant="primary"
+            size="md"
             type="submit"
             disabled={isPending}
-            className="h-9 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
           >
             {isPending ? "Salvando…" : "Salvar"}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="secondary"
+            size="md"
             onClick={() => setEditing(false)}
-            className="h-9 px-3 rounded-md border border-border text-[12px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors"
           >
             Cancelar
-          </button>
+          </Button>
         </div>
         {state?.error && <p className="text-[12px] text-danger">{state.error}</p>}
       </form>
@@ -66,13 +68,13 @@ export function CompetenciaRow({ competencia, updateAction, deleteAction }: Prop
         {competencia.description && <p className="text-[12px] text-fg-muted">{competencia.description}</p>}
       </div>
       <div className="flex items-center gap-3">
-        <button
-          type="button"
+        <Button
+          variant="linkMuted"
           onClick={() => setEditing(true)}
-          className="text-[12px] text-fg-muted hover:text-fg transition-colors"
+          className="text-[12px]"
         >
           Editar
-        </button>
+        </Button>
         <DeleteFieldButton action={deleteAction} nome={competencia.name} />
       </div>
     </div>

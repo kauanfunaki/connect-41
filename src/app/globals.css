@@ -237,6 +237,9 @@
   --fs-badge:       var(--fs-2);  /* badge/status — era 12.5px */
   --fs-kanban-meta: var(--fs-2);
   --fs-ui:          var(--fs-3);  /* nível denso: label, meta, linha compacta */
+  --fs-button-sm:   var(--fs-2);  /* botão compacto (h-7/h-8) — medido em 09/09:
+                                     o app usa 12px em 56 dos 59 h-8 e em 9 dos
+                                     12 h-7. O h-9 é que fica em 13px. */
   --fs-helper:      var(--fs-3);  /* helper text */
   --fs-label:       var(--fs-4);  /* label de formulário/sidebar */
   --fs-dropdown:    var(--fs-4);

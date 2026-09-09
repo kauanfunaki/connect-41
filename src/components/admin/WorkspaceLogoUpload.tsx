@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   tenantId: string;
@@ -72,23 +73,23 @@ export function WorkspaceLogoUpload({ tenantId, tenantName, logoUrl: initialLogo
 
       <div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors disabled:opacity-60"
           >
             {uploading ? "Enviando…" : logoUrl ? "Trocar foto" : "Adicionar foto"}
-          </button>
+          </Button>
           {logoUrl && (
-            <button
-              type="button"
+            <Button
+              variant="danger"
+              size="sm"
               onClick={handleRemove}
               disabled={uploading}
-              className="h-8 px-3 rounded-md text-[12px] font-medium text-danger hover:bg-danger/8 transition-colors disabled:opacity-60"
             >
               Remover
-            </button>
+            </Button>
           )}
         </div>
         <input

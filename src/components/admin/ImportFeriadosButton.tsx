@@ -5,6 +5,7 @@ import { RefreshCw } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { Select } from "@/components/ui/Select";
 import type { ImportFeriadosResult } from "@/app/(app)/admin/feriados/actions";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   action: (year: number) => Promise<ImportFeriadosResult>;
@@ -48,15 +49,15 @@ export function ImportFeriadosButton({ action }: Props) {
           ))}
         </Select>
       </div>
-      <button
-        type="button"
+      <Button
+        variant="secondary"
+        size="md"
         onClick={handleImport}
         disabled={pending}
-        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-border text-[12.5px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
       >
         <RefreshCw size={13} className={pending ? "animate-spin" : ""} />
         {pending ? "Importando…" : "Importar feriados nacionais"}
-      </button>
+      </Button>
     </div>
   );
 }

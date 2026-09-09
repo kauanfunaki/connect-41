@@ -1,6 +1,7 @@
 "use client";
 
 import { useConfirm } from "@/components/ui/useConfirm";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   action: () => Promise<void>;
@@ -19,9 +20,9 @@ export function DeleteFieldButton({ action, nome }: Props) {
 
   return (
     <>
-      <button type="button" onClick={handleClick} className="text-[12px] text-danger hover:underline">
+      <Button variant="link" onClick={handleClick} className="text-[12px] text-danger">
         Excluir
-      </button>
+      </Button>
       {dialog}
     </>
   );

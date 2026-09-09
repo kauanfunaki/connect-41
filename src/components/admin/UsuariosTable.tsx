@@ -253,20 +253,20 @@ export function UsuariosTable({
       </div>
 
       <BulkActionBar count={selected.size} onClear={() => setSelected(new Set())}>
-        <button
-          type="button"
+        <Button
+          variant="success"
+          size="sm"
           onClick={() => applyToggle(true)}
-          className="h-8 px-3 rounded-md border border-success/30 text-[13px] font-semibold text-success hover:bg-success-bg transition-colors"
         >
           Ativar
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="danger"
+          size="sm"
           onClick={() => applyToggle(false)}
-          className="h-8 px-3 rounded-md border border-danger/30 text-[13px] font-semibold text-danger hover:bg-danger-bg transition-colors"
         >
           Desativar
-        </button>
+        </Button>
         {sectorOptions.length > 0 && (
           <>
             <div className="w-44">
@@ -279,13 +279,13 @@ export function UsuariosTable({
                 ))}
               </Select>
             </div>
-            <button
-              type="button"
+            <Button
+              variant="primary"
+              size="sm"
               onClick={applySector}
-              className="h-8 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover transition-colors"
             >
               Atribuir setor
-            </button>
+            </Button>
           </>
         )}
       </BulkActionBar>

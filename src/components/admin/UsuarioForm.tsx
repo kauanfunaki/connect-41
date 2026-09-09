@@ -8,6 +8,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { Button } from "@/components/ui/Button";
 
 export type UsuarioDefaultValues = {
   id?: string;
@@ -143,20 +144,20 @@ export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, de
             </span>
           </p>
           <div className="flex items-center gap-3">
-            <button
-              type="button"
+            <Button
+              variant="link"
               onClick={() => setSelectedSectors(new Set(sectorOptions.map((s) => s.value)))}
-              className="text-[12px] text-brand hover:underline"
+              className="text-[12px]"
             >
               Selecionar todos
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="linkMuted"
               onClick={() => setSelectedSectors(new Set())}
-              className="text-[12px] text-fg-muted hover:text-fg hover:underline"
+              className="text-[12px] hover:underline"
             >
               Limpar
-            </button>
+            </Button>
           </div>
         </div>
         <p className="text-[length:var(--fs-helper)] text-fg-muted">
@@ -188,13 +189,14 @@ export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, de
       </div>
 
       <div className="flex items-center gap-3 pt-2">
-        <button
+        <Button
+          variant="primary"
+          size="md"
           type="submit"
           disabled={isPending}
-          className="h-9 px-5 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
         >
           {isPending ? "Salvando…" : "Salvar"}
-        </button>
+        </Button>
         <Link
           href={cancelHref}
           className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"

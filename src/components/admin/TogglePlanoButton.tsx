@@ -1,6 +1,7 @@
 "use client";
 
 import { useConfirm } from "@/components/ui/useConfirm";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   action: () => Promise<void>;
@@ -19,17 +20,13 @@ export function TogglePlanoButton({ action, active, nome }: Props) {
 
   return (
     <>
-      <button
-        type="button"
+      <Button
+        variant={active ? "danger" : "success"}
+        size="sm"
         onClick={handleClick}
-        className={
-          active
-            ? "h-8 px-3 rounded-md border border-danger/30 text-[12px] font-medium text-danger hover:bg-danger/8 transition-colors"
-            : "h-8 px-3 rounded-md border border-success/30 text-[12px] font-medium text-success hover:bg-success/8 transition-colors"
-        }
       >
         {active ? "Desativar" : "Ativar"}
-      </button>
+      </Button>
       {dialog}
     </>
   );
