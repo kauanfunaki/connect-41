@@ -6,6 +6,7 @@ import { Building2, ChevronRight } from "lucide-react";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Select } from "@/components/ui/Select";
 import { AvatarImage } from "@/components/shared/AvatarImage";
@@ -65,6 +66,11 @@ export function EmpresasTable({
   // A consulta já vem ordenada por (cliente, empresa) — aqui é só quebrar em
   // blocos para desenhar o cabeçalho de cada cliente.
   const blocos = agruparPorCliente(companies);
+  // A árvore é montada aqui, e não dentro de cada renderizador: a tabela e a
+  // lista de cartões desenham exatamente os mesmos nós, e as duas ficam no DOM
+  // (quem esconde uma delas é o CSS). Sem isto, `montarArvore` rodaria duas
+  // vezes a cada render.
+  const blocosComArvore = blocos.map((b) => ({ ...b, nos: montarArvore(b.empresas) }));
   const colunas = canCreate ? 7 : 6;
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -83,6 +89,30 @@ export function EmpresasTable({
   const [bulkStatus, setBulkStatus] = useState<CompanyStatus>("ACTIVE");
   const [, startTransition] = useTransition();
   const { dialog, requestConfirm } = useConfirm();
+
+  // As mesmas duas ações na tabela e no cartão. `linkMuted` é o que estes dois
+  // já eram escritos à mão: texto apagado que escurece no hover, sem caixa. O
+  // tamanho vem do call-site porque a variante não fixa fonte.
+  function acoesEmpresa(c: Row) {
+    return (
+      <span className="inline-flex items-center gap-3">
+        <Button
+          variant="linkMuted"
+          className="text-[13px] font-medium"
+          onClick={() => toggleAtivo(c)}
+        >
+          {FORA_DE_OPERACAO.includes(c.status) ? "Reativar" : "Inativar"}
+        </Button>
+        <Button
+          variant="linkMuted"
+          href={`/empresas/${c.id}/editar`}
+          className="text-[13px] font-medium"
+        >
+          Editar
+        </Button>
+      </span>
+    );
+  }
 
   // Uma linha só, usada pela matriz e pela filial. Extraída porque são as
   // mesmas 8 colunas — o que muda é o recuo, a setinha e a marca de filial.
@@ -173,22 +203,106 @@ export function EmpresasTable({
             selected.has(c.id) ? "bg-selected-bg" : "bg-surface"
           }`}
         >
-          {canCreate && (
-            <span className="inline-flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => toggleAtivo(c)}
-                className="text-[13px] font-medium text-fg-muted hover:text-fg transition-colors"
-              >
-                {FORA_DE_OPERACAO.includes(c.status) ? "Reativar" : "Inativar"}
-              </button>
-              <Link href={`/empresas/${c.id}/editar`} className="text-[13px] font-medium text-fg-muted hover:text-fg transition-colors">
-                Editar
-              </Link>
-            </span>
-          )}
+          {canCreate && acoesEmpresa(c)}
         </td>
       </tr>
+    );
+  }
+
+  /**
+   * A mesma empresa, em cartão, para telas estreitas.
+   *
+   * A tabela é `min-w-[980px]` dentro de um `overflow-x-auto`: no celular as
+   * colunas de regime, localização e as ações nascem fora da tela, e rolar de
+   * lado para ver um campo é pior que não ter o campo — é o mesmo argumento do
+   * comentário do <thead>, aplicado à largura da tela em vez de à quantidade
+   * de colunas.
+   *
+   * O que era coluna vira linha corrida de campos. Nada é escondido: seleção,
+   * filiais e as duas ações continuam todas aqui.
+   */
+  function cartaoEmpresa(c: Row, qtdFiliais: number, ehFilial: boolean) {
+    const doc = formatDocumento(c.kind, c.cnpj, c.cpf);
+    const regime = resumirRegime(c.taxRegime);
+    const local = c.city && c.stateCode ? `${c.city}/${c.stateCode}` : c.city ?? c.stateCode;
+    const secundaria = razaoSocialSecundaria(c);
+    const aberta = expandidas.has(c.id);
+
+    return (
+      <div
+        key={c.id}
+        className={`px-3 py-3 border-b border-border last:border-0 ${
+          selected.has(c.id) ? "bg-selected-bg" : ""
+        }`}
+        // Recuo menor que o da tabela (22px): no celular cada pixel de recuo
+        // sai do nome, que é o que se lê primeiro.
+        style={ehFilial ? { paddingLeft: 26 } : undefined}
+      >
+        <div className="flex items-start gap-2.5">
+          {canCreate && (
+            <Checkbox
+              checked={selected.has(c.id)}
+              onChange={() => toggleOne(c.id)}
+              aria-label={`Selecionar ${c.name}`}
+              className="mt-1.5"
+            />
+          )}
+          <Link
+            href={`/empresas/${c.id}`}
+            className="flex items-start gap-2.5 min-w-0 flex-1 text-fg"
+          >
+            <AvatarImage src={c.logoUrl} name={nomeExibicao(c)} size={32} shape="lg" fontSize={12} />
+            <span className="flex flex-col min-w-0">
+              {/* `break-words` em vez de `truncate`: no cartão há altura de
+                  sobra, e cortar o nome era um custo só da tabela. */}
+              <span className="font-medium break-words">{nomeExibicao(c)}</span>
+              {(secundaria || c.externalId) && (
+                <span className="text-[11.5px] text-fg-muted break-words">
+                  {secundaria}
+                  {secundaria && c.externalId ? " · " : ""}
+                  {c.externalId ? <span className="tnum">#{c.externalId}</span> : null}
+                </span>
+              )}
+            </span>
+          </Link>
+        </div>
+
+        {/* Os quatro campos que eram colunas. `flex-wrap` acomoda o que não
+            couber na largura da tela em vez de empurrar para fora dela. O
+            documento vazio some: na tabela ele vira "—" para segurar a coluna,
+            e aqui não há coluna para segurar. */}
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-fg-secondary">
+          <StatusDot color={statusColor[c.status]} label={statusLabel[c.status]} />
+          {doc !== "—" && <span className="tnum">{doc}</span>}
+          {regime && <span title={c.taxRegime ?? undefined}>{regime}</span>}
+          {local && <span>{local}</span>}
+          {ehFilial && <span className="text-fg-muted">filial</span>}
+        </div>
+
+        {(qtdFiliais > 0 || canCreate) && (
+          <div className="mt-2.5 flex items-center justify-between gap-3">
+            {qtdFiliais > 0 ? (
+              <button
+                type="button"
+                onClick={() => toggleExpandir(c.id)}
+                aria-expanded={aberta}
+                aria-label={`${aberta ? "Recolher" : "Expandir"} as filiais de ${c.name}`}
+                // Área de toque maior que o texto, sem alterar o espaçamento
+                // do cartão — o alvo de 14px da tabela é de mouse.
+                className="-my-1 -ml-1 px-1 py-1 inline-flex items-center gap-1 text-[12px] font-medium text-fg-muted hover:text-fg transition-colors"
+              >
+                <ChevronRight size={14} className={`transition-transform ${aberta ? "rotate-90" : ""}`} />
+                <span className="tnum">
+                  {qtdFiliais} {qtdFiliais === 1 ? "filial" : "filiais"}
+                </span>
+              </button>
+            ) : (
+              <span />
+            )}
+            {canCreate && acoesEmpresa(c)}
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -290,7 +404,43 @@ export function EmpresasTable({
         {companies.length === 0 ? (
           <EmptyState icon={<Building2 />} title="Nenhuma empresa encontrada" />
         ) : (
-          <div className="scroll-x overflow-x-auto">
+          <>
+          {/* Abaixo de md, cartões; de md para cima, a tabela. As duas
+              desenham a mesma árvore e compartilham seleção e expansão —
+              o que muda é a forma. */}
+          <div className="md:hidden">
+            {canCreate && (
+              <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border bg-table-header-bg">
+                <Checkbox checked={allSelected} onChange={toggleAll} aria-label="Selecionar todas" />
+                <span className="text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                  Selecionar todas
+                </span>
+              </div>
+            )}
+            {blocosComArvore.map((bloco, i) => (
+              <Fragment key={`cartoes-${bloco.clientGroupId ?? "sem-cliente"}-${i}`}>
+                {bloco.mostrarCabecalho && (
+                  <div className="px-3 py-2 border-b border-border bg-surface-2">
+                    <span className="text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                      {bloco.label}
+                    </span>
+                    <span className="ml-2 text-[11.5px] text-fg-muted tnum">
+                      {bloco.empresas.length} empresa{bloco.empresas.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                )}
+                {bloco.nos.map((no) => (
+                  <Fragment key={no.matriz.id}>
+                    {cartaoEmpresa(no.matriz, no.filiais.length, false)}
+                    {expandidas.has(no.matriz.id) &&
+                      no.filiais.map((f) => cartaoEmpresa(f, 0, true))}
+                  </Fragment>
+                ))}
+              </Fragment>
+            ))}
+          </div>
+
+          <div className="scroll-x overflow-x-auto hidden md:block">
           {/* `table-fixed` + <colgroup>: com layout automático o navegador recalcula
               TODAS as larguras quando o conteúdo muda, então expandir uma matriz
               deslocava as colunas da tabela inteira. Larguras declaradas uma vez
@@ -326,7 +476,7 @@ export function EmpresasTable({
               </tr>
             </thead>
             <tbody>
-              {blocos.map((bloco, i) => (
+              {blocosComArvore.map((bloco, i) => (
                 <Fragment key={`${bloco.clientGroupId ?? "sem-cliente"}-${i}`}>
                   {bloco.mostrarCabecalho && (
                     <tr className="border-b border-border bg-surface-2">
@@ -344,7 +494,7 @@ export function EmpresasTable({
                       <td className="sticky right-0 bg-surface-2" />
                     </tr>
                   )}
-                  {montarArvore(bloco.empresas).map((no) => (
+                  {bloco.nos.map((no) => (
                     <Fragment key={no.matriz.id}>
                       {linhaEmpresa(no.matriz, no.filiais.length, false)}
                       {expandidas.has(no.matriz.id) &&
@@ -356,6 +506,7 @@ export function EmpresasTable({
             </tbody>
           </table>
           </div>
+          </>
         )}
       </div>
 
