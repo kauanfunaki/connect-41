@@ -5,6 +5,8 @@ import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { Button } from "@/components/ui/Button";
+import { DeleteButton } from "@/components/ui/DeleteButton";
 import type { EdicaoState } from "@/app/(app)/documentos-fiscais/[id]/editar";
 
 type Empresa = { id: string; nome: string };
@@ -41,8 +43,6 @@ export function EditarDocumentoCard({
 }: Props) {
   const [state, formAction, isPending] = useActionState(acao, null);
   const [aberto, setAberto] = useState(false);
-  const [confirmando, setConfirmando] = useState(false);
-  const [erroExclusao, setErroExclusao] = useState<string | null>(null);
 
   if (bloqueado) {
     return (
@@ -67,13 +67,9 @@ export function EditarDocumentoCard({
               : "O XML é a fonte. Corrigir aqui faz o acervo divergir dele, e a mudança fica registrada na auditoria."}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setAberto((v) => !v)}
-          className="h-8 px-3 rounded-md border border-border text-[12px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors flex-shrink-0"
-        >
+        <Button variant="secondary" size="sm" onClick={() => setAberto((v) => !v)} className="flex-shrink-0">
           {aberto ? "Fechar" : "Editar"}
-        </button>
+        </Button>
       </div>
 
       {aberto && (
@@ -150,55 +146,28 @@ export function EditarDocumentoCard({
               Em branco, volta a seguir a data de emissão.
             </p>
 
-            <button
-              type="submit"
-              disabled={isPending}
-              className="h-9 px-5 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
-            >
-              {isPending ? "Salvando…" : "Salvar correção"}
-            </button>
+            {/* `loading` já troca o rótulo por "Salvando…" e desabilita — era o
+                que o ternário fazia à mão. */}
+            <Button type="submit" variant="primary" loading={isPending}>
+              Salvar correção
+            </Button>
           </form>
 
           <div className="mt-6 pt-4 border-t border-border">
-            {erroExclusao && (
-              <p className="text-[13px] text-danger mb-2">{erroExclusao}</p>
-            )}
-            {confirmando ? (
-              <div className="flex items-center gap-2">
-                <span className="text-[13px] text-fg">Excluir este documento do acervo?</span>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const r = await excluir();
-                    if ("error" in r) {
-                      setErroExclusao(r.error);
-                      setConfirmando(false);
-                    }
-                  }}
-                  className="h-8 px-3 rounded-md bg-danger text-on-danger text-[12px] font-medium hover:opacity-90 transition-opacity"
-                >
-                  Excluir
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmando(false)}
-                  className="h-8 px-3 rounded-md border border-border text-[12px] text-fg-muted hover:text-fg transition-colors"
-                >
-                  Cancelar
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setConfirmando(true)}
-                className="text-[12px] text-danger hover:underline"
-              >
-                Excluir documento do acervo
-              </button>
-            )}
-            <p className="text-[12px] text-fg-muted mt-2">
-              Some da lista e some do portal do cliente. O mesmo XML pode ser reimportado depois.
-            </p>
+            {/* Era um fluxo de confirmação escrito à mão — dois estados, dois
+                botões e a mensagem de erro. O `DeleteButton` já faz os três,
+                com diálogo temático e o erro dentro dele em vez de solto na
+                página. Adaptador de uma linha porque ele espera
+                `{ error } | null | void` e a action devolve `{ ok: true }`. */}
+            <DeleteButton
+              action={async () => {
+                const r = await excluir();
+                return "error" in r ? { error: r.error } : null;
+              }}
+              nome="este documento"
+              label="Excluir documento do acervo"
+              description="Some da lista e do portal do cliente. O mesmo XML pode ser reimportado depois."
+            />
           </div>
         </>
       )}

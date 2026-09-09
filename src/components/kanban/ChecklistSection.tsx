@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { Check, GripVertical, Pencil, Trash2, X } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
 import { Input } from "@/components/ui/Input";
 
 export type ChecklistItemData = { id: string; text: string; done: boolean };
@@ -77,8 +79,8 @@ function ChecklistRow({
             }}
             autoFocus
           />
-          <button type="button" onClick={saveEdit} className="text-fg-muted hover:text-brand flex-shrink-0"><Check size={14} /></button>
-          <button type="button" onClick={() => setEditing(false)} className="text-fg-muted hover:text-danger flex-shrink-0"><X size={14} /></button>
+          <IconButton type="button" size="sm" onClick={saveEdit} aria-label="Salvar" className="flex-shrink-0"><Check size={14} /></IconButton>
+          <IconButton type="button" size="sm" onClick={() => setEditing(false)} aria-label="Cancelar" className="flex-shrink-0"><X size={14} /></IconButton>
         </div>
       ) : (
         <span className={`text-[13px] flex-1 min-w-0 truncate ${item.done ? "text-fg-muted line-through" : "text-fg"}`}>
@@ -88,8 +90,8 @@ function ChecklistRow({
 
       {canAct && !editing && (
         <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button type="button" onClick={() => setEditing(true)} className="text-fg-muted hover:text-fg p-1"><Pencil size={13} /></button>
-          <button type="button" onClick={() => startTransition(() => deleteAction(item.id))} className="text-fg-muted hover:text-danger p-1"><Trash2 size={13} /></button>
+          <IconButton type="button" size="sm" onClick={() => setEditing(true)} aria-label="Editar item"><Pencil size={13} /></IconButton>
+          <IconButton type="button" size="sm" onClick={() => startTransition(() => deleteAction(item.id))} aria-label="Excluir item"><Trash2 size={13} /></IconButton>
         </div>
       )}
     </div>
@@ -167,13 +169,9 @@ export function ChecklistSection({ canAct, items, createAction, toggleAction, ed
             onKeyDown={(e) => e.key === "Enter" && addItem()}
             placeholder="Adicionar item ao checklist…"
           />
-          <button
-            type="button"
-            onClick={addItem}
-            className="h-9 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors flex-shrink-0"
-          >
+          <Button type="button" variant="primary" size="sm" onClick={addItem} className="flex-shrink-0">
             Adicionar
-          </button>
+          </Button>
         </div>
       )}
     </div>
