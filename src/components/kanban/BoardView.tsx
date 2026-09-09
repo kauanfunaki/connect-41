@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { FilterButton, FilterButtonSection } from "@/components/ui/FilterButton";
 import { Button } from "@/components/ui/Button";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 
 type Item = TaskRow & {
   tags?: { id: string; name: string; color: string }[];
@@ -119,28 +120,15 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
   return (
     <div className="h-full flex flex-col min-h-0">
       <div className="flex items-center gap-2 mb-3 flex-wrap flex-shrink-0">
-        <div className="inline-flex rounded-lg border border-border overflow-hidden flex-shrink-0">
-          <button
-            type="button"
-            onClick={() => setView("list")}
-            aria-pressed={view === "list"}
-            className={`h-8 px-3 flex items-center gap-1.5 text-[12px] font-medium transition-colors ${
-              view === "list" ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg"
-            }`}
-          >
-            <List size={14} /> Lista
-          </button>
-          <button
-            type="button"
-            onClick={() => setView("board")}
-            aria-pressed={view === "board"}
-            className={`h-8 px-3 flex items-center gap-1.5 text-[12px] font-medium border-l border-border transition-colors ${
-              view === "board" ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg"
-            }`}
-          >
-            <Columns3 size={14} /> Quadro
-          </button>
-        </div>
+        <SegmentedControl
+          label="Visão do pipeline"
+          active={view}
+          onChange={setView}
+          items={[
+            { key: "list", label: "Lista", icon: <List size={14} /> },
+            { key: "board", label: "Quadro", icon: <Columns3 size={14} /> },
+          ]}
+        />
 
         <div className="w-56">
           <Input

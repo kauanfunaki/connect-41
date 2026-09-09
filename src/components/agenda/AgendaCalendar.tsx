@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { CreateMeetingDialog } from "./CreateMeetingDialog";
 import { MiniCalendar } from "./MiniCalendar";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { TimeGrid, slotRange, defaultSlotHour } from "./TimeGrid";
 import { MonthGrid } from "./MonthGrid";
 import { saoPauloParts, shiftAgendaDate, agendaTitle, type AgendaView } from "@/lib/agenda";
@@ -111,21 +112,15 @@ export function AgendaCalendar({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <div role="tablist" aria-label="Visão da agenda" className="inline-flex rounded-lg border border-border overflow-hidden">
-            {VIEW_ORDER.map((v) => (
-              <Link
-                key={v}
-                role="tab"
-                aria-selected={v === view}
-                href={agendaHref(v, dateKey)}
-                className={`h-8 px-3 flex items-center text-[12px] font-medium border-l border-border first:border-l-0 transition-colors ${
-                  v === view ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg"
-                }`}
-              >
-                {VIEW_LABEL[v]}
-              </Link>
-            ))}
-          </div>
+          <SegmentedControl
+            label="Visão da agenda"
+            active={view}
+            items={VIEW_ORDER.map((v) => ({
+              key: v,
+              label: VIEW_LABEL[v],
+              href: agendaHref(v, dateKey),
+            }))}
+          />
 
           <button
             type="button"
