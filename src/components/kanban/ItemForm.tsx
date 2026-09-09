@@ -4,8 +4,8 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { Textarea } from "@/components/ui/Textarea";
 import { CampoForm as Field } from "@/components/ui/CampoForm";
-import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
+import { AttendeePicker } from "@/components/shared/AttendeePicker";
 import { Select } from "@/components/ui/Select";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 import type { PipelineEntityType } from "@/generated/prisma/enums";
@@ -92,18 +92,16 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
         </div>
       )}
 
+      {/* Pesquisável, e não uma parede de checkbox: com centenas de pessoas na
+          plataforma, achar uma no meio da lista deixa de ser possível. O painel
+          de detalhe da tarefa já resolvia isto com busca; criar a tarefa —
+          que é o caminho mais percorrido — tinha ficado para trás.
+
+          `AttendeePicker` emite um `<input type="hidden" name="assignees">` por
+          escolhido, então a action segue lendo `form.getAll("assignees")` sem
+          saber que o controle mudou. */}
       {sectorUsers.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-[12px] font-medium text-fg">Responsáveis</p>
-          <div className="flex flex-wrap gap-3">
-            {sectorUsers.map((u) => (
-              <label key={u.id} className="cursor-pointer inline-flex items-center gap-1.5 text-[12px] text-fg">
-                <Checkbox name="assignees" value={u.id} />
-                {u.name}
-              </label>
-            ))}
-          </div>
-        </div>
+        <AttendeePicker users={sectorUsers} name="assignees" label="Responsáveis" />
       )}
 
       <div className="flex items-center gap-3 pt-2">
