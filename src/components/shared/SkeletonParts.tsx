@@ -104,3 +104,74 @@ export function SkeletonCardList({ cards = 4, linhas = 2 }: { cards?: number; li
     </div>
   );
 }
+
+/** O botão "voltar" que abre várias rotas internas. */
+export function SkeletonBack() {
+  return <SkeletonLine w="w-20" h="h-8" />;
+}
+
+/**
+ * Blocos de informação empilhados — o formato de `/assinatura` e das seções de
+ * `/configuracoes`: um painel com borda por assunto, cada um com rótulo e
+ * conteúdo, em vez de linhas iguais de lista.
+ */
+export function SkeletonBlocks({ blocos = 3, linhas = 3 }: { blocos?: number; linhas?: number }) {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: blocos }).map((_, i) => (
+        <div key={i} className="bg-surface border border-border rounded-lg p-5 space-y-3">
+          <SkeletonLine w="w-24" h="h-3" />
+          {Array.from({ length: linhas }).map((_, j) => (
+            <SkeletonLine key={j} w={j % 2 === 0 ? "w-64" : "w-48"} h="h-3.5" />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Grade de ladrilhos — os cards de módulo de `/setor/[code]`.
+ *
+ * Mais altos que os de métrica e sem o número grande: aqui cada ladrilho é um
+ * destino, com ícone, título e descrição.
+ */
+export function SkeletonTiles({ tiles = 6 }: { tiles?: number }) {
+  return (
+    <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(15rem, 1fr))" }}>
+      {Array.from({ length: tiles }).map((_, i) => (
+        <div key={i} className="bg-surface border border-border rounded-lg p-4 space-y-2.5">
+          <SkeletonLine w="w-8" h="h-8" />
+          <SkeletonLine w="w-32" h="h-3.5" />
+          <SkeletonLine w="w-full" h="h-3" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Dois painéis lado a lado — o workspace de `/bpo-manual`: índice à esquerda,
+ * conteúdo à direita.
+ *
+ * `h-full` porque a página real usa `flex-1 min-h-0` para dar altura definida
+ * ao painel rolável; um esqueleto de altura automática encolheria e faria o
+ * rodapé subir antes de o conteúdo chegar.
+ */
+export function SkeletonWorkspace() {
+  return (
+    <div className="flex gap-4 h-full min-h-96">
+      <div className="w-64 flex-shrink-0 bg-surface border border-border rounded-lg p-4 space-y-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <SkeletonLine key={i} w={i % 3 === 0 ? "w-40" : "w-32"} h="h-3.5" />
+        ))}
+      </div>
+      <div className="flex-1 bg-surface border border-border rounded-lg p-5 space-y-3">
+        <SkeletonLine w="w-56" h="h-5" />
+        {Array.from({ length: 8 }).map((_, i) => (
+          <SkeletonLine key={i} w={i % 4 === 3 ? "w-2/3" : "w-full"} h="h-3" />
+        ))}
+      </div>
+    </div>
+  );
+}
