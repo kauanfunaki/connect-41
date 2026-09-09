@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { UserSearch } from "lucide-react";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
+import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { maskCpf } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -57,13 +58,118 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
     });
   }
 
+  // A pílula de status é a mesma da tabela, e por isso mora num helper: esta
+  // tela é a única que usa pílula em vez do `StatusDot` do resto do app, e
+  // deixar duas cópias dela aqui só espalharia a divergência.
+  function pilulaStatus(c: Row) {
+    return (
+      <span
+        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${
+          c.active
+            ? "bg-success/10 text-success border-success/25"
+            : "bg-surface-2 text-fg-muted border-border"
+        }`}
+      >
+        {c.active ? "Ativo" : "Inativo"}
+      </span>
+    );
+  }
+
+  function tagsDoCandidato(c: Row) {
+    if (c.tags.length === 0) return null;
+    return (
+      <div className="flex flex-wrap gap-1">
+        {c.tags.map((t) => (
+          <span
+            key={t.id}
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium border"
+            style={{ background: `${t.color}1A`, color: t.color, borderColor: `${t.color}40` }}
+          >
+            {t.name}
+          </span>
+        ))}
+      </div>
+    );
+  }
+
+  /**
+   * O mesmo candidato, em cartão, para telas estreitas — a tabela tem 9
+   * colunas em `min-w-[760px]`, e no celular e-mail, candidaturas e o "Editar"
+   * nascem fora da tela.
+   *
+   * O e-mail sobe para logo abaixo do nome pelo mesmo motivo de /pessoas: o
+   * CPF chega mascarado e não identifica ninguém sozinho.
+   */
+  function cartaoCandidato(c: Row) {
+    const cpf = maskCpf(c.cpf);
+
+    return (
+      <div
+        key={c.id}
+        className={`px-3 py-3 border-b border-border last:border-0 ${
+          selected.has(c.id) ? "bg-selected-bg" : ""
+        }`}
+      >
+        <div className="flex items-start gap-2.5">
+          {canCreate && (
+            <Checkbox
+              checked={selected.has(c.id)}
+              onChange={() => toggleOne(c.id)}
+              aria-label={`Selecionar ${c.name}`}
+              className="mt-1"
+            />
+          )}
+          <div className="min-w-0 flex-1">
+            <Link href={`/candidatos/${c.id}`} className="font-medium text-fg break-words">
+              {c.name}
+            </Link>
+            {c.email && <p className="text-[11.5px] text-fg-muted break-all">{c.email}</p>}
+          </div>
+          {canCreate && (
+            <Button
+              variant="linkMuted"
+              href={`/candidatos/${c.id}/editar`}
+              className="text-[12px] shrink-0"
+            >
+              Editar
+            </Button>
+          )}
+        </div>
+
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-fg-muted">
+          {pilulaStatus(c)}
+          {cpf !== "—" && <span className="tnum">{cpf}</span>}
+          {/* Sem coluna para explicar o número, ele vem com a palavra junto. */}
+          <span className="tnum">
+            {c.candidaturasCount} candidatura{c.candidaturasCount !== 1 ? "s" : ""}
+          </span>
+          <span className="tnum">Cadastrado em {c.createdAtLabel}</span>
+        </div>
+
+        {c.tags.length > 0 && <div className="mt-2">{tagsDoCandidato(c)}</div>}
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {candidatos.length === 0 ? (
           <EmptyState icon={<UserSearch />} title="Nenhum candidato encontrado." />
         ) : (
-          <div className="scroll-x overflow-x-auto">
+          <>
+          {/* Abaixo de md, cartões; de md para cima, a tabela. */}
+          <div className="md:hidden">
+            {canCreate && (
+              <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border bg-surface-2">
+                <Checkbox checked={allSelected} onChange={toggleAll} aria-label="Selecionar todos" />
+                <span className="text-[12px] font-medium text-fg-muted">Selecionar todos</span>
+              </div>
+            )}
+            {candidatos.map((c) => cartaoCandidato(c))}
+          </div>
+
+          <div className="scroll-x overflow-x-auto hidden md:block">
           <table className="w-full min-w-[760px] text-[13px]">
             <thead>
               <tr className="border-b border-border bg-surface-2">
@@ -95,33 +201,9 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
                       {c.name}
                     </Link>
                   </td>
+                  <td className="px-4 py-2.5">{pilulaStatus(c)}</td>
                   <td className="px-4 py-2.5">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${
-                        c.active
-                          ? "bg-success/10 text-success border-success/25"
-                          : "bg-surface-2 text-fg-muted border-border"
-                      }`}
-                    >
-                      {c.active ? "Ativo" : "Inativo"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5">
-                    {c.tags.length === 0 ? (
-                      <span className="text-fg-muted">—</span>
-                    ) : (
-                      <div className="flex flex-wrap gap-1">
-                        {c.tags.map((t) => (
-                          <span
-                            key={t.id}
-                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium border"
-                            style={{ background: `${t.color}1A`, color: t.color, borderColor: `${t.color}40` }}
-                          >
-                            {t.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    {tagsDoCandidato(c) ?? <span className="text-fg-muted">—</span>}
                   </td>
                   <td className="px-4 py-2.5 text-fg-muted tnum">{maskCpf(c.cpf)}</td>
                   <td className="px-4 py-2.5 text-fg-muted">{c.email ?? "—"}</td>
@@ -129,9 +211,9 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
                   <td className="px-4 py-2.5 text-fg-muted tnum">{c.createdAtLabel}</td>
                   <td className="px-4 py-2.5 text-right">
                     {canCreate && (
-                      <Link href={`/candidatos/${c.id}/editar`} className="text-[12px] text-fg-muted hover:text-fg transition-colors">
+                      <Button variant="linkMuted" href={`/candidatos/${c.id}/editar`} className="text-[12px]">
                         Editar
-                      </Link>
+                      </Button>
                     )}
                   </td>
                 </tr>
@@ -139,6 +221,7 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
             </tbody>
           </table>
           </div>
+          </>
         )}
       </div>
 
