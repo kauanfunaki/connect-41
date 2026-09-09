@@ -2155,6 +2155,14 @@ model FiscalDocument {
   @@unique([tenantId, dedupKey])
   @@index([tenantId, companyId, competence])
   @@index([tenantId, companyId, destination])
+  // Os três abaixo servem a listagem SEM filtro de empresa, que é como a tela
+  // abre. Medido em 09/09 com 244.558 linhas em produção: sem eles a página
+  // fazia quatro varreduras completas em paralelo e levava ~35s — listagem
+  // 34,6s, competências 32s, resumo 25s. Os índices antigos começam em
+  // (tenantId, companyId) e não valem quando companyId não está no filtro.
+  @@index([tenantId, issuedAt, id])
+  @@index([tenantId, competence])
+  @@index([tenantId, situation, destination])
   @@index([tenantId, accessKey])
   @@index([tenantId, spedTipo, spedIdentificador])
   @@map("fiscal_documents")

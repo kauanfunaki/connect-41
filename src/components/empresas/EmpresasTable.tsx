@@ -434,13 +434,17 @@ export function EmpresasTable({
               TODAS as larguras quando o conteúdo muda, então expandir uma matriz
               deslocava as colunas da tabela inteira. Larguras declaradas uma vez
               deixam o expandir e o recolher inertes. */}
-          <table className="w-full table-fixed min-w-[980px] text-[length:var(--fs-body)]">
+          <table className="w-full table-fixed min-w-[1020px] text-[length:var(--fs-body)]">
             <colgroup>
               {canCreate && <col className="w-11" />}
               {/* Nome não declara largura: fica com o espaço que sobrar. */}
               <col />
-              <col className="w-[150px]" />
-              <col className="w-[110px]" />
+              {/* 190px, e não 150: um CNPJ formatado é `00.000.000/0000-00`,
+                  18 caracteres em `tnum` a 15px — sozinho já passa de 150px, e
+                  com o `px-4` de cada lado o texto encostava na coluna de
+                  Status. Medido no print da conferência de 09/09. */}
+              <col className="w-[190px]" />
+              <col className="w-[120px]" />
               <col className="w-[190px]" />
               <col className="w-[170px]" />
               <col className="w-[130px]" />
