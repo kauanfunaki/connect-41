@@ -4,6 +4,8 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { uploadComProgresso } from "@/lib/uploadComProgresso";
 import { aceitaArquivo, formatarBytes } from "@/lib/fileSize";
 import { FileSpreadsheet, FileText, Paperclip, Presentation, Search, LinkIcon, X } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
 import { MentionTextarea, type MentionUser } from "@/components/transferencias/MentionTextarea";
 import { Input } from "@/components/ui/Input";
 import { renderRichText } from "@/lib/richText";
@@ -55,15 +57,16 @@ function TaskMentionPicker({ candidates, onPick }: { candidates: TaskMentionCand
 
   return (
     <div className="relative">
-      <button
+      <IconButton
         type="button"
+        size="sm"
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => setOpen((v) => !v)}
-        title="Mencionar tarefa" aria-label="Mencionar tarefa"
-        className="text-fg-muted hover:text-fg p-1.5 rounded-md hover:bg-surface-hover transition-colors"
+        title="Mencionar tarefa"
+        aria-label="Mencionar tarefa"
       >
         <LinkIcon size={15} />
-      </button>
+      </IconButton>
       {open && (
         <div className="absolute z-20 bottom-full left-0 mb-1 w-64 bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] p-2">
           <Input
@@ -119,9 +122,9 @@ function AttachmentChip({ attachment, onRemove }: { attachment: Attachment; onRe
         <span className="text-fg-muted flex-shrink-0"><FileIcon fileName={attachment.fileName} /></span>
       )}
       <span className="truncate max-w-[140px]">{attachment.fileName}</span>
-      <button type="button" onClick={onRemove} aria-label="Remover anexo" className="text-fg-muted hover:text-danger flex-shrink-0">
+      <IconButton type="button" size="sm" onClick={onRemove} aria-label="Remover anexo" className="flex-shrink-0">
         <X size={12} />
-      </button>
+      </IconButton>
     </span>
   );
 }
@@ -240,28 +243,30 @@ function Composer({
             <span key={t.id} className="inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-md border border-border bg-surface-hover text-[12px] text-fg-secondary">
               <LinkIcon size={11} className="text-fg-muted flex-shrink-0" />
               <span className="truncate max-w-[160px]">{t.name}</span>
-              <button
+              <IconButton
                 type="button"
+                size="sm"
                 onClick={() => setMentionedTasks((prev) => prev.filter((x) => x.id !== t.id))}
                 aria-label="Remover menção"
-                className="text-fg-muted hover:text-danger flex-shrink-0"
+                className="flex-shrink-0"
               >
                 <X size={12} />
-              </button>
+              </IconButton>
             </span>
           ))}
         </div>
       )}
       <div className="flex items-center gap-1">
-        <button
+        <IconButton
           type="button"
+          size="sm"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          title="Anexar arquivo ou imagem" aria-label="Anexar arquivo ou imagem"
-          className="text-fg-muted hover:text-fg p-1.5 rounded-md hover:bg-surface-hover transition-colors disabled:opacity-60"
+          title="Anexar arquivo ou imagem"
+          aria-label="Anexar arquivo ou imagem"
         >
           <Paperclip size={15} />
-        </button>
+        </IconButton>
         <input ref={fileInputRef} type="file" accept={ANEXO_ACCEPT} className="hidden" onChange={handleFile} />
         {uploading && uploadNome && (
           <span className="flex items-center gap-2 min-w-0 max-w-[220px]">
@@ -291,18 +296,22 @@ function Composer({
 
         <div className="flex-1" />
         {onCancel && (
-          <button type="button" onClick={onCancel} className="h-8 px-3 rounded-md border border-border text-[12px] text-fg-muted hover:text-fg transition-colors">
+          <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
             Cancelar
-          </button>
+          </Button>
         )}
-        <button
+        {/* `loading` do Button diria só "Salvando…"; aqui há um terceiro
+            estado ("Enviando…", enquanto o anexo sobe) que o componente não
+            expressa. Mantido o rótulo explícito, com `disabled` no lugar. */}
+        <Button
           type="button"
+          variant="primary"
+          size="sm"
           onClick={submit}
           disabled={isPending || uploading || (!value.trim() && attachments.length === 0 && mentionedTasks.length === 0)}
-          className="h-8 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
         >
           {isPending ? "Salvando…" : uploading ? "Enviando…" : submitLabel}
-        </button>
+        </Button>
       </div>
 
       {/* Fora da barra de ações: ali o texto seria espremido entre os botões e

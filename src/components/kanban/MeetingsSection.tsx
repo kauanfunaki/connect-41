@@ -11,6 +11,7 @@ import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
 import { AttendeePicker } from "@/components/shared/AttendeePicker";
 import { formatInstantDateTime } from "@/lib/format";
 import { useConfirm } from "@/components/ui/useConfirm";
+import { Button } from "@/components/ui/Button";
 
 type MeetingRow = {
   id: string;
@@ -86,13 +87,13 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
 
               <AttendeePicker users={allUsers} label="Responsáveis pela reunião" />
 
-              <button
+              <Button
+                variant="primary"
                 type="submit"
                 disabled={isPending}
-                className="h-9 px-4 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
               >
                 {isPending ? "Agendando…" : "Agendar"}
-              </button>
+              </Button>
             </>
           )}
           {state?.error && <p className="text-[12px] text-danger">{state.error}</p>}

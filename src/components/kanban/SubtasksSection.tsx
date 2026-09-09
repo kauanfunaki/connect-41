@@ -6,6 +6,7 @@ import { Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { StageDot, type StageDotType } from "@/components/kanban/StageDot";
 import { useConfirm } from "@/components/ui/useConfirm";
+import { Button } from "@/components/ui/Button";
 
 export type SubtaskData = {
   id: string;
@@ -119,13 +120,15 @@ export function SubtasksSection({ canAct, canDelete, basePath, pipelineId, subta
             onKeyDown={(e) => e.key === "Enter" && addSubtask()}
             placeholder="Adicionar subtarefa…"
           />
-          <button
+          <Button
+            variant="primary"
+            size="sm"
             type="button"
             onClick={addSubtask}
-            className="h-8 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors flex-shrink-0"
+            className="flex-shrink-0"
           >
             Adicionar
-          </button>
+          </Button>
         </div>
       )}
       {dialog}

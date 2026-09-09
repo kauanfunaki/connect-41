@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 import type { PipelineEntityType } from "@/generated/prisma/enums";
+import { Button } from "@/components/ui/Button";
 
 type EntityOption = { id: string; name: string };
 type TagOption = { id: string; name: string; color: string };
@@ -106,13 +107,13 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
       )}
 
       <div className="flex items-center gap-3 pt-2">
-        <button
+        <Button
+          variant="primary"
           type="submit"
           disabled={isPending}
-          className="h-9 px-5 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
         >
           {isPending ? "Adicionando…" : "Adicionar"}
-        </button>
+        </Button>
         <Link
           href={cancelHref}
           className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"

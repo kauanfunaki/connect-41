@@ -3,6 +3,7 @@
 import { useActionState, useRef } from "react";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 import { Textarea } from "@/components/ui/Textarea";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   action: (prev: PipelineState, form: FormData) => Promise<PipelineState>;
@@ -30,13 +31,14 @@ export function AddNoteForm({ action }: Props) {
         rows={2}
         placeholder="Adicionar uma nota…"
       />
-      <button
+      <Button
+        variant="primary"
+        size="sm"
         type="submit"
         disabled={isPending}
-        className="h-8 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
       >
         {isPending ? "Salvando…" : "Adicionar nota"}
-      </button>
+      </Button>
     </form>
   );
 }

@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   action: (prev: PipelineState, form: FormData) => Promise<PipelineState>;
@@ -25,26 +26,27 @@ export function NewFolderButton({ action }: Props) {
 
   return (
     <>
-      <button
+      <Button
+        variant="secondary"
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-border text-[13px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors"
       >
         <FolderPlus size={14} /> Nova pasta
-      </button>
+      </Button>
       <Modal open={open} onClose={() => setOpen(false)} title="Nova pasta">
         <form action={(form) => { submitted.current = true; formAction(form); }} className="space-y-3">
           <CampoForm label="Nome" htmlFor="folder-name" required>
             <Input id="folder-name" name="name" required autoFocus placeholder="ex: Financeiro" />
           </CampoForm>
           {state?.error && <p className="text-[12px] text-danger">{state.error}</p>}
-          <button
+          <Button
+            variant="primary"
             type="submit"
             disabled={isPending}
-            className="w-full h-9 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+            className="w-full"
           >
             {isPending ? "Criando…" : "Criar"}
-          </button>
+          </Button>
         </form>
       </Modal>
     </>

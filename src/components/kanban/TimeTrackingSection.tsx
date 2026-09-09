@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
+import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
 
 export type TimeEntryData = {
   id: string;
@@ -108,14 +110,15 @@ export function TimeTrackingSection({ canAct, estimateMinutes, entries, estimate
                 {e.note && <p className="text-[12px] text-fg-muted truncate">{e.note}</p>}
               </div>
               {e.canDelete && (
-                <button
+                <IconButton
                   type="button"
+                  size="sm"
                   onClick={() => startTransition(() => deleteEntryAction(e.id))}
-                  className="text-fg-muted hover:text-danger p-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                   aria-label="Remover apontamento"
                 >
                   <Trash2 size={13} />
-                </button>
+                </IconButton>
               )}
             </div>
           ))}
@@ -139,14 +142,9 @@ export function TimeTrackingSection({ canAct, estimateMinutes, entries, estimate
             placeholder="nota (opcional)"
             className="flex-1 min-w-[120px]"
           />
-          <button
-            type="button"
-            onClick={addEntry}
-            disabled={isPending}
-            className="h-9 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors flex-shrink-0"
-          >
+          <Button type="button" variant="primary" onClick={addEntry} disabled={isPending} className="flex-shrink-0">
             Apontar
-          </button>
+          </Button>
         </div>
       )}
     </div>

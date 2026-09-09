@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   canAct: boolean;
@@ -59,13 +60,9 @@ export function DescriptionEditor({ canAct, description, action }: Props) {
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-[13px] font-semibold text-fg">Descrição</h2>
         {!editing && (
-          <button
-            type="button"
-            onClick={openEditing}
-            className="h-7 px-2.5 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors"
-          >
+          <Button type="button" variant="secondary" size="xs" onClick={openEditing}>
             Editar
-          </button>
+          </Button>
         )}
       </div>
 
@@ -74,22 +71,12 @@ export function DescriptionEditor({ canAct, description, action }: Props) {
           {error && <p className="text-[12px] text-danger">{error}</p>}
           <RichTextEditor name="description" defaultValue={description ?? ""} />
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={save}
-              disabled={isPending}
-              className="h-8 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
-            >
-              {isPending ? "Salvando…" : "Salvar"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setEditing(false)}
-              disabled={isPending}
-              className="h-8 px-3 rounded-md border border-border text-[12px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors"
-            >
+            <Button type="button" variant="primary" size="sm" onClick={save} loading={isPending}>
+              Salvar
+            </Button>
+            <Button type="button" variant="secondary" size="sm" onClick={() => setEditing(false)} disabled={isPending}>
               Cancelar
-            </button>
+            </Button>
           </div>
         </form>
       ) : description ? (

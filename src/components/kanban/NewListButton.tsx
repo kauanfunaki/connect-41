@@ -49,13 +49,14 @@ export function NewListButton({ action }: Props) {
             </button>
           )}
           {state?.error && <p className="text-[12px] text-danger">{state.error}</p>}
-          <button
+          <Button
+            variant="primary"
             type="submit"
             disabled={isPending}
-            className="w-full h-9 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
+            className="w-full"
           >
             {isPending ? "Criando…" : "Criar"}
-          </button>
+          </Button>
         </form>
       </Modal>
     </>

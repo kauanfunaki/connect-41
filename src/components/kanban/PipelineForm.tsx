@@ -7,6 +7,7 @@ import { CampoForm as Field } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { normalizeAccentColor } from "@/lib/color";
+import { Button } from "@/components/ui/Button";
 
 const DEFAULT_COLORS = ["#586577", "#2E6FB8", "#C8860D", "#1E8E5A", "#C5374B"];
 
@@ -122,13 +123,13 @@ export function PipelineForm({ action, sectorOptions }: Props) {
       </div>
 
       <div className="flex items-center gap-3 pt-2">
-        <button
+        <Button
+          variant="primary"
           type="submit"
           disabled={isPending}
-          className="h-9 px-5 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
         >
           {isPending ? "Criando…" : "Criar Kanban"}
-        </button>
+        </Button>
         <Link
           href="/kanban"
           className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"

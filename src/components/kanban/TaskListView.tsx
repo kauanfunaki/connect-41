@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { ChevronRight, ChevronDown, Repeat } from "lucide-react";
+import { IconButton } from "@/components/ui/IconButton";
 import { formatCalendarDate } from "@/lib/format";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -167,14 +168,15 @@ function Row({
         <td className={`py-2 pl-2 pr-1 ${DOT_COL}`}>
           <div className="flex items-center gap-1" style={{ paddingLeft: `${ITEM_INDENT + depth * DEPTH_STEP}px` }}>
             {hasSubtasks ? (
-              <button
+              <IconButton
                 type="button"
+                size="sm"
                 onClick={() => setExpanded((v) => !v)}
-                className="text-fg-muted hover:text-fg flex-shrink-0"
+                className="flex-shrink-0"
                 aria-label={expanded ? "Recolher subtarefas" : "Expandir subtarefas"}
               >
                 <ChevronRight size={14} className={`transition-transform ${expanded ? "rotate-90" : ""}`} />
-              </button>
+              </IconButton>
             ) : (
               <span className="w-[14px] flex-shrink-0" />
             )}
@@ -475,9 +477,9 @@ function StageGroupHeader({
 
   return (
     <div className="flex items-center gap-2">
-      <button type="button" onClick={onToggleCollapsed} aria-label={collapsed ? "Expandir lista" : "Recolher lista"} aria-expanded={!collapsed} className="text-fg-muted hover:text-fg flex-shrink-0">
+      <IconButton type="button" size="sm" onClick={onToggleCollapsed} aria-label={collapsed ? "Expandir lista" : "Recolher lista"} aria-expanded={!collapsed} className="flex-shrink-0">
         <ChevronDown size={13} className={`transition-transform ${collapsed ? "-rotate-90" : ""}`} />
-      </button>
+      </IconButton>
       {editingName && canAct ? (
         <Input
           value={nameValue}

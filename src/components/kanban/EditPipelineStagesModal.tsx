@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 import { Pencil, GripVertical, Trash2, Plus } from "lucide-react";
+import { IconButton } from "@/components/ui/IconButton";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -87,13 +88,9 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={openModal}
-        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-border text-[13px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors"
-      >
+      <Button type="button" variant="secondary" onClick={openModal}>
         <Pencil size={14} /> Editar lista
-      </button>
+      </Button>
 
       <Modal open={open} onClose={() => setOpen(false)} title="Editar lista" maxWidth="max-w-lg">
         <div className="space-y-3">
@@ -112,9 +109,9 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
             {rows.map((row, i) => (
               <div key={row.id ?? `new-${i}`} className="flex items-center gap-2">
                 <div className="flex flex-col flex-shrink-0">
-                  <button type="button" disabled={i === 0} onClick={() => move(i, "up")} aria-label="Mover estágio para cima" className="text-fg-muted hover:text-fg disabled:opacity-30 disabled:hover:text-fg-muted">
+                  <IconButton type="button" size="sm" disabled={i === 0} onClick={() => move(i, "up")} aria-label="Mover estágio para cima">
                     <GripVertical size={13} />
-                  </button>
+                  </IconButton>
                 </div>
                 <input
                   type="color"
@@ -139,14 +136,15 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
                 </Select>
                 <StageDot color={row.color} type={row.type} />
                 {rows.length > 1 && (
-                  <button
+                  <IconButton
                     type="button"
+                    size="sm"
                     onClick={() => removeRow(i)}
-                    className="text-fg-muted hover:text-danger p-1.5 flex-shrink-0"
+                    className="flex-shrink-0"
                     aria-label="Excluir estágio"
                   >
                     <Trash2 size={14} />
-                  </button>
+                  </IconButton>
                 )}
               </div>
             ))}
@@ -178,13 +176,9 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
             >
               {isPending ? "Salvando…" : "Salvar"}
            </Button>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg transition-colors"
-            >
+            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               Cancelar
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>

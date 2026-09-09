@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { getRecentLinkedIds, pushRecentLinkedId } from "@/lib/kanbanRecentLinks";
+import { IconButton } from "@/components/ui/IconButton";
 
 export type LinkedItem = { id: string; name: string };
 export type LinkCandidate = { id: string; name: string };
@@ -49,14 +50,15 @@ export function LinkedItemsSection({ canAct, basePath, links, candidates, create
                 {l.name}
               </Link>
               {canAct && (
-                <button
+                <IconButton
                   type="button"
+                  size="sm"
                   onClick={() => startTransition(() => deleteAction(l.id))}
                   aria-label="Desvincular tarefa"
-                  className="text-fg-muted hover:text-danger p-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <Trash2 size={13} />
-                </button>
+                </IconButton>
               )}
             </div>
           ))}
@@ -68,9 +70,9 @@ export function LinkedItemsSection({ canAct, basePath, links, candidates, create
           <div className="relative">
             <div className="flex items-center gap-2">
               <Input compact value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar tarefa…" autoFocus />
-              <button type="button" onClick={() => { setPicking(false); setQuery(""); }} aria-label="Cancelar busca" className="text-fg-muted hover:text-fg p-1.5 flex-shrink-0">
+              <IconButton type="button" size="sm" onClick={() => { setPicking(false); setQuery(""); }} aria-label="Cancelar busca" className="flex-shrink-0">
                 <X size={14} />
-              </button>
+              </IconButton>
             </div>
             {matches.length > 0 && (
               <div className="mt-1 bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] max-h-48 overflow-y-auto">

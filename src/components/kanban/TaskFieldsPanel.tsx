@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Check, ChevronDown, Circle, Eye, Flag, Play, Square, Tag as TagIcon, Timer, Users, Calendar, Repeat } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -221,13 +222,9 @@ export function TaskFieldsPanel({
             <span className="text-[12px] text-fg-muted">{activeTimer.userName} está rastreando…</span>
           )
         ) : canAct ? (
-          <button
-            type="button"
-            onClick={() => startTransition(() => startTimerAction())}
-            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors"
-          >
+          <Button type="button" variant="secondary" size="xs" onClick={() => startTransition(() => startTimerAction())}>
             <Play size={11} /> Start
-          </button>
+          </Button>
         ) : (
           <span className="text-[13px] text-fg-muted">—</span>
         )}
