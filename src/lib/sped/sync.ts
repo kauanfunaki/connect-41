@@ -186,6 +186,22 @@ export async function sincronizarRaiz(
       // próxima execução, de onde o `cursor_retomada` gravado acima parou.
       if (pagina === MAX_PAGINAS_POR_EXECUCAO - 1) resultado.temMais = true;
     }
+
+    // A rodada terminou sem exceção: o estado é sucesso, inclusive quando a
+    // raiz não devolveu cursor nenhum.
+    //
+    // Sem isto, `lastError` só era limpo dentro do `if (cursor_retomada)` — e
+    // raiz que voltou a funcionar mas não tem nada a sincronizar nunca recebe
+    // cursor, então carregava o erro da última falha para sempre. Foi o que
+    // aconteceu em 2026-09-09: depois de liberarem o IP, as 26 raízes passaram
+    // a responder 200 e 25 continuaram exibindo "SPED 403: Forbidden", porque
+    // não têm documento do lado do SPED. Estado que mente sobre a última
+    // execução é pior que estado ausente — alguém desliga a integração
+    // achando que ela está quebrada.
+    await prisma.spedSyncState.update({
+      where: { id: estado.id },
+      data: { lastRunAt: new Date(), lastError: null },
+    });
   } catch (err) {
     const mensagem =
       err instanceof ErroDoSped ? err.message : err instanceof Error ? err.message : "falha desconhecida";
