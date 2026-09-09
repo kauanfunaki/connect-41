@@ -5,6 +5,7 @@ import type { PipelineState } from "@/app/(app)/kanban/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   action: (prev: PipelineState, form: FormData) => Promise<PipelineState>;
@@ -39,13 +40,14 @@ export function PrazoPrioridadeForm({ action, dueDate, priority }: Props) {
           </Select>
         </CampoForm>
       </div>
-      <button
+      <Button
+        variant="secondary"
+        size="md"
         type="submit"
         disabled={isPending}
-        className="h-9 px-3 rounded-md border border-border text-[12px] font-medium text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
       >
         {isPending ? "Salvando…" : "Salvar"}
-      </button>
+      </Button>
     </form>
   );
 }

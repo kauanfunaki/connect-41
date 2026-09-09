@@ -125,14 +125,14 @@ export function EditMeetingDialog({ action, meeting, allUsers, companies, onClos
           {state?.error && <p className="text-[length:var(--fs-helper)] text-danger">{state.error}</p>}
 
           <div className="flex items-center justify-end gap-2 pt-1">
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="md"
               onClick={onClose}
               disabled={isPending}
-              className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
             >
               Cancelar
-            </button>
+            </Button>
             <Button
               type="submit"
               disabled={isPending}

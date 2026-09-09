@@ -12,6 +12,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { maskCpf } from "@/lib/format";
+import { Button } from "@/components/ui/Button";
 
 type Row = {
   id: string;
@@ -266,13 +267,13 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, defini
       </div>
 
       <BulkActionBar count={selected.size} onClear={() => setSelected(new Set())}>
-        <button
-          type="button"
+        <Button
+          variant="danger"
+          size="sm"
           onClick={() => setConfirmAlvo({ tipo: "massa" })}
-          className="h-8 px-3 rounded-md border border-danger/30 text-[13px] font-semibold text-danger hover:bg-danger-bg transition-colors"
         >
           Inativar
-        </button>
+        </Button>
       </BulkActionBar>
 
       <ConfirmDialog

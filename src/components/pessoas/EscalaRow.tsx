@@ -5,6 +5,7 @@ import type { ScheduleState } from "@/app/(app)/pessoas/[id]/escala/actions";
 import { ScheduleStatus } from "@/generated/prisma/enums";
 import { Select } from "@/components/ui/Select";
 import { useConfirm } from "@/components/ui/useConfirm";
+import { Button } from "@/components/ui/Button";
 
 const STATUS_LABEL: Record<ScheduleStatus, string> = {
   PLANEJADA:  "Planejada",
@@ -72,20 +73,21 @@ export function EscalaRow({ escala, updateAction, removeAction, canManage }: Pro
               ))}
             </Select>
           </div>
-          <button
+          <Button
+            variant="secondary"
+            size="md"
             type="submit"
             disabled={isPending}
-            className="h-9 px-3 rounded-md border border-border text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
           >
             {isPending ? "Salvando…" : "Atualizar"}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="danger"
+            size="md"
             onClick={() => requestConfirm({ title: "Remover este dia da escala?", destructive: true, confirmLabel: "Remover" }, removeAction)}
-            className="h-9 px-3 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
           >
             Remover
-          </button>
+          </Button>
         </form>
       )}
 

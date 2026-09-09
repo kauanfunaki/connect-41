@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { CheckCircle2, RotateCcw } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   canAct: boolean;
@@ -25,14 +26,14 @@ export function CompletionBanner({ canAct, isCompleted, completedByLabel, conclu
           {completedByLabel ?? "Tarefa concluída"}
         </div>
         {canAct && (
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="xs"
             disabled={isPending}
             onClick={() => startTransition(() => reabrirAction())}
-            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover disabled:opacity-60 transition-colors"
           >
             <RotateCcw size={12} /> Reabrir
-          </button>
+          </Button>
         )}
       </div>
     );
@@ -41,13 +42,17 @@ export function CompletionBanner({ canAct, isCompleted, completedByLabel, conclu
   if (!canAct) return null;
 
   return (
-    <button
-      type="button"
+    // Neutro em repouso e verde só no hover — não é o `success` do design
+    // system, que é verde o tempo todo. O convite a concluir não deve competir
+    // com o conteúdo da tarefa antes de o mouse chegar nele.
+    <Button
+      variant="secondary"
+      size="sm"
+      className="mb-4 hover:text-success hover:border-success/40 hover:bg-success/5"
       disabled={isPending}
       onClick={() => startTransition(() => concluirAction())}
-      className="inline-flex items-center gap-1.5 h-8 px-3 mb-4 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-success hover:border-success/40 hover:bg-success/5 disabled:opacity-60 transition-colors"
     >
       <CheckCircle2 size={14} /> Concluir tarefa
-    </button>
+    </Button>
   );
 }

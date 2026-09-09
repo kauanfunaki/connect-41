@@ -9,6 +9,7 @@ import { useConfirm } from "@/components/ui/useConfirm";
 import { toSaoPauloDateTimeLocal } from "@/lib/agenda";
 import { formatInstantDate, formatInstantTime } from "@/lib/format";
 import { PROVIDER_LABEL, type MeetingActions, type MeetingRow } from "./types";
+import { Button } from "@/components/ui/Button";
 
 function formatTime(d: Date): string {
   return formatInstantTime(d, { hour: "2-digit", minute: "2-digit" });
@@ -207,18 +208,18 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
                 <Pencil size={11} /> Editar
               </button>
             )}
-            <button
-              type="button"
+            <Button
+              variant="danger"
+              size="xs"
               onClick={() =>
                 requestConfirm(
                   { title: "Excluir esta reunião?", destructive: true, confirmLabel: "Excluir" },
                   () => actions.deleteAction(meeting.id)
                 )
               }
-              className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[12px] text-danger hover:bg-danger-bg transition-colors"
             >
               <Trash2 size={11} /> Excluir
-            </button>
+            </Button>
           </div>
         </div>
       )}

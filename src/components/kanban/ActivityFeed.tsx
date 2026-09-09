@@ -520,13 +520,14 @@ export function ActivityFeed({ items, canAct, mentionUsers, pipelineItemId, task
             </button>
           )}
           {items.length > 0 && (
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="xs"
+              className="flex-shrink-0"
               onClick={() => setDetailed((v) => !v)}
-              className="h-7 px-2.5 rounded-md border border-border text-[11px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors flex-shrink-0"
             >
               {detailed ? "Ocultar detalhes" : "Mostrar detalhes"}
-            </button>
+            </Button>
           )}
         </div>
       </div>

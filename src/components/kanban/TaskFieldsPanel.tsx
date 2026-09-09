@@ -105,14 +105,15 @@ export function TaskFieldsPanel({
         {canAct ? (
           <Dropdown
             trigger={({ open, toggle }) => (
-              <button
-                type="button"
+              <Button
+                variant="danger"
+                size="xs"
+                className="bg-danger/15"
                 onClick={toggle}
                 aria-expanded={open}
-                className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md bg-danger/15 text-danger text-[12px] font-semibold"
               >
                 {currentStageName.toUpperCase()} <ChevronDown size={12} />
-              </button>
+              </Button>
             )}
           >
             {stages.map((s) => (
@@ -214,13 +215,14 @@ export function TaskFieldsPanel({
           activeTimer.userId === currentUserId ? (
             <span className="inline-flex items-center gap-2">
               <TempoDecorrido key={activeTimer.startedAt} startedAt={activeTimer.startedAt} className="text-[12px] font-medium text-fg" />
-              <button
-                type="button"
+              <Button
+                variant="danger"
+                size="xs"
+                className="bg-danger/15"
                 onClick={() => startTransition(() => stopTimerAction())}
-                className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md bg-danger/15 text-danger text-[12px] font-medium hover:bg-danger/25 transition-colors"
               >
                 <Square size={11} /> Parar
-              </button>
+              </Button>
             </span>
           ) : (
             // Vale para quem não está rastreando também: o "…" antigo não dizia
@@ -420,16 +422,17 @@ function EstimatePopover({
             placeholder="min"
             autoFocus
           />
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            size="md"
+            className="flex-shrink-0"
             onClick={() => {
               startTransition(() => estimateAction(value));
               close();
             }}
-            className="h-9 px-2.5 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover transition-colors flex-shrink-0"
           >
             OK
-          </button>
+          </Button>
         </div>
       )}
     </Dropdown>

@@ -110,13 +110,17 @@ export function PipelineForm({ action, sectorOptions }: Props) {
                 />
               </div>
               {stages.length > 1 && (
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="md"
+                  // Neutro em repouso, vermelho só no hover: numa lista de
+                  // estágios, um "Remover" vermelho por estágio pintaria o
+                  // formulário inteiro de alerta.
+                  className="text-fg-muted hover:text-danger hover:border-danger/30 flex-shrink-0"
                   onClick={() => removeStage(i)}
-                  className="h-9 px-3 rounded-md border border-border text-[12px] text-fg-muted hover:text-danger hover:border-danger/30 transition-colors flex-shrink-0"
                 >
                   Remover
-                </button>
+                </Button>
               )}
             </div>
           ))}

@@ -11,6 +11,7 @@ import { MonthGrid } from "./MonthGrid";
 import { saoPauloParts, shiftAgendaDate, agendaTitle, type AgendaView } from "@/lib/agenda";
 import type { MeetingState } from "@/app/(app)/agenda/actions";
 import type { CalendarDay, CompanyOption, MeetingActions, MeetingRow, UserOption } from "./types";
+import { Button } from "@/components/ui/Button";
 
 const VIEW_LABEL: Record<AgendaView, string> = { dia: "Dia", semana: "Semana", mes: "Mês" };
 const VIEW_ORDER: AgendaView[] = ["dia", "semana", "mes"];
@@ -122,14 +123,15 @@ export function AgendaCalendar({
             }))}
           />
 
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            size="md"
+            className="rounded-full"
             onClick={openDialogForNow}
-            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
           >
             <Plus size={14} />
             Nova reunião
-          </button>
+          </Button>
         </div>
       </div>
 
