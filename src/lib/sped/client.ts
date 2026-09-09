@@ -42,6 +42,20 @@ export type PaginaDeDocumentos = {
   cursor_retomada: string | null;
   /** Informativo, para tela e log. **Nunca devolver à API.** */
   watermark?: string | null;
+  /**
+   * Quinta chave do envelope, declarada aqui para o próximo leitor não
+   * redescobri-la: **este cliente não a usa**.
+   *
+   * Medida em produção em 2026-09-09 (`limite=1`, `alterado_desde` na origem):
+   * veio `null`, enquanto `proximo_cursor` e `cursor_retomada` vieram com 96
+   * caracteres e o `watermark` preenchido — que é a assinatura do modo
+   * sincronização. Não está no contrato, e o lado do SPED ainda não documentou
+   * o que ela significa quando vem preenchida.
+   *
+   * Quem retoma manda `cursor_retomada`; quem pagina manda `proximo_cursor`.
+   * Enquanto não houver definição, não inventar uso para esta.
+   */
+  cursor_sincronizacao?: string | null;
 };
 
 export type CredenciaisSped = { baseUrl: string; token: string };

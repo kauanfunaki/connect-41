@@ -22,6 +22,17 @@ export type ResultadoDaRaiz = {
   semAtribuicao: number;
   ambiguos: number;
   ignorados: number;
+  /**
+   * A execução parou no teto de páginas e ainda havia cursor — ou seja, a carga
+   * não terminou.
+   *
+   * Existe para a decisão operacional da carga inicial: são 457 páginas contra
+   * um teto de 30 por execução, então ela precisa de ~16 rodadas. Sem este
+   * sinal, saber se o cron ainda está correndo atrás exige comparar contagens à
+   * mão. Enquanto vier `true`, vale manter o intervalo curto; quando virar
+   * `false`, dá para espaçar.
+   */
+  temMais: boolean;
   erro?: string;
 };
 
@@ -52,6 +63,7 @@ export async function sincronizarRaiz(
     vistos: 0,
     gravados: 0,
     removidos: 0,
+    temMais: false,
     semAtribuicao: 0,
     ambiguos: 0,
     ignorados: 0,
@@ -160,7 +172,8 @@ export async function sincronizarRaiz(
       }
 
       if (resposta.cursor_retomada) {
-        cursor = resposta.cursor_retomada;
+        // Só grava. Quem continua paginando agora é `proximo_cursor`, logo
+        // abaixo — atribuir `cursor` aqui era morto, sempre sobrescrito.
         await prisma.spedSyncState.update({
           where: { id: estado.id },
           data: { cursorRetomada: resposta.cursor_retomada, watermark, lastRunAt: new Date(), lastError: null },
@@ -169,6 +182,9 @@ export async function sincronizarRaiz(
 
       if (!resposta.proximo_cursor) break;
       cursor = resposta.proximo_cursor;
+      // Última volta permitida e ainda há para onde ir: a carga continua na
+      // próxima execução, de onde o `cursor_retomada` gravado acima parou.
+      if (pagina === MAX_PAGINAS_POR_EXECUCAO - 1) resultado.temMais = true;
     }
   } catch (err) {
     const mensagem =
