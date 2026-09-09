@@ -30,6 +30,24 @@ async function interestedUserIds(pipelineItemId: string, excludeUserId: string):
   return [...ids];
 }
 
+/**
+ * Revalida o detalhe de um item nos DOIS lugares em que ele aparece.
+ *
+ * O detalhe abre como rota cheia (`/kanban/[id]/itens/[itemId]`) e como modal
+ * por rota interceptada (`/kanban/[id]/@modal/(.)itens/[itemId]`), que é um
+ * slot paralelo de `/kanban/[id]`. Revalidar só a rota cheia deixava o modal
+ * com dado velho: parar o cronômetro gravava o apontamento no banco e a seção
+ * de Tempo não recarregava, dando a impressão de que nada tinha sido
+ * registrado. Achado na conferência visual de 09/09.
+ *
+ * Não é exportada de propósito: num arquivo "use server" só valem exports
+ * assíncronos, e esta é síncrona.
+ */
+function revalidarItem(pipeline: { id: string }, itemId: string) {
+  revalidarItem(pipeline, itemId);
+  revalidatePath(boardPath(pipeline));
+}
+
 export async function criarPipeline(
   _prev: PipelineState,
   form: FormData
@@ -458,7 +476,7 @@ export async function adicionarNota(
     }
   }
 
-  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
+  revalidarItem(pipeline, itemId);
   return null;
 }
 
@@ -485,7 +503,7 @@ export async function editarNota(pipelineId: string, itemId: string, activityId:
     return;
   }
 
-  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
+  revalidarItem(pipeline, itemId);
 }
 
 export async function excluirNota(pipelineId: string, itemId: string, activityId: string): Promise<void> {
@@ -511,7 +529,7 @@ export async function excluirNota(pipelineId: string, itemId: string, activityId
     return;
   }
 
-  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
+  revalidarItem(pipeline, itemId);
 }
 
 export async function alternarObservadorItem(pipelineId: string, itemId: string, userId: string, marcado: boolean): Promise<void> {
@@ -544,7 +562,7 @@ export async function alternarObservadorItem(pipelineId: string, itemId: string,
     return;
   }
 
-  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
+  revalidarItem(pipeline, itemId);
 }
 
 const PRIORITY_LABEL: Record<number, string> = { 0: "Normal", 1: "Alta", 2: "Urgente" };
@@ -845,7 +863,7 @@ export async function iniciarCronometro(pipelineId: string, itemId: string): Pro
     return;
   }
 
-  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
+  revalidarItem(pipeline, itemId);
 }
 
 export async function pararCronometro(pipelineId: string, itemId: string): Promise<void> {
@@ -877,7 +895,7 @@ export async function pararCronometro(pipelineId: string, itemId: string): Promi
     return;
   }
 
-  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
+  revalidarItem(pipeline, itemId);
 }
 
 // ─── Vincular itens / dependências ─────────────────────────────────────────
@@ -911,7 +929,7 @@ export async function criarLinkItem(pipelineId: string, itemId: string, linkedIt
     return;
   }
 
-  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
+  revalidarItem(pipeline, itemId);
 }
 
 export async function removerLinkItem(pipelineId: string, itemId: string, linkedItemId: string): Promise<void> {
@@ -940,7 +958,7 @@ export async function removerLinkItem(pipelineId: string, itemId: string, linked
     return;
   }
 
-  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
+  revalidarItem(pipeline, itemId);
 }
 
 export async function excluirItem(pipelineId: string, itemId: string): Promise<void> {
@@ -1288,7 +1306,7 @@ export async function atualizarEstimativa(pipelineId: string, itemId: string, mi
     return;
   }
 
-  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
+  revalidarItem(pipeline, itemId);
 }
 
 export async function criarLancamentoTempo(pipelineItemId: string, _prev: PipelineState, form: FormData): Promise<PipelineState> {
@@ -1350,7 +1368,7 @@ export async function excluirLancamentoTempo(pipelineId: string, itemId: string,
     return;
   }
 
-  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
+  revalidarItem(pipeline, itemId);
 }
 
 // ─── Duplicar Pipeline ──────────────────────────────────────────────────────

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { nomeExibicao } from "@/lib/companyName";
 import { TIPO_LABEL, DESTINO_LABEL, competenciaLegivel } from "@/lib/fiscal/rotulos";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 
 type Empresa = { id: string; name: string; displayName: string | null };
 
@@ -66,18 +67,20 @@ export function AcervoFiltros({ empresas, competencias }: Props) {
         {() => (
           <div className="space-y-3">
             <CampoForm label="Empresa" htmlFor="f-empresa">
-              <Select
+              {/* `key` no valor da URL: o SearchableSelect guarda a escolha em
+                  estado interno, e sem isto ele ficaria mostrando a empresa
+                  antiga se o filtro mudasse por fora — voltar no navegador, ou
+                  abrir um link que já vem filtrado. */}
+              <SearchableSelect
+                key={params.get("empresa") ?? ""}
                 id="f-empresa"
-                value={params.get("empresa") ?? ""}
-                onChange={(e) => aplicar("empresa", e.target.value)}
-              >
-                <option value="">Todas</option>
-                {empresas.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {nomeExibicao(e)}
-                  </option>
-                ))}
-              </Select>
+                name="empresa"
+                defaultValue={params.get("empresa") ?? ""}
+                onChange={(v) => aplicar("empresa", v)}
+                options={empresas.map((e) => ({ value: e.id, label: nomeExibicao(e) }))}
+                vazioLabel="Todas"
+                placeholder="Buscar empresa…"
+              />
             </CampoForm>
 
             <CampoForm label="Competência" htmlFor="f-competencia">

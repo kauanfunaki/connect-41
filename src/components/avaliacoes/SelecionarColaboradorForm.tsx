@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import { CampoForm } from "@/components/ui/CampoForm";
-import { Select } from "@/components/ui/Select";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 
 type PersonOption = { id: string; name: string };
 
@@ -21,16 +21,14 @@ export function SelecionarColaboradorForm({ cycleId, colaboradores }: Props) {
     <div className="border-t border-border pt-4 flex items-end gap-3">
       <div className="flex-1">
         <CampoForm label="Colaborador" htmlFor="personId">
-          <Select
+          <SearchableSelect
             id="personId"
-            value={personId}
-            onChange={(e) => setPersonId(e.target.value)}
-          >
-            <option value="">Selecione</option>
-            {colaboradores.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </Select>
+            name="personId"
+            defaultValue={personId}
+            onChange={setPersonId}
+            options={colaboradores.map((p) => ({ value: p.id, label: p.name }))}
+            placeholder="Buscar colaborador…"
+          />
         </CampoForm>
       </div>
       <Button

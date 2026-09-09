@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 import type { PayrollEntryState } from "@/app/(app)/empresas/[id]/folha/[competencyId]/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 
 type PersonOption = { id: string; name: string };
 
@@ -21,12 +21,12 @@ export function LancarEventoForm({ action, colaboradores }: Props) {
     <form action={formAction} className="border-t border-border pt-4 space-y-3">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <CampoForm label="Colaborador" htmlFor="personId" required>
-          <Select id="personId" name="personId" required>
-            <option value="">Selecione</option>
-            {colaboradores.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </Select>
+          <SearchableSelect
+            id="personId"
+            name="personId"
+            options={colaboradores.map((p) => ({ value: p.id, label: p.name }))}
+            placeholder="Buscar colaborador…"
+          />
         </CampoForm>
         <CampoForm label="Salário Bruto" htmlFor="grossSalary" required>
           <Input id="grossSalary" name="grossSalary" type="number" step="0.01" required prefix="R$" placeholder="0,00" />

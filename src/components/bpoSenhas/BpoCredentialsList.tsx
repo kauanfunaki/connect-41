@@ -7,12 +7,12 @@ import { Eye, EyeOff, Copy, Pencil, Trash2, Plus, KeyRound, Search } from "lucid
 import { Modal } from "@/components/ui/Modal";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/useConfirm";
 import type { BpoCredencialState } from "@/app/(app)/bpo-senhas/actions";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 
 export type CredentialRow = {
   id: string;
@@ -45,12 +45,14 @@ function CredentialFormFields({ companies, defaults }: { companies: CompanyOptio
         <Input id="title" name="title" required defaultValue={defaults?.title} placeholder="Ex: e-CAC, Simples Nacional, Banco Inter" />
       </CampoForm>
       <CampoForm label="Empresa" htmlFor="companyId" helper="Deixe em branco para uma credencial geral do setor.">
-        <Select id="companyId" name="companyId" defaultValue={defaults?.companyId ?? ""}>
-          <option value="">Geral (sem empresa)</option>
-          {companies.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </Select>
+        <SearchableSelect
+          id="companyId"
+          name="companyId"
+          defaultValue={defaults?.companyId ?? ""}
+          options={companies.map((c) => ({ value: c.id, label: c.name }))}
+          vazioLabel="Geral (sem empresa)"
+          placeholder="Buscar empresa…"
+        />
       </CampoForm>
       <CampoForm label="Usuário" htmlFor="username">
         <Input id="username" name="username" defaultValue={defaults?.username ?? ""} />

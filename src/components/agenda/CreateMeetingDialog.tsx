@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { AttendeePicker } from "@/components/shared/AttendeePicker";
 import type { MeetingState } from "@/app/(app)/agenda/actions";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 
 type UserOption = { id: string; name: string };
 type CompanyOption = { id: string; name: string };
@@ -107,12 +108,13 @@ export function CreateMeetingDialog({ action, initialStart, initialEnd, hasGoogl
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <CampoForm label="Empresa" htmlFor="companyId">
-                <Select id="companyId" name="companyId" defaultValue="">
-                  <option value="">Nenhuma</option>
-                  {companies.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </Select>
+                <SearchableSelect
+                  id="companyId"
+                  name="companyId"
+                  options={companies.map((c) => ({ value: c.id, label: c.name }))}
+                  vazioLabel="Nenhuma"
+                  placeholder="Buscar empresa…"
+                />
               </CampoForm>
               <CampoForm label="Cliente(s)" htmlFor="clientName" helper="Separe por vírgula, se houver mais de um">
                 <Input id="clientName" name="clientName" placeholder="Ex: Bruno, Maria" />

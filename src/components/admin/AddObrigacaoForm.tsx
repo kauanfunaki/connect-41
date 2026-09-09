@@ -6,6 +6,7 @@ import type { ObligationState } from "@/app/(app)/admin/obrigacoes/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 
 export type PipelineOption = { id: string; name: string; sectorCode: string; sectorLabel: string };
 
@@ -45,12 +46,12 @@ export function AddObrigacaoForm({ action, companies, pipelines, users }: Props)
     <form action={formAction} className="bg-surface border border-border rounded-lg p-4 mb-6 space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <CampoForm label="Empresa" htmlFor="companyId" required>
-          <Select id="companyId" name="companyId" required defaultValue="">
-            <option value="" disabled>Selecione…</option>
-            {companies.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </Select>
+          <SearchableSelect
+            id="companyId"
+            name="companyId"
+            options={companies.map((c) => ({ value: c.id, label: c.name }))}
+            placeholder="Buscar empresa…"
+          />
         </CampoForm>
         <CampoForm label="Kanban de destino" htmlFor="pipelineId" required>
           <Select

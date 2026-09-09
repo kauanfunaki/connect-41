@@ -4,10 +4,10 @@ import { useActionState, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { DeleteButton } from "@/components/ui/DeleteButton";
 import type { EdicaoState } from "@/app/(app)/documentos-fiscais/[id]/editar";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 
 type Empresa = { id: string; nome: string };
 
@@ -89,13 +89,13 @@ export function EditarDocumentoCard({
             )}
 
             <CampoForm label="Empresa" htmlFor="companyId">
-              <Select id="companyId" name="companyId" defaultValue={valores.companyId}>
-                {empresas.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.nome}
-                  </option>
-                ))}
-              </Select>
+              <SearchableSelect
+                id="companyId"
+                name="companyId"
+                defaultValue={valores.companyId}
+                options={empresas.map((e) => ({ value: e.id, label: e.nome }))}
+                placeholder="Buscar empresa…"
+              />
             </CampoForm>
 
             <div className="grid grid-cols-2 gap-3">
