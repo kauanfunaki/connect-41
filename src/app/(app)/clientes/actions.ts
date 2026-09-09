@@ -138,3 +138,46 @@ export async function alternarAtivoCliente(id: string): Promise<ClienteState> {
   revalidatePath("/clientes");
   return null;
 }
+
+/**
+ * Inativa vários clientes de uma vez.
+ *
+ * Só inativa — não existe "reativar em massa" nem exclusão. Reativar é
+ * inofensivo e já é um clique na linha; **excluir não existe de propósito**: a
+ * FK de `Company.clientGroupId` é `ON DELETE SET NULL`, então apagar um cliente
+ * desvincularia as empresas dele em silêncio, sem nada na tela dizendo isso.
+ *
+ * O `updateMany` filtra por `tenantId` junto do `id in`: sem isso um id de
+ * outro escritório passaria pelo `in` e seria inativado.
+ */
+export async function inativarClientesEmMassa(ids: string[]): Promise<void> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || !canWriteEntity(ctx) || ids.length === 0) return;
+
+  const prisma = getPrisma();
+  const alvos = await prisma.clientGroup.findMany({
+    where: { id: { in: ids }, tenantId: ctx.tenantId, active: true },
+    select: { id: true, name: true },
+  });
+  if (alvos.length === 0) return;
+
+  await prisma.clientGroup.updateMany({
+    where: { id: { in: alvos.map((a) => a.id) }, tenantId: ctx.tenantId },
+    data: { active: false },
+  });
+
+  // Uma entrada por cliente, como na inativação individual: auditoria que
+  // registra "5 clientes inativados" não responde qual foi cada um.
+  for (const alvo of alvos) {
+    await logAudit({
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      action: "clientGroup.deactivate",
+      entityType: "ClientGroup",
+      entityId: alvo.id,
+      metadata: { name: alvo.name, emMassa: true },
+    });
+  }
+
+  revalidatePath("/clientes");
+}

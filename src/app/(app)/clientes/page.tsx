@@ -11,7 +11,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { formatCnpj } from "@/lib/format";
 import { ClientesTable } from "@/components/clientes/ClientesTable";
-import { alternarAtivoCliente } from "./actions";
+import { alternarAtivoCliente, inativarClientesEmMassa } from "./actions";
 
 const PER_PAGE = 20;
 
@@ -116,6 +116,7 @@ export default async function ClientesPage({
           </Card>
         ) : (
           <ClientesTable
+            inativarEmMassa={inativarClientesEmMassa}
             clientes={clientes.map((c) => ({
               id: c.id,
               name: c.name,
