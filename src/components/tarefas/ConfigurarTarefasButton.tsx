@@ -94,16 +94,17 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
 
   return (
     <>
-      <button
-        type="button"
+      <Button
+        variant="secondary"
+        size="md"
+        className="bg-surface-hover hover:border-brand"
         onClick={openModal}
         title="Configurar a tela de Tarefas"
         aria-label="Configurar a tela de Tarefas"
-        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-border-strong bg-surface-hover text-fg-secondary text-[13px] font-medium hover:text-fg hover:border-brand transition-colors"
       >
         <SlidersHorizontal size={14} />
         <span className="hidden sm:inline">Configurar</span>
-      </button>
+      </Button>
 
       <Modal open={open} onClose={() => setOpen(false)} title="Configurar a tela de Tarefas" maxWidth="max-w-lg">
         <p className="text-[length:var(--fs-helper)] text-fg-muted mb-4">

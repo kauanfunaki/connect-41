@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { saoPauloParts, addDaysToKey, mondayOfWeek, type AgendaView } from "@/lib/agenda";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   /** Visão ativa — o mini navega mantendo-a e destaca o período correspondente. */
@@ -112,22 +113,22 @@ export function MiniCalendar({ view, selectedKeys, referenceKey }: Props) {
               {MONTH_LABEL[viewMonth - 1]} de {viewYear}
             </p>
             <div className="flex items-center gap-0.5">
-              <button
-                type="button"
+              <Button
+                variant="linkMuted"
+                className="w-6 h-6 flex justify-center rounded-md hover:bg-surface-hover"
                 onClick={() => shiftMonth(-1)}
                 aria-label="Mês anterior"
-                className="w-6 h-6 flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors"
               >
                 <ChevronLeft size={13} />
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="linkMuted"
+                className="w-6 h-6 flex justify-center rounded-md hover:bg-surface-hover"
                 onClick={() => shiftMonth(1)}
                 aria-label="Próximo mês"
-                className="w-6 h-6 flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors"
               >
                 <ChevronRight size={13} />
-              </button>
+              </Button>
             </div>
           </div>
 

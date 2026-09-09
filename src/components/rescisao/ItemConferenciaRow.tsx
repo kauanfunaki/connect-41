@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import type { ConferenciaState } from "@/app/(app)/pessoas/[id]/desligamento/[terminationId]/conferencia/actions";
 import type { RescisaoCheckItem } from "@/lib/rescisaoChecklist";
+import { Button } from "@/components/ui/Button";
 
 export type CheckState = {
   status: "PENDENTE" | "CONFERIDO" | "DIVERGENTE" | "NAO_APLICAVEL";
@@ -137,14 +138,15 @@ export function ItemConferenciaRow({ item, current, referencia, action, canEdit 
         </div>
 
         {canEdit && (
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="sm"
+            className="flex-shrink-0"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
-            className="inline-flex items-center h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors flex-shrink-0"
           >
             {open ? "Fechar" : current ? "Editar" : "Conferir"}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -177,13 +179,13 @@ export function ItemConferenciaRow({ item, current, referencia, action, canEdit 
           )}
 
           {referencia.situacao === "CALCULADO" && referencia.valorLabel && item.hasValue && (
-            <button
-              type="button"
+            <Button
+              variant="link"
+              className="mt-2 text-[12px]"
               onClick={() => setValorInformado(referencia.valorLabel!.replace("R$ ", ""))}
-              className="mt-2 text-[12px] text-brand hover:underline"
             >
               Usar {referencia.valorLabel} como valor informado
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -242,13 +244,14 @@ export function ItemConferenciaRow({ item, current, referencia, action, canEdit 
           </div>
 
           <div className="sm:col-span-3 flex items-center gap-3">
-            <button
+            <Button
+              variant="primary"
+              size="md"
               type="submit"
               disabled={isPending}
-              className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
             >
               {isPending ? "Salvando…" : "Salvar item"}
-            </button>
+            </Button>
             {state?.error && <p className="text-[13px] text-danger">{state.error}</p>}
           </div>
         </form>

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/Input";
 import { formatInstantDateTime } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AuditoriaFilters } from "@/components/admin/AuditoriaFilters";
+import { Button } from "@/components/ui/Button";
 
 const ACTION_LABEL: Record<string, string> = {
   "company.create": "criou a empresa",
@@ -170,12 +171,13 @@ export default async function AuditoriaPage({
           <label className="block text-[11px] text-fg-muted mb-1">Até</label>
           <Input type="date" name="to" defaultValue={to ?? ""} className="w-auto" />
         </div>
-        <button
+        <Button
+          variant="secondary"
+          size="md"
           type="submit"
-          className="h-9 px-4 rounded-md border border-border-strong text-[13px] font-medium text-fg-secondary hover:bg-surface-2 transition-colors"
         >
           Filtrar
-        </button>
+        </Button>
       </form>
 
       {logs.length === 0 ? (

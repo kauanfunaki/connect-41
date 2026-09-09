@@ -71,14 +71,15 @@ export function PerfilForm({ action, defaultName, email, photoUrl: initialPhotoU
       <div className="flex items-center gap-4">
         <AvatarImage src={photoUrl} name={name || defaultName} size={64} />
         <div>
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="sm"
+            className="bg-surface-hover hover:border-brand disabled:opacity-[var(--c41-disabled-op)]"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="h-8 px-3 rounded-md border border-border-strong bg-surface-hover text-fg text-[12px] font-medium hover:border-brand transition-colors disabled:opacity-[var(--c41-disabled-op)]"
           >
             {uploading ? "Enviando…" : "Alterar foto"}
-          </button>
+          </Button>
           <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1.5">JPG, PNG ou WEBP, até 2MB.</p>
         </div>
         <input

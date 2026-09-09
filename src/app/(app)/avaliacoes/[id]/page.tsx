@@ -8,6 +8,7 @@ import { excluirCiclo, encerrarCiclo } from "../actions";
 import { SelecionarColaboradorForm } from "@/components/avaliacoes/SelecionarColaboradorForm";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { formatCalendarDate } from "@/lib/format";
+import { Button } from "@/components/ui/Button";
 
 export default async function CicloPage({
   params,
@@ -61,12 +62,13 @@ export default async function CicloPage({
           <div className="flex items-center gap-2 flex-shrink-0">
             {ciclo.active && (
               <form action={encerrarAction}>
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
                   type="submit"
-                  className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors"
                 >
                   Encerrar Ciclo
-                </button>
+                </Button>
               </form>
             )}
             <DeleteButton action={deleteAction} nome={ciclo.name} />

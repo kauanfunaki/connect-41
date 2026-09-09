@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   action: () => Promise<void>;
@@ -19,13 +20,13 @@ export function ResendRecipientButton({ action }: Props) {
   }
 
   return (
-    <button
-      type="button"
+    <Button
+      variant="link"
+      className="text-[12px] disabled:opacity-60"
       onClick={handleClick}
       disabled={isPending}
-      className="text-[12px] text-brand hover:underline disabled:opacity-60"
     >
       {isPending ? "Reenviando…" : "Reenviar"}
-    </button>
+    </Button>
   );
 }

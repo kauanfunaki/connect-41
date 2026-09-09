@@ -111,9 +111,9 @@ function NewCredentialModal({ companies, createAction }: { companies: CompanyOpt
             >
               {isPending ? "Salvando…" : "Criar"}
            </Button>
-            <button type="button" onClick={() => setOpen(false)} className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg transition-colors">
+            <Button variant="secondary" size="md" onClick={() => setOpen(false)}>
               Cancelar
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -146,9 +146,9 @@ function EditCredentialModal({
           >
             {isPending ? "Salvando…" : "Salvar"}
          </Button>
-          <button type="button" onClick={onClose} className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg transition-colors">
+          <Button variant="secondary" size="md" onClick={onClose}>
             Cancelar
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>
@@ -176,19 +176,19 @@ function PasswordCell({ credentialId, revealAction }: { credentialId: string; re
   return (
     <div className="flex items-center gap-1.5">
       <span className="tnum text-fg-secondary">{password ?? "••••••••"}</span>
-      <button
-        type="button"
+      <Button
+        variant="linkMuted"
+        className="p-1"
         onClick={() => (password ? setPassword(null) : reveal())}
         disabled={isPending}
-        className="text-fg-muted hover:text-fg p-1"
         aria-label={password ? "Ocultar senha" : "Revelar senha"}
       >
         {password ? <EyeOff size={13} /> : <Eye size={13} />}
-      </button>
+      </Button>
       {password && (
-        <button type="button" onClick={copy} className="text-fg-muted hover:text-fg p-1" aria-label="Copiar senha">
+        <Button variant="linkMuted" className="p-1" onClick={copy} aria-label="Copiar senha">
           <Copy size={13} />
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -284,9 +284,9 @@ export function BpoCredentialsList({ credentials, companies, canManage, createAc
                   <td className="px-4 py-3 text-right">
                     {canManage && (
                       <div className="flex items-center justify-end gap-1">
-                        <button type="button" onClick={() => setEditingId(row.id)} className="text-fg-muted hover:text-fg p-1.5" aria-label="Editar">
+                        <Button variant="linkMuted" className="p-1.5" onClick={() => setEditingId(row.id)} aria-label="Editar">
                           <Pencil size={14} />
-                        </button>
+                        </Button>
                         <button type="button" onClick={() => handleDelete(row)} className="text-fg-muted hover:text-danger p-1.5" aria-label="Excluir">
                           <Trash2 size={14} />
                         </button>

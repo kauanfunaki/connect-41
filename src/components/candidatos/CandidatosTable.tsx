@@ -226,13 +226,13 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
       </div>
 
       <BulkActionBar count={selected.size} onClear={() => setSelected(new Set())}>
-        <button
-          type="button"
+        <Button
+          variant="danger"
+          size="sm"
           onClick={applyInativar}
-          className="h-8 px-3 rounded-md border border-danger/30 text-[12px] font-medium text-danger hover:bg-danger/8 transition-colors"
         >
           Inativar
-        </button>
+        </Button>
       </BulkActionBar>
       {dialog}
     </>

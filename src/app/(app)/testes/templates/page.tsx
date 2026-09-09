@@ -82,9 +82,9 @@ export default async function TemplatesPage() {
                   Editar
                 </Link>
                 <form action={alternarAtivoTemplate.bind(null, t.id)}>
-                  <button type="submit" className="text-[12px] text-fg-muted hover:text-fg transition-colors">
+                  <Button variant="linkMuted" className="text-[12px]" type="submit">
                     {t.active ? "Arquivar" : "Reativar"}
-                  </button>
+                  </Button>
                 </form>
                 {t._count.links === 0 && <DeleteFieldButton action={excluirTemplate.bind(null, t.id)} nome={t.name} />}
               </div>

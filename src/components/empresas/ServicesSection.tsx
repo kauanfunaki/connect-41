@@ -7,6 +7,7 @@ import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
 import type { ServiceState } from "@/app/(app)/empresas/actions";
 import type { ServiceStatus } from "@/generated/prisma/enums";
+import { Button } from "@/components/ui/Button";
 
 type ServiceRow = {
   id: string;
@@ -135,15 +136,15 @@ export function ServicesSection({
               ))}
             </Select>
           </div>
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={handleAdd}
             disabled={pending || !addingSector}
-            className="inline-flex items-center gap-1 h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
           >
             <Plus size={13} />
             Adicionar
-          </button>
+          </Button>
         </div>
       )}
     </Card>

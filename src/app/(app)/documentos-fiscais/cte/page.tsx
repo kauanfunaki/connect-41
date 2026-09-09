@@ -16,6 +16,7 @@ import { credenciaisDoAmbiente, listarCtePorRota, ErroDoSped } from "@/lib/sped/
 import { raizesDoAlcance, janelaDoMesCorrente, ehDataValida } from "@/lib/sped/raizes";
 import { alcanceDaEquipe } from "../alcance";
 import { formatCnpj } from "@/lib/format";
+import { Button } from "@/components/ui/Button";
 
 const SECTOR = "fiscal";
 const MODULE = "fiscal_documentos";
@@ -147,12 +148,13 @@ export default async function CtePage({
             <CampoForm label="Rota até" htmlFor="ate">
               <Input id="ate" name="ate" type="date" defaultValue={ate} />
             </CampoForm>
-            <button
+            <Button
+              variant="primary"
+              size="md"
               type="submit"
-              className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors"
             >
               Consultar
-            </button>
+            </Button>
           </form>
 
           {erro ? (

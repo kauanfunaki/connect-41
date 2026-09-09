@@ -75,15 +75,15 @@ export function EditMeetingDialog({ action, meeting, allUsers, companies, onClos
           <h2 id={titleId} className="text-[length:var(--fs-section)] font-semibold text-fg">
             Editar reunião
           </h2>
-          <button
-            type="button"
+          <Button
+            variant="linkMuted"
+            className="disabled:opacity-60"
             onClick={onClose}
             disabled={isPending}
-            className="text-fg-muted hover:text-fg transition-colors disabled:opacity-60"
             aria-label="Fechar"
           >
             <X size={16} />
-          </button>
+          </Button>
         </div>
 
         <form action={formAction} className="space-y-3">

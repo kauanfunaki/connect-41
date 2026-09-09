@@ -8,6 +8,7 @@ import {
   confirmarCienciaReuniao,
   type MeetingAlert,
 } from "@/app/(app)/agenda/alert-actions";
+import { Button } from "@/components/ui/Button";
 
 const POLL_INTERVAL_MS = 45 * 1000;
 
@@ -189,14 +190,15 @@ export function MeetingAlertOverlay() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            size="lg"
+            className="flex-1"
             onClick={handleOk}
             disabled={pending}
-            className="flex-1 h-10 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
           >
             {pending ? "Registrando…" : "OK, estou ciente"}
-          </button>
+          </Button>
           <a
             href={alert.meetingUrl}
             target="_blank"

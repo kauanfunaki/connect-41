@@ -6,6 +6,7 @@ import { ACTIVE_STAGES, STAGE_LABEL, type Stage } from "@/lib/recruitmentFunnel"
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Button } from "@/components/ui/Button";
 
 export type FunnelCard = {
   id: string;
@@ -194,17 +195,17 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
                       )}
                       {canManage && !isContratado && (
                         <>
-                          <button
-                            type="button"
+                          <Button
+                            variant="danger"
+                            size="sm"
                             onClick={() => {
                               setMotivo("");
                               setDialogError(null);
                               setEncerrarTarget({ cardId: c.id, personName: c.personName, outcome: "REPROVADO" });
                             }}
-                            className="inline-flex items-center h-8 px-2 rounded-md text-[12px] text-danger hover:bg-danger/8 transition-colors"
                           >
                             Reprovar
-                          </button>
+                          </Button>
                           <button
                             type="button"
                             onClick={() => {

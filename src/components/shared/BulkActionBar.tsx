@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 type Props = {
   count: number;
   onClear: () => void;
@@ -20,13 +21,13 @@ export function BulkActionBar({ count, onClear, children }: Props) {
       </span>
       <div className="hidden sm:block w-px h-5 bg-border flex-shrink-0" />
       <div className="flex flex-wrap items-center justify-center gap-2">{children}</div>
-      <button
-        type="button"
+      <Button
+        variant="linkMuted"
+        className="text-[13px] font-medium sm:ml-1 flex-shrink-0"
         onClick={onClear}
-        className="text-[13px] font-medium text-fg-muted hover:text-fg transition-colors sm:ml-1 flex-shrink-0"
       >
         Limpar
-      </button>
+      </Button>
     </div>
   );
 }

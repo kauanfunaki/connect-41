@@ -17,6 +17,7 @@ import { montarArvore } from "@/lib/companyHierarchy";
 import { nomeExibicao, razaoSocialSecundaria } from "@/lib/companyName";
 import { resumirRegime } from "@/lib/taxRegime";
 import { useConfirm } from "@/components/ui/useConfirm";
+import { Button } from "@/components/ui/Button";
 
 type Row = {
   id: string;
@@ -123,18 +124,18 @@ export function EmpresasTable({
             style={ehFilial ? { paddingLeft: 22 } : undefined}
           >
             {qtdFiliais > 0 ? (
-              <button
-                type="button"
+              <Button
+                variant="linkMuted"
+                className="shrink-0 p-0.5 rounded hover:bg-surface-2"
                 onClick={() => toggleExpandir(c.id)}
                 aria-expanded={expandidas.has(c.id)}
                 aria-label={`${expandidas.has(c.id) ? "Recolher" : "Expandir"} as filiais de ${c.name}`}
-                className="shrink-0 p-0.5 rounded text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors"
               >
                 <ChevronRight
                   size={14}
                   className={`transition-transform ${expandidas.has(c.id) ? "rotate-90" : ""}`}
                 />
-              </button>
+              </Button>
             ) : (
               // Espaço reservado mesmo sem filial: sem ele, os nomes das
               // empresas com e sem filial ficam desalinhados na coluna.
@@ -270,20 +271,20 @@ export function EmpresasTable({
         {(qtdFiliais > 0 || canCreate) && (
           <div className="mt-2.5 flex items-center justify-between gap-3">
             {qtdFiliais > 0 ? (
-              <button
-                type="button"
+              <Button
+                variant="linkMuted"
+                className="-my-1 -ml-1 px-1 py-1 text-[12px] font-medium"
                 onClick={() => toggleExpandir(c.id)}
                 aria-expanded={aberta}
                 aria-label={`${aberta ? "Recolher" : "Expandir"} as filiais de ${c.name}`}
                 // Área de toque maior que o texto, sem alterar o espaçamento
                 // do cartão — o alvo de 14px da tabela é de mouse.
-                className="-my-1 -ml-1 px-1 py-1 inline-flex items-center gap-1 text-[12px] font-medium text-fg-muted hover:text-fg transition-colors"
               >
                 <ChevronRight size={14} className={`transition-transform ${aberta ? "rotate-90" : ""}`} />
                 <span className="tnum">
                   {qtdFiliais} {qtdFiliais === 1 ? "filial" : "filiais"}
                 </span>
-              </button>
+              </Button>
             ) : (
               <span />
             )}
@@ -500,13 +501,13 @@ export function EmpresasTable({
 
       <BulkActionBar count={selected.size} onClear={() => setSelected(new Set())}>
         {/* Atalho para o caso comum. O seletor ao lado continua, para os outros status. */}
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={inativarSelecionadas}
-          className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors"
         >
           Inativar
-        </button>
+        </Button>
         <div className="w-40">
           <Select
             value={bulkStatus}
@@ -517,21 +518,21 @@ export function EmpresasTable({
             ))}
           </Select>
         </div>
-        <button
-          type="button"
+        <Button
+          variant="primary"
+          size="sm"
           onClick={applyStatus}
-          className="h-8 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover transition-colors"
         >
           Alterar status
-        </button>
+        </Button>
         {isSuperAdmin && (
-          <button
-            type="button"
+          <Button
+            variant="danger"
+            size="sm"
             onClick={applyDelete}
-            className="h-8 px-3 rounded-md border border-danger/30 text-[12px] font-medium text-danger hover:bg-danger/8 transition-colors"
           >
             Excluir
-          </button>
+          </Button>
         )}
       </BulkActionBar>
       {dialog}

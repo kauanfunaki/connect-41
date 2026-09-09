@@ -10,6 +10,7 @@ import { AvatarImage } from "@/components/shared/AvatarImage";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { formatDocumento, formatPhone } from "@/lib/format";
 import { rotuloDoDocumento } from "@/lib/companyTaxId";
+import { Button } from "@/components/ui/Button";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
   PROSPECT: "Prospecto",
@@ -175,15 +176,15 @@ export function CompanyHeader({
 
             <div className="flex items-center gap-4 flex-wrap mt-2.5">
               {documento && (
-                <button
-                  type="button"
+                <Button
+                  variant="linkMuted"
+                  className="text-[length:var(--fs-helper)] tnum"
                   onClick={copyDocumento}
                   title={`Copiar ${rotuloDoc}`} aria-label={`Copiar ${rotuloDoc}`}
-                  className="inline-flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted hover:text-fg tnum transition-colors"
                 >
                   {copied ? <Check size={13} className="text-success" /> : <Copy size={13} />}
                   {formatDocumento(kind, cnpj, cpf)}
-                </button>
+                </Button>
               )}
               {location && (
                 <span className="inline-flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted">

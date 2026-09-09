@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { UFS } from "@/lib/ufs";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   slug: string;
@@ -96,13 +97,15 @@ export function ApplyForm({ slug, vagaId }: Props) {
         label="Autorizo o uso dos meus dados pessoais para participação neste processo seletivo (LGPD)."
       />
 
-      <button
+      <Button
+        variant="primary"
+        size="lg"
+        className="w-full"
         type="submit"
         disabled={isSubmitting}
-        className="w-full h-10 rounded-md bg-brand text-on-brand text-[14px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
       >
         {isSubmitting ? "Enviando…" : "Enviar Candidatura"}
-      </button>
+      </Button>
 
       {error && (
         <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{error}</p>

@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { useTestDraft } from "./useTestDraft";
+import { Button } from "@/components/ui/Button";
 
 type Question = { id: string; text: string; options: string[] };
 type Props = { token: string; questions: Question[] };
@@ -104,13 +105,13 @@ export function QuizForm({ token, questions }: Props) {
           <p className="text-[13px] text-fg">
             Recuperamos as respostas que você já tinha marcado neste link. Continue de onde parou.
           </p>
-          <button
-            type="button"
+          <Button
+            variant="linkMuted"
+            className="text-[12px] flex-shrink-0"
             onClick={dismissRestoredNotice}
-            className="text-[12px] text-fg-muted hover:text-fg transition-colors flex-shrink-0"
           >
             Ok
-          </button>
+          </Button>
         </div>
       )}
 
@@ -125,9 +126,9 @@ export function QuizForm({ token, questions }: Props) {
             {answeredCount} de {questions.length} respondidas
           </span>
           {!allAnswered && answeredCount > 0 && (
-            <button type="button" onClick={goToFirstIncomplete} className="text-[12px] text-brand hover:underline">
+            <Button variant="link" className="text-[12px]" onClick={goToFirstIncomplete}>
               Ir à próxima pendente
-            </button>
+            </Button>
           )}
         </div>
         <div
@@ -207,13 +208,15 @@ export function QuizForm({ token, questions }: Props) {
         label="Confirmo que as respostas são minhas e autorizo o uso dos meus dados pessoais para este processo seletivo (LGPD)."
       />
 
-      <button
+      <Button
+        variant="primary"
+        size="lg"
+        className="w-full"
         type="submit"
         disabled={isSubmitting}
-        className="w-full h-11 rounded-md bg-brand text-on-brand text-[14px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
       >
         {isSubmitting ? "Enviando…" : "Enviar respostas"}
-      </button>
+      </Button>
 
       {error && (
         <p role="alert" className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">

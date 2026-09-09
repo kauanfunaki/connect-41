@@ -4,6 +4,7 @@ import { MoreHorizontal } from "lucide-react";
 import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
 import { useConfirm } from "@/components/ui/useConfirm";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   /** Como o item se chama no texto do diálogo: "espaço", "pasta", "lista". */
@@ -46,15 +47,15 @@ export function DeleteEntityMenu({ kind, name, action }: Props) {
         align="right"
         width={180}
         trigger={({ open, toggle }) => (
-          <button
-            type="button"
+          <Button
+            variant="linkMuted"
+            className="p-1 rounded-md hover:bg-surface-hover"
             onClick={toggle}
             aria-expanded={open}
             aria-label={`Opções de ${name}`}
-            className="p-1 rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors"
           >
             <MoreHorizontal size={15} />
-          </button>
+          </Button>
         )}
       >
         <DropdownItem danger onClick={handleDelete}>

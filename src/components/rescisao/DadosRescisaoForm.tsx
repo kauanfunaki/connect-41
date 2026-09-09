@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Checkbox } from "@/components/ui/Checkbox";
 import type { ConferenciaState } from "@/app/(app)/pessoas/[id]/desligamento/[terminationId]/conferencia/actions";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   action: (prev: ConferenciaState, form: FormData) => Promise<ConferenciaState>;
@@ -113,13 +114,15 @@ export function DadosRescisaoForm({ action, defaults, canEdit }: Props) {
           label="Contrato de aprendiz (FGTS de 2% em vez de 8%)"
         />
         {canEdit && (
-          <button
+          <Button
+            variant="secondary"
+            size="md"
+            className="bg-surface-hover hover:border-brand"
             type="submit"
             disabled={isPending}
-            className="h-9 px-4 rounded-md border border-border-strong bg-surface-hover text-fg text-[13px] font-medium hover:border-brand disabled:opacity-60 transition-colors"
           >
             {isPending ? "Salvando…" : "Salvar dados"}
-          </button>
+          </Button>
         )}
       </div>
 

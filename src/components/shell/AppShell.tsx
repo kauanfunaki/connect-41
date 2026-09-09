@@ -30,6 +30,7 @@ import { ProfileMenu } from "@/components/shell/ProfileMenu";
 import { GlobalSearch } from "@/components/shell/GlobalSearch";
 import { NavItem, SectorNavItem, CadastrosNavItem } from "@/components/shell/NavLink";
 import { ContextSwitcher } from "@/components/shell/ContextSwitcher";
+import { Button } from "@/components/ui/Button";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
 type Sector = { code: string; label: string; color: string };
@@ -138,14 +139,14 @@ export function AppShell({
             alt="Connect"
             className="hidden dark:block h-8 w-auto object-contain flex-shrink-0"
           />
-          <button
-            type="button"
+          <Button
+            variant="linkMuted"
+            className="lg:hidden absolute right-3 top-1/2 -translate-y-1/2"
             onClick={() => setMobileOpen(false)}
             aria-label="Fechar menu"
-            className="lg:hidden absolute right-3 top-1/2 -translate-y-1/2 text-fg-muted hover:text-fg transition-colors"
           >
             <X size={18} />
-          </button>
+          </Button>
         </div>
 
         <ContextSwitcher

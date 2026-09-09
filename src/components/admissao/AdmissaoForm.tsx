@@ -6,6 +6,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { Button } from "@/components/ui/Button";
 
 type Defaults = {
   cpf: string; rg: string; pis: string; ctps: string; ctpsSerie: string; education: string; birthDate: string;
@@ -254,13 +255,14 @@ export function AdmissaoForm({ token, defaults }: Props) {
           </div>
         )}
 
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="md"
+          className="bg-surface-hover hover:border-brand"
           onClick={addDep}
-          className="h-9 px-4 rounded-md border border-border-strong bg-surface-hover text-fg text-[13px] font-medium hover:border-brand transition-colors"
         >
           + Adicionar dependente
-        </button>
+        </Button>
       </section>
 
       {/* Documentos */}
@@ -289,13 +291,15 @@ export function AdmissaoForm({ token, defaults }: Props) {
         label="Confirmo que as informações são verdadeiras e autorizo o uso dos meus dados pessoais para a minha admissão (LGPD)."
       />
 
-      <button
+      <Button
+        variant="primary"
+        size="lg"
+        className="w-full"
         type="submit"
         disabled={isSubmitting}
-        className="w-full h-10 rounded-md bg-brand text-on-brand text-[14px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
       >
         {isSubmitting ? "Enviando…" : "Enviar admissão"}
-      </button>
+      </Button>
 
       {error && (
         <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{error}</p>

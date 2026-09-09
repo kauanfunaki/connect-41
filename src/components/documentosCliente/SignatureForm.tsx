@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { Button } from "@/components/ui/Button";
 
 export function SignatureForm({ token, documentTitle }: { token: string; documentTitle: string }) {
   const router = useRouter();
@@ -50,13 +51,15 @@ export function SignatureForm({ token, documentTitle }: { token: string; documen
         value="true"
         label={`Li e concordo com o conteúdo de "${documentTitle}" e assino eletronicamente.`}
       />
-      <button
+      <Button
+        variant="primary"
+        size="lg"
+        className="w-full"
         type="submit"
         disabled={isSubmitting}
-        className="w-full h-10 rounded-md bg-brand text-on-brand text-[14px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
       >
         {isSubmitting ? "Assinando…" : "Assinar documento"}
-      </button>
+      </Button>
       {error && (
         <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{error}</p>
       )}

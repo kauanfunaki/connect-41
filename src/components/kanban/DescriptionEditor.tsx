@@ -86,13 +86,13 @@ export function DescriptionEditor({ canAct, description, action }: Props) {
           dangerouslySetInnerHTML={{ __html: description }}
         />
       ) : (
-        <button
-          type="button"
+        <Button
+          variant="linkMuted"
+          className="text-[length:var(--fs-body)] italic hover:text-fg-secondary"
           onClick={openEditing}
-          className="text-[length:var(--fs-body)] text-fg-muted italic hover:text-fg-secondary transition-colors"
         >
           Adicionar uma descrição...
-        </button>
+        </Button>
       )}
     </div>
   );

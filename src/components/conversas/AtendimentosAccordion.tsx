@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, Paperclip } from "lucide-react";
 import { carregarMensagens, carregarMensagensAntigas, type MensagemAtendimento } from "@/app/(app)/conversas/actions";
+import { Button } from "@/components/ui/Button";
 
 export type AtendimentoResumo = {
   id: string;
@@ -56,14 +57,15 @@ function Mensagens({ conversationId }: { conversationId: string }) {
   return (
     <div className="flex flex-col gap-2.5 pt-3">
       {!exhausted && messages.length > 0 && (
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="xs"
+          className="self-center"
           onClick={handleLoadOlder}
           disabled={isLoadingOlder}
-          className="self-center h-7 px-3 rounded-md border border-border-strong text-[11.5px] text-fg-muted hover:bg-surface-hover disabled:opacity-60 transition-colors"
         >
           {isLoadingOlder ? "Carregando…" : "Carregar mensagens anteriores"}
-        </button>
+        </Button>
       )}
 
       {messages.length === 0 && <p className="text-[12.5px] text-fg-muted py-3 text-center">Nenhuma mensagem neste atendimento.</p>}

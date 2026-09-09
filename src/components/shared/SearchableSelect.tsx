@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, X, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 export type Opcao = { value: string; label: string };
 
@@ -81,13 +82,14 @@ export function SearchableSelect({
     <div className="relative" ref={caixaRef}>
       <input type="hidden" name={name} value={valor} />
 
-      <button
-        type="button"
+      <Button
+        variant="secondary"
+        size="md"
+        className="w-full flex justify-between gap-2 bg-surface text-left text-[length:var(--fs-body)] hover:border-border-strong focus:outline-none focus:ring-2 focus:ring-brand/40"
         id={id}
         onClick={() => setAberto((a) => !a)}
         aria-expanded={aberto}
         aria-haspopup="listbox"
-        className="w-full h-9 px-3 flex items-center justify-between gap-2 rounded-md border border-border bg-surface text-left text-[length:var(--fs-body)] hover:border-border-strong focus:outline-none focus:ring-2 focus:ring-brand/40 transition-colors"
       >
         <span className={`truncate ${selecionada ? "text-fg" : "text-fg-muted"}`}>
           {selecionada ? selecionada.label : vazioLabel ?? placeholder}
@@ -116,7 +118,7 @@ export function SearchableSelect({
           )}
           <ChevronDown size={14} className="text-fg-muted" />
         </span>
-      </button>
+      </Button>
 
       {aberto && (
         <div className="absolute z-20 mt-1 w-full rounded-md border border-border bg-surface shadow-lg">

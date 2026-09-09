@@ -3,6 +3,7 @@
 import { MoreHorizontal } from "lucide-react";
 import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
 import { useConfirm } from "@/components/ui/useConfirm";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   name: string;
@@ -30,15 +31,15 @@ export function RowActionsMenu({ name, onDelete }: Props) {
         align="right"
         width={180}
         trigger={({ open, toggle }) => (
-          <button
-            type="button"
+          <Button
+            variant="linkMuted"
+            className="p-0.5 rounded hover:bg-surface-hover"
             onClick={toggle}
             aria-expanded={open}
             aria-label={`Opções de ${name}`}
-            className="p-0.5 rounded text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors"
           >
             <MoreHorizontal size={14} />
-          </button>
+          </Button>
         )}
       >
         <DropdownItem

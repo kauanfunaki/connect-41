@@ -126,24 +126,25 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
             <div className="flex-1">
               <Input readOnly value={linkUrl} onFocus={(e) => e.target.select()} />
             </div>
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="md"
+              className="bg-surface-hover hover:border-brand flex-shrink-0"
               onClick={handleCopy}
-              className="h-9 px-3 rounded-md border border-border-strong bg-surface-hover text-fg text-[12px] font-medium hover:border-brand transition-colors flex-shrink-0"
             >
               {copied ? "Copiado!" : "Copiar"}
-            </button>
+            </Button>
           </div>
           {emailNote && <p className="text-[12px] text-fg-muted mb-3">{emailNote}</p>}
           {canManage && (
-            <button
-              type="button"
+            <Button
+              variant="linkMuted"
+              className="text-[12px] underline disabled:opacity-60"
               onClick={handleGerar}
               disabled={pending}
-              className="text-[12px] text-fg-muted hover:text-fg underline transition-colors disabled:opacity-60"
             >
               {pending ? "Gerando…" : "Gerar novo link (invalida o atual)"}
-            </button>
+            </Button>
           )}
         </>
       )}

@@ -510,14 +510,14 @@ export function ActivityFeed({ items, canAct, mentionUsers, pipelineItemId, task
         <h2 className="text-[13px] font-semibold text-fg">Comentários e atividade</h2>
         <div className="flex items-center gap-2">
           {items.length > 0 && (
-            <button
-              type="button"
+            <Button
+              variant="linkMuted"
+              className="p-1 rounded-md hover:bg-surface-hover"
               onClick={() => setSearch((s) => (s === "" ? " " : ""))}
               title="Pesquisar" aria-label="Pesquisar"
-              className="text-fg-muted hover:text-fg p-1 rounded-md hover:bg-surface-hover transition-colors"
             >
               <Search size={14} />
-            </button>
+            </Button>
           )}
           {items.length > 0 && (
             <Button

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { boardPath } from "@/lib/kanbanPaths";
+import { Button } from "@/components/ui/Button";
 
 type DocumentEntityType = "PERSON" | "COMPANY" | "VAGA" | "PIPELINE_ITEM";
 
@@ -157,14 +158,14 @@ export function GlobalSearch() {
               </kbd>
             )}
             {mobileExpanded && (
-              <button
-                type="button"
+              <Button
+                variant="linkMuted"
+                className="sm:hidden flex-shrink-0"
                 onClick={closeMobile}
-                className="sm:hidden flex-shrink-0 text-fg-muted hover:text-fg transition-colors"
                 aria-label="Fechar busca"
               >
                 <X size={16} />
-              </button>
+              </Button>
             )}
           </div>
 

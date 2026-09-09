@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
+import { Button } from "@/components/ui/Button";
 
 const PRIORITY_OPTIONS: { value: VagaPrioridade; label: string }[] = [
   { value: "BAIXA", label: "Baixa" },
@@ -142,13 +143,14 @@ export function VagaForm({ action, cancelHref, companies, cargos, users, sectorO
       </div>
 
       <div className="flex items-center gap-3 pt-2">
-        <button
+        <Button
+          variant="primary"
+          size="md"
           type="submit"
           disabled={isPending}
-          className="h-9 px-5 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
         >
           {isPending ? "Salvando…" : "Salvar"}
-        </button>
+        </Button>
         <Link href={cancelHref} className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center">
           Cancelar
         </Link>

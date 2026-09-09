@@ -66,15 +66,15 @@ export function CreateMeetingDialog({ action, initialStart, initialEnd, hasGoogl
           <h2 id={titleId} className="text-[length:var(--fs-section)] font-semibold text-fg">
             Nova reunião
           </h2>
-          <button
-            type="button"
+          <Button
+            variant="linkMuted"
+            className="disabled:opacity-60"
             onClick={onClose}
             disabled={isPending}
-            className="text-fg-muted hover:text-fg transition-colors disabled:opacity-60"
             aria-label="Fechar"
           >
             <X size={16} />
-          </button>
+          </Button>
         </div>
 
         {!hasAnyProvider ? (

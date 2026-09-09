@@ -5,6 +5,7 @@ import type { EvaluationState } from "@/app/(app)/avaliacoes/[id]/avaliar/[perso
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { Button } from "@/components/ui/Button";
 
 type CompetencyOption = { id: string; name: string };
 
@@ -66,13 +67,14 @@ export function EvaluationForm({ action, competencies, defaultValues }: Props) {
         </CampoForm>
       </div>
 
-      <button
+      <Button
+        variant="primary"
+        size="md"
         type="submit"
         disabled={isPending}
-        className="h-9 px-5 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
       >
         {isPending ? "Salvando…" : "Salvar Avaliação"}
-      </button>
+      </Button>
     </form>
   );
 }

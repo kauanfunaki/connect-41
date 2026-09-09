@@ -5,6 +5,7 @@ import type { ClientDocumentState } from "@/app/(app)/empresas/[id]/documentos-c
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { EmailChipsInput } from "@/components/documentosCliente/EmailChipsInput";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   action: (prev: ClientDocumentState, form: FormData) => Promise<ClientDocumentState>;
@@ -39,13 +40,14 @@ export function SendDocumentForm({ action, documentId, companyId, companyEmail }
         <EmailChipsInput id="extraEmails" name="extraEmails" />
       </CampoForm>
 
-      <button
+      <Button
+        variant="primary"
+        size="md"
         type="submit"
         disabled={isPending}
-        className="h-9 px-5 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
       >
         {isPending ? "Enviando…" : "Enviar por e-mail"}
-      </button>
+      </Button>
     </form>
   );
 }

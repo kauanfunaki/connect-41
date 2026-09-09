@@ -126,13 +126,13 @@ export function TemplateForm({ action, defaults, cancelHref }: Props) {
             </div>
 
             {q.options.length < 6 && (
-              <button
-                type="button"
+              <Button
+                variant="linkMuted"
+                className="text-[12px] underline"
                 onClick={() => addOption(i)}
-                className="text-[12px] text-fg-muted hover:text-fg underline transition-colors"
               >
                 + Adicionar alternativa
-              </button>
+              </Button>
             )}
           </div>
         ))}
@@ -140,13 +140,14 @@ export function TemplateForm({ action, defaults, cancelHref }: Props) {
 
       <input type="hidden" name="q_count" value={questions.length} />
 
-      <button
-        type="button"
+      <Button
+        variant="secondary"
+        size="md"
+        className="bg-surface-hover hover:border-brand"
         onClick={addQuestion}
-        className="h-9 px-4 rounded-md border border-border-strong bg-surface-hover text-fg text-[13px] font-medium hover:border-brand transition-colors"
       >
         + Adicionar pergunta
-      </button>
+      </Button>
 
       <div className="flex items-center gap-3 pt-2 border-t border-border">
         <Button

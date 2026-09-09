@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Link2, Link2Off, Building2, User, X } from "lucide-react";
 import { vincularContatoChatwoot, desvincularContatoChatwoot } from "@/app/(app)/conversas/actions";
 import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 type SearchResult = {
   companies: { id: string; name: string }[];
@@ -99,22 +100,22 @@ export function VincularContato({ contactLinkId, linkedLabel, canManage }: Props
 
   return (
     <span className="relative inline-flex items-center gap-2">
-      <button
-        type="button"
+      <Button
+        variant="secondary"
+        size="xs"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-border-strong text-[11.5px] font-medium text-fg hover:bg-surface-hover transition-colors"
       >
         <Link2 size={12} /> Vincular
-      </button>
+      </Button>
       {error && <span className="text-[11px] text-danger">{error}</span>}
 
       {open && (
         <div className="absolute right-0 top-9 z-20 w-72 bg-surface border border-border-strong rounded-lg shadow-lg p-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[12px] font-medium text-fg">Vincular a pessoa ou empresa</span>
-            <button type="button" onClick={() => setOpen(false)} aria-label="Fechar" className="text-fg-muted hover:text-fg">
+            <Button variant="linkMuted" onClick={() => setOpen(false)} aria-label="Fechar">
               <X size={14} />
-            </button>
+            </Button>
           </div>
           <Input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar por nome (mín. 2 letras)…" />
           <div className="mt-2 max-h-56 overflow-y-auto space-y-0.5">

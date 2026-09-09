@@ -109,16 +109,17 @@ export function CustomizeHomeButton({ selected, showRestricted, saveAction, rese
 
   return (
     <>
-      <button
-        type="button"
+      <Button
+        variant="secondary"
+        size="md"
+        className="bg-surface-hover hover:border-brand"
         onClick={openModal}
         title="Personalizar Home"
         aria-label="Personalizar Home"
-        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-border-strong bg-surface-hover text-fg-secondary text-[13px] font-medium hover:text-fg hover:border-brand transition-colors"
       >
         <SlidersHorizontal size={14} />
         <span className="hidden sm:inline">Personalizar</span>
-      </button>
+      </Button>
 
       <Modal open={open} onClose={() => setOpen(false)} title="Personalizar Home" maxWidth="max-w-lg">
         <p className="text-[length:var(--fs-helper)] text-fg-muted mb-4">
@@ -152,24 +153,24 @@ export function CustomizeHomeButton({ selected, showRestricted, saveAction, rese
                           <span className="block text-[11.5px] text-fg-muted truncate">{def.description}</span>
                         </label>
                         <div className="flex items-center gap-0.5 flex-shrink-0">
-                          <button
-                            type="button"
+                          <Button
+                            variant="linkMuted"
+                            className="w-7 h-7 justify-center rounded-md hover:bg-surface-hover disabled:opacity-[var(--c41-disabled-op)] disabled:hover:bg-transparent disabled:hover:text-fg-muted"
                             onClick={() => move(entry.key, -1)}
                             disabled={index === 0}
                             aria-label={`Mover ${def.label} para cima`}
-                            className="w-7 h-7 inline-flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors disabled:opacity-[var(--c41-disabled-op)] disabled:hover:bg-transparent disabled:hover:text-fg-muted"
                           >
                             <ArrowUp size={14} />
-                          </button>
-                          <button
-                            type="button"
+                          </Button>
+                          <Button
+                            variant="linkMuted"
+                            className="w-7 h-7 justify-center rounded-md hover:bg-surface-hover disabled:opacity-[var(--c41-disabled-op)] disabled:hover:bg-transparent disabled:hover:text-fg-muted"
                             onClick={() => move(entry.key, 1)}
                             disabled={index === slotEntries.length - 1}
                             aria-label={`Mover ${def.label} para baixo`}
-                            className="w-7 h-7 inline-flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors disabled:opacity-[var(--c41-disabled-op)] disabled:hover:bg-transparent disabled:hover:text-fg-muted"
                           >
                             <ArrowDown size={14} />
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     );

@@ -8,6 +8,7 @@ import { EntityOverflowMenu } from "@/components/ui/EntityOverflowMenu";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import type { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
 import { maskCpf, formatPhone } from "@/lib/format";
+import { Button } from "@/components/ui/Button";
 
 const TYPE_LABEL: Record<PersonType, string> = {
   CANDIDATO: "Candidato",
@@ -92,15 +93,15 @@ export function PersonHeader({
 
             <div className="flex items-center gap-4 flex-wrap mt-2.5">
               {cpf && (
-                <button
-                  type="button"
+                <Button
+                  variant="linkMuted"
+                  className="text-[length:var(--fs-helper)] tnum"
                   onClick={copyCpf}
                   title="Copiar CPF" aria-label="Copiar CPF"
-                  className="inline-flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted hover:text-fg tnum transition-colors"
                 >
                   {copied ? <Check size={13} className="text-success" /> : <Copy size={13} />}
                   {maskCpf(cpf)}
-                </button>
+                </Button>
               )}
               {companyId && companyName && (
                 <Link

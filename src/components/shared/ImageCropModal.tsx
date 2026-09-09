@@ -142,14 +142,14 @@ function CropperDialog({
         )}
 
         <div className="flex items-center justify-end gap-2 mt-4">
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="md"
             onClick={onCancel}
             disabled={isProcessing}
-            className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
           >
             Cancelar
-          </button>
+          </Button>
           <Button
             type="button"
             onClick={handleConfirm}

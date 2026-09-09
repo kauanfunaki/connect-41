@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { salvarPushSubscription, removerPushSubscription } from "@/app/(app)/notificacoes/actions";
+import { Button } from "@/components/ui/Button";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -121,13 +122,14 @@ export function PushNotificationToggle({ publicKey }: { publicKey: string | null
         {error && <p className="text-[12px] text-danger mt-1">{error}</p>}
       </div>
       {status !== "denied" && status !== "loading" && status !== "unconfigured" && (
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
+          className="bg-surface-hover hover:border-brand flex-shrink-0"
           onClick={status === "subscribed" ? handleUnsubscribe : handleSubscribe}
-          className="h-8 px-3 rounded-md border border-border-strong bg-surface-hover text-fg text-[12px] font-medium hover:border-brand transition-colors flex-shrink-0"
         >
           {status === "subscribed" ? "Desativar" : "Ativar"}
-        </button>
+        </Button>
       )}
     </div>
   );

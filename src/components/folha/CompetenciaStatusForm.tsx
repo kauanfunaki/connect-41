@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import type { PayrollCompetencyState } from "@/app/(app)/empresas/[id]/folha/actions";
 import { PayrollStatus } from "@/generated/prisma/enums";
 import { Select } from "@/components/ui/Select";
+import { Button } from "@/components/ui/Button";
 
 const STATUS_LABEL: Record<PayrollStatus, string> = {
   PENDENTE:       "Pendente",
@@ -38,13 +39,14 @@ export function CompetenciaStatusForm({ action, currentStatus }: Props) {
             ))}
           </Select>
         </div>
-        <button
+        <Button
+          variant="secondary"
+          size="md"
           type="submit"
           disabled={isPending}
-          className="h-9 px-3 rounded-md border border-border text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 disabled:opacity-60 transition-colors"
         >
           {isPending ? "Salvando…" : "Atualizar Status"}
-        </button>
+        </Button>
       </form>
       {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
     </div>

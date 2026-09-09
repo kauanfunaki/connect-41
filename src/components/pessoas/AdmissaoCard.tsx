@@ -116,14 +116,14 @@ export function AdmissaoCard({ personId, initialLink, canManage }: Props) {
           </div>
           {emailNote && <p className="text-[12px] text-fg-muted mb-3">{emailNote}</p>}
           {canManage && (
-            <button
-              type="button"
+            <Button
+              variant="linkMuted"
+              className="text-[12px] underline disabled:opacity-60"
               onClick={handleGerar}
               disabled={pending}
-              className="text-[12px] text-fg-muted hover:text-fg underline transition-colors disabled:opacity-60"
             >
               {pending ? "Gerando…" : "Gerar novo link (invalida o atual)"}
-            </button>
+            </Button>
           )}
         </>
       )}

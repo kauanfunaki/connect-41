@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { RESCISAO_CHECKLIST } from "@/lib/rescisaoChecklist";
 import type { RescisaoConfig, OrigemCampo } from "@/lib/rescisao/config";
+import { Button } from "@/components/ui/Button";
 
 export type RescisaoConfigState = { error: string } | null;
 
@@ -226,13 +227,14 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
 
       {canEdit && (
         <div className="pt-4 border-t border-border">
-          <button
+          <Button
+            variant="primary"
+            size="md"
             type="submit"
             disabled={isPending}
-            className="h-9 px-5 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover disabled:opacity-60 transition-colors"
           >
             {isPending ? "Salvando…" : "Salvar configuração"}
-          </button>
+          </Button>
         </div>
       )}
     </form>

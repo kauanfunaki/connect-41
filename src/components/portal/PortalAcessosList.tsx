@@ -111,14 +111,14 @@ export function PortalAcessosList({ acessos, clientes, criarAction, enviarLinkAc
                   </p>
                 </div>
                 <StatusDot color={a.ativo ? "var(--c41-success)" : "var(--c41-fg-muted)"} label={a.ativo ? "Ativo" : "Inativo"} />
-                <button
-                  type="button"
+                <Button
+                  variant="link"
+                  className="text-[length:var(--fs-ui)] font-medium disabled:opacity-50"
                   disabled={pendente || !a.ativo}
                   onClick={() => enviarLink(a.id)}
-                  className="text-[length:var(--fs-ui)] font-medium text-brand hover:underline disabled:opacity-50"
                 >
                   Enviar link
-                </button>
+                </Button>
                 <button
                   type="button"
                   disabled={pendente}

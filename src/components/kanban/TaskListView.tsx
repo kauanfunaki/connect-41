@@ -354,17 +354,17 @@ function TaskCard({
           </Link>
 
           {hasSubtasks && (
-            <button
-              type="button"
+            <Button
+              variant="linkMuted"
+              className="flex flex-shrink-0"
               onClick={() => setExpanded((v) => !v)}
-              className="flex items-center gap-1 flex-shrink-0 text-fg-muted hover:text-fg"
               aria-label={expanded ? "Recolher subtarefas" : "Expandir subtarefas"}
             >
               <span className="text-[11px] tnum">
                 {(item as TaskRow).subtasks!.filter((s) => s.isTerminal).length}/{(item as TaskRow).subtasks!.length}
               </span>
               <ChevronRight size={14} className={`transition-transform ${expanded ? "rotate-90" : ""}`} />
-            </button>
+            </Button>
           )}
 
           {canAct && deleteAction && (

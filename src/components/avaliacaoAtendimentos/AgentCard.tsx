@@ -7,6 +7,7 @@ import { AvatarImage } from "@/components/shared/AvatarImage";
 import { SlideOver } from "@/components/ui/SlideOver";
 import { ScoreRing } from "@/components/avaliacaoAtendimentos/ScoreRing";
 import { useToast } from "@/components/ui/Toast";
+import { Button } from "@/components/ui/Button";
 
 export type EvaluationEntry = {
   id: string;
@@ -176,14 +177,14 @@ export function AgentCard({
                   <Sparkles size={12} className="text-brand" /> Resumo geral
                 </h3>
                 {canGenerateSummary && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="link"
+                    className="text-[11.5px] font-medium disabled:opacity-60 flex-shrink-0"
                     onClick={handleGenerateSummary}
                     disabled={isPending}
-                    className="text-[11.5px] font-medium text-brand hover:underline disabled:opacity-60 flex-shrink-0"
                   >
                     {isPending ? "Gerando…" : summary ? "Atualizar" : "Gerar resumo"}
-                  </button>
+                  </Button>
                 )}
               </div>
               {summary ? (

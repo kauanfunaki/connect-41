@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { formatInstantDate } from "@/lib/format";
 import type { ManualPageState } from "@/app/(app)/bpo-manual/actions";
+import { Button } from "@/components/ui/Button";
 
 export type ManualPageData = {
   id: string;
@@ -185,22 +186,24 @@ function CoverControls({
           {/* eslint-disable-next-line @next/next/no-img-element -- imagem servida por rota própria (src/app/api/bpo-manual) */}
           <img src={coverUrl} alt="" className="w-full h-48 object-cover" />
           <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="xs"
+              className="bg-surface/90"
               onClick={() => fileInputRef.current?.click()}
               disabled={pending}
-              className="h-7 px-2.5 rounded-md bg-surface/90 border border-border text-[12px] text-fg-secondary hover:text-fg disabled:opacity-60"
             >
               Trocar capa
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="secondary"
+              size="xs"
+              className="bg-surface/90 hover:text-danger"
               onClick={handleRemove}
               disabled={pending}
-              className="h-7 px-2.5 rounded-md bg-surface/90 border border-border text-[12px] text-fg-secondary hover:text-danger disabled:opacity-60"
             >
               Remover
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}
@@ -209,14 +212,14 @@ function CoverControls({
 
       {!coverUrl && (
         <div className={`${CANVAS_CLASS} !py-0 !pt-6`}>
-          <button
-            type="button"
+          <Button
+            variant="linkMuted"
+            className="text-[12px] hover:text-fg-secondary disabled:opacity-60"
             onClick={() => fileInputRef.current?.click()}
             disabled={pending}
-            className="inline-flex items-center gap-1.5 text-[12px] text-fg-muted hover:text-fg-secondary disabled:opacity-60"
           >
             <ImagePlus size={13} /> {pending ? "Enviando…" : "Adicionar capa"}
-          </button>
+          </Button>
         </div>
       )}
     </>
@@ -488,14 +491,14 @@ export function ManualWorkspace({
             return (
               <div key={doc.id}>
                 <div className="group flex items-center gap-1">
-                  <button
-                    type="button"
+                  <Button
+                    variant="linkMuted"
+                    className="flex-shrink-0 p-0.5"
                     onClick={() => toggleExpanded(doc.id)}
-                    className="flex-shrink-0 text-fg-muted hover:text-fg p-0.5"
                     aria-label={isExpanded ? "Recolher" : "Expandir"}
                   >
                     {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                  </button>
+                  </Button>
                   <div className="relative flex-shrink-0">
                     {canAct ? (
                       <button
@@ -600,13 +603,13 @@ export function ManualWorkspace({
                           className="w-full !h-7 px-2 text-[12.5px]"
                         />
                       ) : (
-                        <button
-                          type="button"
+                        <Button
+                          variant="linkMuted"
+                          className="flex px-2 py-1 rounded-md text-[12px] hover:bg-surface-hover"
                           onClick={() => { setCreatingPageFor(doc.id); setNewPageTitle(""); }}
-                          className="flex items-center gap-1 px-2 py-1 rounded-md text-[12px] text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors"
                         >
                           <Plus size={11} /> Página
-                        </button>
+                        </Button>
                       )
                     )}
                   </div>
