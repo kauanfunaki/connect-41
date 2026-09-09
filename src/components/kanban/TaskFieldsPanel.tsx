@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Check, ChevronDown, Circle, Eye, Flag, Play, Square, Tag as TagIcon, Timer, Users, Calendar, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { TempoDecorrido } from "@/components/kanban/TempoDecorrido";
 import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -211,15 +212,24 @@ export function TaskFieldsPanel({
       <FieldRow icon={<Play size={14} />} label="Rastrear tempo">
         {activeTimer ? (
           activeTimer.userId === currentUserId ? (
-            <button
-              type="button"
-              onClick={() => startTransition(() => stopTimerAction())}
-              className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md bg-danger/15 text-danger text-[12px] font-medium hover:bg-danger/25 transition-colors"
-            >
-              <Square size={11} /> Parar
-            </button>
+            <span className="inline-flex items-center gap-2">
+              <TempoDecorrido key={activeTimer.startedAt} startedAt={activeTimer.startedAt} className="text-[12px] font-medium text-fg" />
+              <button
+                type="button"
+                onClick={() => startTransition(() => stopTimerAction())}
+                className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md bg-danger/15 text-danger text-[12px] font-medium hover:bg-danger/25 transition-colors"
+              >
+                <Square size={11} /> Parar
+              </button>
+            </span>
           ) : (
-            <span className="text-[12px] text-fg-muted">{activeTimer.userName} está rastreando…</span>
+            // Vale para quem não está rastreando também: o "…" antigo não dizia
+            // se o colega tinha começado agora ou esquecido o cronômetro ligado
+            // desde ontem.
+            <span className="inline-flex items-center gap-1 text-[12px] text-fg-muted">
+              {activeTimer.userName} está rastreando há{" "}
+              <TempoDecorrido key={activeTimer.startedAt} startedAt={activeTimer.startedAt} className="font-medium text-fg-secondary" />
+            </span>
           )
         ) : canAct ? (
           <Button type="button" variant="secondary" size="xs" onClick={() => startTransition(() => startTimerAction())}>
