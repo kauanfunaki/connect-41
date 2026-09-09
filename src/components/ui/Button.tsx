@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger" | "link" | "linkMuted";
-type Size = "xs" | "sm" | "md";
+type Variant = "primary" | "secondary" | "ghost" | "danger" | "success" | "link" | "linkMuted";
+type Size = "xs" | "sm" | "md" | "lg";
 
 type CommonProps = {
   variant?: Variant;
@@ -52,6 +52,15 @@ const VARIANT_CLASS: Record<Variant, string> = {
   secondary: "border border-border-strong text-fg hover:bg-surface-hover",
   ghost: "bg-transparent text-fg-secondary hover:bg-surface-hover hover:text-fg",
   danger: "border border-danger/30 text-danger hover:bg-danger/8",
+  // Simétrica ao danger, de propósito: o par que o app já usava era
+  // "border-danger/30 text-danger" e "border-success/30 text-success", e o
+  // desenho semântico do app é contorno, não preenchimento.
+  //
+  // Os outros dois verdes do app continuam com className por cima, porque são
+  // exceção de uma tela cada: `bg-success text-white` na conclusão de admissão
+  // (é o botão primário daquela ficha, que por acaso é verde) e o "Concluir
+  // tarefa" do kanban, que fica neutro em repouso e só esverdeia no hover.
+  success: "border border-success/30 text-success hover:bg-success/8",
   // ─── As duas variantes sem caixa ──────────────────────────────────────────
   //
   // Medidas em 09/09 ao converter o kanban: 13 dos botões crus são texto
@@ -77,6 +86,12 @@ const SIZE_CLASS: Record<Size, string> = {
   xs: "h-7 px-2.5 text-[length:var(--fs-ui)]",
   sm: "h-8 px-3 text-[length:var(--fs-ui)]",
   md: "h-9 px-4 text-[length:var(--fs-ui)]",
+  // `lg` existe para formulário de página cheia — candidatura em /carreiras,
+  // admissão, assinatura de documento, seletor de tema, DISC e quiz. São telas
+  // onde o botão é o destino da página inteira, e não um controle numa barra.
+  // Os que estavam em `h-11` descem para cá: 4px a menos vale mais que um
+  // sétimo tamanho para três call-sites.
+  lg: "h-10 px-5 text-[14px]",
 };
 
 const BASE =
