@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Textarea } from "@/components/ui/Textarea";
 import { CampoForm } from "@/components/ui/CampoForm";
-import { DESTINO_LABEL } from "@/lib/fiscal/rotulos";
+import { DESTINO_LABEL, DESTINO_VARIANTE } from "@/lib/fiscal/rotulos";
 import type { FiscalDocumentDestination } from "@/generated/prisma/enums";
 
 type Props = {
@@ -57,23 +57,23 @@ export function DestinoControl({ documentoId, destinoAtual, motivoAtual, podeDec
 
   return (
     <div>
-      {/* `tone="brand"`: aqui o segmento ativo é um dado do documento, não a
-          aba em que a pessoa estava — precisa ser legível de relance na ficha
-          inteira. Os outros dois call-sites do componente trocam de visão, e
-          ficam no neutro.
+      {/* Cor por status, e não uma cor só: destino é estado do documento, e a
+          listagem do acervo já o pinta com `DESTINO_VARIANTE` — Pendente
+          `info`, Lançado `success`, Ignorado `warning`. Um azul uniforme aqui
+          fazia a mesma informação ler diferente na lista e no detalhe.
 
           IGNORADO não aplica direto: abre o campo de motivo antes de gravar.
           É o único segmento que não é "escolher e pronto", e por isso o
           `onChange` desvia em vez de chamar `aplicar`. */}
       <SegmentedControl
         label="Destino do documento"
-        tone="brand"
         active={destinoAtual}
         onChange={(valor) => (valor === "IGNORADO" ? setPedindoMotivo(true) : aplicar(valor))}
         items={OPCOES.map((o) => ({
           key: o.valor,
           label: DESTINO_LABEL[o.valor],
           title: o.ajuda,
+          tone: DESTINO_VARIANTE[o.valor],
           disabled: pendente,
         }))}
       />

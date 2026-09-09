@@ -14,7 +14,18 @@ export type SegmentItem<K extends string = string> = {
   title?: string;
   /** Só no modo botão. O segmento ativo já vem desabilitado sozinho. */
   disabled?: boolean;
+  /**
+   * Cor deste segmento quando ele é o ativo, sobrepondo o `tone` do grupo.
+   *
+   * Existe para o caso em que cada opção é um estado com cor própria — o
+   * destino de um documento fiscal, que a listagem já pinta com
+   * `DESTINO_VARIANTE`. Sem isto, a mesma informação apareceria colorida na
+   * lista e azul uniforme no detalhe.
+   */
+  tone?: Tom;
 };
+
+type Tom = "neutral" | "brand" | "success" | "warning" | "danger" | "info";
 
 type Comum<K extends string> = {
   /** `key` do segmento ativo. */
@@ -32,7 +43,7 @@ type Comum<K extends string> = {
    * precisa ser legível de relance na ficha inteira. É o destino de um
    * documento fiscal, não a aba em que você estava.
    */
-  tone?: "neutral" | "brand";
+  tone?: Tom;
   className?: string;
 };
 
@@ -54,15 +65,22 @@ type PorUrl<K extends string> = Comum<K> & {
 const CAIXA = "inline-flex rounded-lg border border-border overflow-hidden flex-shrink-0";
 const SEGMENTO =
   "h-8 px-3 flex items-center gap-1.5 text-[12px] font-medium border-l border-border first:border-l-0 transition-colors";
-const ATIVO = {
+// A borda por dentro não é enfeite: no controle original o ativo tinha
+// `border-brand` junto do fundo, e é ela que fazia o trabalho de mostrar qual
+// está selecionado — `--c41-brand-subtle` é 8% de opacidade, fraco demais para
+// carregar isso sozinho. Vira sombra interna, e não borda, porque a caixa é
+// `overflow-hidden` e uma borda de verdade empurraria o layout.
+//
+// Os quatro semânticos usam os mesmos pares de token do `Badge`, para o mesmo
+// estado ler igual na lista e no detalhe.
+const ATIVO: Record<Tom, string> = {
   neutral: "bg-surface-hover text-fg",
-  // A borda por dentro não é enfeite: no controle original o ativo tinha
-  // `border-brand` junto do fundo, e é ela que fazia o trabalho de mostrar
-  // qual está selecionado — `--c41-brand-subtle` é 8% de opacidade, fraco
-  // demais para carregar isso sozinho. Aqui ela vira sombra interna porque a
-  // caixa é `overflow-hidden` e uma borda de verdade empurraria o layout.
   brand: "bg-brand-subtle text-brand shadow-[inset_0_0_0_1px_var(--c41-brand)]",
-} as const;
+  success: "bg-success-bg text-success shadow-[inset_0_0_0_1px_var(--c41-success)]",
+  warning: "bg-warning-bg text-warning shadow-[inset_0_0_0_1px_var(--c41-warning)]",
+  danger: "bg-danger-bg text-danger shadow-[inset_0_0_0_1px_var(--c41-danger)]",
+  info: "bg-info-bg text-info shadow-[inset_0_0_0_1px_var(--c41-info)]",
+};
 // Sem fundo no hover de propósito: no tom neutro o ativo JÁ é
 // `bg-surface-hover`, e um inativo sob o mouse ficaria idêntico a ele.
 const INATIVO = "text-fg-muted hover:text-fg";
@@ -109,7 +127,9 @@ export function SegmentedControl<K extends string>({
     <div role="group" aria-label={label} className={`${CAIXA} ${className}`.trim()}>
       {items.map((item) => {
         const ativo = item.key === active;
-        const classe = `${SEGMENTO} ${ativo ? ATIVO[tone] : INATIVO}`;
+        // O tom do item ganha do tom do grupo: o grupo diz a linguagem
+        // padrão, o item diz a cor daquele estado específico.
+        const classe = `${SEGMENTO} ${ativo ? ATIVO[item.tone ?? tone] : INATIVO}`;
         const conteudo = (
           <>
             {item.icon}
