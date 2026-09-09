@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Users } from "lucide-react";
+import { AcoesDeLinha } from "@/components/shared/AcoesDeLinha";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -89,13 +90,105 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, defini
     });
   }
 
+  /**
+   * A mesma pessoa, em cartão, para telas estreitas — mesma decisão de
+   * /empresas: a tabela é `min-w-[860px]` dentro de um `overflow-x-auto`, e no
+   * celular e-mail, empresa e as ações nascem fora da tela.
+   *
+   * Ordem diferente da tabela de propósito: o e-mail sobe para logo abaixo do
+   * nome, porque é o segundo identificador de uma pessoa (o CPF chega
+   * mascarado, `123.***.***-45`, e não identifica ninguém sozinho).
+   */
+  function cartaoPessoa(p: Row) {
+    const cpf = maskCpf(p.cpf);
+
+    return (
+      <div
+        key={p.id}
+        className={`px-3 py-3 border-b border-border last:border-0 ${
+          selected.has(p.id) ? "bg-selected-bg" : ""
+        }`}
+      >
+        <div className="flex items-start gap-2.5">
+          {canCreate && (
+            <Checkbox
+              checked={selected.has(p.id)}
+              onChange={() => toggleOne(p.id)}
+              aria-label={`Selecionar ${p.name}`}
+              className="mt-1.5"
+            />
+          )}
+          <Link href={`/pessoas/${p.id}`} className="flex items-start gap-2.5 min-w-0 flex-1 text-fg">
+            <AvatarImage src={p.photoUrl} name={p.name} size={32} shape="circle" fontSize={12} />
+            <span className="flex flex-col min-w-0">
+              <span className="font-medium break-words">{p.name}</span>
+              {p.email && (
+                <span className="text-[11.5px] text-fg-muted break-all">{p.email}</span>
+              )}
+            </span>
+          </Link>
+        </div>
+
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-fg-secondary">
+          <StatusDot
+            color={p.active ? "var(--c41-success)" : "var(--c41-fg-muted)"}
+            label={p.active ? "Ativo" : "Inativo"}
+          />
+          {cpf !== "—" && <span className="tnum">{cpf}</span>}
+          <span className="tnum text-fg-muted">Criada em {p.createdAtLabel}</span>
+        </div>
+
+        {/* Sem o rótulo, o nome da empresa (ou da conta) apareceria solto e
+            ambíguo: na tabela quem o explica é o cabeçalho da coluna, e aqui
+            não há cabeçalho. */}
+        <div className="mt-1 text-[12px] text-fg-secondary">
+          <span className="text-fg-muted">{showLinkedUser ? "Conta de acesso" : "Empresa"}: </span>
+          {showLinkedUser ? (
+            p.linkedUserName ?? <span className="text-fg-muted">não vinculada</span>
+          ) : p.companyId ? (
+            <Link href={`/empresas/${p.companyId}`} className="text-brand hover:underline">
+              {p.companyName}
+            </Link>
+          ) : (
+            "—"
+          )}
+        </div>
+
+        {canCreate && (
+          <div className="mt-2.5 flex justify-end">
+            <AcoesDeLinha
+              foraDeOperacao={!p.active}
+              onToggle={() => toggleAtivo(p)}
+              editarHref={`/pessoas/${p.id}/editar`}
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {people.length === 0 ? (
           <EmptyState icon={<Users />} title="Nenhuma pessoa encontrada" />
         ) : (
-          <div className="scroll-x overflow-x-auto">
+          <>
+          {/* Abaixo de md, cartões; de md para cima, a tabela. As duas
+              compartilham a seleção — quem esconde uma delas é o CSS. */}
+          <div className="md:hidden">
+            {canCreate && (
+              <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border bg-table-header-bg">
+                <Checkbox checked={allSelected} onChange={toggleAll} aria-label="Selecionar todas" />
+                <span className="text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                  Selecionar todas
+                </span>
+              </div>
+            )}
+            {people.map((p) => cartaoPessoa(p))}
+          </div>
+
+          <div className="scroll-x overflow-x-auto hidden md:block">
           <table className="w-full min-w-[860px] text-[length:var(--fs-body)]">
             <thead>
               <tr className="border-b border-border bg-table-header-bg">
@@ -156,18 +249,11 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, defini
                   <td className="px-4 py-3 text-fg-secondary tnum">{p.createdAtLabel}</td>
                   <td className="px-4 py-3 text-right">
                     {canCreate && (
-                      <span className="inline-flex items-center gap-3 whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => toggleAtivo(p)}
-                          className="text-[13px] font-medium text-fg-muted hover:text-fg transition-colors"
-                        >
-                          {p.active ? "Inativar" : "Reativar"}
-                        </button>
-                        <Link href={`/pessoas/${p.id}/editar`} className="text-[13px] font-medium text-fg-muted hover:text-fg transition-colors">
-                          Editar
-                        </Link>
-                      </span>
+                      <AcoesDeLinha
+                        foraDeOperacao={!p.active}
+                        onToggle={() => toggleAtivo(p)}
+                        editarHref={`/pessoas/${p.id}/editar`}
+                      />
                     )}
                   </td>
                 </tr>
@@ -175,6 +261,7 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, defini
             </tbody>
           </table>
           </div>
+          </>
         )}
       </div>
 

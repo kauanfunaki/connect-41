@@ -3,10 +3,10 @@
 import { Fragment, useState, useTransition } from "react";
 import Link from "next/link";
 import { Building2, ChevronRight } from "lucide-react";
+import { AcoesDeLinha } from "@/components/shared/AcoesDeLinha";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Select } from "@/components/ui/Select";
 import { AvatarImage } from "@/components/shared/AvatarImage";
@@ -90,27 +90,15 @@ export function EmpresasTable({
   const [, startTransition] = useTransition();
   const { dialog, requestConfirm } = useConfirm();
 
-  // As mesmas duas ações na tabela e no cartão. `linkMuted` é o que estes dois
-  // já eram escritos à mão: texto apagado que escurece no hover, sem caixa. O
-  // tamanho vem do call-site porque a variante não fixa fonte.
+  // A tabela e o cartão usam as mesmas duas ações — e /pessoas e /clientes
+  // usam as mesmas duas de novo, então elas moram em `AcoesDeLinha`.
   function acoesEmpresa(c: Row) {
     return (
-      <span className="inline-flex items-center gap-3">
-        <Button
-          variant="linkMuted"
-          className="text-[13px] font-medium"
-          onClick={() => toggleAtivo(c)}
-        >
-          {FORA_DE_OPERACAO.includes(c.status) ? "Reativar" : "Inativar"}
-        </Button>
-        <Button
-          variant="linkMuted"
-          href={`/empresas/${c.id}/editar`}
-          className="text-[13px] font-medium"
-        >
-          Editar
-        </Button>
-      </span>
+      <AcoesDeLinha
+        foraDeOperacao={FORA_DE_OPERACAO.includes(c.status)}
+        onToggle={() => toggleAtivo(c)}
+        editarHref={`/empresas/${c.id}/editar`}
+      />
     );
   }
 
