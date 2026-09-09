@@ -7,6 +7,7 @@ import { PipelineEntityType, ActivityType, RecurringFrequency, StageType } from 
 import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
 import { scopedPipelineWhere } from "@/lib/auth/scope";
 import { boardPath } from "@/lib/kanbanPaths";
+import { minutosApontados, segundosDesde } from "@/lib/datetime";
 import { findMentionedUserIds } from "@/lib/handoffMentions";
 import { notifyUser } from "@/lib/notifications";
 import { sanitizeDocumentHtml } from "@/lib/clientDocuments";
@@ -882,7 +883,9 @@ export async function pararCronometro(pipelineId: string, itemId: string): Promi
     });
     if (!item || item.activeTimerUserId !== userId || !item.activeTimerStartedAt) return;
 
-    const minutes = Math.max(1, Math.round((Date.now() - item.activeTimerStartedAt.getTime()) / 60_000));
+    // Mesma função que a tela usa para mostrar o apontamento antes de parar —
+    // se as duas divergirem, o contador volta a prometer o que não cumpre.
+    const minutes = minutosApontados(segundosDesde(item.activeTimerStartedAt.toISOString()));
     await prisma.$transaction([
       prisma.pipelineItem.update({ where: { id: itemId }, data: { activeTimerUserId: null, activeTimerStartedAt: null } }),
       prisma.timeEntry.create({ data: { tenantId, pipelineItemId: itemId, userId, minutes, loggedOn: new Date() } }),

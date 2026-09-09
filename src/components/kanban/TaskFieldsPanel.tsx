@@ -214,7 +214,7 @@ export function TaskFieldsPanel({
         {activeTimer ? (
           activeTimer.userId === currentUserId ? (
             <span className="inline-flex items-center gap-2">
-              <TempoDecorrido key={activeTimer.startedAt} startedAt={activeTimer.startedAt} className="text-[12px] font-medium text-fg" />
+              <TempoDecorrido key={activeTimer.startedAt} startedAt={activeTimer.startedAt} className="text-[12px] font-medium text-fg" mostrarApontamento />
               <Button
                 variant="danger"
                 size="xs"

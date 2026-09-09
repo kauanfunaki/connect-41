@@ -41,3 +41,19 @@ export function formatarDecorrido(segundos: number): string {
   const doisDigitos = (n: number) => String(n).padStart(2, "0");
   return h > 0 ? `${h}:${doisDigitos(m)}:${doisDigitos(s)}` : `${m}:${doisDigitos(s)}`;
 }
+
+/**
+ * Quantos minutos o cronômetro aponta para uma duração em segundos.
+ *
+ * Minuto cheio, com piso de 1: apontamento de horas é cobrado em minutos, e
+ * uma sessão curta de verdade não pode virar zero. `0:47` vale 1 minuto,
+ * `1:29` também.
+ *
+ * Vive aqui, e não solta dentro da action, porque a tela precisa da MESMA
+ * regra para dizer de antemão o que será gravado. Duas cópias da conversão
+ * divergiriam, e aí o contador voltaria a mentir — que é o problema que esta
+ * função existe para resolver.
+ */
+export function minutosApontados(segundos: number): number {
+  return Math.max(1, Math.round(Math.max(0, segundos) / 60));
+}

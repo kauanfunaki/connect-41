@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatarDecorrido, segundosDesde } from "./datetime";
+import { formatarDecorrido, minutosApontados, segundosDesde } from "./datetime";
 
 describe("formatarDecorrido", () => {
   it("mostra M:SS antes de uma hora", () => {
@@ -37,5 +37,31 @@ describe("segundosDesde", () => {
 
   it("devolve 0 para data inválida em vez de NaN", () => {
     expect(segundosDesde("nao e uma data", Date.now())).toBe(0);
+  });
+});
+
+describe("minutosApontados", () => {
+  it("arredonda para o minuto cheio", () => {
+    expect(minutosApontados(90)).toBe(2);   // 1:30 sobe
+    expect(minutosApontados(89)).toBe(1);   // 1:29 desce
+    expect(minutosApontados(3600)).toBe(60);
+  });
+
+  it("tem piso de 1 — sessão curta não pode virar zero", () => {
+    expect(minutosApontados(1)).toBe(1);
+    expect(minutosApontados(29)).toBe(1);
+    expect(minutosApontados(0)).toBe(1);
+  });
+
+  it("não devolve negativo com relógio adiantado", () => {
+    expect(minutosApontados(-120)).toBe(1);
+  });
+
+  // Esta é a razão de a função existir: a tela mostra o mesmo número que a
+  // action grava, então o contador não promete precisão que o registro não tem.
+  it("é a mesma conversão que o contador exibe", () => {
+    for (const seg of [1, 47, 89, 90, 3599, 3600]) {
+      expect(minutosApontados(seg)).toBe(Math.max(1, Math.round(seg / 60)));
+    }
   });
 });
