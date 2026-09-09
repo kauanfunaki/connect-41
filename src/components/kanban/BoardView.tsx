@@ -7,6 +7,7 @@ import { TaskListView, type TaskRow, type StageOption } from "@/components/kanba
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { FilterButton, FilterButtonSection } from "@/components/ui/FilterButton";
+import { Button } from "@/components/ui/Button";
 
 type Item = TaskRow & {
   tags?: { id: string; name: string; color: string }[];
@@ -122,6 +123,7 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
           <button
             type="button"
             onClick={() => setView("list")}
+            aria-pressed={view === "list"}
             className={`h-8 px-3 flex items-center gap-1.5 text-[12px] font-medium transition-colors ${
               view === "list" ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg"
             }`}
@@ -131,6 +133,7 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
           <button
             type="button"
             onClick={() => setView("board")}
+            aria-pressed={view === "board"}
             className={`h-8 px-3 flex items-center gap-1.5 text-[12px] font-medium border-l border-border transition-colors ${
               view === "board" ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg"
             }`}
@@ -209,15 +212,16 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
         </FilterButton>
 
         {activeFilterCount > 0 && (
-          <button
+          <Button
+            variant="linkMuted"
             type="button"
             onClick={() => {
-              setSearch(""); setAssigneeFilter(""); setCreatorFilter(""); setTagFilter(""); setPriorityFilter(""); setDueFilter("");
+            setSearch(""); setAssigneeFilter(""); setCreatorFilter(""); setTagFilter(""); setPriorityFilter(""); setDueFilter("");
             }}
-            className="text-[12px] text-fg-muted hover:text-fg transition-colors"
+            className="text-[12px]"
           >
             Limpar filtros
-          </button>
+          </Button>
         )}
 
         <span className="text-[12px] text-fg-muted ml-auto flex-shrink-0">

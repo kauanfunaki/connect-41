@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Check, GripVertical, Pencil, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { IconButton } from "@/components/ui/IconButton";
 import { Input } from "@/components/ui/Input";
 
@@ -56,17 +57,18 @@ function ChecklistRow({
           <GripVertical size={13} />
         </span>
       )}
-      <button
-        type="button"
+      {/* Era um <button> de 18px desenhado à mão que imitava um checkbox. Um
+          item de checklist É um checkbox — para leitor de tela isso muda de
+          "botão" para "caixa de seleção, marcada", que é a informação certa.
+          O visual passa a ser o `.c41-checkbox` do design system, igual ao do
+          resto do app. */}
+      <Checkbox
+        checked={item.done}
         disabled={!canAct}
-        onClick={() => startTransition(() => toggleAction(item.id, !item.done))}
+        onChange={() => startTransition(() => toggleAction(item.id, !item.done))}
         aria-label={item.done ? "Desmarcar" : "Concluir"}
-        className={`w-[18px] h-[18px] rounded-sm border flex items-center justify-center flex-shrink-0 transition-colors ${
-          item.done ? "bg-brand border-brand text-on-brand" : "border-border-strong hover:border-brand"
-        }`}
-      >
-        {item.done && <Check size={12} />}
-      </button>
+        className="flex-shrink-0"
+      />
 
       {editing ? (
         <div className="flex items-center gap-1.5 flex-1 min-w-0">

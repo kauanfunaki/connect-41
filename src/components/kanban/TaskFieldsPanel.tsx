@@ -264,13 +264,14 @@ export function TaskFieldsPanel({
         </FieldRow>
       )}
 
-      <button
+      <Button
+        variant="linkMuted"
         type="button"
         onClick={() => setCollapseEmpty((v) => !v)}
-        className="text-[11px] text-fg-muted hover:text-fg transition-colors mt-1"
+        className="text-[11px] mt-1"
       >
         {collapseEmpty ? "Mostrar todos os campos" : "Recolher campos vazios"}
-      </button>
+      </Button>
     </div>
   );
 }

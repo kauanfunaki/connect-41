@@ -51,13 +51,14 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
           Reuniões
         </h2>
         {canSchedule && (
-          <button
+          <Button
+            variant="link"
             type="button"
             onClick={() => setOpen((o) => !o)}
-            className="text-[12px] font-medium text-brand hover:underline"
+            className="text-[12px] font-medium"
           >
             {open ? "Cancelar" : "+ Agendar reunião"}
-          </button>
+          </Button>
         )}
       </div>
 

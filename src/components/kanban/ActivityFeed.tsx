@@ -341,13 +341,13 @@ function CommentActions({
   return (
     <div className="flex items-center gap-2 mt-1">
       {canAct && onReply && (
-        <button type="button" onClick={onReply} className="text-[11px] text-fg-muted hover:text-fg transition-colors">Responder</button>
+        <Button variant="linkMuted" type="button" onClick={onReply} className="text-[11px]">Responder</Button>
       )}
       {canModify && onEdit && (
-        <button type="button" onClick={onEdit} className="text-[11px] text-fg-muted hover:text-fg transition-colors">Editar</button>
+        <Button variant="linkMuted" type="button" onClick={onEdit} className="text-[11px]">Editar</Button>
       )}
       {canModify && (
-        <button type="button" onClick={onDelete} className="text-[11px] text-fg-muted hover:text-danger transition-colors">Excluir</button>
+        <Button variant="linkMuted" type="button" onClick={onDelete} className="text-[11px] hover:text-danger">Excluir</Button>
       )}
     </div>
   );
@@ -443,7 +443,7 @@ function Comment({
                     {r.content ? renderRichText(r.content, mentionUsers) : null}
                   </p>
                   {r.canModify && (
-                    <button type="button" onClick={() => confirmDelete(r.id)} className="text-[length:var(--fs-micro)] text-fg-muted hover:text-danger transition-colors mt-0.5">Excluir</button>
+                    <Button variant="linkMuted" type="button" onClick={() => confirmDelete(r.id)} className="text-[length:var(--fs-micro)] hover:text-danger mt-0.5">Excluir</Button>
                   )}
                 </div>
               </div>

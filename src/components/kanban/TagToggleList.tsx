@@ -17,6 +17,7 @@ function Chip({ tag, active, onClick }: { tag: TagOption; active: boolean; onCli
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[12px] font-medium transition-colors ${
         active ? "border-transparent" : "border-border text-fg-muted hover:text-fg"
       }`}

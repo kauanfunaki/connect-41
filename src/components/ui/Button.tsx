@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger";
+type Variant = "primary" | "secondary" | "ghost" | "danger" | "link" | "linkMuted";
 type Size = "xs" | "sm" | "md";
 
 type CommonProps = {
@@ -52,7 +52,22 @@ const VARIANT_CLASS: Record<Variant, string> = {
   secondary: "border border-border-strong text-fg hover:bg-surface-hover",
   ghost: "bg-transparent text-fg-secondary hover:bg-surface-hover hover:text-fg",
   danger: "border border-danger/30 text-danger hover:bg-danger/8",
+  // ─── As duas variantes sem caixa ──────────────────────────────────────────
+  //
+  // Medidas em 09/09 ao converter o kanban: 13 dos botões crus são texto
+  // inline dentro de outra linha — "Responder" num comentário, "+ Vincular
+  // tarefa" no rodapé de uma seção. Dar `h-7 px-2.5` a eles empurraria a linha
+  // em que vivem, então estas variantes **pulam o SIZE_CLASS** inteiro.
+  //
+  // Elas também não fixam tamanho de fonte: 11px num rodapé de comentário e
+  // 12px num rodapé de seção são contextuais, e vêm do call-site. Impor um
+  // mudaria layout em vez de unificar.
+  link: "text-brand hover:underline",
+  linkMuted: "text-fg-muted hover:text-fg",
 };
+
+/** Variantes que não têm caixa — sem altura, sem padding, sem peso próprio. */
+const SEM_CAIXA = new Set<Variant>(["link", "linkMuted"]);
 
 // px-4/text-[length:var(--fs-ui)] no md também vieram de medição: o `h-9`
 // real do app aparece esmagadoramente com padding 16px e texto 13px — não
@@ -67,9 +82,16 @@ const SIZE_CLASS: Record<Size, string> = {
 const BASE =
   "inline-flex items-center justify-center gap-1.5 rounded-md font-semibold transition-colors disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed";
 
+// Sem `justify-center`, sem `font-semibold` e sem raio de botão: o alvo é uma
+// palavra no meio de uma frase, não um controle com área própria.
+const BASE_SEM_CAIXA =
+  "inline-flex items-center gap-1 transition-colors disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed";
+
 export function Button(props: Props) {
   const { variant = "primary", size = "md", className = "", children } = props;
-  const cls = `${BASE} ${VARIANT_CLASS[variant]} ${SIZE_CLASS[size]} ${className}`.trim();
+  const cls = SEM_CAIXA.has(variant)
+    ? `${BASE_SEM_CAIXA} ${VARIANT_CLASS[variant]} ${className}`.trim()
+    : `${BASE} ${VARIANT_CLASS[variant]} ${SIZE_CLASS[size]} ${className}`.trim();
 
   if (props.href !== undefined) {
     const { href, ...rest } = omitCommon(props);

@@ -40,13 +40,14 @@ export function NewListButton({ action }: Props) {
               <Textarea id="list-description" name="description" rows={3} placeholder="Opcional" autoFocus />
             </CampoForm>
           ) : (
-            <button
+            <Button
+              variant="linkMuted"
               type="button"
               onClick={() => setShowDescription(true)}
-              className="text-[12px] text-fg-muted hover:text-fg transition-colors"
+              className="text-[12px]"
             >
               + descrição
-            </button>
+            </Button>
           )}
           {state?.error && <p className="text-[12px] text-danger">{state.error}</p>}
           <Button

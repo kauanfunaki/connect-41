@@ -80,13 +80,14 @@ export function PipelineForm({ action, sectorOptions }: Props) {
           <h3 className="text-[11px] font-semibold text-fg-muted uppercase tracking-wider">
             Estágios
           </h3>
-          <button
+          <Button
+            variant="link"
             type="button"
             onClick={addStage}
-            className="text-[12px] text-brand hover:underline"
+            className="text-[12px]"
           >
             + Adicionar estágio
-          </button>
+          </Button>
         </div>
 
         <div className="space-y-2">

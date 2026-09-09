@@ -150,13 +150,14 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
             ))}
           </div>
 
-          <button
+          <Button
+            variant="link"
             type="button"
             onClick={addRow}
-            className="inline-flex items-center gap-1.5 text-[12px] text-brand hover:underline"
+            className="text-[12px]"
           >
             <Plus size={13} /> Adicionar estágio
-          </button>
+          </Button>
 
           {colorAdjusted && (
             <p className="text-[12px] text-fg-secondary bg-surface-hover border border-border rounded-md px-3 py-2">

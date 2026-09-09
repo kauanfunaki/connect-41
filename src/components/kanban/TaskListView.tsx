@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/Select";
 import { StageDot, type StageDotType } from "@/components/kanban/StageDot";
 import { darkenUntilReadableOnWhiteText } from "@/lib/color";
 import { RowActionsMenu } from "@/components/kanban/RowActionsMenu";
+import { Button } from "@/components/ui/Button";
 
 export type AssigneeRow = { id: string; name: string; priority: number };
 export type SubtaskRow = {
@@ -537,13 +538,14 @@ function AddTaskInline({ stageId, createTaskAction }: { stageId: string; createT
   }
 
   return (
-    <button
+    <Button
+      variant="linkMuted"
       type="button"
       onClick={() => setAdding(true)}
-      className="text-[12px] text-fg-muted hover:text-fg transition-colors"
+      className="text-[12px]"
     >
       + Adicionar Tarefa
-    </button>
+    </Button>
   );
 }
 

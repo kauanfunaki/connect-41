@@ -6,6 +6,7 @@ import { Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { getRecentLinkedIds, pushRecentLinkedId } from "@/lib/kanbanRecentLinks";
 import { IconButton } from "@/components/ui/IconButton";
+import { Button } from "@/components/ui/Button";
 
 export type LinkedItem = { id: string; name: string };
 export type LinkCandidate = { id: string; name: string };
@@ -98,13 +99,14 @@ export function LinkedItemsSection({ canAct, basePath, links, candidates, create
             )}
           </div>
         ) : (
-          <button
+          <Button
+            variant="linkMuted"
             type="button"
             onClick={() => setPicking(true)}
-            className="text-[12px] text-fg-muted hover:text-fg transition-colors"
+            className="text-[12px]"
           >
             + Vincular tarefa
-          </button>
+          </Button>
         )
       )}
     </div>

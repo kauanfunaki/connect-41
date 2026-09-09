@@ -77,7 +77,7 @@ export function TimeTrackingSection({ canAct, estimateMinutes, entries, estimate
                 className="w-20 h-7"
                 placeholder="min"
               />
-              <button type="button" onClick={saveEstimate} className="text-brand hover:underline">Salvar</button>
+              <Button variant="link" type="button" onClick={saveEstimate} >Salvar</Button>
             </div>
           ) : (
             <button
