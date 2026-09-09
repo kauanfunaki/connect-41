@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Textarea } from "@/components/ui/Textarea";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { DESTINO_LABEL } from "@/lib/fiscal/rotulos";
@@ -56,27 +57,26 @@ export function DestinoControl({ documentoId, destinoAtual, motivoAtual, podeDec
 
   return (
     <div>
-      <div className="flex items-center gap-2 flex-wrap">
-        {OPCOES.map((o) => {
-          const atual = o.valor === destinoAtual;
-          return (
-            <button
-              key={o.valor}
-              type="button"
-              disabled={pendente || atual}
-              onClick={() => (o.valor === "IGNORADO" ? setPedindoMotivo(true) : aplicar(o.valor))}
-              title={o.ajuda}
-              className={`px-3 py-1.5 rounded-md border text-[length:var(--fs-ui)] font-medium transition-colors ${
-                atual
-                  ? "border-brand bg-brand-subtle text-brand cursor-default"
-                  : "border-border text-fg-secondary hover:bg-surface-hover hover:text-fg disabled:opacity-60"
-              }`}
-            >
-              {DESTINO_LABEL[o.valor]}
-            </button>
-          );
-        })}
-      </div>
+      {/* `tone="brand"`: aqui o segmento ativo é um dado do documento, não a
+          aba em que a pessoa estava — precisa ser legível de relance na ficha
+          inteira. Os outros dois call-sites do componente trocam de visão, e
+          ficam no neutro.
+
+          IGNORADO não aplica direto: abre o campo de motivo antes de gravar.
+          É o único segmento que não é "escolher e pronto", e por isso o
+          `onChange` desvia em vez de chamar `aplicar`. */}
+      <SegmentedControl
+        label="Destino do documento"
+        tone="brand"
+        active={destinoAtual}
+        onChange={(valor) => (valor === "IGNORADO" ? setPedindoMotivo(true) : aplicar(valor))}
+        items={OPCOES.map((o) => ({
+          key: o.valor,
+          label: DESTINO_LABEL[o.valor],
+          title: o.ajuda,
+          disabled: pendente,
+        }))}
+      />
 
       {destinoAtual === "IGNORADO" && motivoAtual && !pedindoMotivo && (
         <p className="text-[length:var(--fs-helper)] text-fg-secondary mt-3">

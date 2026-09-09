@@ -10,6 +10,10 @@ export type SegmentItem<K extends string = string> = {
   key: K;
   label: string;
   icon?: React.ReactNode;
+  /** Texto de apoio no hover — o que a opção significa, quando o rótulo não basta. */
+  title?: string;
+  /** Só no modo botão. O segmento ativo já vem desabilitado sozinho. */
+  disabled?: boolean;
 };
 
 type Comum<K extends string> = {
@@ -17,6 +21,18 @@ type Comum<K extends string> = {
   active: K;
   /** Do que é o grupo ("Visão da agenda") — vira o rótulo dele no leitor de tela. */
   label: string;
+  /**
+   * Como o segmento ativo se pinta.
+   *
+   * `neutral` (padrão) é o troca-visão: Lista/Quadro, Dia/Semana/Mês. A opção
+   * escolhida é uma preferência de quem olha, some ao recarregar, e um destaque
+   * colorido só competiria com o conteúdo.
+   *
+   * `brand` é o grava-valor: o segmento ativo **é um dado do registro**, e
+   * precisa ser legível de relance na ficha inteira. É o destino de um
+   * documento fiscal, não a aba em que você estava.
+   */
+  tone?: "neutral" | "brand";
   className?: string;
 };
 
@@ -38,8 +54,16 @@ type PorUrl<K extends string> = Comum<K> & {
 const CAIXA = "inline-flex rounded-lg border border-border overflow-hidden flex-shrink-0";
 const SEGMENTO =
   "h-8 px-3 flex items-center gap-1.5 text-[12px] font-medium border-l border-border first:border-l-0 transition-colors";
-const ATIVO = "bg-surface-hover text-fg";
+const ATIVO = {
+  neutral: "bg-surface-hover text-fg",
+  brand: "bg-brand-subtle text-brand",
+} as const;
+// Sem fundo no hover de propósito: no tom neutro o ativo JÁ é
+// `bg-surface-hover`, e um inativo sob o mouse ficaria idêntico a ele.
 const INATIVO = "text-fg-muted hover:text-fg";
+// Só no modo botão, e só em segmento inativo: o ativo nunca desbota — ele é a
+// resposta à pergunta "onde eu estou", e apagá-lo esconderia justamente isso.
+const DESABILITADO = "disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-default";
 
 /**
  * Grupo de segmentos: duas ou três opções mutuamente exclusivas, numa caixa só.
@@ -72,6 +96,7 @@ export function SegmentedControl<K extends string>({
   items,
   active,
   label,
+  tone = "neutral",
   onChange,
   className = "",
 }: PorEstado<K> | PorUrl<K>) {
@@ -79,7 +104,7 @@ export function SegmentedControl<K extends string>({
     <div role="group" aria-label={label} className={`${CAIXA} ${className}`.trim()}>
       {items.map((item) => {
         const ativo = item.key === active;
-        const classe = `${SEGMENTO} ${ativo ? ATIVO : INATIVO}`;
+        const classe = `${SEGMENTO} ${ativo ? ATIVO[tone] : INATIVO}`;
         const conteudo = (
           <>
             {item.icon}
@@ -91,6 +116,7 @@ export function SegmentedControl<K extends string>({
           <Link
             key={item.key}
             href={item.href}
+            title={item.title}
             aria-current={ativo ? "page" : undefined}
             className={classe}
           >
@@ -100,9 +126,17 @@ export function SegmentedControl<K extends string>({
           <button
             key={item.key}
             type="button"
-            onClick={() => onChange?.(item.key)}
+            // O ativo NÃO é desabilitado: `disabled` o tiraria da ordem de
+            // tabulação, e quem navega por teclado perderia justamente o
+            // segmento que responde "onde eu estou". O clique repetido é
+            // barrado aqui, sem custo de acessibilidade.
+            disabled={item.disabled}
+            onClick={() => {
+              if (!ativo) onChange?.(item.key);
+            }}
+            title={item.title}
             aria-pressed={ativo}
-            className={classe}
+            className={`${classe} ${ativo ? "cursor-default" : DESABILITADO}`}
           >
             {conteudo}
           </button>
