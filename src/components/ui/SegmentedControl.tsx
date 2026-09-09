@@ -56,7 +56,12 @@ const SEGMENTO =
   "h-8 px-3 flex items-center gap-1.5 text-[12px] font-medium border-l border-border first:border-l-0 transition-colors";
 const ATIVO = {
   neutral: "bg-surface-hover text-fg",
-  brand: "bg-brand-subtle text-brand",
+  // A borda por dentro não é enfeite: no controle original o ativo tinha
+  // `border-brand` junto do fundo, e é ela que fazia o trabalho de mostrar
+  // qual está selecionado — `--c41-brand-subtle` é 8% de opacidade, fraco
+  // demais para carregar isso sozinho. Aqui ela vira sombra interna porque a
+  // caixa é `overflow-hidden` e uma borda de verdade empurraria o layout.
+  brand: "bg-brand-subtle text-brand shadow-[inset_0_0_0_1px_var(--c41-brand)]",
 } as const;
 // Sem fundo no hover de propósito: no tom neutro o ativo JÁ é
 // `bg-surface-hover`, e um inativo sob o mouse ficaria idêntico a ele.
