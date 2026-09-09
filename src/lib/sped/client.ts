@@ -214,6 +214,57 @@ export async function listarDocumentos(
   return pedir<PaginaDeDocumentos>(creds, "documentos", params);
 }
 
+/**
+ * CT-e de uma janela de **data de rota** — consulta ao vivo, sem ingestão.
+ *
+ * ─── Por que existe separada de `listarDocumentos` ───────────────────────────
+ *
+ * CT-e não entra na listagem padrão: `tipo` é opt-in do lado do SPED, e foi
+ * pedido assim de propósito. O laço de sincronização chama a listagem sem
+ * `tipo` e traz 228 mil documentos; se CT-e viesse junto, viraria dezenas de
+ * milhões sem ninguém ter decidido.
+ *
+ * ─── Por que a janela é `data_rota` e não competência ────────────────────────
+ *
+ * Foi a competência que pedimos, e o lado do SPED recusou com dado: `data_rota`
+ * é a única dimensão indexada, e ela **não coincide** com a competência da
+ * chave. Numa janela de 29/12 a 03/01 a divisão real é 59% dez e 41% jan. Um
+ * parâmetro chamado `competencia` que filtrasse por rota devolveria mês errado
+ * e — pior — perderia documento do mês certo com rota no mês vizinho, que é o
+ * erro sem conserto deste lado. Pedir `competencia` com `tipo=cte` é recusado
+ * com `filtro_nao_suportado`, em vez de ignorado em silêncio.
+ *
+ * A `competencia` de cada linha vem exata, do AAMM da chave: agrupar por ela é
+ * trabalho nosso, sobre o resultado.
+ *
+ * ─── O que NÃO vem ──────────────────────────────────────────────────────────
+ *
+ * `valor` chega `null` com `detalhe: "parcial"` — o `vPrest` só existe dentro
+ * do XML, que é o caminho dos 138 GB. Consequência prática: CT-e desta rota
+ * **não vira lançamento**, porque `podeLancar` recusa `sem_valor`. Serve para
+ * consulta e para abrir o PDF, não para o financeiro.
+ *
+ * O cursor carrega a janela além da âncora `(data_rota, chave)`. Reusá-lo com
+ * outra janela é `cursor_invalido`, e não meio resultado em silêncio.
+ */
+export async function listarCtePorRota(
+  creds: CredenciaisSped,
+  cnpjRaiz: string,
+  janela: { de: string; ate: string },
+  opcoes: { cursor?: string | null; limite?: number } = {}
+): Promise<PaginaDeDocumentos> {
+  const params = new URLSearchParams({ cnpj_raiz: cnpjRaiz, tipo: "cte" });
+  params.set("limite", String(Math.min(Math.max(opcoes.limite ?? 500, 1), 1000)));
+  if (opcoes.cursor) {
+    // Verbatim, como o outro laço: o cursor é opaco e carrega a janela dentro.
+    params.set("cursor", opcoes.cursor);
+  } else {
+    params.set("data_rota_de", janela.de);
+    params.set("data_rota_ate", janela.ate);
+  }
+  return pedir<PaginaDeDocumentos>(creds, "documentos", params);
+}
+
 /** Metadado de um documento. 404 quando a raiz não bate — nunca 403, que confirmaria a existência. */
 export async function obterDocumento(
   creds: CredenciaisSped,

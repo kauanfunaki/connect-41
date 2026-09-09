@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FileText } from "lucide-react";
+import { FileText, Truck } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled } from "@/lib/modules";
@@ -65,16 +65,25 @@ export default async function DocumentosFiscaisPage({
         <div>
           <PageHeader title="Documentos Fiscais" />
           <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
-            NF-e, NFC-e, CT-e e NFS-e por empresa e competência. O acervo espelha o que já foi
-            emitido — nada é emitido aqui.
+            NF-e, NFC-e e NFS-e por empresa e competência. O acervo espelha o que já foi
+            emitido — nada é emitido aqui. <strong>CT-e não entra no acervo</strong>: são milhões
+            por mês e vêm sem valor apurado, então ficam na consulta ao vivo.
           </p>
         </div>
-        <Link
-          href="/documentos-fiscais/entrada"
-          className="inline-flex items-center gap-2 flex-shrink-0 rounded-md bg-brand px-3 py-2 text-[length:var(--fs-button)] font-medium text-white hover:bg-brand-hover transition-colors"
-        >
-          <Upload size={16} /> Entrada de XML
-        </Link>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Link
+            href="/documentos-fiscais/cte"
+            className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-[length:var(--fs-button)] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors"
+          >
+            <Truck size={16} /> Consultar CT-e
+          </Link>
+          <Link
+            href="/documentos-fiscais/entrada"
+            className="inline-flex items-center gap-2 rounded-md bg-brand px-3 py-2 text-[length:var(--fs-button)] font-medium text-white hover:bg-brand-hover transition-colors"
+          >
+            <Upload size={16} /> Entrada de XML
+          </Link>
+        </div>
       </div>
 
       {semNenhum ? (
