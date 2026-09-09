@@ -4,6 +4,7 @@
 //   npx tsx --env-file=.env scripts/repontuar-avaliacoes.ts --aplicar
 //   npx tsx --env-file=.env scripts/repontuar-avaliacoes.ts --aplicar --limite 50
 //   npx tsx --env-file=.env scripts/repontuar-avaliacoes.ts --aplicar --tudo
+//   npx tsx --env-file=.env scripts/repontuar-avaliacoes.ts --aplicar --apenas-defasadas
 //
 // ─── Rode `carregar-historico-chatwoot.ts` ANTES ─────────────────────────────
 //
@@ -73,6 +74,16 @@ const aplicar = process.argv.includes("--aplicar");
 // quem foi avaliado antes de `carregar-historico-chatwoot.ts` rodar foi
 // pontuado sobre metade do texto, e a triagem dessas conversas nem apareceu.
 const tudo = process.argv.includes("--tudo");
+// Refaz SÓ o que foi pontuado antes de o histórico da conversa ser completado.
+//
+// É o meio-termo entre não fazer nada e pagar `--tudo`. Depois da rodada de
+// 04/09 sobraram 9 conversas nessa situação em 711 — 1,3%. Repontuar as 711
+// para consertar 9 custa ~1.400 chamadas de IA; esta flag custa ~18.
+//
+// Como se detecta: a avaliação é mais antiga que a mensagem mais recente que
+// entrou no cache daquela conversa. Se o histórico foi completado DEPOIS de a
+// nota sair, a nota foi dada sobre metade do texto.
+const apenasDefasadas = process.argv.includes("--apenas-defasadas");
 const iLimite = process.argv.indexOf("--limite");
 const limite = iLimite !== -1 ? Number(process.argv[iLimite + 1]) : Infinity;
 
@@ -95,7 +106,7 @@ async function main() {
       // Conversa excluída por SUPER_ADMIN não entra: repontuá-la só gastaria
       // IA para produzir uma nota que o motor apaga em seguida.
       where: { tenantId: tenant.id, resolvedAt: { not: null }, excludedFromEvaluation: false },
-      select: { id: true, evaluations: { select: { handlerLabel: true } } },
+      select: { id: true, evaluations: { select: { handlerLabel: true, evaluatedAt: true } } },
       orderBy: { resolvedAt: "desc" },
     });
     if (conversas.length === 0) continue;
@@ -115,19 +126,63 @@ async function main() {
     const jaFeitas = conversas.filter(
       (c) => c.evaluations.length > 0 && c.evaluations.every((e) => e.handlerLabel !== null)
     );
-    const pendentes = tudo
-      ? [...reguaAntiga, ...semAvaliacao, ...jaFeitas]
-      : [...reguaAntiga, ...semAvaliacao];
+    // Instante da última mensagem que entrou no cache, por conversa. Um groupBy
+    // só, e não uma consulta por conversa: são centenas, e a versão por conversa
+    // levava minutos contra o banco de produção.
+    const ultimaCarga = apenasDefasadas
+      ? new Map(
+          (
+            await prisma.chatwootMessage.groupBy({
+              by: ["conversationId"],
+              where: { tenantId: tenant.id },
+              _max: { syncedAt: true },
+            })
+          ).map((m) => [m.conversationId, m._max.syncedAt])
+        )
+      : new Map<string, Date | null>();
+
+    // Margem de 5s: a avaliação grava logo depois de `ensureMessagesLoaded`, e
+    // sem folga a própria conversa recém-avaliada se acusaria de defasada.
+    const defasadas = apenasDefasadas
+      ? jaFeitas.filter((c) => {
+          const carga = ultimaCarga.get(c.id);
+          if (!carga) return false;
+          const avaliadaEm = c.evaluations
+            .map((e) => e.evaluatedAt)
+            .sort((a, b) => b.getTime() - a.getTime())[0];
+          return avaliadaEm ? avaliadaEm.getTime() < carga.getTime() - 5000 : false;
+        })
+      : [];
+
+    // `--apenas-defasadas` é cirúrgico: NÃO arrasta a régua antiga nem as sem
+    // avaliação, que são outro problema e já têm o modo padrão. Quem quer os
+    // dois roda o script duas vezes.
+    const pendentes = apenasDefasadas
+      ? defasadas
+      : tudo
+        ? [...reguaAntiga, ...semAvaliacao, ...jaFeitas]
+        : [...reguaAntiga, ...semAvaliacao];
 
     console.log(`\n=== ${tenant.name} ===`);
     console.log(`  resolvidas: ${conversas.length}`);
-    console.log(
-      `  a repontuar: ${pendentes.length} (${reguaAntiga.length} na régua antiga, ` +
-        `${semAvaliacao.length} sem avaliação` +
-        (tudo ? `, ${jaFeitas.length} refeitas por --tudo` : "") +
-        ")"
-    );
-    if (!tudo && jaFeitas.length > 0) {
+    if (apenasDefasadas) {
+      console.log(
+        `  a repontuar: ${pendentes.length} defasada(s) — avaliadas antes de o ` +
+          `histórico da conversa ser completado`
+      );
+      console.log(
+        `  (fora deste modo: ${reguaAntiga.length} na régua antiga e ` +
+          `${semAvaliacao.length} sem avaliação — rode sem a flag para essas)`
+      );
+    } else {
+      console.log(
+        `  a repontuar: ${pendentes.length} (${reguaAntiga.length} na régua antiga, ` +
+          `${semAvaliacao.length} sem avaliação` +
+          (tudo ? `, ${jaFeitas.length} refeitas por --tudo` : "") +
+          ")"
+      );
+    }
+    if (!tudo && !apenasDefasadas && jaFeitas.length > 0) {
       console.log(`  (${jaFeitas.length} já repontuadas ficam de fora — use --tudo para refazê-las)`);
     }
     console.log(`  recepção marcada: ${papeis.recepcao.length ? papeis.recepcao.join(", ") : "NENHUMA"}`);

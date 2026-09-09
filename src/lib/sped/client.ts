@@ -89,6 +89,48 @@ export function credenciaisDoAmbiente(): CredenciaisSped | null {
   return { baseUrl, token };
 }
 
+/**
+ * Corpo de erro do SPED, em qualquer um dos três formatos que já circularam.
+ *
+ * Levantado em 2026-09-09, ao ligar a integração pela primeira vez: o contrato
+ * no vault promete `{"erro": "<codigo>"}` no topo, este cliente lia
+ * `{"codigo": ...}`, e o que a API de fato devolve é o envelope padrão do
+ * FastAPI para `HTTPException` — `{"detail": {"erro": "...", "tipo": "..."}}`.
+ * Os três discordavam entre si.
+ *
+ * Ler os três em vez de eleger um: a alternativa era mudar o envelope do lado
+ * do SPED, o que quebraria qualquer consumidor que já leia `detail.erro`, e
+ * trocaria um descasamento por outro. Aqui é uma função, e ela sobrevive a
+ * qualquer dos formatos virar o canônico.
+ *
+ * `detail` string é o formato do FastAPI quando o `detail` é texto simples
+ * (`HTTPException(status_code=..., detail="mensagem")`) — vira mensagem, não
+ * código, porque não é um identificador tipado.
+ */
+export type CorpoDeErro = {
+  codigo?: unknown;
+  erro?: unknown;
+  detail?: unknown;
+  mensagem?: unknown;
+};
+
+export function extrairErro(corpo: CorpoDeErro): { codigo: string | null; mensagem: string | null } {
+  const texto = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v : null);
+
+  const detail = corpo.detail;
+  const detailObjeto =
+    detail !== null && typeof detail === "object" ? (detail as CorpoDeErro) : null;
+
+  const codigo =
+    texto(corpo.codigo) ??
+    texto(corpo.erro) ??
+    (detailObjeto ? texto(detailObjeto.erro) ?? texto(detailObjeto.codigo) : null);
+
+  const mensagem = texto(corpo.mensagem) ?? texto(detail);
+
+  return { codigo, mensagem };
+}
+
 const TIMEOUT_MS = 20_000;
 
 async function pedir<T>(creds: CredenciaisSped, caminho: string, params: URLSearchParams): Promise<T> {
@@ -113,13 +155,13 @@ async function pedir<T>(creds: CredenciaisSped, caminho: string, params: URLSear
   }
 
   if (!resposta.ok) {
-    // O corpo de erro traz `codigo`; se não vier JSON, o status é o que se tem.
+    // Três formatos possíveis — ver `extrairErro`. Se não vier JSON, sobra o status.
     let codigo: string | null = null;
     let detalhe = resposta.statusText;
     try {
-      const corpo = (await resposta.json()) as { codigo?: string; mensagem?: string; detail?: string };
-      codigo = corpo.codigo ?? null;
-      detalhe = corpo.mensagem ?? corpo.detail ?? detalhe;
+      const { codigo: c, mensagem } = extrairErro((await resposta.json()) as CorpoDeErro);
+      codigo = c;
+      detalhe = mensagem ?? detalhe;
     } catch {
       // corpo não-JSON: fica o statusText
     }
@@ -195,8 +237,7 @@ export async function obterPdf(
   if (!resposta.ok) {
     let codigo: string | null = null;
     try {
-      const corpo = (await resposta.json()) as { codigo?: string };
-      codigo = corpo.codigo ?? null;
+      codigo = extrairErro((await resposta.json()) as CorpoDeErro).codigo;
     } catch {
       // PDF com erro nem sempre devolve JSON
     }
