@@ -47,6 +47,29 @@ export type DocumentoFiscalExtraido = {
    */
   valorTotal: string;
   /**
+   * O que a conta a pagar deve usar — bruto menos retenções e descontos.
+   *
+   * **`null` quando a nota não retém nada**, e não uma cópia do bruto: nulo diz
+   * "esta nota não tem o que subtrair", enquanto um número igual ao bruto diria
+   * "alguém calculou e deu no mesmo". Quem lança faz `valorLiquido ?? valorTotal`
+   * e os dois casos caem no lugar certo.
+   *
+   * Regra confirmada pelo BPO (Amanda, 10/09/2026): **com retenção paga-se pelo
+   * líquido**; sem retenção nem desconto os dois números são iguais e tanto faz.
+   * O acervo continua guardando o bruto em `valorTotal`, que é o que está
+   * impresso no DANFSE — quem muda é a conta, não a nota.
+   *
+   * Só NFS-e. NF-e e CT-e vêm `null`: retenção de NF-e vive nos tributos por
+   * item, não num total declarado, e não foi levantada.
+   */
+  valorLiquido: string | null;
+  /**
+   * Quanto foi retido, somado. Existe para a tela poder **explicar** a
+   * diferença em vez de só exibir dois números — sem isto, "1.000 virou 875"
+   * não tem resposta na ficha do documento.
+   */
+  retencoesTotal: string | null;
+  /**
    * Competência declarada no XML, "AAAA-MM", quando existe.
    *
    * Só NFS-e tem. E importa: o serviço prestado em agosto pode ser faturado em
@@ -238,6 +261,67 @@ function competenciaDeclarada(bruto: string | null): string | null {
  *
  * Não há chave de acesso, e é o ponto: a identidade sai da `dedupKey` composta.
  */
+/**
+ * Dinheiro em centavos inteiros, para somar sem passar por float.
+ *
+ * `0.1 + 0.2` é o exemplo de manual, e aqui ele custaria centavo numa conta a
+ * pagar. Inteiro comum e não `bigint`: o campo é `Decimal(12,2)`, cujo teto em
+ * centavos é 1e12 — três ordens de grandeza abaixo do inteiro seguro do
+ * JavaScript, e `bigint` ainda esbarraria no `target` do projeto.
+ *
+ * `null` para o que não é número — campo ausente e campo com lixo caem no mesmo
+ * lugar, que é "não contribui para a soma".
+ */
+function centavos(valor: string | null | undefined): number | null {
+  if (!valor) return null;
+  const limpo = valor.trim().replace(/\s/g, "");
+  if (!/^-?\d+(\.\d{1,2})?$/.test(limpo)) return null;
+  const negativo = limpo.startsWith("-");
+  const [inteira, decimal = ""] = limpo.replace("-", "").split(".");
+  const cents = Number(inteira) * 100 + Number(decimal.padEnd(2, "0"));
+  if (!Number.isSafeInteger(cents)) return null;
+  return negativo ? -cents : cents;
+}
+
+function deCentavos(cents: number): string {
+  const negativo = cents < 0;
+  const abs = Math.abs(cents);
+  return `${negativo ? "-" : ""}${Math.trunc(abs / 100)}.${String(abs % 100).padStart(2, "0")}`;
+}
+
+/**
+ * Retenções e descontos de uma NFS-e ABRASF, somados.
+ *
+ * Os nomes são os do bloco `<Servico><Valores>`. `ValorIss` só entra quando
+ * `IssRetido` é 1 — ISS devido pelo prestador não sai do que o tomador paga, e
+ * somá-lo sempre subtrairia imposto que ninguém reteve. `ValorDeducoes` fica de
+ * fora de propósito: é base de cálculo (material empregado), não retenção, e
+ * abatê-lo do pagamento faria a conta pagar menos do que o contratado.
+ */
+const CAMPOS_RETIDOS = [
+  "ValorPis",
+  "ValorCofins",
+  "ValorInss",
+  "ValorIr",
+  "ValorCsll",
+  "OutrasRetencoes",
+  "DescontoIncondicionado",
+  "DescontoCondicionado",
+] as const;
+
+function retencoesDaNfse(valores: unknown): number {
+  let soma = 0;
+  for (const campo of CAMPOS_RETIDOS) {
+    soma += centavos(texto(filho(valores, campo))) ?? 0;
+  }
+  // 1 = retido pelo tomador; 2 = devido pelo prestador. Qualquer outra coisa
+  // (campo ausente, valor estranho) é tratada como não retido: subtrair por
+  // engano tira dinheiro de quem recebe.
+  const issRetido = texto(filho(valores, "IssRetido"))?.trim();
+  if (issRetido === "1") soma += centavos(texto(filho(valores, "ValorIss"))) ?? 0;
+  return soma;
+}
+
 function lerNfse(comp: unknown, raiz: unknown): ResultadoLeitura {
   // ABRASF: CompNfse > Nfse > InfNfse. Padrão nacional: NFSe > infNFSe.
   const inf =
@@ -280,6 +364,47 @@ function lerNfse(comp: unknown, raiz: unknown): ResultadoLeitura {
     texto(caminho(inf, "valores", "vServ"));
   if (!valorTotal) return recusa("campo_obrigatorio_ausente", "valor do serviço ausente");
 
+  // ── Líquido: o que a conta a pagar usa ────────────────────────────────────
+  //
+  // Duas fontes, nesta ordem. A nota que declara `ValorLiquidoNfse` ganha: foi
+  // o município que calculou, com a regra dele, e recalcular por cima seria
+  // discordar da prefeitura por conta própria. Só quando ela não declara é que
+  // somamos as retenções e subtraímos.
+  //
+  // O resultado só vira valor quando **difere do bruto**: nota sem retenção
+  // nenhuma sai com `null`, que é como quem lança sabe que não há nada a
+  // subtrair (ver `valorLiquido` no tipo).
+  const valores = caminho(inf, "Servico", "Valores") ?? caminho(decl, "Servico", "Valores");
+  const brutoCents = centavos(valorTotal);
+  // `ValorLiquidoNfse` aparece em dois lugares conforme a versão do ABRASF:
+  // dentro de `<Servico><Valores>` (v1) e num `<ValoresNfse>` irmão da
+  // declaração (v2, que é o que os municípios daqui emitem). Ler só um dos dois
+  // faz metade das notas voltarem sem líquido — e "sem líquido" cai no bruto em
+  // silêncio, que é o erro caro.
+  const liquidoDeclarado = centavos(
+    texto(filho(valores, "ValorLiquidoNfse")) ??
+      texto(caminho(inf, "ValoresNfse", "ValorLiquidoNfse")) ??
+      texto(caminho(dps, "serv", "valores", "vLiq"))
+  );
+  const retidoCents = retencoesDaNfse(valores);
+  const liquidoCents =
+    liquidoDeclarado ?? (brutoCents !== null && retidoCents > 0 ? brutoCents - retidoCents : null);
+
+  // Líquido igual ao bruto não é retenção — é a nota sem nada a subtrair, e
+  // guardá-lo faria a ficha exibir dois números idênticos como se fossem
+  // informação. Líquido maior que o bruto, ou negativo, é XML inconsistente: aí
+  // a conta cai no bruto, que ao menos está impresso no DANFSE. Pagar a mais
+  // por causa de um cálculo nosso é pior que não calcular.
+  const confiavel =
+    liquidoCents !== null &&
+    brutoCents !== null &&
+    liquidoCents > 0 &&
+    liquidoCents < brutoCents;
+  const valorLiquido = confiavel ? deCentavos(liquidoCents as number) : null;
+  const retencoesTotal = confiavel
+    ? deCentavos((brutoCents as number) - (liquidoCents as number))
+    : null;
+
   const prestador =
     filho(inf, "PrestadorServico") ?? filho(decl, "Prestador") ?? filho(inf, "emit") ?? filho(dps, "prest");
   const tomador =
@@ -311,6 +436,8 @@ function lerNfse(comp: unknown, raiz: unknown): ResultadoLeitura {
       emitente,
       destinatario,
       valorTotal,
+      valorLiquido,
+      retencoesTotal,
       competenciaDeclarada:
         competenciaDeclarada(texto(filho(inf, "Competencia"))) ??
         competenciaDeclarada(texto(filho(decl, "Competencia"))) ??
@@ -401,6 +528,11 @@ function lerNfe(nfe: unknown): ResultadoLeitura {
       // balcão, e isso é normal, não erro.
       destinatario: parte(filho(inf, "dest")),
       valorTotal,
+      // Retenção de NF-e/CT-e vive nos tributos por item, não num total
+      // declarado como no ABRASF — não foi levantada, e inventar aqui erraria
+      // o valor da conta em vez de deixá-lo no bruto conhecido.
+      valorLiquido: null,
+      retencoesTotal: null,
       // NF-e não declara competência: ela é o mês da emissão, e o chamador
       // deriva. E cancelamento de NF-e vem em evento separado, não no XML da
       // nota — por isso é sempre falso aqui, nunca "não sei".
@@ -446,6 +578,11 @@ function lerCte(cte: unknown): ResultadoLeitura {
       emitente: parte(filho(inf, "emit")),
       destinatario: tomador !== undefined ? parte(tomador) : parte(filho(inf, "dest")),
       valorTotal,
+      // Retenção de NF-e/CT-e vive nos tributos por item, não num total
+      // declarado como no ABRASF — não foi levantada, e inventar aqui erraria
+      // o valor da conta em vez de deixá-lo no bruto conhecido.
+      valorLiquido: null,
+      retencoesTotal: null,
       competenciaDeclarada: null,
       cancelada: false,
     },

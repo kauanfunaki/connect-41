@@ -2087,6 +2087,19 @@ model FiscalDocument {
   /// Anulável por causa do índice do SPED: linha `PARCIAL` vem sem valor, e
   /// gravar zero ali inventaria um número que ninguém apurou.
   amount   Decimal? @db.Decimal(12, 2)
+  /// O que a conta a pagar usa — bruto menos retenções e descontos.
+  ///
+  /// **NULL quando a nota não retém nada**, e não uma cópia de `amount`: nulo
+  /// diz "não há o que subtrair", enquanto um número igual ao bruto diria
+  /// "alguém calculou e deu no mesmo". Quem lança faz `netAmount ?? amount`.
+  ///
+  /// Regra do BPO (Amanda, 10/09/2026): com retenção paga-se pelo líquido. O
+  /// `amount` continua sendo o bruto do DANFSE — quem muda é a conta, não a
+  /// nota. Só NFS-e preenche; NF-e e CT-e não declaram total retido.
+  netAmount Decimal? @db.Decimal(12, 2)
+  /// Quanto foi retido, somado. Existe para a ficha poder **explicar** a
+  /// diferença entre os dois valores em vez de só exibir dois números.
+  retentionsTotal Decimal? @db.Decimal(12, 2)
   issuedAt DateTime
 
   /// Competência "AAAA-MM" — string e não data, porque é agrupador de mês e não

@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { AuthField, AUTH_INPUT } from "./AuthShell";
 import { UserIcon, MailIcon, PhoneIcon, MessageIcon } from "./icons";
+import { Button } from "@/components/ui/Button";
 
 type ActionState = { error: string } | { success: true } | null;
 
@@ -76,13 +77,14 @@ export function AccessRequestForm({
         </p>
       )}
 
-      <button
+      <Button
         type="submit"
+        size="md"
         disabled={isPending}
-        className="w-full h-9 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover active:scale-[0.99] disabled:opacity-60 transition-all duration-100 mt-1"
+        className="w-full mt-1 active:scale-[0.99]"
       >
         {isPending ? submitLabelPending : submitLabel}
-      </button>
+      </Button>
 
       <p className="text-center text-[13px] text-fg-muted">
         <Link href="/login" className="font-medium text-brand hover:underline">

@@ -50,6 +50,44 @@ export function resolveDistEntry({ pkgDir, pkgJson, override, pkgName, soft = fa
   process.exit(1);
 }
 
+// ── Server Action vira stub ──────────────────────────────────────────────────
+//
+// Componente client que **value-importa** uma Server Action arrasta o módulo
+// inteiro para o bundle do navegador — e com ele o Prisma, `node:crypto`,
+// `fs/promises`. Foi o que quebrou o `NotificationItem` em julho e virou
+// exclusão por config. Em setembro o app tinha 14 componentes nessa situação, e
+// excluir todos esvaziaria o design system justamente das telas que ele existe
+// para mostrar (o detalhe do kanban, entre elas).
+//
+// A preview **nunca chama a action** — por contrato ela usa stub de dados. Então
+// a resolução para no especificador e devolve um módulo CommonJS cujo Proxy
+// responde qualquer nome exportado com uma função async inerte. CJS, e não ESM,
+// porque o conjunto de nomes só é conhecido em tempo de execução: com ESM o
+// esbuild exigiria cada export declarado, e a lista muda a cada action nova.
+//
+// Só afeta este bundle. O app não passa por aqui.
+export const serverActionsShim = {
+  name: 'server-actions-stub',
+  setup(b) {
+    b.onResolve({ filter: /^@\/app\/.*actions$/ }, (args) => ({
+      path: args.path,
+      namespace: 'ds-action-stub',
+    }));
+    b.onLoad({ filter: /.*/, namespace: 'ds-action-stub' }, () => ({
+      contents:
+        'var inerte = function () { return Promise.resolve(undefined); };\n' +
+        'module.exports = new Proxy({}, {\n' +
+        '  get: function (_alvo, nome) {\n' +
+        '    if (nome === "__esModule") return true;\n' +
+        '    if (typeof nome === "symbol") return undefined;\n' +
+        '    return inerte;\n' +
+        '  },\n' +
+        '});\n',
+      loader: 'js',
+    }));
+  },
+};
+
 // react/react-dom are externals → resolved to window.React / window.ReactDOM.
 // Everything else is bundled from NODE_MODULES.
 export const reactShim = {
@@ -183,6 +221,9 @@ function sharedBuildOptions({ nodePaths, tsconfig }) {
   const pathsPlugin = tsconfig ? tsconfigPathsPlugin(tsconfig) : null;
   const plugins = [reactShim];
   if (pathsPlugin) plugins.unshift(pathsPlugin);
+  // Antes do plugin de paths: o especificador `@/app/...` precisa ser
+  // interceptado como está, não depois de virar caminho de arquivo real.
+  plugins.unshift(serverActionsShim);
   return {
     bundle: true,
     platform: 'browser',

@@ -154,6 +154,45 @@ to pick this up — this is a real component now, so it should bind and render
 like any other, but it hasn't been graded by an actual re-sync run yet as of
 this note.
 
+## Rebuild de 2026-09-10 — o que quebrou e como foi resolvido
+
+Primeiro rebuild desde julho. O bundle estava marcado com
+`ds-bundle/_ds_needs_recompile`; a recompilacao parou tres vezes, e nenhuma das
+tres era a causa documentada antes.
+
+**1. Server Actions arrastavam o servidor inteiro para o bundle.** Em julho isso
+era UM componente (`NotificationItem`) e virou exclusao por config. Em setembro
+eram catorze: qualquer componente client que **value-importa** uma action puxa
+`@prisma/client`, o driver `mariadb`, `node:crypto`, `fs/promises`. Excluir os
+catorze esvaziaria o design system justamente das telas que ele existe para
+mostrar. Em vez disso, o fork `bundle.mjs` ganhou o plugin `serverActionsShim`:
+todo especificador que casa `^@/app/.*actions$` para na resolucao e vira um
+modulo CommonJS cujo `Proxy` responde qualquer nome exportado com uma funcao
+async inerte. CJS e nao ESM porque a lista de nomes so existe em tempo de
+execucao — com ESM o esbuild exigiria cada export declarado, e a lista muda a
+cada action nova. A preview nunca chama a action (usa stub por contrato), entao
+o corpo real nunca faz falta. O plugin entra ANTES do `tsconfigPathsPlugin`: o
+`@/app/...` precisa ser interceptado como especificador, nao depois de virar
+caminho de arquivo.
+
+**2. `KanbanItemDetail` e server component.** Importa `getPrisma` direto — nao e
+caso de shim, e nao tem o que fazer num bundle de navegador. Excluido por
+`componentSrcMap`, pelo mesmo caminho do `NotificationItem`.
+
+**3. Deriva de props no preview do `EmpresasTable`.** O preview passava
+`statusStyle`; o componente hoje recebe `statusColor`. Indexar `undefined`
+derrubava a arvore e o render check acusava `root empty` — que e a forma que
+deriva de prop assume aqui. Reescrito com a `Row` atual (cliente, matriz,
+regime, cidade, PF por CPF).
+
+Resultado: build limpo, 283 componentes, `package-validate` sem erro. Os warns
+que sobram sao os ja conhecidos (`LockIcon`/`PhoneIcon` thin, benignos) mais
+`Badge`, que nao tem preview autorado — nenhum deles e novo.
+
+**Previews orfaos** apontados pelo build e ainda nao tratados: `CampoForm`,
+`HandoffActions` e `WorkspaceSwitcher` — os tres componentes deixaram de ser
+exportados de `src/components`. Decidir entre reautorar ou apagar o preview.
+
 ## Re-sync risks
 
 - The compiled CSS cache (`.design-sync/.cache/compiled-globals.css`) is

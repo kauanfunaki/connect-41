@@ -112,7 +112,16 @@ export async function lancarDocumento(
           categoryId: categoriaId,
           competence: doc.competence,
           dueDate: vencimento,
-          amount: doc.amount!,
+          // ── Bruto × líquido ────────────────────────────────────────────
+          //
+          // A conta paga o líquido quando a nota retém algo. `netAmount` só
+          // existe quando há o que subtrair, então o `??` cobre os dois casos
+          // que o BPO descreveu: com retenção, o líquido; sem retenção, o
+          // bruto — que é o mesmo número que um líquido calculado daria.
+          //
+          // O documento continua exibindo `amount`: o acervo espelha o DANFSE,
+          // e é a conta que muda, não a nota.
+          amount: doc.netAmount ?? doc.amount!,
           description: `${doc.type} nº ${doc.number}${doc.series ? `/${doc.series}` : ""}`,
           fiscalDocumentId: doc.id,
           createdById: ctx.userId,

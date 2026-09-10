@@ -338,3 +338,89 @@ describe("NFS-e", () => {
     expect(extraido(xml).numero).toBe("7");
   });
 });
+
+// ── Bruto × líquido na NFS-e (10/09/2026) ───────────────────────────────────
+//
+// Regra do BPO (Amanda): com retenção, a conta a pagar sai pelo LÍQUIDO; sem
+// retenção nem desconto os dois números são iguais e tanto faz. O acervo
+// continua guardando o bruto — quem subtrai é o lançamento.
+//
+// O que está travado aqui é a distinção que carrega a regra: `valorLiquido`
+// nulo significa "não há o que subtrair", e NÃO "o líquido é igual ao bruto".
+// Se ele passasse a vir sempre preenchido, quem lança faria `?? amount` sem
+// nunca cair no bruto, e a diferença deixaria de ser visível na ficha.
+const retidoNoServico = `<?xml version="1.0"?><CompNfse><Nfse><InfNfse>
+  <Numero>1200</Numero><DataEmissao>2026-09-08T10:00:00</DataEmissao>
+  <Servico><Valores>
+    <ValorServicos>1000.00</ValorServicos>
+    <ValorPis>6.50</ValorPis><ValorCofins>30.00</ValorCofins>
+    <ValorIr>15.00</ValorIr><ValorCsll>10.00</ValorCsll>
+    <ValorIss>50.00</ValorIss><IssRetido>1</IssRetido>
+  </Valores></Servico>
+  <PrestadorServico><IdentificacaoPrestador><Cnpj>17122471000175</Cnpj></IdentificacaoPrestador><RazaoSocial>BLD</RazaoSocial></PrestadorServico>
+</InfNfse></Nfse></CompNfse>`;
+
+const issNaoRetido = `<?xml version="1.0"?><CompNfse><Nfse><InfNfse>
+  <Numero>1201</Numero><DataEmissao>2026-09-08T10:00:00</DataEmissao>
+  <Servico><Valores>
+    <ValorServicos>1000.00</ValorServicos>
+    <ValorIss>50.00</ValorIss><IssRetido>2</IssRetido>
+  </Valores></Servico>
+  <PrestadorServico><IdentificacaoPrestador><Cnpj>17122471000175</Cnpj></IdentificacaoPrestador><RazaoSocial>BLD</RazaoSocial></PrestadorServico>
+</InfNfse></Nfse></CompNfse>`;
+
+const liquidoIncoerente = `<?xml version="1.0"?><CompNfse><Nfse><InfNfse>
+  <Numero>1202</Numero><DataEmissao>2026-09-08T10:00:00</DataEmissao>
+  <Servico><Valores><ValorServicos>100.00</ValorServicos></Valores></Servico>
+  <ValoresNfse><ValorLiquidoNfse>150.00</ValorLiquidoNfse></ValoresNfse>
+  <PrestadorServico><IdentificacaoPrestador><Cnpj>17122471000175</Cnpj></IdentificacaoPrestador><RazaoSocial>BLD</RazaoSocial></PrestadorServico>
+</InfNfse></Nfse></CompNfse>`;
+
+describe("NFS-e — bruto × líquido", () => {
+  it("soma as retenções quando a nota não declara o líquido", () => {
+    const d = extraido(retidoNoServico);
+    // 1000 − (6,50 + 30 + 15 + 10 + 50 de ISS retido) = 888,50
+    expect(d.valorTotal).toBe("1000.00");
+    expect(d.valorLiquido).toBe("888.50");
+    expect(d.retencoesTotal).toBe("111.50");
+  });
+
+  it("prefere o `ValorLiquidoNfse` declarado ao cálculo próprio", () => {
+    // 2500 de serviço, 2375 declarados pelo município. Recalcular por cima
+    // seria discordar da prefeitura por conta própria.
+    const d = extraido(abrasf2);
+    expect(d.valorTotal).toBe("2500.00");
+    expect(d.valorLiquido).toBe("2375.00");
+    expect(d.retencoesTotal).toBe("125.00");
+  });
+
+  it("ISS devido pelo prestador não sai do que o tomador paga", () => {
+    // `IssRetido` 2 = não retido. Subtrair aqui tiraria imposto que ninguém
+    // reteve — o prestador é quem recolhe, e a conta continua sendo 1.000.
+    const d = extraido(issNaoRetido);
+    expect(d.valorLiquido).toBeNull();
+    expect(d.retencoesTotal).toBeNull();
+  });
+
+  it("nota sem retenção nenhuma sai com líquido nulo, não com uma cópia do bruto", () => {
+    for (const xml of [abrasf1, nacional]) {
+      const d = extraido(xml);
+      expect(d.valorLiquido).toBeNull();
+      expect(d.retencoesTotal).toBeNull();
+    }
+  });
+
+  it("líquido maior que o bruto é recusado — pagar a mais é pior que não calcular", () => {
+    const d = extraido(liquidoIncoerente);
+    expect(d.valorTotal).toBe("100.00");
+    expect(d.valorLiquido).toBeNull();
+  });
+
+  it("NF-e e CT-e não declaram total retido, e não inventam um", () => {
+    for (const xml of [nfce, cte]) {
+      const d = extraido(xml);
+      expect(d.valorLiquido).toBeNull();
+      expect(d.retencoesTotal).toBeNull();
+    }
+  });
+});

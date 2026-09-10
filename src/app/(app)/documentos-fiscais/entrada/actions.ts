@@ -143,6 +143,11 @@ export async function importarXmls(_anterior: EstadoDaEntrada, form: FormData): 
           recipientName: doc.destinatario.nome,
           recipientDocument: doc.destinatario.documento,
           amount: doc.valorTotal,
+          // O bruto acima é o que está impresso na nota; estes dois só vêm
+          // preenchidos quando a NFS-e retém algo, e são o que a conta a pagar
+          // usa. Ver `valorLiquido` em src/lib/fiscal/xml.ts.
+          netAmount: doc.valorLiquido,
+          retentionsTotal: doc.retencoesTotal,
           issuedAt: doc.emitidoEm,
           competence: competencia,
           origin: "UPLOAD",

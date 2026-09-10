@@ -148,6 +148,15 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
             label="Valor total"
             value={doc.amount === null ? "Não veio do índice" : MOEDA.format(Number(doc.amount))}
           />
+          {/* Só aparece quando há o que subtrair. Sem esta linha, a conta a
+              pagar sairia por um número que não está em lugar nenhum da ficha —
+              e "1.000 virou 888,50" viraria pergunta sem resposta. */}
+          {doc.netAmount !== null && (
+            <InfoRow
+              label="Líquido a pagar"
+              value={`${MOEDA.format(Number(doc.netAmount))} — retido ${MOEDA.format(Number(doc.retentionsTotal ?? 0))}`}
+            />
+          )}
           <InfoRow label="Competência" value={competenciaLegivel(doc.competence)} />
           <InfoRow label="Chave de acesso" value={doc.accessKey} mono />
           <InfoRow

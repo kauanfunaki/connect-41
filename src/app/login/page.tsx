@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AuthShell, AuthField, AUTH_INPUT } from "@/components/login/AuthShell";
 import { PasswordField } from "@/components/login/PasswordField";
 import { MailIcon } from "@/components/login/icons";
+import { Button } from "@/components/ui/Button";
 
 const ERRORS: Record<string, string> = {
   "credenciais-invalidas": "E-mail ou senha incorretos.",
@@ -62,12 +63,16 @@ export default async function LoginPage({
           </p>
         )}
 
-        <button
+        {/* `active:scale` e `mt-1` são acréscimos, não sobreposição: a variante
+            não define transform nem margem, então não dependem da ordem no CSS
+            gerado — que é o que torna override de cor ou padding não confiável. */}
+        <Button
           type="submit"
-          className="w-full h-9 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover active:scale-[0.99] transition-all duration-100 mt-1"
+          size="md"
+          className="w-full mt-1 active:scale-[0.99]"
         >
           Entrar
-        </button>
+        </Button>
 
         <p className="text-center text-[13px] text-fg-muted">
           Não tem uma conta?{" "}
