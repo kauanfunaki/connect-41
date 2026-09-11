@@ -26,7 +26,10 @@ import {
   encerrarChamada,
   custoDaChamada,
   type ContextoDaChamada,
+  type PreparoDaChamada,
 } from "@/lib/ia/data";
+import { conversarComFerramentas } from "@/lib/ia/conversa";
+import type { ResultadoDoLaco } from "@/lib/ia/laco";
 
 export type { ContextoDaChamada };
 
@@ -119,7 +122,7 @@ async function executarAgente<T>(params: {
   tenantId: string;
   agentCode: string;
   contexto?: ContextoDaChamada;
-  chamar: (creds: { provider: AiProvider; apiKey: string; model: string }) => Promise<ComUso<T>>;
+  chamar: (preparo: PreparoDaChamada) => Promise<ComUso<T>>;
 }): Promise<T> {
   const agora = new Date();
   const credenciais = await resolveCredentials(params.tenantId);
@@ -538,4 +541,48 @@ export async function summarizeAgentEvaluations(
     summary: assertCleanAiText(result.summary, 1200, "o resumo"),
     examples: result.examples.filter((ex) => validIds.has(ex.conversationId)),
   };
+}
+
+/**
+ * Um agente com ferramentas, em cima da mesma fundação.
+ *
+ * Ganha tudo que as outras quatro ganharam — teto antes de gastar, uma
+ * `AgentRun` por execução, custo somado — com uma diferença que importa: o uso
+ * gravado é a **soma das rodadas**, não o da última. Uma conversa de seis idas
+ * que registrasse só a sexta contaria uma fração do que custou, e o teto
+ * passaria a mentir exatamente nos agentes mais caros.
+ *
+ * As escritas que o agente propôs voltam em `propostas`, sem terem sido feitas.
+ * Quem confirma chama a server action correspondente — ver `ferramentas.ts`.
+ */
+export async function conversarComAgente(params: {
+  tenantId: string;
+  agentCode: string;
+  system: string;
+  pergunta: string;
+  maxTokens?: number;
+  contexto?: ContextoDaChamada;
+}): Promise<ResultadoDoLaco<string>> {
+  return executarAgente({
+    tenantId: params.tenantId,
+    agentCode: params.agentCode,
+    contexto: params.contexto,
+    chamar: async (preparo) => {
+      if (preparo.provider !== "ANTHROPIC") {
+        // Recusa explícita, e não um laço pela metade: ver o cabeçalho de
+        // `src/lib/ia/conversa.ts`.
+        throw new Error("Agente com ferramentas ainda só roda com Anthropic.");
+      }
+      const resultado = await conversarComFerramentas({
+        apiKey: preparo.apiKey,
+        model: preparo.model,
+        def: preparo.def,
+        system: params.system + UNTRUSTED_CONTENT_GUARD,
+        pergunta: params.pergunta,
+        maxTokens: params.maxTokens,
+        ctx: { tenantId: params.tenantId, userId: params.contexto?.userId ?? null },
+      });
+      return { valor: resultado, uso: resultado.uso };
+    },
+  });
 }
