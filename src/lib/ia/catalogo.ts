@@ -10,17 +10,19 @@
 // ferramentas o agente pode chamar, e quem confirma** — e isso é configuração,
 // declarada aqui.
 //
-// ─── Por que estes quatro, e nenhum a mais ──────────────────────────────────
+// ─── Quem está aqui, e por quê ──────────────────────────────────────────────
 //
 // Mesma regra do catálogo de integrações: declarar aqui é prometer que existe
-// implementação. Os quatro que estão aqui **já rodam em produção** desde antes
-// desta fundação, em `src/lib/ai.ts`. Trazê-los para debaixo do catálogo é o
-// que dá a eles o que nunca tiveram — custo medido e auditoria — e é o teste de
-// que a forma serve para o que existe, antes de servir para o que virá.
+// implementação.
 //
-// O agente de Recrutamento com WhatsApp, que é o piloto, **não está aqui**: ele
-// precisa de ferramentas e de memória entre turnos, que são a Onda 2. Declarar
-// antes seria prometer o que não existe.
+// Quatro **já rodavam em produção** antes desta fundação, em `src/lib/ai.ts`, e
+// são de uma chamada só, sem ferramenta. Trazê-los para debaixo do catálogo deu
+// a eles o que nunca tiveram — custo medido e auditoria.
+//
+// O quinto, `assistente_de_vaga`, é o primeiro com ferramentas, e é onde a
+// fundação carrega peso de verdade: várias idas ao provedor, allowlist, e duas
+// ferramentas de escrita que **não escrevem** — viram proposta para o
+// recrutador confirmar. Nasce desligado.
 
 import type { AiProvider } from "@/generated/prisma/enums";
 
@@ -56,9 +58,9 @@ export type AgenteDef = {
   /**
    * As ferramentas que este agente pode chamar, por nome.
    *
-   * Vazio hoje em todos: a Onda 1 não tem tool-calling. O campo existe desde já
-   * porque é **allowlist** — e allowlist que nasce depois nasce com exceção,
-   * que é como um agente acaba podendo chamar o que ninguém revisou.
+   * É **allowlist**, e é checada na hora da chamada, não só ao montar o prompt
+   * — ver `podeUsarFerramenta`. Nome aqui que não exista no registro é
+   * ignorado ao montar o prompt e recusado se o modelo pedir.
    */
   ferramentas: string[];
 
@@ -124,6 +126,46 @@ export const AGENT_CATALOG: AgenteDef[] = [
     tetoMensalCentavos: 15_000,
     tetoMensalChamadas: 5_000,
     padraoLigado: true,
+  },
+  {
+    code: "assistente_de_vaga",
+    label: "Assistente da vaga",
+    sectorCode: "recrutamento",
+    description:
+      "Lê a vaga, os candidatos e as fichas de entrevista para responder o recrutador e sugerir movimentos no funil",
+    faixa: "padrao",
+    // Sugere mover e encerrar, mas as duas ferramentas são de escrita e viram
+    // proposta — o recrutador confirma. Ver `ferramentas.ts`.
+    escreve: false,
+    ferramentas: [
+      "ver_vaga",
+      "listar_candidatos",
+      "ver_candidato",
+      "propor_mover_etapa",
+      "propor_encerrar_candidatura",
+    ],
+    // Teto maior que o dos outros porque uma conversa com ferramentas custa
+    // várias idas ao provedor, não uma.
+    tetoMensalCentavos: 30_000,
+    tetoMensalChamadas: 800,
+    // Agente novo nasce desligado — diferente dos quatro que já rodavam antes
+    // da fundação. Ligar é decisão de quem administra, na tela de Agentes.
+    padraoLigado: false,
+  },
+  {
+    code: "atendente_de_candidato",
+    label: "Atendente de candidato (WhatsApp)",
+    sectorCode: "recrutamento",
+    description:
+      "Responde o candidato no WhatsApp do Recrutamento sobre a situação do processo e as vagas abertas",
+    faixa: "padrao",
+    escreve: false,
+    ferramentas: ["ver_meu_processo", "listar_vagas_abertas", "pedir_ajuda_humana"],
+    // O único agente que fala com quem está fora da 41. O teto é apertado de
+    // propósito: aqui, gastar demais e falar demais são o mesmo problema.
+    tetoMensalCentavos: 20_000,
+    tetoMensalChamadas: 3_000,
+    padraoLigado: false,
   },
   {
     code: "resumo_agente",

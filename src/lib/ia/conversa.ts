@@ -25,6 +25,7 @@ import {
   type ContextoDaFerramenta,
   type PropostaDeEscrita,
 } from "@/lib/ia/ferramentas";
+import { registrarTodasAsFerramentas } from "@/lib/ia/registro";
 import {
   decidirProximoPasso,
   somarUsos,
@@ -74,6 +75,7 @@ export type ParametrosDaConversa = {
 export async function conversarComFerramentas(
   p: ParametrosDaConversa
 ): Promise<ResultadoDoLaco<string>> {
+  registrarTodasAsFerramentas();
   const ferramentas = ferramentasDoAgente(p.def);
 
   const tools = ferramentas.map((f) => ({

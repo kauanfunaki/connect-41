@@ -5,9 +5,11 @@ import {
   podeUsarFerramenta,
   ferramentasDoAgente,
   AVISO_DE_PROPOSTA,
+  registrarFerramentas,
   type FerramentaRegistrada,
 } from "./ferramentas";
-import { agenteDoCatalogo, type AgenteDef } from "./catalogo";
+import { registrarTodasAsFerramentas } from "./registro";
+import { type AgenteDef } from "./catalogo";
 
 function agente(over: Partial<AgenteDef> = {}): AgenteDef {
   return {
@@ -39,17 +41,29 @@ afterEach(() => {
 });
 
 describe("registro", () => {
-  // Vazio de propósito: declarar aqui é prometer que a ferramenta existe e foi
-  // revisada, e o primeiro consumidor real é o piloto do Recrutamento.
-  it("nasce vazio", () => {
-    expect(Object.keys(FERRAMENTAS)).toHaveLength(0);
+  it("nome desconhecido não vira ferramenta", () => {
     expect(ferramentaPara("qualquer")).toBeNull();
   });
 
-  it("nenhum agente do catálogo declara ferramenta ainda", () => {
-    for (const code of ["triagem_curriculo", "resumo_empresa", "avaliacao_escrita", "resumo_agente"]) {
-      expect(agenteDoCatalogo(code)!.ferramentas).toHaveLength(0);
-    }
+  // Nome é a chave do registro: duplicata entre setores sobrescreveria a
+  // primeira em silêncio, e um agente passaria a chamar a ferramenta de outro
+  // sem nunca ter atravessado a allowlist.
+  it("nome repetido é recusado no registro", () => {
+    registrar("ler_empresa", "leitura");
+    expect(() =>
+      registrarFerramentas({
+        ler_empresa: {
+          def: { nome: "ler_empresa", descricao: "outra", parametros: {}, natureza: "leitura" },
+        },
+      })
+    ).toThrow(/duplicada/i);
+  });
+
+  it("registrar todas é idempotente", () => {
+    registrarTodasAsFerramentas();
+    const antes = Object.keys(FERRAMENTAS).length;
+    registrarTodasAsFerramentas();
+    expect(Object.keys(FERRAMENTAS)).toHaveLength(antes);
   });
 
   // Ferramenta de escrita não tem executor: não existe caminho para o agente

@@ -138,6 +138,13 @@ async function executarAgente<T>(params: {
 
   try {
     const { valor, uso } = await params.chamar(preparo);
+    // Carimba o id da execução no resultado, quando ele for um resultado de
+    // laço. É o que liga a mensagem enviada à linha de auditoria que a gerou —
+    // e sem isso o limite de respostas por hora, que conta por `agentRunId`,
+    // não conta nada.
+    if (valor && typeof valor === "object" && "propostas" in valor) {
+      (valor as { runId?: string }).runId = runId;
+    }
     await encerrarChamada(
       runId,
       { ok: true, uso, custoCentavos: uso ? custoDaChamada(preparo.model, uso) : null },
@@ -562,6 +569,8 @@ export async function conversarComAgente(params: {
   pergunta: string;
   maxTokens?: number;
   contexto?: ContextoDaChamada;
+  /** O recorte da conversa — a vaga, a empresa. Ver `ContextoDaFerramenta`. */
+  escopo?: Record<string, string>;
 }): Promise<ResultadoDoLaco<string>> {
   return executarAgente({
     tenantId: params.tenantId,
@@ -580,7 +589,11 @@ export async function conversarComAgente(params: {
         system: params.system + UNTRUSTED_CONTENT_GUARD,
         pergunta: params.pergunta,
         maxTokens: params.maxTokens,
-        ctx: { tenantId: params.tenantId, userId: params.contexto?.userId ?? null },
+        ctx: {
+          tenantId: params.tenantId,
+          userId: params.contexto?.userId ?? null,
+          escopo: params.escopo ?? {},
+        },
       });
       return { valor: resultado, uso: resultado.uso };
     },

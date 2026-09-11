@@ -137,6 +137,14 @@ export const CERCA_DO_RESULTADO =
 /** O que uma execução com ferramentas devolve. */
 export type ResultadoDoLaco<T> = {
   valor: T;
+  /**
+   * A `AgentRun` desta execução.
+   *
+   * Existe para quem precisa ligar o que saiu ao que foi gasto — a mensagem
+   * que o candidato recebeu à linha de auditoria que a produziu. Preenchido
+   * por `executarAgente`; o laço puro não sabe dele.
+   */
+  runId?: string;
   uso: UsoDeTokens | null;
   rodadas: number;
   /** Parou por limite, em vez de porque o modelo terminou. */

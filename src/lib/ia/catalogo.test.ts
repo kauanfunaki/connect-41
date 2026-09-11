@@ -8,6 +8,8 @@ import {
   configEfetiva,
 } from "./catalogo";
 import { temPrecoConhecido } from "./custo";
+import { FERRAMENTAS } from "./ferramentas";
+import { registrarTodasAsFerramentas } from "./registro";
 
 describe("AGENT_CATALOG", () => {
   it("não tem código repetido", () => {
@@ -21,10 +23,26 @@ describe("AGENT_CATALOG", () => {
     expect(AGENT_CATALOG.filter((a) => a.escreve)).toHaveLength(0);
   });
 
-  // Allowlist vazia hoje: a Onda 1 não tem tool-calling, e um nome aqui sem
-  // implementação é promessa que o catálogo não deve fazer.
-  it("nenhum agente declara ferramenta ainda", () => {
-    expect(AGENT_CATALOG.every((a) => a.ferramentas.length === 0)).toBe(true);
+  // Vale mais que contar: nome liberado que não existe no registro vira um
+  // agente que tenta usar a ferramenta e leva recusa em produção — e o sintoma
+  // é um modelo que "resolveu não consultar nada".
+  it("toda ferramenta liberada existe no registro", () => {
+    registrarTodasAsFerramentas();
+    for (const a of AGENT_CATALOG) {
+      for (const nome of a.ferramentas) {
+        expect(FERRAMENTAS[nome], `${a.code} libera "${nome}", que não existe`).toBeDefined();
+      }
+    }
+  });
+
+  // A regra que a Onda 2 tornou estrutural: quem grava é a server action que o
+  // recrutador dispara, nunca o agente.
+  it("agente com ferramenta de escrita não é agente que escreve", () => {
+    registrarTodasAsFerramentas();
+    for (const a of AGENT_CATALOG) {
+      const temEscrita = a.ferramentas.some((n) => FERRAMENTAS[n]?.def.natureza === "escrita");
+      if (temEscrita) expect(a.escreve).toBe(false);
+    }
   });
 
   it("todo agente tem os dois tetos, e positivos", () => {
@@ -40,6 +58,11 @@ describe("AGENT_CATALOG", () => {
   });
 
   it("lista por setor, inclusive os que servem o app inteiro", () => {
+    expect(agentesDoSetor("recrutamento").map((a) => a.code)).toEqual([
+      "triagem_curriculo",
+      "assistente_de_vaga",
+      "atendente_de_candidato",
+    ]);
     expect(agentesDoSetor("atendimento").map((a) => a.code)).toEqual([
       "avaliacao_escrita",
       "resumo_agente",
@@ -117,9 +140,15 @@ describe("configEfetiva", () => {
     expect(c.tetoMensalChamadas).toBe(0);
   });
 
-  it("os quatro agentes que já rodavam nascem ligados", () => {
-    for (const a of AGENT_CATALOG) {
-      expect(configEfetiva(a, null).enabled).toBe(true);
-    }
+  // Os quatro anteriores à fundação nascem ligados, porque desligá-los tiraria
+  // do ar função em uso. Agente novo nasce desligado — a regra é a data, não o
+  // gosto de quem escreve o catálogo.
+  it("o que já rodava nasce ligado; o que é novo, desligado", () => {
+    const ligados = AGENT_CATALOG.filter((a) => configEfetiva(a, null).enabled).map((a) => a.code);
+    expect(ligados.sort()).toEqual(
+      ["avaliacao_escrita", "resumo_agente", "resumo_empresa", "triagem_curriculo"].sort()
+    );
+    expect(configEfetiva(agenteDoCatalogo("assistente_de_vaga")!, null).enabled).toBe(false);
+    expect(configEfetiva(agenteDoCatalogo("atendente_de_candidato")!, null).enabled).toBe(false);
   });
 });

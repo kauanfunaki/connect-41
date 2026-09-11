@@ -540,6 +540,8 @@ model Tenant {
   integrationRuns          IntegrationRun[]
   agents                   TenantAgent[]
   agentRuns                AgentRun[]
+  whatsappThreads          WhatsappThread[]
+  whatsappMessages         WhatsappMessage[]
 
   @@map("tenants")
 }
@@ -4119,4 +4121,97 @@ model AgentRun {
   @@index([tenantId, agentCode, startedAt])
   @@index([tenantId, startedAt])
   @@map("agent_runs")
+}
+
+enum WhatsappDirection {
+  ENTRADA
+  SAIDA
+}
+
+enum WhatsappSendStatus {
+  /// Gravada antes de sair. Se o processo morrer aqui, sobra linha sem id da
+  /// Meta — visível, e melhor que uma mensagem enviada que ninguém registrou.
+  PENDENTE
+  ENVIADA
+  FALHOU
+  /// Não saiu porque uma regra impediu (fora da janela, opt-out, transferida).
+  BLOQUEADA
+}
+
+/// Uma conversa de WhatsApp com um candidato.
+///
+/// O número é o do Connect no Recrutamento — próprio, na BM da 41, fora do
+/// Chatwoot. As credenciais moram em `TenantIntegration`, como qualquer outra
+/// integração; aqui mora a conversa.
+model WhatsappThread {
+  id            String @id @default(uuid())
+  tenantId      String
+  /// A conexão que atende este número, em `TenantIntegration`.
+  integrationId String
+
+  /// E.164 sem "+", como a Meta manda. É a identidade da conversa: o candidato
+  /// pode nem ter cadastro ainda quando escreve pela primeira vez.
+  waPhone String @db.VarChar(20)
+
+  /// A quem isto se refere, quando dá para saber. Nulo é normal no primeiro
+  /// contato — e é por isso que a thread não depende de candidatura existir.
+  personId      String?
+  candidaturaId String?
+
+  /// Última mensagem RECEBIDA. É o relógio da janela de 24h da Meta: fora
+  /// dela, mensagem livre não sai, e insistir só gera erro na API.
+  lastInboundAt DateTime?
+
+  /// Pediu para parar. Uma vez marcado, nada mais sai por aqui — nem robô nem
+  /// disparo. Desfazer é ato de gente, na tela.
+  optedOutAt DateTime?
+
+  /// Passou para uma pessoa. O robô para de responder e não volta sozinho:
+  /// voltar sozinho é como um candidato recebe robô no meio de uma conversa
+  /// que um humano estava conduzindo.
+  handoffAt     DateTime?
+  handoffReason String?   @db.VarChar(300)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id])
+  messages WhatsappMessage[]
+
+  @@unique([integrationId, waPhone])
+  @@index([tenantId, handoffAt])
+  @@map("whatsapp_threads")
+}
+
+/// Uma mensagem, nos dois sentidos.
+model WhatsappMessage {
+  id       String @id @default(uuid())
+  tenantId String
+  threadId String
+
+  direction WhatsappDirection
+
+  /// O id da Meta. **Único**, e é o que torna o webhook idempotente: a Meta
+  /// reentrega o mesmo evento quando não recebe 200 rápido, e sem esta chave
+  /// uma reentrega viraria uma segunda resposta ao candidato.
+  waMessageId String? @db.VarChar(120)
+
+  body String @db.Text
+
+  status WhatsappSendStatus?
+  error  String?             @db.VarChar(500)
+
+  /// A execução de IA que gerou esta resposta, quando foi o robô. Liga a
+  /// mensagem que o candidato recebeu à linha de auditoria que a produziu.
+  agentRunId String? @db.VarChar(191)
+
+  createdAt DateTime @default(now())
+
+  tenant Tenant         @relation(fields: [tenantId], references: [id])
+  thread WhatsappThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@unique([waMessageId])
+  @@index([threadId, createdAt])
+  @@index([tenantId, direction, createdAt])
+  @@map("whatsapp_messages")
 }

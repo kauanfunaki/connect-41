@@ -68,6 +68,12 @@ const PUBLIC_PATHS = [
   // conexão identificada pelo :connectionId da URL (ver
   // src/app/api/integrations/chatwoot/webhook/[connectionId]/route.ts).
   "/api/integrations/chatwoot/webhook/",
+  // Webhook do WhatsApp — chamado pela Meta, sem sessão. O :integrationId da
+  // URL NÃO autentica nada: quem autentica é a assinatura HMAC do App Secret
+  // da BM (X-Hub-Signature-256), verificada dentro da rota. O GET da mesma
+  // rota responde ao desafio de verificação, comparando o verify token em
+  // tempo constante (ver src/lib/whatsapp/assinatura.ts).
+  "/api/integrations/whatsapp/webhook/",
 ];
 
 // Headers de identidade que SÓ podem ser setados por este proxy. Qualquer

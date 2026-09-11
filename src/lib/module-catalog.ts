@@ -32,6 +32,13 @@ export const MODULE_CATALOG: ModuleDef[] = [
     defaultEnabled: true,
   },
   {
+    code: "recrutamento_whatsapp",
+    label: "WhatsApp",
+    sectorCode: "recrutamento",
+    description: "Conversas com candidatos no número do Recrutamento, e o que o assistente passou para uma pessoa",
+    defaultEnabled: false,
+  },
+  {
     code: "recrutamento_testes",
     label: "Testes",
     sectorCode: "recrutamento",
@@ -158,6 +165,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   recrutamento_vagas:      "/vagas",
   recrutamento_candidatos: "/candidatos",
   recrutamento_testes:     "/testes",
+  recrutamento_whatsapp:   "/whatsapp",
   recrutamento_colaboradores_clientes: "/colaboradores-clientes",
   dp_colaboradores:      "/colaboradores",
   dp_afastamentos:       "/afastamentos",

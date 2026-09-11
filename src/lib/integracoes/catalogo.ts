@@ -88,6 +88,53 @@ export const INTEGRATION_CATALOG: IntegracaoDef[] = [
     ],
   },
   {
+    code: "whatsapp_recrutamento",
+    label: "WhatsApp do Recrutamento",
+    vendor: "Meta (WhatsApp Cloud API)",
+    natureza: "API",
+    sectorCode: "recrutamento",
+    description:
+      "Número próprio do Recrutamento, na BM da Meta — recebe mensagem de candidato e responde pelo atendente automático",
+    defaultEnabled: false,
+    campos: [
+      {
+        name: "phoneNumberId",
+        label: "Phone Number ID",
+        type: "text",
+        required: true,
+        help: "Meta Business › WhatsApp › API Setup. É o id do número, não o número.",
+      },
+      {
+        name: "wabaId",
+        label: "WhatsApp Business Account ID",
+        type: "text",
+        required: true,
+      },
+      {
+        name: "accessToken",
+        label: "Token de acesso",
+        type: "secret",
+        required: true,
+        help: "Token permanente de um usuário de sistema da BM. Token temporário expira em 24h.",
+      },
+      {
+        name: "appSecret",
+        label: "App Secret",
+        type: "secret",
+        required: true,
+        help:
+          "É com ele que a Meta assina cada webhook — sem ele, qualquer um consegue inventar mensagem de candidato no Connect.",
+      },
+      {
+        name: "verifyToken",
+        label: "Token de verificação do webhook",
+        type: "secret",
+        required: true,
+        help: "Você escolhe. É o mesmo que vai no campo Verify Token ao cadastrar o webhook na Meta.",
+      },
+    ],
+  },
+  {
     code: "sima_curitiba",
     label: "SIMA — Meio Ambiente Curitiba",
     vendor: "Prefeitura de Curitiba",

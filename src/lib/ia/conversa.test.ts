@@ -64,7 +64,7 @@ function rodar(def: AgenteDef, chamarModelo: ChamadaAoModelo) {
     def,
     system: "sistema",
     pergunta: "pergunta",
-    ctx: { tenantId: "t1", userId: "u1" },
+    ctx: { tenantId: "t1", userId: "u1", escopo: { vagaId: "v1" } },
     chamarModelo,
   });
 }
@@ -119,7 +119,11 @@ describe("conversa com ferramenta de leitura", () => {
       )
     );
 
-    expect(executar.mock.calls[0]![1]).toEqual({ tenantId: "t1", userId: "u1" });
+    expect(executar.mock.calls[0]![1]).toEqual({
+      tenantId: "t1",
+      userId: "u1",
+      escopo: { vagaId: "v1" },
+    });
   });
 
   it("ferramenta que explode não derruba a conversa", async () => {

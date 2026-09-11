@@ -10,6 +10,7 @@ import { getSectorMaps } from "@/lib/sectors";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
 import { ConfirmActionButton } from "@/components/ui/ConfirmActionButton";
 import { AddCandidatoForm } from "@/components/vagas/AddCandidatoForm";
+import { AssistenteDaVaga } from "@/components/vagas/AssistenteDaVaga";
 import { RecruitmentFunnel, type FunnelCard } from "@/components/vagas/RecruitmentFunnel";
 import { computeFunnelConversion, type Stage } from "@/lib/recruitmentFunnel";
 import { formatInstantDate } from "@/lib/format";
@@ -249,6 +250,15 @@ export default async function VagaPage({
         )}
 
         {canAct && <div className="mt-4"><AddCandidatoForm action={addCandidatoAction} candidatos={candidatos} /></div>}
+
+        {/* Quem não pode agir na vaga também não pergunta ao assistente: as
+            sugestões dele são movimentos no funil, e sugerir o que a pessoa não
+            pode fazer só gera botão que falha. */}
+        {canAct && (
+          <div className="mt-6">
+            <AssistenteDaVaga vagaId={vaga.id} />
+          </div>
+        )}
       </div>
     </PageContainer>
   );

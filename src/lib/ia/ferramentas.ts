@@ -59,6 +59,15 @@ export type FerramentaDef = {
 export type ContextoDaFerramenta = {
   tenantId: string;
   userId: string | null;
+  /**
+   * O recorte em que o agente foi aberto — a vaga, a empresa, o processo.
+   *
+   * Mesma razão do `tenantId`: se o recorte viesse do modelo, um agente aberto
+   * numa vaga poderia ler outra só pedindo. Quem abre a conversa decide o
+   * recorte, já tendo checado permissão; o modelo trabalha dentro dele e não
+   * tem como sair.
+   */
+  escopo: Record<string, string>;
 };
 
 export type ExecutorDeFerramenta = (
@@ -72,8 +81,24 @@ export type FerramentaRegistrada = {
   executar?: ExecutorDeFerramenta;
 };
 
-/** As ferramentas que existem. Vazio — ver o cabeçalho. */
+/**
+ * As ferramentas que existem, por nome.
+ *
+ * Mutável porque os módulos de setor se registram aqui na carga — e porque o
+ * teste precisa poder pôr uma ferramenta falsa e tirá-la depois.
+ */
 export const FERRAMENTAS: Record<string, FerramentaRegistrada> = {};
+
+/** Registra um conjunto de ferramentas, recusando nome repetido. */
+export function registrarFerramentas(conjunto: Record<string, FerramentaRegistrada>): void {
+  for (const [nome, reg] of Object.entries(conjunto)) {
+    // Nome repetido entre setores é como um agente chamaria a ferramenta de
+    // outro sem passar pela allowlist: o nome é a chave, e a segunda
+    // sobrescreveria a primeira em silêncio.
+    if (FERRAMENTAS[nome]) throw new Error(`Ferramenta duplicada no registro: ${nome}`);
+    FERRAMENTAS[nome] = reg;
+  }
+}
 
 export function ferramentaPara(nome: string): FerramentaRegistrada | null {
   return FERRAMENTAS[nome] ?? null;
