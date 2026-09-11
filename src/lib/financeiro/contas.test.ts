@@ -5,6 +5,8 @@ import {
   totalizar,
   ordenarContas,
   centavosDeDecimal,
+  podeMarcarPago,
+  podeConferir,
   type LinhaDeConta,
 } from "./contas";
 
@@ -142,5 +144,57 @@ describe("centavosDeDecimal", () => {
   it("soma de centavos não acumula erro", () => {
     const soma = centavosDeDecimal("0.10") + centavosDeDecimal("0.20");
     expect(soma).toBe(30);
+  });
+});
+
+describe("podeMarcarPago", () => {
+  const aberta = { status: "CONFERIDO" as const, paidAt: null };
+
+  it("conta aberta com data de hoje pode", () => {
+    expect(podeMarcarPago(aberta, HOJE, HOJE).pode).toBe(true);
+  });
+
+  it("data passada pode — baixa atrasada é comum", () => {
+    expect(podeMarcarPago(aberta, "2026-09-01", HOJE).pode).toBe(true);
+  });
+
+  // Agendamento que se disfarça de pagamento faz o realizado do mês incluir
+  // dinheiro que ainda não saiu.
+  it("data futura é recusada", () => {
+    const r = podeMarcarPago(aberta, "2026-09-30", HOJE);
+    expect(r.pode).toBe(false);
+    if (!r.pode) expect(r.motivo).toContain("agendamento");
+  });
+
+  // A data real do pagamento é o dado que a conciliação vai usar para casar
+  // com o extrato — sobrescrevê-la em silêncio é perdê-la.
+  it("já paga recusa, e manda desfazer antes", () => {
+    const r = podeMarcarPago({ status: "PAGO", paidAt: new Date() }, HOJE, HOJE);
+    expect(r.pode).toBe(false);
+    if (!r.pode) expect(r.motivo).toContain("Desfaça");
+  });
+
+  it("paidAt preenchido basta para recusar, mesmo sem status PAGO", () => {
+    expect(podeMarcarPago({ status: "CONFERIDO", paidAt: new Date() }, HOJE, HOJE).pode).toBe(false);
+  });
+
+  it("cancelada não volta a ser conta", () => {
+    expect(podeMarcarPago({ status: "CANCELADO", paidAt: null }, HOJE, HOJE).pode).toBe(false);
+  });
+});
+
+describe("podeConferir", () => {
+  it("provisório é exatamente o que se confere", () => {
+    expect(podeConferir({ status: "PROVISORIO" }).pode).toBe(true);
+  });
+
+  it("conferir de novo é ruído, não erro — recusa suave", () => {
+    const r = podeConferir({ status: "CONFERIDO" });
+    expect(r.pode).toBe(false);
+    if (!r.pode) expect(r.motivo).toContain("Já estava");
+  });
+
+  it("pagar já implica ter conferido", () => {
+    expect(podeConferir({ status: "PAGO" }).pode).toBe(false);
   });
 });

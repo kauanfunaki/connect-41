@@ -5,6 +5,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { formatInstantDate } from "@/lib/format";
 import { reaisDeCentavos, type SituacaoDaConta } from "@/lib/financeiro/contas";
 import type { LinhaDaConta, TipoDeConta } from "@/lib/financeiro/data";
+import { AcoesDaConta } from "./AcoesDaConta";
+import { conferirConta, marcarComoPago, desfazerPagamento } from "@/lib/financeiro/acoes";
 
 const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -35,9 +37,11 @@ type Props = {
   kind: TipoDeConta;
   /** Existem contas deste tipo, mas nenhuma passou pelo recorte. */
   filtrado: boolean;
+  /** Hoje em São Paulo, do servidor — o relógio do navegador pode estar noutro fuso. */
+  hojeISO: string;
 };
 
-export function ContasTable({ linhas, kind, filtrado }: Props) {
+export function ContasTable({ linhas, kind, filtrado, hojeISO }: Props) {
   if (linhas.length === 0) {
     return filtrado ? (
       <EmptyState
@@ -67,7 +71,8 @@ export function ContasTable({ linhas, kind, filtrado }: Props) {
             <th className="py-2 pr-3 font-medium">Categoria</th>
             <th className="py-2 pr-3 font-medium">Competência</th>
             <th className="py-2 pr-3 font-medium text-right">Valor</th>
-            <th className="py-2 font-medium">Situação</th>
+            <th className="py-2 pr-3 font-medium">Situação</th>
+            <th className="py-2 font-medium"></th>
           </tr>
         </thead>
         <tbody>
@@ -103,7 +108,7 @@ export function ContasTable({ linhas, kind, filtrado }: Props) {
               <td className="py-2.5 pr-3 text-right tabular-nums font-medium">
                 {moeda(l.valorCentavos)}
               </td>
-              <td className="py-2.5">
+              <td className="py-2.5 pr-3">
                 <div className="flex items-center gap-2">
                   <Badge variant={SITUACAO_VARIANTE[l.situacao]}>{SITUACAO_LABEL[l.situacao]}</Badge>
                   {l.documentoId && (
@@ -115,6 +120,20 @@ export function ContasTable({ linhas, kind, filtrado }: Props) {
                     </Link>
                   )}
                 </div>
+              </td>
+              <td className="py-2.5">
+                <AcoesDaConta
+                  entryId={l.id}
+                  situacao={l.situacao}
+                  status={l.status}
+                  hojeISO={hojeISO}
+                  aPagar={kind === "PAGAR"}
+                  acoes={{
+                    conferir: conferirConta,
+                    pagar: marcarComoPago,
+                    desfazer: desfazerPagamento,
+                  }}
+                />
               </td>
             </tr>
           ))}

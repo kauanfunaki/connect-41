@@ -10,6 +10,13 @@ import {
   proximaTentativa,
   itensObrigatoriosPendentes,
 } from "@/lib/societario/processo";
+import {
+  executorPara,
+  podeSubmeter,
+  decidirAposSubmissao,
+  precisaDeNumeroAMao,
+} from "@/lib/societario/executor";
+import { isPrismaUniqueError } from "@/lib/prismaErrors";
 
 const SECTOR = "societario";
 
@@ -453,5 +460,158 @@ export async function alternarItemDoChecklist(
   });
 
   revalidatePath(`/processos/${item.step.processId}`);
+  return null;
+}
+
+/**
+ * Submete a etapa ao órgão por robô.
+ *
+ * ─── A ordem importa mais que o resto ────────────────────────────────────────
+ *
+ * **Reservar, submeter, preencher** — nunca submeter e depois gravar. A reserva
+ * é um `ProcessProtocol` com número nulo, e o `@@unique([processId, organId,
+ * attempt])` é quem garante que duas execuções simultâneas não abrem dois
+ * processos no órgão: a segunda esbarra no banco antes de qualquer requisição
+ * sair daqui.
+ *
+ * A chamada ao portal acontece **fora da transação**. Segurar transação aberta
+ * durante requisição de rede é como se esgota o pool — e o portal de um órgão
+ * demora o que quiser.
+ *
+ * Se o adaptador morrer depois de submeter e antes de devolver o número, sobra
+ * a reserva com o erro registrado. Uma pessoa vê "submetido, número não
+ * capturado" e resolve, em vez de o robô tentar de novo e duplicar.
+ */
+export async function submeterPorRobo(stepId: string): Promise<ProcessoState> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+
+  const prisma = getPrisma();
+
+  const etapa = await prisma.processStep.findFirst({
+    where: { id: stepId, tenantId: ctx.tenantId },
+    select: {
+      id: true,
+      processId: true,
+      status: true,
+      templateStep: { select: { label: true, organId: true, organ: { select: { acronym: true } } } },
+      items: { select: { done: true, templateItem: { select: { required: true } } } },
+    },
+  });
+  if (!etapa) return { error: "Etapa não encontrada." };
+
+  const organId = etapa.templateStep.organId;
+  const sigla = etapa.templateStep.organ?.acronym ?? null;
+
+  const protocolos = await prisma.processProtocol.findMany({
+    where: { processId: etapa.processId, organId: organId ?? undefined },
+    select: { organId: true, attempt: true, outcome: true },
+  });
+
+  const veredito = podeSubmeter({
+    status: etapa.status,
+    siglaDoOrgao: sigla,
+    temProtocoloAberto: protocolos.some((p) => p.outcome === "PENDENTE"),
+    itensPendentes: itensObrigatoriosPendentes(
+      etapa.items.map((i) => ({ obrigatorio: i.templateItem.required, feito: i.done }))
+    ),
+  });
+  if (!veredito.pode) return { error: veredito.motivo };
+
+  const executor = executorPara(sigla);
+  if (!executor || !organId) return { error: "Este órgão ainda não tem robô — siga à mão." };
+
+  // ── 1. Reservar ───────────────────────────────────────────────────────────
+  const attempt = proximaTentativa(protocolos, organId);
+  let reservaId: string;
+  try {
+    const reserva = await prisma.$transaction(async (tx) => {
+      const criado = await tx.processProtocol.create({
+        data: {
+          tenantId: ctx.tenantId!,
+          processId: etapa.processId,
+          stepId: etapa.id,
+          organId,
+          attempt,
+          number: null,
+        },
+        select: { id: true },
+      });
+      await tx.processStep.update({
+        where: { id: stepId },
+        data: { status: "EM_ANDAMENTO", startedAt: new Date(), actor: "ROBO" },
+      });
+      return criado;
+    });
+    reservaId = reserva.id;
+  } catch (err) {
+    if (isPrismaUniqueError(err)) {
+      // Outra execução reservou a mesma tentativa. É o caso que a chave única
+      // existe para pegar, e o certo aqui é desistir em silêncio.
+      return { error: "Outra submissão desta tentativa já está em andamento." };
+    }
+    console.error("[submeterPorRobo] reserva", err);
+    return { error: "Erro ao reservar o protocolo." };
+  }
+
+  // ── 2. Submeter, fora da transação ───────────────────────────────────────
+  const credencial: Record<string, string> = {};
+  let resultado;
+  try {
+    resultado = await executor({ credencial, dados: {} });
+  } catch (err) {
+    resultado = {
+      ok: false as const,
+      motivo: err instanceof Error ? err.message : "falha desconhecida",
+      recuperavel: true,
+    };
+  }
+
+  // ── 3. Preencher ─────────────────────────────────────────────────────────
+  const desfecho = decidirAposSubmissao(resultado, new Date());
+  await prisma.$transaction(async (tx) => {
+    await tx.processProtocol.update({
+      where: { id: reservaId },
+      data: desfecho.protocolo,
+    });
+    if (desfecho.etapaVoltaParaPendente) {
+      await tx.processStep.update({
+        where: { id: stepId },
+        data: { status: "PENDENTE", startedAt: null },
+      });
+    }
+  });
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "process.robot_submit",
+    entityType: "Process",
+    entityId: etapa.processId,
+    metadata: {
+      etapa: etapa.templateStep.label,
+      tentativa: attempt,
+      ok: resultado.ok,
+      orgao: sigla,
+    },
+  });
+
+  revalidatePath(`/processos/${etapa.processId}`);
+  revalidatePath("/processos");
+
+  if (!resultado.ok) {
+    return {
+      error: desfecho.recuperavel
+        ? `${resultado.motivo} — dá para tentar de novo.`
+        : `${resultado.motivo} — precisa de ajuste antes de reenviar.`,
+    };
+  }
+  if (precisaDeNumeroAMao(resultado)) {
+    // Nem falha nem sucesso limpo: o órgão recebeu e não sabemos o protocolo.
+    return {
+      error:
+        "Enviado, mas o portal não devolveu o número do protocolo. Busque no site e preencha à mão — não reenvie.",
+    };
+  }
   return null;
 }

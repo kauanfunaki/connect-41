@@ -40,6 +40,59 @@ export function emAberto(situacao: SituacaoDaConta): boolean {
   return situacao === "VENCIDA" || situacao === "VENCE_HOJE" || situacao === "A_VENCER";
 }
 
+export type VereditoDeBaixa =
+  | { pode: true }
+  | { pode: false; motivo: string };
+
+/**
+ * Esta conta pode ser marcada como paga, com esta data?
+ *
+ * Três recusas, e cada uma evita um estrago diferente:
+ *
+ * - **cancelada** — lançamento que deixou de existir para efeito de caixa.
+ *   Pagá-lo traria de volta um valor que alguém decidiu tirar;
+ * - **já paga** — remarcar sobrescreveria a data real do pagamento, que é o
+ *   dado que a conciliação vai usar depois para casar com o extrato;
+ * - **data no futuro** — "marcar como pago" registra um fato que aconteceu.
+ *   Data futura é agendamento, e agendamento que se disfarça de pagamento faz
+ *   o realizado do mês incluir dinheiro que ainda não saiu.
+ */
+export function podeMarcarPago(
+  conta: { status: "PROVISORIO" | "CONFERIDO" | "PAGO" | "CANCELADO"; paidAt: Date | null },
+  dataKey: string,
+  hojeKey: string
+): VereditoDeBaixa {
+  if (conta.status === "CANCELADO") {
+    return { pode: false, motivo: "Lançamento cancelado não volta a ser conta." };
+  }
+  if (conta.status === "PAGO" || conta.paidAt !== null) {
+    return { pode: false, motivo: "Já está paga. Desfaça antes de corrigir a data." };
+  }
+  if (dataKey > hojeKey) {
+    return {
+      pode: false,
+      motivo: "A data do pagamento não pode ser futura — isso é agendamento, não baixa.",
+    };
+  }
+  return { pode: true };
+}
+
+/**
+ * Conferir é o passo que o `PROVISORIO` existe para marcar.
+ *
+ * O lançamento nasce a conferir, e não aprovado. Conferir depois de pago não
+ * faz sentido — pagar já implica ter conferido —, e conferir de novo o que já
+ * está conferido é ruído, não erro: devolve recusa suave.
+ */
+export function podeConferir(conta: {
+  status: "PROVISORIO" | "CONFERIDO" | "PAGO" | "CANCELADO";
+}): VereditoDeBaixa {
+  if (conta.status === "PROVISORIO") return { pode: true };
+  if (conta.status === "CONFERIDO") return { pode: false, motivo: "Já estava conferida." };
+  if (conta.status === "PAGO") return { pode: false, motivo: "Conta paga já foi conferida." };
+  return { pode: false, motivo: "Lançamento cancelado." };
+}
+
 export type LinhaDeConta = {
   id: string;
   situacao: SituacaoDaConta;

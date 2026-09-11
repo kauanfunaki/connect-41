@@ -536,6 +536,8 @@ model Tenant {
   processChecklistItems    ProcessChecklistItem[]
   processProtocols         ProcessProtocol[]
   processRequirements      ProcessRequirement[]
+  integrations             TenantIntegration[]
+  integrationRuns          IntegrationRun[]
 
   @@map("tenants")
 }
@@ -3882,4 +3884,126 @@ model ProcessRequirement {
 
   @@index([tenantId, resolvedAt])
   @@map("process_requirements")
+}
+
+
+// ─── A forma das integrações ─────────────────────────────────────────────────
+//
+// Hoje cada integração inventou a sua: `ChatwootConnection` (por tenant, com
+// credencial cifrada e runs), `SpedSyncState` (cursor, watermark, `lastError`) e
+// `BpoCredential` (cofre com auditoria de quem revelou). São três formas de
+// responder **a mesma pergunta** — "a última execução deu certo?" — e somar
+// Omie, Domínio, Trello e os robôs dos portais no mesmo estilo daria oito.
+//
+// Em 10/09 essa pergunta mal respondida custou um dia: o `lastError` do SPED só
+// era limpo num caminho específico, e 25 raízes saudáveis exibiam um 403 que não
+// existia mais.
+//
+// ─── Por que agora, e por que não a vitrine ─────────────────────────────────
+//
+// A parte cara é esta: modelo com dado dentro. A tela da loja — cards de plugin,
+// botão de ativar — se desenha quando quiser, e trocá-la depois não custa
+// migration.
+//
+// A espinha de ativação já existe e está em produção: `MODULE_CATALOG` +
+// `TenantModule` é exatamente "o cliente liga o que contratou". Um plugin é a
+// mesma ideia onde o que liga é uma conexão com sistema de fora. Isto aqui é o
+// par daquilo, do lado das integrações.
+//
+// Nada de Chatwoot, SPED ou BpoCredential foi migrado: esta leva é aditiva, e a
+// convergência é trabalho à parte, com dado dentro.
+
+/// O que dispara uma execução. `MANUAL` existe para o botão "testar conexão", e
+/// separá-lo do `CRON` evita que um teste de alguém apareça como rodada
+/// agendada na leitura de quem investiga um problema.
+enum IntegrationTrigger {
+  CRON
+  MANUAL
+  WEBHOOK
+}
+
+/// Uma integração ligada por um cliente.
+///
+/// Espelha `TenantModule`, de propósito: lá o que se liga é uma tela, aqui é uma
+/// conexão. O catálogo (`src/lib/integracoes/catalogo.ts`) diz que campos cada
+/// uma pede; esta tabela guarda os valores, cifrados.
+model TenantIntegration {
+  id       String @id @default(uuid())
+  tenantId String
+  /// Código do catálogo em código — `omie`, `dominio`, `trello`, `receita_pr`.
+  integrationCode String @db.VarChar(60)
+
+  /// Um cliente pode ter **duas contas do mesmo sistema** — o Chatwoot já
+  /// permite isso hoje, com uma conta por setor. Sem esta chave, a segunda
+  /// sobrescreveria a primeira em silêncio.
+  instanceKey String @db.VarChar(60) @default("default")
+  /// Como o cliente chama esta conexão. Nulo usa o rótulo do catálogo.
+  label String? @db.VarChar(120)
+
+  enabled Boolean @default(true)
+
+  /// JSON cifrado com os campos que o catálogo declara. Cifrado inteiro, e não
+  /// campo a campo, porque o conjunto muda com o catálogo e uma coluna por
+  /// credencial viraria migration a cada plugin novo.
+  ///
+  /// **Nunca sai daqui em texto**: quem lê passa por `lerConfig`, que decifra e
+  /// devolve só os campos pedidos.
+  configEnc String @db.Text
+
+  /// Onde a última varredura parou. Opaco — guardar verbatim, como o cursor do
+  /// SPED, que carrega o desempate dentro e quebra se for "normalizado".
+  cursor    String? @db.Text
+  watermark String? @db.VarChar(80)
+
+  /// Espelho do desfecho da última execução, para a tela não precisar varrer o
+  /// histórico a cada linha.
+  ///
+  /// **`lastError` é NULL sempre que a última execução deu certo** — inclusive
+  /// quando ela não encontrou nada para fazer. Quem garante isso é
+  /// `finalizarExecucao`, que é o único caminho que encerra uma rodada. Estado
+  /// que mente sobre a última execução é pior que estado ausente: alguém olha,
+  /// vê erro, e desliga uma integração saudável.
+  lastRunAt DateTime?
+  lastError String? @db.VarChar(500)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant           @relation(fields: [tenantId], references: [id])
+  runs   IntegrationRun[]
+
+  @@unique([tenantId, integrationCode, instanceKey])
+  @@index([tenantId, enabled])
+  @@map("tenant_integrations")
+}
+
+/// Uma execução. O histórico que o espelho acima resume.
+model IntegrationRun {
+  id            String @id @default(uuid())
+  tenantId      String
+  integrationId String
+
+  trigger    IntegrationTrigger @default(CRON)
+  startedAt  DateTime           @default(now())
+  finishedAt DateTime?
+
+  /// Nulo enquanto a execução corre. Uma rodada que ficou com `ok` nulo e
+  /// `finishedAt` nulo por muito tempo é uma que morreu no meio — e isso é
+  /// visível, em vez de virar sucesso por omissão.
+  ok    Boolean?
+  error String?  @db.VarChar(500)
+
+  /// Contadores livres por integração: páginas, documentos, protocolos. JSON
+  /// porque cada plugin conta uma coisa, e coluna por contador seria migration
+  /// a cada plugin.
+  counters Json?
+
+  createdAt DateTime @default(now())
+
+  tenant      Tenant            @relation(fields: [tenantId], references: [id])
+  integration TenantIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@index([integrationId, startedAt])
+  @@index([tenantId, ok])
+  @@map("integration_runs")
 }

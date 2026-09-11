@@ -8,6 +8,7 @@ import { isModuleEnabled } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
 import { listarContas, competenciasComContas, type TipoDeConta } from "@/lib/financeiro/data";
+import { saoPauloParts } from "@/lib/agenda";
 import { ContasTable, moeda } from "./ContasTable";
 
 const SECTOR = "bpo";
@@ -176,6 +177,7 @@ export async function ContasPage({
         linhas={resultado.linhas}
         kind={kind}
         filtrado={resultado.totalGeral > 0 && resultado.linhas.length === 0}
+        hojeISO={saoPauloParts(agora).dateKey}
       />
 
       {empresas.length > 0 && params.empresa && (
