@@ -1819,7 +1819,14 @@ model ChatwootConnection {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
+  /// A conexão em `TenantIntegration`, de onde vêm as credenciais desde
+  /// 11/09. Nulo enquanto a convergência não rodar para este tenant — e por
+  /// isso os campos abaixo continuam existindo: apagá-los antes de o backfill
+  /// terminar deixaria o Chatwoot sem token no meio do caminho.
+  integrationId String?
+
   tenant        Tenant                 @relation(fields: [tenantId], references: [id])
+  integration   TenantIntegration?     @relation(fields: [integrationId], references: [id])
   contactLinks  ChatwootContactLink[]
   conversations ChatwootConversation[]
   webhookEvents ChatwootWebhookEvent[]
@@ -2369,7 +2376,16 @@ model SpedSyncState {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  /// A conexão em `TenantIntegration`.
+  ///
+  /// O SPED tem estado **por raiz de CNPJ** — 26 raízes, 26 cursores — e é por
+  /// isso que esta tabela continua existindo em vez de virar uma linha de
+  /// `TenantIntegration`: o `cursor` de lá é um só. Aqui mora o fino; lá, a
+  /// credencial e a saúde da conexão inteira.
+  integrationId String?
+
   tenant Tenant @relation(fields: [tenantId], references: [id])
+  integration TenantIntegration? @relation(fields: [integrationId], references: [id])
 
   @@unique([tenantId, cnpjRaiz])
   @@map("sped_sync_states")
@@ -3987,6 +4003,8 @@ model TenantIntegration {
 
   tenant Tenant           @relation(fields: [tenantId], references: [id])
   runs   IntegrationRun[]
+  chatwootConnections ChatwootConnection[]
+  spedSyncStates      SpedSyncState[]
 
   @@unique([tenantId, integrationCode, instanceKey])
   @@index([tenantId, enabled])

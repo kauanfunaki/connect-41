@@ -57,10 +57,16 @@ export type IntegracaoDef = {
  * confirmado como plugin piloto em 10/09, e os campos dele são os que a forma
  * precisa exercitar — chave de aplicação e segredo, que é o formato mais comum.
  *
- * As três integrações que já rodam no app (Chatwoot, SPED e o cofre do BPO)
- * **não estão aqui de propósito**: cada uma tem tabela própria e dado dentro, e
- * convergi-las é trabalho à parte. O que esta forma impede é a quarta, a quinta
- * e a sexta nascerem tortas.
+ * Chatwoot e SPED entraram em 11/09, na convergência: as duas já rodavam com
+ * tabela própria, e agora a **credencial** delas mora aqui, enquanto o dado de
+ * domínio (conversa, cursor por raiz) segue onde estava. Ver
+ * `scripts/converger-integracoes.ts`.
+ *
+ * O **cofre do BPO ficou de fora, e de propósito**. `BpoCredential` não é
+ * integração: é um cofre de senhas que **pessoas leem**, com registro de quem
+ * olhou (`BpoCredentialView`). Ninguém autentica o Connect com ele. Trazê-lo
+ * para cá misturaria "o app fala com este sistema" com "guarde esta senha para
+ * alguém usar" — e a diferença é justamente quem tem acesso.
  */
 export const INTEGRATION_CATALOG: IntegracaoDef[] = [
   {
@@ -84,6 +90,66 @@ export const INTEGRATION_CATALOG: IntegracaoDef[] = [
         label: "App Secret",
         type: "secret",
         required: true,
+      },
+    ],
+  },
+  {
+    code: "chatwoot",
+    label: "Chatwoot",
+    vendor: "Chatwoot",
+    natureza: "SYNC",
+    sectorCode: "atendimento",
+    description:
+      "Conversas de atendimento — sincroniza os atendimentos e recebe webhook de cada evento",
+    defaultEnabled: false,
+    campos: [
+      {
+        name: "baseUrl",
+        label: "URL da instância",
+        type: "url",
+        required: true,
+        help: "Ex.: https://chat.suaempresa.com.br — sem barra no fim.",
+      },
+      {
+        name: "accountId",
+        label: "Account ID",
+        type: "text",
+        required: true,
+        help: "O número da conta no Chatwoot. Um cliente pode ter mais de uma — use uma conexão para cada.",
+      },
+      { name: "apiToken", label: "Token de acesso", type: "secret", required: true },
+      {
+        name: "webhookSecret",
+        label: "Segredo do webhook",
+        type: "secret",
+        required: true,
+        help: "Gerado pelo Chatwoot ao criar a inscrição de webhook. É com ele que a assinatura de cada entrega é conferida.",
+      },
+    ],
+  },
+  {
+    code: "sped",
+    label: "SPED Generator",
+    vendor: "41 Tech",
+    natureza: "SYNC",
+    sectorCode: "fiscal",
+    description:
+      "Índice de documentos fiscais — traz NF-e e NFS-e por raiz de CNPJ, em lotes com cursor",
+    defaultEnabled: false,
+    campos: [
+      {
+        name: "baseUrl",
+        label: "URL do SPED",
+        type: "url",
+        required: true,
+      },
+      {
+        name: "serviceToken",
+        label: "Token de serviço",
+        type: "secret",
+        required: true,
+        help:
+          "Hoje vive no .env do servidor, o que funciona enquanto a 41 é o único cliente e colapsa na primeira venda. Aqui ele passa a ser por cliente.",
       },
     ],
   },

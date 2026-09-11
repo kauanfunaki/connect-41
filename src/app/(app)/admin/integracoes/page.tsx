@@ -14,6 +14,8 @@ import { Card } from "@/components/ui/Card";
 import { DisconnectButton } from "@/components/admin/DisconnectButton";
 import { AiConfigForm } from "@/components/admin/AiConfigForm";
 import { ChatwootConfigForm } from "@/components/admin/ChatwootConfigForm";
+import { VitrineDeIntegracoes } from "@/components/admin/VitrineDeIntegracoes";
+import { listarIntegracoes } from "@/lib/integracoes/data";
 import { desconectarIntegracao } from "./actions";
 
 const ERROR_LABEL: Record<string, string> = {
@@ -52,6 +54,12 @@ export default async function IntegracoesPage({
 
   // Config de IA é segredo tenant-wide (não pessoal, como as contas de
   // reunião acima) — só quem administra o tenant todo (ADMIN/SUPER_ADMIN) vê e mexe.
+  // Credencial de sistema de terceiro é configuração do cliente inteiro.
+  const podeConfigurar = isFullWrite(ctx.role);
+  const integracoesDoCatalogo = podeConfigurar
+    ? await listarIntegracoes(ctx.tenantId!, new Date())
+    : [];
+
   const canManageAi = isFullWrite(ctx.role);
   const aiConfig = canManageAi ? await prisma.tenantAiConfig.findUnique({ where: { tenantId: ctx.tenantId } }) : null;
 
@@ -72,6 +80,23 @@ export default async function IntegracoesPage({
         subtitle="Conecte sua conta pessoal para agendar reuniões (Google Meet / Microsoft Teams) direto
           dos itens do Kanban. Só coordenadores e administradores veem esta tela."
       />
+
+      {/* ─── A vitrine ──────────────────────────────────────────────────────
+          O catálogo inteiro, conectado ou não. É onde um plugin novo aparece
+          sem ninguém escrever tela: declarar em `INTEGRATION_CATALOG` já o põe
+          aqui, com os campos que ele pede. */}
+      {podeConfigurar && integracoesDoCatalogo.length > 0 && (
+        <section className="mb-8 flex flex-col gap-3">
+          <div>
+            <h2 className="text-[15px] font-semibold text-fg">Plugins e conexões</h2>
+            <p className="text-[13px] text-fg-secondary max-w-[62ch]">
+              Os sistemas que o Connect sabe operar. Cada um guarda a própria credencial, cifrada,
+              e registra as execuções.
+            </p>
+          </div>
+          <VitrineDeIntegracoes integracoes={integracoesDoCatalogo} />
+        </section>
+      )}
 
       {error && (
         <p className="mb-4 text-[13px] text-danger bg-danger-bg border border-danger/30 rounded-lg px-3 py-2">

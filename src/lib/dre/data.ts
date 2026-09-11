@@ -10,7 +10,13 @@
 // Por isso o filtro está num lugar só, aqui.
 
 import { getPrisma } from "@/lib/prisma";
-import { calcularDre, type LancamentoDoDre, type Mapeamento, type ResultadoDoDre } from "@/lib/dre/calculo";
+import {
+  calcularDre,
+  impostoForaDoResultado,
+  type LancamentoDoDre,
+  type Mapeamento,
+  type ResultadoDoDre,
+} from "@/lib/dre/calculo";
 import { resolverCategorias, type CategoriaResolvida } from "@/lib/dre/mapeamento";
 import { OPCOES_PADRAO, type OpcoesDoDre } from "@/lib/dre/estrutura";
 import type { MesDoAno } from "@/lib/dre/anual";
@@ -236,7 +242,20 @@ export async function dreDoAnoDaEmpresa(
   companyId: string,
   ano: number,
   opcoes: OpcoesDoDre = OPCOES_PADRAO
-): Promise<{ meses: MesDoAno[]; categorias: CategoriaResolvida[] }> {
+): Promise<{
+  meses: MesDoAno[];
+  categorias: CategoriaResolvida[];
+  /**
+   * O que ficou sem grupo no ano inteiro, somado por categoria.
+   *
+   * A visão mensal já mostrava isto; a anual não, e era onde ele mais se
+   * escondia — uma categoria que some R$ 200 por mês some R$ 2.400 no ano, e
+   * doze avisos pequenos passam despercebidos onde um grande não passaria.
+   */
+  naoClassificado: { categoria: string; centavos: number; origem: "recebimento" | "pagamento" }[];
+  /** Impostos do ano que não entram no resultado. Zero quando a opção muda. */
+  impostoForaDoResultado: number;
+}> {
   const prisma = getPrisma();
   const de = inicioDoMes(ano, 1);
   const ate = inicioDoMes(ano + 1, 1);
@@ -298,14 +317,31 @@ export async function dreDoAnoDaEmpresa(
   }
 
   const meses: MesDoAno[] = [];
+  // Somado no laço, e não num segundo passe: os mesmos doze cálculos já
+  // devolvem tudo que a tela precisa.
+  const soltosNoAno = new Map<string, { centavos: number; origem: "recebimento" | "pagamento" }>();
+  let impostos = 0;
+
   for (let mes = 1; mes <= 12; mes++) {
     const lista = porMes.get(mes) ?? [];
-    meses.push({
-      mes,
-      porGrupo: calcularDre(lista, mapeamento, opcoes).porGrupo,
-      temMovimento: lista.length > 0,
-    });
+    const r = calcularDre(lista, mapeamento, opcoes);
+    meses.push({ mes, porGrupo: r.porGrupo, temMovimento: lista.length > 0 });
+    impostos += impostoForaDoResultado(r, opcoes);
+    for (const n of r.naoClassificado) {
+      const atual = soltosNoAno.get(n.categoria);
+      soltosNoAno.set(n.categoria, {
+        centavos: (atual?.centavos ?? 0) + n.centavos,
+        origem: n.origem,
+      });
+    }
   }
 
-  return { meses, categorias: resolvidas };
+  return {
+    meses,
+    categorias: resolvidas,
+    naoClassificado: [...soltosNoAno.entries()]
+      .map(([categoria, v]) => ({ categoria, centavos: v.centavos, origem: v.origem }))
+      .sort((a, b) => Math.abs(b.centavos) - Math.abs(a.centavos)),
+    impostoForaDoResultado: impostos,
+  };
 }

@@ -60,8 +60,24 @@ export default async function DrePage({
   if (visao === "ano") {
     const anoEscolhido = Number(ano) || meses[0]?.ano || new Date().getFullYear();
     const anos = [...new Set(meses.map((m) => m.ano))].sort((a, b) => b - a);
-    const { meses: porMes } = await dreDoAnoDaEmpresa(ctx.tenantId, companyId, anoEscolhido);
+    const {
+      meses: porMes,
+      categorias: categoriasDoAno,
+      naoClassificado: soltosDoAno,
+      impostoForaDoResultado: impostoDoAno,
+    } = await dreDoAnoDaEmpresa(ctx.tenantId, companyId, anoEscolhido);
     const anual = dreDoAno(porMes);
+
+    const porNomeAno = new Map(categoriasDoAno.map((c) => [c.nome, c]));
+    const itensDoAno: ItemParaClassificar[] = soltosDoAno.map((n) => ({
+      categoria: n.categoria,
+      centavos: n.centavos,
+      origem: n.origem,
+      categoryId: porNomeAno.get(n.categoria)?.id ?? null,
+    }));
+    const excecoesDoAno = categoriasDoAno
+      .filter((c) => c.origem === "excecao")
+      .map((c) => ({ categoryId: c.id, nome: c.nome, grupo: c.grupo! }));
 
     return (
       <PageContainer>
@@ -89,6 +105,33 @@ export default async function DrePage({
             </Link>
           ))}
         </div>
+        {/* Os dois avisos que só a visão mensal tinha. Uma categoria que
+            some R$ 200 por mês some R$ 2.400 no ano — e doze avisos pequenos
+            passam onde um grande não passaria. */}
+        {impostoDoAno !== 0 && (
+          <Card className="p-4 mb-4 border-warning/40 bg-warning-bg">
+            <p className="flex items-start gap-2 text-[13px] text-fg">
+              <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warning" />
+              <span>
+                <strong>{moeda(Math.abs(impostoDoAno))}</strong> de impostos sobre a receita saíram
+                do caixa em {anoEscolhido} e <strong>não entram</strong> no resultado abaixo — a
+                margem de contribuição parte da Receita Bruta, como na planilha do BPO.
+                <span className="block text-[12px] text-fg-secondary mt-1">
+                  Reproduzido de propósito. Confirmar com o BPO se é assim mesmo.
+                </span>
+              </span>
+            </p>
+          </Card>
+        )}
+
+        <div className="mb-4">
+          <FilaDeClassificacao
+            companyId={companyId}
+            itens={itensDoAno}
+            excecoes={excecoesDoAno}
+          />
+        </div>
+
         <RelatorioAnual anual={anual} />
         <p className="text-[11px] text-fg-muted mt-3">
           {/* A média divide pelos meses com movimento, como o AVERAGE do Excel:
