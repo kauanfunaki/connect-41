@@ -102,6 +102,13 @@ export const MODULE_CATALOG: ModuleDef[] = [
     defaultEnabled: true,
   },
   {
+    code: "bpo_dre",
+    label: "DRE",
+    sectorCode: "bpo",
+    description: "Demonstrativo de resultado de caixa, por empresa e mes - monta do que foi pago e recebido",
+    defaultEnabled: false,
+  },
+  {
     code: "bpo_senhas",
     label: "Repositório de Senhas",
     sectorCode: "bpo",
@@ -176,6 +183,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   gestao_cargos_salarios:  "/cargos-salarios",
   gestao_indicadores_rh:   "/indicadores-rh",
   bpo_senhas:              "/bpo-senhas",
+  bpo_dre:                 "/dre",
   bpo_manual:              "/bpo-manual",
   fiscal_documentos:       "/documentos-fiscais",
   societario_processos:    "/processos",

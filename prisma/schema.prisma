@@ -542,6 +542,10 @@ model Tenant {
   agentRuns                AgentRun[]
   whatsappThreads          WhatsappThread[]
   whatsappMessages         WhatsappMessage[]
+  licenses                 License[]
+  processFees              ProcessFee[]
+  dreMappings              DreCategoryMapping[]
+  dreImports               DreImport[]
 
   @@map("tenants")
 }
@@ -976,6 +980,10 @@ model Company {
   @@index([tenantId, status])
   @@index([tenantId, clientGroupId])
   societarioProcesses Process[]
+  licenses            License[]
+  dreMappings         DreCategoryMapping[]
+  dreImports          DreImport[]
+  processFees         ProcessFee[]
 
   @@map("companies")
 }
@@ -2240,6 +2248,7 @@ model FinanceCategory {
   tenant      Tenant         @relation(fields: [tenantId], references: [id])
   entries     FinanceEntry[]
   padraoDe    FinanceCounterparty[]
+  dreMappings DreCategoryMapping[]
 
   @@unique([tenantId, name, kind])
   @@index([tenantId, kind])
@@ -3593,6 +3602,7 @@ model ProcessOrgan {
   tenant        Tenant                @relation(fields: [tenantId], references: [id])
   templateSteps ProcessTemplateStep[]
   protocols     ProcessProtocol[]
+  licenses      License[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -3751,6 +3761,7 @@ model Process {
   owner     User?           @relation("ProcessOwner", fields: [ownerUserId], references: [id])
   steps     ProcessStep[]
   protocols ProcessProtocol[]
+  fees      ProcessFee[]
 
   @@index([tenantId, status])
   @@index([tenantId, companyId])
@@ -3862,6 +3873,7 @@ model ProcessProtocol {
   step         ProcessStep?         @relation(fields: [stepId], references: [id])
   organ        ProcessOrgan         @relation(fields: [organId], references: [id])
   requirements ProcessRequirement[]
+  fees         ProcessFee[]
 
   @@unique([processId, organId, attempt])
   @@index([tenantId, outcome])
@@ -4214,4 +4226,212 @@ model WhatsappMessage {
   @@index([threadId, createdAt])
   @@index([tenantId, direction, createdAt])
   @@map("whatsapp_messages")
+}
+
+/// Uma licença que a empresa tem — alvará, sanitária, ambiental, AVCB.
+///
+/// ─── Por que ela é o par do motor de processos ──────────────────────────────
+///
+/// O processo é o **ato**: abrir, alterar, renovar. A licença é o **resultado**
+/// que fica valendo — e é a validade dela que gera o próximo ato. Sem esta
+/// tabela o setor só enxerga o que já está em andamento, e descobre a renovação
+/// quando o cliente liga dizendo que foi fiscalizado.
+///
+/// `expiresAt` é nulo em licença sem validade. **Nulo não é "vencida" nem
+/// "vence hoje"**: é "não vence", e `situacaoDaLicenca` separa os dois casos —
+/// misturá-los encheria a fila de renovação de coisa que não renova.
+model License {
+  id        String @id @default(uuid())
+  tenantId  String
+  companyId String
+
+  /// O órgão que emitiu, quando é um do cadastro do setor.
+  organId String?
+
+  /// O que é esta licença, como o setor a chama: "Alvará de Funcionamento",
+  /// "Licença Sanitária". Texto e não enum: cada município inventa o seu, e
+  /// enum aqui viraria migration a cada cliente novo.
+  kind String @db.VarChar(120)
+
+  /// Número do documento emitido. Nulo enquanto não sai.
+  number String? @db.VarChar(80)
+
+  issuedAt  DateTime?
+  expiresAt DateTime?
+
+  /// Cassada, revogada ou substituída. Licença revogada não entra na fila de
+  /// renovação — o ato que ela pede é outro.
+  revokedAt DateTime?
+
+  /// O processo que a gerou, quando houve um. Nulo nas que já existiam antes
+  /// de o Connect acompanhar.
+  originProcessId String?
+
+  notes String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant  Tenant        @relation(fields: [tenantId], references: [id])
+  company Company       @relation(fields: [companyId], references: [id])
+  organ   ProcessOrgan? @relation(fields: [organId], references: [id])
+
+  /// A fila de renovação é "o que vence primeiro": é este índice que a sustenta.
+  @@index([tenantId, expiresAt])
+  @@index([tenantId, companyId])
+  @@map("licenses")
+}
+
+/// Uma taxa de processo — DAM, taxa de alvará, taxa de vistoria.
+///
+/// Fica presa ao processo de propósito: **"quanto este ato custou em taxas" é o
+/// segundo KPI do setor**, ao lado de quantas voltas ele deu. Uma taxa solta na
+/// contabilidade responde quanto a empresa gastou; só a taxa ligada ao processo
+/// responde quanto custou reapresentar três vezes.
+///
+/// Valor em centavos inteiros, como todo dinheiro no Connect.
+model ProcessFee {
+  id        String  @id @default(uuid())
+  tenantId  String
+  companyId String
+  processId String?
+
+  /// A tentativa que gerou a taxa, quando a guia saiu de um protocolo. É o que
+  /// permite somar "quanto as voltas custaram" separado da primeira via.
+  protocolId String?
+
+  description String @db.VarChar(160)
+
+  amountCents Int
+  dueDate     DateTime?
+  paidAt      DateTime?
+
+  /// Onde a guia foi arquivada. O robô do SIMA captura a DAM; aqui fica o
+  /// ponteiro para ela.
+  documentUrl String? @db.VarChar(500)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id])
+  company  Company          @relation(fields: [companyId], references: [id])
+  process  Process?         @relation(fields: [processId], references: [id], onDelete: Cascade)
+  protocol ProcessProtocol? @relation(fields: [protocolId], references: [id])
+
+  @@index([tenantId, dueDate])
+  @@index([processId])
+  @@map("process_fees")
+}
+
+/// Exceção do DRE: esta categoria, **nesta empresa**, vai para outro grupo.
+///
+/// ─── Por que só a exceção mora aqui ─────────────────────────────────────────
+///
+/// O padrão do escritório já existe e já tem tela: `FinanceCategory.dreGroup`,
+/// editável no plano de contas. Criar uma segunda tabela para guardar também o
+/// padrão daria duas fontes para a mesma pergunta — e duas fontes é como um
+/// relatório passa a mostrar número diferente conforme quem o abre.
+///
+/// Então aqui só entra o que **diverge** do padrão. Empresa sem nenhuma linha
+/// nesta tabela usa o plano de contas inteiro, que é o caso comum.
+///
+/// `companyId` é obrigatório de propósito: exceção sem empresa é padrão, e
+/// padrão mora noutro lugar. Isso também evita o unique com NULL, que no MySQL
+/// não impede duplicata — e duplicata aqui significaria dois grupos possíveis
+/// para a mesma categoria, decidido pela ordem da consulta.
+model DreCategoryMapping {
+  id         String @id @default(uuid())
+  tenantId   String
+  companyId  String
+  categoryId String
+
+  /// Código do grupo em `src/lib/dre/estrutura.ts`. Texto, e não enum, porque
+  /// o enum obrigaria migration a cada linha nova de relatório — e a estrutura
+  /// do DRE é da 41, não do banco.
+  grupo String @db.VarChar(40)
+
+  /// Por que esta empresa foge do padrão. Ajuda quem revisa meses depois.
+  notes String? @db.VarChar(300)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id])
+  company  Company         @relation(fields: [companyId], references: [id])
+  category FinanceCategory @relation(fields: [categoryId], references: [id])
+
+  @@unique([companyId, categoryId])
+  @@index([tenantId, companyId])
+  @@map("dre_category_mappings")
+}
+
+/// Um arquivo de export do Omie, já lido.
+///
+/// ─── Por que a origem do DRE pode não ser o financeiro do Connect ───────────
+///
+/// O BPO exporta do Omie todo mês e monta o DRE na planilha. Enquanto essa for
+/// a rotina, exigir que o financeiro do Connect esteja completo para o DRE sair
+/// adiaria o relatório até a migração inteira terminar.
+///
+/// Então o DRE tem duas fontes possíveis, e **o import ganha quando existe**: o
+/// mês que foi importado usa o arquivo; o mês que não foi usa `FinanceEntry`. A
+/// tela diz qual das duas usou, porque um relatório que muda de fonte sem avisar
+/// é um relatório em que ninguém confia duas vezes.
+model DreImport {
+  id        String @id @default(uuid())
+  tenantId  String
+  companyId String
+
+  /// O mês do DRE. Um import por mês e por origem — reimportar substitui.
+  ano Int
+  mes Int
+
+  origem DreImportOrigem
+
+  /// Nome do arquivo, para quem conferir meses depois saber o que entrou.
+  arquivo String @db.VarChar(255)
+
+  /// Quantas linhas o arquivo tinha, e quantas foram aproveitadas. A diferença
+  /// é o que o parser recusou — sem data, sem valor — e precisa ser visível.
+  linhasNoArquivo Int
+  linhasLidas     Int
+
+  importedById String?
+  createdAt    DateTime @default(now())
+
+  tenant  Tenant           @relation(fields: [tenantId], references: [id])
+  company Company          @relation(fields: [companyId], references: [id])
+  linhas  DreImportLine[]
+
+  @@unique([companyId, ano, mes, origem])
+  @@index([tenantId, companyId, ano])
+  @@map("dre_imports")
+}
+
+enum DreImportOrigem {
+  PAGAMENTO
+  RECEBIMENTO
+}
+
+/// Uma linha do export, guardada como o DRE a consome.
+///
+/// Guarda a **categoria como texto**, e não um id: o arquivo do Omie traz nome,
+/// e exigir que cada nome já exista como `FinanceCategory` faria o import falhar
+/// por cadastro — que é o oposto do que ele serve para resolver. O de-para casa
+/// pelo nome normalizado, como a planilha faz.
+model DreImportLine {
+  id       String @id @default(uuid())
+  importId String
+
+  data DateTime
+
+  categoria String? @db.VarChar(200)
+
+  /// Centavos, com o sinal do arquivo: negativo em pagamento.
+  valorCentavos Int
+
+  dreImport DreImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  @@index([importId])
+  @@map("dre_import_lines")
 }
