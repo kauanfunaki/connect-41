@@ -1,3 +1,5 @@
+import { saoPauloParts, addDaysToKey } from "@/lib/agenda";
+
 // As regras do motor de processos, como funções puras.
 //
 // Separadas da escrita porque são elas que precisam de teste: qual etapa está
@@ -61,6 +63,26 @@ export function etapasLiberadas(
   return roteiro
     .filter((e) => e.position === barreira && !encerrada(statusDe(e.templateStepId)))
     .map((e) => e.templateStepId);
+}
+
+export type ItemDeChecklist = {
+  obrigatorio: boolean;
+  feito: boolean;
+};
+
+/**
+ * Quantos itens obrigatórios da etapa ainda faltam.
+ *
+ * Existe para uma regra só, e ela vem do rodapé do fluxograma do setor:
+ * **"documentação completa evita retrabalhos"**. Concluir uma etapa com item
+ * obrigatório em aberto é exatamente o retrabalho que a exigência do órgão vai
+ * cobrar depois, com dias de volta no meio.
+ *
+ * Item opcional não conta — "vistoria, quando aplicável" não pode travar quem
+ * não precisa de vistoria.
+ */
+export function itensObrigatoriosPendentes(itens: ItemDeChecklist[]): number {
+  return itens.filter((i) => i.obrigatorio && !i.feito).length;
 }
 
 export type Protocolo = {
@@ -148,7 +170,39 @@ export type Prazo = {
   previstoMax: number | null;
 };
 
-const UM_DIA = 24 * 60 * 60 * 1000;
+/**
+ * Dias úteis entre duas datas, sem contar o dia de início.
+ *
+ * Começar hoje e olhar hoje dá zero — o processo não consumiu prazo ainda. A
+ * contagem pula sábado, domingo e os feriados que o tenant cadastrou em
+ * `/admin/feriados`, que é a razão de os feriados entrarem como parâmetro: a
+ * função continua pura e testável, e quem chama carrega o cadastro daquele
+ * escritório. **Feriado é por tenant de propósito** — municipal de Londrina não
+ * vale para um cliente de outra cidade.
+ *
+ * O teto de iteração existe para o alvará, que o setor chama de moroso: um
+ * processo esquecido aberto não pode virar laço infinito numa listagem.
+ */
+const MAX_DIAS_CONTADOS = 3650;
+
+export function diasUteisEntre(
+  inicioKey: string,
+  fimKey: string,
+  feriados: ReadonlySet<string>
+): number {
+  if (fimKey <= inicioKey) return 0;
+  let dias = 0;
+  let chave = addDaysToKey(inicioKey, 1);
+  for (let i = 0; i < MAX_DIAS_CONTADOS && chave <= fimKey; i++) {
+    // `dateKey` é "AAAA-MM-DD"; o meio-dia UTC evita a virada de fuso mudar o
+    // dia da semana em relação a São Paulo.
+    const diaDaSemana = new Date(`${chave}T12:00:00Z`).getUTCDay();
+    const fimDeSemana = diaDaSemana === 0 || diaDaSemana === 6;
+    if (!fimDeSemana && !feriados.has(chave)) dias += 1;
+    chave = addDaysToKey(chave, 1);
+  }
+  return dias;
+}
 
 /**
  * Previsto contra realizado.
@@ -158,20 +212,29 @@ const UM_DIA = 24 * 60 * 60 * 1000;
  * variável, sem prazo médio** — e aí a tela não deve prometer previsão nenhuma,
  * porque prometer e não cumprir é pior que não prometer.
  *
- * ─── Uma pergunta em aberto ──────────────────────────────────────────────────
+ * ─── Registrado para questionar com o coordenador ────────────────────────────
  *
- * Isto conta **dias corridos**. O setor pode querer dias úteis — o app já tem
- * cadastro de feriados (`/admin/feriados`), então dá para trocar sem drama; mas
- * é decisão do coordenador, não nossa, e chutar aqui faria todo processo
- * parecer mais atrasado do que está.
+ * Conta **dias úteis**, decidido em 11/09/2026 sem confirmação do setor. O
+ * fluxograma diz "prazo médio: 4 a 7 dias" e não diz qual dos dois — e a
+ * diferença é grande: 7 dias úteis são 9 ou 10 corridos, então a mesma tela
+ * chama de atrasado ou de dentro do prazo conforme a escolha.
+ *
+ * Trocar para corridos é apagar a chamada de `diasUteisEntre` e voltar à
+ * subtração — por isso a decisão foi tomada agora em vez de travar o motor.
+ * Está na lista de perguntas em `docs/fluxos/README.md`.
  */
 export function prazoDoProcesso(
   tipo: PrevisaoDeTipo,
   processo: { startedAt: Date; concludedAt: Date | null },
-  agora: Date
+  agora: Date,
+  feriados: ReadonlySet<string> = new Set()
 ): Prazo {
   const fim = processo.concludedAt ?? agora;
-  const dias = Math.max(0, Math.floor((fim.getTime() - processo.startedAt.getTime()) / UM_DIA));
+  const dias = diasUteisEntre(
+    saoPauloParts(processo.startedAt).dateKey,
+    saoPauloParts(fim).dateKey,
+    feriados
+  );
 
   const previstoMin = tipo.expectedDaysMin;
   const previstoMax = tipo.expectedDaysMax;

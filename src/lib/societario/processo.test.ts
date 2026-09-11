@@ -5,7 +5,9 @@ import {
   totalDeVoltas,
   proximaTentativa,
   situacaoDoProcesso,
+  itensObrigatoriosPendentes,
   prazoDoProcesso,
+  diasUteisEntre,
   type EtapaDoRoteiro,
   type EtapaDaInstancia,
   type Protocolo,
@@ -100,6 +102,29 @@ describe("etapasLiberadas", () => {
   });
 });
 
+describe("itensObrigatoriosPendentes", () => {
+  // "Documentação completa evita retrabalhos" — o rodapé do fluxograma do
+  // setor é a justificativa da regra.
+  it("conta só o que é obrigatório e ainda não foi feito", () => {
+    expect(
+      itensObrigatoriosPendentes([
+        { obrigatorio: true, feito: false },
+        { obrigatorio: true, feito: true },
+        { obrigatorio: false, feito: false },
+      ])
+    ).toBe(1);
+  });
+
+  // "Vistoria, quando aplicável" não pode travar quem não precisa de vistoria.
+  it("item opcional em aberto não conta", () => {
+    expect(itensObrigatoriosPendentes([{ obrigatorio: false, feito: false }])).toBe(0);
+  });
+
+  it("etapa sem checklist não tem pendência", () => {
+    expect(itensObrigatoriosPendentes([])).toBe(0);
+  });
+});
+
 describe("voltas de exigência", () => {
   // "Registro deferido? Não → Exigências → Ajustes e reapresentação → volta."
   // A primeira apresentação não é volta; da segunda em diante é.
@@ -162,35 +187,76 @@ describe("situacaoDoProcesso", () => {
   });
 });
 
+describe("diasUteisEntre", () => {
+  it("mesmo dia, ou fim antes do início, dá zero", () => {
+    expect(diasUteisEntre("2026-09-01", "2026-09-01", new Set())).toBe(0);
+    expect(diasUteisEntre("2026-09-10", "2026-09-01", new Set())).toBe(0);
+  });
+
+  it("sexta para segunda é um dia útil, não três", () => {
+    // 04/09/2026 é sexta. Sábado e domingo não contam.
+    expect(diasUteisEntre("2026-09-04", "2026-09-07", new Set())).toBe(1);
+  });
+
+  it("feriado no meio da semana some da contagem", () => {
+    const semFeriado = diasUteisEntre("2026-09-01", "2026-09-04", new Set());
+    const comFeriado = diasUteisEntre("2026-09-01", "2026-09-04", new Set(["2026-09-02"]));
+    expect(semFeriado).toBe(3);
+    expect(comFeriado).toBe(2);
+  });
+});
+
 describe("prazoDoProcesso", () => {
-  const inicio = new Date("2026-09-01T09:00:00Z");
+  // 01/09/2026 é uma terça-feira. A semana seguinte serve para exercitar o
+  // fim de semana sem depender de feriado nenhum.
+  const inicio = new Date("2026-09-01T12:00:00Z");
   const constituicaoTipo = { expectedDaysMin: 4, expectedDaysMax: 7, variableFlow: false };
 
-  it("dentro do prazo enquanto não passa do teto", () => {
-    const r = prazoDoProcesso(
-      constituicaoTipo,
-      { startedAt: inicio, concludedAt: null },
-      new Date("2026-09-06T09:00:00Z")
-    );
-    expect(r.dias).toBe(5);
+  it("não conta o dia em que começou", () => {
+    const r = prazoDoProcesso(constituicaoTipo, { startedAt: inicio, concludedAt: null }, inicio);
+    expect(r.dias).toBe(0);
     expect(r.situacao).toBe("dentro");
   });
 
-  it("no limite exatamente no teto — ainda não estourou", () => {
+  it("pula sábado e domingo", () => {
+    // terça 01 → segunda 07: 02, 03, 04 e 07 são úteis; 05 e 06 caem no fim de
+    // semana. Quatro, não seis.
     const r = prazoDoProcesso(
       constituicaoTipo,
       { startedAt: inicio, concludedAt: null },
-      new Date("2026-09-08T09:00:00Z")
+      new Date("2026-09-07T12:00:00Z")
+    );
+    expect(r.dias).toBe(4);
+    expect(r.situacao).toBe("dentro");
+  });
+
+  it("pula feriado cadastrado pelo tenant", () => {
+    // Com 03/09 feriado, o mesmo intervalo perde um dia útil.
+    const r = prazoDoProcesso(
+      constituicaoTipo,
+      { startedAt: inicio, concludedAt: null },
+      new Date("2026-09-07T12:00:00Z"),
+      new Set(["2026-09-03"])
+    );
+    expect(r.dias).toBe(3);
+  });
+
+  it("no limite exatamente no teto — ainda não estourou", () => {
+    // terça 01 → quinta 10: 02,03,04,07,08,09,10 = sete dias úteis.
+    const r = prazoDoProcesso(
+      constituicaoTipo,
+      { startedAt: inicio, concludedAt: null },
+      new Date("2026-09-10T12:00:00Z")
     );
     expect(r.dias).toBe(7);
     expect(r.situacao).toBe("no_limite");
   });
 
-  it("estourado no dia seguinte ao teto", () => {
+  it("estourado no dia útil seguinte ao teto", () => {
     const r = prazoDoProcesso(
       constituicaoTipo,
       { startedAt: inicio, concludedAt: null },
-      new Date("2026-09-09T09:00:00Z")
+      new Date("2026-09-11T12:00:00Z")
     );
     expect(r.dias).toBe(8);
     expect(r.situacao).toBe("estourado");
@@ -199,10 +265,10 @@ describe("prazoDoProcesso", () => {
   it("processo concluído para de contar na conclusão, não em hoje", () => {
     const r = prazoDoProcesso(
       constituicaoTipo,
-      { startedAt: inicio, concludedAt: new Date("2026-09-05T09:00:00Z") },
-      new Date("2026-10-30T09:00:00Z")
+      { startedAt: inicio, concludedAt: new Date("2026-09-04T12:00:00Z") },
+      new Date("2026-10-30T12:00:00Z")
     );
-    expect(r.dias).toBe(4);
+    expect(r.dias).toBe(3);
     expect(r.situacao).toBe("dentro");
   });
 
@@ -212,9 +278,9 @@ describe("prazoDoProcesso", () => {
     const r = prazoDoProcesso(
       { expectedDaysMin: null, expectedDaysMax: null, variableFlow: true },
       { startedAt: inicio, concludedAt: null },
-      new Date("2026-12-01T09:00:00Z")
+      new Date("2026-12-01T12:00:00Z")
     );
     expect(r.situacao).toBe("sem_previsao");
-    expect(r.dias).toBeGreaterThan(80);
+    expect(r.dias).toBeGreaterThan(60);
   });
 });

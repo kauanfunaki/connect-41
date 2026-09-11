@@ -3835,6 +3835,19 @@ model ProcessProtocol {
   /// de maior valor do fluxo, que hoje é alguém abrindo o site todo dia.
   resolvedByActor ProcessActor?
 
+  /// Quando o observador olhou pela última vez. Nulo = nunca foi olhado por
+  /// robô, o que é diferente de "olhou e não mudou nada".
+  lastCheckedAt DateTime?
+
+  /// Erro da última verificação, ou NULL quando ela deu certo.
+  ///
+  /// **Limpo em toda verificação bem-sucedida**, inclusive quando o desfecho
+  /// continua pendente — que é o caso normal. A lição é de 10/09, quando o
+  /// `lastError` do SPED só era zerado num caminho específico e 25 raízes
+  /// saudáveis ficaram exibindo um 403 que não existia mais. Estado que mente
+  /// sobre a última execução é pior que estado ausente.
+  checkError String? @db.VarChar(500)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

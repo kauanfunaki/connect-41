@@ -52,6 +52,22 @@ Quando o fluxo revelar algo que o modelo do protótipo não segura, **anote no
 próprio arquivo**, na seção "O que isto exige do motor". É essa lista que vira
 migration, e é ela que a validação final confere.
 
+## Perguntas para os coordenadores
+
+Decisões que tomamos para não travar o motor, e que o setor precisa confirmar na
+validação. Cada uma tem o custo de estar errada anotado — é o que decide se vale
+perguntar antes ou depois.
+
+| Setor | Pergunta | O que assumimos | Custo se estiver errado |
+|---|---|---|---|
+| Societário | "Prazo médio: 4 a 7 dias" é em dias **úteis** ou **corridos**? | Úteis, decidido em 11/09/2026 | Baixo. Trocar é apagar uma chamada de função. Mas muda quem aparece como atrasado: 7 úteis são 9 ou 10 corridos. |
+| Societário | Concluir a etapa 6 depende do deferimento sair, ou o setor segue tocando em paralelo? | O desfecho vem do protocolo, e a etapa segue aberta até ele sair | Médio. Se o setor trabalha adiantado, a fila mostra menos trabalho disponível do que existe. |
+| Societário | Licença dispensada e licença não iniciada são a mesma coisa para o setor? | Não: `DISPENSADA` encerra a etapa, `PENDENTE` a mantém esperando | Médio. Se forem a mesma, sobra um estado que ninguém usa. |
+
+Acrescente aqui ao traduzir cada fluxo novo. **É esta tabela que a validação
+final percorre** — ela existe para o coordenador confirmar ou apontar, em vez de
+ter que lembrar sozinho do que faltou.
+
 ## Arquivos
 
 | Setor | Arquivo | Fluxo do setor | Estado |
