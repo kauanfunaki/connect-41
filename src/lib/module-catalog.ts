@@ -126,6 +126,20 @@ export const MODULE_CATALOG: ModuleDef[] = [
     description: "Constituição, alteração contratual, baixa e alvarás — com protocolo, exigência e prazo",
     defaultEnabled: true,
   },
+  {
+    code: "bpo_contas_pagar",
+    label: "Contas a pagar",
+    sectorCode: "bpo",
+    description: "O que sai — nasce do documento fiscal e herda o valor dele",
+    defaultEnabled: true,
+  },
+  {
+    code: "bpo_contas_receber",
+    label: "Contas a receber",
+    sectorCode: "bpo",
+    description: "O que entra — nasce do documento fiscal emitido pela empresa",
+    defaultEnabled: true,
+  },
 ];
 
 export function getModuleDef(code: string): ModuleDef | undefined {
@@ -157,6 +171,8 @@ export const MODULE_ROUTES: Record<string, string> = {
   bpo_manual:              "/bpo-manual",
   fiscal_documentos:       "/documentos-fiscais",
   societario_processos:    "/processos",
+  bpo_contas_pagar:        "/pagar",
+  bpo_contas_receber:      "/receber",
 };
 
 export function getModuleRoute(code: string): string | undefined {

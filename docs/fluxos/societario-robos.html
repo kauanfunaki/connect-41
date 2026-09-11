@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Societário — os seis portais</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Sans+3:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --paper:#F1F2F6; --surface:#FFFFFF; --surface-2:#E7E9F0;
+    --ink:#16181F; --ink-soft:#414654; --muted:#6E7386;
+    --line:#D5D8E2; --line-soft:#E5E7EF;
+    --accent:#3B4A8C; --accent-ink:#2A3667; --accent-wash:#E3E6F3;
+    --ok:#1F6B5B; --ok-wash:#DCEDE7;
+    --warn:#93551C; --warn-wash:#F6E9D8;
+    --stop:#97382B; --stop-wash:#F7E2DD;
+    --lane-bg:#3B4A8C; --lane-fg:#FFFFFF;
+    --fs-micro:.7rem; --fs-meta:.82rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#101218; --surface:#171A22; --surface-2:#1F2330;
+      --ink:#E6E8F0; --ink-soft:#B5BAC9; --muted:#838A9E;
+      --line:#2C3140; --line-soft:#232837;
+      --accent:#93A2E0; --accent-ink:#B3BEEC; --accent-wash:#1C2340;
+      --ok:#63C3AB; --ok-wash:#133029;
+      --warn:#D8A45F; --warn-wash:#2E2415;
+      --stop:#E2897A; --stop-wash:#33201C;
+      --lane-bg:#242A3D; --lane-fg:#D8DEF4;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#101218; --surface:#171A22; --surface-2:#1F2330;
+    --ink:#E6E8F0; --ink-soft:#B5BAC9; --muted:#838A9E;
+    --line:#2C3140; --line-soft:#232837;
+    --accent:#93A2E0; --accent-ink:#B3BEEC; --accent-wash:#1C2340;
+    --ok:#63C3AB; --ok-wash:#133029;
+    --warn:#D8A45F; --warn-wash:#2E2415;
+    --stop:#E2897A; --stop-wash:#33201C;
+    --lane-bg:#242A3D; --lane-fg:#D8DEF4;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:0 1.25rem 4rem;background:var(--paper);color:var(--ink);
+    font-family:"Source Sans 3",ui-sans-serif,system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:78rem;margin:0 auto;display:flex;flex-direction:column;gap:2.5rem}
+  h1,h2,h3{font-family:"Familjen Grotesk",ui-sans-serif,system-ui,sans-serif;margin:0;
+    letter-spacing:-.017em;line-height:1.14;text-wrap:balance}
+  h1{font-size:clamp(1.9rem,1.6rem+1.2vw,2.6rem);font-weight:700}
+  h2{font-size:1.45rem;font-weight:600}
+  h3{font-size:1.02rem;font-weight:600}
+  p{margin:0}
+  code,.mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:.86em}
+  code{background:var(--surface-2);color:var(--ink-soft);padding:.08em .32em;border-radius:3px;word-break:break-all}
+  .eyebrow{font-family:"JetBrains Mono",monospace;font-size:var(--fs-micro);font-weight:500;
+    letter-spacing:.15em;text-transform:uppercase;color:var(--muted)}
+  .prose{max-width:66ch;display:flex;flex-direction:column;gap:.85rem}
+  .prose p{color:var(--ink-soft)}
+  header.head{padding:3rem 0 1.75rem;border-bottom:2px solid var(--ink);display:flex;flex-direction:column;gap:1rem}
+  .head-meta{display:flex;flex-wrap:wrap;gap:.35rem 1.5rem;align-items:baseline}
+  section{display:flex;flex-direction:column;gap:1.2rem}
+  .sec-head{display:flex;flex-direction:column;gap:.45rem}
+
+  .warnbox{border:1px solid color-mix(in srgb,var(--stop) 38%,transparent);border-left:4px solid var(--stop);
+    background:var(--stop-wash);border-radius:4px;padding:1.1rem 1.3rem;max-width:70ch;
+    display:flex;flex-direction:column;gap:.6rem}
+  .warnbox .eyebrow{color:var(--stop)}
+  .warnbox p{color:var(--ink);font-size:var(--fs-meta)}
+
+  .chip{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:var(--fs-micro);
+    letter-spacing:.05em;text-transform:uppercase;padding:.14rem .42rem;border-radius:3px;white-space:nowrap}
+  .chip.consulta{background:var(--ok-wash);color:var(--ok)}
+  .chip.submissao{background:var(--accent-wash);color:var(--accent-ink)}
+  .chip.renovacao{background:var(--warn-wash);color:var(--warn)}
+  .chip.cert{background:var(--stop-wash);color:var(--stop)}
+  .chip.email{background:var(--stop-wash);color:var(--stop)}
+  .chip.aberto{background:var(--surface-2);color:var(--muted)}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--edge,var(--accent));
+    border-radius:5px;padding:1.15rem 1.3rem;display:flex;flex-direction:column;gap:.8rem}
+  .card[data-k="consulta"]{--edge:var(--ok)}
+  .card[data-k="renovacao"]{--edge:var(--warn)}
+  .card-top{display:flex;flex-wrap:wrap;align-items:baseline;gap:.5rem .8rem}
+  .card-top h3{flex:1 1 16rem}
+  .url{font-family:"JetBrains Mono",monospace;font-size:var(--fs-micro);color:var(--accent);word-break:break-all}
+  .passos{margin:0;padding-left:1.15rem;font-size:var(--fs-meta);color:var(--ink-soft);
+    display:flex;flex-direction:column;gap:.22rem}
+  .saida{font-size:var(--fs-meta);color:var(--ink-soft)}
+  .falta{font-size:var(--fs-meta);border-top:1px dashed var(--line);padding-top:.6rem;color:var(--ink)}
+  .falta b{color:var(--stop)}
+
+  .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:4px;background:var(--surface)}
+  table{border-collapse:collapse;width:100%;font-size:var(--fs-meta)}
+  th,td{padding:.6rem .85rem;text-align:left;border-bottom:1px solid var(--line-soft);vertical-align:top}
+  th{font-family:"JetBrains Mono",monospace;font-weight:500;font-size:var(--fs-micro);letter-spacing:.09em;
+    text-transform:uppercase;color:var(--muted);background:var(--surface-2);white-space:nowrap}
+  tbody tr:last-child td{border-bottom:0}
+  td.mono{font-family:"JetBrains Mono",monospace;font-size:.79rem}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(22rem,1fr));gap:1rem}
+  footer.foot{border-top:1px solid var(--line);padding-top:1.3rem;color:var(--muted);
+    font-size:var(--fs-meta);max-width:70ch;display:flex;flex-direction:column;gap:.4rem}
+  @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="head">
+    <div class="head-meta">
+      <span class="eyebrow">Societário · procedimentos de portal</span>
+      <span class="eyebrow">traduzido em 11 set 2026</span>
+    </div>
+    <h1>Societário — os seis portais</h1>
+    <div class="prose">
+      <p>
+        Tradução dos seis procedimentos que o setor documentou, no padrão de
+        <code>docs/fluxos/</code>. Cada um descreve, passo a passo, o que uma pessoa faz hoje num
+        portal de órgão — e é essa repetição que a automação existe para tirar.
+      </p>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Antes de tudo</span>
+      <h2>Estes documentos ensinam a <em>fazer</em>, não a <em>conferir</em></h2>
+    </div>
+
+    <div class="warnbox">
+      <span class="eyebrow">Correção de premissa</span>
+      <p>
+        O observador de protocolo, construído em 11/09, responde uma pergunta só: <strong>"dado um
+        número de protocolo, o que o site diz agora?"</strong> Cinco destes seis documentos não
+        respondem isso — eles descrevem <strong>submissão</strong>, que é o caminho de ida.
+      </p>
+      <p>
+        Só o de <strong>Meio Ambiente</strong> traz o caminho de volta (login → minhas solicitações
+        → ver detalhes), e só o de <strong>Consulta Cadastral IE</strong> é consulta de ponta a
+        ponta. <strong>Nenhum cobre a Junta Comercial</strong>, que é onde o laço de exigência da
+        Constituição acontece — o de Viabilidade para no Empresa Fácil, antes do registro.
+      </p>
+    </div>
+
+    <div class="grid">
+      <div class="card" data-k="consulta">
+        <div class="card-top">
+          <h3>O que dá para automatizar primeiro</h3>
+        </div>
+        <p class="saida">
+          <strong>Consulta Cadastral IE.</strong> É o único com pergunta e resposta fechadas: entra
+          uma inscrição estadual, sai um campo <code>Situação Atual</code> com quatro valores
+          nomeados. Tem valor próprio — monitorar a IE das empresas sem ninguém abrir o portal —
+          e não depende do laço de processo.
+        </p>
+        <p class="saida">
+          <strong>Mas não é um `ObservadorDeOrgao`</strong>: é outro tipo de robô, de vigilância
+          de cadastro. Vale construir a peça certa para ele em vez de forçá-lo no contrato do
+          observador.
+        </p>
+      </div>
+      <div class="card">
+        <div class="card-top">
+          <h3>O que trava os outros cinco</h3>
+        </div>
+        <p class="saida">
+          <strong>Autenticação forte em todos.</strong> Certificado digital da 41 na Receita
+          Estadual e no SIMA; código por e-mail no Bombeiros, duas vezes no mesmo fluxo.
+        </p>
+        <p class="saida">
+          Robô com certificado A1 é decisão de segurança, não de código — e o Quadro já tem em
+          aberto quem guarda e renova o A1 por empresa. Robô que lê e-mail é um agente com acesso à
+          caixa: existe precedente no n8n (<code>IMAP - E-mail Controladoria</code>), mas é
+          superfície nova.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Os seis, em uma tabela</span>
+      <h2>O que cada um é</h2>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Procedimento</th><th>Natureza</th><th>Autenticação</th><th>Produz</th><th>Serve ao observador?</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Consulta Cadastral IE</strong><span class="chip consulta">consulta</span></td>
+            <td>Consulta de ponta a ponta</td>
+            <td><span class="chip cert">certificado</span> da 41</td>
+            <td>CICAD com <code>Situação Atual</code></td>
+            <td>Não — é vigilância de cadastro, outro robô</td>
+          </tr>
+          <tr>
+            <td><strong>Viabilidade — Abertura PR</strong><span class="chip submissao">submissão</span></td>
+            <td>Preenchimento em 10 passos</td>
+            <td>Não declarada</td>
+            <td>Número de protocolo</td>
+            <td>Parcialmente — gera o protocolo, não o consulta</td>
+          </tr>
+          <tr>
+            <td><strong>Alvará de Funcionamento</strong><span class="chip consulta">emissão</span></td>
+            <td>Impressão por inscrição municipal</td>
+            <td>Não declarada</td>
+            <td>PDF do alvará</td>
+            <td>Indiretamente — se imprime, está ativo</td>
+          </tr>
+          <tr>
+            <td><strong>Meio Ambiente</strong><span class="chip submissao">submissão</span></td>
+            <td>Solicitação em 10 passos <strong>+ acompanhamento</strong></td>
+            <td><span class="chip cert">certificado</span> ou gov.br</td>
+            <td>Protocolo <code>AFU-…</code> e DAM</td>
+            <td><strong>Sim</strong> — é o único com o caminho de volta</td>
+          </tr>
+          <tr>
+            <td><strong>Licença Sanitária</strong><span class="chip submissao">submissão</span></td>
+            <td>Formulário LISA PJ em 4 passos</td>
+            <td>Não declarada</td>
+            <td>Guia de recolhimento</td>
+            <td>Parcialmente — "acompanhe no portal", sem o como</td>
+          </tr>
+          <tr>
+            <td><strong>Corpo de Bombeiros</strong><span class="chip renovacao">renovação</span></td>
+            <td>Renovação em 10 passos</td>
+            <td><span class="chip email">código por e-mail</span> ×2</td>
+            <td>Nº do processo e taxa</td>
+            <td>Não — é ida, e a mais travada de todas</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Um a um</span>
+      <h2>O que cada procedimento faz</h2>
+    </div>
+
+    <div class="card" data-k="consulta">
+      <div class="card-top">
+        <h3>Consulta Cadastral — Inscrição Estadual PR</h3>
+        <span class="chip consulta">consulta</span>
+        <span class="chip cert">certificado</span>
+      </div>
+      <span class="url">https://receita.pr.gov.br/login</span>
+      <ol class="passos">
+        <li>Acessa o portal da Receita Estadual do Paraná</li>
+        <li>Entra com o <strong>certificado digital da 41 Contábil</strong></li>
+        <li>Cadastro de Contribuintes → Serviços → Emissão de CICAD</li>
+        <li>Informa a inscrição estadual (CAD/ICMS) e emite</li>
+        <li>Lê o campo <code>Situação Atual</code> no CICAD</li>
+      </ol>
+      <p class="saida">
+        <strong>Saída fechada e nomeada:</strong> ativa, baixada, suspensa ou cancelada. É o que
+        torna este o candidato mais forte — o robô não precisa interpretar texto livre.
+      </p>
+      <p class="falta">
+        <b>Falta:</b> como o certificado entra no robô. É a decisão de segurança que precede
+        qualquer linha de código.
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <h3>Viabilidade — Abertura de empresa na Junta do PR</h3>
+        <span class="chip submissao">submissão</span>
+      </div>
+      <span class="url">https://www.empresafacil.pr.gov.br/ · https://geocuritiba.ippuc.org.br/mapacadastral/</span>
+      <ol class="passos">
+        <li>Empresa Fácil → Abertura de Empresa</li>
+        <li>Junta Comercial, município e natureza jurídica</li>
+        <li>Dados do contador e porte</li>
+        <li>Dados dos sócios e nome empresarial</li>
+        <li><strong>Busca a indicação fiscal do imóvel</strong> no mapa cadastral de Curitiba — outro sistema</li>
+        <li>Endereço detalhado, atividades, forma de instalação</li>
+        <li><strong>21 perguntas</strong> de viabilidade</li>
+        <li>Gera o número de protocolo</li>
+      </ol>
+      <p class="falta">
+        <b>Falta, e é muito:</b> as 21 perguntas não estão no documento, e são elas que decidem o
+        resultado. Sem elas o robô não tem o que responder. O passo do mapa cadastral também é um
+        segundo sistema, com busca por endereço.
+      </p>
+    </div>
+
+    <div class="card" data-k="consulta">
+      <div class="card-top">
+        <h3>Alvará de Funcionamento — Curitiba</h3>
+        <span class="chip consulta">emissão</span>
+      </div>
+      <span class="url">https://servicos.curitiba.pr.gov.br/alvara-comercial-impressao-pela-internet/353</span>
+      <ol class="passos">
+        <li>Acessa o serviço de impressão do alvará comercial</li>
+        <li>Informa a <strong>inscrição municipal</strong> da empresa</li>
+        <li>Dá o aceite e imprime o Alvará de Licença de Localização</li>
+      </ol>
+      <p class="saida">
+        Vale para escritório administrativo e empresas dispensadas, conforme o material interno —
+        <strong>não é o caminho geral</strong>.
+      </p>
+      <p class="falta">
+        <b>Falta:</b> o que a página mostra quando <em>não</em> há alvará a imprimir. O documento
+        só descreve o caminho feliz, e é o outro que o robô precisa distinguir.
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <h3>Meio Ambiente — Curitiba (SIMA)</h3>
+        <span class="chip submissao">submissão</span>
+        <span class="chip cert">certificado</span>
+      </div>
+      <span class="url">https://sima.curitiba.pr.gov.br/</span>
+      <ol class="passos">
+        <li>Solicitação de Atividades Econômicas → Viabilidade</li>
+        <li>CNPJ, dados cadastrais, forma de atuação e CNAEs</li>
+        <li>Sócio por CPF, dados do imóvel pela indicação fiscal</li>
+        <li>Finaliza e <strong>gera protocolo</strong> (ex.: <code>AFU-26002918</code>)</li>
+        <li><strong>Acompanhamento:</strong> login → Minhas solicitações → Ver detalhes</li>
+        <li>Nessa etapa o sistema gera a DAM e aceita o envio de documentos</li>
+      </ol>
+      <p class="saida">
+        <strong>É o único com o caminho de volta descrito</strong> — por isso é o candidato a
+        primeiro <code>ObservadorDeOrgao</code> de verdade.
+      </p>
+      <p class="falta">
+        <b>Falta:</b> o documento avisa que <strong>a consulta tem de ser feita no mesmo login que
+        pediu</strong>. Isso amarra o robô a uma identidade específica, e muda a pergunta de
+        "qual certificado" para "qual certificado, de quem".
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <h3>Licenciamento Sanitário — Curitiba (LISA PJ)</h3>
+        <span class="chip submissao">submissão</span>
+      </div>
+      <span class="url">https://servicodigital.curitiba.pr.gov.br/ … licenciamentosanitario …</span>
+      <ol class="passos">
+        <li>Portal do licenciamento sanitário, pessoa jurídica</li>
+        <li>Dados da empresa, contatos, endereço, inscrição municipal, tipo de unidade, proprietário</li>
+        <li>CNAEs, tipo de solicitação e — se houver — responsabilidade técnica</li>
+        <li>Aguarda a guia de recolhimento, acompanhando no portal</li>
+      </ol>
+      <p class="falta">
+        <b>Falta:</b> "acompanhe o andamento no portal" é justamente o passo que o robô faria, e é
+        o único sem detalhe. Precisa da tela de acompanhamento.
+      </p>
+    </div>
+
+    <div class="card" data-k="renovacao">
+      <div class="card-top">
+        <h3>Corpo de Bombeiros PR — renovação (PREVFOGO)</h3>
+        <span class="chip renovacao">renovação</span>
+        <span class="chip email">código por e-mail ×2</span>
+      </div>
+      <span class="url">https://www.bombeiros.pr.gov.br/PrevFogo/Pagina/Solicitacao-de-Vistoria</span>
+      <ol class="passos">
+        <li>Confirma o endereço do licenciamento</li>
+        <li><strong>Recebe código por e-mail</strong> (caixa cadastrada no PREVFOGO) e valida</li>
+        <li>Confere dados da empresa e do responsável legal — pode usar contato da 41, porque o
+            <strong>segundo código</strong> virá para lá</li>
+        <li>Se não houve mudança de atividade, endereço ou imóvel, é só renovar</li>
+        <li>Aceita os termos, informa o segundo código e conclui</li>
+        <li>Sistema registra e mostra o número do processo</li>
+        <li>Emite a taxa, salva e envia</li>
+      </ol>
+      <p class="saida">
+        <strong>Tem regra de arquivamento e envio</strong>, que é trabalho depois do portal:
+        salvar em <code>Societário › Prefeitura › Bombeiros › ano vigente</code>, nomear
+        <code>EMPRESA - Taxa Bombeiros 2026</code> e enviar aos e-mails da empresa cadastrados no
+        Acessórias.
+      </p>
+      <p class="falta">
+        <b>Falta, e é o mais pesado:</b> ler duas vezes a caixa de e-mail dentro do mesmo fluxo.
+        Isso faz do robô um agente com acesso à correspondência da 41 — decisão de segurança antes
+        de decisão técnica. <strong>Em compensação, a parte pós-portal é 100% automatizável</strong>
+        e não depende de nada disso: nomear, arquivar e enviar já são capacidades do Connect.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">O que isto exige do motor</span>
+      <h2>Três coisas que os seis documentos revelam</h2>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Exigência</th><th>De onde vem</th><th>Consequência</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">Credencial por robô, não por integração</td>
+            <td>Certificado da 41 na Receita e no SIMA; login específico que abriu o pedido</td>
+            <td>Confirma a forma da Connect Store: <code>TenantIntegration</code> com credencial cifrada por cliente. O robô do SIMA precisa saber <em>qual</em> login usar, não só <em>que</em> há um.</td>
+          </tr>
+          <tr>
+            <td class="mono">Robô que só submete também é robô</td>
+            <td>Cinco dos seis são ida, não volta</td>
+            <td>O contrato <code>ObservadorDeOrgao</code> cobre metade do problema. Falta o par: um executor, que preenche e devolve o protocolo gerado.</td>
+          </tr>
+          <tr>
+            <td class="mono">Trabalho pós-portal é automatizável hoje</td>
+            <td>Regra de arquivamento e envio do Bombeiros</td>
+            <td>Nomear, salvar na pasta do ano e enviar aos e-mails do Acessórias <strong>não depende de certificado nenhum</strong> — é a fatia que dá para entregar sem resolver autenticação.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p>Traduzido dos seis PDFs de procedimento do Setor Societário da 41 Contábil, recebidos em 11/09/2026.</p>
+    <p>Os passos e os links são do setor. A classificação (consulta × submissão × renovação), o que falta e as consequências são leitura técnica — e é o que a validação do coordenador deve contestar se estiver errado.</p>
+    <p>Padrão de notação em <code>docs/fluxos/README.md</code>. O fluxo do processo em si está em <code>docs/fluxos/societario.html</code>.</p>
+  </footer>
+
+</div>
+</body>
+</html>

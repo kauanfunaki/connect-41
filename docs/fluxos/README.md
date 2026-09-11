@@ -64,6 +64,11 @@ perguntar antes ou depois.
 | Societário | Concluir a etapa 6 depende do deferimento sair, ou o setor segue tocando em paralelo? | O desfecho vem do protocolo, e a etapa segue aberta até ele sair | Médio. Se o setor trabalha adiantado, a fila mostra menos trabalho disponível do que existe. |
 | Societário | Licença dispensada e licença não iniciada são a mesma coisa para o setor? | Não: `DISPENSADA` encerra a etapa, `PENDENTE` a mantém esperando | Médio. Se forem a mesma, sobra um estado que ninguém usa. |
 
+| Societário | Como o **certificado digital da 41** entra num robô? Receita Estadual e SIMA exigem, e o SIMA exige o *mesmo login que abriu o pedido* | Nada assumido — é decisão de segurança, não de código | **Alto.** Sem resposta, cinco dos seis portais não automatizam |
+| Societário | O robô pode **ler a caixa de e-mail** da 41? O Bombeiros manda código de verificação duas vezes no mesmo fluxo | Nada assumido | **Alto.** Faz do robô um agente com acesso à correspondência |
+| Societário | As **21 perguntas de viabilidade** do Empresa Fácil — quais são, e as respostas variam por empresa? | Nada assumido; não estão no PDF | **Alto.** São elas que decidem o resultado da viabilidade |
+| Societário | O que a página do alvará mostra **quando não há alvará a imprimir**? | Nada assumido; o PDF só tem o caminho feliz | Médio. É o caso que o robô precisa distinguir |
+
 Acrescente aqui ao traduzir cada fluxo novo. **É esta tabela que a validação
 final percorre** — ela existe para o coordenador confirmar ou apontar, em vez de
 ter que lembrar sozinho do que faltou.
@@ -73,6 +78,7 @@ ter que lembrar sozinho do que faltou.
 | Setor | Arquivo | Fluxo do setor | Estado |
 |---|---|---|---|
 | Societário | [societario.html](./societario.html) | sim, recebido em 10/09 | traduzido |
+| Societário · portais | [societario-robos.html](./societario-robos.html) | 6 procedimentos, recebidos em 11/09 | traduzidos |
 | BPO | — | **pedir** — conciliação, cobrança e o que é manual hoje | aguardando |
 | Fiscal | — | pedir | aguardando |
 | DP | — | pedir | aguardando |
