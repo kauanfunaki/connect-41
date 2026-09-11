@@ -168,6 +168,19 @@ export const AGENT_CATALOG: AgenteDef[] = [
     padraoLigado: false,
   },
   {
+    code: "assistente_do_societario",
+    label: "Assistente do Societário",
+    sectorCode: "societario",
+    description:
+      "Lê a fila de processos e o detalhe de cada um para responder o coordenador e sugerir o que dá para destravar",
+    faixa: "padrao",
+    escreve: false,
+    ferramentas: ["listar_fila", "ver_processo", "propor_concluir_etapa", "propor_dispensar_etapa"],
+    tetoMensalCentavos: 30_000,
+    tetoMensalChamadas: 800,
+    padraoLigado: false,
+  },
+  {
     code: "resumo_agente",
     label: "Resumo de avaliações do atendente",
     sectorCode: "atendimento",

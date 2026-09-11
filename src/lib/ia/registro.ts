@@ -12,8 +12,13 @@
 import { FERRAMENTAS, registrarFerramentas } from "@/lib/ia/ferramentas";
 import { FERRAMENTAS_DE_RECRUTAMENTO } from "@/lib/ia/ferramentas-recrutamento";
 import { FERRAMENTAS_DE_CANDIDATO } from "@/lib/ia/ferramentas-candidato";
+import { FERRAMENTAS_DE_SOCIETARIO } from "@/lib/ia/ferramentas-societario";
 
-const CONJUNTOS = [FERRAMENTAS_DE_RECRUTAMENTO, FERRAMENTAS_DE_CANDIDATO];
+const CONJUNTOS = [
+  FERRAMENTAS_DE_RECRUTAMENTO,
+  FERRAMENTAS_DE_CANDIDATO,
+  FERRAMENTAS_DE_SOCIETARIO,
+];
 
 export function registrarTodasAsFerramentas(): void {
   for (const conjunto of CONJUNTOS) {

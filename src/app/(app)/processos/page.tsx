@@ -9,6 +9,7 @@ import { listarFila, contarPorSituacao, feriadosDoTenant } from "@/lib/societari
 import type { SituacaoDoProcesso } from "@/lib/societario/processo";
 import { ProcessosFila, SITUACAO_LABEL } from "@/components/societario/ProcessosFila";
 import { NovoProcessoForm } from "@/components/societario/NovoProcessoForm";
+import { AssistenteDoSocietario } from "@/components/societario/AssistenteDoSocietario";
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
 import { abrirProcesso } from "./actions";
@@ -116,6 +117,10 @@ export default async function ProcessosPage({
       </div>
 
       <ProcessosFila linhas={linhas} filtrado={todas.length > 0 && linhas.length === 0} />
+
+      <div className="mt-6">
+        <AssistenteDoSocietario />
+      </div>
     </PageContainer>
   );
 }
