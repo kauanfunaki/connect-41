@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
-import { ArrowRight, Blocks, CalendarDays, CreditCard, EyeOff, Globe, Headset, Landmark, Layers, Puzzle, Receipt, Repeat, Scale, ScrollText, Settings2, ShieldCheck, Tag, Target, Users2, Video } from "lucide-react";
+import { ArrowRight, Blocks, CalendarDays, CreditCard, EyeOff, Globe, Headset, Landmark, Layers, Puzzle, Receipt, Repeat, Scale, ScrollText, Settings2, ShieldCheck, Sparkles, Tag, Target, Users2, Video } from "lucide-react";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { canManageMeetings } from "@/lib/integrations/oauth";
 import { getPrisma } from "@/lib/prisma";
@@ -129,6 +129,7 @@ export default async function AdminPage() {
       { group: "catalogos", href: "/admin/competencias", icon: <Target size={20} />, title: "Competências", description: "Catálogo usado nas avaliações de desempenho" },
       { group: "catalogos", href: "/admin/rescisao", icon: <Scale size={20} />, title: "Cálculo de Rescisão", description: "Padrão do escritório para a conferência do TRCT" },
       { group: "integracoes", href: "/admin/atendentes", icon: <Headset size={20} />, title: "Atendentes e Vínculos", description: "Conta de acesso, atendente do Chatwoot e quem é da recepção/triagem" },
+      { group: "integracoes", href: "/admin/ia", icon: <Sparkles size={20} />, title: "Agentes de IA", description: "O que a IA fez no mês, quanto custou e até onde pode ir" },
       { group: "workspace", href: "/admin/portal", icon: <Users2 size={20} />, title: "Acessos do Portal", description: "Contas de clientes que entram no portal para ver os próprios documentos" }
     );
   }

@@ -63,7 +63,11 @@ export async function extrairDadosCurriculo(personId: string): Promise<AiExtract
 
   let extraction;
   try {
-    extraction = await extractResumeData(ctx.tenantId, pdfBase64);
+    extraction = await extractResumeData(ctx.tenantId, pdfBase64, {
+      userId: ctx.userId,
+      entityType: "pessoa",
+      entityId: personId,
+    });
   } catch (err) {
     console.error("[extrairDadosCurriculo]", err);
     return { error: err instanceof Error ? err.message : "Erro ao processar o currículo com IA." };

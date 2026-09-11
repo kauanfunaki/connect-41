@@ -84,10 +84,11 @@ export async function gerarResumoEmpresa(companyId: string): Promise<AiSummarySt
 
   let summary: string;
   try {
-    summary = await summarizeCompanyHistory(ctx.tenantId, {
-      companyName: company.tradeName || company.name,
-      digest: lines.join("\n"),
-    });
+    summary = await summarizeCompanyHistory(
+      ctx.tenantId,
+      { companyName: company.tradeName || company.name, digest: lines.join("\n") },
+      { userId: ctx.userId, entityType: "empresa", entityId: companyId }
+    );
   } catch (err) {
     console.error("[gerarResumoEmpresa]", err);
     return { error: err instanceof Error ? err.message : "Erro ao gerar o resumo com IA." };

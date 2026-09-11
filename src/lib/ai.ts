@@ -1,19 +1,34 @@
-// Integração com IA (Claude/Anthropic ou OpenAI) — triagem de currículo e
-// resumo de histórico de empresa. Cada tenant pode configurar a própria
-// chave/provedor em Integrações → Inteligência Artificial (TenantAiConfig,
-// chave criptografada — ver src/lib/crypto.ts); sem config de tenant, cai no
-// fallback global via env (ANTHROPIC_API_KEY/OPENAI_API_KEY). Toda função
-// degrada com erro amigável quando nenhuma chave está disponível (feature
-// opcional por tenant/ambiente).
+// As quatro chamadas de IA do Connect.
+//
+// Cada tenant configura a própria chave/provedor em Integrações → Inteligência
+// Artificial (TenantAiConfig, chave criptografada — ver src/lib/crypto.ts); sem
+// config de tenant, cai no fallback global via env. Toda função degrada com
+// erro amigável quando nenhuma chave está disponível.
+//
+// ─── Desde 11/09, nada aqui chama o provedor direto ─────────────────────────
+//
+// Tudo passa por `executarAgente`, que é a porta da fundação em src/lib/ia/:
+// catálogo, teto antes de gastar, e uma linha de auditoria por chamada. O que
+// mudou para quem chama é só um parâmetro opcional de contexto — quem clicou e
+// sobre o quê — que é o que torna a trilha legível depois.
+//
 // A conferência de folha NÃO passa por aqui — é estatística pura, ver
 // src/lib/payrollAnomalies.ts.
 import Anthropic from "@anthropic-ai/sdk";
 import { getPrisma } from "@/lib/prisma";
 import { decryptSecret } from "@/lib/crypto";
 import type { AiProvider } from "@/generated/prisma/enums";
+import type { UsoDeTokens } from "@/lib/ia/custo";
+import { usoAnthropic, usoOpenAi } from "@/lib/ia/uso";
+import {
+  prepararChamada,
+  abrirChamada,
+  encerrarChamada,
+  custoDaChamada,
+  type ContextoDaChamada,
+} from "@/lib/ia/data";
 
-const DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-8";
-const DEFAULT_OPENAI_MODEL = "gpt-4.1";
+export type { ContextoDaChamada };
 
 // Trecho comum acrescentado aos prompts que processam texto de terceiros
 // (transcrição de conversa com cliente, justificativa gerada por outra
@@ -42,7 +57,16 @@ function assertCleanAiText(text: string, maxLen: number, fieldLabel: string): st
   return trimmed;
 }
 
-type AiCredentials = { provider: AiProvider; apiKey: string; model: string };
+/**
+ * A chave e o provedor do cliente. **Sem modelo** — quem decide o modelo é o
+ * catálogo de agentes, e `modelDoTenant` aqui é só o override que já existia.
+ *
+ * Antes desta fundação o modelo padrão morava logo acima, em duas constantes, e
+ * foi assim que a do Anthropic ficou apontando para uma geração anterior sem
+ * ninguém notar: nome de modelo espalhado envelhece em silêncio. Agora existe
+ * um lugar só — `MODELO_DA_FAIXA`, em `src/lib/ia/catalogo.ts`.
+ */
+type AiCredentials = { provider: AiProvider; apiKey: string; modelDoTenant: string | null };
 
 async function resolveCredentials(tenantId: string): Promise<AiCredentials | null> {
   const prisma = getPrisma();
@@ -52,16 +76,22 @@ async function resolveCredentials(tenantId: string): Promise<AiCredentials | nul
     return {
       provider: tenantConfig.provider,
       apiKey: decryptSecret(tenantConfig.apiKeyEnc),
-      model: tenantConfig.model || (tenantConfig.provider === "ANTHROPIC" ? DEFAULT_ANTHROPIC_MODEL : DEFAULT_OPENAI_MODEL),
+      modelDoTenant: tenantConfig.model || null,
     };
   }
 
   // Sem config de tenant — fallback global via env (ordem: Anthropic, depois OpenAI).
+  //
+  // ⚠️ Este fallback é o mesmo bloqueio de produtização do token do SPED:
+  // funciona enquanto a 41 é o único cliente, e colapsa na primeira venda,
+  // porque a chave do ambiente é de quem hospeda e a conta também. A chave por
+  // tenant já existe e funciona; o que falta é este caminho virar erro
+  // explícito quando houver mais de um cliente.
   if (process.env.ANTHROPIC_API_KEY) {
-    return { provider: "ANTHROPIC", apiKey: process.env.ANTHROPIC_API_KEY, model: DEFAULT_ANTHROPIC_MODEL };
+    return { provider: "ANTHROPIC", apiKey: process.env.ANTHROPIC_API_KEY, modelDoTenant: null };
   }
   if (process.env.OPENAI_API_KEY) {
-    return { provider: "OPENAI", apiKey: process.env.OPENAI_API_KEY, model: DEFAULT_OPENAI_MODEL };
+    return { provider: "OPENAI", apiKey: process.env.OPENAI_API_KEY, modelDoTenant: null };
   }
   return null;
 }
@@ -69,6 +99,58 @@ async function resolveCredentials(tenantId: string): Promise<AiCredentials | nul
 export async function isAiConfigured(tenantId: string): Promise<boolean> {
   return (await resolveCredentials(tenantId)) !== null;
 }
+
+/** O que uma chamada ao provedor devolve: o resultado e o que ele custou. */
+type ComUso<T> = { valor: T; uso: UsoDeTokens | null };
+
+/**
+ * Toda chamada de IA do Connect passa por aqui.
+ *
+ * É o que dá às quatro funções abaixo o que elas nunca tiveram: teto antes de
+ * gastar, e uma linha de auditoria por chamada. A forma é deliberadamente a de
+ * `executar` em `src/lib/integracoes/data.ts` — abre a linha, roda, e fecha
+ * pelo caminho único, dê certo ou não.
+ *
+ * A linha é aberta **antes** da chamada. Se o processo morrer no meio, sobra
+ * uma linha sem `finishedAt`, que é visível; abrir depois faria a chamada que
+ * morreu sumir da conta do mês, que é o contrário do que se quer de um teto.
+ */
+async function executarAgente<T>(params: {
+  tenantId: string;
+  agentCode: string;
+  contexto?: ContextoDaChamada;
+  chamar: (creds: { provider: AiProvider; apiKey: string; model: string }) => Promise<ComUso<T>>;
+}): Promise<T> {
+  const agora = new Date();
+  const credenciais = await resolveCredentials(params.tenantId);
+  const preparo = await prepararChamada(params.tenantId, params.agentCode, credenciais, agora);
+
+  const runId = await abrirChamada({
+    tenantId: params.tenantId,
+    agentCode: params.agentCode,
+    provider: preparo.provider,
+    model: preparo.model,
+    contexto: params.contexto,
+  });
+
+  try {
+    const { valor, uso } = await params.chamar(preparo);
+    await encerrarChamada(
+      runId,
+      { ok: true, uso, custoCentavos: uso ? custoDaChamada(preparo.model, uso) : null },
+      new Date()
+    );
+    return valor;
+  } catch (err) {
+    await encerrarChamada(
+      runId,
+      { ok: false, erro: err instanceof Error ? err.message : String(err) },
+      new Date()
+    );
+    throw err;
+  }
+}
+
 
 export type ResumeExtraction = {
   name: string | null;
@@ -104,7 +186,7 @@ const RESUME_SCHEMA = {
   additionalProperties: false,
 } as const;
 
-async function extractResumeDataAnthropic(apiKey: string, model: string, pdfBase64: string): Promise<ResumeExtraction> {
+async function extractResumeDataAnthropic(apiKey: string, model: string, pdfBase64: string): Promise<ComUso<ResumeExtraction>> {
   const client = new Anthropic({ apiKey });
 
   const response = await client.messages.create({
@@ -136,13 +218,13 @@ async function extractResumeDataAnthropic(apiKey: string, model: string, pdfBase
   if (!textBlock || textBlock.type !== "text") {
     throw new Error("Resposta da IA sem conteúdo.");
   }
-  return JSON.parse(textBlock.text) as ResumeExtraction;
+  return { valor: JSON.parse(textBlock.text) as ResumeExtraction, uso: usoAnthropic(response.usage) };
 }
 
 // OpenAI via Responses API (fetch cru, sem SDK — mesmo padrão de
 // src/lib/integrations/google.ts e microsoft.ts): input_file com file_data em
 // base64 dispensa upload prévio do PDF.
-async function extractResumeDataOpenAi(apiKey: string, model: string, pdfBase64: string): Promise<ResumeExtraction> {
+async function extractResumeDataOpenAi(apiKey: string, model: string, pdfBase64: string): Promise<ComUso<ResumeExtraction>> {
   const res = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -170,15 +252,23 @@ async function extractResumeDataOpenAi(apiKey: string, model: string, pdfBase64:
   const data = await res.json();
   const text = data.output_text ?? data.output?.find((o: { type: string }) => o.type === "message")?.content?.[0]?.text;
   if (!text) throw new Error("Resposta da IA sem conteúdo.");
-  return JSON.parse(text) as ResumeExtraction;
+  return { valor: JSON.parse(text) as ResumeExtraction, uso: usoOpenAi(data.usage) };
 }
 
-export async function extractResumeData(tenantId: string, pdfBase64: string): Promise<ResumeExtraction> {
-  const creds = await resolveCredentials(tenantId);
-  if (!creds) throw new Error("IA não configurada. Cadastre uma chave em Integrações → Inteligência Artificial.");
-  return creds.provider === "ANTHROPIC"
-    ? extractResumeDataAnthropic(creds.apiKey, creds.model, pdfBase64)
-    : extractResumeDataOpenAi(creds.apiKey, creds.model, pdfBase64);
+export async function extractResumeData(
+  tenantId: string,
+  pdfBase64: string,
+  contexto?: ContextoDaChamada
+): Promise<ResumeExtraction> {
+  return executarAgente({
+    tenantId,
+    agentCode: "triagem_curriculo",
+    contexto,
+    chamar: (c) =>
+      c.provider === "ANTHROPIC"
+        ? extractResumeDataAnthropic(c.apiKey, c.model, pdfBase64)
+        : extractResumeDataOpenAi(c.apiKey, c.model, pdfBase64),
+  });
 }
 
 const COMPANY_SUMMARY_SYSTEM_PROMPT =
@@ -188,7 +278,7 @@ async function summarizeCompanyHistoryAnthropic(
   apiKey: string,
   model: string,
   input: { companyName: string; digest: string }
-): Promise<string> {
+): Promise<ComUso<string>> {
   const client = new Anthropic({ apiKey });
 
   const response = await client.messages.create({
@@ -211,14 +301,14 @@ async function summarizeCompanyHistoryAnthropic(
   if (!textBlock || textBlock.type !== "text") {
     throw new Error("Resposta da IA sem conteúdo.");
   }
-  return textBlock.text;
+  return { valor: textBlock.text, uso: usoAnthropic(response.usage) };
 }
 
 async function summarizeCompanyHistoryOpenAi(
   apiKey: string,
   model: string,
   input: { companyName: string; digest: string }
-): Promise<string> {
+): Promise<ComUso<string>> {
   const res = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -235,18 +325,23 @@ async function summarizeCompanyHistoryOpenAi(
   const data = await res.json();
   const text = data.output_text ?? data.output?.find((o: { type: string }) => o.type === "message")?.content?.[0]?.text;
   if (!text) throw new Error("Resposta da IA sem conteúdo.");
-  return text as string;
+  return { valor: text as string, uso: usoOpenAi(data.usage) };
 }
 
 export async function summarizeCompanyHistory(
   tenantId: string,
-  input: { companyName: string; digest: string }
+  input: { companyName: string; digest: string },
+  contexto?: ContextoDaChamada
 ): Promise<string> {
-  const creds = await resolveCredentials(tenantId);
-  if (!creds) throw new Error("IA não configurada. Cadastre uma chave em Integrações → Inteligência Artificial.");
-  return creds.provider === "ANTHROPIC"
-    ? summarizeCompanyHistoryAnthropic(creds.apiKey, creds.model, input)
-    : summarizeCompanyHistoryOpenAi(creds.apiKey, creds.model, input);
+  return executarAgente({
+    tenantId,
+    agentCode: "resumo_empresa",
+    contexto,
+    chamar: (c) =>
+      c.provider === "ANTHROPIC"
+        ? summarizeCompanyHistoryAnthropic(c.apiKey, c.model, input)
+        : summarizeCompanyHistoryOpenAi(c.apiKey, c.model, input),
+  });
 }
 
 // Avaliação de Atendimentos — nota de escrita (0-50) de um atendimento do
@@ -270,7 +365,7 @@ const WRITING_EVALUATION_SCHEMA = {
   additionalProperties: false,
 } as const;
 
-async function evaluateConversationWritingAnthropic(apiKey: string, model: string, transcript: string): Promise<WritingEvaluation> {
+async function evaluateConversationWritingAnthropic(apiKey: string, model: string, transcript: string): Promise<ComUso<WritingEvaluation>> {
   const client = new Anthropic({ apiKey });
 
   const response = await client.messages.create({
@@ -289,10 +384,10 @@ async function evaluateConversationWritingAnthropic(apiKey: string, model: strin
   if (!textBlock || textBlock.type !== "text") {
     throw new Error("Resposta da IA sem conteúdo.");
   }
-  return JSON.parse(textBlock.text) as WritingEvaluation;
+  return { valor: JSON.parse(textBlock.text) as WritingEvaluation, uso: usoAnthropic(response.usage) };
 }
 
-async function evaluateConversationWritingOpenAi(apiKey: string, model: string, transcript: string): Promise<WritingEvaluation> {
+async function evaluateConversationWritingOpenAi(apiKey: string, model: string, transcript: string): Promise<ComUso<WritingEvaluation>> {
   const res = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -310,16 +405,23 @@ async function evaluateConversationWritingOpenAi(apiKey: string, model: string, 
   const data = await res.json();
   const text = data.output_text ?? data.output?.find((o: { type: string }) => o.type === "message")?.content?.[0]?.text;
   if (!text) throw new Error("Resposta da IA sem conteúdo.");
-  return JSON.parse(text) as WritingEvaluation;
+  return { valor: JSON.parse(text) as WritingEvaluation, uso: usoOpenAi(data.usage) };
 }
 
-export async function evaluateConversationWriting(tenantId: string, transcript: string): Promise<WritingEvaluation> {
-  const creds = await resolveCredentials(tenantId);
-  if (!creds) throw new Error("IA não configurada. Cadastre uma chave em Integrações → Inteligência Artificial.");
-  const result =
-    creds.provider === "ANTHROPIC"
-      ? await evaluateConversationWritingAnthropic(creds.apiKey, creds.model, transcript)
-      : await evaluateConversationWritingOpenAi(creds.apiKey, creds.model, transcript);
+export async function evaluateConversationWriting(
+  tenantId: string,
+  transcript: string,
+  contexto?: ContextoDaChamada
+): Promise<WritingEvaluation> {
+  const result = await executarAgente({
+    tenantId,
+    agentCode: "avaliacao_escrita",
+    contexto,
+    chamar: (c) =>
+      c.provider === "ANTHROPIC"
+        ? evaluateConversationWritingAnthropic(c.apiKey, c.model, transcript)
+        : evaluateConversationWritingOpenAi(c.apiKey, c.model, transcript),
+  });
 
   // Barra aqui, na origem: se a justificativa desta avaliação sair corrompida
   // (ver UNTRUSTED_CONTENT_GUARD), ela nunca chega a entrar no prompt de
@@ -369,7 +471,7 @@ function buildAgentSummaryPrompt(agentLabel: string, evaluations: AgentSummaryIn
   return `Atendente: ${agentLabel}\n\nAvaliações (${evaluations.length} atendimentos):\n${list}`;
 }
 
-async function summarizeAgentEvaluationsAnthropic(apiKey: string, model: string, agentLabel: string, evaluations: AgentSummaryInput[]): Promise<AgentSummaryResult> {
+async function summarizeAgentEvaluationsAnthropic(apiKey: string, model: string, agentLabel: string, evaluations: AgentSummaryInput[]): Promise<ComUso<AgentSummaryResult>> {
   const client = new Anthropic({ apiKey });
 
   const response = await client.messages.create({
@@ -388,10 +490,10 @@ async function summarizeAgentEvaluationsAnthropic(apiKey: string, model: string,
   if (!textBlock || textBlock.type !== "text") {
     throw new Error("Resposta da IA sem conteúdo.");
   }
-  return JSON.parse(textBlock.text) as AgentSummaryResult;
+  return { valor: JSON.parse(textBlock.text) as AgentSummaryResult, uso: usoAnthropic(response.usage) };
 }
 
-async function summarizeAgentEvaluationsOpenAi(apiKey: string, model: string, agentLabel: string, evaluations: AgentSummaryInput[]): Promise<AgentSummaryResult> {
+async function summarizeAgentEvaluationsOpenAi(apiKey: string, model: string, agentLabel: string, evaluations: AgentSummaryInput[]): Promise<ComUso<AgentSummaryResult>> {
   const res = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -409,16 +511,24 @@ async function summarizeAgentEvaluationsOpenAi(apiKey: string, model: string, ag
   const data = await res.json();
   const text = data.output_text ?? data.output?.find((o: { type: string }) => o.type === "message")?.content?.[0]?.text;
   if (!text) throw new Error("Resposta da IA sem conteúdo.");
-  return JSON.parse(text) as AgentSummaryResult;
+  return { valor: JSON.parse(text) as AgentSummaryResult, uso: usoOpenAi(data.usage) };
 }
 
-export async function summarizeAgentEvaluations(tenantId: string, agentLabel: string, evaluations: AgentSummaryInput[]): Promise<AgentSummaryResult> {
-  const creds = await resolveCredentials(tenantId);
-  if (!creds) throw new Error("IA não configurada. Cadastre uma chave em Integrações → Inteligência Artificial.");
-  const result =
-    creds.provider === "ANTHROPIC"
-      ? await summarizeAgentEvaluationsAnthropic(creds.apiKey, creds.model, agentLabel, evaluations)
-      : await summarizeAgentEvaluationsOpenAi(creds.apiKey, creds.model, agentLabel, evaluations);
+export async function summarizeAgentEvaluations(
+  tenantId: string,
+  agentLabel: string,
+  evaluations: AgentSummaryInput[],
+  contexto?: ContextoDaChamada
+): Promise<AgentSummaryResult> {
+  const result = await executarAgente({
+    tenantId,
+    agentCode: "resumo_agente",
+    contexto,
+    chamar: (c) =>
+      c.provider === "ANTHROPIC"
+        ? summarizeAgentEvaluationsAnthropic(c.apiKey, c.model, agentLabel, evaluations)
+        : summarizeAgentEvaluationsOpenAi(c.apiKey, c.model, agentLabel, evaluations),
+  });
 
   // Defensivo: nunca confiar cegamente que a IA só citou ids que existem na
   // lista fornecida (mesmo com json_schema, o VALOR de uma string livre pode

@@ -174,7 +174,8 @@ export async function gerarResumoAgente(groupKey: string, agentLabel: string): P
     const result = await summarizeAgentEvaluations(
       ctx.tenantId,
       agentLabel,
-      matching.map((m) => ({ conversationId: m.conversation.id, score: m.score, writingScore: m.writingScore, slaScore: m.slaScore, reasoning: m.reasoning }))
+      matching.map((m) => ({ conversationId: m.conversation.id, score: m.score, writingScore: m.writingScore, slaScore: m.slaScore, reasoning: m.reasoning })),
+      { userId: ctx.userId, entityType: "atendente", entityId: groupKey }
     );
 
     await prisma.agentEvaluationSummary.upsert({

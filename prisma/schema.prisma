@@ -538,6 +538,8 @@ model Tenant {
   processRequirements      ProcessRequirement[]
   integrations             TenantIntegration[]
   integrationRuns          IntegrationRun[]
+  agents                   TenantAgent[]
+  agentRuns                AgentRun[]
 
   @@map("tenants")
 }
@@ -4006,4 +4008,115 @@ model IntegrationRun {
   @@index([integrationId, startedAt])
   @@index([tenantId, ok])
   @@map("integration_runs")
+}
+
+/// Quem disparou uma chamada de IA.
+enum AgentTrigger {
+  /// Alguém clicou num botão. É o padrão hoje — toda IA do Connect é sob demanda.
+  USUARIO
+  /// Rotina agendada.
+  CRON
+  /// Efeito de outra coisa no app (um documento que chegou, um webhook).
+  SISTEMA
+}
+
+/// O que um cliente ajustou num agente do catálogo.
+///
+/// É **override**, não cadastro: a ausência de linha significa "vale o padrão
+/// do catálogo". Isso é o que permite a fundação nascer sem desligar as quatro
+/// chamadas de IA que já rodam em produção — elas continuam valendo o padrão,
+/// e quem quiser mexer ganha uma linha aqui.
+///
+/// Diferente de `TenantIntegration`, ligar um agente não é falar com sistema de
+/// terceiro usando credencial de alguém: é **gastar dinheiro do cliente**. O
+/// ato deliberado que autoriza isso já existe e é outro — salvar a própria
+/// chave em `TenantAiConfig`. Sem chave, nenhum agente roda, com linha aqui ou
+/// sem ela.
+model TenantAgent {
+  id        String @id @default(uuid())
+  tenantId  String
+  /// Código do catálogo em código — ver `AGENT_CATALOG`.
+  agentCode String @db.VarChar(60)
+
+  enabled Boolean @default(true)
+
+  /// Override do modelo. Nulo usa o que o catálogo pede para a faixa do agente
+  /// — e é assim que trocar de modelo não vira migration nem edição por cliente.
+  model String? @db.VarChar(80)
+
+  /// Teto de gasto no mês, em centavos. Nulo usa o do catálogo.
+  ///
+  /// Existe porque o Connect vai ser vendido: sem teto, a conta de IA de um
+  /// cliente é uma conta que ele gera e outra pessoa paga.
+  monthlyCapCents Int?
+
+  /// Teto de chamadas no mês. É o **backstop do teto em reais**: preço de
+  /// modelo muda e modelo novo aparece sem tabela, e quando o custo não é
+  /// conhecido o teto em centavos não protege nada. Contar chamada funciona
+  /// sempre.
+  monthlyCapCalls Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, agentCode])
+  @@index([tenantId, enabled])
+  @@map("tenant_agents")
+}
+
+/// Uma chamada de IA que aconteceu.
+///
+/// Espelha `IntegrationRun`, e existe pelos mesmos dois motivos — mais um
+/// terceiro que só a IA tem:
+///
+/// 1. **Custo.** Sem uma linha por chamada não há teto que funcione, nem como
+///    responder "quanto a IA custou este mês neste cliente".
+/// 2. **Auditoria.** Quando alguém perguntar por que um resumo apareceu numa
+///    ficha, a resposta tem que existir — quem disparou, sobre o quê, com qual
+///    modelo, quando.
+/// 3. **Não referencia `TenantAgent`.** A chamada é fato sobre o que rodou, e
+///    roda mesmo quando o cliente nunca criou linha de override. Amarrar as
+///    duas faria a auditoria depender de uma configuração opcional.
+model AgentRun {
+  id        String @id @default(uuid())
+  tenantId  String
+  agentCode String @db.VarChar(60)
+
+  trigger AgentTrigger @default(USUARIO)
+  /// Quem clicou. Nulo quando foi cron ou efeito do sistema.
+  userId  String?      @db.VarChar(191)
+
+  /// Sobre o que a chamada foi — `candidatura`, `empresa`, `conversa`. É o que
+  /// liga a linha de auditoria à tela onde o texto apareceu.
+  entityType String? @db.VarChar(40)
+  entityId   String? @db.VarChar(191)
+
+  provider AiProvider
+  model    String     @db.VarChar(80)
+
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  /// Nulo enquanto corre. Chamada com `ok` e `finishedAt` nulos há muito tempo
+  /// é uma que morreu no meio — visível, em vez de virar sucesso por omissão.
+  ok    Boolean?
+  error String?  @db.VarChar(500)
+
+  inputTokens  Int?
+  outputTokens Int?
+
+  /// Custo em centavos. **Nulo quando o preço do modelo não é conhecido** — e
+  /// nulo nunca vira zero. Custo desconhecido tratado como zero é um teto que
+  /// não segura nada, e a falha só aparece na fatura.
+  costCents Int?
+
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, agentCode, startedAt])
+  @@index([tenantId, startedAt])
+  @@map("agent_runs")
 }

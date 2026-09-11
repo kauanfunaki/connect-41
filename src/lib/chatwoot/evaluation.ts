@@ -230,9 +230,13 @@ export async function evaluateConversation(
     if (!janela) continue;
 
     const slaScore = computeSlaScore(janela);
+    // `CRON` e sem `userId`: a avaliação roda na varredura, não no clique de
+    // ninguém. É o que faz a trilha distinguir gasto que alguém pediu de gasto
+    // que a rotina gerou — e a rotina é a que pode disparar sozinha.
     const { writingScore, reasoning } = await evaluateConversationWriting(
       tenantId,
-      buildTranscript(seg.mensagens)
+      buildTranscript(seg.mensagens),
+      { trigger: "CRON", entityType: "conversa", entityId: conversationId }
     );
     const clampedWriting = Math.max(0, Math.min(50, Math.round(writingScore)));
     const dados = {

@@ -91,6 +91,12 @@ export function normalizarProtocolo(numero: string): string {
 export const CONTRATO_PENDENTE = [
   "Qual das quatro portas a 41 usa hoje, e — se for nuvem — qual provedor dos quatro",
   "Se o provedor de nuvem escolhido permite autenticar sem aprovação humana a cada login",
+  // Levantado com o Kauan em 11/09: os A1 vivem no `certmgr` — o repositório de
+  // certificados do Windows. Um robô em container Linux não enxerga aquilo. Ou
+  // o robô roda em host Windows com o certificado instalado, ou o .pfx vai para
+  // o cofre — e o .pfx só sai de lá se tiver sido importado como exportável,
+  // que é escolha feita no momento da instalação e não dá para desfazer depois.
+  "Se os A1 no certmgr foram importados como exportáveis (marca a chave privada como exportável)",
   "A URL exata de 'Minhas solicitações' e a de 'Ver detalhes' de um protocolo",
   "O texto que a página mostra quando o pedido está EM ANÁLISE",
   "O texto que a página mostra quando o pedido foi DEFERIDO",
