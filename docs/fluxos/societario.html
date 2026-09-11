@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Societário — fluxo técnico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Sans+3:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --paper:#F1F2F6; --surface:#FFFFFF; --surface-2:#E7E9F0;
+    --ink:#16181F; --ink-soft:#414654; --muted:#6E7386;
+    --line:#D5D8E2; --line-soft:#E5E7EF;
+    --accent:#3B4A8C; --accent-ink:#2A3667; --accent-wash:#E3E6F3;
+    --bot:#1F6B5B; --bot-wash:#DCEDE7;
+    --integ:#93551C; --integ-wash:#F6E9D8;
+    --stop:#97382B; --stop-wash:#F7E2DD;
+    --fs-micro:.7rem; --fs-meta:.82rem;
+    --lane-bg:#3B4A8C; --lane-fg:#FFFFFF;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#101218; --surface:#171A22; --surface-2:#1F2330;
+      --ink:#E6E8F0; --ink-soft:#B5BAC9; --muted:#838A9E;
+      --line:#2C3140; --line-soft:#232837;
+      --accent:#93A2E0; --accent-ink:#B3BEEC; --accent-wash:#1C2340;
+      --bot:#63C3AB; --bot-wash:#133029;
+      --integ:#D8A45F; --integ-wash:#2E2415;
+      --stop:#E2897A; --stop-wash:#33201C;
+      --lane-bg:#242A3D; --lane-fg:#D8DEF4;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#101218; --surface:#171A22; --surface-2:#1F2330;
+    --ink:#E6E8F0; --ink-soft:#B5BAC9; --muted:#838A9E;
+    --line:#2C3140; --line-soft:#232837;
+    --accent:#93A2E0; --accent-ink:#B3BEEC; --accent-wash:#1C2340;
+    --bot:#63C3AB; --bot-wash:#133029;
+    --integ:#D8A45F; --integ-wash:#2E2415;
+    --stop:#E2897A; --stop-wash:#33201C;
+    --lane-bg:#242A3D; --lane-fg:#D8DEF4;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:0 1.25rem 4rem;background:var(--paper);color:var(--ink);
+    font-family:"Source Sans 3",ui-sans-serif,system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:82rem;margin:0 auto;display:flex;flex-direction:column;gap:2.5rem}
+  h1,h2,h3{font-family:"Familjen Grotesk",ui-sans-serif,system-ui,sans-serif;margin:0;letter-spacing:-.017em;line-height:1.14;text-wrap:balance}
+  h1{font-size:clamp(1.9rem,1.6rem+1.2vw,2.6rem);font-weight:700}
+  h2{font-size:1.45rem;font-weight:600}
+  h3{font-size:1.02rem;font-weight:600}
+  p{margin:0}
+  code,.mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:.86em}
+  code{background:var(--surface-2);color:var(--ink-soft);padding:.08em .32em;border-radius:3px}
+  .eyebrow{font-family:"JetBrains Mono",monospace;font-size:var(--fs-micro);font-weight:500;
+    letter-spacing:.15em;text-transform:uppercase;color:var(--muted)}
+  .prose{max-width:66ch;display:flex;flex-direction:column;gap:.85rem}
+  .prose p{color:var(--ink-soft)}
+
+  header.head{padding:3rem 0 1.75rem;border-bottom:2px solid var(--ink);display:flex;flex-direction:column;gap:1rem}
+  .head-meta{display:flex;flex-wrap:wrap;gap:.35rem 1.5rem;align-items:baseline}
+
+  section{display:flex;flex-direction:column;gap:1.2rem}
+  .sec-head{display:flex;flex-direction:column;gap:.45rem}
+
+  /* ---- Legenda: o padrão de notação ---- */
+  .legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+  .legend > div{background:var(--surface);padding:.85rem 1rem;display:flex;flex-direction:column;gap:.3rem}
+  .legend .k{font-size:var(--fs-meta);color:var(--ink-soft)}
+
+  .chip{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:var(--fs-micro);
+    letter-spacing:.05em;text-transform:uppercase;padding:.13rem .4rem;border-radius:3px;white-space:nowrap}
+  .chip.pessoa{background:var(--surface-2);color:var(--ink-soft)}
+  .chip.bot{background:var(--bot-wash);color:var(--bot)}
+  .chip.integ{background:var(--integ-wash);color:var(--integ)}
+  .chip.motor{background:var(--accent-wash);color:var(--accent-ink)}
+  .chip.tela{background:var(--surface-2);color:var(--muted)}
+  .chip.stop{background:var(--stop-wash);color:var(--stop)}
+
+  /* ---- Raia de processo ---- */
+  .lane{display:grid;grid-template-columns:11rem 1fr;background:var(--surface);
+    border:1px solid var(--line);border-radius:5px;overflow:hidden}
+  @media (max-width:60rem){.lane{grid-template-columns:1fr}}
+  /* A lateral da raia tem tokens proprios: no claro e o indigo cheio com texto
+     branco; no escuro o mesmo branco sobre o indigo claro do tema nao teria
+     contraste, entao o fundo escurece e o texto vem do token. */
+  .lane-side{background:var(--lane-bg);color:var(--lane-fg);padding:1.1rem 1.15rem;
+    display:flex;flex-direction:column;gap:.5rem}
+  .lane-side h3{color:var(--lane-fg)}
+  .lane-n{font-family:"Familjen Grotesk",sans-serif;font-weight:700;font-size:2.6rem;line-height:.85;
+    letter-spacing:-.04em;color:var(--lane-fg);opacity:.5}
+  .lane-meta{font-family:"JetBrains Mono",monospace;font-size:var(--fs-micro);color:var(--lane-fg);
+    opacity:.85;line-height:1.5}
+  .lane-body{padding:1.1rem 1.2rem;display:flex;flex-direction:column;gap:.9rem;min-width:0}
+
+  /* ---- Trilha de etapas ---- */
+  .track{display:flex;flex-wrap:wrap;gap:.55rem;align-items:stretch}
+  .stepbox{flex:1 1 9.5rem;min-width:9.5rem;border:1px solid var(--line);border-radius:4px;
+    background:var(--surface);padding:.6rem .65rem;display:flex;flex-direction:column;gap:.35rem}
+  .stepbox[data-x="bot"]{border-color:color-mix(in srgb,var(--bot) 45%,transparent);background:color-mix(in srgb,var(--bot-wash) 40%,var(--surface))}
+  .stepbox[data-x="integ"]{border-color:color-mix(in srgb,var(--integ) 45%,transparent);background:color-mix(in srgb,var(--integ-wash) 40%,var(--surface))}
+  .stepbox .n{font-family:"JetBrains Mono",monospace;font-size:var(--fs-micro);font-weight:600;color:var(--accent)}
+  .stepbox .t{font-size:var(--fs-meta);font-weight:600;line-height:1.3}
+  .stepbox .m{font-family:"JetBrains Mono",monospace;font-size:var(--fs-micro);color:var(--muted);word-break:break-word}
+
+  /* ---- Portão de decisão e laço ---- */
+  .gate{border:1.5px solid var(--accent);border-radius:4px;background:var(--accent-wash);
+    padding:.7rem .8rem;display:flex;flex-direction:column;gap:.4rem;flex:1 1 13rem;min-width:13rem}
+  .gate .q{font-size:var(--fs-meta);font-weight:600;color:var(--accent-ink)}
+  .gate .out{font-family:"JetBrains Mono",monospace;font-size:var(--fs-micro);color:var(--ink-soft)}
+  .loop{border:1px dashed var(--stop);border-radius:4px;background:color-mix(in srgb,var(--stop-wash) 55%,transparent);
+    padding:.7rem .8rem;display:flex;flex-direction:column;gap:.35rem;flex:1 1 15rem;min-width:15rem}
+  .loop .t{font-size:var(--fs-meta);font-weight:600;color:var(--stop)}
+  .loop p{font-size:var(--fs-micro);color:var(--ink-soft);line-height:1.45}
+
+  /* ---- Ramificação paralela ---- */
+  .branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.6rem}
+  .branch{border:1px solid var(--line);border-radius:4px;background:var(--surface);padding:.7rem .8rem;
+    display:flex;flex-direction:column;gap:.35rem}
+  .branch h4{margin:0;font-family:"Familjen Grotesk",sans-serif;font-size:.92rem;font-weight:600;
+    display:flex;align-items:center;gap:.4rem}
+  .branch ul{margin:0;padding-left:1rem;font-size:var(--fs-micro);color:var(--ink-soft);
+    display:flex;flex-direction:column;gap:.2rem;line-height:1.45}
+
+  .note{font-size:var(--fs-meta);color:var(--muted);max-width:66ch}
+
+  /* ---- Exigências do motor ---- */
+  .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:4px;background:var(--surface)}
+  table{border-collapse:collapse;width:100%;font-size:var(--fs-meta)}
+  th,td{padding:.6rem .85rem;text-align:left;border-bottom:1px solid var(--line-soft);vertical-align:top}
+  th{font-family:"JetBrains Mono",monospace;font-weight:500;font-size:var(--fs-micro);letter-spacing:.09em;
+    text-transform:uppercase;color:var(--muted);background:var(--surface-2);white-space:nowrap}
+  tbody tr:last-child td{border-bottom:0}
+  td.mono{font-family:"JetBrains Mono",monospace;font-size:.79rem}
+
+  footer.foot{border-top:1px solid var(--line);padding-top:1.3rem;color:var(--muted);
+    font-size:var(--fs-meta);max-width:66ch;display:flex;flex-direction:column;gap:.4rem}
+  @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="head">
+    <div class="head-meta">
+      <span class="eyebrow">Fluxo técnico · setor societário</span>
+      <span class="eyebrow">traduzido em 10 set 2026</span>
+    </div>
+    <h1>Societário — fluxo técnico</h1>
+    <div class="prose">
+      <p>
+        Tradução do fluxograma que o setor montou. <strong>A ordem e o vocabulário são os
+        dele</strong> — mudar isso para caber num modelo é como se perde a validação. O que esta
+        versão acrescenta são três camadas: quem executa cada etapa, o que a sustenta no Connect, e
+        o que o fluxo exige do motor que o protótipo não tem.
+      </p>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="eyebrow">Como ler</span></div>
+    <div class="legend">
+      <div><span class="chip pessoa">pessoa</span><span class="k">Executa alguém do setor, hoje e depois.</span></div>
+      <div><span class="chip bot">robô</span><span class="k">Candidato a automação — trabalho repetitivo que hoje é manual.</span></div>
+      <div><span class="chip integ">integração</span><span class="k">Depende de sistema de fora: Junta, Receita, prefeitura.</span></div>
+      <div><span class="chip motor">motor</span><span class="k">Modelo e máquina de estado. Só se constrói com fluxo.</span></div>
+      <div><span class="chip tela">tela</span><span class="k">Campo, coluna, rótulo. Não espera fluxo.</span></div>
+      <div><span class="chip stop">laço</span><span class="k">Volta por exigência. É o que estoura prazo — e o contador dele é KPI.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Processo 1</span>
+      <h2>Constituição — o fluxo canônico</h2>
+      <p class="note">
+        Dez etapas, 4 a 7 dias. É o desenho que a Alteração Contratual repete inteiro e do qual a
+        Baixa é variação — então é aqui que o motor se define.
+      </p>
+    </div>
+
+    <div class="lane">
+      <div class="lane-side">
+        <span class="lane-n">1</span>
+        <h3>Constituição</h3>
+        <span class="lane-meta">4 a 7 dias<br>10 etapas<br>varia com entraves</span>
+      </div>
+      <div class="lane-body">
+        <div class="track">
+          <div class="stepbox"><span class="n">1</span><span class="t">Reunir documentação</span><span class="m">ClientDocument · portal</span><span><span class="chip bot">robô</span> <span class="chip tela">tela</span></span></div>
+          <div class="stepbox" data-x="integ"><span class="n">2</span><span class="t">Viabilidade</span><span class="m">Junta / REDESIM</span><span><span class="chip integ">integração</span> <span class="chip motor">motor</span></span></div>
+          <div class="stepbox"><span class="n">3</span><span class="t">Elaboração da minuta</span><span class="m">Document · template</span><span><span class="chip pessoa">pessoa</span> <span class="chip tela">tela</span></span></div>
+          <div class="stepbox" data-x="integ"><span class="n">4</span><span class="t">Sistemas da Junta</span><span class="m">Protocol</span><span><span class="chip integ">integração</span> <span class="chip motor">motor</span></span></div>
+          <div class="stepbox" data-x="integ"><span class="n">5</span><span class="t">Sistemas da Receita</span><span class="m">Protocol</span><span><span class="chip integ">integração</span> <span class="chip motor">motor</span></span></div>
+        </div>
+
+        <div class="track">
+          <div class="gate">
+            <span class="q">6 · Registro deferido?</span>
+            <span class="out">sim → etapa 7</span>
+            <span class="out">não → exigência</span>
+            <span><span class="chip bot">robô</span> <span class="chip motor">motor</span></span>
+          </div>
+          <div class="loop">
+            <span class="t">Exigências / entraves → ajustes e reapresentação</span>
+            <p>
+              Volta para a etapa 4 ou 5, não para o começo. <strong>Não é etapa, é estado</strong>:
+              o mesmo processo passa por aqui zero ou muitas vezes, e cada volta custa dias.
+              Precisa de contador, motivo e prazo próprio.
+            </p>
+            <span><span class="chip pessoa">pessoa</span> <span class="chip motor">motor</span></span>
+          </div>
+        </div>
+
+        <div class="track">
+          <div class="stepbox"><span class="n">7</span><span class="t">Licenciamentos, cadastros, senhas e vínculos</span><span class="m">BpoCredential · License</span><span><span class="chip pessoa">pessoa</span> <span class="chip motor">motor</span></span></div>
+          <div class="stepbox"><span class="n">8</span><span class="t">Procurações Receita Federal</span><span class="m">Document + vencimento</span><span><span class="chip bot">robô</span> <span class="chip motor">motor</span></span></div>
+          <div class="stepbox"><span class="n">9</span><span class="t">Cadastro e comunicação interna</span><span class="m">Company · Handoff · Kanban</span><span><span class="chip pessoa">pessoa</span> <span class="chip tela">tela</span></span></div>
+          <div class="stepbox"><span class="n">10</span><span class="t">Envio de documentação ao cliente</span><span class="m">ClientDocument · portal</span><span><span class="chip bot">robô</span> <span class="chip tela">tela</span></span></div>
+        </div>
+
+        <p class="note">
+          <strong>Onde a automação vale mais:</strong> a etapa 6. Hoje alguém abre o site do órgão
+          todo dia para ver se saiu. Um observador de protocolo que vira o estado sozinho elimina
+          uma rotina diária, avisa o cliente na hora e alimenta o prazo realizado sem ninguém
+          anotar nada.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Processos 2 e 3</span>
+      <h2>Alteração e Baixa — mesmo motor, outro conteúdo</h2>
+    </div>
+
+    <div class="lane">
+      <div class="lane-side">
+        <span class="lane-n">2</span>
+        <h3>Alteração Contratual</h3>
+        <span class="lane-meta">7 a 15 dias<br>10 etapas</span>
+      </div>
+      <div class="lane-body">
+        <p class="note">
+          <strong>Fluxo idêntico ao da Constituição</strong>, etapa por etapa, incluindo o laço de
+          exigência. O que muda é o conteúdo do template e o que se altera: endereço, nome
+          empresarial, sócios, atividades e CNAEs, capital social, cláusulas, administração.
+        </p>
+        <p class="note">
+          Isso é a prova de que <code>ProcessTemplate</code> está certo: dois tipos de processo,
+          um motor, dois conteúdos. <strong>Se precisássemos de código diferente para cada um, o
+          modelo estaria errado.</strong>
+        </p>
+      </div>
+    </div>
+
+    <div class="lane" style="margin-top:1rem">
+      <div class="lane-side">
+        <span class="lane-n">3</span>
+        <h3>Baixa</h3>
+        <span class="lane-meta">5 dias<br>9 etapas</span>
+      </div>
+      <div class="lane-body">
+        <div class="track">
+          <div class="stepbox"><span class="n">1</span><span class="t">Reunir documentação</span><span class="m">ClientDocument</span><span><span class="chip bot">robô</span></span></div>
+          <div class="stepbox" data-x="bot"><span class="n">2</span><span class="t">Levantamento de débitos</span><span class="m">consulta fiscal</span><span><span class="chip bot">robô</span> <span class="chip motor">motor</span></span></div>
+          <div class="stepbox"><span class="n">3</span><span class="t">Elaboração da minuta</span><span class="m">Document</span><span><span class="chip pessoa">pessoa</span></span></div>
+          <div class="stepbox" data-x="integ"><span class="n">4·5</span><span class="t">Sistemas da Junta e da Receita</span><span class="m">Protocol</span><span><span class="chip integ">integração</span></span></div>
+          <div class="stepbox" data-x="integ"><span class="n">7</span><span class="t">Baixa municipal na Prefeitura</span><span class="m">Protocol municipal</span><span><span class="chip integ">integração</span> <span class="chip motor">motor</span></span></div>
+        </div>
+        <p class="note">
+          Duas diferenças que o motor precisa admitir: a etapa 2 é <strong>exclusiva deste tipo</strong>
+          (levantamento de débitos — forte candidata a robô), e a etapa 7 introduz um
+          <strong>terceiro órgão</strong>, a prefeitura. Órgão não pode ser campo fixo com Junta e
+          Receita: já são três, e o alvará traz mais.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Processo 4</span>
+      <h2>Alvará e licenças — o que quebra uma lista ordenada</h2>
+      <p class="note">
+        O setor já o descreve como "processo moroso, fluxo variável". Três etapas em sequência e
+        depois <strong>ramificação paralela</strong>: as licenças correm ao mesmo tempo,
+        independentes, e uma empresa pode precisar de uma, duas ou três.
+      </p>
+    </div>
+
+    <div class="lane">
+      <div class="lane-side">
+        <span class="lane-n">4</span>
+        <h3>Alvará de Funcionamento e Licenças</h3>
+        <span class="lane-meta">fluxo variável<br>sem prazo médio</span>
+      </div>
+      <div class="lane-body">
+        <div class="track">
+          <div class="stepbox"><span class="n">1</span><span class="t">Reunir informações da empresa, atividade e imóvel</span><span class="m">Company · endereço</span><span><span class="chip pessoa">pessoa</span></span></div>
+          <div class="stepbox"><span class="n">2</span><span class="t">Emissão da taxa / protocolo</span><span class="m">Fee · Protocol</span><span><span class="chip integ">integração</span> <span class="chip motor">motor</span></span></div>
+          <div class="gate">
+            <span class="q">3 · Qual licença é necessária?</span>
+            <span class="out">→ uma, duas ou as três</span>
+            <span><span class="chip pessoa">pessoa</span> <span class="chip motor">motor</span></span>
+          </div>
+        </div>
+
+        <div class="branches">
+          <div class="branch">
+            <h4>A · Corpo de Bombeiros</h4>
+            <ul>
+              <li>Análise de risco</li>
+              <li>Documentação e exigências técnicas</li>
+              <li>Vistoria, quando aplicável</li>
+              <li>Emissão / regularização</li>
+            </ul>
+            <span><span class="chip integ">integração</span></span>
+          </div>
+          <div class="branch">
+            <h4>B · Meio Ambiente</h4>
+            <ul>
+              <li>Análise da atividade e impacto</li>
+              <li>Protocolos e documentos específicos</li>
+              <li>Exigências complementares</li>
+              <li>Licença / declaração ambiental</li>
+            </ul>
+            <span><span class="chip integ">integração</span></span>
+          </div>
+          <div class="branch">
+            <h4>C · Vigilância Sanitária</h4>
+            <ul>
+              <li>Documentação do estabelecimento</li>
+              <li>Responsável técnico, quando aplicável</li>
+              <li>Vistoria e adequações</li>
+              <li>Liberação sanitária</li>
+            </ul>
+            <span><span class="chip integ">integração</span></span>
+          </div>
+        </div>
+
+        <div class="track">
+          <div class="stepbox" data-x="bot"><span class="t">Acompanhamento até deferimento</span><span class="m">o mesmo observador da etapa 6</span><span><span class="chip bot">robô</span></span></div>
+          <div class="stepbox"><span class="t">Cadastro / comunicação interna</span><span class="m">Company · Handoff</span><span><span class="chip pessoa">pessoa</span></span></div>
+          <div class="stepbox"><span class="t">Envio ao cliente</span><span class="m">ClientDocument · portal</span><span><span class="chip bot">robô</span></span></div>
+        </div>
+
+        <p class="note">
+          <strong>Cada licença tem particularidades próprias</strong>, diz o setor — e cada uma tem
+          vencimento, o que liga este processo ao alerta de vencimento que o plano geral já previa.
+          Licença vencida é empresa operando irregular.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">A saída deste documento</span>
+      <h2>O que isto exige do motor</h2>
+      <p class="note">
+        Cinco coisas que o fluxo mostra e que o modelo do protótipo, do jeito que está, não segura.
+        É esta lista que vira migration — e é ela que a validação final confere.
+      </p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Exigência</th><th>De onde vem</th><th>Por que não dá para deixar para depois</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">Laço de reapresentação</td>
+            <td>"Exigências / entraves → ajustes e reapresentação", nos três primeiros processos</td>
+            <td>Uma lista ordenada de etapas não expressa "volta para a 4". Sem contador de voltas, o prazo realizado não tem explicação — e é a única métrica que diz se a automação funcionou.</td>
+          </tr>
+          <tr>
+            <td class="mono">Ramificação paralela</td>
+            <td>As três licenças do alvará, simultâneas e independentes</td>
+            <td>Numerar como sequência quebra na primeira empresa que precisa de duas. É modelagem, não tela: exige etapa sem ordem obrigatória.</td>
+          </tr>
+          <tr>
+            <td class="mono">Órgão como entidade</td>
+            <td>Junta, Receita, Prefeitura, Bombeiros, Meio Ambiente, Vigilância</td>
+            <td>Já são seis, e cada um tem protocolo, prazo e exigência próprios. Campo fixo com dois valores morre no processo 3.</td>
+          </tr>
+          <tr>
+            <td class="mono">Executor não-humano</td>
+            <td>Toda etapa marcada <span class="chip bot">robô</span></td>
+            <td><strong>A mais cara de retrofitar.</strong> Se o histórico não sabe dizer se foi pessoa, robô ou integração, não dá para auditar nem para medir o que a automação economizou — e acrescentar isso depois é migration em cima de todo o passado.</td>
+          </tr>
+          <tr>
+            <td class="mono">Prazo previsto × realizado</td>
+            <td>"4 a 7 dias", "7 a 15", "5" — e "pode haver variações em caso de entraves"</td>
+            <td>O prazo é do tipo de processo, o realizado é da instância, e a diferença é o laço. Os três precisam existir juntos para qualquer um deles significar algo.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p>Traduzido do fluxograma do Departamento Societário da 41 Contábil, recebido em 10/09/2026.</p>
+    <p>A ordem e os nomes das etapas são do setor. As camadas de executor, modelo e motor são leitura técnica — e é o que a validação do coordenador deve contestar se estiver errado.</p>
+    <p>Padrão de notação em <code>docs/fluxos/README.md</code>. Um arquivo por setor.</p>
+  </footer>
+
+</div>
+</body>
+</html>

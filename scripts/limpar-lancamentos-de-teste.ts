@@ -70,14 +70,23 @@ async function main() {
   // Transacional: um documento voltar para PENDENTE sem o lançamento sair (ou
   // o contrário) deixaria o acervo e o financeiro discordando, que é o estado
   // que ninguém consegue diagnosticar depois.
-  const resultado = await prisma.$transaction(async (tx) => {
-    const apagados = await tx.financeEntry.deleteMany({});
-    const soltos = await tx.fiscalDocument.updateMany({
-      where: { destination: "LANCADO" },
-      data: { destination: "PENDENTE" },
-    });
-    return { apagados: apagados.count, soltos: soltos.count };
-  });
+  const resultado = await prisma.$transaction(
+    async (tx) => {
+      const apagados = await tx.financeEntry.deleteMany({});
+      const soltos = await tx.fiscalDocument.updateMany({
+        where: { destination: "LANCADO" },
+        data: { destination: "PENDENTE" },
+      });
+      return { apagados: apagados.count, soltos: soltos.count };
+    },
+    // O padrão do Prisma é 5s de transação interativa, e a primeira execução
+    // estourou em 11s — não por volume (são duas linhas), mas pela latência até
+    // o banco: cada ida e volta até `vps.41tech.cloud` custa segundos daqui. Um
+    // minuto é folga para uma janela de rede ruim sem virar transação eterna
+    // segurando lock. `maxWait` é o tempo esperando uma conexão livre no pool,
+    // que na mesma rede também não é instantâneo.
+    { timeout: 60_000, maxWait: 30_000 }
+  );
 
   console.log(
     `\n${resultado.apagados} lançamento(s) removido(s); ` +
