@@ -6,9 +6,9 @@ const COTACAO = 550; // centavos de real por dólar
 
 describe("custoEmCentavos", () => {
   it("calcula entrada e saída com preços diferentes", () => {
-    // 1M entrada a $3 + 1M saída a $15 = $18 → 18 * 550 = 9900 centavos
+    // 1M entrada a $2 + 1M saída a $10 = $12 → 12 * 550 = 6600 centavos
     const c = custoEmCentavos("claude-sonnet-5", { entrada: 1_000_000, saida: 1_000_000 }, COTACAO);
-    expect(c).toBe(9_900);
+    expect(c).toBe(6_600);
   });
 
   // A regra central do arquivo. Zero aqui seria um teto que não segura nada.

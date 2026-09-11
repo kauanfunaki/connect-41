@@ -4,21 +4,12 @@ import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { FinanceCategoryForm } from "@/components/admin/FinanceCategoryForm";
-import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { criarCategoria } from "../actions";
 
 export default async function NovaCategoriaPage() {
   const ctx = await getAuthContext();
   if (!isFullWrite(ctx.role)) notFound();
-
-  const prisma = getPrisma();
-  const grupos = await prisma.financeCategory.findMany({
-    where: { tenantId: ctx.tenantId, dreGroup: { not: null } },
-    select: { dreGroup: true },
-    distinct: ["dreGroup"],
-    orderBy: { dreGroup: "asc" },
-  });
 
   return (
     <PageContainer variant="narrow">
@@ -38,7 +29,6 @@ export default async function NovaCategoriaPage() {
         <FinanceCategoryForm
           action={criarCategoria}
           cancelHref="/admin/plano-de-contas"
-          gruposExistentes={grupos.map((g) => g.dreGroup!).filter(Boolean)}
         />
       </Card>
     </PageContainer>

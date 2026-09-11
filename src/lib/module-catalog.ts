@@ -134,6 +134,13 @@ export const MODULE_CATALOG: ModuleDef[] = [
     defaultEnabled: false,
   },
   {
+    code: "societario_licencas",
+    label: "Licencas",
+    sectorCode: "societario",
+    description: "Alvara, sanitaria, ambiental e AVCB - o que fica valendo, e a fila de renovacao",
+    defaultEnabled: false,
+  },
+  {
     code: "societario_processos",
     label: "Processos",
     sectorCode: "societario",
@@ -187,6 +194,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   bpo_manual:              "/bpo-manual",
   fiscal_documentos:       "/documentos-fiscais",
   societario_processos:    "/processos",
+  societario_licencas:     "/licencas",
   bpo_contas_pagar:        "/pagar",
   bpo_contas_receber:      "/receber",
 };

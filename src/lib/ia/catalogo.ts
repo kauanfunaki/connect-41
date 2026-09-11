@@ -213,9 +213,12 @@ const MODELO_DA_FAIXA: Record<AiProvider, Record<FaixaDeModelo, string>> = {
     complexo: "claude-opus-5",
   },
   OPENAI: {
-    rapido: "gpt-4.1-mini",
-    padrao: "gpt-4.1",
-    complexo: "gpt-4.1",
+    // Conferido na página de preços em 11/09/2026: a linha do `gpt-4.1` saiu
+    // dos modelos atuais. Apontar para ela era exatamente o erro que este
+    // arquivo existe para impedir — e eu o cometi ao escrevê-lo.
+    rapido: "gpt-5.6-luna",
+    padrao: "gpt-5.6-terra",
+    complexo: "gpt-6-astra",
   },
 };
 

@@ -23,12 +23,6 @@ export default async function EditarCategoriaPage({
   });
   if (!categoria) notFound();
 
-  const grupos = await prisma.financeCategory.findMany({
-    where: { tenantId: ctx.tenantId, dreGroup: { not: null } },
-    select: { dreGroup: true },
-    distinct: ["dreGroup"],
-    orderBy: { dreGroup: "asc" },
-  });
 
   return (
     <PageContainer variant="narrow">
@@ -54,7 +48,6 @@ export default async function EditarCategoriaPage({
             kind: categoria.kind,
             dreGroup: categoria.dreGroup,
           }}
-          gruposExistentes={grupos.map((g) => g.dreGroup!).filter(Boolean)}
         />
       </Card>
     </PageContainer>

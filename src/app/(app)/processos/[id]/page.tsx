@@ -18,6 +18,8 @@ import {
 } from "@/lib/societario/processo";
 import { SITUACAO_LABEL } from "@/components/societario/ProcessosFila";
 import { RoteiroDoProcesso, type EtapaNaTela } from "@/components/societario/RoteiroDoProcesso";
+import { TaxasDoProcesso } from "@/components/societario/TaxasDoProcesso";
+import { taxasDoProcesso } from "@/lib/societario/licencas-data";
 import {
   concluirEtapa,
   dispensarEtapa,
@@ -181,6 +183,8 @@ export default async function ProcessoDetalhePage({
 
   const empresaNome = nomeExibicao(processo.company);
 
+  const { taxas, custo } = await taxasDoProcesso(ctx.tenantId, processo.id);
+
   return (
     <PageContainer>
       <BackButton className="mb-3" />
@@ -246,6 +250,10 @@ export default async function ProcessoDetalhePage({
           alternarItem: alternarItemDoChecklist,
         }}
       />
+
+      <div className="mt-4">
+        <TaxasDoProcesso taxas={taxas} custo={custo} />
+      </div>
 
       <p className="mt-6 text-[11px] text-fg-muted">
         Roteiro versão {processo.template.version} — congelado na abertura, para o processo não
