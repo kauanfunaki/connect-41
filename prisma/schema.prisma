@@ -526,6 +526,16 @@ model Tenant {
   financeEntries           FinanceEntry[]
   agentEvaluationSummaries AgentEvaluationSummary[]
   sectorTaskViews          SectorTaskView[]
+  processOrgans            ProcessOrgan[]
+  processTypes             ProcessType[]
+  processTemplates         ProcessTemplate[]
+  processTemplateSteps     ProcessTemplateStep[]
+  processTemplateItems     ProcessTemplateChecklistItem[]
+  processes                Process[]
+  processSteps             ProcessStep[]
+  processChecklistItems    ProcessChecklistItem[]
+  processProtocols         ProcessProtocol[]
+  processRequirements      ProcessRequirement[]
 
   @@map("tenants")
 }
@@ -722,6 +732,9 @@ model User {
 
   @@unique([tenantId, email])
   @@index([tenantId])
+  ownedProcesses    Process[]     @relation("ProcessOwner")
+  executedProcessSteps ProcessStep[] @relation("ProcessStepExecutor")
+
   @@map("users")
 }
 
@@ -956,6 +969,8 @@ model Company {
   @@index([tenantId])
   @@index([tenantId, status])
   @@index([tenantId, clientGroupId])
+  societarioProcesses Process[]
+
   @@map("companies")
 }
 
@@ -3501,4 +3516,357 @@ model BpoCredentialView {
 
   @@index([credentialId])
   @@map("bpo_credential_views")
+}
+
+
+// ─── Societário: o motor de processos ────────────────────────────────────────
+//
+// Derivado do fluxograma que o setor montou (docs/fluxos/societario.html), e
+// **não** do protótipo: o protótipo tem a tela, o fluxo tem o que acontece
+// dentro dela. Cinco coisas vieram de lá, e cada uma responde a algo que uma
+// lista ordenada de etapas não expressa — o porquê está em cada modelo.
+//
+// O motor é multi-tenant e dirigido por dado. A Constituição da 41 é um
+// template, não código: outro escritório tem outra sequência, outros órgãos e
+// outro prazo. O teste disso é grátis e está no próprio fluxo — Constituição e
+// Alteração Contratual têm o mesmo desenho com conteúdo diferente. **Se as duas
+// exigirem código diferente, este modelo está errado.**
+
+/// Quem executou uma etapa. Existe desde a primeira migration de propósito:
+/// acrescentar isto depois é migration em cima de todo o histórico, e histórico
+/// que não sabe dizer "foi um robô" não serve nem para auditar nem para medir o
+/// que a automação economizou.
+enum ProcessActor {
+  PESSOA
+  ROBO
+  INTEGRACAO
+}
+
+enum ProcessStatus {
+  EM_ANDAMENTO
+  /// Protocolado, esperando o órgão. É onde o observador de protocolo atua.
+  AGUARDANDO_ORGAO
+  /// O órgão devolveu exigência. O processo volta a ter trabalho humano.
+  EM_EXIGENCIA
+  CONCLUIDO
+  CANCELADO
+}
+
+enum ProcessStepStatus {
+  PENDENTE
+  EM_ANDAMENTO
+  CONCLUIDA
+  /// Não se aplica a este processo — o alvará que não precisa de vistoria
+  /// sanitária, por exemplo. Diferente de pendente: ninguém está esperando.
+  DISPENSADA
+}
+
+enum ProcessProtocolOutcome {
+  PENDENTE
+  DEFERIDO
+  EXIGENCIA
+}
+
+/// Órgão onde se protocola. **Entidade, não enum**: o fluxo do societário já
+/// cita seis (Junta, Receita, Prefeitura, Bombeiros, Meio Ambiente, Vigilância)
+/// e eles mudam por município e por estado. Campo fixo com dois valores morre
+/// no processo de Baixa, que introduz a prefeitura.
+model ProcessOrgan {
+  id       String  @id @default(uuid())
+  tenantId String
+  name     String  @db.VarChar(120)
+  /// Sigla curta para caber em coluna de tabela: JUCEPAR, RFB, PMLDA.
+  acronym  String? @db.VarChar(20)
+  /// Onde o robô observa o protocolo. Nulo enquanto o acompanhamento for manual.
+  trackingUrl String? @db.VarChar(500)
+  active   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant        Tenant                @relation(fields: [tenantId], references: [id])
+  templateSteps ProcessTemplateStep[]
+  protocols     ProcessProtocol[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("process_organs")
+}
+
+/// Tipo de processo: Constituição, Alteração Contratual, Baixa, Alvará.
+model ProcessType {
+  id       String  @id @default(uuid())
+  tenantId String
+  name     String  @db.VarChar(120)
+  /// Código estável para o app referenciar sem depender do rótulo, que o
+  /// escritório pode renomear.
+  code     String  @db.VarChar(40)
+  description String? @db.VarChar(500)
+
+  /// Prazo médio declarado pelo setor — "4 a 7 dias", "7 a 15", "5". É o
+  /// PREVISTO; o realizado sai das datas da instância, e a diferença entre os
+  /// dois se explica pelas voltas de exigência. Os três só significam algo
+  /// juntos.
+  expectedDaysMin Int?
+  expectedDaysMax Int?
+
+  /// O alvará é "fluxo variável" nas palavras do próprio setor: não tem
+  /// sequência fixa nem prazo médio. A tela não deve prometer previsão para
+  /// um tipo assim.
+  variableFlow Boolean @default(false)
+
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant            @relation(fields: [tenantId], references: [id])
+  templates ProcessTemplate[]
+  processes Process[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("process_types")
+}
+
+/// Versão do roteiro de um tipo. Versionado porque roteiro muda, e processo em
+/// andamento **não pode mudar embaixo de quem está tocando ele**: a instância
+/// congela a versão que valia quando começou.
+model ProcessTemplate {
+  id       String  @id @default(uuid())
+  tenantId String
+  typeId   String
+  version  Int     @default(1)
+  /// Só uma versão publicada por tipo de cada vez — é a que instância nova usa.
+  published Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant                @relation(fields: [tenantId], references: [id])
+  type      ProcessType           @relation(fields: [typeId], references: [id])
+  steps     ProcessTemplateStep[]
+  processes Process[]
+
+  @@unique([typeId, version])
+  @@index([tenantId])
+  @@map("process_templates")
+}
+
+/// Etapa do roteiro.
+model ProcessTemplateStep {
+  id         String @id @default(uuid())
+  tenantId   String
+  templateId String
+  /// Ordem dentro do roteiro. Duas etapas do mesmo `parallelGroup` compartilham
+  /// posição: a ordem entre elas não é obrigatória.
+  position   Int
+  label      String @db.VarChar(160)
+  description String? @db.VarChar(1000)
+
+  /// Etapas que correm ao mesmo tempo e independentes carregam o mesmo grupo.
+  /// É o caso das três licenças do alvará — Bombeiros, Meio Ambiente e
+  /// Vigilância. Numerá-las como sequência quebra na primeira empresa que
+  /// precisa de duas, e o setor já descreve esse trecho como ramificação.
+  parallelGroup String? @db.VarChar(40)
+
+  /// Quem se espera que execute. O realizado fica em `ProcessStep.actor`, e a
+  /// diferença entre os dois é exatamente o que a automação mudou.
+  expectedActor ProcessActor @default(PESSOA)
+
+  /// Etapa que protocola em órgão. Quando preenchido, concluir a etapa abre um
+  /// `ProcessProtocol` em vez de apenas marcar como feita.
+  organId String?
+
+  /// Nem toda etapa vale para todo processo — a vistoria sanitária depende da
+  /// atividade. Opcional pode nascer DISPENSADA.
+  optional Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant                        @relation(fields: [tenantId], references: [id])
+  template ProcessTemplate               @relation(fields: [templateId], references: [id])
+  organ    ProcessOrgan?                 @relation(fields: [organId], references: [id])
+  items    ProcessTemplateChecklistItem[]
+  steps    ProcessStep[]
+
+  @@index([templateId, position])
+  @@index([tenantId])
+  @@map("process_template_steps")
+}
+
+model ProcessTemplateChecklistItem {
+  id       String @id @default(uuid())
+  tenantId String
+  stepId   String
+  position Int
+  label    String @db.VarChar(200)
+  required Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant              @relation(fields: [tenantId], references: [id])
+  step   ProcessTemplateStep @relation(fields: [stepId], references: [id])
+  items  ProcessChecklistItem[]
+
+  @@index([stepId, position])
+  @@index([tenantId])
+  @@map("process_template_checklist_items")
+}
+
+/// Uma instância: este ato societário, desta empresa.
+model Process {
+  id        String @id @default(uuid())
+  tenantId  String
+  companyId String
+  typeId    String
+  /// Versão congelada do roteiro (ver ProcessTemplate).
+  templateId String
+
+  status ProcessStatus @default(EM_ANDAMENTO)
+
+  startedAt   DateTime  @default(now())
+  concludedAt DateTime?
+
+  /// Responsável do setor. Nulo em processo que ainda não foi distribuído.
+  ownerUserId String?
+
+  notes String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant          @relation(fields: [tenantId], references: [id])
+  company   Company         @relation(fields: [companyId], references: [id])
+  type      ProcessType     @relation(fields: [typeId], references: [id])
+  template  ProcessTemplate @relation(fields: [templateId], references: [id])
+  owner     User?           @relation("ProcessOwner", fields: [ownerUserId], references: [id])
+  steps     ProcessStep[]
+  protocols ProcessProtocol[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, companyId])
+  @@index([tenantId, typeId, startedAt])
+  @@map("processes")
+}
+
+model ProcessStep {
+  id             String @id @default(uuid())
+  tenantId       String
+  processId      String
+  templateStepId String
+
+  status ProcessStepStatus @default(PENDENTE)
+
+  startedAt DateTime?
+  doneAt    DateTime?
+
+  /// O que de fato executou. `PESSOA` guarda `executedByUserId`; `ROBO` e
+  /// `INTEGRACAO` guardam `automationRef` — o código do robô ou do plugin que
+  /// rodou. É a coluna que responde "isto foi automático?" sem adivinhação.
+  actor            ProcessActor?
+  executedByUserId String?
+  automationRef    String? @db.VarChar(80)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant       Tenant                @relation(fields: [tenantId], references: [id])
+  process      Process               @relation(fields: [processId], references: [id], onDelete: Cascade)
+  templateStep ProcessTemplateStep   @relation(fields: [templateStepId], references: [id])
+  executedBy   User?                 @relation("ProcessStepExecutor", fields: [executedByUserId], references: [id])
+  items        ProcessChecklistItem[]
+  protocols    ProcessProtocol[]
+
+  @@unique([processId, templateStepId])
+  @@index([tenantId, status])
+  @@map("process_steps")
+}
+
+model ProcessChecklistItem {
+  id             String @id @default(uuid())
+  tenantId       String
+  stepId         String
+  templateItemId String
+  done           Boolean @default(false)
+  doneAt         DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant       Tenant                       @relation(fields: [tenantId], references: [id])
+  step         ProcessStep                  @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  templateItem ProcessTemplateChecklistItem @relation(fields: [templateItemId], references: [id])
+
+  @@unique([stepId, templateItemId])
+  @@index([tenantId])
+  @@map("process_checklist_items")
+}
+
+/// Uma apresentação ao órgão. **É aqui que o laço do fluxo vira dado.**
+///
+/// O fluxograma mostra "Registro deferido? Não → Exigências → Ajustes e
+/// reapresentação → volta". Isso não é etapa, é estado: o mesmo processo passa
+/// por aqui zero ou muitas vezes. Modelado como linha por apresentação, o
+/// contador de voltas sai de graça (`attempt`), e com ele a única explicação
+/// possível para um prazo de 7 dias virar trinta.
+model ProcessProtocol {
+  id        String @id @default(uuid())
+  tenantId  String
+  processId String
+  /// A etapa que gerou este protocolo. Nulo se foi protocolado fora do roteiro.
+  stepId    String?
+  organId   String
+
+  /// 1 na primeira apresentação, 2 na primeira reapresentação, e assim por
+  /// diante. **É o KPI do setor** — quantas voltas este ato deu.
+  attempt Int @default(1)
+
+  /// Número que o órgão devolveu. Nulo enquanto não sai.
+  number String? @db.VarChar(80)
+
+  submittedAt DateTime  @default(now())
+  resolvedAt  DateTime?
+  outcome     ProcessProtocolOutcome @default(PENDENTE)
+
+  /// Quem apurou o desfecho. `ROBO` é o observador de protocolo — a automação
+  /// de maior valor do fluxo, que hoje é alguém abrindo o site todo dia.
+  resolvedByActor ProcessActor?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant       Tenant               @relation(fields: [tenantId], references: [id])
+  process      Process              @relation(fields: [processId], references: [id], onDelete: Cascade)
+  step         ProcessStep?         @relation(fields: [stepId], references: [id])
+  organ        ProcessOrgan         @relation(fields: [organId], references: [id])
+  requirements ProcessRequirement[]
+
+  @@unique([processId, organId, attempt])
+  @@index([tenantId, outcome])
+  @@map("process_protocols")
+}
+
+/// A exigência que um protocolo devolveu — a caixa vermelha do fluxo.
+model ProcessRequirement {
+  id         String @id @default(uuid())
+  tenantId   String
+  protocolId String
+
+  description String  @db.Text
+  raisedAt    DateTime @default(now())
+  /// Prazo que o órgão deu para cumprir. Nem todo órgão dá.
+  dueAt       DateTime?
+  resolvedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id])
+  protocol ProcessProtocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, resolvedAt])
+  @@map("process_requirements")
 }

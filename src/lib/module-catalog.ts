@@ -119,6 +119,13 @@ export const MODULE_CATALOG: ModuleDef[] = [
     // sabe dizer "nenhum documento".
     defaultEnabled: false,
   },
+  {
+    code: "societario_processos",
+    label: "Processos",
+    sectorCode: "societario",
+    description: "Constituição, alteração contratual, baixa e alvarás — com protocolo, exigência e prazo",
+    defaultEnabled: true,
+  },
 ];
 
 export function getModuleDef(code: string): ModuleDef | undefined {
@@ -149,6 +156,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   bpo_senhas:              "/bpo-senhas",
   bpo_manual:              "/bpo-manual",
   fiscal_documentos:       "/documentos-fiscais",
+  societario_processos:    "/processos",
 };
 
 export function getModuleRoute(code: string): string | undefined {
