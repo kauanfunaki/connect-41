@@ -18,6 +18,9 @@
 //   2. este script preenche. Nada ainda lê de lá.
 //   3. alguém confere as linhas na tela de integrações.
 //   4. só então os leitores passam a preferir a integração, com fallback.
+//      **Feito em 14/09** (`src/lib/integracoes/fonte.ts`): a integração vale
+//      quando está LIGADA e completa. Como este script as cria desligadas,
+//      ligar na vitrine é o que troca a fonte de cada cliente.
 //   5. e só depois as colunas antigas saem.
 //
 // Rodar este script duas vezes é seguro: ele pula o que já tem `integrationId`.

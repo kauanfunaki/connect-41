@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
 import { getPrisma } from "@/lib/prisma";
 import { decryptSecret } from "@/lib/crypto";
-import { formatInstantDateTime } from "@/lib/format";
+import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
 
 export type SmtpTestConfig = {
   host: string;
@@ -30,14 +30,15 @@ export type SmtpResult = { ok: true } | { ok: false; error: string };
  * endereço que vai quicar depois. O que isto separa é "nem saiu daqui" de "saiu
  * e sumiu lá fora" — que era a pergunta sem resposta.
  *
- * Só registra: quem decide o que fazer com a falha continua sendo o `catch` de
- * cada função.
+ * Registra e devolve a resposta: quem decide o que fazer com a falha continua
+ * sendo o `catch` de cada função, e quem precisa mostrar `rejected` na tela (o
+ * envio da taxa ao cliente) lê do retorno.
  */
 async function enviarComRegistro(
   transporter: nodemailer.Transporter,
   rotulo: string,
   mensagem: Parameters<nodemailer.Transporter["sendMail"]>[0]
-): Promise<void> {
+) {
   const info = await transporter.sendMail(mensagem);
   console.info(
     `[${rotulo}] enviado`,
@@ -51,6 +52,7 @@ async function enviarComRegistro(
       envelopeFrom: info.envelope?.from,
     })
   );
+  return info;
 }
 
 export async function verifySmtpConnection(config: SmtpTestConfig): Promise<SmtpResult> {
@@ -505,6 +507,91 @@ export async function sendInterviewInviteEmail(input: SendInterviewInviteEmailIn
     return { ok: true };
   } catch (err) {
     console.error("[sendInterviewInviteEmail]", err);
+    return { ok: false, error: "Falha ao enviar e-mail. Verifique a configuração de SMTP." };
+  }
+}
+
+export type SendTaxaAoClienteEmailInput = {
+  tenantId: string;
+  para: string[];
+  assunto: string;
+  empresaNome: string;
+  descricao: string;
+  valorCentavos: number;
+  vencimento: Date | null;
+  anexo: { nome: string; conteudo: Buffer };
+};
+
+export type ResultadoDoEnvioDaTaxa = { ok: true; recusados: string[] } | { ok: false; error: string };
+
+/** Endereço de `accepted`/`rejected`, que o nodemailer devolve como texto ou objeto. */
+function enderecoDe(r: unknown): string {
+  if (typeof r === "string") return r;
+  return (r as { address?: string } | null)?.address ?? "";
+}
+
+// Guia de taxa do Societário para os contatos da empresa — o passo 3 do fluxo do
+// Bombeiros ("enviar aos e-mails da empresa cadastrados no Acessórias").
+//
+// Diferente do e-mail de Documentos para Cliente, este SIM leva o anexo: não há
+// prova de visualização a registrar, e o que o cliente precisa é pagar a guia.
+//
+// Devolve os recusados pelo relay em vez de só `ok`: com três contatos, "enviado"
+// quando um deles voltou é o tipo de meia verdade que só aparece no vencimento.
+export async function sendTaxaAoClienteEmail(input: SendTaxaAoClienteEmailInput): Promise<ResultadoDoEnvioDaTaxa> {
+  const transport = await getTenantTransport(input.tenantId);
+  if (!transport) {
+    return {
+      ok: false,
+      error: "Nenhuma configuração de SMTP cadastrada para este workspace. Configure em Admin > Empresa (Tenant).",
+    };
+  }
+  const { transporter, config } = transport;
+
+  const valor = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(input.valorCentavos / 100);
+  const vencimento = input.vencimento ? formatInstantDate(input.vencimento) : null;
+
+  const html = emailShell(
+    `
+    <p class="email-text" style="font-size:14px; line-height:1.6; margin:0 0 16px; font-family:Arial,Helvetica,sans-serif;">
+      Olá! Segue em anexo a guia de <strong>${escapeHtml(input.descricao)}</strong> de
+      <strong>${escapeHtml(input.empresaNome)}</strong>.
+    </p>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="doc-card" style="margin:0 0 20px; border:1px solid; border-radius:10px;">
+      <tr>
+        <td style="padding:16px 18px;">
+          <p class="email-text-muted" style="margin:0 0 4px; font-size:10.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; font-family:Arial,Helvetica,sans-serif;">Valor</p>
+          <p class="email-text-strong" style="margin:0 0 12px; font-size:15px; font-weight:700; font-family:Arial,Helvetica,sans-serif;">${valor}</p>
+          ${
+            vencimento
+              ? `<p class="email-text-muted" style="margin:0 0 4px; font-size:10.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; font-family:Arial,Helvetica,sans-serif;">Vencimento</p>
+          <p class="email-text-strong" style="margin:0; font-size:15px; font-weight:700; font-family:Arial,Helvetica,sans-serif;">${vencimento}</p>`
+              : ""
+          }
+        </td>
+      </tr>
+    </table>
+
+    <p class="email-text-muted" style="font-size:12px; margin:0; font-family:Arial,Helvetica,sans-serif;">
+      Em caso de dúvida sobre a guia, entre em contato com o escritório.
+    </p>
+  `,
+    "Societário"
+  );
+
+  try {
+    const info = await enviarComRegistro(transporter, "sendTaxaAoClienteEmail", {
+      from: `"${config.fromName}" <${config.fromEmail}>`,
+      to: input.para,
+      subject: input.assunto,
+      html,
+      attachments: [{ filename: input.anexo.nome, content: input.anexo.conteudo, contentType: "application/pdf" }],
+    });
+    const recusados = ((info.rejected ?? []) as unknown[]).map(enderecoDe).filter(Boolean);
+    return { ok: true, recusados };
+  } catch (err) {
+    console.error("[sendTaxaAoClienteEmail]", err);
     return { ok: false, error: "Falha ao enviar e-mail. Verifique a configuração de SMTP." };
   }
 }

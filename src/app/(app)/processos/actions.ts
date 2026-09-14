@@ -17,6 +17,17 @@ import {
   precisaDeNumeroAMao,
 } from "@/lib/societario/executor";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
+import {
+  ehTaxaDoBombeiros,
+  arquivarTaxaDeBombeiros,
+  assuntoDoEnvio,
+  contatosDaEmpresa,
+  destinatarios,
+  podeEnviar,
+  validarGuia,
+} from "@/lib/societario/arquivamento";
+import { salvarGuia, lerGuia } from "@/lib/societario/guias";
+import { sendTaxaAoClienteEmail } from "@/lib/email/sendMail";
 
 const SECTOR = "societario";
 
@@ -614,4 +625,117 @@ export async function submeterPorRobo(stepId: string): Promise<ProcessoState> {
     };
   }
   return null;
+}
+
+export type EnvioDaTaxaState =
+  | { error: string }
+  | { ok: true; enviados: number; recusados: string[] }
+  | null;
+
+/**
+ * Envia a guia da taxa do Bombeiros aos contatos da empresa.
+ *
+ * É o fim do fluxo do setor depois do portal: arquivar com o nome da convenção
+ * e mandar aos e-mails do cadastro. **Ato para fora** — a confirmação é a tela
+ * que mostra destinatários, descartados e o nome do arquivo antes deste clique,
+ * calculados pelas mesmas funções usadas aqui.
+ *
+ * A ordem é validar tudo, **guardar a guia, e só então enviar**: se o e-mail
+ * falhar, a guia já está no processo e a nova tentativa não pede o arquivo de
+ * novo. O inverso deixaria um e-mail enviado sem a guia registrada.
+ */
+export async function enviarTaxaAoCliente(form: FormData): Promise<EnvioDaTaxaState> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+
+  const taxaId = String(form.get("taxaId") ?? "");
+  if (!taxaId) return { error: "Taxa não informada." };
+
+  const prisma = getPrisma();
+  // Tenant no `where`: um id de taxa de outro cliente não chega a ser lido.
+  const taxa = await prisma.processFee.findFirst({
+    where: { id: taxaId, tenantId: ctx.tenantId },
+    select: {
+      id: true,
+      processId: true,
+      description: true,
+      amountCents: true,
+      dueDate: true,
+      documentUrl: true,
+      protocol: { select: { organ: { select: { name: true, acronym: true } } } },
+      company: {
+        select: {
+          name: true,
+          email: true,
+          people: { where: { active: true, isInternal: false }, select: { name: true, email: true } },
+        },
+      },
+    },
+  });
+  if (!taxa) return { error: "Taxa não encontrada." };
+
+  const orgao = taxa.protocol?.organ ?? null;
+  if (!ehTaxaDoBombeiros(orgao ? { sigla: orgao.acronym, nome: orgao.name } : null)) {
+    return { error: "O envio ao cliente por aqui é só da taxa do Corpo de Bombeiros." };
+  }
+
+  const arquivo = form.get("guia");
+  const novaGuia = arquivo instanceof File && arquivo.size > 0 ? arquivo : null;
+  if (novaGuia) {
+    const v = validarGuia(novaGuia);
+    if (!v.ok) return { error: v.motivo };
+  }
+  const guiaGuardada = !novaGuia && taxa.documentUrl ? await lerGuia(ctx.tenantId, taxa.documentUrl) : null;
+
+  const d = destinatarios(contatosDaEmpresa(taxa.company, taxa.company.people));
+  const veredito = podeEnviar(d, novaGuia !== null || guiaGuardada !== null);
+  if (!veredito.pode) return { error: veredito.motivo };
+
+  const arquivamento = arquivarTaxaDeBombeiros(taxa.company.name, taxa.dueDate, new Date());
+
+  let conteudo: Buffer;
+  if (novaGuia) {
+    conteudo = Buffer.from(await novaGuia.arrayBuffer());
+    try {
+      const documentUrl = await salvarGuia(ctx.tenantId, conteudo);
+      await prisma.processFee.update({ where: { id: taxa.id }, data: { documentUrl } });
+    } catch (err) {
+      console.error("[enviarTaxaAoCliente] guardar guia", err);
+      return { error: "Erro ao guardar a guia. Nada foi enviado." };
+    }
+  } else {
+    conteudo = guiaGuardada!;
+  }
+
+  const envio = await sendTaxaAoClienteEmail({
+    tenantId: ctx.tenantId,
+    para: d.para,
+    assunto: assuntoDoEnvio(arquivamento),
+    empresaNome: taxa.company.name,
+    descricao: taxa.description,
+    valorCentavos: taxa.amountCents,
+    vencimento: taxa.dueDate,
+    anexo: { nome: `${arquivamento.nome}.pdf`, conteudo },
+  });
+  if (!envio.ok) return { error: envio.error };
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "process.fee_sent",
+    entityType: "Process",
+    entityId: taxa.processId ?? taxa.id,
+    // Contagens, não endereços: o log é lido por quem audita, e o que importa
+    // é que saiu, para quantos, e com qual arquivo.
+    metadata: {
+      taxaId: taxa.id,
+      arquivo: arquivamento.caminho,
+      destinatarios: d.para.length,
+      descartados: d.descartados.length,
+      recusados: envio.recusados.length,
+    },
+  });
+
+  if (taxa.processId) revalidatePath(`/processos/${taxa.processId}`);
+  return { ok: true, enviados: d.para.length - envio.recusados.length, recusados: envio.recusados };
 }

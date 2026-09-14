@@ -89,12 +89,13 @@ export class ErroDoSped extends Error {
 }
 
 /**
- * Credenciais do ambiente.
+ * Credenciais do ambiente — **o fallback**, desde 14/09.
  *
- * O token mora no `.env` e **não** no banco, ao contrário do Chatwoot. É o que
- * o contrato pede: um segredo só, que nunca passa por chat, para um serviço só
- * — não há um SPED por tenant. Guardá-lo cifrado numa tabela acrescentaria uma
- * chave de criptografia ao caminho sem acrescentar isolamento nenhum.
+ * Quem chama o SPED deve passar por `credenciaisDoSped(tenantId)`, em
+ * `./credenciais`, que prefere a integração do cliente quando ligada. O `.env`
+ * era a fonte única porque "não há um SPED por tenant" — verdade para a 41, e
+ * falso na primeira venda: um Connect vendido não pode autenticar com a
+ * credencial de quem hospeda.
  */
 export function credenciaisDoAmbiente(): CredenciaisSped | null {
   const baseUrl = process.env.SPED_API_URL?.replace(/\/+$/, "");

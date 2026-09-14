@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/Card";
 import { formatInstantDate } from "@/lib/format";
 import type { TaxaNaTela } from "@/lib/societario/licencas-data";
 import type { CustoDoProcesso } from "@/lib/societario/licencas";
+import { EnviarTaxaAoCliente } from "./EnviarTaxaAoCliente";
 
 const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const moeda = (c: number) => MOEDA.format(c / 100);
@@ -52,6 +53,11 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
                       volta, e é isso que o rótulo diz. */}
                   {t.attempt !== null && t.attempt >= 2 && (
                     <span className="block text-[11px] text-warning">{t.attempt}ª apresentação</span>
+                  )}
+                  {t.envio && (
+                    <div>
+                      <EnviarTaxaAoCliente taxaId={t.id} descricao={t.description} envio={t.envio} />
+                    </div>
                   )}
                 </td>
                 <td className="py-2.5 pr-3 text-fg-muted">{t.orgaoNome ?? "—"}</td>

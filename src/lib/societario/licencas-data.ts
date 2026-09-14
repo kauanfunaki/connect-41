@@ -2,6 +2,13 @@
 
 import { getPrisma } from "@/lib/prisma";
 import { ordenarLicencas, contarPendentes, custoEmTaxas, type CustoDoProcesso } from "@/lib/societario/licencas";
+import {
+  ehTaxaDoBombeiros,
+  arquivarTaxaDeBombeiros,
+  contatosDaEmpresa,
+  destinatarios,
+} from "@/lib/societario/arquivamento";
+import { caminhoDaGuia } from "@/lib/societario/guias";
 
 export type LinhaDeLicenca = {
   id: string;
@@ -68,6 +75,21 @@ export async function resumoDasLicencas(tenantId: string, hoje: Date) {
   return { linhas, ...contarPendentes(linhas, hoje) };
 }
 
+/**
+ * O que a tela mostra **antes** de enviar a guia ao cliente.
+ *
+ * Calculado no servidor com as mesmas funções que a action usa, para a prévia
+ * e o envio não discordarem: "vai para 2 de 3" na tela e três e-mails saindo
+ * seria a confirmação mentindo.
+ */
+export type EnvioDaTaxa = {
+  caminho: string;
+  para: string[];
+  descartados: { rotulo: string; motivo: string }[];
+  /** Já existe guia guardada deste armazenamento. Não confere o disco. */
+  temGuia: boolean;
+};
+
 export type TaxaNaTela = {
   id: string;
   description: string;
@@ -78,6 +100,8 @@ export type TaxaNaTela = {
   /** A tentativa do protocolo que gerou a guia. Nulo em taxa avulsa. */
   attempt: number | null;
   orgaoNome: string | null;
+  /** Prévia do envio ao cliente. Só a taxa do Bombeiros tem — ver `ehTaxaDoBombeiros`. */
+  envio: EnvioDaTaxa | null;
 };
 
 /** As taxas de um processo, com o custo somado — inclusive o das voltas. */
@@ -100,6 +124,30 @@ export async function taxasDoProcesso(
     },
   });
 
+  const doBombeiros = (t: (typeof linhas)[number]) =>
+    ehTaxaDoBombeiros(t.protocol?.organ ? { sigla: t.protocol.organ.acronym, nome: t.protocol.organ.name } : null);
+
+  // Os contatos só são buscados quando há o que enviar — é a mesma empresa para
+  // todas as taxas do processo, então uma consulta serve a todas.
+  const empresa = linhas.some(doBombeiros)
+    ? (
+        await prisma.process.findFirst({
+          where: { id: processId, tenantId },
+          select: {
+            company: {
+              select: {
+                name: true,
+                email: true,
+                people: { where: { active: true, isInternal: false }, select: { name: true, email: true } },
+              },
+            },
+          },
+        })
+      )?.company ?? null
+    : null;
+  const contatos = empresa ? destinatarios(contatosDaEmpresa(empresa, empresa.people)) : null;
+  const hoje = new Date();
+
   const taxas: TaxaNaTela[] = linhas.map((t) => ({
     id: t.id,
     description: t.description,
@@ -109,6 +157,15 @@ export async function taxasDoProcesso(
     documentUrl: t.documentUrl,
     attempt: t.protocol?.attempt ?? null,
     orgaoNome: t.protocol?.organ ? t.protocol.organ.acronym || t.protocol.organ.name : null,
+    envio:
+      empresa && contatos && doBombeiros(t)
+        ? {
+            caminho: arquivarTaxaDeBombeiros(empresa.name, t.dueDate, hoje).caminho,
+            para: contatos.para,
+            descartados: contatos.descartados,
+            temGuia: t.documentUrl !== null && caminhoDaGuia(tenantId, t.documentUrl) !== null,
+          }
+        : null,
   }));
 
   return {

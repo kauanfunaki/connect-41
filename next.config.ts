@@ -39,6 +39,15 @@ const nextConfig: NextConfig = {
   // sem isto o Next infere a raiz errada e o standalone sai aninhado/quebrado.
   outputFileTracingRoot: __dirname,
   turbopack: { root: __dirname },
+  experimental: {
+    // Corpo máximo de Server Action. O padrão do Next é 1 MB, e a recusa
+    // acontece ANTES de a action rodar — o import do Omie anunciava 8 MB e,
+    // acima de 1 MB, falhava com erro genérico em vez de "arquivo maior que 8
+    // MB". 10 MB cobre os 8 MB do arquivo mais o envelope multipart, e é o
+    // mesmo teto padrão do proxy (`proxyClientMaxBodySize`): subir só este
+    // faria o corpo ser cortado lá antes de chegar aqui.
+    serverActions: { bodySizeLimit: "10mb" },
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

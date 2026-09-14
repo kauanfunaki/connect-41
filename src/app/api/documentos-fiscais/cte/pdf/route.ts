@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled } from "@/lib/modules";
-import { credenciaisDoAmbiente, obterPdf, ErroDoSped } from "@/lib/sped/client";
+import { obterPdf, ErroDoSped } from "@/lib/sped/client";
+import { credenciaisDoSped } from "@/lib/sped/credenciais";
 import { raizesDoAlcance } from "@/lib/sped/raizes";
 import { alcanceDaEquipe } from "@/app/(app)/documentos-fiscais/alcance";
 
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Documento não encontrado." }, { status: 404 });
   }
 
-  const creds = credenciaisDoAmbiente();
+  const creds = await credenciaisDoSped(ctx.tenantId);
   if (!creds) {
     return NextResponse.json({ error: "Integração com o SPED não configurada." }, { status: 503 });
   }

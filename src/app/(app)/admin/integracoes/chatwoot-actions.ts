@@ -3,10 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
-import { encryptSecret, decryptSecret } from "@/lib/crypto";
+import { encryptSecret } from "@/lib/crypto";
 import { logAudit } from "@/lib/audit";
 import { testConnection } from "@/lib/chatwoot/client";
+import { credenciaisDaConexao, SELECT_CONEXAO } from "@/lib/chatwoot/connection";
 import { runChatwootSync } from "@/lib/chatwoot/sync";
+import { salvarIntegracao } from "@/lib/integracoes/data";
 
 export type ChatwootConfigState = { error: string } | { success: true } | null;
 
@@ -15,7 +17,11 @@ export type ChatwootConfigState = { error: string } | { success: true } | null;
 // tela só expõe a primeira ativa, decisão do usuário para simplificar por ora).
 async function getSingleConnection(tenantId: string) {
   const prisma = getPrisma();
-  return prisma.chatwootConnection.findFirst({ where: { tenantId }, orderBy: { createdAt: "asc" } });
+  return prisma.chatwootConnection.findFirst({
+    where: { tenantId },
+    orderBy: { createdAt: "asc" },
+    select: SELECT_CONEXAO,
+  });
 }
 
 export async function salvarConexaoChatwoot(_prev: ChatwootConfigState, form: FormData): Promise<ChatwootConfigState> {
@@ -55,6 +61,25 @@ export async function salvarConexaoChatwoot(_prev: ChatwootConfigState, form: Fo
     return { error: "Erro ao salvar conexão com o Chatwoot." };
   }
 
+  // Espelho na integração convergida. Desde 14/09 os leitores preferem a
+  // integração quando ela está ligada — sem este espelho, editar por este
+  // formulário gravaria nas colunas antigas e seria ignorado em silêncio, e a
+  // pessoa veria o Chatwoot seguir usando o token velho.
+  //
+  // Campo em branco mantém o que estava (é o `mesclarConfig`), `enabled` fica
+  // como está (ligar é ato da vitrine) e o rótulo é repassado porque
+  // `salvarIntegracao` grava o que receber.
+  if (existing?.integration) {
+    const espelho = await salvarIntegracao({
+      tenantId: ctx.tenantId,
+      code: "chatwoot",
+      instanceKey: existing.integration.instanceKey,
+      label: existing.integration.label,
+      campos: { baseUrl, accountId, apiToken, webhookSecret },
+    });
+    if (!espelho.ok) console.error("[salvarConexaoChatwoot] espelho na integração", espelho.erro);
+  }
+
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "tenant.chatwoot.update", entityType: "Tenant", entityId: ctx.tenantId });
 
   revalidatePath("/admin/integracoes");
@@ -77,7 +102,8 @@ export async function removerConexaoChatwoot(): Promise<ChatwootConfigState> {
 
 // Smoke test de conectividade (Etapa 2 do pedido original): 1 chamada de
 // leitura, sem paginar tudo, nunca imprime o token. Usa a chave já salva se o
-// campo do form estiver vazio (permite testar sem redigitar o token).
+// campo do form estiver vazio (permite testar sem redigitar o token) — a mesma
+// que a sincronização usaria, integração ou colunas antigas.
 export async function testarConexaoChatwoot(input: {
   baseUrl: string;
   accountId: string;
@@ -91,7 +117,7 @@ export async function testarConexaoChatwoot(input: {
   if (!apiToken) {
     const existing = await getSingleConnection(ctx.tenantId);
     if (!existing) return { ok: false, error: "Informe o token para testar (nenhuma conexão salva ainda)." };
-    apiToken = decryptSecret(existing.apiTokenEnc);
+    apiToken = credenciaisDaConexao(existing).apiToken;
   }
   if (!input.baseUrl || !input.accountId) return { ok: false, error: "Preencha URL base e ID da conta." };
 

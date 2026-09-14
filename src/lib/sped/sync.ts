@@ -10,7 +10,8 @@
 
 import { getPrisma } from "@/lib/prisma";
 import { documentoDaEmpresa } from "@/lib/companyTaxId";
-import { credenciaisDoAmbiente, listarDocumentos, ErroDoSped, type CredenciaisSped } from "./client";
+import { listarDocumentos, ErroDoSped, type CredenciaisSped } from "./client";
+import { credenciaisDoSped } from "./credenciais";
 import { mapearDocumento, empresaDaLinha } from "./mapeamento";
 
 export type ResultadoDaRaiz = {
@@ -229,7 +230,7 @@ export type ResultadoDaSincronizacao = {
  * sincronizar, e isso não é erro.
  */
 export async function sincronizarTenant(tenantId: string): Promise<ResultadoDaSincronizacao> {
-  const creds = credenciaisDoAmbiente();
+  const creds = await credenciaisDoSped(tenantId);
   if (!creds) return { raizes: [], semCredencial: true };
 
   const prisma = getPrisma();

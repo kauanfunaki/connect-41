@@ -28,20 +28,24 @@ export async function POST(req: NextRequest) {
     const tenants = await prisma.tenant.findMany({ select: { id: true, name: true } });
 
     const porTenant = [];
-    let semCredencial = false;
+    let semCredencial = 0;
     for (const t of tenants) {
       const r = await sincronizarTenant(t.id);
       if (r.semCredencial) {
-        semCredencial = true;
-        break;
+        // Desde 14/09 a credencial é por cliente — integração ligada na
+        // vitrine, com o `.env` como fallback. Um tenant sem credencial não diz
+        // nada sobre o seguinte, e interromper o laço aqui (como era quando a
+        // credencial era uma só para todos) deixaria os demais sem sincronizar.
+        semCredencial++;
+        continue;
       }
       if (r.raizes.length > 0) porTenant.push({ tenant: t.name, raizes: r.raizes });
     }
 
-    if (semCredencial) {
-      // 200, não erro: sem `SPED_API_URL`/`SPED_API_TOKEN` a integração está
-      // desligada, e isso é uma configuração ausente — não uma falha do cron,
-      // que ficaria vermelho todo minuto no scheduler até alguém desligá-lo.
+    if (tenants.length > 0 && semCredencial === tenants.length) {
+      // 200, não erro: sem credencial nenhuma a integração está desligada, e
+      // isso é uma configuração ausente — não uma falha do cron, que ficaria
+      // vermelho todo minuto no scheduler até alguém desligá-lo.
       //
       // Mas falha fechada e silenciosa é como se perde uma semana: em
       // 2026-09-09 a rota respondeu 200 em 0,11s por três dias, e a resposta
@@ -50,12 +54,15 @@ export async function POST(req: NextRequest) {
       // variável precisa existir. O aviso vai para o log do servidor, que é
       // onde alguém procura quando a sincronização não anda.
       console.warn(
-        "[cron/sped-sync] integração desligada: SPED_API_URL/SPED_API_TOKEN ausentes no ambiente do container"
+        "[cron/sped-sync] integração desligada: nenhum cliente com integração do SPED ligada, e SPED_API_URL/SPED_API_TOKEN ausentes no ambiente do container"
       );
-      return NextResponse.json({ ok: true, desligado: "SPED_API_URL/SPED_API_TOKEN não configurados" });
+      return NextResponse.json({
+        ok: true,
+        desligado: "sem integração do SPED ligada e sem SPED_API_URL/SPED_API_TOKEN no ambiente",
+      });
     }
 
-    return NextResponse.json({ ok: true, tenants: porTenant });
+    return NextResponse.json({ ok: true, tenants: porTenant, semCredencial });
   } catch (err) {
     console.error("[cron/sped-sync]", err);
     return NextResponse.json({ ok: false, error: "Falha ao sincronizar com o SPED" }, { status: 500 });

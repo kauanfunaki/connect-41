@@ -12,7 +12,8 @@ import { Select } from "@/components/ui/Select";
 import { BackButton } from "@/components/shared/BackButton";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled } from "@/lib/modules";
-import { credenciaisDoAmbiente, listarCtePorRota, ErroDoSped } from "@/lib/sped/client";
+import { listarCtePorRota, ErroDoSped } from "@/lib/sped/client";
+import { credenciaisDoSped } from "@/lib/sped/credenciais";
 import { raizesDoAlcance, janelaDoMesCorrente, ehDataValida } from "@/lib/sped/raizes";
 import { alcanceDaEquipe } from "../alcance";
 import { formatCnpj } from "@/lib/format";
@@ -65,7 +66,7 @@ export default async function CtePage({
   const de = sp.de && ehDataValida(sp.de) ? sp.de : padrao.de;
   const ate = sp.ate && ehDataValida(sp.ate) ? sp.ate : padrao.ate;
 
-  const creds = credenciaisDoAmbiente();
+  const creds = await credenciaisDoSped(ctx.tenantId);
 
   let documentos: Awaited<ReturnType<typeof listarCtePorRota>>["documentos"] = [];
   let proximoCursor: string | null = null;
@@ -119,7 +120,7 @@ export default async function CtePage({
           <EmptyState
             icon={<Truck />}
             title="Integração com o SPED não configurada"
-            description="Sem SPED_API_URL e SPED_API_TOKEN no ambiente, não há o que consultar."
+            description="Sem credencial do SPED — nem integração ligada em Integrações, nem SPED_API_URL/SPED_API_TOKEN no ambiente."
           />
         </Card>
       ) : !raiz ? (

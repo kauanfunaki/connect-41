@@ -167,3 +167,70 @@ export function podeEnviar(d: Destinatarios, temArquivo: boolean): VereditoDeEnv
 export function assuntoDoEnvio(a: Arquivamento): string {
   return a.nome;
 }
+
+// ─── Taxa do Corpo de Bombeiros ──────────────────────────────────────────────
+
+/** Como o setor escreve o tipo e o órgão no nome e na pasta. */
+export const TIPO_TAXA_BOMBEIROS = "Taxa Bombeiros";
+export const ORGAO_BOMBEIROS = "Bombeiros";
+
+/**
+ * Esta taxa é do Corpo de Bombeiros?
+ *
+ * Pela sigla do seed (`CB`) ou pelo nome, porque órgão é tabela editável e o
+ * nome é o que alguém digita.
+ *
+ * O envio ao cliente só vale para ela porque **a convenção de pasta e nome só
+ * foi documentada para o Bombeiros**. Aplicá-la a outro órgão arquivaria taxa
+ * da Receita Federal dentro de "Prefeitura".
+ */
+export function ehTaxaDoBombeiros(orgao: { sigla: string | null; nome: string | null } | null): boolean {
+  if (!orgao) return false;
+  return orgao.sigla?.trim().toUpperCase() === "CB" || /bombeiro/i.test(orgao.nome ?? "");
+}
+
+/** Pasta e nome da taxa do Bombeiros — o ano é o do vencimento, ver `anoDaTaxa`. */
+export function arquivarTaxaDeBombeiros(empresaNome: string, dueDate: Date | null, hoje: Date): Arquivamento {
+  return arquivar({
+    empresaNome,
+    ano: anoDaTaxa(dueDate, hoje),
+    tipo: TIPO_TAXA_BOMBEIROS,
+    orgao: ORGAO_BOMBEIROS,
+  });
+}
+
+/**
+ * Os contatos de uma empresa, na forma que `destinatarios` lê.
+ *
+ * O e-mail do cadastro da empresa e o de cada pessoa ligada a ela — é onde o
+ * import do Acessórias pôs os contatos (`scripts/importar-acessorias.ts`). A
+ * empresa sem e-mail aparece nos descartados de propósito: é cadastro a
+ * corrigir, e a tela mostra antes de enviar.
+ */
+export function contatosDaEmpresa(
+  empresa: { email: string | null },
+  pessoas: { name: string; email: string | null }[]
+): ContatoDaEmpresa[] {
+  return [
+    { email: empresa.email, rotulo: "E-mail da empresa" },
+    ...pessoas.map((p) => ({ email: p.email, rotulo: p.name })),
+  ];
+}
+
+/**
+ * Teto da guia anexada.
+ *
+ * Tem de ficar abaixo do corpo máximo de Server Action (`bodySizeLimit`, 10 MB
+ * no `next.config.ts`): acima dele a recusa acontece **antes** de a action
+ * rodar, e chegaria à tela como exceção genérica, sem dizer que o problema é o
+ * tamanho. Guia de taxa costuma ter poucas centenas de KB; 5 MB cobre guia
+ * escaneada sem chegar perto do teto.
+ */
+export const TAMANHO_MAXIMO_DA_GUIA = 5 * 1024 * 1024;
+
+export function validarGuia(arquivo: { type: string; size: number }): { ok: true } | { ok: false; motivo: string } {
+  if (arquivo.size === 0) return { ok: false, motivo: "O arquivo da guia está vazio." };
+  if (arquivo.type !== "application/pdf") return { ok: false, motivo: "A guia precisa ser PDF." };
+  if (arquivo.size > TAMANHO_MAXIMO_DA_GUIA) return { ok: false, motivo: "Guia maior que 5 MB." };
+  return { ok: true };
+}
