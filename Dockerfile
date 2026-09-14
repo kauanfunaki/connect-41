@@ -18,7 +18,12 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 # "build" roda `prisma generate && next build` (ver package.json)
-RUN npm run build
+# NEXT_DEPLOYMENT_ID muda a cada build: a aba aberta durante um deploy compara o
+# próprio ID com o do servidor (header x-deployment-id) e recarrega inteira, em vez
+# de postar uma Server Action que o build novo não conhece ("Failed to find Server
+# Action"). Se o EasyPanel passar GIT_SHA como build arg, usa o commit — rastreável.
+ARG GIT_SHA
+RUN NEXT_DEPLOYMENT_ID="${GIT_SHA:-$(date +%s)}" npm run build
 
 # --- runtime ---
 FROM base AS runner
