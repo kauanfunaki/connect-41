@@ -120,7 +120,7 @@ export default async function CtePage({
           <EmptyState
             icon={<Truck />}
             title="Integração com o SPED não configurada"
-            description="Sem credencial do SPED — nem integração ligada em Integrações, nem SPED_API_URL/SPED_API_TOKEN no ambiente."
+            description="Este workspace não tem a integração do SPED ligada em Integrações — sem ela, não há o que consultar."
           />
         </Card>
       ) : !raiz ? (

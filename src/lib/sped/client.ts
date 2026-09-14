@@ -88,21 +88,10 @@ export class ErroDoSped extends Error {
   }
 }
 
-/**
- * Credenciais do ambiente — **o fallback**, desde 14/09.
- *
- * Quem chama o SPED deve passar por `credenciaisDoSped(tenantId)`, em
- * `./credenciais`, que prefere a integração do cliente quando ligada. O `.env`
- * era a fonte única porque "não há um SPED por tenant" — verdade para a 41, e
- * falso na primeira venda: um Connect vendido não pode autenticar com a
- * credencial de quem hospeda.
- */
-export function credenciaisDoAmbiente(): CredenciaisSped | null {
-  const baseUrl = process.env.SPED_API_URL?.replace(/\/+$/, "");
-  const token = process.env.SPED_API_TOKEN;
-  if (!baseUrl || !token) return null;
-  return { baseUrl, token };
-}
+// A credencial não é lida aqui: vem de `credenciaisDoSped(tenantId)`, em
+// `./credenciais`, e é por cliente. Até 14/09 existia `credenciaisDoAmbiente`,
+// lendo SPED_API_URL/SPED_API_TOKEN para qualquer tenant — o motivo de ter saído
+// está no cabeçalho de lá.
 
 /**
  * Corpo de erro do SPED, em qualquer um dos três formatos que já circularam.

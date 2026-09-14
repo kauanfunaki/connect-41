@@ -149,7 +149,7 @@ export const INTEGRATION_CATALOG: IntegracaoDef[] = [
         type: "secret",
         required: true,
         help:
-          "Hoje vive no .env do servidor, o que funciona enquanto a 41 é o único cliente e colapsa na primeira venda. Aqui ele passa a ser por cliente.",
+          "Token da base de documentos deste cliente. Cada cliente conecta a própria; sem esta integração ligada, nada é sincronizado nem consultado.",
       },
     ],
   },

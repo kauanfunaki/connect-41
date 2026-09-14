@@ -1,8 +1,12 @@
 // De onde vem a credencial de uma integração que ainda tem fonte antiga.
 //
-// É o passo 4 de 5 da convergência (ver `scripts/converger-integracoes.ts`): os
-// leitores de Chatwoot e SPED passam a preferir `TenantIntegration`, com as
-// colunas antigas (ou o `.env`, no caso do SPED) como fallback.
+// É o passo 4 de 5 da convergência (ver `scripts/converger-integracoes.ts`): o
+// leitor do Chatwoot passa a preferir `TenantIntegration`, com as colunas antigas
+// da conexão como fallback.
+//
+// O SPED usou esta função até 14/09, com o `.env` como fallback, e saiu dela: o
+// `.env` valia para qualquer tenant, inclusive quem não tem base de documentos
+// nenhuma. Ver `src/lib/sped/credenciais.ts`.
 //
 // ─── O interruptor é o `enabled` ────────────────────────────────────────────
 //

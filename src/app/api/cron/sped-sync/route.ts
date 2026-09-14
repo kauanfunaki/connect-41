@@ -32,10 +32,9 @@ export async function POST(req: NextRequest) {
     for (const t of tenants) {
       const r = await sincronizarTenant(t.id);
       if (r.semCredencial) {
-        // Desde 14/09 a credencial é por cliente — integração ligada na
-        // vitrine, com o `.env` como fallback. Um tenant sem credencial não diz
-        // nada sobre o seguinte, e interromper o laço aqui (como era quando a
-        // credencial era uma só para todos) deixaria os demais sem sincronizar.
+        // A integração do SPED é a base de documentos de cada cliente: tenant
+        // sem a integração ligada simplesmente não tem o que sincronizar. Não é
+        // erro, e não diz nada sobre o tenant seguinte.
         semCredencial++;
         continue;
       }
@@ -43,23 +42,17 @@ export async function POST(req: NextRequest) {
     }
 
     if (tenants.length > 0 && semCredencial === tenants.length) {
-      // 200, não erro: sem credencial nenhuma a integração está desligada, e
-      // isso é uma configuração ausente — não uma falha do cron, que ficaria
-      // vermelho todo minuto no scheduler até alguém desligá-lo.
+      // 200, não erro: nenhum cliente conectado é configuração ausente, não
+      // falha do cron — que ficaria vermelho todo minuto no scheduler até
+      // alguém desligá-lo.
       //
       // Mas falha fechada e silenciosa é como se perde uma semana: em
       // 2026-09-09 a rota respondeu 200 em 0,11s por três dias, e a resposta
-      // "desligado" só apareceu para quem chamou a rota à mão. O `.env` do
-      // repositório estava preenchido — o app roda no container, e é lá que a
-      // variável precisa existir. O aviso vai para o log do servidor, que é
-      // onde alguém procura quando a sincronização não anda.
-      console.warn(
-        "[cron/sped-sync] integração desligada: nenhum cliente com integração do SPED ligada, e SPED_API_URL/SPED_API_TOKEN ausentes no ambiente do container"
-      );
-      return NextResponse.json({
-        ok: true,
-        desligado: "sem integração do SPED ligada e sem SPED_API_URL/SPED_API_TOKEN no ambiente",
-      });
+      // "desligado" só apareceu para quem chamou a rota à mão. O aviso vai para
+      // o log do servidor, que é onde alguém procura quando a sincronização não
+      // anda.
+      console.warn("[cron/sped-sync] nenhum tenant com a integração do SPED ligada em Integrações");
+      return NextResponse.json({ ok: true, desligado: "nenhum tenant com a integração do SPED ligada" });
     }
 
     return NextResponse.json({ ok: true, tenants: porTenant, semCredencial });
