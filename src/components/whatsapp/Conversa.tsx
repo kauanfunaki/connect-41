@@ -167,8 +167,13 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
                   {m.status === "BLOQUEADA" && <span className="text-warning">· não enviada</span>}
                   {m.status === "FALHOU" && <span className="text-danger">· falhou</span>}
                 </p>
-                {m.error && m.status !== "FALHOU" && (
-                  <p className="text-[10px] text-fg-muted">motivo: {m.error}</p>
+                {/* O motivo aparece também na falha de envio: é justamente o
+                    caso em que quem olha precisa saber o que o provedor
+                    respondeu, e o log do container nem sempre está à mão. */}
+                {m.error && (
+                  <p className={`text-[10px] ${m.status === "FALHOU" ? "text-danger" : "text-fg-muted"}`}>
+                    motivo: {m.error}
+                  </p>
                 )}
               </div>
             );

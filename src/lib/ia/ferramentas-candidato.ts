@@ -70,7 +70,13 @@ export const FERRAMENTAS_DE_CANDIDATO: Record<string, FerramentaRegistrada> = {
         return {
           identificado: false,
           recado:
-            "Esta conversa ainda não está ligada a nenhuma candidatura. Não peça documento nem dado pessoal — diga que vai passar para uma pessoa do time confirmar.",
+            // Até 15/09 o recado mandava "dizer que vai passar para uma pessoa" —
+            // e o modelo dizia, sem chamar a ferramenta que de fato transfere. O
+            // candidato ficava com uma promessa de contato que ninguém ia cumprir.
+            "Esta conversa ainda não está ligada a nenhuma candidatura. Não peça documento nem dado pessoal. " +
+            "Diga que não encontrou uma candidatura ligada a este número e ofereça mostrar as vagas abertas. " +
+            "Se a pessoa quiser falar de uma candidatura que já fez, use pedir_ajuda_humana — nunca diga que " +
+            "alguém vai entrar em contato sem usar essa ferramenta.",
         };
       }
 

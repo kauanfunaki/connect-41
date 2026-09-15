@@ -171,10 +171,42 @@ export type RespostaDoAgente = {
 
 export type DesfechoDaResposta =
   | { tipo: "enviar"; texto: string }
-  | { tipo: "transferir"; motivo: string };
+  | { tipo: "transferir"; motivo: string }
+  /** Sai a mensagem e uma pessoa assume — ver `prometeContatoHumano`. */
+  | { tipo: "enviar_e_transferir"; texto: string; motivo: string };
 
 /** Limite de tamanho de uma mensagem de texto na Cloud API. */
 export const MAX_CARACTERES_DA_MENSAGEM = 4_096;
+
+const PROMESSAS_DE_CONTATO: RegExp[] = [
+  // "vou passar seu caso", "vou te transferir", "vamos encaminhar"
+  /\b(vou|irei|vamos|iremos)\s+(te\s+|lhe\s+)?(passar|transferir|encaminhar|repassar)\b/,
+  // "alguém do time entra em contato", "uma pessoa vai entrar em contato"
+  /\b(alguem|pessoa|time|equipe|recrutador[a]?|atendente)\b.{0,40}\b(entra|entrara|vai\s+entrar|ira\s+entrar|retorna|retornara|vai\s+retornar)\b/,
+  // "passar para uma pessoa do time", "encaminhar ao atendente humano"
+  /\b(passar|transferir|encaminhar|repassar)\b.{0,30}\b(pessoa|humano|atendente|time|equipe|recrutador[a]?)\b/,
+];
+
+/**
+ * O texto promete que uma pessoa vai assumir?
+ *
+ * Existe porque, no primeiro teste real (15/09), o modelo escreveu "vou passar
+ * seu caso para a pessoa do time… alguém entra em contato" **sem** chamar
+ * `pedir_ajuda_humana` — a conversa não foi transferida e o robô seguiu
+ * respondendo. O prompt agora proíbe isso, mas prompt se contorna; esta trava
+ * garante que promessa dita vira transferência feita.
+ *
+ * Erra de propósito para o lado de transferir: um falso positivo é uma pessoa
+ * olhando uma conversa à toa; um falso negativo é um candidato esperando um
+ * contato que não vem.
+ */
+export function prometeContatoHumano(texto: string): boolean {
+  const normalizado = texto
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+  return PROMESSAS_DE_CONTATO.some((re) => re.test(normalizado));
+}
 
 /**
  * O que fazer com o que o agente escreveu.
@@ -205,6 +237,9 @@ export function decidirComARespostaDoAgente(
     // Cortar uma resposta ao meio e mandar assim é pior que não mandar: o
     // candidato lê meia informação e age sobre ela.
     return { tipo: "transferir", motivo: "resposta longa demais para o WhatsApp" };
+  }
+  if (prometeContatoHumano(texto)) {
+    return { tipo: "enviar_e_transferir", texto, motivo: "o assistente disse ao candidato que uma pessoa vai assumir" };
   }
   return { tipo: "enviar", texto };
 }

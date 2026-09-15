@@ -23,6 +23,7 @@ import {
   type EstadoDaConversa,
 } from "@/lib/whatsapp/decisao";
 import { enviarERegistrar, registrarBloqueio } from "@/lib/whatsapp/envio";
+import { montarPerguntaComHistorico, MAX_MENSAGENS_NO_HISTORICO } from "@/lib/whatsapp/historico";
 import type { MensagemRecebida, ProvedorWhatsapp } from "@/lib/whatsapp/provedores/tipos";
 
 const AGENTE = "atendente_de_candidato";
@@ -45,7 +46,11 @@ function sistema(nomeDoEscritorio: string): string {
     "promete prazo que não leu no sistema, nem pede CPF, RG, data de nascimento ou qualquer " +
     "documento.\n" +
     "Em qualquer um desses casos — e sempre que não tiver certeza — use a ferramenta " +
-    "pedir_ajuda_humana. Não é derrota: é o certo a fazer."
+    "pedir_ajuda_humana. Não é derrota: é o certo a fazer.\n" +
+    "Só a ferramenta pedir_ajuda_humana chama uma pessoa. Nunca escreva que vai passar, transferir " +
+    "ou encaminhar a conversa, nem que alguém vai entrar em contato, sem usá-la.\n" +
+    "Leia a conversa até aqui antes de responder: se a pessoa aceitou algo que você ofereceu, faça " +
+    "— não pergunte de novo."
   );
 }
 
@@ -205,13 +210,32 @@ export async function atenderMensagem(
   // ─── Responder ────────────────────────────────────────────────────────────
   const escritorio = await nomeDoEscritorio(conexao.tenantId);
 
+  // O que já foi trocado nesta conversa — ver `src/lib/whatsapp/historico.ts`.
+  // Busca uma a mais e tira a mensagem nova em memória: filtrar por
+  // `waMessageId` no banco descartaria também as saídas sem id (NULL não passa
+  // em `NOT =`).
+  const recentes = await prisma.whatsappMessage.findMany({
+    where: {
+      threadId: thread.id,
+      OR: [{ direction: "ENTRADA" }, { direction: "SAIDA", status: "ENVIADA" }],
+    },
+    orderBy: { createdAt: "desc" },
+    take: MAX_MENSAGENS_NO_HISTORICO + 1,
+    select: { direction: true, body: true, waMessageId: true },
+  });
+  const anteriores = recentes
+    .filter((r) => r.waMessageId !== m.waMessageId)
+    .slice(0, MAX_MENSAGENS_NO_HISTORICO)
+    .reverse()
+    .map((r) => ({ direcao: r.direction, texto: r.body }));
+
   let resposta;
   try {
     resposta = await conversarComAgente({
       tenantId: conexao.tenantId,
       agentCode: AGENTE,
       system: sistema(escritorio),
-      pergunta: m.texto,
+      pergunta: montarPerguntaComHistorico(anteriores, m.texto),
       maxTokens: 800,
       // `CRON` não: foi o candidato que provocou. `SISTEMA` é o que descreve
       // "efeito de algo que chegou de fora", e é o que separa este gasto do
@@ -260,6 +284,14 @@ export async function atenderMensagem(
     texto: montarMensagem(desfecho.texto, decisao.apresentar, escritorio),
     agentRunId: resposta.runId ?? null,
   });
+
+  // A resposta prometeu uma pessoa sem o agente chamar a ferramenta: a mensagem
+  // já saiu, então a promessa passa a ser verdade — transferir **depois** de
+  // enviar, para o robô silenciar a partir da próxima mensagem.
+  if (desfecho.tipo === "enviar_e_transferir") {
+    await transferir(thread.id, desfecho.motivo);
+    return `respondido e transferido: ${desfecho.motivo}`;
+  }
   return "respondido";
 }
 

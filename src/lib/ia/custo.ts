@@ -43,6 +43,10 @@ export const PRECO_POR_MILHAO_USD: Record<string, { entrada: number; saida: numb
   "gpt-5.6-terra": { entrada: 2, saida: 12 },
   "gpt-5.6-sol": { entrada: 4, saida: 20 },
   "gpt-6-astra": { entrada: 10, saida: 50 },
+  // Conferido em 15/09/2026 em developers.openai.com/api/docs/pricing, quando o
+  // Kauan configurou o atendente do WhatsApp com ele e as chamadas ficaram sem
+  // custo apurado. Listado como atual, não legado.
+  "gpt-5-nano": { entrada: 0.05, saida: 0.4 },
   // OpenAI — legados
   "gpt-4.1-mini": { entrada: 0.4, saida: 1.6 },
   "gpt-4.1": { entrada: 2, saida: 8 },

@@ -4,6 +4,7 @@ import {
   pediuParaSair,
   dentroDaJanelaLivre,
   decidirComARespostaDoAgente,
+  prometeContatoHumano,
   montarMensagem,
   avisoDeRobo,
   MAX_RESPOSTAS_POR_HORA,
@@ -191,6 +192,43 @@ describe("decidirComARespostaDoAgente", () => {
     expect(decidirComARespostaDoAgente({ texto: "x".repeat(101), propostas: 0, truncado: false }, 100).tipo).toBe(
       "transferir"
     );
+  });
+
+  // O caso real de 15/09: a promessa saiu e ninguém assumiu. Agora a mensagem
+  // sai e a conversa é transferida — a promessa vira verdade.
+  it("promessa de contato sem ferramenta sai e transfere", () => {
+    const texto =
+      "Oi! Esta conversa ainda não está ligada a nenhuma candidatura; vou passar seu caso para a pessoa do time confirmar o próximo passo. Assim que houver confirmação, alguém do time entra em contato.";
+    const d = decidirComARespostaDoAgente({ texto, propostas: 0, truncado: false });
+    expect(d.tipo).toBe("enviar_e_transferir");
+    if (d.tipo === "enviar_e_transferir") expect(d.texto).toBe(texto);
+  });
+
+  it("proposta continua valendo mais que a promessa: não envia", () => {
+    const d = decidirComARespostaDoAgente({ texto: "Vou te transferir para o time.", propostas: 1, truncado: false });
+    expect(d.tipo).toBe("transferir");
+  });
+});
+
+describe("prometeContatoHumano", () => {
+  it.each([
+    "vou passar seu caso para a pessoa do time",
+    "Alguém do time entra em contato em breve.",
+    "Vou te transferir para um atendente.",
+    "Uma pessoa da equipe vai entrar em contato com você.",
+    "Vamos encaminhar sua dúvida ao recrutador.",
+    "Nossa equipe retornará o contato.",
+  ])("detecta: %s", (texto) => {
+    expect(prometeContatoHumano(texto)).toBe(true);
+  });
+
+  it.each([
+    "Claro! Vagas abertas no momento: Analista, empresa FIEL TRANSPORTES. Quer detalhes de alguma?",
+    "Somos o atendimento virtual de Recrutamento da 41 Tech.",
+    "Se preferir falar com uma pessoa, é só pedir.",
+    "Sua candidatura está em triagem.",
+  ])("não detecta: %s", (texto) => {
+    expect(prometeContatoHumano(texto)).toBe(false);
   });
 });
 
