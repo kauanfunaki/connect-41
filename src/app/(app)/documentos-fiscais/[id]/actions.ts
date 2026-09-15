@@ -3,12 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
-import { isModuleEnabled } from "@/lib/modules";
+import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { logAudit } from "@/lib/audit";
 import { obterDocumento } from "@/lib/fiscal/data";
 import { alcanceDaEquipe } from "../alcance";
 import type { FiscalDocumentDestination } from "@/generated/prisma/enums";
 
+// `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
+// acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "fiscal";
 const MODULE = "fiscal_documentos";
 
@@ -27,8 +29,8 @@ export async function definirDestino(
   motivo?: string
 ): Promise<{ error: string } | { ok: true }> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, SECTOR)) return { error: "Sem permissão." };
-  if (!canManageSector(ctx, SECTOR)) return { error: "Só a coordenação do fiscal decide o destino." };
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Sem permissão." };
+  if (!canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Só a coordenação do fiscal decide o destino." };
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { error: "Módulo não habilitado." };
 
   const alcance = alcanceDaEquipe(ctx.tenantId);

@@ -147,6 +147,31 @@ export const MODULE_CATALOG: ModuleDef[] = [
     description: "Constituição, alteração contratual, baixa e alvarás — com protocolo, exigência e prazo",
     defaultEnabled: true,
   },
+  // Os três abaixo são telas sobre o motor de processos — não têm dado próprio.
+  // Kanban e visão de cliente não viraram módulo: são outro jeito de olhar a
+  // fila e moram como sub-rotas de `/processos`, sob o gate de
+  // `societario_processos`.
+  {
+    code: "societario_minha_area",
+    label: "Minha área",
+    sectorCode: "societario",
+    description: "O que está na sua mão, por prazo: processos, exigências, taxas e licenças vencendo",
+    defaultEnabled: true,
+  },
+  {
+    code: "societario_prazos",
+    label: "Exigências e prazos",
+    sectorCode: "societario",
+    description: "Exigências abertas de todos os processos e a agenda unificada de prazos",
+    defaultEnabled: true,
+  },
+  {
+    code: "societario_relatorios",
+    label: "Relatórios",
+    sectorCode: "societario",
+    description: "SLA por tipo, voltas de exigência, produtividade por responsável e custo em taxas",
+    defaultEnabled: true,
+  },
   {
     code: "bpo_contas_pagar",
     label: "Contas a pagar",
@@ -160,6 +185,49 @@ export const MODULE_CATALOG: ModuleDef[] = [
     sectorCode: "bpo",
     description: "O que entra — nasce do documento fiscal emitido pela empresa",
     defaultEnabled: true,
+  },
+  // ─── Paridade do BPO e do DRE (15/09) ─────────────────────────────────────
+  //
+  // Telas sobre FinanceEntry/FinanceCategory/FinanceCounterparty, sem motor
+  // novo. Agrupadas em poucos módulos coesos em vez de um por tela, e com o DRE
+  // separado das contas: um cliente pode transferir as DREs para outro setor
+  // (ver `setorDoModulo`) sem levar junto o operacional do BPO.
+  {
+    code: "bpo_lancamentos",
+    label: "Lançamentos",
+    sectorCode: "bpo",
+    description: "Lançamento manual de contas sem nota fiscal e importação de lançamentos por CSV",
+    defaultEnabled: true,
+  },
+  {
+    code: "bpo_fluxo_caixa",
+    label: "Fluxo de caixa",
+    sectorCode: "bpo",
+    description: "Realizado dos últimos meses, projeção dos títulos em aberto e consolidado por empresa",
+    defaultEnabled: true,
+  },
+  {
+    code: "bpo_cadastros",
+    label: "Fornecedores e sacados",
+    sectorCode: "bpo",
+    description: "Cadastro das contrapartes das empresas clientes, com a categoria que a próxima conta herda",
+    defaultEnabled: true,
+  },
+  {
+    code: "dre_economica",
+    label: "DRE econômica",
+    sectorCode: "bpo",
+    description: "Demonstrativo de resultado por competência — o que pertence ao mês, pago ou não",
+    // Desligado como o `bpo_dre`: as duas DREs são entregas que o tenant liga
+    // quando o plano de contas já está classificado.
+    defaultEnabled: false,
+  },
+  {
+    code: "dre_analises",
+    label: "Análises gerenciais",
+    sectorCode: "bpo",
+    description: "Econômico × financeiro, reconciliação lucro → caixa, comparativos, forecast, cenários, indicadores e CFO",
+    defaultEnabled: false,
   },
 ];
 
@@ -195,8 +263,18 @@ export const MODULE_ROUTES: Record<string, string> = {
   fiscal_documentos:       "/documentos-fiscais",
   societario_processos:    "/processos",
   societario_licencas:     "/licencas",
+  // Fora de `/processos` de propósito: a sidebar marca ativo por prefixo, e
+  // `/processos/exigencias` acenderia "Processos" e "Exigências" juntos.
+  societario_minha_area:   "/societario/minha-area",
+  societario_prazos:       "/societario/exigencias",
+  societario_relatorios:   "/societario/relatorios",
   bpo_contas_pagar:        "/pagar",
   bpo_contas_receber:      "/receber",
+  bpo_lancamentos:         "/lancamentos",
+  bpo_fluxo_caixa:         "/fluxo-de-caixa",
+  bpo_cadastros:           "/cadastros-financeiros",
+  dre_economica:           "/dre/economica",
+  dre_analises:            "/dre/analises",
 };
 
 export function getModuleRoute(code: string): string | undefined {

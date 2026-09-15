@@ -4,10 +4,14 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { ConversasLista } from "@/components/whatsapp/ConversasLista";
 import { listarConversas } from "@/lib/whatsapp/data";
+import { setorDoModulo } from "@/lib/modules";
+
+const MODULE = "recrutamento_whatsapp";
 
 export default async function ConversasDeWhatsappPage() {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, "recrutamento")) notFound();
+  // Setor que opera o módulo neste tenant, não o de origem — ver `setorDoModulo`.
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? "recrutamento")) notFound();
 
   const agora = new Date();
   const conversas = await listarConversas(ctx.tenantId, agora);

@@ -7,10 +7,14 @@ import { encryptSecret, decryptSecret } from "@/lib/crypto";
 import { pick } from "@/lib/forms";
 import { logAudit } from "@/lib/audit";
 import type { ActionState } from "@/lib/actionState";
+import { setorDoModulo } from "@/lib/modules";
 
 export type BpoCredencialState = ActionState;
 
+// `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
+// acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "bpo";
+const MODULE = "bpo_senhas";
 
 function credencialData(form: FormData) {
   return {
@@ -28,7 +32,7 @@ export async function criarCredencial(
 ): Promise<BpoCredencialState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { error: "Não autenticado" };
-  if (!canManageSector(ctx, SECTOR)) return { error: "Só o coordenador do BPO pode cadastrar credenciais." };
+  if (!canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Só o coordenador do BPO pode cadastrar credenciais." };
 
   const data = credencialData(form);
   const password = (form.get("password") as string)?.trim();
@@ -76,7 +80,7 @@ export async function atualizarCredencial(
 ): Promise<BpoCredencialState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { error: "Não autenticado" };
-  if (!canManageSector(ctx, SECTOR)) return { error: "Só o coordenador do BPO pode editar credenciais." };
+  if (!canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Só o coordenador do BPO pode editar credenciais." };
 
   const existing = await getPrisma().bpoCredential.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { id: true } });
   if (!existing) return { error: "Credencial não encontrada." };
@@ -121,7 +125,7 @@ export async function atualizarCredencial(
 
 export async function excluirCredencial(id: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !ctx.userId || !canManageSector(ctx, SECTOR)) return;
+  if (!ctx.tenantId || !ctx.userId || !canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return;
 
   const prisma = getPrisma();
   const existing = await prisma.bpoCredential.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { id: true, title: true } });
@@ -152,7 +156,7 @@ export async function excluirCredencial(id: string): Promise<void> {
 export async function revelarCredencial(id: string): Promise<{ error: string } | { password: string }> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { error: "Não autenticado" };
-  if (!canActOnSector(ctx, SECTOR)) return { error: "Sem permissão para ver esta credencial." };
+  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Sem permissão para ver esta credencial." };
 
   const prisma = getPrisma();
   const credential = await prisma.bpoCredential.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { passwordEnc: true } });

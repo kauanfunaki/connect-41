@@ -7,13 +7,17 @@ import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/cont
 import { formatInstantDate } from "@/lib/format";
 import { BpoCredentialsList } from "@/components/bpoSenhas/BpoCredentialsList";
 import { criarCredencial, atualizarCredencial, excluirCredencial, revelarCredencial } from "./actions";
+import { setorDoModulo } from "@/lib/modules";
 
+// `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
+// acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "bpo";
+const MODULE = "bpo_senhas";
 
 export default async function BpoSenhasPage() {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, SECTOR)) notFound();
-  const canManage = canManageSector(ctx, SECTOR);
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
+  const canManage = canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
 
   const prisma = getPrisma();
   const [credentials, companies] = await Promise.all([

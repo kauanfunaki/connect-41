@@ -4,10 +4,12 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled } from "@/lib/modules";
+import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { EntradaXmlForm } from "@/components/fiscal/EntradaXmlForm";
 import { importarXmls } from "./actions";
 
+// `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
+// acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "fiscal";
 const MODULE = "fiscal_documentos";
 
@@ -15,7 +17,7 @@ const MODULE = "fiscal_documentos";
 // SPED não trouxe (ou enquanto ela não existe).
 export default async function EntradaDeXmlPage() {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, SECTOR)) notFound();
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const prisma = getPrisma();

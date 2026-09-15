@@ -3,10 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled } from "@/lib/modules";
+import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { logAudit } from "@/lib/audit";
 import { lerFormularioDeLicenca } from "@/lib/societario/licenca-form";
 
+// `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
+// setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "societario";
 const MODULE = "societario_licencas";
 
@@ -15,7 +17,7 @@ export type LicencaState = { error: string } | { success: true } | null;
 async function contexto() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { erro: "Não autenticado", ctx: null };
-  if (!canActOnSector(ctx, SECTOR)) return { erro: "Sem permissão no Societário.", ctx: null };
+  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { erro: "Sem permissão no Societário.", ctx: null };
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { erro: "O módulo de licenças não está ligado.", ctx: null };
   return { erro: null, ctx };
 }

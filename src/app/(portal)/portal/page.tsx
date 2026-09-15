@@ -11,6 +11,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PortalDocumentosTable } from "@/components/portal/PortalDocumentosTable";
 import { PortalCompetenciaFiltro } from "@/components/portal/PortalCompetenciaFiltro";
 import { sairDoPortal } from "./login/actions";
+import { PortalNav } from "@/components/portal/PortalCabecalho";
+import { getEnabledModuleCodes } from "@/lib/modules";
 
 // Acervo fiscal visto pelo cliente. **Só leitura**, e por construção: não há
 // entrada de XML nem decisão de destino aqui, e as actions que fazem essas
@@ -29,10 +31,11 @@ export default async function PortalPage({
   const filtro = { competencia: params.competencia || undefined };
 
   const prisma = getPrisma();
-  const [{ documentos, total, porPagina }, competencias, grupo] = await Promise.all([
+  const [{ documentos, total, porPagina }, competencias, grupo, modulos] = await Promise.all([
     listarDocumentos(alcance, filtro, pagina),
     competenciasDisponiveis(alcance),
     prisma.clientGroup.findUnique({ where: { id: sessao.clientGroupId }, select: { name: true } }),
+    getEnabledModuleCodes(sessao.tenantId),
   ]);
 
   return (
@@ -53,6 +56,7 @@ export default async function PortalPage({
           </button>
         </form>
       </div>
+      <PortalNav ativo="documentos" modulos={modulos} />
 
       {total === 0 && !params.competencia ? (
         <Card>

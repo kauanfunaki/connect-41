@@ -3,8 +3,12 @@ import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
+import { setorDoModulo } from "@/lib/modules";
 
+// `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
+// acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "bpo";
+const MODULE = "bpo_manual";
 
 const ALLOWED_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -15,7 +19,7 @@ const MAX_SIZE = 4 * 1024 * 1024;
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, SECTOR)) {
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) {
     return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
   }
 
@@ -52,7 +56,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, SECTOR)) {
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) {
     return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
   }
 

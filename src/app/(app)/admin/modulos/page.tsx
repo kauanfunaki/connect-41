@@ -6,18 +6,27 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getTenantModuleStates } from "@/lib/modules";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { ToggleModuleButton } from "@/components/admin/ToggleModuleButton";
+import { SetorDoModuloSelect } from "@/components/admin/SetorDoModuloSelect";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { alternarModulo } from "./actions";
+import { alternarModulo, transferirModulo } from "./actions";
 
 export default async function ModulosPage() {
   const ctx = await getAuthContext();
   if (!isFullWrite(ctx.role)) notFound();
 
-  const [modules, { labels: sectorLabels }] = await Promise.all([
+  const [modules, { labels: sectorLabels, options: setoresAtivos }] = await Promise.all([
     getTenantModuleStates(ctx.tenantId),
     getSectorMaps(ctx.tenantId),
   ]);
+
+  // Agrupado pelo setor que opera (já resolvido), não pelo de origem. O setor
+  // atual entra nas opções mesmo desativado, para o select não mentir sobre
+  // onde o módulo está.
+  const opcoesDeSetor = (atual: string) =>
+    setoresAtivos.some((o) => o.value === atual)
+      ? setoresAtivos
+      : [{ value: atual, label: sectorLabel(sectorLabels, atual) }, ...setoresAtivos];
 
   const grouped = modules.reduce<Record<string, typeof modules>>((acc, m) => {
     (acc[m.sectorCode] ??= []).push(m);
@@ -52,12 +61,25 @@ export default async function ModulosPage() {
                     <div>
                       <p className="text-[13px] text-fg">{m.label}</p>
                       <p className="text-[11px] text-fg-muted">{m.description}</p>
+                      {m.sectorCode !== m.catalogSectorCode && (
+                        <p className="text-[11px] text-fg-muted mt-0.5">
+                          Transferido — origem: {sectorLabel(sectorLabels, m.catalogSectorCode)}
+                        </p>
+                      )}
                     </div>
-                    <ToggleModuleButton
-                      action={alternarModulo.bind(null, m.code, !m.enabled)}
-                      enabled={m.enabled}
-                      nome={m.label}
-                    />
+                    <div className="flex items-center gap-2 shrink-0">
+                      <SetorDoModuloSelect
+                        action={transferirModulo.bind(null, m.code)}
+                        atual={m.sectorCode}
+                        opcoes={opcoesDeSetor(m.sectorCode)}
+                        nome={m.label}
+                      />
+                      <ToggleModuleButton
+                        action={alternarModulo.bind(null, m.code, !m.enabled)}
+                        enabled={m.enabled}
+                        nome={m.label}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>

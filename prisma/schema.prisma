@@ -631,6 +631,11 @@ model TenantModule {
   tenantId   String
   moduleCode String   @db.VarChar(60)
   enabled    Boolean  @default(true)
+  /// Setor que opera o módulo **neste tenant**, quando não é o do catálogo —
+  /// o cliente em que o DRE é do Financeiro, e não do BPO. Nulo = setor do
+  /// catálogo. Código de `Sector`, sem FK, como em todo lugar que guarda setor.
+  /// Resolvido só em `src/lib/modules.ts` (`setorDoModulo`).
+  sectorCode String?  @db.VarChar(40)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

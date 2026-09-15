@@ -10,12 +10,16 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
 import { excluirTemplate, alternarAtivoTemplate } from "./actions";
+import { setorDoModulo } from "@/lib/modules";
 
+// `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
+// acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "recrutamento";
+const MODULE = "recrutamento_testes";
 
 export default async function TemplatesPage() {
   const ctx = await getAuthContext();
-  if (!canManageSector(ctx, SECTOR)) notFound();
+  if (!canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
 
   const prisma = getPrisma();
   const templates = await prisma.assessmentTemplate.findMany({

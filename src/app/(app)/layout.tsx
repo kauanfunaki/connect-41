@@ -6,8 +6,8 @@ import { getSectorMaps } from "@/lib/sectors";
 import { ROLE_LABELS } from "@/lib/roles";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getPrisma } from "@/lib/prisma";
-import { getSectorsWithEnabledModules, getEnabledModuleCodes } from "@/lib/modules";
-import { getModulesForSector, getModuleRoute } from "@/lib/module-catalog";
+import { getSectorsWithEnabledModules, getTenantModuleStates } from "@/lib/modules";
+import { getModuleRoute } from "@/lib/module-catalog";
 import { baseDomain, hostSuffix } from "@/lib/auth/activeSector";
 import { canManageMeetings } from "@/lib/integrations/oauth";
 import { formatInstantDateTime } from "@/lib/format";
@@ -43,10 +43,12 @@ export default async function AppLayout({
         }
       : null;
 
-  const enabledModules = activeSector ? await getEnabledModuleCodes(tenantId) : new Set<string>();
+  // Pelo estado do tenant, e não pelo catálogo: um módulo transferido (o DRE no
+  // Financeiro) aparece no setor que o opera, não no de origem.
+  const moduleStates = activeSector ? await getTenantModuleStates(tenantId) : [];
   const activeSectorModules = activeSector
-    ? getModulesForSector(activeSector.code)
-        .filter((m) => enabledModules.has(m.code))
+    ? moduleStates
+        .filter((m) => m.enabled && m.sectorCode === activeSector.code)
         .map((m) => ({ code: m.code, label: m.label, href: getModuleRoute(m.code) ?? `/setor/${activeSector.code}/${m.code}` }))
     : [];
 

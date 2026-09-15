@@ -19,6 +19,7 @@ import {
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { lerDadosDoProcesso } from "@/lib/societario/dados-do-processo";
+import { lerDataDoCampo } from "@/lib/societario/datas";
 import {
   ehTaxaDoBombeiros,
   arquivarTaxaDeBombeiros,
@@ -30,15 +31,19 @@ import {
 } from "@/lib/societario/arquivamento";
 import { salvarGuia, lerGuia } from "@/lib/societario/guias";
 import { sendTaxaAoClienteEmail } from "@/lib/email/sendMail";
+import { setorDoModulo } from "@/lib/modules";
 
+// `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
+// setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "societario";
+const MODULE = "societario_processos";
 
 export type ProcessoState = { error: string } | null;
 
 async function contexto() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { erro: "Não autenticado" as const, ctx: null };
-  if (!canActOnSector(ctx, SECTOR)) return { erro: "Sem permissão no Societário" as const, ctx: null };
+  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { erro: "Sem permissão no Societário" as const, ctx: null };
   return { erro: null, ctx };
 }
 
@@ -112,7 +117,7 @@ export async function abrirProcesso(_prev: ProcessoState, form: FormData): Promi
 
   // Responsável só pode ser alguém do Societário (ou admin). Sem o campo no
   // formulário, fica com quem abriu — que é como era antes de o campo existir.
-  const responsaveis = await getSectorUsers(ctx.tenantId, SECTOR);
+  const responsaveis = await getSectorUsers(ctx.tenantId, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
   const validos = new Set(responsaveis.map((r) => r.id));
   const informouResponsavel = form.has("ownerUserId");
   if (!informouResponsavel && ctx.userId) validos.add(ctx.userId);
@@ -407,6 +412,11 @@ export async function registrarExigencia(
   const { erro, ctx } = await contexto();
   if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
   if (!descricao.trim()) return { error: "Descreva a exigência." };
+  // Ao meio-dia UTC, como toda data civil do Societário (ver `datas.ts`):
+  // `new Date("AAAA-MM-DD")` dava meia-noite UTC, que em São Paulo ainda é o dia
+  // anterior — e a agenda de prazos mostrava o prazo do órgão um dia antes.
+  const prazo = lerDataDoCampo(prazoAte);
+  if (!prazo.ok) return { error: "Prazo do órgão inválido." };
 
   const protocolo = await protocoloDoTenant(protocolId, ctx.tenantId);
   if (!protocolo) return { error: "Protocolo não encontrado." };
@@ -422,7 +432,7 @@ export async function registrarExigencia(
         tenantId: ctx.tenantId!,
         protocolId,
         description: descricao.trim(),
-        dueAt: prazoAte ? new Date(prazoAte) : null,
+        dueAt: prazo.data,
       },
     });
     if (protocolo.stepId) {
@@ -783,7 +793,7 @@ export async function atualizarDadosDoProcesso(_prev: ProcessoState, form: FormD
   });
   if (!processo) return { error: "Processo não encontrado." };
 
-  const responsaveis = await getSectorUsers(ctx.tenantId, SECTOR);
+  const responsaveis = await getSectorUsers(ctx.tenantId, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
   const validos = new Set(responsaveis.map((r) => r.id));
   if (processo.ownerUserId) validos.add(processo.ownerUserId);
 

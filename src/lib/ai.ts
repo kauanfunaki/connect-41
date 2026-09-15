@@ -29,6 +29,7 @@ import {
   type PreparoDaChamada,
 } from "@/lib/ia/data";
 import { conversarComFerramentas } from "@/lib/ia/conversa";
+import { conversarComFerramentasOpenAi } from "@/lib/ia/conversa-openai";
 import type { ResultadoDoLaco } from "@/lib/ia/laco";
 
 export type { ContextoDaChamada };
@@ -577,12 +578,7 @@ export async function conversarComAgente(params: {
     agentCode: params.agentCode,
     contexto: params.contexto,
     chamar: async (preparo) => {
-      if (preparo.provider !== "ANTHROPIC") {
-        // Recusa explícita, e não um laço pela metade: ver o cabeçalho de
-        // `src/lib/ia/conversa.ts`.
-        throw new Error("Agente com ferramentas ainda só roda com Anthropic.");
-      }
-      const resultado = await conversarComFerramentas({
+      const conversa = {
         apiKey: preparo.apiKey,
         model: preparo.model,
         def: preparo.def,
@@ -594,7 +590,20 @@ export async function conversarComAgente(params: {
           userId: params.contexto?.userId ?? null,
           escopo: params.escopo ?? {},
         },
-      });
+      };
+      // Mesmo laço, adaptador por provedor — ver `src/lib/ia/conversa.ts`.
+      // Provedor que não seja um dos dois é recusado explicitamente, e não
+      // mandado para um formato que não é o dele.
+      let resultado: ResultadoDoLaco<string>;
+      if (preparo.provider === "ANTHROPIC") {
+        resultado = await conversarComFerramentas(conversa);
+      } else if (preparo.provider === "OPENAI") {
+        resultado = await conversarComFerramentasOpenAi(conversa);
+      } else {
+        throw new Error(
+          `Agente com ferramentas não roda com o provedor ${String(preparo.provider)}.`
+        );
+      }
       return { valor: resultado, uso: resultado.uso };
     },
   });

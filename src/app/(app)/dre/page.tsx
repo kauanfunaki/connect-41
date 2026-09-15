@@ -15,6 +15,7 @@ import { RelatorioAnual } from "@/components/dre/RelatorioAnual";
 import { ImportarDoOmie } from "@/components/dre/ImportarDoOmie";
 import { impostoForaDoResultado } from "@/lib/dre/calculo";
 import { OPCOES_PADRAO, TRANSFERENCIA } from "@/lib/dre/estrutura";
+import { setorDoModulo } from "@/lib/modules";
 
 const MESES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -23,15 +24,15 @@ const MESES = [
 
 type EmpresaNaAba = { id: string; name: string; tradeName: string | null };
 
-// O DRE é entrega do BPO — não é setor próprio, e por isso vive atrás do
-// mesmo gate das contas a pagar e receber.
+// O DRE nasce como entrega do BPO, mas o gate é o setor que opera o módulo
+// neste tenant — num cliente ele pode ser do Financeiro (ver `setorDoModulo`).
 export default async function DrePage({
   searchParams,
 }: {
   searchParams: Promise<{ empresa?: string; mes?: string; visao?: string; ano?: string }>;
 }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, "bpo")) notFound();
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, "bpo_dre")) ?? "bpo")) notFound();
 
   const { empresa, mes, visao, ano } = await searchParams;
   const prisma = getPrisma();

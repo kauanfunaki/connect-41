@@ -14,8 +14,12 @@ import {
   atualizarPaginaManual,
   excluirPaginaManual,
 } from "./actions";
+import { setorDoModulo } from "@/lib/modules";
 
+// `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
+// acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "bpo";
+const MODULE = "bpo_manual";
 
 // Manual/Instruções internas do BPO — biblioteca em dois níveis (Documento >
 // Página) escrita pelos próprios colaboradores (não upload de arquivo) pra
@@ -23,9 +27,9 @@ const SECTOR = "bpo";
 // dos Espaços do setor em /setor/bpo e de /bpo-senhas (Repositório de Senhas).
 export default async function BpoManualPage() {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, SECTOR)) notFound();
-  const canAct = canActOnSector(ctx, SECTOR);
-  const canDelete = canManageSector(ctx, SECTOR);
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
+  const canAct = canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
+  const canDelete = canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
 
   const prisma = getPrisma();
   const documents = await prisma.manualDocument.findMany({

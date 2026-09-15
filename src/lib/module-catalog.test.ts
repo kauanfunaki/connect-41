@@ -42,6 +42,15 @@ describe("catálogo de módulos", () => {
     expect(fiscais).toContain("fiscal_documentos");
   });
 
+  // As telas novas derivam o setor do catálogo (`getModuleDef(MODULE).sectorCode`)
+  // em vez de cravar "societario": se o módulo sumir ou mudar de setor, é aqui
+  // que precisa quebrar primeiro, e não num `!` em produção.
+  it("as visões do Societário estão no catálogo, no setor societário", () => {
+    for (const code of ["societario_minha_area", "societario_prazos", "societario_relatorios"]) {
+      expect(getModuleDef(code)?.sectorCode).toBe("societario");
+    }
+  });
+
   // Nasce desligado de propósito: a tela é a etapa 3 e o acervo depende da
   // ponte com o SPED. Ligar antes entregaria uma rota que ainda não existe.
   it("Documentos Fiscais nasce desligado", () => {

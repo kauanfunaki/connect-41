@@ -9,9 +9,13 @@ import { sendTesteEmail } from "@/lib/email/sendMail";
 import { formatInstantDate } from "@/lib/format";
 import { stageIndex } from "@/lib/recruitmentFunnel";
 import type { AssessmentType } from "@/generated/prisma/enums";
+import { setorDoModulo } from "@/lib/modules";
 
 const LINK_TTL_DAYS = 7;
+// `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
+// acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "recrutamento";
+const MODULE = "recrutamento_testes";
 
 export type GerarLinkTesteResult =
   | { error: string }
@@ -34,7 +38,7 @@ export async function gerarLinkTeste(
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { error: "Não autenticado" };
   if (!canWrite(ctx.role)) return { error: "Sem permissão para gerar teste." };
-  if (!canActOnSector(ctx, SECTOR)) return { error: "Sem permissão para o setor de Recrutamento." };
+  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Sem permissão para o setor de Recrutamento." };
 
   const person = await assertPersonEmEscopo(personId, ctx);
   if (!person) return { error: "Pessoa não encontrada ou fora do seu escopo." };

@@ -6,6 +6,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { lerExportDoOmie, mesesDoExport, mesDaData, ExportIlegivel, type Celula } from "@/lib/dre/omie";
+import { setorDoModulo } from "@/lib/modules";
 
 export type ResultadoDaImportacao =
   | { error: string }
@@ -20,7 +21,9 @@ export type ResultadoDaImportacao =
 /** 8 MB — o export de um mês grande fica bem abaixo disso. */
 const TAMANHO_MAXIMO = 8 * 1024 * 1024;
 
+// `SETOR` é o de origem, usado só como padrão — ver `setorDoModulo`.
 const SETOR = "bpo";
+const MODULE = "bpo_dre";
 
 /**
  * Importa um export do Omie.
@@ -41,7 +44,7 @@ const SETOR = "bpo";
 export async function importarExportDoOmie(form: FormData): Promise<ResultadoDaImportacao> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canActOnSector(ctx, SETOR)) return { error: "Sem permissão no BPO." };
+  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SETOR)) return { error: "Sem permissão no BPO." };
   const tenantId = ctx.tenantId;
 
   const companyId = String(form.get("companyId") ?? "");
@@ -163,7 +166,7 @@ export async function removerImport(
 ): Promise<{ error: string } | null> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canActOnSector(ctx, SETOR)) return { error: "Sem permissão no BPO." };
+  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SETOR)) return { error: "Sem permissão no BPO." };
 
   const prisma = getPrisma();
   await prisma.dreImport.deleteMany({ where: { tenantId: ctx.tenantId, companyId, ano, mes } });

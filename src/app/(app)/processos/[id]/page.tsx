@@ -5,7 +5,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Badge } from "@/components/ui/Badge";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled } from "@/lib/modules";
+import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
 import { formatInstantDate } from "@/lib/format";
@@ -35,6 +35,8 @@ import { PRIORIDADE_LABEL, PRIORIDADE_VARIANTE } from "@/lib/societario/priorida
 import { prazoCombinado } from "@/lib/societario/dados-do-processo";
 import { campoDaData } from "@/lib/societario/datas";
 
+// `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
+// setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "societario";
 const MODULE = "societario_processos";
 
@@ -46,7 +48,7 @@ export default async function ProcessoDetalhePage({
   params: Promise<{ id: string }>;
 }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, SECTOR)) notFound();
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const { id } = await params;
@@ -196,7 +198,7 @@ export default async function ProcessoDetalhePage({
 
   // O responsável atual entra na lista mesmo que tenha saído do setor — senão o
   // formulário de editar mostraria "sem responsável" e salvaria isso sem querer.
-  const equipe = await getSectorUsers(ctx.tenantId, SECTOR);
+  const equipe = await getSectorUsers(ctx.tenantId, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
   const responsaveis =
     processo.owner && !equipe.some((u) => u.id === processo.owner!.id) ? [...equipe, processo.owner] : equipe;
   const combinado = processo.dueAt ? prazoCombinado(processo.dueAt, new Date()) : null;
@@ -282,6 +284,9 @@ export default async function ProcessoDetalhePage({
 
           <span>Aberto em {formatInstantDate(processo.startedAt)}</span>
           <span>{processo.owner?.name ?? "sem responsável"}</span>
+          <Link href={`/processos/empresas/${processo.company.id}`} className="text-brand hover:underline">
+            Visão societária da empresa
+          </Link>
           <Link href={`/empresas/${processo.company.id}`} className="text-brand hover:underline">
             Ver empresa
           </Link>

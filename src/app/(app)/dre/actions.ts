@@ -5,15 +5,18 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { grupoDeTexto } from "@/lib/dre/mapeamento";
+import { setorDoModulo } from "@/lib/modules";
 
 export type AcaoDoDre = { error: string } | { success: true } | null;
 
+// `SETOR` é o de origem, usado só como padrão — ver `setorDoModulo`.
 const SETOR = "bpo";
+const MODULE = "bpo_dre";
 
 async function contexto(companyId: string) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { ok: false as const, erro: "Não autenticado" };
-  if (!canActOnSector(ctx, SETOR)) return { ok: false as const, erro: "Sem permissão no BPO." };
+  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SETOR)) return { ok: false as const, erro: "Sem permissão no BPO." };
   const tenantId = ctx.tenantId;
 
   const prisma = getPrisma();

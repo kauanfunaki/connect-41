@@ -1,7 +1,11 @@
 import { getPrisma } from "@/lib/prisma";
-import { MODULE_CATALOG, type ModuleDef } from "@/lib/module-catalog";
+import { MODULE_CATALOG, getModuleDef, type ModuleDef } from "@/lib/module-catalog";
+import { resolverSetorDoModulo } from "@/lib/modulo-setor";
 
-export type ModuleState = ModuleDef & { enabled: boolean };
+// `sectorCode` já vem resolvido para o tenant (ver `src/lib/modulo-setor.ts`);
+// `catalogSectorCode` é onde o módulo nasce, para a tela de admin mostrar que
+// ele foi transferido.
+export type ModuleState = ModuleDef & { enabled: boolean; catalogSectorCode: string };
 
 // null = plano não restringe módulos (planos antigos, ou tenant sem
 // assinatura configurada ainda) — nesse caso só o TenantModule/defaultEnabled
@@ -33,12 +37,17 @@ export async function getTenantModuleStates(tenantId: string): Promise<ModuleSta
     prisma.tenantModule.findMany({ where: { tenantId } }),
     getPlanAllowedModules(tenantId),
   ]);
-  const overrides = new Map(rows.map((r) => [r.moduleCode, r.enabled]));
+  const overrides = new Map(rows.map((r) => [r.moduleCode, r]));
 
-  return MODULE_CATALOG.map((m) => ({
-    ...m,
-    enabled: (allowedByPlan === null || allowedByPlan.has(m.code)) && (overrides.get(m.code) ?? m.defaultEnabled),
-  }));
+  return MODULE_CATALOG.map((m) => {
+    const row = overrides.get(m.code);
+    return {
+      ...m,
+      sectorCode: resolverSetorDoModulo(m.sectorCode, row?.sectorCode),
+      catalogSectorCode: m.sectorCode,
+      enabled: (allowedByPlan === null || allowedByPlan.has(m.code)) && (row?.enabled ?? m.defaultEnabled),
+    };
+  });
 }
 
 export async function getEnabledModuleCodes(tenantId: string): Promise<Set<string>> {
@@ -51,15 +60,30 @@ export async function isModuleEnabled(tenantId: string, code: string): Promise<b
   return states.find((s) => s.code === code)?.enabled ?? false;
 }
 
+/**
+ * O setor que opera o módulo neste tenant — é o que o gate de cada tela deve
+ * usar, no lugar de um `const SECTOR = "bpo"`. Módulo fora do catálogo devolve
+ * `null`, e o chamador trata como não encontrado.
+ *
+ * Consulta só a linha do módulo, e não os estados todos: o gate roda em toda
+ * página e em toda action.
+ */
+export async function setorDoModulo(tenantId: string, code: string): Promise<string | null> {
+  const def = getModuleDef(code);
+  if (!def) return null;
+  const prisma = getPrisma();
+  const row = await prisma.tenantModule.findUnique({
+    where: { tenantId_moduleCode: { tenantId, moduleCode: code } },
+    select: { sectorCode: true },
+  });
+  return resolverSetorDoModulo(def.sectorCode, row?.sectorCode);
+}
+
 // Setores que têm ao menos um módulo ativo para o tenant — usado pra sidebar não
 // mostrar um setor sem nenhum módulo plugado nele.
 export async function getSectorsWithEnabledModules(tenantId: string): Promise<Set<string>> {
-  const enabled = await getEnabledModuleCodes(tenantId);
-  const sectors = new Set<string>();
-  for (const m of MODULE_CATALOG) {
-    if (enabled.has(m.code)) sectors.add(m.sectorCode);
-  }
-  return sectors;
+  const states = await getTenantModuleStates(tenantId);
+  return new Set(states.filter((s) => s.enabled).map((s) => s.sectorCode));
 }
 
 export async function setModuleEnabled(tenantId: string, code: string, enabled: boolean): Promise<void> {
@@ -68,5 +92,22 @@ export async function setModuleEnabled(tenantId: string, code: string, enabled: 
     where: { tenantId_moduleCode: { tenantId, moduleCode: code } },
     create: { tenantId, moduleCode: code, enabled },
     update: { enabled },
+  });
+}
+
+/**
+ * Grava o setor que opera o módulo. `null` volta ao setor do catálogo.
+ *
+ * Na criação, `enabled` nasce com o padrão do catálogo: transferir um módulo que
+ * nunca foi ligado nem desligado não pode, de carona, mudar se ele está ativo.
+ */
+export async function setModuleSector(tenantId: string, code: string, sectorCode: string | null): Promise<void> {
+  const def = getModuleDef(code);
+  if (!def) return;
+  const prisma = getPrisma();
+  await prisma.tenantModule.upsert({
+    where: { tenantId_moduleCode: { tenantId, moduleCode: code } },
+    create: { tenantId, moduleCode: code, enabled: def.defaultEnabled, sectorCode },
+    update: { sectorCode },
   });
 }

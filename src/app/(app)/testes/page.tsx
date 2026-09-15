@@ -11,9 +11,13 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { NovoTesteForm } from "@/components/teste/NovoTesteForm";
 import { formatInstantDate } from "@/lib/format";
 import type { AssessmentLinkStatus } from "@/generated/prisma/enums";
+import { setorDoModulo } from "@/lib/modules";
 
 const PER_PAGE = 30;
+// `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
+// acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "recrutamento";
+const MODULE = "recrutamento_testes";
 
 const STATUS_LABEL: Record<AssessmentLinkStatus, string> = {
   PENDENTE: "Pendente",
@@ -43,7 +47,7 @@ export default async function TestesPage({
     ...(statusFilter ? { status: statusFilter } : {}),
   };
 
-  const canCreate = canWrite(ctx.role) && canActOnSector(ctx, SECTOR);
+  const canCreate = canWrite(ctx.role) && canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
 
   const [links, total, candidatos, templates] = await Promise.all([
     prisma.assessmentLink.findMany({

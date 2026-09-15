@@ -79,13 +79,19 @@ export function AiConfigForm({ hasConfig, defaultValues }: Props) {
               ))}
             </Select>
           </CampoForm>
-          <CampoForm label="Modelo (opcional)" htmlFor="model" helper="Deixe em branco para usar o padrão do provedor.">
+          <CampoForm
+            label="Modelo (opcional)"
+            htmlFor="model"
+            helper="Deixe em branco: cada agente usa o modelo da sua faixa. Preenchido, vale para todos os agentes."
+          >
             <Input
               id="model"
               name="model"
               type="text"
               defaultValue={defaultValues?.model ?? ""}
-              placeholder={provider === "ANTHROPIC" ? "claude-opus-4-8" : "gpt-4.1"}
+              // O exemplo é um modelo que está na tabela de preço: um id fora
+              // dela deixa o custo desconhecido e o teto do agente sem conta.
+              placeholder={provider === "ANTHROPIC" ? "claude-opus-5" : "gpt-5.6-terra"}
             />
           </CampoForm>
         </div>

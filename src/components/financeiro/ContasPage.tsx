@@ -4,14 +4,15 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled } from "@/lib/modules";
+import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
 import { listarContas, competenciasComContas, type TipoDeConta } from "@/lib/financeiro/data";
 import { saoPauloParts } from "@/lib/agenda";
+import { getModuleDef } from "@/lib/module-catalog";
 import { ContasTable, moeda } from "./ContasTable";
-
-const SECTOR = "bpo";
+import { AnaliseDeContas } from "./AnaliseDeContas";
+import { AbasDeLink } from "./FiltroDePeriodo";
 
 const RECORTES = [
   { chave: "abertas", rotulo: "Em aberto" },
@@ -37,13 +38,20 @@ export async function ContasPage({
   modulo: string;
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
+  // O setor não é constante: é o que opera o módulo neste tenant
+  // (`setorDoModulo`), então a tela acompanha uma transferência.
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, SECTOR)) notFound();
+  if (!ctx.tenantId || !getModuleDef(modulo)) notFound();
+  const sector = await setorDoModulo(ctx.tenantId, modulo);
+  if (!sector || !canActOnSector(ctx, sector)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, modulo))) notFound();
 
   const params = await searchParams;
+  // A análise lê sempre o recorte "em aberto": faixa de atraso de conta paga
+  // não existe, e a soma das faixas precisa bater com o total do topo.
+  const aba = params.aba === "analise" ? "analise" : "contas";
   const recorte =
-    RECORTES.find((r) => r.chave === params.recorte)?.chave ?? "abertas";
+    aba === "analise" ? "abertas" : RECORTES.find((r) => r.chave === params.recorte)?.chave ?? "abertas";
 
   const prisma = getPrisma();
   const agora = new Date();
@@ -71,6 +79,7 @@ export async function ContasPage({
     if (params.competencia) q.set("competencia", params.competencia);
     if (params.empresa) q.set("empresa", params.empresa);
     if (recorte !== "abertas") q.set("recorte", recorte);
+    if (aba === "analise") q.set("aba", "analise");
     if (valor) q.set(chave, valor);
     else q.delete(chave);
     const s = q.toString();
@@ -125,8 +134,16 @@ export async function ContasPage({
         </div>
       </div>
 
+      <AbasDeLink
+        abas={[
+          { chave: "contas", rotulo: "Contas", href: comParam("aba", undefined) },
+          { chave: "analise", rotulo: "Análise — atraso e ranking", href: comParam("aba", "analise") },
+        ]}
+        ativa={aba}
+      />
+
       <div className="flex flex-wrap items-center gap-1.5 mb-4">
-        {RECORTES.map((r) => {
+        {aba === "contas" && RECORTES.map((r) => {
           const ativo = r.chave === recorte;
           return (
             <Link
@@ -173,12 +190,16 @@ export async function ContasPage({
         )}
       </div>
 
-      <ContasTable
-        linhas={resultado.linhas}
-        kind={kind}
-        filtrado={resultado.totalGeral > 0 && resultado.linhas.length === 0}
-        hojeISO={saoPauloParts(agora).dateKey}
-      />
+      {aba === "analise" ? (
+        <AnaliseDeContas linhas={resultado.linhas} hojeKey={saoPauloParts(agora).dateKey} aPagar={aPagar} />
+      ) : (
+        <ContasTable
+          linhas={resultado.linhas}
+          kind={kind}
+          filtrado={resultado.totalGeral > 0 && resultado.linhas.length === 0}
+          hojeISO={saoPauloParts(agora).dateKey}
+        />
+      )}
 
       {empresas.length > 0 && params.empresa && (
         <p className="mt-4 text-[12px] text-fg-muted">

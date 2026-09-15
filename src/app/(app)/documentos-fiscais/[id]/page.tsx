@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { InfoRow } from "@/components/empresas/InfoRow";
 import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
-import { isModuleEnabled } from "@/lib/modules";
+import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { obterDocumento } from "@/lib/fiscal/data";
 import { alcanceDaEquipe } from "../alcance";
 import { definirDestino } from "./actions";
@@ -33,6 +33,8 @@ import {
   competenciaLegivel,
 } from "@/lib/fiscal/rotulos";
 
+// `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
+// acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "fiscal";
 const MODULE = "fiscal_documentos";
 const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -45,7 +47,7 @@ function documentoLegivel(valor: string | null): string {
 
 export default async function DocumentoFiscalPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, SECTOR)) notFound();
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const { id } = await params;
@@ -197,7 +199,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
           documentoId={doc.id}
           destinoAtual={doc.destination}
           motivoAtual={doc.ignoredReason}
-          podeDecidir={canManageSector(ctx, SECTOR)}
+          podeDecidir={canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)}
           action={definirDestino}
         />
       </Card>
@@ -205,7 +207,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
       <LancamentoCard
         documentoId={doc.id}
         direcao={direcao === "RECEBER" ? "RECEBER" : "PAGAR"}
-        podeDecidir={canManageSector(ctx, SECTOR)}
+        podeDecidir={canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)}
         categorias={categorias}
         vencimentoPresumidoIso={vencimentoPresumido(doc.issuedAt).toISOString().slice(0, 10)}
         impedimento={veredito.pode || doc.financeEntry ? null : veredito.explicacao}

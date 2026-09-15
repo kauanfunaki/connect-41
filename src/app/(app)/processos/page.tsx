@@ -6,7 +6,7 @@ import { BackButton } from "@/components/shared/BackButton";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled } from "@/lib/modules";
+import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { listarFila, contarPorSituacao, feriadosDoTenant } from "@/lib/societario/fila";
 import type { SituacaoDoProcesso } from "@/lib/societario/processo";
 import { PRIORIDADES, PRIORIDADE_LABEL, ehPrioridade } from "@/lib/societario/prioridade";
@@ -18,6 +18,8 @@ import { getSectorUsers } from "@/lib/sectorUsers";
 import { nomeExibicao } from "@/lib/companyName";
 import { abrirProcesso } from "./actions";
 
+// `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
+// setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "societario";
 const MODULE = "societario_processos";
 
@@ -37,7 +39,7 @@ export default async function ProcessosPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, SECTOR)) notFound();
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   // Gate de módulo além do gate de setor: o módulo é vendido por plano, e quem
   // é do societário num tenant que não contratou não deve ver a tela.
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
@@ -60,7 +62,7 @@ export default async function ProcessosPage({
       orderBy: { name: "asc" },
       select: { id: true, name: true, expectedDaysMin: true, expectedDaysMax: true, variableFlow: true },
     }),
-    getSectorUsers(ctx.tenantId, SECTOR),
+    getSectorUsers(ctx.tenantId, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR),
   ]);
 
   // Os filtros da URL só valem quando são valores conhecidos: o parâmetro é
@@ -105,6 +107,13 @@ export default async function ProcessosPage({
             Constituição, alteração contratual, baixa e alvarás — com protocolo, exigência e prazo.
           </p>
         </div>
+        <div className="flex items-center gap-3">
+        <Link
+          href={filtrosNaUrl.size > 0 ? `/processos/kanban?${filtrosNaUrl}` : "/processos/kanban"}
+          className="text-[13px] text-brand hover:underline whitespace-nowrap"
+        >
+          Ver no kanban
+        </Link>
         <NovoProcessoForm
           empresas={empresas.map((e) => ({ value: e.id, label: nomeExibicao(e) }))}
           tipos={tipos.map((t) => ({
@@ -122,6 +131,7 @@ export default async function ProcessosPage({
           responsavelPadrao={responsaveis.some((r) => r.id === ctx.userId) ? (ctx.userId ?? "") : ""}
           abrirAction={abrirProcesso}
         />
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-1.5 mb-3">

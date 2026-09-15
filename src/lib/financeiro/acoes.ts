@@ -12,15 +12,22 @@ import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { saoPauloParts } from "@/lib/agenda";
 import { podeMarcarPago, podeConferir } from "./contas";
+import { setorDoModulo } from "@/lib/modules";
 
+// `SECTOR` é o de origem, usado só como padrão. As ações servem `/pagar` e
+// `/receber`, que podem estar em setores diferentes num tenant: o gate aceita
+// quem atua no setor de qualquer um dos dois, porque a checagem roda antes de
+// se saber o tipo do lançamento — e a tela de cada um já barra quem não é dele.
 const SECTOR = "bpo";
+const MODULOS = ["bpo_contas_pagar", "bpo_contas_receber"];
 
 export type AcaoDeContaState = { error: string } | null;
 
 async function contexto() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { erro: "Não autenticado" as const, ctx: null };
-  if (!canActOnSector(ctx, SECTOR)) return { erro: "Sem permissão no BPO" as const, ctx: null };
+  const setores = await Promise.all(MODULOS.map((m) => setorDoModulo(ctx.tenantId, m)));
+  if (!setores.some((s) => canActOnSector(ctx, s ?? SECTOR))) return { erro: "Sem permissão no BPO" as const, ctx: null };
   return { erro: null, ctx };
 }
 

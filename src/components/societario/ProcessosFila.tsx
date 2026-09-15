@@ -38,7 +38,7 @@ const COR_DO_PRAZO_COMBINADO = {
  * "sem previsão" não é falta de dado — é o alvará, que o próprio setor declara
  * como fluxo variável. Escrever "0 de 0 dias" ali seria inventar régua.
  */
-function PrazoCelula({ prazo }: { prazo: LinhaDaFila["prazo"] }) {
+export function PrazoCelula({ prazo }: { prazo: LinhaDaFila["prazo"] }) {
   if (prazo.situacao === "sem_previsao") {
     return (
       <span className="text-[12px] text-fg-muted">

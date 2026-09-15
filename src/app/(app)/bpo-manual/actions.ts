@@ -4,8 +4,12 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
 import { sanitizeDocumentHtml } from "@/lib/clientDocuments";
+import { setorDoModulo } from "@/lib/modules";
 
+// `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
+// acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "bpo";
+const MODULE = "bpo_manual";
 
 export type ManualPageState = { error: string } | null;
 
@@ -21,7 +25,7 @@ export async function criarDocumentoManual(titleRaw: string): Promise<{ error: s
   const { tenantId, userId } = ctx;
   const title = titleRaw.trim();
   if (!tenantId || !userId) return { error: "Não autenticado" };
-  if (!canActOnSector(ctx, SECTOR)) return { error: "Sem permissão para criar documento." };
+  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Sem permissão para criar documento." };
   if (!title) return { error: "Título é obrigatório" };
 
   const prisma = getPrisma();
@@ -41,7 +45,7 @@ export async function renomearDocumentoManual(documentId: string, titleRaw: stri
   const ctx = await getAuthContext();
   const { tenantId } = ctx;
   const title = titleRaw.trim();
-  if (!tenantId || !title || !canActOnSector(ctx, SECTOR)) return;
+  if (!tenantId || !title || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return;
 
   const prisma = getPrisma();
   try {
@@ -60,7 +64,7 @@ export async function renomearDocumentoManual(documentId: string, titleRaw: stri
 export async function atualizarIconeDocumento(documentId: string, iconRaw: string | null): Promise<void> {
   const ctx = await getAuthContext();
   const { tenantId } = ctx;
-  if (!tenantId || !canActOnSector(ctx, SECTOR)) return;
+  if (!tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return;
 
   const icon = iconRaw?.trim() || null;
   const prisma = getPrisma();
@@ -77,7 +81,7 @@ export async function atualizarIconeDocumento(documentId: string, iconRaw: strin
 export async function excluirDocumentoManual(documentId: string): Promise<void> {
   const ctx = await getAuthContext();
   const { tenantId } = ctx;
-  if (!tenantId || !canManageSector(ctx, SECTOR)) return;
+  if (!tenantId || !canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return;
 
   const prisma = getPrisma();
   try {
@@ -95,7 +99,7 @@ export async function criarPaginaManual(documentId: string, titleRaw: string): P
   const { tenantId, userId } = ctx;
   const title = titleRaw.trim();
   if (!tenantId || !userId) return { error: "Não autenticado" };
-  if (!canActOnSector(ctx, SECTOR)) return { error: "Sem permissão para criar página." };
+  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Sem permissão para criar página." };
   if (!title) return { error: "Título é obrigatório" };
 
   const prisma = getPrisma();
@@ -119,7 +123,7 @@ export async function atualizarPaginaManual(pageId: string, _prev: ManualPageSta
   const ctx = await getAuthContext();
   const { tenantId } = ctx;
   if (!tenantId) return { error: "Não autenticado" };
-  if (!canActOnSector(ctx, SECTOR)) return { error: "Sem permissão para editar esta página." };
+  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Sem permissão para editar esta página." };
 
   const title = (form.get("title") as string)?.trim();
   if (!title) return { error: "Título é obrigatório" };
@@ -142,7 +146,7 @@ export async function atualizarPaginaManual(pageId: string, _prev: ManualPageSta
 export async function excluirPaginaManual(pageId: string): Promise<void> {
   const ctx = await getAuthContext();
   const { tenantId } = ctx;
-  if (!tenantId || !canManageSector(ctx, SECTOR)) return;
+  if (!tenantId || !canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return;
 
   const prisma = getPrisma();
   try {

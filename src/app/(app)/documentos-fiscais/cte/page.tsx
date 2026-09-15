@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { BackButton } from "@/components/shared/BackButton";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled } from "@/lib/modules";
+import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { listarCtePorRota, ErroDoSped } from "@/lib/sped/client";
 import { credenciaisDoSped } from "@/lib/sped/credenciais";
 import { raizesDoAlcance, janelaDoMesCorrente, ehDataValida } from "@/lib/sped/raizes";
@@ -19,6 +19,8 @@ import { alcanceDaEquipe } from "../alcance";
 import { formatCnpj } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 
+// `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
+// acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "fiscal";
 const MODULE = "fiscal_documentos";
 const POR_PAGINA = 100;
@@ -51,7 +53,7 @@ export default async function CtePage({
   searchParams: Promise<{ raiz?: string; de?: string; ate?: string; cursor?: string }>;
 }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, SECTOR)) notFound();
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const sp = await searchParams;

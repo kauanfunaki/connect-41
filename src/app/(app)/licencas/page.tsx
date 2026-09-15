@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled } from "@/lib/modules";
+import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -25,7 +25,8 @@ export default async function LicencasPage({
   searchParams: Promise<{ recorte?: string }>;
 }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, "societario")) notFound();
+  // Setor que opera o módulo neste tenant, não o de origem — ver `setorDoModulo`.
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, "societario_licencas")) ?? "societario")) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, "societario_licencas"))) notFound();
 
   const { recorte } = await searchParams;

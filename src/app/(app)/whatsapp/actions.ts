@@ -8,16 +8,20 @@ import { lerConfig } from "@/lib/integracoes/data";
 import { enviarERegistrar } from "@/lib/whatsapp/envio";
 import { podeResponder, podeDevolverAoRobo } from "@/lib/whatsapp/conversas";
 import { provedorDaIntegracao } from "@/lib/whatsapp/provedores";
+import { setorDoModulo } from "@/lib/modules";
 
 export type AcaoNaConversa = { error: string } | { success: true } | null;
 
+// `SETOR` é o de origem, usado só como padrão: o acesso segue o setor que opera
+// o módulo neste tenant — ver `setorDoModulo`.
 const SETOR = "recrutamento";
+const MODULE = "recrutamento_whatsapp";
 
 /** Resolve a conversa, já com a checagem de permissão feita. */
 async function abrirConversa(threadId: string) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { ok: false as const, erro: "Não autenticado" };
-  if (!canActOnSector(ctx, SETOR)) {
+  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SETOR)) {
     return { ok: false as const, erro: "Sem permissão no Recrutamento." };
   }
   const tenantId = ctx.tenantId;

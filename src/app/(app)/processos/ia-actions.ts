@@ -4,9 +4,13 @@ import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { conversarComAgente } from "@/lib/ai";
 import type { PropostaDeEscrita } from "@/lib/ia/ferramentas";
 import { concluirEtapa, dispensarEtapa } from "./actions";
+import { setorDoModulo } from "@/lib/modules";
 
 const AGENTE = "assistente_do_societario";
+// `SETOR` é o de origem, usado só como padrão: o acesso segue o setor que opera
+// a fila de processos neste tenant — ver `setorDoModulo`.
 const SETOR = "societario";
+const MODULE = "societario_processos";
 
 const SISTEMA =
   "Você ajuda o coordenador do Societário a enxergar a fila de processos de abertura, " +
@@ -26,7 +30,7 @@ export type RespostaDoSocietario =
 export async function perguntarAoSocietario(pergunta: string): Promise<RespostaDoSocietario> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canActOnSector(ctx, SETOR)) return { error: "Sem permissão no Societário." };
+  if (!canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SETOR)) return { error: "Sem permissão no Societário." };
 
   const texto = pergunta.trim();
   if (!texto) return { error: "Escreva a pergunta." };

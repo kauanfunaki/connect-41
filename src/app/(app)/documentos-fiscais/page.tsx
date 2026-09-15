@@ -8,13 +8,15 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FileText, Truck } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled } from "@/lib/modules";
+import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { listarDocumentos, competenciasDisponiveis, resumoPorDestino } from "@/lib/fiscal/data";
 import { AcervoTable } from "@/components/fiscal/AcervoTable";
 import { AcervoFiltros } from "@/components/fiscal/AcervoFiltros";
 import { alcanceDaEquipe } from "./alcance";
 import type { FiscalDocumentType, FiscalDocumentDestination } from "@/generated/prisma/enums";
 
+// `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
+// acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "fiscal";
 const MODULE = "fiscal_documentos";
 
@@ -28,7 +30,7 @@ export default async function DocumentosFiscaisPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, SECTOR)) notFound();
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   // Gate de módulo além do gate de setor: o módulo é vendido por plano, e quem
   // é do fiscal num tenant que não contratou não deve ver a tela.
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();

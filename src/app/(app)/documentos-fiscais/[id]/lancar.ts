@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
-import { isModuleEnabled } from "@/lib/modules";
+import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { logAudit } from "@/lib/audit";
 import { obterDocumento } from "@/lib/fiscal/data";
 import { alcanceDaEquipe } from "../alcance";
@@ -16,6 +16,8 @@ import {
   categoriaObrigatoria,
 } from "@/lib/financeiro/lancamento";
 
+// `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
+// acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "fiscal";
 const MODULE = "fiscal_documentos";
 
@@ -37,8 +39,8 @@ export async function lancarDocumento(
   opcoes: { categoriaId?: string | null; vencimento?: string | null }
 ): Promise<ResultadoDoLancamento> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, SECTOR)) return { error: "Sem permissão." };
-  if (!canManageSector(ctx, SECTOR)) return { error: "Só a coordenação do fiscal lança documento." };
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Sem permissão." };
+  if (!canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Só a coordenação do fiscal lança documento." };
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { error: "Módulo não habilitado." };
 
   const prisma = getPrisma();
@@ -169,8 +171,8 @@ export async function lancarDocumento(
 /** Desfaz o lançamento e devolve o documento para pendente. */
 export async function estornarLancamento(documentoId: string): Promise<{ error: string } | { ok: true }> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, SECTOR)) return { error: "Sem permissão." };
-  if (!canManageSector(ctx, SECTOR)) return { error: "Só a coordenação do fiscal estorna." };
+  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Sem permissão." };
+  if (!canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Só a coordenação do fiscal estorna." };
 
   const prisma = getPrisma();
   const doc = await obterDocumento(alcanceDaEquipe(ctx.tenantId), documentoId);
