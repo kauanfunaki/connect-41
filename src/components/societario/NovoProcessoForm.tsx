@@ -4,17 +4,22 @@ import { useActionState, useState } from "react";
 import { Plus } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { CampoForm } from "@/components/ui/CampoForm";
 import { Select } from "@/components/ui/Select";
 import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSelect";
 import type { ProcessoState } from "@/app/(app)/processos/actions";
+import { CamposDoProcesso } from "./CamposDoProcesso";
 
 type Props = {
   empresas: Opcao[];
   tipos: { id: string; name: string; prazo: string }[];
+  responsaveis: { id: string; name: string }[];
+  /** Quem abre fica como responsável, a menos que escolha outro. */
+  responsavelPadrao: string;
   abrirAction: (prev: ProcessoState, form: FormData) => Promise<ProcessoState>;
 };
 
-export function NovoProcessoForm({ empresas, tipos, abrirAction }: Props) {
+export function NovoProcessoForm({ empresas, tipos, responsaveis, responsavelPadrao, abrirAction }: Props) {
   const [aberto, setAberto] = useState(false);
   const [estado, action, isPending] = useActionState(abrirAction, null);
 
@@ -24,21 +29,15 @@ export function NovoProcessoForm({ empresas, tipos, abrirAction }: Props) {
         <Plus size={14} /> Abrir processo
       </Button>
 
-      <Modal open={aberto} onClose={() => setAberto(false)} title="Abrir processo">
+      <Modal open={aberto} onClose={() => setAberto(false)} title="Abrir processo" maxWidth="max-w-lg">
         <form action={action} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="companyId" className="text-[12px] font-medium text-fg-secondary">
-              Empresa
-            </label>
+          <CampoForm label="Empresa" htmlFor="companyId" required>
             {/* Busca e não select nativo: são centenas de empresas desde a
                 importação do Acessórias. */}
             <SearchableSelect id="companyId" name="companyId" options={empresas} placeholder="Buscar empresa…" />
-          </div>
+          </CampoForm>
 
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="typeId" className="text-[12px] font-medium text-fg-secondary">
-              Tipo de processo
-            </label>
+          <CampoForm label="Tipo de processo" htmlFor="typeId" required>
             <Select id="typeId" name="typeId" defaultValue="">
               <option value="" disabled>
                 Escolha…
@@ -49,7 +48,13 @@ export function NovoProcessoForm({ empresas, tipos, abrirAction }: Props) {
                 </option>
               ))}
             </Select>
-          </div>
+          </CampoForm>
+
+          <CamposDoProcesso
+            prefixo="novo"
+            responsaveis={responsaveis}
+            valores={{ titulo: "", responsavelId: responsavelPadrao, prioridade: "NORMAL", prazoCombinado: "" }}
+          />
 
           {estado?.error && (
             <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">

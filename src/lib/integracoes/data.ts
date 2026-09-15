@@ -68,6 +68,8 @@ export type IntegracaoNaTela = {
   /** Quais segredos já estão guardados, para a tela escrever "preenchido". */
   segredosGuardados: string[];
   faltando: string[];
+  /** Caminho do webhook desta conexão, já com o id. Nulo sem conexão ou sem webhook. */
+  caminhoDoWebhook: string | null;
 };
 
 /**
@@ -124,6 +126,8 @@ export async function listarIntegracoes(
       valores: configParaTela(def, config),
       segredosGuardados: segredosPreenchidos(def, config),
       faltando: camposFaltando(def, config),
+      caminhoDoWebhook:
+        conexao && def.caminhoDoWebhook ? def.caminhoDoWebhook.replace("{id}", conexao.id) : null,
     };
   });
 }

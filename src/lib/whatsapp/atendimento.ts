@@ -1,16 +1,16 @@
 // O que acontece quando um candidato manda mensagem.
 //
-// A cola entre as peças puras (`payload`, `decisao`) e as impuras (banco,
-// agente, Cloud API). Vive fora da rota porque a rota tem um trabalho só:
-// autenticar e responder 200 rápido.
+// A cola entre as peças puras (`decisao`, o `lerEvento` do provedor) e as
+// impuras (banco, agente, envio). Vive fora da rota porque a rota tem um
+// trabalho só: autenticar e responder 200.
 //
-// ─── 200 rápido, sempre ─────────────────────────────────────────────────────
+// ─── Reentrega ──────────────────────────────────────────────────────────────
 //
-// A Meta reentrega quando não recebe 200 em poucos segundos. Como a resposta
+// Provedor de webhook reentrega quando não recebe 200 a tempo. Como a resposta
 // depende de uma conversa com o modelo — que leva segundos, às vezes mais —
-// processar dentro do ciclo da requisição é pedir reentrega, e reentrega é
-// segunda mensagem ao candidato. O `waMessageId` único é o que segura isso, e
-// é a primeira coisa que este módulo faz.
+// reentrega acontece, e reentrega seria segunda mensagem ao candidato. O
+// `waMessageId` único é o que segura isso, e é a primeira coisa que este módulo
+// faz.
 
 import { getPrisma } from "@/lib/prisma";
 import { conversarComAgente } from "@/lib/ai";
@@ -23,21 +23,36 @@ import {
   type EstadoDaConversa,
 } from "@/lib/whatsapp/decisao";
 import { enviarERegistrar, registrarBloqueio } from "@/lib/whatsapp/envio";
-import type { MensagemRecebida } from "@/lib/whatsapp/payload";
+import type { MensagemRecebida, ProvedorWhatsapp } from "@/lib/whatsapp/provedores/tipos";
 
 const AGENTE = "atendente_de_candidato";
 
-const SISTEMA =
-  "Você é o atendente virtual do Recrutamento da 41 Contábil, falando por WhatsApp com um " +
-  "candidato. Escreva em português do Brasil, curto — no máximo três frases —, educado e " +
-  "direto, como se estivesse no WhatsApp mesmo, sem formatação e sem listas longas.\n" +
-  "Consulte as ferramentas antes de afirmar qualquer coisa sobre o processo da pessoa; nunca " +
-  "invente etapa, prazo ou resultado.\n" +
-  "VOCÊ NUNCA: reprova alguém, fala de salário, faz ou insinua proposta, confirma contratação, " +
-  "promete prazo que não leu no sistema, nem pede CPF, RG, data de nascimento ou qualquer " +
-  "documento.\n" +
-  "Em qualquer um desses casos — e sempre que não tiver certeza — use a ferramenta " +
-  "pedir_ajuda_humana. Não é derrota: é o certo a fazer.";
+/**
+ * O prompt do atendente.
+ *
+ * O nome do escritório entra por parâmetro: até 14/09 estava escrito "41
+ * Contábil", e o candidato de qualquer outro cliente do Connect leria o nome
+ * errado.
+ */
+function sistema(nomeDoEscritorio: string): string {
+  return (
+    `Você é o atendente virtual do Recrutamento da ${nomeDoEscritorio}, falando por WhatsApp com um ` +
+    "candidato. Escreva em português do Brasil, curto — no máximo três frases —, educado e " +
+    "direto, como se estivesse no WhatsApp mesmo, sem formatação e sem listas longas.\n" +
+    "Consulte as ferramentas antes de afirmar qualquer coisa sobre o processo da pessoa; nunca " +
+    "invente etapa, prazo ou resultado.\n" +
+    "VOCÊ NUNCA: reprova alguém, fala de salário, faz ou insinua proposta, confirma contratação, " +
+    "promete prazo que não leu no sistema, nem pede CPF, RG, data de nascimento ou qualquer " +
+    "documento.\n" +
+    "Em qualquer um desses casos — e sempre que não tiver certeza — use a ferramenta " +
+    "pedir_ajuda_humana. Não é derrota: é o certo a fazer."
+  );
+}
+
+async function nomeDoEscritorio(tenantId: string): Promise<string> {
+  const tenant = await getPrisma().tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
+  return tenant?.name.trim() || "nossa empresa";
+}
 
 /** Grava a mensagem recebida. `false` quando já tínhamos visto este id. */
 async function registrarEntrada(
@@ -58,9 +73,9 @@ async function registrarEntrada(
     });
     return true;
   } catch {
-    // Violação da chave única em `waMessageId` — reentrega da Meta. É o
-    // caminho normal, não erro: a Meta reenvia sempre que não recebe 200
-    // rápido, e é exatamente aqui que a segunda resposta ao candidato morre.
+    // Violação da chave única em `waMessageId` — reentrega do provedor. É o
+    // caminho normal, não erro: é exatamente aqui que a segunda resposta ao
+    // candidato morre.
     return false;
   }
 }
@@ -97,6 +112,7 @@ async function transferir(threadId: string, motivo: string): Promise<void> {
 export type Conexao = {
   id: string;
   tenantId: string;
+  integrationCode: string;
   enabled: boolean;
   configEnc: string;
 };
@@ -109,6 +125,7 @@ export type Conexao = {
  */
 export async function atenderMensagem(
   conexao: Conexao,
+  provedor: ProvedorWhatsapp,
   m: MensagemRecebida
 ): Promise<string> {
   const agora = new Date();
@@ -145,12 +162,13 @@ export async function atenderMensagem(
     lastInboundAt: thread.lastInboundAt,
     respostasNaUltimaHora,
     jaSeApresentou: saidas > 0,
+    janelaLivreHoras: provedor.politica.janelaLivreHoras,
   };
 
   const decisao = decidir(estado, m.texto, agora);
 
   // Carimba o inbound depois de decidir, e sempre — inclusive quando ninguém
-  // responde. É o relógio da janela de 24h, e ele não depende de termos falado.
+  // responde. É o relógio da janela, e ele não depende de termos falado.
   await prisma.whatsappThread.update({
     where: { id: thread.id },
     data: { lastInboundAt: m.recebidaEm },
@@ -163,7 +181,7 @@ export async function atenderMensagem(
     return `transferido: ${decisao.motivo}`;
   }
 
-  const cred = credenciais(conexao);
+  const config = lerConfig(conexao.configEnc);
 
   if (decisao.tipo === "confirmar_saida") {
     await prisma.whatsappThread.update({
@@ -176,7 +194,8 @@ export async function atenderMensagem(
     await enviarERegistrar({
       tenantId: conexao.tenantId,
       threadId: thread.id,
-      cred,
+      provedor,
+      config,
       paraE164: m.de,
       texto: CONFIRMACAO_DE_SAIDA,
     });
@@ -184,17 +203,19 @@ export async function atenderMensagem(
   }
 
   // ─── Responder ────────────────────────────────────────────────────────────
+  const escritorio = await nomeDoEscritorio(conexao.tenantId);
+
   let resposta;
   try {
     resposta = await conversarComAgente({
       tenantId: conexao.tenantId,
       agentCode: AGENTE,
-      system: SISTEMA,
+      system: sistema(escritorio),
       pergunta: m.texto,
       maxTokens: 800,
       // `CRON` não: foi o candidato que provocou. `SISTEMA` é o que descreve
       // "efeito de algo que chegou de fora", e é o que separa este gasto do
-      // que alguém da 41 pediu clicando.
+      // que alguém do escritório pediu clicando.
       contexto: { trigger: "SISTEMA", entityType: "whatsapp", entityId: thread.id },
       escopo: { threadId: thread.id },
     });
@@ -207,11 +228,14 @@ export async function atenderMensagem(
     return `transferido: ${motivo}`;
   }
 
-  const desfecho = decidirComARespostaDoAgente({
-    texto: resposta.valor,
-    propostas: resposta.propostas.length,
-    truncado: resposta.truncado,
-  });
+  const desfecho = decidirComARespostaDoAgente(
+    {
+      texto: resposta.valor,
+      propostas: resposta.propostas.length,
+      truncado: resposta.truncado,
+    },
+    provedor.politica.maxCaracteres
+  );
 
   if (desfecho.tipo === "transferir") {
     await transferir(thread.id, desfecho.motivo);
@@ -230,20 +254,13 @@ export async function atenderMensagem(
   await enviarERegistrar({
     tenantId: conexao.tenantId,
     threadId: thread.id,
-    cred,
+    provedor,
+    config,
     paraE164: m.de,
-    texto: montarMensagem(desfecho.texto, decisao.apresentar),
+    texto: montarMensagem(desfecho.texto, decisao.apresentar, escritorio),
     agentRunId: resposta.runId ?? null,
   });
   return "respondido";
-}
-
-function credenciais(conexao: Conexao) {
-  const config = lerConfig(conexao.configEnc);
-  return {
-    phoneNumberId: config.phoneNumberId ?? "",
-    accessToken: config.accessToken ?? "",
-  };
 }
 
 /** Uma mensagem que não é texto: ninguém responde, e uma pessoa assume. */

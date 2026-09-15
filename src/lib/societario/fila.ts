@@ -14,6 +14,7 @@ import {
   type SituacaoDoProcesso,
   type Prazo,
 } from "./processo";
+import type { Prioridade } from "./prioridade";
 
 export type LinhaDaFila = {
   id: string;
@@ -21,6 +22,11 @@ export type LinhaDaFila = {
   empresaId: string;
   empresaNome: string;
   responsavelNome: string | null;
+  responsavelId: string | null;
+  titulo: string | null;
+  prioridade: Prioridade;
+  /** Data combinada com o cliente, quando houver. Outra régua que `prazo`. */
+  prazoCombinado: Date | null;
   situacao: SituacaoDoProcesso;
   prazo: Prazo;
   voltas: number;
@@ -97,6 +103,9 @@ export type FiltroDaFila = {
   situacao?: SituacaoDoProcesso;
   empresaId?: string;
   tipoId?: string;
+  /** Id de usuário, ou `"nenhum"` para os que ainda não foram distribuídos. */
+  responsavelId?: string;
+  prioridade?: Prioridade;
 };
 
 /**
@@ -127,11 +136,17 @@ export async function listarFila(
       status: { notIn: ["CONCLUIDO", "CANCELADO"] },
       companyId: filtro.empresaId || undefined,
       typeId: filtro.tipoId || undefined,
+      ownerUserId: filtro.responsavelId === "nenhum" ? null : filtro.responsavelId || undefined,
+      priority: filtro.prioridade || undefined,
     },
     select: {
       id: true,
       startedAt: true,
       concludedAt: true,
+      ownerUserId: true,
+      title: true,
+      priority: true,
+      dueAt: true,
       company: { select: { id: true, name: true, displayName: true } },
       owner: { select: { name: true } },
       type: {
@@ -171,6 +186,10 @@ export async function listarFila(
       empresaId: p.company.id,
       empresaNome: nomeExibicao(p.company),
       responsavelNome: p.owner?.name ?? null,
+      responsavelId: p.ownerUserId,
+      titulo: p.title,
+      prioridade: p.priority,
+      prazoCombinado: p.dueAt,
       situacao: situacaoDoProcesso(p.protocols, p.concludedAt !== null),
       prazo: prazoDoProcesso(p.type, p, agora, feriados),
       voltas: totalDeVoltas(p.protocols),

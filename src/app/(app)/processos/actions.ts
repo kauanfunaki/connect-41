@@ -17,6 +17,8 @@ import {
   precisaDeNumeroAMao,
 } from "@/lib/societario/executor";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
+import { getSectorUsers } from "@/lib/sectorUsers";
+import { lerDadosDoProcesso } from "@/lib/societario/dados-do-processo";
 import {
   ehTaxaDoBombeiros,
   arquivarTaxaDeBombeiros,
@@ -108,6 +110,24 @@ export async function abrirProcesso(_prev: ProcessoState, form: FormData): Promi
   if (!companyId) return { error: "Escolha a empresa." };
   if (!typeId) return { error: "Escolha o tipo de processo." };
 
+  // Responsável só pode ser alguém do Societário (ou admin). Sem o campo no
+  // formulário, fica com quem abriu — que é como era antes de o campo existir.
+  const responsaveis = await getSectorUsers(ctx.tenantId, SECTOR);
+  const validos = new Set(responsaveis.map((r) => r.id));
+  const informouResponsavel = form.has("ownerUserId");
+  if (!informouResponsavel && ctx.userId) validos.add(ctx.userId);
+  const lido = lerDadosDoProcesso(
+    {
+      titulo: form.get("title"),
+      responsavelId: informouResponsavel ? form.get("ownerUserId") : (ctx.userId ?? ""),
+      prioridade: form.get("priority"),
+      prazoCombinado: form.get("dueAt"),
+    },
+    validos
+  );
+  if (!lido.ok) return { error: lido.erro };
+  const dados = lido.dados;
+
   const prisma = getPrisma();
 
   const template = await prisma.processTemplate.findFirst({
@@ -147,7 +167,10 @@ export async function abrirProcesso(_prev: ProcessoState, form: FormData): Promi
             companyId,
             typeId,
             templateId: template.id,
-            ownerUserId: ctx.userId ?? null,
+            ownerUserId: dados.responsavelId,
+            title: dados.titulo,
+            priority: dados.prioridade,
+            dueAt: dados.prazoCombinado,
           },
           select: { id: true },
         });
@@ -186,7 +209,7 @@ export async function abrirProcesso(_prev: ProcessoState, form: FormData): Promi
     action: "process.open",
     entityType: "Process",
     entityId: processoId,
-    metadata: { tipo: template.type.name, companyId },
+    metadata: { tipo: template.type.name, companyId, prioridade: dados.prioridade },
   });
 
   revalidatePath("/processos");
@@ -738,4 +761,72 @@ export async function enviarTaxaAoCliente(form: FormData): Promise<EnvioDaTaxaSt
 
   if (taxa.processId) revalidatePath(`/processos/${taxa.processId}`);
   return { ok: true, enviados: d.para.length - envio.recusados.length, recusados: envio.recusados };
+}
+
+/**
+ * Edita título, responsável, prioridade e prazo combinado.
+ *
+ * O responsável atual continua aceito mesmo que tenha saído do setor: editar a
+ * prioridade de um processo não pode obrigar a trocar quem responde por ele.
+ */
+export async function atualizarDadosDoProcesso(_prev: ProcessoState, form: FormData): Promise<ProcessoState> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+
+  const processId = String(form.get("processId") ?? "").trim();
+  if (!processId) return { error: "Processo não informado." };
+
+  const prisma = getPrisma();
+  const processo = await prisma.process.findFirst({
+    where: { id: processId, tenantId: ctx.tenantId },
+    select: { id: true, ownerUserId: true, title: true, priority: true, dueAt: true },
+  });
+  if (!processo) return { error: "Processo não encontrado." };
+
+  const responsaveis = await getSectorUsers(ctx.tenantId, SECTOR);
+  const validos = new Set(responsaveis.map((r) => r.id));
+  if (processo.ownerUserId) validos.add(processo.ownerUserId);
+
+  const lido = lerDadosDoProcesso(
+    {
+      titulo: form.get("title"),
+      responsavelId: form.get("ownerUserId"),
+      prioridade: form.get("priority"),
+      prazoCombinado: form.get("dueAt"),
+    },
+    validos
+  );
+  if (!lido.ok) return { error: lido.erro };
+  const dados = lido.dados;
+
+  await prisma.process.update({
+    where: { id: processo.id },
+    data: {
+      title: dados.titulo,
+      ownerUserId: dados.responsavelId,
+      priority: dados.prioridade,
+      dueAt: dados.prazoCombinado,
+    },
+  });
+
+  // Só os nomes do que mudou: o log é lido por quem audita, e "quem mudou a
+  // prioridade para urgente" é a pergunta que ele responde.
+  const mudou: string[] = [];
+  if (processo.title !== dados.titulo) mudou.push("titulo");
+  if (processo.ownerUserId !== dados.responsavelId) mudou.push("responsavel");
+  if (processo.priority !== dados.prioridade) mudou.push("prioridade");
+  if ((processo.dueAt?.getTime() ?? null) !== (dados.prazoCombinado?.getTime() ?? null)) mudou.push("prazo");
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "process.update",
+    entityType: "Process",
+    entityId: processo.id,
+    metadata: { campos: mudou, prioridade: dados.prioridade },
+  });
+
+  revalidatePath(`/processos/${processo.id}`);
+  revalidatePath("/processos");
+  return null;
 }

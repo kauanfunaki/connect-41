@@ -94,7 +94,10 @@ export default async function IntegracoesPage({
               e registra as execuções.
             </p>
           </div>
-          <VitrineDeIntegracoes integracoes={integracoesDoCatalogo} />
+          <VitrineDeIntegracoes
+            integracoes={integracoesDoCatalogo}
+            urlPublica={process.env.APP_PUBLIC_URL ?? null}
+          />
         </section>
       )}
 

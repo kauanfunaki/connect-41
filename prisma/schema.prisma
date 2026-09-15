@@ -3598,6 +3598,15 @@ enum ProcessProtocolOutcome {
   EXIGENCIA
 }
 
+/// Prioridade marcada pelo setor. Aparece e filtra; **não reordena a fila** —
+/// ver `src/lib/societario/prioridade.ts`.
+enum ProcessPriority {
+  BAIXA
+  NORMAL
+  ALTA
+  URGENTE
+}
+
 /// Órgão onde se protocola. **Entidade, não enum**: o fluxo do societário já
 /// cita seis (Junta, Receita, Prefeitura, Bombeiros, Meio Ambiente, Vigilância)
 /// e eles mudam por município e por estado. Campo fixo com dois valores morre
@@ -3765,6 +3774,17 @@ model Process {
   /// Responsável do setor. Nulo em processo que ainda não foi distribuído.
   ownerUserId String?
 
+  /// O que diferencia este processo de outro do mesmo tipo na mesma empresa —
+  /// "Filial de Pinhais". Opcional: a maioria se identifica por tipo e empresa.
+  title String? @db.VarChar(160)
+
+  priority ProcessPriority @default(NORMAL)
+
+  /// Prazo combinado com o cliente — data de calendário, gravada ao meio-dia
+  /// UTC (ver `src/lib/societario/datas.ts`). É outra régua que o previsto do
+  /// tipo, que conta dias úteis; os dois aparecem.
+  dueAt DateTime?
+
   notes String? @db.Text
 
   createdAt DateTime @default(now())
@@ -3782,6 +3802,7 @@ model Process {
   @@index([tenantId, status])
   @@index([tenantId, companyId])
   @@index([tenantId, typeId, startedAt])
+  @@index([tenantId, ownerUserId])
   @@map("processes")
 }
 

@@ -23,8 +23,14 @@
 // E o corolário que vale como código: **qualquer proposta que o agente emitir
 // é motivo de transferência.** O agente querer agir já é o sinal de que o caso
 // é de gente — ver `decidirComARespostaDoAgente`.
+//
+// Nada aqui é de um provedor específico: a janela de mensagem livre e o tamanho
+// máximo chegam como parâmetro, da política do provedor (`provedores/`).
 
-/** Janela de mensagem livre da Meta. Fora dela, só template aprovado. */
+/**
+ * Janela de mensagem livre da Meta, em horas. Fora dela, só template aprovado.
+ * É a política do provedor Meta; provedor sem janela passa `null`.
+ */
 export const JANELA_LIVRE_EM_HORAS = 24;
 
 /** Teto de respostas do robô por hora, na mesma conversa. */
@@ -32,10 +38,20 @@ export const MAX_RESPOSTAS_POR_HORA = 10;
 
 export const PALAVRAS_DE_SAIDA = ["parar", "pare", "sair", "cancelar", "descadastrar", "stop"];
 
-export const AVISO_DE_ROBO =
-  "Oi! Aqui é o assistente virtual do Recrutamento da 41 Contábil. " +
-  "Posso te ajudar com informações sobre o seu processo seletivo. " +
-  "Se preferir falar com uma pessoa, é só pedir. Para não receber mais mensagens, responda PARAR.";
+/**
+ * A apresentação do robô na primeira mensagem.
+ *
+ * Recebe o nome do escritório em vez de trazê-lo escrito: o Connect é
+ * multi-tenant, e até 14/09 este texto dizia "41 Contábil" para o candidato de
+ * qualquer cliente.
+ */
+export function avisoDeRobo(nomeDoEscritorio: string): string {
+  return (
+    `Oi! Aqui é o assistente virtual do Recrutamento da ${nomeDoEscritorio}. ` +
+    "Posso te ajudar com informações sobre o seu processo seletivo. " +
+    "Se preferir falar com uma pessoa, é só pedir. Para não receber mais mensagens, responda PARAR."
+  );
+}
 
 export const CONFIRMACAO_DE_SAIDA =
   "Pronto, não vamos mais te enviar mensagens por aqui. Se mudar de ideia, é só escrever.";
@@ -66,6 +82,8 @@ export type EstadoDaConversa = {
   respostasNaUltimaHora: number;
   /** O robô já se apresentou nesta conversa? */
   jaSeApresentou: boolean;
+  /** Janela de mensagem livre do provedor, em horas. `null` = o provedor não tem. */
+  janelaLivreHoras: number | null;
 };
 
 export type Decisao =
@@ -109,8 +127,12 @@ export function decidir(estado: EstadoDaConversa, texto: string, agora: Date): D
   // chegar, então quem entra aqui está dentro dela. A checagem existe para o
   // caminho em que o envio é adiado (fila, reprocessamento) e a janela fecha
   // no meio.
-  if (estado.lastInboundAt && horasEntre(estado.lastInboundAt, agora) > JANELA_LIVRE_EM_HORAS) {
-    return { tipo: "transferir", motivo: "fora da janela de 24h do WhatsApp" };
+  if (
+    estado.janelaLivreHoras !== null &&
+    estado.lastInboundAt &&
+    horasEntre(estado.lastInboundAt, agora) > estado.janelaLivreHoras
+  ) {
+    return { tipo: "transferir", motivo: `fora da janela de ${estado.janelaLivreHoras}h do WhatsApp` };
   }
 
   return { tipo: "responder", apresentar: !estado.jaSeApresentou };
@@ -124,12 +146,20 @@ function horasEntre(a: Date, b: Date): number {
  * Dá para mandar mensagem livre agora?
  *
  * Separado de `decidir` porque vale para qualquer envio, inclusive o de uma
- * pessoa pela tela: fora das 24h a Meta recusa mensagem livre, e o erro dela
+ * pessoa pela tela: fora da janela a Meta recusa mensagem livre, e o erro dela
  * não explica isso para quem clicou.
+ *
+ * Sem mensagem recebida não há com quem retomar, com ou sem janela: a conversa
+ * só existe porque alguém escreveu primeiro.
  */
-export function dentroDaJanelaLivre(lastInboundAt: Date | null, agora: Date): boolean {
+export function dentroDaJanelaLivre(
+  lastInboundAt: Date | null,
+  agora: Date,
+  janelaLivreHoras: number | null
+): boolean {
   if (!lastInboundAt) return false;
-  return horasEntre(lastInboundAt, agora) <= JANELA_LIVRE_EM_HORAS;
+  if (janelaLivreHoras === null) return true;
+  return horasEntre(lastInboundAt, agora) <= janelaLivreHoras;
 }
 
 export type RespostaDoAgente = {
@@ -159,7 +189,10 @@ export const MAX_CARACTERES_DA_MENSAGEM = 4_096;
  * Resposta vazia também transfere, em vez de virar silêncio: o candidato
  * escreveu e ficou sem retorno é o pior desfecho possível desta conversa.
  */
-export function decidirComARespostaDoAgente(r: RespostaDoAgente): DesfechoDaResposta {
+export function decidirComARespostaDoAgente(
+  r: RespostaDoAgente,
+  maxCaracteres: number = MAX_CARACTERES_DA_MENSAGEM
+): DesfechoDaResposta {
   if (r.propostas > 0) {
     return { tipo: "transferir", motivo: "o assistente sugeriu uma ação no processo seletivo" };
   }
@@ -168,7 +201,7 @@ export function decidirComARespostaDoAgente(r: RespostaDoAgente): DesfechoDaResp
   if (r.truncado) {
     return { tipo: "transferir", motivo: "o assistente parou antes de terminar a resposta" };
   }
-  if (texto.length > MAX_CARACTERES_DA_MENSAGEM) {
+  if (texto.length > maxCaracteres) {
     // Cortar uma resposta ao meio e mandar assim é pior que não mandar: o
     // candidato lê meia informação e age sobre ela.
     return { tipo: "transferir", motivo: "resposta longa demais para o WhatsApp" };
@@ -177,6 +210,6 @@ export function decidirComARespostaDoAgente(r: RespostaDoAgente): DesfechoDaResp
 }
 
 /** Monta o corpo final, com a apresentação quando for a primeira vez. */
-export function montarMensagem(texto: string, apresentar: boolean): string {
-  return apresentar ? `${AVISO_DE_ROBO}\n\n${texto}` : texto;
+export function montarMensagem(texto: string, apresentar: boolean, nomeDoEscritorio: string): string {
+  return apresentar ? `${avisoDeRobo(nomeDoEscritorio)}\n\n${texto}` : texto;
 }

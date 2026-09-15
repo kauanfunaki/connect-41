@@ -7,7 +7,7 @@ import { logAudit } from "@/lib/audit";
 import { lerConfig } from "@/lib/integracoes/data";
 import { enviarERegistrar } from "@/lib/whatsapp/envio";
 import { podeResponder, podeDevolverAoRobo } from "@/lib/whatsapp/conversas";
-import { MAX_CARACTERES_DA_MENSAGEM } from "@/lib/whatsapp/decisao";
+import { provedorDaIntegracao } from "@/lib/whatsapp/provedores";
 
 export type AcaoNaConversa = { error: string } | { success: true } | null;
 
@@ -44,20 +44,27 @@ export async function responderConversa(
   if (!aberta.ok) return { error: aberta.erro };
   const { ctx, tenantId, thread, prisma } = aberta;
 
+  const conexao = await prisma.tenantIntegration.findFirst({
+    where: { id: thread.integrationId, tenantId: tenantId },
+    select: { configEnc: true, integrationCode: true },
+  });
+  if (!conexao) return { error: "Conexão de WhatsApp não encontrada." };
+  const provedor = provedorDaIntegracao(conexao.integrationCode);
+  if (!provedor) return { error: "Esta conexão não é de um provedor de WhatsApp conhecido." };
+
   const corpo = texto.trim();
   if (!corpo) return { error: "Escreva a mensagem." };
-  if (corpo.length > MAX_CARACTERES_DA_MENSAGEM) {
+  if (corpo.length > provedor.politica.maxCaracteres) {
     return { error: "Mensagem longa demais para o WhatsApp." };
   }
 
-  const veredito = podeResponder(thread, new Date());
+  // A janela é do provedor da conversa: a Meta tem 24h, a Evolution não tem.
+  const veredito = podeResponder(
+    { ...thread, janelaLivreHoras: provedor.politica.janelaLivreHoras },
+    new Date()
+  );
   if (!veredito.pode) return { error: veredito.motivo };
 
-  const conexao = await prisma.tenantIntegration.findFirst({
-    where: { id: thread.integrationId, tenantId: tenantId },
-    select: { configEnc: true, enabled: true },
-  });
-  if (!conexao) return { error: "Conexão de WhatsApp não encontrada." };
   // Diferente do robô, uma pessoa pode responder com a integração desligada:
   // desligar o robô é decidir que ninguém automatiza, não que ninguém fala.
   const config = lerConfig(conexao.configEnc);
@@ -74,7 +81,8 @@ export async function responderConversa(
   const r = await enviarERegistrar({
     tenantId: tenantId,
     threadId: thread.id,
-    cred: { phoneNumberId: config.phoneNumberId ?? "", accessToken: config.accessToken ?? "" },
+    provedor,
+    config,
     paraE164: thread.waPhone,
     texto: corpo,
   });

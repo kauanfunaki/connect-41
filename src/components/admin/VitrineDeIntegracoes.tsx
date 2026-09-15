@@ -42,18 +42,25 @@ const NATUREZA_LABEL = {
   API: "chamada pontual",
 } as const;
 
-export function VitrineDeIntegracoes({ integracoes }: { integracoes: IntegracaoNaTela[] }) {
+export function VitrineDeIntegracoes({
+  integracoes,
+  urlPublica,
+}: {
+  integracoes: IntegracaoNaTela[];
+  /** `APP_PUBLIC_URL`, vinda do servidor por prop — `NEXT_PUBLIC_` não chega ao build do container. */
+  urlPublica: string | null;
+}) {
   if (integracoes.length === 0) return null;
   return (
     <div className="flex flex-col gap-3">
       {integracoes.map((i) => (
-        <CartaoDaIntegracao key={`${i.code}:${i.instanceKey}`} integracao={i} />
+        <CartaoDaIntegracao key={`${i.code}:${i.instanceKey}`} integracao={i} urlPublica={urlPublica} />
       ))}
     </div>
   );
 }
 
-function CartaoDaIntegracao({ integracao: i }: { integracao: IntegracaoNaTela }) {
+function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: IntegracaoNaTela; urlPublica: string | null }) {
   const [aberto, setAberto] = useState(false);
   const [state, formAction, isPending] = useActionState<ConexaoState, FormData>(salvarConexao, null);
   const Icone = ICONE[i.natureza];
@@ -88,6 +95,20 @@ function CartaoDaIntegracao({ integracao: i }: { integracao: IntegracaoNaTela })
       {i.conectada && i.faltando.length > 0 && (
         <p className="text-[12px] text-warning bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
           Falta preencher: {i.faltando.join(", ")}.
+        </p>
+      )}
+
+      {/* A URL que se cadastra do outro lado (Meta, Evolution). Sem ela, quem
+          configura precisaria descobrir o id da conexão no banco. */}
+      {i.caminhoDoWebhook && (
+        <p className="text-[12px] text-fg-secondary break-all">
+          <span className="text-fg-muted">URL do webhook: </span>
+          <code className="text-fg">
+            {urlPublica ? `${urlPublica.replace(/\/+$/, "")}${i.caminhoDoWebhook}` : i.caminhoDoWebhook}
+          </code>
+          {!urlPublica && (
+            <span className="text-warning"> — APP_PUBLIC_URL não configurada: complete com o domínio do Connect</span>
+          )}
         </p>
       )}
 

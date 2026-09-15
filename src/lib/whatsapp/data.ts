@@ -2,6 +2,8 @@
 
 import { getPrisma } from "@/lib/prisma";
 import { ordenarConversas, type ConversaParaTela } from "@/lib/whatsapp/conversas";
+import { JANELA_LIVRE_EM_HORAS } from "@/lib/whatsapp/decisao";
+import { janelaDoCodigo } from "@/lib/whatsapp/provedores";
 
 export type LinhaDeConversa = ConversaParaTela & {
   id: string;
@@ -14,6 +16,29 @@ export type LinhaDeConversa = ConversaParaTela & {
   handoffReason: string | null;
   naoRespondidas: number;
 };
+
+/**
+ * A janela de mensagem livre de cada conexão, pelo provedor dela.
+ *
+ * Uma consulta para todas — a janela é da conexão, não da conversa, e o mesmo
+ * cliente pode ter um número na Meta e outro na Evolution.
+ */
+async function janelasDasConexoes(tenantId: string, integrationIds: string[]): Promise<Map<string, number | null>> {
+  const prisma = getPrisma();
+  const conexoes = await prisma.tenantIntegration.findMany({
+    where: { tenantId, id: { in: [...new Set(integrationIds)] } },
+    select: { id: true, integrationCode: true },
+  });
+  return new Map(conexoes.map((c) => [c.id, janelaDoCodigo(c.integrationCode)]));
+}
+
+/**
+ * Conexão apagada ou fora do mapa fica com a janela mais restritiva: errar para
+ * o lado de recusar a resposta é a pessoa ver o motivo na tela.
+ */
+function janelaDe(janelas: Map<string, number | null>, integrationId: string): number | null {
+  return janelas.has(integrationId) ? janelas.get(integrationId)! : JANELA_LIVRE_EM_HORAS;
+}
 
 /**
  * As conversas de um cliente, já na ordem da fila.
@@ -30,6 +55,7 @@ export async function listarConversas(tenantId: string, agora: Date): Promise<Li
     take: 200,
     select: {
       id: true,
+      integrationId: true,
       waPhone: true,
       optedOutAt: true,
       handoffAt: true,
@@ -41,7 +67,7 @@ export async function listarConversas(tenantId: string, agora: Date): Promise<Li
   if (threads.length === 0) return [];
 
   const ids = threads.map((t) => t.id);
-  const [ultimas, candidaturas] = await Promise.all([
+  const [ultimas, candidaturas, janelas] = await Promise.all([
     prisma.whatsappMessage.findMany({
       where: { threadId: { in: ids } },
       orderBy: { createdAt: "desc" },
@@ -54,6 +80,10 @@ export async function listarConversas(tenantId: string, agora: Date): Promise<Li
       },
       select: { id: true, person: { select: { name: true } }, vaga: { select: { title: true } } },
     }),
+    janelasDasConexoes(
+      tenantId,
+      threads.map((t) => t.integrationId)
+    ),
   ]);
 
   // A consulta veio em ordem decrescente, então a primeira de cada thread é a
@@ -91,6 +121,7 @@ export async function listarConversas(tenantId: string, agora: Date): Promise<Li
       handoffReason: t.handoffReason,
       lastInboundAt: t.lastInboundAt,
       candidaturaId: t.candidaturaId,
+      janelaLivreHoras: janelaDe(janelas, t.integrationId),
       naoRespondidas: naoRespondidas.get(t.id) ?? 0,
     };
   });
@@ -120,6 +151,7 @@ export async function lerConversa(
     where: { id: threadId, tenantId },
     select: {
       id: true,
+      integrationId: true,
       waPhone: true,
       optedOutAt: true,
       handoffAt: true,
@@ -130,7 +162,7 @@ export async function lerConversa(
   });
   if (!thread) return null;
 
-  const [mensagens, candidatura] = await Promise.all([
+  const [mensagens, candidatura, janelas] = await Promise.all([
     prisma.whatsappMessage.findMany({
       where: { threadId, tenantId },
       orderBy: { createdAt: "asc" },
@@ -151,6 +183,7 @@ export async function lerConversa(
           select: { person: { select: { name: true } }, vaga: { select: { title: true } } },
         })
       : null,
+    janelasDasConexoes(tenantId, [thread.integrationId]),
   ]);
 
   const ultima = mensagens.length > 0 ? mensagens[mensagens.length - 1]! : null;
@@ -172,6 +205,7 @@ export async function lerConversa(
     handoffReason: thread.handoffReason,
     lastInboundAt: thread.lastInboundAt,
     candidaturaId: thread.candidaturaId,
+    janelaLivreHoras: janelaDe(janelas, thread.integrationId),
     naoRespondidas,
     mensagens: mensagens.map((m) => ({
       id: m.id,

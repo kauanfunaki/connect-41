@@ -9,13 +9,17 @@ import {
   SITUACAO_LABEL,
   SITUACAO_VARIANTE,
 } from "@/lib/societario/licencas";
+import { campoDaData } from "@/lib/societario/datas";
 import type { LinhaDeLicenca } from "@/lib/societario/licencas-data";
+import { AcoesDaLicenca } from "./AcoesDaLicenca";
+import type { OrgaoDaLicenca } from "./LicencaForm";
 
 type Props = {
   linhas: LinhaDeLicenca[];
   /** Hoje, do servidor — o relógio do navegador pode estar noutro fuso. */
   hoje: Date;
   filtrado: boolean;
+  orgaos: OrgaoDaLicenca[];
 };
 
 /**
@@ -34,7 +38,7 @@ function prazoEmPalavras(expiresAt: Date | null, hoje: Date): string | null {
   return `venceu há ${Math.abs(dias)} dias`;
 }
 
-export function LicencasFila({ linhas, hoje, filtrado }: Props) {
+export function LicencasFila({ linhas, hoje, filtrado, orgaos }: Props) {
   if (linhas.length === 0) {
     return filtrado ? (
       <EmptyState
@@ -45,7 +49,7 @@ export function LicencasFila({ linhas, hoje, filtrado }: Props) {
     ) : (
       <EmptyState
         title="Nenhuma licença cadastrada"
-        description="Alvará, licença sanitária, ambiental, AVCB — o que fica valendo depois que o processo fecha, e cuja validade gera a próxima renovação."
+        description="Alvará, licença sanitária, ambiental, bombeiros — o que fica valendo depois que o processo fecha, e cuja validade gera a próxima renovação. Cadastre em “Nova licença”."
         icon={<ShieldCheck />}
       />
     );
@@ -53,7 +57,7 @@ export function LicencasFila({ linhas, hoje, filtrado }: Props) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[820px] text-[13px]">
+      <table className="w-full min-w-[920px] text-[13px]">
         <thead>
           <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
             <th className="py-2 pr-3 font-medium">Empresa</th>
@@ -62,6 +66,9 @@ export function LicencasFila({ linhas, hoje, filtrado }: Props) {
             <th className="py-2 pr-3 font-medium">Número</th>
             <th className="py-2 pr-3 font-medium">Validade</th>
             <th className="py-2 pr-3 font-medium">Situação</th>
+            <th className="py-2 font-medium">
+              <span className="sr-only">Ações</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -95,6 +102,23 @@ export function LicencasFila({ linhas, hoje, filtrado }: Props) {
                 </td>
                 <td className="py-2.5 pr-3">
                   <Badge variant={SITUACAO_VARIANTE[situacao]}>{SITUACAO_LABEL[situacao]}</Badge>
+                </td>
+                <td className="py-2.5">
+                  <AcoesDaLicenca
+                    orgaos={orgaos}
+                    licenca={{
+                      id: l.id,
+                      companyId: l.companyId,
+                      empresaNome: l.empresaNome,
+                      kind: l.kind,
+                      organId: l.organId,
+                      number: l.number,
+                      issuedAt: campoDaData(l.issuedAt),
+                      expiresAt: campoDaData(l.expiresAt),
+                      notes: l.notes,
+                      revogada: l.revokedAt !== null,
+                    }}
+                  />
                 </td>
               </tr>
             );

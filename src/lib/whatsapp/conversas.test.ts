@@ -22,6 +22,7 @@ function conversa(over: Partial<ConversaParaTela> = {}): ConversaParaTela {
     handoffAt: null,
     lastInboundAt: HA_UMA_HORA,
     candidaturaId: null,
+    janelaLivreHoras: 24,
     ...over,
   };
 }
@@ -52,6 +53,17 @@ describe("situacaoDaConversa", () => {
     ).toBe("fora_da_janela");
   });
 
+  // Conversa na Evolution não tem janela: marcar "fora da janela" mandaria a
+  // pessoa ligar para um candidato a quem ela pode simplesmente responder.
+  it("provedor sem janela nunca fica fora da janela", () => {
+    expect(
+      situacaoDaConversa(
+        conversa({ handoffAt: HA_UMA_HORA, lastInboundAt: HA_DOIS_DIAS, janelaLivreHoras: null }),
+        AGORA
+      )
+    ).toBe("precisa_atencao");
+  });
+
   it("opt-out vence a transferência", () => {
     expect(
       situacaoDaConversa(conversa({ optedOutAt: HA_UMA_HORA, handoffAt: HA_UMA_HORA }), AGORA)
@@ -76,14 +88,23 @@ describe("podeResponder", () => {
     if (!v.pode) expect(v.motivo).toContain("não receber");
   });
 
+  it("opt-out impede até em provedor sem janela", () => {
+    expect(podeResponder(conversa({ optedOutAt: HA_UMA_HORA, janelaLivreHoras: null }), AGORA).pode).toBe(false);
+  });
+
   it("fora da janela recusa com o motivo em português, antes de gastar a viagem", () => {
     const v = podeResponder(conversa({ lastInboundAt: HA_DOIS_DIAS }), AGORA);
     expect(v.pode).toBe(false);
     if (!v.pode) expect(v.motivo).toContain("24h");
   });
 
+  it("provedor sem janela deixa responder mesmo dias depois", () => {
+    expect(podeResponder(conversa({ lastInboundAt: HA_DOIS_DIAS, janelaLivreHoras: null }), AGORA).pode).toBe(true);
+  });
+
   it("conversa sem mensagem recebida não tem janela", () => {
     expect(podeResponder(conversa({ lastInboundAt: null }), AGORA).pode).toBe(false);
+    expect(podeResponder(conversa({ lastInboundAt: null, janelaLivreHoras: null }), AGORA).pode).toBe(false);
   });
 });
 

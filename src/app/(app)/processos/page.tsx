@@ -3,14 +3,18 @@ import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
+import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled } from "@/lib/modules";
 import { listarFila, contarPorSituacao, feriadosDoTenant } from "@/lib/societario/fila";
 import type { SituacaoDoProcesso } from "@/lib/societario/processo";
+import { PRIORIDADES, PRIORIDADE_LABEL, ehPrioridade } from "@/lib/societario/prioridade";
 import { ProcessosFila, SITUACAO_LABEL } from "@/components/societario/ProcessosFila";
 import { NovoProcessoForm } from "@/components/societario/NovoProcessoForm";
 import { AssistenteDoSocietario } from "@/components/societario/AssistenteDoSocietario";
 import { getPrisma } from "@/lib/prisma";
+import { getSectorUsers } from "@/lib/sectorUsers";
 import { nomeExibicao } from "@/lib/companyName";
 import { abrirProcesso } from "./actions";
 
@@ -45,7 +49,7 @@ export default async function ProcessosPage({
   const agora = new Date();
   const prisma = getPrisma();
 
-  const [empresas, tipos] = await Promise.all([
+  const [empresas, tipos, responsaveis] = await Promise.all([
     prisma.company.findMany({
       where: { tenantId: ctx.tenantId, status: { in: ["ACTIVE", "PROSPECT"] } },
       orderBy: { name: "asc" },
@@ -56,14 +60,39 @@ export default async function ProcessosPage({
       orderBy: { name: "asc" },
       select: { id: true, name: true, expectedDaysMin: true, expectedDaysMax: true, variableFlow: true },
     }),
+    getSectorUsers(ctx.tenantId, SECTOR),
   ]);
 
-  // A fila inteira vem sempre: os contadores do recorte precisam do total, e
-  // uma segunda consulta só para contar discordaria da primeira no instante em
-  // que alguém gravasse algo entre as duas.
-  const todas = await listarFila(ctx.tenantId, {}, feriados, agora);
+  // Os filtros da URL só valem quando são valores conhecidos: o parâmetro é
+  // texto do usuário, e um id desconhecido viraria uma fila vazia sem motivo.
+  const responsavelFiltro =
+    params.responsavel === "nenhum" || responsaveis.some((r) => r.id === params.responsavel)
+      ? params.responsavel
+      : undefined;
+  const prioridadeFiltro = ehPrioridade(params.prioridade) ? params.prioridade : undefined;
+  const filtroAtivo = Boolean(responsavelFiltro || prioridadeFiltro);
+
+  // A fila inteira do filtro vem sempre: os contadores do recorte precisam do
+  // total, e uma segunda consulta só para contar discordaria da primeira no
+  // instante em que alguém gravasse algo entre as duas.
+  const todas = await listarFila(
+    ctx.tenantId,
+    { responsavelId: responsavelFiltro, prioridade: prioridadeFiltro },
+    feriados,
+    agora
+  );
   const contagem = contarPorSituacao(todas);
   const linhas = recorte.situacao ? todas.filter((l) => l.situacao === recorte.situacao) : todas;
+
+  const filtrosNaUrl = new URLSearchParams();
+  if (responsavelFiltro) filtrosNaUrl.set("responsavel", responsavelFiltro);
+  if (prioridadeFiltro) filtrosNaUrl.set("prioridade", prioridadeFiltro);
+  const hrefDoRecorte = (chave: string) => {
+    const q = new URLSearchParams(filtrosNaUrl);
+    if (chave !== "todos") q.set("situacao", chave);
+    const s = q.toString();
+    return s ? `/processos?${s}` : "/processos";
+  };
 
   return (
     <PageContainer>
@@ -89,11 +118,13 @@ export default async function ProcessosPage({
                 ? `${t.expectedDaysMax} dias úteis`
                 : `${t.expectedDaysMin}–${t.expectedDaysMax} dias úteis`,
           }))}
+          responsaveis={responsaveis}
+          responsavelPadrao={responsaveis.some((r) => r.id === ctx.userId) ? (ctx.userId ?? "") : ""}
           abrirAction={abrirProcesso}
         />
       </div>
 
-      <div className="flex flex-wrap gap-1.5 mb-4">
+      <div className="flex flex-wrap gap-1.5 mb-3">
         {RECORTES.map((r) => {
           const ativo = r.chave === recorte.chave;
           const total = r.situacao ? contagem[r.situacao] : todas.length;
@@ -101,7 +132,7 @@ export default async function ProcessosPage({
           return (
             <Link
               key={r.chave}
-              href={r.chave === "todos" ? "/processos" : `/processos?situacao=${r.chave}`}
+              href={hrefDoRecorte(r.chave)}
               aria-current={ativo ? "page" : undefined}
               className={
                 ativo
@@ -116,7 +147,55 @@ export default async function ProcessosPage({
         })}
       </div>
 
-      <ProcessosFila linhas={linhas} filtrado={todas.length > 0 && linhas.length === 0} />
+      {/* Filtro por GET: a URL guarda o recorte, e quem manda o link para um
+          colega manda a mesma fila que está vendo. */}
+      <form method="get" action="/processos" className="flex flex-wrap items-end gap-2 mb-4">
+        {recorte.chave !== "todos" && <input type="hidden" name="situacao" value={recorte.chave} />}
+        <div className="flex flex-col gap-1">
+          <label htmlFor="filtro-responsavel" className="text-[11px] text-fg-muted">
+            Responsável
+          </label>
+          <Select id="filtro-responsavel" name="responsavel" defaultValue={responsavelFiltro ?? ""} compact>
+            <option value="">Todos</option>
+            <option value="nenhum">Sem responsável</option>
+            {responsaveis.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="filtro-prioridade" className="text-[11px] text-fg-muted">
+            Prioridade
+          </label>
+          <Select id="filtro-prioridade" name="prioridade" defaultValue={prioridadeFiltro ?? ""} compact>
+            <option value="">Todas</option>
+            {PRIORIDADES.map((p) => (
+              <option key={p} value={p}>
+                {PRIORIDADE_LABEL[p]}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <Button type="submit" size="sm" variant="secondary">
+          Filtrar
+        </Button>
+        {filtroAtivo && (
+          <Link
+            href={recorte.chave === "todos" ? "/processos" : `/processos?situacao=${recorte.chave}`}
+            className="h-8 inline-flex items-center text-[12px] text-brand hover:underline"
+          >
+            Limpar filtros
+          </Link>
+        )}
+      </form>
+
+      <ProcessosFila
+        linhas={linhas}
+        filtrado={linhas.length === 0 && (todas.length > 0 || filtroAtivo)}
+        agora={agora}
+      />
 
       <div className="mt-6">
         <AssistenteDoSocietario />

@@ -16,6 +16,7 @@ export type LinhaDeLicenca = {
   empresaNome: string;
   kind: string;
   number: string | null;
+  organId: string | null;
   orgaoNome: string | null;
   issuedAt: Date | null;
   expiresAt: Date | null;
@@ -44,6 +45,7 @@ export async function listarLicencas(
       companyId: true,
       kind: true,
       number: true,
+      organId: true,
       issuedAt: true,
       expiresAt: true,
       revokedAt: true,
@@ -60,6 +62,7 @@ export async function listarLicencas(
       empresaNome: l.company.tradeName || l.company.name,
       kind: l.kind,
       number: l.number,
+      organId: l.organId,
       orgaoNome: l.organ ? l.organ.acronym || l.organ.name : null,
       issuedAt: l.issuedAt,
       expiresAt: l.expiresAt,

@@ -29,6 +29,11 @@ import {
   resolverExigencia,
   alternarItemDoChecklist,
 } from "../actions";
+import { EditarDadosDoProcesso } from "@/components/societario/EditarDadosDoProcesso";
+import { getSectorUsers } from "@/lib/sectorUsers";
+import { PRIORIDADE_LABEL, PRIORIDADE_VARIANTE } from "@/lib/societario/prioridade";
+import { prazoCombinado } from "@/lib/societario/dados-do-processo";
+import { campoDaData } from "@/lib/societario/datas";
 
 const SECTOR = "societario";
 const MODULE = "societario_processos";
@@ -56,8 +61,12 @@ export default async function ProcessoDetalhePage({
       startedAt: true,
       concludedAt: true,
       notes: true,
+      title: true,
+      priority: true,
+      dueAt: true,
+      ownerUserId: true,
       company: { select: { id: true, name: true, displayName: true } },
-      owner: { select: { name: true } },
+      owner: { select: { id: true, name: true } },
       type: {
         select: { name: true, expectedDaysMin: true, expectedDaysMax: true, variableFlow: true },
       },
@@ -185,12 +194,34 @@ export default async function ProcessoDetalhePage({
 
   const { taxas, custo } = await taxasDoProcesso(ctx.tenantId, processo.id);
 
+  // O responsável atual entra na lista mesmo que tenha saído do setor — senão o
+  // formulário de editar mostraria "sem responsável" e salvaria isso sem querer.
+  const equipe = await getSectorUsers(ctx.tenantId, SECTOR);
+  const responsaveis =
+    processo.owner && !equipe.some((u) => u.id === processo.owner!.id) ? [...equipe, processo.owner] : equipe;
+  const combinado = processo.dueAt ? prazoCombinado(processo.dueAt, new Date()) : null;
+
   return (
     <PageContainer>
       <BackButton className="mb-3" />
 
       <div className="mb-5 flex flex-col gap-2">
-        <PageHeader title={`${processo.type.name} — ${empresaNome}`} />
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex flex-col gap-1">
+            <PageHeader title={`${processo.type.name} — ${empresaNome}`} />
+            {processo.title && <p className="text-[14px] text-fg-secondary">{processo.title}</p>}
+          </div>
+          <EditarDadosDoProcesso
+            processoId={processo.id}
+            responsaveis={responsaveis}
+            valores={{
+              titulo: processo.title ?? "",
+              responsavelId: processo.ownerUserId ?? "",
+              prioridade: processo.priority,
+              prazoCombinado: campoDaData(processo.dueAt),
+            }}
+          />
+        </div>
         <div className="flex items-center gap-3 flex-wrap text-[12px] text-fg-muted">
           <Badge
             variant={
@@ -226,6 +257,26 @@ export default async function ProcessoDetalhePage({
           {voltas > 0 && (
             <span className="text-danger">
               {voltas} {voltas === 1 ? "volta de exigência" : "voltas de exigência"}
+            </span>
+          )}
+
+          {processo.priority !== "NORMAL" && (
+            <Badge variant={PRIORIDADE_VARIANTE[processo.priority]}>
+              Prioridade {PRIORIDADE_LABEL[processo.priority].toLowerCase()}
+            </Badge>
+          )}
+
+          {combinado && processo.dueAt && (
+            <span
+              className={
+                combinado.situacao === "vencido" || combinado.situacao === "hoje"
+                  ? "text-danger font-medium"
+                  : combinado.situacao === "proximo"
+                    ? "text-warning"
+                    : undefined
+              }
+            >
+              {combinado.texto} · {formatInstantDate(processo.dueAt)}
             </span>
           )}
 

@@ -5,7 +5,7 @@ import {
   dentroDaJanelaLivre,
   decidirComARespostaDoAgente,
   montarMensagem,
-  AVISO_DE_ROBO,
+  avisoDeRobo,
   MAX_RESPOSTAS_POR_HORA,
   MAX_CARACTERES_DA_MENSAGEM,
   type EstadoDaConversa,
@@ -23,6 +23,7 @@ function estado(over: Partial<EstadoDaConversa> = {}): EstadoDaConversa {
     lastInboundAt: HA_UMA_HORA,
     respostasNaUltimaHora: 0,
     jaSeApresentou: true,
+    janelaLivreHoras: 24,
     ...over,
   };
 }
@@ -112,6 +113,14 @@ describe("decidir", () => {
     if (d.tipo === "transferir") expect(d.motivo).toContain("24h");
   });
 
+  // Provedor sem janela (a Evolution) não pode transferir por uma regra que é
+  // só da Meta — seria o robô parar de responder sem motivo nenhum.
+  it("provedor sem janela nunca transfere por janela", () => {
+    expect(decidir(estado({ lastInboundAt: HA_DOIS_DIAS, janelaLivreHoras: null }), "oi", AGORA).tipo).toBe(
+      "responder"
+    );
+  });
+
   it("primeira mensagem da vida, sem inbound anterior, responde", () => {
     expect(decidir(estado({ lastInboundAt: null, jaSeApresentou: false }), "oi", AGORA).tipo).toBe(
       "responder"
@@ -121,16 +130,21 @@ describe("decidir", () => {
 
 describe("dentroDaJanelaLivre", () => {
   it("sem mensagem recebida, não há janela", () => {
-    expect(dentroDaJanelaLivre(null, AGORA)).toBe(false);
+    expect(dentroDaJanelaLivre(null, AGORA, 24)).toBe(false);
+    expect(dentroDaJanelaLivre(null, AGORA, null)).toBe(false);
   });
 
   it("dentro e fora das 24h", () => {
-    expect(dentroDaJanelaLivre(HA_UMA_HORA, AGORA)).toBe(true);
-    expect(dentroDaJanelaLivre(HA_DOIS_DIAS, AGORA)).toBe(false);
+    expect(dentroDaJanelaLivre(HA_UMA_HORA, AGORA, 24)).toBe(true);
+    expect(dentroDaJanelaLivre(HA_DOIS_DIAS, AGORA, 24)).toBe(false);
   });
 
   it("exatamente 24h ainda vale", () => {
-    expect(dentroDaJanelaLivre(new Date("2026-09-10T12:00:00Z"), AGORA)).toBe(true);
+    expect(dentroDaJanelaLivre(new Date("2026-09-10T12:00:00Z"), AGORA, 24)).toBe(true);
+  });
+
+  it("sem janela no provedor, qualquer conversa com mensagem recebida está dentro", () => {
+    expect(dentroDaJanelaLivre(HA_DOIS_DIAS, AGORA, null)).toBe(true);
   });
 });
 
@@ -172,19 +186,32 @@ describe("decidirComARespostaDoAgente", () => {
     });
     expect(d.tipo).toBe("transferir");
   });
+
+  it("o teto de tamanho vem do provedor quando informado", () => {
+    expect(decidirComARespostaDoAgente({ texto: "x".repeat(101), propostas: 0, truncado: false }, 100).tipo).toBe(
+      "transferir"
+    );
+  });
 });
 
 describe("montarMensagem", () => {
   // O primeiro contato tem de dizer que é robô e como sair. É o que torna o
   // "PARAR" uma opção real, e não um segredo de quem escreveu o código.
-  it("a apresentação diz que é robô e como sair", () => {
-    const m = montarMensagem("Oi!", true);
-    expect(m).toContain(AVISO_DE_ROBO);
+  it("a apresentação diz que é robô, de qual escritório, e como sair", () => {
+    const m = montarMensagem("Oi!", true, "Escritório Exemplo");
+    expect(m).toContain(avisoDeRobo("Escritório Exemplo"));
+    expect(m).toContain("Escritório Exemplo");
     expect(m).toContain("PARAR");
     expect(m).toContain("Oi!");
   });
 
+  // Regressão de 14/09: o texto dizia "41 Contábil" para o candidato de
+  // qualquer cliente do Connect.
+  it("não carrega o nome de um escritório fixo", () => {
+    expect(avisoDeRobo("Escritório Exemplo")).not.toContain("41 Contábil");
+  });
+
   it("depois da primeira, não se apresenta de novo", () => {
-    expect(montarMensagem("Oi!", false)).toBe("Oi!");
+    expect(montarMensagem("Oi!", false, "Escritório Exemplo")).toBe("Oi!");
   });
 });

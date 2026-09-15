@@ -2,9 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled } from "@/lib/modules";
+import { getPrisma } from "@/lib/prisma";
+import { nomeExibicao } from "@/lib/companyName";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { LicencasFila } from "@/components/societario/LicencasFila";
+import { NovaLicenca } from "@/components/societario/LicencaForm";
 import { resumoDasLicencas } from "@/lib/societario/licencas-data";
 import { situacaoDaLicenca, AVISO_EM_DIAS, type SituacaoDaLicenca } from "@/lib/societario/licencas";
 
@@ -29,7 +32,21 @@ export default async function LicencasPage({
   const chave = RECORTES.some((r) => r.chave === recorte) ? recorte! : "atencao";
 
   const hoje = new Date();
-  const { linhas, vencidas, aRenovar } = await resumoDasLicencas(ctx.tenantId, hoje);
+  const prisma = getPrisma();
+  const [{ linhas, vencidas, aRenovar }, empresas, orgaos] = await Promise.all([
+    resumoDasLicencas(ctx.tenantId, hoje),
+    prisma.company.findMany({
+      where: { tenantId: ctx.tenantId, status: { in: ["ACTIVE", "PROSPECT"] } },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, displayName: true },
+    }),
+    prisma.processOrgan.findMany({
+      where: { tenantId: ctx.tenantId, active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
+  const orgaosDoForm = orgaos.map((o) => ({ id: o.id, nome: o.name }));
 
   const filtradas = linhas.filter((l) => {
     const s = situacaoDaLicenca(l, hoje);
@@ -43,10 +60,16 @@ export default async function LicencasPage({
 
   return (
     <PageContainer variant="narrow">
-      <PageHeader
-        title="Licenças"
-        subtitle={`Alvará, sanitária, ambiental, bombeiros — o que fica valendo, e o que precisa ser renovado. Entram na fila com ${AVISO_EM_DIAS} dias de antecedência.`}
-      />
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <PageHeader
+          title="Licenças"
+          subtitle={`Alvará, sanitária, ambiental, bombeiros — o que fica valendo, e o que precisa ser renovado. Entram na fila com ${AVISO_EM_DIAS} dias de antecedência.`}
+        />
+        <NovaLicenca
+          empresas={empresas.map((e) => ({ value: e.id, label: nomeExibicao(e) }))}
+          orgaos={orgaosDoForm}
+        />
+      </div>
 
       {(vencidas > 0 || aRenovar > 0) && (
         <p className="text-[13px] text-fg mb-4">
@@ -91,7 +114,12 @@ export default async function LicencasPage({
         })}
       </div>
 
-      <LicencasFila linhas={filtradas} hoje={hoje} filtrado={linhas.length > 0 && filtradas.length === 0} />
+      <LicencasFila
+        linhas={filtradas}
+        hoje={hoje}
+        filtrado={linhas.length > 0 && filtradas.length === 0}
+        orgaos={orgaosDoForm}
+      />
     </PageContainer>
   );
 }

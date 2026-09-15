@@ -66,7 +66,7 @@ export function EnviarTaxaAoCliente({ taxaId, descricao, envio }: Props) {
       </Button>
 
       <Modal open={aberto} onClose={fechar} title="Enviar guia ao cliente" maxWidth="max-w-lg">
-        <form onSubmit={enviar} className="px-5 pb-5 flex flex-col gap-3 text-[13px]">
+        <form onSubmit={enviar} className="flex flex-col gap-3 text-[13px]">
           <input type="hidden" name="taxaId" value={taxaId} />
 
           <p className="text-fg-secondary">{descricao}</p>

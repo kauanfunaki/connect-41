@@ -5,13 +5,15 @@
 // pessoa clicando — se valesse só para o robô, o pedido do candidato não teria
 // significado nenhum, e a tela seria o jeito mais fácil de furá-lo.
 
-import { dentroDaJanelaLivre, JANELA_LIVRE_EM_HORAS } from "@/lib/whatsapp/decisao";
+import { dentroDaJanelaLivre } from "@/lib/whatsapp/decisao";
 
 export type ConversaParaTela = {
   optedOutAt: Date | null;
   handoffAt: Date | null;
   lastInboundAt: Date | null;
   candidaturaId: string | null;
+  /** Janela de mensagem livre do provedor desta conversa. `null` = sem janela. */
+  janelaLivreHoras: number | null;
 };
 
 export type SituacaoDaConversa =
@@ -21,7 +23,7 @@ export type SituacaoDaConversa =
   | "com_robo"
   /** Pediu para não receber mais. */
   | "encerrada"
-  /** Transferida, mas passou das 24h: só template resolve. */
+  /** Transferida, mas passou da janela do provedor: só template resolve. */
   | "fora_da_janela";
 
 export function situacaoDaConversa(c: ConversaParaTela, agora: Date): SituacaoDaConversa {
@@ -30,14 +32,14 @@ export function situacaoDaConversa(c: ConversaParaTela, agora: Date): SituacaoDa
   // Transferida: a pergunta seguinte é se ainda dá para responder. Separar os
   // dois estados existe porque a ação da pessoa é diferente — num caso ela
   // responde, no outro precisa ligar ou mandar template.
-  return dentroDaJanelaLivre(c.lastInboundAt, agora) ? "precisa_atencao" : "fora_da_janela";
+  return dentroDaJanelaLivre(c.lastInboundAt, agora, c.janelaLivreHoras) ? "precisa_atencao" : "fora_da_janela";
 }
 
 export const SITUACAO_LABEL: Record<SituacaoDaConversa, string> = {
   precisa_atencao: "Precisa de você",
   com_robo: "Com o assistente",
   encerrada: "Não quer mensagens",
-  fora_da_janela: "Fora das 24h",
+  fora_da_janela: "Fora da janela",
 };
 
 export const SITUACAO_VARIANTE: Record<SituacaoDaConversa, "danger" | "warning" | "info" | "success"> = {
@@ -60,10 +62,13 @@ export function podeResponder(c: ConversaParaTela, agora: Date): VereditoDeRespo
   if (c.optedOutAt) {
     return { pode: false, motivo: "O candidato pediu para não receber mais mensagens por aqui." };
   }
-  if (!dentroDaJanelaLivre(c.lastInboundAt, agora)) {
+  if (!dentroDaJanelaLivre(c.lastInboundAt, agora, c.janelaLivreHoras)) {
+    if (c.janelaLivreHoras === null || !c.lastInboundAt) {
+      return { pode: false, motivo: "Ele ainda não escreveu nesta conversa." };
+    }
     return {
       pode: false,
-      motivo: `Passaram-se mais de ${JANELA_LIVRE_EM_HORAS}h desde a última mensagem dele. O WhatsApp só permite retomar por modelo aprovado — ligue ou aguarde ele escrever.`,
+      motivo: `Passaram-se mais de ${c.janelaLivreHoras}h desde a última mensagem dele. O WhatsApp só permite retomar por modelo aprovado — ligue ou aguarde ele escrever.`,
     };
   }
   return { pode: true };
@@ -76,7 +81,7 @@ export function podeResponder(c: ConversaParaTela, agora: Date): VereditoDeRespo
  * nunca volta — devolver ao robô uma conversa de quem pediu silêncio é
  * exatamente o que o opt-out existe para impedir.
  */
-export function podeDevolverAoRobo(c: ConversaParaTela): VereditoDeResposta {
+export function podeDevolverAoRobo(c: Pick<ConversaParaTela, "optedOutAt" | "handoffAt">): VereditoDeResposta {
   if (c.optedOutAt) {
     return { pode: false, motivo: "O candidato pediu para não receber mais mensagens." };
   }
@@ -109,7 +114,7 @@ export function ordenarConversas<T extends ConversaParaTela>(conversas: T[], ago
   });
 }
 
-/** Formata o telefone da Meta (E.164 sem "+") como as pessoas leem. */
+/** Formata o telefone (DDI + número, sem "+") como as pessoas leem. */
 export function telefoneLegivel(waPhone: string): string {
   const d = waPhone.replace(/\D/g, "");
   const semPais = d.startsWith("55") ? d.slice(2) : d;

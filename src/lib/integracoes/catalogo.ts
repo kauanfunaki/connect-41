@@ -41,6 +41,12 @@ export type IntegracaoDef = {
   description: string;
   campos: CampoDeIntegracao[];
   /**
+   * Caminho do webhook que o sistema de fora chama, com `{id}` no lugar do id
+   * da conexão. A vitrine mostra a URL pronta para copiar — sem isso, quem
+   * configura a Meta ou a Evolution precisaria descobrir o id no banco.
+   */
+  caminhoDoWebhook?: string;
+  /**
    * Integração **nunca** nasce ligada. Diferente de módulo, ligar aqui
    * significa começar a falar com sistema de terceiro usando credencial de
    * alguém — é ato deliberado, não padrão.
@@ -156,6 +162,7 @@ export const INTEGRATION_CATALOG: IntegracaoDef[] = [
   {
     code: "whatsapp_recrutamento",
     label: "WhatsApp do Recrutamento",
+    caminhoDoWebhook: "/api/integrations/whatsapp/webhook/{id}",
     vendor: "Meta (WhatsApp Cloud API)",
     natureza: "API",
     sectorCode: "recrutamento",
@@ -197,6 +204,48 @@ export const INTEGRATION_CATALOG: IntegracaoDef[] = [
         type: "secret",
         required: true,
         help: "Você escolhe. É o mesmo que vai no campo Verify Token ao cadastrar o webhook na Meta.",
+      },
+    ],
+  },
+  {
+    code: "whatsapp_recrutamento_evolution",
+    label: "WhatsApp do Recrutamento (Evolution, testes)",
+    caminhoDoWebhook: "/api/integrations/whatsapp/webhook/{id}",
+    vendor: "Evolution API (self-hosted)",
+    natureza: "API",
+    sectorCode: "recrutamento",
+    description:
+      "Número comum numa instância da Evolution API — para testar o atendimento antes da BM da Meta. Não oficial: número pessoal corre risco de bloqueio por volume",
+    defaultEnabled: false,
+    campos: [
+      {
+        name: "baseUrl",
+        label: "URL da Evolution",
+        type: "url",
+        required: true,
+        help: "Ex.: https://evo.suaempresa.com.br — sem barra no fim.",
+      },
+      {
+        name: "instance",
+        label: "Nome da instância",
+        type: "text",
+        required: true,
+        help: "O nome dado ao criar a instância. É o que vai no caminho /message/sendText/{instância}.",
+      },
+      {
+        name: "apiKey",
+        label: "API key",
+        type: "secret",
+        required: true,
+        help: "O token da instância (ou a chave global). Vai no header apikey de cada envio.",
+      },
+      {
+        name: "webhookSecret",
+        label: "Segredo do webhook",
+        type: "secret",
+        required: true,
+        help:
+          "Você escolhe. Configure o webhook DA INSTÂNCIA (não o global, que não manda cabeçalho) com o header x-connect-secret contendo este valor — sem ele, qualquer um inventa mensagem de candidato.",
       },
     ],
   },
