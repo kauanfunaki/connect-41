@@ -24,6 +24,15 @@ import {
 } from "@/lib/whatsapp/decisao";
 import { enviarERegistrar, registrarBloqueio } from "@/lib/whatsapp/envio";
 import { montarPerguntaComHistorico, MAX_MENSAGENS_NO_HISTORICO } from "@/lib/whatsapp/historico";
+import {
+  nomeConfere,
+  MAX_TENTATIVAS_DO_NOME,
+  PERGUNTA_DO_NOME,
+  PEDIR_NOME_DE_NOVO,
+  NOME_NAO_CONFIRMADO,
+  NOTA_DE_VINCULO_CONFIRMADO,
+} from "@/lib/whatsapp/vinculo";
+import { pessoaPeloTelefone, candidaturaPrincipal } from "@/lib/whatsapp/vinculo-dados";
 import type { MensagemRecebida, ProvedorWhatsapp } from "@/lib/whatsapp/provedores/tipos";
 
 const AGENTE = "atendente_de_candidato";
@@ -207,8 +216,74 @@ export async function atenderMensagem(
     return "saída confirmada";
   }
 
-  // ─── Responder ────────────────────────────────────────────────────────────
   const escritorio = await nomeDoEscritorio(conexao.tenantId);
+
+  // ─── Vínculo com a candidatura ────────────────────────────────────────────
+  //
+  // Antes do agente, e sem ele: perguntar e conferir o nome é regra, não
+  // conversa — ver `src/lib/whatsapp/vinculo.ts`. Só entra quando a conversa
+  // ainda não tem vínculo e ninguém desistiu dele.
+  let acabouDeConfirmar = false;
+  if (!thread.personId && !thread.candidaturaId && !thread.linkFailedAt) {
+    const enviar = (texto: string) =>
+      enviarERegistrar({
+        tenantId: conexao.tenantId,
+        threadId: thread.id,
+        provedor,
+        config,
+        paraE164: m.de,
+        texto: montarMensagem(texto, decisao.apresentar, escritorio),
+      });
+
+    if (thread.linkPendingPersonId) {
+      const pessoa = await prisma.person.findFirst({
+        where: { id: thread.linkPendingPersonId, tenantId: conexao.tenantId },
+        select: { id: true, name: true },
+      });
+
+      if (pessoa && nomeConfere(m.texto, pessoa.name)) {
+        await prisma.whatsappThread.update({
+          where: { id: thread.id },
+          data: {
+            personId: pessoa.id,
+            candidaturaId: await candidaturaPrincipal(conexao.tenantId, pessoa.id),
+            linkPendingPersonId: null,
+            linkAttempts: 0,
+          },
+        });
+        acabouDeConfirmar = true;
+      } else {
+        const tentativas = thread.linkAttempts + 1;
+        if (pessoa && tentativas < MAX_TENTATIVAS_DO_NOME) {
+          await prisma.whatsappThread.update({ where: { id: thread.id }, data: { linkAttempts: tentativas } });
+          await enviar(PEDIR_NOME_DE_NOVO);
+          return "vínculo: nome não conferiu, pedido de novo";
+        }
+        // Pessoa apagada do cadastro no meio da confirmação também cai aqui:
+        // não há mais com quem conferir.
+        await prisma.whatsappThread.update({
+          where: { id: thread.id },
+          data: { linkPendingPersonId: null, linkAttempts: tentativas, linkFailedAt: agora },
+        });
+        await enviar(NOME_NAO_CONFIRMADO);
+        return "vínculo: nome não conferiu, desistiu";
+      }
+    } else {
+      const achada = await pessoaPeloTelefone(conexao.tenantId, m.de);
+      if (achada) {
+        await prisma.whatsappThread.update({
+          where: { id: thread.id },
+          data: { linkPendingPersonId: achada.personId, linkAttempts: 0 },
+        });
+        // A pergunta não diz o nome nem a vaga que achou: quem recebeu o número
+        // por engano não pode sair daqui sabendo de quem é a inscrição.
+        await enviar(PERGUNTA_DO_NOME);
+        return "vínculo: pediu o nome";
+      }
+    }
+  }
+
+  // ─── Responder ────────────────────────────────────────────────────────────
 
   // O que já foi trocado nesta conversa — ver `src/lib/whatsapp/historico.ts`.
   // Busca uma a mais e tira a mensagem nova em memória: filtrar por
@@ -235,7 +310,10 @@ export async function atenderMensagem(
       tenantId: conexao.tenantId,
       agentCode: AGENTE,
       system: sistema(escritorio),
-      pergunta: montarPerguntaComHistorico(anteriores, m.texto),
+      pergunta: montarPerguntaComHistorico(
+        anteriores,
+        acabouDeConfirmar ? `${NOTA_DE_VINCULO_CONFIRMADO}${m.texto}` : m.texto
+      ),
       maxTokens: 800,
       // `CRON` não: foi o candidato que provocou. `SISTEMA` é o que descreve
       // "efeito de algo que chegou de fora", e é o que separa este gasto do

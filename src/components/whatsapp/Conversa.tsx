@@ -86,9 +86,11 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
           </p>
         )}
 
-        {/* O vínculo é o que faz o assistente saber de quem está falando — e é
-            de gente, nunca do robô: identificar alguém por telefone é palpite,
-            e palpite errado mostra o processo de uma pessoa para outra. */}
+        {/* O vínculo é o que faz o assistente saber de quem está falando.
+            Telefone sozinho é palpite — palpite errado mostra o processo de
+            uma pessoa para outra —, então o robô só liga sozinho quando o
+            candidato confirma o nome (`src/lib/whatsapp/vinculo.ts`). Fora
+            disso, é de gente: aqui. */}
         {conversa.candidaturaId ? (
           <div className="flex flex-wrap items-center gap-2 text-[12px] text-fg-secondary">
             <Link2 size={13} />
@@ -103,6 +105,17 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
             </button>
           </div>
         ) : (
+          <>
+          {conversa.vinculoAutomatico === "confirmando" && (
+            <p className="text-[12px] text-fg-muted">
+              O assistente achou uma inscrição com este telefone e pediu o nome completo para confirmar.
+            </p>
+          )}
+          {conversa.vinculoAutomatico === "nao_confirmou" && (
+            <p className="text-[12px] text-warning">
+              O vínculo automático não confirmou quem é (ou foi desfeito). Só se liga à mão.
+            </p>
+          )}
           <div className="flex flex-wrap items-end gap-2">
             <div className="flex-1 min-w-[16rem]">
               <label htmlFor="vinculo" className="block text-[11px] text-fg-muted mb-1">
@@ -129,6 +142,7 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
               Ligar
             </Button>
           </div>
+          </>
         )}
       </Card>
 

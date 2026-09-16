@@ -53,7 +53,7 @@ export const FERRAMENTAS_DE_CANDIDATO: Record<string, FerramentaRegistrada> = {
     def: {
       nome: "ver_meu_processo",
       descricao:
-        "A situação do processo seletivo da pessoa com quem você está falando: a vaga, a etapa e a situação. Use antes de responder qualquer pergunta sobre 'meu processo'.",
+        "As candidaturas da pessoa com quem você está falando: para cada uma, a vaga, a empresa, a etapa e a situação, da mais recente para a mais antiga. Use antes de responder qualquer pergunta sobre 'meu processo'.",
       parametros: SEM_PARAMETROS as unknown as Record<string, unknown>,
       natureza: "leitura",
     },
@@ -63,9 +63,22 @@ export const FERRAMENTAS_DE_CANDIDATO: Record<string, FerramentaRegistrada> = {
 
       const thread = await prisma.whatsappThread.findFirst({
         where: { id: threadId, tenantId: ctx.tenantId },
-        select: { candidaturaId: true },
+        select: { personId: true, candidaturaId: true },
       });
-      if (!thread?.candidaturaId) {
+
+      // A pessoa, e não uma candidatura só: quem se inscreveu em duas vagas
+      // pergunta das duas. Vínculo manual antigo só gravou a candidatura, e é
+      // dela que a pessoa sai.
+      let personId = thread?.personId ?? null;
+      if (!personId && thread?.candidaturaId) {
+        const c = await prisma.candidatura.findFirst({
+          where: { id: thread.candidaturaId, tenantId: ctx.tenantId },
+          select: { personId: true },
+        });
+        personId = c?.personId ?? null;
+      }
+
+      if (!personId) {
         // Não é erro: é o caso normal de quem escreve pela primeira vez.
         return {
           identificado: false,
@@ -80,8 +93,10 @@ export const FERRAMENTAS_DE_CANDIDATO: Record<string, FerramentaRegistrada> = {
         };
       }
 
-      const c = await prisma.candidatura.findFirst({
-        where: { id: thread.candidaturaId, tenantId: ctx.tenantId },
+      const candidaturas = await prisma.candidatura.findMany({
+        where: { personId, tenantId: ctx.tenantId },
+        orderBy: { createdAt: "desc" },
+        take: 5,
         select: {
           stage: true,
           status: true,
@@ -90,15 +105,17 @@ export const FERRAMENTAS_DE_CANDIDATO: Record<string, FerramentaRegistrada> = {
           vaga: { select: { title: true, company: { select: { tradeName: true, name: true } } } },
         },
       });
-      if (!c) throw new Error("Candidatura não encontrada.");
 
       return {
         identificado: true,
-        vaga: c.vaga.title,
-        empresa: c.vaga.company.tradeName || c.vaga.company.name,
-        etapa: ETAPA_EM_PORTUGUES[c.stage] ?? c.stage,
-        situacao: SITUACAO_EM_PORTUGUES[c.status] ?? c.status,
-        inscritoEm: c.createdAt.toISOString().slice(0, 10),
+        candidaturas: candidaturas.map((c) => ({
+          vaga: c.vaga.title,
+          empresa: c.vaga.company.tradeName || c.vaga.company.name,
+          etapa: ETAPA_EM_PORTUGUES[c.stage] ?? c.stage,
+          situacao: SITUACAO_EM_PORTUGUES[c.status] ?? c.status,
+          inscritoEm: c.createdAt.toISOString().slice(0, 10),
+        })),
+        ...(candidaturas.length === 0 ? { recado: "Esta pessoa não tem candidatura registrada." } : {}),
       };
     },
   },

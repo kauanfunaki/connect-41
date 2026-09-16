@@ -140,7 +140,15 @@ export type MensagemNaTela = {
   doRobo: boolean;
 };
 
-export type ConversaDetalhada = LinhaDeConversa & { mensagens: MensagemNaTela[] };
+export type ConversaDetalhada = LinhaDeConversa & {
+  mensagens: MensagemNaTela[];
+  /**
+   * Vínculo automático por telefone + nome (`src/lib/whatsapp/vinculo.ts`):
+   * `confirmando` enquanto espera o nome, `nao_confirmou` quando desistiu ou
+   * alguém desfez um vínculo. Nulo quando nada disso se aplica.
+   */
+  vinculoAutomatico: "confirmando" | "nao_confirmou" | null;
+};
 
 export async function lerConversa(
   tenantId: string,
@@ -158,6 +166,8 @@ export async function lerConversa(
       handoffReason: true,
       lastInboundAt: true,
       candidaturaId: true,
+      linkPendingPersonId: true,
+      linkFailedAt: true,
     },
   });
   if (!thread) return null;
@@ -207,6 +217,13 @@ export async function lerConversa(
     candidaturaId: thread.candidaturaId,
     janelaLivreHoras: janelaDe(janelas, thread.integrationId),
     naoRespondidas,
+    vinculoAutomatico: thread.candidaturaId
+      ? null
+      : thread.linkPendingPersonId
+        ? "confirmando"
+        : thread.linkFailedAt
+          ? "nao_confirmou"
+          : null,
     mensagens: mensagens.map((m) => ({
       id: m.id,
       direction: m.direction,

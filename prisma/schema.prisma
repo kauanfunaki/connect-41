@@ -4214,6 +4214,19 @@ model WhatsappThread {
   personId      String?
   candidaturaId String?
 
+  /// Vínculo automático em andamento: a pessoa que **um** telefone de inscrição
+  /// apontou, esperando o candidato confirmar o nome completo. Telefone sozinho
+  /// é palpite (inscrição com número digitado errado mostraria o processo de
+  /// uma pessoa para outra); telefone + nome é o que liga. Ver
+  /// `src/lib/whatsapp/vinculo.ts`.
+  linkPendingPersonId String?
+  /// Nomes informados que não conferiram nesta tentativa de vínculo.
+  linkAttempts        Int       @default(0)
+  /// O vínculo automático desistiu (nome não conferiu) ou uma pessoa desfez um
+  /// vínculo. Daqui em diante só vínculo manual — sem isso o robô perguntaria o
+  /// nome de novo a cada mensagem, e insistir é como se adivinha um nome.
+  linkFailedAt        DateTime?
+
   /// Última mensagem RECEBIDA. É o relógio da janela de 24h da Meta: fora
   /// dela, mensagem livre não sai, e insistir só gera erro na API.
   lastInboundAt DateTime?

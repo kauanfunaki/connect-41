@@ -159,7 +159,14 @@ export async function vincularCandidatura(
 
   await prisma.whatsappThread.update({
     where: { id: thread.id },
-    data: { candidaturaId: candidatura.id, personId: candidatura.personId },
+    // Ligar à mão encerra qualquer confirmação por nome em andamento: uma pessoa
+    // do time já decidiu quem é.
+    data: {
+      candidaturaId: candidatura.id,
+      personId: candidatura.personId,
+      linkPendingPersonId: null,
+      linkAttempts: 0,
+    },
   });
 
   await logAudit({
@@ -183,7 +190,9 @@ export async function desvincularCandidatura(threadId: string): Promise<AcaoNaCo
 
   await prisma.whatsappThread.update({
     where: { id: thread.id },
-    data: { candidaturaId: null, personId: null },
+    // `linkFailedAt` impede o vínculo automático de refazer o mesmo engano na
+    // próxima mensagem: desfeito à mão, só se liga à mão.
+    data: { candidaturaId: null, personId: null, linkPendingPersonId: null, linkFailedAt: new Date() },
   });
 
   await logAudit({
