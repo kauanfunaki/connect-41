@@ -3,7 +3,10 @@
 import { getPrisma } from "@/lib/prisma";
 import { ordenarConversas, type ConversaParaTela } from "@/lib/whatsapp/conversas";
 import { JANELA_LIVRE_EM_HORAS } from "@/lib/whatsapp/decisao";
-import { janelaDoCodigo } from "@/lib/whatsapp/provedores";
+import { janelaDoCodigo, CODIGOS_DE_WHATSAPP, provedorDaIntegracao } from "@/lib/whatsapp/provedores";
+import { avaliarConexao, contarEsperandoRobo, type SaudeDaConexao } from "@/lib/whatsapp/saude";
+import { lerConfig } from "@/lib/integracoes/data";
+import { INTEGRATION_CATALOG } from "@/lib/integracoes/catalogo";
 
 export type LinhaDeConversa = ConversaParaTela & {
   id: string;
@@ -138,6 +141,8 @@ export type MensagemNaTela = {
   error: string | null;
   /** Veio do robô? É o que distingue o que uma pessoa escreveu. */
   doRobo: boolean;
+  /** Arquivo guardado com a mensagem (hoje, currículo em PDF). Baixa por `/api/whatsapp/midia/[id]`. */
+  anexo: { nome: string } | null;
 };
 
 export type ConversaDetalhada = LinhaDeConversa & {
@@ -185,6 +190,8 @@ export async function lerConversa(
         status: true,
         error: true,
         agentRunId: true,
+        mediaUrl: true,
+        mediaFileName: true,
       },
     }),
     thread.candidaturaId
@@ -232,6 +239,103 @@ export async function lerConversa(
       status: m.status,
       error: m.error,
       doRobo: m.agentRunId !== null,
+      anexo: m.mediaUrl ? { nome: m.mediaFileName ?? "curriculo.pdf" } : null,
     })),
   };
+}
+
+export type ConexaoNaTela = {
+  id: string;
+  rotulo: string;
+  /** Nome da instância na Evolution — não é segredo, e é o que se procura no Manager. */
+  instancia: string | null;
+  ligada: boolean;
+  /** A última mensagem que chegou por esta conexão, de qualquer candidato. */
+  ultimaEntradaEm: Date | null;
+  saude: SaudeDaConexao;
+};
+
+/**
+ * A saúde de cada conexão de WhatsApp do cliente, para o topo de `/whatsapp`.
+ *
+ * O estado vem do provedor **na hora**, e não de um cron: a tela é aberta por
+ * quem está atendendo, e um estado de meia hora atrás é exatamente o que mente
+ * no momento em que o número acabou de cair. O timeout do provedor é curto para
+ * não segurar a página.
+ */
+export async function saudeDasConexoes(tenantId: string, agora: Date): Promise<ConexaoNaTela[]> {
+  const prisma = getPrisma();
+  const conexoes = await prisma.tenantIntegration.findMany({
+    where: { tenantId, integrationCode: { in: CODIGOS_DE_WHATSAPP } },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, integrationCode: true, label: true, enabled: true, configEnc: true },
+  });
+
+  return Promise.all(
+    conexoes.map(async (c) => {
+      const provedor = provedorDaIntegracao(c.integrationCode);
+      const config = lerConfig(c.configEnc);
+
+      const threads = await prisma.whatsappThread.findMany({
+        where: { tenantId, integrationId: c.id },
+        orderBy: { updatedAt: "desc" },
+        take: 200,
+        select: { id: true, handoffAt: true, optedOutAt: true, lastInboundAt: true },
+      });
+      const ids = threads.map((t) => t.id);
+
+      const [estado, saidas, ultimaFalha] = await Promise.all([
+        // Conexão desligada não é consultada: o veredito já é "desligada", e
+        // consultar gastaria o timeout à toa.
+        c.enabled && provedor?.consultarConexao ? provedor.consultarConexao(config) : Promise.resolve(null),
+        ids.length > 0
+          ? prisma.whatsappMessage.groupBy({
+              by: ["threadId"],
+              where: { threadId: { in: ids }, direction: "SAIDA", status: "ENVIADA" },
+              _max: { createdAt: true },
+            })
+          : Promise.resolve([]),
+        ids.length > 0
+          ? prisma.whatsappMessage.findFirst({
+              where: { threadId: { in: ids }, direction: "SAIDA", status: "FALHOU" },
+              orderBy: { createdAt: "desc" },
+              select: { createdAt: true, error: true },
+            })
+          : Promise.resolve(null),
+      ]);
+
+      const ultimaSaidaPorThread = new Map(saidas.map((s) => [s.threadId, s._max.createdAt]));
+      const esperandoRobo = contarEsperandoRobo(
+        threads.map((t) => ({
+          handoffAt: t.handoffAt,
+          optedOutAt: t.optedOutAt,
+          ultimaEntradaEm: t.lastInboundAt,
+          ultimaSaidaEm: ultimaSaidaPorThread.get(t.id) ?? null,
+        })),
+        agora
+      );
+
+      const ultimaEntradaEm = threads.reduce<Date | null>(
+        (maior, t) => (t.lastInboundAt && (!maior || t.lastInboundAt > maior) ? t.lastInboundAt : maior),
+        null
+      );
+
+      return {
+        id: c.id,
+        rotulo: c.label ?? INTEGRATION_CATALOG.find((d) => d.code === c.integrationCode)?.label ?? c.integrationCode,
+        instancia: config.instance ?? null,
+        ligada: c.enabled,
+        ultimaEntradaEm,
+        saude: avaliarConexao(
+          {
+            ligada: c.enabled,
+            estado: provedor?.consultarConexao ? estado : null,
+            ultimaFalha: ultimaFalha ? { em: ultimaFalha.createdAt, erro: ultimaFalha.error } : null,
+            esperandoRobo,
+          },
+          agora
+        ),
+      };
+    })
+  );
 }

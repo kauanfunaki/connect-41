@@ -33,7 +33,23 @@ import {
   NOTA_DE_VINCULO_CONFIRMADO,
 } from "@/lib/whatsapp/vinculo";
 import { pessoaPeloTelefone, candidaturaPrincipal } from "@/lib/whatsapp/vinculo-dados";
-import type { MensagemRecebida, ProvedorWhatsapp } from "@/lib/whatsapp/provedores/tipos";
+import type {
+  DocumentoRecebido,
+  MensagemIgnorada,
+  MensagemRecebida,
+  ProvedorWhatsapp,
+} from "@/lib/whatsapp/provedores/tipos";
+import {
+  classificarDocumento,
+  ehPdf,
+  nomeDoArquivoParaTela,
+  mensagemDeCurriculoRecebido,
+  CURRICULO_SEM_VINCULO,
+  MAX_BYTES_DO_CURRICULO,
+} from "@/lib/whatsapp/documento";
+import { randomUUID } from "crypto";
+import { mkdir, writeFile } from "fs/promises";
+import path from "path";
 
 const AGENTE = "atendente_de_candidato";
 
@@ -373,18 +389,134 @@ export async function atenderMensagem(
   return "respondido";
 }
 
-/** Uma mensagem que não é texto: ninguém responde, e uma pessoa assume. */
+/**
+ * Uma mensagem que não é texto. Currículo em PDF é guardado (ver
+ * `src/lib/whatsapp/documento.ts`); o resto vai para uma pessoa, sem resposta.
+ */
 export async function tratarNaoTexto(
   conexao: Conexao,
-  de: string,
-  tipo: string
-): Promise<void> {
+  provedor: ProvedorWhatsapp,
+  i: MensagemIgnorada
+): Promise<string> {
   const thread = await acharOuCriarThread({
     tenantId: conexao.tenantId,
     integrationId: conexao.id,
-    waPhone: de,
+    waPhone: i.de,
   });
-  if (thread.optedOutAt || thread.handoffAt) return;
+  if (thread.optedOutAt) return "ignorado: pediu para parar";
+
+  if (i.documento && provedor.baixarMidia && conexao.enabled) {
+    return tratarDocumento(conexao, provedor, thread, i, i.documento);
+  }
+
+  if (thread.handoffAt) return "ignorado: já está com uma pessoa";
   // Responder a um áudio com um robô que não o ouviu é pior que não responder.
-  await transferir(thread.id, `candidato mandou ${tipo}, que o robô não lê`);
+  await transferir(thread.id, `candidato mandou ${i.tipo}, que o robô não lê`);
+  return `transferido: ${i.tipo}`;
+}
+
+type ThreadDoAtendimento = Awaited<ReturnType<typeof acharOuCriarThread>>;
+
+async function tratarDocumento(
+  conexao: Conexao,
+  provedor: ProvedorWhatsapp,
+  thread: ThreadDoAtendimento,
+  i: MensagemIgnorada,
+  doc: DocumentoRecebido
+): Promise<string> {
+  const prisma = getPrisma();
+  const agora = new Date();
+  const nome = nomeDoArquivoParaTela(doc.nomeDoArquivo);
+
+  // Registra a entrada antes de qualquer coisa, pelo mesmo motivo do texto: o
+  // `waMessageId` único é o que impede a reentrega de baixar e responder duas
+  // vezes. E a conversa passa a mostrar que um arquivo chegou.
+  let mensagemId: string;
+  try {
+    const criada = await prisma.whatsappMessage.create({
+      data: {
+        tenantId: conexao.tenantId,
+        threadId: thread.id,
+        direction: "ENTRADA",
+        waMessageId: i.waMessageId,
+        body: `[arquivo: ${nome}]`,
+      },
+      select: { id: true },
+    });
+    mensagemId = criada.id;
+  } catch {
+    return "reentrega ignorada";
+  }
+  await prisma.whatsappThread.update({ where: { id: thread.id }, data: { lastInboundAt: agora } });
+
+  // Uma pessoa já conduz a conversa: o arquivo fica guardado, mas o robô não fala.
+  const podeFalar = !thread.handoffAt;
+  const passarParaPessoa = async (motivo: string) => {
+    if (podeFalar) await transferir(thread.id, motivo);
+    return `transferido: ${motivo}`;
+  };
+
+  const classe = classificarDocumento(doc);
+  if (classe === "nao_pdf") return passarParaPessoa(`candidato mandou ${nome}, que o robô não lê`);
+  if (classe === "grande_demais") return passarParaPessoa(`candidato mandou um PDF maior que 5 MB (${nome})`);
+
+  const config = lerConfig(conexao.configEnc);
+  const baixado = await provedor.baixarMidia!(config, doc.referencia);
+  if (!baixado.ok) {
+    await prisma.whatsappMessage.update({ where: { id: mensagemId }, data: { error: baixado.erro.slice(0, 500) } });
+    return passarParaPessoa(`não deu para baixar o arquivo ${nome}`);
+  }
+  if (baixado.bytes.length > MAX_BYTES_DO_CURRICULO || !ehPdf(baixado.bytes)) {
+    return passarParaPessoa(`o arquivo ${nome} não é um PDF válido de até 5 MB`);
+  }
+
+  // Mesmo lugar e mesmo formato do portal de carreiras — é o que faz o arquivo
+  // servir ao funil da vaga e ao "Extrair dados" sem nada novo do lado deles.
+  const arquivo = `${randomUUID()}.pdf`;
+  const pasta = path.join(process.cwd(), "storage", "resumes", conexao.tenantId);
+  await mkdir(pasta, { recursive: true });
+  await writeFile(path.join(pasta, arquivo), baixado.bytes);
+  const resumeUrl = `${conexao.tenantId}/${arquivo}`;
+
+  await prisma.whatsappMessage.update({
+    where: { id: mensagemId },
+    data: { mediaUrl: resumeUrl, mediaFileName: nome, mediaMimeType: "application/pdf" },
+  });
+
+  const saidas = await prisma.whatsappMessage.count({
+    where: { threadId: thread.id, direction: "SAIDA", status: "ENVIADA" },
+  });
+  const escritorio = await nomeDoEscritorio(conexao.tenantId);
+  const responder = (texto: string) =>
+    enviarERegistrar({
+      tenantId: conexao.tenantId,
+      threadId: thread.id,
+      provedor,
+      config,
+      paraE164: i.de,
+      texto: montarMensagem(texto, saidas === 0, escritorio),
+    });
+
+  const candidatura = thread.candidaturaId
+    ? await prisma.candidatura.findFirst({
+        where: { id: thread.candidaturaId, tenantId: conexao.tenantId },
+        select: { id: true, vaga: { select: { title: true } } },
+      })
+    : null;
+
+  if (candidatura) {
+    // Substitui o do portal, se houver: quem manda de novo manda o atualizado.
+    // O arquivo antigo continua no disco.
+    await prisma.candidatura.update({ where: { id: candidatura.id }, data: { resumeUrl } });
+    if (podeFalar) await responder(mensagemDeCurriculoRecebido(candidatura.vaga.title));
+    return "currículo juntado à candidatura";
+  }
+
+  // Sem vínculo (ou vínculo ainda sendo confirmado pelo nome): não dá para saber
+  // de quem é. Fica na conversa, e uma pessoa liga.
+  if (podeFalar) {
+    await responder(CURRICULO_SEM_VINCULO);
+    await transferir(thread.id, `candidato sem vínculo mandou currículo (${nome}) — está na conversa`);
+  }
+  return "currículo guardado na conversa, sem vínculo";
 }

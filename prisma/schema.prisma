@@ -4274,6 +4274,15 @@ model WhatsappMessage {
   /// mensagem que o candidato recebeu à linha de auditoria que a produziu.
   agentRunId String? @db.VarChar(191)
 
+  /// Arquivo que veio com a mensagem e foi guardado — hoje só currículo em PDF,
+  /// relativo a `storage/resumes` ("<tenantId>/<uuid>.pdf"), o mesmo formato de
+  /// `Candidatura.resumeUrl`. Gerado pelo Connect, nunca pelo remetente: é o que
+  /// deixa a rota de download sem risco de caminho forjado.
+  mediaUrl      String? @db.VarChar(255)
+  /// O nome que o remetente deu ao arquivo. Só para exibir.
+  mediaFileName String? @db.VarChar(180)
+  mediaMimeType String? @db.VarChar(100)
+
   createdAt DateTime @default(now())
 
   tenant Tenant         @relation(fields: [tenantId], references: [id])

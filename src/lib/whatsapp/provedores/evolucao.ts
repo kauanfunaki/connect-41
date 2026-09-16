@@ -23,9 +23,11 @@ import { timingSafeEqual } from "crypto";
 import { MAX_CARACTERES_DA_MENSAGEM } from "../decisao";
 import type {
   ConfigDoProvedor,
+  EstadoDaConexao,
   EventoRecebido,
   MensagemIgnorada,
   MensagemRecebida,
+  MidiaBaixada,
   ProvedorWhatsapp,
   ResultadoDoEnvio,
 } from "./tipos";
@@ -61,6 +63,21 @@ function str(v: unknown): string | null {
  */
 export function idDaMensagem(instancia: string, id: string): string {
   return `evo:${instancia}:${id}`.slice(0, 120);
+}
+
+/**
+ * `fileLength` do Baileys vem como número, texto ou `Long` serializado
+ * (`{ low, high }`), conforme o caminho que a mensagem fez.
+ */
+function tamanhoDoArquivo(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && /^\d+$/.test(v)) return Number(v);
+  const longo = obj(v);
+  if (longo && typeof longo.low === "number") {
+    const alto = typeof longo.high === "number" ? longo.high : 0;
+    return (longo.low >>> 0) + alto * 2 ** 32;
+  }
+  return null;
 }
 
 function lerEvento(payload: unknown): EventoRecebido {
@@ -118,7 +135,27 @@ function lerEvento(payload: unknown): EventoRecebido {
     const ehTexto = tipo === "conversation" || tipo === "extendedTextMessage" || (!tipo && texto !== null);
 
     if (!ehTexto) {
-      ignoradas.push({ waMessageId, tipo: tipo ?? "desconhecido", de });
+      // Documento com legenda chega embrulhado em `documentWithCaptionMessage`.
+      const doc =
+        obj(mensagem?.documentMessage) ?? obj(obj(obj(mensagem?.documentWithCaptionMessage)?.message)?.documentMessage);
+      ignoradas.push({
+        waMessageId,
+        tipo: tipo ?? "desconhecido",
+        de,
+        ...(doc
+          ? {
+              documento: {
+                nomeDoArquivo: str(doc.fileName),
+                mimetype: str(doc.mimetype),
+                tamanhoBytes: tamanhoDoArquivo(doc.fileLength),
+                // A mensagem inteira, e não só a chave: com `message` presente a
+                // Evolution baixa direto do WhatsApp, sem depender de ter
+                // guardado a mensagem no banco dela (conferido no 2.3.7).
+                referencia: { key: chave, message: mensagem },
+              },
+            }
+          : {}),
+      });
       continue;
     }
     if (!texto) {
@@ -190,6 +227,117 @@ async function enviarTexto(config: ConfigDoProvedor, paraE164: string, texto: st
   }
 }
 
+/** A consulta de estado roda ao abrir a tela: não pode segurar a página como o envio segura o webhook. */
+const TIMEOUT_DO_ESTADO_MS = 5_000;
+
+/**
+ * Lê a resposta de `GET /instance/connectionState/{instância}`.
+ *
+ * Formato conferido no código do tag 2.3.7 (`instance.controller.ts`):
+ * `{ instance: { instanceName, state } }`, com `state` vindo do Baileys —
+ * `open`, `connecting` ou `close`. Estado ausente é instância que existe mas não
+ * está carregada no servidor, que para quem atende é o mesmo que caída.
+ */
+export function lerEstadoDaEvolution(corpo: unknown): EstadoDaConexao {
+  const estado = str(obj(obj(corpo)?.instance)?.state);
+  if (estado === "open") return { estado: "conectado", detalhe: null };
+  if (estado === "connecting") return { estado: "conectando", detalhe: null };
+  if (estado === "close") return { estado: "desconectado", detalhe: null };
+  return { estado: "desconectado", detalhe: estado ? `estado "${estado}"` : "a instância não está carregada na Evolution" };
+}
+
+async function consultarConexao(config: ConfigDoProvedor): Promise<EstadoDaConexao> {
+  const base = (config.baseUrl ?? "").replace(/\/+$/, "");
+  const instancia = config.instance ?? "";
+  const apiKey = config.apiKey ?? "";
+  if (!base || !instancia || !apiKey) {
+    return { estado: "indisponivel", detalhe: "conexão incompleta: URL, instância ou apikey" };
+  }
+
+  const controle = new AbortController();
+  const relogio = setTimeout(() => controle.abort(), TIMEOUT_DO_ESTADO_MS);
+  try {
+    const res = await fetch(`${base}/instance/connectionState/${encodeURIComponent(instancia)}`, {
+      headers: { apikey: apiKey },
+      signal: controle.signal,
+      cache: "no-store",
+    });
+    const corpo = await res.text();
+    if (!res.ok) {
+      // 404 é nome de instância errado; 401/403 é apikey. O corpo vai junto
+      // porque é a Evolution dizendo qual dos dois.
+      return { estado: "indisponivel", detalhe: `Evolution ${res.status}: ${corpo.slice(0, 200)}` };
+    }
+    try {
+      return lerEstadoDaEvolution(JSON.parse(corpo));
+    } catch {
+      return { estado: "indisponivel", detalhe: "resposta da Evolution não é JSON" };
+    }
+  } catch (err) {
+    const abortou = err instanceof Error && err.name === "AbortError";
+    return {
+      estado: "indisponivel",
+      detalhe: abortou ? "a Evolution não respondeu a tempo" : err instanceof Error ? err.message : "falha de rede",
+    };
+  } finally {
+    clearTimeout(relogio);
+  }
+}
+
+/** Download de arquivo é mais lento que o envio de texto: a Evolution busca no WhatsApp e tem retentativa de 5 s. */
+const TIMEOUT_DA_MIDIA_MS = 40_000;
+
+/**
+ * Baixa um documento: `POST /chat/getBase64FromMediaMessage/{instância}`.
+ *
+ * Conferido no código do tag 2.3.7 (`chat.router.ts`, `chat.dto.ts` e
+ * `getBase64FromMediaMessage` em `whatsapp.baileys.service.ts`): o corpo é
+ * `{ message, convertToMp4 }`, responde 201 com `{ mediaType, fileName,
+ * mimetype, base64, … }`, e erro vira 400 com a mensagem.
+ */
+async function baixarMidia(config: ConfigDoProvedor, referencia: unknown): Promise<MidiaBaixada> {
+  const base = (config.baseUrl ?? "").replace(/\/+$/, "");
+  const instancia = config.instance ?? "";
+  const apiKey = config.apiKey ?? "";
+  if (!base || !instancia || !apiKey) {
+    return { ok: false, erro: "Conexão da Evolution incompleta: URL, instância ou apikey." };
+  }
+
+  const controle = new AbortController();
+  const relogio = setTimeout(() => controle.abort(), TIMEOUT_DA_MIDIA_MS);
+  try {
+    const res = await fetch(`${base}/chat/getBase64FromMediaMessage/${encodeURIComponent(instancia)}`, {
+      method: "POST",
+      headers: { apikey: apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ message: referencia, convertToMp4: false }),
+      signal: controle.signal,
+      cache: "no-store",
+    });
+    const corpo = await res.text();
+    if (!res.ok) return { ok: false, erro: `Evolution ${res.status}: ${corpo.slice(0, 300)}` };
+
+    let json: Json | null = null;
+    try {
+      json = obj(JSON.parse(corpo));
+    } catch {
+      // cai no "sem base64" abaixo
+    }
+    const base64 = str(json?.base64);
+    if (!base64) return { ok: false, erro: "a Evolution respondeu sem o arquivo" };
+    return {
+      ok: true,
+      bytes: Buffer.from(base64, "base64"),
+      mimetype: str(json?.mimetype),
+      nomeDoArquivo: str(json?.fileName),
+    };
+  } catch (err) {
+    const abortou = err instanceof Error && err.name === "AbortError";
+    return { ok: false, erro: abortou ? "tempo esgotado ao baixar o arquivo" : err instanceof Error ? err.message : "falha de rede" };
+  } finally {
+    clearTimeout(relogio);
+  }
+}
+
 export const provedorEvolucao: ProvedorWhatsapp = {
   codigo: "whatsapp_recrutamento_evolution",
   politica: { janelaLivreHoras: null, maxCaracteres: MAX_CARACTERES_DA_MENSAGEM },
@@ -214,4 +362,6 @@ export const provedorEvolucao: ProvedorWhatsapp = {
 
   lerEvento,
   enviarTexto,
+  consultarConexao,
+  baixarMidia,
 };

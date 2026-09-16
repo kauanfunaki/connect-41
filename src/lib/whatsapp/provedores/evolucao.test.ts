@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { provedorEvolucao, idDaMensagem, CABECALHO_DO_SEGREDO } from "./evolucao";
+import { provedorEvolucao, idDaMensagem, CABECALHO_DO_SEGREDO, lerEstadoDaEvolution } from "./evolucao";
 
 // Formato conferido no código do tag 2.3.7 da Evolution API
 // (`webhook.controller.ts` e `prepareMessage` em `whatsapp.baileys.service.ts`).
@@ -198,5 +198,118 @@ describe("Evolution · enviarTexto", () => {
     const r = await provedorEvolucao.enviarTexto({ baseUrl: "https://evo.test" }, "5541988887777", "Olá!");
     expect(r.ok).toBe(false);
     expect(fetchFalso).not.toHaveBeenCalled();
+  });
+});
+
+describe("Evolution · estado da conexão", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const CONFIG = { baseUrl: "https://evo.test/", instance: "Teste Connect", apiKey: "chave" };
+
+  it("lê os três estados do Baileys", () => {
+    expect(lerEstadoDaEvolution({ instance: { instanceName: "x", state: "open" } }).estado).toBe("conectado");
+    expect(lerEstadoDaEvolution({ instance: { instanceName: "x", state: "connecting" } }).estado).toBe("conectando");
+    expect(lerEstadoDaEvolution({ instance: { instanceName: "x", state: "close" } }).estado).toBe("desconectado");
+  });
+
+  // Instância existe mas não está carregada: para quem atende, é número caído.
+  it("estado ausente ou desconhecido conta como desconectado, com o motivo", () => {
+    const r = lerEstadoDaEvolution({ instance: { instanceName: "x" } });
+    expect(r.estado).toBe("desconectado");
+    expect(r.detalhe).not.toBeNull();
+    expect(lerEstadoDaEvolution(null).estado).toBe("desconectado");
+  });
+
+  it("consulta a instância com espaço no nome e a apikey no header", async () => {
+    const fetchFalso = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({ instance: { instanceName: "Teste Connect", state: "open" } })));
+    vi.stubGlobal("fetch", fetchFalso);
+
+    const r = await provedorEvolucao.consultarConexao!(CONFIG);
+
+    expect(r).toEqual({ estado: "conectado", detalhe: null });
+    const [url, init] = fetchFalso.mock.calls[0]!;
+    expect(url).toBe("https://evo.test/instance/connectionState/Teste%20Connect");
+    expect(init.headers).toMatchObject({ apikey: "chave" });
+  });
+
+  it("erro HTTP vira indisponível com o corpo, sem lançar", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response('{"status":404,"response":{"message":["does not exist"]}}', { status: 404 }))
+    );
+    const r = await provedorEvolucao.consultarConexao!(CONFIG);
+    expect(r.estado).toBe("indisponivel");
+    expect(r.detalhe).toContain("404");
+  });
+
+  it("falha de rede vira indisponível, sem lançar", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("ECONNREFUSED")));
+    const r = await provedorEvolucao.consultarConexao!(CONFIG);
+    expect(r).toEqual({ estado: "indisponivel", detalhe: "ECONNREFUSED" });
+  });
+
+  it("conexão incompleta nem chama a Evolution", async () => {
+    const fetchFalso = vi.fn();
+    vi.stubGlobal("fetch", fetchFalso);
+    const r = await provedorEvolucao.consultarConexao!({ baseUrl: "https://evo.test" });
+    expect(r.estado).toBe("indisponivel");
+    expect(fetchFalso).not.toHaveBeenCalled();
+  });
+});
+
+describe("Evolution · documento recebido", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const CONFIG = { baseUrl: "https://evo.test", instance: "Teste Connect", apiKey: "chave" };
+
+  it("documento vira ignorada com nome, mimetype, tamanho e a mensagem inteira para baixar", () => {
+    const mensagem = {
+      documentMessage: { fileName: "cv.pdf", mimetype: "application/pdf", fileLength: { low: 250000, high: 0 } },
+    };
+    const ev = provedorEvolucao.lerEvento(upsert(texto({ messageType: "documentMessage", message: mensagem })));
+    expect(ev.mensagens).toHaveLength(0);
+    const doc = ev.ignoradas[0]!.documento!;
+    expect(doc).toMatchObject({ nomeDoArquivo: "cv.pdf", mimetype: "application/pdf", tamanhoBytes: 250000 });
+    expect(doc.referencia).toMatchObject({ key: { id: "3EB0AAA" }, message: mensagem });
+  });
+
+  it("documento com legenda também é lido", () => {
+    const mensagem = {
+      documentWithCaptionMessage: { message: { documentMessage: { fileName: "cv.pdf", mimetype: "application/pdf", fileLength: "1024" } } },
+    };
+    const ev = provedorEvolucao.lerEvento(upsert(texto({ messageType: "documentWithCaptionMessage", message: mensagem })));
+    expect(ev.ignoradas[0]!.documento).toMatchObject({ nomeDoArquivo: "cv.pdf", tamanhoBytes: 1024 });
+  });
+
+  it("áudio não traz documento", () => {
+    const ev = provedorEvolucao.lerEvento(upsert(texto({ messageType: "audioMessage", message: { audioMessage: {} } })));
+    expect(ev.ignoradas[0]!.documento).toBeUndefined();
+  });
+
+  it("baixa pela rota da 2.3.7 e devolve os bytes", async () => {
+    const fetchFalso = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ mediaType: "documentMessage", fileName: "cv.pdf", mimetype: "application/pdf", base64: Buffer.from("%PDF-1.7").toString("base64") }),
+        { status: 201 }
+      )
+    );
+    vi.stubGlobal("fetch", fetchFalso);
+
+    const r = await provedorEvolucao.baixarMidia!(CONFIG, { key: { id: "X" }, message: { documentMessage: {} } });
+
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.bytes.toString()).toBe("%PDF-1.7");
+    const [url, init] = fetchFalso.mock.calls[0]!;
+    expect(url).toBe("https://evo.test/chat/getBase64FromMediaMessage/Teste%20Connect");
+    expect(JSON.parse(init.body)).toEqual({ message: { key: { id: "X" }, message: { documentMessage: {} } }, convertToMp4: false });
+  });
+
+  it("erro ou resposta sem arquivo não lança", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response('{"status":400,"response":{"message":["x"]}}', { status: 400 })));
+    expect((await provedorEvolucao.baixarMidia!(CONFIG, {})).ok).toBe(false);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 201 })));
+    expect((await provedorEvolucao.baixarMidia!(CONFIG, {})).ok).toBe(false);
   });
 });

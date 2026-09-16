@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, User, AlertTriangle, Link2, Unlink } from "lucide-react";
+import { Bot, User, AlertTriangle, Link2, Unlink, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -162,6 +162,14 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
                   }`}
                 >
                   {m.body}
+                  {m.anexo && (
+                    <a
+                      href={`/api/whatsapp/midia/${m.id}`}
+                      className="mt-1 flex items-center gap-1 text-[12px] text-brand hover:underline"
+                    >
+                      <FileText size={12} /> Baixar {m.anexo.nome}
+                    </a>
+                  )}
                 </div>
                 <p className="text-[10px] text-fg-muted mt-0.5 flex items-center gap-1">
                   {minha &&

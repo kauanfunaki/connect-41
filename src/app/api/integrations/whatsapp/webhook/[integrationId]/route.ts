@@ -105,7 +105,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ int
 
   for (const i of evento.ignoradas) {
     try {
-      await tratarNaoTexto(conexao, i.de, i.tipo);
+      const desfecho = await tratarNaoTexto(conexao, provedor, i);
+      console.info("[whatsapp:webhook]", i.waMessageId, desfecho);
     } catch (err) {
       console.error("[whatsapp:webhook] falha ao tratar não-texto", i.waMessageId, err);
     }

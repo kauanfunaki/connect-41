@@ -33,8 +33,29 @@ export type MensagemRecebida = {
   nomeDoPerfil: string | null;
 };
 
-/** Mensagem que chegou mas não é texto — áudio, imagem, documento. Vai para uma pessoa. */
-export type MensagemIgnorada = { waMessageId: string; tipo: string; de: string };
+/**
+ * Um arquivo mandado como documento. `referencia` é opaca: é o que o próprio
+ * provedor precisa de volta para baixar (na Evolution, a mensagem inteira), e o
+ * atendimento só a repassa.
+ */
+export type DocumentoRecebido = {
+  nomeDoArquivo: string | null;
+  mimetype: string | null;
+  /** Tamanho declarado pelo WhatsApp, antes de baixar. `null` quando não veio. */
+  tamanhoBytes: number | null;
+  referencia: unknown;
+};
+
+/**
+ * Mensagem que chegou mas não é texto — áudio, imagem, documento. Vai para uma
+ * pessoa, a não ser que seja um documento que o atendimento sabe tratar (hoje,
+ * currículo em PDF).
+ */
+export type MensagemIgnorada = { waMessageId: string; tipo: string; de: string; documento?: DocumentoRecebido };
+
+export type MidiaBaixada =
+  | { ok: true; bytes: Buffer; mimetype: string | null; nomeDoArquivo: string | null }
+  | { ok: false; erro: string };
 
 export type EventoRecebido = {
   mensagens: MensagemRecebida[];
@@ -94,4 +115,28 @@ export interface ProvedorWhatsapp {
 
   /** Manda um texto. Não lança: devolve o erro, porque quem chama está no meio de um webhook. */
   enviarTexto(config: ConfigDoProvedor, paraE164: string, texto: string): Promise<ResultadoDoEnvio>;
+
+  /**
+   * O número está conectado? Ausente = o provedor não tem como informar (a Meta,
+   * por enquanto: o contrato dela não foi conferido). Não lança: provedor fora
+   * do ar é justamente um dos estados que a tela precisa mostrar.
+   */
+  consultarConexao?(config: ConfigDoProvedor): Promise<EstadoDaConexao>;
+
+  /**
+   * Baixa o arquivo de um documento recebido. Ausente = o provedor não sabe
+   * baixar (a Meta, por enquanto), e o documento vai para uma pessoa como antes.
+   * Não lança.
+   */
+  baixarMidia?(config: ConfigDoProvedor, referencia: unknown): Promise<MidiaBaixada>;
 }
+
+/**
+ * O estado do número, como a tela mostra. `indisponivel` é "não deu para
+ * perguntar" (credencial errada, instância inexistente, servidor fora) — e é
+ * diferente de `desconectado`, que é o provedor respondendo que o WhatsApp caiu.
+ */
+export type EstadoDaConexao = {
+  estado: "conectado" | "conectando" | "desconectado" | "indisponivel";
+  detalhe: string | null;
+};
