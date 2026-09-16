@@ -8,13 +8,16 @@ import { Select } from "@/components/ui/Select";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { UFS } from "@/lib/ufs";
 import { Button } from "@/components/ui/Button";
+import { MAX_MB_DO_CURRICULO } from "@/lib/curriculo";
 
 type Props = {
   slug: string;
   vagaId: string;
+  /** Carimbo de tempo assinado pelo servidor ao montar a página — ver `src/lib/carreiras/antiRobo.ts`. */
+  carimbo: string;
 };
 
-export function ApplyForm({ slug, vagaId }: Props) {
+export function ApplyForm({ slug, vagaId, carimbo }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -27,6 +30,7 @@ export function ApplyForm({ slug, vagaId }: Props) {
     const form = new FormData(e.currentTarget);
     form.set("slug", slug);
     form.set("vagaId", vagaId);
+    form.set("carimbo", carimbo);
     // Checkbox desmarcado não entra no FormData — normaliza pro backend.
     form.set("consent", form.get("consent") ? "true" : "false");
 
@@ -88,7 +92,17 @@ export function ApplyForm({ slug, vagaId }: Props) {
         <label htmlFor="resume" className="block text-[length:var(--fs-label)] font-medium text-fg">
           Currículo (PDF, opcional)
         </label>
-        <FileDropzoneField id="resume" name="resume" accept=".pdf" maxSizeMb={10} />
+        <FileDropzoneField id="resume" name="resume" accept=".pdf" maxSizeMb={MAX_MB_DO_CURRICULO} />
+      </div>
+
+      {/* Campo-armadilha: invisível para quem usa o formulário, preenchido por
+          robô que completa todo campo que acha. Fora da tela em vez de
+          `display: none`, que parte dos robôs sabe ignorar; fora da ordem de
+          tabulação e escondido do leitor de tela, para nenhuma pessoa cair
+          nele. */}
+      <div aria-hidden="true" className="absolute -left-[9999px] top-auto w-px h-px overflow-hidden">
+        <label htmlFor="website">Site</label>
+        <Input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
       </div>
 
       <Checkbox

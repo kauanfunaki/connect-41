@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
-import { encryptSecret } from "@/lib/crypto";
 import { logAudit } from "@/lib/audit";
 import { testConnection } from "@/lib/chatwoot/client";
 import { credenciaisDaConexao, SELECT_CONEXAO } from "@/lib/chatwoot/connection";
@@ -39,45 +38,38 @@ export async function salvarConexaoChatwoot(_prev: ChatwootConfigState, form: Fo
 
   const prisma = getPrisma();
   const existing = await getSingleConnection(ctx.tenantId);
-  if (!apiToken && !existing) return { error: "Token de API é obrigatório no primeiro cadastro." };
-  if (!webhookSecret && !existing) return { error: "Segredo de webhook é obrigatório no primeiro cadastro." };
+  const primeiroCadastro = !existing?.integration;
+  if (!apiToken && primeiroCadastro) return { error: "Token de API é obrigatório no primeiro cadastro." };
+  if (!webhookSecret && primeiroCadastro) return { error: "Segredo de webhook é obrigatório no primeiro cadastro." };
 
-  const apiTokenEnc = apiToken ? encryptSecret(apiToken) : existing!.apiTokenEnc;
-  const webhookSecretEnc = webhookSecret ? encryptSecret(webhookSecret) : existing!.webhookSecretEnc;
+  // A credencial vai **só** para a integração (desde 16/09 a conexão não guarda
+  // segredo). Campo em branco mantém o que estava — é o `mesclarConfig`. No
+  // primeiro cadastro a integração nasce ligada, porque cadastrar aqui é o ato
+  // de ligar o Chatwoot; depois disso, ligar e desligar é da vitrine.
+  const integracao = await salvarIntegracao({
+    tenantId: ctx.tenantId,
+    code: "chatwoot",
+    instanceKey: existing?.integration?.instanceKey ?? accountId,
+    label: existing?.integration?.label ?? `Conta ${accountId}`,
+    ...(primeiroCadastro ? { enabled: true } : {}),
+    campos: { baseUrl, accountId, apiToken, webhookSecret },
+  });
+  if (!integracao.ok) return { error: integracao.erro };
 
   try {
     if (existing) {
       await prisma.chatwootConnection.update({
         where: { id: existing.id },
-        data: { baseUrl, accountId, apiTokenEnc, webhookSecretEnc, active: true },
+        data: { baseUrl, accountId, active: true, integrationId: integracao.id },
       });
     } else {
       await prisma.chatwootConnection.create({
-        data: { tenantId: ctx.tenantId, baseUrl, accountId, apiTokenEnc, webhookSecretEnc, active: true },
+        data: { tenantId: ctx.tenantId, baseUrl, accountId, active: true, integrationId: integracao.id },
       });
     }
   } catch (err) {
     console.error("[salvarConexaoChatwoot]", err);
     return { error: "Erro ao salvar conexão com o Chatwoot." };
-  }
-
-  // Espelho na integração convergida. Desde 14/09 os leitores preferem a
-  // integração quando ela está ligada — sem este espelho, editar por este
-  // formulário gravaria nas colunas antigas e seria ignorado em silêncio, e a
-  // pessoa veria o Chatwoot seguir usando o token velho.
-  //
-  // Campo em branco mantém o que estava (é o `mesclarConfig`), `enabled` fica
-  // como está (ligar é ato da vitrine) e o rótulo é repassado porque
-  // `salvarIntegracao` grava o que receber.
-  if (existing?.integration) {
-    const espelho = await salvarIntegracao({
-      tenantId: ctx.tenantId,
-      code: "chatwoot",
-      instanceKey: existing.integration.instanceKey,
-      label: existing.integration.label,
-      campos: { baseUrl, accountId, apiToken, webhookSecret },
-    });
-    if (!espelho.ok) console.error("[salvarConexaoChatwoot] espelho na integração", espelho.erro);
   }
 
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "tenant.chatwoot.update", entityType: "Tenant", entityId: ctx.tenantId });
@@ -117,7 +109,11 @@ export async function testarConexaoChatwoot(input: {
   if (!apiToken) {
     const existing = await getSingleConnection(ctx.tenantId);
     if (!existing) return { ok: false, error: "Informe o token para testar (nenhuma conexão salva ainda)." };
-    apiToken = credenciaisDaConexao(existing).apiToken;
+    const salvas = credenciaisDaConexao(existing);
+    if (!salvas) {
+      return { ok: false, error: "Não há token salvo que valha: a integração do Chatwoot está desligada ou incompleta." };
+    }
+    apiToken = salvas.apiToken;
   }
   if (!input.baseUrl || !input.accountId) return { ok: false, error: "Preencha URL base e ID da conta." };
 

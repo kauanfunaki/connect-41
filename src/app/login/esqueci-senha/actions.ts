@@ -30,23 +30,30 @@ export async function solicitarRedefinicaoSenha(
   // evita que o cliente tenha de saber que existem duas telas de recuperação.
   // A conta interna vence quando o e-mail existe nas duas: quem tem as duas é
   // gente da 41 com um acesso de cliente, e o caminho interno é o que ela usa.
-  const portalUser = user
-    ? null
-    : await prisma.portalUser.findFirst({ where: { email, active: true } });
+  //
+  // O mesmo e-mail pode ter conta de portal em mais de um cliente (o contador
+  // que atende duas empresas). Até 16/09 ia um link só, para a conta que o
+  // banco devolvesse primeiro — e a pessoa redefinia a senha do cliente errado.
+  // Agora vai um link por conta, cada um pelo SMTP do escritório daquela conta,
+  // que é o que diz a ela de onde o e-mail veio.
+  const portalUsers = user
+    ? []
+    : await prisma.portalUser.findMany({ where: { email, active: true }, take: 10 });
 
-  if (portalUser) {
+  let algumEnviado = false;
+  for (const portalUser of portalUsers) {
     const smtp = await prisma.tenantSmtpConfig.findUnique({ where: { tenantId: portalUser.tenantId } });
-    if (smtp) {
-      const token = await createPasswordResetToken(portalUser.id, "PORTAL_USER");
-      const sent = await sendPasswordResetEmail({
-        tenantId: portalUser.tenantId,
-        to: email,
-        resetToken: token,
-        destino: "portal",
-      });
-      if (sent.ok) return { success: true };
-    }
+    if (!smtp) continue;
+    const token = await createPasswordResetToken(portalUser.id, "PORTAL_USER");
+    const sent = await sendPasswordResetEmail({
+      tenantId: portalUser.tenantId,
+      to: email,
+      resetToken: token,
+      destino: "portal",
+    });
+    if (sent.ok) algumEnviado = true;
   }
+  if (algumEnviado) return { success: true };
 
   if (user) {
     const smtpConfigured = await prisma.tenantSmtpConfig.findUnique({ where: { tenantId: user.tenantId } });

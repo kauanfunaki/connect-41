@@ -3,19 +3,17 @@
 // tenant tem sua própria conta Chatwoot, não faz sentido uma conta
 // compartilhada "padrão" para um dado de negócio de terceiro como este.
 //
-// Desde 14/09 a credencial prefere a integração convergida (`TenantIntegration`)
-// quando ela está ligada na vitrine, e cai nas colunas antigas da conexão nos
-// demais casos — ver `src/lib/integracoes/fonte.ts`. A conexão continua sendo
-// quem diz se o Chatwoot está ativo e qual é o id do webhook: o que mudou de
-// lugar foi só o segredo.
+// Desde 16/09 a credencial vem **só** da integração (`TenantIntegration`): as
+// colunas antigas da conexão saíram no passo 5 da convergência. Integração
+// ausente, desligada ou incompleta é Chatwoot não configurado — a mesma regra
+// do SPED, e pelo mesmo motivo: duas fontes para um segredo é como se descobre,
+// tarde, que o token trocado numa tela não valia na outra.
+//
+// A conexão continua sendo quem diz se o Chatwoot está ativo e qual é o id do
+// webhook; o que mudou de lugar foi o segredo.
 import { getPrisma } from "@/lib/prisma";
-import { decryptSecret } from "@/lib/crypto";
 import { lerConfig } from "@/lib/integracoes/data";
-import {
-  escolherCredencial,
-  type EscolhaDeCredencial,
-  type IntegracaoGravada,
-} from "@/lib/integracoes/fonte";
+import { escolherCredencial, type IntegracaoGravada } from "@/lib/integracoes/fonte";
 import type { ChatwootCredentials } from "./client";
 
 const CAMPOS_DA_API = ["baseUrl", "accountId", "apiToken"] as const;
@@ -28,18 +26,12 @@ export const SELECT_CONEXAO = {
   active: true,
   baseUrl: true,
   accountId: true,
-  apiTokenEnc: true,
-  webhookSecretEnc: true,
   integrationId: true,
   integration: { select: { enabled: true, configEnc: true, instanceKey: true, label: true } },
 } as const;
 
 type ConexaoGravada = {
   id: string;
-  baseUrl: string;
-  accountId: string;
-  apiTokenEnc: string;
-  webhookSecretEnc: string;
   integration: { enabled: boolean; configEnc: string } | null;
 };
 
@@ -47,35 +39,33 @@ function integracaoDa(c: ConexaoGravada): IntegracaoGravada {
   return c.integration ? { enabled: c.integration.enabled, config: lerConfig(c.integration.configEnc) } : null;
 }
 
-function registrarQueda(conexaoId: string, escolha: EscolhaDeCredencial<string>) {
-  if (escolha.fonte === "legado" && escolha.integracaoIncompleta) {
-    console.warn(
-      `[chatwoot] conexão ${conexaoId}: integração ligada e incompleta — usando as credenciais antigas da conexão`
-    );
+function avisarSeIncompleta(conexaoId: string, integracao: IntegracaoGravada) {
+  if (integracao?.enabled) {
+    console.warn(`[chatwoot] conexão ${conexaoId}: integração ligada e incompleta — Chatwoot fica sem credencial`);
   }
 }
 
-/** Credencial de API da conexão, já decidida a fonte. */
+/** Credencial de API da conexão, ou `null` quando a integração não a fornece. */
 export function credenciaisDaConexao(
   c: ConexaoGravada,
   integracao: IntegracaoGravada = integracaoDa(c)
-): ChatwootCredentials {
-  // As colunas antigas são NOT NULL: a fonte antiga sempre existe, então a
-  // escolha nunca é nula aqui.
-  const escolha = escolherCredencial(integracao, CAMPOS_DA_API, () => ({
-    baseUrl: c.baseUrl,
-    accountId: c.accountId,
-    apiToken: decryptSecret(c.apiTokenEnc),
-  }))!;
-  registrarQueda(c.id, escolha);
+): ChatwootCredentials | null {
+  // Sem fonte antiga: `legado` devolve nada, e a escolha só existe quando a
+  // integração está ligada e completa.
+  const escolha = escolherCredencial(integracao, CAMPOS_DA_API, () => null);
+  if (!escolha) {
+    avisarSeIncompleta(c.id, integracao);
+    return null;
+  }
   return escolha.valores;
 }
 
-function segredoDoWebhook(c: ConexaoGravada, integracao: IntegracaoGravada): string {
-  const escolha = escolherCredencial(integracao, CAMPOS_DO_WEBHOOK, () => ({
-    webhookSecret: decryptSecret(c.webhookSecretEnc),
-  }))!;
-  registrarQueda(c.id, escolha);
+function segredoDoWebhook(c: ConexaoGravada, integracao: IntegracaoGravada): string | null {
+  const escolha = escolherCredencial(integracao, CAMPOS_DO_WEBHOOK, () => null);
+  if (!escolha) {
+    avisarSeIncompleta(c.id, integracao);
+    return null;
+  }
   return escolha.valores.webhookSecret;
 }
 
@@ -86,7 +76,8 @@ export async function resolveConnectionCredentials(tenantId: string): Promise<{ 
     select: SELECT_CONEXAO,
   });
   if (!connection) return null;
-  return { connectionId: connection.id, creds: credenciaisDaConexao(connection) };
+  const creds = credenciaisDaConexao(connection);
+  return creds ? { connectionId: connection.id, creds } : null;
 }
 
 export async function isChatwootConfigured(tenantId: string): Promise<boolean> {
@@ -107,9 +98,10 @@ export async function resolveConnectionById(
   if (!connection || !connection.active) return null;
   // Decifrada uma vez só: são dois grupos de campos da mesma config.
   const integracao = integracaoDa(connection);
-  return {
-    tenantId: connection.tenantId,
-    webhookSecret: segredoDoWebhook(connection, integracao),
-    creds: credenciaisDaConexao(connection, integracao),
-  };
+  const webhookSecret = segredoDoWebhook(connection, integracao);
+  const creds = credenciaisDaConexao(connection, integracao);
+  // Sem segredo não há como conferir a assinatura: webhook sem credencial é
+  // recusado, nunca aceito sem verificação.
+  if (!webhookSecret || !creds) return null;
+  return { tenantId: connection.tenantId, webhookSecret, creds };
 }

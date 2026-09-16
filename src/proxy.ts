@@ -162,7 +162,10 @@ export async function proxy(req: NextRequest) {
   const headers = new Headers(req.headers);
   stripIdentityHeaders(headers);
 
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+  // `/carreiras` sem empresa é público por **igualdade**, não por prefixo: pôr
+  // "/carreiras" em PUBLIC_PATHS liberaria qualquer caminho que comece assim.
+  // Antes caía no login, e o candidato achava que precisava de conta.
+  if (pathname === "/carreiras" || PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next({ request: { headers } });
   }
 

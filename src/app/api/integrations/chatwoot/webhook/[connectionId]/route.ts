@@ -11,8 +11,10 @@ export const dynamic = "force-dynamic";
 
 // Chamado pelo Chatwoot (fora do app, sem sessão de usuário) — por isso está
 // em PUBLIC_PATHS no proxy. A autenticação de verdade é a assinatura HMAC
-// (X-Chatwoot-Signature), verificada aqui contra o webhookSecretEnc da
-// conexão identificada pelo :connectionId da URL (não secreto por si só).
+// (X-Chatwoot-Signature), verificada aqui contra o segredo do webhook da
+// integração ligada à conexão identificada pelo :connectionId da URL (não
+// secreto por si só). Sem integração ligada e completa, a conexão não resolve e
+// a entrega é recusada.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ connectionId: string }> }) {
   const { connectionId } = await params;
 

@@ -34,7 +34,7 @@
 // usar" — e a diferença entre os dois é exatamente quem pode ver o segredo.
 
 import { getPrisma } from "../src/lib/prisma";
-import { encryptSecret, decryptSecret } from "../src/lib/crypto";
+import { encryptSecret } from "../src/lib/crypto";
 
 const aplicar = process.argv.includes("--aplicar");
 
@@ -55,52 +55,12 @@ async function main() {
   const prisma = getPrisma();
   const planos: Plano[] = [];
 
-  // ─── Chatwoot: uma integração por conta ───────────────────────────────────
+  // ─── Chatwoot: já convergido ──────────────────────────────────────────────
   //
-  // O `accountId` vira `instanceKey`, porque é exatamente o que ele significa:
-  // um cliente pode ter mais de uma conta do Chatwoot, uma por setor, e o
-  // schema já dizia isso no comentário do unique.
-  const conexoes = await prisma.chatwootConnection.findMany({
-    where: { integrationId: null },
-    select: {
-      id: true,
-      tenantId: true,
-      baseUrl: true,
-      accountId: true,
-      apiTokenEnc: true,
-      webhookSecretEnc: true,
-      active: true,
-    },
-  });
-
-  for (const c of conexoes) {
-    let apiToken = "";
-    let webhookSecret = "";
-    const faltando: string[] = [];
-    try {
-      apiToken = decryptSecret(c.apiTokenEnc);
-    } catch {
-      // Segredo que não decifra é chave de criptografia trocada, e copiar o
-      // texto cifrado para a linha nova só levaria o problema junto.
-      faltando.push("Token de acesso (não decifrou)");
-    }
-    try {
-      webhookSecret = decryptSecret(c.webhookSecretEnc);
-    } catch {
-      faltando.push("Segredo do webhook (não decifrou)");
-    }
-
-    planos.push({
-      tenantId: c.tenantId,
-      code: "chatwoot",
-      instanceKey: c.accountId,
-      label: `Conta ${c.accountId}`,
-      config: { baseUrl: c.baseUrl, accountId: c.accountId, apiToken, webhookSecret },
-      chatwootIds: [c.id],
-      spedIds: [],
-      faltando,
-    });
-  }
+  // O bloco que copiava o token e o segredo das colunas da conexão para a
+  // integração saiu em 16/09, junto com as colunas (passo 5). Toda conexão de
+  // produção já tinha integração ligada e completa, e o formulário do Chatwoot
+  // passou a gravar direto na integração — não sobra nada para copiar.
 
   // ─── SPED: uma integração por tenant ──────────────────────────────────────
   //

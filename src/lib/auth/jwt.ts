@@ -45,3 +45,37 @@ export function verifyPortalAccess(token: string): PortalAccessTokenPayload {
 export function verifyRefresh(token: string): RefreshTokenPayload {
   return jwt.verify(token, env("JWT_REFRESH_SECRET")) as RefreshTokenPayload;
 }
+
+// ─── Escolha de cliente no login do portal ──────────────────────────────────
+//
+// O portal é uma URL só para todos os clientes do Connect, e o mesmo e-mail pode
+// ter conta em dois (o contador que atende duas empresas). Quando a senha
+// confere em mais de uma, o login devolve a lista e este token, que carrega as
+// contas **já verificadas** — a escolha não pede a senha de novo nem a guarda.
+//
+// Chave derivada, e não o `JWT_ACCESS_SECRET` puro: `verifyAccess` só recusa
+// `kind: "portal"`, então um token de escolha assinado com a mesma chave
+// passaria como sessão interna. Com outra chave, nenhum verificador de sessão o
+// aceita.
+
+export type PortalEscolhaPayload = { kind: "portal_escolha"; contas: string[] };
+
+function chaveDaEscolha(): string {
+  return `${env("JWT_ACCESS_SECRET")}:portal-escolha`;
+}
+
+export function signPortalEscolha(contas: string[]): string {
+  const payload: PortalEscolhaPayload = { kind: "portal_escolha", contas };
+  return jwt.sign(payload, chaveDaEscolha(), { expiresIn: "5m" });
+}
+
+/** As contas que a senha liberou, ou `null` se o token expirou, foi forjado ou é de outro tipo. */
+export function verifyPortalEscolha(token: string): string[] | null {
+  try {
+    const payload = jwt.verify(token, chaveDaEscolha()) as Partial<PortalEscolhaPayload>;
+    if (payload.kind !== "portal_escolha" || !Array.isArray(payload.contas)) return null;
+    return payload.contas.filter((c): c is string => typeof c === "string");
+  } catch {
+    return null;
+  }
+}

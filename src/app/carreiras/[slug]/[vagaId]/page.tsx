@@ -7,6 +7,12 @@ import { formatCalendarDate } from "@/lib/format";
 import { ApplyForm } from "@/components/carreiras/ApplyForm";
 import { SimpleMarkdown } from "@/components/shared/SimpleMarkdown";
 import { buildJobPostingJsonLd, buildJobSummary, publicUrl } from "@/lib/jobPostingSchema";
+import { emitirCarimbo } from "@/lib/carreiras/antiRobo";
+
+// Dinâmica de propósito: o formulário leva um carimbo de tempo assinado na hora
+// em que a página é montada (`src/lib/carreiras/antiRobo.ts`). Página em cache
+// serviria o mesmo carimbo velho a todo mundo, e toda candidatura seria recusada.
+export const dynamic = "force-dynamic";
 
 // A vaga carregada é a mesma pro metadata e pro corpo — o Next dedupe as duas
 // chamadas dentro do mesmo request, então não vira query dobrada.
@@ -120,7 +126,7 @@ export default async function VagaPublicaPage({
 
         <Card className="p-5">
           <h2 className="text-[15px] font-semibold text-fg mb-4">Candidatar-se</h2>
-          <ApplyForm slug={slug} vagaId={vaga.id} />
+          <ApplyForm slug={slug} vagaId={vaga.id} carimbo={emitirCarimbo(new Date())} />
         </Card>
 
         <p className="text-[11px] text-fg-muted mt-6 text-center">

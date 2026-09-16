@@ -6,15 +6,17 @@ import { getPrisma } from "@/lib/prisma";
 import { hit, clientIp } from "@/lib/rateLimit";
 import { notifyUser, notifySector } from "@/lib/notifications";
 import { PersonType } from "@/generated/prisma/enums";
+import { MAX_BYTES_DO_CURRICULO, MAX_MB_DO_CURRICULO, ehPdf } from "@/lib/curriculo";
+import { avaliarEnvio } from "@/lib/carreiras/antiRobo";
 
 // Currículos do portal ficam fora de public/ (mesma razão do storage de
 // documents): só são servidos via /api/resumes/[candidaturaId], com sessão.
 const STORAGE_DIR = path.join(process.cwd(), "storage", "resumes");
 
 const RESUME_TYPES: Record<string, string> = { "application/pdf": "pdf" };
-const MAX_RESUME_SIZE = 5 * 1024 * 1024;
 
 // Rota pública (candidato não tem login) — as defesas são: rate limit por IP,
+// campo-armadilha e carimbo de tempo assinado (`src/lib/carreiras/antiRobo.ts`),
 // slug+vaga validados contra isPublic/ABERTA, consentimento LGPD obrigatório
 // e dedup por (vaga, e-mail). Nenhum dado do form entra em caminho de arquivo.
 export async function POST(req: NextRequest) {
@@ -28,6 +30,22 @@ export async function POST(req: NextRequest) {
   }
 
   const form = await req.formData();
+
+  const veredicto = avaliarEnvio({
+    carimbo: (form.get("carimbo") as string | null) ?? null,
+    armadilha: (form.get("website") as string | null) ?? null,
+    agora: new Date(),
+  });
+  // Robô recebe o mesmo sucesso de uma candidatura de verdade, e nada é
+  // gravado: dizer que foi recusado ensina o robô a ajustar.
+  if (veredicto === "robo") return NextResponse.json({ ok: true });
+  if (veredicto === "carimbo_invalido") {
+    return NextResponse.json(
+      { error: "Esta página ficou aberta por muito tempo. Recarregue a página e envie de novo." },
+      { status: 400 }
+    );
+  }
+
   const slug = (form.get("slug") as string)?.trim();
   const vagaId = (form.get("vagaId") as string)?.trim();
   const name = (form.get("name") as string)?.trim();
@@ -62,13 +80,16 @@ export async function POST(req: NextRequest) {
   if (resume instanceof File && resume.size > 0) {
     const ext = RESUME_TYPES[resume.type];
     if (!ext) return NextResponse.json({ error: "Currículo precisa ser um PDF." }, { status: 400 });
-    if (resume.size > MAX_RESUME_SIZE) {
-      return NextResponse.json({ error: "Currículo maior que 5MB." }, { status: 400 });
+    if (resume.size > MAX_BYTES_DO_CURRICULO) {
+      return NextResponse.json({ error: `Currículo maior que ${MAX_MB_DO_CURRICULO} MB.` }, { status: 400 });
     }
+    // O tipo acima é o que o navegador declarou; os bytes dizem o que o arquivo é.
+    const bytes = Buffer.from(await resume.arrayBuffer());
+    if (!ehPdf(bytes)) return NextResponse.json({ error: "Currículo precisa ser um PDF." }, { status: 400 });
     const storedFileName = `${randomUUID()}.${ext}`;
     const dir = path.join(STORAGE_DIR, tenant.id);
     await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, storedFileName), Buffer.from(await resume.arrayBuffer()));
+    await writeFile(path.join(dir, storedFileName), bytes);
     resumeUrl = `${tenant.id}/${storedFileName}`;
   }
 

@@ -1817,17 +1817,16 @@ model ChatwootConnection {
   tenantId         String
   baseUrl          String    @db.VarChar(255)
   accountId        String    @db.VarChar(40)
-  apiTokenEnc      String    @db.Text
-  webhookSecretEnc String    @db.Text
   active           Boolean   @default(true)
   lastSyncAt       DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  /// A conexão em `TenantIntegration`, de onde vêm as credenciais desde
-  /// 11/09. Nulo enquanto a convergência não rodar para este tenant — e por
-  /// isso os campos abaixo continuam existindo: apagá-los antes de o backfill
-  /// terminar deixaria o Chatwoot sem token no meio do caminho.
+  /// A conexão em `TenantIntegration`, **única fonte** do token e do segredo do
+  /// webhook desde 16/09 (passo 5 da convergência: as colunas `apiTokenEnc` e
+  /// `webhookSecretEnc` saíram). Nula, desligada ou incompleta = Chatwoot não
+  /// configurado — a mesma regra do SPED. `baseUrl` e `accountId` ficam aqui
+  /// porque são identidade da conexão (o unique abaixo), não segredo.
   integrationId String?
 
   tenant        Tenant                 @relation(fields: [tenantId], references: [id])
