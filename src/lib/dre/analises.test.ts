@@ -206,3 +206,29 @@ describe("calcularIndicadores", () => {
     expect(semReceita.find((i) => i.codigo === "pmr")!.motivo).toBeTruthy();
   });
 });
+
+describe("runway com saldo bancário", () => {
+  const base = {
+    economico: resultadoDePorGrupo({ receita_bruta: 100_000 }),
+    diasNoMes: 30,
+    aReceberEmAberto: 0,
+    aReceberVencido: 0,
+    aPagarEmAberto: 0,
+    maiorClienteEmAberto: 0,
+  };
+  const runway = (d: Parameters<typeof calcularIndicadores>[0]) => calcularIndicadores(d).find((i) => i.codigo === "runway")!;
+
+  it("saldo dividido pelo consumo médio dos últimos três meses, em dias", () => {
+    const r = runway({ ...base, variacoesDeCaixa: [-100_000, -100_000, -100_000], saldoBancario: { centavos: 300_000, atualizadoAteKey: "2026-09-15" } });
+    expect(r.valor).toBe(90);
+    expect(r.motivo).toBeUndefined();
+  });
+
+  // Cada "sem valor" pede uma ação diferente de quem lê.
+  it("sem saldo aponta para a conciliação; sem consumo diz que não se aplica", () => {
+    expect(runway({ ...base, variacoesDeCaixa: [-1, -1, -1] }).motivo).toContain("Conciliação");
+    const gerando = runway({ ...base, variacoesDeCaixa: [5_000, 5_000, 5_000], saldoBancario: { centavos: 300_000, atualizadoAteKey: null } });
+    expect(gerando.valor).toBeNull();
+    expect(gerando.motivo).toContain("Não se aplica");
+  });
+});

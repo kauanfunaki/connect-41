@@ -64,3 +64,19 @@ describe("responderAoCfo", () => {
     expect(r.prioridade).toBe("Baixa");
   });
 });
+
+describe("caixa em 60 dias com saldo bancário", () => {
+  // base: a receber 10.000 e a pagar 40.000 em 60 dias — os títulos sozinhos fecham negativos.
+  it("com saldo, a resposta é se o caixa aguenta, e o saldo entra nas evidências", () => {
+    const r = responderAoCfo("caixa_60_dias", { ...base, saldoBancario: { centavos: 50_000, atualizadoAteKey: "2026-09-15" } });
+    expect(r.diagnostico.startsWith("Sim")).toBe(true);
+    expect(r.prioridade).toBe("Baixa");
+    expect(r.evidencias[0]).toContain("15/09");
+  });
+
+  it("saldo que não cobre o compromissado é Alta", () => {
+    const r = responderAoCfo("caixa_60_dias", { ...base, saldoBancario: { centavos: 10_000, atualizadoAteKey: null } });
+    expect(r.diagnostico.startsWith("Não")).toBe(true);
+    expect(r.prioridade).toBe("Alta");
+  });
+});

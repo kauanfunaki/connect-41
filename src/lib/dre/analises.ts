@@ -18,6 +18,7 @@
 import { calcularDre, montarLinhas, type LancamentoDoDre, type Mapeamento, type ResultadoDoDre } from "./calculo";
 import { GRUPOS, NAO_CLASSIFICADO, TRANSFERENCIA, OPCOES_PADRAO, type OpcoesDoDre } from "./estrutura";
 import { LINHA_DE_RESULTADO, LINHA_OPERACIONAL, valorDaLinha } from "./economica";
+import { runwayEmDias } from "@/lib/financeiro/conciliacao/saldoConsolidado";
 
 // ─── Reconciliação lucro → caixa ────────────────────────────────────────────
 
@@ -359,6 +360,11 @@ export type DadosDosIndicadores = {
   variacoesDeCaixa: number[];
   /** Maior contraparte do a receber em aberto, em centavos. */
   maiorClienteEmAberto: number;
+  /**
+   * Saldo das contas bancárias da empresa, vindo da conciliação. Ausente ou
+   * `null` = sem conta com saldo, e o runway diz isso em vez de ser estimado.
+   */
+  saldoBancario?: { centavos: number; atualizadoAteKey: string | null } | null;
 };
 
 /**
@@ -369,6 +375,38 @@ export type DadosDosIndicadores = {
  * ser estimado. Some da tela é o jeito de alguém achar que foi esquecido; ser
  * estimado é o jeito de alguém decidir em cima dele.
  */
+/**
+ * Runway: quantos dias o saldo das contas sustenta o consumo médio de caixa dos
+ * últimos três meses. Os três "não há valor" têm motivos diferentes, e cada um
+ * pede uma ação diferente de quem lê.
+ */
+function indicadorDeRunway(
+  saldo: { centavos: number; atualizadoAteKey: string | null } | null,
+  mediaRecente: number | null
+): Indicador {
+  const base = {
+    codigo: "runway",
+    categoria: "Caixa" as const,
+    rotulo: "Runway",
+    formula: "Saldo bancário / Consumo médio de caixa (3 meses)",
+    leitura: "Quantos dias o saldo das contas sustenta o ritmo atual de consumo.",
+    formato: "dias" as const,
+  };
+  if (!saldo) {
+    return {
+      ...base,
+      valor: null,
+      motivo: "Sem saldo bancário desta empresa: cadastre a conta e importe o extrato em Conciliação bancária.",
+    };
+  }
+  if (mediaRecente === null) return { ...base, valor: null, motivo: "Sem movimento de caixa nos últimos meses." };
+  const dias = runwayEmDias(saldo.centavos, mediaRecente);
+  if (dias === null) {
+    return { ...base, valor: null, motivo: "Não se aplica: nos últimos três meses entrou mais caixa do que saiu." };
+  }
+  return { ...base, valor: dias };
+}
+
 export function calcularIndicadores(d: DadosDosIndicadores): Indicador[] {
   const receita = valorDaLinha(d.economico, "receita_bruta");
   const despesasDoMes = GRUPOS.filter((g) => g.origem === "pagamento").reduce(
@@ -492,16 +530,7 @@ export function calcularIndicadores(d: DadosDosIndicadores): Indicador[] {
       },
       "Sem movimento de caixa nos últimos meses."
     ),
-    {
-      codigo: "runway",
-      categoria: "Caixa",
-      rotulo: "Runway",
-      formula: "Saldo bancário / Consumo médio de caixa",
-      leitura: "Quantos meses o caixa sustenta o ritmo atual.",
-      formato: "dias",
-      valor: null,
-      motivo: "Precisa do saldo bancário, que chega com a conciliação — fora desta etapa.",
-    },
+    indicadorDeRunway(d.saldoBancario ?? null, mediaRecente),
     comMotivo(
       {
         codigo: "vencido_a_receber",

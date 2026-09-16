@@ -24,7 +24,8 @@ import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { dataValida } from "@/lib/financeiro/periodo";
 import { decimalDeCentavos } from "@/lib/financeiro/manual";
 import { moeda, tomDoValor } from "@/lib/financeiro/formato";
-import { situacaoDoSaldo, saldoDeReferencia, type SituacaoDoSaldo } from "@/lib/financeiro/conciliacao/saldo";
+import type { SituacaoDoSaldo } from "@/lib/financeiro/conciliacao/saldo";
+import { saldosDasContas } from "@/lib/financeiro/conciliacao/saldoDasContas";
 import {
   rankearCandidatos,
   sugestaoForte,
@@ -204,61 +205,6 @@ export default async function ConciliacaoPage({
 function textoDeCentavos(centavos: number): string {
   const abs = Math.abs(centavos);
   return `${centavos < 0 ? "-" : ""}${Math.trunc(abs / 100)},${String(abs % 100).padStart(2, "0")}`;
-}
-
-type ContaDaTela = {
-  id: string;
-  openingBalance: { toString(): string } | null;
-  openingBalanceDate: Date | null;
-};
-
-/**
- * Situação do saldo de cada conta da empresa.
- *
- * Soma por dia no banco (`groupBy` em `postedAt`, que é sempre o meio-dia do
- * dia do extrato) em vez de trazer cada transação: uma conta movimentada tem
- * milhares de linhas por ano e a tela só precisa das somas.
- */
-async function saldosDasContas(tenantId: string, contas: ContaDaTela[]): Promise<Map<string, SituacaoDoSaldo>> {
-  const prisma = getPrisma();
-  const ids = contas.map((c) => c.id);
-  if (ids.length === 0) return new Map();
-  const [porDia, importacoes] = await Promise.all([
-    prisma.bankTransaction.groupBy({
-      by: ["bankAccountId", "postedAt"],
-      where: { tenantId, bankAccountId: { in: ids } },
-      _sum: { amount: true },
-    }),
-    prisma.bankStatementImport.findMany({
-      where: { tenantId, bankAccountId: { in: ids }, ledgerBalance: { not: null } },
-      select: { bankAccountId: true, ledgerBalance: true, ledgerBalanceAt: true, createdAt: true },
-    }),
-  ]);
-
-  const mapa = new Map<string, SituacaoDoSaldo>();
-  for (const c of contas) {
-    const referencia = saldoDeReferencia(
-      importacoes
-        .filter((i) => i.bankAccountId === c.id)
-        .map((i) => ({
-          ledgerCentavos: i.ledgerBalance ? centavosDeDecimal(i.ledgerBalance) : null,
-          ledgerKey: i.ledgerBalanceAt ? saoPauloParts(i.ledgerBalanceAt).dateKey : null,
-          importadoEm: i.createdAt,
-        }))
-    );
-    mapa.set(
-      c.id,
-      situacaoDoSaldo({
-        saldoInicialCentavos: c.openingBalance === null ? null : centavosDeDecimal(c.openingBalance),
-        saldoInicialKey: c.openingBalanceDate ? saoPauloParts(c.openingBalanceDate).dateKey : null,
-        transacoes: porDia
-          .filter((d) => d.bankAccountId === c.id)
-          .map((d) => ({ dataKey: saoPauloParts(d.postedAt).dateKey, centavos: d._sum.amount ? centavosDeDecimal(d._sum.amount) : 0 })),
-        banco: referencia ? { centavos: referencia.ledgerCentavos!, dataKey: referencia.ledgerKey } : null,
-      })
-    );
-  }
-  return mapa;
 }
 
 function BlocoDoSaldo({ situacao }: { situacao: SituacaoDoSaldo }) {

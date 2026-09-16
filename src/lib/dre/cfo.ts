@@ -60,6 +60,8 @@ export type DadosDoCfo = {
   vencidos: { entradas: number; saidas: number };
   aReceber: { nome: string; emAberto: number; vencido: number }[];
   aReceberTotal: number;
+  /** Saldo das contas bancárias, da conciliação. Ausente = só os títulos respondem. */
+  saldoBancario?: { centavos: number; atualizadoAteKey: string | null } | null;
 };
 
 const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -194,6 +196,36 @@ export function responderAoCfo(pergunta: ChaveDaPergunta, d: DadosDoCfo): Respos
 
     case "caixa_60_dias": {
       const saldo = d.proximos60.entradas - d.proximos60.saidas;
+      // Com saldo bancário, a pergunta deixa de ser "os títulos fecham?" e passa
+      // a ser "o caixa aguenta?" — o que a pessoa quis perguntar desde o início.
+      if (d.saldoBancario) {
+        const final = d.saldoBancario.centavos + saldo;
+        const aguenta = final >= 0;
+        const ate = d.saldoBancario.atualizadoAteKey
+          ? ` (extrato até ${d.saldoBancario.atualizadoAteKey.slice(8, 10)}/${d.saldoBancario.atualizadoAteKey.slice(5, 7)})`
+          : "";
+        return {
+          titulo,
+          diagnostico: aguenta
+            ? `Sim: o saldo das contas mais os títulos dos próximos 60 dias deixa ${moedaDoCfo(final)}.`
+            : `Não: o saldo das contas mais os títulos dos próximos 60 dias fica em ${moedaDoCfo(final)}.`,
+          evidencias: [
+            `Saldo das contas${ate}: ${moedaDoCfo(d.saldoBancario.centavos)}`,
+            `A receber em 60 dias: ${moedaDoCfo(d.proximos60.entradas)}`,
+            `A pagar em 60 dias: ${moedaDoCfo(d.proximos60.saidas)}`,
+            `Já vencido e não baixado: ${moedaDoCfo(d.vencidos.entradas)} a receber e ${moedaDoCfo(d.vencidos.saidas)} a pagar`,
+          ],
+          causaProvavel: aguenta ? "—" : "O compromissado a pagar supera o saldo das contas somado ao que está lançado a receber.",
+          impacto:
+            "Saldo bancário importado na conciliação somado aos títulos já lançados. O que não foi lançado nem importado fica de fora.",
+          recomendacao: aguenta ? "Nenhuma ação urgente." : "Renegociar os maiores vencimentos a pagar e cobrar o vencido a receber.",
+          planoDeAcao: aguenta
+            ? ["Acompanhar a projeção semanalmente", "Manter os extratos importados"]
+            : ["Abrir contas a pagar e ordenar os maiores vencimentos", "Cobrar o vencido a receber", "Avaliar antecipação de recebíveis"],
+          prioridade: aguenta ? "Baixa" : "Alta",
+          origem: { rotulo: "Fluxo de caixa", href: "/fluxo-de-caixa" },
+        };
+      }
       const positivo = saldo >= 0;
       return {
         titulo,
@@ -207,7 +239,7 @@ export function responderAoCfo(pergunta: ChaveDaPergunta, d: DadosDoCfo): Respos
         ],
         causaProvavel: positivo ? "—" : "O compromissado a pagar supera o que já está lançado a receber.",
         impacto:
-          "Só o que já está lançado. Sem saldo bancário no Connect (chega com a conciliação), isto diz se os títulos fecham, não se o caixa aguenta.",
+          "Só o que já está lançado. Sem saldo bancário desta empresa na conciliação, isto diz se os títulos fecham, não se o caixa aguenta.",
         recomendacao: positivo ? "Nenhuma ação urgente." : "Renegociar os maiores vencimentos a pagar e cobrar o vencido a receber.",
         planoDeAcao: positivo
           ? ["Acompanhar a projeção semanalmente"]

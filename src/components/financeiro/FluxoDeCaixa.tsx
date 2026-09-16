@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { MesDoFluxo, Projecao, LinhaDoConsolidado } from "@/lib/financeiro/fluxo";
+import type { SaldoConsolidado } from "@/lib/financeiro/conciliacao/saldoConsolidado";
 import { moeda, tomDoValor } from "@/lib/financeiro/formato";
 
 const CABECALHO = "text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border";
@@ -48,7 +49,12 @@ export function TabelaDoRealizado({ meses }: { meses: MesDoFluxo[] }) {
   );
 }
 
-export function CartoesDaProjecao({ projecao }: { projecao: Projecao }) {
+/**
+ * Com saldo bancário, cada janela mostra também o **saldo projetado**: o das
+ * contas mais os títulos até o fim dela. Sem saldo, fica só o resultado dos
+ * títulos, como antes — somar zero seria afirmar um saldo que não se conhece.
+ */
+export function CartoesDaProjecao({ projecao, saldoInicial = null }: { projecao: Projecao; saldoInicial?: number | null }) {
   return (
     <>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -59,6 +65,11 @@ export function CartoesDaProjecao({ projecao }: { projecao: Projecao }) {
             <p className="text-[11px] text-fg-muted tabular-nums">
               +{moeda(j.entradas)} / −{moeda(j.saidas)}
             </p>
+            {saldoInicial !== null && (
+              <p className={`text-[11px] tabular-nums mt-1 ${tomDoValor(saldoInicial + j.saldo)}`}>
+                Saldo projetado: {moeda(saldoInicial + j.saldo)}
+              </p>
+            )}
           </Card>
         ))}
       </div>
@@ -69,6 +80,52 @@ export function CartoesDaProjecao({ projecao }: { projecao: Projecao }) {
         </p>
       )}
     </>
+  );
+}
+
+/** O saldo das contas bancárias do escopo, vindo da conciliação. */
+export function QuadroDoSaldoBancario({ saldo }: { saldo: SaldoConsolidado }) {
+  const dataCurta = (key: string) => `${key.slice(8, 10)}/${key.slice(5, 7)}/${key.slice(0, 4)}`;
+  if (saldo.contas.length === 0) {
+    return (
+      <Card className="p-3.5 mb-6 text-[12px] text-fg-muted">
+        Nenhuma conta bancária ativa. Cadastre a conta e importe o extrato em{" "}
+        <Link href="/conciliacao" className="text-brand hover:underline">
+          Conciliação bancária
+        </Link>{" "}
+        para o fluxo mostrar o saldo real.
+      </Card>
+    );
+  }
+  return (
+    <Card className="p-3.5 mb-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-[12px] text-fg-muted">Saldo das contas</p>
+        {saldo.atualizadoAteKey && <p className="text-[11px] text-fg-muted">extrato até {dataCurta(saldo.atualizadoAteKey)}</p>}
+      </div>
+      <p className={`text-[20px] font-semibold tabular-nums ${saldo.centavos === null ? "text-fg-muted" : tomDoValor(saldo.centavos)}`}>
+        {saldo.centavos === null ? "—" : moeda(saldo.centavos)}
+      </p>
+      <ul className="mt-2 flex flex-col gap-0.5">
+        {saldo.contas.map((c) => (
+          <li key={c.id} className="flex items-baseline justify-between gap-2 text-[12px]">
+            <span className="text-fg-secondary truncate">{c.nome}</span>
+            <span className="tabular-nums">
+              {c.saldo.centavos === null ? <span className="text-fg-muted">sem saldo</span> : moeda(c.saldo.centavos)}
+              {c.saldo.origem === "banco" && <span className="text-fg-muted"> (do banco)</span>}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {(saldo.contasSemSaldo > 0 || saldo.contasDivergentes > 0) && (
+        <p className="text-[11px] text-warning mt-2">
+          {saldo.contasSemSaldo > 0 &&
+            `${saldo.contasSemSaldo === 1 ? "1 conta ficou" : `${saldo.contasSemSaldo} contas ficaram`} fora do total por não ter saldo inicial nem extrato. `}
+          {saldo.contasDivergentes > 0 &&
+            `${saldo.contasDivergentes === 1 ? "1 conta não bate" : `${saldo.contasDivergentes} contas não batem`} com o saldo do banco — confira na conciliação.`}
+        </p>
+      )}
+    </Card>
   );
 }
 

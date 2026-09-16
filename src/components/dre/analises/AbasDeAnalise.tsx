@@ -30,6 +30,7 @@ import {
 import { rotuloEconomico, valorDaLinha, LINHA_DE_RESULTADO, LINHA_OPERACIONAL } from "@/lib/dre/economica";
 import { responderAoCfo, PERGUNTAS_DO_CFO, type ChaveDaPergunta } from "@/lib/dre/cfo";
 import { titulosEmAberto, movimentosRealizados } from "@/lib/financeiro/consultas";
+import { saldoBancarioDoEscopo } from "@/lib/financeiro/conciliacao/saldoDasContas";
 import { fluxoRealizado, abertosPorMes, projecaoPorJanela } from "@/lib/financeiro/fluxo";
 import { rankingDeContrapartes } from "@/lib/financeiro/analise";
 import {
@@ -432,10 +433,11 @@ function valorDoIndicador(i: Indicador): string {
 export async function AbaIndicadores({ tenantId, companyId, mes }: Base) {
   const escopo = { tenantId, companyIds: [companyId] };
   const ultimos = competenciasAte(mes, 3);
-  const [serie, titulos, movimentos] = await Promise.all([
+  const [serie, titulos, movimentos, saldo] = await Promise.all([
     serieEconomica(tenantId, companyId, [mes]),
     titulosEmAberto(escopo),
     movimentosRealizados(escopo, ultimos),
+    saldoBancarioDoEscopo(escopo),
   ]);
   const hojeKey = saoPauloParts(new Date()).dateKey;
   const receber = titulos.filter((t) => t.kind === "RECEBER");
@@ -458,6 +460,7 @@ export async function AbaIndicadores({ tenantId, companyId, mes }: Base) {
     aPagarEmAberto: soma(titulos.filter((t) => t.kind === "PAGAR")),
     variacoesDeCaixa: fluxoRealizado(movimentos, ultimos).map((m) => m.saldoDoMes),
     maiorClienteEmAberto: ranking[0]?.emAberto ?? 0,
+    saldoBancario: saldo.centavos === null ? null : { centavos: saldo.centavos, atualizadoAteKey: saldo.atualizadoAteKey },
   });
 
   return (
@@ -499,10 +502,11 @@ export async function AbaCfo({ tenantId, companyId, mes, pergunta }: Base & { pe
   let resposta = null;
   if (chave) {
     const anterior = somarMeses(mes, -1);
-    const [serie, reconciliacao, titulos] = await Promise.all([
+    const [serie, reconciliacao, titulos, saldo] = await Promise.all([
       serieEconomica(tenantId, companyId, [anterior, mes]),
       dadosDaReconciliacao(tenantId, companyId, mes),
       titulosEmAberto({ tenantId, companyIds: [companyId] }),
+      saldoBancarioDoEscopo({ tenantId, companyIds: [companyId] }),
     ]);
     const hojeKey = saoPauloParts(new Date()).dateKey;
     const projecao = projecaoPorJanela(titulos, hojeKey, [60]);
@@ -525,6 +529,7 @@ export async function AbaCfo({ tenantId, companyId, mes, pergunta }: Base & { pe
       vencidos: projecao.vencidos,
       aReceber: ranking.map((r) => ({ nome: r.contraparteNome, emAberto: r.emAberto, vencido: r.vencido })),
       aReceberTotal: receber.reduce((n, t) => n + t.centavos, 0),
+      saldoBancario: saldo.centavos === null ? null : { centavos: saldo.centavos, atualizadoAteKey: saldo.atualizadoAteKey },
     });
   }
 

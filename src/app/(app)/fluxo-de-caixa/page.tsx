@@ -6,7 +6,8 @@ import { saoPauloParts } from "@/lib/agenda";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
-import { TabelaDoRealizado, CartoesDaProjecao, TabelaDoConsolidado } from "@/components/financeiro/FluxoDeCaixa";
+import { TabelaDoRealizado, CartoesDaProjecao, TabelaDoConsolidado, QuadroDoSaldoBancario } from "@/components/financeiro/FluxoDeCaixa";
+import { saldoBancarioDoEscopo } from "@/lib/financeiro/conciliacao/saldoDasContas";
 import {
   empresasDoSeletor,
   movimentosRealizados,
@@ -83,20 +84,27 @@ export default async function FluxoDeCaixaPage({
 
 async function Fluxo({ escopo, mes, hojeKey }: { escopo: EscopoFinanceiro; mes: string; hojeKey: string }) {
   const competencias = competenciasAte(mes, 6);
-  const [movimentos, titulos] = await Promise.all([movimentosRealizados(escopo, competencias), titulosEmAberto(escopo)]);
+  const [movimentos, titulos, saldo] = await Promise.all([
+    movimentosRealizados(escopo, competencias),
+    titulosEmAberto(escopo),
+    saldoBancarioDoEscopo(escopo),
+  ]);
   return (
     <>
+      <QuadroDoSaldoBancario saldo={saldo} />
+
       <h2 className="text-[14px] font-semibold text-fg mb-2">Realizado — seis meses até {rotuloDaCompetencia(mes)}</h2>
       <TabelaDoRealizado meses={fluxoRealizado(movimentos, competencias)} />
       <p className="text-[11px] text-fg-muted mt-2 mb-6">
-        Pela data da baixa. O acumulado começa no primeiro mês da tabela — sem saldo bancário, que chega com a
-        conciliação, ele é a soma dos saldos, não o saldo da conta.
+        Pela data da baixa. O acumulado soma os saldos do período a partir do primeiro mês da tabela — é movimento
+        de lançamentos, não o saldo da conta, que está no quadro acima.
       </p>
 
       <h2 className="text-[14px] font-semibold text-fg mb-2">Projeção — títulos em aberto a partir de hoje</h2>
-      <CartoesDaProjecao projecao={projecaoPorJanela(titulos, hojeKey)} />
+      <CartoesDaProjecao projecao={projecaoPorJanela(titulos, hojeKey)} saldoInicial={saldo.centavos} />
       <p className="text-[11px] text-fg-muted mt-2">
-        Cada janela acumula de hoje até o fim dela: a receber menos a pagar, pelo vencimento. Só o que já está lançado
+        Cada janela acumula de hoje até o fim dela: a receber menos a pagar, pelo vencimento
+        {saldo.centavos !== null ? "; o saldo projetado soma o saldo das contas" : ""}. Só o que já está lançado
         {titulos.length >= 5_000 ? " (limitado aos 5.000 títulos mais antigos)" : ""}.
       </p>
     </>
