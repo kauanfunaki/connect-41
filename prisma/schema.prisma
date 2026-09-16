@@ -524,6 +524,9 @@ model Tenant {
   financeCategories        FinanceCategory[]
   financeCounterparties    FinanceCounterparty[]
   financeEntries           FinanceEntry[]
+  bankAccounts             BankAccount[]
+  bankStatementImports     BankStatementImport[]
+  bankTransactions         BankTransaction[]
   agentEvaluationSummaries AgentEvaluationSummary[]
   sectorTaskViews          SectorTaskView[]
   processOrgans            ProcessOrgan[]
@@ -730,6 +733,9 @@ model User {
   fiscalDocumentsUploaded    FiscalDocument[]
   financeEntriesCreated      FinanceEntry[]          @relation("FinanceEntryCreatedBy")
   financeEntriesReviewed     FinanceEntry[]          @relation("FinanceEntryReviewedBy")
+  bankStatementImports       BankStatementImport[]   @relation("BankStatementImportedBy")
+  bankTransactionsReconciled BankTransaction[]       @relation("BankTransactionReconciledBy")
+  bankTransactionMatches     BankTransactionMatch[]  @relation("BankTransactionMatchCreatedBy")
   meetingsCreated            Meeting[]               @relation("MeetingCreatedBy")
   meetingAttendances         MeetingAttendee[]
   clientDocumentsCreated     ClientDocument[]
@@ -963,6 +969,7 @@ model Company {
   fiscalDocuments      FiscalDocument[]
   financeCounterparties FinanceCounterparty[]
   financeEntries        FinanceEntry[]
+  bankAccounts          BankAccount[]
 
   // Casar documento fiscal com empresa pelo CNPJ do XML exige que o par seja
   // único: com duas empresas do mesmo tenant sob o mesmo CNPJ o casamento é
@@ -2346,11 +2353,160 @@ model FinanceEntry {
   fiscalDocument FiscalDocument?     @relation(fields: [fiscalDocumentId], references: [id])
   createdBy      User?               @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id])
   reviewedBy     User?               @relation("FinanceEntryReviewedBy", fields: [reviewedById], references: [id])
+  /// O vínculo com a transação do extrato que liquidou este lançamento.
+  bankMatch      BankTransactionMatch?
 
   @@index([tenantId, companyId, competence])
   @@index([tenantId, companyId, kind, status])
   @@index([tenantId, dueDate])
   @@map("finance_entries")
+}
+
+// ─── Conciliação bancária ────────────────────────────────────────────────────
+//
+// O extrato é a verdade do caixa; o lançamento é o que se esperava que
+// acontecesse. Conciliar é dizer "esta linha do banco é aquele lançamento", e
+// só uma pessoa diz isso: a regra sugere, nunca confirma sozinha.
+
+enum BankAccountType {
+  CORRENTE
+  POUPANCA
+}
+
+/// Estado de uma linha do extrato.
+///
+/// `IGNORADA` existe para o que passou pela conta e não é lançamento — resgate
+/// automático de aplicação, estorno que se anula no mesmo dia. Ignorada não sai
+/// do saldo: o dinheiro passou pela conta de qualquer jeito.
+enum BankTransactionStatus {
+  PENDENTE
+  CONCILIADA
+  IGNORADA
+}
+
+/// Conta bancária de uma empresa cliente.
+model BankAccount {
+  id        String @id @default(uuid())
+  tenantId  String
+  companyId String
+
+  nickname      String          @db.VarChar(80)
+  /// Código COMPE com três dígitos ("001", "341") — o BANKID do OFX.
+  bankCode      String          @db.VarChar(3)
+  agency        String?         @db.VarChar(10)
+  /// Como a pessoa digitou, com o dígito separado se ela separou. É o que a
+  /// tela mostra.
+  accountNumber String          @db.VarChar(30)
+  /// Só dígitos, sem zero à esquerda. É a chave da unicidade e da conferência
+  /// com o ACCTID do arquivo — "0012345-6" e "123456" são a mesma conta.
+  accountDigits String          @db.VarChar(30)
+  type          BankAccountType @default(CORRENTE)
+
+  /// Saldo no **início** do dia `openingBalanceDate`, antes das transações
+  /// dele. Os dois andam juntos: saldo sem data não se confere com nada.
+  openingBalance     Decimal?  @db.Decimal(14, 2)
+  openingBalanceDate DateTime?
+
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant       Tenant                @relation(fields: [tenantId], references: [id])
+  company      Company               @relation(fields: [companyId], references: [id])
+  imports      BankStatementImport[]
+  transactions BankTransaction[]
+
+  @@unique([tenantId, companyId, bankCode, accountDigits])
+  @@index([tenantId, companyId])
+  @@map("bank_accounts")
+}
+
+/// Um arquivo de extrato importado. Fica mesmo quando não trouxe nada novo: é o
+/// histórico do que foi feito, e o saldo do banco que ele informou.
+model BankStatementImport {
+  id               String    @id @default(uuid())
+  tenantId         String
+  bankAccountId    String
+  fileName         String    @db.VarChar(255)
+  periodStart      DateTime?
+  periodEnd        DateTime?
+  /// LEDGERBAL do arquivo — o saldo que o banco diz ter na data `ledgerBalanceAt`.
+  ledgerBalance    Decimal?  @db.Decimal(14, 2)
+  ledgerBalanceAt  DateTime?
+  transactionsRead Int
+  transactionsNew  Int
+  importedById     String?
+  createdAt        DateTime  @default(now())
+
+  tenant       Tenant            @relation(fields: [tenantId], references: [id])
+  bankAccount  BankAccount       @relation(fields: [bankAccountId], references: [id])
+  importedBy   User?             @relation("BankStatementImportedBy", fields: [importedById], references: [id], onDelete: SetNull)
+  transactions BankTransaction[]
+
+  @@index([tenantId, bankAccountId, createdAt])
+  @@map("bank_statement_imports")
+}
+
+/// Uma linha do extrato.
+model BankTransaction {
+  id            String @id @default(uuid())
+  tenantId      String
+  bankAccountId String
+  importId      String
+
+  /// FITID do banco, ou um id gerado quando o arquivo não traz — ver
+  /// `src/lib/financeiro/conciliacao/ofx.ts`. O unique com a conta é o que
+  /// torna a reimportação do mesmo extrato inofensiva.
+  fitId     String   @db.VarChar(255)
+  postedAt  DateTime
+  /// Com sinal: crédito positivo, débito negativo.
+  amount    Decimal  @db.Decimal(14, 2)
+  memo      String?  @db.VarChar(255)
+  payeeName String?  @db.VarChar(180)
+
+  status         BankTransactionStatus @default(PENDENTE)
+  ignoredReason  String?               @db.VarChar(255)
+  reconciledAt   DateTime?
+  reconciledById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant       Tenant                 @relation(fields: [tenantId], references: [id])
+  bankAccount  BankAccount            @relation(fields: [bankAccountId], references: [id])
+  import       BankStatementImport    @relation(fields: [importId], references: [id])
+  reconciledBy User?                  @relation("BankTransactionReconciledBy", fields: [reconciledById], references: [id], onDelete: SetNull)
+  matches      BankTransactionMatch[]
+
+  @@unique([bankAccountId, fitId])
+  @@index([tenantId, bankAccountId, status, postedAt])
+  @@map("bank_transactions")
+}
+
+/// Uma transação liquidando um lançamento. Uma transação pode liquidar vários
+/// (o boleto único que pagou três contas); um lançamento só é liquidado por uma
+/// — o unique em `financeEntryId` é quem impede conciliar a mesma conta duas
+/// vezes. Pagamento parcial (um lançamento em várias transações) fica fora.
+model BankTransactionMatch {
+  id             String  @id @default(uuid())
+  transactionId  String
+  financeEntryId String  @unique
+  amount         Decimal @db.Decimal(14, 2)
+
+  /// Como o lançamento estava antes da conciliação, para desfazer devolvendo
+  /// exatamente o que havia — inclusive uma baixa feita à mão com outra data.
+  entryStatusBefore FinanceEntryStatus
+  entryPaidAtBefore DateTime?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  transaction  BankTransaction @relation(fields: [transactionId], references: [id])
+  financeEntry FinanceEntry    @relation(fields: [financeEntryId], references: [id])
+  createdBy    User?           @relation("BankTransactionMatchCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([transactionId])
+  @@map("bank_transaction_matches")
 }
 
 /// Onde a sincronização com o SPED parou, por raiz de CNPJ.

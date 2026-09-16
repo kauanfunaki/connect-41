@@ -53,6 +53,13 @@ describe("catálogo de módulos", () => {
 
   // Nasce desligado de propósito: a tela é a etapa 3 e o acervo depende da
   // ponte com o SPED. Ligar antes entregaria uma rota que ainda não existe.
+  // A conciliação é BPO operacional, ligada por padrão como contas e fluxo:
+  // sem ela o fluxo de caixa continua sem saldo bancário para ancorar.
+  it("Conciliação bancária está no BPO, em /conciliacao, ligada por padrão", () => {
+    expect(getModuleDef("bpo_conciliacao")).toMatchObject({ sectorCode: "bpo", defaultEnabled: true });
+    expect(MODULE_ROUTES.bpo_conciliacao).toBe("/conciliacao");
+  });
+
   it("Documentos Fiscais nasce desligado", () => {
     expect(getModuleDef("fiscal_documentos")?.defaultEnabled).toBe(false);
   });

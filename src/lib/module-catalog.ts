@@ -207,6 +207,13 @@ export const MODULE_CATALOG: ModuleDef[] = [
     defaultEnabled: true,
   },
   {
+    code: "bpo_conciliacao",
+    label: "Conciliação bancária",
+    sectorCode: "bpo",
+    description: "Contas bancárias das empresas, importação de extrato OFX e casamento das transações com os lançamentos",
+    defaultEnabled: true,
+  },
+  {
     code: "bpo_cadastros",
     label: "Fornecedores e sacados",
     sectorCode: "bpo",
@@ -272,6 +279,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   bpo_contas_receber:      "/receber",
   bpo_lancamentos:         "/lancamentos",
   bpo_fluxo_caixa:         "/fluxo-de-caixa",
+  bpo_conciliacao:         "/conciliacao",
   bpo_cadastros:           "/cadastros-financeiros",
   dre_economica:           "/dre/economica",
   dre_analises:            "/dre/analises",
