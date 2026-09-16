@@ -31,6 +31,8 @@ export type LinhaDaConta = {
   contraparteNome: string;
   categoriaNome: string | null;
   status: "PROVISORIO" | "CONFERIDO" | "PAGO" | "CANCELADO";
+  /** Aprovação por alçada — AGUARDANDO e REPROVADO travam a baixa. */
+  approvalStatus: "NAO_REQUER" | "AGUARDANDO" | "APROVADO" | "REPROVADO";
   /** Documento fiscal que originou, quando veio de um. */
   documentoId: string | null;
 };
@@ -82,6 +84,7 @@ export async function listarContas(
       competence: true,
       description: true,
       fiscalDocumentId: true,
+      approvalStatus: true,
       company: { select: { id: true, name: true, displayName: true } },
       counterparty: { select: { name: true } },
       category: { select: { name: true } },
@@ -107,6 +110,7 @@ export async function listarContas(
       contraparteNome: e.counterparty.name,
       categoriaNome: e.category?.name ?? null,
       status: e.status,
+      approvalStatus: e.approvalStatus,
       documentoId: e.fiscalDocumentId,
     };
   });

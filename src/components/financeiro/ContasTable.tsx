@@ -7,6 +7,9 @@ import { reaisDeCentavos, type SituacaoDaConta } from "@/lib/financeiro/contas";
 import type { LinhaDaConta, TipoDeConta } from "@/lib/financeiro/data";
 import { AcoesDaConta } from "./AcoesDaConta";
 import { conferirConta, marcarComoPago, desfazerPagamento } from "@/lib/financeiro/acoes";
+import { enviarParaAprovacao } from "@/app/(app)/aprovacoes/actions";
+import { SeloDaAprovacao } from "@/components/aprovacoes/HistoricoDaAprovacao";
+import { aprovacaoEmCurso, motivoDoBloqueioDeBaixa, podeEnviarParaAprovacao } from "@/lib/financeiro/aprovacao/regras";
 
 const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -39,9 +42,20 @@ type Props = {
   filtrado: boolean;
   /** Hoje em São Paulo, do servidor — o relógio do navegador pode estar noutro fuso. */
   hojeISO: string;
+  /** Módulo de aprovações ligado e a pessoa atua nele: mostra "Enviar p/ aprovação". */
+  podeEnviarParaAprovacao?: boolean;
+  /** Módulo de pendências ligado e a pessoa atua nele: mostra "abrir pendência". */
+  podeAbrirPendencia?: boolean;
 };
 
-export function ContasTable({ linhas, kind, filtrado, hojeISO }: Props) {
+export function ContasTable({
+  linhas,
+  kind,
+  filtrado,
+  hojeISO,
+  podeEnviarParaAprovacao: moduloDeAprovacao = false,
+  podeAbrirPendencia = false,
+}: Props) {
   if (linhas.length === 0) {
     return filtrado ? (
       <EmptyState
@@ -111,12 +125,25 @@ export function ContasTable({ linhas, kind, filtrado, hojeISO }: Props) {
               <td className="py-2.5 pr-3">
                 <div className="flex items-center gap-2">
                   <Badge variant={SITUACAO_VARIANTE[l.situacao]}>{SITUACAO_LABEL[l.situacao]}</Badge>
+                  {/* Selo só enquanto pesa sobre a conta, ou aprovada ainda em aberto:
+                      depois de paga ou cancelada, a aprovação é histórico. */}
+                  {(aprovacaoEmCurso(l) || (l.approvalStatus === "APROVADO" && l.status !== "PAGO" && l.status !== "CANCELADO")) && (
+                    <SeloDaAprovacao status={l.approvalStatus} />
+                  )}
                   {l.documentoId && (
                     <Link
                       href={`/documentos-fiscais/${l.documentoId}`}
                       className="text-brand hover:underline text-[12px] whitespace-nowrap"
                     >
                       ver nota
+                    </Link>
+                  )}
+                  {podeAbrirPendencia && l.situacao !== "CANCELADA" && (
+                    <Link
+                      href={`/pendencias?nova=1&lancamento=${l.id}`}
+                      className="text-brand hover:underline text-[12px] whitespace-nowrap"
+                    >
+                      abrir pendência
                     </Link>
                   )}
                 </div>
@@ -128,10 +155,13 @@ export function ContasTable({ linhas, kind, filtrado, hojeISO }: Props) {
                   status={l.status}
                   hojeISO={hojeISO}
                   aPagar={kind === "PAGAR"}
+                  bloqueioDeBaixa={motivoDoBloqueioDeBaixa(l)}
+                  podeEnviar={moduloDeAprovacao && podeEnviarParaAprovacao({ ...l, kind, paidAt: l.pagoEm }).pode}
                   acoes={{
                     conferir: conferirConta,
                     pagar: marcarComoPago,
                     desfazer: desfazerPagamento,
+                    enviarParaAprovacao: moduloDeAprovacao ? enviarParaAprovacao : undefined,
                   }}
                 />
               </td>

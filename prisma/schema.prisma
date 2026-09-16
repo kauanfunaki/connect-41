@@ -527,6 +527,8 @@ model Tenant {
   bankAccounts             BankAccount[]
   bankStatementImports     BankStatementImport[]
   bankTransactions         BankTransaction[]
+  clientRequests           ClientRequest[]
+  portalApprovalLimits     PortalApprovalLimit[]
   agentEvaluationSummaries AgentEvaluationSummary[]
   sectorTaskViews          SectorTaskView[]
   processOrgans            ProcessOrgan[]
@@ -736,6 +738,11 @@ model User {
   bankStatementImports       BankStatementImport[]   @relation("BankStatementImportedBy")
   bankTransactionsReconciled BankTransaction[]       @relation("BankTransactionReconciledBy")
   bankTransactionMatches     BankTransactionMatch[]  @relation("BankTransactionMatchCreatedBy")
+  clientRequestsCreated      ClientRequest[]         @relation("ClientRequestCreatedBy")
+  clientRequestsResolved     ClientRequest[]         @relation("ClientRequestResolvedBy")
+  clientRequestMessages      ClientRequestMessage[]  @relation("ClientRequestMessageAuthorUser")
+  clientRequestAttachments   ClientRequestAttachment[] @relation("ClientRequestAttachmentUser")
+  financeApprovalEvents      FinanceApprovalEvent[]  @relation("FinanceApprovalEventUser")
   meetingsCreated            Meeting[]               @relation("MeetingCreatedBy")
   meetingAttendances         MeetingAttendee[]
   clientDocumentsCreated     ClientDocument[]
@@ -828,6 +835,11 @@ model PortalUser {
 
   tenant      Tenant      @relation(fields: [tenantId], references: [id])
   clientGroup ClientGroup @relation(fields: [clientGroupId], references: [id])
+
+  clientRequestMessages    ClientRequestMessage[]    @relation("ClientRequestMessageAuthorPortal")
+  clientRequestAttachments ClientRequestAttachment[] @relation("ClientRequestAttachmentPortal")
+  approvalLimits           PortalApprovalLimit[]
+  financeApprovalEvents    FinanceApprovalEvent[]    @relation("FinanceApprovalEventPortal")
 
   @@unique([tenantId, email])
   @@index([tenantId, clientGroupId])
@@ -970,6 +982,8 @@ model Company {
   financeCounterparties FinanceCounterparty[]
   financeEntries        FinanceEntry[]
   bankAccounts          BankAccount[]
+  clientRequests        ClientRequest[]
+  portalApprovalLimits  PortalApprovalLimit[]
 
   // Casar documento fiscal com empresa pelo CNPJ do XML exige que o par seja
   // único: com duas empresas do mesmo tenant sob o mesmo CNPJ o casamento é
@@ -2343,6 +2357,12 @@ model FinanceEntry {
   reviewedById String?
   reviewedAt   DateTime?
 
+  /// Aprovação por alçada. `NAO_REQUER` é o padrão para nada existente mudar:
+  /// só conta a pagar criada em aberto numa empresa com alçada ativa entra em
+  /// `AGUARDANDO` — a regra vive em src/lib/financeiro/aprovacao/regras.ts.
+  approvalStatus FinanceApprovalStatus @default(NAO_REQUER)
+  approvedAt     DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -2355,11 +2375,168 @@ model FinanceEntry {
   reviewedBy     User?               @relation("FinanceEntryReviewedBy", fields: [reviewedById], references: [id])
   /// O vínculo com a transação do extrato que liquidou este lançamento.
   bankMatch      BankTransactionMatch?
+  approvalEvents FinanceApprovalEvent[]
+  clientRequests ClientRequest[]
 
   @@index([tenantId, companyId, competence])
   @@index([tenantId, companyId, kind, status])
   @@index([tenantId, dueDate])
+  @@index([tenantId, approvalStatus, companyId])
   @@map("finance_entries")
+}
+
+// ─── Aprovação por alçada ────────────────────────────────────────────────────
+//
+// O cliente (ou a coordenação do BPO) diz "pode pagar" antes da baixa. A alçada
+// é por usuário do portal e por empresa, com teto de valor; o histórico guarda
+// toda decisão, não só a última — reprovar, reenviar e aprovar são três fatos.
+
+enum FinanceApprovalStatus {
+  NAO_REQUER
+  AGUARDANDO
+  APROVADO
+  REPROVADO
+}
+
+enum FinanceApprovalDecision {
+  ENVIADO
+  APROVADO
+  REPROVADO
+}
+
+model PortalApprovalLimit {
+  id           String  @id @default(uuid())
+  tenantId     String
+  companyId    String
+  portalUserId String
+  maxAmount    Decimal @db.Decimal(12, 2)
+  active       Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id])
+  company    Company    @relation(fields: [companyId], references: [id])
+  portalUser PortalUser @relation(fields: [portalUserId], references: [id], onDelete: Cascade)
+
+  @@unique([portalUserId, companyId])
+  @@index([tenantId, companyId, active])
+  @@map("portal_approval_limits")
+}
+
+/// Um fato da aprovação. O autor é **ou** usuário interno **ou** do portal — a
+/// regra (exatamente um) vive na aplicação; o MySQL não a expressa com clareza.
+model FinanceApprovalEvent {
+  id                String                  @id @default(uuid())
+  entryId           String
+  decision          FinanceApprovalDecision
+  actorUserId       String?
+  actorPortalUserId String?
+  reason            String?                 @db.Text
+  createdAt         DateTime                @default(now())
+
+  /// Cascade: o estorno do documento fiscal apaga o lançamento, e o histórico
+  /// de um lançamento que deixou de existir não tem onde ser lido.
+  entry       FinanceEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  actorUser   User?        @relation("FinanceApprovalEventUser", fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorPortal PortalUser?  @relation("FinanceApprovalEventPortal", fields: [actorPortalUserId], references: [id], onDelete: SetNull)
+
+  @@index([entryId, createdAt])
+  @@map("finance_approval_events")
+}
+
+// ─── Pendências ao cliente ───────────────────────────────────────────────────
+//
+// O que a equipe precisa do cliente para fechar o mês: um comprovante, uma
+// informação, uma confirmação. Conversa com anexos, e o status diz de quem é a
+// vez — ABERTA espera o cliente, RESPONDIDA espera a equipe.
+
+enum ClientRequestKind {
+  DOCUMENTO
+  INFORMACAO
+  CONFIRMACAO
+}
+
+enum ClientRequestStatus {
+  ABERTA
+  RESPONDIDA
+  RESOLVIDA
+  CANCELADA
+}
+
+model ClientRequest {
+  id             String              @id @default(uuid())
+  tenantId       String
+  companyId      String
+  kind           ClientRequestKind
+  title          String              @db.VarChar(160)
+  description    String?             @db.Text
+  /// Data civil ao meio-dia UTC — ver src/lib/societario/datas.ts.
+  dueDate        DateTime?
+  status         ClientRequestStatus @default(ABERTA)
+  /// Vínculo opcional com um lançamento da mesma empresa.
+  financeEntryId String?
+
+  createdById  String?
+  resolvedAt   DateTime?
+  resolvedById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant       Tenant                    @relation(fields: [tenantId], references: [id])
+  company      Company                   @relation(fields: [companyId], references: [id])
+  financeEntry FinanceEntry?             @relation(fields: [financeEntryId], references: [id], onDelete: SetNull)
+  createdBy    User?                     @relation("ClientRequestCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  resolvedBy   User?                     @relation("ClientRequestResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+  messages     ClientRequestMessage[]
+  attachments  ClientRequestAttachment[]
+
+  @@index([tenantId, status, dueDate])
+  @@index([tenantId, companyId, status])
+  @@index([financeEntryId])
+  @@map("client_requests")
+}
+
+model ClientRequestMessage {
+  id                 String   @id @default(uuid())
+  requestId          String
+  /// Exatamente um dos dois autores — regra na aplicação.
+  authorUserId       String?
+  authorPortalUserId String?
+  body               String   @db.Text
+  createdAt          DateTime @default(now())
+
+  request      ClientRequest             @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  authorUser   User?                     @relation("ClientRequestMessageAuthorUser", fields: [authorUserId], references: [id], onDelete: SetNull)
+  authorPortal PortalUser?               @relation("ClientRequestMessageAuthorPortal", fields: [authorPortalUserId], references: [id], onDelete: SetNull)
+  attachments  ClientRequestAttachment[]
+
+  @@index([requestId, createdAt])
+  @@map("client_request_messages")
+}
+
+model ClientRequestAttachment {
+  id                     String   @id @default(uuid())
+  requestId              String
+  messageId              String?
+  uploadedByUserId       String?
+  uploadedByPortalUserId String?
+  fileName               String   @db.VarChar(255)
+  /// "<tenantId>/<uuid>.<ext>" sob storage/client-requests — nunca vem do usuário.
+  fileUrl                String   @db.VarChar(255)
+  mimeType               String   @db.VarChar(100)
+  sizeBytes              Int
+  createdAt              DateTime @default(now())
+
+  request          ClientRequest         @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  message          ClientRequestMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  uploadedByUser   User?                 @relation("ClientRequestAttachmentUser", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  uploadedByPortal PortalUser?           @relation("ClientRequestAttachmentPortal", fields: [uploadedByPortalUserId], references: [id], onDelete: SetNull)
+
+  @@index([requestId])
+  @@index([messageId])
+  @@map("client_request_attachments")
 }
 
 // ─── Conciliação bancária ────────────────────────────────────────────────────

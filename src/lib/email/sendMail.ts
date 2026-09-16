@@ -596,6 +596,145 @@ export async function sendTaxaAoClienteEmail(input: SendTaxaAoClienteEmailInput)
   }
 }
 
+/** O botão "bulletproof" do e-mail de documentos, reaproveitado pelos avisos do portal. */
+function botaoDoEmail(url: string, rotulo: string): string {
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr><td height="8" style="height:8px; line-height:8px; font-size:0;">&nbsp;</td></tr>
+      <tr>
+        <td align="center">
+          <!--[if mso]>
+          <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${url}" style="height:44px;v-text-anchor:middle;width:220px;" arcsize="18%" strokecolor="#1F5EEA" fillcolor="#1F5EEA">
+          <w:anchorlock/>
+          <center style="color:#FFFFFF; font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;">${escapeHtml(rotulo)}</center>
+          </v:roundrect>
+          <![endif]-->
+          <!--[if !mso]><!-->
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+            <tr>
+              <td align="center" bgcolor="#1F5EEA" style="border-radius:8px; background-color:#1F5EEA;">
+                <a href="${url}" style="display:inline-block; padding:13px 30px; font-family:Arial,Helvetica,sans-serif; font-size:14px; font-weight:bold; line-height:18px; color:#FFFFFF; text-decoration:none; border-radius:8px;">
+                  <span style="color:#FFFFFF; text-decoration:none;">${escapeHtml(rotulo)}</span>
+                </a>
+              </td>
+            </tr>
+          </table>
+          <!--<![endif]-->
+        </td>
+      </tr>
+      <tr><td height="24" style="height:24px; line-height:24px; font-size:0;">&nbsp;</td></tr>
+    </table>
+    <p class="email-text-muted" style="font-size:12px; margin:0; font-family:Arial,Helvetica,sans-serif;">
+      Caso o botão não funcione, copie e cole este link no navegador:<br />
+      <span style="word-break:break-all;">${url}</span>
+    </p>`;
+}
+
+/** Resultado de um aviso a vários destinatários, um e-mail por pessoa. */
+export type ResultadoDoAviso = { enviados: number; falhas: number; semSmtp: boolean };
+
+/**
+ * Um e-mail por destinatário, e não um com todos no `to`: os usuários do portal
+ * de um grupo não precisam descobrir o endereço uns dos outros por um aviso.
+ *
+ * Sem SMTP configurado devolve `semSmtp` em vez de erro — o aviso é
+ * complemento; a pendência e a aprovação existem e aparecem no portal com ou
+ * sem e-mail, e quem chamou registra o que não saiu.
+ */
+async function enviarAvisoIndividual(
+  tenantId: string,
+  rotulo: string,
+  mensagens: { to: string; subject: string; html: string }[]
+): Promise<ResultadoDoAviso> {
+  if (mensagens.length === 0) return { enviados: 0, falhas: 0, semSmtp: false };
+  const transport = await getTenantTransport(tenantId);
+  if (!transport) return { enviados: 0, falhas: mensagens.length, semSmtp: true };
+  const { transporter, config } = transport;
+  let enviados = 0;
+  let falhas = 0;
+  for (const m of mensagens) {
+    try {
+      await enviarComRegistro(transporter, rotulo, { from: `"${config.fromName}" <${config.fromEmail}>`, ...m });
+      enviados++;
+    } catch (err) {
+      console.error(`[${rotulo}]`, err);
+      falhas++;
+    }
+  }
+  return { enviados, falhas, semSmtp: false };
+}
+
+export type SendPendenciaAoClienteEmailInput = {
+  tenantId: string;
+  destinatarios: { email: string; nome: string }[];
+  requestId: string;
+  titulo: string;
+  motivo: "nova" | "resposta";
+};
+
+// Pendência aberta ou respondida pela equipe. O corpo leva **só o título** e o
+// link: descrição e conversa podem citar valor, conta, documento — e e-mail é
+// o canal que se encaminha sem pensar. O conteúdo fica atrás do login do portal.
+export async function sendPendenciaAoClienteEmail(input: SendPendenciaAoClienteEmailInput): Promise<ResultadoDoAviso> {
+  const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
+  const url = `${baseUrl}/portal/pendencias/${input.requestId}`;
+  const nova = input.motivo === "nova";
+  const mensagens = input.destinatarios.map((d) => ({
+    to: d.email,
+    subject: nova ? `Nova pendência: ${input.titulo}` : `Resposta na pendência: ${input.titulo}`,
+    html: emailShell(
+      `
+    <p class="email-text" style="font-size:14px; line-height:1.6; margin:0 0 16px; font-family:Arial,Helvetica,sans-serif;">
+      Olá, ${escapeHtml(d.nome)}. ${nova ? "A equipe abriu uma pendência para você:" : "A equipe respondeu na pendência:"}
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="doc-card" style="margin:0 0 16px; border:1px solid; border-radius:10px;">
+      <tr>
+        <td style="padding:16px 18px;">
+          <p class="email-text-muted" style="margin:0 0 4px; font-size:10.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; font-family:Arial,Helvetica,sans-serif;">Pendência</p>
+          <p class="email-text-strong" style="margin:0; font-size:15px; font-weight:700; font-family:Arial,Helvetica,sans-serif;">${escapeHtml(input.titulo)}</p>
+        </td>
+      </tr>
+    </table>
+    ${botaoDoEmail(url, "Abrir no portal")}
+  `,
+      "Portal do cliente"
+    ),
+  }));
+  return enviarAvisoIndividual(input.tenantId, "sendPendenciaAoClienteEmail", mensagens);
+}
+
+export type SendAprovacaoPendenteEmailInput = {
+  tenantId: string;
+  destinatarios: { email: string; nome: string; quantidade: number }[];
+};
+
+// Contas a pagar esperando aprovação. Leva só a contagem — valor, fornecedor e
+// empresa ficam no portal, pelo mesmo motivo do aviso de pendência. Um e-mail
+// por aprovador, com a contagem dele: a importação de uma planilha com cem
+// títulos manda cem avisos se cada título virar um e-mail.
+export async function sendAprovacaoPendenteEmail(input: SendAprovacaoPendenteEmailInput): Promise<ResultadoDoAviso> {
+  const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
+  const url = `${baseUrl}/portal/aprovacoes`;
+  const mensagens = input.destinatarios.map((d) => {
+    const frase =
+      d.quantidade === 1 ? "Há 1 conta a pagar aguardando a sua aprovação." : `Há ${d.quantidade} contas a pagar aguardando a sua aprovação.`;
+    return {
+      to: d.email,
+      subject: d.quantidade === 1 ? "Conta a pagar aguardando aprovação" : `${d.quantidade} contas a pagar aguardando aprovação`,
+      html: emailShell(
+        `
+    <p class="email-text" style="font-size:14px; line-height:1.6; margin:0 0 16px; font-family:Arial,Helvetica,sans-serif;">
+      Olá, ${escapeHtml(d.nome)}. ${frase} A baixa só é feita depois da aprovação.
+    </p>
+    ${botaoDoEmail(url, "Revisar no portal")}
+  `,
+        "Portal do cliente"
+      ),
+    };
+  });
+  return enviarAvisoIndividual(input.tenantId, "sendAprovacaoPendenteEmail", mensagens);
+}
+
 function escapeHtml(input: string): string {
   return input
     .replace(/&/g, "&amp;")

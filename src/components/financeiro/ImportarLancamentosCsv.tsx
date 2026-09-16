@@ -44,7 +44,8 @@ export function ImportarLancamentosCsv({ companyId }: { companyId: string }) {
       setResultado(
         `${r.criados} ${r.criados === 1 ? "lançamento criado" : "lançamentos criados"}` +
           (r.duplicadas ? ` · ${r.duplicadas} duplicadas ignoradas` : "") +
-          (r.comErro ? ` · ${r.comErro} com erro não importadas` : "")
+          (r.comErro ? ` · ${r.comErro} com erro não importadas` : "") +
+          (r.aguardandoAprovacao ? ` · ${r.aguardandoAprovacao} aguardando aprovação` : "")
       );
       setPrevia(null);
       setTexto(null);

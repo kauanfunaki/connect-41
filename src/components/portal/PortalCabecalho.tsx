@@ -14,6 +14,8 @@ const ITENS: Item[] = [
   { chave: "pagar", rotulo: "Contas a pagar", href: "/portal/pagar", modulo: "bpo_contas_pagar" },
   { chave: "receber", rotulo: "Contas a receber", href: "/portal/receber", modulo: "bpo_contas_receber" },
   { chave: "relatorios", rotulo: "Relatório", href: "/portal/relatorios", modulo: "bpo_fluxo_caixa" },
+  { chave: "pendencias", rotulo: "Pendências", href: "/portal/pendencias", modulo: "bpo_pendencias" },
+  { chave: "aprovacoes", rotulo: "Aprovações", href: "/portal/aprovacoes", modulo: "bpo_aprovacoes" },
 ];
 
 export function PortalNav({ ativo, modulos }: { ativo: string; modulos: Set<string> }) {
@@ -46,12 +48,15 @@ export function PortalCabecalho({
   grupoNome,
   ativo,
   modulos,
+  somenteLeitura = true,
 }: {
   titulo: string;
   descricao: string;
   grupoNome: string | null;
   ativo: string;
   modulos: Set<string>;
+  /** Pendências e aprovações são as telas em que o cliente escreve — lá o "Só leitura" mentiria. */
+  somenteLeitura?: boolean;
 }) {
   return (
     <>
@@ -59,7 +64,8 @@ export function PortalCabecalho({
         <div>
           <PageHeader title={titulo} />
           <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
-            {grupoNome ?? "Suas empresas"} · {descricao} Só leitura.
+            {grupoNome ?? "Suas empresas"} · {descricao}
+            {somenteLeitura && " Só leitura."}
           </p>
         </div>
         <form action={sairDoPortal}>

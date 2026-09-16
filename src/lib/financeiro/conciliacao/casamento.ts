@@ -221,7 +221,10 @@ export type SelecaoValidada = { ok: true; totalCentavos: number } | { ok: false;
  */
 export function validarSelecao(
   tx: { centavos: number },
-  selecionados: Pick<LancamentoCandidato, "id" | "kind" | "status" | "centavos" | "conciliado" | "contraparteNome">[]
+  selecionados: (Pick<LancamentoCandidato, "id" | "kind" | "status" | "centavos" | "conciliado" | "contraparteNome"> & {
+    /** Motivo que impede a baixa (aprovação por alçada pendente ou reprovada), ou nada. */
+    bloqueioDeBaixa?: string | null;
+  })[]
 ): SelecaoValidada {
   const tipo = tipoCompativel(tx.centavos);
   if (!tipo) return { ok: false, erro: "Transação de valor zero não se concilia." };
@@ -238,6 +241,7 @@ export function validarSelecao(
     }
     if (s.status === "CANCELADO") return { ok: false, erro: `${s.contraparteNome}: lançamento cancelado.` };
     if (s.conciliado) return { ok: false, erro: `${s.contraparteNome}: já está conciliado com outra transação.` };
+    if (s.bloqueioDeBaixa) return { ok: false, erro: `${s.contraparteNome}: ${s.bloqueioDeBaixa}` };
     if (s.centavos <= 0) return { ok: false, erro: `${s.contraparteNome}: lançamento sem valor.` };
   }
   const total = selecionados.reduce((acc, s) => acc + s.centavos, 0);

@@ -15,6 +15,7 @@ import {
   categoriaDoLancamento,
   categoriaObrigatoria,
 } from "@/lib/financeiro/lancamento";
+import { contextoDeEntrada, registrarEnvios, avisarAprovadores } from "@/lib/financeiro/aprovacao/servidor";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
 // acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -85,6 +86,14 @@ export async function lancarDocumento(
   const vencimento = opcoes.vencimento ? new Date(opcoes.vencimento) : vencimentoPresumido(doc.issuedAt);
   if (Number.isNaN(vencimento.getTime())) return { error: "Vencimento inválido." };
 
+  // Nasce PROVISORIO, portanto em aberto: conta a pagar de empresa com alçada
+  // já entra aguardando aprovação.
+  const approvalStatus = (await contextoDeEntrada(ctx.tenantId, [doc.companyId])).statusInicial(
+    doc.companyId,
+    veredito.kind,
+    "PROVISORIO"
+  );
+
   try {
     const entry = await prisma.$transaction(async (tx) => {
       // Contraparte sem documento não pode ser reaproveitada por CNPJ — o
@@ -110,6 +119,7 @@ export async function lancarDocumento(
           kind: veredito.kind,
           // PROVISORIO é o ponto da etapa: nasce a conferir, não aprovado.
           status: "PROVISORIO",
+          approvalStatus,
           counterpartyId: contraparte.id,
           categoryId: categoriaId,
           competence: doc.competence,
@@ -128,8 +138,9 @@ export async function lancarDocumento(
           fiscalDocumentId: doc.id,
           createdById: ctx.userId,
         },
-        select: { id: true },
+        select: { id: true, amount: true },
       });
+      if (approvalStatus === "AGUARDANDO") await registrarEnvios(tx, [criado.id], ctx.userId || null);
 
       // A primeira nota de um fornecedor classifica; da segunda em diante ela é
       // herdada. Gravar aqui é o que fecha esse ciclo.
@@ -148,13 +159,22 @@ export async function lancarDocumento(
       return criado;
     });
 
+    const aviso =
+      approvalStatus === "AGUARDANDO" ? await avisarAprovadores(ctx.tenantId, [{ companyId: doc.companyId, amount: entry.amount }]) : null;
+
     await logAudit({
       tenantId: ctx.tenantId,
       userId: ctx.userId,
       action: "financeiro.entry.created_from_document",
       entityType: "FinanceEntry",
       entityId: entry.id,
-      metadata: { fiscalDocumentId: doc.id, kind: veredito.kind, categoriaId },
+      metadata: {
+        fiscalDocumentId: doc.id,
+        kind: veredito.kind,
+        categoriaId,
+        approvalStatus,
+        ...(aviso ? { emailsDeAprovacao: aviso.enviados, semSmtp: aviso.semSmtp } : {}),
+      },
     });
 
     revalidatePath("/documentos-fiscais");

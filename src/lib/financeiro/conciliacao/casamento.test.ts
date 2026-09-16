@@ -149,6 +149,14 @@ describe("validarSelecao", () => {
     expect(r).toEqual({ ok: true, totalCentavos: 300_00 });
   });
 
+  it("conta travada pela aprovação por alçada não se concilia, e o motivo aparece", () => {
+    const r = validarSelecao({ centavos: -100_00 }, [
+      { ...lanc({ id: "a" }), bloqueioDeBaixa: "Aguardando aprovação — a baixa só é liberada depois." },
+    ]);
+    expect(r).toEqual({ ok: false, erro: expect.stringContaining("Aguardando aprovação") });
+    expect(validarSelecao({ centavos: -100_00 }, [{ ...lanc({ id: "a" }), bloqueioDeBaixa: null }]).ok).toBe(true);
+  });
+
   it("um centavo de diferença não fecha", () => {
     const r = validarSelecao({ centavos: -300_00 }, [lanc({ id: "a", centavos: 299_99 })]);
     expect(r.ok).toBe(false);

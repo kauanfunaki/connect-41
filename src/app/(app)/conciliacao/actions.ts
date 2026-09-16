@@ -23,6 +23,7 @@ import { instanteDaData, competenciaDoInstante } from "@/lib/financeiro/periodo"
 import { lerOfx } from "@/lib/financeiro/conciliacao/ofx";
 import { contaConfere, codigoDoBanco, validarConta } from "@/lib/financeiro/conciliacao/conta";
 import { tipoCompativel, validarSelecao } from "@/lib/financeiro/conciliacao/casamento";
+import { motivoDoBloqueioDeBaixa } from "@/lib/financeiro/aprovacao/regras";
 
 const MODULE = "bpo_conciliacao";
 
@@ -359,6 +360,7 @@ export async function confirmarConciliacao(transactionId: string, entryIds: stri
           status: true,
           amount: true,
           paidAt: true,
+          approvalStatus: true,
           counterparty: { select: { name: true } },
           bankMatch: { select: { id: true } },
         },
@@ -377,6 +379,9 @@ export async function confirmarConciliacao(transactionId: string, entryIds: stri
           centavos: centavosDeDecimal(l.amount),
           conciliado: l.bankMatch !== null,
           contraparteNome: l.counterparty.name,
+          // Conta aguardando ou reprovada na aprovação por alçada não é baixada
+          // nem pelo extrato — senão a conciliação viraria o atalho da aprovação.
+          bloqueioDeBaixa: motivoDoBloqueioDeBaixa(l),
         }))
       );
       if (!v.ok) throw new Recusa(v.erro);
@@ -394,7 +399,13 @@ export async function confirmarConciliacao(transactionId: string, entryIds: stri
             createdById: c.userId,
           },
         });
-        await tx.financeEntry.update({ where: { id: l.id }, data: { status: "PAGO", paidAt: pagoEm } });
+        // Condicional na aprovação lida: reenvio para aprovação no meio do
+        // caminho derruba a transação inteira em vez de baixar por cima.
+        const baixado = await tx.financeEntry.updateMany({
+          where: { id: l.id, approvalStatus: { in: ["NAO_REQUER", "APROVADO"] }, status: { not: "CANCELADO" } },
+          data: { status: "PAGO", paidAt: pagoEm },
+        });
+        if (baixado.count !== 1) throw new Recusa(`${l.counterparty.name}: o lançamento acabou de mudar — atualize a tela.`);
       }
 
       // Condicional no status: se outra conciliação ganhou a corrida, nada muda
@@ -587,6 +598,8 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
         }));
 
       const pagoEm = instanteDaData(dataKey);
+      // Nasce PAGO: é o registro de um dinheiro que já saiu. Não entra em
+      // aprovação por alçada (fica no padrão NAO_REQUER).
       const criado = await tx.financeEntry.create({
         data: {
           tenantId: c.tenantId,

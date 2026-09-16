@@ -13,6 +13,7 @@ import { PortalCompetenciaFiltro } from "@/components/portal/PortalCompetenciaFi
 import { sairDoPortal } from "./login/actions";
 import { PortalNav } from "@/components/portal/PortalCabecalho";
 import { getEnabledModuleCodes } from "@/lib/modules";
+import { AvisosDaHome } from "@/components/portal/AvisosDaHome";
 
 // Acervo fiscal visto pelo cliente. **Só leitura**, e por construção: não há
 // entrada de XML nem decisão de destino aqui, e as actions que fazem essas
@@ -57,6 +58,12 @@ export default async function PortalPage({
         </form>
       </div>
       <PortalNav ativo="documentos" modulos={modulos} />
+      <AvisosDaHome
+        tenantId={sessao.tenantId}
+        companyIds={alcance.tipo === "EMPRESAS" ? alcance.companyIds : []}
+        portalUserId={sessao.sub}
+        modulos={modulos}
+      />
 
       {total === 0 && !params.competencia ? (
         <Card>

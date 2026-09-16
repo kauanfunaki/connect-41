@@ -23,6 +23,7 @@ import {
 import { prepararImportacao, chaveDeDuplicidade, type PreviaDaImportacao } from "@/lib/financeiro/importacaoCsv";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { instanteDaData } from "@/lib/financeiro/periodo";
+import { contextoDeEntrada, registrarEnvios, avisarAprovadores } from "@/lib/financeiro/aprovacao/servidor";
 
 const MODULE = "bpo_lancamentos";
 
@@ -44,7 +45,7 @@ function revalidar() {
   }
 }
 
-export type ResultadoDoManual = { error: string } | { ok: true };
+export type ResultadoDoManual = { error: string } | { ok: true; aguardandoAprovacao?: boolean };
 
 /**
  * Cria o lançamento manual.
@@ -108,6 +109,11 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
       : null;
   if (counterpartyId && !existente) return { error: "Contraparte não encontrada nesta empresa." };
 
+  const status = statusInicialDoManual(d.pagoEmKey);
+  // Aprovação por alçada: conta a pagar em aberto numa empresa com alçada nasce
+  // aguardando. A que já veio com a data da baixa nasce PAGO e não entra.
+  const approvalStatus = (await contextoDeEntrada(c.tenantId, [companyId])).statusInicial(companyId, d.kind, status);
+
   const entry = await c.prisma.$transaction(async (tx) => {
     const contraparte =
       existente ??
@@ -121,7 +127,8 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
         tenantId: c.tenantId,
         companyId,
         kind: d.kind,
-        status: statusInicialDoManual(d.pagoEmKey),
+        status,
+        approvalStatus,
         counterpartyId: contraparte.id,
         categoryId: d.categoryId,
         competence: d.competencia,
@@ -134,8 +141,9 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
         reviewedById: c.ctx.userId || null,
         reviewedAt: new Date(),
       },
-      select: { id: true },
+      select: { id: true, amount: true },
     });
+    if (approvalStatus === "AGUARDANDO") await registrarEnvios(tx, [criado.id], c.ctx.userId || null);
 
     // A mesma herança do lançamento por nota: a primeira conta classifica o
     // fornecedor, as próximas já nascem classificadas.
@@ -145,17 +153,26 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
     return criado;
   });
 
+  const aviso = approvalStatus === "AGUARDANDO" ? await avisarAprovadores(c.tenantId, [{ companyId, amount: entry.amount }]) : null;
+
   await logAudit({
     tenantId: c.tenantId,
     userId: c.ctx.userId,
     action: "financeiro.entry.created_manual",
     entityType: "FinanceEntry",
     entityId: entry.id,
-    metadata: { companyId, kind: d.kind, valor: decimalDeCentavos(d.centavos), competencia: d.competencia },
+    metadata: {
+      companyId,
+      kind: d.kind,
+      valor: decimalDeCentavos(d.centavos),
+      competencia: d.competencia,
+      approvalStatus,
+      ...(aviso ? { emailsDeAprovacao: aviso.enviados, semSmtp: aviso.semSmtp } : {}),
+    },
   });
 
   revalidar();
-  return { ok: true };
+  return { ok: true, aguardandoAprovacao: approvalStatus === "AGUARDANDO" };
 }
 
 /** Cancela um lançamento manual em aberto. Nunca apaga. */
@@ -245,7 +262,7 @@ export async function previsualizarImportacao(companyId: string, texto: string):
 
 export type ResultadoDaImportacaoCsv =
   | { error: string }
-  | { ok: true; criados: number; duplicadas: number; comErro: number };
+  | { ok: true; criados: number; duplicadas: number; comErro: number; aguardandoAprovacao: number };
 
 /**
  * Grava as linhas válidas.
@@ -274,6 +291,10 @@ export async function confirmarImportacao(companyId: string, texto: string): Pro
   const porNome = new Map(contrapartes.map((p) => [chaveDaCategoria(p.name), p]));
 
   const hoje = new Date();
+  const entrada = await contextoDeEntrada(c.tenantId, [companyId]);
+  // O que entrou em aprovação, para um aviso por aprovador no fim — e não um
+  // e-mail por linha da planilha.
+  const aguardando: { id: string; companyId: string; amount: { toString(): string } }[] = [];
   await c.prisma.$transaction(
     async (tx) => {
       for (const d of validas) {
@@ -289,12 +310,15 @@ export async function confirmarImportacao(companyId: string, texto: string): Pro
           else porNome.set(chaveDaCategoria(contraparte.name), contraparte);
         }
 
-        await tx.financeEntry.create({
+        const status = statusInicialDoManual(d.pagoEmKey);
+        const approvalStatus = entrada.statusInicial(companyId, d.kind, status);
+        const criado = await tx.financeEntry.create({
           data: {
             tenantId: c.tenantId,
             companyId,
             kind: d.kind,
-            status: statusInicialDoManual(d.pagoEmKey),
+            status,
+            approvalStatus,
             counterpartyId: contraparte.id,
             categoryId: d.categoryId,
             competence: d.competencia,
@@ -306,13 +330,20 @@ export async function confirmarImportacao(companyId: string, texto: string): Pro
             reviewedById: c.ctx.userId || null,
             reviewedAt: hoje,
           },
+          select: { id: true, amount: true },
         });
+        if (approvalStatus === "AGUARDANDO") aguardando.push({ id: criado.id, companyId, amount: criado.amount });
 
         if (d.kind === "PAGAR" && d.categoryId && !contraparte.defaultCategoryId) {
           await tx.financeCounterparty.update({ where: { id: contraparte.id }, data: { defaultCategoryId: d.categoryId } });
           contraparte.defaultCategoryId = d.categoryId;
         }
       }
+      await registrarEnvios(
+        tx,
+        aguardando.map((a) => a.id),
+        c.ctx.userId || null
+      );
     },
     // 2.000 linhas em série passam do timeout padrão de 5 s da transação.
     { timeout: 120_000, maxWait: 10_000 }
@@ -320,6 +351,7 @@ export async function confirmarImportacao(companyId: string, texto: string): Pro
 
   const duplicadas = previa.linhas.filter((l) => l.situacao === "duplicada").length;
   const comErro = previa.linhas.filter((l) => l.situacao === "erro").length;
+  const aviso = aguardando.length > 0 ? await avisarAprovadores(c.tenantId, aguardando) : null;
 
   await logAudit({
     tenantId: c.tenantId,
@@ -327,9 +359,15 @@ export async function confirmarImportacao(companyId: string, texto: string): Pro
     action: "financeiro.entry.imported_csv",
     entityType: "Company",
     entityId: companyId,
-    metadata: { criados: validas.length, duplicadas, comErro },
+    metadata: {
+      criados: validas.length,
+      duplicadas,
+      comErro,
+      aguardandoAprovacao: aguardando.length,
+      ...(aviso ? { emailsDeAprovacao: aviso.enviados, semSmtp: aviso.semSmtp } : {}),
+    },
   });
 
   revalidar();
-  return { ok: true, criados: validas.length, duplicadas, comErro };
+  return { ok: true, criados: validas.length, duplicadas, comErro, aguardandoAprovacao: aguardando.length };
 }

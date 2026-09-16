@@ -56,6 +56,17 @@ export async function ContasPage({
   const prisma = getPrisma();
   const agora = new Date();
 
+  // Os atalhos para os módulos vizinhos aparecem só para quem atua neles, com
+  // eles ligados — link para uma tela que responde 404 é pior que nenhum.
+  const [pendenciasLigado, aprovacoesLigado, setorDePendencias, setorDeAprovacoes] = await Promise.all([
+    isModuleEnabled(ctx.tenantId, "bpo_pendencias"),
+    isModuleEnabled(ctx.tenantId, "bpo_aprovacoes"),
+    setorDoModulo(ctx.tenantId, "bpo_pendencias"),
+    setorDoModulo(ctx.tenantId, "bpo_aprovacoes"),
+  ]);
+  const podeAbrirPendencia = pendenciasLigado && canActOnSector(ctx, setorDePendencias ?? "bpo");
+  const podeEnviarParaAprovacao = kind === "PAGAR" && aprovacoesLigado && canActOnSector(ctx, setorDeAprovacoes ?? "bpo");
+
   const [resultado, competencias, empresas] = await Promise.all([
     listarContas(
       ctx.tenantId,
@@ -198,6 +209,8 @@ export async function ContasPage({
           kind={kind}
           filtrado={resultado.totalGeral > 0 && resultado.linhas.length === 0}
           hojeISO={saoPauloParts(agora).dateKey}
+          podeAbrirPendencia={podeAbrirPendencia}
+          podeEnviarParaAprovacao={podeEnviarParaAprovacao}
         />
       )}
 

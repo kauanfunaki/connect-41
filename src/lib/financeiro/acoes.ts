@@ -13,6 +13,7 @@ import { logAudit } from "@/lib/audit";
 import { saoPauloParts } from "@/lib/agenda";
 import { podeMarcarPago, podeConferir } from "./contas";
 import { setorDoModulo } from "@/lib/modules";
+import { motivoDoBloqueioDeBaixa } from "./aprovacao/regras";
 
 // `SECTOR` é o de origem, usado só como padrão. As ações servem `/pagar` e
 // `/receber`, que podem estar em setores diferentes num tenant: o gate aceita
@@ -42,6 +43,7 @@ async function contaDoTenant(entryId: string, tenantId: string) {
       status: true,
       paidAt: true,
       amount: true,
+      approvalStatus: true,
       counterparty: { select: { name: true } },
     },
   });
@@ -107,16 +109,29 @@ export async function marcarComoPago(
   const hojeKey = saoPauloParts(new Date()).dateKey;
   const veredito = podeMarcarPago(conta, bruto, hojeKey);
   if (!veredito.pode) return { error: veredito.motivo };
+  // Aprovação por alçada: aguardando ou reprovada não sai do caixa.
+  const bloqueio = motivoDoBloqueioDeBaixa(conta);
+  if (bloqueio) return { error: bloqueio };
 
   // Meio-dia para a data não escorregar de dia ao atravessar o fuso — o mesmo
   // cuidado da contagem de dias úteis do societário.
   const pagoEm = new Date(`${bruto}T12:00:00-03:00`);
 
+  // Condicionado ao estado lido: se a conta foi reenviada para aprovação (ou
+  // paga por outra pessoa, ou cancelada) entre a leitura e aqui, a baixa não
+  // passa por cima.
   const prisma = getPrisma();
-  await prisma.financeEntry.update({
-    where: { id: entryId },
+  const baixada = await prisma.financeEntry.updateMany({
+    where: {
+      id: entryId,
+      tenantId: ctx.tenantId,
+      status: { in: ["PROVISORIO", "CONFERIDO"] },
+      paidAt: null,
+      approvalStatus: { in: ["NAO_REQUER", "APROVADO"] },
+    },
     data: { status: "PAGO", paidAt: pagoEm },
   });
+  if (baixada.count !== 1) return { error: "A conta acabou de mudar (aprovação, baixa ou cancelamento) — atualize a tela." };
 
   await logAudit({
     tenantId: ctx.tenantId,

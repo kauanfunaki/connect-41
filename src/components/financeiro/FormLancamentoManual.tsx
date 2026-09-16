@@ -43,6 +43,7 @@ export function FormLancamentoManual({
   const [categoria, setCategoria] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [salvo, setSalvo] = useState(false);
+  const [aguardando, setAguardando] = useState(false);
   const [pendente, startTransition] = useTransition();
 
   const doTipo = categorias.filter((c) => c.kind === kind);
@@ -68,6 +69,7 @@ export function FormLancamentoManual({
         return;
       }
       setSalvo(true);
+      setAguardando(Boolean(r.aguardandoAprovacao));
       formRef.current?.reset();
       setContraparte("");
       setCategoria("");
@@ -161,6 +163,8 @@ export function FormLancamentoManual({
           {salvo && (
             <span className="inline-flex items-center gap-1 text-[12px] text-success">
               <Check size={13} /> Lançado. Ele já aparece nas contas e na DRE.
+              {/* Empresa com alçada: a conta nasce aguardando, e a baixa fica travada até alguém aprovar. */}
+              {aguardando && " Aguardando aprovação antes da baixa."}
             </span>
           )}
           {erro && <span className="text-[12px] text-danger">{erro}</span>}

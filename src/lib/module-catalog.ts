@@ -220,6 +220,25 @@ export const MODULE_CATALOG: ModuleDef[] = [
     description: "Cadastro das contrapartes das empresas clientes, com a categoria que a próxima conta herda",
     defaultEnabled: true,
   },
+  // ─── Relacionamento com o cliente no BPO (16/09) ──────────────────────────
+  //
+  // Os dois primeiros módulos em que o cliente **escreve** pelo portal. Ligados
+  // por padrão como o resto do operacional: pendência sem cliente avisado e
+  // aprovação sem alçada cadastrada não mudam nada até alguém usá-las.
+  {
+    code: "bpo_pendencias",
+    label: "Pendências ao cliente",
+    sectorCode: "bpo",
+    description: "Pedidos de documento, informação ou confirmação ao cliente, com conversa e anexos pelo portal",
+    defaultEnabled: true,
+  },
+  {
+    code: "bpo_aprovacoes",
+    label: "Aprovações",
+    sectorCode: "bpo",
+    description: "Aprovação de contas a pagar por alçada — o cliente aprova no portal antes da baixa",
+    defaultEnabled: true,
+  },
   {
     code: "dre_economica",
     label: "DRE econômica",
@@ -281,6 +300,8 @@ export const MODULE_ROUTES: Record<string, string> = {
   bpo_fluxo_caixa:         "/fluxo-de-caixa",
   bpo_conciliacao:         "/conciliacao",
   bpo_cadastros:           "/cadastros-financeiros",
+  bpo_pendencias:          "/pendencias",
+  bpo_aprovacoes:          "/aprovacoes",
   dre_economica:           "/dre/economica",
   dre_analises:            "/dre/analises",
 };

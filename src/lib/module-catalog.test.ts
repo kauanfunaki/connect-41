@@ -60,6 +60,16 @@ describe("catálogo de módulos", () => {
     expect(MODULE_ROUTES.bpo_conciliacao).toBe("/conciliacao");
   });
 
+  // As duas primeiras telas em que o cliente escreve pelo portal. Ligadas por
+  // padrão: sem alçada cadastrada nada entra em aprovação, e pendência só existe
+  // quando alguém abre uma.
+  it("Pendências e Aprovações estão no BPO, com rota, ligadas por padrão", () => {
+    expect(getModuleDef("bpo_pendencias")).toMatchObject({ sectorCode: "bpo", defaultEnabled: true });
+    expect(getModuleDef("bpo_aprovacoes")).toMatchObject({ sectorCode: "bpo", defaultEnabled: true });
+    expect(MODULE_ROUTES.bpo_pendencias).toBe("/pendencias");
+    expect(MODULE_ROUTES.bpo_aprovacoes).toBe("/aprovacoes");
+  });
+
   it("Documentos Fiscais nasce desligado", () => {
     expect(getModuleDef("fiscal_documentos")?.defaultEnabled).toBe(false);
   });
