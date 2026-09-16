@@ -33,6 +33,14 @@ export type LancamentoDoDre = {
   /** Centavos. Negativo em pagamento, positivo em recebimento. */
   valorCentavos: number;
   origem: "recebimento" | "pagamento";
+  /**
+   * Grupo já decidido, sem passar pelo de-para. Só para o que não é categoria:
+   * a diferença de acordo e a perda com clientes da DRE econômica — ver
+   * `src/lib/financeiro/cobranca/dre.ts`. A conferência de origem vale igual.
+   */
+  grupo?: string;
+  /** Marca a perda com clientes entre os lançamentos de grupo fixo. */
+  perda?: boolean;
 };
 
 /**
@@ -123,7 +131,7 @@ export function calcularDre(
     totalEntrado += l.valorCentavos;
 
     const chave = l.categoria ? chaveDaCategoria(l.categoria) : "";
-    const grupo = chave ? mapeamento.get(chave) : undefined;
+    const grupo = l.grupo ?? (chave ? mapeamento.get(chave) : undefined);
 
     // Grupo cuja origem não bate com a do lançamento é de-para errado, não
     // dado errado — e somar um recebimento dentro de um grupo de despesa

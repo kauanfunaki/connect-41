@@ -24,6 +24,7 @@ import { lerOfx } from "@/lib/financeiro/conciliacao/ofx";
 import { contaConfere, codigoDoBanco, validarConta } from "@/lib/financeiro/conciliacao/conta";
 import { tipoCompativel, validarSelecao } from "@/lib/financeiro/conciliacao/casamento";
 import { motivoDoBloqueioDeBaixa } from "@/lib/financeiro/aprovacao/regras";
+import { sincronizarAcordos } from "@/lib/financeiro/cobranca/sincronizar";
 
 const MODULE = "bpo_conciliacao";
 
@@ -48,6 +49,7 @@ function revalidar() {
   for (const p of ["/conciliacao", "/pagar", "/receber", "/lancamentos", "/fluxo-de-caixa", "/dre", "/dre/economica", "/dre/analises"]) {
     revalidatePath(p);
   }
+  revalidatePath("/cobranca", "layout");
 }
 
 function texto(formData: FormData, k: string): string {
@@ -407,6 +409,8 @@ export async function confirmarConciliacao(transactionId: string, entryIds: stri
         });
         if (baixado.count !== 1) throw new Recusa(`${l.counterparty.name}: o lançamento acabou de mudar — atualize a tela.`);
       }
+      // Parcela de acordo conciliada é baixa como outra qualquer: pode cumprir o acordo.
+      await sincronizarAcordos(tx, c.tenantId, lancamentos.map((l) => l.id));
 
       // Condicional no status: se outra conciliação ganhou a corrida, nada muda
       // aqui e a transação inteira volta.
@@ -488,6 +492,7 @@ export async function desfazerConciliacao(transactionId: string): Promise<Result
         }
       }
       await tx.bankTransactionMatch.deleteMany({ where: { transactionId: t.id } });
+      await sincronizarAcordos(tx, c.tenantId, restaurados);
       const voltou = await tx.bankTransaction.updateMany({
         where: { id: t.id, status: "CONCILIADA" },
         data: { status: "PENDENTE", reconciledAt: null, reconciledById: null },

@@ -119,6 +119,7 @@ export async function obterDocumento(alcance: AlcanceFiscal, id: string) {
           id: true,
           kind: true,
           status: true,
+          closeReason: true,
           dueDate: true,
           amount: true,
           category: { select: { name: true } },

@@ -182,7 +182,7 @@ export async function cancelarLancamentoManual(entryId: string): Promise<Resulta
   if (!ctx.tenantId) return { error: "Não autenticado." };
   const conta = await prisma.financeEntry.findFirst({
     where: { id: entryId, tenantId: ctx.tenantId },
-    select: { id: true, companyId: true, status: true, paidAt: true, fiscalDocumentId: true },
+    select: { id: true, companyId: true, status: true, paidAt: true, fiscalDocumentId: true, agreementId: true },
   });
   if (!conta) return { error: "Lançamento não encontrado." };
 
@@ -192,7 +192,14 @@ export async function cancelarLancamentoManual(entryId: string): Promise<Resulta
   const veredito = podeCancelarManual(conta);
   if (!veredito.pode) return { error: veredito.motivo };
 
-  await prisma.financeEntry.update({ where: { id: entryId }, data: { status: "CANCELADO" } });
+  // Motivo explícito desde a cobrança: `CANCELADO` com motivo nulo é só o
+  // cancelado de antes da coluna. Condicionado ao estado lido — uma baixa ou um
+  // acordo que chegou antes não é cancelado por cima.
+  const cancelado = await prisma.financeEntry.updateMany({
+    where: { id: entryId, tenantId: c.tenantId, status: conta.status, paidAt: null, agreementId: null },
+    data: { status: "CANCELADO", closeReason: "CANCELADO" },
+  });
+  if (cancelado.count !== 1) return { error: "O lançamento acabou de mudar — atualize a tela." };
   await logAudit({
     tenantId: c.tenantId,
     userId: c.ctx.userId,
@@ -228,7 +235,15 @@ async function prepararParaEmpresa(tenantId: string, companyId: string, texto: s
 
   const existentes = competencias.length
     ? await prisma.financeEntry.findMany({
-        where: { tenantId, companyId, competence: { in: competencias }, status: { not: "CANCELADO" } },
+        // Renegociado e perdido contam como existentes: o título continua sendo
+        // um fato daquela competência, e reimportar a planilha que o trouxe não
+        // pode recriá-lo em aberto por cima do acordo ou da perda.
+        where: {
+          tenantId,
+          companyId,
+          competence: { in: competencias },
+          OR: [{ status: { not: "CANCELADO" } }, { closeReason: { in: ["RENEGOCIADO", "PERDA"] } }],
+        },
         select: {
           kind: true,
           competence: true,

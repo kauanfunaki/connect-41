@@ -76,6 +76,17 @@ export default async function DreEconomicaPage({
   const lancamentos = meses.reduce((n, m) => n + m.lancamentos, 0);
   const provisorios = meses.reduce((n, m) => n + m.provisorios, 0);
   const naoClassificado = meses.flatMap((m) => m.resultado.naoClassificado).reduce((n, x) => n + x.centavos, 0);
+  // Diferença de acordo e perda com clientes: não são lançamento, mas são
+  // resultado do mês — ver src/lib/financeiro/cobranca/dre.ts.
+  const cobranca = meses.reduce(
+    (t, m) => ({
+      acrescimos: t.acrescimos + m.cobranca.acrescimosDeAcordo,
+      descontos: t.descontos + m.cobranca.descontosDeAcordo,
+      perdas: t.perdas + m.cobranca.perdas,
+    }),
+    { acrescimos: 0, descontos: 0, perdas: 0 }
+  );
+  const temCobranca = cobranca.acrescimos !== 0 || cobranca.descontos !== 0 || cobranca.perdas !== 0;
   const resultado = comRotulosEconomicos(
     visao === "mes" ? serie.get(mes)!.resultado : resultadoDePorGrupo(somarPorGrupo(meses.map((m) => m.resultado.porGrupo)))
   );
@@ -96,7 +107,7 @@ export default async function DreEconomicaPage({
         ativa={visao}
       />
 
-      {lancamentos === 0 ? (
+      {lancamentos === 0 && !temCobranca ? (
         <EmptyState
           title={`Nenhum lançamento com competência em ${periodo}`}
           description="A DRE econômica soma os lançamentos pela competência. Contas lançadas por nota ou à mão aparecem aqui no mês a que pertencem."
@@ -152,12 +163,26 @@ export default async function DreEconomicaPage({
             </Card>
           )}
 
+          {temCobranca && (
+            <Card className="p-4 mb-4">
+              <p className="text-[13px] text-fg">
+                Da cobrança neste período:
+                {cobranca.acrescimos !== 0 && <> acréscimos de acordo <strong className="tabular-nums">{moeda(cobranca.acrescimos)}</strong> em outras receitas;</>}
+                {cobranca.descontos !== 0 && <> descontos de acordo <strong className="tabular-nums">{moeda(Math.abs(cobranca.descontos))}</strong> em outras despesas;</>}
+                {cobranca.perdas !== 0 && <> perdas com clientes <strong className="tabular-nums">{moeda(Math.abs(cobranca.perdas))}</strong> em outras despesas.</>}
+              </p>
+              <p className="text-[11px] text-fg-muted mt-1">
+                Título renegociado ou perdido continua como receita na competência dele; parcela de acordo não é receita, é recebimento.
+              </p>
+            </Card>
+          )}
+
           <RelatorioDoDre resultado={resultado} />
         </>
       )}
 
       <p className="text-[11px] text-fg-muted mt-3">
-        {lancamentos} {lancamentos === 1 ? "lançamento" : "lançamentos"} com competência em {periodo}, cancelados fora.
+        {lancamentos} {lancamentos === 1 ? "lançamento" : "lançamentos"} com competência em {periodo}, cancelados e parcelas de acordo fora.
         {" "}Regime de <strong>competência</strong>: o que foi pago ou recebido está em{" "}
         <Link href={`/dre?empresa=${companyId}`} className="text-brand hover:underline">DRE (caixa)</Link>. O import do Omie
         não entra aqui — é export de pagamentos, sem competência. A diferença entre os dois regimes está em{" "}

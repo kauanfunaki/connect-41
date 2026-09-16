@@ -71,12 +71,18 @@ export default async function CadastrosFinanceirosPage({
   const [contrapartes, movimento, categorias] = await Promise.all([
     prisma.financeCounterparty.findMany({
       where: { tenantId: ctx.tenantId, companyId },
-      select: { id: true, name: true, document: true, active: true, defaultCategoryId: true, defaultCategory: { select: { name: true } } },
+      select: { id: true, name: true, document: true, email: true, active: true, defaultCategoryId: true, defaultCategory: { select: { name: true } } },
       orderBy: { name: "asc" },
     }),
     prisma.financeEntry.groupBy({
       by: ["counterpartyId", "kind"],
-      where: { tenantId: ctx.tenantId, companyId, status: { not: "CANCELADO" } },
+      // Renegociado e perdido ainda dizem o papel da ficha: são contas a receber
+      // que existiram, e o sacado não vira "sem movimento" porque fez um acordo.
+      where: {
+        tenantId: ctx.tenantId,
+        companyId,
+        OR: [{ status: { not: "CANCELADO" } }, { closeReason: { in: ["RENEGOCIADO", "PERDA"] } }],
+      },
       _count: { _all: true },
     }),
     prisma.financeCategory.findMany({
@@ -146,7 +152,10 @@ export default async function CadastrosFinanceirosPage({
                 const n = contas.get(c.id) ?? { pagar: 0, receber: 0 };
                 return (
                   <tr key={c.id} className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
-                    <td className="py-2.5 pr-3 font-medium">{c.name}</td>
+                    <td className="py-2.5 pr-3">
+                      <span className="font-medium">{c.name}</span>
+                      {c.email && <span className="block text-[11px] text-fg-muted">{c.email}</span>}
+                    </td>
                     <td className="py-2.5 pr-3 tabular-nums text-fg-secondary">{documento(c.document)}</td>
                     <td className="py-2.5 pr-3 text-fg-secondary">{c.defaultCategory?.name ?? "—"}</td>
                     <td className="py-2.5 pr-3 text-right tabular-nums">{n.pagar}</td>
@@ -158,7 +167,7 @@ export default async function CadastrosFinanceirosPage({
                       {podeEditar && (
                         <EditarContraparte
                           categorias={listaDeCategorias}
-                          contraparte={{ id: c.id, nome: c.name, documento: c.document, defaultCategoryId: c.defaultCategoryId, ativo: c.active }}
+                          contraparte={{ id: c.id, nome: c.name, documento: c.document, email: c.email, defaultCategoryId: c.defaultCategoryId, ativo: c.active }}
                         />
                       )}
                     </td>
@@ -169,7 +178,8 @@ export default async function CadastrosFinanceirosPage({
           </table>
           <p className="text-[11px] text-fg-muted mt-3">
             Inativo continua nas contas antigas e deixa de aparecer no lançamento manual. Cadastro não é apagado: a ficha é
-            o que liga as notas e as contas de um mesmo fornecedor.
+            o que liga as notas e as contas de um mesmo fornecedor. O e-mail é para onde vai o lembrete da régua de
+            cobrança — sacado sem e-mail fica fora dela.
           </p>
         </div>
       )}

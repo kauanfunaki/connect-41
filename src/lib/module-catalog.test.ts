@@ -70,6 +70,12 @@ describe("catálogo de módulos", () => {
     expect(MODULE_ROUTES.bpo_aprovacoes).toBe("/aprovacoes");
   });
 
+  // A régua de e-mail é que nasce desligada (por tenant); a fila só lê vencidos.
+  it("Cobrança está no BPO, em /cobranca, ligada por padrão", () => {
+    expect(getModuleDef("bpo_cobranca")).toMatchObject({ sectorCode: "bpo", defaultEnabled: true, label: "Cobrança" });
+    expect(MODULE_ROUTES.bpo_cobranca).toBe("/cobranca");
+  });
+
   it("Documentos Fiscais nasce desligado", () => {
     expect(getModuleDef("fiscal_documentos")?.defaultEnabled).toBe(false);
   });

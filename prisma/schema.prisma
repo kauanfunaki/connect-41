@@ -529,6 +529,12 @@ model Tenant {
   bankTransactions         BankTransaction[]
   clientRequests           ClientRequest[]
   portalApprovalLimits     PortalApprovalLimit[]
+  collectionContacts       CollectionContact[]
+  collectionAgreements     CollectionAgreement[]
+  collectionEvents         CollectionEvent[]
+  collectionReminderLogs   CollectionReminderLog[]
+  collectionReminderConfig CollectionReminderConfig?
+  collectionReminderOptOuts CollectionReminderOptOut[]
   agentEvaluationSummaries AgentEvaluationSummary[]
   sectorTaskViews          SectorTaskView[]
   processOrgans            ProcessOrgan[]
@@ -743,6 +749,14 @@ model User {
   clientRequestMessages      ClientRequestMessage[]  @relation("ClientRequestMessageAuthorUser")
   clientRequestAttachments   ClientRequestAttachment[] @relation("ClientRequestAttachmentUser")
   financeApprovalEvents      FinanceApprovalEvent[]  @relation("FinanceApprovalEventUser")
+  financeEntriesLost         FinanceEntry[]          @relation("FinanceEntryLossBy")
+  financeEntriesCollecting   FinanceEntry[]          @relation("FinanceEntryCollectionOwner")
+  collectionContacts         CollectionContact[]     @relation("CollectionContactUser")
+  collectionAgreementsCreated CollectionAgreement[]  @relation("CollectionAgreementCreatedBy")
+  collectionAgreementsClosed CollectionAgreement[]   @relation("CollectionAgreementClosedBy")
+  collectionEvents           CollectionEvent[]       @relation("CollectionEventUser")
+  collectionReminderConfigs  CollectionReminderConfig[] @relation("CollectionReminderConfigUpdatedBy")
+  collectionReminderOptOuts  CollectionReminderOptOut[] @relation("CollectionReminderOptOutCreatedBy")
   meetingsCreated            Meeting[]               @relation("MeetingCreatedBy")
   meetingAttendances         MeetingAttendee[]
   clientDocumentsCreated     ClientDocument[]
@@ -984,6 +998,8 @@ model Company {
   bankAccounts          BankAccount[]
   clientRequests        ClientRequest[]
   portalApprovalLimits  PortalApprovalLimit[]
+  collectionAgreements  CollectionAgreement[]
+  collectionReminderOptOut CollectionReminderOptOut?
 
   // Casar documento fiscal com empresa pelo CNPJ do XML exige que o par seja
   // único: com duas empresas do mesmo tenant sob o mesmo CNPJ o casamento é
@@ -2299,6 +2315,9 @@ model FinanceCounterparty {
   name      String  @db.VarChar(180)
   /// CNPJ ou CPF, só dígitos — é assim que se casa com a ponta do documento.
   document  String? @db.VarChar(14)
+  /// Para onde vai o lembrete da régua de cobrança. Opcional: sacado sem e-mail
+  /// fica fora da régua, e a fila diz isso em vez de pular em silêncio.
+  email     String? @db.VarChar(180)
 
   /// Categoria que a próxima nota deste fornecedor herda.
   ///
@@ -2316,6 +2335,7 @@ model FinanceCounterparty {
   company         Company          @relation(fields: [companyId], references: [id])
   defaultCategory FinanceCategory? @relation(fields: [defaultCategoryId], references: [id])
   entries         FinanceEntry[]
+  agreements      CollectionAgreement[]
 
   @@unique([tenantId, companyId, document])
   @@index([tenantId, companyId])
@@ -2363,6 +2383,27 @@ model FinanceEntry {
   approvalStatus FinanceApprovalStatus @default(NAO_REQUER)
   approvedAt     DateTime?
 
+  /// Por que o lançamento saiu do em aberto, quando saiu por decisão e não por
+  /// baixa. Vem **junto** de `status: CANCELADO` — é o que mantém certo todo
+  /// filtro de "em aberto" que já existe (`status != CANCELADO`), sem que cada
+  /// um precise conhecer cobrança. Nulo com `CANCELADO` é o cancelado comum de
+  /// antes desta coluna: a migration não reescreve dado.
+  closeReason       FinanceCloseReason?
+  /// O status que o lançamento tinha antes de ser encerrado por renegociação ou
+  /// perda — desfazer o acordo ou reverter a perda devolve exatamente ele.
+  statusBeforeClose FinanceEntryStatus?
+  /// Parcela deste acordo. Parcela não é receita na DRE econômica: é o
+  /// recebimento de uma receita que já foi reconhecida no título original.
+  agreementId             String?
+  /// Título original renegociado neste acordo.
+  renegotiatedAgreementId String?
+  /// Baixa por perda: quando, por quê e quem decidiu (a coordenação).
+  lossAt            DateTime?
+  lossReason        String?   @db.VarChar(500)
+  lossById          String?
+  /// Quem da equipe cuida da cobrança deste título.
+  collectionOwnerId String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -2377,12 +2418,30 @@ model FinanceEntry {
   bankMatch      BankTransactionMatch?
   approvalEvents FinanceApprovalEvent[]
   clientRequests ClientRequest[]
+  agreement             CollectionAgreement?    @relation("AgreementInstallments", fields: [agreementId], references: [id], onDelete: Restrict)
+  renegotiatedAgreement CollectionAgreement?    @relation("AgreementOriginals", fields: [renegotiatedAgreementId], references: [id], onDelete: Restrict)
+  lossBy                User?                   @relation("FinanceEntryLossBy", fields: [lossById], references: [id], onDelete: SetNull)
+  collectionOwner       User?                   @relation("FinanceEntryCollectionOwner", fields: [collectionOwnerId], references: [id], onDelete: SetNull)
+  collectionContacts    CollectionContact[]
+  collectionEvents      CollectionEvent[]
+  reminderLogs          CollectionReminderLog[]
 
   @@index([tenantId, companyId, competence])
   @@index([tenantId, companyId, kind, status])
   @@index([tenantId, dueDate])
   @@index([tenantId, approvalStatus, companyId])
+  @@index([agreementId])
+  @@index([renegotiatedAgreementId])
+  @@index([tenantId, companyId, closeReason, lossAt])
+  @@index([tenantId, collectionOwnerId])
   @@map("finance_entries")
+}
+
+/// Por que um lançamento cancelado saiu do em aberto. Ver `FinanceEntry.closeReason`.
+enum FinanceCloseReason {
+  CANCELADO
+  RENEGOCIADO
+  PERDA
 }
 
 // ─── Aprovação por alçada ────────────────────────────────────────────────────
@@ -2537,6 +2596,188 @@ model ClientRequestAttachment {
   @@index([requestId])
   @@index([messageId])
   @@map("client_request_attachments")
+}
+
+// ─── Cobrança ────────────────────────────────────────────────────────────────
+//
+// Inadimplência das contas a receber da empresa cliente: o histórico de
+// contatos com o sacado, o acordo que troca títulos vencidos por parcelas, a
+// baixa por perda e a régua de lembretes por e-mail. As regras vivem em
+// src/lib/financeiro/cobranca/ — aqui só o que precisa persistir.
+
+enum CollectionChannel {
+  TELEFONE
+  WHATSAPP
+  EMAIL
+  PRESENCIAL
+  OUTRO
+}
+
+enum CollectionOutcome {
+  SEM_RESPOSTA
+  PROMETEU_PAGAR
+  CONTESTOU
+  NEGOCIANDO
+  OUTRO
+}
+
+enum CollectionAgreementStatus {
+  ATIVO
+  CUMPRIDO
+  QUEBRADO
+  DESFEITO
+}
+
+/// Os fatos da cobrança que não são contato: quem assumiu, renegociação,
+/// perda e a volta de cada um. Contato tem tabela própria porque tem canal,
+/// resultado e próxima ação; estes são só "aconteceu, por quem, por quê".
+enum CollectionEventKind {
+  RESPONSAVEL_ALTERADO
+  RENEGOCIADO
+  DEVOLVIDO_AO_ABERTO
+  PERDA
+  PERDA_REVERTIDA
+  ACORDO_QUEBRADO
+}
+
+/// Um contato com o sacado sobre um título.
+model CollectionContact {
+  id           String            @id @default(uuid())
+  tenantId     String
+  entryId      String
+  /// Pode ser retroativo (a ligação de ontem registrada hoje), nunca futuro.
+  contactedAt  DateTime
+  channel      CollectionChannel
+  outcome      CollectionOutcome
+  /// Anotação **interna** — o portal mostra canal e resultado, nunca isto.
+  notes        String?           @db.Text
+  nextActionAt DateTime?
+  userId       String?
+  createdAt    DateTime          @default(now())
+
+  tenant Tenant       @relation(fields: [tenantId], references: [id])
+  /// Cascade como o histórico de aprovação: o estorno da nota apaga o lançamento.
+  entry  FinanceEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  user   User?        @relation("CollectionContactUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entryId, contactedAt])
+  @@index([tenantId, nextActionAt])
+  @@map("collection_contacts")
+}
+
+/// Acordo: títulos vencidos de um sacado trocados por N parcelas novas.
+model CollectionAgreement {
+  id             String @id @default(uuid())
+  tenantId       String
+  companyId      String
+  counterpartyId String
+
+  /// Soma dos títulos originais no momento do acordo.
+  originalAmount Decimal @db.Decimal(12, 2)
+  /// O que o sacado se comprometeu a pagar. A diferença para o original é
+  /// acréscimo (positiva) ou desconto (negativa) na DRE econômica.
+  agreedAmount   Decimal @db.Decimal(12, 2)
+  installments   Int
+  /// Data civil ao meio-dia de São Paulo, como todo vencimento.
+  firstDueDate   DateTime
+  intervalMonths Int     @default(1)
+  /// Data do acordo — a competência em que a diferença é reconhecida.
+  agreedAt       DateTime
+
+  status   CollectionAgreementStatus @default(ATIVO)
+  notes    String?                   @db.Text
+  closedAt DateTime?
+
+  createdById String?
+  closedById  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant       Tenant              @relation(fields: [tenantId], references: [id])
+  company      Company             @relation(fields: [companyId], references: [id])
+  counterparty FinanceCounterparty @relation(fields: [counterpartyId], references: [id])
+  createdBy    User?               @relation("CollectionAgreementCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  closedBy     User?               @relation("CollectionAgreementClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
+  parcelas     FinanceEntry[]      @relation("AgreementInstallments")
+  originais    FinanceEntry[]      @relation("AgreementOriginals")
+  events       CollectionEvent[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, companyId, agreedAt])
+  @@map("collection_agreements")
+}
+
+model CollectionEvent {
+  id          String              @id @default(uuid())
+  tenantId    String
+  entryId     String
+  kind        CollectionEventKind
+  agreementId String?
+  reason      String?             @db.VarChar(500)
+  userId      String?
+  createdAt   DateTime            @default(now())
+
+  tenant    Tenant               @relation(fields: [tenantId], references: [id])
+  entry     FinanceEntry         @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  agreement CollectionAgreement? @relation(fields: [agreementId], references: [id], onDelete: SetNull)
+  user      User?                @relation("CollectionEventUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entryId, createdAt])
+  @@map("collection_events")
+}
+
+/// Um passo da régua por título. O unique é a idempotência: a linha é gravada
+/// **antes** do envio, e a segunda execução do cron esbarra nela.
+model CollectionReminderLog {
+  id       String   @id @default(uuid())
+  tenantId String
+  entryId  String
+  /// Dias de atraso do passo (1, 7, 15, 30…).
+  step     Int
+  sentAt   DateTime @default(now())
+  to       String   @db.VarChar(180)
+  ok       Boolean  @default(false)
+  error    String?  @db.VarChar(500)
+
+  tenant Tenant       @relation(fields: [tenantId], references: [id])
+  entry  FinanceEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, step])
+  @@index([tenantId, sentAt])
+  @@map("collection_reminder_logs")
+}
+
+/// Régua do tenant. Sem linha, a régua está **desligada**: o primeiro envio
+/// automático a sacado de cliente é decisão de alguém, não efeito de deploy.
+model CollectionReminderConfig {
+  id          String   @id @default(uuid())
+  tenantId    String   @unique
+  enabled     Boolean  @default(false)
+  /// Passos em dias de atraso, separados por vírgula ("1,7,15,30").
+  steps       String   @db.VarChar(60)
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id])
+  updatedBy User?  @relation("CollectionReminderConfigUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@map("collection_reminder_configs")
+}
+
+/// Empresa cliente fora da régua — o cliente que cobra os próprios sacados.
+model CollectionReminderOptOut {
+  id          String   @id @default(uuid())
+  tenantId    String
+  companyId   String   @unique
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  tenant    Tenant  @relation(fields: [tenantId], references: [id])
+  company   Company @relation(fields: [companyId], references: [id])
+  createdBy User?   @relation("CollectionReminderOptOutCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@map("collection_reminder_opt_outs")
 }
 
 // ─── Conciliação bancária ────────────────────────────────────────────────────

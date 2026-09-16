@@ -16,6 +16,7 @@ const ITENS: Item[] = [
   { chave: "relatorios", rotulo: "Relatório", href: "/portal/relatorios", modulo: "bpo_fluxo_caixa" },
   { chave: "pendencias", rotulo: "Pendências", href: "/portal/pendencias", modulo: "bpo_pendencias" },
   { chave: "aprovacoes", rotulo: "Aprovações", href: "/portal/aprovacoes", modulo: "bpo_aprovacoes" },
+  { chave: "cobranca", rotulo: "Cobrança", href: "/portal/cobranca", modulo: "bpo_cobranca" },
 ];
 
 export function PortalNav({ ativo, modulos }: { ativo: string; modulos: Set<string> }) {

@@ -10,6 +10,8 @@ import { conferirConta, marcarComoPago, desfazerPagamento } from "@/lib/financei
 import { enviarParaAprovacao } from "@/app/(app)/aprovacoes/actions";
 import { SeloDaAprovacao } from "@/components/aprovacoes/HistoricoDaAprovacao";
 import { aprovacaoEmCurso, motivoDoBloqueioDeBaixa, podeEnviarParaAprovacao } from "@/lib/financeiro/aprovacao/regras";
+import { SeloDaCobranca } from "@/components/cobranca/SeloDaCobranca";
+import type { SituacaoDeCobranca } from "@/lib/financeiro/cobranca/regras";
 
 const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -46,6 +48,11 @@ type Props = {
   podeEnviarParaAprovacao?: boolean;
   /** Módulo de pendências ligado e a pessoa atua nele: mostra "abrir pendência". */
   podeAbrirPendencia?: boolean;
+  /**
+   * Situação de cobrança por lançamento, quando o módulo de cobrança está ligado
+   * e a pessoa atua nele (só a receber). O selo leva ao título na cobrança.
+   */
+  cobranca?: Map<string, SituacaoDeCobranca | null> | null;
 };
 
 export function ContasTable({
@@ -55,6 +62,7 @@ export function ContasTable({
   hojeISO,
   podeEnviarParaAprovacao: moduloDeAprovacao = false,
   podeAbrirPendencia = false,
+  cobranca = null,
 }: Props) {
   if (linhas.length === 0) {
     return filtrado ? (
@@ -124,7 +132,17 @@ export function ContasTable({
               </td>
               <td className="py-2.5 pr-3">
                 <div className="flex items-center gap-2">
-                  <Badge variant={SITUACAO_VARIANTE[l.situacao]}>{SITUACAO_LABEL[l.situacao]}</Badge>
+                  <Badge variant={SITUACAO_VARIANTE[l.situacao]}>
+                    {/* Cancelada por renegociação ou perda diz o nome: "cancelada" esconderia
+                        que a dívida continua num acordo, ou que alguém decidiu dar por perdida. */}
+                    {l.closeReason === "RENEGOCIADO" ? "Renegociada" : l.closeReason === "PERDA" ? "Perda" : SITUACAO_LABEL[l.situacao]}
+                  </Badge>
+                  {cobranca && cobranca.get(l.id) && cobranca.get(l.id) !== "EM_DIA" && l.closeReason !== "PERDA" && (
+                    <Link href={`/cobranca/${l.id}`} className="inline-flex" title="Abrir na cobrança">
+                      <SeloDaCobranca situacao={cobranca.get(l.id) ?? null} />
+                    </Link>
+                  )}
+                  {l.parcelaDeAcordo && !cobranca?.get(l.id) && <span className="text-[11px] text-fg-muted whitespace-nowrap">parcela de acordo</span>}
                   {/* Selo só enquanto pesa sobre a conta, ou aprovada ainda em aberto:
                       depois de paga ou cancelada, a aprovação é histórico. */}
                   {(aprovacaoEmCurso(l) || (l.approvalStatus === "APROVADO" && l.status !== "PAGO" && l.status !== "CANCELADO")) && (

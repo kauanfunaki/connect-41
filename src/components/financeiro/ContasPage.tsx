@@ -13,6 +13,7 @@ import { getModuleDef } from "@/lib/module-catalog";
 import { ContasTable, moeda } from "./ContasTable";
 import { AnaliseDeContas } from "./AnaliseDeContas";
 import { AbasDeLink } from "./FiltroDePeriodo";
+import { situacoesDeCobranca, MODULO_DE_COBRANCA } from "@/lib/financeiro/cobranca/consultas";
 
 const RECORTES = [
   { chave: "abertas", rotulo: "Em aberto" },
@@ -58,11 +59,13 @@ export async function ContasPage({
 
   // Os atalhos para os módulos vizinhos aparecem só para quem atua neles, com
   // eles ligados — link para uma tela que responde 404 é pior que nenhum.
-  const [pendenciasLigado, aprovacoesLigado, setorDePendencias, setorDeAprovacoes] = await Promise.all([
+  const [pendenciasLigado, aprovacoesLigado, cobrancaLigada, setorDePendencias, setorDeAprovacoes, setorDaCobranca] = await Promise.all([
     isModuleEnabled(ctx.tenantId, "bpo_pendencias"),
     isModuleEnabled(ctx.tenantId, "bpo_aprovacoes"),
+    isModuleEnabled(ctx.tenantId, MODULO_DE_COBRANCA),
     setorDoModulo(ctx.tenantId, "bpo_pendencias"),
     setorDoModulo(ctx.tenantId, "bpo_aprovacoes"),
+    setorDoModulo(ctx.tenantId, MODULO_DE_COBRANCA),
   ]);
   const podeAbrirPendencia = pendenciasLigado && canActOnSector(ctx, setorDePendencias ?? "bpo");
   const podeEnviarParaAprovacao = kind === "PAGAR" && aprovacoesLigado && canActOnSector(ctx, setorDeAprovacoes ?? "bpo");
@@ -84,6 +87,11 @@ export async function ContasPage({
 
   const aPagar = kind === "PAGAR";
   const base = aPagar ? "/pagar" : "/receber";
+  // Selo de cobrança só em a receber, e só na aba de contas — a análise não lista título.
+  const cobranca =
+    !aPagar && aba === "contas" && cobrancaLigada && canActOnSector(ctx, setorDaCobranca ?? "bpo")
+      ? await situacoesDeCobranca(ctx.tenantId, resultado.linhas.map((l) => l.id), saoPauloParts(agora).dateKey)
+      : null;
 
   function comParam(chave: string, valor: string | undefined) {
     const q = new URLSearchParams();
@@ -211,6 +219,7 @@ export async function ContasPage({
           hojeISO={saoPauloParts(agora).dateKey}
           podeAbrirPendencia={podeAbrirPendencia}
           podeEnviarParaAprovacao={podeEnviarParaAprovacao}
+          cobranca={cobranca}
         />
       )}
 

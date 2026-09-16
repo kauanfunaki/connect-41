@@ -73,7 +73,8 @@ export default async function PortalDrePage({
   } else {
     const dre = (await serieEconomica(escopo.tenantId, companyId, [mes])).get(mes)!;
     conteudo =
-      dre.lancamentos === 0 ? (
+      // Mês só com perda ou diferença de acordo ainda tem resultado a mostrar.
+      dre.lancamentos === 0 && dre.cobranca.perdas === 0 && dre.cobranca.acrescimosDeAcordo === 0 && dre.cobranca.descontosDeAcordo === 0 ? (
         <EmptyState icon={<FileText />} title={`Nenhum lançamento com competência em ${rotuloDaCompetencia(mes)}`} />
       ) : (
         <RelatorioDoDre resultado={comRotulosEconomicos(dre.resultado)} />

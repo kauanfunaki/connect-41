@@ -202,6 +202,16 @@ export async function estornarLancamento(documentoId: string): Promise<{ error: 
     // Apagar aqui esconderia um pagamento que saiu da conta.
     return { error: "O lançamento já foi pago. O estorno tem de ser feito no financeiro, com a baixa." };
   }
+  if (doc.financeEntry.closeReason === "RENEGOCIADO" || doc.financeEntry.closeReason === "PERDA") {
+    // Apagar o título apagaria junto a receita que a DRE econômica mantém e o
+    // vínculo com o acordo (ou a decisão de perda). Desfaça na cobrança antes.
+    return {
+      error:
+        doc.financeEntry.closeReason === "RENEGOCIADO"
+          ? "O título foi renegociado num acordo de cobrança. Desfaça o acordo antes de estornar."
+          : "O título foi baixado por perda na cobrança. Reverta a perda antes de estornar.",
+    };
+  }
 
   const entryId = doc.financeEntry.id;
   await prisma.$transaction(async (tx) => {

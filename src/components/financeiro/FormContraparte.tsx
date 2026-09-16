@@ -47,6 +47,10 @@ export function NovaContraparte({ companyId, categorias }: { companyId: string; 
           <span className="font-medium">CPF ou CNPJ</span>
           <Input name="documento" inputMode="numeric" />
         </label>
+        <label className="flex flex-col gap-1 text-[12px] text-fg-secondary md:col-span-2">
+          <span className="font-medium">E-mail (lembretes de cobrança)</span>
+          <Input name="email" type="email" maxLength={180} />
+        </label>
         <label className="flex flex-col gap-1 text-[12px] text-fg-secondary">
           <span className="font-medium">Categoria padrão (pagar)</span>
           <Select name="defaultCategoryId" defaultValue="">
@@ -76,7 +80,7 @@ export function EditarContraparte({
   contraparte,
   categorias,
 }: {
-  contraparte: { id: string; nome: string; documento: string | null; defaultCategoryId: string | null; ativo: boolean };
+  contraparte: { id: string; nome: string; documento: string | null; email: string | null; defaultCategoryId: string | null; ativo: boolean };
   categorias: Categoria[];
 }) {
   const [aberto, setAberto] = useState(false);
@@ -110,6 +114,7 @@ export function EditarContraparte({
       {/* Documento só se preenche: trocar o CNPJ de ficha com histórico
           desfaria o casamento com as notas — ver `atualizarContraparte`. */}
       {!contraparte.documento && <Input compact name="documento" placeholder="CPF ou CNPJ" inputMode="numeric" aria-label="Documento" />}
+      <Input compact name="email" type="email" defaultValue={contraparte.email ?? ""} maxLength={180} placeholder="E-mail para cobrança" aria-label="E-mail" />
       <Select compact name="defaultCategoryId" defaultValue={contraparte.defaultCategoryId ?? ""} aria-label="Categoria padrão">
         <option value="">Sem categoria padrão</option>
         {categorias.map((c) => (

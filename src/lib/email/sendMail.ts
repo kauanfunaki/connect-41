@@ -743,3 +743,95 @@ function escapeHtml(input: string): string {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
+
+// ─── Régua de cobrança ─────────────────────────────────────────────────────
+
+export type LembreteDeCobranca = {
+  para: string;
+  /** A empresa cliente — a credora. É quem assina o e-mail. */
+  empresaNome: string;
+  sacadoNome: string;
+  valorCentavos: number;
+  vencimento: Date;
+  diasDeAtraso: number;
+  descricao: string | null;
+};
+
+/**
+ * Abre o envio da régua de cobrança para um tenant: um transporte para o lote
+ * inteiro, em vez de um por e-mail. `null` quando o tenant não tem SMTP — o
+ * cron registra isso e segue para o próximo tenant, sem quebrar.
+ *
+ * O e-mail vai ao **sacado**, que não é cliente do escritório nem usuário do
+ * Connect. Por isso não usa `emailShell`: sem a marca do Connect, sem link
+ * nenhum (nem de portal, nem de app), e com o nome da empresa credora no
+ * remetente e no topo — é a empresa cliente cobrando, pelo SMTP do escritório.
+ */
+export async function abrirEnvioDeCobranca(tenantId: string) {
+  const transport = await getTenantTransport(tenantId);
+  if (!transport) return null;
+  const { transporter, config } = transport;
+  const moeda = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+
+  return async function enviar(l: LembreteDeCobranca): Promise<SmtpResult> {
+    const valor = moeda.format(l.valorCentavos / 100);
+    const vencimento = formatInstantDate(l.vencimento);
+    const atraso = l.diasDeAtraso === 1 ? "1 dia" : `${l.diasDeAtraso} dias`;
+    const linha = (rotulo: string, texto: string) => `
+          <tr>
+            <td style="padding:6px 0; font-size:12px; color:#7B81A0; font-family:Arial,Helvetica,sans-serif;">${rotulo}</td>
+            <td align="right" style="padding:6px 0; font-size:14px; font-weight:700; color:#0B1F42; font-family:Arial,Helvetica,sans-serif;">${texto}</td>
+          </tr>`;
+    const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+  <head><meta charset="utf-8" /><meta name="color-scheme" content="light" /><title></title></head>
+  <body bgcolor="#F4F5F8" style="margin:0; padding:0; background-color:#F4F5F8;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#F4F5F8" style="background-color:#F4F5F8;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="520" cellpadding="0" cellspacing="0" bgcolor="#FFFFFF" style="max-width:520px; width:100%; border:1px solid #E4E8F2; border-radius:12px; background-color:#FFFFFF;">
+            <tr>
+              <td style="padding:24px 28px 8px; font-family:Arial,Helvetica,sans-serif;">
+                <p style="margin:0; font-size:16px; font-weight:700; color:#0B1F42;">${escapeHtml(l.empresaNome)}</p>
+                <p style="margin:4px 0 0; font-size:12px; color:#7B81A0;">Lembrete de pagamento</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 28px; font-family:Arial,Helvetica,sans-serif;">
+                <p style="margin:0 0 16px; font-size:14px; line-height:1.6; color:#171A2B;">
+                  Olá, ${escapeHtml(l.sacadoNome)}. Consta em aberto, a favor de <strong>${escapeHtml(l.empresaNome)}</strong>, o título abaixo:
+                </p>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #EDF0F7; border-bottom:1px solid #EDF0F7;">
+                  ${l.descricao ? linha("Referência", escapeHtml(l.descricao)) : ""}
+                  ${linha("Valor", valor)}
+                  ${linha("Vencimento", vencimento)}
+                  ${linha("Em atraso há", atraso)}
+                </table>
+                <p style="margin:16px 0 0; font-size:13px; line-height:1.6; color:#171A2B;">
+                  Se o pagamento já foi feito, por favor desconsidere esta mensagem. Para combinar o pagamento ou tirar dúvidas, responda a este e-mail ou fale diretamente com ${escapeHtml(l.empresaNome)}.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+
+    try {
+      // Aspas e quebras no nome da empresa quebrariam o cabeçalho From.
+      const remetente = l.empresaNome.replace(/[\r\n"\\]/g, " ").trim().slice(0, 120);
+      await enviarComRegistro(transporter, "sendLembreteDeCobranca", {
+        from: `"${remetente}" <${config.fromEmail}>`,
+        to: l.para,
+        subject: `Lembrete de pagamento — ${remetente}`,
+        html,
+      });
+      return { ok: true };
+    } catch (err) {
+      console.error("[sendLembreteDeCobranca]", err);
+      return { ok: false, error: err instanceof Error ? err.message.slice(0, 400) : "Falha ao enviar e-mail." };
+    }
+  };
+}

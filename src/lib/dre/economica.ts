@@ -16,7 +16,9 @@
 //
 // ─── O que não entra ─────────────────────────────────────────────────────────
 //
-// - **cancelado** — deixou de existir para efeito de resultado;
+// - **cancelado** — deixou de existir para efeito de resultado. **Menos** o
+//   renegociado e o perdido, que continuam receita na competência deles, e com
+//   a **parcela de acordo** de fora — ver `src/lib/financeiro/cobranca/dre.ts`;
 // - **o import do Omie** — é export de pagamentos e recebimentos, só tem data
 //   de caixa. Não há competência nele para somar.
 
@@ -28,6 +30,11 @@ import {
   type ValorDaLinha,
 } from "./calculo";
 import { OPCOES_PADRAO, type OpcoesDoDre } from "./estrutura";
+import {
+  contaNaDreEconomica,
+  resumoDaCobrancaNaDre,
+  type ResumoDaCobrancaNaDre,
+} from "@/lib/financeiro/cobranca/dre";
 
 export type LancamentoFinanceiro = {
   kind: "PAGAR" | "RECEBER";
@@ -35,6 +42,10 @@ export type LancamentoFinanceiro = {
   /** Sempre positivo, como vem do banco. */
   centavos: number;
   categoria: string | null;
+  /** Por que saiu do em aberto, quando `CANCELADO`. Nulo é o cancelado comum. */
+  closeReason?: "CANCELADO" | "RENEGOCIADO" | "PERDA" | null;
+  /** Parcela de acordo de cobrança — não é receita, é recebimento. */
+  parcelaDeAcordo?: boolean;
 };
 
 /**
@@ -60,19 +71,30 @@ export type DreEconomica = {
    * precisa dizer quantos são, porque é o pedaço do número que ninguém olhou.
    */
   provisorios: number;
+  /** Quanto das outras receitas e despesas é acordo e perda de cobrança. */
+  cobranca: ResumoDaCobrancaNaDre;
 };
 
-/** A DRE de competência de um conjunto de lançamentos já recortado pelo mês. */
+/**
+ * A DRE de competência de um conjunto de lançamentos já recortado pelo mês.
+ *
+ * `ajustes` são os lançamentos de grupo fixo que a cobrança acrescenta ao mês
+ * (diferença de acordo e perda) — `ajustesDaCobranca`. Não contam em
+ * `lancamentos`: não são lançamento de ninguém, e o forecast usa essa contagem
+ * para achar o primeiro mês com movimento.
+ */
 export function calcularDreEconomica(
   lancamentos: LancamentoFinanceiro[],
   mapeamento: Mapeamento,
-  opcoes: OpcoesDoDre = OPCOES_PADRAO
+  opcoes: OpcoesDoDre = OPCOES_PADRAO,
+  ajustes: LancamentoDoDre[] = []
 ): DreEconomica {
-  const validos = lancamentos.filter((l) => l.status !== "CANCELADO");
+  const validos = lancamentos.filter(contaNaDreEconomica);
   return {
-    resultado: calcularDre(validos.map(paraLancamentoDoDre), mapeamento, opcoes),
+    resultado: calcularDre([...validos.map(paraLancamentoDoDre), ...ajustes], mapeamento, opcoes),
     lancamentos: validos.length,
     provisorios: validos.filter((l) => l.status === "PROVISORIO").length,
+    cobranca: resumoDaCobrancaNaDre(ajustes),
   };
 }
 

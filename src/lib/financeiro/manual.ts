@@ -168,13 +168,20 @@ export function statusInicialDoManual(pagoEmKey: string | null): "CONFERIDO" | "
  *   devolve a nota para pendente. Cancelar aqui deixaria a nota marcada como
  *   lançada apontando para um lançamento morto;
  * - **pago** — desfaça a baixa antes. Cancelar um pagamento esconderia
- *   dinheiro que saiu da conta.
+ *   dinheiro que saiu da conta;
+ * - **parcela de acordo** — o caminho é desfazer o acordo, que cancela as
+ *   parcelas juntas e devolve os títulos originais. Cancelar uma parcela solta
+ *   deixaria o acordo cobrando menos do que foi combinado, sem ninguém decidir.
  */
 export function podeCancelarManual(conta: {
   status: "PROVISORIO" | "CONFERIDO" | "PAGO" | "CANCELADO";
   paidAt: Date | null;
   fiscalDocumentId: string | null;
+  agreementId?: string | null;
 }): { pode: true } | { pode: false; motivo: string } {
+  if (conta.agreementId) {
+    return { pode: false, motivo: "Parcela de acordo de cobrança — desfaça o acordo na tela de cobrança." };
+  }
   if (conta.fiscalDocumentId) {
     return { pode: false, motivo: "Este lançamento veio de um documento fiscal — estorne na ficha da nota." };
   }

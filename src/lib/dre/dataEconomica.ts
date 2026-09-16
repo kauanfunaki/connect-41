@@ -3,7 +3,10 @@
 //
 // ─── Dois recortes, cada um num lugar só ─────────────────────────────────────
 //
-// **Competência:** `competence IN (...)`, qualquer status menos cancelado.
+// **Competência:** `competence IN (...)`, qualquer status menos cancelado — com
+// o renegociado e o perdido dentro, a parcela de acordo fora, e a diferença de
+// acordo e a perda somadas na competência da data delas (`WHERE_ECONOMICO` e
+// `ajustesDoPeriodo`, sobre a regra de `src/lib/financeiro/cobranca/dre.ts`).
 // **Caixa:** `paidAt` dentro dos meses — a mesma régua de `dreDoMes`.
 //
 // O caixa daqui usa **só `FinanceEntry`**, sem o import do Omie. As análises
@@ -19,6 +22,8 @@ import { centavosDeDecimal } from "./data";
 import { OPCOES_PADRAO } from "./estrutura";
 import { calcularDreEconomica, paraLancamentoDoDre, type DreEconomica, type LancamentoFinanceiro } from "./economica";
 import { resultadoDePorGrupo, somarPorGrupo, type ConjuntosDaReconciliacao } from "./analises";
+import type { Prisma } from "@/generated/prisma/client";
+import { ajustesDaCobranca, contaNaDreEconomica } from "@/lib/financeiro/cobranca/dre";
 import {
   competenciaDoInstante,
   inicioDaCompetencia,
@@ -43,10 +48,21 @@ export async function contextoDoDre(tenantId: string, companyId: string): Promis
   return { mapeamento, nomePorId: new Map(resolvidas.map((c) => [c.id, c.nome])) };
 }
 
+/**
+ * O recorte econômico no banco — a mesma regra de `contaNaDreEconomica`:
+ * não cancelado, ou encerrado por renegociação ou perda; nunca parcela.
+ */
+export const WHERE_ECONOMICO: Prisma.FinanceEntryWhereInput = {
+  agreementId: null,
+  OR: [{ status: { not: "CANCELADO" } }, { closeReason: { in: ["RENEGOCIADO", "PERDA"] } }],
+};
+
 const SELECAO = {
   id: true,
   kind: true,
   status: true,
+  closeReason: true,
+  agreementId: true,
   amount: true,
   categoryId: true,
   competence: true,
@@ -58,6 +74,8 @@ type Linha = {
   id: string;
   kind: "PAGAR" | "RECEBER";
   status: "PROVISORIO" | "CONFERIDO" | "PAGO" | "CANCELADO";
+  closeReason: "CANCELADO" | "RENEGOCIADO" | "PERDA" | null;
+  agreementId: string | null;
   amount: { toString(): string };
   categoryId: string | null;
   competence: string;
@@ -69,9 +87,48 @@ function paraFinanceiro(l: Linha, nomePorId: Map<string, string>): LancamentoFin
   return {
     kind: l.kind,
     status: l.status,
+    closeReason: l.closeReason,
+    parcelaDeAcordo: l.agreementId !== null,
     centavos: centavosDeDecimal(l.amount),
     categoria: l.categoryId ? nomePorId.get(l.categoryId) ?? null : null,
   };
+}
+
+/**
+ * A diferença de acordo e a perda de cada competência pedida, já como
+ * lançamentos de grupo fixo. Duas consultas pelo intervalo inteiro, separadas
+ * em memória pela competência da **data** do acordo e da perda.
+ */
+export async function ajustesDoPeriodo(
+  tenantId: string,
+  companyId: string,
+  competencias: string[]
+): Promise<Map<string, LancamentoDoDre[]>> {
+  const saida = new Map<string, LancamentoDoDre[]>(competencias.map((c) => [c, []]));
+  if (competencias.length === 0) return saida;
+  const ordenadas = [...competencias].sort();
+  const de = inicioDaCompetencia(ordenadas[0]!);
+  const ate = inicioDaCompetencia(somarMeses(ordenadas.at(-1)!, 1));
+  const prisma = getPrisma();
+  const [acordos, perdas] = await Promise.all([
+    prisma.collectionAgreement.findMany({
+      where: { tenantId, companyId, status: { not: "DESFEITO" }, agreedAt: { gte: de, lt: ate } },
+      select: { agreedAt: true, status: true, originalAmount: true, agreedAmount: true },
+    }),
+    prisma.financeEntry.findMany({
+      where: { tenantId, companyId, closeReason: "PERDA", lossAt: { gte: de, lt: ate } },
+      select: { lossAt: true, amount: true },
+    }),
+  ]);
+  const acordosNaDre = acordos.map((a) => ({
+    competencia: competenciaDoInstante(a.agreedAt),
+    status: a.status,
+    originalCentavos: centavosDeDecimal(a.originalAmount),
+    acordadoCentavos: centavosDeDecimal(a.agreedAmount),
+  }));
+  const perdasNaDre = perdas.map((p) => ({ competencia: competenciaDoInstante(p.lossAt!), centavos: centavosDeDecimal(p.amount) }));
+  for (const c of competencias) saida.set(c, ajustesDaCobranca(acordosNaDre, perdasNaDre, c));
+  return saida;
 }
 
 /** A DRE econômica de cada competência pedida. Uma consulta para todas. */
@@ -81,16 +138,19 @@ export async function serieEconomica(
   competencias: string[]
 ): Promise<Map<string, DreEconomica>> {
   const prisma = getPrisma();
-  const [ctx, linhas] = await Promise.all([
+  const [ctx, linhas, ajustes] = await Promise.all([
     contextoDoDre(tenantId, companyId),
     prisma.financeEntry.findMany({
-      where: { tenantId, companyId, competence: { in: competencias }, status: { not: "CANCELADO" } },
+      where: { tenantId, companyId, competence: { in: competencias }, ...WHERE_ECONOMICO },
       select: SELECAO,
     }),
+    ajustesDoPeriodo(tenantId, companyId, competencias),
   ]);
   const porMes = new Map<string, LancamentoFinanceiro[]>(competencias.map((c) => [c, []]));
   for (const l of linhas) porMes.get(l.competence)?.push(paraFinanceiro(l, ctx.nomePorId));
-  return new Map(competencias.map((c) => [c, calcularDreEconomica(porMes.get(c)!, ctx.mapeamento)]));
+  return new Map(
+    competencias.map((c) => [c, calcularDreEconomica(porMes.get(c)!, ctx.mapeamento, OPCOES_PADRAO, ajustes.get(c) ?? [])])
+  );
 }
 
 /**
@@ -140,22 +200,25 @@ export async function dadosDaReconciliacao(
   const prisma = getPrisma();
   const de = inicioDaCompetencia(competencia);
   const ate = inicioDaCompetencia(somarMeses(competencia, 1));
-  const [ctx, linhas] = await Promise.all([
+  const [ctx, linhas, ajustes] = await Promise.all([
     contextoDoDre(tenantId, companyId),
     prisma.financeEntry.findMany({
       where: {
         tenantId,
         companyId,
-        OR: [{ competence: competencia, status: { not: "CANCELADO" } }, { paidAt: { gte: de, lt: ate } }],
+        OR: [{ competence: competencia, ...WHERE_ECONOMICO }, { paidAt: { gte: de, lt: ate } }],
       },
       select: SELECAO,
     }),
+    ajustesDoPeriodo(tenantId, companyId, [competencia]),
   ]);
 
-  const conjuntos: ConjuntosDaReconciliacao = { ambos: [], soCompetencia: [], soCaixa: [] };
+  // A diferença de acordo e a perda são só competência: não moveram caixa.
+  const conjuntos: ConjuntosDaReconciliacao = { ambos: [], soCompetencia: [...(ajustes.get(competencia) ?? [])], soCaixa: [] };
   for (const l of linhas) {
-    const lanc = paraLancamentoDoDre(paraFinanceiro(l, ctx.nomePorId));
-    const economico = l.competence === competencia && l.status !== "CANCELADO";
+    const financeiro = paraFinanceiro(l, ctx.nomePorId);
+    const lanc = paraLancamentoDoDre(financeiro);
+    const economico = l.competence === competencia && contaNaDreEconomica(financeiro);
     const caixa = l.paidAt !== null && l.paidAt >= de && l.paidAt < ate;
     if (economico && caixa) conjuntos.ambos.push(lanc);
     else if (economico) conjuntos.soCompetencia.push(lanc);
@@ -211,7 +274,7 @@ export async function competenciasDaEmpresa(tenantId: string, companyId: string)
   const prisma = getPrisma();
   const linhas = await prisma.financeEntry.groupBy({
     by: ["competence"],
-    where: { tenantId, companyId, status: { not: "CANCELADO" } },
+    where: { tenantId, companyId, ...WHERE_ECONOMICO },
     orderBy: { competence: "desc" },
     take: 36,
   });

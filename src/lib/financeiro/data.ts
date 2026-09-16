@@ -35,6 +35,10 @@ export type LinhaDaConta = {
   approvalStatus: "NAO_REQUER" | "AGUARDANDO" | "APROVADO" | "REPROVADO";
   /** Documento fiscal que originou, quando veio de um. */
   documentoId: string | null;
+  /** Por que saiu do em aberto, quando cancelada — renegociada e perda aparecem com o nome. */
+  closeReason: "CANCELADO" | "RENEGOCIADO" | "PERDA" | null;
+  /** Parcela de acordo de cobrança. */
+  parcelaDeAcordo: boolean;
 };
 
 export type FiltroDeContas = {
@@ -85,6 +89,8 @@ export async function listarContas(
       description: true,
       fiscalDocumentId: true,
       approvalStatus: true,
+      closeReason: true,
+      agreementId: true,
       company: { select: { id: true, name: true, displayName: true } },
       counterparty: { select: { name: true } },
       category: { select: { name: true } },
@@ -112,6 +118,8 @@ export async function listarContas(
       status: e.status,
       approvalStatus: e.approvalStatus,
       documentoId: e.fiscalDocumentId,
+      closeReason: e.closeReason,
+      parcelaDeAcordo: e.agreementId !== null,
     };
   });
 

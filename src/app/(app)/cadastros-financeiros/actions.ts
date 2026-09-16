@@ -7,6 +7,7 @@ import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { logAudit } from "@/lib/audit";
 import { digitosDoDocumento } from "@/lib/financeiro/manual";
+import { lerEmail } from "@/lib/financeiro/cobranca/regua";
 
 const MODULE = "bpo_cadastros";
 
@@ -42,6 +43,8 @@ export async function criarContraparte(formData: FormData): Promise<ResultadoDoC
   const nome = texto("nome");
   const documento = digitosDoDocumento(texto("documento"));
   const categoriaId = texto("defaultCategoryId") || null;
+  const email = lerEmail(texto("email"));
+  if (email === false) return { error: "E-mail inválido." };
   if (!nome) return { error: "Informe o nome." };
   if (nome.length > 180) return { error: "Nome com mais de 180 caracteres." };
   if (!documentoValido(documento)) return { error: "Documento não é CPF (11 dígitos) nem CNPJ (14)." };
@@ -58,7 +61,7 @@ export async function criarContraparte(formData: FormData): Promise<ResultadoDoC
   }
 
   const criada = await c.prisma.financeCounterparty.create({
-    data: { tenantId: c.tenantId, companyId, name: nome, document: documento, defaultCategoryId: categoriaId },
+    data: { tenantId: c.tenantId, companyId, name: nome, document: documento, email, defaultCategoryId: categoriaId },
     select: { id: true },
   });
   await logAudit({
@@ -99,6 +102,10 @@ export async function atualizarContraparte(formData: FormData): Promise<Resultad
   const nome = texto("nome");
   const categoriaId = texto("defaultCategoryId") || null;
   const ativo = texto("ativo") === "1";
+  // Diferente do documento, o e-mail troca livremente: não casa com nada, só
+  // diz para onde vai o lembrete da régua de cobrança.
+  const email = lerEmail(texto("email"));
+  if (email === false) return { error: "E-mail inválido." };
   const novoDocumento = atual.document ? null : digitosDoDocumento(texto("documento"));
   if (!nome || nome.length > 180) return { error: "Nome obrigatório, até 180 caracteres." };
   if (!documentoValido(novoDocumento)) return { error: "Documento não é CPF (11 dígitos) nem CNPJ (14)." };
@@ -113,7 +120,7 @@ export async function atualizarContraparte(formData: FormData): Promise<Resultad
 
   await prisma.financeCounterparty.update({
     where: { id },
-    data: { name: nome, defaultCategoryId: categoriaId, active: ativo, ...(novoDocumento ? { document: novoDocumento } : {}) },
+    data: { name: nome, email, defaultCategoryId: categoriaId, active: ativo, ...(novoDocumento ? { document: novoDocumento } : {}) },
   });
   await logAudit({
     tenantId: c.tenantId,
@@ -121,7 +128,7 @@ export async function atualizarContraparte(formData: FormData): Promise<Resultad
     action: "financeiro.counterparty.updated",
     entityType: "FinanceCounterparty",
     entityId: id,
-    metadata: { ativo, documentoPreenchido: !!novoDocumento },
+    metadata: { ativo, documentoPreenchido: !!novoDocumento, comEmail: email !== null },
   });
   revalidatePath("/cadastros-financeiros");
   return { ok: true };

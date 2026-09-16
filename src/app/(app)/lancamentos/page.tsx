@@ -178,6 +178,8 @@ async function ListaDeManuais({
       paidAt: true,
       description: true,
       fiscalDocumentId: true,
+      closeReason: true,
+      agreementId: true,
       counterparty: { select: { name: true } },
       category: { select: { name: true } },
     },
@@ -211,7 +213,14 @@ async function ListaDeManuais({
         </thead>
         <tbody>
           {linhas.map((l) => {
-            const status = STATUS[l.status]!;
+            // Renegociado e perda são cancelamentos com nome: a dívida seguiu num
+            // acordo, ou alguém decidiu dar por perdida — "cancelado" diria outra coisa.
+            const status =
+              l.closeReason === "RENEGOCIADO"
+                ? { rotulo: "Renegociado", variante: "info" as const }
+                : l.closeReason === "PERDA"
+                  ? { rotulo: "Perda", variante: "danger" as const }
+                  : STATUS[l.status]!;
             return (
               <tr key={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
                 <td className={`py-2.5 pr-3 text-[12px] font-medium ${l.kind === "PAGAR" ? "text-danger" : "text-success"}`}>

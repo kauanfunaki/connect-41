@@ -239,6 +239,16 @@ export const MODULE_CATALOG: ModuleDef[] = [
     description: "Aprovação de contas a pagar por alçada — o cliente aprova no portal antes da baixa",
     defaultEnabled: true,
   },
+  // Ligado por padrão como o resto do operacional: a fila só lê o que já está
+  // vencido em contas a receber, e a régua de e-mail nasce **desligada** por
+  // tenant (sem linha de configuração) — ligar o módulo não manda nada a ninguém.
+  {
+    code: "bpo_cobranca",
+    label: "Cobrança",
+    sectorCode: "bpo",
+    description: "Inadimplência de contas a receber: fila de vencidos, contatos, acordos, baixa por perda e régua de lembretes por e-mail",
+    defaultEnabled: true,
+  },
   {
     code: "dre_economica",
     label: "DRE econômica",
@@ -302,6 +312,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   bpo_cadastros:           "/cadastros-financeiros",
   bpo_pendencias:          "/pendencias",
   bpo_aprovacoes:          "/aprovacoes",
+  bpo_cobranca:            "/cobranca",
   dre_economica:           "/dre/economica",
   dre_analises:            "/dre/analises",
 };

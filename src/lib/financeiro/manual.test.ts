@@ -113,6 +113,11 @@ describe("podeCancelarManual", () => {
     expect(podeCancelarManual({ status: "PAGO", paidAt: new Date(), fiscalDocumentId: null }).pode).toBe(false);
     expect(podeCancelarManual({ status: "CANCELADO", paidAt: null, fiscalDocumentId: null }).pode).toBe(false);
   });
+
+  // Parcela solta cancelada deixaria o acordo cobrando menos do que foi combinado.
+  it("recusa parcela de acordo de cobrança — o caminho é desfazer o acordo", () => {
+    expect(podeCancelarManual({ status: "CONFERIDO", paidAt: null, fiscalDocumentId: null, agreementId: "acordo" }).pode).toBe(false);
+  });
 });
 
 describe("periodo", () => {

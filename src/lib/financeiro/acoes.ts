@@ -14,6 +14,7 @@ import { saoPauloParts } from "@/lib/agenda";
 import { podeMarcarPago, podeConferir } from "./contas";
 import { setorDoModulo } from "@/lib/modules";
 import { motivoDoBloqueioDeBaixa } from "./aprovacao/regras";
+import { sincronizarAcordos } from "./cobranca/sincronizar";
 
 // `SECTOR` é o de origem, usado só como padrão. As ações servem `/pagar` e
 // `/receber`, que podem estar em setores diferentes num tenant: o gate aceita
@@ -52,6 +53,8 @@ async function contaDoTenant(entryId: string, tenantId: string) {
 function revalidar() {
   revalidatePath("/pagar");
   revalidatePath("/receber");
+  // Baixa de parcela muda o acordo (cumprido) e tira o título da fila.
+  revalidatePath("/cobranca", "layout");
 }
 
 export async function conferirConta(entryId: string): Promise<AcaoDeContaState> {
@@ -120,16 +123,24 @@ export async function marcarComoPago(
   // Condicionado ao estado lido: se a conta foi reenviada para aprovação (ou
   // paga por outra pessoa, ou cancelada) entre a leitura e aqui, a baixa não
   // passa por cima.
+  //
+  // Na mesma transação, o acordo de que a conta é parcela: a última parcela
+  // paga torna o acordo cumprido junto com a baixa.
   const prisma = getPrisma();
-  const baixada = await prisma.financeEntry.updateMany({
-    where: {
-      id: entryId,
-      tenantId: ctx.tenantId,
-      status: { in: ["PROVISORIO", "CONFERIDO"] },
-      paidAt: null,
-      approvalStatus: { in: ["NAO_REQUER", "APROVADO"] },
-    },
-    data: { status: "PAGO", paidAt: pagoEm },
+  const tenantId = ctx.tenantId;
+  const baixada = await prisma.$transaction(async (tx) => {
+    const r = await tx.financeEntry.updateMany({
+      where: {
+        id: entryId,
+        tenantId,
+        status: { in: ["PROVISORIO", "CONFERIDO"] },
+        paidAt: null,
+        approvalStatus: { in: ["NAO_REQUER", "APROVADO"] },
+      },
+      data: { status: "PAGO", paidAt: pagoEm },
+    });
+    if (r.count === 1) await sincronizarAcordos(tx, tenantId, [entryId]);
+    return r;
   });
   if (baixada.count !== 1) return { error: "A conta acabou de mudar (aprovação, baixa ou cancelamento) — atualize a tela." };
 
@@ -171,10 +182,15 @@ export async function desfazerPagamento(entryId: string): Promise<AcaoDeContaSta
     return { error: "Esta conta não está paga." };
   }
 
+  // Parcela de acordo cumprido que deixa de estar paga devolve o acordo a ativo.
   const prisma = getPrisma();
-  await prisma.financeEntry.update({
-    where: { id: entryId },
-    data: { status: "CONFERIDO", paidAt: null },
+  const tenantId = ctx.tenantId;
+  await prisma.$transaction(async (tx) => {
+    await tx.financeEntry.update({
+      where: { id: entryId },
+      data: { status: "CONFERIDO", paidAt: null },
+    });
+    await sincronizarAcordos(tx, tenantId, [entryId]);
   });
 
   await logAudit({
