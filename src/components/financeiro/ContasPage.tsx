@@ -14,6 +14,7 @@ import { ContasTable, moeda } from "./ContasTable";
 import { AnaliseDeContas } from "./AnaliseDeContas";
 import { AbasDeLink } from "./FiltroDePeriodo";
 import { situacoesDeCobranca, MODULO_DE_COBRANCA } from "@/lib/financeiro/cobranca/consultas";
+import { DefinirCentroDasContas } from "./DefinirCentroDasContas";
 
 const RECORTES = [
   { chave: "abertas", rotulo: "Em aberto" },
@@ -92,6 +93,28 @@ export async function ContasPage({
     !aPagar && aba === "contas" && cobrancaLigada && canActOnSector(ctx, setorDaCobranca ?? "bpo")
       ? await situacoesDeCobranca(ctx.tenantId, resultado.linhas.map((l) => l.id), saoPauloParts(agora).dateKey)
       : null;
+
+  // Centros ativos das empresas que aparecem na lista, para a barra de definir
+  // centro. Sem nenhum centro cadastrado, nem a coluna de seleção aparece.
+  const empresasDaLista = [...new Set(resultado.linhas.map((l) => l.empresaId))];
+  const centros =
+    aba === "contas" && empresasDaLista.length > 0
+      ? await prisma.costCenter.findMany({
+          where: { tenantId: ctx.tenantId, companyId: { in: empresasDaLista }, active: true },
+          select: { id: true, name: true, companyId: true },
+          orderBy: { name: "asc" },
+        })
+      : [];
+  const temCentroNaLista = resultado.linhas.some((l) => l.centroDeCustoId !== null);
+  const empresasComCentros = empresas
+    .filter((e) => empresasDaLista.includes(e.id))
+    .map((e) => ({
+      id: e.id,
+      nome: nomeExibicao(e),
+      centros: centros.filter((c) => c.companyId === e.id).map((c) => ({ id: c.id, nome: c.name })),
+    }));
+  // A tela já exige atuar no setor do módulo, que é o que a action confere.
+  const podeDefinirCentro = centros.length > 0 || temCentroNaLista;
 
   function comParam(chave: string, valor: string | undefined) {
     const q = new URLSearchParams();
@@ -212,15 +235,20 @@ export async function ContasPage({
       {aba === "analise" ? (
         <AnaliseDeContas linhas={resultado.linhas} hojeKey={saoPauloParts(agora).dateKey} aPagar={aPagar} />
       ) : (
-        <ContasTable
-          linhas={resultado.linhas}
-          kind={kind}
-          filtrado={resultado.totalGeral > 0 && resultado.linhas.length === 0}
-          hojeISO={saoPauloParts(agora).dateKey}
-          podeAbrirPendencia={podeAbrirPendencia}
-          podeEnviarParaAprovacao={podeEnviarParaAprovacao}
-          cobranca={cobranca}
-        />
+        <>
+          {podeDefinirCentro && resultado.linhas.length > 0 && <DefinirCentroDasContas empresas={empresasComCentros} />}
+          <ContasTable
+            linhas={resultado.linhas}
+            kind={kind}
+            filtrado={resultado.totalGeral > 0 && resultado.linhas.length === 0}
+            hojeISO={saoPauloParts(agora).dateKey}
+            podeAbrirPendencia={podeAbrirPendencia}
+            podeEnviarParaAprovacao={podeEnviarParaAprovacao}
+            cobranca={cobranca}
+            selecionarCentro={podeDefinirCentro}
+            mostrarCentro={podeDefinirCentro}
+          />
+        </>
       )}
 
       {empresas.length > 0 && params.empresa && (

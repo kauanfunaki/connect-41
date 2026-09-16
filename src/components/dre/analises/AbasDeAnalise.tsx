@@ -19,6 +19,7 @@ import {
 import {
   reconciliarLucroCaixa,
   compararResultados,
+  resultadoDePorGrupo,
   atrasoMedioEmDias,
   projetarSerie,
   calcularIndicadores,
@@ -43,6 +44,9 @@ import {
 } from "@/lib/financeiro/periodo";
 import { moeda, percentual, dias, tomDoValor } from "@/lib/financeiro/formato";
 import { SimuladorDeCenarios } from "./SimuladorDeCenarios";
+import { orcamentosAprovados, orcamentoLigado, type OrcamentoAprovado } from "@/lib/dre/orcamento/dados";
+import { porGrupoOrcado } from "@/lib/dre/orcamento/grade";
+import { mesesDoAcumulado } from "@/lib/dre/orcamento/variacao";
 
 type Base = { tenantId: string; companyId: string; mes: string };
 
@@ -207,7 +211,11 @@ const MODOS = [
   { chave: "ano_anterior", rotulo: "Mês × mesmo mês do ano anterior" },
   { chave: "acumulado", rotulo: "Acumulado × acumulado do ano anterior" },
   { chave: "empresa", rotulo: "Empresa × empresa" },
+  { chave: "orcado", rotulo: "Realizado × orçado — mês" },
+  { chave: "orcado_acumulado", rotulo: "Realizado × orçado — acumulado do ano" },
 ] as const;
+
+const MODOS_DE_ORCADO = new Set<string>(["orcado", "orcado_acumulado"]);
 
 export async function AbaComparativos({
   tenantId,
@@ -218,8 +226,13 @@ export async function AbaComparativos({
   empresa2,
   empresas,
 }: Base & { modo?: string; regime?: string; empresa2?: string; empresas: { id: string; nome: string }[] }) {
-  const modo = MODOS.find((m) => m.chave === modoBruto)?.chave ?? "mes_anterior";
-  const regime = regimeBruto === "caixa" ? "caixa" : "competencia";
+  // Os modos de orçado só existem com o módulo de orçamento ligado.
+  const comOrcamento = await orcamentoLigado(tenantId);
+  const modosDisponiveis = MODOS.filter((m) => comOrcamento || !MODOS_DE_ORCADO.has(m.chave));
+  const modo = modosDisponiveis.find((m) => m.chave === modoBruto)?.chave ?? "mes_anterior";
+  const contraOrcado = MODOS_DE_ORCADO.has(modo);
+  // O orçamento é por competência: contra ele, o realizado é sempre a DRE econômica.
+  const regime = regimeBruto === "caixa" && !contraOrcado ? "caixa" : "competencia";
   const outras = empresas.filter((e) => e.id !== companyId);
   const outra = outras.find((e) => e.id === empresa2) ?? outras[0];
 
@@ -228,7 +241,30 @@ export async function AbaComparativos({
   let atual;
   let comparado;
 
-  if (modo === "empresa") {
+  let orcamento: OrcamentoAprovado | null = null;
+  if (contraOrcado) {
+    const { ano, mes: numeroDoMes } = partesDaCompetencia(mes);
+    orcamento = (await orcamentosAprovados(tenantId, companyId, [ano])).get(ano) ?? null;
+    if (!orcamento) {
+      return (
+        <EmptyState
+          title={`Sem orçamento aprovado para ${ano}`}
+          description="O comparativo usa a versão aprovada do ano. Crie e aprove uma versão em Orçamento."
+          action={
+            <Link href={`/dre/orcamento?empresa=${companyId}&ano=${ano}`} className="text-brand hover:underline text-[13px]">
+              Abrir orçamento
+            </Link>
+          }
+        />
+      );
+    }
+    const meses = modo === "orcado" ? [numeroDoMes] : mesesDoAcumulado(numeroDoMes);
+    const periodo = modo === "orcado" ? [mes] : acumuladoDoAno(mes);
+    rotuloA = `Realizado ${periodo.length === 1 ? rotuloDaCompetencia(mes) : `jan a ${rotuloDaCompetencia(mes)}`}`;
+    rotuloB = `Orçado — ${orcamento.nome}`;
+    atual = await resultadoDoPeriodo(tenantId, companyId, periodo, "competencia");
+    comparado = resultadoDePorGrupo(porGrupoOrcado(orcamento.grade, meses));
+  } else if (modo === "empresa") {
     if (!outra) return <EmptyState title="Não há outra empresa para comparar" />;
     rotuloA = empresas.find((e) => e.id === companyId)?.nome ?? "Empresa";
     rotuloB = outra.nome;
@@ -262,16 +298,18 @@ export async function AbaComparativos({
         <input type="hidden" name="empresa" value={companyId} />
         <input type="hidden" name="mes" value={mes} />
         <Select compact name="modo" defaultValue={modo} className="w-80 max-w-full" aria-label="Modo">
-          {MODOS.map((m) => (
+          {modosDisponiveis.map((m) => (
             <option key={m.chave} value={m.chave}>
               {m.rotulo}
             </option>
           ))}
         </Select>
-        <Select compact name="regime" defaultValue={regime} className="w-44" aria-label="Regime">
-          <option value="competencia">Competência</option>
-          <option value="caixa">Caixa</option>
-        </Select>
+        {!contraOrcado && (
+          <Select compact name="regime" defaultValue={regime} className="w-44" aria-label="Regime">
+            <option value="competencia">Competência</option>
+            <option value="caixa">Caixa</option>
+          </Select>
+        )}
         {modo === "empresa" && outra && (
           <Select compact name="empresa2" defaultValue={outra.id} className="w-72 max-w-full" aria-label="Comparar com">
             {outras.map((e) => (
@@ -289,7 +327,11 @@ export async function AbaComparativos({
       <NotaDeFonte>
         Variação sobre o valor absoluto do comparado: despesa que vai de −100 para −150 aparece como −50%, piora.
         {regime === "caixa" && " Caixa só com lançamentos do Connect, sem o import do Omie."}
-        {" "}Realizado × orçamento e × forecast salvo dependem do motor de orçamento, fora desta etapa.
+        {contraOrcado
+          ? " Contra o orçado, o realizado é a DRE econômica (competência) da empresa inteira, e o orçado é a versão aprovada do ano, pelo mesmo motor de linhas — verde é melhor que o orçado (receita acima, despesa abaixo)."
+          : comOrcamento
+            ? " Realizado × orçado está nos dois últimos modos."
+            : ""}
       </NotaDeFonte>
     </>
   );
@@ -301,9 +343,10 @@ export async function AbaForecast({ tenantId, companyId, mes, metodo: metodoBrut
   const metodo: MetodoDeProjecao = METODOS_DE_PROJECAO.find((m) => m.chave === metodoBruto)?.chave ?? "tendencia";
   const janela = competenciasAte(mes, 12);
   const futuros = Array.from({ length: 6 }, (_, i) => somarMeses(mes, i + 1));
-  const [serie, titulos] = await Promise.all([
+  const [serie, titulos, comOrcamento] = await Promise.all([
     serieEconomica(tenantId, companyId, janela),
     titulosEmAberto({ tenantId, companyIds: [companyId] }),
+    orcamentoLigado(tenantId),
   ]);
 
   // O histórico começa no primeiro mês com lançamento. Zeros de antes de a
@@ -334,6 +377,23 @@ export async function AbaForecast({ tenantId, companyId, mes, metodo: metodoBrut
   const resultado = projetar(LINHA_DE_RESULTADO);
   const abertos = abertosPorMes(titulos, futuros);
 
+  // O orçado de cada mês mostrado, da versão aprovada do ano dele — a janela
+  // atravessa a virada do ano, então são até dois orçamentos.
+  const mostrados = [...historico.slice(-3), ...futuros];
+  const orcamentos = comOrcamento
+    ? await orcamentosAprovados(tenantId, companyId, mostrados.map((c) => partesDaCompetencia(c).ano))
+    : new Map<number, OrcamentoAprovado>();
+  const orcadoDoMes = (c: string, code: string): number | null => {
+    const { ano, mes: m } = partesDaCompetencia(c);
+    const o = orcamentos.get(ano);
+    return o ? valorDaLinha(resultadoDePorGrupo(porGrupoOrcado(o.grade, [m])), code) : null;
+  };
+  const temOrcado = orcamentos.size > 0;
+  const celulaOrcada = (c: string, code: string) => {
+    const v = orcadoDoMes(c, code);
+    return <td className="py-2 pr-3 text-right tabular-nums text-fg-secondary">{v === null ? "—" : moeda(v)}</td>;
+  };
+
   return (
     <>
       <nav className="flex flex-wrap gap-1.5 mb-4">
@@ -358,8 +418,10 @@ export async function AbaForecast({ tenantId, companyId, mes, metodo: metodoBrut
             <tr className={CABECALHO}>
               <th className={`${TH} pl-4`}>Mês</th>
               <th className={`${TH} text-right`}>Receita bruta</th>
+              {temOrcado && <th className={`${TH} text-right`}>Receita orçada</th>}
               <th className={`${TH} text-right`}>Resultado operacional</th>
               <th className={`${TH} text-right`}>Resultado do período</th>
+              {temOrcado && <th className={`${TH} text-right`}>Resultado orçado</th>}
               <th className={`${TH} pr-4 text-right`}>Títulos em aberto (líquido)</th>
             </tr>
           </thead>
@@ -372,8 +434,10 @@ export async function AbaForecast({ tenantId, companyId, mes, metodo: metodoBrut
                     {rotuloDaCompetencia(c)} <span className="text-[11px]">realizado</span>
                   </td>
                   <td className="py-2 pr-3 text-right tabular-nums">{moeda(valorDaLinha(r, "receita_bruta"))}</td>
+                  {temOrcado && celulaOrcada(c, "receita_bruta")}
                   <td className="py-2 pr-3 text-right tabular-nums">{moeda(valorDaLinha(r, LINHA_OPERACIONAL))}</td>
                   <td className="py-2 pr-3 text-right tabular-nums">{moeda(valorDaLinha(r, LINHA_DE_RESULTADO))}</td>
+                  {temOrcado && celulaOrcada(c, LINHA_DE_RESULTADO)}
                   <td className="py-2 pr-4 text-right">—</td>
                 </tr>
               );
@@ -382,8 +446,10 @@ export async function AbaForecast({ tenantId, companyId, mes, metodo: metodoBrut
               <tr key={c} className="border-b border-border-soft">
                 <td className="py-2 pl-4 pr-3 font-medium">{rotuloDaCompetencia(c)}</td>
                 <td className="py-2 pr-3 text-right tabular-nums">{moeda(receita[i]!)}</td>
+                {temOrcado && celulaOrcada(c, "receita_bruta")}
                 <td className={`py-2 pr-3 text-right tabular-nums ${tomDoValor(operacional[i]!)}`}>{moeda(operacional[i]!)}</td>
                 <td className={`py-2 pr-3 text-right tabular-nums ${tomDoValor(resultado[i]!)}`}>{moeda(resultado[i]!)}</td>
+                {temOrcado && celulaOrcada(c, LINHA_DE_RESULTADO)}
                 <td className="py-2 pr-4 text-right tabular-nums">{moeda(abertos.get(c)!)}</td>
               </tr>
             ))}
@@ -393,8 +459,12 @@ export async function AbaForecast({ tenantId, companyId, mes, metodo: metodoBrut
       <NotaDeFonte>
         Projeção determinística sobre {historico.length} meses de competência, sem IA. A última coluna não é projeção: é o
         que já está lançado vencendo em cada mês (a receber menos a pagar). Sazonalidade com menos de dois anos de histórico
-        pesa um ano só e tende a exagerar o mês atípico. Forecast manual, versionado e aprovado é motor de orçamento, fora
-        desta etapa.
+        pesa um ano só e tende a exagerar o mês atípico.
+        {temOrcado
+          ? " As colunas orçadas são da versão aprovada do ano de cada mês — travessão onde o ano não tem versão aprovada."
+          : comOrcamento
+            ? " Com uma versão de orçamento aprovada, o orçado de cada mês aparece ao lado da projeção."
+            : ""}
       </NotaDeFonte>
     </>
   );
@@ -403,17 +473,35 @@ export async function AbaForecast({ tenantId, companyId, mes, metodo: metodoBrut
 // ─── Cenários ───────────────────────────────────────────────────────────────
 
 export async function AbaCenarios({ tenantId, companyId, mes }: Base) {
-  const serie = await serieEconomica(tenantId, companyId, [mes]);
+  const { ano, mes: numeroDoMes } = partesDaCompetencia(mes);
+  const [serie, comOrcamento] = await Promise.all([serieEconomica(tenantId, companyId, [mes]), orcamentoLigado(tenantId)]);
   const dre = serie.get(mes)!;
-  if (dre.lancamentos === 0) {
-    return <EmptyState title={`Sem lançamentos com competência em ${rotuloDaCompetencia(mes)}`} description="O cenário parte de um mês real." />;
+  const orcamento = comOrcamento ? (await orcamentosAprovados(tenantId, companyId, [ano])).get(ano) ?? null : null;
+
+  // Duas bases possíveis: o mês real e, com versão aprovada, o orçado do mesmo
+  // mês. Sem nenhuma das duas, não há de onde partir.
+  const bases = [
+    ...(dre.lancamentos > 0 ? [{ chave: "real", rotulo: `Mês real (${rotuloDaCompetencia(mes)})`, porGrupo: dre.resultado.porGrupo }] : []),
+    ...(orcamento
+      ? [{ chave: "orcamento", rotulo: `Orçamento de ${rotuloDaCompetencia(mes)} (${orcamento.nome})`, porGrupo: porGrupoOrcado(orcamento.grade, [numeroDoMes]) }]
+      : []),
+  ];
+  if (bases.length === 0) {
+    return (
+      <EmptyState
+        title={`Sem lançamentos com competência em ${rotuloDaCompetencia(mes)}`}
+        description={comOrcamento ? "O cenário parte de um mês real ou do orçamento aprovado do mês — não há nenhum dos dois." : "O cenário parte de um mês real."}
+      />
+    );
   }
   return (
     <>
-      <SimuladorDeCenarios porGrupo={dre.resultado.porGrupo} />
+      <SimuladorDeCenarios bases={bases} />
       <NotaDeFonte>
-        Simulação sobre a DRE econômica de {rotuloDaCompetencia(mes)}, calculada no navegador e não gravada. O variável da
-        margem de contribuição acompanha a receita; investimentos e não operacionais ficam constantes.
+        Simulação sobre a DRE econômica de {rotuloDaCompetencia(mes)}
+        {orcamento ? " ou sobre o orçado do mês na versão aprovada" : ""}, calculada no navegador e não gravada. O variável
+        da margem de contribuição acompanha a receita; investimentos e não operacionais ficam constantes.
+        {comOrcamento && !orcamento && ` Com uma versão de orçamento aprovada para ${ano}, dá para partir do orçado.`}
       </NotaDeFonte>
     </>
   );

@@ -124,6 +124,7 @@ export async function obterDocumento(alcance: AlcanceFiscal, id: string) {
           amount: true,
           category: { select: { name: true } },
           counterparty: { select: { name: true } },
+          costCenter: { select: { name: true } },
         },
       },
     },

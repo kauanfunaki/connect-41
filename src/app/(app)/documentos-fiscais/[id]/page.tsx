@@ -18,6 +18,7 @@ import { editarDocumento, excluirDocumento } from "./editar";
 import { lancarDocumento, estornarLancamento } from "./lancar";
 import { podeLancar, vencimentoPresumido } from "@/lib/financeiro/lancamento";
 import { getPrisma } from "@/lib/prisma";
+import { centrosAtivosDaEmpresa } from "@/lib/financeiro/centroDeCustoServidor";
 import { direcaoDoLancamento, precisaDeEstorno } from "@/lib/fiscal/documentos";
 import { documentoDaEmpresa } from "@/lib/companyTaxId";
 import { nomeExibicao } from "@/lib/companyName";
@@ -91,6 +92,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
           select: { id: true, name: true },
         })
       : [];
+  const centros = veredito.pode && !doc.financeEntry ? await centrosAtivosDaEmpresa(ctx.tenantId, doc.companyId) : [];
 
   return (
     <PageContainer variant="narrow">
@@ -209,6 +211,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
         direcao={direcao === "RECEBER" ? "RECEBER" : "PAGAR"}
         podeDecidir={canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)}
         categorias={categorias}
+        centros={centros}
         vencimentoPresumidoIso={vencimentoPresumido(doc.issuedAt).toISOString().slice(0, 10)}
         impedimento={veredito.pode || doc.financeEntry ? null : veredito.explicacao}
         lancamento={
@@ -221,6 +224,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
                 amountLabel: MOEDA.format(Number(doc.financeEntry.amount)),
                 categoria: doc.financeEntry.category?.name ?? null,
                 contraparte: doc.financeEntry.counterparty.name,
+                centroDeCusto: doc.financeEntry.costCenter?.name ?? null,
               }
             : null
         }

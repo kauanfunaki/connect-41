@@ -9,8 +9,10 @@ import { Select } from "@/components/ui/Select";
 import { criarContraparte, atualizarContraparte } from "@/app/(app)/cadastros-financeiros/actions";
 
 type Categoria = { id: string; nome: string };
+/** Centros ativos da empresa — o que se pode escolher como padrão. */
+type Centro = { id: string; nome: string };
 
-export function NovaContraparte({ companyId, categorias }: { companyId: string; categorias: Categoria[] }) {
+export function NovaContraparte({ companyId, categorias, centros = [] }: { companyId: string; categorias: Categoria[]; centros?: Centro[] }) {
   const [aberto, setAberto] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
@@ -62,6 +64,19 @@ export function NovaContraparte({ companyId, categorias }: { companyId: string; 
             ))}
           </Select>
         </label>
+        {centros.length > 0 && (
+          <label className="flex flex-col gap-1 text-[12px] text-fg-secondary">
+            <span className="font-medium">Centro de custo padrão</span>
+            <Select name="defaultCostCenterId" defaultValue="">
+              <option value="">Nenhum</option>
+              {centros.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </Select>
+          </label>
+        )}
         <div className="flex items-center gap-2 md:col-span-4">
           <Button type="submit" size="sm" disabled={pendente}>
             Cadastrar
@@ -79,10 +94,28 @@ export function NovaContraparte({ companyId, categorias }: { companyId: string; 
 export function EditarContraparte({
   contraparte,
   categorias,
+  centros = [],
 }: {
-  contraparte: { id: string; nome: string; documento: string | null; email: string | null; defaultCategoryId: string | null; ativo: boolean };
+  contraparte: {
+    id: string;
+    nome: string;
+    documento: string | null;
+    email: string | null;
+    defaultCategoryId: string | null;
+    ativo: boolean;
+    defaultCostCenterId?: string | null;
+    /** Nome do centro padrão atual — aparece mesmo se ele foi inativado. */
+    centroPadraoNome?: string | null;
+  };
   categorias: Categoria[];
+  centros?: Centro[];
 }) {
+  // O centro atual continua na lista mesmo inativo: salvar a ficha por outro
+  // motivo não pode apagar o padrão sem a pessoa ter escolhido isso.
+  const opcoesDeCentro =
+    contraparte.defaultCostCenterId && !centros.some((c) => c.id === contraparte.defaultCostCenterId)
+      ? [...centros, { id: contraparte.defaultCostCenterId, nome: `${contraparte.centroPadraoNome ?? "Centro atual"} (inativo)` }]
+      : centros;
   const [aberto, setAberto] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
@@ -123,6 +156,16 @@ export function EditarContraparte({
           </option>
         ))}
       </Select>
+      {opcoesDeCentro.length > 0 && (
+        <Select compact name="defaultCostCenterId" defaultValue={contraparte.defaultCostCenterId ?? ""} aria-label="Centro de custo padrão">
+          <option value="">Sem centro de custo padrão</option>
+          {opcoesDeCentro.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nome}
+            </option>
+          ))}
+        </Select>
+      )}
       <Select compact name="ativo" defaultValue={contraparte.ativo ? "1" : "0"} aria-label="Situação">
         <option value="1">Ativo</option>
         <option value="0">Inativo</option>

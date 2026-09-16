@@ -41,6 +41,11 @@ export type LancamentoDoDre = {
   grupo?: string;
   /** Marca a perda com clientes entre os lançamentos de grupo fixo. */
   perda?: boolean;
+  /**
+   * Centro de custo, quando o lançamento tem um. O cálculo não lê: só o
+   * filtro e o quadro da DRE por centro — ver `src/lib/dre/centroDeCusto.ts`.
+   */
+  centroDeCustoId?: string | null;
 };
 
 /**

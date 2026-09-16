@@ -47,7 +47,8 @@ export type LinhaDaTransacao = {
   vinculados: LancamentoResumido[];
 };
 
-type Contraparte = { id: string; nome: string; documento: string | null; defaultCategoryId: string | null };
+type Contraparte = { id: string; nome: string; documento: string | null; defaultCategoryId: string | null; defaultCostCenterId?: string | null };
+type Centro = { id: string; nome: string };
 type Categoria = { id: string; nome: string; kind: "PAGAR" | "RECEBER" };
 
 const STATUS: Record<LinhaDaTransacao["status"], { rotulo: string; variante: "success" | "warning" | "info" }> = {
@@ -72,11 +73,14 @@ export function TransacoesDaConta({
   podeAgir,
   contrapartes,
   categorias,
+  centros = [],
 }: {
   linhas: LinhaDaTransacao[];
   podeAgir: boolean;
   contrapartes: Contraparte[];
   categorias: Categoria[];
+  /** Centros de custo ativos da empresa; sem nenhum, o campo não aparece. */
+  centros?: Centro[];
 }) {
   const { dialog, requestConfirm } = useConfirm();
   const [escolhendo, setEscolhendo] = useState<LinhaDaTransacao | null>(null);
@@ -219,7 +223,7 @@ export function TransacoesDaConta({
       {dialog}
       {escolhendo && <EscolherLancamentos transacao={escolhendo} onClose={() => setEscolhendo(null)} />}
       {criando && (
-        <CriarLancamento transacao={criando} contrapartes={contrapartes} categorias={categorias} onClose={() => setCriando(null)} />
+        <CriarLancamento transacao={criando} contrapartes={contrapartes} categorias={categorias} centros={centros} onClose={() => setCriando(null)} />
       )}
       {ignorando && <IgnorarTransacao transacao={ignorando} onClose={() => setIgnorando(null)} />}
     </>
@@ -393,11 +397,13 @@ function CriarLancamento({
   transacao,
   contrapartes,
   categorias,
+  centros,
   onClose,
 }: {
   transacao: LinhaDaTransacao;
   contrapartes: Contraparte[];
   categorias: Categoria[];
+  centros: Centro[];
   onClose: () => void;
 }) {
   const kind = transacao.centavos < 0 ? "PAGAR" : "RECEBER";
@@ -406,6 +412,9 @@ function CriarLancamento({
   const [categoria, setCategoria] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
+  // Em branco o servidor herda o padrão da contraparte; a tela só diz qual é.
+  const padraoId = contrapartes.find((c) => c.id === contraparte)?.defaultCostCenterId ?? null;
+  const centroPadrao = padraoId ? centros.find((c) => c.id === padraoId) : undefined;
 
   function escolherContraparte(id: string) {
     setContraparte(id);
@@ -482,6 +491,23 @@ function CriarLancamento({
             <Input id="criar-competencia" type="month" name="competencia" defaultValue={transacao.dataKey.slice(0, 7)} required />
           </CampoForm>
         </div>
+
+        {centros.length > 0 && (
+          <CampoForm
+            label="Centro de custo"
+            htmlFor="criar-centro"
+            helper={centroPadrao ? `Em branco, herda o padrão da contraparte: ${centroPadrao.nome}.` : "Opcional."}
+          >
+            <Select id="criar-centro" name="costCenterId" defaultValue="">
+              <option value="">{centroPadrao ? `Padrão da contraparte (${centroPadrao.nome})` : "Sem centro de custo"}</option>
+              {centros.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </Select>
+          </CampoForm>
+        )}
 
         <CampoForm label="Descrição" htmlFor="criar-descricao">
           <Input id="criar-descricao" name="descricao" maxLength={255} defaultValue={(transacao.memo ?? transacao.nome ?? "").slice(0, 255)} />

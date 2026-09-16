@@ -16,6 +16,7 @@ import {
   categoriaObrigatoria,
 } from "@/lib/financeiro/lancamento";
 import { contextoDeEntrada, registrarEnvios, avisarAprovadores } from "@/lib/financeiro/aprovacao/servidor";
+import { centroNaCriacao } from "@/lib/financeiro/centroDeCustoServidor";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
 // acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -37,7 +38,7 @@ export type ResultadoDoLancamento = { error: string } | { ok: true; entryId: str
  */
 export async function lancarDocumento(
   documentoId: string,
-  opcoes: { categoriaId?: string | null; vencimento?: string | null }
+  opcoes: { categoriaId?: string | null; vencimento?: string | null; centroDeCustoId?: string | null }
 ): Promise<ResultadoDoLancamento> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Sem permissão." };
@@ -64,7 +65,7 @@ export async function lancarDocumento(
   const existente = contraparteDocumento
     ? await prisma.financeCounterparty.findFirst({
         where: { tenantId: ctx.tenantId, companyId: doc.companyId, document: contraparteDocumento },
-        select: { id: true, defaultCategoryId: true },
+        select: { id: true, defaultCategoryId: true, defaultCostCenterId: true },
       })
     : null;
 
@@ -85,6 +86,15 @@ export async function lancarDocumento(
 
   const vencimento = opcoes.vencimento ? new Date(opcoes.vencimento) : vencimentoPresumido(doc.issuedAt);
   if (Number.isNaN(vencimento.getTime())) return { error: "Vencimento inválido." };
+
+  // O centro escolhido na ficha vence; sem ele, o padrão da contraparte.
+  const centro = await centroNaCriacao({
+    tenantId: ctx.tenantId,
+    companyId: doc.companyId,
+    informadoId: opcoes.centroDeCustoId || null,
+    padraoDaContraparteId: existente?.defaultCostCenterId ?? null,
+  });
+  if (!centro.ok) return { error: centro.erro };
 
   // Nasce PROVISORIO, portanto em aberto: conta a pagar de empresa com alçada
   // já entra aguardando aprovação.
@@ -122,6 +132,7 @@ export async function lancarDocumento(
           approvalStatus,
           counterpartyId: contraparte.id,
           categoryId: categoriaId,
+          costCenterId: centro.centroId,
           competence: doc.competence,
           dueDate: vencimento,
           // ── Bruto × líquido ────────────────────────────────────────────
@@ -172,6 +183,7 @@ export async function lancarDocumento(
         fiscalDocumentId: doc.id,
         kind: veredito.kind,
         categoriaId,
+        centroDeCusto: centro.centroId,
         approvalStatus,
         ...(aviso ? { emailsDeAprovacao: aviso.enviados, semSmtp: aviso.semSmtp } : {}),
       },

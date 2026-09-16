@@ -10,6 +10,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 
 type Categoria = { id: string; name: string };
+type Centro = { id: string; nome: string };
 
 type Lancamento = {
   id: string;
@@ -19,6 +20,7 @@ type Lancamento = {
   amountLabel: string;
   categoria: string | null;
   contraparte: string;
+  centroDeCusto?: string | null;
 };
 
 type Props = {
@@ -28,10 +30,12 @@ type Props = {
   direcao: "PAGAR" | "RECEBER" | "INDEFINIDA";
   vencimentoPresumidoIso: string;
   categorias: Categoria[];
+  /** Centros de custo ativos da empresa do documento. Sem nenhum, o campo não aparece. */
+  centros?: Centro[];
   podeDecidir: boolean;
   lancarAction: (
     documentoId: string,
-    opcoes: { categoriaId?: string | null; vencimento?: string | null }
+    opcoes: { categoriaId?: string | null; vencimento?: string | null; centroDeCustoId?: string | null }
   ) => Promise<{ error: string } | { ok: true; entryId: string }>;
   estornarAction: (documentoId: string) => Promise<{ error: string } | { ok: true }>;
   documentoId: string;
@@ -57,6 +61,7 @@ export function LancamentoCard({
   direcao,
   vencimentoPresumidoIso,
   categorias,
+  centros = [],
   podeDecidir,
   lancarAction,
   estornarAction,
@@ -66,11 +71,12 @@ export function LancamentoCard({
   const [erro, setErro] = useState<string | null>(null);
   const [categoriaId, setCategoriaId] = useState("");
   const [vencimento, setVencimento] = useState(vencimentoPresumidoIso);
+  const [centroId, setCentroId] = useState("");
 
   function lancar() {
     setErro(null);
     startTransition(async () => {
-      const r = await lancarAction(documentoId, { categoriaId: categoriaId || null, vencimento });
+      const r = await lancarAction(documentoId, { categoriaId: categoriaId || null, vencimento, centroDeCustoId: centroId || null });
       if ("error" in r) setErro(r.error);
     });
   }
@@ -119,6 +125,12 @@ export function LancamentoCard({
               <dt className="text-fg-muted">Categoria</dt>
               <dd className="text-fg truncate">{lancamento.categoria ?? "—"}</dd>
             </div>
+            {lancamento.centroDeCusto !== undefined && (
+              <div className="flex justify-between gap-4 border-b border-border py-1.5">
+                <dt className="text-fg-muted">Centro de custo</dt>
+                <dd className="text-fg truncate">{lancamento.centroDeCusto ?? "—"}</dd>
+              </div>
+            )}
           </dl>
 
           {podeDecidir && (
@@ -172,6 +184,22 @@ export function LancamentoCard({
                 onChange={(e) => setVencimento(e.target.value)}
               />
             </CampoForm>
+            {centros.length > 0 && (
+              <CampoForm
+                label="Centro de custo"
+                htmlFor="centro-de-custo"
+                helper="Opcional. Em branco, vale o centro padrão da contraparte, se houver."
+              >
+                <Select id="centro-de-custo" value={centroId} onChange={(e) => setCentroId(e.target.value)}>
+                  <option value="">Padrão da contraparte / sem centro</option>
+                  {centros.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                    </option>
+                  ))}
+                </Select>
+              </CampoForm>
+            )}
           </FieldGrid>
           <div className="mt-4">
             <Button type="button" onClick={lancar} disabled={pendente}>

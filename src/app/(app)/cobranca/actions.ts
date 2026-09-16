@@ -37,6 +37,7 @@ import {
 } from "@/lib/financeiro/cobranca/acordo";
 import { lerPassos, textoDosPassos } from "@/lib/financeiro/cobranca/regua";
 import { MODULO_DE_COBRANCA } from "@/lib/financeiro/cobranca/consultas";
+import { centroComum } from "@/lib/financeiro/centroDeCusto";
 
 const MODULE = MODULO_DE_COBRANCA;
 
@@ -231,6 +232,7 @@ export async function criarAcordo(formData: FormData): Promise<ResultadoDoAcordo
             companyId: true,
             counterpartyId: true,
             categoryId: true,
+            costCenterId: true,
             dueDate: true,
             amount: true,
             agreementId: true,
@@ -297,6 +299,10 @@ export async function criarAcordo(formData: FormData): Promise<ResultadoDoAcordo
         const sacado = originais[0]!.counterparty.name;
         const categoria = categoriaDasParcelas(originais.map((o) => ({ categoryId: o.categoryId, valorCentavos: centavosDeDecimal(o.amount) })));
         const responsavel = originais.find((o) => o.collectionOwnerId)?.collectionOwnerId ?? null;
+        // Centro comum dos originais, ou nenhum se divergirem — sem rateio, e sem
+        // dar a um centro o dinheiro que veio de outro. A diferença do acordo
+        // segue a mesma regra na DRE (`ajustesDoPeriodo`).
+        const centro = centroComum(originais.map((o) => o.costCenterId));
         const parcelas = gerarParcelas({
           totalCentavos: termos.dados.acordadoCentavos,
           parcelas: termos.dados.parcelas,
@@ -315,6 +321,7 @@ export async function criarAcordo(formData: FormData): Promise<ResultadoDoAcordo
               approvalStatus: "NAO_REQUER",
               counterpartyId: selecao.counterpartyId,
               categoryId: categoria,
+              costCenterId: centro,
               competence: competenciaDoInstante(vencimento),
               dueDate: vencimento,
               amount: decimalDeCentavos(p.valorCentavos),

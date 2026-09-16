@@ -39,6 +39,8 @@ export type LinhaDaConta = {
   closeReason: "CANCELADO" | "RENEGOCIADO" | "PERDA" | null;
   /** Parcela de acordo de cobrança. */
   parcelaDeAcordo: boolean;
+  centroDeCustoId: string | null;
+  centroDeCustoNome: string | null;
 };
 
 export type FiltroDeContas = {
@@ -94,6 +96,8 @@ export async function listarContas(
       company: { select: { id: true, name: true, displayName: true } },
       counterparty: { select: { name: true } },
       category: { select: { name: true } },
+      costCenterId: true,
+      costCenter: { select: { name: true } },
     },
     // Teto defensivo: a tela é para trabalhar o mês, não para inventariar o
     // histórico inteiro. Passando disto, o que falta é filtro.
@@ -120,6 +124,8 @@ export async function listarContas(
       documentoId: e.fiscalDocumentId,
       closeReason: e.closeReason,
       parcelaDeAcordo: e.agreementId !== null,
+      centroDeCustoId: e.costCenterId,
+      centroDeCustoNome: e.costCenter?.name ?? null,
     };
   });
 

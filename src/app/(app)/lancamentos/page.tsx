@@ -19,6 +19,7 @@ import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { competenciaValida, competenciaDoInstante } from "@/lib/financeiro/periodo";
 import { podeCancelarManual } from "@/lib/financeiro/manual";
 import { moeda } from "@/lib/financeiro/formato";
+import { centrosAtivosDaEmpresa } from "@/lib/financeiro/centroDeCustoServidor";
 
 export const dynamic = "force-dynamic";
 
@@ -131,10 +132,10 @@ async function FormularioDaEmpresa({
   mes: string;
 }) {
   const prisma = getPrisma();
-  const [contrapartes, categorias] = await Promise.all([
+  const [contrapartes, categorias, centros] = await Promise.all([
     prisma.financeCounterparty.findMany({
       where: { tenantId, companyId, active: true },
-      select: { id: true, name: true, document: true, defaultCategoryId: true },
+      select: { id: true, name: true, document: true, defaultCategoryId: true, defaultCostCenterId: true },
       orderBy: { name: "asc" },
     }),
     prisma.financeCategory.findMany({
@@ -142,13 +143,21 @@ async function FormularioDaEmpresa({
       select: { id: true, name: true, kind: true },
       orderBy: { name: "asc" },
     }),
+    centrosAtivosDaEmpresa(tenantId, companyId),
   ]);
   return (
     <FormLancamentoManual
       companyId={companyId}
       hojeISO={hojeKey}
       competenciaPadrao={mes}
-      contrapartes={contrapartes.map((c) => ({ id: c.id, nome: c.name, documento: c.document, defaultCategoryId: c.defaultCategoryId }))}
+      contrapartes={contrapartes.map((c) => ({
+        id: c.id,
+        nome: c.name,
+        documento: c.document,
+        defaultCategoryId: c.defaultCategoryId,
+        defaultCostCenterId: c.defaultCostCenterId,
+      }))}
+      centros={centros}
       categorias={categorias.map((c) => ({ id: c.id, nome: c.name, kind: c.kind }))}
     />
   );
@@ -182,6 +191,7 @@ async function ListaDeManuais({
       agreementId: true,
       counterparty: { select: { name: true } },
       category: { select: { name: true } },
+      costCenter: { select: { name: true } },
     },
     orderBy: { dueDate: "asc" },
     take: 500,
@@ -205,6 +215,7 @@ async function ListaDeManuais({
             <th className="py-2 pr-3 font-medium">Tipo</th>
             <th className="py-2 pr-3 font-medium">Contraparte</th>
             <th className="py-2 pr-3 font-medium">Categoria</th>
+            <th className="py-2 pr-3 font-medium">Centro de custo</th>
             <th className="py-2 pr-3 font-medium">Vencimento</th>
             <th className="py-2 pr-3 font-medium text-right">Valor</th>
             <th className="py-2 pr-3 font-medium">Status</th>
@@ -231,6 +242,7 @@ async function ListaDeManuais({
                   {l.description && <span className="block text-[11px] text-fg-muted truncate max-w-[260px]">{l.description}</span>}
                 </td>
                 <td className="py-2.5 pr-3 text-fg-secondary">{l.category?.name ?? "—"}</td>
+                <td className="py-2.5 pr-3 text-fg-secondary">{l.costCenter?.name ?? "—"}</td>
                 <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">
                   {formatInstantDate(l.dueDate)}
                   {l.paidAt && <span className="block text-[11px] text-fg-muted">liquidado em {formatInstantDate(l.paidAt)}</span>}

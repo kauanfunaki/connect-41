@@ -76,6 +76,12 @@ describe("catálogo de módulos", () => {
     expect(MODULE_ROUTES.bpo_cobranca).toBe("/cobranca");
   });
 
+  // Entrega de DRE como a econômica e as análises: nasce desligada.
+  it("Orçamento está no BPO, em /dre/orcamento, desligado por padrão", () => {
+    expect(getModuleDef("dre_orcamento")).toMatchObject({ sectorCode: "bpo", defaultEnabled: false, label: "Orçamento" });
+    expect(MODULE_ROUTES.dre_orcamento).toBe("/dre/orcamento");
+  });
+
   it("Documentos Fiscais nasce desligado", () => {
     expect(getModuleDef("fiscal_documentos")?.defaultEnabled).toBe(false);
   });

@@ -46,6 +46,8 @@ export type LancamentoFinanceiro = {
   closeReason?: "CANCELADO" | "RENEGOCIADO" | "PERDA" | null;
   /** Parcela de acordo de cobrança — não é receita, é recebimento. */
   parcelaDeAcordo?: boolean;
+  /** Centro de custo do lançamento. Nulo é "sem centro de custo". */
+  centroDeCustoId?: string | null;
 };
 
 /**
@@ -54,11 +56,14 @@ export type LancamentoFinanceiro = {
  * O sinal sai do tipo — pagamento negativo, recebimento positivo — que é a
  * convenção do cabeçalho de `calculo.ts`: toda linha de subtotal é soma.
  */
-export function paraLancamentoDoDre(l: Pick<LancamentoFinanceiro, "kind" | "centavos" | "categoria">): LancamentoDoDre {
+export function paraLancamentoDoDre(
+  l: Pick<LancamentoFinanceiro, "kind" | "centavos" | "categoria" | "centroDeCustoId">
+): LancamentoDoDre {
   return {
     categoria: l.categoria,
     valorCentavos: l.kind === "PAGAR" ? -l.centavos : l.centavos,
     origem: l.kind === "PAGAR" ? "pagamento" : "recebimento",
+    ...(l.centroDeCustoId !== undefined ? { centroDeCustoId: l.centroDeCustoId } : {}),
   };
 }
 

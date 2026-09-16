@@ -265,6 +265,16 @@ export const MODULE_CATALOG: ModuleDef[] = [
     description: "Econômico × financeiro, reconciliação lucro → caixa, comparativos, forecast, cenários, indicadores e CFO",
     defaultEnabled: false,
   },
+  // Desligado como as outras entregas de DRE: o orçado só faz sentido quando a
+  // DRE econômica já está no ar. Ligado, as telas de DRE passam a comparar com a
+  // versão aprovada do ano.
+  {
+    code: "dre_orcamento",
+    label: "Orçamento",
+    sectorCode: "bpo",
+    description: "Orçamento anual por grupo da DRE, com versões e aprovação, comparado ao realizado na DRE econômica e nas análises",
+    defaultEnabled: false,
+  },
 ];
 
 export function getModuleDef(code: string): ModuleDef | undefined {
@@ -315,6 +325,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   bpo_cobranca:            "/cobranca",
   dre_economica:           "/dre/economica",
   dre_analises:            "/dre/analises",
+  dre_orcamento:           "/dre/orcamento",
 };
 
 export function getModuleRoute(code: string): string | undefined {

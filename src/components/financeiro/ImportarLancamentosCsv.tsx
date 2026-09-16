@@ -9,7 +9,7 @@ import { previsualizarImportacao, confirmarImportacao } from "@/app/(app)/lancam
 import type { PreviaDaImportacao } from "@/lib/financeiro/importacaoCsv";
 import { moeda } from "@/lib/financeiro/formato";
 
-const MODELO = "Tipo;Contraparte;Documento;Categoria;Competência;Vencimento;Valor;Descrição;Pago em";
+const MODELO = "Tipo;Contraparte;Documento;Categoria;Competência;Vencimento;Valor;Descrição;Pago em;Centro de custo";
 
 export function ImportarLancamentosCsv({ companyId }: { companyId: string }) {
   const [texto, setTexto] = useState<string | null>(null);
@@ -64,7 +64,9 @@ export function ImportarLancamentosCsv({ companyId }: { companyId: string }) {
       <p className="text-[12px] text-fg-secondary max-w-[70ch]">
         Uma linha por conta. Vírgula ou ponto e vírgula, datas em <code>dd/mm/aaaa</code> ou <code>aaaa-mm-dd</code>.
         Competência em branco herda o mês do vencimento. A categoria precisa existir no plano de contas com o mesmo
-        tipo. Nada é gravado antes de você confirmar, e linha igual a um lançamento que já existe é ignorada.
+        tipo. Centro de custo é opcional e casa pelo nome ou pelo código de um centro ativo; em branco, vale o centro
+        padrão da contraparte. Nada é gravado antes de você confirmar, e linha igual a um lançamento que já existe é
+        ignorada.
       </p>
       <pre className="text-[11px] bg-surface-hover border border-border rounded-md px-3 py-2 overflow-x-auto">{MODELO}</pre>
 

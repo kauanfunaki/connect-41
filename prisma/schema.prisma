@@ -535,6 +535,8 @@ model Tenant {
   collectionReminderLogs   CollectionReminderLog[]
   collectionReminderConfig CollectionReminderConfig?
   collectionReminderOptOuts CollectionReminderOptOut[]
+  costCenters              CostCenter[]
+  budgets                  Budget[]
   agentEvaluationSummaries AgentEvaluationSummary[]
   sectorTaskViews          SectorTaskView[]
   processOrgans            ProcessOrgan[]
@@ -757,6 +759,8 @@ model User {
   collectionEvents           CollectionEvent[]       @relation("CollectionEventUser")
   collectionReminderConfigs  CollectionReminderConfig[] @relation("CollectionReminderConfigUpdatedBy")
   collectionReminderOptOuts  CollectionReminderOptOut[] @relation("CollectionReminderOptOutCreatedBy")
+  budgetsCreated             Budget[]                @relation("BudgetCreatedBy")
+  budgetsApproved            Budget[]                @relation("BudgetApprovedBy")
   meetingsCreated            Meeting[]               @relation("MeetingCreatedBy")
   meetingAttendances         MeetingAttendee[]
   clientDocumentsCreated     ClientDocument[]
@@ -1000,6 +1004,8 @@ model Company {
   portalApprovalLimits  PortalApprovalLimit[]
   collectionAgreements  CollectionAgreement[]
   collectionReminderOptOut CollectionReminderOptOut?
+  costCenters           CostCenter[]
+  budgets               Budget[]
 
   // Casar documento fiscal com empresa pelo CNPJ do XML exige que o par seja
   // único: com duas empresas do mesmo tenant sob o mesmo CNPJ o casamento é
@@ -2327,6 +2333,12 @@ model FinanceCounterparty {
   /// no recebimento a categoria é opcional.
   defaultCategoryId String?
 
+  /// Centro de custo que a próxima conta desta contraparte herda quando quem
+  /// lança não informa um. Diferente da categoria, não é gravado pelo primeiro
+  /// lançamento: centro é decisão de gestão, não classificação contábil — um
+  /// fornecedor que atende duas unidades não pode ficar preso à primeira.
+  defaultCostCenterId String?
+
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2334,6 +2346,7 @@ model FinanceCounterparty {
   tenant          Tenant           @relation(fields: [tenantId], references: [id])
   company         Company          @relation(fields: [companyId], references: [id])
   defaultCategory FinanceCategory? @relation(fields: [defaultCategoryId], references: [id])
+  defaultCostCenter CostCenter?    @relation(fields: [defaultCostCenterId], references: [id])
   entries         FinanceEntry[]
   agreements      CollectionAgreement[]
 
@@ -2360,6 +2373,12 @@ model FinanceEntry {
   /// src/lib/financeiro/lancamento.ts, não numa constraint: o banco não sabe
   /// expressar "obrigatório só quando kind=PAGAR".
   categoryId     String?
+
+  /// Centro de custo — **um por lançamento, sem rateio**. Opcional sempre: a
+  /// DRE sem filtro não depende dele, e o que não tem centro aparece como
+  /// "Sem centro de custo" na DRE por centro em vez de sumir. A herança na
+  /// criação vive em src/lib/financeiro/centroDeCusto.ts.
+  costCenterId   String?
 
   /// Competência "AAAA-MM", herdada do documento quando vem de um.
   competence String   @db.VarChar(7)
@@ -2411,6 +2430,7 @@ model FinanceEntry {
   company        Company             @relation(fields: [companyId], references: [id])
   counterparty   FinanceCounterparty @relation(fields: [counterpartyId], references: [id])
   category       FinanceCategory?    @relation(fields: [categoryId], references: [id])
+  costCenter     CostCenter?         @relation(fields: [costCenterId], references: [id])
   fiscalDocument FiscalDocument?     @relation(fields: [fiscalDocumentId], references: [id])
   createdBy      User?               @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id])
   reviewedBy     User?               @relation("FinanceEntryReviewedBy", fields: [reviewedById], references: [id])
@@ -2434,7 +2454,99 @@ model FinanceEntry {
   @@index([renegotiatedAgreementId])
   @@index([tenantId, companyId, closeReason, lossAt])
   @@index([tenantId, collectionOwnerId])
+  @@index([tenantId, companyId, costCenterId])
   @@map("finance_entries")
+}
+
+/// Centro de custo de uma empresa cliente — unidade, obra, projeto, loja.
+///
+/// Por empresa, e não do escritório como o plano de contas: cada cliente
+/// divide o próprio negócio do seu jeito, e o centro de uma empresa não tem
+/// significado na outra. Nunca é apagado — inativo some dos seletores e
+/// continua nos relatórios, porque o lançamento antigo continua sendo dele.
+model CostCenter {
+  id        String  @id @default(uuid())
+  tenantId  String
+  companyId String
+  name      String  @db.VarChar(120)
+  /// Código curto opcional ("OBRA-12"). A importação por CSV casa por nome ou
+  /// por código.
+  code      String? @db.VarChar(30)
+  active    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant                @relation(fields: [tenantId], references: [id])
+  company  Company               @relation(fields: [companyId], references: [id])
+  entries  FinanceEntry[]
+  padraoDe FinanceCounterparty[]
+
+  @@unique([companyId, name])
+  @@unique([companyId, code])
+  @@index([tenantId, companyId, active])
+  @@map("cost_centers")
+}
+
+// ─── Orçamento ───────────────────────────────────────────────────────────────
+//
+// Por grupo da DRE (os 12 de src/lib/dre/estrutura.ts) × mês, por empresa e
+// ano. Versões com nome; **só uma aprovada por empresa e ano**, e é ela que a
+// DRE econômica e as análises comparam com o realizado. A regra de aprovação
+// vive em src/lib/dre/orcamento/regras.ts e roda em transação na action.
+
+enum BudgetStatus {
+  RASCUNHO
+  APROVADO
+}
+
+model Budget {
+  id        String       @id @default(uuid())
+  tenantId  String
+  companyId String
+  year      Int
+  name      String       @db.VarChar(80)
+  /// APROVADO é somente leitura; reabrir devolve a RASCUNHO.
+  status    BudgetStatus @default(RASCUNHO)
+
+  approvedAt   DateTime?
+  approvedById String?
+  createdById  String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant     Tenant       @relation(fields: [tenantId], references: [id])
+  company    Company      @relation(fields: [companyId], references: [id])
+  createdBy  User         @relation("BudgetCreatedBy", fields: [createdById], references: [id])
+  approvedBy User?        @relation("BudgetApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  lines      BudgetLine[]
+
+  @@unique([companyId, year, name])
+  @@index([tenantId, companyId, year, status])
+  @@map("budgets")
+}
+
+/// Um valor orçado: grupo da DRE × mês.
+///
+/// `amount` é **magnitude positiva** — o sinal sai da origem do grupo
+/// (recebimento soma, pagamento subtrai), como na DRE. Quem digita orçamento
+/// escreve "aluguel 5.000", não "−5.000"; guardar o sinal pediria que toda tela
+/// de edição soubesse a convenção. Grupo × mês sem linha vale zero.
+model BudgetLine {
+  id        String  @id @default(uuid())
+  budgetId  String
+  /// Código do grupo em `src/lib/dre/estrutura.ts`, validado na aplicação —
+  /// texto pelo mesmo motivo de `DreCategoryMapping.grupo`.
+  groupCode String  @db.VarChar(40)
+  /// 1 a 12.
+  month     Int
+  amount    Decimal @db.Decimal(14, 2)
+
+  budget Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+
+  @@unique([budgetId, groupCode, month])
+  @@map("budget_lines")
 }
 
 /// Por que um lançamento cancelado saiu do em aberto. Ver `FinanceEntry.closeReason`.

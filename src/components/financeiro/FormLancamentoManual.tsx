@@ -8,7 +8,14 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { criarLancamentoManual } from "@/app/(app)/lancamentos/actions";
 
-type Contraparte = { id: string; nome: string; documento: string | null; defaultCategoryId: string | null };
+type Contraparte = {
+  id: string;
+  nome: string;
+  documento: string | null;
+  defaultCategoryId: string | null;
+  defaultCostCenterId?: string | null;
+};
+type Centro = { id: string; nome: string; codigo: string | null };
 type Categoria = { id: string; nome: string; kind: "PAGAR" | "RECEBER" };
 
 const NOVA = "__nova__";
@@ -29,10 +36,13 @@ export function FormLancamentoManual({
   categorias,
   hojeISO,
   competenciaPadrao,
+  centros = [],
 }: {
   companyId: string;
   contrapartes: Contraparte[];
   categorias: Categoria[];
+  /** Centros de custo ativos da empresa. Sem nenhum, o campo não aparece. */
+  centros?: Centro[];
   /** Hoje em São Paulo, do servidor. */
   hojeISO: string;
   competenciaPadrao: string;
@@ -47,6 +57,10 @@ export function FormLancamentoManual({
   const [pendente, startTransition] = useTransition();
 
   const doTipo = categorias.filter((c) => c.kind === kind);
+  // O padrão não é pré-selecionado: em branco o servidor já herda, e pré-
+  // selecionar faria "limpar o campo" parecer "sem centro" quando não é.
+  const padraoId = contrapartes.find((c) => c.id === contraparte)?.defaultCostCenterId ?? null;
+  const centroPadrao = padraoId ? centros.find((c) => c.id === padraoId) : undefined;
 
   function escolherContraparte(id: string) {
     setContraparte(id);
@@ -133,6 +147,25 @@ export function FormLancamentoManual({
             </Campo>
             <Campo rotulo="CPF ou CNPJ" dica="Opcional. Com documento, a ficha é reaproveitada se já existir.">
               <Input name="contraparteDocumento" inputMode="numeric" />
+            </Campo>
+          </div>
+        )}
+
+        {centros.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Campo
+              rotulo="Centro de custo"
+              dica={centroPadrao ? `Em branco, herda o padrão da contraparte: ${centroPadrao.nome}.` : "Opcional. Um centro por lançamento."}
+            >
+              <Select name="costCenterId" defaultValue="">
+                <option value="">{centroPadrao ? `Padrão da contraparte (${centroPadrao.nome})` : "Sem centro de custo"}</option>
+                {centros.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                    {c.codigo ? ` · ${c.codigo}` : ""}
+                  </option>
+                ))}
+              </Select>
             </Campo>
           </div>
         )}

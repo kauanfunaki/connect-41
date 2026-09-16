@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Users } from "lucide-react";
+import { Layers, Users } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
 import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
 import { NovaContraparte, EditarContraparte } from "@/components/financeiro/FormContraparte";
+import { NovoCentroDeCusto, EditarCentroDeCusto } from "@/components/financeiro/FormCentroDeCusto";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,7 @@ const ABAS = [
   { chave: "fornecedores", rotulo: "Fornecedores" },
   { chave: "sacados", rotulo: "Sacados" },
   { chave: "todos", rotulo: "Todos" },
+  { chave: "centros", rotulo: "Centros de custo" },
 ] as const;
 
 function documento(d: string | null): string {
@@ -31,13 +33,16 @@ function documento(d: string | null): string {
 }
 
 /**
- * Fornecedores e sacados da empresa cliente.
+ * Fornecedores e sacados da empresa cliente, e os centros de custo dela.
  *
  * **Uma ficha só para os dois papéis** — é como o schema modela
  * (`FinanceCounterparty`), porque o mesmo CNPJ costuma ser as duas coisas. As
  * abas não são tabelas diferentes: o papel sai do movimento. Fornecedor é quem
  * tem conta a pagar, sacado é quem tem conta a receber, e a ficha ainda sem
  * movimento aparece nas duas até a primeira conta dizer o que ela é.
+ *
+ * Centros de custo moram aqui porque são cadastro da mesma empresa, com a mesma
+ * permissão, e a contraparte aponta para eles como centro padrão.
  */
 export default async function CadastrosFinanceirosPage({
   searchParams,
@@ -57,7 +62,12 @@ export default async function CadastrosFinanceirosPage({
   const empresas = await empresasDoSeletor(ctx.tenantId);
   const companyId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : empresas[0]?.id;
 
-  const cabecalho = <PageHeader title="Fornecedores e sacados" subtitle="As contrapartes de cada empresa cliente, e a categoria que a próxima conta herda." />;
+  const cabecalho = (
+    <PageHeader
+      title="Fornecedores e sacados"
+      subtitle="As contrapartes e os centros de custo de cada empresa cliente, e o que a próxima conta herda."
+    />
+  );
   if (!companyId) {
     return (
       <PageContainer>
@@ -68,10 +78,41 @@ export default async function CadastrosFinanceirosPage({
   }
 
   const prisma = getPrisma();
+  const href = (a: string) => `/cadastros-financeiros?empresa=${companyId}${a === "fornecedores" ? "" : `&aba=${a}`}`;
+  const centros = await prisma.costCenter.findMany({
+    where: { tenantId: ctx.tenantId, companyId },
+    select: { id: true, name: true, code: true, active: true },
+    orderBy: { name: "asc" },
+  });
+
+  if (aba === "centros") {
+    return (
+      <PageContainer>
+        {cabecalho}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba }} />
+          {podeEditar && <NovoCentroDeCusto companyId={companyId} />}
+        </div>
+        <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
+        <AbaDeCentros tenantId={ctx.tenantId} companyId={companyId} centros={centros} podeEditar={podeEditar} />
+      </PageContainer>
+    );
+  }
+
   const [contrapartes, movimento, categorias] = await Promise.all([
     prisma.financeCounterparty.findMany({
       where: { tenantId: ctx.tenantId, companyId },
-      select: { id: true, name: true, document: true, email: true, active: true, defaultCategoryId: true, defaultCategory: { select: { name: true } } },
+      select: {
+        id: true,
+        name: true,
+        document: true,
+        email: true,
+        active: true,
+        defaultCategoryId: true,
+        defaultCategory: { select: { name: true } },
+        defaultCostCenterId: true,
+        defaultCostCenter: { select: { name: true, active: true } },
+      },
       orderBy: { name: "asc" },
     }),
     prisma.financeEntry.groupBy({
@@ -110,14 +151,15 @@ export default async function CadastrosFinanceirosPage({
   });
 
   const listaDeCategorias = categorias.map((c) => ({ id: c.id, nome: c.name }));
-  const href = (a: string) => `/cadastros-financeiros?empresa=${companyId}${a === "fornecedores" ? "" : `&aba=${a}`}`;
+  // Inativo não é oferecido como padrão novo — ver `centroPadraoValido`.
+  const centrosAtivos = centros.filter((c) => c.active).map((c) => ({ id: c.id, nome: c.name }));
 
   return (
     <PageContainer>
       {cabecalho}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba: aba === "fornecedores" ? undefined : aba }} />
-        {podeEditar && <NovaContraparte companyId={companyId} categorias={listaDeCategorias} />}
+        {podeEditar && <NovaContraparte companyId={companyId} categorias={listaDeCategorias} centros={centrosAtivos} />}
       </div>
       <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
 
@@ -135,12 +177,13 @@ export default async function CadastrosFinanceirosPage({
         />
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-[13px]">
+          <table className="w-full min-w-[920px] text-[13px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                 <th className="py-2 pr-3 font-medium">Nome</th>
                 <th className="py-2 pr-3 font-medium">Documento</th>
                 <th className="py-2 pr-3 font-medium">Categoria padrão</th>
+                <th className="py-2 pr-3 font-medium">Centro padrão</th>
                 <th className="py-2 pr-3 font-medium text-right">Contas a pagar</th>
                 <th className="py-2 pr-3 font-medium text-right">Contas a receber</th>
                 <th className="py-2 pr-3 font-medium">Situação</th>
@@ -158,6 +201,12 @@ export default async function CadastrosFinanceirosPage({
                     </td>
                     <td className="py-2.5 pr-3 tabular-nums text-fg-secondary">{documento(c.document)}</td>
                     <td className="py-2.5 pr-3 text-fg-secondary">{c.defaultCategory?.name ?? "—"}</td>
+                    <td className="py-2.5 pr-3 text-fg-secondary">
+                      {c.defaultCostCenter?.name ?? "—"}
+                      {c.defaultCostCenter && !c.defaultCostCenter.active && (
+                        <span className="block text-[11px] text-warning">inativo — não é herdado</span>
+                      )}
+                    </td>
                     <td className="py-2.5 pr-3 text-right tabular-nums">{n.pagar}</td>
                     <td className="py-2.5 pr-3 text-right tabular-nums">{n.receber}</td>
                     <td className="py-2.5 pr-3">
@@ -167,7 +216,17 @@ export default async function CadastrosFinanceirosPage({
                       {podeEditar && (
                         <EditarContraparte
                           categorias={listaDeCategorias}
-                          contraparte={{ id: c.id, nome: c.name, documento: c.document, email: c.email, defaultCategoryId: c.defaultCategoryId, ativo: c.active }}
+                          centros={centrosAtivos}
+                          contraparte={{
+                            id: c.id,
+                            nome: c.name,
+                            documento: c.document,
+                            email: c.email,
+                            defaultCategoryId: c.defaultCategoryId,
+                            ativo: c.active,
+                            defaultCostCenterId: c.defaultCostCenterId,
+                            centroPadraoNome: c.defaultCostCenter?.name ?? null,
+                          }}
                         />
                       )}
                     </td>
@@ -179,10 +238,89 @@ export default async function CadastrosFinanceirosPage({
           <p className="text-[11px] text-fg-muted mt-3">
             Inativo continua nas contas antigas e deixa de aparecer no lançamento manual. Cadastro não é apagado: a ficha é
             o que liga as notas e as contas de um mesmo fornecedor. O e-mail é para onde vai o lembrete da régua de
-            cobrança — sacado sem e-mail fica fora dela.
+            cobrança — sacado sem e-mail fica fora dela. O centro padrão entra na próxima conta quando quem lança não
+            escolhe um centro.
           </p>
         </div>
       )}
     </PageContainer>
+  );
+}
+
+async function AbaDeCentros({
+  tenantId,
+  companyId,
+  centros,
+  podeEditar,
+}: {
+  tenantId: string;
+  companyId: string;
+  centros: { id: string; name: string; code: string | null; active: boolean }[];
+  podeEditar: boolean;
+}) {
+  if (centros.length === 0) {
+    return (
+      <EmptyState
+        title="Nenhum centro de custo nesta empresa"
+        description="Centro de custo é opcional: cadastre unidades, obras ou projetos para ver a DRE econômica por centro."
+        icon={<Layers />}
+      />
+    );
+  }
+
+  const prisma = getPrisma();
+  // Quantos lançamentos cada centro tem — é o que diz se inativar tira alguém
+  // do relatório (não tira: inativo continua nele, e a tela diz isso).
+  const [uso, padroes] = await Promise.all([
+    prisma.financeEntry.groupBy({
+      by: ["costCenterId"],
+      where: { tenantId, companyId, costCenterId: { not: null } },
+      _count: { _all: true },
+    }),
+    prisma.financeCounterparty.groupBy({
+      by: ["defaultCostCenterId"],
+      where: { tenantId, companyId, defaultCostCenterId: { not: null } },
+      _count: { _all: true },
+    }),
+  ]);
+  const lancamentos = new Map(uso.map((u) => [u.costCenterId, u._count._all]));
+  const contrapartes = new Map(padroes.map((u) => [u.defaultCostCenterId, u._count._all]));
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[720px] text-[13px]">
+        <thead>
+          <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+            <th className="py-2 pr-3 font-medium">Nome</th>
+            <th className="py-2 pr-3 font-medium">Código</th>
+            <th className="py-2 pr-3 font-medium text-right">Lançamentos</th>
+            <th className="py-2 pr-3 font-medium text-right">Padrão de contrapartes</th>
+            <th className="py-2 pr-3 font-medium">Situação</th>
+            <th className="py-2 font-medium"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {centros.map((c) => (
+            <tr key={c.id} className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
+              <td className="py-2.5 pr-3 font-medium">{c.name}</td>
+              <td className="py-2.5 pr-3 text-fg-secondary tabular-nums">{c.code ?? "—"}</td>
+              <td className="py-2.5 pr-3 text-right tabular-nums">{lancamentos.get(c.id) ?? 0}</td>
+              <td className="py-2.5 pr-3 text-right tabular-nums">{contrapartes.get(c.id) ?? 0}</td>
+              <td className="py-2.5 pr-3">
+                {c.active ? <Badge variant="success">Ativo</Badge> : <Badge variant="info">Inativo</Badge>}
+              </td>
+              <td className="py-2.5">
+                {podeEditar && <EditarCentroDeCusto centro={{ id: c.id, nome: c.name, codigo: c.code, ativo: c.active }} />}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="text-[11px] text-fg-muted mt-3">
+        Um centro por lançamento, sem rateio. Inativo some dos seletores e da herança, e continua na DRE por centro com o que
+        já foi lançado nele. Centro de custo não é apagado. Na importação por CSV, a coluna <code>centro_de_custo</code> casa
+        pelo nome ou pelo código.
+      </p>
+    </div>
   );
 }

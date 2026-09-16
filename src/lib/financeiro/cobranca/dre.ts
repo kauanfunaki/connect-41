@@ -64,13 +64,26 @@ export type AcordoNaDre = {
   status: StatusDoAcordo;
   originalCentavos: number;
   acordadoCentavos: number;
+  /**
+   * Centro de custo da diferença: o comum dos títulos originais, ou nulo se
+   * divergirem — a mesma regra das parcelas (`centroComum`). Sem rateio.
+   */
+  centroDeCustoId?: string | null;
 };
 
 export type PerdaNaDre = {
   /** Competência "AAAA-MM" da data da perda, em São Paulo. */
   competencia: string;
   centavos: number;
+  /** Centro de custo do título perdido — a perda segue o título. */
+  centroDeCustoId?: string | null;
 };
+
+// Só leva a chave quando o chamador informou o centro: os testes e telas que
+// não conhecem centro continuam recebendo o mesmo objeto de antes.
+function centro(x: { centroDeCustoId?: string | null }): { centroDeCustoId?: string | null } {
+  return x.centroDeCustoId !== undefined ? { centroDeCustoId: x.centroDeCustoId } : {};
+}
 
 /**
  * Os lançamentos que a cobrança acrescenta à DRE econômica de uma competência.
@@ -86,14 +99,14 @@ export function ajustesDaCobranca(acordos: AcordoNaDre[], perdas: PerdaNaDre[], 
     if (a.competencia !== competencia || a.status === "DESFEITO") continue;
     const diferenca = a.acordadoCentavos - a.originalCentavos;
     if (diferenca > 0) {
-      saida.push({ categoria: null, grupo: GRUPO_DO_ACRESCIMO_DE_ACORDO, valorCentavos: diferenca, origem: "recebimento" });
+      saida.push({ categoria: null, grupo: GRUPO_DO_ACRESCIMO_DE_ACORDO, valorCentavos: diferenca, origem: "recebimento", ...centro(a) });
     } else if (diferenca < 0) {
-      saida.push({ categoria: null, grupo: GRUPO_DO_DESCONTO_DE_ACORDO, valorCentavos: diferenca, origem: "pagamento" });
+      saida.push({ categoria: null, grupo: GRUPO_DO_DESCONTO_DE_ACORDO, valorCentavos: diferenca, origem: "pagamento", ...centro(a) });
     }
   }
   for (const p of perdas) {
     if (p.competencia !== competencia || p.centavos === 0) continue;
-    saida.push({ categoria: null, grupo: GRUPO_DA_PERDA, valorCentavos: -Math.abs(p.centavos), origem: "pagamento", perda: true });
+    saida.push({ categoria: null, grupo: GRUPO_DA_PERDA, valorCentavos: -Math.abs(p.centavos), origem: "pagamento", perda: true, ...centro(p) });
   }
   return saida;
 }

@@ -14,6 +14,8 @@ type Props = {
   mes?: string;
   /** Parâmetros que o filtro precisa carregar (aba, modo…). */
   extras?: Record<string, string | undefined>;
+  /** Campos a mais no mesmo formulário (ex.: centro de custo), antes do botão. */
+  children?: React.ReactNode;
 };
 
 /**
@@ -24,7 +26,7 @@ type Props = {
  * navegações — e o GET deixa a URL copiável, que é como relatório é mandado
  * para outra pessoa.
  */
-export function FiltroDePeriodo({ acao, empresas, empresaId, permitirTodas, mes, extras }: Props) {
+export function FiltroDePeriodo({ acao, empresas, empresaId, permitirTodas, mes, extras, children }: Props) {
   return (
     <form method="get" action={acao} className="flex flex-wrap items-center gap-2 mb-4">
       {Object.entries(extras ?? {}).map(([k, v]) => (v ? <input key={k} type="hidden" name={k} value={v} /> : null))}
@@ -41,6 +43,7 @@ export function FiltroDePeriodo({ acao, empresas, empresaId, permitirTodas, mes,
       {mes !== undefined && (
         <Input compact type="month" name="mes" defaultValue={mes} className="w-40" aria-label="Mês" />
       )}
+      {children}
       <Button type="submit" variant="secondary" size="sm">
         Aplicar
       </Button>

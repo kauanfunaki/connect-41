@@ -397,12 +397,12 @@ async function ExtratoDaConta({
     };
   });
 
-  const [contrapartes, categorias] =
+  const [contrapartes, categorias, centros] =
     podeAgir && pendentes.length > 0
       ? await Promise.all([
           prisma.financeCounterparty.findMany({
             where: { tenantId, companyId, active: true },
-            select: { id: true, name: true, document: true, defaultCategoryId: true },
+            select: { id: true, name: true, document: true, defaultCategoryId: true, defaultCostCenterId: true },
             orderBy: { name: "asc" },
           }),
           prisma.financeCategory.findMany({
@@ -410,8 +410,13 @@ async function ExtratoDaConta({
             select: { id: true, name: true, kind: true },
             orderBy: { name: "asc" },
           }),
+          prisma.costCenter.findMany({
+            where: { tenantId, companyId, active: true },
+            select: { id: true, name: true },
+            orderBy: { name: "asc" },
+          }),
         ])
-      : [[], []];
+      : [[], [], []];
 
   return (
     <>
@@ -488,8 +493,15 @@ async function ExtratoDaConta({
           <TransacoesDaConta
             linhas={linhas}
             podeAgir={podeAgir}
-            contrapartes={contrapartes.map((c) => ({ id: c.id, nome: c.name, documento: c.document, defaultCategoryId: c.defaultCategoryId }))}
+            contrapartes={contrapartes.map((c) => ({
+              id: c.id,
+              nome: c.name,
+              documento: c.document,
+              defaultCategoryId: c.defaultCategoryId,
+              defaultCostCenterId: c.defaultCostCenterId,
+            }))}
             categorias={categorias.map((c) => ({ id: c.id, nome: c.name, kind: c.kind }))}
+            centros={centros.map((c) => ({ id: c.id, nome: c.name }))}
           />
           {limitado && (
             <p className="text-[11px] text-fg-muted mt-2">

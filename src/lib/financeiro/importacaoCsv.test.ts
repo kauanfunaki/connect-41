@@ -89,6 +89,46 @@ describe("prepararImportacao", () => {
   });
 });
 
+describe("prepararImportacao — centro de custo", () => {
+  const CENTROS = [
+    { id: "cc-loja", nome: "Loja Centro", codigo: "LJ1" },
+    { id: "cc-obra", nome: "Obra 12", codigo: null },
+  ];
+  const comCentro = (...linhas: string[]) => [`${CABECALHO};Centro de custo`, ...linhas].join("\n");
+
+  it("casa por nome ou código, e coluna vazia fica sem centro (herda na gravação)", () => {
+    const r = prepararImportacao(
+      comCentro("pagar;A;;Aluguel;;2026-09-10;10;;;lj1", "pagar;B;;Aluguel;;2026-09-10;11;;;obra 12", "pagar;C;;Aluguel;;2026-09-10;12;;;"),
+      HOJE,
+      CATEGORIAS,
+      new Set(),
+      CENTROS
+    );
+    expect(r.ok && r.linhas.map((l) => (l.situacao === "valida" ? l.dados.centroDeCustoId : l.situacao))).toEqual(["cc-loja", "cc-obra", null]);
+  });
+
+  it("centro escrito e não encontrado é erro da linha", () => {
+    const r = prepararImportacao(comCentro("receber;A;;;;2026-09-10;10;;;Fábrica"), HOJE, CATEGORIAS, new Set(), CENTROS);
+    expect(r.ok && r.linhas[0]).toMatchObject({ situacao: "erro", erro: expect.stringMatching(/Fábrica/) });
+  });
+
+  it("sem a coluna, o arquivo de antes continua válido e sem centro", () => {
+    const r = prepararImportacao(csv("pagar;A;;Aluguel;;2026-09-10;10;;"), HOJE, CATEGORIAS, new Set(), CENTROS);
+    expect(r.ok && r.linhas[0]).toMatchObject({ situacao: "valida", dados: { centroDeCustoId: null } });
+  });
+
+  it("o centro não entra na chave de duplicidade", () => {
+    const r = prepararImportacao(
+      comCentro("pagar;A;;Aluguel;;2026-09-10;10;;;LJ1", "pagar;A;;Aluguel;;2026-09-10;10;;;Obra 12"),
+      HOJE,
+      CATEGORIAS,
+      new Set(),
+      CENTROS
+    );
+    expect(r.ok && r.linhas.map((l) => l.situacao)).toEqual(["valida", "duplicada"]);
+  });
+});
+
 describe("conversões de texto", () => {
   it("tipo, data e competência", () => {
     expect(tipoDeTexto("Despesa")).toBe("PAGAR");

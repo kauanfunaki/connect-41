@@ -22,6 +22,8 @@ import { centavosDeDecimal } from "./data";
 import { OPCOES_PADRAO } from "./estrutura";
 import { calcularDreEconomica, paraLancamentoDoDre, type DreEconomica, type LancamentoFinanceiro } from "./economica";
 import { resultadoDePorGrupo, somarPorGrupo, type ConjuntosDaReconciliacao } from "./analises";
+import { quadroPorCentro, type QuadroPorCentro } from "./centroDeCusto";
+import { centroComum, passaNoFiltroDeCentro, type FiltroDeCentro } from "@/lib/financeiro/centroDeCusto";
 import type { Prisma } from "@/generated/prisma/client";
 import { ajustesDaCobranca, contaNaDreEconomica } from "@/lib/financeiro/cobranca/dre";
 import {
@@ -68,6 +70,7 @@ const SELECAO = {
   competence: true,
   paidAt: true,
   dueDate: true,
+  costCenterId: true,
 } as const;
 
 type Linha = {
@@ -81,6 +84,7 @@ type Linha = {
   competence: string;
   paidAt: Date | null;
   dueDate: Date;
+  costCenterId: string | null;
 };
 
 function paraFinanceiro(l: Linha, nomePorId: Map<string, string>): LancamentoFinanceiro {
@@ -91,13 +95,24 @@ function paraFinanceiro(l: Linha, nomePorId: Map<string, string>): LancamentoFin
     parcelaDeAcordo: l.agreementId !== null,
     centavos: centavosDeDecimal(l.amount),
     categoria: l.categoryId ? nomePorId.get(l.categoryId) ?? null : null,
+    centroDeCustoId: l.costCenterId,
   };
+}
+
+/** O recorte do filtro de centro no banco. "Todos" não acrescenta nada. */
+function whereDoCentro(filtro: FiltroDeCentro): Prisma.FinanceEntryWhereInput {
+  if (filtro.tipo === "todos") return {};
+  return { costCenterId: filtro.tipo === "sem" ? null : filtro.id };
 }
 
 /**
  * A diferença de acordo e a perda de cada competência pedida, já como
  * lançamentos de grupo fixo. Duas consultas pelo intervalo inteiro, separadas
  * em memória pela competência da **data** do acordo e da perda.
+ *
+ * Cada ajuste leva o centro de custo do título: a perda, o do título perdido;
+ * a diferença de acordo, o comum dos originais (nenhum se divergirem). Quem
+ * filtra por centro filtra estes ajustes junto com os lançamentos.
  */
 export async function ajustesDoPeriodo(
   tenantId: string,
@@ -113,11 +128,17 @@ export async function ajustesDoPeriodo(
   const [acordos, perdas] = await Promise.all([
     prisma.collectionAgreement.findMany({
       where: { tenantId, companyId, status: { not: "DESFEITO" }, agreedAt: { gte: de, lt: ate } },
-      select: { agreedAt: true, status: true, originalAmount: true, agreedAmount: true },
+      select: {
+        agreedAt: true,
+        status: true,
+        originalAmount: true,
+        agreedAmount: true,
+        originais: { select: { costCenterId: true } },
+      },
     }),
     prisma.financeEntry.findMany({
       where: { tenantId, companyId, closeReason: "PERDA", lossAt: { gte: de, lt: ate } },
-      select: { lossAt: true, amount: true },
+      select: { lossAt: true, amount: true, costCenterId: true },
     }),
   ]);
   const acordosNaDre = acordos.map((a) => ({
@@ -125,23 +146,34 @@ export async function ajustesDoPeriodo(
     status: a.status,
     originalCentavos: centavosDeDecimal(a.originalAmount),
     acordadoCentavos: centavosDeDecimal(a.agreedAmount),
+    centroDeCustoId: centroComum(a.originais.map((o) => o.costCenterId)),
   }));
-  const perdasNaDre = perdas.map((p) => ({ competencia: competenciaDoInstante(p.lossAt!), centavos: centavosDeDecimal(p.amount) }));
+  const perdasNaDre = perdas.map((p) => ({
+    competencia: competenciaDoInstante(p.lossAt!),
+    centavos: centavosDeDecimal(p.amount),
+    centroDeCustoId: p.costCenterId,
+  }));
   for (const c of competencias) saida.set(c, ajustesDaCobranca(acordosNaDre, perdasNaDre, c));
   return saida;
 }
 
-/** A DRE econômica de cada competência pedida. Uma consulta para todas. */
+/**
+ * A DRE econômica de cada competência pedida. Uma consulta para todas.
+ *
+ * `centro` recorta lançamentos **e** ajustes da cobrança pelo centro de custo;
+ * sem ele, a empresa inteira — que é o que o portal e as análises leem.
+ */
 export async function serieEconomica(
   tenantId: string,
   companyId: string,
-  competencias: string[]
+  competencias: string[],
+  centro: FiltroDeCentro = { tipo: "todos" }
 ): Promise<Map<string, DreEconomica>> {
   const prisma = getPrisma();
   const [ctx, linhas, ajustes] = await Promise.all([
     contextoDoDre(tenantId, companyId),
     prisma.financeEntry.findMany({
-      where: { tenantId, companyId, competence: { in: competencias }, ...WHERE_ECONOMICO },
+      where: { tenantId, companyId, competence: { in: competencias }, ...WHERE_ECONOMICO, ...whereDoCentro(centro) },
       select: SELECAO,
     }),
     ajustesDoPeriodo(tenantId, companyId, competencias),
@@ -149,7 +181,47 @@ export async function serieEconomica(
   const porMes = new Map<string, LancamentoFinanceiro[]>(competencias.map((c) => [c, []]));
   for (const l of linhas) porMes.get(l.competence)?.push(paraFinanceiro(l, ctx.nomePorId));
   return new Map(
-    competencias.map((c) => [c, calcularDreEconomica(porMes.get(c)!, ctx.mapeamento, OPCOES_PADRAO, ajustes.get(c) ?? [])])
+    competencias.map((c) => [
+      c,
+      calcularDreEconomica(
+        porMes.get(c)!,
+        ctx.mapeamento,
+        OPCOES_PADRAO,
+        (ajustes.get(c) ?? []).filter((a) => passaNoFiltroDeCentro(a.centroDeCustoId, centro))
+      ),
+    ])
+  );
+}
+
+/**
+ * O quadro "Resultado por centro de custo" de um período: a DRE econômica de
+ * cada centro, com "Sem centro de custo", somando a DRE sem filtro. Uma
+ * consulta de lançamentos para o período inteiro — o resultado é soma de
+ * grupos, então não precisa separar por mês.
+ */
+export async function quadroPorCentroDoPeriodo(
+  tenantId: string,
+  companyId: string,
+  competencias: string[]
+): Promise<QuadroPorCentro> {
+  const prisma = getPrisma();
+  const [ctx, linhas, ajustes, centros] = await Promise.all([
+    contextoDoDre(tenantId, companyId),
+    prisma.financeEntry.findMany({
+      where: { tenantId, companyId, competence: { in: competencias }, ...WHERE_ECONOMICO },
+      select: SELECAO,
+    }),
+    ajustesDoPeriodo(tenantId, companyId, competencias),
+    prisma.costCenter.findMany({
+      where: { tenantId, companyId },
+      select: { id: true, name: true, code: true, active: true },
+    }),
+  ]);
+  return quadroPorCentro(
+    linhas.map((l) => paraFinanceiro(l, ctx.nomePorId)),
+    [...ajustes.values()].flat(),
+    ctx.mapeamento,
+    centros.map((c) => ({ id: c.id, nome: c.name, codigo: c.code, active: c.active }))
   );
 }
 

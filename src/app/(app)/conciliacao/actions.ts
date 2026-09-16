@@ -25,6 +25,7 @@ import { contaConfere, codigoDoBanco, validarConta } from "@/lib/financeiro/conc
 import { tipoCompativel, validarSelecao } from "@/lib/financeiro/conciliacao/casamento";
 import { motivoDoBloqueioDeBaixa } from "@/lib/financeiro/aprovacao/regras";
 import { sincronizarAcordos } from "@/lib/financeiro/cobranca/sincronizar";
+import { centroNaCriacao } from "@/lib/financeiro/centroDeCustoServidor";
 
 const MODULE = "bpo_conciliacao";
 
@@ -582,15 +583,24 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
   const existente = counterpartyId
     ? await c.prisma.financeCounterparty.findFirst({
         where: { id: counterpartyId, tenantId: c.tenantId, companyId },
-        select: { id: true, defaultCategoryId: true },
+        select: { id: true, defaultCategoryId: true, defaultCostCenterId: true },
       })
     : novoDocumento
       ? await c.prisma.financeCounterparty.findFirst({
           where: { tenantId: c.tenantId, companyId, document: novoDocumento },
-          select: { id: true, defaultCategoryId: true },
+          select: { id: true, defaultCategoryId: true, defaultCostCenterId: true },
         })
       : null;
   if (counterpartyId && !existente) return { error: "Contraparte não encontrada nesta empresa." };
+
+  // Mesma herança do lançamento manual: o centro escolhido, senão o padrão da contraparte.
+  const centro = await centroNaCriacao({
+    tenantId: c.tenantId,
+    companyId,
+    informadoId: texto(formData, "costCenterId") || null,
+    padraoDaContraparteId: existente?.defaultCostCenterId ?? null,
+  });
+  if (!centro.ok) return { error: centro.erro };
 
   let entryId: string;
   try {
@@ -613,6 +623,7 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
           status: "PAGO",
           counterpartyId: contraparte.id,
           categoryId: d.categoryId,
+          costCenterId: centro.centroId,
           competence: d.competencia,
           dueDate: pagoEm,
           paidAt: pagoEm,
@@ -657,7 +668,14 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
     action: "financeiro.entry.created_from_bank_transaction",
     entityType: "FinanceEntry",
     entityId: entryId,
-    metadata: { companyId, transactionId: t.id, kind: d.kind, valor: decimalDeCentavos(d.centavos), competencia: d.competencia },
+    metadata: {
+      companyId,
+      transactionId: t.id,
+      kind: d.kind,
+      valor: decimalDeCentavos(d.centavos),
+      competencia: d.competencia,
+      centroDeCusto: centro.centroId,
+    },
   });
 
   revalidar();

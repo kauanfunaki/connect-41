@@ -12,6 +12,10 @@ import { SeloDaAprovacao } from "@/components/aprovacoes/HistoricoDaAprovacao";
 import { aprovacaoEmCurso, motivoDoBloqueioDeBaixa, podeEnviarParaAprovacao } from "@/lib/financeiro/aprovacao/regras";
 import { SeloDaCobranca } from "@/components/cobranca/SeloDaCobranca";
 import type { SituacaoDeCobranca } from "@/lib/financeiro/cobranca/regras";
+import { Checkbox } from "@/components/ui/Checkbox";
+// Constante de módulo comum, e não do componente de cliente: importada de um
+// arquivo "use client", chegaria aqui como referência de cliente, não string.
+import { FORM_DO_CENTRO } from "@/lib/financeiro/centroDeCusto";
 
 const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -53,6 +57,10 @@ type Props = {
    * e a pessoa atua nele (só a receber). O selo leva ao título na cobrança.
    */
   cobranca?: Map<string, SituacaoDeCobranca | null> | null;
+  /** Mostra a coluna do centro de custo — só quando a empresa usa centro. */
+  mostrarCentro?: boolean;
+  /** Caixa de seleção por linha, ligada à barra `DefinirCentroDasContas`. */
+  selecionarCentro?: boolean;
 };
 
 export function ContasTable({
@@ -63,6 +71,8 @@ export function ContasTable({
   podeEnviarParaAprovacao: moduloDeAprovacao = false,
   podeAbrirPendencia = false,
   cobranca = null,
+  mostrarCentro = false,
+  selecionarCentro = false,
 }: Props) {
   if (linhas.length === 0) {
     return filtrado ? (
@@ -85,12 +95,14 @@ export function ContasTable({
       <table className="w-full min-w-[880px] text-[13px]">
         <thead>
           <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+            {selecionarCentro && <th className="py-2 pr-2 font-medium w-6" aria-label="Selecionar"></th>}
             <th className="py-2 pr-3 font-medium">Vencimento</th>
             <th className="py-2 pr-3 font-medium">
               {kind === "PAGAR" ? "Fornecedor" : "Cliente"}
             </th>
             <th className="py-2 pr-3 font-medium">Empresa</th>
             <th className="py-2 pr-3 font-medium">Categoria</th>
+            {mostrarCentro && <th className="py-2 pr-3 font-medium">Centro de custo</th>}
             <th className="py-2 pr-3 font-medium">Competência</th>
             <th className="py-2 pr-3 font-medium text-right">Valor</th>
             <th className="py-2 pr-3 font-medium">Situação</th>
@@ -100,6 +112,11 @@ export function ContasTable({
         <tbody>
           {linhas.map((l) => (
             <tr key={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
+              {selecionarCentro && (
+                <td className="py-2.5 pr-2">
+                  <Checkbox name="entryIds" value={l.id} form={FORM_DO_CENTRO} aria-label={`Selecionar ${l.contraparteNome}`} />
+                </td>
+              )}
               <td className="py-2.5 pr-3 whitespace-nowrap tabular-nums">
                 {formatInstantDate(l.vencimento)}
                 {l.pagoEm && (
@@ -126,6 +143,7 @@ export function ContasTable({
                   </span>
                 )}
               </td>
+              {mostrarCentro && <td className="py-2.5 pr-3 text-fg-secondary">{l.centroDeCustoNome ?? "—"}</td>}
               <td className="py-2.5 pr-3 text-fg-muted tabular-nums">{l.competencia}</td>
               <td className="py-2.5 pr-3 text-right tabular-nums font-medium">
                 {moeda(l.valorCentavos)}

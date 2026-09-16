@@ -18,17 +18,24 @@ const CAMPOS: { chave: keyof PremissasDoCenario; rotulo: string; dica: string }[
   { chave: "financeiras", rotulo: "Despesas financeiras", dica: "Juros e tarifas." },
 ];
 
+export type BaseDoCenario = { chave: string; rotulo: string; porGrupo: Record<string, number> };
+
 /**
- * O simulador roda no navegador, sobre os totais por grupo de um mês real.
+ * O simulador roda no navegador, sobre os totais por grupo de uma base: o mês
+ * real ou, com versão de orçamento aprovada, o orçado do mês.
  *
- * Nada é gravado: cenário salvo, versionado e aprovado é motor de orçamento,
- * que está fora desta etapa. As contas são as mesmas funções puras que o
- * servidor usaria — `simularCenario` e `montarLinhas` —, então o número daqui
- * é o que a DRE mostraria se o mês tivesse sido assim.
+ * Nada é gravado: o cenário é exploração, e o número que se compromete é o
+ * orçamento, que tem versão e aprovação próprias em `/dre/orcamento`. As contas
+ * são as mesmas funções puras que o servidor usaria — `simularCenario` e
+ * `montarLinhas` —, então o número daqui é o que a DRE mostraria se o mês
+ * tivesse sido assim.
  */
-export function SimuladorDeCenarios({ porGrupo }: { porGrupo: Record<string, number> }) {
+export function SimuladorDeCenarios({ bases }: { bases: BaseDoCenario[] }) {
   const [premissas, setPremissas] = useState<PremissasDoCenario>(PREMISSAS_ZERADAS);
   const [pronto, setPronto] = useState("base");
+  const [chaveDaBase, setChaveDaBase] = useState(bases[0]?.chave ?? "");
+  const baseEscolhida = bases.find((b) => b.chave === chaveDaBase) ?? bases[0]!;
+  const porGrupo = baseEscolhida.porGrupo;
 
   const base = useMemo(() => montarLinhas(porGrupo), [porGrupo]);
   const simulado = useMemo(() => montarLinhas(simularCenario(porGrupo, premissas)), [porGrupo, premissas]);
@@ -40,6 +47,16 @@ export function SimuladorDeCenarios({ porGrupo }: { porGrupo: Record<string, num
     <div className="grid gap-4 lg:grid-cols-2">
       <Card className="p-4 flex flex-col gap-4">
         <h3 className="text-[14px] font-semibold text-fg">Premissas</h3>
+        {bases.length > 1 && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[12px] text-fg-secondary">Partir de:</span>
+            {bases.map((b) => (
+              <Button key={b.chave} size="sm" variant={b.chave === baseEscolhida.chave ? "primary" : "secondary"} onClick={() => setChaveDaBase(b.chave)}>
+                {b.rotulo}
+              </Button>
+            ))}
+          </div>
+        )}
         <div className="flex flex-wrap gap-1.5">
           {CENARIOS_PRONTOS.map((c) => (
             <Button
@@ -83,7 +100,7 @@ export function SimuladorDeCenarios({ porGrupo }: { porGrupo: Record<string, num
           <thead>
             <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
               <th className="py-2 pl-4 pr-3 font-medium">Linha</th>
-              <th className="py-2 pr-3 font-medium text-right">Mês real</th>
+              <th className="py-2 pr-3 font-medium text-right">{baseEscolhida.chave === "orcamento" ? "Orçado" : "Mês real"}</th>
               <th className="py-2 pr-4 font-medium text-right">Simulado</th>
             </tr>
           </thead>

@@ -16,6 +16,7 @@ import {
   type LancamentoValidado,
 } from "./manual";
 import { competenciaDe } from "./periodo";
+import { casarCentroDeCusto, type CentroParaCasar } from "./centroDeCusto";
 
 /** Linhas por arquivo. Mais que isso é migração, e migração pede conferência por lote. */
 export const MAXIMO_DE_LINHAS = 2000;
@@ -29,7 +30,8 @@ type Coluna =
   | "vencimento"
   | "valor"
   | "descricao"
-  | "pagoEm";
+  | "pagoEm"
+  | "centroDeCusto";
 
 // Os apelidos saem do que as planilhas do BPO e os exports de ERP costumam
 // chamar cada coisa. Comparados já normalizados — sem acento, caixa ou espaço.
@@ -43,6 +45,8 @@ const APELIDOS: Record<Coluna, string[]> = {
   valor: ["valor", "valorr", "valortotal"],
   descricao: ["descricao", "historico", "observacao"],
   pagoEm: ["pagoem", "datadepagamento", "datapagamento", "recebidoem", "baixa", "databaixa"],
+  // Opcional. Casa pelo nome ou pelo código do centro — ver `casarCentroDeCusto`.
+  centroDeCusto: ["centrodecusto", "centrocusto", "centro", "codigodocentro"],
 };
 
 const OBRIGATORIAS: Coluna[] = ["tipo", "contraparte", "vencimento", "valor"];
@@ -52,6 +56,11 @@ export type CategoriaParaCasar = { id: string; nome: string; kind: "PAGAR" | "RE
 export type DadosDaLinha = LancamentoValidado & {
   contraparteNome: string;
   contraparteDocumento: string | null;
+  /**
+   * Centro escrito na coluna e casado com um centro ativo. `null` quando a
+   * coluna está vazia ou ausente — aí a gravação herda o padrão da contraparte.
+   */
+  centroDeCustoId: string | null;
 };
 
 export type LinhaDaImportacao =
@@ -115,13 +124,17 @@ export function competenciaDeTexto(texto: string): string {
  * - competência em branco herda o mês do vencimento, que é o que quase toda
  *   planilha de contas quer dizer quando não diz;
  * - duplicada é a linha cuja chave já existe no banco **ou mais acima no
- *   próprio arquivo**. Ela aparece na prévia, mas não é gravada.
+ *   próprio arquivo**. Ela aparece na prévia, mas não é gravada. O centro de
+ *   custo não entra na chave: a mesma conta com outro centro é a mesma conta;
+ * - centro de custo (coluna opcional) casa com os centros **ativos** recebidos,
+ *   por nome ou código; escrito e não encontrado é erro da linha.
  */
 export function prepararImportacao(
   texto: string,
   hojeKey: string,
   categorias: CategoriaParaCasar[],
-  chavesExistentes: Set<string>
+  chavesExistentes: Set<string>,
+  centros: CentroParaCasar[] = []
 ): PreviaDaImportacao {
   const { headers, rows } = parseCsv(texto);
   if (headers.length === 0) return { ok: false, erro: "O arquivo está vazio." };
@@ -178,6 +191,9 @@ export function prepararImportacao(
       return { numero, situacao: "erro", erro: `Categoria "${nomeDaCategoria}" não existe no plano de contas para ${kind === "PAGAR" ? "pagar" : "receber"}.` };
     }
 
+    const centro = casarCentroDeCusto(campo("centroDeCusto"), centros);
+    if (!centro.ok) return { numero, situacao: "erro", erro: centro.erro };
+
     const vencimento = dataDeTexto(campo("vencimento"));
     const competencia = competenciaDeTexto(campo("competencia")) || vencimento.slice(0, 7);
 
@@ -195,7 +211,7 @@ export function prepararImportacao(
     );
     if (!v.ok) return { numero, situacao: "erro", erro: v.erro };
 
-    const dados: DadosDaLinha = { ...v.dados, contraparteNome, contraparteDocumento };
+    const dados: DadosDaLinha = { ...v.dados, contraparteNome, contraparteDocumento, centroDeCustoId: centro.centroId };
     const chave = chaveDeDuplicidade(dados);
     if (vistas.has(chave)) {
       return { numero, situacao: "duplicada", dados, erro: "Já existe lançamento igual (tipo, contraparte, competência, vencimento e valor)." };
