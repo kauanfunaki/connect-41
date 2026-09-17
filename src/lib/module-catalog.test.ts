@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { MODULE_CATALOG, MODULE_ROUTES, getModuleDef, getModulesForSector } from "./module-catalog";
+import {
+  MODULE_CATALOG,
+  MODULE_ROUTES,
+  ORDEM_DOS_GRUPOS,
+  agruparModulos,
+  getModuleDef,
+  getModulesForSector,
+} from "./module-catalog";
 import { DEFAULT_SECTORS } from "./sector-constants";
 
 // O comentário do próprio `module-catalog.ts` conta o defeito que estes testes
@@ -84,5 +91,38 @@ describe("catálogo de módulos", () => {
 
   it("Documentos Fiscais nasce desligado", () => {
     expect(getModuleDef("fiscal_documentos")?.defaultEnabled).toBe(false);
+  });
+});
+
+// Grupo fora da ordem não aparece na sidebar nem no hub do setor: `agruparModulos`
+// percorre `ORDEM_DOS_GRUPOS`, então o item cairia num grupo que ninguém desenha.
+// É a mesma classe de defeito das duas cópias do de-para, uma casa adiante.
+describe("grupos dos módulos", () => {
+  it("todo grupo usado está na ordem de exibição", () => {
+    const fora = MODULE_CATALOG.filter((m) => !ORDEM_DOS_GRUPOS.includes(m.group)).map((m) => `${m.code} -> ${m.group}`);
+    expect(fora).toEqual([]);
+  });
+
+  it("agrupar não perde módulo, e respeita a ordem dos grupos", () => {
+    for (const setor of new Set(MODULE_CATALOG.map((m) => m.sectorCode))) {
+      const modulos = getModulesForSector(setor);
+      const grupos = agruparModulos(modulos);
+      expect(grupos.flatMap((g) => g.itens.map((i) => i.code)).sort()).toEqual(modulos.map((m) => m.code).sort());
+      const posicoes = grupos.map((g) => ORDEM_DOS_GRUPOS.indexOf(g.grupo));
+      expect(posicoes).toEqual([...posicoes].sort((a, b) => a - b));
+    }
+  });
+
+  it("código fora do catálogo não desaparece do menu", () => {
+    const grupos = agruparModulos([{ code: "modulo_que_nao_existe" }]);
+    expect(grupos).toEqual([{ grupo: "Apoio", itens: [{ code: "modulo_que_nao_existe" }] }]);
+  });
+
+  it("o BPO abre pelas contas, e o resultado vem depois do operacional", () => {
+    const grupos = agruparModulos(getModulesForSector("bpo")).map((g) => g.grupo);
+    expect(grupos[0]).toBe("Contas");
+    expect(grupos.indexOf("Resultado")).toBeGreaterThan(grupos.indexOf("Banco e caixa"));
+    // Quinze telas em cinco ou seis grupos: é o que tira a lista única da sidebar.
+    expect(grupos.length).toBeGreaterThanOrEqual(5);
   });
 });

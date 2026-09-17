@@ -28,7 +28,9 @@ import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { NotificationBell } from "@/components/shell/NotificationBell";
 import { ProfileMenu } from "@/components/shell/ProfileMenu";
 import { GlobalSearch } from "@/components/shell/GlobalSearch";
-import { NavItem, SectorNavItem, CadastrosNavItem } from "@/components/shell/NavLink";
+import { NavItem, SectorNavItem, CadastrosNavItem, GrupoDeModulos } from "@/components/shell/NavLink";
+import { ModuleIcon } from "@/components/shared/ModuleIcon";
+import { agruparModulos } from "@/lib/module-catalog";
 import { ContextSwitcher } from "@/components/shell/ContextSwitcher";
 import { Button } from "@/components/ui/Button";
 
@@ -183,9 +185,21 @@ export function AppShell({
                 color={activeSector.color}
                 icon={SECTOR_ICONS[activeSector.code] ?? <LayoutGrid size={16} />}
               />
-              {activeSectorModules.map((m) => (
-                <NavItem key={m.code} href={m.href} icon={<LayoutGrid size={16} />} label={m.label} />
-              ))}
+              {/* Os módulos do setor em grupos, com o ícone de cada um (ver
+                  `module-catalog.ts`). Grupo único não ganha rótulo: um título
+                  para uma lista é ruído. Até 8 módulos, todos os grupos abrem —
+                  a lista cabe; acima disso, abre o grupo da tela atual. */}
+              {(() => {
+                const grupos = agruparModulos(activeSectorModules);
+                if (grupos.length <= 1) {
+                  return activeSectorModules.map((m) => (
+                    <NavItem key={m.code} href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} />
+                  ));
+                }
+                return grupos.map(({ grupo, itens }) => (
+                  <GrupoDeModulos key={grupo} label={grupo} itens={itens} abertoPorPadrao={activeSectorModules.length <= 8} />
+                ));
+              })()}
 
               {/* Transversais. NUNCA somem por causa do setor ativo: transferência
                   é setor↔setor por natureza, e cadastro é do tenant. Isolar os

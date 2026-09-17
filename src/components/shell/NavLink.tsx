@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
+import { ChevronRight } from "lucide-react";
+import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { CADASTROS_LAST_TAB_KEY, type CadastrosTab } from "@/lib/cadastrosNav";
 
 function subscribeToStorage(callback: () => void) {
@@ -44,6 +46,53 @@ export function NavItem({ href, icon, label }: NavItemProps) {
       <span className={`flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${active ? "text-brand" : ""}`}>{icon}</span>
       {label}
     </Link>
+  );
+}
+
+export type ItemDeModulo = { code: string; label: string; href: string };
+
+/**
+ * Um grupo de módulos na sidebar: o rótulo do grupo e os módulos dele.
+ *
+ * Abre quando a rota atual está dentro dele; fora disso, `abertoPorPadrao` decide
+ * — o setor com poucos módulos abre tudo, e o setor grande (o BPO tem quinze
+ * telas) mostra os rótulos, que é o que tira a lista única da frente de quem só
+ * quer chegar em "Contas a pagar".
+ *
+ * Quem abre e fecha é o `<details>`, sem estado do React: a seta e a contagem
+ * respondem ao atributo `open` por CSS (`group-open`). Assim o clique de quem
+ * abriu à mão não briga com um `open` controlado, e a navegação ainda fecha o
+ * grupo que ficou para trás e abre o do destino.
+ *
+ * O `stopPropagation` existe porque o `<nav>` fecha o menu no clique (drawer do
+ * celular): sem ele, abrir um grupo fecharia a sidebar inteira.
+ */
+export function GrupoDeModulos({
+  label,
+  itens,
+  abertoPorPadrao,
+}: {
+  label: string;
+  itens: ItemDeModulo[];
+  abertoPorPadrao: boolean;
+}) {
+  const pathname = usePathname();
+  const temAtivo = itens.some((i) => isActivePath(pathname, i.href));
+
+  return (
+    <details open={temAtivo || abertoPorPadrao} className="group/grupo [&>summary::-webkit-details-marker]:hidden">
+      <summary
+        onClick={(e) => e.stopPropagation()}
+        className="flex items-center gap-1.5 px-2.5 pt-4 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-muted cursor-pointer list-none hover:text-fg-secondary"
+      >
+        <ChevronRight size={11} className="flex-shrink-0 transition-transform group-open/grupo:rotate-90" />
+        <span className="truncate">{label}</span>
+        <span className="ml-auto tabular-nums text-fg-muted/70 group-open/grupo:hidden">{itens.length}</span>
+      </summary>
+      {itens.map((m) => (
+        <NavItem key={m.code} href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} />
+      ))}
+    </details>
   );
 }
 

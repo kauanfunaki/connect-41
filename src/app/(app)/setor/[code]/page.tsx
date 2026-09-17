@@ -2,23 +2,10 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
-import {
-  ArrowRight,
-  Briefcase,
-  UserSearch,
-  Users,
-  Stethoscope,
-  Clock,
-  CalendarClock,
-  GraduationCap,
-  Star,
-  BarChart3,
-  IdCard,
-  LayoutGrid,
-  BookOpen,
-  ClipboardList,
-} from "lucide-react";
+import { ArrowRight, LayoutGrid } from "lucide-react";
 import { getAuthContext, canViewSector, canManageSector } from "@/lib/auth/context";
+import { ModuleIcon } from "@/components/shared/ModuleIcon";
+import { agruparModulos } from "@/lib/module-catalog";
 import { getTenantModuleStates } from "@/lib/modules";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getPrisma } from "@/lib/prisma";
@@ -27,22 +14,6 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { NewSpaceButton } from "@/components/kanban/NewSpaceButton";
 import { DeleteEntityMenu } from "@/components/kanban/DeleteEntityMenu";
 import { criarEspaco, excluirEspaco } from "@/app/(app)/kanban/spaces-actions";
-
-// Ícone por módulo — identidade visual dos cards do hub setorial.
-const MODULE_ICONS: Record<string, React.ReactNode> = {
-  recrutamento_vagas: <Briefcase size={20} />,
-  recrutamento_candidatos: <UserSearch size={20} />,
-  recrutamento_testes: <ClipboardList size={20} />,
-  dp_colaboradores: <Users size={20} />,
-  dp_afastamentos: <Stethoscope size={20} />,
-  dp_horas_extras: <Clock size={20} />,
-  dp_escalas: <CalendarClock size={20} />,
-  dp_treinamentos: <GraduationCap size={20} />,
-  dp_avaliacoes: <Star size={20} />,
-  gestao_cargos_salarios: <IdCard size={20} />,
-  gestao_indicadores_rh: <BarChart3 size={20} />,
-  bpo_manual: <BookOpen size={20} />,
-};
 
 export default async function SectorHubPage({
   params,
@@ -85,29 +56,39 @@ export default async function SectorHubPage({
           />
         </Card>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {modules.map((m) => (
-            <Link
-              key={m.code}
-              href={`/setor/${code}/${m.code}`}
-              className="group bg-surface border border-border rounded-lg p-5 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
-            >
-              <span
-                className="inline-flex w-10 h-10 rounded-lg items-center justify-center mb-4"
-                style={{ background: `${sectorColor}1A`, color: sectorColor }}
-              >
-                {MODULE_ICONS[m.code] ?? <LayoutGrid size={20} />}
-              </span>
-
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[14px] font-semibold text-fg">{m.label}</p>
-                <ArrowRight
-                  size={15}
-                  className="text-fg-muted flex-shrink-0 -translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all"
-                />
+        // Em grupos, na ordem do catálogo (`agruparModulos`): quinze cartões
+        // iguais em quatro colunas é uma parede, e o setor não trabalha em ordem
+        // alfabética — trabalha por assunto. O grupo vira o título; os cartões
+        // ficam menores, com o ícone ao lado do nome em vez de acima dele.
+        <div className="flex flex-col gap-7">
+          {agruparModulos(modules).map(({ grupo, itens }) => (
+            <section key={grupo}>
+              <h2 className="text-[11px] font-semibold uppercase tracking-wider text-fg-muted mb-2.5">{grupo}</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {itens.map((m) => (
+                  <Link
+                    key={m.code}
+                    href={`/setor/${code}/${m.code}`}
+                    className="group bg-surface border border-border rounded-lg p-4 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className="inline-flex w-8 h-8 rounded-lg items-center justify-center flex-shrink-0"
+                        style={{ background: `${sectorColor}1A`, color: sectorColor }}
+                      >
+                        <ModuleIcon code={m.code} size={17} />
+                      </span>
+                      <p className="text-[14px] font-semibold text-fg leading-tight">{m.label}</p>
+                      <ArrowRight
+                        size={15}
+                        className="ml-auto text-fg-muted flex-shrink-0 -translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all"
+                      />
+                    </div>
+                    <p className="text-[12.5px] text-fg-muted mt-2 leading-relaxed">{m.description}</p>
+                  </Link>
+                ))}
               </div>
-              <p className="text-[12.5px] text-fg-muted mt-1 leading-relaxed">{m.description}</p>
-            </Link>
+            </section>
           ))}
         </div>
       )}
