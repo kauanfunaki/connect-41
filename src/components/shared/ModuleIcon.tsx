@@ -74,6 +74,12 @@ const DESENHO: Record<IconeDeModulo, LucideIcon> = {
   Workflow,
 };
 
+/** Um ícone pelo nome — serve módulo e grupo (ver `ICONE_DO_GRUPO`). */
+export function Icone({ nome, size = 16 }: { nome: IconeDeModulo; size?: number }) {
+  const Desenho = DESENHO[nome];
+  return <Desenho size={size} />;
+}
+
 /**
  * O ícone de um módulo, pelo código.
  *

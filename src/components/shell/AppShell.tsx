@@ -29,9 +29,9 @@ import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { NotificationBell } from "@/components/shell/NotificationBell";
 import { ProfileMenu } from "@/components/shell/ProfileMenu";
 import { GlobalSearch } from "@/components/shell/GlobalSearch";
-import { NavItem, SectorNavItem, CadastrosNavItem, GrupoDeModulos } from "@/components/shell/NavLink";
-import { ModuleIcon } from "@/components/shared/ModuleIcon";
-import { agruparModulos } from "@/lib/module-catalog";
+import { NavItem, SectorNavItem, CadastrosNavItem, GrupoNavItem } from "@/components/shell/NavLink";
+import { ModuleIcon, Icone } from "@/components/shared/ModuleIcon";
+import { agruparModulos, slugDoGrupo, ICONE_DO_GRUPO } from "@/lib/module-catalog";
 import { ContextSwitcher } from "@/components/shell/ContextSwitcher";
 import { Button } from "@/components/ui/Button";
 
@@ -162,12 +162,11 @@ export function AppShell({
         />
 
         {/* Nav */}
-        {/* `scroll-gutter-stable`: com os grupos de módulos, expandir um faz a
-            lista passar da altura da tela e a barra aparecer — sem o gutter
-            reservado, o content box encolhe 9px e a contagem de cada grupo, que
-            é alinhada à direita, salta de lugar. O comentário do globals.css
-            evita o gutter em container estreito; aqui a troca vale: 9px de
-            faixa parada custam menos que o menu inteiro se mexendo. */}
+        {/* `scroll-gutter-stable`: quando a lista passa da altura da tela, a barra
+            de rolagem aparece, o content box encolhe 9px e tudo que é alinhado à
+            direita (a contagem de cada grupo) salta de lugar. O comentário do
+            globals.css evita o gutter em container estreito; aqui a troca vale:
+            9px de faixa parada custam menos que o menu inteiro se mexendo. */}
         <nav
           onClick={() => setMobileOpen(false)}
           className="scroll-y scroll-gutter-stable flex-1 overflow-y-auto px-3 py-4 space-y-0.5"
@@ -200,10 +199,11 @@ export function AppShell({
                 <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />
               )}
 
-              {/* Os módulos do setor em grupos, com o ícone de cada um (ver
-                  `module-catalog.ts`). Grupo único não ganha rótulo de grupo: um
-                  título para uma lista é ruído. Até 8 módulos, todos os grupos
-                  abrem — a lista cabe; acima disso, abre o grupo da tela atual. */}
+              {/* Até 8 módulos, a sidebar lista as telas direto, cada uma com seu
+                  ícone: o setor pequeno não ganha nada em esconder cinco itens
+                  atrás de três grupos. Acima disso (o BPO tem quinze), a linha é
+                  o **grupo**, e clicar nela abre a tela do setor filtrada por ele
+                  — pedido do Kauan em 17/09, no lugar de abrir e fechar seções. */}
               {activeSectorModules.length > 0 && (
                 <p className="flex items-center gap-2 px-2.5 pt-4 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
                   <span
@@ -216,13 +216,19 @@ export function AppShell({
               )}
               {(() => {
                 const grupos = agruparModulos(activeSectorModules);
-                if (grupos.length <= 1) {
+                if (grupos.length <= 1 || activeSectorModules.length <= 8) {
                   return activeSectorModules.map((m) => (
                     <NavItem key={m.code} href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} />
                   ));
                 }
                 return grupos.map(({ grupo, itens }) => (
-                  <GrupoDeModulos key={grupo} label={grupo} itens={itens} abertoPorPadrao={activeSectorModules.length <= 8} />
+                  <GrupoNavItem
+                    key={grupo}
+                    label={grupo}
+                    href={`/setor/${activeSector.code}/grupo/${slugDoGrupo(grupo)}`}
+                    icon={<Icone nome={ICONE_DO_GRUPO[grupo]} />}
+                    itens={itens}
+                  />
                 ));
               })()}
             </>

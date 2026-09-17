@@ -2,10 +2,9 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
-import { ArrowRight, LayoutGrid } from "lucide-react";
+import { LayoutGrid } from "lucide-react";
 import { getAuthContext, canViewSector, canManageSector } from "@/lib/auth/context";
-import { ModuleIcon } from "@/components/shared/ModuleIcon";
-import { agruparModulos } from "@/lib/module-catalog";
+import { ModulosDoSetor } from "@/components/setor/ModulosDoSetor";
 import { getTenantModuleStates } from "@/lib/modules";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getPrisma } from "@/lib/prisma";
@@ -56,41 +55,11 @@ export default async function SectorHubPage({
           />
         </Card>
       ) : (
-        // Em grupos, na ordem do catálogo (`agruparModulos`): quinze cartões
-        // iguais em quatro colunas é uma parede, e o setor não trabalha em ordem
-        // alfabética — trabalha por assunto. O grupo vira o título; os cartões
-        // ficam menores, com o ícone ao lado do nome em vez de acima dele.
-        <div className="flex flex-col gap-7">
-          {agruparModulos(modules).map(({ grupo, itens }) => (
-            <section key={grupo}>
-              <h2 className="text-[11px] font-semibold uppercase tracking-wider text-fg-muted mb-2.5">{grupo}</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {itens.map((m) => (
-                  <Link
-                    key={m.code}
-                    href={`/setor/${code}/${m.code}`}
-                    className="group bg-surface border border-border rounded-lg p-4 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span
-                        className="inline-flex w-8 h-8 rounded-lg items-center justify-center flex-shrink-0"
-                        style={{ background: `${sectorColor}1A`, color: sectorColor }}
-                      >
-                        <ModuleIcon code={m.code} size={17} />
-                      </span>
-                      <p className="text-[14px] font-semibold text-fg leading-tight">{m.label}</p>
-                      <ArrowRight
-                        size={15}
-                        className="ml-auto text-fg-muted flex-shrink-0 -translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all"
-                      />
-                    </div>
-                    <p className="text-[12.5px] text-fg-muted mt-2 leading-relaxed">{m.description}</p>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
+        // Em grupos, na ordem do catálogo: quinze cartões iguais em quatro
+        // colunas é uma parede, e o setor não trabalha em ordem alfabética —
+        // trabalha por assunto. Mesma tela da rota filtrada por grupo, que é
+        // onde a sidebar cai (ver `ModulosDoSetor`).
+        <ModulosDoSetor code={code} modulos={modules} cor={sectorColor} />
       )}
 
       <div className="mt-8">

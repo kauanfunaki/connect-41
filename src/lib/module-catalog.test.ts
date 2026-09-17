@@ -3,7 +3,10 @@ import {
   MODULE_CATALOG,
   MODULE_ROUTES,
   ORDEM_DOS_GRUPOS,
+  ICONE_DO_GRUPO,
   agruparModulos,
+  grupoDoSlug,
+  slugDoGrupo,
   getModuleDef,
   getModulesForSector,
 } from "./module-catalog";
@@ -116,6 +119,26 @@ describe("grupos dos módulos", () => {
   it("código fora do catálogo não desaparece do menu", () => {
     const grupos = agruparModulos([{ code: "modulo_que_nao_existe" }]);
     expect(grupos).toEqual([{ grupo: "Apoio", itens: [{ code: "modulo_que_nao_existe" }] }]);
+  });
+
+  // O slug do grupo é segmento de rota (`/setor/bpo/grupo/banco-e-caixa`): dois
+  // grupos com o mesmo slug fariam um deles abrir a tela do outro.
+  it("o slug do grupo vai e volta, sem acento, espaço nem repetição", () => {
+    const slugs = ORDEM_DOS_GRUPOS.map(slugDoGrupo);
+    expect(new Set(slugs).size).toBe(slugs.length);
+    expect(slugs.filter((s) => !/^[a-z0-9-]+$/.test(s))).toEqual([]);
+    for (const grupo of ORDEM_DOS_GRUPOS) {
+      expect(grupoDoSlug(slugDoGrupo(grupo))).toBe(grupo);
+    }
+    expect(slugDoGrupo("Banco e caixa")).toBe("banco-e-caixa");
+    expect(grupoDoSlug("operacao")).toBe("Operação");
+    expect(grupoDoSlug("grupo-que-nao-existe")).toBeNull();
+    expect(grupoDoSlug(null)).toBeNull();
+  });
+
+  it("todo grupo tem ícone", () => {
+    const sem = ORDEM_DOS_GRUPOS.filter((g) => !ICONE_DO_GRUPO[g]);
+    expect(sem).toEqual([]);
   });
 
   it("o BPO abre pelas contas, e o resultado vem depois do operacional", () => {

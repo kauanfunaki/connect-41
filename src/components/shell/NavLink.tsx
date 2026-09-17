@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
-import { ChevronRight } from "lucide-react";
-import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { CADASTROS_LAST_TAB_KEY, type CadastrosTab } from "@/lib/cadastrosNav";
 
 function subscribeToStorage(callback: () => void) {
@@ -52,50 +50,44 @@ export function NavItem({ href, icon, label }: NavItemProps) {
 export type ItemDeModulo = { code: string; label: string; href: string };
 
 /**
- * Um grupo de módulos na sidebar: o rótulo do grupo e os módulos dele.
+ * Um grupo de módulos na sidebar — uma linha que **leva** à tela do grupo.
  *
- * Abre quando a rota atual está dentro dele; fora disso, `abertoPorPadrao` decide
- * — o setor com poucos módulos abre tudo, e o setor grande (o BPO tem quinze
- * telas) mostra os rótulos, que é o que tira a lista única da frente de quem só
- * quer chegar em "Contas a pagar".
+ * Era uma seção que abria e fechava dentro da sidebar, e o Kauan pediu o
+ * contrário (17/09): clicar em "Contas" abre `/setor/bpo/grupo/contas`, com as
+ * telas de contas e só elas. A sidebar fica com uma linha por grupo — seis no
+ * BPO, no lugar de quinze itens — e nada nela muda de tamanho ao clicar.
  *
- * Quem abre e fecha é o `<details>`, sem estado do React: só a seta responde ao
- * atributo `open`, por CSS (`group-open`). Assim o clique de quem abriu à mão não
- * briga com um `open` controlado, e a navegação ainda fecha o grupo que ficou
- * para trás e abre o do destino.
- *
- * A contagem fica visível aberta ou fechada: esconder ao abrir fazia um número
- * desaparecer da linha a cada clique, e foi lido como a interface se mexendo.
- *
- * O `stopPropagation` existe porque o `<nav>` fecha o menu no clique (drawer do
- * celular): sem ele, abrir um grupo fecharia a sidebar inteira.
+ * Fica aceso também quando a tela aberta é de um módulo do grupo: quem está em
+ * `/pagar` vê "Contas" marcado, que é o que diz onde ele está.
  */
-export function GrupoDeModulos({
+export function GrupoNavItem({
   label,
+  href,
+  icon,
   itens,
-  abertoPorPadrao,
 }: {
   label: string;
+  href: string;
+  icon: React.ReactNode;
   itens: ItemDeModulo[];
-  abertoPorPadrao: boolean;
 }) {
   const pathname = usePathname();
-  const temAtivo = itens.some((i) => isActivePath(pathname, i.href));
+  const active = isActivePath(pathname, href) || itens.some((i) => isActivePath(pathname, i.href));
 
   return (
-    <details open={temAtivo || abertoPorPadrao} className="group/grupo [&>summary::-webkit-details-marker]:hidden">
-      <summary
-        onClick={(e) => e.stopPropagation()}
-        className="flex items-center gap-1.5 px-2.5 pt-4 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-muted cursor-pointer list-none hover:text-fg-secondary"
-      >
-        <ChevronRight size={11} className="flex-shrink-0 transition-transform group-open/grupo:rotate-90" />
-        <span className="truncate">{label}</span>
-        <span className="ml-auto tabular-nums text-fg-muted/70">{itens.length}</span>
-      </summary>
-      {itens.map((m) => (
-        <NavItem key={m.code} href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} />
-      ))}
-    </details>
+    <Link
+      href={href}
+      className={`relative flex items-center gap-2.5 px-2.5 py-2 -ml-3 pl-[calc(0.625rem+0.75rem)] rounded-lg text-[14px] font-medium transition-colors ${
+        active ? "text-brand" : "text-fg-secondary hover:text-fg"
+      }`}
+    >
+      {active && <span className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-brand" />}
+      <span className={`flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${active ? "text-brand" : ""}`}>{icon}</span>
+      <span className="truncate">{label}</span>
+      <span className={`ml-auto text-[11px] tabular-nums ${active ? "text-brand/70" : "text-fg-muted/70"}`}>
+        {itens.length}
+      </span>
+    </Link>
   );
 }
 

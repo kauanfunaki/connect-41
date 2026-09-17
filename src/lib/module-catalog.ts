@@ -95,6 +95,48 @@ export const ORDEM_DOS_GRUPOS: readonly GrupoDeModulo[] = [
   "Apoio",
 ];
 
+/** O ícone de cada grupo — a sidebar mostra o grupo, e o grupo leva à tela filtrada. */
+export const ICONE_DO_GRUPO: Record<GrupoDeModulo, IconeDeModulo> = {
+  Operação: "Workflow",
+  Seleção: "Briefcase",
+  Pessoas: "IdCard",
+  Jornada: "Clock",
+  Contas: "Receipt",
+  "Banco e caixa": "Landmark",
+  Cliente: "Users",
+  Atendimento: "MessageCircle",
+  Documentos: "ReceiptText",
+  Licenças: "BadgeCheck",
+  Desenvolvimento: "GraduationCap",
+  Resultado: "ChartColumn",
+  Relatórios: "ChartPie",
+  Cadastros: "Building2",
+  Apoio: "BookOpen",
+};
+
+/**
+ * O grupo como valor de URL: "Banco e caixa" → `banco-e-caixa`.
+ *
+ * Sem acento e sem espaço porque vira segmento de rota
+ * (`/setor/bpo/grupo/banco-e-caixa`). O rótulo continua sendo a fonte: quem
+ * renomear um grupo muda o endereço junto, e link antigo cai no `notFound`, que
+ * é melhor que abrir a tela de outro grupo.
+ */
+export function slugDoGrupo(grupo: GrupoDeModulo): string {
+  return grupo
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, "-");
+}
+
+/** O grupo de um slug de URL, ou `null` quando não existe. */
+export function grupoDoSlug(slug: string | null | undefined): GrupoDeModulo | null {
+  if (!slug) return null;
+  const alvo = slug.toLowerCase();
+  return ORDEM_DOS_GRUPOS.find((g) => slugDoGrupo(g) === alvo) ?? null;
+}
+
 export type ModuleDef = {
   code: string;
   label: string;
