@@ -13,6 +13,7 @@ import {
   ReceiptText,
   UserRoundCog,
   FileSignature,
+  FolderKanban,
   WalletCards,
   BriefcaseBusiness,
   UserSearch,
@@ -161,34 +162,58 @@ export function AppShell({
         />
 
         {/* Nav */}
+        {/* `scroll-gutter-stable`: com os grupos de módulos, expandir um faz a
+            lista passar da altura da tela e a barra aparecer — sem o gutter
+            reservado, o content box encolhe 9px e a contagem de cada grupo, que
+            é alinhada à direita, salta de lugar. O comentário do globals.css
+            evita o gutter em container estreito; aqui a troca vale: 9px de
+            faixa parada custam menos que o menu inteiro se mexendo. */}
         <nav
           onClick={() => setMobileOpen(false)}
-          className="scroll-y flex-1 overflow-y-auto px-3 py-4 space-y-0.5"
+          className="scroll-y scroll-gutter-stable flex-1 overflow-y-auto px-3 py-4 space-y-0.5"
         >
           {activeSector ? (
             <>
-              {/* Identidade do setor: é o que faz a pessoa SENTIR que está no app
-                  dela, e não ler um rótulo. A cor vem do cadastro (Sector.color),
-                  escolhida pelo admin. */}
-              <p className="flex items-center gap-2 px-2.5 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
-                <span
-                  aria-hidden
-                  className="inline-block size-2 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: activeSector.color }}
-                />
-                <span className="truncate">{activeSector.label}</span>
-              </p>
+              {/* A ordem é a do uso: Início, o que serve a todos os setores, e por
+                  último as telas deste setor. Geral no meio, e não no fim, porque
+                  tarefa e transferência são o dia a dia de qualquer setor — no fim
+                  da lista, num setor com quinze telas, ficavam abaixo da dobra.
+
+                  A identidade do setor não é mais um rótulo solto no topo: ela
+                  está no seletor acima (com a cor) e volta como título das telas
+                  do setor, que é onde diz de quem são aqueles grupos. */}
               <NavItem href="/home" icon={<Home size={16} />} label="Início" />
-              <SectorNavItem
-                href={`/setor/${activeSector.code}`}
-                label="Espaços"
-                color={activeSector.color}
-                icon={SECTOR_ICONS[activeSector.code] ?? <LayoutGrid size={16} />}
-              />
+
+              {/* Transversais. NUNCA somem por causa do setor ativo: transferência
+                  é setor↔setor por natureza, e cadastro é do tenant. Isolar os
+                  dois mataria a razão de existir do Connect. Espaços entra aqui:
+                  é a mesma tela em todo setor, e solto no topo parecia um módulo. */}
+              <p className="px-2.5 pt-4 pb-1.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wider">
+                Geral
+              </p>
+              <NavItem href={`/setor/${activeSector.code}`} icon={<FolderKanban size={16} />} label="Espaços" />
+              <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
+              <NavItem href="/tarefas" icon={<ListTodo size={16} />} label="Tarefas" />
+              <NavItem href="/conversas" icon={<MessageCircle size={16} />} label="Conversas" />
+              <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />
+              {canManageMeetings && (
+                <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />
+              )}
+
               {/* Os módulos do setor em grupos, com o ícone de cada um (ver
-                  `module-catalog.ts`). Grupo único não ganha rótulo: um título
-                  para uma lista é ruído. Até 8 módulos, todos os grupos abrem —
-                  a lista cabe; acima disso, abre o grupo da tela atual. */}
+                  `module-catalog.ts`). Grupo único não ganha rótulo de grupo: um
+                  título para uma lista é ruído. Até 8 módulos, todos os grupos
+                  abrem — a lista cabe; acima disso, abre o grupo da tela atual. */}
+              {activeSectorModules.length > 0 && (
+                <p className="flex items-center gap-2 px-2.5 pt-4 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
+                  <span
+                    aria-hidden
+                    className="inline-block size-2 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: activeSector.color }}
+                  />
+                  <span className="truncate">{activeSector.label}</span>
+                </p>
+              )}
               {(() => {
                 const grupos = agruparModulos(activeSectorModules);
                 if (grupos.length <= 1) {
@@ -200,20 +225,6 @@ export function AppShell({
                   <GrupoDeModulos key={grupo} label={grupo} itens={itens} abertoPorPadrao={activeSectorModules.length <= 8} />
                 ));
               })()}
-
-              {/* Transversais. NUNCA somem por causa do setor ativo: transferência
-                  é setor↔setor por natureza, e cadastro é do tenant. Isolar os
-                  dois mataria a razão de existir do Connect. */}
-              <p className="px-2.5 pt-4 pb-1.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wider">
-                Geral
-              </p>
-              <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
-              <NavItem href="/tarefas" icon={<ListTodo size={16} />} label="Tarefas" />
-              <NavItem href="/conversas" icon={<MessageCircle size={16} />} label="Conversas" />
-              <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />
-              {canManageMeetings && (
-                <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />
-              )}
             </>
           ) : (
             <>

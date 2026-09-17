@@ -59,10 +59,13 @@ export type ItemDeModulo = { code: string; label: string; href: string };
  * telas) mostra os rótulos, que é o que tira a lista única da frente de quem só
  * quer chegar em "Contas a pagar".
  *
- * Quem abre e fecha é o `<details>`, sem estado do React: a seta e a contagem
- * respondem ao atributo `open` por CSS (`group-open`). Assim o clique de quem
- * abriu à mão não briga com um `open` controlado, e a navegação ainda fecha o
- * grupo que ficou para trás e abre o do destino.
+ * Quem abre e fecha é o `<details>`, sem estado do React: só a seta responde ao
+ * atributo `open`, por CSS (`group-open`). Assim o clique de quem abriu à mão não
+ * briga com um `open` controlado, e a navegação ainda fecha o grupo que ficou
+ * para trás e abre o do destino.
+ *
+ * A contagem fica visível aberta ou fechada: esconder ao abrir fazia um número
+ * desaparecer da linha a cada clique, e foi lido como a interface se mexendo.
  *
  * O `stopPropagation` existe porque o `<nav>` fecha o menu no clique (drawer do
  * celular): sem ele, abrir um grupo fecharia a sidebar inteira.
@@ -87,7 +90,7 @@ export function GrupoDeModulos({
       >
         <ChevronRight size={11} className="flex-shrink-0 transition-transform group-open/grupo:rotate-90" />
         <span className="truncate">{label}</span>
-        <span className="ml-auto tabular-nums text-fg-muted/70 group-open/grupo:hidden">{itens.length}</span>
+        <span className="ml-auto tabular-nums text-fg-muted/70">{itens.length}</span>
       </summary>
       {itens.map((m) => (
         <NavItem key={m.code} href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} />
