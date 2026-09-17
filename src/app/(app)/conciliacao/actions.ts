@@ -741,6 +741,12 @@ export type LancamentoParaEscolha = {
   pagoEmKey: string | null;
   status: "PROVISORIO" | "CONFERIDO" | "PAGO" | "CANCELADO";
   competencia: string;
+  /**
+   * Travada na aprovação por alçada: aparece na lista, com o motivo, mas não pode
+   * ser marcada. Esconder faria a pessoa procurar a conta que não acha — e
+   * acabar criando outra a partir da transação.
+   */
+  bloqueio: string | null;
 };
 
 export type ResultadoDaEscolha = { error: string } | { ok: true; lancamentos: LancamentoParaEscolha[]; limitado: boolean };
@@ -792,6 +798,7 @@ export async function lancamentosParaEscolha(transactionId: string, busca: strin
       paidAt: true,
       competence: true,
       description: true,
+      approvalStatus: true,
       counterparty: { select: { name: true } },
     },
     orderBy: { dueDate: "desc" },
@@ -808,6 +815,7 @@ export async function lancamentosParaEscolha(transactionId: string, busca: strin
     pagoEmKey: l.paidAt ? saoPauloParts(l.paidAt).dateKey : null,
     status: l.status,
     competencia: l.competence,
+    bloqueio: motivoDoBloqueioDeBaixa(l),
   }));
   // Mais perto da data do extrato primeiro — é onde o que se procura costuma estar.
   const distancia = (k: string) => Math.abs(Date.parse(k) - Date.parse(alvo));

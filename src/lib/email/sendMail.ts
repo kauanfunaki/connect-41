@@ -669,23 +669,43 @@ export type SendPendenciaAoClienteEmailInput = {
   destinatarios: { email: string; nome: string }[];
   requestId: string;
   titulo: string;
-  motivo: "nova" | "resposta";
+  motivo: "nova" | "resposta" | "lembrete";
+  /** Só no lembrete: o prazo que passou. */
+  prazo?: Date | null;
 };
 
-// Pendência aberta ou respondida pela equipe. O corpo leva **só o título** e o
-// link: descrição e conversa podem citar valor, conta, documento — e e-mail é
-// o canal que se encaminha sem pensar. O conteúdo fica atrás do login do portal.
+/** O tenant tem SMTP configurado? Para quem precisa saber antes de reservar um envio. */
+export async function temSmtpConfigurado(tenantId: string): Promise<boolean> {
+  const config = await getPrisma().tenantSmtpConfig.findUnique({ where: { tenantId }, select: { id: true } });
+  return config !== null;
+}
+
+// Pendência aberta ou respondida pela equipe, ou lembrete de pendência vencida.
+// O corpo leva **só o título** e o link: descrição e conversa podem citar valor,
+// conta, documento — e e-mail é o canal que se encaminha sem pensar. O conteúdo
+// fica atrás do login do portal.
 export async function sendPendenciaAoClienteEmail(input: SendPendenciaAoClienteEmailInput): Promise<ResultadoDoAviso> {
   const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
   const url = `${baseUrl}/portal/pendencias/${input.requestId}`;
-  const nova = input.motivo === "nova";
+  const assunto = {
+    nova: `Nova pendência: ${input.titulo}`,
+    resposta: `Resposta na pendência: ${input.titulo}`,
+    lembrete: `Lembrete: pendência vencida — ${input.titulo}`,
+  }[input.motivo];
+  const abertura = {
+    nova: "A equipe abriu uma pendência para você:",
+    resposta: "A equipe respondeu na pendência:",
+    lembrete: input.prazo
+      ? `A pendência abaixo venceu em ${formatInstantDate(input.prazo)} e ainda aguarda a sua resposta:`
+      : "A pendência abaixo está vencida e ainda aguarda a sua resposta:",
+  }[input.motivo];
   const mensagens = input.destinatarios.map((d) => ({
     to: d.email,
-    subject: nova ? `Nova pendência: ${input.titulo}` : `Resposta na pendência: ${input.titulo}`,
+    subject: assunto,
     html: emailShell(
       `
     <p class="email-text" style="font-size:14px; line-height:1.6; margin:0 0 16px; font-family:Arial,Helvetica,sans-serif;">
-      Olá, ${escapeHtml(d.nome)}. ${nova ? "A equipe abriu uma pendência para você:" : "A equipe respondeu na pendência:"}
+      Olá, ${escapeHtml(d.nome)}. ${escapeHtml(abertura)}
     </p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="doc-card" style="margin:0 0 16px; border:1px solid; border-radius:10px;">
       <tr>

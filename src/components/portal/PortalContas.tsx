@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Wallet } from "lucide-react";
+import { SeloDaAprovacao } from "@/components/aprovacoes/HistoricoDaAprovacao";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
@@ -38,6 +40,8 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
   const contas = await contasDoEscopo(escopo, kind, hojeKey);
   const totais = totalizar(contas);
   const aPagar = kind === "PAGAR";
+  // A aprovação é de conta a pagar; o link só existe se a tela de aprovações existir para este cliente.
+  const linkDaAprovacao = aPagar && modulos.has("bpo_aprovacoes");
 
   return (
     <PageContainer>
@@ -90,7 +94,19 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
                   <td className="py-2.5 pr-3 text-fg-secondary">{c.categoriaNome ?? "—"}</td>
                   <td className="py-2.5 pr-3 text-right tabular-nums font-medium">{moeda(c.valorCentavos)}</td>
                   <td className="py-2.5">
-                    <Badge variant={SITUACAO[c.situacao].variante}>{SITUACAO[c.situacao].rotulo}</Badge>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge variant={SITUACAO[c.situacao].variante}>{SITUACAO[c.situacao].rotulo}</Badge>
+                      {/* O mesmo selo que a equipe vê: "vencida" sem ele parece descuido do
+                          escritório, quando a conta está esperando a aprovação do próprio cliente. */}
+                      {c.aprovacao &&
+                        (c.aprovacao === "AGUARDANDO" && linkDaAprovacao ? (
+                          <Link href="/portal/aprovacoes" className="inline-flex" title="Abrir as aprovações">
+                            <SeloDaAprovacao status={c.aprovacao} />
+                          </Link>
+                        ) : (
+                          <SeloDaAprovacao status={c.aprovacao} />
+                        ))}
+                    </div>
                   </td>
                 </tr>
               ))}

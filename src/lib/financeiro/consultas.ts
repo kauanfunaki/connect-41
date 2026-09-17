@@ -12,6 +12,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { saoPauloParts } from "@/lib/agenda";
 import { nomeExibicao } from "@/lib/companyName";
 import { centavosDeDecimal, situacaoDaConta, type SituacaoDaConta } from "./contas";
+import { seloDeAprovacaoVisivel, type StatusDeAprovacao } from "./aprovacao/regras";
 import { competenciaDoInstante, inicioDaCompetencia, somarMeses } from "./periodo";
 import type { MovimentoRealizado, TituloEmAberto, SomaPorEmpresa, ContagemPorEmpresa } from "./fluxo";
 
@@ -156,6 +157,8 @@ export type ContaDoPortal = {
   contraparteNome: string;
   categoriaNome: string | null;
   descricao: string | null;
+  /** O selo da aprovação por alçada, quando a lista deve mostrá-lo (`seloDeAprovacaoVisivel`). */
+  aprovacao: StatusDeAprovacao | null;
 };
 
 /**
@@ -181,6 +184,7 @@ export async function contasDoEscopo(
       paidAt: true,
       competence: true,
       description: true,
+      approvalStatus: true,
       company: { select: { name: true, displayName: true } },
       counterparty: { select: { name: true } },
       category: { select: { name: true } },
@@ -202,6 +206,7 @@ export async function contasDoEscopo(
       contraparteNome: l.counterparty.name,
       categoriaNome: l.category?.name ?? null,
       descricao: l.description,
+      aprovacao: seloDeAprovacaoVisivel(l) ? l.approvalStatus : null,
     };
   });
 }

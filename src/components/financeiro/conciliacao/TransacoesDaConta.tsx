@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Check, ListChecks, Plus, EyeOff, Undo2, RotateCcw, Sparkles } from "lucide-react";
+import { Check, ListChecks, Plus, EyeOff, Undo2, RotateCcw, Sparkles, Lock } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
@@ -40,10 +40,15 @@ export type LinhaDaTransacao = {
   nome: string | null;
   status: "PENDENTE" | "CONCILIADA" | "IGNORADA";
   ignoredReason: string | null;
-  /** Só em pendente, e só quando a regra de casamento tem certeza razoável. */
-  sugestao: (LancamentoResumido & { motivo: string }) | null;
+  /**
+   * Só em pendente, e só quando a regra de casamento tem certeza razoável. Com
+   * `bloqueio`, é uma conta travada na aprovação: mostra o motivo, não confirma.
+   */
+  sugestao: (LancamentoResumido & { motivo: string; bloqueio: string | null }) | null;
   /** Lançamentos de valor exato — com ou sem sugestão forte. */
   candidatosDeMesmoValor: number;
+  /** Quantos desses estão travados na aprovação por alçada. */
+  travadosDeMesmoValor: number;
   vinculados: LancamentoResumido[];
 };
 
@@ -59,6 +64,12 @@ const STATUS: Record<LinhaDaTransacao["status"], { rotulo: string; variante: "su
 
 function descricaoDaTransacao(l: Pick<LinhaDaTransacao, "memo" | "nome">): string {
   return [l.nome, l.memo].filter(Boolean).join(" · ") || "Sem descrição no extrato";
+}
+
+function avisoDeTravados(candidatos: number, travados: number): string | null {
+  if (travados === 0) return null;
+  if (travados === candidatos) return candidatos === 1 ? "Ele está travado na aprovação." : "Todos estão travados na aprovação.";
+  return travados === 1 ? "1 deles está travado na aprovação." : `${travados} deles estão travados na aprovação.`;
 }
 
 /**
@@ -154,7 +165,17 @@ export function TransacoesDaConta({
                 <td className="py-2.5">
                   {l.status === "PENDENTE" && (
                     <div className="flex flex-col gap-2 items-start">
-                      {l.sugestao ? (
+                      {l.sugestao?.bloqueio ? (
+                        <div className="flex flex-col gap-0.5 rounded-md border border-warning/30 bg-warning/10 px-2.5 py-1.5 max-w-[420px]">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-warning">
+                            <Lock size={11} /> Casa com uma conta travada na aprovação · {l.sugestao.motivo}
+                          </span>
+                          <ResumoDoLancamento l={l.sugestao} />
+                          <span className="text-[11px] text-fg-secondary">
+                            {l.sugestao.bloqueio} Não crie outro lançamento para esta transação: concilie depois da aprovação.
+                          </span>
+                        </div>
+                      ) : l.sugestao ? (
                         <div className="flex flex-col gap-0.5 rounded-md border border-brand/30 bg-brand/5 px-2.5 py-1.5">
                           <span className="inline-flex items-center gap-1 text-[11px] font-medium text-brand">
                             <Sparkles size={11} /> Sugestão · {l.sugestao.motivo}
@@ -165,13 +186,13 @@ export function TransacoesDaConta({
                         l.candidatosDeMesmoValor > 0 && (
                           <span className="text-[11px] text-fg-muted">
                             {l.candidatosDeMesmoValor} {l.candidatosDeMesmoValor === 1 ? "lançamento" : "lançamentos"} de mesmo valor,
-                            sem um claramente melhor — escolha.
+                            sem um claramente melhor — escolha. {avisoDeTravados(l.candidatosDeMesmoValor, l.travadosDeMesmoValor)}
                           </span>
                         )
                       )}
                       {podeAgir && (
                         <div className="flex flex-wrap items-center gap-1.5">
-                          {l.sugestao && (
+                          {l.sugestao && !l.sugestao.bloqueio && (
                             <Button size="xs" onClick={() => confirmarSugestao(l)}>
                               <Check size={11} /> Confirmar
                             </Button>
@@ -331,19 +352,24 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
                 {lista.map((l) => {
                   const id = `escolha-${l.id}`;
                   return (
-                    <tr key={l.id} className={`border-b border-border-soft ${l.centavos === alvo ? "bg-brand/5" : ""}`}>
+                    <tr key={l.id} className={`border-b border-border-soft ${l.centavos === alvo && !l.bloqueio ? "bg-brand/5" : ""}`}>
                       <td className="py-2 px-3 w-8">
-                        <Checkbox id={id} checked={marcados.has(l.id)} onChange={() => alternar(l)} />
+                        <Checkbox id={id} checked={marcados.has(l.id)} onChange={() => alternar(l)} disabled={Boolean(l.bloqueio)} />
                       </td>
                       <td className="py-2 pr-3">
-                        <label htmlFor={id} className="cursor-pointer">
-                          <span className="font-medium text-fg">{l.contraparteNome}</span>
+                        <label htmlFor={id} className={l.bloqueio ? "cursor-not-allowed" : "cursor-pointer"}>
+                          <span className={`font-medium ${l.bloqueio ? "text-fg-muted" : "text-fg"}`}>{l.contraparteNome}</span>
                           {l.descricao && <span className="text-fg-muted"> · {l.descricao}</span>}
                           <span className="block text-[11px] text-fg-muted">
                             venc. {dataCurta(l.vencimentoKey)}
                             {l.pagoEmKey && ` · baixa ${dataCurta(l.pagoEmKey)}`} · comp. {l.competencia}
                             {l.centavos === alvo && " · mesmo valor"}
                           </span>
+                          {l.bloqueio && (
+                            <span className="flex items-center gap-1 text-[11px] text-warning">
+                              <Lock size={10} /> {l.bloqueio}
+                            </span>
+                          )}
                         </label>
                       </td>
                       <td className="py-2 pr-3 text-right tabular-nums whitespace-nowrap">{moeda(l.centavos)}</td>
@@ -444,6 +470,15 @@ function CriarLancamento({
           <strong className={tomDoValor(transacao.centavos)}>{moeda(transacao.centavos)}</strong>. O lançamento nasce pago
           nesta data, com este valor, e já conciliado.
         </p>
+        {transacao.sugestao?.bloqueio && (
+          <p className="flex items-start gap-1.5 rounded-md border border-warning/30 bg-warning/10 px-2.5 py-2 text-[12px] text-fg-secondary">
+            <Lock size={12} className="mt-0.5 shrink-0 text-warning" />
+            <span>
+              Esta transação parece liquidar <strong>{transacao.sugestao.contraparteNome}</strong>, que já existe e está travada
+              na aprovação. Criar outro lançamento duplica a conta — concilie com ela depois de aprovada.
+            </span>
+          </p>
+        )}
 
         <CampoForm label={kind === "PAGAR" ? "Fornecedor" : "Cliente (sacado)"} htmlFor="criar-contraparte" required>
           <Select id="criar-contraparte" name="counterpartyId" value={contraparte} onChange={(e) => escolherContraparte(e.target.value)} required>

@@ -3,6 +3,7 @@ import {
   entraEmAprovacao,
   statusInicialDeAprovacao,
   aprovacaoEmCurso,
+  seloDeAprovacaoVisivel,
   motivoDoBloqueioDeBaixa,
   podeEnviarParaAprovacao,
   podeDecidir,
@@ -42,6 +43,21 @@ describe("entraEmAprovacao", () => {
 
   it("cancelado não entra", () => {
     expect(entraEmAprovacao({ ...base, status: "CANCELADO" })).toBe(false);
+  });
+});
+
+describe("selo da aprovação na lista de contas", () => {
+  it("aparece enquanto pesa sobre a conta, e aprovada ainda em aberto", () => {
+    expect(seloDeAprovacaoVisivel({ approvalStatus: "AGUARDANDO", status: "CONFERIDO" })).toBe(true);
+    expect(seloDeAprovacaoVisivel({ approvalStatus: "REPROVADO", status: "PROVISORIO" })).toBe(true);
+    expect(seloDeAprovacaoVisivel({ approvalStatus: "APROVADO", status: "CONFERIDO" })).toBe(true);
+  });
+
+  it("paga, cancelada ou sem aprovação: sem selo", () => {
+    expect(seloDeAprovacaoVisivel({ approvalStatus: "APROVADO", status: "PAGO" })).toBe(false);
+    expect(seloDeAprovacaoVisivel({ approvalStatus: "APROVADO", status: "CANCELADO" })).toBe(false);
+    expect(seloDeAprovacaoVisivel({ approvalStatus: "AGUARDANDO", status: "CANCELADO" })).toBe(false);
+    expect(seloDeAprovacaoVisivel({ approvalStatus: "NAO_REQUER", status: "CONFERIDO" })).toBe(false);
   });
 });
 

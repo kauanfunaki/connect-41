@@ -60,6 +60,19 @@ export function aprovacaoEmCurso(conta: { approvalStatus: StatusDeAprovacao; sta
 }
 
 /**
+ * A lista de contas mostra o selo da aprovação?
+ *
+ * Enquanto ela pesa sobre a conta, ou aprovada ainda em aberto — é o "pode
+ * pagar" que quem olha a lista quer saber. Paga ou cancelada, a aprovação vira
+ * histórico. Uma regra só para a equipe (`ContasTable`) e o cliente
+ * (`/portal/pagar`) lerem o mesmo selo na mesma conta.
+ */
+export function seloDeAprovacaoVisivel(conta: { approvalStatus: StatusDeAprovacao; status: StatusDoLancamento }): boolean {
+  if (aprovacaoEmCurso(conta)) return true;
+  return conta.approvalStatus === "APROVADO" && conta.status !== "PAGO" && conta.status !== "CANCELADO";
+}
+
+/**
  * Por que esta conta não pode ser baixada — ou `null` se a aprovação não impede.
  *
  * Uma função só para todos os caminhos de baixa (tela de contas, conciliação),

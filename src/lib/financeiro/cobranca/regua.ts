@@ -50,14 +50,22 @@ export function textoDosPassos(passos: number[]): string {
  *   e o de 7 no mesmo e-mail — manda o de 7;
  * - um passo perdido (cron fora do ar do dia 7 ao dia 15) não é recuperado
  *   depois: o sacado recebe o de 15, que diz o atraso de hoje.
+ *
+ * A mesma mecânica serve o lembrete de pendência vencida, que passa a própria
+ * `janela` — mudar a da régua não pode mudar a do outro em silêncio.
  */
-export function passoDevido(diasDeAtraso: number, passos: number[], enviados: number[]): number | null {
+export function passoDevido(
+  diasDeAtraso: number,
+  passos: number[],
+  enviados: number[],
+  janela: number = JANELA_DO_ULTIMO_PASSO
+): number | null {
   const ordenados = [...passos].sort((a, b) => a - b);
   let i = -1;
   for (let k = 0; k < ordenados.length; k++) if (ordenados[k]! <= diasDeAtraso) i = k;
   if (i < 0) return null;
   const passo = ordenados[i]!;
-  const limite = ordenados[i + 1] ?? passo + JANELA_DO_ULTIMO_PASSO;
+  const limite = ordenados[i + 1] ?? passo + janela;
   if (diasDeAtraso >= limite) return null;
   // Enviado um passo igual ou maior — inclusive de uma configuração anterior
   // com outros números — e este já não é notícia.

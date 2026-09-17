@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   rankearCandidatos,
   sugestaoForte,
+  sugestaoDaTransacao,
   validarSelecao,
   tipoCompativel,
   normalizarTexto,
@@ -137,6 +138,33 @@ describe("sugestaoForte", () => {
 
   it("lista vazia", () => {
     expect(sugestaoForte([])).toBeNull();
+  });
+});
+
+describe("sugestaoDaTransacao — conta travada na aprovação", () => {
+  const travada = "Aguardando aprovação — a baixa só é liberada depois que a conta for aprovada.";
+  const tx = { ...debito, memo: "BOLETO IMOBILIARIA CENTRAL" };
+
+  it("a travada continua sendo a sugestão, com o motivo no lugar do confirmar", () => {
+    const ranking = rankearCandidatos(tx, [lanc({ id: "b", contraparteNome: "Imobiliária Central", bloqueioDeBaixa: travada })]);
+    expect(sugestaoDaTransacao(ranking)).toMatchObject({ candidato: { lancamento: { id: "b" } }, bloqueio: travada });
+  });
+
+  it("travar a melhor não promove a segunda a sugestão confirmável", () => {
+    // Sem nome no extrato para o condomínio: se a imobiliária saísse do ranking por
+    // estar travada, o condomínio de mesmo valor viraria "sugestão" — o casamento errado.
+    const ranking = rankearCandidatos(tx, [
+      lanc({ id: "a", contraparteNome: "Condomínio Jardim" }),
+      lanc({ id: "b", contraparteNome: "Imobiliária Central", bloqueioDeBaixa: travada }),
+    ]);
+    const sugestao = sugestaoDaTransacao(ranking);
+    expect(sugestao?.candidato.lancamento.id).toBe("b");
+    expect(sugestao?.bloqueio).toBe(travada);
+  });
+
+  it("sem bloqueio a sugestão é confirmável, e sem sugestão forte não há nada", () => {
+    expect(sugestaoDaTransacao(rankearCandidatos(debito, [lanc({ id: "x" })]))).toMatchObject({ bloqueio: null });
+    expect(sugestaoDaTransacao(rankearCandidatos(debito, [lanc({ id: "a" }), lanc({ id: "b" })]))).toBeNull();
   });
 });
 

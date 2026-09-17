@@ -28,11 +28,12 @@ import type { SituacaoDoSaldo } from "@/lib/financeiro/conciliacao/saldo";
 import { saldosDasContas } from "@/lib/financeiro/conciliacao/saldoDasContas";
 import {
   rankearCandidatos,
-  sugestaoForte,
+  sugestaoDaTransacao,
   tipoCompativel,
   type LancamentoCandidato,
   type Motivo,
 } from "@/lib/financeiro/conciliacao/casamento";
+import { motivoDoBloqueioDeBaixa } from "@/lib/financeiro/aprovacao/regras";
 
 export const dynamic = "force-dynamic";
 
@@ -359,12 +360,14 @@ async function ExtratoDaConta({
     const dataKey = saoPauloParts(t.postedAt).dateKey;
     let sugestao: LinhaDaTransacao["sugestao"] = null;
     let candidatosDeMesmoValor = 0;
+    let travadosDeMesmoValor = 0;
     if (t.status === "PENDENTE") {
       const ranking = rankearCandidatos({ centavos, dataKey, memo: t.memo, nome: t.payeeName }, candidatos);
       candidatosDeMesmoValor = ranking.length;
-      const forte = sugestaoForte(ranking);
+      travadosDeMesmoValor = ranking.filter((c) => c.lancamento.bloqueioDeBaixa).length;
+      const forte = sugestaoDaTransacao(ranking);
       if (forte) {
-        const l = forte.lancamento;
+        const l = forte.candidato.lancamento;
         sugestao = {
           id: l.id,
           contraparteNome: l.contraparteNome,
@@ -372,7 +375,8 @@ async function ExtratoDaConta({
           centavos: l.centavos,
           vencimentoKey: l.vencimentoKey,
           pagoEmKey: l.pagoEmKey,
-          motivo: forte.motivos.map((m) => MOTIVOS[m]).join(" · "),
+          motivo: forte.candidato.motivos.map((m) => MOTIVOS[m]).join(" · "),
+          bloqueio: forte.bloqueio,
         };
       }
     }
@@ -386,6 +390,7 @@ async function ExtratoDaConta({
       ignoredReason: t.ignoredReason,
       sugestao,
       candidatosDeMesmoValor,
+      travadosDeMesmoValor,
       vinculados: t.matches.map((m) => ({
         id: m.financeEntry.id,
         contraparteNome: m.financeEntry.counterparty.name,
@@ -550,6 +555,7 @@ async function candidatosDaEmpresa(
       dueDate: true,
       paidAt: true,
       description: true,
+      approvalStatus: true,
       counterparty: { select: { name: true, document: true } },
     },
     take: 2_000,
@@ -566,6 +572,8 @@ async function candidatosDaEmpresa(
       contraparteNome: l.counterparty.name,
       contraparteDocumento: l.counterparty.document,
       conciliado: false,
+      // A mesma frase que a action devolve ao confirmar — só que antes do clique.
+      bloqueioDeBaixa: motivoDoBloqueioDeBaixa(l),
     };
   });
 }

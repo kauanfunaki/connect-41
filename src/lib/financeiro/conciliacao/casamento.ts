@@ -42,6 +42,11 @@ export type LancamentoCandidato = {
   contraparteDocumento: string | null;
   /** Já tem vínculo com alguma transação. */
   conciliado: boolean;
+  /**
+   * Por que a aprovação por alçada impede a baixa (`motivoDoBloqueioDeBaixa`), ou
+   * nada. **Não tira o lançamento do ranking** — ver `sugestaoDaTransacao`.
+   */
+  bloqueioDeBaixa?: string | null;
 };
 
 /**
@@ -209,6 +214,27 @@ export function sugestaoForte(ranking: CandidatoPontuado[]): CandidatoPontuado |
     return primeiro;
   }
   return primeiro.pontos - segundo.pontos >= VANTAGEM_MINIMA ? primeiro : null;
+}
+
+export type SugestaoDaTransacao = {
+  candidato: CandidatoPontuado;
+  /** Preenchido quando a sugestão é uma conta travada na aprovação: a tela mostra o motivo, não o "Confirmar". */
+  bloqueio: string | null;
+};
+
+/**
+ * A sugestão que a tela mostra: a forte, com o que impede confirmá-la.
+ *
+ * Conta travada na aprovação **fica no ranking** e pode ser a sugestão — só não
+ * é confirmável. Tirá-la antes de escolher a forte faria o segundo colocado,
+ * outro lançamento de mesmo valor e quase sempre o errado, virar sugestão com
+ * botão de confirmar. E sumir com ela da tela convida a "Criar lançamento" a
+ * partir da transação, que duplica a conta a pagar.
+ */
+export function sugestaoDaTransacao(ranking: CandidatoPontuado[]): SugestaoDaTransacao | null {
+  const forte = sugestaoForte(ranking);
+  if (!forte) return null;
+  return { candidato: forte, bloqueio: forte.lancamento.bloqueioDeBaixa ?? null };
 }
 
 export type SelecaoValidada = { ok: true; totalCentavos: number } | { ok: false; erro: string };

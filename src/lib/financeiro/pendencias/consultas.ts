@@ -163,6 +163,15 @@ export type PendenciaDetalhada = {
   mensagens: MensagemDaConversa[];
 };
 
+export type LembreteDaPendencia = {
+  passo: number;
+  em: Date;
+  destinatarios: number;
+  falhas: number;
+  ok: boolean;
+  erro: string | null;
+};
+
 /**
  * A pendência com a conversa.
  *
@@ -243,4 +252,26 @@ export async function carregarPendencia(escopo: EscopoDePendencias, id: string, 
       anexos: m.attachments,
     })),
   };
+}
+
+/**
+ * Os lembretes automáticos que a pendência já recebeu, do primeiro passo ao último.
+ *
+ * Fora de `carregarPendencia` de propósito: é informação só da equipe, e o
+ * portal do cliente não tem por que consultar esta tabela — nem depender dela.
+ */
+export async function lembretesDaPendencia(tenantId: string, requestId: string): Promise<LembreteDaPendencia[]> {
+  const linhas = await getPrisma().clientRequestReminder.findMany({
+    where: { tenantId, requestId },
+    orderBy: { step: "asc" },
+    select: { step: true, sentAt: true, recipients: true, failures: true, ok: true, error: true },
+  });
+  return linhas.map((l) => ({
+    passo: l.step,
+    em: l.sentAt,
+    destinatarios: l.recipients,
+    falhas: l.failures,
+    ok: l.ok,
+    erro: l.error,
+  }));
 }

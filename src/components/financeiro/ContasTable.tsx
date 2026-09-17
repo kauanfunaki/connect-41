@@ -9,7 +9,7 @@ import { AcoesDaConta } from "./AcoesDaConta";
 import { conferirConta, marcarComoPago, desfazerPagamento } from "@/lib/financeiro/acoes";
 import { enviarParaAprovacao } from "@/app/(app)/aprovacoes/actions";
 import { SeloDaAprovacao } from "@/components/aprovacoes/HistoricoDaAprovacao";
-import { aprovacaoEmCurso, motivoDoBloqueioDeBaixa, podeEnviarParaAprovacao } from "@/lib/financeiro/aprovacao/regras";
+import { motivoDoBloqueioDeBaixa, podeEnviarParaAprovacao, seloDeAprovacaoVisivel } from "@/lib/financeiro/aprovacao/regras";
 import { SeloDaCobranca } from "@/components/cobranca/SeloDaCobranca";
 import type { SituacaoDeCobranca } from "@/lib/financeiro/cobranca/regras";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -163,9 +163,7 @@ export function ContasTable({
                   {l.parcelaDeAcordo && !cobranca?.get(l.id) && <span className="text-[11px] text-fg-muted whitespace-nowrap">parcela de acordo</span>}
                   {/* Selo só enquanto pesa sobre a conta, ou aprovada ainda em aberto:
                       depois de paga ou cancelada, a aprovação é histórico. */}
-                  {(aprovacaoEmCurso(l) || (l.approvalStatus === "APROVADO" && l.status !== "PAGO" && l.status !== "CANCELADO")) && (
-                    <SeloDaAprovacao status={l.approvalStatus} />
-                  )}
+                  {seloDeAprovacaoVisivel(l) && <SeloDaAprovacao status={l.approvalStatus} />}
                   {l.documentoId && (
                     <Link
                       href={`/documentos-fiscais/${l.documentoId}`}

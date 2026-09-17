@@ -12,8 +12,9 @@ import { ConversaDaPendencia } from "@/components/pendencias/ConversaDaPendencia
 import { ResponderPendencia } from "@/components/pendencias/ResponderPendencia";
 import { AcoesDaPendencia } from "@/components/pendencias/AcoesDaPendencia";
 import { SeloDoPrazo, SeloDoStatus } from "@/components/pendencias/SelosDaPendencia";
-import { carregarPendencia } from "@/lib/financeiro/pendencias/consultas";
+import { carregarPendencia, lembretesDaPendencia } from "@/lib/financeiro/pendencias/consultas";
 import { ROTULO_DO_TIPO, emAndamento } from "@/lib/financeiro/pendencias/regras";
+import { passosPorExtenso, rotuloDoPasso, situacaoDoLembrete } from "@/lib/financeiro/pendencias/lembrete";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { moeda } from "@/lib/financeiro/formato";
 import { responderPendenciaEquipe } from "../actions";
@@ -31,7 +32,11 @@ export default async function PendenciaPage({ params }: { params: Promise<{ id: 
   const podeAgir = canActOnSector(ctx, setor);
 
   const { id } = await params;
-  const p = await carregarPendencia({ tenantId: ctx.tenantId, companyIds: null }, id, new Date());
+  const agora = new Date();
+  const [p, lembretes] = await Promise.all([
+    carregarPendencia({ tenantId: ctx.tenantId, companyIds: null }, id, agora),
+    lembretesDaPendencia(ctx.tenantId, id),
+  ]);
   if (!p) notFound();
 
   return (
@@ -57,6 +62,31 @@ export default async function PendenciaPage({ params }: { params: Promise<{ id: 
           </span>
         )}
       </div>
+
+      {/* O que o cliente recebeu sozinho precisa estar à vista de quem cobra: sem isso,
+          a equipe liga para lembrar de algo que o e-mail já lembrou ontem. */}
+      {lembretes.length > 0 ? (
+        <Card className="mb-4 px-4 py-3 text-[12px]">
+          <p className="text-fg-muted mb-1">Lembretes automáticos ao cliente</p>
+          <ul className="flex flex-col gap-0.5">
+            {lembretes.map((l) => {
+              const s = situacaoDoLembrete(l, agora);
+              return (
+                <li key={l.passo} className={s.tom === "falha" ? "text-danger" : "text-fg-secondary"}>
+                  {rotuloDoPasso(l.passo)} · {formatInstantDateTime(l.em)} · {s.texto}
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      ) : (
+        p.status === "ABERTA" &&
+        p.prazo && (
+          <p className="mb-4 text-[12px] text-fg-muted">
+            Se o prazo passar sem resposta, o cliente recebe lembrete por e-mail com {passosPorExtenso()} dias de atraso.
+          </p>
+        )
+      )}
 
       {p.lancamento && (
         <Card className="mb-4 px-4 py-3 text-[13px]">
