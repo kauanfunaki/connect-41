@@ -55,14 +55,17 @@ describe("lerObservacoes", () => {
 });
 
 describe("o contrato", () => {
-  // Três itens, contra oito do SIMA: a consulta pública é a parte que já foi
-  // observada de ponta a ponta.
+  // Um item, depois de 15/09: o aceite foi decidido e as telas de exceção
+  // deixaram de bloquear — o alvará passou a ser acompanhado pela Junta, e aqui
+  // só se imprime.
   it("o que falta é curto, e nomeado", () => {
-    expect(CONTRATO_PENDENTE).toHaveLength(3);
+    expect(CONTRATO_PENDENTE).toHaveLength(1);
   });
 
-  // O aceite é declaração em nome do cliente. Quem marca assume — por isso ele
-  // está registrado como texto, e não como passo automático.
+  // O aceite é declaração em nome do cliente, e o robô passou a marcá-la (Kauan,
+  // 15/09). O texto fica verbatim porque é o que foi aceito: mudança de redação
+  // pela prefeitura precisa parar o robô, e comparar com esta constante é como
+  // se percebe.
   it("o aceite de acessibilidade está guardado verbatim", () => {
     expect(ACEITE_ANTES_DE_IMPRIMIR).toContain("acessibilidade");
     expect(ACEITE_ANTES_DE_IMPRIMIR).toContain("adequarei");

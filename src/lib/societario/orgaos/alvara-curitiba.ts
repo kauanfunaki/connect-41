@@ -1,10 +1,22 @@
 // Alvará de Licença para Localização — Curitiba.
 //
-// ─── O primeiro portal com o contrato observado ─────────────────────────────
+// ─── Este portal deixou de ser onde se acompanha ────────────────────────────
 //
-// Levantado no próprio site em 11/09/2026, consultando a inscrição municipal
-// da 41 Contabilidade. Diferente dos outros cinco, aqui **não falta nada**:
-// a consulta é pública, de um campo só, e devolve a página inteira.
+// Levantado no próprio site em 11/09/2026, consultando a inscrição municipal da
+// 41 Contabilidade: a consulta é pública, de um campo só, e devolve a página
+// inteira.
+//
+// **Em 15/09 o setor esclareceu que não é aqui que se acompanha o alvará.**
+// Abertura de empresa, alteração de endereço e alteração de atividades seguem
+// todas as licenças dentro do site da Junta Comercial, e a prefeitura integra —
+// o acompanhamento é o painel da Junta (ver `junta.ts`), cujo layout é o mesmo
+// em qualquer município. O site de Curitiba **é usado só para imprimir** o
+// alvará já emitido.
+//
+// Então este arquivo é o **passo de impressão**, não um observador: consultar a
+// inscrição, marcar o aceite e imprimir. O robô só chega aqui depois de a Junta
+// mostrar o alvará emitido — e qualquer tela que não seja "alvará encontrado"
+// vai para uma pessoa conferir, em vez de virar estado no sistema.
 //
 // ─── Sobre o reCAPTCHA ──────────────────────────────────────────────────────
 //
@@ -93,10 +105,10 @@ export type LeituraDoAlvara =
   /**
    * A inscrição existe mas não há alvará a imprimir.
    *
-   * **Este é o único estado que ainda não foi observado.** O fluxograma do
-   * setor descreve só o caminho feliz, e a consulta de 11/09 usou uma inscrição
-   * que tem alvará. Um print dessa tela fecha o adaptador — é a pergunta
-   * `ALV-1` do formulário do Societário.
+   * Continua sem print, e **deixou de bloquear**: desde 15/09 o robô só abre
+   * esta consulta depois de a Junta mostrar o alvará emitido, então chegar aqui
+   * e não achar alvará é divergência entre os dois órgãos — caso de uma pessoa
+   * olhar, não de o robô decidir. Vale para `nao_encontrado` também.
    */
   | { tipo: "sem_alvara" }
   | { tipo: "nao_encontrado" };
@@ -116,10 +128,20 @@ export class TelaNaoObservada extends Error {
  * A página pede marcar "Li e concordo" — declaração sobre legislação de
  * acessibilidade — antes de liberar "Imprimir Alvará".
  *
- * **É um aceite de termo em nome do cliente**, e por isso não é passo de robô
- * por conta própria: quem marca assume a declaração. O robô para na consulta,
- * traz os dados, e a impressão fica para uma pessoa — ou para uma decisão
- * explícita de quem responde pelo escritório.
+ * É um aceite de termo em nome do cliente, e quem marca assume a declaração.
+ * Em 11/09 o desenho era o robô parar aqui e a impressão ficar com gente;
+ * **em 15/09 o Kauan decidiu o contrário: o robô marca sozinho e imprime** —
+ * é a decisão explícita de quem responde pelo escritório que aquele desenho
+ * pedia, e ela foi tomada.
+ *
+ * O que a decisão obriga em troca: **cada aceite marcado pelo robô fica
+ * registrado** — empresa, inscrição e data. Assumir a declaração em nome do
+ * cliente sem deixar rastro de quando e para quem seria o mesmo que ninguém ter
+ * assumido.
+ *
+ * O texto fica guardado verbatim porque é o que foi aceito. Se a prefeitura
+ * mudar a redação, o robô precisa parar e alguém precisa reler — comparar com
+ * esta constante é como se percebe.
  */
 export const ACEITE_ANTES_DE_IMPRIMIR =
   "Estou ciente da legislação específica de acessibilidade e, caso o estabelecimento " +
@@ -128,11 +150,15 @@ export const ACEITE_ANTES_DE_IMPRIMIR =
 /**
  * O que ainda falta para o robô existir.
  *
- * Curto, porque o resto foi observado. Compare com `CONTRATO_PENDENTE` do SIMA,
- * que tem oito itens.
+ * Um item. Os outros dois caíram em 15/09: o aceite foi decidido (o robô marca
+ * e imprime), e as telas de "sem alvará" e "não encontrado" deixaram de ser
+ * bloqueio — viraram divergência entre a Junta e a prefeitura, que vai para uma
+ * pessoa.
+ *
+ * O arquivamento segue a convenção do Bombeiros (ALV-3), que já está em
+ * `src/lib/societario/arquivamento.ts`: `Societário › Prefeitura › <órgão> ›
+ * <ano>`, arquivo `<EMPRESA> - <tipo> <ano>`.
  */
 export const CONTRATO_PENDENTE = [
-  "O que a tela mostra quando a inscrição existe mas não há alvará a imprimir",
-  "O que a tela mostra quando a inscrição não existe",
-  "Se o escritório autoriza o robô a marcar o aceite de acessibilidade, ou se a impressão fica com gente",
+  "Como o PDF do alvará sai da página depois do aceite: download direto, nova aba ou diálogo de impressão",
 ] as const;

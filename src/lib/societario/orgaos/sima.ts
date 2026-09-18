@@ -5,22 +5,21 @@
 // solicitações → Ver detalhes. Por isso é o candidato a primeiro observador de
 // verdade.
 //
-// ─── O que este arquivo NÃO faz, e por quê ──────────────────────────────────
+// ─── O que este arquivo faz, e o que ainda não ──────────────────────────────
 //
-// Não lê a página. O procedimento do setor descreve os passos que uma pessoa
-// segue, e não contém nada do que um robô precisa para ler: nenhum seletor,
-// nenhum nome de campo, e — o que mais importa — **nenhum texto que a página
-// mostra em cada desfecho**.
+// Faz: a **decisão**. O levantamento de 15/09/2026 com o setor (Ruli) trouxe o
+// que faltava — as abas da lista, os selos e a frase do protocolo que não é
+// daquele login —, e com isso `classificarSolicitacao` deixou de ser uma falha
+// explícita e virou tabela, testada com os textos reais.
 //
-// Escrever o matcher sem isso seria inventar o critério que decide "deferido", e
-// marcar um processo como deferido sem ser é o pior defeito possível desta
-// automação: o setor para de acompanhar, o prazo do órgão corre, e a exigência
-// só aparece quando já custou.
+// Não faz: a **navegação**. O SIMA não tem área pública; tudo vive atrás do
+// e-Cidadão, e uma sessão autenticada depende do certificado — decisão que
+// ainda está com o escritório. Sem ela não há como ver o HTML, e inventar
+// seletor é o defeito que esta automação não pode ter: marcar um processo como
+// deferido sem ser faz o setor parar de acompanhar, o prazo do órgão correr, e
+// a exigência aparecer quando já custou.
 //
-// Então o que existe aqui é o que sabemos de fato (endereços, formato de
-// protocolo, a regra do login) e **falhas explícitas** nos dois pontos que
-// dependem do levantamento. Uma sessão com o portal aberto fecha isso — o que
-// falta está listado em `CONTRATO_PENDENTE`, abaixo.
+// O que falta está em `CONTRATO_PENDENTE`, abaixo — de oito itens sobraram três.
 
 import type {
   ObservadorDeOrgao,
@@ -46,15 +45,19 @@ export const AUTENTICACAO = "https://autenticacao-ecidadao.curitiba.pr.gov.br";
 /**
  * As quatro portas do e-Cidadão, medidas na tela de login.
  *
- * `certificado_nuvem` é a que muda a arquitetura do robô: o A1 **não precisa
- * morar na máquina dele**. A autenticação acontece no provedor, que expõe
- * fluxo próprio — em geral com PIN ou aprovação em aplicativo, o que pode
- * colocar uma pessoa no laço a cada login. Qual dos quatro provedores a 41 usa
- * decide se esse laço existe.
+ * **Respondido em 15/09 (MA-1, MA-2):** a 41 entra por "Entrar com Certificado
+ * Digital", com o certificado da 41 ou o do cliente, e **entra direto — nenhum
+ * portal pede PIN ou aprovação a cada login**. Isso tira do caminho a dúvida
+ * que era o eixo do robô: não há pessoa no laço a cada sessão.
  *
- * `e-Cidadão` é autenticação **compartilhada de Curitiba**: resolver uma vez
- * provavelmente cobre também o Licenciamento Sanitário, que é do mesmo
- * município. Vale confirmar antes de tratar como dois problemas.
+ * Duas consequências que ficam:
+ *
+ * - **a consulta tem de usar o mesmo certificado que abriu o pedido** (MA-3),
+ *   então o protocolo precisa guardar com qual foi aberto — sem isso a consulta
+ *   devolve "Nenhuma solicitação encontrada" e parece protocolo inexistente;
+ * - **no primeiro acesso de cada identidade** o e-Cidadão mostra "Solicitação de
+ *   Permissão" com "Aceitar e entrar". É uma vez por certificado, e vale também
+ *   para o LISA — autenticação de Curitiba é compartilhada.
  */
 export const PORTAS_DE_ENTRADA = ["cpf", "certificado_local", "certificado_nuvem", "govbr"] as const;
 
@@ -84,25 +87,14 @@ export function normalizarProtocolo(numero: string): string {
 /**
  * O que ainda falta para este adaptador existir.
  *
- * Vive em código, e não num documento à parte, porque é a lista que alguém
- * consulta no momento em que abre o portal para levantar — e documento separado
- * é o que fica desatualizado.
+ * Eram oito; o levantamento de 15/09 fechou cinco. Vive em código, e não num
+ * documento à parte, porque é a lista que alguém consulta no momento em que
+ * abre o portal para levantar — documento separado é o que fica desatualizado.
  */
 export const CONTRATO_PENDENTE = [
-  "Qual das quatro portas a 41 usa hoje, e — se for nuvem — qual provedor dos quatro",
-  "Se o provedor de nuvem escolhido permite autenticar sem aprovação humana a cada login",
-  // Levantado com o Kauan em 11/09: os A1 vivem no `certmgr` — o repositório de
-  // certificados do Windows. Um robô em container Linux não enxerga aquilo. Ou
-  // o robô roda em host Windows com o certificado instalado, ou o .pfx vai para
-  // o cofre — e o .pfx só sai de lá se tiver sido importado como exportável,
-  // que é escolha feita no momento da instalação e não dá para desfazer depois.
-  "Se os A1 no certmgr foram importados como exportáveis (marca a chave privada como exportável)",
-  "A URL exata de 'Minhas solicitações' e a de 'Ver detalhes' de um protocolo",
-  "O texto que a página mostra quando o pedido está EM ANÁLISE",
-  "O texto que a página mostra quando o pedido foi DEFERIDO",
-  "O texto que a página mostra quando há EXIGÊNCIA, e onde fica a descrição dela",
-  "Como a DAM aparece (link, botão, PDF embutido) e se dá para baixá-la sem clique",
-  "O que a página mostra quando o protocolo não existe naquele login",
+  "A URL exata de 'Minhas Solicitações' e a de 'Ver detalhes' de um protocolo",
+  "O texto do selo no DETALHE quando está em análise e quando há exigência (na lista já sabemos; MA-5/MA-6 responderam 'é a mesma tela', então muda só o status)",
+  "Os selos da aba Finalizado que não sejam DEFERIDO — indeferido, cancelado, arquivado",
 ] as const;
 
 export class ContratoNaoLevantado extends Error {
@@ -115,33 +107,143 @@ export class ContratoNaoLevantado extends Error {
   }
 }
 
-export type TextoDaConsulta = {
-  /** O texto visível da página de detalhes, já extraído. */
-  texto: string;
+/**
+ * As três abas de "Minhas Solicitações", com contador, observadas em 15/09.
+ *
+ * A aba é metade da leitura: é ela que diz se o pedido está com o órgão ou de
+ * volta com o requerente. A outra metade é o selo do cartão.
+ */
+export const ABAS = ["Pendente", "Em análise", "Finalizado"] as const;
+export type Aba = (typeof ABAS)[number];
+
+/**
+ * Os selos da aba **Pendente** que significam exigência.
+ *
+ * O próprio portal diz que a complementação pedida pelo analista aparece em
+ * Pendente com um destes dois. "Pendente" no SIMA quer dizer pendente **do
+ * requerente**, não do órgão — é o contrário do que a palavra sugere, e é por
+ * isso que esta constante existe com nome em vez de virar um `if` solto.
+ */
+export const SELOS_DE_EXIGENCIA = ["Aguardando Envio de Documento", "Aguardando Assinatura"] as const;
+
+/** O selo de conclusão observado no detalhe de um protocolo real (`AFU-26003257`). */
+export const SELO_DEFERIDO = "DEFERIDO";
+
+/** O que a consulta mostra quando o protocolo não é daquele login (MA-8). */
+export const SEM_SOLICITACAO = "Nenhuma solicitação encontrada";
+
+/**
+ * A consulta não achou o protocolo **naquele login**.
+ *
+ * Erro próprio, e não "pendente", porque quase sempre não significa que o
+ * pedido não existe: significa que se consultou com o certificado errado. O
+ * SIMA exige consultar com o mesmo que abriu (MA-3), e tratar isso como
+ * "segue pendente" esconderia uma configuração errada por semanas.
+ */
+export class ProtocoloForaDoLogin extends Error {
+  constructor(numero: string) {
+    super(
+      `SIMA: "${SEM_SOLICITACAO}" para ${numero} — provavelmente a consulta usou ` +
+        `certificado diferente do que abriu o pedido (MA-3).`
+    );
+    this.name = "ProtocoloForaDoLogin";
+  }
+}
+
+export class SeloNaoObservado extends Error {
+  constructor(aba: string, status: string) {
+    super(
+      `SIMA: selo não observado na aba "${aba}": "${status}". ` +
+        `Acrescentar em SELOS_DE_EXIGENCIA ou tratar na aba Finalizado, ` +
+        `em src/lib/societario/orgaos/sima.ts — depois de ver a tela, não antes.`
+    );
+    this.name = "SeloNaoObservado";
+  }
+}
+
+/** Compara selo sem depender de acento, caixa ou espaço duplo. */
+export function normalizarSelo(selo: string): string {
+  return selo
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toUpperCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const EXIGENCIA = new Set(SELOS_DE_EXIGENCIA.map(normalizarSelo));
+
+/**
+ * Uma solicitação como a lista a mostra: a aba em que o cartão está e o selo
+ * dele.
+ *
+ * ─── Por que não é texto livre ───────────────────────────────────────────────
+ *
+ * A versão anterior desta função recebia `{ texto }` — o texto visível da
+ * página, para casar frases. **Não serve**, e o motivo é concreto: a página de
+ * detalhe tem abas chamadas "Documentos aguardando assinatura" e "Documentos
+ * aguardando envio". Procurar "Aguardando Assinatura" no texto de um protocolo
+ * DEFERIDO acha o nome da aba e classifica como exigência um processo que
+ * terminou. O contrário — procurar "DEFERIDO" primeiro — trocaria o erro de
+ * lado.
+ *
+ * Então a extração entrega os dois campos separados, e a decisão fica sem
+ * ambiguidade. Quem escrever a navegação paga esse preço uma vez.
+ */
+export type SolicitacaoNaLista = {
+  aba: Aba;
+  /** O selo do cartão, verbatim. */
+  selo: string;
 };
 
 /**
- * Classifica o desfecho a partir do texto da página.
+ * O que a lista diz sobre uma solicitação.
  *
- * **Separada da navegação de propósito.** Assim que alguém trouxer as três
- * frases que o portal usa, esta função vira uma tabela de padrões e ganha teste
- * com texto real — sem precisar de portal, certificado nem rede.
+ * ─── A regra, aba por aba ────────────────────────────────────────────────────
  *
- * É a peça que decide se um processo está deferido. Ela recusa enquanto não
- * souber: devolver "pendente" por não reconhecer o texto seria pior, porque um
- * deferimento passaria despercebido e o setor não saberia que parou de olhar.
+ * - **Pendente** é pendente do requerente: um dos dois selos de exigência, e
+ *   qualquer outro falha — é a aba onde uma leitura errada custa mais, porque
+ *   exigência não vista é prazo correndo contra o cliente.
+ * - **Em análise** é o órgão trabalhando. O selo dessa aba não foi observado, e
+ *   **não precisa ser**: nenhum estado dentro dela conclui o processo, então a
+ *   aba sozinha já decide. Exigir um selo conhecido aqui geraria erro em todo
+ *   processo normal, sem proteger nada.
+ * - **Finalizado** só conclui com `DEFERIDO`. Um finalizado que não é deferido
+ *   (indeferido, cancelado) é justamente o caso que não vimos, e o mais caro de
+ *   confundir com deferimento — falha até alguém ver a tela.
  */
-export function classificarDesfecho(_pagina: TextoDaConsulta): LeituraDoOrgao {
-  throw new ContratoNaoLevantado("os textos de análise, deferimento e exigência");
+export function classificarSolicitacao(s: SolicitacaoNaLista): LeituraDoOrgao {
+  switch (s.aba) {
+    case "Pendente": {
+      if (!EXIGENCIA.has(normalizarSelo(s.selo))) throw new SeloNaoObservado(s.aba, s.selo);
+      // A descrição é o próprio selo do órgão: é o que o analista pediu, na
+      // palavra dele. `decidir()` recusa exigência sem descrição.
+      return { desfecho: "EXIGENCIA", detalhe: s.selo.trim() };
+    }
+    case "Em análise":
+      return { desfecho: "PENDENTE" };
+    case "Finalizado": {
+      if (normalizarSelo(s.selo) !== SELO_DEFERIDO) throw new SeloNaoObservado(s.aba, s.selo);
+      return { desfecho: "DEFERIDO" };
+    }
+  }
+}
+
+/** A consulta voltou sem nenhum cartão? (MA-8) */
+export function semSolicitacao(texto: string): boolean {
+  return normalizarSelo(texto).includes(normalizarSelo(SEM_SOLICITACAO));
 }
 
 /**
  * O observador do SIMA.
  *
- * Registrar em `OBSERVADORES.MA` só depois que os dois pontos acima existirem.
- * Enquanto isso o cron pula este órgão — que é o comportamento correto: o setor
- * segue conferindo à mão, como sempre fez, e ninguém recebe informação
- * inventada.
+ * A decisão já existe (`classificarSolicitacao`); falta a navegação, que só se
+ * escreve com uma sessão autenticada na frente — e essa depende do certificado.
+ *
+ * Registrar em `OBSERVADORES.MA` só depois de a navegação existir **e** de ter
+ * rodado uma vez contra a tela real. Enquanto isso o cron pula este órgão, que
+ * é o comportamento correto: o setor segue conferindo à mão, como sempre fez, e
+ * ninguém recebe informação inventada.
  */
 export const observadorSima: ObservadorDeOrgao = async (protocolo: DadosDoProtocolo) => {
   if (!protocoloValido(protocolo.numero)) {

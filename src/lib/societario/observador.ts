@@ -9,13 +9,20 @@
 // Existe: a máquina inteira em volta — quem verificar, o que fazer com a
 // leitura, como gravar sem mentir, e o laço do cron.
 //
-// **Não existe: nenhum leitor de órgão de verdade.** Ler o site da JUCEPAR
-// exige o contrato daquela página — onde fica o número, que texto significa
-// deferido, como entra a credencial —, e isso não se adivinha. `OBSERVADORES`
-// nasce vazio de propósito: inventar um seletor de HTML que ninguém conferiu
-// seria pior que não ter robô, porque marcaria processo como deferido sem ser.
+// Existe também, desde 18/09, **a decisão de dois órgãos**: o painel da Junta
+// Comercial (`orgaos/junta.ts`) e a lista do SIMA (`orgaos/sima.ts`). Dado o que
+// a tela mostra, os dois já dizem se o processo está deferido, em exigência ou
+// andando — com os textos que o setor levantou em 15/09, e com teste.
 //
-// Escrever o primeiro é preencher uma entrada deste mapa. Todo o resto já roda.
+// **Não existe: a navegação até essa tela.** Nenhum dos dois tem o HTML lido: o
+// SIMA vive atrás do e-Cidadão e depende do certificado, e do painel da Junta
+// não temos nem a URL. Inventar seletor seria pior que não ter robô, porque
+// marcaria processo como deferido sem ser.
+//
+// Por isso `OBSERVADORES` segue **vazio**: a entrada só entra quando a leitura
+// tiver rodado uma vez contra a página real. Registrar aqui é prometer que o
+// robô lê de verdade, e o cron pula o que não está prometido — que é o
+// comportamento certo enquanto isso.
 
 export type LeituraDoOrgao = {
   desfecho: "PENDENTE" | "DEFERIDO" | "EXIGENCIA";
@@ -34,8 +41,8 @@ export type ObservadorDeOrgao = (protocolo: DadosDoProtocolo) => Promise<Leitura
 /**
  * Leitores registrados, por sigla do órgão.
  *
- * Vazio hoje. Ver o cabeçalho: a entrada só entra quando alguém tiver lido a
- * página do órgão e souber dizer o que significa cada estado.
+ * Vazio hoje. Ver o cabeçalho: o que significa cada estado já está escrito para
+ * a Junta (`JUCEPAR`) e o SIMA (`MA`) — o que falta é chegar até a tela.
  */
 export const OBSERVADORES: Record<string, ObservadorDeOrgao> = {};
 
