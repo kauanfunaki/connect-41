@@ -45,6 +45,21 @@ import {
 import { prepararImportacao, chaveDeDuplicidade, MAXIMO_DE_LINHAS } from "@/lib/financeiro/importacaoCsv";
 import { podeMarcarPago, podeConferir, centavosDeDecimal, situacaoDaConta } from "@/lib/financeiro/contas";
 import { listarContas } from "@/lib/financeiro/data";
+import {
+  podeEnviarParaAprovacao,
+  podeDecidir,
+  motivoDoBloqueioDeBaixa,
+  validarMotivo,
+  dentroDoTeto,
+  statusInicialDeAprovacao,
+} from "@/lib/financeiro/aprovacao/regras";
+import { contextoDeEntrada } from "@/lib/financeiro/aprovacao/servidor";
+import { transicao, situacaoDoPrazo } from "@/lib/financeiro/pendencias/regras";
+import { avaliarLembrete, PASSOS_DO_LEMBRETE } from "@/lib/financeiro/pendencias/lembrete";
+import { avaliarRegua, passoDevido, PASSOS_PADRAO } from "@/lib/financeiro/cobranca/regua";
+import { validarSelecaoDoAcordo, validarTermosDoAcordo, gerarParcelas } from "@/lib/financeiro/cobranca/acordo";
+import { lerOfx } from "@/lib/financeiro/conciliacao/ofx";
+import { rankearCandidatos, sugestaoDaTransacao, tipoCompativel } from "@/lib/financeiro/conciliacao/casamento";
 
 const SLUG_DO_SANDBOX = "teste";
 const limpar = process.argv.includes("--limpar");
@@ -108,11 +123,22 @@ async function tenantDoSandbox() {
 async function limparSandbox(tenantId: string) {
   const prisma = getPrisma();
   const ordem = [
+    () => prisma.clientRequestReminder.deleteMany({ where: { tenantId } }),
+    () => prisma.clientRequest.deleteMany({ where: { tenantId } }),
+    () => prisma.bankTransactionMatch.deleteMany({ where: { transaction: { tenantId } } }),
+    () => prisma.bankTransaction.deleteMany({ where: { tenantId } }),
+    () => prisma.bankStatementImport.deleteMany({ where: { tenantId } }),
+    () => prisma.financeApprovalEvent.deleteMany({ where: { entry: { tenantId } } }),
+    () => prisma.portalApprovalLimit.deleteMany({ where: { tenantId } }),
+    () => prisma.portalUser.deleteMany({ where: { tenantId } }),
+    () => prisma.financeEntry.updateMany({ where: { tenantId }, data: { agreementId: null, renegotiatedAgreementId: null } }),
+    () => prisma.collectionAgreement.deleteMany({ where: { tenantId } }),
     () => prisma.financeEntry.deleteMany({ where: { tenantId } }),
     () => prisma.financeCounterparty.deleteMany({ where: { tenantId } }),
     () => prisma.costCenter.deleteMany({ where: { tenantId } }),
     () => prisma.bankAccount.deleteMany({ where: { tenantId } }),
     () => prisma.financeCategory.deleteMany({ where: { tenantId } }),
+    () => prisma.clientGroup.deleteMany({ where: { tenantId } }),
     () => prisma.company.deleteMany({ where: { tenantId } }),
   ];
   let total = 0;
@@ -524,6 +550,583 @@ async function a4(tenantId: string, contas: Awaited<ReturnType<typeof a2>>) {
   igual(situacaoDaConta({ ...emAberto, status: "PAGO", paidAt: new Date() }, HOJE, diasAFrente(-30)), "PAGA", "paga com atraso aparece como paga, e não como vencida");
 }
 
+// ─── A5 · alçada e aprovação ────────────────────────────────────────────────
+
+const TETO_DA_ALCADA = 100000; // R$ 1.000,00
+
+async function a5(tenantId: string, c: Cadastros) {
+  titulo("A5 · alçada e aprovação pelo portal");
+  const prisma = getPrisma();
+
+  const grupo = await prisma.clientGroup.create({
+    data: { tenantId, name: `${MARCA} Grupo ACME` },
+    select: { id: true },
+  });
+  await prisma.company.update({ where: { id: c.empresa.id }, data: { clientGroupId: grupo.id } });
+  const cliente = await prisma.portalUser.create({
+    data: {
+      tenantId,
+      clientGroupId: grupo.id,
+      name: `${MARCA} Aprovador`,
+      email: `bancada+${Date.now()}@exemplo.invalido`,
+      passwordHash: "x".repeat(60),
+    },
+    select: { id: true },
+  });
+  const alcada = await prisma.portalApprovalLimit.create({
+    data: { tenantId, companyId: c.empresa.id, portalUserId: cliente.id, maxAmount: "1000.00" },
+    select: { id: true },
+  });
+  ok(!!alcada.id, "alçada criada para o usuário do portal, com teto de R$ 1.000,00");
+
+  // Com alçada ativa, conta a pagar em aberto nasce aguardando — é o que muda o
+  // comportamento da empresa inteira, e é decidido na entrada.
+  const ctx = await contextoDeEntrada(tenantId, [c.empresa.id]);
+  igual(ctx.statusInicial(c.empresa.id, "PAGAR", "CONFERIDO"), "AGUARDANDO", "conta a pagar em aberto nasce aguardando aprovação");
+  igual(ctx.statusInicial(c.empresa.id, "PAGAR", "PAGO"), "NAO_REQUER", "conta que já nasce paga não entra em aprovação");
+  igual(ctx.statusInicial(c.empresa.id, "RECEBER", "CONFERIDO"), "NAO_REQUER", "conta a receber não passa por aprovação");
+  igual(
+    statusInicialDeAprovacao({ kind: "PAGAR", status: "CONFERIDO", moduloLigado: true, empresaTemAlcadaAtiva: false }),
+    "NAO_REQUER",
+    "empresa sem alçada não manda nada para aprovação"
+  );
+
+  const dentro = await prisma.financeEntry.create({
+    data: {
+      tenantId,
+      companyId: c.empresa.id,
+      kind: "PAGAR",
+      status: "CONFERIDO",
+      approvalStatus: "AGUARDANDO",
+      counterpartyId: c.fornecedor.id,
+      categoryId: c.despesa.id,
+      competence: COMPETENCIA,
+      dueDate: instanteDaData(diasAFrente(15)),
+      amount: decimalDeCentavos(50000),
+      description: "Dentro do teto",
+    },
+    select: { id: true },
+  });
+  const acima = await prisma.financeEntry.create({
+    data: {
+      tenantId,
+      companyId: c.empresa.id,
+      kind: "PAGAR",
+      status: "CONFERIDO",
+      approvalStatus: "AGUARDANDO",
+      counterpartyId: c.fornecedor.id,
+      categoryId: c.despesa.id,
+      competence: COMPETENCIA,
+      // Vencida ontem de propósito: é a data da transação do extrato no A8, e
+      // "conta vencida travada na aprovação" é justamente o caso que dói.
+      dueDate: instanteDaData(diasAFrente(-1)),
+      amount: decimalDeCentavos(500000),
+      description: "Acima do teto",
+    },
+    select: { id: true },
+  });
+
+  const noPortal = { tipo: "PORTAL" as const, tetoCentavos: TETO_DA_ALCADA };
+  ok(
+    podeDecidir({ status: "CONFERIDO", approvalStatus: "AGUARDANDO", valorCentavos: 50000, createdById: null }, noPortal, "APROVAR").pode,
+    "o cliente aprova a conta que cabe no teto dele"
+  );
+  const foraDoTeto = podeDecidir(
+    { status: "CONFERIDO", approvalStatus: "AGUARDANDO", valorCentavos: 500000, createdById: null },
+    noPortal,
+    "APROVAR"
+  );
+  ok(!foraDoTeto.pode, "o cliente não aprova acima do teto", foraDoTeto.pode ? "" : foraDoTeto.motivo);
+  ok(dentroDoTeto(TETO_DA_ALCADA, 100000), "o teto é inclusivo: o valor exato do teto passa");
+  ok(!dentroDoTeto(TETO_DA_ALCADA, 100001), "um centavo acima do teto não passa");
+  ok(!dentroDoTeto(null, 1), "sem alçada não se aprova nada");
+
+  // Reprovar sem dizer por quê deixa a equipe sem o que corrigir.
+  ok(!validarMotivo("  ").ok, "reprovação sem motivo é recusada");
+  ok(!validarMotivo("ab").ok, "motivo curto demais é recusado");
+  ok(validarMotivo("Nota divergente do pedido").ok, "motivo com texto é aceito");
+  const semMotivo = podeDecidir(
+    { status: "CONFERIDO", approvalStatus: "AGUARDANDO", valorCentavos: 50000, createdById: null },
+    noPortal,
+    "REPROVAR",
+    null
+  );
+  ok(!semMotivo.pode, "reprovar sem motivo é recusado também na decisão");
+
+  // A trava: aguardando aprovação impede a baixa.
+  const bloqueio = motivoDoBloqueioDeBaixa({ approvalStatus: "AGUARDANDO" });
+  ok(!!bloqueio, "conta aguardando aprovação tem motivo de bloqueio de baixa", bloqueio ?? "veio nulo");
+  igual(motivoDoBloqueioDeBaixa({ approvalStatus: "APROVADO" }), null, "conta aprovada não tem bloqueio");
+
+  // Aprova de verdade e confere que a trava saiu.
+  await prisma.$transaction(async (tx) => {
+    await tx.financeEntry.update({
+      where: { id: dentro.id },
+      data: { approvalStatus: "APROVADO", approvedAt: new Date() },
+    });
+    await tx.financeApprovalEvent.create({
+      data: { entryId: dentro.id, decision: "APROVADO", actorPortalUserId: cliente.id },
+    });
+  });
+  const aprovada = await prisma.financeEntry.findUniqueOrThrow({
+    where: { id: dentro.id },
+    select: { approvalStatus: true, approvalEvents: { select: { decision: true, actorPortalUserId: true } } },
+  });
+  igual(aprovada.approvalStatus, "APROVADO", "a conta ficou aprovada");
+  igual(aprovada.approvalEvents.length, 1, "a decisão ficou registrada no histórico");
+  igual(aprovada.approvalEvents[0]?.actorPortalUserId, cliente.id, "e o histórico guarda que foi o cliente quem decidiu");
+  igual(motivoDoBloqueioDeBaixa({ approvalStatus: "APROVADO" }), null, "depois de aprovada, a baixa está liberada");
+
+  // Reenvio e não-reenvio.
+  const jaAguardando = podeEnviarParaAprovacao({ kind: "PAGAR", status: "CONFERIDO", paidAt: null, approvalStatus: "AGUARDANDO" });
+  ok(!jaAguardando.pode, "conta já aguardando não é enviada de novo");
+  const contaAReceber = podeEnviarParaAprovacao({ kind: "RECEBER", status: "CONFERIDO", paidAt: null, approvalStatus: "NAO_REQUER" });
+  ok(!contaAReceber.pode, "conta a receber nunca é enviada para aprovação");
+  const reprovadaVolta = podeEnviarParaAprovacao({ kind: "PAGAR", status: "CONFERIDO", paidAt: null, approvalStatus: "REPROVADO" });
+  ok(reprovadaVolta.pode, "conta reprovada pode ser reenviada depois de corrigida");
+
+  return { cliente, acima };
+}
+
+// ─── A6 · pendência e a régua de lembrete ───────────────────────────────────
+
+async function a6(tenantId: string, c: Cadastros) {
+  titulo("A6 · pendência: transições, prazo e régua de lembrete");
+  const prisma = getPrisma();
+
+  const vencida = await prisma.clientRequest.create({
+    data: {
+      tenantId,
+      companyId: c.empresa.id,
+      kind: "DOCUMENTO",
+      title: `${MARCA} Enviar o extrato de ${COMPETENCIA}`,
+      description: "Precisamos do extrato para conciliar.",
+      dueDate: instanteDaData(diasAFrente(-3)),
+    },
+    select: { id: true, status: true, dueDate: true },
+  });
+  igual(vencida.status, "ABERTA", "pendência nasce aberta");
+  igual(situacaoDoPrazo(vencida.dueDate, AGORA), "VENCIDA", "prazo de três dias atrás é prazo vencido");
+  igual(situacaoDoPrazo(instanteDaData(HOJE), AGORA), "VENCE_HOJE", "prazo de hoje ainda não está vencido");
+  igual(situacaoDoPrazo(null, AGORA), "SEM_PRAZO", "pendência sem prazo não tem situação de prazo");
+
+  // As transições, incluindo as que não existem.
+  const clienteResponde = transicao("ABERTA", "CLIENTE", "RESPONDER");
+  ok(clienteResponde.ok && clienteResponde.novo === "RESPONDIDA", "cliente respondendo leva a pendência para RESPONDIDA");
+  const equipeResolve = transicao("RESPONDIDA", "EQUIPE", "RESOLVER");
+  ok(equipeResolve.ok && equipeResolve.novo === "RESOLVIDA", "equipe resolve a pendência respondida");
+  ok(!transicao("RESOLVIDA", "CLIENTE", "RESPONDER").ok, "pendência resolvida não aceita resposta do cliente");
+  ok(!transicao("RESOLVIDA", "CLIENTE", "REABRIR").ok, "cliente não reabre pendência");
+  ok(transicao("RESOLVIDA", "EQUIPE", "REABRIR").ok, "a equipe reabre");
+
+  // A régua: passos 1, 3, 7 e 15 dias de atraso.
+  igual(PASSOS_DO_LEMBRETE, [1, 3, 7, 15], "os passos do lembrete são 1, 3, 7 e 15 dias");
+  const semPrazo = avaliarLembrete({ status: "ABERTA", prazoKey: null, enviados: [] }, HOJE);
+  ok(semPrazo.enviar === null && semPrazo.motivo === "SEM_PRAZO", "pendência sem prazo não recebe lembrete");
+  const noPrazo = avaliarLembrete({ status: "ABERTA", prazoKey: HOJE, enviados: [] }, HOJE);
+  ok(noPrazo.enviar === null && noPrazo.motivo === "NO_PRAZO", "quem vence hoje ainda não recebe lembrete");
+  const respondida = avaliarLembrete({ status: "RESPONDIDA", prazoKey: diasAFrente(-5), enviados: [] }, HOJE);
+  ok(respondida.enviar === null && respondida.motivo === "NAO_AGUARDA_CLIENTE", "pendência já respondida não é cobrada");
+
+  const primeiroDia = avaliarLembrete({ status: "ABERTA", prazoKey: diasAFrente(-1), enviados: [] }, HOJE);
+  igual(primeiroDia.enviar, 1, "um dia de atraso dispara o passo 1");
+  const jaMandou = avaliarLembrete({ status: "ABERTA", prazoKey: diasAFrente(-1), enviados: [1] }, HOJE);
+  ok(jaMandou.enviar === null && jaMandou.motivo === "SEM_PASSO_HOJE", "o passo 1 não é mandado duas vezes");
+  const terceiroDia = avaliarLembrete({ status: "ABERTA", prazoKey: diasAFrente(-3), enviados: [1] }, HOJE);
+  igual(terceiroDia.enviar, 3, "três dias de atraso dispara o passo 3");
+
+  // A reserva no banco: é ela que impede o cron de mandar duas vezes se rodar
+  // duas vezes no mesmo dia.
+  await prisma.clientRequestReminder.create({
+    data: { tenantId, requestId: vencida.id, step: 3, recipients: 1, ok: true },
+  });
+  const repetiu = await prisma.clientRequestReminder
+    .create({ data: { tenantId, requestId: vencida.id, step: 3, recipients: 1, ok: true } })
+    .then(() => true)
+    .catch(() => false);
+  ok(!repetiu, "o banco recusa o mesmo passo duas vezes na mesma pendência (índice por pendência + passo)");
+}
+
+// ─── A7 · cobrança, régua de e-mail e acordo ────────────────────────────────
+
+async function a7(tenantId: string, c: Cadastros) {
+  titulo("A7 · cobrança: régua de e-mail e acordo em parcelas");
+  const prisma = getPrisma();
+
+  const sacado = await prisma.financeCounterparty.create({
+    data: { tenantId, companyId: c.empresa.id, name: `${MARCA} CLIENTE INADIMPLENTE`, document: "77888999000155" },
+    select: { id: true },
+  });
+
+  const vencido = await prisma.financeEntry.create({
+    data: {
+      tenantId,
+      companyId: c.empresa.id,
+      kind: "RECEBER",
+      status: "CONFERIDO",
+      counterpartyId: sacado.id,
+      categoryId: c.receita.id,
+      competence: COMPETENCIA,
+      dueDate: instanteDaData(diasAFrente(-8)),
+      amount: decimalDeCentavos(100000),
+      description: "Honorários em atraso",
+    },
+    select: { id: true },
+  });
+
+  // A régua de e-mail: os passos e as pausas.
+  igual(PASSOS_PADRAO, [1, 7, 15, 30], "os passos padrão da régua são 1, 7, 15 e 30 dias");
+  igual(passoDevido(8, PASSOS_PADRAO, [], 30), 7, "oito dias de atraso cai no passo de 7");
+  igual(passoDevido(8, PASSOS_PADRAO, [7], 30), null, "o passo de 7 não se repete");
+  igual(passoDevido(0, PASSOS_PADRAO, [], 30), null, "sem atraso não há passo");
+
+  const ligada = { ligada: true, passos: PASSOS_PADRAO };
+  const base = {
+    situacao: "EM_COBRANCA" as const,
+    vencimentoKey: diasAFrente(-8),
+    ultimoContato: null,
+    email: "sacado@exemplo.invalido",
+    empresaForaDaRegua: false,
+    enviados: [] as number[],
+  };
+
+  const normal = avaliarRegua(base, ligada, HOJE);
+  igual(normal.enviar, 7, "com e-mail e oito dias de atraso, manda o passo de 7");
+
+  const semEmail = avaliarRegua({ ...base, email: null }, ligada, HOJE);
+  ok(semEmail.enviar === null && semEmail.motivo === "SEM_EMAIL", "sacado sem e-mail fica fora da régua");
+
+  const desligada = avaliarRegua(base, { ligada: false, passos: PASSOS_PADRAO }, HOJE);
+  ok(desligada.enviar === null && desligada.motivo === "REGUA_DESLIGADA", "régua desligada não manda nada");
+
+  const foraDaRegua = avaliarRegua({ ...base, empresaForaDaRegua: true }, ligada, HOJE);
+  ok(foraDaRegua.enviar === null && foraDaRegua.motivo === "EMPRESA_FORA", "empresa que cobra os próprios sacados fica fora da régua");
+
+  const comAcordo = avaliarRegua({ ...base, situacao: "EM_ACORDO" }, ligada, HOJE);
+  ok(comAcordo.enviar === null && comAcordo.motivo === "EM_ACORDO", "título em acordo não é cobrado: atropelaria o que foi combinado");
+
+  // Contestação: mandar "você está devendo" para quem disse que não deve é o
+  // que transforma contestação em reclamação.
+  const contestou = avaliarRegua(
+    { ...base, ultimoContato: { resultado: "CONTESTOU", contatoKey: diasAFrente(-1), proximaAcaoKey: null } },
+    ligada,
+    HOJE
+  );
+  ok(contestou.enviar === null, "quem contestou não recebe cobrança automática");
+
+  const jaMandou = avaliarRegua({ ...base, enviados: [7] }, ligada, HOJE);
+  ok(jaMandou.enviar === null, "o passo já enviado não se repete");
+
+  // O acordo: a seleção, os termos e as parcelas.
+  const titulo1 = {
+    id: vencido.id,
+    kind: "RECEBER" as const,
+    status: "CONFERIDO" as const,
+    closeReason: null,
+    paidAt: null,
+    companyId: c.empresa.id,
+    counterpartyId: sacado.id,
+    vencimentoKey: diasAFrente(-8),
+    valorCentavos: 100000,
+    statusDoAcordo: null,
+  };
+  const selecao = validarSelecaoDoAcordo([titulo1], HOJE);
+  ok(selecao.ok, "título vencido e em aberto pode virar acordo", selecao.ok ? "" : selecao.erro);
+
+  const emDia = validarSelecaoDoAcordo([{ ...titulo1, vencimentoKey: diasAFrente(5) }], HOJE);
+  ok(!emDia.ok, "título em dia não entra em acordo — não está em cobrança");
+
+  const outroSacado = validarSelecaoDoAcordo([titulo1, { ...titulo1, id: "outro", counterpartyId: "sacado-2" }], HOJE);
+  ok(!outroSacado.ok, "não se mistura sacado no mesmo acordo");
+
+  const repetido = validarSelecaoDoAcordo([titulo1, titulo1], HOJE);
+  ok(!repetido.ok, "título repetido na seleção é recusado");
+
+  const termos = validarTermosDoAcordo(
+    { valor: "900,00", parcelas: "3", primeiroVencimento: diasAFrente(30), notas: null },
+    HOJE
+  );
+  ok(termos.ok, "termos válidos: R$ 900,00 em 3 parcelas", termos.ok ? "" : termos.erro);
+
+  const parcelas = gerarParcelas({ totalCentavos: 100000, parcelas: 3, primeiroVencimentoKey: diasAFrente(30) });
+  igual(
+    parcelas.map((p) => p.valorCentavos),
+    [33333, 33333, 33334],
+    "R$ 1.000,00 em 3 vira 333,33 + 333,33 + 333,34 — a sobra fica na última"
+  );
+  igual(
+    parcelas.reduce((t, p) => t + p.valorCentavos, 0),
+    100000,
+    "a soma das parcelas é exatamente o total, sem centavo a mais nem a menos"
+  );
+
+  // Grava o acordo como a action faz: originais renegociados, parcelas novas.
+  const acordo = await prisma.$transaction(async (tx) => {
+    const a = await tx.collectionAgreement.create({
+      data: {
+        tenantId,
+        companyId: c.empresa.id,
+        counterpartyId: sacado.id,
+        originalAmount: decimalDeCentavos(100000),
+        agreedAmount: decimalDeCentavos(90000),
+        installments: 3,
+        firstDueDate: instanteDaData(diasAFrente(30)),
+        agreedAt: new Date(),
+      },
+      select: { id: true },
+    });
+    await tx.financeEntry.update({
+      where: { id: vencido.id },
+      data: {
+        status: "CANCELADO",
+        closeReason: "RENEGOCIADO",
+        statusBeforeClose: "CONFERIDO",
+        renegotiatedAgreementId: a.id,
+      },
+    });
+    for (const p of gerarParcelas({ totalCentavos: 90000, parcelas: 3, primeiroVencimentoKey: diasAFrente(30) })) {
+      await tx.financeEntry.create({
+        data: {
+          tenantId,
+          companyId: c.empresa.id,
+          kind: "RECEBER",
+          status: "CONFERIDO",
+          counterpartyId: sacado.id,
+          categoryId: c.receita.id,
+          competence: p.vencimentoKey.slice(0, 7),
+          dueDate: instanteDaData(p.vencimentoKey),
+          amount: decimalDeCentavos(p.valorCentavos),
+          description: `Parcela ${p.numero}/3 do acordo`,
+          agreementId: a.id,
+        },
+      });
+    }
+    return a;
+  });
+
+  const original = await prisma.financeEntry.findUniqueOrThrow({
+    where: { id: vencido.id },
+    select: { closeReason: true, renegotiatedAgreementId: true },
+  });
+  igual(original.closeReason, "RENEGOCIADO", "o título original fica marcado como renegociado, e não simplesmente cancelado");
+  igual(original.renegotiatedAgreementId, acordo.id, "e aponta para o acordo que o substituiu");
+
+  const doAcordo = await prisma.financeEntry.findMany({
+    where: { tenantId, agreementId: acordo.id },
+    select: { amount: true },
+  });
+  igual(doAcordo.length, 3, "nasceram as três parcelas");
+  igual(
+    doAcordo.reduce((t, p) => t + centavosDeDecimal(p.amount), 0),
+    90000,
+    "a soma das parcelas no banco é o valor acordado"
+  );
+
+  // Parcela de acordo ativo não se renegocia de novo.
+  const parcelaDeAtivo = validarSelecaoDoAcordo([{ ...titulo1, id: "parcela", statusDoAcordo: "ATIVO" }], HOJE);
+  ok(!parcelaDeAtivo.ok, "parcela de acordo ativo não entra em outro acordo — quebra-se o atual antes");
+}
+
+// ─── A8 · conciliação de extrato ────────────────────────────────────────────
+
+/**
+ * Um OFX montado aqui, no formato SGML que o internet banking brasileiro usa.
+ *
+ * **É sintético, e isso é um limite conhecido** — é o item B1 do plano de
+ * testes. Ele prova que o leitor entende o formato; não prova que entende o
+ * arquivo do Itaú. Um extrato de verdade pode trazer acento em latin1, FITID
+ * ausente, tag fechada de outro jeito.
+ */
+function ofxSintetico(transacoes: { fitId: string; data: string; valor: string; memo: string }[]): Uint8Array {
+  const semTraco = (k: string) => k.replace(/-/g, "");
+  const linhas = [
+    "OFXHEADER:100",
+    "DATA:OFXSGML",
+    "VERSION:102",
+    "SECURITY:NONE",
+    "ENCODING:USASCII",
+    "CHARSET:1252",
+    "COMPRESSION:NONE",
+    "OLDFILEUID:NONE",
+    "NEWFILEUID:NONE",
+    "",
+    "<OFX>",
+    "<BANKMSGSRSV1>",
+    "<STMTTRNRS>",
+    "<STMTRS>",
+    "<CURDEF>BRL",
+    "<BANKACCTFROM>",
+    "<BANKID>0341",
+    "<BRANCHID>1234",
+    "<ACCTID>56789-0",
+    "<ACCTTYPE>CHECKING",
+    "</BANKACCTFROM>",
+    "<BANKTRANLIST>",
+    `<DTSTART>${semTraco(diasAFrente(-30))}000000[-3:BRT]`,
+    `<DTEND>${semTraco(HOJE)}000000[-3:BRT]`,
+    ...transacoes.flatMap((t) => [
+      "<STMTTRN>",
+      `<TRNTYPE>${t.valor.startsWith("-") ? "DEBIT" : "CREDIT"}`,
+      `<DTPOSTED>${semTraco(t.data)}000000[-3:BRT]`,
+      `<TRNAMT>${t.valor}`,
+      `<FITID>${t.fitId}`,
+      `<MEMO>${t.memo}`,
+      "</STMTTRN>",
+    ]),
+    "</BANKTRANLIST>",
+    "<LEDGERBAL>",
+    "<BALAMT>1500.00",
+    `<DTASOF>${semTraco(HOJE)}000000[-3:BRT]`,
+    "</LEDGERBAL>",
+    "</STMTRS>",
+    "</STMTTRNRS>",
+    "</BANKMSGSRSV1>",
+    "</OFX>",
+  ];
+  return new TextEncoder().encode(linhas.join("\n"));
+}
+
+async function a8(tenantId: string, c: Cadastros, travada: { id: string }) {
+  titulo("A8 · conciliação: leitura do extrato e casamento");
+  const prisma = getPrisma();
+
+  igual(tipoCompativel(-1000), "PAGAR", "débito no extrato casa com conta a pagar");
+  igual(tipoCompativel(1000), "RECEBER", "crédito no extrato casa com conta a receber");
+  igual(tipoCompativel(0), null, "transação de valor zero não casa com nada");
+
+  const bytes = ofxSintetico([
+    { fitId: "TX-001", data: diasAFrente(-2), valor: "-250.00", memo: "PAGTO ENERGISA" },
+    { fitId: "TX-002", data: diasAFrente(-1), valor: "-5000.00", memo: "PAGTO FORNECEDOR" },
+  ]);
+  const leitura = lerOfx(bytes);
+  ok(leitura.ok, "o leitor entendeu o OFX", leitura.ok ? "" : leitura.erro);
+  if (!leitura.ok) return;
+
+  igual(leitura.extrato.transacoes.length, 2, "duas transações lidas");
+  igual(leitura.extrato.transacoes[0]?.centavos, -25000, "o valor vem em centavos, com sinal");
+  igual(leitura.extrato.saldo?.centavos, 150000, "o saldo do extrato foi lido");
+
+  const importacao = await prisma.bankStatementImport.create({
+    data: {
+      tenantId,
+      bankAccountId: c.banco.id,
+      fileName: "bancada.ofx",
+      transactionsRead: leitura.extrato.transacoes.length,
+      transactionsNew: leitura.extrato.transacoes.length,
+      ledgerBalance: decimalDeCentavos(leitura.extrato.saldo!.centavos),
+      ledgerBalanceAt: instanteDaData(leitura.extrato.saldo!.dataKey!),
+    },
+    select: { id: true },
+  });
+  for (const t of leitura.extrato.transacoes) {
+    await prisma.bankTransaction.create({
+      data: {
+        tenantId,
+        bankAccountId: c.banco.id,
+        importId: importacao.id,
+        fitId: t.fitId,
+        postedAt: instanteDaData(t.dataKey),
+        amount: decimalDeCentavos(t.centavos),
+        memo: t.memo,
+      },
+    });
+  }
+  const gravadas = await prisma.bankTransaction.count({ where: { tenantId, bankAccountId: c.banco.id } });
+  igual(gravadas, 2, "as transações foram gravadas");
+
+  // Reimportar o mesmo extrato não duplica: o FITID é único por conta.
+  const duplicou = await prisma.bankTransaction
+    .create({
+      data: {
+        tenantId,
+        bankAccountId: c.banco.id,
+        importId: importacao.id,
+        fitId: "TX-001",
+        postedAt: instanteDaData(HOJE),
+        amount: decimalDeCentavos(-25000),
+      },
+    })
+    .then(() => true)
+    .catch(() => false);
+  ok(!duplicou, "reimportar o mesmo extrato não duplica transação (FITID é único por conta)");
+
+  // Uma conta que vence **no dia** da transação. A do A3 tem o mesmo valor e o
+  // mesmo fornecedor, mas vence daqui a 20 dias: é o par que prova que a data
+  // decide quando o nome empata.
+  const energisa = await prisma.financeCounterparty.findFirstOrThrow({
+    where: { tenantId, name: { contains: "ENERGISA" } },
+    select: { id: true },
+  });
+  const doDia = await prisma.financeEntry.create({
+    data: {
+      tenantId,
+      companyId: c.empresa.id,
+      kind: "PAGAR",
+      status: "CONFERIDO",
+      counterpartyId: energisa.id,
+      categoryId: c.despesa.id,
+      competence: COMPETENCIA,
+      dueDate: instanteDaData(diasAFrente(-2)),
+      amount: decimalDeCentavos(25000),
+      description: "Luz vencida no dia do extrato",
+    },
+    select: { id: true },
+  });
+
+  // O casamento.
+  const candidatas = await prisma.financeEntry.findMany({
+    where: { tenantId, kind: "PAGAR", status: { in: ["CONFERIDO", "PROVISORIO"] } },
+    select: {
+      id: true,
+      kind: true,
+      status: true,
+      amount: true,
+      dueDate: true,
+      paidAt: true,
+      approvalStatus: true,
+      counterparty: { select: { name: true, document: true } },
+    },
+  });
+  const paraCasar = candidatas.map((l) => ({
+    id: l.id,
+    kind: l.kind,
+    status: l.status,
+    centavos: centavosDeDecimal(l.amount),
+    vencimentoKey: l.dueDate.toISOString().slice(0, 10),
+    pagoEmKey: l.paidAt ? l.paidAt.toISOString().slice(0, 10) : null,
+    contraparteNome: l.counterparty.name,
+    contraparteDocumento: l.counterparty.document,
+    conciliado: false,
+    bloqueioDeBaixa: motivoDoBloqueioDeBaixa({ approvalStatus: l.approvalStatus }),
+  }));
+
+  const daLuz = { centavos: -25000, dataKey: diasAFrente(-2), memo: "PAGTO ENERGISA", nome: null };
+  const ranking = rankearCandidatos(daLuz, paraCasar);
+  igual(ranking.length, 2, "duas contas de R$ 250,00 entram no ranking — mesmo valor, mesmo fornecedor");
+  igual(ranking[0]?.lancamento.id, doDia.id, "ganha a que vence no dia do extrato, não a que vence em 20 dias");
+  ok(ranking[0]!.naJanela, "a primeira está dentro da janela de data");
+  ok(!ranking[1]!.naJanela, "a segunda está fora da janela, e por isso não pontua por data");
+
+  const sugestao = sugestaoDaTransacao(ranking);
+  ok(!!sugestao, "e virou sugestão forte");
+  igual(sugestao?.candidato.lancamento.id, doDia.id, "a sugestão é a conta certa");
+  igual(sugestao?.bloqueio, null, "a sugestão não está travada: dá para confirmar");
+
+  // A trava que o A5 criou: a conta de R$ 5.000,00 está aguardando aprovação.
+  // Ela **continua no ranking** — tirá-la promoveria o segundo colocado, que é
+  // outra conta, de outro valor.
+  const doFornecedor = { centavos: -500000, dataKey: diasAFrente(-1), memo: "PAGTO FORNECEDOR", nome: null };
+  const rankingTravado = rankearCandidatos(doFornecedor, paraCasar);
+  igual(rankingTravado[0]?.lancamento.id, travada.id, "a conta travada continua em primeiro no ranking");
+  const sugestaoTravada = sugestaoDaTransacao(rankingTravado);
+  ok(
+    !!sugestaoTravada?.bloqueio,
+    "a sugestão vem com o motivo do bloqueio, em vez de sumir",
+    sugestaoTravada?.bloqueio ?? "veio nula"
+  );
+  igual(sugestaoTravada?.candidato.lancamento.id, travada.id, "e é a conta travada, não a segunda colocada");
+}
+
 // ─── Execução ───────────────────────────────────────────────────────────────
 
 async function main() {
@@ -548,6 +1151,10 @@ async function main() {
     const contas = await a2(tenant.id, cadastros);
     await a3(tenant.id, cadastros);
     await a4(tenant.id, contas);
+    const aprovacao = await a5(tenant.id, cadastros);
+    await a6(tenant.id, cadastros);
+    await a7(tenant.id, cadastros);
+    await a8(tenant.id, cadastros, aprovacao.acima);
   } finally {
     console.log(`\n${"═".repeat(60)}`);
     console.log(`${passou} passaram · ${falhou} falharam`);
