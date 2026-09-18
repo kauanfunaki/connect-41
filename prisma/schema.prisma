@@ -529,6 +529,7 @@ model Tenant {
   bankTransactions         BankTransaction[]
   clientRequests           ClientRequest[]
   clientRequestReminders   ClientRequestReminder[]
+  userPinnedModules        UserPinnedModule[]
   portalApprovalLimits     PortalApprovalLimit[]
   collectionContacts       CollectionContact[]
   collectionAgreements     CollectionAgreement[]
@@ -776,6 +777,7 @@ model User {
   bpoCredentialViews         BpoCredentialView[]
   chatwootAgentLinks         ChatwootAgentLink[]
   preference                 UserPreference?
+  pinnedModules              UserPinnedModule[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -4246,6 +4248,33 @@ model UserPreference {
 
   @@index([tenantId])
   @@map("user_preferences")
+}
+
+/// Telas fixadas na sidebar, por usuário: uma linha por tela, na ordem escolhida.
+///
+/// Tabela própria, e não uma coluna JSON em `UserPreference` (como
+/// `homeWidgets`), por causa da ordem do deploy: o Prisma seleciona todos os
+/// campos escalares do model, então uma coluna nova lida por código que subiu
+/// antes da migration derrubaria **toda** leitura de `user_preferences` — a Home
+/// junto. Tabela nova quebra só o que é novo.
+///
+/// Por tenant também: o mesmo usuário em dois workspaces fixa telas diferentes,
+/// e um módulo ligado num pode nem existir no outro.
+model UserPinnedModule {
+  id         String   @id @default(uuid())
+  tenantId   String
+  userId     String
+  moduleCode String   @db.VarChar(60)
+  /// Ordem na sidebar; menor primeiro.
+  position   Int
+  createdAt  DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId, moduleCode])
+  @@index([userId, tenantId, position])
+  @@map("user_pinned_modules")
 }
 
 // Auditoria de acesso — quem revelou/copiou a senha e quando. Não impede

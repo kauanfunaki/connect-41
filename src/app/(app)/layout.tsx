@@ -4,7 +4,9 @@ import { MeetingAlertOverlay } from "@/components/shell/MeetingAlertOverlay";
 import { ToastProvider } from "@/components/ui/Toast";
 import { getSectorMaps } from "@/lib/sectors";
 import { ROLE_LABELS } from "@/lib/roles";
-import { getAuthContext, isFullWrite } from "@/lib/auth/context";
+import { getAuthContext, isFullWrite, canViewSector } from "@/lib/auth/context";
+import { codigosDeTelasFixadas } from "@/lib/telasFixadas-data";
+import { telasFixadasVisiveis } from "@/lib/telasFixadas";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorsWithEnabledModules, getTenantModuleStates } from "@/lib/modules";
 import { getModuleRoute } from "@/lib/module-catalog";
@@ -45,12 +47,27 @@ export default async function AppLayout({
 
   // Pelo estado do tenant, e não pelo catálogo: um módulo transferido (o DRE no
   // Financeiro) aparece no setor que o opera, não no de origem.
-  const moduleStates = activeSector ? await getTenantModuleStates(tenantId) : [];
+  //
+  // Carregado sempre, e não só com setor ativo: o Ctrl+K busca tela de qualquer
+  // setor que a pessoa enxerga, e as fixadas também atravessam setor.
+  const moduleStates = await getTenantModuleStates(tenantId);
+  const telasNavegaveis = moduleStates
+    .filter((m) => m.enabled && canViewSector(ctx, m.sectorCode))
+    .map((m) => ({
+      code: m.code,
+      label: m.label,
+      href: getModuleRoute(m.code) ?? `/setor/${m.sectorCode}/${m.code}`,
+      setor: sectorLabels[m.sectorCode] ?? m.sectorCode,
+    }));
   const activeSectorModules = activeSector
     ? moduleStates
         .filter((m) => m.enabled && m.sectorCode === activeSector.code)
         .map((m) => ({ code: m.code, label: m.label, href: getModuleRoute(m.code) ?? `/setor/${activeSector.code}/${m.code}` }))
     : [];
+  // Fixadas: a ordem é a que a pessoa escolheu, e o filtro é o que ela pode
+  // abrir agora — fixada de módulo desligado depois continua guardada, só não
+  // aparece (ver `telasFixadasVisiveis`).
+  const telasFixadas = telasFixadasVisiveis(await codigosDeTelasFixadas(ctx.userId, tenantId), telasNavegaveis);
 
   const prisma = getPrisma();
   const [unreadCount, me, accessibleTenants, recentNotifications] = await Promise.all([
@@ -104,6 +121,8 @@ export default async function AppLayout({
         sectors={visibleSectors}
         activeSector={activeSector}
         activeSectorModules={activeSectorModules}
+        telasNavegaveis={telasNavegaveis}
+        telasFixadas={telasFixadas}
         appDomain={baseDomain()}
         sectorHostSuffix={hostSuffix()}
         canOpenAdmin={canOpenAdmin}

@@ -22,6 +22,7 @@ import {
   LayoutGrid,
   ListTodo,
   Menu,
+  Pin,
   X,
   MessageCircle,
 } from "lucide-react";
@@ -31,7 +32,9 @@ import { ProfileMenu } from "@/components/shell/ProfileMenu";
 import { GlobalSearch } from "@/components/shell/GlobalSearch";
 import { NavItem, SectorNavItem, CadastrosNavItem, GrupoNavItem } from "@/components/shell/NavLink";
 import { ModuleIcon, Icone } from "@/components/shared/ModuleIcon";
+import { RegistroDeTelasRecentes } from "@/components/shell/TelasRecentes";
 import { agruparModulos, slugDoGrupo, ICONE_DO_GRUPO } from "@/lib/module-catalog";
+import type { TelaNavegavel } from "@/lib/buscaDeTelas";
 import { ContextSwitcher } from "@/components/shell/ContextSwitcher";
 import { Button } from "@/components/ui/Button";
 
@@ -54,6 +57,29 @@ const SECTOR_ICONS: Record<string, React.ReactNode> = {
   gestao: <LayoutGrid size={16} />,
 };
 
+/**
+ * As telas que a pessoa fixou, logo acima das telas do setor.
+ *
+ * Fica nesta posição nos dois modos (dentro de um setor ou em "Todos os
+ * setores"): é atalho para tela de setor, então mora colado nelas, sem empurrar
+ * Início e Geral para baixo. Ninguém tem fixadas no começo — a seção só existe
+ * depois que a pessoa fixa a primeira, no alfinete do cartão da tela.
+ */
+function TelasFixadas({ telas }: { telas: TelaNavegavel[] }) {
+  if (telas.length === 0) return null;
+  return (
+    <>
+      <p className="flex items-center gap-1.5 px-2.5 pt-4 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
+        <Pin size={11} className="flex-shrink-0" />
+        Fixadas
+      </p>
+      {telas.map((t) => (
+        <NavItem key={t.code} href={t.href} icon={<ModuleIcon code={t.code} />} label={t.label} />
+      ))}
+    </>
+  );
+}
+
 type NotificationEntry = { id: string; message: string; read: boolean; href: string | null; createdAt: string };
 
 type Props = {
@@ -69,6 +95,10 @@ type Props = {
   // continua ali.
   activeSector: Sector | null;
   activeSectorModules: SectorModule[];
+  /** Tudo que a pessoa pode abrir, de qualquer setor — alimenta o Ctrl+K. */
+  telasNavegaveis: TelaNavegavel[];
+  /** As telas que ela fixou, na ordem dela, já filtradas pelo que pode abrir. */
+  telasFixadas: TelaNavegavel[];
   // Config de runtime do endereço por setor — vem do layout, não de env no
   // cliente (ver ContextSwitcher).
   appDomain: string | null;
@@ -94,6 +124,8 @@ export function AppShell({
   sectors,
   activeSector,
   activeSectorModules,
+  telasNavegaveis,
+  telasFixadas,
   appDomain,
   sectorHostSuffix,
   canOpenAdmin,
@@ -204,6 +236,8 @@ export function AppShell({
                   atrás de três grupos. Acima disso (o BPO tem quinze), a linha é
                   o **grupo**, e clicar nela abre a tela do setor filtrada por ele
                   — pedido do Kauan em 17/09, no lugar de abrir e fechar seções. */}
+              <TelasFixadas telas={telasFixadas} />
+
               {activeSectorModules.length > 0 && (
                 <p className="flex items-center gap-2 px-2.5 pt-4 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
                   <span
@@ -245,6 +279,8 @@ export function AppShell({
               {canManageMeetings && (
                 <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />
               )}
+
+              <TelasFixadas telas={telasFixadas} />
 
               {sectors.length > 0 && (
                 <>
@@ -292,7 +328,7 @@ export function AppShell({
             <Menu size={20} />
           </button>
           <div className="flex-1 min-w-0">
-            <GlobalSearch />
+            <GlobalSearch telas={telasNavegaveis} />
           </div>
 
           <div className="flex items-center gap-2.5 flex-shrink-0">
@@ -317,6 +353,9 @@ export function AppShell({
 
         {/* Page content */}
         <main className="scroll-y scroll-gutter-stable flex-1 overflow-y-auto">
+          {/* Anota a tela aberta como recente (no navegador) — é o que o Ctrl+K
+              oferece antes de a pessoa digitar. */}
+          <RegistroDeTelasRecentes />
           {children}
         </main>
       </div>

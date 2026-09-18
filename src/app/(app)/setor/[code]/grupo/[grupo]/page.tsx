@@ -7,6 +7,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { BackButton } from "@/components/shared/BackButton";
 import { ModulosDoSetor } from "@/components/setor/ModulosDoSetor";
+import { codigosDeTelasFixadas } from "@/lib/telasFixadas-data";
 
 // As telas de um grupo do setor — onde a sidebar cai ao clicar no grupo.
 //
@@ -29,9 +30,10 @@ export default async function GrupoDoSetorPage({
   const grupo = grupoDoSlug(slug);
   if (!grupo) notFound();
 
-  const [allModules, { labels, colors }] = await Promise.all([
+  const [allModules, { labels, colors }, fixadas] = await Promise.all([
     getTenantModuleStates(ctx.tenantId),
     getSectorMaps(ctx.tenantId),
+    codigosDeTelasFixadas(ctx.userId, ctx.tenantId),
   ]);
   const modules = allModules.filter((m) => m.sectorCode === code && m.enabled);
   // Grupo sem módulo ligado neste cliente não é tela vazia: é endereço que não
@@ -42,7 +44,7 @@ export default async function GrupoDoSetorPage({
     <PageContainer>
       <BackButton className="mb-3" />
       <PageHeader title={sectorLabel(labels, code)} subtitle={`${grupo} — telas deste grupo.`} />
-      <ModulosDoSetor code={code} modulos={modules} cor={colors[code] ?? "#586577"} grupoAtivo={grupo} />
+      <ModulosDoSetor code={code} modulos={modules} cor={colors[code] ?? "#586577"} grupoAtivo={grupo} fixadas={fixadas} />
     </PageContainer>
   );
 }

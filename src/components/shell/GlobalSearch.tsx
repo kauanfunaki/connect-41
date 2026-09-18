@@ -2,9 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, X } from "lucide-react";
+import { Search, X, Clock3 } from "lucide-react";
 import { boardPath } from "@/lib/kanbanPaths";
 import { Button } from "@/components/ui/Button";
+import { ModuleIcon } from "@/components/shared/ModuleIcon";
+import { useTelasRecentes } from "@/components/shell/TelasRecentes";
+import { buscarTelas, type TelaNavegavel } from "@/lib/buscaDeTelas";
 
 type DocumentEntityType = "PERSON" | "COMPANY" | "VAGA" | "PIPELINE_ITEM";
 
@@ -35,7 +38,13 @@ function documentHref(entityType: DocumentEntityType, entityId: string): string 
 // Abaixo de sm, o input inline não cabe na topbar (some espremido pelos
 // ícones de tema/notificação/perfil) — vira um botão de lupa que abre um
 // campo em overlay cobrindo a topbar inteira, com foco automático.
-export function GlobalSearch() {
+//
+// Desde 18/09 a busca também acha **tela** (as do setor, ligadas para este
+// cliente): o filtro é no navegador, sobre a lista que o shell já tem, então
+// aparece enquanto se digita, antes de a busca de dados voltar do servidor. E
+// aberta sem termo, oferece as últimas telas abertas — é o que faz o Ctrl+K
+// valer para "voltar rápido para onde eu estava".
+export function GlobalSearch({ telas = [] }: { telas?: TelaNavegavel[] }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults>(EMPTY);
   const [open, setOpen] = useState(false);
@@ -94,6 +103,13 @@ export function GlobalSearch() {
       controller.abort();
     };
   }, [query]);
+
+  const recentes = useTelasRecentes();
+  const telasEncontradas = buscarTelas(telas, query.trim());
+  const telasRecentes = recentes
+    .map((code) => telas.find((t) => t.code === code))
+    .filter((t): t is TelaNavegavel => Boolean(t))
+    .slice(0, 5);
 
   const hasResults =
     results.companies.length +
@@ -169,9 +185,20 @@ export function GlobalSearch() {
             )}
           </div>
 
+          {/* Aberta sem termo: as últimas telas abertas. Só aparece quando há
+              alguma — painel vazio embaixo do campo é ruído. */}
+          {open && query.trim().length < 2 && telasRecentes.length > 0 && (
+            <div className="scroll-y absolute left-0 top-[calc(100%+10px)] w-full bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] py-2 z-20 max-h-[360px] overflow-y-auto">
+              <GrupoDeTelas label="Recentes" telas={telasRecentes} icone="relogio" onSelect={go} />
+            </div>
+          )}
+
           {open && query.trim().length >= 2 && (
             <div className="scroll-y absolute left-0 top-[calc(100%+10px)] w-full bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] py-2 z-20 max-h-[360px] overflow-y-auto">
-              {!hasResults ? (
+              {/* Telas primeiro: quem digita "conc" quase sempre quer abrir a
+                  conciliação, não achar um lançamento com "conc" no nome. */}
+              <GrupoDeTelas label="Telas" telas={telasEncontradas} onSelect={go} />
+              {!hasResults && telasEncontradas.length === 0 ? (
                 <p className="px-3.5 py-3 text-[13px] text-fg-muted">Nenhum resultado para &quot;{query}&quot;.</p>
               ) : (
                 <>
@@ -214,6 +241,40 @@ export function GlobalSearch() {
         </div>
       </div>
     </>
+  );
+}
+
+/** As telas no painel: ícone do módulo (ou relógio, nas recentes), nome e setor. */
+function GrupoDeTelas({
+  label,
+  telas,
+  icone = "modulo",
+  onSelect,
+}: {
+  label: string;
+  telas: TelaNavegavel[];
+  icone?: "modulo" | "relogio";
+  onSelect: (href: string) => void;
+}) {
+  if (telas.length === 0) return null;
+  return (
+    <div className="py-1 px-1">
+      <p className="px-2.5 pb-1 text-[11px] font-semibold text-fg-muted uppercase tracking-wider">{label}</p>
+      {telas.map((tela) => (
+        <button
+          key={tela.code}
+          type="button"
+          onClick={() => onSelect(tela.href)}
+          className="w-full flex items-center gap-2.5 text-left px-2.5 py-2 rounded-lg text-[14px] text-fg hover:bg-surface-hover transition-colors"
+        >
+          <span className="flex-shrink-0 text-fg-muted [&>svg]:w-4 [&>svg]:h-4">
+            {icone === "relogio" ? <Clock3 size={16} /> : <ModuleIcon code={tela.code} />}
+          </span>
+          <span className="truncate">{tela.label}</span>
+          <span className="ml-auto flex-shrink-0 text-[11px] text-fg-muted">{tela.setor}</span>
+        </button>
+      ))}
+    </div>
   );
 }
 

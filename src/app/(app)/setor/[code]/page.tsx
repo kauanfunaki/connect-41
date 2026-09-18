@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { LayoutGrid } from "lucide-react";
 import { getAuthContext, canViewSector, canManageSector } from "@/lib/auth/context";
 import { ModulosDoSetor } from "@/components/setor/ModulosDoSetor";
+import { codigosDeTelasFixadas } from "@/lib/telasFixadas-data";
 import { getTenantModuleStates } from "@/lib/modules";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getPrisma } from "@/lib/prisma";
@@ -25,9 +26,10 @@ export default async function SectorHubPage({
   if (!canViewSector(ctx, code)) notFound();
 
   const prisma = getPrisma();
-  const [allModules, { labels: sectorLabels, colors: sectorColors }, spaces] = await Promise.all([
+  const [allModules, { labels: sectorLabels, colors: sectorColors }, fixadas, spaces] = await Promise.all([
     getTenantModuleStates(ctx.tenantId),
     getSectorMaps(ctx.tenantId),
+    codigosDeTelasFixadas(ctx.userId, ctx.tenantId),
     prisma.space.findMany({
       where: { tenantId: ctx.tenantId, sectorCode: code },
       orderBy: { order: "asc" },
@@ -59,7 +61,7 @@ export default async function SectorHubPage({
         // colunas é uma parede, e o setor não trabalha em ordem alfabética —
         // trabalha por assunto. Mesma tela da rota filtrada por grupo, que é
         // onde a sidebar cai (ver `ModulosDoSetor`).
-        <ModulosDoSetor code={code} modulos={modules} cor={sectorColor} />
+        <ModulosDoSetor code={code} modulos={modules} cor={sectorColor} fixadas={fixadas} />
       )}
 
       <div className="mt-8">
