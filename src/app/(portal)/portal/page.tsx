@@ -14,6 +14,9 @@ import { sairDoPortal } from "./login/actions";
 import { PortalNav } from "@/components/portal/PortalCabecalho";
 import { getEnabledModuleCodes } from "@/lib/modules";
 import { AvisosDaHome } from "@/components/portal/AvisosDaHome";
+import { PushNotificationToggle } from "@/components/notificacoes/PushNotificationToggle";
+import { getVapidPublicKey } from "@/lib/vapid";
+import { salvarPushDoPortal, removerPushDoPortal } from "./actions";
 
 // Acervo fiscal visto pelo cliente. **Só leitura**, e por construção: não há
 // entrada de XML nem decisão de destino aqui, e as actions que fazem essas
@@ -63,6 +66,15 @@ export default async function PortalPage({
         companyIds={alcance.tipo === "EMPRESAS" ? alcance.companyIds : []}
         portalUserId={sessao.sub}
         modulos={modulos}
+      />
+      {/* Só na home: o cliente entra por aqui, e um botão de ativar aviso
+          repetido em toda tela viraria paisagem. Some sozinho quando o
+          navegador não suporta push. */}
+      <PushNotificationToggle
+        publicKey={getVapidPublicKey()}
+        acoes={{ salvar: salvarPushDoPortal, remover: removerPushDoPortal }}
+        descricao="Avisamos no celular quando houver pendência, mensagem ou conta a aprovar. O que é avisado fica só aqui dentro."
+        semChaves="esconder"
       />
 
       {total === 0 && !params.competencia ? (

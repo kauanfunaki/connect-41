@@ -35,8 +35,22 @@ export function ehCaminhoDoPortal(pathname: string): boolean {
   return pathname === PREFIXO_DO_PORTAL || pathname.startsWith(`${PREFIXO_DO_PORTAL}/`);
 }
 
-/** Rotas do portal que dispensam sessão: entrar e recuperar senha. */
-const PUBLICAS_DO_PORTAL = ["/portal/login", "/portal/esqueci-senha", "/portal/redefinir-senha"];
+/**
+ * Rotas do portal que dispensam sessão: entrar, recuperar senha — e o manifesto
+ * do PWA.
+ *
+ * O manifesto entra aqui pelo mesmo motivo que o interno está em `PUBLIC_PATHS`
+ * (ver proxy.ts): o navegador o busca no `<head>` de **toda** página do portal,
+ * `/portal/login` inclusive, e é ali que ele decide se o site é instalável. Um
+ * redirect para o login em vez do JSON tira o botão "instalar" da tela em que o
+ * cliente mais vai vê-lo.
+ */
+const PUBLICAS_DO_PORTAL = [
+  "/portal/login",
+  "/portal/esqueci-senha",
+  "/portal/redefinir-senha",
+  "/portal/manifest.webmanifest",
+];
 
 export function ehRotaPublicaDoPortal(pathname: string): boolean {
   return PUBLICAS_DO_PORTAL.some((r) => pathname === r || pathname.startsWith(`${r}/`));

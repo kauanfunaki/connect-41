@@ -22,6 +22,7 @@ import { saoPauloParts } from "@/lib/agenda";
 import { isModuleEnabled } from "@/lib/modules";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { sendPendenciaAoClienteEmail, temSmtpConfigurado } from "@/lib/email/sendMail";
+import { avisarClientePorPush } from "@/lib/portal/avisos";
 import { usuariosDoPortalDaEmpresa } from "./avisos";
 import {
   avaliarLembrete,
@@ -149,14 +150,26 @@ export async function executarLembretesDePendencia(opcoes: { limite?: number; ag
           throw err;
         }
 
-        const envio = await sendPendenciaAoClienteEmail({
-          tenantId,
-          destinatarios: destinatarios.map((u) => ({ email: u.email, nome: u.name })),
-          requestId: p.id,
-          titulo: p.title,
-          motivo: "lembrete",
-          prazo: p.dueDate,
-        });
+        // O push acompanha o lembrete, mas fica fora da contabilidade do
+        // `ClientRequestReminder`: o registro é do envio de e-mail, que é o que
+        // a régua reserva por passo. Contar push ali faria o passo parecer
+        // entregue a quem não recebeu e-mail nenhum.
+        const [envio] = await Promise.all([
+          sendPendenciaAoClienteEmail({
+            tenantId,
+            destinatarios: destinatarios.map((u) => ({ email: u.email, nome: u.name })),
+            requestId: p.id,
+            titulo: p.title,
+            motivo: "lembrete",
+            prazo: p.dueDate,
+          }),
+          avisarClientePorPush(tenantId, destinatarios.map((u) => u.id), {
+            tipo: "pendencia",
+            motivo: "lembrete",
+            titulo: p.title,
+            requestId: p.id,
+          }),
+        ]);
         const falhas = envio.semSmtp ? destinatarios.length : envio.falhas;
         await prisma.clientRequestReminder.update({
           where: { id: registroId },

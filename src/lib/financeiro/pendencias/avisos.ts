@@ -1,12 +1,17 @@
 // Quem fica sabendo de uma pendência, e por onde.
 //
-// Cliente por e-mail (ele não tem sino), equipe pelo sino. Os dois são
+// Cliente por e-mail e por push (ele não tem sino), equipe pelo sino. Todos são
 // best-effort: a pendência já está gravada quando o aviso sai, e aviso que
 // falhou não desfaz nada — só é devolvido para a tela contar e fica no log.
+//
+// O push é adicional, nunca substituto: só chega a quem instalou o portal e
+// aceitou receber, então o e-mail continua sendo o aviso que alcança todo mundo.
+// Por isso o resultado devolvido à tela continua contando só o e-mail.
 
 import { getPrisma } from "@/lib/prisma";
 import { notifyUser } from "@/lib/notifications";
 import { sendPendenciaAoClienteEmail, type ResultadoDoAviso } from "@/lib/email/sendMail";
+import { avisarClientePorPush } from "@/lib/portal/avisos";
 
 /** Usuários ativos do portal que enxergam a empresa — os do grupo dela. */
 export async function usuariosDoPortalDaEmpresa(tenantId: string, companyId: string) {
@@ -29,13 +34,21 @@ export async function avisarClienteDaPendencia(input: {
   try {
     const usuarios = await usuariosDoPortalDaEmpresa(input.tenantId, input.companyId);
     if (usuarios.length === 0) return { enviados: 0, falhas: 0, semSmtp: false, semDestinatario: true };
-    const r = await sendPendenciaAoClienteEmail({
-      tenantId: input.tenantId,
-      destinatarios: usuarios.map((u) => ({ email: u.email, nome: u.name })),
-      requestId: input.requestId,
-      titulo: input.titulo,
-      motivo: input.motivo,
-    });
+    const [r] = await Promise.all([
+      sendPendenciaAoClienteEmail({
+        tenantId: input.tenantId,
+        destinatarios: usuarios.map((u) => ({ email: u.email, nome: u.name })),
+        requestId: input.requestId,
+        titulo: input.titulo,
+        motivo: input.motivo,
+      }),
+      avisarClientePorPush(input.tenantId, usuarios.map((u) => u.id), {
+        tipo: "pendencia",
+        motivo: input.motivo,
+        titulo: input.titulo,
+        requestId: input.requestId,
+      }),
+    ]);
     return { ...r, semDestinatario: false };
   } catch (err) {
     console.error("[avisarClienteDaPendencia]", err);

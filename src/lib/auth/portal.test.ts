@@ -28,6 +28,8 @@ describe("ehRotaPublicaDoPortal", () => {
     expect(ehRotaPublicaDoPortal("/portal/login")).toBe(true);
     expect(ehRotaPublicaDoPortal("/portal/esqueci-senha")).toBe(true);
     expect(ehRotaPublicaDoPortal("/portal/redefinir-senha")).toBe(true);
+    // O manifesto do PWA é buscado no login, antes de existir sessão.
+    expect(ehRotaPublicaDoPortal("/portal/manifest.webmanifest")).toBe(true);
   });
 
   it("o resto do portal exige sessão", () => {

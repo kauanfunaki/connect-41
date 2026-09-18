@@ -1,7 +1,13 @@
 import type { MetadataRoute } from "next";
 
+// O app interno. O do cliente é outro, em `app/(portal)/portal/manifest.webmanifest`
+// — o convention file do Next só existe na raiz, e um manifesto só significava
+// instalar o portal e cair no login da equipe.
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    // Explícito porque o padrão é a `start_url`: com `id` fixo, mudar a tela
+    // inicial um dia não faz o navegador achar que é outro app.
+    id: "/home",
     name: "Connect — 41 Tech",
     short_name: "Connect",
     description: "CRM interno multi-setor da 41 Tech",

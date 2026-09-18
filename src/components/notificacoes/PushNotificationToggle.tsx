@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { salvarPushSubscription, removerPushSubscription } from "@/app/(app)/notificacoes/actions";
 import { Button } from "@/components/ui/Button";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
@@ -22,7 +21,40 @@ type Status = "unsupported" | "unconfigured" | "loading" | "subscribed" | "unsub
 // ambiente não consegue assinar push, e o estado é detectado na montagem:
 // antes o botão "Ativar" aparecia normalmente e só depois do clique dizia que
 // não estava configurado, o que parecia bug do botão.
-export function PushNotificationToggle({ publicKey }: { publicKey: string | null }) {
+/**
+ * Gravar e apagar a assinatura chegam por prop, não por import.
+ *
+ * A equipe e o cliente do portal gravam em tabelas diferentes, com sessões
+ * diferentes — e importar a action interna aqui dentro faria este componente
+ * arrastar código de `(app)` para dentro do portal, que é exatamente a costura
+ * que o layout separado do portal existe para não ter.
+ *
+ * Elas ficam **fora das dependências** do efeito de propósito: server action
+ * recebida por prop não tem identidade estável (muda a cada `revalidatePath`),
+ * e o efeito re-registraria o service worker a cada render.
+ */
+export type AcoesDePush = {
+  salvar: (sub: { endpoint: string; keys: { p256dh: string; auth: string } }) => Promise<{ error: string } | null>;
+  remover: (endpoint: string) => Promise<void>;
+};
+
+export function PushNotificationToggle({
+  publicKey,
+  acoes,
+  descricao = "Receba um aviso mesmo com o Connect fechado.",
+  semChaves = "explicar",
+}: {
+  publicKey: string | null;
+  acoes: AcoesDePush;
+  descricao?: string;
+  /**
+   * O que fazer quando o ambiente não tem as chaves VAPID. A equipe vê o que
+   * precisa ser configurado; para o cliente do portal isso não é informação —
+   * ele não tem o que fazer com o nome de uma variável de ambiente, e um aviso
+   * de indisponibilidade que ele não pode resolver só gera chamado.
+   */
+  semChaves?: "explicar" | "esconder";
+}) {
   const VAPID_PUBLIC_KEY = publicKey;
   const [status, setStatus] = useState<Status>("loading");
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +109,7 @@ export function PushNotificationToggle({ publicKey }: { publicKey: string | null
         applicationServerKey: urlBase64ToUint8Array(publicKey),
       });
       const json = subscription.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
-      const result = await salvarPushSubscription({ endpoint: json.endpoint, keys: json.keys });
+      const result = await acoes.salvar({ endpoint: json.endpoint, keys: json.keys });
       if (result?.error) {
         setError(result.error);
         return;
@@ -96,7 +128,7 @@ export function PushNotificationToggle({ publicKey }: { publicKey: string | null
       if (subscription) {
         const endpoint = subscription.endpoint;
         await subscription.unsubscribe();
-        await removerPushSubscription(endpoint);
+        await acoes.remover(endpoint);
       }
       setStatus("unsubscribed");
     } catch {
@@ -105,6 +137,7 @@ export function PushNotificationToggle({ publicKey }: { publicKey: string | null
   }
 
   if (status === "unsupported") return null;
+  if (status === "unconfigured" && semChaves === "esconder") return null;
 
   return (
     <div className="bg-surface border border-border rounded-lg p-4 mb-4 flex items-center justify-between gap-4">
@@ -117,7 +150,7 @@ export function PushNotificationToggle({ publicKey }: { publicKey: string | null
               ? "Bloqueadas nas configurações do navegador."
               : status === "subscribed"
                 ? "Ativadas neste navegador."
-                : "Receba um aviso mesmo com o Connect fechado."}
+                : descricao}
         </p>
         {error && <p className="text-[12px] text-danger mt-1">{error}</p>}
       </div>

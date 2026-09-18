@@ -20,6 +20,7 @@ import { usuariosDoPortalDaEmpresa } from "@/lib/financeiro/pendencias/avisos";
 import { anexosDaConversa } from "@/lib/financeiro/comunicacao/armazenamento";
 import { MODULO_DE_COMUNICACAO } from "@/lib/financeiro/comunicacao/regras";
 import { sendMensagemAoClienteEmail } from "@/lib/email/sendMail";
+import { avisarClientePorPush } from "@/lib/portal/avisos";
 
 export type ResultadoDaMensagem = { error: string } | { ok: true; aviso: string | null };
 
@@ -71,14 +72,21 @@ export async function enviarMensagemEquipe(formData: FormData): Promise<Resultad
   }
 
   const destinatarios = await usuariosDoPortalDaEmpresa(c.tenantId, empresa.id);
-  const envio =
+  // Push além do e-mail: quem instalou o portal no celular vê na hora. O corpo
+  // da mensagem não vai em nenhum dos dois — ver `lib/portal/avisos.ts`.
+  const [envio] = await Promise.all([
     destinatarios.length > 0
-      ? await sendMensagemAoClienteEmail({
+      ? sendMensagemAoClienteEmail({
           tenantId: c.tenantId,
           destinatarios: destinatarios.map((u) => ({ email: u.email, nome: u.name })),
           empresaNome: nomeExibicao(empresa),
         })
-      : { enviados: 0, falhas: 0, semSmtp: false };
+      : Promise.resolve({ enviados: 0, falhas: 0, semSmtp: false }),
+    avisarClientePorPush(c.tenantId, destinatarios.map((u) => u.id), {
+      tipo: "mensagem",
+      empresaNome: nomeExibicao(empresa),
+    }),
+  ]);
 
   await logAudit({
     tenantId: c.tenantId,

@@ -445,124 +445,125 @@ model Tenant {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  subscription             Subscription?
-  users                    User[]
-  companies                Company[]
-  clientGroups             ClientGroup[]
-  people                   Person[]
-  pipelines                Pipeline[]
-  pipelineItems            PipelineItem[]
-  activities               Activity[]
-  handoffs                 Handoff[]
-  handoffSectors           HandoffSector[]
-  notifications            Notification[]
-  pushSubscriptions        PushSubscription[]
-  admissaoLinks            AdmissaoLink[]
-  assessmentLinks          AssessmentLink[]
-  assessmentTemplates      AssessmentTemplate[]
-  dependentes              Dependente[]
-  customFields             CustomField[]
-  customValues             CustomValue[]
-  sectors                  Sector[]
-  tenantModules            TenantModule[]
-  tags                     Tag[]
-  accessGrants             UserTenantAccess[]
-  departments              Department[]
-  cargos                   Cargo[]
-  vagas                    Vaga[]
-  candidaturas             Candidatura[]
-  exames                   ExameAdmissional[]
-  interviewScorecards      InterviewScorecard[]
-  documents                Document[]
-  fieldPermissions         FieldPermission[]
-  salaryChanges            SalaryChange[]
-  vacations                Vacation[]
-  absences                 Absence[]
-  terminations             Termination[]
-  terminationChecks        TerminationCheck[]
-  rescisaoConfig           TenantRescisaoConfig?
-  companyRescisaoConfigs   CompanyRescisaoConfig[]
-  payrollCompetencies      PayrollCompetency[]
-  payrollEntries           PayrollEntry[]
-  overtimeEntries          OvertimeEntry[]
-  benefitCatalogs          BenefitCatalog[]
-  benefitAssignments       BenefitAssignment[]
-  workShifts               WorkShift[]
-  holidays                 Holiday[]
-  scheduleEntries          ScheduleEntry[]
-  trainings                Training[]
-  trainingClasses          TrainingClass[]
-  trainingParticipants     TrainingParticipant[]
-  competencies             Competency[]
-  evaluationCycles         EvaluationCycle[]
-  evaluations              Evaluation[]
-  evaluationScores         EvaluationScore[]
-  handoffViews             HandoffView[]
-  checklistItems           ChecklistItem[]
-  timeEntries              TimeEntry[]
-  spaces                   Space[]
-  folders                  Folder[]
-  pipelineItemLinks        PipelineItemLink[]
-  manualDocuments          ManualDocument[]
-  manualPages              ManualPage[]
-  auditLogs                AuditLog[]
-  oauthAccounts            OAuthAccount[]
-  meetings                 Meeting[]
-  clientDocuments          ClientDocument[]
-  smtpConfig               TenantSmtpConfig?
-  aiConfig                 TenantAiConfig?
-  alertDispatches          AlertDispatch[]
-  recurringObligations     RecurringObligation[]
-  chatwootConnections      ChatwootConnection[]
-  bpoCredentials           BpoCredential[]
-  bpoCredentialViews       BpoCredentialView[]
-  chatwootAgentLinks       ChatwootAgentLink[]
-  chatwootSenderRoles      ChatwootSenderRole[]
-  fiscalDocuments          FiscalDocument[]
-  spedSyncStates           SpedSyncState[]
-  portalUsers              PortalUser[]
-  financeCategories        FinanceCategory[]
-  financeCounterparties    FinanceCounterparty[]
-  financeEntries           FinanceEntry[]
-  bankAccounts             BankAccount[]
-  bankStatementImports     BankStatementImport[]
-  bankTransactions         BankTransaction[]
-  clientRequests           ClientRequest[]
-  clientRequestReminders   ClientRequestReminder[]
-  userPinnedModules        UserPinnedModule[]
-  companyMessages          CompanyMessage[]
+  subscription              Subscription?
+  users                     User[]
+  companies                 Company[]
+  clientGroups              ClientGroup[]
+  people                    Person[]
+  pipelines                 Pipeline[]
+  pipelineItems             PipelineItem[]
+  activities                Activity[]
+  handoffs                  Handoff[]
+  handoffSectors            HandoffSector[]
+  notifications             Notification[]
+  pushSubscriptions         PushSubscription[]
+  portalPushSubscriptions   PortalPushSubscription[]
+  admissaoLinks             AdmissaoLink[]
+  assessmentLinks           AssessmentLink[]
+  assessmentTemplates       AssessmentTemplate[]
+  dependentes               Dependente[]
+  customFields              CustomField[]
+  customValues              CustomValue[]
+  sectors                   Sector[]
+  tenantModules             TenantModule[]
+  tags                      Tag[]
+  accessGrants              UserTenantAccess[]
+  departments               Department[]
+  cargos                    Cargo[]
+  vagas                     Vaga[]
+  candidaturas              Candidatura[]
+  exames                    ExameAdmissional[]
+  interviewScorecards       InterviewScorecard[]
+  documents                 Document[]
+  fieldPermissions          FieldPermission[]
+  salaryChanges             SalaryChange[]
+  vacations                 Vacation[]
+  absences                  Absence[]
+  terminations              Termination[]
+  terminationChecks         TerminationCheck[]
+  rescisaoConfig            TenantRescisaoConfig?
+  companyRescisaoConfigs    CompanyRescisaoConfig[]
+  payrollCompetencies       PayrollCompetency[]
+  payrollEntries            PayrollEntry[]
+  overtimeEntries           OvertimeEntry[]
+  benefitCatalogs           BenefitCatalog[]
+  benefitAssignments        BenefitAssignment[]
+  workShifts                WorkShift[]
+  holidays                  Holiday[]
+  scheduleEntries           ScheduleEntry[]
+  trainings                 Training[]
+  trainingClasses           TrainingClass[]
+  trainingParticipants      TrainingParticipant[]
+  competencies              Competency[]
+  evaluationCycles          EvaluationCycle[]
+  evaluations               Evaluation[]
+  evaluationScores          EvaluationScore[]
+  handoffViews              HandoffView[]
+  checklistItems            ChecklistItem[]
+  timeEntries               TimeEntry[]
+  spaces                    Space[]
+  folders                   Folder[]
+  pipelineItemLinks         PipelineItemLink[]
+  manualDocuments           ManualDocument[]
+  manualPages               ManualPage[]
+  auditLogs                 AuditLog[]
+  oauthAccounts             OAuthAccount[]
+  meetings                  Meeting[]
+  clientDocuments           ClientDocument[]
+  smtpConfig                TenantSmtpConfig?
+  aiConfig                  TenantAiConfig?
+  alertDispatches           AlertDispatch[]
+  recurringObligations      RecurringObligation[]
+  chatwootConnections       ChatwootConnection[]
+  bpoCredentials            BpoCredential[]
+  bpoCredentialViews        BpoCredentialView[]
+  chatwootAgentLinks        ChatwootAgentLink[]
+  chatwootSenderRoles       ChatwootSenderRole[]
+  fiscalDocuments           FiscalDocument[]
+  spedSyncStates            SpedSyncState[]
+  portalUsers               PortalUser[]
+  financeCategories         FinanceCategory[]
+  financeCounterparties     FinanceCounterparty[]
+  financeEntries            FinanceEntry[]
+  bankAccounts              BankAccount[]
+  bankStatementImports      BankStatementImport[]
+  bankTransactions          BankTransaction[]
+  clientRequests            ClientRequest[]
+  clientRequestReminders    ClientRequestReminder[]
+  userPinnedModules         UserPinnedModule[]
+  companyMessages           CompanyMessage[]
   companyMessageAttachments CompanyMessageAttachment[]
-  portalApprovalLimits     PortalApprovalLimit[]
-  collectionContacts       CollectionContact[]
-  collectionAgreements     CollectionAgreement[]
-  collectionEvents         CollectionEvent[]
-  collectionReminderLogs   CollectionReminderLog[]
-  collectionReminderConfig CollectionReminderConfig?
+  portalApprovalLimits      PortalApprovalLimit[]
+  collectionContacts        CollectionContact[]
+  collectionAgreements      CollectionAgreement[]
+  collectionEvents          CollectionEvent[]
+  collectionReminderLogs    CollectionReminderLog[]
+  collectionReminderConfig  CollectionReminderConfig?
   collectionReminderOptOuts CollectionReminderOptOut[]
-  costCenters              CostCenter[]
-  budgets                  Budget[]
-  agentEvaluationSummaries AgentEvaluationSummary[]
-  sectorTaskViews          SectorTaskView[]
-  processOrgans            ProcessOrgan[]
-  processTypes             ProcessType[]
-  processTemplates         ProcessTemplate[]
-  processTemplateSteps     ProcessTemplateStep[]
-  processTemplateItems     ProcessTemplateChecklistItem[]
-  processes                Process[]
-  processSteps             ProcessStep[]
-  processChecklistItems    ProcessChecklistItem[]
-  processProtocols         ProcessProtocol[]
-  processRequirements      ProcessRequirement[]
-  integrations             TenantIntegration[]
-  integrationRuns          IntegrationRun[]
-  agents                   TenantAgent[]
-  agentRuns                AgentRun[]
-  whatsappThreads          WhatsappThread[]
-  whatsappMessages         WhatsappMessage[]
-  licenses                 License[]
-  processFees              ProcessFee[]
-  dreMappings              DreCategoryMapping[]
-  dreImports               DreImport[]
+  costCenters               CostCenter[]
+  budgets                   Budget[]
+  agentEvaluationSummaries  AgentEvaluationSummary[]
+  sectorTaskViews           SectorTaskView[]
+  processOrgans             ProcessOrgan[]
+  processTypes              ProcessType[]
+  processTemplates          ProcessTemplate[]
+  processTemplateSteps      ProcessTemplateStep[]
+  processTemplateItems      ProcessTemplateChecklistItem[]
+  processes                 Process[]
+  processSteps              ProcessStep[]
+  processChecklistItems     ProcessChecklistItem[]
+  processProtocols          ProcessProtocol[]
+  processRequirements       ProcessRequirement[]
+  integrations              TenantIntegration[]
+  integrationRuns           IntegrationRun[]
+  agents                    TenantAgent[]
+  agentRuns                 AgentRun[]
+  whatsappThreads           WhatsappThread[]
+  whatsappMessages          WhatsappMessage[]
+  licenses                  License[]
+  processFees               ProcessFee[]
+  dreMappings               DreCategoryMapping[]
+  dreImports                DreImport[]
 
   @@map("tenants")
 }
@@ -725,68 +726,67 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  tenant                     Tenant                  @relation(fields: [tenantId], references: [id])
-  sectors                    UserSector[]
-  assignedItems              PipelineItemAssignee[]
-  watchedItems               PipelineItemWatcher[]
-  timeEntries                TimeEntry[]
-  manualDocuments            ManualDocument[]
-  manualPages                ManualPage[]
-  activities                 Activity[]
-  handoffs                   Handoff[]               @relation("HandoffRequester")
-  handoffSectorAssignees     HandoffSectorAssignee[]
-  handoffViews               HandoffView[]
-  notifications              Notification[]
-  pushSubscriptions          PushSubscription[]
-  tenantAccess               UserTenantAccess[]
-  uploadedDocuments          Document[]
-  evaluationsGiven           Evaluation[]
-  auditLogs                  AuditLog[]
-  responsibleFor             CompanyService[]        @relation("CompanyServiceResponsible")
-  oauthAccounts              OAuthAccount[]
-  fiscalDocumentsUploaded    FiscalDocument[]
-  financeEntriesCreated      FinanceEntry[]          @relation("FinanceEntryCreatedBy")
-  financeEntriesReviewed     FinanceEntry[]          @relation("FinanceEntryReviewedBy")
-  bankStatementImports       BankStatementImport[]   @relation("BankStatementImportedBy")
-  bankTransactionsReconciled BankTransaction[]       @relation("BankTransactionReconciledBy")
-  bankTransactionMatches     BankTransactionMatch[]  @relation("BankTransactionMatchCreatedBy")
-  clientRequestsCreated      ClientRequest[]         @relation("ClientRequestCreatedBy")
-  clientRequestsResolved     ClientRequest[]         @relation("ClientRequestResolvedBy")
-  clientRequestMessages      ClientRequestMessage[]  @relation("ClientRequestMessageAuthorUser")
-  clientRequestAttachments   ClientRequestAttachment[] @relation("ClientRequestAttachmentUser")
-  companyMessages            CompanyMessage[]          @relation("CompanyMessageAuthorUser")
-  financeApprovalEvents      FinanceApprovalEvent[]  @relation("FinanceApprovalEventUser")
-  financeEntriesLost         FinanceEntry[]          @relation("FinanceEntryLossBy")
-  financeEntriesCollecting   FinanceEntry[]          @relation("FinanceEntryCollectionOwner")
-  collectionContacts         CollectionContact[]     @relation("CollectionContactUser")
-  collectionAgreementsCreated CollectionAgreement[]  @relation("CollectionAgreementCreatedBy")
-  collectionAgreementsClosed CollectionAgreement[]   @relation("CollectionAgreementClosedBy")
-  collectionEvents           CollectionEvent[]       @relation("CollectionEventUser")
-  collectionReminderConfigs  CollectionReminderConfig[] @relation("CollectionReminderConfigUpdatedBy")
-  collectionReminderOptOuts  CollectionReminderOptOut[] @relation("CollectionReminderOptOutCreatedBy")
-  budgetsCreated             Budget[]                @relation("BudgetCreatedBy")
-  budgetsApproved            Budget[]                @relation("BudgetApprovedBy")
-  meetingsCreated            Meeting[]               @relation("MeetingCreatedBy")
-  meetingAttendances         MeetingAttendee[]
-  clientDocumentsCreated     ClientDocument[]
-  recurringObligations       RecurringObligation[]
-  admissaoLinksCreated       AdmissaoLink[]
-  assessmentLinksCreated     AssessmentLink[]
-  assessmentTemplatesCreated AssessmentTemplate[]
-  terminationChecksDone      TerminationCheck[]
-  interviewScorecards        InterviewScorecard[]
-  linkedPerson               Person?
-  bpoCredentialsCreated      BpoCredential[]
-  bpoCredentialViews         BpoCredentialView[]
-  chatwootAgentLinks         ChatwootAgentLink[]
-  preference                 UserPreference?
-  pinnedModules              UserPinnedModule[]
+  tenant                      Tenant                     @relation(fields: [tenantId], references: [id])
+  sectors                     UserSector[]
+  assignedItems               PipelineItemAssignee[]
+  watchedItems                PipelineItemWatcher[]
+  timeEntries                 TimeEntry[]
+  manualDocuments             ManualDocument[]
+  manualPages                 ManualPage[]
+  activities                  Activity[]
+  handoffs                    Handoff[]                  @relation("HandoffRequester")
+  handoffSectorAssignees      HandoffSectorAssignee[]
+  handoffViews                HandoffView[]
+  notifications               Notification[]
+  pushSubscriptions           PushSubscription[]
+  tenantAccess                UserTenantAccess[]
+  uploadedDocuments           Document[]
+  evaluationsGiven            Evaluation[]
+  auditLogs                   AuditLog[]
+  responsibleFor              CompanyService[]           @relation("CompanyServiceResponsible")
+  oauthAccounts               OAuthAccount[]
+  fiscalDocumentsUploaded     FiscalDocument[]
+  financeEntriesCreated       FinanceEntry[]             @relation("FinanceEntryCreatedBy")
+  financeEntriesReviewed      FinanceEntry[]             @relation("FinanceEntryReviewedBy")
+  bankStatementImports        BankStatementImport[]      @relation("BankStatementImportedBy")
+  bankTransactionsReconciled  BankTransaction[]          @relation("BankTransactionReconciledBy")
+  bankTransactionMatches      BankTransactionMatch[]     @relation("BankTransactionMatchCreatedBy")
+  clientRequestsCreated       ClientRequest[]            @relation("ClientRequestCreatedBy")
+  clientRequestsResolved      ClientRequest[]            @relation("ClientRequestResolvedBy")
+  clientRequestMessages       ClientRequestMessage[]     @relation("ClientRequestMessageAuthorUser")
+  clientRequestAttachments    ClientRequestAttachment[]  @relation("ClientRequestAttachmentUser")
+  companyMessages             CompanyMessage[]           @relation("CompanyMessageAuthorUser")
+  financeApprovalEvents       FinanceApprovalEvent[]     @relation("FinanceApprovalEventUser")
+  financeEntriesLost          FinanceEntry[]             @relation("FinanceEntryLossBy")
+  financeEntriesCollecting    FinanceEntry[]             @relation("FinanceEntryCollectionOwner")
+  collectionContacts          CollectionContact[]        @relation("CollectionContactUser")
+  collectionAgreementsCreated CollectionAgreement[]      @relation("CollectionAgreementCreatedBy")
+  collectionAgreementsClosed  CollectionAgreement[]      @relation("CollectionAgreementClosedBy")
+  collectionEvents            CollectionEvent[]          @relation("CollectionEventUser")
+  collectionReminderConfigs   CollectionReminderConfig[] @relation("CollectionReminderConfigUpdatedBy")
+  collectionReminderOptOuts   CollectionReminderOptOut[] @relation("CollectionReminderOptOutCreatedBy")
+  budgetsCreated              Budget[]                   @relation("BudgetCreatedBy")
+  budgetsApproved             Budget[]                   @relation("BudgetApprovedBy")
+  meetingsCreated             Meeting[]                  @relation("MeetingCreatedBy")
+  meetingAttendances          MeetingAttendee[]
+  clientDocumentsCreated      ClientDocument[]
+  recurringObligations        RecurringObligation[]
+  admissaoLinksCreated        AdmissaoLink[]
+  assessmentLinksCreated      AssessmentLink[]
+  assessmentTemplatesCreated  AssessmentTemplate[]
+  terminationChecksDone       TerminationCheck[]
+  interviewScorecards         InterviewScorecard[]
+  linkedPerson                Person?
+  bpoCredentialsCreated       BpoCredential[]
+  bpoCredentialViews          BpoCredentialView[]
+  chatwootAgentLinks          ChatwootAgentLink[]
+  preference                  UserPreference?
+  pinnedModules               UserPinnedModule[]
+  ownedProcesses              Process[]                  @relation("ProcessOwner")
+  executedProcessSteps        ProcessStep[]              @relation("ProcessStepExecutor")
 
   @@unique([tenantId, email])
   @@index([tenantId])
-  ownedProcesses    Process[]     @relation("ProcessOwner")
-  executedProcessSteps ProcessStep[] @relation("ProcessStepExecutor")
-
   @@map("users")
 }
 
@@ -848,10 +848,10 @@ model PortalUser {
   /// Sempre presente: é o que define o que esta conta enxerga.
   clientGroupId String
 
-  name         String  @db.VarChar(120)
-  email        String  @db.VarChar(120)
-  passwordHash String  @db.VarChar(255)
-  active       Boolean @default(true)
+  name         String    @db.VarChar(120)
+  email        String    @db.VarChar(120)
+  passwordHash String    @db.VarChar(255)
+  active       Boolean   @default(true)
   lastLoginAt  DateTime?
 
   createdAt DateTime @default(now())
@@ -865,6 +865,7 @@ model PortalUser {
   companyMessages          CompanyMessage[]          @relation("CompanyMessageAuthorPortal")
   approvalLimits           PortalApprovalLimit[]
   financeApprovalEvents    FinanceApprovalEvent[]    @relation("FinanceApprovalEventPortal")
+  pushSubscriptions        PortalPushSubscription[]
 
   @@unique([tenantId, email])
   @@index([tenantId, clientGroupId])
@@ -872,13 +873,13 @@ model PortalUser {
 }
 
 model PasswordResetToken {
-  id        String    @id @default(uuid())
+  id        String               @id @default(uuid())
   userId    String
   subject   PasswordResetSubject @default(USER)
-  tokenHash String    @db.VarChar(255)
+  tokenHash String               @db.VarChar(255)
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime  @default(now())
+  createdAt DateTime             @default(now())
 
   @@index([userId])
   @@map("password_reset_tokens")
@@ -897,9 +898,9 @@ model PasswordResetToken {
 // e não `Client` porque `ClientDocument*` já usa o prefixo `Client` com outro
 // sentido — documento enviado a UM CNPJ.
 model ClientGroup {
-  id       String @id @default(uuid())
+  id       String  @id @default(uuid())
   tenantId String
-  name     String @db.VarChar(180)
+  name     String  @db.VarChar(180)
   // Raiz do CNPJ (8 dígitos) quando o grupo é um CNPJ raiz com N
   // estabelecimentos. É dica de agrupamento e origem do backfill, NÃO
   // identidade: holding com raízes diferentes também é um grupo, e cliente
@@ -989,31 +990,36 @@ model Company {
   filiais     Company[]    @relation("CompanyFiliais")
   clientGroup ClientGroup? @relation(fields: [clientGroupId], references: [id], onDelete: SetNull)
 
-  services             CompanyService[]
-  people               Person[]
-  departments          Department[]
-  cargos               Cargo[]
-  vagas                Vaga[]
-  payrollCompetencies  PayrollCompetency[]
-  rescisaoConfig       CompanyRescisaoConfig?
-  benefitCatalogs      BenefitCatalog[]
-  workShifts           WorkShift[]
-  meetings             Meeting[]
-  clientDocuments      ClientDocument[]
-  recurringObligations RecurringObligation[]
-  chatwootContactLinks ChatwootContactLink[]
-  bpoCredentials       BpoCredential[]
-  fiscalDocuments      FiscalDocument[]
-  financeCounterparties FinanceCounterparty[]
-  financeEntries        FinanceEntry[]
-  bankAccounts          BankAccount[]
-  clientRequests        ClientRequest[]
-  companyMessages       CompanyMessage[]
-  portalApprovalLimits  PortalApprovalLimit[]
-  collectionAgreements  CollectionAgreement[]
+  services                 CompanyService[]
+  people                   Person[]
+  departments              Department[]
+  cargos                   Cargo[]
+  vagas                    Vaga[]
+  payrollCompetencies      PayrollCompetency[]
+  rescisaoConfig           CompanyRescisaoConfig?
+  benefitCatalogs          BenefitCatalog[]
+  workShifts               WorkShift[]
+  meetings                 Meeting[]
+  clientDocuments          ClientDocument[]
+  recurringObligations     RecurringObligation[]
+  chatwootContactLinks     ChatwootContactLink[]
+  bpoCredentials           BpoCredential[]
+  fiscalDocuments          FiscalDocument[]
+  financeCounterparties    FinanceCounterparty[]
+  financeEntries           FinanceEntry[]
+  bankAccounts             BankAccount[]
+  clientRequests           ClientRequest[]
+  companyMessages          CompanyMessage[]
+  portalApprovalLimits     PortalApprovalLimit[]
+  collectionAgreements     CollectionAgreement[]
   collectionReminderOptOut CollectionReminderOptOut?
-  costCenters           CostCenter[]
-  budgets               Budget[]
+  costCenters              CostCenter[]
+  budgets                  Budget[]
+  societarioProcesses      Process[]
+  licenses                 License[]
+  dreMappings              DreCategoryMapping[]
+  dreImports               DreImport[]
+  processFees              ProcessFee[]
 
   // Casar documento fiscal com empresa pelo CNPJ do XML exige que o par seja
   // único: com duas empresas do mesmo tenant sob o mesmo CNPJ o casamento é
@@ -1035,12 +1041,6 @@ model Company {
   @@index([tenantId])
   @@index([tenantId, status])
   @@index([tenantId, clientGroupId])
-  societarioProcesses Process[]
-  licenses            License[]
-  dreMappings         DreCategoryMapping[]
-  dreImports          DreImport[]
-  processFees         ProcessFee[]
-
   @@map("companies")
 }
 
@@ -1864,14 +1864,14 @@ enum ChatwootLinkMethod {
 // usuário cola esse valor na tela de configuração do Connect, que o usa para
 // verificar a assinatura HMAC-SHA256 (X-Chatwoot-Signature) de cada evento recebido.
 model ChatwootConnection {
-  id               String    @id @default(uuid())
-  tenantId         String
-  baseUrl          String    @db.VarChar(255)
-  accountId        String    @db.VarChar(40)
-  active           Boolean   @default(true)
-  lastSyncAt       DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id         String    @id @default(uuid())
+  tenantId   String
+  baseUrl    String    @db.VarChar(255)
+  accountId  String    @db.VarChar(40)
+  active     Boolean   @default(true)
+  lastSyncAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   /// A conexão em `TenantIntegration`, **única fonte** do token e do segredo do
   /// webhook desde 16/09 (passo 5 da convergência: as colunas `apiTokenEnc` e
@@ -1963,8 +1963,8 @@ model ChatwootConversation {
   messageCount           Int? // total de mensagens do atendimento — calculado 1x via paginação da API (ver countAllMessages) e mantido por incremento no webhook message_created; null = ainda não calculado
   syncedAt               DateTime  @default(now())
 
-  connection  ChatwootConnection      @relation(fields: [connectionId], references: [id])
-  contactLink ChatwootContactLink?    @relation(fields: [contactLinkId], references: [id])
+  connection  ChatwootConnection       @relation(fields: [connectionId], references: [id])
+  contactLink ChatwootContactLink?     @relation(fields: [contactLinkId], references: [id])
   messages    ChatwootMessage[]
   evaluations ConversationEvaluation[]
 
@@ -2022,15 +2022,18 @@ model ChatwootMessage {
 // vem do remetente da mensagem, e `normalizarNomeAtendente` é o que casa tudo.
 // Guardar o papel num id de agente que o autor pode não ter era o descasamento.
 model ChatwootSenderRole {
-  id         String  @id @default(uuid())
-  tenantId   String
-  /** Nome como aparece no remetente da mensagem, já normalizado (ver normalizarNomeAtendente). */
-  senderName String  @db.VarChar(120)
-  /** Faz triagem: a barreira entre triagem e tratativa é a 1ª resposta de quem NÃO está marcado. */
-  isReception Boolean @default(false)
+  id           String  @id @default(uuid())
+  tenantId     String
+  /**
+   * Nome como aparece no remetente da mensagem, já normalizado (ver normalizarNomeAtendente).
+   */
+  senderName   String  @db.VarChar(120)
+  /**
+   * Faz triagem: a barreira entre triagem e tratativa é a 1ª resposta de quem NÃO está marcado.
+   */
+  isReception  Boolean @default(false)
   /**
    * Conta da automação/gateway, não de uma pessoa.
-   *
    * Sem carimbo de autor no texto, a mensagem dela não é atendimento de
    * ninguém (saudação, fora de horário, agradecimento final); com carimbo, é de
    * quem está carimbado. Ver `autorEfetivo` em src/lib/chatwoot/segments.ts.
@@ -2177,7 +2180,7 @@ model FiscalDocument {
   ///
   /// Anulável por causa do índice do SPED: linha `PARCIAL` vem sem valor, e
   /// gravar zero ali inventaria um número que ninguém apurou.
-  amount   Decimal? @db.Decimal(12, 2)
+  amount          Decimal? @db.Decimal(12, 2)
   /// O que a conta a pagar usa — bruto menos retenções e descontos.
   ///
   /// **NULL quando a nota não retém nada**, e não uma cópia de `amount`: nulo
@@ -2187,11 +2190,11 @@ model FiscalDocument {
   /// Regra do BPO (Amanda, 10/09/2026): com retenção paga-se pelo líquido. O
   /// `amount` continua sendo o bruto do DANFSE — quem muda é a conta, não a
   /// nota. Só NFS-e preenche; NF-e e CT-e não declaram total retido.
-  netAmount Decimal? @db.Decimal(12, 2)
+  netAmount       Decimal? @db.Decimal(12, 2)
   /// Quanto foi retido, somado. Existe para a ficha poder **explicar** a
   /// diferença entre os dois valores em vez de só exibir dois números.
   retentionsTotal Decimal? @db.Decimal(12, 2)
-  issuedAt DateTime
+  issuedAt        DateTime
 
   /// Competência "AAAA-MM" — string e não data, porque é agrupador de mês e não
   /// instante. Derivada de `issuedAt`; guardada porque é o filtro mais usado da
@@ -2251,9 +2254,9 @@ model FiscalDocument {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant      Tenant        @relation(fields: [tenantId], references: [id])
-  company     Company       @relation(fields: [companyId], references: [id])
-  uploadedBy  User?         @relation(fields: [uploadedById], references: [id])
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  company      Company       @relation(fields: [companyId], references: [id])
+  uploadedBy   User?         @relation(fields: [uploadedById], references: [id])
   financeEntry FinanceEntry?
 
   @@unique([tenantId, dedupKey])
@@ -2307,7 +2310,7 @@ model FinanceCategory {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant      Tenant         @relation(fields: [tenantId], references: [id])
+  tenant      Tenant                @relation(fields: [tenantId], references: [id])
   entries     FinanceEntry[]
   padraoDe    FinanceCounterparty[]
   dreMappings DreCategoryMapping[]
@@ -2351,12 +2354,12 @@ model FinanceCounterparty {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant          Tenant           @relation(fields: [tenantId], references: [id])
-  company         Company          @relation(fields: [companyId], references: [id])
-  defaultCategory FinanceCategory? @relation(fields: [defaultCategoryId], references: [id])
-  defaultCostCenter CostCenter?    @relation(fields: [defaultCostCenterId], references: [id])
-  entries         FinanceEntry[]
-  agreements      CollectionAgreement[]
+  tenant            Tenant                @relation(fields: [tenantId], references: [id])
+  company           Company               @relation(fields: [companyId], references: [id])
+  defaultCategory   FinanceCategory?      @relation(fields: [defaultCategoryId], references: [id])
+  defaultCostCenter CostCenter?           @relation(fields: [defaultCostCenterId], references: [id])
+  entries           FinanceEntry[]
+  agreements        CollectionAgreement[]
 
   @@unique([tenantId, companyId, document])
   @@index([tenantId, companyId])
@@ -2369,7 +2372,7 @@ model FinanceCounterparty {
 /// mesmos, a diferença é o sinal. Duas tabelas idênticas dobrariam toda consulta
 /// de fluxo de caixa e todo relatório.
 model FinanceEntry {
-  id        String           @id @default(uuid())
+  id        String             @id @default(uuid())
   tenantId  String
   companyId String
   kind      FinanceEntryKind
@@ -2386,14 +2389,14 @@ model FinanceEntry {
   /// DRE sem filtro não depende dele, e o que não tem centro aparece como
   /// "Sem centro de custo" na DRE por centro em vez de sumir. A herança na
   /// criação vive em src/lib/financeiro/centroDeCusto.ts.
-  costCenterId   String?
+  costCenterId String?
 
   /// Competência "AAAA-MM", herdada do documento quando vem de um.
-  competence String   @db.VarChar(7)
-  dueDate    DateTime
-  paidAt     DateTime?
-  amount     Decimal  @db.Decimal(12, 2)
-  description String? @db.VarChar(255)
+  competence  String    @db.VarChar(7)
+  dueDate     DateTime
+  paidAt      DateTime?
+  amount      Decimal   @db.Decimal(12, 2)
+  description String?   @db.VarChar(255)
 
   /// Documento fiscal que originou o lançamento. **1:1**: relançar o mesmo
   /// documento duplicaria valor no financeiro, e o unique é quem impede.
@@ -2415,37 +2418,37 @@ model FinanceEntry {
   /// filtro de "em aberto" que já existe (`status != CANCELADO`), sem que cada
   /// um precise conhecer cobrança. Nulo com `CANCELADO` é o cancelado comum de
   /// antes desta coluna: a migration não reescreve dado.
-  closeReason       FinanceCloseReason?
+  closeReason             FinanceCloseReason?
   /// O status que o lançamento tinha antes de ser encerrado por renegociação ou
   /// perda — desfazer o acordo ou reverter a perda devolve exatamente ele.
-  statusBeforeClose FinanceEntryStatus?
+  statusBeforeClose       FinanceEntryStatus?
   /// Parcela deste acordo. Parcela não é receita na DRE econômica: é o
   /// recebimento de uma receita que já foi reconhecida no título original.
   agreementId             String?
   /// Título original renegociado neste acordo.
   renegotiatedAgreementId String?
   /// Baixa por perda: quando, por quê e quem decidiu (a coordenação).
-  lossAt            DateTime?
-  lossReason        String?   @db.VarChar(500)
-  lossById          String?
+  lossAt                  DateTime?
+  lossReason              String?             @db.VarChar(500)
+  lossById                String?
   /// Quem da equipe cuida da cobrança deste título.
-  collectionOwnerId String?
+  collectionOwnerId       String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant         Tenant              @relation(fields: [tenantId], references: [id])
-  company        Company             @relation(fields: [companyId], references: [id])
-  counterparty   FinanceCounterparty @relation(fields: [counterpartyId], references: [id])
-  category       FinanceCategory?    @relation(fields: [categoryId], references: [id])
-  costCenter     CostCenter?         @relation(fields: [costCenterId], references: [id])
-  fiscalDocument FiscalDocument?     @relation(fields: [fiscalDocumentId], references: [id])
-  createdBy      User?               @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id])
-  reviewedBy     User?               @relation("FinanceEntryReviewedBy", fields: [reviewedById], references: [id])
+  tenant                Tenant                  @relation(fields: [tenantId], references: [id])
+  company               Company                 @relation(fields: [companyId], references: [id])
+  counterparty          FinanceCounterparty     @relation(fields: [counterpartyId], references: [id])
+  category              FinanceCategory?        @relation(fields: [categoryId], references: [id])
+  costCenter            CostCenter?             @relation(fields: [costCenterId], references: [id])
+  fiscalDocument        FiscalDocument?         @relation(fields: [fiscalDocumentId], references: [id])
+  createdBy             User?                   @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id])
+  reviewedBy            User?                   @relation("FinanceEntryReviewedBy", fields: [reviewedById], references: [id])
   /// O vínculo com a transação do extrato que liquidou este lançamento.
-  bankMatch      BankTransactionMatch?
-  approvalEvents FinanceApprovalEvent[]
-  clientRequests ClientRequest[]
+  bankMatch             BankTransactionMatch?
+  approvalEvents        FinanceApprovalEvent[]
+  clientRequests        ClientRequest[]
   agreement             CollectionAgreement?    @relation("AgreementInstallments", fields: [agreementId], references: [id], onDelete: Restrict)
   renegotiatedAgreement CollectionAgreement?    @relation("AgreementOriginals", fields: [renegotiatedAgreementId], references: [id], onDelete: Restrict)
   lossBy                User?                   @relation("FinanceEntryLossBy", fields: [lossById], references: [id], onDelete: SetNull)
@@ -2726,16 +2729,16 @@ model ClientRequestAttachment {
 /// sem prazo, sem status, sem fila. Misturar os dois faria a fila de pendências
 /// encher de conversa, e a conversa herdar cobrança que ninguém pediu.
 model CompanyMessage {
-  id       String @id @default(uuid())
-  tenantId String
+  id                 String   @id @default(uuid())
+  tenantId           String
   /// A conversa é por empresa, e não por cliente: o cliente pode ter 21 empresas,
   /// e "o que falamos da BLD Filial 3" não é o mesmo assunto da matriz.
-  companyId String
+  companyId          String
   /// Exatamente um dos dois autores — regra na aplicação, como em ClientRequestMessage.
   authorUserId       String?
   authorPortalUserId String?
-  body      String   @db.Text
-  createdAt DateTime @default(now())
+  body               String   @db.Text
+  createdAt          DateTime @default(now())
 
   tenant       Tenant                     @relation(fields: [tenantId], references: [id])
   company      Company                    @relation(fields: [companyId], references: [id])
@@ -2750,13 +2753,13 @@ model CompanyMessage {
 /// Arquivo que acompanha uma mensagem da conversa — o caminho do cliente para
 /// mandar documento sem esperar o escritório abrir uma pendência.
 model CompanyMessageAttachment {
-  id        String @id @default(uuid())
+  id        String   @id @default(uuid())
   tenantId  String
   messageId String
-  fileName  String @db.VarChar(255)
+  fileName  String   @db.VarChar(255)
   /// "<tenantId>/<uuid>.<ext>" sob storage/company-messages — nunca vem do usuário.
-  fileUrl   String @db.VarChar(255)
-  mimeType  String @db.VarChar(100)
+  fileUrl   String   @db.VarChar(255)
+  mimeType  String   @db.VarChar(100)
   sizeBytes Int
   createdAt DateTime @default(now())
 
@@ -2866,14 +2869,14 @@ model CollectionAgreement {
   counterpartyId String
 
   /// Soma dos títulos originais no momento do acordo.
-  originalAmount Decimal @db.Decimal(12, 2)
+  originalAmount Decimal  @db.Decimal(12, 2)
   /// O que o sacado se comprometeu a pagar. A diferença para o original é
   /// acréscimo (positiva) ou desconto (negativa) na DRE econômica.
-  agreedAmount   Decimal @db.Decimal(12, 2)
+  agreedAmount   Decimal  @db.Decimal(12, 2)
   installments   Int
   /// Data civil ao meio-dia de São Paulo, como todo vencimento.
   firstDueDate   DateTime
-  intervalMonths Int     @default(1)
+  intervalMonths Int      @default(1)
   /// Data do acordo — a competência em que a diferença é reconhecida.
   agreedAt       DateTime
 
@@ -3139,8 +3142,8 @@ model SpedSyncState {
   /// obrigatória em toda rota de lá — esquecê-la é 422, nunca "todos".
   cnpjRaiz String @db.VarChar(8)
 
-  cursorRetomada String? @db.Text
-  watermark      String? @db.VarChar(60)
+  cursorRetomada String?   @db.Text
+  watermark      String?   @db.VarChar(60)
   lastRunAt      DateTime?
   lastError      String?   @db.VarChar(500)
 
@@ -3155,7 +3158,7 @@ model SpedSyncState {
   /// credencial e a saúde da conexão inteira.
   integrationId String?
 
-  tenant Tenant @relation(fields: [tenantId], references: [id])
+  tenant      Tenant             @relation(fields: [tenantId], references: [id])
   integration TenantIntegration? @relation(fields: [integrationId], references: [id])
 
   @@unique([tenantId, cnpjRaiz])
@@ -3163,7 +3166,7 @@ model SpedSyncState {
 }
 
 model ConversationEvaluation {
-  id             String   @id @default(uuid())
+  id             String            @id @default(uuid())
   tenantId       String
   conversationId String
   // Uma conversa rende até duas avaliações, uma por metade. Conversa que a
@@ -3176,12 +3179,12 @@ model ConversationEvaluation {
   // 500 conversas. Com dois segmentos isso deixa de ser só caro e passa a ser
   // errado: o dono da metade não está em lugar nenhum da conversa — o campo
   // `assignee` do Chatwoot é a recepção em 485 dos 500 atendimentos.
-  handlerLabel   String?  @db.VarChar(120)
+  handlerLabel   String?           @db.VarChar(120)
   score          Int // 0-100 = writingScore + slaScore
   writingScore   Int // 0-50 — português/educação, avaliado pela IA
   slaScore       Int // 0-50 — tempo até 1ª resposta + até resolução
-  reasoning      String   @db.Text // justificativa curta da IA, pra auditoria/transparência no drill-down
-  evaluatedAt    DateTime @default(now())
+  reasoning      String            @db.Text // justificativa curta da IA, pra auditoria/transparência no drill-down
+  evaluatedAt    DateTime          @default(now())
 
   conversation ChatwootConversation @relation(fields: [conversationId], references: [id])
 
@@ -3981,6 +3984,33 @@ model PushSubscription {
   @@map("push_subscriptions")
 }
 
+// Push do cliente no portal — tabela separada de `push_subscriptions`, e não
+// uma coluna `portalUserId` nela.
+//
+// Duas razões, na ordem em que pesam:
+//
+// 1. `PortalUser` é tabela separada de `User` desde 03/09, justamente para que
+//    "cliente com acesso interno" não seja um estado alcançável. Uma linha que
+//    aponta ora para um, ora para outro reabre a pergunta em cada consulta.
+// 2. Coluna nova numa tabela existente quebra toda leitura dela se o código
+//    subir antes da migration — o Prisma seleciona todos os campos escalares.
+//    Tabela nova só quebra o que é novo. Mesmo raciocínio de `user_pinned_modules`.
+model PortalPushSubscription {
+  id           String   @id @default(uuid())
+  tenantId     String
+  portalUserId String
+  endpoint     String   @unique @db.VarChar(500)
+  p256dh       String   @db.VarChar(255)
+  auth         String   @db.VarChar(255)
+  createdAt    DateTime @default(now())
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id])
+  portalUser PortalUser @relation(fields: [portalUserId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, portalUserId])
+  @@map("portal_push_subscriptions")
+}
+
 // Admissão digital self-service — link tokenizado que o novo colaborador
 // (em ADMISSAO_EM_ANDAMENTO) abre SEM login para preencher os próprios dados
 // e enviar documentos, alimentando a ficha e eliminando a digitação manual do
@@ -4347,7 +4377,6 @@ model BpoCredentialView {
   @@map("bpo_credential_views")
 }
 
-
 // ─── Societário: o motor de processos ────────────────────────────────────────
 //
 // Derivado do fluxograma que o setor montou (docs/fluxos/societario.html), e
@@ -4410,14 +4439,14 @@ enum ProcessPriority {
 /// e eles mudam por município e por estado. Campo fixo com dois valores morre
 /// no processo de Baixa, que introduz a prefeitura.
 model ProcessOrgan {
-  id       String  @id @default(uuid())
-  tenantId String
-  name     String  @db.VarChar(120)
+  id          String  @id @default(uuid())
+  tenantId    String
+  name        String  @db.VarChar(120)
   /// Sigla curta para caber em coluna de tabela: JUCEPAR, RFB, PMLDA.
-  acronym  String? @db.VarChar(20)
+  acronym     String? @db.VarChar(20)
   /// Onde o robô observa o protocolo. Nulo enquanto o acompanhamento for manual.
   trackingUrl String? @db.VarChar(500)
-  active   Boolean @default(true)
+  active      Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -4434,12 +4463,12 @@ model ProcessOrgan {
 
 /// Tipo de processo: Constituição, Alteração Contratual, Baixa, Alvará.
 model ProcessType {
-  id       String  @id @default(uuid())
-  tenantId String
-  name     String  @db.VarChar(120)
+  id          String  @id @default(uuid())
+  tenantId    String
+  name        String  @db.VarChar(120)
   /// Código estável para o app referenciar sem depender do rótulo, que o
   /// escritório pode renomear.
-  code     String  @db.VarChar(40)
+  code        String  @db.VarChar(40)
   description String? @db.VarChar(500)
 
   /// Prazo médio declarado pelo setor — "4 a 7 dias", "7 a 15", "5". É o
@@ -4472,10 +4501,10 @@ model ProcessType {
 /// andamento **não pode mudar embaixo de quem está tocando ele**: a instância
 /// congela a versão que valia quando começou.
 model ProcessTemplate {
-  id       String  @id @default(uuid())
-  tenantId String
-  typeId   String
-  version  Int     @default(1)
+  id        String  @id @default(uuid())
+  tenantId  String
+  typeId    String
+  version   Int     @default(1)
   /// Só uma versão publicada por tipo de cada vez — é a que instância nova usa.
   published Boolean @default(false)
 
@@ -4494,13 +4523,13 @@ model ProcessTemplate {
 
 /// Etapa do roteiro.
 model ProcessTemplateStep {
-  id         String @id @default(uuid())
-  tenantId   String
-  templateId String
+  id          String  @id @default(uuid())
+  tenantId    String
+  templateId  String
   /// Ordem dentro do roteiro. Duas etapas do mesmo `parallelGroup` compartilham
   /// posição: a ordem entre elas não é obrigatória.
-  position   Int
-  label      String @db.VarChar(160)
+  position    Int
+  label       String  @db.VarChar(160)
   description String? @db.VarChar(1000)
 
   /// Etapas que correm ao mesmo tempo e independentes carregam o mesmo grupo.
@@ -4524,9 +4553,9 @@ model ProcessTemplateStep {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant   Tenant                        @relation(fields: [tenantId], references: [id])
-  template ProcessTemplate               @relation(fields: [templateId], references: [id])
-  organ    ProcessOrgan?                 @relation(fields: [organId], references: [id])
+  tenant   Tenant                         @relation(fields: [tenantId], references: [id])
+  template ProcessTemplate                @relation(fields: [templateId], references: [id])
+  organ    ProcessOrgan?                  @relation(fields: [organId], references: [id])
   items    ProcessTemplateChecklistItem[]
   steps    ProcessStep[]
 
@@ -4536,18 +4565,18 @@ model ProcessTemplateStep {
 }
 
 model ProcessTemplateChecklistItem {
-  id       String @id @default(uuid())
+  id       String  @id @default(uuid())
   tenantId String
   stepId   String
   position Int
-  label    String @db.VarChar(200)
+  label    String  @db.VarChar(200)
   required Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant Tenant              @relation(fields: [tenantId], references: [id])
-  step   ProcessTemplateStep @relation(fields: [stepId], references: [id])
+  tenant Tenant                 @relation(fields: [tenantId], references: [id])
+  step   ProcessTemplateStep    @relation(fields: [stepId], references: [id])
   items  ProcessChecklistItem[]
 
   @@index([stepId, position])
@@ -4557,10 +4586,10 @@ model ProcessTemplateChecklistItem {
 
 /// Uma instância: este ato societário, desta empresa.
 model Process {
-  id        String @id @default(uuid())
-  tenantId  String
-  companyId String
-  typeId    String
+  id         String @id @default(uuid())
+  tenantId   String
+  companyId  String
+  typeId     String
   /// Versão congelada do roteiro (ver ProcessTemplate).
   templateId String
 
@@ -4588,11 +4617,11 @@ model Process {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant    Tenant          @relation(fields: [tenantId], references: [id])
-  company   Company         @relation(fields: [companyId], references: [id])
-  type      ProcessType     @relation(fields: [typeId], references: [id])
-  template  ProcessTemplate @relation(fields: [templateId], references: [id])
-  owner     User?           @relation("ProcessOwner", fields: [ownerUserId], references: [id])
+  tenant    Tenant            @relation(fields: [tenantId], references: [id])
+  company   Company           @relation(fields: [companyId], references: [id])
+  type      ProcessType       @relation(fields: [typeId], references: [id])
+  template  ProcessTemplate   @relation(fields: [templateId], references: [id])
+  owner     User?             @relation("ProcessOwner", fields: [ownerUserId], references: [id])
   steps     ProcessStep[]
   protocols ProcessProtocol[]
   fees      ProcessFee[]
@@ -4620,15 +4649,15 @@ model ProcessStep {
   /// rodou. É a coluna que responde "isto foi automático?" sem adivinhação.
   actor            ProcessActor?
   executedByUserId String?
-  automationRef    String? @db.VarChar(80)
+  automationRef    String?       @db.VarChar(80)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant       Tenant                @relation(fields: [tenantId], references: [id])
-  process      Process               @relation(fields: [processId], references: [id], onDelete: Cascade)
-  templateStep ProcessTemplateStep   @relation(fields: [templateStepId], references: [id])
-  executedBy   User?                 @relation("ProcessStepExecutor", fields: [executedByUserId], references: [id])
+  tenant       Tenant                 @relation(fields: [tenantId], references: [id])
+  process      Process                @relation(fields: [processId], references: [id], onDelete: Cascade)
+  templateStep ProcessTemplateStep    @relation(fields: [templateStepId], references: [id])
+  executedBy   User?                  @relation("ProcessStepExecutor", fields: [executedByUserId], references: [id])
   items        ProcessChecklistItem[]
   protocols    ProcessProtocol[]
 
@@ -4638,11 +4667,11 @@ model ProcessStep {
 }
 
 model ProcessChecklistItem {
-  id             String @id @default(uuid())
+  id             String    @id @default(uuid())
   tenantId       String
   stepId         String
   templateItemId String
-  done           Boolean @default(false)
+  done           Boolean   @default(false)
   doneAt         DateTime?
 
   createdAt DateTime @default(now())
@@ -4665,7 +4694,7 @@ model ProcessChecklistItem {
 /// contador de voltas sai de graça (`attempt`), e com ele a única explicação
 /// possível para um prazo de 7 dias virar trinta.
 model ProcessProtocol {
-  id        String @id @default(uuid())
+  id        String  @id @default(uuid())
   tenantId  String
   processId String
   /// A etapa que gerou este protocolo. Nulo se foi protocolado fora do roteiro.
@@ -4679,7 +4708,7 @@ model ProcessProtocol {
   /// Número que o órgão devolveu. Nulo enquanto não sai.
   number String? @db.VarChar(80)
 
-  submittedAt DateTime  @default(now())
+  submittedAt DateTime               @default(now())
   resolvedAt  DateTime?
   outcome     ProcessProtocolOutcome @default(PENDENTE)
 
@@ -4721,8 +4750,8 @@ model ProcessRequirement {
   tenantId   String
   protocolId String
 
-  description String  @db.Text
-  raisedAt    DateTime @default(now())
+  description String    @db.Text
+  raisedAt    DateTime  @default(now())
   /// Prazo que o órgão deu para cumprir. Nem todo órgão dá.
   dueAt       DateTime?
   resolvedAt  DateTime?
@@ -4736,7 +4765,6 @@ model ProcessRequirement {
   @@index([tenantId, resolvedAt])
   @@map("process_requirements")
 }
-
 
 // ─── A forma das integrações ─────────────────────────────────────────────────
 //
@@ -4779,17 +4807,17 @@ enum IntegrationTrigger {
 /// conexão. O catálogo (`src/lib/integracoes/catalogo.ts`) diz que campos cada
 /// uma pede; esta tabela guarda os valores, cifrados.
 model TenantIntegration {
-  id       String @id @default(uuid())
-  tenantId String
+  id              String @id @default(uuid())
+  tenantId        String
   /// Código do catálogo em código — `omie`, `dominio`, `trello`, `receita_pr`.
   integrationCode String @db.VarChar(60)
 
   /// Um cliente pode ter **duas contas do mesmo sistema** — o Chatwoot já
   /// permite isso hoje, com uma conta por setor. Sem esta chave, a segunda
   /// sobrescreveria a primeira em silêncio.
-  instanceKey String @db.VarChar(60) @default("default")
+  instanceKey String  @default("default") @db.VarChar(60)
   /// Como o cliente chama esta conexão. Nulo usa o rótulo do catálogo.
-  label String? @db.VarChar(120)
+  label       String? @db.VarChar(120)
 
   enabled Boolean @default(true)
 
@@ -4815,13 +4843,13 @@ model TenantIntegration {
   /// que mente sobre a última execução é pior que estado ausente: alguém olha,
   /// vê erro, e desliga uma integração saudável.
   lastRunAt DateTime?
-  lastError String? @db.VarChar(500)
+  lastError String?   @db.VarChar(500)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant Tenant           @relation(fields: [tenantId], references: [id])
-  runs   IntegrationRun[]
+  tenant              Tenant               @relation(fields: [tenantId], references: [id])
+  runs                IntegrationRun[]
   chatwootConnections ChatwootConnection[]
   spedSyncStates      SpedSyncState[]
 
@@ -5258,8 +5286,8 @@ model DreImport {
   importedById String?
   createdAt    DateTime @default(now())
 
-  tenant  Tenant           @relation(fields: [tenantId], references: [id])
-  company Company          @relation(fields: [companyId], references: [id])
+  tenant  Tenant          @relation(fields: [tenantId], references: [id])
+  company Company         @relation(fields: [companyId], references: [id])
   linhas  DreImportLine[]
 
   @@unique([companyId, ano, mes, origem])

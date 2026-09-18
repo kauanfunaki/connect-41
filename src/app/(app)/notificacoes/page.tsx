@@ -5,6 +5,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { NotificationItem } from "@/components/shell/NotificationItem";
 import { MarkAllReadButton } from "@/components/shell/MarkAllReadButton";
 import { PushNotificationToggle } from "@/components/notificacoes/PushNotificationToggle";
+import { salvarPushSubscription, removerPushSubscription } from "@/app/(app)/notificacoes/actions";
 import { getVapidPublicKey } from "@/lib/vapid";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -32,7 +33,10 @@ export default async function NotificacoesPage() {
         subtitle={<>{unreadCount > 0 ? `${unreadCount} não lida${unreadCount !== 1 ? "s" : ""}` : "Tudo em dia"}</>}
         action={<>{unreadCount > 0 && <MarkAllReadButton action={marcarTodasLidas} />}</>}
       />
-      <PushNotificationToggle publicKey={getVapidPublicKey()} />
+      <PushNotificationToggle
+        publicKey={getVapidPublicKey()}
+        acoes={{ salvar: salvarPushSubscription, remover: removerPushSubscription }}
+      />
 
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {notifications.length === 0 ? (

@@ -24,17 +24,22 @@ function ensureConfigured(): boolean {
 
 export type WebPushPayload = { title: string; body: string; url: string };
 
-export async function sendWebPushToUser(tenantId: string, userId: string, payload: WebPushPayload): Promise<void> {
-  if (!ensureConfigured()) return; // VAPID não configurado neste ambiente — no-op silencioso
+type Assinatura = { id: string; endpoint: string; p256dh: string; auth: string };
 
-  const prisma = getPrisma();
-  const subscriptions = await prisma.pushSubscription.findMany({ where: { tenantId, userId } });
-  if (subscriptions.length === 0) return;
-
+/**
+ * O envio propriamente dito, igual para os dois públicos. `descartar` existe
+ * porque a assinatura da equipe e a do cliente moram em tabelas diferentes —
+ * só quem chamou sabe de qual apagar quando o navegador diz que expirou.
+ */
+async function enviar(
+  assinaturas: Assinatura[],
+  payload: WebPushPayload,
+  descartar: (id: string) => Promise<unknown>,
+  origem: string
+): Promise<void> {
   const body = JSON.stringify(payload);
-
   await Promise.all(
-    subscriptions.map(async (sub) => {
+    assinaturas.map(async (sub) => {
       try {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
@@ -44,11 +49,58 @@ export async function sendWebPushToUser(tenantId: string, userId: string, payloa
         const statusCode = (err as { statusCode?: number }).statusCode;
         if (statusCode === 404 || statusCode === 410) {
           // Assinatura expirada/revogada pelo navegador — não adianta reenviar.
-          await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
+          await descartar(sub.id).catch(() => {});
         } else {
-          console.error("[sendWebPushToUser]", err);
+          console.error(`[${origem}]`, err);
         }
       }
     })
+  );
+}
+
+export async function sendWebPushToUser(tenantId: string, userId: string, payload: WebPushPayload): Promise<void> {
+  if (!ensureConfigured()) return; // VAPID não configurado neste ambiente — no-op silencioso
+
+  const prisma = getPrisma();
+  const subscriptions = await prisma.pushSubscription.findMany({ where: { tenantId, userId } });
+  if (subscriptions.length === 0) return;
+
+  await enviar(
+    subscriptions,
+    payload,
+    (id) => prisma.pushSubscription.delete({ where: { id } }),
+    "sendWebPushToUser"
+  );
+}
+
+/**
+ * Push para clientes do portal. Recebe uma lista porque os avisos do portal são
+ * sempre para o grupo que enxerga a empresa, não para uma pessoa — uma consulta
+ * em vez de uma por destinatário.
+ *
+ * Como todo aviso do portal, é best-effort: o que foi avisado já está gravado, e
+ * o cliente vê ao entrar. **O texto não leva conteúdo** — push aparece na tela
+ * de bloqueio, e a regra dos e-mails ("valor, fornecedor e empresa ficam no
+ * portal") vale mais ainda aqui.
+ */
+export async function sendWebPushToPortalUsers(
+  tenantId: string,
+  portalUserIds: string[],
+  payload: WebPushPayload
+): Promise<void> {
+  if (portalUserIds.length === 0) return;
+  if (!ensureConfigured()) return;
+
+  const prisma = getPrisma();
+  const subscriptions = await prisma.portalPushSubscription.findMany({
+    where: { tenantId, portalUserId: { in: [...new Set(portalUserIds)] } },
+  });
+  if (subscriptions.length === 0) return;
+
+  await enviar(
+    subscriptions,
+    payload,
+    (id) => prisma.portalPushSubscription.delete({ where: { id } }),
+    "sendWebPushToPortalUsers"
   );
 }

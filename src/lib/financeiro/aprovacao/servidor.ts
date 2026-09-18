@@ -6,6 +6,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { isModuleEnabled } from "@/lib/modules";
 import { notifyUser } from "@/lib/notifications";
 import { sendAprovacaoPendenteEmail, type ResultadoDoAviso } from "@/lib/email/sendMail";
+import { avisarClientePorPush } from "@/lib/portal/avisos";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { avisosPorAprovador, statusInicialDeAprovacao, type StatusDoLancamento, type TipoDoLancamento } from "./regras";
 
@@ -52,8 +53,13 @@ export async function registrarEnvios(tx: Prisma.TransactionClient, entryIds: st
 }
 
 /**
- * Avisa por e-mail os aprovadores cujo teto cobre as contas que entraram.
- * Best-effort: a conta já está aguardando e aparece no portal com ou sem e-mail.
+ * Avisa os aprovadores cujo teto cobre as contas que entraram — por e-mail e,
+ * para quem instalou o portal, por push. Best-effort: a conta já está
+ * aguardando e aparece no portal com ou sem aviso.
+ *
+ * O push segue a mesma regra do e-mail: **só a contagem de cada aprovador**,
+ * nunca valor ou fornecedor. O resultado devolvido conta só o e-mail, que é o
+ * canal que alcança todo mundo.
  */
 export async function avisarAprovadores(
   tenantId: string,
@@ -75,10 +81,18 @@ export async function avisarAprovadores(
         nome: a.portalUser.name,
       }))
     );
-    return await sendAprovacaoPendenteEmail({
-      tenantId,
-      destinatarios: avisos.map((a) => ({ email: a.email, nome: a.nome, quantidade: a.quantidade })),
-    });
+    const [email] = await Promise.all([
+      sendAprovacaoPendenteEmail({
+        tenantId,
+        destinatarios: avisos.map((a) => ({ email: a.email, nome: a.nome, quantidade: a.quantidade })),
+      }),
+      // Um push por aprovador, com a contagem dele: a contagem é o que muda de
+      // pessoa para pessoa, então não dá para juntar todos numa chamada só.
+      ...avisos.map((a) =>
+        avisarClientePorPush(tenantId, [a.portalUserId], { tipo: "aprovacao", quantidade: a.quantidade })
+      ),
+    ]);
+    return email;
   } catch (err) {
     console.error("[avisarAprovadores]", err);
     return { enviados: 0, falhas: 1, semSmtp: false };
