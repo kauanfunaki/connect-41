@@ -35,7 +35,7 @@ export default async function PortalPage({
   const filtro = { competencia: params.competencia || undefined };
 
   const prisma = getPrisma();
-  const [{ documentos, total, porPagina }, competencias, grupo, modulos] = await Promise.all([
+  const [{ documentos, total, totalLimitado, temProxima, porPagina }, competencias, grupo, modulos] = await Promise.all([
     listarDocumentos(alcance, filtro, pagina),
     competenciasDisponiveis(alcance),
     prisma.clientGroup.findUnique({ where: { id: sessao.clientGroupId }, select: { name: true } }),
@@ -100,6 +100,8 @@ export default async function PortalPage({
             <PortalDocumentosTable
               documentos={documentos}
               total={total}
+              totalLimitado={totalLimitado}
+              temProxima={temProxima}
               pagina={pagina}
               porPagina={porPagina}
               filtrosDaUrl={params}

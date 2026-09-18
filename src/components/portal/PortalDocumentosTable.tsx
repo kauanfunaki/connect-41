@@ -10,12 +10,16 @@ import type { LinhaDoAcervo } from "@/lib/fiscal/data";
 type Props = {
   documentos: LinhaDoAcervo[];
   total: number;
+  /** A contagem parou no teto — ver `TETO_DA_CONTAGEM` em src/lib/fiscal/data.ts. */
+  totalLimitado: boolean;
+  temProxima: boolean;
   pagina: number;
   porPagina: number;
   filtrosDaUrl: Record<string, string | undefined>;
 };
 
 const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const INTEIRO = new Intl.NumberFormat("pt-BR");
 
 /**
  * A mesma tabela do acervo interno, menos o que é assunto do escritório.
@@ -24,8 +28,11 @@ const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL
  * nota está "pendente de decisão" no BPO — é trabalho interno, e mostrar isso
  * geraria pergunta sobre um estado que não é dele. O que ele vê é o documento.
  */
-export function PortalDocumentosTable({ documentos, total, pagina, porPagina, filtrosDaUrl }: Props) {
-  const ultimaPagina = Math.max(1, Math.ceil(total / porPagina));
+export function PortalDocumentosTable({ documentos, total, totalLimitado, temProxima, pagina, porPagina, filtrosDaUrl }: Props) {
+  // Com a contagem no teto não se sabe qual é a última página — só se existe a
+  // próxima. Quem tem mais de mil documentos navega pela competência.
+  const ultimaPagina = totalLimitado ? null : Math.max(1, Math.ceil(total / porPagina));
+  const temPaginas = ultimaPagina === null || ultimaPagina > 1;
   // A contraparte sai da direção do lançamento, e a direção sai do documento da
   // empresa: calculada uma vez, serve ao cartão e à tabela.
   const linhas = documentos.map((d) => {
@@ -108,16 +115,18 @@ export function PortalDocumentosTable({ documentos, total, pagina, porPagina, fi
         </table>
       </TabelaNoDesktop>
 
-      {ultimaPagina > 1 && (
+      {temPaginas && (
         <div className="flex items-center justify-between mt-3 text-[length:var(--fs-ui)] text-fg-muted">
           <span className="tnum">
-            {total} documento{total === 1 ? "" : "s"} · página {pagina} de {ultimaPagina}
+            {ultimaPagina === null
+              ? `mais de ${INTEIRO.format(total)} documentos · página ${pagina}`
+              : `${total} documento${total === 1 ? "" : "s"} · página ${pagina} de ${ultimaPagina}`}
           </span>
           <div className="flex items-center gap-2">
             <Pagina n={pagina - 1} desabilitado={pagina <= 1} filtros={filtrosDaUrl}>
               Anterior
             </Pagina>
-            <Pagina n={pagina + 1} desabilitado={pagina >= ultimaPagina} filtros={filtrosDaUrl}>
+            <Pagina n={pagina + 1} desabilitado={!temProxima} filtros={filtrosDaUrl}>
               Próxima
             </Pagina>
           </div>

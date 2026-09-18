@@ -2262,7 +2262,11 @@ model FiscalDocument {
   financeEntry FinanceEntry?
 
   @@unique([tenantId, dedupKey])
-  @@index([tenantId, companyId, competence])
+  // O nome é citado num FORCE INDEX em src/lib/fiscal/data.ts
+  // (competenciasDisponiveis, no portal). O `map` só fixa o nome que o Prisma
+  // já dava, para que mudar as colunas não o troque em silêncio — renomear aqui
+  // quebra a home do portal.
+  @@index([tenantId, companyId, competence], map: "fiscal_documents_tenantId_companyId_competence_idx")
   @@index([tenantId, companyId, destination])
   // Os três abaixo servem a listagem SEM filtro de empresa, que é como a tela
   // abre. Medido em 09/09 com 244.558 linhas em produção: sem eles a página

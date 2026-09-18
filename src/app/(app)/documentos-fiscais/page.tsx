@@ -19,6 +19,7 @@ import type { FiscalDocumentType, FiscalDocumentDestination } from "@/generated/
 // acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "fiscal";
 const MODULE = "fiscal_documentos";
+const INTEIRO = new Intl.NumberFormat("pt-BR");
 
 // Acervo de documentos fiscais — o que já foi emitido, espelhado aqui.
 //
@@ -48,7 +49,7 @@ export default async function DocumentosFiscaisPage({
   const alcance = alcanceDaEquipe(ctx.tenantId);
   const prisma = getPrisma();
 
-  const [{ documentos, total, porPagina }, competencias, resumo, empresas] = await Promise.all([
+  const [{ documentos, total, totalLimitado, temProxima, porPagina }, competencias, resumo, empresas] = await Promise.all([
     listarDocumentos(alcance, filtro, pagina),
     competenciasDisponiveis(alcance),
     resumoPorDestino(alcance, { ...filtro, destino: undefined }),
@@ -101,7 +102,10 @@ export default async function DocumentosFiscaisPage({
           <div className="grid grid-cols-3 gap-px bg-border border border-border rounded-lg overflow-hidden mb-4">
             {(["PENDENTE", "LANCADO", "IGNORADO"] as const).map((d) => (
               <div key={d} className="bg-surface px-4 py-3">
-                <p className="text-[20px] font-semibold text-fg tabular-nums leading-none">{resumo[d]}</p>
+                <p className="text-[20px] font-semibold text-fg tabular-nums leading-none">
+                  {INTEIRO.format(resumo[d].total)}
+                  {resumo[d].limitado ? "+" : ""}
+                </p>
                 <p className="text-[11px] text-fg-muted mt-1.5">
                   {d === "PENDENTE" ? "Pendentes de decisão" : d === "LANCADO" ? "Lançados" : "Ignorados"}
                 </p>
@@ -120,7 +124,15 @@ export default async function DocumentosFiscaisPage({
               />
             </Card>
           ) : (
-            <AcervoTable documentos={documentos} total={total} pagina={pagina} porPagina={porPagina} filtrosDaUrl={params} />
+            <AcervoTable
+              documentos={documentos}
+              total={total}
+              totalLimitado={totalLimitado}
+              temProxima={temProxima}
+              pagina={pagina}
+              porPagina={porPagina}
+              filtrosDaUrl={params}
+            />
           )}
         </>
       )}

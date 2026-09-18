@@ -17,6 +17,9 @@ import type { LinhaDoAcervo } from "@/lib/fiscal/data";
 type Props = {
   documentos: LinhaDoAcervo[];
   total: number;
+  /** A contagem parou no teto — ver `TETO_DA_CONTAGEM` em src/lib/fiscal/data.ts. */
+  totalLimitado: boolean;
+  temProxima: boolean;
   pagina: number;
   porPagina: number;
   /** Filtros da URL, para a paginação não jogá-los fora. */
@@ -24,9 +27,13 @@ type Props = {
 };
 
 const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const INTEIRO = new Intl.NumberFormat("pt-BR");
 
-export function AcervoTable({ documentos, total, pagina, porPagina, filtrosDaUrl }: Props) {
-  const ultimaPagina = Math.max(1, Math.ceil(total / porPagina));
+export function AcervoTable({ documentos, total, totalLimitado, temProxima, pagina, porPagina, filtrosDaUrl }: Props) {
+  // Com a contagem no teto não se sabe qual é a última página — só se existe a
+  // próxima. Com filtro de empresa e competência ela volta a ser exata.
+  const ultimaPagina = totalLimitado ? null : Math.max(1, Math.ceil(total / porPagina));
+  const temPaginas = ultimaPagina === null || ultimaPagina > 1;
 
   return (
     <div className="mt-4">
@@ -124,16 +131,18 @@ export function AcervoTable({ documentos, total, pagina, porPagina, filtrosDaUrl
         </table>
       </div>
 
-      {ultimaPagina > 1 && (
+      {temPaginas && (
         <div className="flex items-center justify-between mt-3 text-[length:var(--fs-ui)] text-fg-muted">
           <span className="tnum">
-            {total} documento{total === 1 ? "" : "s"} · página {pagina} de {ultimaPagina}
+            {ultimaPagina === null
+              ? `mais de ${INTEIRO.format(total)} documentos · página ${pagina}`
+              : `${total} documento${total === 1 ? "" : "s"} · página ${pagina} de ${ultimaPagina}`}
           </span>
           <div className="flex items-center gap-2">
             <PaginaLink pagina={pagina - 1} desabilitado={pagina <= 1} filtros={filtrosDaUrl}>
               Anterior
             </PaginaLink>
-            <PaginaLink pagina={pagina + 1} desabilitado={pagina >= ultimaPagina} filtros={filtrosDaUrl}>
+            <PaginaLink pagina={pagina + 1} desabilitado={!temProxima} filtros={filtrosDaUrl}>
               Próxima
             </PaginaLink>
           </div>
