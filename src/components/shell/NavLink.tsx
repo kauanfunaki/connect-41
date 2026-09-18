@@ -23,15 +23,20 @@ type NavItemProps = {
   href: string;
   icon: React.ReactNode;
   label: string;
+  /**
+   * Acende só na própria rota. Para o item cujo endereço é o começo de todos os
+   * outros — a home do portal, `/portal`, acenderia em qualquer tela dele.
+   */
+  exact?: boolean;
 };
 
 function isActivePath(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function NavItem({ href, icon, label }: NavItemProps) {
+export function NavItem({ href, icon, label, exact = false }: NavItemProps) {
   const pathname = usePathname();
-  const active = isActivePath(pathname, href);
+  const active = exact ? pathname === href : isActivePath(pathname, href);
 
   return (
     <Link

@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 /** Contas a pagar das empresas do cliente esperando aprovação. */
 export default async function PortalAprovacoesPage() {
-  const { sessao, escopo, modulos, grupoNome } = await contextoFinanceiroDoPortal();
+  const { sessao, escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("bpo_aprovacoes")) notFound();
 
   const { contas, temAlcada } = await aprovacoesDoCliente(escopo, sessao.sub);
@@ -24,10 +24,7 @@ export default async function PortalAprovacoesPage() {
     <PageContainer>
       <PortalCabecalho
         titulo="Aprovações"
-        descricao="contas a pagar que só são pagas depois da sua aprovação."
-        grupoNome={grupoNome}
-        ativo="aprovacoes"
-        modulos={modulos}
+        descricao="Contas a pagar que só são pagas depois da sua aprovação."
         somenteLeitura={false}
       />
 

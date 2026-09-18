@@ -33,7 +33,7 @@ const SITUACAO: Record<SituacaoDaConta, { rotulo: string; variante: "danger" | "
  * "vencido".
  */
 export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
-  const { escopo, modulos, grupoNome } = await contextoFinanceiroDoPortal();
+  const { escopo, modulos } = await contextoFinanceiroDoPortal();
   const modulo = kind === "PAGAR" ? "bpo_contas_pagar" : "bpo_contas_receber";
   if (!modulos.has(modulo)) notFound();
 
@@ -48,10 +48,7 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
     <PageContainer>
       <PortalCabecalho
         titulo={aPagar ? "Contas a pagar" : "Contas a receber"}
-        descricao={aPagar ? "o que suas empresas têm a pagar." : "o que suas empresas têm a receber."}
-        grupoNome={grupoNome}
-        ativo={aPagar ? "pagar" : "receber"}
-        modulos={modulos}
+        descricao={aPagar ? "O que suas empresas têm a pagar." : "O que suas empresas têm a receber."}
       />
 
       <FaixaDeTotais

@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { formatInstantDate } from "@/lib/format";
 import { moeda } from "@/lib/financeiro/formato";
-import { aprovarContas, reprovarConta } from "@/app/(portal)/portal/aprovacoes/actions";
+import { aprovarContas, reprovarConta } from "@/app/(portal)/portal/(area)/aprovacoes/actions";
 import { ReprovarComMotivo } from "./ReprovarComMotivo";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 

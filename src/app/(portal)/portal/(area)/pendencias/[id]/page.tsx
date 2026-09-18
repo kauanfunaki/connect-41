@@ -4,7 +4,6 @@ import { ArrowLeft } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
-import { PortalNav } from "@/components/portal/PortalCabecalho";
 import { ConversaDaPendencia } from "@/components/pendencias/ConversaDaPendencia";
 import { ResponderPendencia } from "@/components/pendencias/ResponderPendencia";
 import { SeloDoPrazo, SeloDoStatus } from "@/components/pendencias/SelosDaPendencia";
@@ -32,7 +31,6 @@ export default async function PortalPendenciaPage({ params }: { params: Promise<
 
   return (
     <PageContainer>
-      <PortalNav ativo="pendencias" modulos={modulos} />
       <Link href="/portal/pendencias" className="inline-flex items-center gap-1.5 text-[13px] text-fg-muted hover:text-fg mb-3">
         <ArrowLeft size={14} /> Pendências
       </Link>

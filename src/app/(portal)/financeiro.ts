@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { getPrisma } from "@/lib/prisma";
 import { getPortalSession } from "@/lib/auth/portal";
 import { getEnabledModuleCodes } from "@/lib/modules";
 import type { EscopoFinanceiro } from "@/lib/financeiro/consultas";
@@ -19,13 +18,8 @@ export async function contextoFinanceiroDoPortal() {
   const sessao = await getPortalSession();
   if (!sessao) redirect("/portal/login");
 
-  const prisma = getPrisma();
-  const [alcance, modulos, grupo] = await Promise.all([
-    alcanceDoCliente(sessao),
-    getEnabledModuleCodes(sessao.tenantId),
-    prisma.clientGroup.findUnique({ where: { id: sessao.clientGroupId }, select: { name: true } }),
-  ]);
+  const [alcance, modulos] = await Promise.all([alcanceDoCliente(sessao), getEnabledModuleCodes(sessao.tenantId)]);
   const companyIds = alcance.tipo === "EMPRESAS" ? alcance.companyIds : [];
   const escopo: EscopoFinanceiro = { tenantId: sessao.tenantId, companyIds };
-  return { sessao, escopo, modulos, grupoNome: grupo?.name ?? null };
+  return { sessao, escopo, modulos };
 }

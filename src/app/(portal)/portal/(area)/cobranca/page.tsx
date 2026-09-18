@@ -23,7 +23,7 @@ export const dynamic = "force-dynamic";
  * equipe, e o cliente acompanha. A anotação interna do contato não sai daqui.
  */
 export default async function PortalCobrancaPage() {
-  const { escopo, modulos, grupoNome } = await contextoFinanceiroDoPortal();
+  const { escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has(MODULO_DE_COBRANCA)) notFound();
 
   const { titulos, acordos } = await cobrancaDoCliente(escopo, new Date());
@@ -34,10 +34,7 @@ export default async function PortalCobrancaPage() {
     <PageContainer>
       <PortalCabecalho
         titulo="Cobrança"
-        descricao="contas a receber vencidas das suas empresas, o andamento da cobrança e os acordos."
-        grupoNome={grupoNome}
-        ativo="cobranca"
-        modulos={modulos}
+        descricao="Contas a receber vencidas das suas empresas, o andamento da cobrança e os acordos."
       />
 
       <FaixaDeTotais

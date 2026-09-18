@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
 import { RelatorioDoDre } from "@/components/dre/RelatorioDoDre";
-import { contextoFinanceiroDoPortal } from "../../financeiro";
+import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { dreDoMes, mesesComMovimento } from "@/lib/dre/data";
 import { serieEconomica } from "@/lib/dre/dataEconomica";
@@ -28,7 +28,7 @@ export default async function PortalDrePage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  const { escopo, modulos, grupoNome } = await contextoFinanceiroDoPortal();
+  const { escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("bpo_dre")) notFound();
 
   const params = await searchParams;
@@ -39,7 +39,7 @@ export default async function PortalDrePage({
   const companyId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : empresas[0]?.id;
 
   const cabecalho = (
-    <PortalCabecalho titulo="DRE" descricao="demonstrativo de resultado por empresa e mês." grupoNome={grupoNome} ativo="dre" modulos={modulos} />
+    <PortalCabecalho titulo="DRE" descricao="Demonstrativo de resultado por empresa e mês." />
   );
   if (!companyId) {
     return (

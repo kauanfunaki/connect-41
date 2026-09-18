@@ -3,7 +3,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
 import { TabelaDoConsolidado } from "@/components/financeiro/FluxoDeCaixa";
-import { contextoFinanceiroDoPortal } from "../../financeiro";
+import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { dadosDoConsolidado, nomesDasEmpresas } from "@/lib/financeiro/consultas";
 import { consolidarPorEmpresa } from "@/lib/financeiro/fluxo";
 import { competenciaValida, competenciaDoInstante, rotuloDaCompetencia } from "@/lib/financeiro/periodo";
@@ -16,7 +16,7 @@ export default async function PortalRelatoriosPage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  const { escopo, modulos, grupoNome } = await contextoFinanceiroDoPortal();
+  const { escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("bpo_fluxo_caixa")) notFound();
 
   const params = await searchParams;
@@ -30,10 +30,7 @@ export default async function PortalRelatoriosPage({
     <PageContainer>
       <PortalCabecalho
         titulo="Relatório"
-        descricao={`consolidado por empresa em ${rotuloDaCompetencia(mes)}.`}
-        grupoNome={grupoNome}
-        ativo="relatorios"
-        modulos={modulos}
+        descricao={`Consolidado por empresa em ${rotuloDaCompetencia(mes)}.`}
       />
       <FiltroDePeriodo acao="/portal/relatorios" mes={mes} />
       <TabelaDoConsolidado linhas={linhas} nomes={nomes} />

@@ -31,7 +31,7 @@ export default async function PortalPendenciasPage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  const { escopo, modulos, grupoNome } = await contextoFinanceiroDoPortal();
+  const { escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("bpo_pendencias")) notFound();
 
   const params = await searchParams;
@@ -42,10 +42,7 @@ export default async function PortalPendenciasPage({
     <PageContainer>
       <PortalCabecalho
         titulo="Pendências"
-        descricao="o que a equipe precisa de você para fechar o mês."
-        grupoNome={grupoNome}
-        ativo="pendencias"
-        modulos={modulos}
+        descricao="O que a equipe precisa de você para fechar o mês."
         somenteLeitura={false}
       />
 

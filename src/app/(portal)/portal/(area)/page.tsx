@@ -1,22 +1,19 @@
 import { redirect } from "next/navigation";
-import { LogOut, FileText } from "lucide-react";
-import { getPrisma } from "@/lib/prisma";
+import { FileText } from "lucide-react";
 import { getPortalSession } from "@/lib/auth/portal";
-import { alcanceDoCliente } from "../alcance";
+import { alcanceDoCliente } from "@/app/(portal)/alcance";
 import { listarDocumentos, competenciasDisponiveis } from "@/lib/fiscal/data";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PortalDocumentosTable } from "@/components/portal/PortalDocumentosTable";
 import { PortalCompetenciaFiltro } from "@/components/portal/PortalCompetenciaFiltro";
-import { sairDoPortal } from "./login/actions";
-import { PortalNav } from "@/components/portal/PortalCabecalho";
+import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { getEnabledModuleCodes } from "@/lib/modules";
 import { AvisosDaHome } from "@/components/portal/AvisosDaHome";
 import { PushNotificationToggle } from "@/components/notificacoes/PushNotificationToggle";
 import { getVapidPublicKey } from "@/lib/vapid";
-import { salvarPushDoPortal, removerPushDoPortal } from "./actions";
+import { salvarPushDoPortal, removerPushDoPortal } from "@/app/(portal)/portal/actions";
 
 // Acervo fiscal visto pelo cliente. **Só leitura**, e por construção: não há
 // entrada de XML nem decisão de destino aqui, e as actions que fazem essas
@@ -34,33 +31,19 @@ export default async function PortalPage({
   const pagina = Math.max(1, Number(params.pagina) || 1);
   const filtro = { competencia: params.competencia || undefined };
 
-  const prisma = getPrisma();
-  const [{ documentos, total, totalLimitado, temProxima, porPagina }, competencias, grupo, modulos] = await Promise.all([
+  const [{ documentos, total, totalLimitado, temProxima, porPagina }, competencias, modulos] = await Promise.all([
     listarDocumentos(alcance, filtro, pagina),
     competenciasDisponiveis(alcance),
-    prisma.clientGroup.findUnique({ where: { id: sessao.clientGroupId }, select: { name: true } }),
     getEnabledModuleCodes(sessao.tenantId),
   ]);
 
   return (
     <PageContainer>
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <PageHeader title="Documentos Fiscais" />
-          <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
-            {grupo?.name ?? "Seus documentos"} · notas emitidas e recebidas pelas suas empresas.
-          </p>
-        </div>
-        <form action={sairDoPortal}>
-          <button
-            type="submit"
-            className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-[length:var(--fs-button)] text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors"
-          >
-            <LogOut size={15} /> Sair
-          </button>
-        </form>
-      </div>
-      <PortalNav ativo="documentos" modulos={modulos} />
+      <PortalCabecalho
+        titulo="Documentos Fiscais"
+        descricao="Notas emitidas e recebidas pelas suas empresas."
+        somenteLeitura={false}
+      />
       <AvisosDaHome
         tenantId={sessao.tenantId}
         companyIds={alcance.tipo === "EMPRESAS" ? alcance.companyIds : []}

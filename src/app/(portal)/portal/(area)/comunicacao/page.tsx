@@ -21,7 +21,7 @@ export default async function PortalComunicacaoPage({
 }: {
   searchParams: Promise<{ empresa?: string }>;
 }) {
-  const { escopo, modulos, grupoNome } = await contextoFinanceiroDoPortal();
+  const { escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("bpo_comunicacao")) notFound();
 
   // As empresas do alcance do cliente, e não as ativas do tenant: o portal é dele.
@@ -35,10 +35,7 @@ export default async function PortalComunicacaoPage({
     <PageContainer>
       <PortalCabecalho
         titulo="Conversa"
-        descricao="fale com a equipe e mande arquivos, por empresa."
-        grupoNome={grupoNome}
-        ativo="comunicacao"
-        modulos={modulos}
+        descricao="Fale com a equipe e mande arquivos, por empresa."
         somenteLeitura={false}
       />
 

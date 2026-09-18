@@ -3,7 +3,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
 import { TabelaDoRealizado, CartoesDaProjecao } from "@/components/financeiro/FluxoDeCaixa";
-import { contextoFinanceiroDoPortal } from "../../financeiro";
+import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { empresasDoSeletor, movimentosRealizados, titulosEmAberto } from "@/lib/financeiro/consultas";
 import { fluxoRealizado, projecaoPorJanela } from "@/lib/financeiro/fluxo";
 import { competenciaDoInstante, competenciasAte } from "@/lib/financeiro/periodo";
@@ -21,7 +21,7 @@ export default async function PortalFluxoDeCaixaPage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  const { escopo, modulos, grupoNome } = await contextoFinanceiroDoPortal();
+  const { escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("bpo_fluxo_caixa")) notFound();
 
   const params = await searchParams;
@@ -37,10 +37,7 @@ export default async function PortalFluxoDeCaixaPage({
     <PageContainer>
       <PortalCabecalho
         titulo="Fluxo de caixa"
-        descricao="o que entrou e saiu nos últimos seis meses, e o que vence daqui para frente."
-        grupoNome={grupoNome}
-        ativo="fluxo"
-        modulos={modulos}
+        descricao="O que entrou e saiu nos últimos seis meses, e o que vence daqui para frente."
       />
       {empresas.length > 1 && <FiltroDePeriodo acao="/portal/fluxo-de-caixa" empresas={empresas} empresaId={empresaId} permitirTodas />}
 
