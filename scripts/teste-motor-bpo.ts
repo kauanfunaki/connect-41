@@ -973,10 +973,21 @@ async function a7(tenantId: string, c: Cadastros) {
 /**
  * Um OFX montado aqui, no formato SGML que o internet banking brasileiro usa.
  *
- * **É sintético, e isso é um limite conhecido** — é o item B1 do plano de
- * testes. Ele prova que o leitor entende o formato; não prova que entende o
- * arquivo do Itaú. Um extrato de verdade pode trazer acento em latin1, FITID
- * ausente, tag fechada de outro jeito.
+ * É sintético, mas **deixou de ser um limite cego**: em 18/09/2026 o leitor foi
+ * rodado contra um extrato real do Itaú (conta corrente, 71 transações de um
+ * dia só) e leu tudo — charset windows-1252 detectado, 68 débitos e 3 créditos,
+ * nenhum FITID gerado (o banco manda), nenhum duplicado, saldo e período no
+ * lugar. `agencia` veio nula porque o arquivo não traz `<BRANCHID>`, e devolver
+ * nulo é o certo.
+ *
+ * O casamento também foi conferido com os memos de verdade, e é onde estava a
+ * dúvida real: o memo do Itaú é `PAGAMENTOS A FORNECEDORES <NOME> <CNPJ>`, sem
+ * `<NAME>` nenhum. O CNPJ **com máscara** dentro do memo casa com o documento
+ * do cadastro (90 pontos), e fornecedor sem documento cadastrado ainda casa
+ * pelo nome inteiro (80). Os dois viram sugestão forte.
+ *
+ * O arquivo real não entra no repositório: é extrato de cliente, com CNPJ de
+ * fornecedor e valor de verdade. Quem quiser repetir usa o próprio.
  */
 function ofxSintetico(transacoes: { fitId: string; data: string; valor: string; memo: string }[]): Uint8Array {
   const semTraco = (k: string) => k.replace(/-/g, "");
