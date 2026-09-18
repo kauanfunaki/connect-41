@@ -43,6 +43,12 @@ const PUBLIC_PATHS = [
   "/manifest.webmanifest",
   "/sw.js",
   "/icons/",
+  // Digital Asset Links: o Android busca isto sem sessão, no primeiro
+  // lançamento do app Android que embrulha o portal, para decidir se abre sem
+  // a barra de endereço. Um redirect para o login devolveria HTML onde ele
+  // espera JSON, e a verificação falharia em silêncio — o app abriria com a
+  // faixa do Chrome no topo e ninguém saberia por quê.
+  "/.well-known/",
   // Link público de visualização de Documentos para Clientes — o cliente que
   // recebe o e-mail não tem (e não deve precisar de) login no Connect 41. A
   // prova de acesso é o token na própria URL, validado dentro da rota.

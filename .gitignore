@@ -58,3 +58,18 @@ prisma/schema.dbpull.bak.prisma
 *.sql.gz
 backup-*.sql
 *.dump
+
+# App Android (TWA) — o que não pode entrar no repositório.
+# A keystore é o segredo que assina o app: perdê-la impede atualizar o app para
+# sempre, e vazá-la deixa qualquer um publicar em nome da 41.
+android/android.keystore
+android/*.keystore
+android/*.jks
+android/*.apk
+android/*.aab
+android/app/
+android/build/
+android/gradle*
+android/*.gradle
+android/local.properties
+android/.gradle/
