@@ -11,6 +11,7 @@ import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { listarPendencias } from "@/lib/financeiro/pendencias/consultas";
 import { ROTULO_DO_TIPO } from "@/lib/financeiro/pendencias/regras";
 import { formatInstantDate } from "@/lib/format";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 
 export const dynamic = "force-dynamic";
 
@@ -74,13 +75,13 @@ export default async function PortalPendenciasPage({
         <>
         {/* Abaixo de md, cartões: o cliente lê isto no celular, e o que importa
             é o título e o prazo — não a quarta coluna de uma tabela de 720px. */}
-        <div className="md:hidden flex flex-col gap-2">
+        <CartoesNoCelular>
           {linhas.map((l) => (
-            <div key={l.id} className="bg-surface border border-border rounded-lg px-3 py-2.5">
+            <Cartao key={l.id}>
               <Link href={`/portal/pendencias/${l.id}`} className="font-medium text-brand hover:underline break-words">
                 {l.titulo}
               </Link>
-              <span className="block text-[11.5px] text-fg-muted mt-0.5">
+              <InfoDoCartao className="mt-0.5">
                 {ROTULO_DO_TIPO[l.tipo]} · {l.empresaNome}
                 {l.anexos > 0 && (
                   <>
@@ -88,19 +89,19 @@ export default async function PortalPendenciasPage({
                     <Paperclip size={10} className="inline" /> {l.anexos}
                   </>
                 )}
-              </span>
-              <span className="block text-[11.5px] text-fg-muted tabular-nums">
+              </InfoDoCartao>
+              <InfoDoCartao className="tabular-nums">
                 prazo {l.prazo ? formatInstantDate(l.prazo) : "—"}
-              </span>
-              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+              </InfoDoCartao>
+              <PeDoCartao>
                 <SeloDoStatus status={l.status} lado="CLIENTE" />
                 <SeloDoPrazo situacao={l.situacaoDoPrazo} status={l.status} />
-              </div>
-            </div>
+              </PeDoCartao>
+            </Cartao>
           ))}
-        </div>
+        </CartoesNoCelular>
 
-        <div className="overflow-x-auto hidden md:block">
+        <TabelaNoDesktop>
           <table className="w-full min-w-[720px] text-[13px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
@@ -139,7 +140,7 @@ export default async function PortalPendenciasPage({
               ))}
             </tbody>
           </table>
-        </div>
+        </TabelaNoDesktop>
         </>
       )}
     </PageContainer>

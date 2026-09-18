@@ -4,6 +4,7 @@ import { nomeExibicao } from "@/lib/companyName";
 import { TIPO_LABEL, competenciaLegivel } from "@/lib/fiscal/rotulos";
 import { direcaoDoLancamento } from "@/lib/fiscal/documentos";
 import { documentoDaEmpresa } from "@/lib/companyTaxId";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao } from "@/components/shared/ListaResponsiva";
 import type { LinhaDoAcervo } from "@/lib/fiscal/data";
 
 type Props = {
@@ -25,10 +26,42 @@ const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL
  */
 export function PortalDocumentosTable({ documentos, total, pagina, porPagina, filtrosDaUrl }: Props) {
   const ultimaPagina = Math.max(1, Math.ceil(total / porPagina));
+  // A contraparte sai da direção do lançamento, e a direção sai do documento da
+  // empresa: calculada uma vez, serve ao cartão e à tabela.
+  const linhas = documentos.map((d) => {
+    const doc = documentoDaEmpresa(d.company);
+    const direcao = direcaoDoLancamento(doc?.digitos ?? null, {
+      emitenteDocumento: d.issuerDocument,
+      destinatarioDocumento: d.recipientDocument,
+    });
+    return {
+      d,
+      contraparte: direcao === "PAGAR" ? d.issuerName : direcao === "RECEBER" ? d.recipientName : d.issuerName,
+    };
+  });
 
   return (
     <div className="mt-4">
-      <div className="overflow-x-auto border border-border rounded-lg">
+      <CartoesNoCelular>
+        {linhas.map(({ d, contraparte }) => (
+          <Cartao key={d.id}>
+            <TopoDoCartao
+              nome={nomeExibicao(d.company)}
+              valor={d.amount === null ? "—" : MOEDA.format(Number(d.amount))}
+            />
+            <InfoDoCartao className="tabular-nums">
+              {TIPO_LABEL[d.type]} nº {d.number}
+              {d.series ? `/${d.series}` : ""}
+            </InfoDoCartao>
+            <InfoDoCartao>{contraparte ?? "—"}</InfoDoCartao>
+            <InfoDoCartao className="tabular-nums">
+              emitida em {formatCalendarDate(d.issuedAt)} · {competenciaLegivel(d.competence)}
+            </InfoDoCartao>
+          </Cartao>
+        ))}
+      </CartoesNoCelular>
+
+      <TabelaNoDesktop className="border border-border rounded-lg">
         <table className="w-full table-fixed min-w-[760px] text-[length:var(--fs-ui)]">
           <colgroup>
             <col className="w-[88px]" />
@@ -47,16 +80,7 @@ export function PortalDocumentosTable({ documentos, total, pagina, porPagina, fi
             </tr>
           </thead>
           <tbody className="divide-y divide-border bg-surface">
-            {documentos.map((d) => {
-              const doc = documentoDaEmpresa(d.company);
-              const direcao = direcaoDoLancamento(doc?.digitos ?? null, {
-                emitenteDocumento: d.issuerDocument,
-                destinatarioDocumento: d.recipientDocument,
-              });
-              const contraparte =
-                direcao === "PAGAR" ? d.issuerName : direcao === "RECEBER" ? d.recipientName : d.issuerName;
-
-              return (
+            {linhas.map(({ d, contraparte }) => (
                 <tr key={d.id}>
                   <td className="px-4 py-3 text-fg-secondary">{TIPO_LABEL[d.type]}</td>
                   <td className="px-4 py-3 text-fg tnum whitespace-nowrap">
@@ -79,11 +103,10 @@ export function PortalDocumentosTable({ documentos, total, pagina, porPagina, fi
                     )}
                   </td>
                 </tr>
-              );
-            })}
+            ))}
           </tbody>
         </table>
-      </div>
+      </TabelaNoDesktop>
 
       {ultimaPagina > 1 && (
         <div className="flex items-center justify-between mt-3 text-[length:var(--fs-ui)] text-fg-muted">

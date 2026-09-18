@@ -20,6 +20,7 @@ import { listarPendencias, RECORTES_DE_PENDENCIA, type RecorteDePendencia } from
 import { ROTULO_DO_TIPO } from "@/lib/financeiro/pendencias/regras";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { moeda } from "@/lib/financeiro/formato";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 
 export const dynamic = "force-dynamic";
 
@@ -130,13 +131,13 @@ export default async function PendenciasPage({
         <>
         {/* Abaixo de md, cartões — mesma forma da lista do portal, para os dois
             lados da mesma pendência se parecerem. */}
-        <div className="md:hidden flex flex-col gap-2">
+        <CartoesNoCelular>
           {linhas.map((l) => (
-            <div key={l.id} className="bg-surface border border-border rounded-lg px-3 py-2.5">
+            <Cartao key={l.id}>
               <Link href={`/pendencias/${l.id}`} className="font-medium text-brand hover:underline break-words">
                 {l.titulo}
               </Link>
-              <span className="block text-[11.5px] text-fg-muted mt-0.5 break-words">
+              <InfoDoCartao className="mt-0.5 break-words">
                 {ROTULO_DO_TIPO[l.tipo]} · {l.empresaNome} · {l.mensagens} {l.mensagens === 1 ? "mensagem" : "mensagens"}
                 {l.anexos > 0 && (
                   <>
@@ -144,20 +145,20 @@ export default async function PendenciasPage({
                     <Paperclip size={10} className="inline" /> {l.anexos}
                   </>
                 )}
-              </span>
-              <span className="block text-[11.5px] text-fg-muted tabular-nums">
+              </InfoDoCartao>
+              <InfoDoCartao className="tabular-nums">
                 prazo {l.prazo ? formatInstantDate(l.prazo) : "—"} · atualizada {formatInstantDate(l.atualizadaEm)}
-              </span>
-              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+              </InfoDoCartao>
+              <PeDoCartao>
                 <SeloDoStatus status={l.status} lado="EQUIPE" />
                 <SeloDoPrazo situacao={l.situacaoDoPrazo} status={l.status} />
-              </div>
-            </div>
+              </PeDoCartao>
+            </Cartao>
           ))}
           {limitado && <p className="text-[11px] text-fg-muted mt-1">Mostrando as 500 primeiras. Filtre por empresa para ver o resto.</p>}
-        </div>
+        </CartoesNoCelular>
 
-        <div className="overflow-x-auto hidden md:block">
+        <TabelaNoDesktop>
           <table className="w-full min-w-[860px] text-[13px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
@@ -199,7 +200,7 @@ export default async function PendenciasPage({
             </tbody>
           </table>
           {limitado && <p className="text-[11px] text-fg-muted mt-3">Mostrando as 500 primeiras. Filtre por empresa para ver o resto.</p>}
-        </div>
+        </TabelaNoDesktop>
         </>
       )}
     </PageContainer>

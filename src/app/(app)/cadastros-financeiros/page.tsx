@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { Input } from "@/components/ui/Input";
 import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
 import { NovaContraparte, EditarContraparte } from "@/components/financeiro/FormContraparte";
@@ -176,7 +177,51 @@ export default async function CadastrosFinanceirosPage({
           icon={<Users />}
         />
       ) : (
-        <div className="overflow-x-auto">
+        <>
+          <CartoesNoCelular>
+            {visiveis.map((c) => {
+              const n = contas.get(c.id) ?? { pagar: 0, receber: 0 };
+              return (
+                <Cartao key={c.id}>
+                  <TopoDoCartao nome={c.name} />
+                  {c.email && <InfoDoCartao>{c.email}</InfoDoCartao>}
+                  <InfoDoCartao className="tabular-nums">{documento(c.document)}</InfoDoCartao>
+                  <InfoDoCartao className="mt-1">
+                    categoria padrão {c.defaultCategory?.name ?? "—"} · centro padrão {c.defaultCostCenter?.name ?? "—"}
+                    {c.defaultCostCenter && !c.defaultCostCenter.active && (
+                      <span className="text-warning"> (inativo — não é herdado)</span>
+                    )}
+                  </InfoDoCartao>
+                  <InfoDoCartao className="tabular-nums">
+                    {n.pagar} a pagar · {n.receber} a receber
+                  </InfoDoCartao>
+                  <PeDoCartao>
+                    {c.active ? <Badge variant="success">Ativo</Badge> : <Badge variant="info">Inativo</Badge>}
+                    {podeEditar && (
+                      <span className="ml-auto">
+                        <EditarContraparte
+                          categorias={listaDeCategorias}
+                          centros={centrosAtivos}
+                          contraparte={{
+                            id: c.id,
+                            nome: c.name,
+                            documento: c.document,
+                            email: c.email,
+                            defaultCategoryId: c.defaultCategoryId,
+                            ativo: c.active,
+                            defaultCostCenterId: c.defaultCostCenterId,
+                            centroPadraoNome: c.defaultCostCenter?.name ?? null,
+                          }}
+                        />
+                      </span>
+                    )}
+                  </PeDoCartao>
+                </Cartao>
+              );
+            })}
+          </CartoesNoCelular>
+
+          <TabelaNoDesktop>
           <table className="w-full min-w-[920px] text-[13px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
@@ -235,13 +280,14 @@ export default async function CadastrosFinanceirosPage({
               })}
             </tbody>
           </table>
+          </TabelaNoDesktop>
           <p className="text-[11px] text-fg-muted mt-3">
             Inativo continua nas contas antigas e deixa de aparecer no lançamento manual. Cadastro não é apagado: a ficha é
             o que liga as notas e as contas de um mesmo fornecedor. O e-mail é para onde vai o lembrete da régua de
             cobrança — sacado sem e-mail fica fora dela. O centro padrão entra na próxima conta quando quem lança não
             escolhe um centro.
           </p>
-        </div>
+        </>
       )}
     </PageContainer>
   );
@@ -287,7 +333,27 @@ async function AbaDeCentros({
   const contrapartes = new Map(padroes.map((u) => [u.defaultCostCenterId, u._count._all]));
 
   return (
-    <div className="overflow-x-auto">
+    <>
+      <CartoesNoCelular>
+        {centros.map((c) => (
+          <Cartao key={c.id}>
+            <TopoDoCartao nome={c.name} valor={c.code ?? undefined} />
+            <InfoDoCartao className="tabular-nums mt-1">
+              {lancamentos.get(c.id) ?? 0} lançamento(s) · padrão de {contrapartes.get(c.id) ?? 0} contraparte(s)
+            </InfoDoCartao>
+            <PeDoCartao>
+              {c.active ? <Badge variant="success">Ativo</Badge> : <Badge variant="info">Inativo</Badge>}
+              {podeEditar && (
+                <span className="ml-auto">
+                  <EditarCentroDeCusto centro={{ id: c.id, nome: c.name, codigo: c.code, ativo: c.active }} />
+                </span>
+              )}
+            </PeDoCartao>
+          </Cartao>
+        ))}
+      </CartoesNoCelular>
+
+      <TabelaNoDesktop>
       <table className="w-full min-w-[720px] text-[13px]">
         <thead>
           <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
@@ -316,11 +382,12 @@ async function AbaDeCentros({
           ))}
         </tbody>
       </table>
+      </TabelaNoDesktop>
       <p className="text-[11px] text-fg-muted mt-3">
         Um centro por lançamento, sem rateio. Inativo some dos seletores e da herança, e continua na DRE por centro com o que
         já foi lançado nele. Centro de custo não é apagado. Na importação por CSV, a coluna <code>centro_de_custo</code> casa
         pelo nome ou pelo código.
       </p>
-    </div>
+    </>
   );
 }

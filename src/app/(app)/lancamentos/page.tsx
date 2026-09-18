@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
 import { FormLancamentoManual } from "@/components/financeiro/FormLancamentoManual";
 import { ImportarLancamentosCsv } from "@/components/financeiro/ImportarLancamentosCsv";
@@ -207,8 +208,49 @@ async function ListaDeManuais({
     );
   }
 
+  // Renegociado e perda são cancelamentos com nome: a dívida seguiu num acordo,
+  // ou alguém decidiu dar por perdida — "cancelado" diria outra coisa.
+  const statusDe = (l: (typeof linhas)[number]) =>
+    l.closeReason === "RENEGOCIADO"
+      ? { rotulo: "Renegociado", variante: "info" as const }
+      : l.closeReason === "PERDA"
+        ? { rotulo: "Perda", variante: "danger" as const }
+        : STATUS[l.status]!;
+
   return (
-    <div className="overflow-x-auto">
+    <>
+      <CartoesNoCelular>
+        {linhas.map((l) => {
+          const status = statusDe(l);
+          return (
+            <Cartao key={l.id}>
+              <TopoDoCartao nome={l.counterparty.name} valor={moeda(centavosDeDecimal(l.amount))} />
+              {l.description && <InfoDoCartao>{l.description}</InfoDoCartao>}
+              <InfoDoCartao className="mt-1 tabular-nums">
+                vence {formatInstantDate(l.dueDate)}
+                {l.paidAt && ` · liquidado em ${formatInstantDate(l.paidAt)}`}
+              </InfoDoCartao>
+              <InfoDoCartao>
+                {l.category?.name ?? "sem categoria"}
+                {l.costCenter?.name ? ` · ${l.costCenter.name}` : ""}
+              </InfoDoCartao>
+              <PeDoCartao>
+                <span className={`text-[12px] font-medium ${l.kind === "PAGAR" ? "text-danger" : "text-success"}`}>
+                  {l.kind === "PAGAR" ? "A pagar" : "A receber"}
+                </span>
+                <Badge variant={status.variante}>{status.rotulo}</Badge>
+                {podeCancelar && podeCancelarManual(l).pode && (
+                  <span className="ml-auto">
+                    <CancelarLancamento entryId={l.id} />
+                  </span>
+                )}
+              </PeDoCartao>
+            </Cartao>
+          );
+        })}
+      </CartoesNoCelular>
+
+      <TabelaNoDesktop>
       <table className="w-full min-w-[880px] text-[13px]">
         <thead>
           <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
@@ -224,14 +266,7 @@ async function ListaDeManuais({
         </thead>
         <tbody>
           {linhas.map((l) => {
-            // Renegociado e perda são cancelamentos com nome: a dívida seguiu num
-            // acordo, ou alguém decidiu dar por perdida — "cancelado" diria outra coisa.
-            const status =
-              l.closeReason === "RENEGOCIADO"
-                ? { rotulo: "Renegociado", variante: "info" as const }
-                : l.closeReason === "PERDA"
-                  ? { rotulo: "Perda", variante: "danger" as const }
-                  : STATUS[l.status]!;
+            const status = statusDe(l);
             return (
               <tr key={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
                 <td className={`py-2.5 pr-3 text-[12px] font-medium ${l.kind === "PAGAR" ? "text-danger" : "text-success"}`}>
@@ -259,10 +294,11 @@ async function ListaDeManuais({
           })}
         </tbody>
       </table>
+      </TabelaNoDesktop>
       <p className="text-[11px] text-fg-muted mt-3">
         Lançamento não é apagado: cancelar tira dos totais e fica no histórico de auditoria. A baixa de um lançamento
         em aberto é feita em Contas a pagar ou a receber, como a de qualquer conta.
       </p>
-    </div>
+    </>
   );
 }

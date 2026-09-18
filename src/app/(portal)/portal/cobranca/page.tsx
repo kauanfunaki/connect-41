@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { SeloDaCobranca, SeloDoAcordo } from "@/components/cobranca/SeloDaCobranca";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { formatInstantDate } from "@/lib/format";
 import { moeda } from "@/lib/financeiro/formato";
@@ -54,7 +55,30 @@ export default async function PortalCobrancaPage() {
           <EmptyState icon={<Handshake />} title="Nenhum título vencido" description="Quando um cliente das suas empresas atrasar um pagamento, o título aparece aqui." />
         </Card>
       ) : (
-        <div className="overflow-x-auto mb-6">
+        <div className="mb-6">
+          <CartoesNoCelular>
+            {titulos.map((t) => (
+              <Cartao key={t.id}>
+                <TopoDoCartao nome={t.sacadoNome} valor={moeda(t.valorCentavos)} />
+                {t.descricao && <InfoDoCartao>{t.descricao}</InfoDoCartao>}
+                <InfoDoCartao className="mt-1 tabular-nums">
+                  vence {formatInstantDate(t.vencimento)} · {FAIXAS_DE_ATRASO.find((f) => f.chave === t.faixa)?.rotulo}
+                </InfoDoCartao>
+                <InfoDoCartao>{t.empresaNome}</InfoDoCartao>
+                {t.ultimoContato && (
+                  <InfoDoCartao className="tabular-nums">
+                    último contato {formatInstantDate(t.ultimoContato.em)} · {ROTULO_DO_CANAL[t.ultimoContato.canal]} ·{" "}
+                    {ROTULO_DO_RESULTADO[t.ultimoContato.resultado]}
+                  </InfoDoCartao>
+                )}
+                <PeDoCartao>
+                  <SeloDaCobranca situacao={t.situacao} />
+                </PeDoCartao>
+              </Cartao>
+            ))}
+          </CartoesNoCelular>
+
+          <TabelaNoDesktop>
           <table className="w-full min-w-[860px] text-[13px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
@@ -90,6 +114,7 @@ export default async function PortalCobrancaPage() {
               ))}
             </tbody>
           </table>
+          </TabelaNoDesktop>
         </div>
       )}
 

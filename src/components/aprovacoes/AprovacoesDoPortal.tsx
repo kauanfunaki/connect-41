@@ -10,6 +10,7 @@ import { formatInstantDate } from "@/lib/format";
 import { moeda } from "@/lib/financeiro/formato";
 import { aprovarContas, reprovarConta } from "@/app/(portal)/portal/aprovacoes/actions";
 import { ReprovarComMotivo } from "./ReprovarComMotivo";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 
 export type ContaParaAprovar = {
   id: string;
@@ -86,9 +87,9 @@ export function AprovacoesDoPortal({ contas }: { contas: ContaParaAprovar[] }) {
       {/* Abaixo de md, cartões. Aprovar pagamento é o que o cliente mais faz
           longe do computador, e a tabela de 820px escondia o valor e os botões
           atrás de uma rolagem lateral. */}
-      <div className="md:hidden flex flex-col gap-2">
+      <CartoesNoCelular>
         {contas.map((c) => (
-          <div key={c.id} className="bg-surface border border-border rounded-lg px-3 py-2.5">
+          <Cartao key={c.id}>
             <div className="flex items-start gap-2.5">
               {c.dentroDoTeto && (
                 <Checkbox
@@ -99,17 +100,14 @@ export function AprovacoesDoPortal({ contas }: { contas: ContaParaAprovar[] }) {
                 />
               )}
               <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-2">
-                  <span className="font-medium break-words">{c.fornecedor}</span>
-                  <span className="tabular-nums font-semibold whitespace-nowrap">{moeda(c.valorCentavos)}</span>
-                </div>
-                {c.descricao && <span className="block text-[11.5px] text-fg-muted break-words">{c.descricao}</span>}
-                <span className="block text-[11.5px] text-fg-muted mt-1 tabular-nums">
+                <TopoDoCartao nome={c.fornecedor} valor={moeda(c.valorCentavos)} />
+                {c.descricao && <InfoDoCartao className="break-words">{c.descricao}</InfoDoCartao>}
+                <InfoDoCartao className="mt-1 tabular-nums">
                   vence {formatInstantDate(c.vencimento)} · {c.empresa}
-                </span>
-                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                </InfoDoCartao>
+                <PeDoCartao>
                   {c.dentroDoTeto ? <Badge variant="success">Dentro do teto</Badge> : <Badge variant="warning">Fora do teto</Badge>}
-                </div>
+                </PeDoCartao>
                 <div className="mt-2">
                   {c.dentroDoTeto ? (
                     <div className="flex flex-wrap items-center gap-1.5">
@@ -136,11 +134,11 @@ export function AprovacoesDoPortal({ contas }: { contas: ContaParaAprovar[] }) {
                 </div>
               </div>
             </div>
-          </div>
+          </Cartao>
         ))}
-      </div>
+      </CartoesNoCelular>
 
-      <div className="overflow-x-auto hidden md:block">
+      <TabelaNoDesktop>
         <table className="w-full min-w-[820px] text-[13px]">
           <thead>
             <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
@@ -199,7 +197,7 @@ export function AprovacoesDoPortal({ contas }: { contas: ContaParaAprovar[] }) {
             ))}
           </tbody>
         </table>
-      </div>
+      </TabelaNoDesktop>
       {dialog}
     </div>
   );

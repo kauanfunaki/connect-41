@@ -14,6 +14,7 @@ import { totalizar, type SituacaoDaConta } from "@/lib/financeiro/contas";
 import { saoPauloParts } from "@/lib/agenda";
 import { formatInstantDate } from "@/lib/format";
 import { moeda } from "@/lib/financeiro/formato";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 
 const SITUACAO: Record<SituacaoDaConta, { rotulo: string; variante: "danger" | "warning" | "info" | "success" }> = {
   VENCIDA: { rotulo: "Vencida", variante: "danger" },
@@ -71,23 +72,20 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
         {/* Abaixo de md, cartões. O portal é a tela que o cliente abre no
             celular — a tabela de 760px obrigava a rolar de lado para chegar ao
             valor, que é o que ele veio ver. */}
-        <div className="md:hidden flex flex-col gap-2">
+        <CartoesNoCelular>
           {contas.map((c) => (
-            <div key={c.id} className="bg-surface border border-border rounded-lg px-3 py-2.5">
-              <div className="flex items-start justify-between gap-2">
-                <span className="font-medium break-words">{c.contraparteNome}</span>
-                <span className="tabular-nums font-semibold whitespace-nowrap">{moeda(c.valorCentavos)}</span>
-              </div>
-              {c.descricao && <span className="block text-[11.5px] text-fg-muted break-words">{c.descricao}</span>}
-              <span className="block text-[11.5px] text-fg-muted mt-1 tabular-nums">
+            <Cartao key={c.id}>
+              <TopoDoCartao nome={c.contraparteNome} valor={moeda(c.valorCentavos)} />
+              {c.descricao && <InfoDoCartao className="break-words">{c.descricao}</InfoDoCartao>}
+              <InfoDoCartao className="mt-1 tabular-nums">
                 vence {formatInstantDate(c.vencimento)}
                 {c.pagoEm && ` · liquidada em ${formatInstantDate(c.pagoEm)}`}
-              </span>
-              <span className="block text-[11.5px] text-fg-muted break-words">
+              </InfoDoCartao>
+              <InfoDoCartao className="break-words">
                 {c.empresaNome}
                 {c.categoriaNome ? ` · ${c.categoriaNome}` : ""}
-              </span>
-              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+              </InfoDoCartao>
+              <PeDoCartao>
                 <Badge variant={SITUACAO[c.situacao].variante}>{SITUACAO[c.situacao].rotulo}</Badge>
                 {c.aprovacao &&
                   (c.aprovacao === "AGUARDANDO" && linkDaAprovacao ? (
@@ -97,12 +95,12 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
                   ) : (
                     <SeloDaAprovacao status={c.aprovacao} />
                   ))}
-              </div>
-            </div>
+              </PeDoCartao>
+            </Cartao>
           ))}
-        </div>
+        </CartoesNoCelular>
 
-        <div className="overflow-x-auto hidden md:block">
+        <TabelaNoDesktop>
           <table className="w-full min-w-[760px] text-[13px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
@@ -147,7 +145,7 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </TabelaNoDesktop>
 
         {contas.length >= 500 && (
           <p className="text-[11px] text-fg-muted mt-3">Mostrando as 500 contas de vencimento mais recente.</p>

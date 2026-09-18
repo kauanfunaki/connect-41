@@ -11,6 +11,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { FiltroDePeriodo, AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { DecisaoDaEquipe } from "@/components/aprovacoes/DecisaoDaEquipe";
 import { HistoricoDaAprovacao, SeloDaAprovacao, type EventoDaAprovacao } from "@/components/aprovacoes/HistoricoDaAprovacao";
@@ -152,6 +153,33 @@ async function Fila({
   const aguardando = soma("AGUARDANDO");
   const reprovadas = soma("REPROVADO");
 
+  // O veredito e o histórico de cada linha, calculados uma vez: cartão e tabela
+  // mostram a mesma decisão, e `podeDecidir` não roda duas vezes por conta.
+  const decididas = linhas.slice(0, LIMITE).map((l) => {
+    const valorCentavos = centavosDeDecimal(l.amount);
+    const veredito = podeDecidir({ ...l, valorCentavos }, { tipo: "EQUIPE", userId, gerenciaOSetor: gerencia }, "APROVAR");
+    const eventos: EventoDaAprovacao[] = l.approvalEvents.map((e) => ({
+      id: e.id,
+      decisao: e.decision,
+      autor: e.actorPortal?.name ?? e.actorUser?.name ?? "—",
+      lado: e.actorPortal ? "cliente" : "equipe",
+      motivo: e.reason,
+      em: e.createdAt,
+    }));
+    return {
+      l,
+      valorCentavos,
+      descricao: `${l.counterparty.name} · ${moeda(valorCentavos)}`,
+      decidir: (l.approvalStatus !== "AGUARDANDO" || !podeAgir
+        ? null
+        : veredito.pode
+          ? true
+          : veredito.motivo) as true | string | null,
+      eventos,
+      ultimoMotivo: [...eventos].reverse().find((e) => e.decisao === "REPROVADO")?.motivo,
+    };
+  });
+
   const hrefSituacao = (chave: string) => {
     const q = new URLSearchParams();
     if (empresaId) q.set("empresa", empresaId);
@@ -186,7 +214,36 @@ async function Fila({
           description="Contas a pagar lançadas em empresas com alçada entram aqui sozinhas. Uma conta antiga pode ser enviada pela tela de contas a pagar."
         />
       ) : (
-        <div className="overflow-x-auto">
+        <>
+          <CartoesNoCelular>
+            {decididas.map(({ l, valorCentavos, descricao, decidir, eventos, ultimoMotivo }) => (
+              <Cartao key={l.id}>
+                <TopoDoCartao nome={l.counterparty.name} valor={moeda(valorCentavos)} />
+                {l.description && <InfoDoCartao>{l.description}</InfoDoCartao>}
+                <InfoDoCartao className="mt-1 tabular-nums">vence {formatInstantDate(l.dueDate)}</InfoDoCartao>
+                <InfoDoCartao>
+                  {nomeExibicao(l.company)} · lançada por {l.createdBy?.name ?? "—"}
+                </InfoDoCartao>
+                {l.approvalStatus === "REPROVADO" && ultimoMotivo && (
+                  <span className="block text-[11px] text-danger mt-1 break-words">“{ultimoMotivo}”</span>
+                )}
+                <PeDoCartao>
+                  <SeloDaAprovacao status={l.approvalStatus} />
+                  <HistoricoDaAprovacao eventos={eventos} />
+                </PeDoCartao>
+                <div className="mt-2">
+                  <DecisaoDaEquipe
+                    entryId={l.id}
+                    descricao={descricao}
+                    decidir={decidir}
+                    reenviar={podeAgir && l.approvalStatus === "REPROVADO" && podeEnviarParaAprovacao(l).pode}
+                  />
+                </div>
+              </Cartao>
+            ))}
+          </CartoesNoCelular>
+
+          <TabelaNoDesktop>
           <table className="w-full min-w-[960px] text-[13px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
@@ -199,26 +256,7 @@ async function Fila({
               </tr>
             </thead>
             <tbody>
-              {linhas.slice(0, LIMITE).map((l) => {
-                const valorCentavos = centavosDeDecimal(l.amount);
-                const descricao = `${l.counterparty.name} · ${moeda(valorCentavos)}`;
-                const veredito = podeDecidir(
-                  { ...l, valorCentavos },
-                  { tipo: "EQUIPE", userId, gerenciaOSetor: gerencia },
-                  "APROVAR"
-                );
-                const decidir: true | string | null =
-                  l.approvalStatus !== "AGUARDANDO" || !podeAgir ? null : veredito.pode ? true : veredito.motivo;
-                const eventos: EventoDaAprovacao[] = l.approvalEvents.map((e) => ({
-                  id: e.id,
-                  decisao: e.decision,
-                  autor: e.actorPortal?.name ?? e.actorUser?.name ?? "—",
-                  lado: e.actorPortal ? "cliente" : "equipe",
-                  motivo: e.reason,
-                  em: e.createdAt,
-                }));
-                const ultimoMotivo = [...eventos].reverse().find((e) => e.decisao === "REPROVADO")?.motivo;
-                return (
+              {decididas.map(({ l, valorCentavos, descricao, decidir, eventos, ultimoMotivo }) => (
                   <tr key={l.id} className="border-b border-border-soft align-top">
                     <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">{formatInstantDate(l.dueDate)}</td>
                     <td className="py-2.5 pr-3">
@@ -244,12 +282,12 @@ async function Fila({
                       />
                     </td>
                   </tr>
-                );
-              })}
+              ))}
             </tbody>
           </table>
+          </TabelaNoDesktop>
           {linhas.length > LIMITE && <p className="text-[11px] text-fg-muted mt-3">Mostrando as {LIMITE} primeiras. Filtre por empresa.</p>}
-        </div>
+        </>
       )}
     </>
   );
@@ -301,7 +339,32 @@ async function Alcadas({
       {alcadas.length === 0 ? (
         <EmptyState icon={<ShieldCheck />} title="Nenhuma alçada cadastrada" description="Sem alçada, as contas não entram em aprovação sozinhas." />
       ) : (
-        <div className="overflow-x-auto">
+        <>
+          <CartoesNoCelular>
+            {alcadas.map((a) => (
+              <Cartao key={a.id}>
+                <TopoDoCartao nome={nomeExibicao(a.company)} valor={moeda(centavosDeDecimal(a.maxAmount))} />
+                <InfoDoCartao className="mt-1">
+                  {a.portalUser.name} · {a.portalUser.email}
+                </InfoDoCartao>
+                <PeDoCartao>
+                  {/* Alçada ativa de usuário desativado não conta — ver `whereDaAlcadaValida`. */}
+                  {!a.portalUser.active ? (
+                    <Badge variant="warning">Usuário inativo</Badge>
+                  ) : a.active ? (
+                    <Badge variant="success">Ativa</Badge>
+                  ) : (
+                    <Badge variant="info">Inativa</Badge>
+                  )}
+                  <span className="ml-auto">
+                    <AlternarAlcada id={a.id} ativa={a.active} />
+                  </span>
+                </PeDoCartao>
+              </Cartao>
+            ))}
+          </CartoesNoCelular>
+
+          <TabelaNoDesktop>
           <table className="w-full min-w-[720px] text-[13px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
@@ -338,7 +401,8 @@ async function Alcadas({
               ))}
             </tbody>
           </table>
-        </div>
+          </TabelaNoDesktop>
+        </>
       )}
     </>
   );

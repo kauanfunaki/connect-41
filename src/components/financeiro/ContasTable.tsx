@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 // Constante de módulo comum, e não do componente de cliente: importada de um
 // arquivo "use client", chegaria aqui como referência de cliente, não string.
 import { FORM_DO_CENTRO } from "@/lib/financeiro/centroDeCusto";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 
 const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -145,9 +146,9 @@ export function ContasTable({
           880px: no celular, rolar de lado para ver o valor da conta é pior que
           não ter a coluna. O cartão põe contraparte e valor na mesma linha, que
           é o par que se lê primeiro. */}
-      <div className="md:hidden flex flex-col gap-2">
+      <CartoesNoCelular>
         {linhas.map((l) => (
-          <div key={l.id} className="bg-surface border border-border rounded-lg px-3 py-2.5">
+          <Cartao key={l.id}>
             <div className="flex items-start gap-2.5">
               {selecionarCentro && (
                 <Checkbox
@@ -159,34 +160,31 @@ export function ContasTable({
                 />
               )}
               <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-2">
-                  <span className="font-medium break-words">{l.contraparteNome}</span>
-                  <span className="tabular-nums font-semibold whitespace-nowrap">{moeda(l.valorCentavos)}</span>
-                </div>
-                {l.descricao && <span className="block text-[11.5px] text-fg-muted break-words">{l.descricao}</span>}
-                <span className="block text-[11.5px] text-fg-muted mt-1 tabular-nums">
+                <TopoDoCartao nome={l.contraparteNome} valor={moeda(l.valorCentavos)} />
+                {l.descricao && <InfoDoCartao className="break-words">{l.descricao}</InfoDoCartao>}
+                <InfoDoCartao className="mt-1 tabular-nums">
                   vence {formatInstantDate(l.vencimento)}
                   {l.pagoEm && ` · pago em ${formatInstantDate(l.pagoEm)}`} · comp. {l.competencia}
-                </span>
-                <span className="block text-[11.5px] text-fg-muted break-words">
+                </InfoDoCartao>
+                <InfoDoCartao className="break-words">
                   {l.empresaNome}
                   {l.categoriaNome ? ` · ${l.categoriaNome}` : ""}
                   {mostrarCentro && l.centroDeCustoNome ? ` · ${l.centroDeCustoNome}` : ""}
-                </span>
+                </InfoDoCartao>
                 {!l.categoriaNome && (
                   <span className="inline-flex items-center gap-1 text-warning text-[11.5px] mt-0.5">
                     <AlertCircle size={12} /> sem categoria
                   </span>
                 )}
-                <div className="flex flex-wrap items-center gap-2 mt-2">{selos(l)}</div>
+                <PeDoCartao>{selos(l)}</PeDoCartao>
                 <div className="mt-2">{acoes(l)}</div>
               </div>
             </div>
-          </div>
+          </Cartao>
         ))}
-      </div>
+      </CartoesNoCelular>
 
-      <div className="overflow-x-auto hidden md:block">
+      <TabelaNoDesktop>
       <table className="w-full min-w-[880px] text-[13px]">
         <thead>
           <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
@@ -251,7 +249,7 @@ export function ContasTable({
           ))}
         </tbody>
       </table>
-      </div>
+      </TabelaNoDesktop>
     </>
   );
 }

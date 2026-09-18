@@ -16,6 +16,7 @@ import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { SeloDaCobranca, SeloDoAcordo } from "@/components/cobranca/SeloDaCobranca";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { AcaoComMotivo } from "@/components/cobranca/AcaoComMotivo";
 import { ConfigDaRegua, EmpresaNaRegua } from "@/components/cobranca/ConfigDaRegua";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
@@ -220,8 +221,57 @@ async function Fila({
 }
 
 function TabelaDaFila({ linhas, hojeKey }: { linhas: LinhaDeCobranca[]; hojeKey: string }) {
+  // A régua em texto curto: no celular não há coluna para o motivo por extenso.
+  const regua = (l: LinhaDeCobranca) =>
+    l.regua.enviar !== null ? `passo de ${l.regua.enviar} dias` : ROTULO_DO_MOTIVO[l.regua.motivo];
+
   return (
-    <div className="overflow-x-auto">
+    <>
+      <CartoesNoCelular>
+        {linhas.map((l) => (
+          <Cartao key={l.id}>
+            <TopoDoCartao
+              nome={
+                <Link href={`/cobranca/${l.id}`} className="text-brand hover:underline">
+                  {l.sacadoNome}
+                </Link>
+              }
+              valor={moeda(l.valorCentavos)}
+            />
+            <InfoDoCartao>{l.empresaNome}</InfoDoCartao>
+            <InfoDoCartao className="mt-1 tabular-nums">
+              venceu {formatInstantDate(l.vencimento)} · {l.diasDeAtraso === 1 ? "1 dia" : `${l.diasDeAtraso} dias`} de atraso
+              {l.parcelaDeAcordo && " · parcela de acordo"}
+            </InfoDoCartao>
+            {l.acao.quandoKey && (
+              <InfoDoCartao className="tabular-nums">
+                próxima ação{" "}
+                <span className={l.acao.quandoKey < hojeKey ? "text-danger" : l.acao.paraHoje ? "text-warning font-medium" : ""}>
+                  {dataDaChave(l.acao.quandoKey)}
+                </span>
+                {l.responsavelNome ? ` · ${l.responsavelNome}` : ""}
+              </InfoDoCartao>
+            )}
+            <InfoDoCartao className={l.regua.enviar === null && l.regua.motivo === "SEM_EMAIL" ? "text-warning" : ""}>
+              {regua(l)}
+            </InfoDoCartao>
+            {l.ultimoContato && (
+              <InfoDoCartao className="tabular-nums">
+                último contato {formatInstantDate(l.ultimoContato.em)} · {ROTULO_DO_CANAL[l.ultimoContato.canal]} ·{" "}
+                {ROTULO_DO_RESULTADO[l.ultimoContato.resultado]}
+              </InfoDoCartao>
+            )}
+            <PeDoCartao>
+              <SeloDaCobranca situacao={l.situacao} />
+              <Link href={`/cobranca/${l.id}`} className="text-brand hover:underline text-[12px] ml-auto">
+                abrir
+              </Link>
+            </PeDoCartao>
+          </Cartao>
+        ))}
+      </CartoesNoCelular>
+
+      <TabelaNoDesktop>
       <table className="w-full min-w-[1080px] text-[13px]">
         <thead>
           <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
@@ -286,7 +336,8 @@ function TabelaDaFila({ linhas, hojeKey }: { linhas: LinhaDeCobranca[]; hojeKey:
           ))}
         </tbody>
       </table>
-    </div>
+      </TabelaNoDesktop>
+    </>
   );
 }
 
@@ -508,7 +559,32 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
       {d.envios.length === 0 ? (
         <EmptyState icon={<Mail />} title="Nenhum lembrete enviado" description="Os envios da régua aparecem aqui, com erro quando o servidor de e-mail recusou." />
       ) : (
-        <div className="overflow-x-auto">
+        <>
+          <CartoesNoCelular>
+            {d.envios.map((e) => (
+              <Cartao key={e.id}>
+                <TopoDoCartao
+                  nome={
+                    <Link href={`/cobranca/${e.entryId}`} className="hover:underline">
+                      {e.sacadoNome}
+                    </Link>
+                  }
+                  valor={moeda(e.valorCentavos)}
+                />
+                <InfoDoCartao>{e.empresaNome}</InfoDoCartao>
+                <InfoDoCartao className="mt-1 tabular-nums">
+                  {formatInstantDateTime(e.em)} · passo de {e.passo} dias
+                </InfoDoCartao>
+                <InfoDoCartao>para {e.para}</InfoDoCartao>
+                <PeDoCartao>
+                  {e.ok ? <Badge variant="success">Enviado</Badge> : <Badge variant="danger">Erro</Badge>}
+                </PeDoCartao>
+                {!e.ok && e.erro && <span className="block text-[11px] text-danger mt-1 break-words">{e.erro}</span>}
+              </Cartao>
+            ))}
+          </CartoesNoCelular>
+
+          <TabelaNoDesktop>
           <table className="w-full min-w-[880px] text-[13px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
@@ -541,7 +617,8 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
               ))}
             </tbody>
           </table>
-        </div>
+          </TabelaNoDesktop>
+        </>
       )}
     </>
   );
