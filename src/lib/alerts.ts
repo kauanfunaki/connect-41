@@ -9,6 +9,15 @@ import { getPrisma } from "@/lib/prisma";
 import { notifySector, notifyUser } from "@/lib/notifications";
 import { statusPrazoPagamento } from "@/lib/rescisaoChecklist";
 import { calcularValidade } from "@/lib/relatoriosRH";
+import { saoPauloParts } from "@/lib/agenda";
+import { nomeExibicao } from "@/lib/companyName";
+import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { getModuleDef } from "@/lib/module-catalog";
+import { centavosDeDecimal } from "@/lib/financeiro/contas";
+import { avisoDeContasAPagar, avisoDeOrcamento, avisoDePendenciasVencidas, maiorEstouro } from "@/lib/financeiro/alertas";
+import { serieEconomica } from "@/lib/dre/dataEconomica";
+import { orcamentosAprovados, MODULO_DE_ORCAMENTO } from "@/lib/dre/orcamento/dados";
+import { porGrupoOrcado } from "@/lib/dre/orcamento/grade";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -254,6 +263,176 @@ async function checkAdmissoesParadas(tenantId: string, today: Date): Promise<num
   return sent;
 }
 
+// ─── Financeiro (18/09) ──────────────────────────────────────────────────────
+//
+// As checagens acima são de DP e nasceram antes dos módulos; as três abaixo são
+// do BPO e **só rodam com o módulo ligado** no cliente. As regras de texto e de
+// estouro são puras, em `src/lib/financeiro/alertas.ts`, com teste.
+
+const MODULO_CONTAS_PAGAR = "bpo_contas_pagar";
+const MODULO_PENDENCIAS = "bpo_pendencias";
+
+/** Abaixo disso, estouro de orçamento é troco de arredondamento, não notícia. */
+const ESTOURO_MINIMO_CENTAVOS = 100_00;
+
+function setorPadrao(code: string): string {
+  return getModuleDef(code)?.sectorCode ?? "bpo";
+}
+
+/**
+ * Reserva um aviso cuja chave já carrega o **dia de São Paulo** (ou a
+ * competência).
+ *
+ * O `tryDispatch` dedupe pelo dia UTC, que vira às 21h de Brasília: sem isto, o
+ * aviso das contas de hoje sairia de novo às 21h, com o mesmo texto. Aqui a
+ * pergunta é "esta chave já saiu alguma vez?", e a chave é única por dia civil
+ * daqui.
+ */
+async function reservarPorChave(tenantId: string, alertKey: string, today: Date): Promise<boolean> {
+  const prisma = getPrisma();
+  const jaSaiu = await prisma.alertDispatch.findFirst({ where: { tenantId, alertKey }, select: { id: true } });
+  if (jaSaiu) return false;
+  return tryDispatch(tenantId, alertKey, today);
+}
+
+/** Um dia antes, em chave de dia civil (`AAAA-MM-DD`). */
+function diaAnterior(dateKey: string): string {
+  const [ano, mes, dia] = dateKey.split("-").map(Number);
+  const d = new Date(Date.UTC(ano!, mes! - 1, dia! - 1));
+  return d.toISOString().slice(0, 10);
+}
+
+// O que vence hoje e o que venceu ontem e segue em aberto, num aviso só para o
+// setor que opera as contas a pagar.
+async function checkContasAPagar(tenantId: string, today: Date): Promise<number> {
+  if (!(await isModuleEnabled(tenantId, MODULO_CONTAS_PAGAR))) return 0;
+
+  const hojeKey = saoPauloParts(new Date()).dateKey;
+  const ontemKey = diaAnterior(hojeKey);
+  const alertKey = `FINANCE_CONTAS_DIA:${hojeKey}`;
+  const prisma = getPrisma();
+
+  // A pergunta barata primeiro: já avisei hoje? O motor roda a cada 15 minutos, e
+  // sem isto a consulta das contas sairia 96 vezes por dia para nada. Reservar
+  // aqui, porém, seria pior: numa manhã sem vencimento a chave queimaria, e a
+  // conta lançada às 10h não avisaria ninguém.
+  if (await prisma.alertDispatch.findFirst({ where: { tenantId, alertKey }, select: { id: true } })) return 0;
+
+  const contas = await prisma.financeEntry.findMany({
+    where: {
+      tenantId,
+      kind: "PAGAR",
+      status: { in: ["PROVISORIO", "CONFERIDO"] },
+      paidAt: null,
+      dueDate: { gte: new Date(`${ontemKey}T00:00:00-03:00`), lte: new Date(`${hojeKey}T23:59:59.999-03:00`) },
+    },
+    select: { amount: true, dueDate: true },
+  });
+
+  const resumo = { venceHoje: 0, totalHoje: 0, venceramOntem: 0, totalOntem: 0 };
+  for (const c of contas) {
+    const dia = saoPauloParts(c.dueDate).dateKey;
+    const centavos = centavosDeDecimal(c.amount);
+    if (dia === hojeKey) {
+      resumo.venceHoje += 1;
+      resumo.totalHoje += centavos;
+    } else if (dia === ontemKey) {
+      resumo.venceramOntem += 1;
+      resumo.totalOntem += centavos;
+    }
+  }
+
+  const message = avisoDeContasAPagar(resumo);
+  if (!message) return 0;
+  if (!(await reservarPorChave(tenantId, alertKey, today))) return 0;
+
+  const setor = (await setorDoModulo(tenantId, MODULO_CONTAS_PAGAR)) ?? setorPadrao(MODULO_CONTAS_PAGAR);
+  await notifySector(setor, { tenantId, type: "FINANCE_CONTAS_DIA", message });
+  return 1;
+}
+
+// Pendência vencida sem resposta avisa **quem a abriu**, não o setor: o cliente
+// já recebe o lembrete por e-mail (ver `pendencias/lembrete.ts`), e quem cobra é
+// quem pediu.
+async function checkPendenciasVencidas(tenantId: string, today: Date): Promise<number> {
+  if (!(await isModuleEnabled(tenantId, MODULO_PENDENCIAS))) return 0;
+
+  const hojeKey = saoPauloParts(new Date()).dateKey;
+  const prisma = getPrisma();
+  const porAutor = await prisma.clientRequest.groupBy({
+    by: ["createdById"],
+    where: {
+      tenantId,
+      status: "ABERTA",
+      dueDate: { lt: new Date(`${hojeKey}T00:00:00-03:00`) },
+      createdById: { not: null },
+    },
+    _count: { _all: true },
+  });
+
+  let sent = 0;
+  for (const linha of porAutor) {
+    const userId = linha.createdById;
+    if (!userId) continue;
+    const message = avisoDePendenciasVencidas(linha._count._all);
+    if (!message) continue;
+    if (!(await reservarPorChave(tenantId, `PENDENCIAS_VENCIDAS:${userId}:${hojeKey}`, today))) continue;
+    await notifyUser(userId, { tenantId, type: "PENDENCIAS_VENCIDAS", message });
+    sent++;
+  }
+  return sent;
+}
+
+// Orçamento estourado no mês: uma vez por empresa e por competência — o estouro
+// não desfaz, e repetir todo dia seria cobrar a mesma coisa trinta vezes.
+//
+// Só as empresas com versão APROVADA do ano entram na conta, e a DRE do mês só é
+// montada para quem ainda não foi avisado: é a parte cara da checagem.
+async function checkOrcamentoEstourado(tenantId: string, today: Date): Promise<number> {
+  if (!(await isModuleEnabled(tenantId, MODULO_DE_ORCAMENTO))) return 0;
+
+  const hojeKey = saoPauloParts(new Date()).dateKey;
+  const competencia = hojeKey.slice(0, 7);
+  const ano = Number(competencia.slice(0, 4));
+  const mes = Number(competencia.slice(5, 7));
+
+  const prisma = getPrisma();
+  const versoes = await prisma.budget.findMany({
+    where: { tenantId, year: ano, status: "APROVADO" },
+    select: { companyId: true, company: { select: { name: true, displayName: true } } },
+    distinct: ["companyId"],
+  });
+  if (versoes.length === 0) return 0;
+
+  const setor = (await setorDoModulo(tenantId, MODULO_DE_ORCAMENTO)) ?? setorPadrao(MODULO_DE_ORCAMENTO);
+  let sent = 0;
+
+  for (const v of versoes) {
+    const alertKey = `ORCAMENTO_ESTOURADO:${v.companyId}:${competencia}`;
+    const jaSaiu = await prisma.alertDispatch.findFirst({ where: { tenantId, alertKey }, select: { id: true } });
+    if (jaSaiu) continue;
+
+    const orcamento = (await orcamentosAprovados(tenantId, v.companyId, [ano])).get(ano);
+    if (!orcamento) continue;
+    const serie = await serieEconomica(tenantId, v.companyId, [competencia]);
+    const realizado = serie.get(competencia)?.resultado.porGrupo ?? {};
+
+    const estouro = maiorEstouro(realizado, porGrupoOrcado(orcamento.grade, [mes]), ESTOURO_MINIMO_CENTAVOS);
+    if (!estouro) continue;
+    if (!(await reservarPorChave(tenantId, alertKey, today))) continue;
+
+    await notifySector(setor, {
+      tenantId,
+      type: "ORCAMENTO_ESTOURADO",
+      message: avisoDeOrcamento(nomeExibicao(v.company), competencia, estouro),
+      entityType: "COMPANY",
+      entityId: v.companyId,
+    });
+    sent++;
+  }
+  return sent;
+}
+
 type TenantResult = { tenantId: string; sent: number; errors: string[] };
 
 // Prazo legal de pagamento da rescisão (CLT art. 477 §6). É o passivo mais
@@ -358,6 +537,9 @@ async function runForTenant(tenantId: string, today: Date): Promise<TenantResult
     ["admissoes", () => checkAdmissoesParadas(tenantId, today)],
     ["rescisoes", () => checkRescisoesPrazo(tenantId, today)],
     ["treinamentos", () => checkTreinamentosVencendo(tenantId, today)],
+    ["contas a pagar", () => checkContasAPagar(tenantId, today)],
+    ["pendências", () => checkPendenciasVencidas(tenantId, today)],
+    ["orçamento", () => checkOrcamentoEstourado(tenantId, today)],
   ];
 
   let sent = 0;
