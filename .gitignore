@@ -73,3 +73,7 @@ android/gradle*
 android/*.gradle
 android/local.properties
 android/.gradle/
+# Gerados pelo `bubblewrap init` a partir do twa-manifest.json: o checksum com
+# que ele detecta mudança no manifesto e a cópia do ícone para a loja.
+android/manifest-checksum.txt
+android/store_icon.png
