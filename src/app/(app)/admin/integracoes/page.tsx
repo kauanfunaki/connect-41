@@ -74,7 +74,7 @@ export default async function IntegracoesPage({
       : null;
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <PageHeader
         title="Integrações"
         subtitle="Conecte sua conta pessoal para agendar reuniões (Google Meet / Microsoft Teams) direto

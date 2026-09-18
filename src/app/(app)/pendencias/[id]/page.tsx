@@ -40,7 +40,7 @@ export default async function PendenciaPage({ params }: { params: Promise<{ id: 
   if (!p) notFound();
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <BackButton className="mb-3" />
       <PageHeader
         title={p.titulo}

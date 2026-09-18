@@ -12,7 +12,7 @@ export default async function NovoWorkspacePage() {
   if (ctx.role !== "SUPER_ADMIN") notFound();
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-6">
         <Link href="/admin/workspaces" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Workspaces

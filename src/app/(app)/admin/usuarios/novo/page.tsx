@@ -23,7 +23,7 @@ export default async function NovoUsuarioPage() {
   const seatCheck = await canAddUser(ctx.tenantId);
   if (!seatCheck.allowed) {
     return (
-      <PageContainer variant="narrow">
+      <PageContainer>
         <div className="flex items-center gap-2 mb-6">
           <Link href="/admin/usuarios" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
             Usuários
@@ -47,7 +47,7 @@ export default async function NovoUsuarioPage() {
   }
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-6">
         <Link href="/admin/usuarios" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Usuários

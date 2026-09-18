@@ -31,7 +31,7 @@ export default async function AssinaturaPage() {
   const seatsUsedPct = seatLimit ? Math.min(100, Math.round((activeUsers / seatLimit) * 100)) : null;
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <PageHeader
         title="Minha Assinatura"
         subtitle="Plano contratado e uso atual."

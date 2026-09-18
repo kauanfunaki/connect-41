@@ -75,7 +75,7 @@ export default async function AdminAtendentesPage() {
   const hasChatwoot = linhasDeRemetente.length > 0;
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <PageHeader
         title="Atendentes e Vínculos"
         subtitle={<>Para cada colaborador interno: qual conta de acesso (User) é dele e, se aplicável, qual agente do Chatwoot é

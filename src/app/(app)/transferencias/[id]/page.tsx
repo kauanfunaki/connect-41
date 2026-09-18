@@ -77,7 +77,7 @@ export default async function HandoffDetailPage({
   });
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-5">
         <Link href="/transferencias" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Transferências

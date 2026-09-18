@@ -113,7 +113,7 @@ export default async function CandidatoPage({
     .join(", ");
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-6">
         <Link href="/candidatos" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Candidatos

@@ -12,7 +12,7 @@ export default async function NovoClientePage() {
   if (!canWrite(ctx.role)) notFound();
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <Breadcrumb items={[{ label: "Cadastros", href: "/clientes" }, { label: "Clientes", href: "/clientes" }, { label: "Novo Cliente" }]} />
       <BackButton className="mb-3" />
       <PageHeader title="Novo Cliente" />

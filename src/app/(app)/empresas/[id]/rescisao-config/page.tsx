@@ -39,7 +39,7 @@ export default async function EmpresaRescisaoConfigPage({ params }: { params: Pr
   const canEdit = canWrite(ctx.role);
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Empresas</Link>
         <span className="text-fg-muted">/</span>

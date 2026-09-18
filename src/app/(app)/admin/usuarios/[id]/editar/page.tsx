@@ -34,7 +34,7 @@ export default async function EditarUsuarioPage({
   const { options: sectorOptions } = await getSectorMaps(ctx.tenantId);
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-6">
         <Link href="/admin/usuarios" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Usuários

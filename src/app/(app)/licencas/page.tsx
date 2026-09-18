@@ -60,7 +60,7 @@ export default async function LicencasPage({
   });
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <PageHeader
           title="Licenças"

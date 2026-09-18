@@ -34,7 +34,7 @@ export default async function AvaliarColaboradorPage({
   const action = registrarAvaliacao.bind(null, cycleId, personId);
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-6">
         <Link href="/avaliacoes" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Avaliações</Link>
         <span className="text-fg-muted">/</span>

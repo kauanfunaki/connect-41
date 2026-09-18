@@ -27,7 +27,7 @@ export default async function NotificacoesPage() {
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <PageHeader
         title="Notificações"
         subtitle={<>{unreadCount > 0 ? `${unreadCount} não lida${unreadCount !== 1 ? "s" : ""}` : "Tudo em dia"}</>}

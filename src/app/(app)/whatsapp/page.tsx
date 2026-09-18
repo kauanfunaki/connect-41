@@ -24,7 +24,7 @@ export default async function ConversasDeWhatsappPage() {
   ]);
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <PageHeader
         title="WhatsApp do Recrutamento"
         subtitle="As conversas com candidatos. O assistente responde o que sabe; o que sai do combinado aparece aqui, esperando alguém."

@@ -12,7 +12,7 @@ export default async function NovoSetorPage() {
   if (!isFullWrite(ctx.role)) notFound();
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-6">
         <Link href="/admin/setores" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Setores

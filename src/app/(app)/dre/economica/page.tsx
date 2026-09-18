@@ -82,7 +82,7 @@ export default async function DreEconomicaPage({
   );
   if (!companyId) {
     return (
-      <PageContainer variant="narrow">
+      <PageContainer>
         {cabecalho}
         <EmptyState title="Nenhuma empresa ativa" icon={<FileText />} />
       </PageContainer>
@@ -168,7 +168,7 @@ export default async function DreEconomicaPage({
       : `${rotuloDaCompetencia(competencias[0]!)} a ${rotuloDaCompetencia(competencias.at(-1)!)}`;
 
   return (
-    <PageContainer variant={comparacao ? "wide" : "narrow"}>
+    <PageContainer>
       {cabecalho}
       <FiltroDePeriodo acao="/dre/economica" empresas={empresas} empresaId={companyId} mes={mes} extras={{ visao: visao === "mes" ? undefined : visao }}>
         {centros.length > 0 && (

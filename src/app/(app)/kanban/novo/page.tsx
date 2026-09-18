@@ -20,7 +20,7 @@ export default async function NovoKanbanPage() {
     : allSectorOptions.filter((s) => ctx.sectors.includes(s.value));
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-6">
         <Link href="/kanban" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Kanban

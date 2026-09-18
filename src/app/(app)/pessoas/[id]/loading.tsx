@@ -2,8 +2,8 @@ import { PageContainer } from "@/components/shared/PageContainer";
 
 // Skeleton exibido enquanto a ficha da pessoa (várias queries) carrega — feedback
 // imediato em conexão lenta, em vez de tela em branco. Mesmo PageContainer
-// (wide, 1440px) da página real, senão a troca skeleton -> conteúdo pula de
-// largura (mismatch com o max-w-4xl antigo).
+// da página real, senão a troca skeleton -> conteúdo pula de largura
+// (mismatch com o max-w-4xl antigo).
 export default function LoadingPessoa() {
   return (
     <PageContainer>

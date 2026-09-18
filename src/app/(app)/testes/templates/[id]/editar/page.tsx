@@ -21,7 +21,7 @@ export default async function EditarTemplatePage({ params }: { params: Promise<{
   if (!canManageSector(ctx, template.sectorCode)) notFound();
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-6">
         <Link href="/testes/templates" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Modelos

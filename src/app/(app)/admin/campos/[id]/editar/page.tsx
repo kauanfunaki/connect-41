@@ -22,7 +22,7 @@ export default async function EditarCampoPage({
   if (!canManageSector(ctx, field.sectorCode)) notFound();
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-6">
         <Link href="/admin/campos" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Campos Customizados

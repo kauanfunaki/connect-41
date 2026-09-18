@@ -28,7 +28,7 @@ export default async function EntradaDeXmlPage() {
   });
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <BackButton className="mb-3" />
       <PageHeader title="Entrada de XML" />
       <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1 mb-6">

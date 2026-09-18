@@ -1,7 +1,7 @@
 import { PageContainer } from "@/components/shared/PageContainer";
 
 // Skeleton exibido enquanto a ficha da empresa (várias queries) carrega —
-// mesmo PageContainer (wide) da página real, senão a troca skeleton ->
+// mesmo PageContainer da página real, senão a troca skeleton ->
 // conteúdo pula de largura.
 export default function LoadingEmpresa() {
   return (

@@ -34,7 +34,7 @@ export default async function TesteDetailPage({ params }: { params: Promise<{ id
   const linkUrl = link.status === "PENDENTE" ? `${baseUrl}/teste/${link.token}` : null;
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <BackButton className="mb-3" />
       <div className="flex items-center gap-2 mb-6">
         <Link href="/testes" className="text-[13px] text-fg-muted hover:text-fg transition-colors">

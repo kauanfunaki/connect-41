@@ -74,7 +74,7 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
   ].sort((a, b) => b.em.getTime() - a.em.getTime() || b.ordem.getTime() - a.ordem.getTime());
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <BackButton className="mb-3" />
       <PageHeader
         title={l.sacadoNome}

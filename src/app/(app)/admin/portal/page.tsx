@@ -40,7 +40,7 @@ export default async function AdminPortalPage() {
   ]);
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <BackButton className="mb-3" />
       <PageHeader title="Acessos do Portal" />
       <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1 mb-6">

@@ -19,7 +19,7 @@ export default async function NovaTagPage() {
     : allSectorOptions.filter((s) => ctx.sectors.includes(s.value));
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-6">
         <Link href="/admin/tags" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Tags

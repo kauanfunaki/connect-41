@@ -36,7 +36,7 @@ export default async function WorkspaceDetailPage({
   const grantedIds = new Set(grants.map((g) => g.userId));
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-6">
         <Link href="/admin/workspaces" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           Workspaces

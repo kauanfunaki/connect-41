@@ -29,7 +29,7 @@ export default async function NovaPessoaPage({
 
   if (kind === null) {
     return (
-      <PageContainer variant="narrow">
+      <PageContainer>
         <BackButton className="mb-3" />
         <PageHeader
           title="Nova Pessoa"

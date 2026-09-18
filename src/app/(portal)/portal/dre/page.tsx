@@ -82,7 +82,7 @@ export default async function PortalDrePage({
   }
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       {cabecalho}
       <FiltroDePeriodo
         acao="/portal/dre"

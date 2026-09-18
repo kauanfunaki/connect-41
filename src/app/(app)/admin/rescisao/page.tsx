@@ -22,7 +22,7 @@ export default async function AdminRescisaoPage() {
   );
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <PageHeader
         title="Cálculo de rescisão — padrão do escritório"
         subtitle="Base usada por todas as empresas-cliente. Cada empresa pode sobrescrever o que for diferente na própria ficha."

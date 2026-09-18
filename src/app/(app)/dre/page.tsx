@@ -48,7 +48,7 @@ export default async function DrePage({
   const companyId = empresa && empresas.some((e) => e.id === empresa) ? empresa : empresas[0]?.id;
   if (!companyId) {
     return (
-      <PageContainer variant="narrow">
+      <PageContainer>
         <PageHeader title="DRE" subtitle="Demonstrativo de resultado, por empresa e mês." />
         <EmptyState title="Nenhuma empresa cadastrada" icon={<FileText />} />
       </PageContainer>
@@ -149,7 +149,7 @@ export default async function DrePage({
 
   if (!escolhido) {
     return (
-      <PageContainer variant="narrow">
+      <PageContainer>
         <PageHeader title="DRE" subtitle="Demonstrativo de resultado, por empresa e mês." />
         <SeletorDeEmpresa empresas={empresas} companyId={companyId} />
         <div className="mt-4">
@@ -185,7 +185,7 @@ export default async function DrePage({
   const transferencias = resultado.porGrupo[TRANSFERENCIA] ?? 0;
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <PageHeader
         title="DRE"
         subtitle="Demonstrativo de resultado de caixa — monta do que foi pago e recebido no mês."

@@ -36,7 +36,7 @@ export default async function ConfiguracoesPage() {
   const roleLabel = ROLE_LABELS[ctx.role as keyof typeof ROLE_LABELS] ?? ctx.role;
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <PageHeader
         title="Configurações"
         subtitle="Sua conta e suas preferências neste workspace."

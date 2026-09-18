@@ -12,7 +12,7 @@ export default async function NovaCategoriaPage() {
   if (!isFullWrite(ctx.role)) notFound();
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-6">
         <Link
           href="/admin/plano-de-contas"

@@ -95,7 +95,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
   const centros = veredito.pode && !doc.financeEntry ? await centrosAtivosDaEmpresa(ctx.tenantId, doc.companyId) : [];
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <BackButton className="mb-3" />
 
       <div className="flex items-start justify-between gap-4 mb-1">

@@ -31,7 +31,7 @@ export default async function PortalPendenciaPage({ params }: { params: Promise<
   if (!p) notFound();
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <PortalNav ativo="pendencias" modulos={modulos} />
       <Link href="/portal/pendencias" className="inline-flex items-center gap-1.5 text-[13px] text-fg-muted hover:text-fg mb-3">
         <ArrowLeft size={14} /> Pendências

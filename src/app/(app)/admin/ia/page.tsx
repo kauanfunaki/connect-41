@@ -38,7 +38,7 @@ export default async function AgentesDeIAPage() {
   const totalSemCusto = linhas.reduce((n, l) => n + l.gasto.semCusto, 0);
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <PageHeader
         title="Agentes de IA"
         subtitle="O que a IA fez neste mês, quanto custou e até onde pode ir. Só administradores veem esta tela."

@@ -12,7 +12,7 @@ export default async function NovoTreinamentoPage() {
   if (!canWrite(ctx.role)) notFound();
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-6">
         <Link href="/treinamentos" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Treinamentos</Link>
         <span className="text-fg-muted">/</span>

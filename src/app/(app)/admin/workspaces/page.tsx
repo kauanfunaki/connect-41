@@ -16,7 +16,7 @@ export default async function WorkspacesPage() {
   const tenants = await prisma.tenant.findMany({ orderBy: { name: "asc" } });
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <PageHeader
         title="Workspaces"
         subtitle={<>{tenants.length} workspace{tenants.length !== 1 ? "s" : ""} cadastrado{tenants.length !== 1 ? "s" : ""}</>}

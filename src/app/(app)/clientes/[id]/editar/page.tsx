@@ -22,7 +22,7 @@ export default async function EditarClientePage({
   if (!cliente) notFound();
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <Breadcrumb
         items={[
           { label: "Cadastros", href: "/clientes" },

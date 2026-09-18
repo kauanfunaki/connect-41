@@ -20,7 +20,7 @@ export default async function TenantPage() {
   if (!tenant) notFound();
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <PageHeader
         title="Empresa (Tenant)"
         subtitle="Dados do workspace da 41 Tech no Connect."

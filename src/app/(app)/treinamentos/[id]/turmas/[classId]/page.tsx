@@ -38,7 +38,7 @@ export default async function TurmaPage({
   const addParticipanteAction = adicionarParticipante.bind(null, trainingId, classId);
 
   return (
-    <PageContainer variant="narrow">
+    <PageContainer>
       <div className="flex items-center gap-2 mb-6">
         <Link href="/treinamentos" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Treinamentos</Link>
         <span className="text-fg-muted">/</span>
