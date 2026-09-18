@@ -20,7 +20,7 @@
     "alias": "portal41"
   },
   "appVersionName": "1.0.0",
-  "appVersionCode": 1,
+  "appVersionCode": 2,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://appteste.useconnect.com.br/portal/manifest.webmanifest",
@@ -34,5 +34,10 @@
   "isMetaQuest": false,
   "fullScopeUrl": "https://appteste.useconnect.com.br/portal",
   "minSdkVersion": 23,
-  "orientation": "default"
+  "orientation": "default",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "displayOverride": [],
+  "appVersion": "1.0.0"
 }
