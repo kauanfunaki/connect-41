@@ -5,7 +5,10 @@
 //
 // São três coisas, todas anotadas no Quadro desde a importação do Acessórias:
 //
-// 1. **Empresas de teste com CNPJ inválido** (menos de 14 dígitos, ou só zeros).
+// 1. **Empresas de teste com CNPJ inválido** (menos de 14 dígitos, ou só zeros)
+//    **ou com nome de teste e nenhum documento** — o segundo critério entrou em
+//    18/09, quando se viu que "Teste 2" e "Teste!" tinham CNPJ nulo e por isso
+//    escaparam da primeira passagem.
 //    Não travam nada — o índice único foi criado em 02/09 sem precisar tirá-las,
 //    porque são valores distintos entre si —, mas aparecem na lista de empresas
 //    junto das 396 reais.
@@ -36,6 +39,31 @@ function cnpjInvalido(cnpj: string | null): boolean {
   const d = digitos(cnpj);
   if (d.length === 0) return false; // empresa sem documento é caso legítimo (PF, cadastro em andamento)
   return d.length !== 14 || /^0+$/.test(d);
+}
+
+/**
+ * Nome que só existe porque alguém estava testando.
+ *
+ * O padrão casa o **nome inteiro**, e não um pedaço: "TESTE ALIMENTOS LTDA" é
+ * empresa de verdade, e um `includes("teste")` a levaria junto. Dígitos e
+ * pontuação no fim entram porque é assim que o segundo teste nasce — "Teste 2",
+ * "Teste!".
+ */
+const NOME_DE_TESTE = /^(teste|test|asdasd|aaa+|xxx+)[\s\d!.?-]*$/i;
+
+/**
+ * Empresa de teste sem documento nenhum.
+ *
+ * Nasceu de um achado de 18/09: a primeira faxina procurava CNPJ **inválido**, e
+ * "Teste 2" e "Teste!" têm CNPJ **nulo** — não casavam nenhum critério e
+ * ficaram. A falta de documento sozinha não basta para condenar (o comentário de
+ * `cnpjInvalido` diz por quê: PF e cadastro em andamento são legítimos), e o
+ * nome sozinho também não. **São as duas coisas juntas** que descrevem lixo de
+ * teste: ninguém cadastra uma empresa real chamada "Teste" e a deixa sem CNPJ e
+ * sem CPF.
+ */
+function empresaDeTeste(e: { name: string; cnpj: string | null; cpf: string | null }): boolean {
+  return NOME_DE_TESTE.test(e.name.trim()) && digitos(e.cnpj) === "" && digitos(e.cpf) === "";
 }
 
 /** O nome completo da matriz, deduzido do prefixo comum das filiais ("… - Filial 02"). */
@@ -130,15 +158,20 @@ async function main() {
   const acoes: string[] = [];
 
   // ─── 1. Empresas com CNPJ inválido ────────────────────────────────────────
-  const empresas = await prisma.company.findMany({ select: { id: true, name: true, cnpj: true, status: true, tenantId: true } });
-  const invalidas = empresas.filter((e) => cnpjInvalido(e.cnpj));
+  const empresas = await prisma.company.findMany({
+    select: { id: true, name: true, cnpj: true, cpf: true, status: true, tenantId: true },
+  });
+  const invalidas = empresas.filter((e) => cnpjInvalido(e.cnpj) || empresaDeTeste(e));
   console.log(`Empresas cadastradas: ${empresas.length}`);
-  console.log(`Com CNPJ inválido: ${invalidas.length}\n`);
+  console.log(`Com CNPJ inválido ou nome de teste sem documento: ${invalidas.length}\n`);
 
   for (const e of invalidas) {
     const v = await vinculosDaEmpresa(prisma, e.id);
     const acao = v.length === 0 ? "APAGAR" : e.status === "INACTIVE" ? "nada (já inativa)" : "INATIVAR";
-    console.log(`  [${acao}] ${e.name} — CNPJ "${e.cnpj}" (${digitos(e.cnpj).length} dígitos)`);
+    const motivo = cnpjInvalido(e.cnpj)
+      ? `CNPJ "${e.cnpj}" (${digitos(e.cnpj).length} dígitos)`
+      : "nome de teste, sem CNPJ e sem CPF";
+    console.log(`  [${acao}] ${e.name} — ${motivo}`);
     if (v.length > 0) console.log(`      segurada por: ${descreve(v)}`);
     if (acao === "APAGAR") acoes.push(`apagar empresa ${e.id} (${e.name})`);
     if (acao === "INATIVAR") acoes.push(`inativar empresa ${e.id} (${e.name})`);
