@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Select } from "@/components/ui/Select";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { Button } from "@/components/ui/Button";
 import { AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { SeloDaCobranca, SeloDoAcordo } from "@/components/cobranca/SeloDaCobranca";
@@ -141,14 +142,17 @@ async function Fila({
       />
 
       <form method="get" action="/cobranca" className="flex flex-wrap items-center gap-2 mb-4">
-        <Select compact name="empresa" defaultValue={empresaId ?? ""} className="w-72 max-w-full" aria-label="Empresa">
-          <option value="">Todas as empresas</option>
-          {empresas.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.nome}
-            </option>
-          ))}
-        </Select>
+        <SearchableSelect
+          key={empresaId ?? ""}
+          name="empresa"
+          compact
+          className="w-72 max-w-full"
+          aria-label="Empresa"
+          options={empresas.map((e) => ({ value: e.id, label: e.nome }))}
+          defaultValue={empresaId ?? ""}
+          vazioLabel="Todas as empresas"
+          placeholder="Buscar empresa…"
+        />
         <Select compact name="faixa" defaultValue={faixa ?? ""} className="w-40" aria-label="Faixa de atraso">
           <option value="">Qualquer atraso</option>
           {FAIXAS.map((f) => (
@@ -370,14 +374,17 @@ async function Acordos({
       <form method="get" action="/cobranca" className="flex flex-wrap items-center gap-2 mb-4">
         <input type="hidden" name="aba" value="acordos" />
         {filtroStatus && <input type="hidden" name="status" value={filtroStatus} />}
-        <Select compact name="empresa" defaultValue={empresaId ?? ""} className="w-72 max-w-full" aria-label="Empresa">
-          <option value="">Todas as empresas</option>
-          {empresas.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.nome}
-            </option>
-          ))}
-        </Select>
+        <SearchableSelect
+          key={empresaId ?? ""}
+          name="empresa"
+          compact
+          className="w-72 max-w-full"
+          aria-label="Empresa"
+          options={empresas.map((e) => ({ value: e.id, label: e.nome }))}
+          defaultValue={empresaId ?? ""}
+          vazioLabel="Todas as empresas"
+          placeholder="Buscar empresa…"
+        />
         <Button type="submit" variant="secondary" size="sm">
           Aplicar
         </Button>

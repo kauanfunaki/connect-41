@@ -9,7 +9,7 @@ import { formatInstantDate } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Select } from "@/components/ui/Select";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
@@ -102,14 +102,17 @@ export default async function PendenciasPage({
 
       <form method="get" action="/pendencias" className="flex flex-wrap items-center gap-3 mb-4">
         {recorte !== "andamento" && <input type="hidden" name="recorte" value={recorte} />}
-        <Select compact name="empresa" defaultValue={empresaId ?? ""} className="w-72 max-w-full" aria-label="Empresa">
-          <option value="">Todas as empresas</option>
-          {empresas.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.nome}
-            </option>
-          ))}
-        </Select>
+        <SearchableSelect
+          key={empresaId ?? ""}
+          name="empresa"
+          compact
+          className="w-72 max-w-full"
+          aria-label="Empresa"
+          options={empresas.map((e) => ({ value: e.id, label: e.nome }))}
+          defaultValue={empresaId ?? ""}
+          vazioLabel="Todas as empresas"
+          placeholder="Buscar empresa…"
+        />
         <Checkbox name="vencidas" value="1" defaultChecked={vencidas} label="Só vencidas" />
         <Button type="submit" variant="secondary" size="sm">
           Aplicar

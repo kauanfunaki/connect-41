@@ -5,6 +5,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { SeletorDeEmpresaQueNavega } from "@/components/shared/SeletorDeEmpresaQueNavega";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { RelatorioDoDre, moeda } from "@/components/dre/RelatorioDoDre";
@@ -284,17 +285,10 @@ function SeletorDeEmpresa({
   companyId: string;
 }) {
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {empresas.slice(0, 12).map((e) => (
-        <Link
-          key={e.id}
-          href={`/dre?empresa=${e.id}`}
-          aria-current={e.id === companyId ? "page" : undefined}
-          className={e.id === companyId ? ABA_ATIVA : ABA}
-        >
-          {e.tradeName || e.name}
-        </Link>
-      ))}
-    </div>
+    <SeletorDeEmpresaQueNavega
+      empresas={empresas.map((e) => ({ id: e.id, nome: e.tradeName || e.name }))}
+      empresaId={companyId}
+      acao="/dre"
+    />
   );
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Select } from "@/components/ui/Select";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
@@ -31,14 +31,19 @@ export function FiltroDePeriodo({ acao, empresas, empresaId, permitirTodas, mes,
     <form method="get" action={acao} className="flex flex-wrap items-center gap-2 mb-4">
       {Object.entries(extras ?? {}).map(([k, v]) => (v ? <input key={k} type="hidden" name={k} value={v} /> : null))}
       {empresas && (
-        <Select compact name="empresa" defaultValue={empresaId ?? ""} className="w-72 max-w-full" aria-label="Empresa">
-          {permitirTodas && <option value="">Todas as empresas</option>}
-          {empresas.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.nome}
-            </option>
-          ))}
-        </Select>
+        // Com busca, e não `<select>`: a lista de empresas é longa (quase
+        // quatrocentas no escritório), a mesma regra do cadastro de empresas.
+        <SearchableSelect
+          key={empresaId ?? ""}
+          name="empresa"
+          compact
+          className="w-72 max-w-full"
+          aria-label="Empresa"
+          options={empresas.map((e) => ({ value: e.id, label: e.nome }))}
+          defaultValue={empresaId ?? ""}
+          vazioLabel={permitirTodas ? "Todas as empresas" : undefined}
+          placeholder="Buscar empresa…"
+        />
       )}
       {mes !== undefined && (
         <Input compact type="month" name="mes" defaultValue={mes} className="w-40" aria-label="Mês" />

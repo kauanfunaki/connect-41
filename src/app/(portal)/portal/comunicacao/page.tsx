@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { MessagesSquare } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
+import { SeletorDeEmpresaQueNavega } from "@/components/shared/SeletorDeEmpresaQueNavega";
 import { ConversaDaPendencia } from "@/components/pendencias/ConversaDaPendencia";
 import { ResponderPendencia } from "@/components/pendencias/ResponderPendencia";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
@@ -49,22 +49,9 @@ export default async function PortalComunicacaoPage({
       ) : (
         <>
           {empresas.length > 1 && (
-            <nav className="flex flex-wrap gap-1.5 mb-4" aria-label="Empresas">
-              {empresas.map((e) => (
-                <Link
-                  key={e.id}
-                  href={`/portal/comunicacao?empresa=${e.id}`}
-                  aria-current={e.id === selecionada?.id ? "page" : undefined}
-                  className={
-                    e.id === selecionada?.id
-                      ? "h-8 px-3 inline-flex items-center rounded-md border border-brand/40 bg-brand/8 text-brand text-[12px] font-medium"
-                      : "h-8 px-3 inline-flex items-center rounded-md border border-border text-fg-secondary text-[12px] hover:bg-surface-hover transition-colors"
-                  }
-                >
-                  {e.nome}
-                </Link>
-              ))}
-            </nav>
+            <div className="mb-4">
+              <SeletorDeEmpresaQueNavega empresas={empresas} empresaId={selecionada?.id ?? null} acao="/portal/comunicacao" />
+            </div>
           )}
 
           {!selecionada ? (

@@ -23,6 +23,15 @@ type Props = {
    * escuta `onChange` no `<form>` (como o de empresa) nunca ficaria sabendo.
    */
   onChange?: (value: string) => void;
+  /**
+   * Altura das barras de filtro (h-8), ao lado de `Input` e `Select` compactos
+   * — é onde a empresa se escolhe nas telas financeiras.
+   */
+  compact?: boolean;
+  /** Largura do campo; nas barras de filtro, a do `<select>` que ele substituiu. */
+  className?: string;
+  /** Nome acessível quando não há `<label>` — nas barras de filtro. */
+  "aria-label"?: string;
 };
 
 /**
@@ -44,6 +53,9 @@ export function SearchableSelect({
   vazioLabel,
   id,
   onChange,
+  compact = false,
+  className = "",
+  "aria-label": ariaLabel,
 }: Props) {
   const [valor, setValor] = useState(defaultValue);
   const [query, setQuery] = useState("");
@@ -78,22 +90,26 @@ export function SearchableSelect({
     onChange?.(v);
   }
 
+  const texto = selecionada ? selecionada.label : vazioLabel ?? placeholder;
+
   return (
-    <div className="relative" ref={caixaRef}>
+    <div className={`relative ${className}`.trim()} ref={caixaRef}>
       <input type="hidden" name={name} value={valor} />
 
       <Button
         variant="secondary"
-        size="md"
-        className="w-full flex justify-between gap-2 bg-surface text-left text-[length:var(--fs-body)] hover:border-border-strong focus:outline-none focus:ring-2 focus:ring-brand/40"
+        size={compact ? "sm" : "md"}
+        className={`w-full flex justify-between gap-2 bg-surface text-left ${
+          compact ? "text-[13px]" : "text-[length:var(--fs-body)]"
+        } hover:border-border-strong focus:outline-none focus:ring-2 focus:ring-brand/40`}
         id={id}
         onClick={() => setAberto((a) => !a)}
         aria-expanded={aberto}
         aria-haspopup="listbox"
+        // O rótulo sozinho apagaria o que está escolhido do nome acessível.
+        aria-label={ariaLabel ? `${ariaLabel}: ${texto}` : undefined}
       >
-        <span className={`truncate ${selecionada ? "text-fg" : "text-fg-muted"}`}>
-          {selecionada ? selecionada.label : vazioLabel ?? placeholder}
-        </span>
+        <span className={`truncate ${selecionada ? "text-fg" : "text-fg-muted"}`}>{texto}</span>
         <span className="flex items-center gap-1 shrink-0">
           {selecionada && vazioLabel && (
             <span
