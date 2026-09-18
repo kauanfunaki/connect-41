@@ -77,3 +77,7 @@ android/.gradle/
 # que ele detecta mudança no manifesto e a cópia do ícone para a loja.
 android/manifest-checksum.txt
 android/store_icon.png
+# Log de queda da JVM. Traz variáveis de ambiente da máquina, e não é coisa de
+# repositório.
+android/hs_err_pid*.log
+android/replay_pid*.log
