@@ -1,4 +1,4 @@
-import { Briefcase, Building2, Gift, Clock, Wallet, FileCheck, Scale } from "lucide-react";
+import { Briefcase, Building2, Gift, Clock, Wallet, FileCheck, Scale, Users } from "lucide-react";
 import { OperationsLinkList, type OperationLink } from "@/components/shared/OperationsLinkList";
 
 type Props = {
@@ -6,6 +6,7 @@ type Props = {
 };
 
 const LINKS: OperationLink[] = [
+  { href: "socios", label: "Sócios", description: "Quadro societário e endereço de cada sócio", icon: <Users size={16} /> },
   { href: "cargos", label: "Cargos", description: "Catálogo de cargos da empresa", icon: <Briefcase size={16} /> },
   { href: "departamentos", label: "Departamentos", description: "Estrutura organizacional", icon: <Building2 size={16} /> },
   { href: "beneficios", label: "Benefícios", description: "Catálogo de benefícios oferecidos", icon: <Gift size={16} /> },

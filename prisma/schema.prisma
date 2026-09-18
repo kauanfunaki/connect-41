@@ -469,6 +469,7 @@ model Tenant {
   tags                      Tag[]
   accessGrants              UserTenantAccess[]
   departments               Department[]
+  companyPartners           CompanyPartner[]
   cargos                    Cargo[]
   vagas                     Vaga[]
   candidaturas              Candidatura[]
@@ -993,6 +994,7 @@ model Company {
   services                 CompanyService[]
   people                   Person[]
   departments              Department[]
+  partners                 CompanyPartner[]
   cargos                   Cargo[]
   vagas                    Vaga[]
   payrollCompetencies      PayrollCompetency[]
@@ -3995,6 +3997,50 @@ model PushSubscription {
 // 2. Coluna nova numa tabela existente quebra toda leitura dela se o código
 //    subir antes da migration — o Prisma seleciona todos os campos escalares.
 //    Tabela nova só quebra o que é novo. Mesmo raciocínio de `user_pinned_modules`.
+// Os sócios de uma empresa cliente.
+//
+// Nasceu de uma pergunta do Empresa Fácil: "Reside no local?" é Sim quando o
+// endereço do sócio é o da empresa, e o Connect não tinha onde guardar isso —
+// não havia modelo de sócio nenhum. Ver `src/lib/societario/socios.ts`, que faz
+// a comparação, e `viabilidade.ts`, que consome a resposta.
+//
+// Endereço com o mesmo desenho do da `Company` de propósito: é campo a campo
+// que a comparação acontece, e dois formatos diferentes fariam a mesma rua
+// parecer endereços distintos.
+model CompanyPartner {
+  id        String @id @default(uuid())
+  tenantId  String
+  companyId String
+
+  name          String   @db.VarChar(180)
+  /// Só dígitos. CPF (11) ou CNPJ (14) — o tipo sai do tamanho, como em `lerDocumentoFiscal`.
+  document      String?  @db.VarChar(14)
+  administrator Boolean  @default(false)
+  /// Participação no capital, em porcento.
+  sharePercent  Decimal? @db.Decimal(7, 4)
+
+  zipCode           String? @db.VarChar(10)
+  addressStreet     String? @db.VarChar(180)
+  addressNumber     String? @db.VarChar(20)
+  addressComplement String? @db.VarChar(80)
+  neighborhood      String? @db.VarChar(80)
+  city              String? @db.VarChar(80)
+  stateCode         String? @db.VarChar(2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // Documento nulo não colide (MySQL permite vários NULL num índice único), o
+  // que deixa cadastrar sócio sem documento e ainda assim barrar o mesmo CPF
+  // duas vezes na mesma empresa.
+  @@unique([tenantId, companyId, document])
+  @@index([tenantId, companyId])
+  @@map("company_partners")
+}
+
 model PortalPushSubscription {
   id           String   @id @default(uuid())
   tenantId     String
