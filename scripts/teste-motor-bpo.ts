@@ -60,6 +60,17 @@ import { avaliarRegua, passoDevido, PASSOS_PADRAO } from "@/lib/financeiro/cobra
 import { validarSelecaoDoAcordo, validarTermosDoAcordo, gerarParcelas } from "@/lib/financeiro/cobranca/acordo";
 import { lerOfx } from "@/lib/financeiro/conciliacao/ofx";
 import { rankearCandidatos, sugestaoDaTransacao, tipoCompativel } from "@/lib/financeiro/conciliacao/casamento";
+import { gradeVazia, porGrupoOrcado, totalDoGrupo, lerReajuste, reajustar, copiarComReajuste, MESES } from "@/lib/dre/orcamento/grade";
+import { maiorEstouro, avisoDeOrcamento, avisoDeContasAPagar, avisoDePendenciasVencidas } from "@/lib/financeiro/alertas";
+import { calcularDre, montarMapeamento, type LancamentoDoDre } from "@/lib/dre/calculo";
+import { reconciliarLucroCaixa } from "@/lib/dre/analises";
+import { calcularDreEconomica } from "@/lib/dre/economica";
+import { conversaDaEmpresa } from "@/lib/financeiro/comunicacao/consultas";
+import { resumirConversa, previa } from "@/lib/financeiro/comunicacao/regras";
+import { decidir, podeVerificar } from "@/lib/societario/observador";
+import { classificarPainel, SIGLA as SIGLA_DA_JUNTA } from "@/lib/societario/orgaos/junta";
+import { classificarSolicitacao } from "@/lib/societario/orgaos/sima";
+import { faixaDoPrazo } from "@/lib/societario/prazos";
 
 const SLUG_DO_SANDBOX = "teste";
 const limpar = process.argv.includes("--limpar");
@@ -114,35 +125,65 @@ async function tenantDoSandbox() {
 }
 
 /**
- * Apaga na ordem das dependências.
+ * Apaga **só o que a bancada criou**, na ordem das dependências.
  *
- * Um `deleteMany` por tabela, sempre com o `tenantId` do sandbox: mesmo se
- * alguém rodar isto distraído com outra `DATABASE_URL`, o alcance é um tenant
- * que só tem lixo de teste dentro.
+ * A primeira versão apagava tudo do tenant, e isso quase custou caro: o tenant
+ * `teste` já tinha o seed do Societário dentro (6 órgãos, 4 tipos, 4 templates,
+ * 38 etapas), posto por alguém antes, e o `deleteMany` por tenant teria levado
+ * junto. Foi o próprio Prisma que barrou, com erro de chave estrangeira.
+ *
+ * Agora o alcance é a marca `[bancada]` no nome e as empresas dela. Além de
+ * proteger o seed, isso deixa a bancada rodar num tenant que tenha outra coisa
+ * dentro — que é o que vai acontecer no dia em que alguém usar o sandbox para
+ * mais de uma finalidade.
  */
 async function limparSandbox(tenantId: string) {
   const prisma = getPrisma();
-  const ordem = [
-    () => prisma.clientRequestReminder.deleteMany({ where: { tenantId } }),
-    () => prisma.clientRequest.deleteMany({ where: { tenantId } }),
-    () => prisma.bankTransactionMatch.deleteMany({ where: { transaction: { tenantId } } }),
-    () => prisma.bankTransaction.deleteMany({ where: { tenantId } }),
-    () => prisma.bankStatementImport.deleteMany({ where: { tenantId } }),
-    () => prisma.financeApprovalEvent.deleteMany({ where: { entry: { tenantId } } }),
-    () => prisma.portalApprovalLimit.deleteMany({ where: { tenantId } }),
-    () => prisma.portalUser.deleteMany({ where: { tenantId } }),
-    () => prisma.financeEntry.updateMany({ where: { tenantId }, data: { agreementId: null, renegotiatedAgreementId: null } }),
-    () => prisma.collectionAgreement.deleteMany({ where: { tenantId } }),
-    () => prisma.financeEntry.deleteMany({ where: { tenantId } }),
-    () => prisma.financeCounterparty.deleteMany({ where: { tenantId } }),
-    () => prisma.costCenter.deleteMany({ where: { tenantId } }),
-    () => prisma.bankAccount.deleteMany({ where: { tenantId } }),
-    () => prisma.financeCategory.deleteMany({ where: { tenantId } }),
-    () => prisma.clientGroup.deleteMany({ where: { tenantId } }),
-    () => prisma.company.deleteMany({ where: { tenantId } }),
-  ];
+  const empresas = await prisma.company.findMany({
+    where: { tenantId, name: { contains: MARCA } },
+    select: { id: true },
+  });
+  const companyIds = empresas.map((e) => e.id);
+
   let total = 0;
-  for (const passo of ordem) total += (await passo()).count;
+  const conta = (r: { count: number }) => {
+    total += r.count;
+  };
+
+  if (companyIds.length > 0) {
+    const daEmpresa = { companyId: { in: companyIds } };
+    conta(await prisma.processRequirement.deleteMany({ where: { protocol: { process: daEmpresa } } }));
+    conta(await prisma.processProtocol.deleteMany({ where: { process: daEmpresa } }));
+    conta(await prisma.process.deleteMany({ where: daEmpresa }));
+    conta(await prisma.companyMessageAttachment.deleteMany({ where: { message: daEmpresa } }));
+    conta(await prisma.companyMessage.deleteMany({ where: daEmpresa }));
+    conta(await prisma.clientRequestReminder.deleteMany({ where: { request: daEmpresa } }));
+    conta(await prisma.clientRequest.deleteMany({ where: daEmpresa }));
+    conta(await prisma.bankTransactionMatch.deleteMany({ where: { transaction: { bankAccount: daEmpresa } } }));
+    conta(await prisma.bankTransaction.deleteMany({ where: { bankAccount: daEmpresa } }));
+    conta(await prisma.bankStatementImport.deleteMany({ where: { bankAccount: daEmpresa } }));
+    conta(await prisma.financeApprovalEvent.deleteMany({ where: { entry: daEmpresa } }));
+    conta(await prisma.portalApprovalLimit.deleteMany({ where: daEmpresa }));
+    // Solta os vínculos com o acordo antes de apagá-lo: são FKs nos dois
+    // sentidos (parcela aponta para o acordo, e o original também).
+    await prisma.financeEntry.updateMany({
+      where: daEmpresa,
+      data: { agreementId: null, renegotiatedAgreementId: null },
+    });
+    conta(await prisma.collectionAgreement.deleteMany({ where: daEmpresa }));
+    conta(await prisma.financeEntry.deleteMany({ where: daEmpresa }));
+    conta(await prisma.financeCounterparty.deleteMany({ where: daEmpresa }));
+    conta(await prisma.costCenter.deleteMany({ where: daEmpresa }));
+    conta(await prisma.bankAccount.deleteMany({ where: daEmpresa }));
+  }
+
+  const comMarca = { tenantId, name: { contains: MARCA } };
+  conta(await prisma.portalUser.deleteMany({ where: comMarca }));
+  conta(await prisma.company.deleteMany({ where: comMarca }));
+  conta(await prisma.clientGroup.deleteMany({ where: comMarca }));
+  conta(await prisma.financeCategory.deleteMany({ where: comMarca }));
+  conta(await prisma.processOrgan.deleteMany({ where: comMarca }));
+  conta(await prisma.alertDispatch.deleteMany({ where: { tenantId, alertKey: { startsWith: "BANCADA_" } } }));
   return total;
 }
 
@@ -1127,6 +1168,356 @@ async function a8(tenantId: string, c: Cadastros, travada: { id: string }) {
   igual(sugestaoTravada?.candidato.lancamento.id, travada.id, "e é a conta travada, não a segunda colocada");
 }
 
+// ─── A9 · centro de custo e orçamento × realizado ───────────────────────────
+
+async function a9(tenantId: string, c: Cadastros) {
+  titulo("A9 · orçamento × realizado e centro de custo");
+  const prisma = getPrisma();
+
+  // A grade do orçamento: doze meses por grupo de despesa.
+  const grade = gradeVazia();
+  grade["administrativas"] = MESES.map(() => 100000); // R$ 1.000,00/mês
+  grade["pessoal"] = MESES.map(() => 500000); // R$ 5.000,00/mês
+  igual(totalDoGrupo(grade, "administrativas"), 1200000, "o total anual do grupo é a soma dos doze meses");
+
+  const mesAtual = Number(COMPETENCIA.slice(5, 7));
+  const orcado = porGrupoOrcado(grade, [mesAtual]);
+  igual(orcado["administrativas"], -100000, "o orçado chega na convenção de sinal da DRE: despesa negativa");
+  igual(orcado["receita_bruta"], 0, "grupo sem orçado fica zerado, e não ausente");
+
+  // O estouro: quem passou mais do orçado no mês.
+  const realizado = { administrativas: -150000, pessoal: -400000, receita_bruta: 900000 };
+  const estouro = maiorEstouro(realizado, orcado);
+  ok(!!estouro, "achou o grupo que estourou");
+  igual(estouro?.grupo, "administrativas", "o grupo que passou é o administrativo, não o de pessoal, que ficou abaixo");
+  igual(estouro?.excedente, 50000, "o excedente é a diferença em magnitude de gasto");
+
+  // Grupo sem orçado não estoura: orçado zero costuma ser linha que a empresa
+  // não preencheu, e avisar sobre ela viraria ruído no primeiro mês de uso.
+  const semOrcado = maiorEstouro({ comerciais: -900000 }, { comerciais: 0 });
+  igual(semOrcado, null, "grupo sem orçado não estoura");
+
+  // O mínimo protege do estouro de centavos.
+  const centavos = maiorEstouro({ administrativas: -100050 }, orcado, 10000);
+  igual(centavos, null, "estouro menor que o mínimo não vira alerta");
+
+  const aviso = avisoDeOrcamento("ACME", COMPETENCIA, estouro!);
+  ok(aviso.includes("ACME") && aviso.includes(COMPETENCIA), "o aviso diz de qual empresa e de qual mês");
+
+  // Reajuste: a base do "copiar o ano passado com 5%".
+  const lido = lerReajuste("5,5");
+  ok(lido.ok, "percentual com vírgula é lido");
+  igual(reajustar(100000, 5.5), 105500, "reajuste de 5,5% sobre R$ 1.000,00 dá R$ 1.055,00");
+  const reajustada = copiarComReajuste(grade, 10);
+  igual(totalDoGrupo(reajustada, "administrativas"), 1320000, "a grade inteira reajusta em 10%");
+
+  // O centro de custo no banco: é um por lançamento, sem rateio.
+  const comCentro = await prisma.financeEntry.count({ where: { tenantId, costCenterId: c.centro.id } });
+  ok(comCentro > 0, "há lançamentos apontando para o centro de custo", `veio ${comCentro}`);
+  const centroInativo = await prisma.costCenter.create({
+    data: { tenantId, companyId: c.empresa.id, name: `${MARCA} Desativado`, active: false },
+    select: { id: true, active: true },
+  });
+  ok(!centroInativo.active, "centro de custo inativo existe e não é apagado");
+}
+
+// ─── A10 · DRE e a reconciliação lucro → caixa ──────────────────────────────
+
+async function a10() {
+  titulo("A10 · DRE: fechamento e a ponte do lucro até o caixa");
+
+  const mapeamento = montarMapeamento([
+    { categoria: "Honorários", grupo: "receita_bruta" },
+    { categoria: "Simples Nacional", grupo: "impostos" },
+    { categoria: "Aluguel", grupo: "administrativas" },
+    { categoria: "Salários", grupo: "pessoal" },
+  ]);
+
+  const lancamentos: LancamentoDoDre[] = [
+    { categoria: "Honorários", valorCentavos: 1000000, origem: "recebimento" },
+    { categoria: "Simples Nacional", valorCentavos: -60000, origem: "pagamento" },
+    { categoria: "Aluguel", valorCentavos: -150000, origem: "pagamento" },
+    { categoria: "Salários", valorCentavos: -400000, origem: "pagamento" },
+    // Sem de-para: não some, vai para a fila de classificação.
+    { categoria: "Categoria Nova", valorCentavos: -25000, origem: "pagamento" },
+  ];
+
+  const dre = calcularDre(lancamentos, mapeamento);
+  igual(dre.diferencaDeFechamento, 0, "a DRE fecha: a soma dos grupos é exatamente o que entrou");
+  igual(dre.porGrupo["receita_bruta"], 1000000, "a receita foi para o grupo certo");
+  igual(dre.porGrupo["administrativas"], -150000, "e a despesa também, com o sinal da convenção");
+  igual(dre.naoClassificado.length, 1, "o lançamento sem de-para não sumiu: está na fila de classificação");
+  igual(dre.naoClassificado[0]?.categoria, "Categoria Nova", "e a fila diz qual categoria é");
+  igual(dre.porGrupo["nao_classificado"], -25000, "ele soma no não classificado, e não em conta nenhuma do resultado");
+
+  // A grafia é o que mais quebra planilha: dois espaços e caixa diferente.
+  const comGrafia = montarMapeamento([{ categoria: "Outras  Taxas", grupo: "administrativas" }]);
+  const dreGrafia = calcularDre(
+    [{ categoria: "outras taxas", valorCentavos: -1000, origem: "pagamento" }],
+    comGrafia
+  );
+  igual(dreGrafia.porGrupo["administrativas"], -1000, "espaço duplo e caixa diferente casam no de-para");
+  igual(dreGrafia.diferencaDeFechamento, 0, "e continua fechando");
+
+  // A ponte do resultado econômico até a variação de caixa do mês.
+  const reconciliacao = reconciliarLucroCaixa(
+    {
+      // Competência e caixa no mesmo mês.
+      ambos: [
+        { categoria: "Honorários", valorCentavos: 800000, origem: "recebimento" },
+        { categoria: "Aluguel", valorCentavos: -150000, origem: "pagamento" },
+      ],
+      // Competência do mês, ainda não recebido.
+      soCompetencia: [{ categoria: "Honorários", valorCentavos: 200000, origem: "recebimento" }],
+      // Recebido no mês, de competência anterior.
+      soCaixa: [{ categoria: "Honorários", valorCentavos: 300000, origem: "recebimento" }],
+    },
+    mapeamento
+  );
+
+  const economico = reconciliacao.find((p) => p.code === "resultado_economico")!;
+  const variacao = reconciliacao.at(-1)!;
+  igual(economico.centavos, 850000, "o resultado por competência é receita do mês menos despesa do mês");
+
+  // A prova que interessa: partindo do econômico e somando os passos, chega-se
+  // exatamente ao último. Sem resíduo, sem "ajuste de timing".
+  const passos = reconciliacao.filter((p) => p.tipo !== "total");
+  const somado = economico.centavos + passos.reduce((n, p) => n + p.centavos, 0);
+  igual(somado, variacao.centavos, "a ponte fecha no centavo: econômico + os passos = a variação de caixa");
+
+  const caixaEsperado = 800000 - 150000 + 300000;
+  igual(variacao.centavos, caixaEsperado, "e a variação de caixa é o que de fato entrou e saiu no mês");
+
+  // A DRE econômica: mesma estrutura, lida por competência.
+  // A econômica recebe o lançamento como ele vem do banco — valor positivo, e o
+  // sinal saindo do tipo. O recorte por competência é de quem consulta.
+  const economica = calcularDreEconomica(
+    [
+      { kind: "RECEBER", status: "CONFERIDO", centavos: 1000000, categoria: "Honorários" },
+      { kind: "PAGAR", status: "CONFERIDO", centavos: 150000, categoria: "Aluguel" },
+      // Cancelada: não é resultado, e precisa sair da conta.
+      { kind: "PAGAR", status: "CANCELADO", centavos: 999999, categoria: "Aluguel", closeReason: "CANCELADO" },
+    ],
+    mapeamento
+  );
+  igual(economica.resultado.diferencaDeFechamento, 0, "a DRE econômica também fecha");
+  igual(economica.resultado.porGrupo["receita_bruta"], 1000000, "com a receita no grupo certo");
+  igual(economica.resultado.porGrupo["administrativas"], -150000, "e a cancelada ficou de fora da despesa");
+  igual(economica.lancamentos, 2, "a cancelada não conta nem como lançamento considerado");
+}
+
+// ─── A11 · alertas financeiros ──────────────────────────────────────────────
+
+async function a11(tenantId: string) {
+  titulo("A11 · alertas financeiros: texto e o que impede repetir");
+  const prisma = getPrisma();
+
+  igual(avisoDeContasAPagar({ venceHoje: 0, totalHoje: 0, venceramOntem: 0, totalOntem: 0 }), null, "sem conta vencendo, o motor fica calado");
+  const doDia = avisoDeContasAPagar({ venceHoje: 2, totalHoje: 350000, venceramOntem: 1, totalOntem: 25000 });
+  ok(!!doDia, "com contas vencendo, há aviso");
+  ok(doDia!.includes("2"), "o aviso leva a quantidade");
+
+  // "Venceu ontem" e não "está vencida": o aviso é do que mudou hoje. Conta
+  // parada há três meses viraria o mesmo texto todo dia.
+  const soOntem = avisoDeContasAPagar({ venceHoje: 0, totalHoje: 0, venceramOntem: 1, totalOntem: 25000 });
+  ok(!!soOntem && soOntem.includes("ontem"), "o que venceu ontem é dito como tal", soOntem ?? "veio nulo");
+
+  igual(avisoDePendenciasVencidas(0), null, "sem pendência vencida, nada é dito");
+  ok(!!avisoDePendenciasVencidas(3), "com três pendências vencidas, há aviso");
+
+  // A dedup: é o índice único que impede o mesmo aviso sair duas vezes no
+  // mesmo dia — e o dia é o de São Paulo, não o UTC, senão às 21h viraria
+  // "amanhã" e o aviso sairia de novo.
+  const chave = `BANCADA_CONTAS_A_PAGAR:${Date.now()}`;
+  const diaDeSaoPaulo = instanteDaData(HOJE);
+  await prisma.alertDispatch.create({ data: { tenantId, alertKey: chave, sentOn: diaDeSaoPaulo } });
+  const repetiu = await prisma.alertDispatch
+    .create({ data: { tenantId, alertKey: chave, sentOn: diaDeSaoPaulo } })
+    .then(() => true)
+    .catch(() => false);
+  ok(!repetiu, "o mesmo alerta no mesmo dia é recusado pelo banco");
+
+  const amanha = await prisma.alertDispatch
+    .create({ data: { tenantId, alertKey: chave, sentOn: instanteDaData(diasAFrente(1)) } })
+    .then(() => true)
+    .catch(() => false);
+  ok(amanha, "o mesmo alerta no dia seguinte é permitido — a reserva é por dia");
+}
+
+// ─── A12 · conversa com o cliente ───────────────────────────────────────────
+
+async function a12(tenantId: string, c: Cadastros, cliente: { id: string }) {
+  titulo("A12 · conversa com o cliente e anexos");
+  const prisma = getPrisma();
+
+  const escopo = { tenantId, companyIds: null };
+  const vazia = await conversaDaEmpresa(escopo, c.empresa.id);
+  igual(vazia.mensagens.length, 0, "empresa sem conversa devolve lista vazia, e não erro");
+
+  const daEquipe = await prisma.companyMessage.create({
+    data: { tenantId, companyId: c.empresa.id, body: "Bom dia! Pode mandar o extrato de agosto?" },
+    select: { id: true },
+  });
+  await prisma.companyMessageAttachment.create({
+    data: {
+      tenantId,
+      messageId: daEquipe.id,
+      fileName: "modelo.pdf",
+      fileUrl: "bancada/modelo.pdf",
+      mimeType: "application/pdf",
+      sizeBytes: 1024,
+    },
+  });
+  await prisma.companyMessage.create({
+    data: {
+      tenantId,
+      companyId: c.empresa.id,
+      authorPortalUserId: cliente.id,
+      body: "Segue em anexo. Qualquer coisa me avise, por favor — obrigado!",
+    },
+  });
+
+  const conversa = await conversaDaEmpresa(escopo, c.empresa.id);
+  igual(conversa.mensagens.length, 2, "as duas mensagens aparecem na conversa");
+  igual(conversa.mensagens[0]?.lado, "EQUIPE", "a primeira é da equipe");
+  igual(conversa.mensagens[1]?.lado, "CLIENTE", "a segunda é do cliente");
+  igual(conversa.mensagens[0]?.anexos.length, 1, "o anexo da equipe veio junto");
+
+  const resumo = resumirConversa(conversa.mensagens);
+  igual(resumo.mensagens, 2, "o resumo conta as mensagens");
+  igual(resumo.anexos, 1, "e os anexos");
+  ok(resumo.esperandoEscritorio, "o cliente falou por último: a bola está com o escritório");
+
+  // A bola volta quando a equipe responde.
+  await prisma.companyMessage.create({
+    data: { tenantId, companyId: c.empresa.id, body: "Recebido, obrigado!" },
+  });
+  const depois = await conversaDaEmpresa(escopo, c.empresa.id);
+  ok(!resumirConversa(depois.mensagens).esperandoEscritorio, "depois da resposta da equipe, a bola volta para o cliente");
+
+  const cortada = previa("a".repeat(500));
+  ok(cortada.length <= 121, "a prévia corta a mensagem longa para caber na lista", `veio com ${cortada.length}`);
+  // Quebra de linha vira espaço: a lista mostra uma linha por conversa, e
+  // cortar na primeira quebra esconderia a segunda metade de toda mensagem
+  // formatada. O comentário da função dizia "primeira linha" e foi corrigido.
+  igual(previa("linha um\n\n  linha dois "), "linha um linha dois", "a prévia junta as quebras de linha");
+}
+
+// ─── A13 · societário: protocolo, exigência e prazo ─────────────────────────
+
+async function a13(tenantId: string, c: Cadastros) {
+  titulo("A13 · societário: observador de protocolo e prazos");
+  const prisma = getPrisma();
+
+  const orgao = await prisma.processOrgan.create({
+    data: { tenantId, name: `${MARCA} Junta Comercial`, acronym: SIGLA_DA_JUNTA, trackingUrl: "https://exemplo.invalido/painel" },
+    select: { id: true, acronym: true, trackingUrl: true },
+  });
+  // Tipo e roteiro vêm do seed do Societário, que já está no sandbox. Criar os
+  // meus seria testar um roteiro vazio; usar o do setor é testar o que existe.
+  const template = await prisma.processTemplate.findFirst({
+    where: { tenantId },
+    select: { id: true, typeId: true, steps: { select: { id: true } } },
+    orderBy: { version: "desc" },
+  });
+  if (!template) throw new Error("o sandbox não tem roteiro do Societário — rode scripts/seed-societario.ts nele");
+  ok(template.steps.length > 0, "o roteiro do seed tem etapas", `veio com ${template.steps.length}`);
+  const processo = await prisma.process.create({
+    data: {
+      tenantId,
+      companyId: c.empresa.id,
+      typeId: template.typeId,
+      templateId: template.id,
+      title: `${MARCA} Abertura da ACME`,
+      dueAt: instanteDaData(diasAFrente(-1)),
+    },
+    select: { id: true },
+  });
+  const protocolo = await prisma.processProtocol.create({
+    data: { tenantId, processId: processo.id, organId: orgao.id, number: "PRP2151987803" },
+    select: { id: true, number: true, outcome: true },
+  });
+  igual(protocolo.outcome, "PENDENTE", "o protocolo nasce pendente");
+
+  const paraVerificar = {
+    id: protocolo.id,
+    outcome: protocolo.outcome,
+    numero: protocolo.number,
+    trackingUrl: orgao.trackingUrl,
+    siglaDoOrgao: orgao.acronym,
+  };
+
+  // `podeVerificar` exige leitor registrado — e `OBSERVADORES` está vazio de
+  // propósito, porque a navegação até a tela do órgão ainda não existe.
+  ok(!podeVerificar(paraVerificar), "sem leitor registrado, o cron pula o protocolo — é o estado de hoje");
+
+  // A decisão, que é a parte escrita. O painel do print real do setor.
+  const painel = classificarPainel([
+    { nome: "Consulta Prévia", status: "DEFERIDA" },
+    { nome: "Inscrição Municipal", status: "EMITIDO" },
+    { nome: "Alvará de Localização e Funcionamento", status: "EM EXIGÊNCIA" },
+  ]);
+  const comExigencia = decidir(paraVerificar, painel);
+  igual(comExigencia.tipo, "exigir", "painel com etapa em exigência manda abrir exigência");
+
+  const deferido = decidir(paraVerificar, classificarPainel([{ nome: "Alvará", status: "EMITIDO" }]));
+  igual(deferido.tipo, "deferir", "painel com tudo concluído defere o protocolo");
+
+  const simaEmAnalise = decidir(paraVerificar, classificarSolicitacao({ aba: "Em análise", selo: "seja lá o que for" }));
+  igual(simaEmAnalise.tipo, "segue_pendente", "o SIMA em análise mantém o protocolo pendente");
+
+  // As recusas do observador, que são a parte que protege.
+  const semNumero = decidir({ ...paraVerificar, numero: null }, { desfecho: "DEFERIDO" });
+  igual(semNumero.tipo, "pular", "sem número não há o que consultar — é cedo demais, não erro");
+  const jaResolvido = decidir({ ...paraVerificar, outcome: "DEFERIDO" }, { desfecho: "EXIGENCIA", detalhe: "x" });
+  igual(jaResolvido.tipo, "pular", "protocolo já resolvido não é reprocessado");
+  const exigenciaMuda = decidir(paraVerificar, { desfecho: "EXIGENCIA", detalhe: "   " });
+  igual(exigenciaMuda.tipo, "pular", "exigência sem descrição é recusada: voltaria para a fila sem dizer por quê");
+
+  // Aplica a exigência como o cron aplica, e confere no banco.
+  if (comExigencia.tipo !== "exigir") throw new Error("a exigência do painel não passou por decidir");
+  await prisma.$transaction(async (tx) => {
+    await tx.processRequirement.create({
+      data: { tenantId, protocolId: protocolo.id, description: comExigencia.descricao },
+    });
+    await tx.processProtocol.update({
+      where: { id: protocolo.id },
+      data: { outcome: "EXIGENCIA", resolvedAt: new Date(), lastCheckedAt: new Date(), checkError: null },
+    });
+  });
+  const exigencias = await prisma.processRequirement.findMany({
+    where: { tenantId, protocolId: protocolo.id },
+    select: { description: true, resolvedAt: true },
+  });
+  igual(exigencias.length, 1, "a exigência foi gravada");
+  ok(exigencias[0]!.description.includes("Alvará"), "e a descrição diz qual etapa travou");
+  igual(exigencias[0]!.resolvedAt, null, "nasce em aberto");
+
+  const depois = await prisma.processProtocol.findUniqueOrThrow({
+    where: { id: protocolo.id },
+    select: { outcome: true, lastCheckedAt: true },
+  });
+  igual(depois.outcome, "EXIGENCIA", "o protocolo ficou em exigência");
+  ok(depois.lastCheckedAt !== null, "e a data da última checagem ficou registrada");
+
+  // O erro do observador vai para a tela em vez de virar silêncio.
+  await prisma.processProtocol.update({
+    where: { id: protocolo.id },
+    data: { checkError: `Junta: selo não observado na etapa "Alvará": "EM ANÁLISE".` },
+  });
+  const comErro = await prisma.processProtocol.findUniqueOrThrow({
+    where: { id: protocolo.id },
+    select: { checkError: true },
+  });
+  ok(comErro.checkError?.includes("EM ANÁLISE") ?? false, "o erro guarda o texto que o robô não reconheceu, verbatim");
+
+  // Os prazos, que é o que a fila ordena.
+  igual(faixaDoPrazo(instanteDaData(diasAFrente(-1)), AGORA), "vencido", "prazo de ontem é vencido");
+  igual(faixaDoPrazo(instanteDaData(HOJE), AGORA), "hoje", "prazo de hoje é hoje");
+  igual(faixaDoPrazo(instanteDaData(diasAFrente(3)), AGORA), "semana", "prazo desta semana é semana");
+  igual(faixaDoPrazo(instanteDaData(diasAFrente(60)), AGORA), "depois", "prazo distante é depois");
+}
+
 // ─── Execução ───────────────────────────────────────────────────────────────
 
 async function main() {
@@ -1155,6 +1546,11 @@ async function main() {
     await a6(tenant.id, cadastros);
     await a7(tenant.id, cadastros);
     await a8(tenant.id, cadastros, aprovacao.acima);
+    await a9(tenant.id, cadastros);
+    await a10();
+    await a11(tenant.id);
+    await a12(tenant.id, cadastros, aprovacao.cliente);
+    await a13(tenant.id, cadastros);
   } finally {
     console.log(`\n${"═".repeat(60)}`);
     console.log(`${passou} passaram · ${falhou} falharam`);

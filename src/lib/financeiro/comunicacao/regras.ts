@@ -48,7 +48,19 @@ export function resumirConversa(mensagens: MensagemDaConversa[]): ResumoDaConver
   };
 }
 
-/** Primeira linha da mensagem, cortada, para caber na lista. */
+/**
+ * A mensagem inteira numa linha só, cortada no limite.
+ *
+ * Quebra de linha vira espaço, e não corte: a lista mostra uma linha por
+ * conversa, e quem escreve "bom dia
+
+segue o extrato" quis dizer as duas
+ * coisas. Cortar na primeira quebra esconderia a segunda metade de toda
+ * mensagem formatada.
+ *
+ * (O comentário anterior dizia "primeira linha da mensagem", que é o que a
+ * função **não** faz — quem lesse e confiasse escreveria a expectativa errada.)
+ */
 export function previa(corpo: string, limite = 120): string {
   const limpo = corpo.replace(/\s+/g, " ").trim();
   if (limpo.length <= limite) return limpo;
