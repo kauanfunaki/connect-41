@@ -90,8 +90,103 @@ export function ContasTable({
     );
   }
 
+  // Os selos e as ações são os mesmos nas duas formas; ficam em função para a
+  // tabela e o cartão não descolarem um do outro com o tempo.
+  const selos = (l: LinhaDaConta) => (
+    <>
+      <Badge variant={SITUACAO_VARIANTE[l.situacao]}>
+        {/* Cancelada por renegociação ou perda diz o nome: "cancelada" esconderia
+            que a dívida continua num acordo, ou que alguém decidiu dar por perdida. */}
+        {l.closeReason === "RENEGOCIADO" ? "Renegociada" : l.closeReason === "PERDA" ? "Perda" : SITUACAO_LABEL[l.situacao]}
+      </Badge>
+      {cobranca && cobranca.get(l.id) && cobranca.get(l.id) !== "EM_DIA" && l.closeReason !== "PERDA" && (
+        <Link href={`/cobranca/${l.id}`} className="inline-flex" title="Abrir na cobrança">
+          <SeloDaCobranca situacao={cobranca.get(l.id) ?? null} />
+        </Link>
+      )}
+      {l.parcelaDeAcordo && !cobranca?.get(l.id) && <span className="text-[11px] text-fg-muted whitespace-nowrap">parcela de acordo</span>}
+      {/* Selo só enquanto pesa sobre a conta, ou aprovada ainda em aberto:
+          depois de paga ou cancelada, a aprovação é histórico. */}
+      {seloDeAprovacaoVisivel(l) && <SeloDaAprovacao status={l.approvalStatus} />}
+      {l.documentoId && (
+        <Link href={`/documentos-fiscais/${l.documentoId}`} className="text-brand hover:underline text-[12px] whitespace-nowrap">
+          ver nota
+        </Link>
+      )}
+      {podeAbrirPendencia && l.situacao !== "CANCELADA" && (
+        <Link href={`/pendencias?nova=1&lancamento=${l.id}`} className="text-brand hover:underline text-[12px] whitespace-nowrap">
+          abrir pendência
+        </Link>
+      )}
+    </>
+  );
+
+  const acoes = (l: LinhaDaConta) => (
+    <AcoesDaConta
+      entryId={l.id}
+      situacao={l.situacao}
+      status={l.status}
+      hojeISO={hojeISO}
+      aPagar={kind === "PAGAR"}
+      bloqueioDeBaixa={motivoDoBloqueioDeBaixa(l)}
+      podeEnviar={moduloDeAprovacao && podeEnviarParaAprovacao({ ...l, kind, paidAt: l.pagoEm }).pode}
+      acoes={{
+        conferir: conferirConta,
+        pagar: marcarComoPago,
+        desfazer: desfazerPagamento,
+        enviarParaAprovacao: moduloDeAprovacao ? enviarParaAprovacao : undefined,
+      }}
+    />
+  );
+
   return (
-    <div className="overflow-x-auto">
+    <>
+      {/* Abaixo de md, cartões; de md para cima, a tabela. São nove colunas e
+          880px: no celular, rolar de lado para ver o valor da conta é pior que
+          não ter a coluna. O cartão põe contraparte e valor na mesma linha, que
+          é o par que se lê primeiro. */}
+      <div className="md:hidden flex flex-col gap-2">
+        {linhas.map((l) => (
+          <div key={l.id} className="bg-surface border border-border rounded-lg px-3 py-2.5">
+            <div className="flex items-start gap-2.5">
+              {selecionarCentro && (
+                <Checkbox
+                  name="entryIds"
+                  value={l.id}
+                  form={FORM_DO_CENTRO}
+                  aria-label={`Selecionar ${l.contraparteNome}`}
+                  className="mt-1"
+                />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-medium break-words">{l.contraparteNome}</span>
+                  <span className="tabular-nums font-semibold whitespace-nowrap">{moeda(l.valorCentavos)}</span>
+                </div>
+                {l.descricao && <span className="block text-[11.5px] text-fg-muted break-words">{l.descricao}</span>}
+                <span className="block text-[11.5px] text-fg-muted mt-1 tabular-nums">
+                  vence {formatInstantDate(l.vencimento)}
+                  {l.pagoEm && ` · pago em ${formatInstantDate(l.pagoEm)}`} · comp. {l.competencia}
+                </span>
+                <span className="block text-[11.5px] text-fg-muted break-words">
+                  {l.empresaNome}
+                  {l.categoriaNome ? ` · ${l.categoriaNome}` : ""}
+                  {mostrarCentro && l.centroDeCustoNome ? ` · ${l.centroDeCustoNome}` : ""}
+                </span>
+                {!l.categoriaNome && (
+                  <span className="inline-flex items-center gap-1 text-warning text-[11.5px] mt-0.5">
+                    <AlertCircle size={12} /> sem categoria
+                  </span>
+                )}
+                <div className="flex flex-wrap items-center gap-2 mt-2">{selos(l)}</div>
+                <div className="mt-2">{acoes(l)}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="overflow-x-auto hidden md:block">
       <table className="w-full min-w-[880px] text-[13px]">
         <thead>
           <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
@@ -149,60 +244,14 @@ export function ContasTable({
                 {moeda(l.valorCentavos)}
               </td>
               <td className="py-2.5 pr-3">
-                <div className="flex items-center gap-2">
-                  <Badge variant={SITUACAO_VARIANTE[l.situacao]}>
-                    {/* Cancelada por renegociação ou perda diz o nome: "cancelada" esconderia
-                        que a dívida continua num acordo, ou que alguém decidiu dar por perdida. */}
-                    {l.closeReason === "RENEGOCIADO" ? "Renegociada" : l.closeReason === "PERDA" ? "Perda" : SITUACAO_LABEL[l.situacao]}
-                  </Badge>
-                  {cobranca && cobranca.get(l.id) && cobranca.get(l.id) !== "EM_DIA" && l.closeReason !== "PERDA" && (
-                    <Link href={`/cobranca/${l.id}`} className="inline-flex" title="Abrir na cobrança">
-                      <SeloDaCobranca situacao={cobranca.get(l.id) ?? null} />
-                    </Link>
-                  )}
-                  {l.parcelaDeAcordo && !cobranca?.get(l.id) && <span className="text-[11px] text-fg-muted whitespace-nowrap">parcela de acordo</span>}
-                  {/* Selo só enquanto pesa sobre a conta, ou aprovada ainda em aberto:
-                      depois de paga ou cancelada, a aprovação é histórico. */}
-                  {seloDeAprovacaoVisivel(l) && <SeloDaAprovacao status={l.approvalStatus} />}
-                  {l.documentoId && (
-                    <Link
-                      href={`/documentos-fiscais/${l.documentoId}`}
-                      className="text-brand hover:underline text-[12px] whitespace-nowrap"
-                    >
-                      ver nota
-                    </Link>
-                  )}
-                  {podeAbrirPendencia && l.situacao !== "CANCELADA" && (
-                    <Link
-                      href={`/pendencias?nova=1&lancamento=${l.id}`}
-                      className="text-brand hover:underline text-[12px] whitespace-nowrap"
-                    >
-                      abrir pendência
-                    </Link>
-                  )}
-                </div>
+                <div className="flex items-center gap-2">{selos(l)}</div>
               </td>
-              <td className="py-2.5">
-                <AcoesDaConta
-                  entryId={l.id}
-                  situacao={l.situacao}
-                  status={l.status}
-                  hojeISO={hojeISO}
-                  aPagar={kind === "PAGAR"}
-                  bloqueioDeBaixa={motivoDoBloqueioDeBaixa(l)}
-                  podeEnviar={moduloDeAprovacao && podeEnviarParaAprovacao({ ...l, kind, paidAt: l.pagoEm }).pode}
-                  acoes={{
-                    conferir: conferirConta,
-                    pagar: marcarComoPago,
-                    desfazer: desfazerPagamento,
-                    enviarParaAprovacao: moduloDeAprovacao ? enviarParaAprovacao : undefined,
-                  }}
-                />
-              </td>
+              <td className="py-2.5">{acoes(l)}</td>
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   );
 }

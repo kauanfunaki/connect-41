@@ -71,7 +71,36 @@ export default async function PortalPendenciasPage({
           <EmptyState icon={<MessageSquareWarning />} title="Nenhuma pendência aqui" description="Quando a equipe precisar de algo, o pedido aparece nesta tela e você recebe um e-mail." />
         </Card>
       ) : (
-        <div className="overflow-x-auto">
+        <>
+        {/* Abaixo de md, cartões: o cliente lê isto no celular, e o que importa
+            é o título e o prazo — não a quarta coluna de uma tabela de 720px. */}
+        <div className="md:hidden flex flex-col gap-2">
+          {linhas.map((l) => (
+            <div key={l.id} className="bg-surface border border-border rounded-lg px-3 py-2.5">
+              <Link href={`/portal/pendencias/${l.id}`} className="font-medium text-brand hover:underline break-words">
+                {l.titulo}
+              </Link>
+              <span className="block text-[11.5px] text-fg-muted mt-0.5">
+                {ROTULO_DO_TIPO[l.tipo]} · {l.empresaNome}
+                {l.anexos > 0 && (
+                  <>
+                    {" · "}
+                    <Paperclip size={10} className="inline" /> {l.anexos}
+                  </>
+                )}
+              </span>
+              <span className="block text-[11.5px] text-fg-muted tabular-nums">
+                prazo {l.prazo ? formatInstantDate(l.prazo) : "—"}
+              </span>
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                <SeloDoStatus status={l.status} lado="CLIENTE" />
+                <SeloDoPrazo situacao={l.situacaoDoPrazo} status={l.status} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="overflow-x-auto hidden md:block">
           <table className="w-full min-w-[720px] text-[13px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
@@ -111,6 +140,7 @@ export default async function PortalPendenciasPage({
             </tbody>
           </table>
         </div>
+        </>
       )}
     </PageContainer>
   );

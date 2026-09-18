@@ -127,7 +127,37 @@ export default async function PendenciasPage({
           description={podeAgir ? "Abra uma pendência quando precisar de algo do cliente — ele responde pelo portal." : undefined}
         />
       ) : (
-        <div className="overflow-x-auto">
+        <>
+        {/* Abaixo de md, cartões — mesma forma da lista do portal, para os dois
+            lados da mesma pendência se parecerem. */}
+        <div className="md:hidden flex flex-col gap-2">
+          {linhas.map((l) => (
+            <div key={l.id} className="bg-surface border border-border rounded-lg px-3 py-2.5">
+              <Link href={`/pendencias/${l.id}`} className="font-medium text-brand hover:underline break-words">
+                {l.titulo}
+              </Link>
+              <span className="block text-[11.5px] text-fg-muted mt-0.5 break-words">
+                {ROTULO_DO_TIPO[l.tipo]} · {l.empresaNome} · {l.mensagens} {l.mensagens === 1 ? "mensagem" : "mensagens"}
+                {l.anexos > 0 && (
+                  <>
+                    {" · "}
+                    <Paperclip size={10} className="inline" /> {l.anexos}
+                  </>
+                )}
+              </span>
+              <span className="block text-[11.5px] text-fg-muted tabular-nums">
+                prazo {l.prazo ? formatInstantDate(l.prazo) : "—"} · atualizada {formatInstantDate(l.atualizadaEm)}
+              </span>
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                <SeloDoStatus status={l.status} lado="EQUIPE" />
+                <SeloDoPrazo situacao={l.situacaoDoPrazo} status={l.status} />
+              </div>
+            </div>
+          ))}
+          {limitado && <p className="text-[11px] text-fg-muted mt-1">Mostrando as 500 primeiras. Filtre por empresa para ver o resto.</p>}
+        </div>
+
+        <div className="overflow-x-auto hidden md:block">
           <table className="w-full min-w-[860px] text-[13px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
@@ -170,6 +200,7 @@ export default async function PendenciasPage({
           </table>
           {limitado && <p className="text-[11px] text-fg-muted mt-3">Mostrando as 500 primeiras. Filtre por empresa para ver o resto.</p>}
         </div>
+        </>
       )}
     </PageContainer>
   );

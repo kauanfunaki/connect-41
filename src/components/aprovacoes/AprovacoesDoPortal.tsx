@@ -83,7 +83,64 @@ export function AprovacoesDoPortal({ contas }: { contas: ContaParaAprovar[] }) {
       )}
       {resultado && <p className="text-[12px] text-success mb-3">{resultado}</p>}
 
-      <div className="overflow-x-auto">
+      {/* Abaixo de md, cartões. Aprovar pagamento é o que o cliente mais faz
+          longe do computador, e a tabela de 820px escondia o valor e os botões
+          atrás de uma rolagem lateral. */}
+      <div className="md:hidden flex flex-col gap-2">
+        {contas.map((c) => (
+          <div key={c.id} className="bg-surface border border-border rounded-lg px-3 py-2.5">
+            <div className="flex items-start gap-2.5">
+              {c.dentroDoTeto && (
+                <Checkbox
+                  checked={marcadas.has(c.id)}
+                  onChange={() => alternar(c.id)}
+                  aria-label={`Marcar ${c.fornecedor}`}
+                  className="mt-1"
+                />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-medium break-words">{c.fornecedor}</span>
+                  <span className="tabular-nums font-semibold whitespace-nowrap">{moeda(c.valorCentavos)}</span>
+                </div>
+                {c.descricao && <span className="block text-[11.5px] text-fg-muted break-words">{c.descricao}</span>}
+                <span className="block text-[11.5px] text-fg-muted mt-1 tabular-nums">
+                  vence {formatInstantDate(c.vencimento)} · {c.empresa}
+                </span>
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  {c.dentroDoTeto ? <Badge variant="success">Dentro do teto</Badge> : <Badge variant="warning">Fora do teto</Badge>}
+                </div>
+                <div className="mt-2">
+                  {c.dentroDoTeto ? (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Button
+                        size="xs"
+                        variant="success"
+                        onClick={() => aprovar([c.id], `Aprovar ${c.fornecedor} (${moeda(c.valorCentavos)})?`)}
+                      >
+                        <CheckCircle2 size={12} /> Aprovar
+                      </Button>
+                      <ReprovarComMotivo
+                        entryId={c.id}
+                        descricao={`${c.fornecedor} · ${moeda(c.valorCentavos)} · ${c.empresa}`}
+                        acao={async (id, motivo) => {
+                          const r = await reprovarConta(id, motivo);
+                          if ("ok" in r) setResultado("Conta reprovada. A equipe foi avisada.");
+                          return r;
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <span className="text-[11px] text-fg-muted">Outra pessoa aprova</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="overflow-x-auto hidden md:block">
         <table className="w-full min-w-[820px] text-[13px]">
           <thead>
             <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">

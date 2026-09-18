@@ -67,7 +67,42 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
           <EmptyState icon={<Wallet />} title={aPagar ? "Nenhuma conta a pagar" : "Nenhuma conta a receber"} />
         </Card>
       ) : (
-        <div className="overflow-x-auto">
+        <>
+        {/* Abaixo de md, cartões. O portal é a tela que o cliente abre no
+            celular — a tabela de 760px obrigava a rolar de lado para chegar ao
+            valor, que é o que ele veio ver. */}
+        <div className="md:hidden flex flex-col gap-2">
+          {contas.map((c) => (
+            <div key={c.id} className="bg-surface border border-border rounded-lg px-3 py-2.5">
+              <div className="flex items-start justify-between gap-2">
+                <span className="font-medium break-words">{c.contraparteNome}</span>
+                <span className="tabular-nums font-semibold whitespace-nowrap">{moeda(c.valorCentavos)}</span>
+              </div>
+              {c.descricao && <span className="block text-[11.5px] text-fg-muted break-words">{c.descricao}</span>}
+              <span className="block text-[11.5px] text-fg-muted mt-1 tabular-nums">
+                vence {formatInstantDate(c.vencimento)}
+                {c.pagoEm && ` · liquidada em ${formatInstantDate(c.pagoEm)}`}
+              </span>
+              <span className="block text-[11.5px] text-fg-muted break-words">
+                {c.empresaNome}
+                {c.categoriaNome ? ` · ${c.categoriaNome}` : ""}
+              </span>
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                <Badge variant={SITUACAO[c.situacao].variante}>{SITUACAO[c.situacao].rotulo}</Badge>
+                {c.aprovacao &&
+                  (c.aprovacao === "AGUARDANDO" && linkDaAprovacao ? (
+                    <Link href="/portal/aprovacoes" className="inline-flex" title="Abrir as aprovações">
+                      <SeloDaAprovacao status={c.aprovacao} />
+                    </Link>
+                  ) : (
+                    <SeloDaAprovacao status={c.aprovacao} />
+                  ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="overflow-x-auto hidden md:block">
           <table className="w-full min-w-[760px] text-[13px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
@@ -112,10 +147,12 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
               ))}
             </tbody>
           </table>
-          {contas.length >= 500 && (
-            <p className="text-[11px] text-fg-muted mt-3">Mostrando as 500 contas de vencimento mais recente.</p>
-          )}
         </div>
+
+        {contas.length >= 500 && (
+          <p className="text-[11px] text-fg-muted mt-3">Mostrando as 500 contas de vencimento mais recente.</p>
+        )}
+        </>
       )}
     </PageContainer>
   );
