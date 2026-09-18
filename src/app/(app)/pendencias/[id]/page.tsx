@@ -99,10 +99,7 @@ export default async function PendenciaPage({ params }: { params: Promise<{ id: 
       )}
 
       <ConversaDaPendencia
-        descricao={p.descricao}
-        anexosDaAbertura={p.anexosDaAbertura}
-        abertaPor={p.abertaPor}
-        abertaEm={p.abertaEm}
+        abertura={{ descricao: p.descricao, anexos: p.anexosDaAbertura, por: p.abertaPor, em: p.abertaEm }}
         mensagens={p.mensagens}
         baseDoDownload="/api/pendencias/anexos"
         ladoDeQuemVe="EQUIPE"
@@ -111,7 +108,7 @@ export default async function PendenciaPage({ params }: { params: Promise<{ id: 
       {podeAgir && emAndamento(p.status) && (
         <Card className="mt-5 p-4">
           <ResponderPendencia
-            requestId={p.id}
+            alvo={p.id}
             acao={responderPendenciaEquipe}
             dica="Responder devolve a pendência para o cliente, que recebe um e-mail só com o título e o link."
           />

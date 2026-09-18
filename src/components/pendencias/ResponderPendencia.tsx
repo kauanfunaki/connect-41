@@ -14,14 +14,21 @@ type RespostaDaAcao = { error: string } | { ok: true; aviso?: string | null };
  *
  * A action chega por prop, e não por import, para o portal não carregar a
  * action interna (nem o contrário) para dentro da própria árvore.
+ *
+ * `alvo` é o que a action precisa saber para gravar, e `campo` é o nome com que
+ * ele viaja: `requestId` na pendência, `companyId` na conversa livre. Uma caixa
+ * de escrever mensagem só, para as duas telas não divergirem em tamanho de
+ * arquivo, contagem de anexos e estado de envio.
  */
 export function ResponderPendencia({
-  requestId,
+  alvo,
+  campo = "requestId",
   acao,
   rotulo = "Responder",
   dica,
 }: {
-  requestId: string;
+  alvo: string;
+  campo?: string;
   acao: (formData: FormData) => Promise<RespostaDaAcao>;
   rotulo?: string;
   dica?: string;
@@ -53,11 +60,11 @@ export function ResponderPendencia({
         });
       }}
     >
-      <input type="hidden" name="requestId" value={requestId} />
-      <CampoForm label="Mensagem" htmlFor={`resposta-${requestId}`} helper={dica}>
-        <Textarea id={`resposta-${requestId}`} name="body" rows={4} maxLength={5000} />
+      <input type="hidden" name={campo} value={alvo} />
+      <CampoForm label="Mensagem" htmlFor={`resposta-${alvo}`} helper={dica}>
+        <Textarea id={`resposta-${alvo}`} name="body" rows={4} maxLength={5000} />
       </CampoForm>
-      <CampoDeAnexos idBase={`anexo-${requestId}`} />
+      <CampoDeAnexos idBase={`anexo-${alvo}`} />
       <div className="flex flex-wrap items-center gap-2">
         <Button type="submit" size="sm" disabled={pendente}>
           <Send size={13} /> {pendente ? "Enviando…" : rotulo}

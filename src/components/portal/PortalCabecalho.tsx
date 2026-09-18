@@ -15,6 +15,7 @@ const ITENS: Item[] = [
   { chave: "receber", rotulo: "Contas a receber", href: "/portal/receber", modulo: "bpo_contas_receber" },
   { chave: "relatorios", rotulo: "Relatório", href: "/portal/relatorios", modulo: "bpo_fluxo_caixa" },
   { chave: "pendencias", rotulo: "Pendências", href: "/portal/pendencias", modulo: "bpo_pendencias" },
+  { chave: "comunicacao", rotulo: "Conversa", href: "/portal/comunicacao", modulo: "bpo_comunicacao" },
   { chave: "aprovacoes", rotulo: "Aprovações", href: "/portal/aprovacoes", modulo: "bpo_aprovacoes" },
   { chave: "cobranca", rotulo: "Cobrança", href: "/portal/cobranca", modulo: "bpo_cobranca" },
 ];

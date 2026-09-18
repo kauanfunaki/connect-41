@@ -28,37 +28,36 @@ function ListaDeAnexos({ anexos, baseDoDownload }: { anexos: AnexoDaConversa[]; 
  * Serve as duas telas: `baseDoDownload` aponta para a rota de quem está vendo
  * (interna ou do portal), porque cada rota confere o próprio escopo e um link
  * para a rota errada simplesmente não abriria.
+ *
+ * A `abertura` é o pedido que começou a pendência. Sem ela, o mesmo componente
+ * desenha a conversa livre com o cliente, que não começa por pedido nenhum.
  */
 export function ConversaDaPendencia({
-  descricao,
-  anexosDaAbertura,
-  abertaPor,
-  abertaEm,
+  abertura = null,
   mensagens,
   baseDoDownload,
   ladoDeQuemVe,
 }: {
-  descricao: string | null;
-  anexosDaAbertura: AnexoDaConversa[];
-  abertaPor: string;
-  abertaEm: Date;
+  abertura?: { descricao: string | null; anexos: AnexoDaConversa[]; por: string; em: Date } | null;
   mensagens: MensagemDaConversa[];
   baseDoDownload: string;
   ladoDeQuemVe: "EQUIPE" | "CLIENTE";
 }) {
   return (
     <ol className="flex flex-col gap-3">
+      {abertura && (
       <li className="rounded-md border border-border bg-surface px-4 py-3">
         <p className="text-[11px] text-fg-muted">
-          {abertaPor} · abriu em {formatInstantDateTime(abertaEm)}
+          {abertura.por} · abriu em {formatInstantDateTime(abertura.em)}
         </p>
-        {descricao ? (
-          <p className="mt-1.5 text-[13px] whitespace-pre-wrap break-words">{descricao}</p>
+        {abertura.descricao ? (
+          <p className="mt-1.5 text-[13px] whitespace-pre-wrap break-words">{abertura.descricao}</p>
         ) : (
           <p className="mt-1.5 text-[13px] text-fg-muted">Sem descrição.</p>
         )}
-        <ListaDeAnexos anexos={anexosDaAbertura} baseDoDownload={baseDoDownload} />
+        <ListaDeAnexos anexos={abertura.anexos} baseDoDownload={baseDoDownload} />
       </li>
+      )}
       {mensagens.map((m) => {
         const minha = m.lado === ladoDeQuemVe;
         return (

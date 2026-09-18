@@ -51,10 +51,7 @@ export default async function PortalPendenciaPage({ params }: { params: Promise<
       </div>
 
       <ConversaDaPendencia
-        descricao={p.descricao}
-        anexosDaAbertura={p.anexosDaAbertura}
-        abertaPor={p.abertaPor}
-        abertaEm={p.abertaEm}
+        abertura={{ descricao: p.descricao, anexos: p.anexosDaAbertura, por: p.abertaPor, em: p.abertaEm }}
         mensagens={p.mensagens}
         baseDoDownload="/portal/pendencias/anexos"
         ladoDeQuemVe="CLIENTE"
@@ -63,7 +60,7 @@ export default async function PortalPendenciaPage({ params }: { params: Promise<
       {emAndamento(p.status) ? (
         <Card className="mt-5 p-4">
           <ResponderPendencia
-            requestId={p.id}
+            alvo={p.id}
             acao={responderPendenciaCliente}
             rotulo="Enviar resposta"
             dica="Anexe PDF, PNG, JPG ou XML de até 10 MB. A equipe é avisada quando você responde."

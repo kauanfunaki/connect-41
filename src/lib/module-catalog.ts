@@ -40,6 +40,7 @@ export type IconeDeModulo =
   | "Landmark"
   | "MessageCircle"
   | "MessageSquareWarning"
+  | "MessagesSquare"
   | "Network"
   | "Receipt"
   | "ReceiptText"
@@ -431,6 +432,15 @@ export const MODULE_CATALOG: ModuleDef[] = [
     group: "Cliente",
   },
   {
+    code: "bpo_comunicacao",
+    label: "Conversa com o cliente",
+    sectorCode: "bpo",
+    description: "Conversa livre por empresa, com anexos — o que não é pedido com prazo, e o caminho do cliente para mandar arquivo sem esperar uma pendência",
+    defaultEnabled: true,
+    icon: "MessagesSquare",
+    group: "Cliente",
+  },
+  {
     code: "bpo_aprovacoes",
     label: "Aprovações",
     sectorCode: "bpo",
@@ -554,6 +564,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   bpo_cadastros:           "/cadastros-financeiros",
   bpo_pendencias:          "/pendencias",
   bpo_aprovacoes:          "/aprovacoes",
+  bpo_comunicacao:         "/comunicacao",
   bpo_cobranca:            "/cobranca",
   dre_economica:           "/dre/economica",
   dre_analises:            "/dre/analises",

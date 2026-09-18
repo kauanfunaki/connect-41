@@ -530,6 +530,8 @@ model Tenant {
   clientRequests           ClientRequest[]
   clientRequestReminders   ClientRequestReminder[]
   userPinnedModules        UserPinnedModule[]
+  companyMessages          CompanyMessage[]
+  companyMessageAttachments CompanyMessageAttachment[]
   portalApprovalLimits     PortalApprovalLimit[]
   collectionContacts       CollectionContact[]
   collectionAgreements     CollectionAgreement[]
@@ -752,6 +754,7 @@ model User {
   clientRequestsResolved     ClientRequest[]         @relation("ClientRequestResolvedBy")
   clientRequestMessages      ClientRequestMessage[]  @relation("ClientRequestMessageAuthorUser")
   clientRequestAttachments   ClientRequestAttachment[] @relation("ClientRequestAttachmentUser")
+  companyMessages            CompanyMessage[]          @relation("CompanyMessageAuthorUser")
   financeApprovalEvents      FinanceApprovalEvent[]  @relation("FinanceApprovalEventUser")
   financeEntriesLost         FinanceEntry[]          @relation("FinanceEntryLossBy")
   financeEntriesCollecting   FinanceEntry[]          @relation("FinanceEntryCollectionOwner")
@@ -859,6 +862,7 @@ model PortalUser {
 
   clientRequestMessages    ClientRequestMessage[]    @relation("ClientRequestMessageAuthorPortal")
   clientRequestAttachments ClientRequestAttachment[] @relation("ClientRequestAttachmentPortal")
+  companyMessages          CompanyMessage[]          @relation("CompanyMessageAuthorPortal")
   approvalLimits           PortalApprovalLimit[]
   financeApprovalEvents    FinanceApprovalEvent[]    @relation("FinanceApprovalEventPortal")
 
@@ -1004,6 +1008,7 @@ model Company {
   financeEntries        FinanceEntry[]
   bankAccounts          BankAccount[]
   clientRequests        ClientRequest[]
+  companyMessages       CompanyMessage[]
   portalApprovalLimits  PortalApprovalLimit[]
   collectionAgreements  CollectionAgreement[]
   collectionReminderOptOut CollectionReminderOptOut?
@@ -2712,6 +2717,54 @@ model ClientRequestAttachment {
   @@index([requestId])
   @@index([messageId])
   @@map("client_request_attachments")
+}
+
+/// Conversa livre entre o escritório e o cliente, por empresa.
+///
+/// É o que sobra quando **não** é pendência: pendência é pedido com prazo, entra
+/// numa fila, cobra sozinha por e-mail e alguém precisa encerrar. Aqui é recado —
+/// sem prazo, sem status, sem fila. Misturar os dois faria a fila de pendências
+/// encher de conversa, e a conversa herdar cobrança que ninguém pediu.
+model CompanyMessage {
+  id       String @id @default(uuid())
+  tenantId String
+  /// A conversa é por empresa, e não por cliente: o cliente pode ter 21 empresas,
+  /// e "o que falamos da BLD Filial 3" não é o mesmo assunto da matriz.
+  companyId String
+  /// Exatamente um dos dois autores — regra na aplicação, como em ClientRequestMessage.
+  authorUserId       String?
+  authorPortalUserId String?
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  tenant       Tenant                     @relation(fields: [tenantId], references: [id])
+  company      Company                    @relation(fields: [companyId], references: [id])
+  authorUser   User?                      @relation("CompanyMessageAuthorUser", fields: [authorUserId], references: [id], onDelete: SetNull)
+  authorPortal PortalUser?                @relation("CompanyMessageAuthorPortal", fields: [authorPortalUserId], references: [id], onDelete: SetNull)
+  attachments  CompanyMessageAttachment[]
+
+  @@index([tenantId, companyId, createdAt])
+  @@map("company_messages")
+}
+
+/// Arquivo que acompanha uma mensagem da conversa — o caminho do cliente para
+/// mandar documento sem esperar o escritório abrir uma pendência.
+model CompanyMessageAttachment {
+  id        String @id @default(uuid())
+  tenantId  String
+  messageId String
+  fileName  String @db.VarChar(255)
+  /// "<tenantId>/<uuid>.<ext>" sob storage/company-messages — nunca vem do usuário.
+  fileUrl   String @db.VarChar(255)
+  mimeType  String @db.VarChar(100)
+  sizeBytes Int
+  createdAt DateTime @default(now())
+
+  tenant  Tenant         @relation(fields: [tenantId], references: [id])
+  message CompanyMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("company_message_attachments")
 }
 
 /// Lembrete automático de pendência vencida — um por (pendência, passo).

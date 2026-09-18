@@ -723,6 +723,35 @@ export async function sendPendenciaAoClienteEmail(input: SendPendenciaAoClienteE
   return enviarAvisoIndividual(input.tenantId, "sendPendenciaAoClienteEmail", mensagens);
 }
 
+export type SendMensagemAoClienteEmailInput = {
+  tenantId: string;
+  destinatarios: { email: string; nome: string }[];
+  empresaNome: string;
+};
+
+// Mensagem do escritório na conversa livre. Como no aviso de pendência, o corpo
+// **não** vai no e-mail: conversa de escritório com cliente cita valor, banco e
+// documento, e e-mail é o canal que se encaminha sem pensar. O e-mail diz que
+// existe mensagem nova e de qual empresa; o conteúdo fica atrás do login.
+export async function sendMensagemAoClienteEmail(input: SendMensagemAoClienteEmailInput): Promise<ResultadoDoAviso> {
+  const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
+  const url = `${baseUrl}/portal/comunicacao`;
+  const mensagens = input.destinatarios.map((d) => ({
+    to: d.email,
+    subject: `Nova mensagem sobre ${input.empresaNome}`,
+    html: emailShell(
+      `
+    <p class="email-text" style="font-size:14px; line-height:1.6; margin:0 0 16px; font-family:Arial,Helvetica,sans-serif;">
+      Olá, ${escapeHtml(d.nome)}. A equipe deixou uma mensagem sobre <strong>${escapeHtml(input.empresaNome)}</strong> no portal.
+    </p>
+    ${botaoDoEmail(url, "Ler no portal")}
+  `,
+      "Portal do cliente"
+    ),
+  }));
+  return enviarAvisoIndividual(input.tenantId, "sendMensagemAoClienteEmail", mensagens);
+}
+
 export type SendAprovacaoPendenteEmailInput = {
   tenantId: string;
   destinatarios: { email: string; nome: string; quantidade: number }[];
