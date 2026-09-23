@@ -7,9 +7,37 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
-import { salvarContaOmieAction, testarContaOmieAction } from "@/app/(app)/admin/integracoes/omie-actions";
+import { previaDasNotasOmieAction, salvarContaOmieAction, testarContaOmieAction } from "@/app/(app)/admin/integracoes/omie-actions";
 import type { ContaOmieNaTela } from "@/lib/integracoes/omie/contas";
 import type { Saude } from "@/lib/integracoes/execucao";
+import type { PreviaDeChamada } from "@/lib/integracoes/omie/contas";
+
+type Previa = { nfe: PreviaDeChamada; nfse: PreviaDeChamada } | { erro: string };
+
+function BlocoDaPrevia({ titulo, p }: { titulo: string; p: PreviaDeChamada }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[12px] font-semibold mb-1">{titulo}</p>
+      {!p.ok ? (
+        <p className="text-[12px] text-danger">{p.erro}</p>
+      ) : (
+        <div className="max-h-72 overflow-auto rounded border border-border-soft">
+          <table className="w-full text-[11px]">
+            <tbody>
+              {p.estrutura.map((l) => (
+                <tr key={l.caminho} className="border-b border-border-soft align-top">
+                  <td className="py-0.5 px-1.5 font-mono text-fg-secondary break-all">{l.caminho}</td>
+                  <td className="py-0.5 px-1.5 text-fg-muted whitespace-nowrap">{l.tipo}</td>
+                  <td className="py-0.5 px-1.5 break-all">{l.exemplo}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const SAUDE: Record<Saude, { rotulo: string; variante: "success" | "warning" | "danger" | "info" }> = {
   nunca_rodou: { rotulo: "Não testada", variante: "info" },
@@ -88,6 +116,15 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
   const [editando, setEditando] = useState<string | null>(null);
   const [teste, setTeste] = useState<Record<string, { ok: boolean; texto: string }>>({});
   const [testando, setTestando] = useState<string | null>(null);
+  const [previas, setPrevias] = useState<Record<string, Previa>>({});
+  const [lendo, setLendo] = useState<string | null>(null);
+
+  async function previa(companyId: string) {
+    setLendo(companyId);
+    const r = await previaDasNotasOmieAction(companyId);
+    setPrevias((p) => ({ ...p, [companyId]: r }));
+    setLendo(null);
+  }
   const semConta = empresas.filter((e) => !contas.some((c) => c.companyId === e.id));
 
   async function testar(companyId: string) {
@@ -162,10 +199,38 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
                       <Button variant="linkMuted" size="xs" onClick={() => setEditando(c.companyId)}>
                         Trocar chave
                       </Button>
+                      {c.saude === "ok" && (
+                        <Button variant="linkMuted" size="xs" disabled={lendo !== null} onClick={() => previa(c.companyId)}>
+                          {lendo === c.companyId ? "Lendo…" : "Prévia das notas"}
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 )
               )}
+              {contas
+                .filter((c) => previas[c.companyId])
+                .map((c) => {
+                  const p = previas[c.companyId];
+                  return (
+                    <tr key={`${c.companyId}-previa`} className="border-b border-border-soft">
+                      <td colSpan={4} className="py-3">
+                        <p className="text-[12px] mb-2">
+                          <span className="font-medium">Prévia das notas — {c.empresa}.</span>{" "}
+                          <span className="text-fg-muted">Só leitura: nada foi gravado no Connect nem alterado no Omie.</span>
+                        </p>
+                        {"erro" in p ? (
+                          <p className="text-[12px] text-danger">{p.erro}</p>
+                        ) : (
+                          <div className="grid gap-3 lg:grid-cols-2">
+                            <BlocoDaPrevia titulo="NF-e (produtos/nfconsultar · ListarNF)" p={p.nfe} />
+                            <BlocoDaPrevia titulo="NFS-e (servicos/nfse · ListarNFSEs)" p={p.nfse} />
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
             </tbody>
           </table>
         </div>
