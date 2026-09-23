@@ -19,6 +19,20 @@
 //    a proposta estiver errada, ela falha nas mesmas validações que falhariam
 //    se alguém tivesse digitado errado.
 //
+// ─── A exceção, e por que ela é estreita ────────────────────────────────────
+//
+// Uma ferramenta de natureza `registro` executa sozinha e grava — **só se o
+// nome estiver em `REGISTROS_AUTOMATICOS`**. Fora da lista, ela vira proposta
+// como qualquer escrita. A lista é o lugar da decisão: entrar nela é código
+// revisado, e não uma flag no catálogo que alguém liga sem ler.
+//
+// Existe por causa do WhatsApp do Recrutamento (decisão do Kauan em 23/09):
+// ali não há pessoa para confirmar proposta — proposta significa passar a
+// conversa para um humano —, e as respostas do candidato (pretensão,
+// disponibilidade, deslocamento) com 200 conversas por dia voltariam a ser
+// trabalho manual. Por isso o registro é o mínimo: campos do próprio
+// candidato, na candidatura ligada à conversa, sem tocar etapa, status ou nota.
+
 // ─── Por que o registro está vazio ──────────────────────────────────────────
 //
 // Mesma regra de `OBSERVADORES` e `EXECUTORES`: declarar aqui é prometer que a
@@ -44,8 +58,10 @@ export type FerramentaDef = {
   /**
    * `leitura` executa e devolve o resultado ao modelo.
    * `escrita` **nunca executa**: vira proposta para uma pessoa confirmar.
+   * `registro` grava sozinha **só** se estiver em `REGISTROS_AUTOMATICOS`;
+   * fora dela, vira proposta — ver o cabeçalho.
    */
-  natureza: "leitura" | "escrita";
+  natureza: "leitura" | "escrita" | "registro";
 };
 
 /**
@@ -98,6 +114,23 @@ export function registrarFerramentas(conjunto: Record<string, FerramentaRegistra
     if (FERRAMENTAS[nome]) throw new Error(`Ferramenta duplicada no registro: ${nome}`);
     FERRAMENTAS[nome] = reg;
   }
+}
+
+/**
+ * As únicas ferramentas que gravam sem uma pessoa confirmar. Cada nome aqui é
+ * uma exceção à regra do cabeçalho, com o motivo ao lado.
+ */
+export const REGISTROS_AUTOMATICOS: readonly string[] = [
+  // Respostas do candidato no WhatsApp do Recrutamento (23/09): pretensão,
+  // disponibilidade e deslocamento, na candidatura ligada à conversa.
+  "registrar_respostas_do_candidato",
+];
+
+/** A chamada vira proposta em vez de executar? */
+export function viraProposta(def: FerramentaDef, executar: ExecutorDeFerramenta | undefined): boolean {
+  if (!executar || def.natureza === "escrita") return true;
+  if (def.natureza === "registro") return !REGISTROS_AUTOMATICOS.includes(def.nome);
+  return false;
 }
 
 export function ferramentaPara(nome: string): FerramentaRegistrada | null {

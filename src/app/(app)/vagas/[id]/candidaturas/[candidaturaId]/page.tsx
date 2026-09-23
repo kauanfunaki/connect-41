@@ -10,6 +10,8 @@ import { BackButton } from "@/components/shared/BackButton";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
 import { ScorecardForm } from "@/components/vagas/ScorecardForm";
 import { NotaDaTriagem } from "@/components/vagas/NotaDaTriagem";
+import { RespostasDoCandidato } from "@/components/vagas/RespostasDoCandidato";
+import { lerFonte } from "@/lib/recrutamento/respostas";
 import { requisitosAtuais } from "@/lib/recrutamento/triagemServidor";
 import type { AvaliacaoDeRequisito, Faixa, Requisito } from "@/lib/recrutamento/triagem";
 import { MeetingsSection } from "@/components/kanban/MeetingsSection";
@@ -149,6 +151,18 @@ export default async function CandidaturaScorecardPage({
           createdAt: n.createdAt,
           origem: n.origem,
         }))}
+      />
+
+      <RespostasDoCandidato
+        vagaId={vagaId}
+        candidaturaId={candidaturaId}
+        podeEditar={canAct}
+        fonte={lerFonte(candidatura.respostasFonte)}
+        respostas={{
+          pretensaoSalarial: candidatura.pretensaoSalarial === null ? null : candidatura.pretensaoSalarial.toNumber(),
+          disponibilidade: candidatura.disponibilidade,
+          deslocamentoMinutos: candidatura.deslocamentoMinutos,
+        }}
       />
 
       {/* Entrevistas */}
