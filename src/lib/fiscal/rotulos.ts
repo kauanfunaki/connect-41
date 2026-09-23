@@ -21,6 +21,7 @@ export const TIPO_LABEL: Record<FiscalDocumentType, string> = {
 export const ORIGEM_LABEL: Record<FiscalDocumentOrigin, string> = {
   SPED: "SPED",
   UPLOAD: "Upload",
+  OMIE: "Omie",
 };
 
 export const SITUACAO_LABEL: Record<FiscalDocumentSituation, string> = {

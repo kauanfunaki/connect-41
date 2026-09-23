@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { previaDasNotasOmie, salvarContaOmie, testarContaOmie } from "@/lib/integracoes/omie/contas";
+import { sincronizarNotasDaEmpresa } from "@/lib/integracoes/omie/sincronizacao";
 
 type Resultado = { error: string } | { ok: true; mensagem?: string };
 
@@ -44,4 +45,24 @@ export async function previaDasNotasOmieAction(companyId: string) {
   const ctx = await contexto();
   if (!ctx) return { erro: "Sem permissão para configurar integrações." };
   return previaDasNotasOmie(ctx.tenantId!, companyId);
+}
+
+/**
+ * Lê agora as notas emitidas da conta e grava no acervo (Fase 1b). Só leitura
+ * do lado do Omie. Conta grande continua de onde parou na próxima leitura.
+ */
+export async function importarNotasOmieAction(companyId: string): Promise<Resultado> {
+  const ctx = await contexto();
+  if (!ctx) return { error: "Sem permissão para configurar integrações." };
+  const r = await sincronizarNotasDaEmpresa(ctx.tenantId!, companyId, "MANUAL");
+  revalidatePath("/admin/integracoes");
+  if (!r.ok) return { error: r.erro };
+  const c = r.counters;
+  const fora = Object.entries(c)
+    .filter(([k]) => k.startsWith("fora_"))
+    .reduce((n, [, v]) => n + v, 0);
+  return {
+    ok: true,
+    mensagem: `${c.lidas} notas lidas em ${c.paginas} página(s): ${c.novas} novas no acervo, ${c.reconhecidas} já estavam (SPED), ${c.atualizadas} atualizadas, ${fora} de fora (entradas e outras).`,
+  };
 }
