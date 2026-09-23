@@ -16,6 +16,9 @@ import { AiConfigForm } from "@/components/admin/AiConfigForm";
 import { ChatwootConfigForm } from "@/components/admin/ChatwootConfigForm";
 import { VitrineDeIntegracoes } from "@/components/admin/VitrineDeIntegracoes";
 import { listarIntegracoes } from "@/lib/integracoes/data";
+import { ContasOmie } from "@/components/admin/ContasOmie";
+import { listarContasOmie } from "@/lib/integracoes/omie/contas";
+import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { desconectarIntegracao } from "./actions";
 
 const ERROR_LABEL: Record<string, string> = {
@@ -56,9 +59,13 @@ export default async function IntegracoesPage({
   // reunião acima) — só quem administra o tenant todo (ADMIN/SUPER_ADMIN) vê e mexe.
   // Credencial de sistema de terceiro é configuração do cliente inteiro.
   const podeConfigurar = isFullWrite(ctx.role);
+  // O Omie sai da vitrine genérica: a conta é por empresa cliente, com seção própria.
   const integracoesDoCatalogo = podeConfigurar
-    ? await listarIntegracoes(ctx.tenantId!, new Date())
+    ? (await listarIntegracoes(ctx.tenantId!, new Date())).filter((i) => i.code !== "omie")
     : [];
+  const [contasOmie, empresasParaOmie] = podeConfigurar
+    ? await Promise.all([listarContasOmie(ctx.tenantId!, new Date()), empresasDoSeletor(ctx.tenantId!)])
+    : [[], []];
 
   const canManageAi = isFullWrite(ctx.role);
   const aiConfig = canManageAi ? await prisma.tenantAiConfig.findUnique({ where: { tenantId: ctx.tenantId } }) : null;
@@ -98,6 +105,9 @@ export default async function IntegracoesPage({
             integracoes={integracoesDoCatalogo}
             urlPublica={process.env.APP_PUBLIC_URL ?? null}
           />
+          <div className="mt-3">
+            <ContasOmie contas={contasOmie} empresas={empresasParaOmie} />
+          </div>
         </section>
       )}
 
