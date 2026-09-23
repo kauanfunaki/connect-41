@@ -15,6 +15,7 @@ import { TriagemDaVaga } from "@/components/vagas/TriagemDaVaga";
 import { isAiConfigured } from "@/lib/ai";
 import { requisitosAtuais } from "@/lib/recrutamento/triagemServidor";
 import { compararParaTriagem, type Faixa } from "@/lib/recrutamento/triagem";
+import { resumoDasRespostas } from "@/lib/recrutamento/respostas";
 import { RecruitmentFunnel, type FunnelCard } from "@/components/vagas/RecruitmentFunnel";
 import { computeFunnelConversion, type Stage } from "@/lib/recruitmentFunnel";
 import { formatInstantDate } from "@/lib/format";
@@ -102,6 +103,11 @@ export default async function VagaPage({
       hasResume: c.resumeUrl != null,
       stage: c.stage as Stage,
       scorecardCount: c._count.scorecards,
+      respostas: resumoDasRespostas({
+        pretensaoSalarial: c.pretensaoSalarial === null ? null : c.pretensaoSalarial.toNumber(),
+        disponibilidade: c.disponibilidade,
+        deslocamentoMinutos: c.deslocamentoMinutos,
+      }),
       nota: (() => {
         const n = notaDa.get(c.id);
         return n ? { score: n.score, faixa: n.faixa as Faixa, desatualizada: n.requisitosId !== requisitos?.id } : null;

@@ -19,6 +19,8 @@ export type FunnelCard = {
   scorecardCount: number;
   /** Nota da triagem (R1). Só ordena — nunca tira ninguém do funil. */
   nota: { score: number; faixa: Faixa; desatualizada: boolean } | null;
+  /** Resumo das respostas do candidato (pretensão · deslocamento · disponibilidade), ou nulo. */
+  respostas: string | null;
 };
 
 const COR_DA_FAIXA: Record<Faixa, string> = {
@@ -171,6 +173,7 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
                         </span>
                       </p>
                     )}
+                    {c.respostas && <p className="text-[11px] text-fg-secondary mt-1 pl-8 tnum">{c.respostas}</p>}
                     {c.origin && <p className="text-[11px] text-fg-muted mt-1.5 pl-8">via {c.origin}</p>}
 
                     {/* Alternativa acessível ao arraste: o board era só

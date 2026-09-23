@@ -1,5 +1,7 @@
 // Leitura das conversas para a tela.
 
+import type { Faixa } from "@/lib/recrutamento/triagem";
+import type { Respostas } from "@/lib/recrutamento/respostas";
 import { getPrisma } from "@/lib/prisma";
 import { ordenarConversas, type ConversaParaTela } from "@/lib/whatsapp/conversas";
 import { JANELA_LIVRE_EM_HORAS } from "@/lib/whatsapp/decisao";
@@ -145,8 +147,20 @@ export type MensagemNaTela = {
   anexo: { nome: string } | null;
 };
 
+/**
+ * O que o recrutador precisa ver da candidatura enquanto atende: a nota da
+ * triagem e as respostas que o robô já coletou — sem sair da conversa.
+ */
+export type FichaDaCandidatura = {
+  vagaId: string;
+  candidaturaId: string;
+  nota: { score: number; faixa: Faixa; desatualizada: boolean } | null;
+  respostas: Respostas;
+};
+
 export type ConversaDetalhada = LinhaDeConversa & {
   mensagens: MensagemNaTela[];
+  ficha: FichaDaCandidatura | null;
   /**
    * Vínculo automático por telefone + nome (`src/lib/whatsapp/vinculo.ts`):
    * `confirmando` enquanto espera o nome, `nao_confirmou` quando desistiu ou
@@ -197,7 +211,21 @@ export async function lerConversa(
     thread.candidaturaId
       ? prisma.candidatura.findFirst({
           where: { id: thread.candidaturaId, tenantId },
-          select: { person: { select: { name: true } }, vaga: { select: { title: true } } },
+          select: {
+            id: true,
+            vagaId: true,
+            pretensaoSalarial: true,
+            disponibilidade: true,
+            deslocamentoMinutos: true,
+            person: { select: { name: true } },
+            vaga: {
+              select: {
+                title: true,
+                requisitos: { orderBy: { versao: "desc" }, take: 1, select: { id: true } },
+              },
+            },
+            notas: { orderBy: { createdAt: "desc" }, take: 1, select: { score: true, faixa: true, requisitosId: true } },
+          },
         })
       : null,
     janelasDasConexoes(tenantId, [thread.integrationId]),
@@ -231,6 +259,24 @@ export async function lerConversa(
         : thread.linkFailedAt
           ? "nao_confirmou"
           : null,
+    ficha: candidatura
+      ? {
+          vagaId: candidatura.vagaId,
+          candidaturaId: candidatura.id,
+          nota: candidatura.notas[0]
+            ? {
+                score: candidatura.notas[0].score,
+                faixa: candidatura.notas[0].faixa as Faixa,
+                desatualizada: candidatura.notas[0].requisitosId !== candidatura.vaga.requisitos[0]?.id,
+              }
+            : null,
+          respostas: {
+            pretensaoSalarial: candidatura.pretensaoSalarial === null ? null : candidatura.pretensaoSalarial.toNumber(),
+            disponibilidade: candidatura.disponibilidade,
+            deslocamentoMinutos: candidatura.deslocamentoMinutos,
+          },
+        }
+      : null,
     mensagens: mensagens.map((m) => ({
       id: m.id,
       direction: m.direction,
