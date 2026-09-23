@@ -74,6 +74,14 @@ export function ImportarDoOmie({ companyId }: { companyId: string }) {
               {m.linhas} em {MES[m.mes - 1]} de {m.ano}
             </span>
           ))}
+          {estado.categoriasCriadas > 0 && (
+            <span className="text-fg-secondary">
+              {estado.categoriasCriadas}{" "}
+              {estado.categoriasCriadas === 1 ? "categoria nova" : "categorias novas"} no plano de contas
+              {estado.categoriasSemGrupo > 0 &&
+                ` — ${estado.categoriasSemGrupo} sem grupo no DRE, para classificar acima`}
+            </span>
+          )}
           {estado.ignoradas > 0 && (
             <span className="text-warning">
               {estado.ignoradas}{" "}

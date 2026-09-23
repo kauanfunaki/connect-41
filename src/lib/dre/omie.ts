@@ -66,6 +66,12 @@ const COLUNA_DATA = "data de credito ou debito no extrato";
 const COLUNA_CATEGORIA = "categoria";
 const COLUNA_PAGO = "valor pago";
 const COLUNA_RECEBIDO = "recebido";
+// Outro relatório do Omie (o de movimento "Pagamentos", visto no arquivo da
+// Irriga de ago/26) traz uma coluna só para os dois lados. O lado sai da
+// contraparte: coluna "Fornecedor" é pagamento, "Cliente" é recebimento.
+const COLUNA_PAGO_OU_RECEBIDO = "pago ou recebido";
+const COLUNA_FORNECEDOR = "fornecedor";
+const COLUNA_CLIENTE = "cliente";
 
 /**
  * Acha a linha de cabeçalho.
@@ -82,7 +88,7 @@ function acharCabecalho(matriz: Celula[][]): { indice: number; colunas: Map<stri
       const k = chaveDoCabecalho(c);
       if (k && !colunas.has(k)) colunas.set(k, j);
     });
-    const temValor = colunas.has(COLUNA_PAGO) || colunas.has(COLUNA_RECEBIDO);
+    const temValor = colunas.has(COLUNA_PAGO) || colunas.has(COLUNA_RECEBIDO) || colunas.has(COLUNA_PAGO_OU_RECEBIDO);
     if (colunas.has(COLUNA_CATEGORIA) && temValor) return { indice: i, colunas };
   }
   throw new ExportIlegivel(
@@ -157,8 +163,27 @@ export function lerExportDoOmie(matriz: Celula[][]): LeituraDoExport {
 
   const colPago = colunas.get(COLUNA_PAGO);
   const colRecebido = colunas.get(COLUNA_RECEBIDO);
-  const origem: "recebimento" | "pagamento" = colPago !== undefined ? "pagamento" : "recebimento";
-  const colValor = colPago ?? colRecebido!;
+  let origem: "recebimento" | "pagamento";
+  let colValor: number;
+  if (colPago !== undefined) {
+    origem = "pagamento";
+    colValor = colPago;
+  } else if (colRecebido !== undefined) {
+    origem = "recebimento";
+    colValor = colRecebido;
+  } else {
+    // Só "Pago ou Recebido": o lado vem da contraparte. Sem ela, adivinhar pelo
+    // sinal do valor jogaria um estorno no lado errado — recusa explicando.
+    colValor = colunas.get(COLUNA_PAGO_OU_RECEBIDO)!;
+    const fornecedor = colunas.has(COLUNA_FORNECEDOR);
+    const cliente = colunas.has(COLUNA_CLIENTE);
+    if (fornecedor === cliente) {
+      throw new ExportIlegivel(
+        'a coluna "Pago ou Recebido" não diz de que lado é, e não achei só "Fornecedor" (pagamento) ou só "Cliente" (recebimento) para saber.'
+      );
+    }
+    origem = fornecedor ? "pagamento" : "recebimento";
+  }
 
   const colData = colunas.get(COLUNA_DATA);
   if (colData === undefined) {
