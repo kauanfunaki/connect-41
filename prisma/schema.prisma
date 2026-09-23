@@ -1666,6 +1666,16 @@ model Vaga {
   /// e some quando o candidato filtra por um valor — não se inventa modalidade.
   workMode          VagaModalidade?
   contractType      VagaContrato?
+  /// Benefícios, um por linha — a página da vaga mostra como lista.
+  benefits          String?        @db.Text
+  /// Último dia de inscrição, data-calendário (meia-noite UTC, como os outros
+  /// campos de data do sistema). Vale até o fim desse dia em Brasília; depois
+  /// a vaga sai do portal sozinha, sem ninguém precisar despublicar.
+  applicationDeadline DateTime?
+  /// Onde se trabalha, quando não é a cidade da empresa (filial, cliente).
+  /// Nulo usa a cidade do cadastro da empresa, como antes.
+  workCity          String?        @db.VarChar(80)
+  workStateCode     String?        @db.VarChar(2)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 

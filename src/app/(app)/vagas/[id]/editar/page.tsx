@@ -79,6 +79,10 @@ export default async function EditarVagaPage({
             showSalary: vaga.showSalary,
             workMode: vaga.workMode,
             contractType: vaga.contractType,
+            benefits: vaga.benefits,
+            applicationDeadline: vaga.applicationDeadline ? vaga.applicationDeadline.toISOString().slice(0, 10) : null,
+            workCity: vaga.workCity,
+            workStateCode: vaga.workStateCode,
           }}
         />
       </Card>

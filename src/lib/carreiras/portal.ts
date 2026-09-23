@@ -152,3 +152,65 @@ export function opcoesDosFiltros(vagas: VagaDoPortal[]): {
     contratos: CONTRATOS.filter((c) => vagas.some((v) => v.contractType === c)),
   };
 }
+
+// ─── 2ª leva (23/09): prazo, benefícios, local próprio, paginação ──────────
+
+/**
+ * Hoje em Brasília, como data-calendário (meia-noite UTC) — a mesma forma em
+ * que o prazo é gravado. Comparar com o dia de Brasília, e não com o instante
+ * UTC, é o que faz o prazo valer até as 23h59 daqui, e não até as 21h.
+ */
+export function hojeEmBrasilia(agora: Date): Date {
+  const [a, m, d] = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" })
+    .format(agora)
+    .split("-");
+  return new Date(`${a}-${m}-${d}T00:00:00Z`);
+}
+
+/** O filtro do Prisma para "ainda aceita inscrição": sem prazo, ou prazo de hoje em diante. */
+export function whereDoPrazo(agora: Date) {
+  return { OR: [{ applicationDeadline: null }, { applicationDeadline: { gte: hojeEmBrasilia(agora) } }] };
+}
+
+/** O que o recrutador escreveu, um benefício por linha, sem marcador de lista. */
+export function beneficiosDaVaga(texto: string | null | undefined): string[] {
+  return (texto ?? "")
+    .split(/\r?\n/)
+    .map((l) => l.replace(/^\s*[-*•·]\s*/, "").trim())
+    .filter(Boolean)
+    .slice(0, 20);
+}
+
+/** A cidade da vaga quando ela tem uma; senão, a da empresa. */
+export function localDaVaga(v: {
+  workCity: string | null;
+  workStateCode: string | null;
+  company: { city: string | null; stateCode: string | null };
+}): { cidade: string | null; uf: string | null } {
+  if (v.workCity?.trim()) return { cidade: v.workCity.trim(), uf: v.workStateCode?.trim() || null };
+  return { cidade: v.company.city, uf: v.company.stateCode };
+}
+
+export const VAGAS_POR_PAGINA = 20;
+
+export function paginar<T>(lista: T[], pedida: string | string[] | undefined, porPagina = VAGAS_POR_PAGINA) {
+  const totalDePaginas = Math.max(1, Math.ceil(lista.length / porPagina));
+  const n = Number(Array.isArray(pedida) ? pedida[0] : pedida);
+  // Página fora da faixa cai na mais próxima: link velho de "página 4" depois
+  // que vagas fecharam não deve dar lista vazia.
+  const pagina = Number.isInteger(n) ? Math.min(Math.max(n, 1), totalDePaginas) : 1;
+  return { itens: lista.slice((pagina - 1) * porPagina, pagina * porPagina), pagina, totalDePaginas };
+}
+
+/** O link de uma página da lista, mantendo os filtros. */
+export function urlDaLista(slug: string, f: FiltrosDoPortal, pagina = 1): string {
+  const q = new URLSearchParams();
+  if (f.busca) q.set("q", f.busca);
+  if (f.cidade) q.set("cidade", f.cidade);
+  if (f.area) q.set("area", f.area);
+  if (f.modalidade) q.set("modalidade", f.modalidade);
+  if (f.contrato) q.set("contrato", f.contrato);
+  if (pagina > 1) q.set("pagina", String(pagina));
+  const s = q.toString();
+  return `/carreiras/${slug}${s ? `?${s}` : ""}`;
+}

@@ -4,7 +4,18 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { formatCalendarDate } from "@/lib/format";
 import { publicUrl } from "@/lib/jobPostingSchema";
-import { CONTRATO_LABEL, MODALIDADE_LABEL, filtrarVagas, lerFiltros, opcoesDosFiltros, temFiltro } from "@/lib/carreiras/portal";
+import {
+  CONTRATO_LABEL,
+  MODALIDADE_LABEL,
+  filtrarVagas,
+  lerFiltros,
+  localDaVaga,
+  opcoesDosFiltros,
+  paginar,
+  temFiltro,
+  urlDaLista,
+  whereDoPrazo,
+} from "@/lib/carreiras/portal";
 import { EtiquetasDaVaga } from "@/components/carreiras/EtiquetasDaVaga";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -44,7 +55,8 @@ export default async function CarreirasPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { slug } = await params;
-  const filtros = lerFiltros(await searchParams);
+  const busca = await searchParams;
+  const filtros = lerFiltros(busca);
   const prisma = getPrisma();
 
   const tenant = await prisma.tenant.findUnique({
@@ -54,13 +66,17 @@ export default async function CarreirasPage({
   if (!tenant || !tenant.active) notFound();
 
   const abertas = await prisma.vaga.findMany({
-    where: { tenantId: tenant.id, isPublic: true, status: "ABERTA" },
+    // Prazo vencido sai da lista sozinho — ver `whereDoPrazo`.
+    where: { tenantId: tenant.id, isPublic: true, status: "ABERTA", ...whereDoPrazo(new Date()) },
     select: {
       id: true,
       title: true,
       quantity: true,
       openedAt: true,
       publicDescription: true,
+      applicationDeadline: true,
+      workCity: true,
+      workStateCode: true,
       salaryMin: true,
       salaryMax: true,
       showSalary: true,
@@ -75,12 +91,13 @@ export default async function CarreirasPage({
   const todas = abertas.map((v) => ({
     ...v,
     empresa: v.company.tradeName || v.company.name,
-    cidade: v.company.city,
+    ...localDaVaga(v),
     area: v.cargo?.name ?? null,
     salaryMin: v.salaryMin === null ? null : v.salaryMin.toNumber(),
     salaryMax: v.salaryMax === null ? null : v.salaryMax.toNumber(),
   }));
-  const vagas = filtrarVagas(todas, filtros);
+  const filtradas = filtrarVagas(todas, filtros);
+  const { itens: vagas, pagina, totalDePaginas } = paginar(filtradas, busca.pagina);
   const opcoes = opcoesDosFiltros(todas);
   const filtrando = temFiltro(filtros);
 
@@ -112,7 +129,7 @@ export default async function CarreirasPage({
             </div>
             <div className="flex items-center justify-between gap-3">
               <p className="text-[12px] text-fg-muted tabular-nums">
-                {vagas.length === 1 ? "1 vaga" : `${vagas.length} vagas`}
+                {filtradas.length === 1 ? "1 vaga" : `${filtradas.length} vagas`}
                 {filtrando && ` de ${todas.length}`}
               </p>
               <div className="flex items-center gap-3">
@@ -144,7 +161,7 @@ export default async function CarreirasPage({
         ) : (
           <div className="space-y-3">
             {vagas.map((v) => {
-              const local = [v.company.city, v.company.stateCode].filter(Boolean).join(" – ");
+              const local = [v.cidade, v.uf].filter(Boolean).join(" – ");
               return (
                 <Link
                   key={v.id}
@@ -178,10 +195,34 @@ export default async function CarreirasPage({
                   {v.publicDescription && (
                     <p className="text-[12.5px] text-fg-muted mt-2 line-clamp-2">{v.publicDescription}</p>
                   )}
-                  <p className="text-[11px] text-fg-muted mt-2">Publicada em {formatCalendarDate(v.openedAt)}</p>
+                  <p className="text-[11px] text-fg-muted mt-2">
+                    Publicada em {formatCalendarDate(v.openedAt)}
+                    {v.applicationDeadline && ` · inscrições até ${formatCalendarDate(v.applicationDeadline)}`}
+                  </p>
                 </Link>
               );
             })}
+            {totalDePaginas > 1 && (
+              <nav className="flex items-center justify-between gap-3 pt-2" aria-label="Páginas">
+                {pagina > 1 ? (
+                  <Link href={urlDaLista(slug, filtros, pagina - 1)} className="text-[13px] text-brand hover:underline">
+                    ← Anteriores
+                  </Link>
+                ) : (
+                  <span />
+                )}
+                <span className="text-[12px] text-fg-muted tabular-nums">
+                  Página {pagina} de {totalDePaginas}
+                </span>
+                {pagina < totalDePaginas ? (
+                  <Link href={urlDaLista(slug, filtros, pagina + 1)} className="text-[13px] text-brand hover:underline">
+                    Próximas →
+                  </Link>
+                ) : (
+                  <span />
+                )}
+              </nav>
+            )}
           </div>
         )}
       </div>
