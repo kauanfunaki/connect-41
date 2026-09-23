@@ -269,6 +269,15 @@ export const MODULE_CATALOG: ModuleDef[] = [
     group: "Relatórios",
   },
   {
+    code: "gestao_valora",
+    label: "Valora",
+    sectorCode: "gestao",
+    description: "Precificação de honorários pelo custo real de atender: simulação com piso, alvo e tabela, e registro de propostas ganhas e perdidas",
+    defaultEnabled: false,
+    icon: "HandCoins",
+    group: "Cliente",
+  },
+  {
     code: "bpo_dre",
     label: "DRE",
     sectorCode: "bpo",
@@ -545,6 +554,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   dp_avaliacoes:         "/avaliacoes",
   gestao_cargos_salarios:  "/cargos-salarios",
   gestao_indicadores_rh:   "/indicadores-rh",
+  gestao_valora:           "/valora",
   bpo_senhas:              "/bpo-senhas",
   bpo_dre:                 "/dre",
   bpo_manual:              "/bpo-manual",
