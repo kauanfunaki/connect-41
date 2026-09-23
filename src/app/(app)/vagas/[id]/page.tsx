@@ -11,6 +11,10 @@ import { DeleteButton } from "@/components/pessoas/DeleteButton";
 import { ConfirmActionButton } from "@/components/ui/ConfirmActionButton";
 import { AddCandidatoForm } from "@/components/vagas/AddCandidatoForm";
 import { AssistenteDaVaga } from "@/components/vagas/AssistenteDaVaga";
+import { TriagemDaVaga } from "@/components/vagas/TriagemDaVaga";
+import { isAiConfigured } from "@/lib/ai";
+import { requisitosAtuais } from "@/lib/recrutamento/triagemServidor";
+import { compararParaTriagem, type Faixa } from "@/lib/recrutamento/triagem";
 import { RecruitmentFunnel, type FunnelCard } from "@/components/vagas/RecruitmentFunnel";
 import { computeFunnelConversion, type Stage } from "@/lib/recruitmentFunnel";
 import { formatInstantDate } from "@/lib/format";
@@ -57,6 +61,19 @@ export default async function VagaPage({
   const canAct = canActOnSector(ctx, vaga.sectorCode);
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
 
+  // Triagem (R1): requisitos atuais e a última nota de cada candidatura. Nota
+  // de versão anterior dos requisitos aparece, mas marcada como desatualizada.
+  const [requisitos, iaConfigurada] = await Promise.all([requisitosAtuais(ctx.tenantId, id), isAiConfigured(ctx.tenantId)]);
+  const ultimasNotas = await prisma.candidaturaNota.findMany({
+    where: { tenantId: ctx.tenantId, candidatura: { vagaId: id } },
+    orderBy: { createdAt: "desc" },
+    distinct: ["candidaturaId"],
+    select: { candidaturaId: true, score: true, faixa: true, requisitosId: true },
+  });
+  const notaDa = new Map(ultimasNotas.map((n) => [n.candidaturaId, n]));
+  const emAndamento = vaga.candidaturas.filter((c) => c.status === "EM_ANDAMENTO");
+  const pendentes = requisitos ? emAndamento.filter((c) => notaDa.get(c.id)?.requisitosId !== requisitos.id).length : 0;
+
   const linkedPersonIds = new Set(vaga.candidaturas.map((c) => c.personId));
   const candidatos = await prisma.person.findMany({
     where: { tenantId: ctx.tenantId, type: "CANDIDATO", active: true, id: { notIn: [...linkedPersonIds] } },
@@ -85,7 +102,13 @@ export default async function VagaPage({
       hasResume: c.resumeUrl != null,
       stage: c.stage as Stage,
       scorecardCount: c._count.scorecards,
-    }));
+      nota: (() => {
+        const n = notaDa.get(c.id);
+        return n ? { score: n.score, faixa: n.faixa as Faixa, desatualizada: n.requisitosId !== requisitos?.id } : null;
+      })(),
+    }))
+    // Dentro de cada etapa, o mais aderente primeiro; sem nota vai para o fim.
+    .sort(compararParaTriagem);
   const encerrados = vaga.candidaturas.filter((c) => c.status === "REPROVADO" || c.status === "DESISTENTE");
 
   return (
@@ -179,6 +202,16 @@ export default async function VagaPage({
           </div>
         )}
       </div>
+
+      <TriagemDaVaga
+        vagaId={id}
+        requisitos={requisitos}
+        pendentes={pendentes}
+        emAndamento={emAndamento.length}
+        podeEditar={canManage}
+        podePontuar={canAct}
+        iaConfigurada={iaConfigurada}
+      />
 
       {/* Funil de recrutamento */}
       <div className="bg-surface border border-border rounded-lg p-5 mb-4">

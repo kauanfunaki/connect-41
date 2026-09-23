@@ -7,6 +7,7 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
+import { ROTULO_DA_FAIXA, type Faixa } from "@/lib/recrutamento/triagem";
 
 export type FunnelCard = {
   id: string;
@@ -16,6 +17,14 @@ export type FunnelCard = {
   hasResume: boolean;
   stage: Stage;
   scorecardCount: number;
+  /** Nota da triagem (R1). Só ordena — nunca tira ninguém do funil. */
+  nota: { score: number; faixa: Faixa; desatualizada: boolean } | null;
+};
+
+const COR_DA_FAIXA: Record<Faixa, string> = {
+  COMPATIVEL: "bg-success-bg text-success border-success/40",
+  PARCIAL: "bg-warning-bg text-warning border-warning/40",
+  INCOMPATIVEL: "bg-surface-2 text-fg-muted border-border",
 };
 
 type ActionResult = { error: string } | null;
@@ -151,6 +160,17 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
                       </Link>
                     </div>
 
+                    {c.nota && (
+                      <p className="mt-1.5 pl-8">
+                        <span
+                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[11px] font-medium tnum ${COR_DA_FAIXA[c.nota.faixa]} ${c.nota.desatualizada ? "opacity-60" : ""}`}
+                          title={c.nota.desatualizada ? "Nota dada com uma versão anterior dos requisitos" : "Nota da triagem — só ordena, não reprova"}
+                        >
+                          {c.nota.score} · {ROTULO_DA_FAIXA[c.nota.faixa]}
+                          {c.nota.desatualizada && " · versão anterior"}
+                        </span>
+                      </p>
+                    )}
                     {c.origin && <p className="text-[11px] text-fg-muted mt-1.5 pl-8">via {c.origin}</p>}
 
                     {/* Alternativa acessível ao arraste: o board era só
