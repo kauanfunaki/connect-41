@@ -194,3 +194,22 @@ export function normalizarAvaliacoes(v: unknown, req: Requisitos): AvaliacaoDeRe
 export function ehBloqueioDoAgente(erro: string): boolean {
   return /teto de|agente está desligado|chave de IA/i.test(erro);
 }
+
+/**
+ * O resumo e a evidência são para o recrutador ler. O modelo às vezes escreve
+ * na língua interna — "atende r1 e r2", "o r5 é SEM_EVIDENCIA", `"situacao":"Cursando"`
+ * (visto no teste de 23/09). A instrução pede texto corrido; isto garante:
+ * troca o id pelo requisito e o código pelo rótulo, e tira aspas de campo JSON.
+ */
+export function humanizarTexto(texto: string, req: Requisitos): string {
+  const nome = new Map(req.itens.map((r) => [r.id, r.texto]));
+  return texto
+    .replace(/"[a-zA-Z_]+"\s*:\s*"([^"]*)"/g, "$1") // "situacao":"Cursando" → Cursando
+    .replace(/\b(r\d{1,2})\b/g, (m, id: string) => (nome.has(id) ? `"${nome.get(id)}"` : m))
+    .replace(/\bSEM_EVIDENCIA\b/g, "sem evidência")
+    .replace(/\bPARCIAL\b/g, "atende em parte")
+    .replace(/\bSIM\b/g, "atende")
+    .replace(/\bNAO\b/g, "não atende")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
