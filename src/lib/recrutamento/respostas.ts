@@ -10,6 +10,10 @@
 //   pelo mesmo motivo que a triagem não usa cidade (proxy de classe).
 //
 // Nada disto entra na nota da triagem: é informação para o recrutador.
+//
+// Desde 23/09 o portal de vagas faz as mesmas três perguntas na inscrição
+// (origem PORTAL). O WhatsApp consulta `faltaPerguntar` e não repete o que o
+// candidato já respondeu no portal.
 
 export const CAMPOS_DE_RESPOSTA = ["pretensaoSalarial", "disponibilidade", "deslocamentoMinutos"] as const;
 export type CampoDeResposta = (typeof CAMPOS_DE_RESPOSTA)[number];
@@ -20,7 +24,7 @@ export const ROTULO_DA_RESPOSTA: Record<CampoDeResposta, string> = {
   deslocamentoMinutos: "Tempo até o local de trabalho",
 };
 
-export type OrigemDaResposta = "WHATSAPP" | "RECRUTADOR";
+export type OrigemDaResposta = "WHATSAPP" | "PORTAL" | "RECRUTADOR";
 export type FonteDasRespostas = Partial<Record<CampoDeResposta, { origem: OrigemDaResposta; em: string }>>;
 
 export type Respostas = {
@@ -108,7 +112,9 @@ export function lerFonte(v: unknown): FonteDasRespostas {
   const out: FonteDasRespostas = {};
   for (const c of CAMPOS_DE_RESPOSTA) {
     const x = (v as Record<string, unknown>)[c] as { origem?: unknown; em?: unknown } | undefined;
-    if (x && (x.origem === "WHATSAPP" || x.origem === "RECRUTADOR") && typeof x.em === "string") out[c] = { origem: x.origem, em: x.em };
+    if (x && (x.origem === "WHATSAPP" || x.origem === "PORTAL" || x.origem === "RECRUTADOR") && typeof x.em === "string") {
+      out[c] = { origem: x.origem, em: x.em };
+    }
   }
   return out;
 }
