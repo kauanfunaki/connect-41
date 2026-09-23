@@ -14,7 +14,21 @@ type JobPostingInput = {
   city?: string | null;
   stateCode?: string | null;
   quantity: number;
+  /** Tipo de contrato da vaga; sem ele, FULL_TIME (o que o portal sempre declarou). */
+  contractType?: "CLT" | "PJ" | "ESTAGIO" | "TEMPORARIO" | "APRENDIZ" | null;
+  remoto?: boolean;
+  /** Só quando a vaga mostra a faixa no portal — o JSON-LD não revela o que a página esconde. */
+  salario?: { min: number | null; max: number | null } | null;
 };
+
+// Vocabulário do Google for Jobs para employmentType.
+const EMPLOYMENT_TYPE = {
+  CLT: "FULL_TIME",
+  PJ: "CONTRACTOR",
+  ESTAGIO: "INTERN",
+  TEMPORARIO: "TEMPORARY",
+  APRENDIZ: "OTHER",
+} as const;
 
 export function buildJobPostingJsonLd(input: JobPostingInput): string {
   const schema: Record<string, unknown> = {
@@ -23,7 +37,7 @@ export function buildJobPostingJsonLd(input: JobPostingInput): string {
     title: input.title,
     description: input.description,
     datePosted: input.datePosted.toISOString().slice(0, 10),
-    employmentType: "FULL_TIME",
+    employmentType: input.contractType ? EMPLOYMENT_TYPE[input.contractType] : "FULL_TIME",
     hiringOrganization: {
       "@type": "Organization",
       name: input.companyName,
@@ -47,6 +61,25 @@ export function buildJobPostingJsonLd(input: JobPostingInput): string {
       addressCountry: "BR",
     },
   };
+
+  if (input.remoto) {
+    schema.jobLocationType = "TELECOMMUTE";
+    schema.applicantLocationRequirements = { "@type": "Country", name: "BR" };
+  }
+
+  const faixa = input.salario;
+  if (faixa && (faixa.min !== null || faixa.max !== null)) {
+    schema.baseSalary = {
+      "@type": "MonetaryAmount",
+      currency: "BRL",
+      value: {
+        "@type": "QuantitativeValue",
+        ...(faixa.min !== null ? { minValue: faixa.min } : {}),
+        ...(faixa.max !== null ? { maxValue: faixa.max } : {}),
+        unitText: "MONTH",
+      },
+    };
+  }
 
   if (input.quantity > 1) {
     schema.totalJobOpenings = input.quantity;

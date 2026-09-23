@@ -74,6 +74,11 @@ export default async function EditarVagaPage({
             notes: vaga.notes ?? undefined,
             isPublic: vaga.isPublic,
             publicDescription: vaga.publicDescription ?? undefined,
+            salaryMin: vaga.salaryMin === null ? null : vaga.salaryMin.toNumber(),
+            salaryMax: vaga.salaryMax === null ? null : vaga.salaryMax.toNumber(),
+            showSalary: vaga.showSalary,
+            workMode: vaga.workMode,
+            contractType: vaga.contractType,
           }}
         />
       </Card>

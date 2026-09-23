@@ -57,3 +57,13 @@ describe("resumoDasRespostas", () => {
     expect(resumoDasRespostas({ pretensaoSalarial: null, disponibilidade: null, deslocamentoMinutos: null })).toBeNull();
   });
 });
+
+describe("respostas vindas do portal", () => {
+  it("são lidas como PORTAL e o WhatsApp pode atualizá-las", () => {
+    expect(lerFonte({ disponibilidade: { origem: "PORTAL", em: "2026-09-23" } })).toEqual({
+      disponibilidade: { origem: "PORTAL", em: "2026-09-23" },
+    });
+    const r = aplicarRespostas({ disponibilidade: { origem: "PORTAL", em: "x" } }, { disponibilidade: "em 15 dias" }, "WHATSAPP", new Date("2026-09-24T12:00:00Z"));
+    expect(r.gravados).toEqual(["disponibilidade"]);
+  });
+});

@@ -10,6 +10,8 @@ import { UFS } from "@/lib/ufs";
 import { Button } from "@/components/ui/Button";
 import { MAX_MB_DO_CURRICULO } from "@/lib/curriculo";
 
+const DISPONIBILIDADES = ["Imediata", "Em até 15 dias", "Em até 30 dias", "Mais de 30 dias"];
+
 type Props = {
   slug: string;
   vagaId: string;
@@ -87,6 +89,29 @@ export function ApplyForm({ slug, vagaId, carimbo }: Props) {
           </Select>
         </CampoForm>
       </div>
+
+      {/* As mesmas três perguntas do WhatsApp do Recrutamento — respondidas
+          aqui, o robô não pergunta de novo. Nenhuma pede endereço: o tempo até
+          o local é o que importa, e ele é opcional. */}
+      <fieldset className="space-y-3 border-t border-border pt-4">
+        <legend className="text-[length:var(--fs-label)] font-medium text-fg">Algumas perguntas rápidas</legend>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <CampoForm label="Pretensão salarial (R$ por mês)" htmlFor="pretensaoSalarial" required>
+            <Input id="pretensaoSalarial" name="pretensaoSalarial" type="number" inputMode="decimal" min={1} step="0.01" required />
+          </CampoForm>
+          <CampoForm label="Quando pode começar?" htmlFor="disponibilidade" required>
+            <Select id="disponibilidade" name="disponibilidade" defaultValue="" required>
+              <option value="" disabled>Selecione</option>
+              {DISPONIBILIDADES.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </Select>
+          </CampoForm>
+          <CampoForm label="Tempo até o local (minutos)" htmlFor="deslocamentoMinutos">
+            <Input id="deslocamentoMinutos" name="deslocamentoMinutos" type="number" inputMode="numeric" min={0} max={600} step={1} placeholder="Opcional" />
+          </CampoForm>
+        </div>
+      </fieldset>
 
       <div className="space-y-1.5">
         <label htmlFor="resume" className="block text-[length:var(--fs-label)] font-medium text-fg">

@@ -4,6 +4,11 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { formatCalendarDate } from "@/lib/format";
 import { publicUrl } from "@/lib/jobPostingSchema";
+import { CONTRATO_LABEL, MODALIDADE_LABEL, filtrarVagas, lerFiltros, opcoesDosFiltros, temFiltro } from "@/lib/carreiras/portal";
+import { EtiquetasDaVaga } from "@/components/carreiras/EtiquetasDaVaga";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Button } from "@/components/ui/Button";
 
 export async function generateMetadata({
   params,
@@ -31,8 +36,15 @@ export async function generateMetadata({
   };
 }
 
-export default async function CarreirasPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function CarreirasPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { slug } = await params;
+  const filtros = lerFiltros(await searchParams);
   const prisma = getPrisma();
 
   const tenant = await prisma.tenant.findUnique({
@@ -41,7 +53,7 @@ export default async function CarreirasPage({ params }: { params: Promise<{ slug
   });
   if (!tenant || !tenant.active) notFound();
 
-  const vagas = await prisma.vaga.findMany({
+  const abertas = await prisma.vaga.findMany({
     where: { tenantId: tenant.id, isPublic: true, status: "ABERTA" },
     select: {
       id: true,
@@ -49,15 +61,32 @@ export default async function CarreirasPage({ params }: { params: Promise<{ slug
       quantity: true,
       openedAt: true,
       publicDescription: true,
+      salaryMin: true,
+      salaryMax: true,
+      showSalary: true,
+      workMode: true,
+      contractType: true,
       company: { select: { tradeName: true, name: true, city: true, stateCode: true } },
       cargo: { select: { name: true } },
     },
     orderBy: { openedAt: "desc" },
   });
 
+  const todas = abertas.map((v) => ({
+    ...v,
+    empresa: v.company.tradeName || v.company.name,
+    cidade: v.company.city,
+    area: v.cargo?.name ?? null,
+    salaryMin: v.salaryMin === null ? null : v.salaryMin.toNumber(),
+    salaryMax: v.salaryMax === null ? null : v.salaryMax.toNumber(),
+  }));
+  const vagas = filtrarVagas(todas, filtros);
+  const opcoes = opcoesDosFiltros(todas);
+  const filtrando = temFiltro(filtros);
+
   return (
     <div className="min-h-screen py-10 px-4">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         <header className="mb-8 text-center">
           {tenant.logoUrl && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -69,15 +98,52 @@ export default async function CarreirasPage({ params }: { params: Promise<{ slug
           </p>
         </header>
 
-        {vagas.length === 0 ? (
+        {todas.length > 0 && (
+          // GET puro: a busca vira URL, funciona sem JavaScript e pode ser
+          // compartilhada como link (vagas remotas em Curitiba, por exemplo).
+          <form method="get" className="bg-surface border border-border rounded-lg p-4 mb-5 space-y-3" role="search">
+            <label htmlFor="q" className="sr-only">Buscar vaga</label>
+            <Input id="q" name="q" type="search" defaultValue={filtros.busca} placeholder="Buscar por cargo, área ou palavra-chave" />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <Filtro nome="cidade" rotulo="Cidade" valor={filtros.cidade} opcoes={opcoes.cidades.map((c) => [c, c])} />
+              <Filtro nome="area" rotulo="Área" valor={filtros.area} opcoes={opcoes.areas.map((a) => [a, a])} />
+              <Filtro nome="modalidade" rotulo="Modalidade" valor={filtros.modalidade} opcoes={opcoes.modalidades.map((m) => [m, MODALIDADE_LABEL[m]])} />
+              <Filtro nome="contrato" rotulo="Contrato" valor={filtros.contrato} opcoes={opcoes.contratos.map((c) => [c, CONTRATO_LABEL[c]])} />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[12px] text-fg-muted tabular-nums">
+                {vagas.length === 1 ? "1 vaga" : `${vagas.length} vagas`}
+                {filtrando && ` de ${todas.length}`}
+              </p>
+              <div className="flex items-center gap-3">
+                {filtrando && (
+                  <Link href={`/carreiras/${slug}`} className="text-[12px] text-fg-muted hover:text-fg transition-colors">
+                    Limpar filtros
+                  </Link>
+                )}
+                <Button type="submit" variant="primary" size="sm">
+                  Buscar
+                </Button>
+              </div>
+            </div>
+          </form>
+        )}
+
+        {todas.length === 0 ? (
           <div className="bg-surface border border-border rounded-lg p-8 text-center">
             <p className="text-[14px] text-fg">Nenhuma vaga aberta no momento.</p>
             <p className="text-[12px] text-fg-muted mt-1">Volte em breve — novas oportunidades aparecem aqui.</p>
           </div>
+        ) : vagas.length === 0 ? (
+          <div className="bg-surface border border-border rounded-lg p-8 text-center">
+            <p className="text-[14px] text-fg">Nenhuma vaga com esses filtros.</p>
+            <Link href={`/carreiras/${slug}`} className="text-[12px] text-brand hover:underline mt-1 inline-block">
+              Ver todas as {todas.length} vagas abertas
+            </Link>
+          </div>
         ) : (
           <div className="space-y-3">
             {vagas.map((v) => {
-              const companyLabel = v.company.tradeName || v.company.name;
               const local = [v.company.city, v.company.stateCode].filter(Boolean).join(" – ");
               return (
                 <Link
@@ -89,9 +155,9 @@ export default async function CarreirasPage({ params }: { params: Promise<{ slug
                     <div className="min-w-0">
                       <h2 className="text-[15px] font-semibold text-fg">{v.title}</h2>
                       <p className="text-[12px] text-fg-muted mt-0.5">
-                        {companyLabel}
+                        {v.empresa}
                         {local && ` · ${local}`}
-                        {v.cargo && ` · ${v.cargo.name}`}
+                        {v.area && ` · ${v.area}`}
                       </p>
                     </div>
                     {v.quantity > 1 && (
@@ -99,6 +165,15 @@ export default async function CarreirasPage({ params }: { params: Promise<{ slug
                         {v.quantity} vagas
                       </span>
                     )}
+                  </div>
+                  <div className="mt-2.5">
+                    <EtiquetasDaVaga
+                      workMode={v.workMode}
+                      contractType={v.contractType}
+                      salaryMin={v.salaryMin}
+                      salaryMax={v.salaryMax}
+                      showSalary={v.showSalary}
+                    />
                   </div>
                   {v.publicDescription && (
                     <p className="text-[12.5px] text-fg-muted mt-2 line-clamp-2">{v.publicDescription}</p>
@@ -111,5 +186,20 @@ export default async function CarreirasPage({ params }: { params: Promise<{ slug
         )}
       </div>
     </div>
+  );
+}
+
+/** Um filtro de lista. Sem opção, fica desabilitado em vez de sumir — o layout não pula. */
+function Filtro({ nome, rotulo, valor, opcoes }: { nome: string; rotulo: string; valor: string; opcoes: [string, string][] }) {
+  return (
+    <label className="flex flex-col gap-1 text-[11px] text-fg-muted">
+      {rotulo}
+      <Select name={nome} defaultValue={valor} disabled={opcoes.length === 0}>
+        <option value="">Todas</option>
+        {opcoes.map(([v, t]) => (
+          <option key={v} value={v}>{t}</option>
+        ))}
+      </Select>
+    </label>
   );
 }
