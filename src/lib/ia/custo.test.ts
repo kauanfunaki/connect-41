@@ -36,6 +36,9 @@ describe("custoEmCentavos", () => {
 
   it("temPrecoConhecido responde antes de gastar", () => {
     expect(temPrecoConhecido("claude-opus-5")).toBe(true);
+    expect(temPrecoConhecido("claude-opus-5-5")).toBe(true);
+    expect(temPrecoConhecido("gpt-6-sol")).toBe(true);
+    expect(temPrecoConhecido("gpt-6-luna")).toBe(true);
     expect(temPrecoConhecido("gpt-5-turbo-imaginario")).toBe(false);
   });
 });

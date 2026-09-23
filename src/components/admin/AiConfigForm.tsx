@@ -56,7 +56,7 @@ export function AiConfigForm({ hasConfig, defaultValues }: Props) {
         )}
         {removeState && "success" in removeState && removeState.success && (
           <p className="text-[13px] text-success bg-success/8 border border-success/20 rounded-md px-3 py-2">
-            Configuração removida — volta a usar a chave padrão do ambiente (se houver).
+            Configuração removida — a IA fica desligada até uma nova chave ser cadastrada.
           </p>
         )}
         {testResult && (
@@ -91,7 +91,7 @@ export function AiConfigForm({ hasConfig, defaultValues }: Props) {
               defaultValue={defaultValues?.model ?? ""}
               // O exemplo é um modelo que está na tabela de preço: um id fora
               // dela deixa o custo desconhecido e o teto do agente sem conta.
-              placeholder={provider === "ANTHROPIC" ? "claude-opus-5" : "gpt-5.6-terra"}
+              placeholder={provider === "ANTHROPIC" ? "claude-sonnet-5" : "gpt-6-sol"}
             />
           </CampoForm>
         </div>
