@@ -37,7 +37,7 @@ export default async function CandidaturaScorecardPage({
   const candidatura = await prisma.candidatura.findFirst({
     where: { id: candidaturaId, vagaId, tenantId: ctx.tenantId, vaga: { ...scopedVagaWhere(ctx) } },
     include: {
-      person: { select: { id: true, name: true } },
+      person: { select: { id: true, name: true, dataDeletionRequestedAt: true } },
       vaga: { select: { id: true, title: true, sectorCode: true } },
       scorecards: {
         orderBy: { createdAt: "asc" },
@@ -133,6 +133,16 @@ export default async function CandidaturaScorecardPage({
           </Link></>}
         subtitle={<>Pareceres de entrevista · etapa atual: {STAGE_LABEL[candidatura.stage as Stage]}</>}
       />
+
+      {/* Pedido feito pelo próprio candidato, na conta dele do portal de vagas.
+          É pedido legal (LGPD): fica à vista de quem abre a candidatura, e não
+          só no sino de quem estava de plantão. */}
+      {candidatura.person.dataDeletionRequestedAt && (
+        <p className="mb-4 text-[13px] text-warning bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
+          O candidato pediu a exclusão dos dados pessoais (LGPD) em{" "}
+          {formatInstantDate(candidatura.person.dataDeletionRequestedAt)}, pelo portal de vagas. Tratar o pedido na ficha do candidato.
+        </p>
+      )}
 
       <NotaDaTriagem
         vagaId={vagaId}
