@@ -9,6 +9,7 @@ import { PersonType } from "@/generated/prisma/enums";
 import { MAX_BYTES_DO_CURRICULO, MAX_MB_DO_CURRICULO, ehPdf } from "@/lib/curriculo";
 import { avaliarEnvio } from "@/lib/carreiras/antiRobo";
 import { aplicarRespostas, validarRespostas } from "@/lib/recrutamento/respostas";
+import { whereDoPrazo } from "@/lib/carreiras/portal";
 
 // Currículos do portal ficam fora de public/ (mesma razão do storage de
 // documents): só são servidos via /api/resumes/[candidaturaId], com sessão.
@@ -89,7 +90,9 @@ export async function POST(req: NextRequest) {
   if (!tenant || !tenant.active) return NextResponse.json({ error: "Página não encontrada." }, { status: 404 });
 
   const vaga = await prisma.vaga.findFirst({
-    where: { id: vagaId, tenantId: tenant.id, isPublic: true, status: "ABERTA" },
+    // Mesma regra da página: passou do prazo, não aceita — nem de quem estava
+    // com a página aberta desde antes da meia-noite.
+    where: { id: vagaId, tenantId: tenant.id, isPublic: true, status: "ABERTA", ...whereDoPrazo(new Date()) },
     select: { id: true, title: true, sectorCode: true, responsibleUserId: true },
   });
   if (!vaga) return NextResponse.json({ error: "Esta vaga não está mais disponível." }, { status: 404 });

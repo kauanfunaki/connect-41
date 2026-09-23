@@ -9,6 +9,7 @@ import { SimpleMarkdown } from "@/components/shared/SimpleMarkdown";
 import { buildJobPostingJsonLd, buildJobSummary, publicUrl } from "@/lib/jobPostingSchema";
 import { emitirCarimbo } from "@/lib/carreiras/antiRobo";
 import { EtiquetasDaVaga } from "@/components/carreiras/EtiquetasDaVaga";
+import { beneficiosDaVaga, localDaVaga, whereDoPrazo } from "@/lib/carreiras/portal";
 
 // Dinâmica de propósito: o formulário leva um carimbo de tempo assinado na hora
 // em que a página é montada (`src/lib/carreiras/antiRobo.ts`). Página em cache
@@ -26,7 +27,7 @@ async function loadVaga(slug: string, vagaId: string) {
   if (!tenant || !tenant.active) return null;
 
   const vaga = await prisma.vaga.findFirst({
-    where: { id: vagaId, tenantId: tenant.id, isPublic: true, status: "ABERTA" },
+    where: { id: vagaId, tenantId: tenant.id, isPublic: true, status: "ABERTA", ...whereDoPrazo(new Date()) },
     select: {
       id: true,
       title: true,
@@ -38,6 +39,10 @@ async function loadVaga(slug: string, vagaId: string) {
       showSalary: true,
       workMode: true,
       contractType: true,
+      benefits: true,
+      applicationDeadline: true,
+      workCity: true,
+      workStateCode: true,
       company: { select: { tradeName: true, name: true, city: true, stateCode: true } },
       cargo: { select: { name: true } },
     },
@@ -61,7 +66,8 @@ export async function generateMetadata({
 
   const { tenant, vaga } = data;
   const companyLabel = vaga.company.tradeName || vaga.company.name;
-  const local = [vaga.company.city, vaga.company.stateCode].filter(Boolean).join(" – ") || null;
+  const onde = localDaVaga(vaga);
+  const local = [onde.cidade, onde.uf].filter(Boolean).join(" – ") || null;
   const title = `${vaga.title} — ${companyLabel}`;
   const description = buildJobSummary(vaga.title, companyLabel, local, vaga.publicDescription);
   const url = publicUrl(`/carreiras/${slug}/${vaga.id}`);
@@ -93,7 +99,9 @@ export default async function VagaPublicaPage({
   const { tenant, vaga } = data;
 
   const companyLabel = vaga.company.tradeName || vaga.company.name;
-  const local = [vaga.company.city, vaga.company.stateCode].filter(Boolean).join(" – ");
+  const onde = localDaVaga(vaga);
+  const local = [onde.cidade, onde.uf].filter(Boolean).join(" – ");
+  const beneficios = beneficiosDaVaga(vaga.benefits);
   const salaryMin = vaga.salaryMin === null ? null : vaga.salaryMin.toNumber();
   const salaryMax = vaga.salaryMax === null ? null : vaga.salaryMax.toNumber();
 
@@ -101,9 +109,10 @@ export default async function VagaPublicaPage({
     title: vaga.title,
     description: vaga.publicDescription?.trim() || `Vaga de ${vaga.title} na ${companyLabel}.`,
     datePosted: vaga.openedAt,
+    validThrough: vaga.applicationDeadline,
     companyName: companyLabel,
-    city: vaga.company.city,
-    stateCode: vaga.company.stateCode,
+    city: onde.cidade,
+    stateCode: onde.uf,
     quantity: vaga.quantity,
     contractType: vaga.contractType,
     remoto: vaga.workMode === "REMOTO",
@@ -135,12 +144,31 @@ export default async function VagaPublicaPage({
               showSalary={vaga.showSalary}
             />
           </div>
-          <p className="text-[11px] text-fg-muted mt-2">Publicada em {formatCalendarDate(vaga.openedAt)}</p>
+          <p className="text-[11px] text-fg-muted mt-2">
+            Publicada em {formatCalendarDate(vaga.openedAt)}
+            {vaga.applicationDeadline && (
+              <> · <strong className="font-medium text-fg-secondary">inscrições até {formatCalendarDate(vaga.applicationDeadline)}</strong></>
+            )}
+          </p>
         </header>
 
         {vaga.publicDescription && (
           <div className="bg-surface border border-border rounded-lg p-5 mb-6">
             <SimpleMarkdown text={vaga.publicDescription} className="text-[13.5px] text-fg leading-relaxed" />
+          </div>
+        )}
+
+        {beneficios.length > 0 && (
+          <div className="bg-surface border border-border rounded-lg p-5 mb-6">
+            <h2 className="text-[14px] font-semibold text-fg mb-2">Benefícios</h2>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
+              {beneficios.map((b) => (
+                <li key={b} className="text-[13px] text-fg flex items-start gap-2">
+                  <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0" aria-hidden="true" />
+                  {b}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
