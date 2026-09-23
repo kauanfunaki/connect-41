@@ -1,9 +1,9 @@
 // As quatro chamadas de IA do Connect.
 //
 // Cada tenant configura a própria chave/provedor em Integrações → Inteligência
-// Artificial (TenantAiConfig, chave criptografada — ver src/lib/crypto.ts); sem
-// config de tenant, cai no fallback global via env. Toda função degrada com
-// erro amigável quando nenhuma chave está disponível.
+// Artificial (TenantAiConfig, chave criptografada — ver src/lib/crypto.ts). Sem
+// chave do tenant não há IA — não existe mais chave global pelo ambiente. Toda
+// função degrada com erro amigável quando o tenant não tem chave.
 //
 // ─── Desde 11/09, nada aqui chama o provedor direto ─────────────────────────
 //
@@ -92,19 +92,13 @@ async function resolveCredentials(tenantId: string): Promise<AiCredentials | nul
     };
   }
 
-  // Sem config de tenant — fallback global via env (ordem: Anthropic, depois OpenAI).
-  //
-  // ⚠️ Este fallback é o mesmo bloqueio de produtização do token do SPED:
-  // funciona enquanto a 41 é o único cliente, e colapsa na primeira venda,
-  // porque a chave do ambiente é de quem hospeda e a conta também. A chave por
-  // tenant já existe e funciona; o que falta é este caminho virar erro
-  // explícito quando houver mais de um cliente.
-  if (process.env.ANTHROPIC_API_KEY) {
-    return { provider: "ANTHROPIC", apiKey: process.env.ANTHROPIC_API_KEY, modelDoTenant: null };
-  }
-  if (process.env.OPENAI_API_KEY) {
-    return { provider: "OPENAI", apiKey: process.env.OPENAI_API_KEY, modelDoTenant: null };
-  }
+  // Sem config do tenant, sem IA. Até 23/09 havia aqui um fallback para
+  // ANTHROPIC_API_KEY/OPENAI_API_KEY do ambiente — o mesmo bloqueio de venda do
+  // token do SPED: a chave do ambiente é de quem hospeda, e a conta também, então
+  // o tenant sem chave própria gastaria na conta da 41 sem teto de quem paga.
+  // Saiu quando o Connect passou a ter quatro tenants: conferido em produção,
+  // as 440 chamadas registradas até ali eram todas do 41 Tech, com chave própria
+  // — o fallback nunca tinha sido usado.
   return null;
 }
 
