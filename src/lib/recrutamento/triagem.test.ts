@@ -4,6 +4,7 @@ import {
   calcularNota,
   compararParaTriagem,
   ehBloqueioDoAgente,
+  humanizarTexto,
   normalizarAvaliacoes,
   normalizarPerfil,
   normalizarRequisitos,
@@ -123,5 +124,16 @@ describe("ehBloqueioDoAgente", () => {
     expect(ehBloqueioDoAgente("Nenhuma chave de IA configurada. Configure em Integrações › Inteligência Artificial.")).toBe(true);
     expect(ehBloqueioDoAgente("Sem currículo em PDF.")).toBe(false);
     expect(ehBloqueioDoAgente("A IA recusou processar este conteúdo.")).toBe(false);
+  });
+});
+
+describe("humanizarTexto", () => {
+  it("troca código de requisito e de veredito pelo que o recrutador entende, e tira campo JSON", () => {
+    expect(humanizarTexto("O perfil atende r1 e r3. O r2 é PARCIAL e o r9 é SEM_EVIDENCIA.", req)).toBe(
+      'O perfil atende "Ensino médio completo" e "Excel intermediário". O "Experiência com atendimento" é atende em parte e o r9 é sem evidência.'
+    );
+    expect(humanizarTexto('"Analise e Desenvolvimento de Sistemas"; "situacao":"Cursando"', req)).toBe('"Analise e Desenvolvimento de Sistemas"; Cursando');
+    expect(humanizarTexto("Desenvolvimento de telas em React e TypeScript", req)).toBe("Desenvolvimento de telas em React e TypeScript");
+    expect(humanizarTexto('Formação: "ADS", cursando', req)).toBe('Formação: "ADS", cursando');
   });
 });

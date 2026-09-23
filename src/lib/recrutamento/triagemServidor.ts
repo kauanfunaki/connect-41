@@ -62,25 +62,31 @@ export async function salvarRequisitos(tenantId: string, vagaId: string, userId:
   return { versao: row.versao, igual: false as const };
 }
 
-/** O PDF da candidatura; na falta, o último currículo em PDF anexado à pessoa. */
+/**
+ * O PDF da candidatura; se ele não existir no disco, o último currículo em PDF
+ * anexado à pessoa. A segunda tentativa não é só para quem não tem
+ * `resumeUrl`: até 23/09 a pasta de currículos não tinha volume e cada deploy
+ * apagava o arquivo, deixando a candidatura com um caminho que não abre.
+ */
 async function lerCurriculo(tenantId: string, c: { resumeUrl: string | null; personId: string }): Promise<string | null> {
-  let arquivo: string | null = null;
+  const ler = async (arquivo: string) => {
+    try {
+      return (await readFile(arquivo)).toString("base64");
+    } catch {
+      return null;
+    }
+  };
   // resumeUrl e fileUrl são gerados pelo servidor (tenant/uuid.pdf), nunca vêm do candidato.
-  if (c.resumeUrl) arquivo = path.join(RESUMES_DIR, c.resumeUrl);
-  else {
-    const doc = await getPrisma().document.findFirst({
-      where: { tenantId, entityType: "PERSON", entityId: c.personId, category: "CURRICULO", mimeType: "application/pdf" },
-      orderBy: { createdAt: "desc" },
-      select: { fileUrl: true },
-    });
-    if (doc) arquivo = path.join(DOCUMENTS_DIR, doc.fileUrl);
+  if (c.resumeUrl) {
+    const pdf = await ler(path.join(RESUMES_DIR, c.resumeUrl));
+    if (pdf) return pdf;
   }
-  if (!arquivo) return null;
-  try {
-    return (await readFile(arquivo)).toString("base64");
-  } catch {
-    return null;
-  }
+  const doc = await getPrisma().document.findFirst({
+    where: { tenantId, entityType: "PERSON", entityId: c.personId, category: "CURRICULO", mimeType: "application/pdf" },
+    orderBy: { createdAt: "desc" },
+    select: { fileUrl: true },
+  });
+  return doc ? ler(path.join(DOCUMENTS_DIR, doc.fileUrl)) : null;
 }
 
 export type ResultadoDaPontuacao = { ok: true; score: number; faixa: Faixa } | { ok: false; erro: string };
@@ -181,6 +187,14 @@ export async function filaDoLote(tenantId: string, vagaId: string, requisitosId:
  */
 const POR_RODADA = 8;
 
+/**
+ * Tempo da rodada. Com modelo lento (o `gpt-5-nano` do teste de 23/09 levou
+ * ~45 s por chamada, duas por candidatura) 8 candidaturas passariam dos 5
+ * minutos entre rodadas e do tempo de espera do n8n. Passado o orçamento, a
+ * rodada não começa candidatura nova — a que está em curso termina.
+ */
+const ORCAMENTO_DA_RODADA_MS = 3 * 60_000;
+
 /** Uma instância do app, e a rodada não pode se sobrepor à anterior: duas pontuariam a mesma candidatura. */
 let rodando = false;
 
@@ -214,9 +228,10 @@ export async function pontuarNovasCandidaturas(): Promise<RodadaAutomatica> {
     let pontuadas = 0;
     let falhas = 0;
     let tentadas = 0;
+    const inicio = Date.now();
 
     for (const c of fila) {
-      if (tentadas >= POR_RODADA) break;
+      if (tentadas >= POR_RODADA || Date.now() - inicio > ORCAMENTO_DA_RODADA_MS) break;
       if (bloqueados.has(c.tenantId)) continue;
       if (!iaDoTenant.has(c.tenantId)) iaDoTenant.set(c.tenantId, await isAiConfigured(c.tenantId));
       if (!iaDoTenant.get(c.tenantId)) continue;
