@@ -791,6 +791,7 @@ model User {
   valoraPropostas             ValoraProposta[]
   ownedProcesses              Process[]                  @relation("ProcessOwner")
   executedProcessSteps        ProcessStep[]              @relation("ProcessStepExecutor")
+  whatsappThreadsAssumidas    WhatsappThread[]           @relation("WhatsappThreadResponsavel")
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -5145,14 +5146,24 @@ model WhatsappThread {
   handoffAt     DateTime?
   handoffReason String?   @db.VarChar(300)
 
+  /// Quem do time assumiu a conversa transferida. Sem isto a fila é de todo
+  /// mundo e de ninguém: dois recrutadores respondem o mesmo candidato, ou
+  /// cada um acha que o outro respondeu. Nulo com `handoffAt` preenchido é
+  /// "esperando alguém"; devolver ao assistente limpa. Usuário removido solta
+  /// a conversa (SetNull) em vez de levá-la junto.
+  assignedToId String?
+  assignedAt   DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant   Tenant            @relation(fields: [tenantId], references: [id])
-  messages WhatsappMessage[]
+  tenant     Tenant            @relation(fields: [tenantId], references: [id])
+  assignedTo User?             @relation("WhatsappThreadResponsavel", fields: [assignedToId], references: [id], onDelete: SetNull)
+  messages   WhatsappMessage[]
 
   @@unique([integrationId, waPhone])
   @@index([tenantId, handoffAt])
+  @@index([assignedToId])
   @@map("whatsapp_threads")
 }
 
