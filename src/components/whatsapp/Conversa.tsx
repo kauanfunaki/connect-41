@@ -24,6 +24,7 @@ import {
   type AcaoNaConversa,
 } from "@/app/(app)/whatsapp/actions";
 import type { ConversaDetalhada } from "@/lib/whatsapp/data";
+import { FichaNaConversa } from "./FichaNaConversa";
 
 type Props = {
   conversa: ConversaDetalhada;
@@ -103,6 +104,7 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
             >
               <Unlink size={12} /> desfazer
             </button>
+            {conversa.ficha && <FichaNaConversa ficha={conversa.ficha} />}
           </div>
         ) : (
           <>

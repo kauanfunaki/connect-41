@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { aplicarRespostas, faltaPerguntar, lerFonte, validarRespostas } from "./respostas";
+import { aplicarRespostas, faltaPerguntar, lerFonte, resumoDasRespostas, validarRespostas } from "./respostas";
 
 const AGORA = new Date("2026-09-23T15:00:00Z");
 
@@ -47,5 +47,13 @@ describe("faltaPerguntar e lerFonte", () => {
       disponibilidade: { origem: "WHATSAPP", em: "2026-09-23" },
     });
     expect(lerFonte(null)).toEqual({});
+  });
+});
+
+describe("resumoDasRespostas", () => {
+  it("junta o que existe, na ordem pretensão · deslocamento · disponibilidade", () => {
+    expect(resumoDasRespostas({ pretensaoSalarial: 2500, disponibilidade: "imediata", deslocamentoMinutos: 30 })).toBe("R$ 2.500 · 30 min até o local · imediata");
+    expect(resumoDasRespostas({ pretensaoSalarial: null, disponibilidade: null, deslocamentoMinutos: 0 })).toBe("0 min até o local");
+    expect(resumoDasRespostas({ pretensaoSalarial: null, disponibilidade: null, deslocamentoMinutos: null })).toBeNull();
   });
 });
