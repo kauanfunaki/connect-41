@@ -29,6 +29,7 @@ import { usoAnthropic } from "@/lib/ia/uso";
 import {
   ferramentasDoAgente,
   podeUsarFerramenta,
+  viraProposta,
   AVISO_DE_PROPOSTA,
   type ContextoDaFerramenta,
   type FerramentaDef,
@@ -169,8 +170,9 @@ async function atenderPedido(
   const { def: fdef, executar } = veredito.ferramenta;
 
   // Escrita nunca executa. Vira proposta, e o modelo é avisado de que nada foi
-  // gravado — ver o cabeçalho de `ferramentas.ts`.
-  if (fdef.natureza === "escrita" || !executar) {
+  // gravado — ver o cabeçalho de `ferramentas.ts`. A única exceção é o
+  // `registro` que está em `REGISTROS_AUTOMATICOS`.
+  if (viraProposta(fdef, executar) || !executar) {
     propostas.push({ ferramenta: fdef.nome, descricao: fdef.descricao, argumentos });
     return { id, erro: false, conteudo: AVISO_DE_PROPOSTA };
   }

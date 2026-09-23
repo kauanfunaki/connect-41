@@ -1680,6 +1680,14 @@ model Candidatura {
   /// ela preenchida o cron não tenta de novo; o botão manual segue valendo e limpa.
   triagemFalha         String?   @db.VarChar(200)
   triagemFalhaEm       DateTime?
+  /// Respostas do candidato (R2), gravadas pelo atendente do WhatsApp ou
+  /// corrigidas pelo recrutador. Não entram na nota da triagem.
+  pretensaoSalarial    Decimal?  @db.Decimal(12, 2)
+  disponibilidade      String?   @db.VarChar(120)
+  /// Minutos até o local de trabalho — nunca endereço (ver src/lib/recrutamento/respostas.ts).
+  deslocamentoMinutos  Int?
+  /// FonteDasRespostas: por campo, { origem WHATSAPP|RECRUTADOR, em }.
+  respostasFonte       Json?
   notas                CandidaturaNota[]
   createdAt        DateTime               @default(now())
   updatedAt        DateTime               @updatedAt

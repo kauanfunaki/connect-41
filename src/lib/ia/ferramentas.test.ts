@@ -6,6 +6,8 @@ import {
   ferramentasDoAgente,
   AVISO_DE_PROPOSTA,
   registrarFerramentas,
+  REGISTROS_AUTOMATICOS,
+  viraProposta,
   type FerramentaRegistrada,
 } from "./ferramentas";
 import { registrarTodasAsFerramentas } from "./registro";
@@ -137,5 +139,22 @@ describe("AVISO_DE_PROPOSTA", () => {
   it("diz que nada foi gravado, e proíbe afirmar o contrário", () => {
     expect(AVISO_DE_PROPOSTA).toContain("NADA foi gravado");
     expect(AVISO_DE_PROPOSTA.toLowerCase()).toContain("não afirme");
+  });
+});
+
+describe("viraProposta — a exceção dos registros automáticos", () => {
+  const executar = async () => ({});
+  const def = (nome: string, natureza: "leitura" | "escrita" | "registro") => ({ nome, descricao: "", parametros: {}, natureza });
+
+  it("registro só grava sozinho se estiver em REGISTROS_AUTOMATICOS", () => {
+    expect(REGISTROS_AUTOMATICOS).toContain("registrar_respostas_do_candidato");
+    expect(viraProposta(def("registrar_respostas_do_candidato", "registro"), executar)).toBe(false);
+    expect(viraProposta(def("mover_etapa_por_conta_propria", "registro"), executar)).toBe(true);
+  });
+
+  it("escrita e ferramenta sem executor continuam virando proposta; leitura executa", () => {
+    expect(viraProposta(def("registrar_respostas_do_candidato", "escrita"), executar)).toBe(true);
+    expect(viraProposta(def("registrar_respostas_do_candidato", "registro"), undefined)).toBe(true);
+    expect(viraProposta(def("ver_meu_processo", "leitura"), executar)).toBe(false);
   });
 });

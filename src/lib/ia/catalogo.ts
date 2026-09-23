@@ -187,8 +187,10 @@ export const AGENT_CATALOG: AgenteDef[] = [
     description:
       "Responde o candidato no WhatsApp do Recrutamento sobre a situação do processo e as vagas abertas",
     faixa: "padrao",
-    escreve: false,
-    ferramentas: ["ver_meu_processo", "listar_vagas_abertas", "pedir_ajuda_humana"],
+    // Grava só as respostas do candidato na candidatura ligada à conversa —
+    // a exceção de `REGISTROS_AUTOMATICOS` (src/lib/ia/ferramentas.ts).
+    escreve: true,
+    ferramentas: ["ver_meu_processo", "listar_vagas_abertas", "registrar_respostas_do_candidato", "pedir_ajuda_humana"],
     // O único agente que fala com quem está fora da 41. O teto é apertado de
     // propósito: aqui, gastar demais e falar demais são o mesmo problema.
     tetoMensalCentavos: 20_000,

@@ -8,7 +8,7 @@ import {
   configEfetiva,
 } from "./catalogo";
 import { temPrecoConhecido } from "./custo";
-import { FERRAMENTAS } from "./ferramentas";
+import { REGISTROS_AUTOMATICOS, FERRAMENTAS } from "./ferramentas";
 import { registrarTodasAsFerramentas } from "./registro";
 
 describe("AGENT_CATALOG", () => {
@@ -19,8 +19,14 @@ describe("AGENT_CATALOG", () => {
 
   // A regra do arquivo: o agente lê e propõe, uma pessoa confirma. Se um dia
   // algum precisar escrever sozinho, que seja uma decisão que quebra um teste.
-  it("nenhum agente escreve sozinho", () => {
-    expect(AGENT_CATALOG.filter((a) => a.escreve)).toHaveLength(0);
+  // Quebrou em 23/09, por decisão do Kauan: o atendente do WhatsApp grava as
+  // respostas do candidato (REGISTROS_AUTOMATICOS). A lista abaixo é a exceção
+  // inteira — agente novo que escreva sozinho quebra este teste de novo.
+  it("só escreve sozinho quem usa um registro automático, e hoje é só o atendente", () => {
+    expect(AGENT_CATALOG.filter((a) => a.escreve).map((a) => a.code)).toEqual(["atendente_de_candidato"]);
+    for (const a of AGENT_CATALOG.filter((x) => x.escreve)) {
+      expect(a.ferramentas.some((n) => REGISTROS_AUTOMATICOS.includes(n)), a.code).toBe(true);
+    }
   });
 
   // Vale mais que contar: nome liberado que não existe no registro vira um
@@ -37,11 +43,12 @@ describe("AGENT_CATALOG", () => {
 
   // A regra que a Onda 2 tornou estrutural: quem grava é a server action que o
   // recrutador dispara, nunca o agente.
-  it("agente com ferramenta de escrita não é agente que escreve", () => {
+  it("agente com ferramenta de escrita só é agente que escreve se tiver um registro automático", () => {
     registrarTodasAsFerramentas();
     for (const a of AGENT_CATALOG) {
       const temEscrita = a.ferramentas.some((n) => FERRAMENTAS[n]?.def.natureza === "escrita");
-      if (temEscrita) expect(a.escreve).toBe(false);
+      const temRegistro = a.ferramentas.some((n) => REGISTROS_AUTOMATICOS.includes(n));
+      if (temEscrita && !temRegistro) expect(a.escreve, a.code).toBe(false);
     }
   });
 
