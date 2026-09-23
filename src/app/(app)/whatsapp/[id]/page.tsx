@@ -46,6 +46,7 @@ export default async function ConversaPage({ params }: { params: Promise<{ id: s
       <Conversa
         conversa={conversa}
         agora={agora}
+        userId={ctx.userId}
         candidaturas={emAndamento.map((c) => ({
           id: c.id,
           rotulo: `${c.person.name} — ${c.vaga.title}`,

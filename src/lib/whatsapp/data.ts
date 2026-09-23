@@ -20,6 +20,8 @@ export type LinhaDeConversa = ConversaParaTela & {
   ultimaMensagemEm: Date | null;
   handoffReason: string | null;
   naoRespondidas: number;
+  /** Quem do time assumiu. Nulo com `handoffAt` = esperando alguém. */
+  responsavel: { id: string; nome: string } | null;
 };
 
 /**
@@ -67,6 +69,7 @@ export async function listarConversas(tenantId: string, agora: Date): Promise<Li
       handoffReason: true,
       lastInboundAt: true,
       candidaturaId: true,
+      assignedTo: { select: { id: true, name: true } },
     },
   });
   if (threads.length === 0) return [];
@@ -128,6 +131,7 @@ export async function listarConversas(tenantId: string, agora: Date): Promise<Li
       candidaturaId: t.candidaturaId,
       janelaLivreHoras: janelaDe(janelas, t.integrationId),
       naoRespondidas: naoRespondidas.get(t.id) ?? 0,
+      responsavel: t.assignedTo ? { id: t.assignedTo.id, nome: t.assignedTo.name } : null,
     };
   });
 
@@ -187,6 +191,7 @@ export async function lerConversa(
       candidaturaId: true,
       linkPendingPersonId: true,
       linkFailedAt: true,
+      assignedTo: { select: { id: true, name: true } },
     },
   });
   if (!thread) return null;
@@ -252,6 +257,7 @@ export async function lerConversa(
     candidaturaId: thread.candidaturaId,
     janelaLivreHoras: janelaDe(janelas, thread.integrationId),
     naoRespondidas,
+    responsavel: thread.assignedTo ? { id: thread.assignedTo.id, nome: thread.assignedTo.name } : null,
     vinculoAutomatico: thread.candidaturaId
       ? null
       : thread.linkPendingPersonId
