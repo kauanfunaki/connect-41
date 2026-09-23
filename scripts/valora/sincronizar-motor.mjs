@@ -28,12 +28,15 @@ if (!existsSync(join(alvo, "package.json"))) {
 }
 
 const arquivos = readdirSync(ORIGEM).filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"));
-const esperado = new Map(arquivos.map((f) => [f, CABECALHO + readFileSync(join(ORIGEM, f), "utf8")]));
+// Compara sem olhar a quebra de linha: o Git no Windows troca LF por CRLF no checkout, e isso
+// não é edição da cópia.
+const semCr = (s) => s.replace(/\r\n/g, "\n");
+const esperado = new Map(arquivos.map((f) => [f, CABECALHO + semCr(readFileSync(join(ORIGEM, f), "utf8"))]));
 
 if (verificar) {
   const presentes = existsSync(DESTINO) ? readdirSync(DESTINO) : [];
   const divergentes = [
-    ...[...esperado].filter(([f, c]) => !presentes.includes(f) || readFileSync(join(DESTINO, f), "utf8") !== c).map(([f]) => f),
+    ...[...esperado].filter(([f, c]) => !presentes.includes(f) || semCr(readFileSync(join(DESTINO, f), "utf8")) !== c).map(([f]) => f),
     ...presentes.filter((f) => !esperado.has(f)),
   ];
   if (divergentes.length) {
