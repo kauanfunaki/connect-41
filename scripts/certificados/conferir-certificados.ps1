@@ -351,11 +351,15 @@ foreach ($arq in $arquivos) {
   }
 
   $relativo = $arq.FullName.Substring($raizDaPasta.Length).TrimStart('\')
+  # Na pasta da 41 o nome do arquivo traz a senha entre parênteses — EMPRESA (senha) 08.06.2027.pfx.
+  # O relatório sai daqui e vai para outras mãos (e para a importação no Connect): mostra o nome
+  # sem o trecho entre parênteses. O caminho inteiro só vai para as Notas do cofre, que é cifrado.
+  $noRelatorio = $relativo -replace '\([^)]*\)', '(…)'
   if (-not $cert) {
     $motivo = if ($leitor) { 'SENHA NÃO ENCONTRADA' } else { 'FORMATO NÃO RECONHECIDO' }
     $obs = if ($leitor) { '' } else { "testadas só as $TentativasLentas senhas de nome mais parecido; abrir à mão" }
     [void]$linhas.Add([pscustomobject]@{
-      Arquivo = $relativo; Titular = ''; Tipo = ''; Documento = ''; Vencimento = ''; 'Dias para vencer' = ''
+      Arquivo = $noRelatorio; Titular = ''; Tipo = ''; Documento = ''; Vencimento = ''; 'Dias para vencer' = ''
       'Situação' = $motivo; 'Entrada do cofre' = ''; Conferir = $obs; 'Vencimento no cofre' = ''
     })
     continue
@@ -392,7 +396,7 @@ foreach ($arq in $arquivos) {
 
   [void]$entrada.Arquivos.Add([pscustomobject]@{ Relativo = $relativo; Documento = $doc.Numero; Vence = $vence; Seguro = $seguro })
   [void]$linhas.Add([pscustomobject]@{
-    Arquivo = $relativo; Titular = $titular; Tipo = $doc.Tipo; Documento = $doc.Numero
+    Arquivo = $noRelatorio; Titular = $titular; Tipo = $doc.Tipo; Documento = $doc.Numero
     Vencimento = $vence.ToString('dd/MM/yyyy'); 'Dias para vencer' = $dias; 'Situação' = $situacao
     'Entrada do cofre' = $entrada.Titulo; Conferir = ($avisos -join '; ')
     'Vencimento no cofre' = if ($vencimentoCofre) { $vencimentoCofre.ToString('dd/MM/yyyy') } else { '' }
@@ -401,7 +405,7 @@ foreach ($arq in $arquivos) {
 }
 Write-Progress -Activity 'Conferindo certificados' -Completed
 
-# ---------------------------------------------------------------- 3. relatório (sem senhas)
+# ---------------------------------------------------------------- 3. relatório (sem senhas, nem a do nome do arquivo)
 
 New-Item -ItemType Directory -Force -Path $Saida | Out-Null
 $arqRelatorio = Join-Path $Saida 'certificados.csv'
