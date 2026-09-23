@@ -207,9 +207,9 @@ export default async function IntegracoesPage({
               <Sparkles size={14} className="text-brand" /> Inteligência Artificial
             </h2>
             <p className="text-[12.5px] text-fg-muted mt-0.5">
-              Chave usada pela triagem de currículo e pelo resumo de histórico de empresa. Cada
-              escritório usa a própria conta — sem configurar aqui, o app cai na chave padrão do
-              ambiente (se houver).
+              Chave usada por todos os agentes de IA do Connect (triagem de currículo, atendimento
+              do WhatsApp, resumos). Cada escritório usa a própria conta — sem configurar aqui, a IA
+              fica desligada.
             </p>
           </div>
           <Card className="p-5">
