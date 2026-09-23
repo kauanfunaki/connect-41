@@ -14,7 +14,8 @@
 /**
  * Preço por milhão de tokens, em dólares.
  *
- * **Conferido nas páginas dos dois provedores em 11/09/2026.** A primeira
+ * **Conferido nas páginas dos dois provedores em 11/09/2026, e de novo em
+ * 23/09/2026** (entraram Opus 5.5, gpt-6-sol e gpt-6-luna). A primeira
  * versão desta tabela foi escrita de memória e estava errada nos dois: o Opus 5
  * saía a $15/$75 quando custa $5/$25, e o Sonnet 5 a $3/$15 quando custa
  * $2/$10. O teto em reais travava cedo demais — que é o lado seguro de errar,
@@ -30,19 +31,26 @@
 export const PRECO_POR_MILHAO_USD: Record<string, { entrada: number; saida: number }> = {
   // Anthropic — linha atual
   "claude-haiku-4-5-20251001": { entrada: 1, saida: 5 },
+  // O preço de lançamento do Sonnet 5 virou o definitivo — o aumento para
+  // $3/$15 previsto para 01/09 não aconteceu (nota na página, 23/09).
   "claude-sonnet-5": { entrada: 2, saida: 10 },
-  "claude-opus-5": { entrada: 5, saida: 25 },
+  "claude-opus-5-5": { entrada: 4, saida: 20 },
   "claude-fable-5-1": { entrada: 10, saida: 50 },
+  // Anthropic — geração anterior, ainda oferecida
+  "claude-opus-5": { entrada: 5, saida: 25 },
   // Anthropic — legados, para override de cliente continuar com preço
   "claude-opus-4-8": { entrada: 5, saida: 25 },
   "claude-sonnet-4-5": { entrada: 3, saida: 15 },
   "claude-opus-4-1": { entrada: 15, saida: 75 },
 
   // OpenAI — linha atual
+  "gpt-6-luna": { entrada: 0.1, saida: 0.5 },
+  "gpt-6-sol": { entrada: 2, saida: 10 },
+  "gpt-6-astra": { entrada: 10, saida: 50 },
+  // OpenAI — geração anterior, ainda oferecida
   "gpt-5.6-luna": { entrada: 0.2, saida: 1.2 },
   "gpt-5.6-terra": { entrada: 2, saida: 12 },
   "gpt-5.6-sol": { entrada: 4, saida: 20 },
-  "gpt-6-astra": { entrada: 10, saida: 50 },
   // Conferido em 15/09/2026 em developers.openai.com/api/docs/pricing, quando o
   // Kauan configurou o atendente do WhatsApp com ele e as chamadas ficaram sem
   // custo apurado. Listado como atual, não legado.
@@ -52,7 +60,7 @@ export const PRECO_POR_MILHAO_USD: Record<string, { entrada: number; saida: numb
   "gpt-4.1": { entrada: 2, saida: 8 },
 };
 
-export const PRECOS_ESCRITOS_EM = "2026-09-11";
+export const PRECOS_ESCRITOS_EM = "2026-09-23";
 export const PRECOS_CONFERIDOS = true;
 
 export type UsoDeTokens = {

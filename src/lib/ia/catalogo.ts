@@ -240,14 +240,18 @@ const MODELO_DA_FAIXA: Record<AiProvider, Record<FaixaDeModelo, string>> = {
   ANTHROPIC: {
     rapido: "claude-haiku-4-5-20251001",
     padrao: "claude-sonnet-5",
-    complexo: "claude-opus-5",
+    // 23/09: Opus 5.5 é o atual e sai mais barato que o 5 ($4/$20 contra $5/$25).
+    complexo: "claude-opus-5-5",
   },
   OPENAI: {
     // Conferido na página de preços em 11/09/2026: a linha do `gpt-4.1` saiu
     // dos modelos atuais. Apontar para ela era exatamente o erro que este
     // arquivo existe para impedir — e eu o cometi ao escrevê-lo.
-    rapido: "gpt-5.6-luna",
-    padrao: "gpt-5.6-terra",
+    //
+    // 23/09: a linha gpt-6 completou as três faixas, e cada uma sai mais barata
+    // que a 5.6 que substitui (luna $0,10/$0,50; sol $2/$10).
+    rapido: "gpt-6-luna",
+    padrao: "gpt-6-sol",
     complexo: "gpt-6-astra",
   },
 };

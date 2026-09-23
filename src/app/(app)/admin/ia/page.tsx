@@ -25,9 +25,8 @@ export default async function AgentesDeIAPage() {
     select: { provider: true, model: true },
   });
 
-  // Sem config de tenant o app ainda pode ter chave no ambiente, mas ela não é
-  // do cliente — e esta tela fala da conta do cliente. Tratar como "sem chave"
-  // aqui é o que faz o aviso abaixo aparecer para quem precisa cadastrar a sua.
+  // Sem config de tenant não há IA (a chave pelo ambiente saiu em 23/09). É o
+  // que faz o aviso abaixo aparecer para quem precisa cadastrar a sua.
   const [linhas, chamadas] = await Promise.all([
     listarAgentes(ctx.tenantId, config?.provider ?? null, config?.model ?? null, agora),
     ultimasChamadas(ctx.tenantId, 30),
