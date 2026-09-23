@@ -32,6 +32,7 @@ import { conversarComFerramentas } from "@/lib/ia/conversa";
 import { conversarComFerramentasOpenAi } from "@/lib/ia/conversa-openai";
 import type { ResultadoDoLaco } from "@/lib/ia/laco";
 import {
+  humanizarTexto,
   normalizarAvaliacoes,
   normalizarPerfil as normalizarPerfilProfissional,
   type AvaliacaoDeRequisito,
@@ -759,7 +760,9 @@ export async function extrairPerfilProfissional(
 const PONTUACAO_SISTEMA =
   "Você confere se um perfil profissional atende os requisitos de uma vaga. Para CADA requisito, responda: SIM (o perfil mostra que atende), PARCIAL (atende em parte), " +
   "NAO (o perfil mostra que não atende) ou SEM_EVIDENCIA (o perfil não diz). Na evidência, cite em uma frase o trecho do perfil que sustenta a resposta. " +
-  "Seja literal: ausência de informação é SEM_EVIDENCIA, não NAO. Não dê nota geral — ela é calculada depois. O resumo tem 2 ou 3 frases sobre a aderência, sem julgamento pessoal." +
+  "Seja literal: ausência de informação é SEM_EVIDENCIA, não NAO. Não dê nota geral — ela é calculada depois. " +
+  "A evidência e o resumo são lidos por um recrutador: escreva em texto corrido, em português, sem JSON, sem nomes de campo e sem aspas de código. " +
+  "No resumo (2 ou 3 frases, sem julgamento pessoal), fale dos requisitos pelo assunto (ex.: \"atende JavaScript e React; SQL só básico\"), nunca pelos códigos r1, r2… nem pelas palavras SIM, PARCIAL, NAO ou SEM_EVIDENCIA." +
   UNTRUSTED_CONTENT_GUARD;
 
 export type AvaliacaoDaIa = { avaliacoes: AvaliacaoDeRequisito[]; resumo: string };
@@ -808,7 +811,10 @@ export async function avaliarRequisitos(
       }),
   })) as { avaliacoes?: unknown; resumo?: unknown };
   return {
-    avaliacoes: normalizarAvaliacoes(bruto.avaliacoes, entrada.requisitos),
-    resumo: String(bruto.resumo ?? "").trim().slice(0, 1000),
+    avaliacoes: normalizarAvaliacoes(bruto.avaliacoes, entrada.requisitos).map((a) => ({
+      ...a,
+      evidencia: humanizarTexto(a.evidencia, entrada.requisitos),
+    })),
+    resumo: humanizarTexto(String(bruto.resumo ?? ""), entrada.requisitos).slice(0, 1000),
   };
 }
