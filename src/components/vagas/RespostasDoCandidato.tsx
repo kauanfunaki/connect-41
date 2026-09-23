@@ -103,7 +103,7 @@ export function RespostasDoCandidato({
               <dd className="text-[13px] text-fg tnum">{mostrar(c, respostas)}</dd>
               {fonte[c] && (
                 <dd className="text-[11px] text-fg-muted">
-                  {fonte[c]!.origem === "WHATSAPP" ? "pelo WhatsApp" : "pelo recrutador"}
+                  {fonte[c]!.origem === "WHATSAPP" ? "pelo WhatsApp" : fonte[c]!.origem === "PORTAL" ? "no portal de vagas" : "pelo recrutador"}
                 </dd>
               )}
             </div>

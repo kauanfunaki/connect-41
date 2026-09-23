@@ -8,6 +8,7 @@ import { ApplyForm } from "@/components/carreiras/ApplyForm";
 import { SimpleMarkdown } from "@/components/shared/SimpleMarkdown";
 import { buildJobPostingJsonLd, buildJobSummary, publicUrl } from "@/lib/jobPostingSchema";
 import { emitirCarimbo } from "@/lib/carreiras/antiRobo";
+import { EtiquetasDaVaga } from "@/components/carreiras/EtiquetasDaVaga";
 
 // Dinâmica de propósito: o formulário leva um carimbo de tempo assinado na hora
 // em que a página é montada (`src/lib/carreiras/antiRobo.ts`). Página em cache
@@ -32,6 +33,11 @@ async function loadVaga(slug: string, vagaId: string) {
       quantity: true,
       openedAt: true,
       publicDescription: true,
+      salaryMin: true,
+      salaryMax: true,
+      showSalary: true,
+      workMode: true,
+      contractType: true,
       company: { select: { tradeName: true, name: true, city: true, stateCode: true } },
       cargo: { select: { name: true } },
     },
@@ -88,6 +94,8 @@ export default async function VagaPublicaPage({
 
   const companyLabel = vaga.company.tradeName || vaga.company.name;
   const local = [vaga.company.city, vaga.company.stateCode].filter(Boolean).join(" – ");
+  const salaryMin = vaga.salaryMin === null ? null : vaga.salaryMin.toNumber();
+  const salaryMax = vaga.salaryMax === null ? null : vaga.salaryMax.toNumber();
 
   const jsonLd = buildJobPostingJsonLd({
     title: vaga.title,
@@ -97,6 +105,9 @@ export default async function VagaPublicaPage({
     city: vaga.company.city,
     stateCode: vaga.company.stateCode,
     quantity: vaga.quantity,
+    contractType: vaga.contractType,
+    remoto: vaga.workMode === "REMOTO",
+    salario: vaga.showSalary ? { min: salaryMin, max: salaryMax } : null,
   });
 
   return (
@@ -115,7 +126,16 @@ export default async function VagaPublicaPage({
             {vaga.cargo && ` · ${vaga.cargo.name}`}
             {vaga.quantity > 1 && ` · ${vaga.quantity} vagas`}
           </p>
-          <p className="text-[11px] text-fg-muted mt-1">Publicada em {formatCalendarDate(vaga.openedAt)}</p>
+          <div className="mt-3">
+            <EtiquetasDaVaga
+              workMode={vaga.workMode}
+              contractType={vaga.contractType}
+              salaryMin={salaryMin}
+              salaryMax={salaryMax}
+              showSalary={vaga.showSalary}
+            />
+          </div>
+          <p className="text-[11px] text-fg-muted mt-2">Publicada em {formatCalendarDate(vaga.openedAt)}</p>
         </header>
 
         {vaga.publicDescription && (
