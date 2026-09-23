@@ -2125,6 +2125,7 @@ enum FiscalDocumentType {
 enum FiscalDocumentOrigin {
   SPED // veio da base do SPED Generator
   UPLOAD // alguém subiu o XML na tela de entrada
+  OMIE // lida da conta do Omie da empresa (só as notas que ela emitiu)
 }
 
 // O que a SEFAZ diz sobre o documento. Também não é workflow: quem cancela é o
@@ -2246,6 +2247,12 @@ model FiscalDocument {
   /// Nulo em documento que entrou por upload.
   spedTipo          String? @db.VarChar(8)
   spedIdentificador String? @db.VarChar(120)
+
+  /// Identidade da nota **do lado do Omie** (`compl.nIdNF`), quando a conta do
+  /// Omie da empresa a devolveu. É o que um pedido de DANFE ao Omie usa. Fica
+  /// preenchido também em nota que entrou antes pelo SPED — a mesma chave de
+  /// acesso é reconhecida, e a nota ganha o id em vez de virar uma segunda linha.
+  omieIdNF String? @db.VarChar(30)
 
   /// O documento saiu da origem — a lápide chegou no delta.
   ///
