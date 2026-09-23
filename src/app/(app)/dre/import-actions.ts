@@ -7,6 +7,7 @@ import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { lerExportDoOmie, mesesDoExport, mesDaData, ExportIlegivel, type Celula } from "@/lib/dre/omie";
 import { setorDoModulo } from "@/lib/modules";
+import { categoriasParaCriar } from "@/lib/dre/categoriasDoImport";
 
 export type ResultadoDaImportacao =
   | { error: string }
@@ -16,6 +17,10 @@ export type ResultadoDaImportacao =
       meses: { ano: number; mes: number; linhas: number }[];
       lidas: number;
       ignoradas: number;
+      /** Categorias que o plano de contas não tinha e o import criou. */
+      categoriasCriadas: number;
+      /** Dessas, quantas nasceram sem grupo e esperam classificação. */
+      categoriasSemGrupo: number;
     };
 
 /** 8 MB — o export de um mês grande fica bem abaixo disso. */
@@ -95,9 +100,23 @@ export async function importarExportDoOmie(form: FormData): Promise<ResultadoDaI
   const origemDb = leitura.origem === "pagamento" ? "PAGAMENTO" : "RECEBIMENTO";
   const nome = arquivo.name.slice(0, 255);
 
+  let criadas: { dreGroup: string | null }[] = [];
   try {
     await prisma.$transaction(
       async (tx) => {
+        // Categoria do arquivo que o plano de contas não tem ficaria fora do
+        // DRE e sem onde classificar — ver src/lib/dre/categoriasDoImport.ts.
+        const existentes = await tx.financeCategory.findMany({ where: { tenantId }, select: { name: true } });
+        const novas = categoriasParaCriar(
+          leitura.linhas.map((l) => l.categoria),
+          existentes.map((e) => e.name),
+          leitura.origem
+        );
+        if (novas.length > 0) {
+          await tx.financeCategory.createMany({ data: novas.map((n) => ({ tenantId, ...n })) });
+        }
+        criadas = novas;
+
         for (const m of meses) {
           const doMes = leitura.linhas.filter((l) => {
             const d = mesDaData(l.data);
@@ -145,7 +164,7 @@ export async function importarExportDoOmie(form: FormData): Promise<ResultadoDaI
     action: "dre.import",
     entityType: "Company",
     entityId: companyId,
-    metadata: { arquivo: nome, origem: origemDb, meses, lidas: leitura.linhas.length },
+    metadata: { arquivo: nome, origem: origemDb, meses, lidas: leitura.linhas.length, categoriasCriadas: criadas.length },
   });
 
   revalidatePath("/dre");
@@ -155,6 +174,8 @@ export async function importarExportDoOmie(form: FormData): Promise<ResultadoDaI
     meses,
     lidas: leitura.linhas.length,
     ignoradas: leitura.ignoradas.length,
+    categoriasCriadas: criadas.length,
+    categoriasSemGrupo: criadas.filter((c) => !c.dreGroup).length,
   };
 }
 
