@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
-import { previaDasNotasOmieAction, salvarContaOmieAction, testarContaOmieAction } from "@/app/(app)/admin/integracoes/omie-actions";
+import { importarNotasOmieAction, previaDasNotasOmieAction, salvarContaOmieAction, testarContaOmieAction } from "@/app/(app)/admin/integracoes/omie-actions";
 import type { ContaOmieNaTela } from "@/lib/integracoes/omie/contas";
 import type { Saude } from "@/lib/integracoes/execucao";
 import type { PreviaDeChamada } from "@/lib/integracoes/omie/contas";
@@ -127,6 +127,13 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
   }
   const semConta = empresas.filter((e) => !contas.some((c) => c.companyId === e.id));
 
+  async function importar(companyId: string) {
+    setTestando(companyId);
+    const r = await importarNotasOmieAction(companyId);
+    setTeste((t) => ({ ...t, [companyId]: "error" in r ? { ok: false, texto: r.error } : { ok: true, texto: r.mensagem ?? "Notas lidas." } }));
+    setTestando(null);
+  }
+
   async function testar(companyId: string) {
     setTestando(companyId);
     const r = await testarContaOmieAction(companyId);
@@ -142,7 +149,8 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
           <p className="text-[12px] text-fg-muted mt-0.5 max-w-[680px]">
             Uma conta do Omie para cada empresa cliente do BPO. A App Key e o App Secret ficam no Omie da empresa, em
             Configurações › Aplicativos — login e senha não servem para a API. &ldquo;Testar&rdquo; lê os dados da empresa
-            no Omie e confere o CNPJ, para pegar chave colada na empresa errada.
+            no Omie e confere o CNPJ, para pegar chave colada na empresa errada. As notas de saída emitidas no Omie entram no
+            acervo fiscal a cada 30 minutos (ou em &ldquo;Importar notas&rdquo;) — só leitura: nada é alterado no Omie.
           </p>
         </div>
         {!novo && (
@@ -199,6 +207,11 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
                       <Button variant="linkMuted" size="xs" onClick={() => setEditando(c.companyId)}>
                         Trocar chave
                       </Button>
+                      {c.saude === "ok" && (
+                        <Button variant="linkMuted" size="xs" disabled={testando !== null} onClick={() => importar(c.companyId)}>
+                          Importar notas
+                        </Button>
+                      )}
                       {c.saude === "ok" && (
                         <Button variant="linkMuted" size="xs" disabled={lendo !== null} onClick={() => previa(c.companyId)}>
                           {lendo === c.companyId ? "Lendo…" : "Prévia das notas"}
