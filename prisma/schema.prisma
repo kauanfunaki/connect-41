@@ -532,6 +532,8 @@ model Tenant {
   clientRequests            ClientRequest[]
   clientRequestReminders    ClientRequestReminder[]
   userPinnedModules         UserPinnedModule[]
+  vagaRequisitos            VagaRequisitos[]
+  candidaturaNotas          CandidaturaNota[]
   valoraConfig              ValoraConfig?
   valoraPropostas           ValoraProposta[]
   companyMessages           CompanyMessage[]
@@ -1646,6 +1648,7 @@ model Vaga {
   company Company @relation(fields: [companyId], references: [id])
   cargo   Cargo?  @relation(fields: [cargoId], references: [id])
 
+  requisitos     VagaRequisitos[]
   candidaturas Candidatura[]
 
   @@index([tenantId, sectorCode, status])
@@ -1668,6 +1671,12 @@ model Candidatura {
   rejectionReason  String?                @db.Text
   withdrawalReason String?                @db.Text
   hiredAt          DateTime?
+  /// Perfil profissional extraído do currículo pela IA (sem dado pessoal — ver
+  /// src/lib/recrutamento/triagem.ts). Cache: o currículo não muda, então
+  /// reprocessar a vaga depois de trocar requisito só refaz a pontuação.
+  perfilProfissional   Json?
+  perfilProfissionalEm DateTime?
+  notas                CandidaturaNota[]
   createdAt        DateTime               @default(now())
   updatedAt        DateTime               @updatedAt
 
@@ -5459,4 +5468,58 @@ model DigitalCertificate {
   @@index([tenantId, expiresAt])
   @@index([tenantId, companyId])
   @@map("digital_certificates")
+}
+
+// ── Triagem de currículos (R1) ─────────────────────────────────────────────
+// Requisitos da vaga versionados e a nota de compatibilidade de cada
+// candidatura, com histórico. A nota é calculada pelo código a partir dos
+// veredictos por requisito (src/lib/recrutamento/triagem.ts) e **só ordena** —
+// nunca reprova sozinha (LGPD, art. 20).
+
+model VagaRequisitos {
+  id              String   @id @default(uuid())
+  tenantId        String
+  vagaId          String
+  /// 1, 2, 3… — editar os requisitos grava versão nova; nota antiga aponta para a dela.
+  versao          Int
+  /// Requisito[]: { id, tipo OBRIGATORIO|DESEJAVEL, texto, peso 1–3 }
+  itens           Json
+  corteCompativel Int
+  corteParcial    Int
+  createdById     String?
+  createdAt       DateTime @default(now())
+
+  tenant Tenant            @relation(fields: [tenantId], references: [id])
+  vaga   Vaga              @relation(fields: [vagaId], references: [id], onDelete: Cascade)
+  notas  CandidaturaNota[]
+
+  @@unique([vagaId, versao])
+  @@index([tenantId])
+  @@map("vaga_requisitos")
+}
+
+model CandidaturaNota {
+  id            String   @id @default(uuid())
+  tenantId      String
+  candidaturaId String
+  requisitosId  String
+  score         Int
+  /// COMPATIVEL | PARCIAL | INCOMPATIVEL
+  faixa         String   @db.VarChar(20)
+  /// AvaliacaoDeRequisito[]: { requisitoId, veredito, evidencia }
+  avaliacoes    Json
+  resumo        String?  @db.Text
+  /// USUARIO | LOTE
+  origem        String   @db.VarChar(20)
+  createdById   String?
+  createdAt     DateTime @default(now())
+
+  tenant      Tenant         @relation(fields: [tenantId], references: [id])
+  candidatura Candidatura    @relation(fields: [candidaturaId], references: [id], onDelete: Cascade)
+  requisitos  VagaRequisitos @relation(fields: [requisitosId], references: [id], onDelete: Cascade)
+
+  @@index([candidaturaId, createdAt])
+  @@index([requisitosId])
+  @@index([tenantId])
+  @@map("candidatura_notas")
 }

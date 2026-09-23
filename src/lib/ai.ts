@@ -31,6 +31,13 @@ import {
 import { conversarComFerramentas } from "@/lib/ia/conversa";
 import { conversarComFerramentasOpenAi } from "@/lib/ia/conversa-openai";
 import type { ResultadoDoLaco } from "@/lib/ia/laco";
+import {
+  normalizarAvaliacoes,
+  normalizarPerfil as normalizarPerfilProfissional,
+  type AvaliacaoDeRequisito,
+  type PerfilProfissional,
+  type Requisitos,
+} from "@/lib/recrutamento/triagem";
 
 export type { ContextoDaChamada };
 
@@ -607,4 +614,201 @@ export async function conversarComAgente(params: {
       return { valor: resultado, uso: resultado.uso };
     },
   });
+}
+
+// ─── Triagem de currículos (R1) ─────────────────────────────────────────────
+//
+// Duas chamadas estreitas, de propósito. A primeira lê o PDF e devolve só o
+// perfil profissional, num formato **sem campo para dado pessoal** — é a
+// trava que garante que a segunda, a que julga, nunca vê nome, idade, cidade,
+// foto ou gênero. A segunda recebe o perfil e os requisitos e diz, requisito a
+// requisito, se atende e onde está a evidência. A nota sai do código
+// (`calcularNota` em src/lib/recrutamento/triagem.ts), não da IA.
+
+/** Chamada de uma volta com saída estruturada, nos dois provedores. PDF opcional. */
+async function chamarComFormato(
+  c: PreparoDaChamada,
+  p: { sistema: string; texto: string; pdfBase64?: string; nome: string; schema: Record<string, unknown>; maxTokens: number }
+): Promise<ComUso<unknown>> {
+  if (c.provider === "ANTHROPIC") {
+    const client = new Anthropic({ apiKey: c.apiKey });
+    const response = await client.messages.create({
+      model: c.model,
+      max_tokens: p.maxTokens,
+      system: p.sistema,
+      output_config: { format: { type: "json_schema", schema: p.schema } },
+      messages: [
+        {
+          role: "user",
+          content: [
+            ...(p.pdfBase64
+              ? [{ type: "document" as const, source: { type: "base64" as const, media_type: "application/pdf" as const, data: p.pdfBase64 } }]
+              : []),
+            { type: "text" as const, text: p.texto },
+          ],
+        },
+      ],
+    });
+    if (response.stop_reason === "refusal") throw new Error("A IA recusou processar este conteúdo.");
+    const bloco = response.content.find((b) => b.type === "text");
+    if (!bloco || bloco.type !== "text") throw new Error("Resposta da IA sem conteúdo.");
+    return { valor: JSON.parse(bloco.text), uso: usoAnthropic(response.usage) };
+  }
+
+  const res = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${c.apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: c.model,
+      instructions: p.sistema,
+      input: [
+        {
+          role: "user",
+          content: [
+            ...(p.pdfBase64 ? [{ type: "input_file", filename: "curriculo.pdf", file_data: `data:application/pdf;base64,${p.pdfBase64}` }] : []),
+            { type: "input_text", text: p.texto },
+          ],
+        },
+      ],
+      text: { format: { type: "json_schema", name: p.nome, schema: p.schema, strict: true } },
+    }),
+  });
+  if (!res.ok) throw new Error(`Falha na chamada à OpenAI: ${await res.text()}`);
+  const data = await res.json();
+  const text = data.output_text ?? data.output?.find((o: { type: string }) => o.type === "message")?.content?.[0]?.text;
+  if (!text) throw new Error("Resposta da IA sem conteúdo.");
+  return { valor: JSON.parse(text), uso: usoOpenAi(data.usage) };
+}
+
+const campoDeTexto = (descricao: string) => ({ type: "string", description: descricao });
+
+const PERFIL_SCHEMA = {
+  type: "object",
+  properties: {
+    formacao: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          nivel: campoDeTexto("Nível: Fundamental, Médio, Técnico, Superior, Pós-graduação, Mestrado ou Doutorado"),
+          curso: campoDeTexto("Nome do curso, sem nome de instituição e sem ano, no máximo 120 caracteres"),
+          situacao: campoDeTexto("Completo, Cursando ou Incompleto"),
+        },
+        required: ["nivel", "curso", "situacao"],
+        additionalProperties: false,
+      },
+    },
+    experiencias: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          cargo: campoDeTexto("Cargo ou função, no máximo 120 caracteres"),
+          area: campoDeTexto("Área de atuação (ex.: Financeiro, Logística, Atendimento), no máximo 80 caracteres"),
+          meses: { type: ["integer", "null"], description: "Duração em meses, se o currículo permitir calcular" },
+          atividades: campoDeTexto("O que fazia, em uma ou duas frases, sem nome de empresa, no máximo 600 caracteres"),
+        },
+        required: ["cargo", "area", "meses", "atividades"],
+        additionalProperties: false,
+      },
+    },
+    habilidades: { type: "array", items: campoDeTexto("Ferramenta, sistema ou competência técnica, no máximo 80 caracteres") },
+    certificacoes: { type: "array", items: campoDeTexto("Certificação ou curso livre relevante, no máximo 120 caracteres") },
+    idiomas: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { idioma: campoDeTexto("Idioma"), nivel: campoDeTexto("Básico, Intermediário, Avançado ou Fluente") },
+        required: ["idioma", "nivel"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["formacao", "experiencias", "habilidades", "certificacoes", "idiomas"],
+  additionalProperties: false,
+};
+
+const PERFIL_SISTEMA =
+  "Você extrai o perfil profissional de um currículo para uma triagem justa. Devolva só formação, experiências, habilidades, certificações e idiomas, em português. " +
+  "NUNCA inclua, em nenhum campo, nome da pessoa, idade, data de nascimento, gênero, estado civil, filhos, religião, deficiência, raça, foto, endereço, cidade, bairro, " +
+  "telefone, e-mail, nem nome de empresa ou de instituição de ensino — esses dados não podem influenciar a avaliação. Não invente: o que o currículo não diz fica de fora." +
+  UNTRUSTED_CONTENT_GUARD;
+
+export async function extrairPerfilProfissional(
+  tenantId: string,
+  pdfBase64: string,
+  contexto?: ContextoDaChamada
+): Promise<PerfilProfissional> {
+  const bruto = await executarAgente({
+    tenantId,
+    agentCode: "perfil_profissional",
+    contexto,
+    chamar: (c) =>
+      chamarComFormato(c, {
+        sistema: PERFIL_SISTEMA,
+        texto: "Extraia o perfil profissional deste currículo.",
+        pdfBase64,
+        nome: "perfil_profissional",
+        schema: PERFIL_SCHEMA,
+        maxTokens: 4096,
+      }),
+  });
+  return normalizarPerfilProfissional(bruto);
+}
+
+const PONTUACAO_SISTEMA =
+  "Você confere se um perfil profissional atende os requisitos de uma vaga. Para CADA requisito, responda: SIM (o perfil mostra que atende), PARCIAL (atende em parte), " +
+  "NAO (o perfil mostra que não atende) ou SEM_EVIDENCIA (o perfil não diz). Na evidência, cite em uma frase o trecho do perfil que sustenta a resposta. " +
+  "Seja literal: ausência de informação é SEM_EVIDENCIA, não NAO. Não dê nota geral — ela é calculada depois. O resumo tem 2 ou 3 frases sobre a aderência, sem julgamento pessoal." +
+  UNTRUSTED_CONTENT_GUARD;
+
+export type AvaliacaoDaIa = { avaliacoes: AvaliacaoDeRequisito[]; resumo: string };
+
+export async function avaliarRequisitos(
+  tenantId: string,
+  entrada: { perfil: PerfilProfissional; requisitos: Requisitos },
+  contexto?: ContextoDaChamada
+): Promise<AvaliacaoDaIa> {
+  const ids = entrada.requisitos.itens.map((r) => r.id);
+  const schema = {
+    type: "object",
+    properties: {
+      avaliacoes: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            requisitoId: { type: "string", enum: ids },
+            veredito: { type: "string", enum: ["SIM", "PARCIAL", "NAO", "SEM_EVIDENCIA"] },
+            evidencia: campoDeTexto("Uma frase citando o perfil, no máximo 400 caracteres"),
+          },
+          required: ["requisitoId", "veredito", "evidencia"],
+          additionalProperties: false,
+        },
+      },
+      resumo: campoDeTexto("2 ou 3 frases sobre a aderência do perfil à vaga, em português"),
+    },
+    required: ["avaliacoes", "resumo"],
+    additionalProperties: false,
+  };
+  const requisitosTexto = entrada.requisitos.itens
+    .map((r) => `${r.id} (${r.tipo === "OBRIGATORIO" ? "obrigatório" : "desejável"}): ${r.texto}`)
+    .join("\n");
+  const bruto = (await executarAgente({
+    tenantId,
+    agentCode: "pontuador_de_vaga",
+    contexto,
+    chamar: (c) =>
+      chamarComFormato(c, {
+        sistema: PONTUACAO_SISTEMA,
+        texto: `Requisitos da vaga:\n${requisitosTexto}\n\nPerfil profissional do candidato (JSON):\n${JSON.stringify(entrada.perfil)}`,
+        nome: "avaliacao_de_requisitos",
+        schema,
+        maxTokens: 4096,
+      }),
+  })) as { avaliacoes?: unknown; resumo?: unknown };
+  return {
+    avaliacoes: normalizarAvaliacoes(bruto.avaliacoes, entrada.requisitos),
+    resumo: String(bruto.resumo ?? "").trim().slice(0, 1000),
+  };
 }

@@ -60,6 +60,8 @@ describe("AGENT_CATALOG", () => {
   it("lista por setor, inclusive os que servem o app inteiro", () => {
     expect(agentesDoSetor("recrutamento").map((a) => a.code)).toEqual([
       "triagem_curriculo",
+      "perfil_profissional",
+      "pontuador_de_vaga",
       "assistente_de_vaga",
       "atendente_de_candidato",
     ]);
