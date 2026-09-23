@@ -21,6 +21,29 @@
 
 import { getPrisma } from "@/lib/prisma";
 import type { ContextoDaFerramenta, FerramentaRegistrada } from "@/lib/ia/ferramentas";
+import {
+  aplicarRespostas,
+  faltaPerguntar,
+  lerFonte,
+  ROTULO_DA_RESPOSTA,
+  validarRespostas,
+  type Respostas,
+} from "@/lib/recrutamento/respostas";
+
+/** A candidatura ligada à conversa — a única em que o registro pode gravar. */
+async function candidaturaDaConversa(ctx: ContextoDaFerramenta): Promise<string | null> {
+  const thread = await getPrisma().whatsappThread.findFirst({
+    where: { id: threadDoEscopo(ctx), tenantId: ctx.tenantId },
+    select: { candidaturaId: true },
+  });
+  return thread?.candidaturaId ?? null;
+}
+
+const respostasDe = (c: { pretensaoSalarial: { toNumber(): number } | null; disponibilidade: string | null; deslocamentoMinutos: number | null }): Respostas => ({
+  pretensaoSalarial: c.pretensaoSalarial === null ? null : c.pretensaoSalarial.toNumber(),
+  disponibilidade: c.disponibilidade,
+  deslocamentoMinutos: c.deslocamentoMinutos,
+});
 
 /** O id da conversa, do recorte. Nunca vem do modelo. */
 export function threadDoEscopo(ctx: ContextoDaFerramenta): string {
@@ -106,8 +129,19 @@ export const FERRAMENTAS_DE_CANDIDATO: Record<string, FerramentaRegistrada> = {
         },
       });
 
+      // O que ainda falta perguntar, na candidatura ligada à conversa. Sem
+      // os valores já dados: o bot não precisa repetir a pretensão de ninguém.
+      const ligada = thread?.candidaturaId
+        ? await prisma.candidatura.findFirst({
+            where: { id: thread.candidaturaId, tenantId: ctx.tenantId },
+            select: { pretensaoSalarial: true, disponibilidade: true, deslocamentoMinutos: true },
+          })
+        : null;
+      const falta = ligada ? faltaPerguntar(respostasDe(ligada)).map((c) => ROTULO_DA_RESPOSTA[c]) : [];
+
       return {
         identificado: true,
+        ...(ligada ? { faltaPerguntar: falta } : {}),
         candidaturas: candidaturas.map((c) => ({
           vaga: c.vaga.title,
           empresa: c.vaga.company.tradeName || c.vaga.company.name,
@@ -148,6 +182,54 @@ export const FERRAMENTAS_DE_CANDIDATO: Record<string, FerramentaRegistrada> = {
         empresa: v.company.tradeName || v.company.name,
         descricao: v.publicDescription,
       }));
+    },
+  },
+
+  registrar_respostas_do_candidato: {
+    def: {
+      nome: "registrar_respostas_do_candidato",
+      descricao:
+        "Grava na candidatura desta conversa o que o candidato respondeu: pretensão salarial mensal (em reais), disponibilidade para começar (texto curto, ex.: 'imediata', 'em 15 dias') e tempo até o local de trabalho (em minutos). Mande só o que a pessoa disse nesta conversa; o que não sabe vai como null. Nunca registre endereço, bairro ou cidade.",
+      parametros: {
+        type: "object",
+        properties: {
+          pretensaoSalarial: { type: ["number", "null"], description: "Reais por mês, só o número" },
+          disponibilidade: { type: ["string", "null"], description: "Quando pode começar, até 120 caracteres" },
+          deslocamentoMinutos: { type: ["integer", "null"], description: "Minutos até o local de trabalho" },
+        },
+        required: ["pretensaoSalarial", "disponibilidade", "deslocamentoMinutos"],
+        additionalProperties: false,
+      },
+      // Grava sozinha: está em REGISTROS_AUTOMATICOS (src/lib/ia/ferramentas.ts).
+      natureza: "registro",
+    },
+    executar: async (args, ctx) => {
+      const candidaturaId = await candidaturaDaConversa(ctx);
+      if (!candidaturaId) {
+        return { gravado: false, recado: "Esta conversa não está ligada a uma candidatura: não registre nada nem peça dados para descobrir quem é." };
+      }
+      const { valores, descartados } = validarRespostas(args);
+      const prisma = getPrisma();
+      const atual = await prisma.candidatura.findFirst({
+        where: { id: candidaturaId, tenantId: ctx.tenantId },
+        select: { respostasFonte: true },
+      });
+      if (!atual) return { gravado: false, recado: "Candidatura não encontrada." };
+
+      const r = aplicarRespostas(lerFonte(atual.respostasFonte), valores, "WHATSAPP", new Date());
+      if (r.gravados.length > 0) {
+        await prisma.candidatura.update({
+          where: { id: candidaturaId },
+          data: { ...r.dados, respostasFonte: r.fonte },
+        });
+      }
+      return {
+        gravado: r.gravados.length > 0,
+        registrado: r.gravados.map((c) => ROTULO_DA_RESPOSTA[c]),
+        // O recrutador já definiu esses — não pergunte de novo.
+        ...(r.preservados.length ? { jaDefinidoPeloRecrutador: r.preservados.map((c) => ROTULO_DA_RESPOSTA[c]) } : {}),
+        ...(descartados.length ? { naoEntendido: descartados.map((c) => ROTULO_DA_RESPOSTA[c]), recado: "Valor fora do esperado: confirme com a pessoa." } : {}),
+      };
     },
   },
 
