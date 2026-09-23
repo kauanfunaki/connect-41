@@ -9,6 +9,9 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
 import { ScorecardForm } from "@/components/vagas/ScorecardForm";
+import { NotaDaTriagem } from "@/components/vagas/NotaDaTriagem";
+import { requisitosAtuais } from "@/lib/recrutamento/triagemServidor";
+import type { AvaliacaoDeRequisito, Faixa, Requisito } from "@/lib/recrutamento/triagem";
 import { MeetingsSection } from "@/components/kanban/MeetingsSection";
 import { TesteCard } from "@/components/teste/TesteCard";
 import { STAGE_LABEL, type Stage } from "@/lib/recruitmentFunnel";
@@ -97,6 +100,15 @@ export default async function CandidaturaScorecardPage({
         })
       : Promise.resolve([]),
   ]);
+  const [notas, requisitos] = await Promise.all([
+    prisma.candidaturaNota.findMany({
+      where: { tenantId: ctx.tenantId, candidaturaId },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      include: { requisitos: { select: { versao: true, itens: true } } },
+    }),
+    requisitosAtuais(ctx.tenantId, vagaId),
+  ]);
   const hasGoogle = oauthAccounts.some((a) => a.provider === "GOOGLE");
   const hasMicrosoft = oauthAccounts.some((a) => a.provider === "MICROSOFT");
 
@@ -118,6 +130,24 @@ export default async function CandidaturaScorecardPage({
             {candidatura.person.name}
           </Link></>}
         subtitle={<>Pareceres de entrevista · etapa atual: {STAGE_LABEL[candidatura.stage as Stage]}</>}
+      />
+
+      <NotaDaTriagem
+        vagaId={vagaId}
+        candidaturaId={candidaturaId}
+        versaoAtual={requisitos?.versao ?? null}
+        podePontuar={canAct}
+        notas={notas.map((n) => ({
+          id: n.id,
+          score: n.score,
+          faixa: n.faixa as Faixa,
+          resumo: n.resumo,
+          avaliacoes: n.avaliacoes as AvaliacaoDeRequisito[],
+          versao: n.requisitos.versao,
+          itens: n.requisitos.itens as Requisito[],
+          createdAt: n.createdAt,
+          origem: n.origem,
+        }))}
       />
 
       {/* Entrevistas */}

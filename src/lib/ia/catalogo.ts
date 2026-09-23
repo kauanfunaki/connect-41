@@ -104,6 +104,34 @@ export const AGENT_CATALOG: AgenteDef[] = [
     padraoLigado: true,
   },
   {
+    code: "perfil_profissional",
+    label: "Perfil profissional do currículo",
+    sectorCode: "recrutamento",
+    description:
+      "Lê o PDF do currículo e devolve só formação, experiências, habilidades, certificações e idiomas — sem nenhum dado pessoal — para a triagem da vaga",
+    // Faixa rápida: é extração, não julgamento. Uma vez por candidatura (o
+    // perfil fica guardado), ~200 currículos/dia no Recrutamento.
+    faixa: "rapido",
+    escreve: false,
+    ferramentas: [],
+    tetoMensalCentavos: 30_000,
+    tetoMensalChamadas: 6_000,
+    padraoLigado: false,
+  },
+  {
+    code: "pontuador_de_vaga",
+    label: "Pontuação da triagem",
+    sectorCode: "recrutamento",
+    description:
+      "Confere o perfil profissional contra cada requisito da vaga e aponta a evidência; a nota é calculada pelo Connect e só ordena, nunca reprova",
+    faixa: "rapido",
+    escreve: false,
+    ferramentas: [],
+    tetoMensalCentavos: 20_000,
+    tetoMensalChamadas: 15_000,
+    padraoLigado: false,
+  },
+  {
     code: "resumo_empresa",
     label: "Resumo de histórico da empresa",
     sectorCode: null,
