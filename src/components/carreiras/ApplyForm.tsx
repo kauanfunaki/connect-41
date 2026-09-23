@@ -58,6 +58,9 @@ export function ApplyForm({ slug, vagaId, carimbo }: Props) {
         <p className="text-[13px] text-fg-muted mt-1">
           Recebemos seus dados. Se o seu perfil avançar no processo, a equipe de recrutamento entra em contato pelo e-mail ou telefone informado.
         </p>
+        <a href={`/carreiras/${slug}/minha-conta`} className="inline-block text-[13px] text-brand hover:underline mt-3">
+          Acompanhar minhas candidaturas
+        </a>
       </div>
     );
   }
