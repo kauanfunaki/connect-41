@@ -93,7 +93,11 @@ export async function listarIntegracoes(
   const porCodigo = new Map<string, (typeof conexoes)[number]>();
   for (const c of conexoes) {
     // A primeira instância representa o código na vitrine; as demais aparecem
-    // na tela de conexões, quando ela existir.
+    // na tela de conexões, quando ela existir. Conta **de empresa**
+    // (`empresa:{id}`, o Omie por cliente do BPO) tem seção própria: se ela
+    // representasse o código aqui, salvar o card genérico sobrescreveria a
+    // chave daquela empresa.
+    if (c.instanceKey.startsWith("empresa:")) continue;
     if (!porCodigo.has(c.integrationCode)) porCodigo.set(c.integrationCode, c);
   }
 
