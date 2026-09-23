@@ -5,9 +5,10 @@
 import { readFile } from "fs/promises";
 import path from "path";
 import { getPrisma } from "@/lib/prisma";
-import { avaliarRequisitos, extrairPerfilProfissional } from "@/lib/ai";
+import { avaliarRequisitos, extrairPerfilProfissional, isAiConfigured } from "@/lib/ai";
 import {
   calcularNota,
+  ehBloqueioDoAgente,
   normalizarPerfil,
   normalizarRequisitos,
   type Faixa,
@@ -92,8 +93,9 @@ export async function pontuarCandidatura(p: {
   tenantId: string;
   candidaturaId: string;
   requisitos: RequisitosDaVaga;
-  userId: string;
-  origem: "USUARIO" | "LOTE";
+  /** Nulo na pontuação automática (cron). */
+  userId: string | null;
+  origem: "USUARIO" | "LOTE" | "AUTO";
 }): Promise<ResultadoDaPontuacao> {
   const prisma = getPrisma();
   const c = await prisma.candidatura.findFirst({
@@ -101,14 +103,22 @@ export async function pontuarCandidatura(p: {
     select: { id: true, personId: true, resumeUrl: true, perfilProfissional: true },
   });
   if (!c) return { ok: false, erro: "Candidatura não encontrada." };
-  const contexto = { trigger: "USUARIO" as const, userId: p.userId, entityType: "candidatura", entityId: c.id };
+  const contexto = {
+    trigger: p.origem === "AUTO" ? ("CRON" as const) : ("USUARIO" as const),
+    userId: p.userId,
+    entityType: "candidatura",
+    entityId: c.id,
+  };
 
   try {
     let perfil: PerfilProfissional;
     if (c.perfilProfissional) perfil = normalizarPerfil(c.perfilProfissional);
     else {
       const pdf = await lerCurriculo(p.tenantId, c);
-      if (!pdf) return { ok: false, erro: "Sem currículo em PDF." };
+      if (!pdf) {
+        await registrarFalha(c.id, "Sem currículo em PDF.");
+        return { ok: false, erro: "Sem currículo em PDF." };
+      }
       perfil = await extrairPerfilProfissional(p.tenantId, pdf, contexto);
       await prisma.candidatura.update({ where: { id: c.id }, data: { perfilProfissional: perfil, perfilProfissionalEm: new Date() } });
     }
@@ -128,10 +138,19 @@ export async function pontuarCandidatura(p: {
         createdById: p.userId,
       },
     });
+    await prisma.candidatura.update({ where: { id: c.id }, data: { triagemFalha: null, triagemFalhaEm: null } });
     return { ok: true, score: nota.score, faixa: nota.faixa };
   } catch (err) {
-    return { ok: false, erro: err instanceof Error ? err.message.slice(0, 200) : "Falha ao pontuar." };
+    const erro = err instanceof Error ? err.message.slice(0, 200) : "Falha ao pontuar.";
+    await registrarFalha(c.id, erro);
+    return { ok: false, erro };
   }
+}
+
+/** Guarda a falha para o cron não insistir — menos quando o bloqueio é do agente, não do currículo. */
+async function registrarFalha(candidaturaId: string, erro: string) {
+  if (ehBloqueioDoAgente(erro)) return;
+  await getPrisma().candidatura.update({ where: { id: candidaturaId }, data: { triagemFalha: erro.slice(0, 200), triagemFalhaEm: new Date() } });
 }
 
 /**
@@ -151,4 +170,70 @@ export async function filaDoLote(tenantId: string, vagaId: string, requisitosId:
     orderBy: { createdAt: "asc" },
   });
   return cands.map((c) => ({ id: c.id, nome: c.person.name }));
+}
+
+// ─── Pontuação automática (cron) ───────────────────────────────────────────
+
+/**
+ * Candidaturas por rodada do cron. Cada uma são até duas chamadas de IA; com o
+ * n8n chamando a cada 5 minutos, 8 por rodada dão ~2 mil por dia — folga sobre
+ * os ~200 currículos diários do Recrutamento, sem segurar a requisição.
+ */
+const POR_RODADA = 8;
+
+/** Uma instância do app, e a rodada não pode se sobrepor à anterior: duas pontuariam a mesma candidatura. */
+let rodando = false;
+
+export type RodadaAutomatica = { pontuadas: number; falhas: number; tenantsBloqueados: number; ocupado?: true };
+
+/**
+ * Pontua as candidaturas novas: em andamento, **sem nenhuma nota**, sem falha
+ * registrada, em vaga aberta que já tem requisitos. Mudar o requisito da vaga
+ * não entra aqui — reprocessar é um clique, para não gastar sem ninguém pedir.
+ */
+export async function pontuarNovasCandidaturas(): Promise<RodadaAutomatica> {
+  if (rodando) return { pontuadas: 0, falhas: 0, tenantsBloqueados: 0, ocupado: true };
+  rodando = true;
+  try {
+    const prisma = getPrisma();
+    const fila = await prisma.candidatura.findMany({
+      where: {
+        status: "EM_ANDAMENTO",
+        triagemFalhaEm: null,
+        notas: { none: {} },
+        vaga: { status: { in: ["ABERTA", "EM_ANDAMENTO"] }, requisitos: { some: {} } },
+      },
+      orderBy: { createdAt: "asc" },
+      take: POR_RODADA * 3, // folga para pular tenants sem IA sem nova consulta
+      select: { id: true, tenantId: true, vagaId: true },
+    });
+
+    const iaDoTenant = new Map<string, boolean>();
+    const requisitosDaVaga = new Map<string, RequisitosDaVaga | null>();
+    const bloqueados = new Set<string>();
+    let pontuadas = 0;
+    let falhas = 0;
+    let tentadas = 0;
+
+    for (const c of fila) {
+      if (tentadas >= POR_RODADA) break;
+      if (bloqueados.has(c.tenantId)) continue;
+      if (!iaDoTenant.has(c.tenantId)) iaDoTenant.set(c.tenantId, await isAiConfigured(c.tenantId));
+      if (!iaDoTenant.get(c.tenantId)) continue;
+      if (!requisitosDaVaga.has(c.vagaId)) requisitosDaVaga.set(c.vagaId, await requisitosAtuais(c.tenantId, c.vagaId));
+      const requisitos = requisitosDaVaga.get(c.vagaId);
+      if (!requisitos) continue;
+
+      tentadas++;
+      const r = await pontuarCandidatura({ tenantId: c.tenantId, candidaturaId: c.id, requisitos, userId: null, origem: "AUTO" });
+      if (r.ok) pontuadas++;
+      else {
+        falhas++;
+        if (ehBloqueioDoAgente(r.erro)) bloqueados.add(c.tenantId);
+      }
+    }
+    return { pontuadas, falhas, tenantsBloqueados: bloqueados.size };
+  } finally {
+    rodando = false;
+  }
 }

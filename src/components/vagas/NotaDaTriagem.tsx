@@ -40,12 +40,15 @@ export function NotaDaTriagem({
   notas,
   versaoAtual,
   podePontuar,
+  falha,
 }: {
   vagaId: string;
   candidaturaId: string;
   notas: NotaParaTela[];
   versaoAtual: number | null;
   podePontuar: boolean;
+  /** Última falha da pontuação (automática ou não) — o cron não tenta de novo enquanto ela existir. */
+  falha: string | null;
 }) {
   const [ultima, ...anteriores] = notas;
   return (
@@ -63,6 +66,11 @@ export function NotaDaTriagem({
       {!ultima ? (
         <p className="text-[13px] text-fg-muted">
           {versaoAtual === null ? "A vaga ainda não tem requisitos de triagem." : "Ainda sem nota nesta candidatura."}
+          {falha && versaoAtual !== null && (
+            <span className="block text-warning mt-1">
+              A pontuação falhou: {falha} A pontuação automática não tenta de novo — use o botão depois de resolver.
+            </span>
+          )}
         </p>
       ) : (
         <>

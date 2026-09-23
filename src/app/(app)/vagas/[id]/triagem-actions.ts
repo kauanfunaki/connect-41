@@ -7,6 +7,7 @@ import { scopedVagaWhere } from "@/lib/auth/scope";
 import { isAiConfigured } from "@/lib/ai";
 import { logAudit } from "@/lib/audit";
 import { filaDoLote, pontuarCandidatura, requisitosAtuais, salvarRequisitos } from "@/lib/recrutamento/triagemServidor";
+import { ehBloqueioDoAgente } from "@/lib/recrutamento/triagem";
 
 /**
  * Candidaturas por chamada do lote. Cada uma são até duas chamadas de IA
@@ -70,7 +71,7 @@ export async function pontuarPassoDoLote(vagaId: string, modo: "pendentes" | "to
     else {
       passo.falhas.push({ id: c.id, nome: c.nome, erro: r.erro });
       // Teto de gasto ou agente desligado não melhora na próxima candidatura: para o lote.
-      if (/teto|desligado|chave de IA/i.test(r.erro)) return { ...passo, restantes: 0 };
+      if (ehBloqueioDoAgente(r.erro)) return { ...passo, restantes: 0 };
     }
   }
   if (passo.restantes === 0) revalidatePath(`/vagas/${vagaId}`);

@@ -137,6 +137,7 @@ export default async function CandidaturaScorecardPage({
         candidaturaId={candidaturaId}
         versaoAtual={requisitos?.versao ?? null}
         podePontuar={canAct}
+        falha={candidatura.triagemFalha}
         notas={notas.map((n) => ({
           id: n.id,
           score: n.score,

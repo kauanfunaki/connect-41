@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   calcularNota,
   compararParaTriagem,
+  ehBloqueioDoAgente,
   normalizarAvaliacoes,
   normalizarPerfil,
   normalizarRequisitos,
@@ -111,5 +112,16 @@ describe("normalização da saída da IA", () => {
       { requisitoId: "r1", veredito: "SIM", evidencia: "ok" },
       { requisitoId: "r2", veredito: "SEM_EVIDENCIA", evidencia: "" },
     ]);
+  });
+});
+
+describe("ehBloqueioDoAgente", () => {
+  it("reconhece as recusas do agente e não confunde com problema do currículo", () => {
+    expect(ehBloqueioDoAgente("O teto de gasto de IA deste mês foi atingido.")).toBe(true);
+    expect(ehBloqueioDoAgente("O teto de chamadas de IA deste mês foi atingido.")).toBe(true);
+    expect(ehBloqueioDoAgente("Este agente está desligado para esta empresa.")).toBe(true);
+    expect(ehBloqueioDoAgente("Nenhuma chave de IA configurada. Configure em Integrações › Inteligência Artificial.")).toBe(true);
+    expect(ehBloqueioDoAgente("Sem currículo em PDF.")).toBe(false);
+    expect(ehBloqueioDoAgente("A IA recusou processar este conteúdo.")).toBe(false);
   });
 });

@@ -184,3 +184,13 @@ export function normalizarAvaliacoes(v: unknown, req: Requisitos): AvaliacaoDeRe
   }
   return out;
 }
+
+/**
+ * A falha é do agente (teto do mês, agente desligado, sem chave) e não da
+ * candidatura? Aí não adianta seguir com a próxima — e não se marca a
+ * candidatura como problemática, porque o currículo dela não tem culpa.
+ * Os textos vêm de `TEXTO` em src/lib/ia/execucao.ts.
+ */
+export function ehBloqueioDoAgente(erro: string): boolean {
+  return /teto de|agente está desligado|chave de IA/i.test(erro);
+}
