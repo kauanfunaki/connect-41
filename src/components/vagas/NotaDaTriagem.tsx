@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/Card";
 import { formatInstantDateTime } from "@/lib/format";
 import {
+  FALHA_SEM_CURRICULO,
   ROTULO_DA_FAIXA,
   ROTULO_DO_VEREDITO,
   type AvaliacaoDeRequisito,
@@ -66,10 +67,19 @@ export function NotaDaTriagem({
       {!ultima ? (
         <p className="text-[13px] text-fg-muted">
           {versaoAtual === null ? "A vaga ainda não tem requisitos de triagem." : "Ainda sem nota nesta candidatura."}
-          {falha && versaoAtual !== null && (
-            <span className="block text-warning mt-1">
-              A pontuação falhou: {falha} A pontuação automática não tenta de novo — use o botão depois de resolver.
+          {falha === FALHA_SEM_CURRICULO && versaoAtual !== null ? (
+            // Currículo é opcional no portal: não é erro do sistema, é o que a
+            // candidatura tem. Dizer "falhou" fazia parecer defeito.
+            <span className="block text-fg-secondary mt-1">
+              O candidato não enviou currículo em PDF, então não há o que pontuar. Quando o currículo chegar, use o botão.
             </span>
+          ) : (
+            falha &&
+            versaoAtual !== null && (
+              <span className="block text-warning mt-1">
+                A pontuação falhou: {falha} A pontuação automática não tenta de novo — use o botão depois de resolver.
+              </span>
+            )
           )}
         </p>
       ) : (

@@ -49,7 +49,7 @@ export function RespostasDoCandidato({
         <div>
           <h2 className="text-[14px] font-semibold text-fg">Respostas do candidato</h2>
           <p className="text-[12px] text-fg-muted mt-0.5">
-            Coletadas pelo atendente do WhatsApp ou preenchidas aqui. Não entram na nota da triagem.
+            Respondidas na inscrição pelo portal, coletadas pelo atendente do WhatsApp ou preenchidas aqui. Não entram na nota da triagem.
           </p>
         </div>
         {podeEditar && !editando && (
