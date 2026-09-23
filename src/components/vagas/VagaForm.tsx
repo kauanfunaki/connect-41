@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { VagaState } from "@/app/(app)/vagas/actions";
 import { VagaPrioridade, type VagaContrato, type VagaModalidade } from "@/generated/prisma/enums";
 import { CONTRATO_LABEL, MODALIDADE_LABEL } from "@/lib/carreiras/portal";
+import { UFS } from "@/lib/ufs";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
@@ -35,6 +36,11 @@ export type VagaDefaultValues = {
   showSalary?: boolean;
   workMode?: VagaModalidade | null;
   contractType?: VagaContrato | null;
+  benefits?: string | null;
+  /** "AAAA-MM-DD", como o <input type="date"> espera. */
+  applicationDeadline?: string | null;
+  workCity?: string | null;
+  workStateCode?: string | null;
 };
 
 type Option = { id: string; name: string };
@@ -178,6 +184,31 @@ export function VagaForm({ action, cancelHref, companies, cargos, users, sectorO
           defaultChecked={defaultValues?.showSalary ?? false}
           label="Mostrar a faixa salarial no portal (desmarcado, aparece &quot;A combinar&quot;)"
         />
+        <CampoForm label="Benefícios (um por linha)" htmlFor="benefits">
+          <Textarea
+            id="benefits"
+            name="benefits"
+            rows={4}
+            defaultValue={defaultValues?.benefits ?? ""}
+            placeholder={"Vale-refeição\nPlano de saúde\nHome office às sextas"}
+          />
+        </CampoForm>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <CampoForm label="Inscrições até" htmlFor="applicationDeadline" helper="Depois desse dia a vaga sai do portal sozinha.">
+            <Input id="applicationDeadline" name="applicationDeadline" type="date" defaultValue={defaultValues?.applicationDeadline ?? ""} />
+          </CampoForm>
+          <CampoForm label="Cidade de trabalho" htmlFor="workCity" helper="Em branco, vale a cidade da empresa.">
+            <Input id="workCity" name="workCity" type="text" maxLength={80} defaultValue={defaultValues?.workCity ?? ""} />
+          </CampoForm>
+          <CampoForm label="UF de trabalho" htmlFor="workStateCode">
+            <Select id="workStateCode" name="workStateCode" defaultValue={defaultValues?.workStateCode ?? ""}>
+              <option value="">Da empresa</option>
+              {UFS.map((uf) => (
+                <option key={uf.value} value={uf.value}>{uf.label}</option>
+              ))}
+            </Select>
+          </CampoForm>
+        </div>
       </div>
 
       <div className="flex items-center gap-3 pt-2">
