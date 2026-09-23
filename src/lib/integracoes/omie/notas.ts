@@ -43,6 +43,38 @@ export type MotivoDeFora =
   | "outro_emitente" // chave de outro CNPJ
   | "data_invalida";
 
+/** Como cada motivo aparece na mensagem da importação. */
+const MOTIVO_NA_MENSAGEM: Record<MotivoDeFora, string> = {
+  entrada: "entradas (chegam pelo SPED)",
+  homologacao: "de homologação",
+  denegada: "denegadas",
+  outro_modelo: "de outro modelo",
+  sem_chave: "sem chave de acesso",
+  outro_emitente: "de outro CNPJ emitente",
+  data_invalida: "com data inválida",
+};
+
+/**
+ * O resumo de uma importação, para gente. Diz o motivo de cada nota que ficou
+ * de fora — "709 de fora" sem motivo parece erro quando é só compra.
+ */
+export function mensagemDaImportacao(c: Record<string, number>): string {
+  const n = (k: string) => c[k] ?? 0;
+  const partes = [
+    `${n("novas")} novas no acervo`,
+    n("reconhecidas") ? `${n("reconhecidas")} já estavam (SPED)` : null,
+    n("atualizadas") ? `${n("atualizadas")} atualizadas` : null,
+    ...(Object.keys(MOTIVO_NA_MENSAGEM) as MotivoDeFora[])
+      .filter((m) => n(`fora_${m}`) > 0)
+      .map((m) => `${n(`fora_${m}`)} ${MOTIVO_NA_MENSAGEM[m]}`),
+  ].filter(Boolean);
+  const semSaida = n("lidas") > 0 && n("novas") + n("reconhecidas") + n("atualizadas") === 0;
+  return (
+    `${n("lidas")} notas lidas em ${n("paginas")} página(s): ${partes.join(", ")}.` +
+    (semSaida ? " Nenhuma nota de saída emitida pela empresa nesta conta." : "")
+  );
+}
+
 type Obj = Record<string, unknown>;
 const obj = (v: unknown): Obj => (v && typeof v === "object" && !Array.isArray(v) ? (v as Obj) : {});
 const texto = (v: unknown): string => (v === null || v === undefined ? "" : String(v).trim());
