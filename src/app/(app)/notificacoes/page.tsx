@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { marcarTodasLidas } from "./actions";
 import { formatInstantDateTime } from "@/lib/format";
+import { linkDaNotificacao } from "@/lib/notificacaoLink";
 
 export default async function NotificacoesPage() {
   const ctx = await getAuthContext();
@@ -49,13 +50,7 @@ export default async function NotificacoesPage() {
                 id={n.id}
                 message={n.message}
                 read={n.read}
-                href={
-                  n.entityType && n.entityId
-                    ? n.entityType === "COMPANY"
-                      ? `/empresas/${n.entityId}`
-                      : `/pessoas/${n.entityId}`
-                    : null
-                }
+                href={linkDaNotificacao(n)}
                 createdAt={formatInstantDateTime(n.createdAt, {
                   day: "2-digit",
                   month: "short",

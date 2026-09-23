@@ -12,6 +12,8 @@ import {
   situacaoDaConversa,
   podeResponder,
   podeDevolverAoRobo,
+  podeAssumir,
+  podeSoltar,
   telefoneLegivel,
   SITUACAO_LABEL,
   SITUACAO_VARIANTE,
@@ -19,6 +21,8 @@ import {
 import {
   responderConversa,
   devolverAoRobo,
+  assumirConversa,
+  soltarConversa,
   vincularCandidatura,
   desvincularCandidatura,
   type AcaoNaConversa,
@@ -31,9 +35,11 @@ type Props = {
   agora: Date;
   /** Candidaturas em andamento, para ligar a conversa a uma pessoa. */
   candidaturas: { id: string; rotulo: string }[];
+  /** Quem está olhando — decide entre "Assumir" e "Soltar". */
+  userId: string;
 };
 
-export function Conversa({ conversa, agora, candidaturas }: Props) {
+export function Conversa({ conversa, agora, candidaturas, userId }: Props) {
   const [texto, setTexto] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
@@ -42,6 +48,8 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
   const situacao = situacaoDaConversa(conversa, agora);
   const resposta = podeResponder(conversa, agora);
   const devolucao = podeDevolverAoRobo(conversa);
+  const assumir = podeAssumir({ optedOutAt: conversa.optedOutAt, assignedToId: conversa.responsavel?.id ?? null }, userId);
+  const soltar = podeSoltar({ assignedToId: conversa.responsavel?.id ?? null }, userId);
 
   async function correr(fn: () => Promise<AcaoNaConversa>, limparTexto = false) {
     setOcupado(true);
@@ -68,16 +76,36 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
               {conversa.vaga && ` · ${conversa.vaga}`}
             </p>
           </div>
-          {devolucao.pode && (
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={ocupado}
-              onClick={() => correr(() => devolverAoRobo(conversa.id))}
-            >
-              Devolver ao assistente
-            </Button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {conversa.responsavel ? (
+              <span className="text-[12px] text-fg-secondary">
+                {conversa.responsavel.id === userId ? "Com você" : `Com ${conversa.responsavel.nome}`}
+              </span>
+            ) : (
+              conversa.handoffAt &&
+              !conversa.optedOutAt && <span className="text-[12px] text-danger font-medium">Ninguém assumiu</span>
+            )}
+            {assumir.pode && (
+              <Button size="sm" disabled={ocupado} onClick={() => correr(() => assumirConversa(conversa.id))}>
+                Assumir
+              </Button>
+            )}
+            {soltar.pode && (
+              <Button variant="linkMuted" size="sm" disabled={ocupado} onClick={() => correr(() => soltarConversa(conversa.id))}>
+                Soltar
+              </Button>
+            )}
+            {devolucao.pode && (
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={ocupado}
+                onClick={() => correr(() => devolverAoRobo(conversa.id))}
+              >
+                Devolver ao assistente
+              </Button>
+            )}
+          </div>
         </div>
 
         {conversa.handoffReason && (

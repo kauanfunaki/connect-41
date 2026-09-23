@@ -16,9 +16,16 @@ type Props = {
   conversas: LinhaDeConversa[];
   /** Agora, do servidor — o relógio do navegador pode estar noutro fuso. */
   agora: Date;
+  /** Quem está olhando: "com você" em vez do próprio nome. */
+  userId: string;
+  /** A lista é um recorte (minhas, sem responsável): vazio não é "nenhuma conversa". */
+  filtrada?: boolean;
 };
 
-export function ConversasLista({ conversas, agora }: Props) {
+export function ConversasLista({ conversas, agora, userId, filtrada = false }: Props) {
+  if (conversas.length === 0 && filtrada) {
+    return <EmptyState title="Nada neste recorte" description="Nenhuma conversa se encaixa aqui agora." icon={<MessageSquare />} />;
+  }
   if (conversas.length === 0) {
     return (
       <EmptyState
@@ -46,6 +53,14 @@ export function ConversasLista({ conversas, agora }: Props) {
                       {c.nome ?? telefoneLegivel(c.waPhone)}
                     </span>
                     <Badge variant={SITUACAO_VARIANTE[situacao]}>{SITUACAO_LABEL[situacao]}</Badge>
+                    {c.responsavel ? (
+                      <span className="text-[11px] text-fg-secondary">
+                        {c.responsavel.id === userId ? "com você" : `com ${c.responsavel.nome}`}
+                      </span>
+                    ) : (
+                      c.handoffAt &&
+                      !c.optedOutAt && <span className="text-[11px] text-danger font-medium">ninguém assumiu</span>
+                    )}
                     {c.naoRespondidas > 0 && (
                       <span className="text-[11px] text-danger font-medium">
                         {c.naoRespondidas === 1

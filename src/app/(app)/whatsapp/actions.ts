@@ -6,7 +6,7 @@ import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { lerConfig } from "@/lib/integracoes/data";
 import { enviarERegistrar } from "@/lib/whatsapp/envio";
-import { podeResponder, podeDevolverAoRobo } from "@/lib/whatsapp/conversas";
+import { podeResponder, podeDevolverAoRobo, podeAssumir, podeSoltar } from "@/lib/whatsapp/conversas";
 import { provedorDaIntegracao } from "@/lib/whatsapp/provedores";
 import { setorDoModulo } from "@/lib/modules";
 
@@ -74,11 +74,18 @@ export async function responderConversa(
   const config = lerConfig(conexao.configEnc);
 
   // Responder assume a conversa: se estava com o robô, ele para aqui. Dois
-  // escrevendo na mesma conversa é o pior atendimento possível.
-  if (!thread.handoffAt) {
+  // escrevendo na mesma conversa é o pior atendimento possível. E, se ninguém
+  // tinha assumido, quem respondeu passa a ser o responsável — respondeu,
+  // é dele. Se já era de outra pessoa, continua dela: responder uma vez não
+  // é tomar a conversa.
+  if (!thread.handoffAt || !thread.assignedToId) {
+    const agora = new Date();
     await prisma.whatsappThread.update({
       where: { id: thread.id },
-      data: { handoffAt: new Date(), handoffReason: "alguém do time respondeu" },
+      data: {
+        ...(thread.handoffAt ? {} : { handoffAt: agora, handoffReason: "alguém do time respondeu" }),
+        ...(thread.assignedToId ? {} : { assignedToId: ctx.userId, assignedAt: agora }),
+      },
     });
   }
 
@@ -117,13 +124,81 @@ export async function devolverAoRobo(threadId: string): Promise<AcaoNaConversa> 
 
   await prisma.whatsappThread.update({
     where: { id: thread.id },
-    data: { handoffAt: null, handoffReason: null },
+    // Com o assistente, a conversa não tem responsável: soltar junto evita que
+    // a próxima transferência caia no nome de quem a devolveu semanas antes.
+    data: { handoffAt: null, handoffReason: null, assignedToId: null, assignedAt: null },
   });
 
   await logAudit({
     tenantId: tenantId,
     userId: ctx.userId,
     action: "whatsapp.returnToBot",
+    entityType: "WhatsappThread",
+    entityId: thread.id,
+  });
+
+  revalidatePath(`/whatsapp/${thread.id}`);
+  revalidatePath("/whatsapp");
+  return { success: true };
+}
+
+/**
+ * Assume a conversa: ela passa a ser de quem clicou, e os avisos dela vão só
+ * para essa pessoa. Se estava com o assistente, ele para aqui — assumir é
+ * decidir que uma pessoa conduz.
+ */
+export async function assumirConversa(threadId: string): Promise<AcaoNaConversa> {
+  const aberta = await abrirConversa(threadId);
+  if (!aberta.ok) return { error: aberta.erro };
+  const { ctx, tenantId, thread, prisma } = aberta;
+
+  const veredito = podeAssumir(thread, ctx.userId);
+  if (!veredito.pode) return { error: veredito.motivo };
+
+  const agora = new Date();
+  await prisma.whatsappThread.update({
+    where: { id: thread.id },
+    data: {
+      assignedToId: ctx.userId,
+      assignedAt: agora,
+      ...(thread.handoffAt ? {} : { handoffAt: agora, handoffReason: "assumida por alguém do time" }),
+    },
+  });
+
+  await logAudit({
+    tenantId,
+    userId: ctx.userId,
+    action: "whatsapp.assign",
+    entityType: "WhatsappThread",
+    entityId: thread.id,
+    // De quem era: assumir a conversa de outra pessoa é permitido, e é isto que
+    // responde "quem tirou de mim?".
+    metadata: { anterior: thread.assignedToId },
+  });
+
+  revalidatePath(`/whatsapp/${thread.id}`);
+  revalidatePath("/whatsapp");
+  return { success: true };
+}
+
+/** Solta a conversa: ela volta para a fila, sem responsável, ainda com o time. */
+export async function soltarConversa(threadId: string): Promise<AcaoNaConversa> {
+  const aberta = await abrirConversa(threadId);
+  if (!aberta.ok) return { error: aberta.erro };
+  const { ctx, tenantId, thread, prisma } = aberta;
+
+  const veredito = podeSoltar(thread, ctx.userId);
+  if (!veredito.pode) return { error: veredito.motivo };
+
+  await prisma.whatsappThread.update({
+    where: { id: thread.id },
+    data: { assignedToId: null, assignedAt: null },
+  });
+
+  await logAudit({
+    tenantId,
+    userId: ctx.userId,
+    action: "whatsapp.unassign",
     entityType: "WhatsappThread",
     entityId: thread.id,
   });

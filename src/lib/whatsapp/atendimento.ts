@@ -23,6 +23,8 @@ import {
   type EstadoDaConversa,
 } from "@/lib/whatsapp/decisao";
 import { enviarERegistrar, registrarBloqueio } from "@/lib/whatsapp/envio";
+import { avisarMensagemNova } from "@/lib/whatsapp/conversas";
+import { avisarSobreConversa } from "@/lib/whatsapp/avisos";
 import { montarPerguntaComHistorico, MAX_MENSAGENS_NO_HISTORICO } from "@/lib/whatsapp/historico";
 import {
   nomeConfere,
@@ -143,6 +145,8 @@ async function transferir(threadId: string, motivo: string): Promise<void> {
     where: { id: threadId },
     data: { handoffAt: new Date(), handoffReason: motivo.slice(0, 300) },
   });
+  // Transferir sem avisar era o defeito: a conversa ficava marcada, e ninguém via.
+  await avisarSobreConversa(threadId, { tipo: "transferida", motivo });
 }
 
 export type Conexao = {
@@ -210,7 +214,14 @@ export async function atenderMensagem(
     data: { lastInboundAt: m.recebidaEm },
   });
 
-  if (decisao.tipo === "silenciar") return `silenciado: ${decisao.motivo}`;
+  if (decisao.tipo === "silenciar") {
+    // Com gente, o robô cala — e quem está com a conversa precisa saber que o
+    // candidato voltou. Só quando ela reabre depois de um silêncio, não a cada linha.
+    if (thread.handoffAt && !thread.optedOutAt && avisarMensagemNova(thread.lastInboundAt, m.recebidaEm)) {
+      await avisarSobreConversa(thread.id, { tipo: "mensagem_nova" });
+    }
+    return `silenciado: ${decisao.motivo}`;
+  }
 
   if (decisao.tipo === "transferir") {
     await transferir(thread.id, decisao.motivo);
@@ -455,8 +466,12 @@ async function tratarDocumento(
   }
   await prisma.whatsappThread.update({ where: { id: thread.id }, data: { lastInboundAt: agora } });
 
-  // Uma pessoa já conduz a conversa: o arquivo fica guardado, mas o robô não fala.
+  // Uma pessoa já conduz a conversa: o arquivo fica guardado, mas o robô não
+  // fala — e quem está com ela é avisado, como numa mensagem de texto.
   const podeFalar = !thread.handoffAt;
+  if (!podeFalar && avisarMensagemNova(thread.lastInboundAt, agora)) {
+    await avisarSobreConversa(thread.id, { tipo: "mensagem_nova" });
+  }
   const passarParaPessoa = async (motivo: string) => {
     if (podeFalar) await transferir(thread.id, motivo);
     return `transferido: ${motivo}`;
