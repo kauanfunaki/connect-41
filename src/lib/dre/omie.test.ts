@@ -46,6 +46,28 @@ describe("lerExportDoOmie", () => {
     expect(r.linhas[1]!.valorCentavos).toBe(-5000);
   });
 
+  // O relatório de movimento do Omie (Irriga, ago/26) traz uma coluna só,
+  // "Pago ou Recebido", e o lado sai da contraparte.
+  it("lê o export com a coluna Pago ou Recebido", () => {
+    const pag = cabecalho("pagamento");
+    pag[31] = "Pago ou Recebido";
+    pag[32] = "A Pagar ou Receber";
+    const r = lerExportDoOmie([pag, linha(D("2026-08-04"), "Tarifas Bancárias", -1.9)]);
+    expect(r.origem).toBe("pagamento");
+    expect(r.linhas[0]!.valorCentavos).toBe(-190);
+
+    const rec = cabecalho("recebimento");
+    rec[31] = "Pago ou Recebido";
+    expect(lerExportDoOmie([rec, linha(D("2026-08-04"), "Clientes", 10)]).origem).toBe("recebimento");
+  });
+
+  it("Pago ou Recebido sem contraparte que diga o lado é recusado", () => {
+    const c = cabecalho("pagamento");
+    c[5] = "Contraparte";
+    c[31] = "Pago ou Recebido";
+    expect(() => lerExportDoOmie([c, linha(D("2026-08-04"), "X", -1)])).toThrow(ExportIlegivel);
+  });
+
   it("lê o export de recebimentos e marca a origem", () => {
     const r = lerExportDoOmie([
       cabecalho("recebimento"),
