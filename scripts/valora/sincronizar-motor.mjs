@@ -30,9 +30,7 @@ if (!existsSync(join(alvo, "package.json"))) {
 const arquivos = readdirSync(ORIGEM).filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"));
 // Compara sem olhar a quebra de linha: o Git no Windows troca LF por CRLF no checkout, e isso
 // não é edição da cópia.
-const semCr = (s) => s.replace(/
-/g, "
-");
+const semCr = (s) => s.replace(/\r\n/g, "\n");
 const esperado = new Map(arquivos.map((f) => [f, CABECALHO + semCr(readFileSync(join(ORIGEM, f), "utf8"))]));
 
 if (verificar) {
