@@ -455,6 +455,58 @@ export async function sendTesteEmail(input: SendTesteEmailInput): Promise<SmtpRe
   }
 }
 
+export type SendLinkDoCandidatoInput = {
+  tenantId: string;
+  to: string;
+  nomeDoEscritorio: string;
+  url: string;
+};
+
+// Link de acesso à conta do candidato no portal de vagas (entra sem senha).
+// Diferente dos outros convites, aqui o e-mail É o caminho principal: sem ele o
+// candidato não entra. Quem chama não conta ao visitante se deu certo — a tela
+// diz sempre a mesma coisa, para não revelar quais e-mails têm inscrição.
+export async function sendLinkDoCandidatoEmail(input: SendLinkDoCandidatoInput): Promise<SmtpResult> {
+  const transport = await getTenantTransport(input.tenantId);
+  if (!transport) {
+    return { ok: false, error: "Nenhuma configuração de SMTP cadastrada para este workspace." };
+  }
+  const { transporter, config } = transport;
+
+  const html = `
+    <div style="font-family: Arial, Helvetica, sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+      <p style="font-size: 14px; line-height: 1.5;">Olá!</p>
+      <p style="font-size: 14px; line-height: 1.5;">
+        Você pediu para acompanhar suas candidaturas no portal de vagas de ${escapeHtml(input.nomeDoEscritorio)}.
+        Use o botão abaixo para entrar — não precisa de senha.
+      </p>
+      <p style="margin: 24px 0;">
+        <a href="${input.url}" style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500;">
+          Ver minhas candidaturas
+        </a>
+      </p>
+      <p style="font-size: 13px; color: #555;">O link vale por 30 minutos e funciona uma vez só. Se não foi você que pediu, ignore este e-mail.</p>
+      <p style="font-size: 12px; color: #888; margin-top: 32px;">
+        Se o botão acima não funcionar, copie e cole este link no navegador:<br />
+        <span style="word-break: break-all;">${input.url}</span>
+      </p>
+    </div>
+  `;
+
+  try {
+    await enviarComRegistro(transporter, "sendLinkDoCandidatoEmail", {
+      from: `"${config.fromName}" <${config.fromEmail}>`,
+      to: input.to,
+      subject: `Suas candidaturas — ${input.nomeDoEscritorio}`,
+      html,
+    });
+    return { ok: true };
+  } catch (err) {
+    console.error("[sendLinkDoCandidatoEmail]", err);
+    return { ok: false, error: "Falha ao enviar e-mail." };
+  }
+}
+
 export type SendInterviewInviteEmailInput = {
   tenantId: string;
   to: string;

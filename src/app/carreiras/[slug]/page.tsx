@@ -113,6 +113,9 @@ export default async function CarreirasPage({
           <p className="text-[13px] text-fg-muted mt-1">
             Vagas abertas — {tenant.name}
           </p>
+          <Link href={`/carreiras/${slug}/minha-conta`} className="inline-block text-[12px] text-brand hover:underline mt-2">
+            Já se candidatou? Acompanhe suas candidaturas
+          </Link>
         </header>
 
         {todas.length > 0 && (

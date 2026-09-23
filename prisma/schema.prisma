@@ -572,6 +572,7 @@ model Tenant {
   dreImports                DreImport[]
 
   @@map("tenants")
+  candidatoAcessos CandidatoAcesso[]
 }
 
 // Quais blocos a tela /tarefas monta para cada setor.
@@ -1084,6 +1085,10 @@ model Person {
   cpf              String?    @db.VarChar(14)
   email            String?    @db.VarChar(120)
   phone            String?    @db.VarChar(30)
+  /// O próprio candidato pediu, pela conta dele no portal de vagas, a
+  /// exclusão dos dados (LGPD). Só registra: quem executa é o setor, porque
+  /// pode haver obrigação de guardar (contratado, processo em andamento).
+  dataDeletionRequestedAt DateTime?
   photoUrl         String?    @db.VarChar(255)
   birthDate        DateTime?
   type             PersonType @default(CANDIDATO)
@@ -5586,4 +5591,33 @@ model CandidaturaNota {
   @@index([requisitosId])
   @@index([tenantId])
   @@map("candidatura_notas")
+}
+
+// ── Conta do candidato no portal de vagas ──────────────────────────────────
+// O candidato entra pelo e-mail da inscrição, com um link de uso único — sem
+// senha. A identidade é (tenant, e-mail): enxerga as candidaturas das pessoas
+// CANDIDATO com aquele e-mail. Uma tabela para as duas credenciais porque
+// expiração, hash e uso único são as mesmas regras (mesmo racional de
+// PasswordResetToken). Só o hash é guardado; o valor cru vive no e-mail (LINK)
+// ou no cookie httpOnly (SESSAO).
+
+enum CandidatoAcessoTipo {
+  LINK
+  SESSAO
+}
+
+model CandidatoAcesso {
+  id        String              @id @default(uuid())
+  tenantId  String
+  email     String              @db.VarChar(120)
+  tipo      CandidatoAcessoTipo
+  tokenHash String              @unique @db.VarChar(64)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, email])
+  @@map("candidato_acessos")
 }
