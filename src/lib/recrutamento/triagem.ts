@@ -33,6 +33,13 @@ export type Requisitos = {
 export const CORTES_PADRAO = { corteCompativel: 75, corteParcial: 45 } as const;
 export const MAX_REQUISITOS = 20;
 
+/**
+ * A marca gravada quando a candidatura não tem currículo em PDF. Não é defeito
+ * do sistema — o currículo é opcional no portal —, e a tela a mostra como
+ * situação da candidatura, não como "a pontuação falhou".
+ */
+export const FALHA_SEM_CURRICULO = "Sem currículo em PDF.";
+
 export type Veredito = "SIM" | "PARCIAL" | "NAO" | "SEM_EVIDENCIA";
 export type AvaliacaoDeRequisito = { requisitoId: string; veredito: Veredito; evidencia: string };
 

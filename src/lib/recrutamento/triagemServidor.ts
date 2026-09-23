@@ -9,6 +9,7 @@ import { avaliarRequisitos, extrairPerfilProfissional, isAiConfigured } from "@/
 import {
   calcularNota,
   ehBloqueioDoAgente,
+  FALHA_SEM_CURRICULO,
   normalizarPerfil,
   normalizarRequisitos,
   type Faixa,
@@ -122,8 +123,8 @@ export async function pontuarCandidatura(p: {
     else {
       const pdf = await lerCurriculo(p.tenantId, c);
       if (!pdf) {
-        await registrarFalha(c.id, "Sem currículo em PDF.");
-        return { ok: false, erro: "Sem currículo em PDF." };
+        await registrarFalha(c.id, FALHA_SEM_CURRICULO);
+        return { ok: false, erro: FALHA_SEM_CURRICULO };
       }
       perfil = await extrairPerfilProfissional(p.tenantId, pdf, contexto);
       await prisma.candidatura.update({ where: { id: c.id }, data: { perfilProfissional: perfil, perfilProfissionalEm: new Date() } });
