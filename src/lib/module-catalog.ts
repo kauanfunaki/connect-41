@@ -152,6 +152,17 @@ export type ModuleDef = {
 
 export const MODULE_CATALOG: ModuleDef[] = [
   {
+    // Setor Tech até existir um módulo de Financeiro para onde ele vai
+    // (decisão de 23/09) — o Tech segue com acesso depois da mudança.
+    code: "tech_certificados",
+    label: "Certificados digitais",
+    sectorCode: "tech",
+    description: "Vencimento dos certificados A1 dos clientes e em qual entrada do cofre está cada senha — sem arquivo e sem senha no Connect",
+    defaultEnabled: false,
+    icon: "KeyRound",
+    group: "Documentos",
+  },
+  {
     code: "recrutamento_vagas",
     label: "Vagas",
     sectorCode: "recrutamento",
@@ -541,6 +552,7 @@ export function agruparModulos<T extends { code: string }>(itens: T[]): { grupo:
 // sidebar setorial passou a precisar da mesma informação — duas cópias de um
 // de-para é como um módulo novo aparece no menu e não abre.
 export const MODULE_ROUTES: Record<string, string> = {
+  tech_certificados:       "/certificados",
   recrutamento_vagas:      "/vagas",
   recrutamento_candidatos: "/candidatos",
   recrutamento_testes:     "/testes",

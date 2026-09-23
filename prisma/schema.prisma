@@ -564,6 +564,7 @@ model Tenant {
   whatsappThreads           WhatsappThread[]
   whatsappMessages          WhatsappMessage[]
   licenses                  License[]
+  digitalCertificates       DigitalCertificate[]
   processFees               ProcessFee[]
   dreMappings               DreCategoryMapping[]
   dreImports                DreImport[]
@@ -1022,6 +1023,7 @@ model Company {
   budgets                  Budget[]
   societarioProcesses      Process[]
   licenses                 License[]
+  digitalCertificates      DigitalCertificate[]
   dreMappings              DreCategoryMapping[]
   dreImports               DreImport[]
   processFees              ProcessFee[]
@@ -5421,4 +5423,40 @@ model ValoraProposta {
 
   @@index([tenantId, status, createdAt])
   @@map("valora_propostas")
+}
+
+// ── Certificados digitais (A1 e-CNPJ / e-CPF) ──────────────────────────────
+// Só metadado (decisão de 23/09): o .pfx e a senha ficam na rede e no cofre do
+// KeePassXC. Identidade = documento + vencimento — o mesmo certificado aparece em
+// mais de uma pasta. O nome do arquivo NÃO é guardado: na pasta da 41 ele traz a
+// senha. Lógica em src/lib/certificados.
+
+model DigitalCertificate {
+  id           String   @id @default(uuid())
+  tenantId     String
+  /// Empresa do Connect com o mesmo CNPJ/CPF; null = titular não cadastrado.
+  companyId    String?
+  /// CNPJ | CPF
+  tipo         String   @db.VarChar(4)
+  /// Só dígitos.
+  documento    String   @db.VarChar(14)
+  titular      String   @db.VarChar(200)
+  /// Dia do vencimento (meio-dia UTC), lido de dentro do certificado.
+  expiresAt    DateTime
+  /// Título da entrada do cofre que guarda a senha — o título, nunca a senha.
+  cofreEntrada String?  @db.VarChar(200)
+  /// Aviso do script para conferir à mão (senha repetida, vencimento divergente…).
+  conferir     String?  @db.VarChar(300)
+  /// Última importação em que o certificado estava no relatório.
+  importedAt   DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id])
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, documento, expiresAt])
+  @@index([tenantId, expiresAt])
+  @@index([tenantId, companyId])
+  @@map("digital_certificates")
 }

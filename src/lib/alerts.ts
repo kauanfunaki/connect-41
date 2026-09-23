@@ -13,6 +13,8 @@ import { saoPauloParts } from "@/lib/agenda";
 import { nomeExibicao } from "@/lib/companyName";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
+import { atuaisPorDocumento, faixaDeAviso } from "@/lib/certificados/certificados";
+import { diasAte } from "@/lib/societario/licencas";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { avisoDeContasAPagar, avisoDeOrcamento, avisoDePendenciasVencidas, maiorEstouro } from "@/lib/financeiro/alertas";
 import { serieEconomica } from "@/lib/dre/dataEconomica";
@@ -527,6 +529,44 @@ async function checkTreinamentosVencendo(tenantId: string, today: Date): Promise
   return sent;
 }
 
+// Certificado digital A1 vencendo — 60, 30, 15 e 7 dias antes e no vencimento
+// (decisão de 23/09). Um aviso por faixa, uma vez só na vida do certificado: a
+// chave não leva o dia. Importar tarde não dispara as faixas que já passaram —
+// com 10 dias, sai só o de 15. Só o certificado mais novo de cada CNPJ/CPF
+// avisa: o antigo de quem já renovou está "substituído".
+const MODULO_CERTIFICADOS = "tech_certificados";
+
+async function checkCertificadosVencendo(tenantId: string, today: Date): Promise<number> {
+  if (!(await isModuleEnabled(tenantId, MODULO_CERTIFICADOS))) return 0;
+  const prisma = getPrisma();
+  const certs = await prisma.digitalCertificate.findMany({
+    where: { tenantId },
+    select: { id: true, documento: true, titular: true, expiresAt: true, companyId: true, cofreEntrada: true },
+  });
+  const setor = (await setorDoModulo(tenantId, MODULO_CERTIFICADOS)) ?? getModuleDef(MODULO_CERTIFICADOS)!.sectorCode;
+  const agora = new Date();
+
+  let sent = 0;
+  for (const c of atuaisPorDocumento(certs).values()) {
+    const faixa = faixaDeAviso(c.expiresAt, agora);
+    if (faixa === null) continue;
+    if (!(await reservarPorChave(tenantId, `CERT_EXPIRING:${c.id}:${faixa}`, today))) continue;
+
+    const dias = diasAte(c.expiresAt, agora);
+    const data = c.expiresAt.toISOString().slice(0, 10).split("-").reverse().join("/");
+    const quando = dias < 0 ? `venceu em ${data}` : dias === 0 ? "vence hoje" : `vence em ${dias} dia(s), ${data}`;
+    const message = `Certificado digital de ${c.titular} ${quando}.`.slice(0, 255);
+    await notifySector(setor, {
+      tenantId,
+      type: "CERT_EXPIRING",
+      message,
+      ...(c.companyId ? { entityType: "COMPANY" as const, entityId: c.companyId } : {}),
+    });
+    sent++;
+  }
+  return sent;
+}
+
 async function runForTenant(tenantId: string, today: Date): Promise<TenantResult> {
   const checks: Array<[string, () => Promise<number>]> = [
     ["vacations", () => checkVacationsExpiring(tenantId, today)],
@@ -540,6 +580,7 @@ async function runForTenant(tenantId: string, today: Date): Promise<TenantResult
     ["contas a pagar", () => checkContasAPagar(tenantId, today)],
     ["pendências", () => checkPendenciasVencidas(tenantId, today)],
     ["orçamento", () => checkOrcamentoEstourado(tenantId, today)],
+    ["certificados", () => checkCertificadosVencendo(tenantId, today)],
   ];
 
   let sent = 0;
