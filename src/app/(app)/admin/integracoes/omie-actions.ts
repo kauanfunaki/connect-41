@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { previaDasNotasOmie, salvarContaOmie, testarContaOmie } from "@/lib/integracoes/omie/contas";
+import { mensagemDaImportacao } from "@/lib/integracoes/omie/notas";
 import { sincronizarNotasDaEmpresa } from "@/lib/integracoes/omie/sincronizacao";
 
 type Resultado = { error: string } | { ok: true; mensagem?: string };
@@ -57,12 +58,5 @@ export async function importarNotasOmieAction(companyId: string): Promise<Result
   const r = await sincronizarNotasDaEmpresa(ctx.tenantId!, companyId, "MANUAL");
   revalidatePath("/admin/integracoes");
   if (!r.ok) return { error: r.erro };
-  const c = r.counters;
-  const fora = Object.entries(c)
-    .filter(([k]) => k.startsWith("fora_"))
-    .reduce((n, [, v]) => n + v, 0);
-  return {
-    ok: true,
-    mensagem: `${c.lidas} notas lidas em ${c.paginas} página(s): ${c.novas} novas no acervo, ${c.reconhecidas} já estavam (SPED), ${c.atualizadas} atualizadas, ${fora} de fora (entradas e outras).`,
-  };
+  return { ok: true, mensagem: mensagemDaImportacao(r.counters) };
 }
