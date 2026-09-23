@@ -13,6 +13,7 @@ import { getModuleRoute } from "@/lib/module-catalog";
 import { baseDomain, hostSuffix } from "@/lib/auth/activeSector";
 import { canManageMeetings } from "@/lib/integrations/oauth";
 import { formatInstantDateTime } from "@/lib/format";
+import { linkDaNotificacao } from "@/lib/notificacaoLink";
 
 export default async function AppLayout({
   children,
@@ -102,12 +103,7 @@ export default async function AppLayout({
     id: n.id,
     message: n.message,
     read: n.read,
-    href:
-      n.entityType && n.entityId
-        ? n.entityType === "COMPANY"
-          ? `/empresas/${n.entityId}`
-          : `/pessoas/${n.entityId}`
-        : null,
+    href: linkDaNotificacao(n),
     createdAt: formatInstantDateTime(n.createdAt, {
       day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
     }),

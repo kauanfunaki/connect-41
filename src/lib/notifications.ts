@@ -1,6 +1,7 @@
 import { getPrisma } from "@/lib/prisma";
 import type { EntityType } from "@/generated/prisma/enums";
 import { sendWebPushToUser } from "@/lib/webPush";
+import { linkDaNotificacao } from "@/lib/notificacaoLink";
 
 type NotifyInput = {
   tenantId: string;
@@ -10,12 +11,9 @@ type NotifyInput = {
   entityId?: string;
 };
 
-// Mesmo mapeamento usado pelo sino/página de notificações (layout.tsx,
-// notificacoes/page.tsx) — mantido em sincronia manualmente, não vale extrair
-// uma abstração maior só por causa de 2 linhas repetidas.
-function buildNotificationUrl(entityType?: EntityType, entityId?: string): string {
-  if (!entityType || !entityId) return "/notificacoes";
-  return entityType === "COMPANY" ? `/empresas/${entityId}` : `/pessoas/${entityId}`;
+// O mesmo link do sino e da página de notificações — ver src/lib/notificacaoLink.ts.
+function buildNotificationUrl(input: NotifyInput): string {
+  return linkDaNotificacao(input) ?? "/notificacoes";
 }
 
 export async function notifyUser(userId: string, input: NotifyInput): Promise<void> {
@@ -34,7 +32,7 @@ export async function notifyUser(userId: string, input: NotifyInput): Promise<vo
   await sendWebPushToUser(input.tenantId, userId, {
     title: "Connect",
     body: input.message,
-    url: buildNotificationUrl(input.entityType, input.entityId),
+    url: buildNotificationUrl(input),
   });
 }
 
@@ -64,7 +62,7 @@ export async function notifySector(sectorCode: string, input: NotifyInput): Prom
     })),
   });
 
-  const url = buildNotificationUrl(input.entityType, input.entityId);
+  const url = buildNotificationUrl(input);
   await Promise.all(
     users.map((u) => sendWebPushToUser(input.tenantId, u.id, { title: "Connect", body: input.message, url }))
   );

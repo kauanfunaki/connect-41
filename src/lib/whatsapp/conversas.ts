@@ -89,6 +89,86 @@ export function podeDevolverAoRobo(c: Pick<ConversaParaTela, "optedOutAt" | "han
   return { pode: true };
 }
 
+// ─── Quem assume ────────────────────────────────────────────────────────────
+
+/**
+ * Esta pessoa pode assumir a conversa?
+ *
+ * Assumir de quem já assumiu é permitido — alguém sai de férias, a conversa não
+ * pode ficar presa —, mas fica no log. Assumir conversa que está com o
+ * assistente também: é o jeito de tirá-la dele antes de escrever. A única
+ * recusa é quem pediu para não receber mensagens: não há o que atender.
+ */
+export function podeAssumir(
+  c: { optedOutAt: Date | null; assignedToId: string | null },
+  userId: string
+): VereditoDeResposta {
+  if (c.optedOutAt) return { pode: false, motivo: "O candidato pediu para não receber mais mensagens." };
+  if (c.assignedToId === userId) return { pode: false, motivo: "Esta conversa já está com você." };
+  return { pode: true };
+}
+
+/** Soltar devolve a conversa à fila, sem responsável. Só quem está com ela solta. */
+export function podeSoltar(c: { assignedToId: string | null }, userId: string): VereditoDeResposta {
+  if (!c.assignedToId) return { pode: false, motivo: "Ninguém assumiu esta conversa." };
+  if (c.assignedToId !== userId) return { pode: false, motivo: "Só quem assumiu a conversa pode soltá-la." };
+  return { pode: true };
+}
+
+/**
+ * Quem é avisado quando a conversa pede alguém.
+ *
+ * Quem assumiu, se houver — a conversa é dele. Senão, o responsável pela vaga
+ * da candidatura ligada, que é quem conhece o processo. Sem nenhum dos dois, o
+ * setor inteiro: alguém precisa ver, e a fila é de todos.
+ */
+export function destinoDoAviso(c: {
+  assignedToId: string | null;
+  responsavelDaVagaId: string | null;
+}): { usuario: string } | { setor: true } {
+  if (c.assignedToId) return { usuario: c.assignedToId };
+  if (c.responsavelDaVagaId) return { usuario: c.responsavelDaVagaId };
+  return { setor: true };
+}
+
+/** Intervalo mínimo entre avisos de mensagem nova na mesma conversa. */
+export const INTERVALO_ENTRE_AVISOS_MS = 15 * 60_000;
+
+/**
+ * Mensagem nova numa conversa que já está com gente: avisa?
+ *
+ * Só quando ela reabre a conversa depois de um silêncio. Candidato escreve em
+ * rajada — "oi", "tudo bem?", "sobre a vaga…" —, e um aviso por linha faz o
+ * recrutador desligar os avisos, que é pior que não ter.
+ */
+export function avisarMensagemNova(ultimaAntes: Date | null, agora: Date): boolean {
+  if (!ultimaAntes) return true;
+  return agora.getTime() - ultimaAntes.getTime() >= INTERVALO_ENTRE_AVISOS_MS;
+}
+
+/** Os recortes da lista de conversas. */
+export type RecorteDaLista = "todas" | "minhas" | "sem_responsavel";
+
+export function recorteDaUrl(v: string | undefined): RecorteDaLista {
+  return v === "minhas" || v === "sem_responsavel" ? v : "todas";
+}
+
+/**
+ * "Sem responsável" é a fila de verdade: transferidas que ninguém assumiu. As
+ * que estão com o assistente não entram — não esperam ninguém.
+ */
+export function filtrarConversas<T extends ConversaParaTela & { responsavel: { id: string } | null }>(
+  conversas: T[],
+  recorte: RecorteDaLista,
+  userId: string
+): T[] {
+  if (recorte === "minhas") return conversas.filter((c) => c.responsavel?.id === userId);
+  if (recorte === "sem_responsavel") {
+    return conversas.filter((c) => c.handoffAt && !c.optedOutAt && !c.responsavel);
+  }
+  return conversas;
+}
+
 /**
  * A ordem da fila.
  *
