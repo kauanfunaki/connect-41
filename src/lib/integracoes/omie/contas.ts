@@ -12,6 +12,7 @@ import { executar, lerConfig, salvarIntegracao } from "@/lib/integracoes/data";
 import { saudeDaIntegracao, type Saude } from "@/lib/integracoes/execucao";
 import { nomeExibicao } from "@/lib/companyName";
 import { chamarOmie, conferirEmpresa, empresasDaResposta, type ResultadoDoTeste } from "./cliente";
+import { estruturaDe, type LinhaDaEstrutura } from "./estrutura";
 
 export const PREFIXO_DA_EMPRESA = "empresa:";
 export const instanciaDaEmpresa = (companyId: string) => `${PREFIXO_DA_EMPRESA}${companyId}`;
@@ -110,4 +111,42 @@ export async function testarContaOmie(tenantId: string, companyId: string): Prom
   } catch (err) {
     return { ok: false, erro: err instanceof Error ? err.message : "Falha ao testar." };
   }
+}
+
+// ─── Prévia das notas (Fase 1a — só leitura, nada é gravado) ─────────────────
+
+export type PreviaDeChamada =
+  | { ok: true; estrutura: LinhaDaEstrutura[] }
+  | { ok: false; erro: string };
+
+/**
+ * As primeiras notas da conta, como o Omie devolve — para conferir a forma da
+ * resposta antes de escrever a gravação no acervo. Duas chamadas de leitura,
+ * poucas notas cada; **não grava nada** e não mexe no estado da conta.
+ * Parâmetro com nome errado volta como erro do Omie, e o erro é a informação.
+ */
+export async function previaDasNotasOmie(
+  tenantId: string,
+  companyId: string
+): Promise<{ nfe: PreviaDeChamada; nfse: PreviaDeChamada } | { erro: string }> {
+  const conexao = await getPrisma().tenantIntegration.findUnique({
+    where: { tenantId_integrationCode_instanceKey: { tenantId, integrationCode: "omie", instanceKey: instanciaDaEmpresa(companyId) } },
+  });
+  if (!conexao) return { erro: "Esta empresa não tem conta do Omie cadastrada." };
+  const config = lerConfig(conexao.configEnc);
+  if (!config.appKey || !config.appSecret) return { erro: "Falta App Key ou App Secret." };
+  const cred = { appKey: config.appKey, appSecret: config.appSecret };
+
+  const tentar = async (modulo: string, call: string, param: Record<string, unknown>): Promise<PreviaDeChamada> => {
+    try {
+      return { ok: true, estrutura: estruturaDe(await chamarOmie(cred, modulo, call, param)) };
+    } catch (err) {
+      return { ok: false, erro: err instanceof Error ? err.message : "Falha na chamada." };
+    }
+  };
+
+  // Em sequência, não em paralelo: o Omie limita chamadas simultâneas por chave.
+  const nfe = await tentar("produtos/nfconsultar", "ListarNF", { pagina: 1, registros_por_pagina: 3, apenas_importado_api: "N" });
+  const nfse = await tentar("servicos/nfse", "ListarNFSEs", { nPagina: 1, nRegPorPagina: 3 });
+  return { nfe, nfse };
 }

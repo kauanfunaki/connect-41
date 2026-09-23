@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
-import { salvarContaOmie, testarContaOmie } from "@/lib/integracoes/omie/contas";
+import { previaDasNotasOmie, salvarContaOmie, testarContaOmie } from "@/lib/integracoes/omie/contas";
 
 type Resultado = { error: string } | { ok: true; mensagem?: string };
 
@@ -37,4 +37,11 @@ export async function testarContaOmieAction(companyId: string): Promise<Resultad
   if (!r.ok) return { error: r.erro };
   const e = r.empresa;
   return { ok: true, mensagem: e ? `Conectado: ${e.razaoSocial} — CNPJ confere.` : "Conectado." };
+}
+
+/** Prévia das notas da conta — só leitura, nada é gravado (Fase 1a). */
+export async function previaDasNotasOmieAction(companyId: string) {
+  const ctx = await contexto();
+  if (!ctx) return { erro: "Sem permissão para configurar integrações." };
+  return previaDasNotasOmie(ctx.tenantId!, companyId);
 }
