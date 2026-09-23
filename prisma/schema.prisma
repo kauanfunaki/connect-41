@@ -1624,6 +1624,20 @@ model Cargo {
   @@map("cargos")
 }
 
+enum VagaModalidade {
+  PRESENCIAL
+  HIBRIDO
+  REMOTO
+}
+
+enum VagaContrato {
+  CLT
+  PJ
+  ESTAGIO
+  TEMPORARIO
+  APRENDIZ
+}
+
 model Vaga {
   id                String         @id @default(uuid())
   tenantId          String
@@ -1642,6 +1656,16 @@ model Vaga {
   // pública é separada de notes (que é anotação interna do recrutador).
   isPublic          Boolean        @default(false)
   publicDescription String?        @db.Text
+  /// Faixa salarial mensal, em reais. Opcional e só aparece no portal com
+  /// `showSalary` — mostrar é decisão vaga a vaga do recrutador (Kauan,
+  /// 23/09). Sem faixa, o portal diz "A combinar".
+  salaryMin         Decimal?       @db.Decimal(12, 2)
+  salaryMax         Decimal?       @db.Decimal(12, 2)
+  showSalary        Boolean        @default(false)
+  /// Filtros do portal. Nulos em vaga antiga: ela aparece na lista sem filtro
+  /// e some quando o candidato filtra por um valor — não se inventa modalidade.
+  workMode          VagaModalidade?
+  contractType      VagaContrato?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 

@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { VagaStatus, VagaPrioridade } from "@/generated/prisma/enums";
+import { VagaStatus, VagaPrioridade, VagaContrato, VagaModalidade } from "@/generated/prisma/enums";
+import { validarFaixa } from "@/lib/carreiras/portal";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 
@@ -11,6 +12,10 @@ export type VagaState = { error: string } | null;
 
 function pick(form: FormData, key: string): string | null {
   return (form.get(key) as string)?.trim() || null;
+}
+
+function enumOuNulo<T extends string>(valor: string | null, opcoes: Record<string, T>): T | null {
+  return valor && (Object.values(opcoes) as string[]).includes(valor) ? (valor as T) : null;
 }
 
 function vagaData(form: FormData) {
@@ -25,7 +30,14 @@ function vagaData(form: FormData) {
     notes:             pick(form, "notes"),
     isPublic:          form.get("isPublic") === "true",
     publicDescription: pick(form, "publicDescription"),
+    workMode:          enumOuNulo(pick(form, "workMode"), VagaModalidade),
+    contractType:      enumOuNulo(pick(form, "contractType"), VagaContrato),
   };
+}
+
+/** A faixa salarial do formulário, já validada — ou o erro para a tela. */
+function faixaDoForm(form: FormData) {
+  return validarFaixa(pick(form, "salaryMin"), pick(form, "salaryMax"), form.get("showSalary") === "true");
 }
 
 export async function criarVaga(_prev: VagaState, form: FormData): Promise<VagaState> {
@@ -35,6 +47,8 @@ export async function criarVaga(_prev: VagaState, form: FormData): Promise<VagaS
   const data = vagaData(form);
   if (!data.title) return { error: "Título da vaga é obrigatório" };
   if (!data.companyId) return { error: "Empresa é obrigatória" };
+  const faixa = faixaDoForm(form);
+  if (!faixa.ok) return { error: faixa.erro };
   if (!data.sectorCode) return { error: "Setor é obrigatório" };
   if (!canManageSector(ctx, data.sectorCode)) {
     return { error: "Sem permissão para criar vagas neste setor." };
@@ -43,7 +57,9 @@ export async function criarVaga(_prev: VagaState, form: FormData): Promise<VagaS
   const prisma = getPrisma();
   let id: string;
   try {
-    const vaga = await prisma.vaga.create({ data: { tenantId: ctx.tenantId, ...data } });
+    const vaga = await prisma.vaga.create({
+      data: { tenantId: ctx.tenantId, ...data, salaryMin: faixa.salaryMin, salaryMax: faixa.salaryMax, showSalary: faixa.showSalary },
+    });
     id = vaga.id;
   } catch (err) {
     console.error("[criarVaga]", err);
@@ -63,13 +79,18 @@ export async function atualizarVaga(_prev: VagaState, form: FormData): Promise<V
   if (!canManageSector(ctx, data.sectorCode)) {
     return { error: "Sem permissão para editar vagas neste setor." };
   }
+  const faixa = faixaDoForm(form);
+  if (!faixa.ok) return { error: faixa.erro };
 
   const prisma = getPrisma();
   const existing = await prisma.vaga.findFirst({ where: { id, ...scopedVagaWhere(ctx) } });
   if (!existing) return { error: "Vaga não encontrada ou fora do seu escopo." };
 
   try {
-    await prisma.vaga.update({ where: { id }, data });
+    await prisma.vaga.update({
+      where: { id },
+      data: { ...data, salaryMin: faixa.salaryMin, salaryMax: faixa.salaryMax, showSalary: faixa.showSalary },
+    });
   } catch (err) {
     console.error("[atualizarVaga]", err);
     return { error: "Erro ao atualizar vaga." };

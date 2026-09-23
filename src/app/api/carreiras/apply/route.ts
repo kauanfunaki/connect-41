@@ -8,6 +8,7 @@ import { notifyUser, notifySector } from "@/lib/notifications";
 import { PersonType } from "@/generated/prisma/enums";
 import { MAX_BYTES_DO_CURRICULO, MAX_MB_DO_CURRICULO, ehPdf } from "@/lib/curriculo";
 import { avaliarEnvio } from "@/lib/carreiras/antiRobo";
+import { aplicarRespostas, validarRespostas } from "@/lib/recrutamento/respostas";
 
 // Currículos do portal ficam fora de public/ (mesma razão do storage de
 // documents): só são servidos via /api/resumes/[candidaturaId], com sessão.
@@ -61,6 +62,24 @@ export async function POST(req: NextRequest) {
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return NextResponse.json({ error: "Informe um e-mail válido." }, { status: 400 });
   }
+  // As três perguntas do WhatsApp (R2), feitas aqui na inscrição — o robô não
+  // pergunta de novo o que já veio do portal. Pretensão e disponibilidade são
+  // obrigatórias; o tempo até o local é opcional (nunca se pede endereço).
+  const respostas = validarRespostas({
+    pretensaoSalarial: form.get("pretensaoSalarial"),
+    disponibilidade: form.get("disponibilidade"),
+    deslocamentoMinutos: form.get("deslocamentoMinutos"),
+  });
+  if (respostas.descartados.includes("pretensaoSalarial") || respostas.valores.pretensaoSalarial === undefined) {
+    return NextResponse.json({ error: "Informe sua pretensão salarial mensal, em reais." }, { status: 400 });
+  }
+  if (!respostas.valores.disponibilidade) {
+    return NextResponse.json({ error: "Informe quando você pode começar." }, { status: 400 });
+  }
+  if (respostas.descartados.includes("deslocamentoMinutos")) {
+    return NextResponse.json({ error: "O tempo até o local precisa ser em minutos, entre 0 e 600." }, { status: 400 });
+  }
+
   if (!consent) {
     return NextResponse.json({ error: "É preciso autorizar o uso dos dados para participar do processo seletivo." }, { status: 400 });
   }
@@ -122,6 +141,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Você já se candidatou a esta vaga com este e-mail." }, { status: 409 });
   }
 
+  const agora = new Date();
+  const r = aplicarRespostas({}, respostas.valores, "PORTAL", agora);
   await prisma.candidatura.create({
     data: {
       tenantId: tenant.id,
@@ -129,6 +150,8 @@ export async function POST(req: NextRequest) {
       personId: person.id,
       origin: "PORTAL",
       resumeUrl,
+      ...r.dados,
+      respostasFonte: r.fonte,
     },
   });
 

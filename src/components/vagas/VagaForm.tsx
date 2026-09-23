@@ -3,7 +3,8 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { VagaState } from "@/app/(app)/vagas/actions";
-import { VagaPrioridade } from "@/generated/prisma/enums";
+import { VagaPrioridade, type VagaContrato, type VagaModalidade } from "@/generated/prisma/enums";
+import { CONTRATO_LABEL, MODALIDADE_LABEL } from "@/lib/carreiras/portal";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
@@ -29,6 +30,11 @@ export type VagaDefaultValues = {
   notes?: string;
   isPublic?: boolean;
   publicDescription?: string;
+  salaryMin?: number | null;
+  salaryMax?: number | null;
+  showSalary?: boolean;
+  workMode?: VagaModalidade | null;
+  contractType?: VagaContrato | null;
 };
 
 type Option = { id: string; name: string };
@@ -140,6 +146,38 @@ export function VagaForm({ action, cancelHref, companies, cargos, users, sectorO
             placeholder="O que o candidato vê no portal — atividades, requisitos, benefícios. Observações acima continuam internas."
           />
         </CampoForm>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <CampoForm label="Modalidade" htmlFor="workMode">
+            <Select id="workMode" name="workMode" defaultValue={defaultValues?.workMode ?? ""}>
+              <option value="">Não informar</option>
+              {(Object.keys(MODALIDADE_LABEL) as VagaModalidade[]).map((m) => (
+                <option key={m} value={m}>{MODALIDADE_LABEL[m]}</option>
+              ))}
+            </Select>
+          </CampoForm>
+          <CampoForm label="Tipo de contrato" htmlFor="contractType">
+            <Select id="contractType" name="contractType" defaultValue={defaultValues?.contractType ?? ""}>
+              <option value="">Não informar</option>
+              {(Object.keys(CONTRATO_LABEL) as VagaContrato[]).map((c) => (
+                <option key={c} value={c}>{CONTRATO_LABEL[c]}</option>
+              ))}
+            </Select>
+          </CampoForm>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <CampoForm label="Salário de (R$ por mês)" htmlFor="salaryMin">
+            <Input id="salaryMin" name="salaryMin" type="text" inputMode="decimal" defaultValue={defaultValues?.salaryMin ?? ""} placeholder="3.500,00" />
+          </CampoForm>
+          <CampoForm label="Salário até (R$ por mês)" htmlFor="salaryMax">
+            <Input id="salaryMax" name="salaryMax" type="text" inputMode="decimal" defaultValue={defaultValues?.salaryMax ?? ""} placeholder="4.500,00" />
+          </CampoForm>
+        </div>
+        <Checkbox
+          name="showSalary"
+          value="true"
+          defaultChecked={defaultValues?.showSalary ?? false}
+          label="Mostrar a faixa salarial no portal (desmarcado, aparece &quot;A combinar&quot;)"
+        />
       </div>
 
       <div className="flex items-center gap-3 pt-2">
