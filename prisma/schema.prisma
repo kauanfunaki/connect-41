@@ -532,6 +532,8 @@ model Tenant {
   clientRequests            ClientRequest[]
   clientRequestReminders    ClientRequestReminder[]
   userPinnedModules         UserPinnedModule[]
+  valoraConfig              ValoraConfig?
+  valoraPropostas           ValoraProposta[]
   companyMessages           CompanyMessage[]
   companyMessageAttachments CompanyMessageAttachment[]
   portalApprovalLimits      PortalApprovalLimit[]
@@ -783,6 +785,7 @@ model User {
   chatwootAgentLinks          ChatwootAgentLink[]
   preference                  UserPreference?
   pinnedModules               UserPinnedModule[]
+  valoraPropostas             ValoraProposta[]
   ownedProcesses              Process[]                  @relation("ProcessOwner")
   executedProcessSteps        ProcessStep[]              @relation("ProcessStepExecutor")
 
@@ -5371,4 +5374,51 @@ model DreImportLine {
 
   @@index([importId])
   @@map("dre_import_lines")
+}
+
+// ── Valora (precificação de honorários) ────────────────────────────────────
+// O cálculo mora em src/lib/valora/motor (fonte única, copiada para o 41-gestao).
+// Aqui só o que é do escritório: os ajustes por cima do catálogo modelo e as
+// propostas simuladas — ganhas, perdidas ou em aberto, que viram a comparação
+// com o mercado.
+
+model ValoraConfig {
+  tenantId   String   @id
+  /// AjusteSetor[]: custo mensal da equipe, capacidade e fator de calibração por setor.
+  ajustes    Json
+  /// ParametrosPreco: despesas fixas, variáveis, margens e desconto máximo.
+  parametros Json
+  updatedAt  DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("valora_config")
+}
+
+model ValoraProposta {
+  id               String   @id @default(uuid())
+  tenantId         String
+  /// Prospect ainda não é empresa no Connect: o nome é texto livre.
+  cliente          String   @db.VarChar(160)
+  companyId        String?
+  /// Perfil do motor (regime, volumes, marcadores, complexidades, setores).
+  perfil           Json
+  /// Resultado do motor no dia — foto, não recalcula quando os parâmetros mudam.
+  resultado        Json
+  precoAlvo        Decimal? @db.Decimal(12, 2)
+  /// O que foi de fato oferecido ao cliente.
+  precoOferecido   Decimal? @db.Decimal(12, 2)
+  /// ABERTA | GANHA | PERDIDA
+  status           String   @default("ABERTA") @db.VarChar(20)
+  motivo           String?  @db.VarChar(500)
+  precoConcorrente Decimal? @db.Decimal(12, 2)
+  createdById      String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id])
+  createdBy User   @relation(fields: [createdById], references: [id])
+
+  @@index([tenantId, status, createdAt])
+  @@map("valora_propostas")
 }
