@@ -1676,6 +1676,10 @@ model Candidatura {
   /// reprocessar a vaga depois de trocar requisito só refaz a pontuação.
   perfilProfissional   Json?
   perfilProfissionalEm DateTime?
+  /// Última falha da pontuação automática (sem currículo, PDF ilegível…). Com
+  /// ela preenchida o cron não tenta de novo; o botão manual segue valendo e limpa.
+  triagemFalha         String?   @db.VarChar(200)
+  triagemFalhaEm       DateTime?
   notas                CandidaturaNota[]
   createdAt        DateTime               @default(now())
   updatedAt        DateTime               @updatedAt
