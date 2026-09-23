@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { instanteDoOmie, mapearNotaOmie, paginaDoListarNF } from "./notas";
+import { instanteDoOmie, mapearNotaOmie, mensagemDaImportacao, paginaDoListarNF } from "./notas";
 
 const CNPJ = "12345678000190";
 // UF 41 · AAMM 2609 · CNPJ · modelo 55 · série 001 · número 000006014 · ...
@@ -76,5 +76,18 @@ describe("paginaDoListarNF", () => {
   it("lê a lista e o total de páginas", () => {
     expect(paginaDoListarNF({ pagina: 1, total_de_paginas: 8, nfCadastro: [1, 2] })).toEqual({ notas: [1, 2], totalDePaginas: 8 });
     expect(paginaDoListarNF({})).toEqual({ notas: [], totalDePaginas: 1 });
+  });
+});
+
+describe("mensagemDaImportacao", () => {
+  it("diz o motivo de quem ficou de fora", () => {
+    expect(mensagemDaImportacao({ lidas: 709, paginas: 8, novas: 0, reconhecidas: 0, atualizadas: 0, fora_entrada: 709 })).toBe(
+      "709 notas lidas em 8 página(s): 0 novas no acervo, 709 entradas (chegam pelo SPED). Nenhuma nota de saída emitida pela empresa nesta conta."
+    );
+  });
+  it("mostra só o que aconteceu", () => {
+    expect(mensagemDaImportacao({ lidas: 12, paginas: 1, novas: 5, reconhecidas: 3, atualizadas: 0, fora_entrada: 3, fora_outro_emitente: 1 })).toBe(
+      "12 notas lidas em 1 página(s): 5 novas no acervo, 3 já estavam (SPED), 3 entradas (chegam pelo SPED), 1 de outro CNPJ emitente."
+    );
   });
 });
