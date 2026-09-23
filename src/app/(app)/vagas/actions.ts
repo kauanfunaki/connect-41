@@ -32,7 +32,18 @@ function vagaData(form: FormData) {
     publicDescription: pick(form, "publicDescription"),
     workMode:          enumOuNulo(pick(form, "workMode"), VagaModalidade),
     contractType:      enumOuNulo(pick(form, "contractType"), VagaContrato),
+    benefits:          pick(form, "benefits"),
+    applicationDeadline: dataDoForm(pick(form, "applicationDeadline")),
+    workCity:          pick(form, "workCity")?.slice(0, 80) ?? null,
+    workStateCode:     /^[A-Z]{2}$/.test(pick(form, "workStateCode") ?? "") ? pick(form, "workStateCode") : null,
   };
+}
+
+/** "AAAA-MM-DD" do <input type="date"> → data-calendário (meia-noite UTC). */
+function dataDoForm(v: string | null): Date | null {
+  if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+  const d = new Date(`${v}T00:00:00Z`);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
 /** A faixa salarial do formulário, já validada — ou o erro para a tela. */

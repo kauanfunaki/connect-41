@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { faixaSalarialLegivel, validarFaixa, lerFiltros, filtrarVagas, opcoesDosFiltros, temFiltro, type VagaDoPortal } from "./portal";
+import { faixaSalarialLegivel, validarFaixa, lerFiltros, filtrarVagas, opcoesDosFiltros, temFiltro, hojeEmBrasilia, beneficiosDaVaga, localDaVaga, paginar, urlDaLista, type VagaDoPortal } from "./portal";
 
 // Intl usa espaço não separável entre "R$" e o número.
 const semNbsp = (t: string) => t.replace(/ /g, " ");
@@ -83,5 +83,42 @@ describe("filtrarVagas", () => {
       modalidades: ["PRESENCIAL", "HIBRIDO", "REMOTO"],
       contratos: ["CLT", "ESTAGIO"],
     });
+  });
+});
+
+describe("2ª leva", () => {
+  it("hoje em Brasília vira a data-calendário do dia daqui", () => {
+    // 01h UTC do dia 25 ainda é dia 24 em Brasília.
+    expect(hojeEmBrasilia(new Date("2026-09-25T01:00:00Z")).toISOString()).toBe("2026-09-24T00:00:00.000Z");
+    expect(hojeEmBrasilia(new Date("2026-09-25T04:00:00Z")).toISOString()).toBe("2026-09-25T00:00:00.000Z");
+  });
+
+  it("benefícios: um por linha, sem marcador", () => {
+    expect(beneficiosDaVaga("- Vale-refeição\n\n• Plano de saúde\r\n* Home office às sextas\n  ")).toEqual([
+      "Vale-refeição",
+      "Plano de saúde",
+      "Home office às sextas",
+    ]);
+    expect(beneficiosDaVaga(null)).toEqual([]);
+  });
+
+  it("local próprio da vaga ganha da cidade da empresa", () => {
+    const company = { city: "Curitiba", stateCode: "PR" };
+    expect(localDaVaga({ workCity: "Joinville", workStateCode: "SC", company })).toEqual({ cidade: "Joinville", uf: "SC" });
+    expect(localDaVaga({ workCity: " ", workStateCode: null, company })).toEqual({ cidade: "Curitiba", uf: "PR" });
+  });
+
+  it("paginação corta em 20 e segura página fora da faixa", () => {
+    const lista = Array.from({ length: 45 }, (_, i) => i);
+    expect(paginar(lista, "2")).toMatchObject({ pagina: 2, totalDePaginas: 3 });
+    expect(paginar(lista, "2").itens[0]).toBe(20);
+    expect(paginar(lista, "9").pagina).toBe(3);
+    expect(paginar(lista, "abc").pagina).toBe(1);
+    expect(paginar([], "3")).toMatchObject({ pagina: 1, totalDePaginas: 1, itens: [] });
+  });
+
+  it("o link da página mantém os filtros", () => {
+    expect(urlDaLista("41tech", lerFiltros({ q: "fiscal", modalidade: "REMOTO" }), 2)).toBe("/carreiras/41tech?q=fiscal&modalidade=REMOTO&pagina=2");
+    expect(urlDaLista("41tech", lerFiltros({}))).toBe("/carreiras/41tech");
   });
 });
