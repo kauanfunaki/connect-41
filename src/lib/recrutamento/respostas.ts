@@ -91,6 +91,18 @@ export function faltaPerguntar(r: Respostas): CampoDeResposta[] {
   return CAMPOS_DE_RESPOSTA.filter((c) => r[c] === null || r[c] === undefined);
 }
 
+const REAIS = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+
+/** "R$ 2.500 · 30 min · imediata" — para caber num card; nulo quando não há nada. */
+export function resumoDasRespostas(r: Respostas): string | null {
+  const partes = [
+    r.pretensaoSalarial !== null ? REAIS.format(r.pretensaoSalarial) : null,
+    r.deslocamentoMinutos !== null ? `${r.deslocamentoMinutos} min até o local` : null,
+    r.disponibilidade,
+  ].filter((x): x is string => !!x);
+  return partes.length ? partes.join(" · ") : null;
+}
+
 export function lerFonte(v: unknown): FonteDasRespostas {
   if (!v || typeof v !== "object") return {};
   const out: FonteDasRespostas = {};
