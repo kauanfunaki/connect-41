@@ -6,12 +6,14 @@
 //   custo do setor   = minutos × (custo/min da equipe + rateio/min das despesas fixas)
 //   preço            = custo ÷ (1 − variáveis % − margem %)       ← markup divisor, nunca "custo + %"
 //   tabela           = alvo ÷ (1 − desconto máximo %)             ← gordura para negociar
+//   avulso           = mesmo custeio, por UMA execução, fora da mensalidade (abertura, alteração…)
 
 import type {
   Atividade,
   Catalogo,
   Frequencia,
   LinhaAtividade,
+  LinhaAvulso,
   ParametrosPreco,
   Perfil,
   Precos,
@@ -86,12 +88,13 @@ export function calcular(catalogo: Catalogo, perfilInformado: Perfil, p: Paramet
   const avisos: string[] = [];
   const rateioMin = rateioPorMinuto(catalogo, p);
   const setores: ResultadoSetor[] = [];
+  const avulsos: LinhaAvulso[] = [];
   let custoImplantacao = 0;
 
   for (const setor of catalogo.setores) {
     if (!perfil.setores.includes(setor.codigo)) continue;
     const doSetor = catalogo.atividades.filter((a) => a.setor === setor.codigo);
-    const recorrentes = doSetor.filter((a) => !a.implantacao && (!perfil.semMovimento || a.semMovimento));
+    const recorrentes = doSetor.filter((a) => !a.implantacao && !a.avulso && (!perfil.semMovimento || a.semMovimento));
     const mensal = somar(recorrentes, setor, perfil);
     if (perfil.semMovimento && setor.minutosSemMovimento) {
       const minutos = setor.minutosSemMovimento * finito(setor.fatorCalibracao);
@@ -109,8 +112,16 @@ export function calcular(catalogo: Catalogo, perfilInformado: Perfil, p: Paramet
     if (setor.fatorCalibracao !== 1)
       avisos.push(`${setor.nome}: tempos ajustados pela capacidade da equipe (fator ${setor.fatorCalibracao.toFixed(2).replace(".", ",")}).`);
 
-    const implantacao = somar(doSetor.filter((a) => a.implantacao), setor, perfil);
+    const implantacao = somar(doSetor.filter((a) => a.implantacao && !a.avulso), setor, perfil);
     custoImplantacao += implantacao.minutos * (custoMin + rateioMin);
+
+    // Avulso não depende de volume: é o preço de uma execução. A complexidade do cliente vale aqui
+    // também — no Societário ela é quase toda de processo (município fora da REDESIM, licença especial).
+    for (const a of doSetor.filter((x) => x.avulso)) {
+      const minutos = tempoNoRegime(a, perfil) * finito(setor.fatorCalibracao) * (1 + complexidadePct / 100);
+      if (minutos <= 0) continue;
+      avulsos.push({ id: a.id, setor: a.setor, nome: a.nome, minutos, precos: precos(minutos * (custoMin + rateioMin), p) });
+    }
 
     setores.push({
       codigo: setor.codigo,
@@ -133,6 +144,7 @@ export function calcular(catalogo: Catalogo, perfilInformado: Perfil, p: Paramet
     setores,
     mensal: precos(custoMensal, p),
     implantacao: precos(custoImplantacao, p),
+    avulsos,
     horasMes: setores.reduce((s, x) => s + x.minutosMes, 0) / 60,
     avisos,
   };

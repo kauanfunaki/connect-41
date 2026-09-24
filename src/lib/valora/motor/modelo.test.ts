@@ -39,6 +39,37 @@ describe("MODELO_41", () => {
   });
 });
 
+describe("Societário: mensalidade + avulsos", () => {
+  const cat = { ...MODELO_41, setores: MODELO_41.setores.map((s) => ({ ...s, custoMensal: 30000 })) };
+  const soc = (extra: Partial<ReturnType<typeof perfilVazio>> = {}) =>
+    calcular(cat, { ...perfilVazio(cat), setores: ["SOC"], ...extra }, PARAMETROS_PADRAO);
+
+  it("processo vai para a tabela de avulsos, não para a mensalidade", () => {
+    const r = soc();
+    const ids = r.setores[0].atividades.map((a) => a.id);
+    expect(ids).not.toContain("SOC-07");
+    expect(r.avulsos.map((a) => a.id)).toEqual(expect.arrayContaining(["SOC-07", "SOC-10", "SOC-12"]));
+    const abertura = r.avulsos.find((a) => a.id === "SOC-07")!;
+    const baixa = r.avulsos.find((a) => a.id === "SOC-12")!;
+    expect(abertura.precos.alvo!).toBeGreaterThan(baixa.precos.alvo!);
+    expect(r.mensal.alvo!).toBeGreaterThan(0);
+  });
+
+  it("licenças sobem a mensalidade; complexidade encarece o avulso", () => {
+    const sem = soc();
+    const com = soc({ volumes: { licencas: 4 } });
+    expect(com.mensal.alvo!).toBeGreaterThan(sem.mensal.alvo!);
+    const dificil = soc({ complexidades: MODELO_41.complexidades.filter((c) => c.setor === "SOC").slice(0, 1).map((c) => c.id) });
+    const abertura = (x: typeof sem) => x.avulsos.find((a) => a.id === "SOC-07")!.minutos;
+    expect(abertura(dificil)).toBeGreaterThan(abertura(sem));
+  });
+
+  it("setor não contratado não gera avulso", () => {
+    const r = calcular(cat, { ...perfilVazio(cat), setores: ["FIS"] }, PARAMETROS_PADRAO);
+    expect(r.avulsos).toEqual([]);
+  });
+});
+
 describe("validação", () => {
   it("recusa margem que torna o preço impossível e piso acima do alvo", () => {
     expect(normalizarParametros({ ...PARAMETROS_PADRAO, variaveisPct: 50, margemAlvoPct: 50 })).toBeNull();

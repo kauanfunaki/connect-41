@@ -220,6 +220,20 @@ export function Simulador({
           a {parametros.margemPisoPct > 0 ? `margem fica menor que ${parametros.margemPisoPct}%` : "empresa paga para atender"}.
         </p>
 
+        {r.avulsos.length > 0 && (
+          <div className="border-t border-border-soft pt-3">
+            <p className="text-[11px] uppercase tracking-wide text-fg-muted mb-1.5">Avulsos (por processo, fora da mensalidade)</p>
+            <div className="space-y-1 text-[12px]">
+              {r.avulsos.map((a) => (
+                <div key={a.id} className="flex justify-between gap-2">
+                  <span className="min-w-0">{a.nome}</span>
+                  <span className="tabular-nums text-fg-secondary shrink-0">{brl(a.precos.alvo)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="border-t border-border-soft pt-3 space-y-1.5 text-[12px]">
           {r.setores.map((s) => (
             <div key={s.codigo} className="flex justify-between gap-2">
