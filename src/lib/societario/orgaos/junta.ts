@@ -13,14 +13,16 @@
 // ─── O que está escrito aqui, e o que não está ──────────────────────────────
 //
 // Está: a **decisão** — dado o que o painel mostra em cada etapa, o que isso
-// significa para o processo. Sai inteira do print do ALV-1, que o setor mandou
-// justamente por estar com uma etapa em exigência.
+// significa para o processo. Saiu do print do ALV-1 (15/09) e foi completada
+// pelas respostas e prints da Ruli em 24/09: os selos de análise e de
+// cancelamento, o caminho até o painel e onde fica o texto da exigência.
 //
-// Não está: a **navegação**. Não temos a URL do painel, não sabemos se ele
-// exige login, e não vimos o HTML. Inventar seletor é o defeito que esta
-// automação não pode ter: marcar processo como deferido sem ser faz o setor
-// parar de acompanhar, o prazo do órgão correr, e a exigência aparecer quando
-// já custou. `CONTRATO_PENDENTE` lista o que falta.
+// Não está: a **navegação automática**, e agora pelo motivo certo. O caminho é
+// conhecido (ver `ACESSO`), mas o login pelo gov.br mostra CAPTCHA — "clique no
+// animal que a bola nunca toca", na maioria das vezes duas vezes. Contornar
+// CAPTCHA está fora de questão (mesma decisão do Bombeiros, 15/09). O que resta
+// é uma pessoa resolver o CAPTCHA e o robô ler o painel na mesma sessão —
+// `CONTRATO_PENDENTE` lista o que falta para decidir se isso compensa.
 
 import type { LeituraDoOrgao } from "@/lib/societario/observador";
 
@@ -28,13 +30,37 @@ import type { LeituraDoOrgao } from "@/lib/societario/observador";
 export const SIGLA = "JUCEPAR";
 
 /**
+ * Como se chega no painel, pela Ruli em 24/09.
+ *
+ * O número do protocolo vai em "Acompanhamento do Protocolo" na página inicial
+ * do Empresa Fácil; "Acompanhar" leva ao login do gov.br, onde o escritório
+ * entra **sempre com o e-CNPJ da 41** (não o do cliente, diferente do SIMA). O
+ * painel de um protocolo tem endereço próprio — visto no print do PRN2676221371.
+ */
+export const ACESSO = {
+  inicio: "https://www.empresafacil.pr.gov.br/",
+  login: "gov.br, com o certificado do escritório (e-CNPJ da 41)",
+  captcha: true,
+} as const;
+
+export function urlDoPainel(protocolo: string): string {
+  return `https://www.empresafacil.pr.gov.br/sigfacil/processo/acompanhar/co_protocolo/${encodeURIComponent(protocolo.trim())}`;
+}
+
+/**
  * As etapas observadas no painel, na ordem em que aparecem.
  *
  * Serve de referência para quem for escrever a extração: não é uma lista
  * fechada (município com licença a mais mostra etapa a mais), e a classificação
- * abaixo **não depende** dela — trabalha com o que vier.
+ * abaixo **não depende** dela — trabalha com o que vier. Só entram as linhas
+ * com selo: "Declaração de Responsabilidade Contador", "Contrato Social",
+ * "Solicitação de Recurso" e "Reaproveitar Solicitação" são botões, não etapas.
  */
 export const ETAPAS_OBSERVADAS = [
+  "Dados da Coleta",
+  "Ficha de Cadastro Nacional (FCN)",
+  "Ato Constitutivo",
+  "Solicitação",
   "Consulta Prévia",
   "Inscrição Municipal",
   "Alvará de Localização e Funcionamento",
@@ -46,9 +72,10 @@ export type EtapaDoPainel = {
   /** O selo da etapa, verbatim. Ex.: "DEFERIDA", "EMITIDO", "EM EXIGÊNCIA". */
   status: string;
   /**
-   * O texto de "Ver Exigência(s)", quando a etapa está em exigência e a
-   * extração conseguiu abri-lo. Opcional porque abrir custa um clique a mais:
-   * sem ele o processo ainda é classificado, só com descrição mais pobre.
+   * O texto de "Visualizar Motivos de Exigência", quando a etapa está em
+   * exigência e a extração conseguiu abri-lo. Fica atrás desse botão, no mesmo
+   * painel (Ruli, 24/09). Opcional porque abrir custa um clique a mais: sem ele
+   * o processo ainda é classificado, só com descrição mais pobre.
    */
   exigencia?: string | null;
 };
@@ -70,27 +97,70 @@ export function normalizarStatus(status: string): string {
 }
 
 /**
- * Selos que significam etapa concluída.
+ * Selos que significam etapa concluída (bolinha verde no painel).
  *
- * Observados: `DEFERIDA` (Consulta Prévia) e `EMITIDO` (Inscrição Municipal).
- * As variantes de gênero entram porque são a **mesma palavra concordando com o
- * nome da etapa**, não um estado novo — "Alvará DEFERIDO" e "Consulta Prévia
- * DEFERIDA" dizem a mesma coisa.
+ * Observados: `DEFERIDA` (Consulta Prévia), `EMITIDO` (Inscrição Municipal),
+ * `COLETADA` (Dados da Coleta) e `TRANSMITIDO` (FCN). As variantes de gênero
+ * entram porque são a **mesma palavra concordando com o nome da etapa**, não um
+ * estado novo — "Alvará DEFERIDO" e "Consulta Prévia DEFERIDA" dizem a mesma
+ * coisa.
  */
-const CONCLUIDA = new Set(["DEFERIDA", "DEFERIDO", "EMITIDA", "EMITIDO"]);
+const CONCLUIDA = new Set([
+  "DEFERIDA", "DEFERIDO", "EMITIDA", "EMITIDO", "COLETADA", "COLETADO", "TRANSMITIDA", "TRANSMITIDO",
+]);
 
-/** Selo de etapa que voltou para o requerente. Observado no print do ALV-1. */
+/** Etapa com o órgão (bolinha amarela). Observada no Ato Constitutivo em 24/09. */
+const EM_ANALISE = new Set(["EM ANALISE"]);
+
+/** Selo de etapa que voltou para o requerente (bolinha vermelha). ALV-1 e 24/09. */
 const EXIGENCIA = new Set(["EM EXIGENCIA"]);
+
+/** Processo encerrado sem deferimento (bolinha vermelha). Visto em 24/09. */
+const CANCELADA = new Set(["CANCELADA", "CANCELADO"]);
 
 export class StatusNaoObservado extends Error {
   constructor(etapa: string, status: string) {
     super(
       `Junta: selo não observado na etapa "${etapa}": "${status}". ` +
-        `Acrescentar em CONCLUIDA ou EXIGENCIA em src/lib/societario/orgaos/junta.ts ` +
-        `depois de ver a tela — não antes.`
+        `Acrescentar em CONCLUIDA, EM_ANALISE, EXIGENCIA ou CANCELADA em ` +
+        `src/lib/societario/orgaos/junta.ts depois de ver a tela — não antes.`
     );
     this.name = "StatusNaoObservado";
   }
+}
+
+/**
+ * O protocolo foi cancelado.
+ *
+ * Erro, e não um desfecho, porque cancelamento não é resultado que o robô
+ * resolva: no caso visto em 24/09, o processo foi **reaproveitado** e ganhou
+ * outro protocolo — quem acompanha precisa trocar o número, senão o robô fica
+ * lendo um processo morto para sempre. Virar erro faz ele aparecer na tela do
+ * protocolo para uma pessoa.
+ */
+export class ProtocoloCancelado extends Error {
+  readonly novoProtocolo: string | null;
+  constructor(novoProtocolo: string | null) {
+    super(
+      novoProtocolo
+        ? `Junta: protocolo cancelado por reaproveitamento — o processo continua no protocolo ${novoProtocolo}.`
+        : "Junta: protocolo cancelado no painel — conferir se foi reaproveitado em outro número."
+    );
+    this.name = "ProtocoloCancelado";
+    this.novoProtocolo = novoProtocolo;
+  }
+}
+
+/**
+ * O protocolo novo que o aviso de reaproveitamento cita.
+ *
+ * Texto visto em 24/09: "ESTE PROCESSO ESTÁ CANCELADO POR TER SIDO
+ * REAPROVEITADO PELO USUÁRIO … GERANDO OUTRO PROTOCOLO DE NÚMERO: PRP2523827360."
+ */
+export function protocoloDoReaproveitamento(aviso: string | null | undefined): string | null {
+  if (!aviso) return null;
+  const m = /PROTOCOLO\s+DE\s+N[UÚ]MERO:?\s*([A-Z]{2,4}\d{6,})/i.exec(aviso);
+  return m ? m[1]!.toUpperCase() : null;
 }
 
 export class PainelSemEtapas extends Error {
@@ -103,15 +173,21 @@ export class PainelSemEtapas extends Error {
 /**
  * O que o painel inteiro diz sobre o processo.
  *
- * ─── As três regras, na ordem em que valem ────────────────────────────────
+ * ─── As regras, na ordem em que valem ─────────────────────────────────────
  *
+ * 0. **Cancelada em qualquer etapa encerra a leitura** com `ProtocoloCancelado`
+ *    — o processo morreu ou mudou de número, e isso é para uma pessoa.
  * 1. **Exigência em qualquer etapa ganha.** É o único estado que precisa de uma
  *    pessoa, e ela precisa saber hoje: o prazo do órgão corre enquanto o
  *    processo espera o escritório.
  * 2. **Deferido só quando todas as etapas estão concluídas.** O processo na
  *    Junta é a soma das licenças; dar por encerrado com o alvará ainda em
  *    análise é o erro que faz o setor parar de acompanhar cedo demais.
- * 3. **O resto é pendente**, que é o caso comum e não precisa de ninguém.
+ * 3. **O resto é pendente** — em análise, ou parte concluída e parte não —, que
+ *    é o caso comum e não precisa de ninguém.
+ *
+ * `aviso` é a caixa "ATENÇÃO" do painel, quando existe; é dela que sai o
+ * protocolo novo de um processo reaproveitado.
  *
  * ─── Por que selo desconhecido falha em vez de virar "pendente" ───────────
  *
@@ -121,12 +197,18 @@ export class PainelSemEtapas extends Error {
  * aparece em `checkError` na tela do protocolo e alguém olha. A mensagem leva o
  * texto verbatim de propósito: completar a tabela é uma linha, depois de ver.
  */
-export function classificarPainel(etapas: EtapaDoPainel[]): LeituraDoOrgao {
+export function classificarPainel(etapas: EtapaDoPainel[], aviso?: string | null): LeituraDoOrgao {
   if (etapas.length === 0) throw new PainelSemEtapas();
 
   for (const e of etapas) {
     const s = normalizarStatus(e.status);
-    if (!CONCLUIDA.has(s) && !EXIGENCIA.has(s)) throw new StatusNaoObservado(e.nome, e.status);
+    if (!CONCLUIDA.has(s) && !EM_ANALISE.has(s) && !EXIGENCIA.has(s) && !CANCELADA.has(s)) {
+      throw new StatusNaoObservado(e.nome, e.status);
+    }
+  }
+
+  if (etapas.some((e) => CANCELADA.has(normalizarStatus(e.status)))) {
+    throw new ProtocoloCancelado(protocoloDoReaproveitamento(aviso));
   }
 
   const emExigencia = etapas.filter((e) => EXIGENCIA.has(normalizarStatus(e.status)));
@@ -156,7 +238,9 @@ function descricaoDaExigencia(etapas: EtapaDoPainel[]): string {
   return etapas
     .map((e) => {
       const texto = e.exigencia?.trim();
-      return texto ? `${e.nome}: ${texto}` : `${e.nome}: em exigência — ver "Ver Exigência(s)" no painel da Junta.`;
+      return texto
+        ? `${e.nome}: ${texto}`
+        : `${e.nome}: em exigência — ver "Visualizar Motivos de Exigência" no painel da Junta.`;
     })
     .join(" · ");
 }
@@ -168,8 +252,7 @@ function descricaoDaExigencia(etapas: EtapaDoPainel[]): string {
  * consulta no momento em que abre o painel para levantar.
  */
 export const CONTRATO_PENDENTE = [
-  "A URL do painel de acompanhamento e como se chega nele a partir do protocolo",
-  "Se o painel exige login (e, se exigir, qual certificado — como no SIMA, pode ser o mesmo que abriu)",
-  "Os selos das etapas que ainda não foram vistas — em análise, indeferida, cancelada",
-  "Onde fica o texto de 'Ver Exigência(s)': na mesma página ou atrás de um clique",
+  "Se, depois de uma pessoa resolver o CAPTCHA do login, a mesma sessão abre outros protocolos pela URL do painel sem pedir CAPTCHA de novo — é o que decide se vale o robô com uma pessoa no laço",
+  "O HTML do painel (onde ficam nome da etapa, selo e a caixa ATENÇÃO), visto numa sessão aberta",
+  "O selo de etapa indeferida, que ainda não apareceu em nenhum print",
 ] as const;

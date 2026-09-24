@@ -55,11 +55,10 @@ describe("lerObservacoes", () => {
 });
 
 describe("o contrato", () => {
-  // Um item, depois de 15/09: o aceite foi decidido e as telas de exceção
-  // deixaram de bloquear — o alvará passou a ser acompanhado pela Junta, e aqui
-  // só se imprime.
-  it("o que falta é curto, e nomeado", () => {
-    expect(CONTRATO_PENDENTE).toHaveLength(1);
+  // Vazio desde 24/09: o último item (como o PDF sai) a Ruli respondeu — abre
+  // sozinho numa aba nova.
+  it("não falta nada do lado do setor", () => {
+    expect(CONTRATO_PENDENTE).toHaveLength(0);
   });
 
   // O aceite é declaração em nome do cliente, e o robô passou a marcá-la (Kauan,

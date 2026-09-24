@@ -123,8 +123,18 @@ export type Aba = (typeof ABAS)[number];
  * Pendente com um destes dois. "Pendente" no SIMA quer dizer pendente **do
  * requerente**, não do órgão — é o contrário do que a palavra sugere, e é por
  * isso que esta constante existe com nome em vez de virar um `if` solto.
+ *
+ * Em 24/09 a Ruli citou mais um, "Aguardando Pagamento" — taxa a pagar, que
+ * também é o escritório que tem de agir —, e escreveu "Envio **do** Documento";
+ * o portal, em 15/09, mostrava "Envio **de** Documento". As duas grafias ficam
+ * até a tela confirmar qual é, porque a normalização não junta "de" com "do".
  */
-export const SELOS_DE_EXIGENCIA = ["Aguardando Envio de Documento", "Aguardando Assinatura"] as const;
+export const SELOS_DE_EXIGENCIA = [
+  "Aguardando Envio de Documento",
+  "Aguardando Envio do Documento",
+  "Aguardando Assinatura",
+  "Aguardando Pagamento",
+] as const;
 
 /** O selo de conclusão observado no detalhe de um protocolo real (`AFU-26003257`). */
 export const SELO_DEFERIDO = "DEFERIDO";
