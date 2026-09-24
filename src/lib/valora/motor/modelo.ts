@@ -1,5 +1,5 @@
 // GERADO por valora/consolidacao/exportar_modelo.py — não editar à mão.
-// Catálogo modelo da 41: tempos dos questionários (Fiscal e DP, 23/09) com as premissas da
+// Catálogo modelo da 41: tempos dos questionários (Fiscal e DP, 23/09; Societário, 24/09) com as premissas da
 // consolidação. Custos dos setores zerados até a planilha confidencial chegar.
 
 import type { Catalogo } from "./tipos";
@@ -20,6 +20,13 @@ export const MODELO_41: Catalogo = {
       "capacidadeHorasMes": 489.4,
       "custoMensal": 0,
       "fatorCalibracao": 0.8374
+    },
+    {
+      "codigo": "SOC",
+      "nome": "Societário",
+      "capacidadeHorasMes": 436.9,
+      "custoMensal": 0,
+      "fatorCalibracao": 0.9759
     }
   ],
   "atividades": [
@@ -933,6 +940,289 @@ export const MODELO_41: Catalogo = {
         "valor": 1
       },
       "implantacao": true
+    },
+    {
+      "id": "SOC-01",
+      "setor": "SOC",
+      "grupo": "Acompanhamento",
+      "nome": "Controlar vencimentos de alvarás, licenças e certificados digitais",
+      "frequencia": "anual",
+      "tempoMin": {
+        "MEI": 90.0,
+        "SIMPLES": 90.0,
+        "PRESUMIDO": 90.0,
+        "REAL": 90.0
+      },
+      "quantidade": {
+        "tipo": "volume",
+        "campo": "licencas"
+      },
+      "semMovimento": true
+    },
+    {
+      "id": "SOC-02",
+      "setor": "SOC",
+      "grupo": "Acompanhamento",
+      "nome": "Renovar alvará ou licença de funcionamento",
+      "frequencia": "anual",
+      "tempoMin": {
+        "MEI": 90.0,
+        "SIMPLES": 90.0,
+        "PRESUMIDO": 90.0,
+        "REAL": 90.0
+      },
+      "quantidade": {
+        "tipo": "volume",
+        "campo": "licencas"
+      },
+      "semMovimento": true
+    },
+    {
+      "id": "SOC-04",
+      "setor": "SOC",
+      "grupo": "Acompanhamento",
+      "nome": "Emitir certidões (CND, certidão simplificada da Junta)",
+      "frequencia": "trimestral",
+      "tempoMin": {
+        "MEI": 25.0,
+        "SIMPLES": 25.0,
+        "PRESUMIDO": 25.0,
+        "REAL": 25.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      },
+      "semMovimento": true
+    },
+    {
+      "id": "SOC-05",
+      "setor": "SOC",
+      "grupo": "Acompanhamento",
+      "nome": "Atualizar cadastros (Receita, SEFAZ, prefeitura)",
+      "frequencia": "mensal",
+      "tempoMin": {
+        "MEI": 50.0,
+        "SIMPLES": 50.0,
+        "PRESUMIDO": 50.0,
+        "REAL": 50.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 0.05
+      }
+    },
+    {
+      "id": "SOC-06",
+      "setor": "SOC",
+      "grupo": "Atendimento",
+      "nome": "Atender o cliente (WhatsApp, e-mail, telefone, reunião)",
+      "frequencia": "mensal",
+      "tempoMin": {
+        "MEI": 30.0,
+        "SIMPLES": 30.0,
+        "PRESUMIDO": 30.0,
+        "REAL": 30.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      }
+    },
+    {
+      "id": "SOC-07",
+      "setor": "SOC",
+      "grupo": "Processos",
+      "nome": "Abrir empresa (viabilidade, DBE, contrato, Junta, inscrições, alvará)",
+      "frequencia": "evento",
+      "tempoMin": {
+        "MEI": 180,
+        "SIMPLES": 180,
+        "PRESUMIDO": 180,
+        "REAL": 180
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      },
+      "avulso": true
+    },
+    {
+      "id": "SOC-08",
+      "setor": "SOC",
+      "grupo": "Processos",
+      "nome": "Abrir MEI",
+      "frequencia": "evento",
+      "tempoMin": {
+        "MEI": 20.0,
+        "SIMPLES": 20.0,
+        "PRESUMIDO": 20.0,
+        "REAL": 20.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      },
+      "avulso": true
+    },
+    {
+      "id": "SOC-09",
+      "setor": "SOC",
+      "grupo": "Processos",
+      "nome": "Abrir filial",
+      "frequencia": "evento",
+      "tempoMin": {
+        "MEI": 300,
+        "SIMPLES": 300,
+        "PRESUMIDO": 300,
+        "REAL": 300
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      },
+      "avulso": true
+    },
+    {
+      "id": "SOC-10",
+      "setor": "SOC",
+      "grupo": "Processos",
+      "nome": "Alteração contratual (endereço, sócios, capital, atividade)",
+      "frequencia": "evento",
+      "tempoMin": {
+        "MEI": 210,
+        "SIMPLES": 210,
+        "PRESUMIDO": 210,
+        "REAL": 210
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      },
+      "avulso": true
+    },
+    {
+      "id": "SOC-11",
+      "setor": "SOC",
+      "grupo": "Processos",
+      "nome": "Transformação de tipo jurídico ou desenquadramento (ME/EPP)",
+      "frequencia": "evento",
+      "tempoMin": {
+        "MEI": 210,
+        "SIMPLES": 210,
+        "PRESUMIDO": 210,
+        "REAL": 210
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      },
+      "avulso": true
+    },
+    {
+      "id": "SOC-12",
+      "setor": "SOC",
+      "grupo": "Processos",
+      "nome": "Baixar ou encerrar empresa",
+      "frequencia": "evento",
+      "tempoMin": {
+        "MEI": 140,
+        "SIMPLES": 140,
+        "PRESUMIDO": 140,
+        "REAL": 140
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      },
+      "avulso": true
+    },
+    {
+      "id": "SOC-13",
+      "setor": "SOC",
+      "grupo": "Processos",
+      "nome": "Licenças específicas (Vigilância Sanitária, Bombeiros, ambiental)",
+      "frequencia": "evento",
+      "tempoMin": {
+        "MEI": 32,
+        "SIMPLES": 32,
+        "PRESUMIDO": 32,
+        "REAL": 32
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      },
+      "avulso": true
+    },
+    {
+      "id": "SOC-14",
+      "setor": "SOC",
+      "grupo": "Processos",
+      "nome": "Atas, reuniões de sócios e registros de holding",
+      "frequencia": "evento",
+      "tempoMin": {
+        "MEI": 90,
+        "SIMPLES": 90,
+        "PRESUMIDO": 90,
+        "REAL": 90
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      },
+      "avulso": true
+    },
+    {
+      "id": "SOC-15",
+      "setor": "SOC",
+      "grupo": "Implantação",
+      "nome": "Receber cliente vindo de outro escritório (procurações, acessos, documentos)",
+      "frequencia": "evento",
+      "tempoMin": {
+        "MEI": 120.0,
+        "SIMPLES": 120.0,
+        "PRESUMIDO": 120.0,
+        "REAL": 120.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      },
+      "implantacao": true
+    },
+    {
+      "id": "SOC-17",
+      "setor": "SOC",
+      "grupo": "Eventual",
+      "nome": "Refazer processo por exigência ou indeferimento (Junta, prefeitura)",
+      "frequencia": "evento",
+      "tempoMin": {
+        "MEI": 90,
+        "SIMPLES": 90,
+        "PRESUMIDO": 90,
+        "REAL": 90
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      },
+      "avulso": true
+    },
+    {
+      "id": "SOC-P01",
+      "setor": "SOC",
+      "grupo": "Premissa",
+      "nome": "Declaração anual do MEI (DASN-SIMEI)",
+      "frequencia": "anual",
+      "tempoMin": {
+        "MEI": 15
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      },
+      "semMovimento": true
     }
   ],
   "complexidades": [
@@ -1031,6 +1321,60 @@ export const MODELO_41: Catalogo = {
       "setor": "DP",
       "nome": "Períodos anteriores atrasados ou com erros herdados de outro contador",
       "pct": 1.0
+    },
+    {
+      "id": "SOC-C01",
+      "setor": "SOC",
+      "nome": "Cliente envia documentos ou informações fora do prazo",
+      "pct": 30.0
+    },
+    {
+      "id": "SOC-C02",
+      "setor": "SOC",
+      "nome": "Documentos desorganizados, incompletos, em papel ou foto",
+      "pct": 15.0
+    },
+    {
+      "id": "SOC-C03",
+      "setor": "SOC",
+      "nome": "Cliente pede muito atendimento (dúvidas, ligações, reuniões)",
+      "pct": 13.0
+    },
+    {
+      "id": "SOC-C04",
+      "setor": "SOC",
+      "nome": "Cliente com várias empresas ou filiais no mesmo grupo",
+      "pct": 15.0
+    },
+    {
+      "id": "SOC-C05",
+      "setor": "SOC",
+      "nome": "Períodos anteriores atrasados ou com erros herdados de outro contador",
+      "pct": 10.0
+    },
+    {
+      "id": "SOC-C06",
+      "setor": "SOC",
+      "nome": "Sociedade com muitos sócios ou sócios com outras empresas",
+      "pct": 5.0
+    },
+    {
+      "id": "SOC-C07",
+      "setor": "SOC",
+      "nome": "Holding ou grupo com várias empresas",
+      "pct": 2.0
+    },
+    {
+      "id": "SOC-C08",
+      "setor": "SOC",
+      "nome": "Atividade que exige licenças especiais (saúde, alimentos, ambiental)",
+      "pct": 50.0
+    },
+    {
+      "id": "SOC-C09",
+      "setor": "SOC",
+      "nome": "Município com processo não integrado à Junta Comercial",
+      "pct": 50.0
     }
   ],
   "campos": [
@@ -1104,6 +1448,12 @@ export const MODELO_41: Catalogo = {
       "tipo": "marcador",
       "chave": "temVariaveis",
       "rotulo": "Folha com comissões, adicionais ou escalas"
+    },
+    {
+      "tipo": "volume",
+      "chave": "licencas",
+      "rotulo": "Alvarás e licenças que a empresa mantém",
+      "ajuda": "Prefeitura, Bombeiros, Vigilância Sanitária, ambiental — cada uma renova uma vez por ano."
     }
   ]
 };

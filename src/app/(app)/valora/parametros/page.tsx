@@ -66,6 +66,7 @@ export default async function ParametrosDoValoraPage() {
                           <span className="text-fg-muted tabular-nums mr-2">{a.id}</span>
                           {a.nome}
                           {a.implantacao && <span className="text-fg-muted"> (implantação)</span>}
+                          {a.avulso && <span className="text-fg-muted"> (avulso, por execução)</span>}
                         </td>
                         <td className="py-1.5 pr-3 text-fg-secondary">{FREQUENCIA[a.frequencia]}</td>
                         <td className="py-1.5 pr-3 text-fg-secondary">

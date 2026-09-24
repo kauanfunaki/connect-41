@@ -29,6 +29,8 @@ export type Atividade = {
   semMovimento?: boolean;
   /** Custo de entrada, cobrado uma vez — não soma na mensalidade. */
   implantacao?: boolean;
+  /** Serviço cobrado por execução (abertura, alteração, baixa…): vai para a tabela de avulsos, fora da mensalidade. */
+  avulso?: boolean;
 };
 
 export type Complexidade = {
@@ -120,10 +122,21 @@ export type Precos = {
   tabela: number | null;
 };
 
+/** Preço de UMA execução de um serviço avulso, para este cliente (regime e complexidade dele). */
+export type LinhaAvulso = {
+  id: string;
+  setor: string;
+  nome: string;
+  minutos: number; // calibrado, com complexidade
+  precos: Precos;
+};
+
 export type Resultado = {
   setores: ResultadoSetor[];
   mensal: Precos;
   implantacao: Precos;
+  /** Tabela de avulsos dos setores contratados. Não soma na mensalidade nem na implantação. */
+  avulsos: LinhaAvulso[];
   horasMes: number;
   avisos: string[];
 };
