@@ -98,10 +98,12 @@ describe("o que o robô se recusa a responder", () => {
     expect(r.conferir).toContain("20");
   });
 
-  it("o pavimento térreo vai para conferência quando a atividade é exercida no local", () => {
-    // A regra do setor repete o padrão em vez de descrever a troca.
-    expect(resposta(ESCRITORIO, "pavimento-terreo").conferir).toBeUndefined();
-    expect(resposta({ ...ESCRITORIO, exercidaNoLocal: true }, "pavimento-terreo").conferir).toContain("Societário");
+  it("o pavimento térreo segue a atividade: exercida no local é Sim, não exercida é Não", () => {
+    // Regra fechada pela Ruli em 24/09.
+    expect(resposta(ESCRITORIO, "pavimento-terreo").resposta).toBe("Não");
+    const noLocal = resposta({ ...ESCRITORIO, exercidaNoLocal: true }, "pavimento-terreo");
+    expect(noLocal.resposta).toBe("Sim");
+    expect(noLocal.conferir).toBeUndefined();
   });
 });
 
@@ -114,11 +116,7 @@ describe("pendentesDeConferencia", () => {
     const pendentes = pendentesDeConferencia(
       responderViabilidade({ ...ESCRITORIO, socioNoMesmoEndereco: null, areaGrande: true, exercidaNoLocal: true })
     );
-    expect(pendentes.map((p) => p.id).sort()).toEqual([
-      "capacidade-de-publico",
-      "pavimento-terreo",
-      "reside-no-local",
-    ]);
+    expect(pendentes.map((p) => p.id).sort()).toEqual(["capacidade-de-publico", "reside-no-local"]);
   });
 });
 

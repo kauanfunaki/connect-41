@@ -125,21 +125,11 @@ export const PERGUNTAS: readonly Pergunta[] = [
     pergunta: "Atividade no pavimento térreo",
     padrao: "Não",
     sempre: false,
-    // A tabela do setor traz padrão "Não" e, na coluna de quando muda, "Não
-    // quando não exerce no local" — que repete o padrão em vez de descrever uma
-    // troca. Ou a condição está incompleta, ou o padrão é outro quando a
-    // atividade É exercida no local. Não dá para saber qual, então responde o
-    // padrão e manda conferir: inventar aqui é declarar ao órgão um dado que
-    // ninguém verificou.
+    // A tabela do setor dizia só "Não quando não exerce no local", que repetia
+    // o padrão. A Ruli fechou a regra em 24/09: exercida no local é Sim; não
+    // exercida é Não.
     regra: (f) =>
-      f.exercidaNoLocal
-        ? {
-            resposta: "Não",
-            motivo: PADRAO,
-            conferir:
-              "A regra do setor repete o padrão em vez de descrever a troca — confirmar com o Societário quando a atividade é exercida no local.",
-          }
-        : null,
+      f.exercidaNoLocal ? { resposta: "Sim", motivo: "atividade exercida no local" } : null,
   },
   { id: "subsolo-uso-distinto", pergunta: "Subsolo com uso distinto de estacionamento", padrao: "Não", sempre: true },
   { id: "atividade-na-residencia", pergunta: "Atividade na residência do empreendedor", padrao: "Não", sempre: false },
