@@ -87,9 +87,19 @@ describe("o que o leitor recusa", () => {
   });
 
   it("selo desconhecido na aba Pendente falha em vez de virar pendente", () => {
-    expect(() => classificarSolicitacao({ aba: "Pendente", selo: "Aguardando Pagamento" })).toThrow(
+    expect(() => classificarSolicitacao({ aba: "Pendente", selo: "Aguardando Vistoria" })).toThrow(
       SeloNaoObservado
     );
+  });
+
+  it("taxa a pagar é o escritório que age: vira exigência com a palavra do órgão (Ruli, 24/09)", () => {
+    const r = classificarSolicitacao({ aba: "Pendente", selo: "Aguardando Pagamento" });
+    expect(r).toEqual({ desfecho: "EXIGENCIA", detalhe: "Aguardando Pagamento" });
+  });
+
+  it("aceita as duas grafias do envio de documento até a tela confirmar", () => {
+    expect(classificarSolicitacao({ aba: "Pendente", selo: "Aguardando Envio do Documento" }).desfecho).toBe("EXIGENCIA");
+    expect(classificarSolicitacao({ aba: "Pendente", selo: "Aguardando Envio de Documento" }).desfecho).toBe("EXIGENCIA");
   });
 
   // A armadilha que fez a classificação deixar de ser por texto livre: o

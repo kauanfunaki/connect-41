@@ -150,15 +150,18 @@ export const ACEITE_ANTES_DE_IMPRIMIR =
 /**
  * O que ainda falta para o robô existir.
  *
- * Um item. Os outros dois caíram em 15/09: o aceite foi decidido (o robô marca
- * e imprime), e as telas de "sem alvará" e "não encontrado" deixaram de ser
- * bloqueio — viraram divergência entre a Junta e a prefeitura, que vai para uma
- * pessoa.
+ * Nada do lado do setor. O último item caiu em 24/09: "Imprimir alvará" abre o
+ * PDF **sozinho numa aba nova**, num endereço `blob:` do próprio site (Ruli,
+ * com print do alvará 1.855.561). O robô pega o arquivo dessa aba nova — não é
+ * download nem diálogo de impressão. Os outros dois caíram em 15/09: o aceite
+ * foi decidido (o robô marca e imprime), e as telas de "sem alvará" e "não
+ * encontrado" viraram divergência entre a Junta e a prefeitura, para uma pessoa.
  *
  * O arquivamento segue a convenção do Bombeiros (ALV-3), que já está em
  * `src/lib/societario/arquivamento.ts`: `Societário › Prefeitura › <órgão> ›
  * <ano>`, arquivo `<EMPRESA> - <tipo> <ano>`.
  */
-export const CONTRATO_PENDENTE = [
-  "Como o PDF do alvará sai da página depois do aceite: download direto, nova aba ou diálogo de impressão",
-] as const;
+export const CONTRATO_PENDENTE = [] as const;
+
+/** Como o PDF sai depois de "Imprimir alvará": aba nova com endereço `blob:` (24/09). */
+export const SAIDA_DO_PDF = "aba_nova_blob" as const;
