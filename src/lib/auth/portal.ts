@@ -50,6 +50,9 @@ const PUBLICAS_DO_PORTAL = [
   "/portal/esqueci-senha",
   "/portal/redefinir-senha",
   "/portal/manifest.webmanifest",
+  // A Google Play exige a política numa URL pública: revisor e quem ainda não
+  // é cliente leem sem login.
+  "/portal/privacidade",
 ];
 
 export function ehRotaPublicaDoPortal(pathname: string): boolean {

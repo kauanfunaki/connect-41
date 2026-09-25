@@ -75,6 +75,10 @@ export function PortalLoginForm({ action }: Props) {
           <Link href="/portal/esqueci-senha" className="text-brand hover:underline">
             Esqueci minha senha
           </Link>
+          {" · "}
+          <Link href="/portal/privacidade" className="text-brand hover:underline">
+            Privacidade
+          </Link>
         </p>
       </form>
     </Card>
