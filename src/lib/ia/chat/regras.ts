@@ -52,7 +52,7 @@ export function tituloDaConversa(pergunta: string): string {
 }
 
 export type ContextoDaTela =
-  | { tipo: "processo" | "vaga" | "candidato"; id: string }
+  | { tipo: "processo" | "vaga" | "candidato" | "empresa" | "documento_fiscal"; id: string }
   | { tipo: "tela"; caminho: string };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -71,6 +71,10 @@ export function contextoDaTela(caminho: string): ContextoDaTela | null {
   if (processo && UUID.test(processo[1]!)) return { tipo: "processo", id: processo[1]! };
   const vaga = /^\/vagas\/([^/]+)(?:\/.*)?$/.exec(limpo);
   if (vaga && UUID.test(vaga[1]!)) return { tipo: "vaga", id: vaga[1]! };
+  const empresa = /^\/empresas\/([^/]+)(?:\/.*)?$/.exec(limpo);
+  if (empresa && UUID.test(empresa[1]!)) return { tipo: "empresa", id: empresa[1]! };
+  const documento = /^\/documentos-fiscais\/([^/]+)\/?$/.exec(limpo);
+  if (documento && UUID.test(documento[1]!)) return { tipo: "documento_fiscal", id: documento[1]! };
   const pessoa = /^\/candidatos\/([^/]+)\/?$/.exec(limpo);
   if (pessoa && UUID.test(pessoa[1]!)) return { tipo: "candidato", id: pessoa[1]! };
   return { tipo: "tela", caminho: limpo.slice(0, 120) };
@@ -88,6 +92,11 @@ const PASSOS: Record<string, string> = {
   listar_candidatos_da_vaga: "Consultando os candidatos…",
   ver_candidatura: "Lendo a candidatura…",
   buscar_candidato: "Procurando o candidato…",
+  buscar_empresa: "Procurando a empresa…",
+  competencias_da_empresa: "Vendo os meses com documentos…",
+  resumo_fiscal_do_mes: "Somando os documentos do mês…",
+  listar_documentos_fiscais: "Listando os documentos…",
+  fila_de_lancamento: "Contando a fila de lançamento…",
   propor_mover_etapa: "Preparando uma sugestão…",
   propor_encerrar_candidatura: "Preparando uma sugestão…",
   buscar_nos_manuais: "Procurando nos manuais…",
