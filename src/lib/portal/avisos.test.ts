@@ -21,6 +21,15 @@ describe("textoDoAviso", () => {
     expect(t.url).toBe("/portal/comunicacao");
   });
 
+  it("no processo, leva o nome do processo e o link dele — nunca o que foi escrito", () => {
+    const m = textoDoAviso({ tipo: "processo", motivo: "mensagem", processoNome: "Alteração contratual — ACME", processId: "p1" });
+    expect(m.title).toBe("Nova mensagem no processo");
+    expect(m.body).toBe("Alteração contratual — ACME");
+    expect(m.url).toBe("/portal/processos/p1");
+    const d = textoDoAviso({ tipo: "processo", motivo: "documento", processoNome: "x", processId: "p1" });
+    expect(d.title).toBe("Novo documento no processo");
+  });
+
   it("na aprovação, leva só a contagem — e concorda em número", () => {
     expect(textoDoAviso({ tipo: "aprovacao", quantidade: 1 }).title).toBe("Conta a pagar aguardando aprovação");
     expect(textoDoAviso({ tipo: "aprovacao", quantidade: 4 }).title).toBe("4 contas a pagar aguardando aprovação");

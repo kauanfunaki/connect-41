@@ -804,6 +804,37 @@ export async function sendMensagemAoClienteEmail(input: SendMensagemAoClienteEma
   return enviarAvisoIndividual(input.tenantId, "sendMensagemAoClienteEmail", mensagens);
 }
 
+export type SendNovidadeNoProcessoEmailInput = {
+  tenantId: string;
+  destinatarios: { email: string; nome: string }[];
+  processId: string;
+  processoNome: string;
+  motivo: "mensagem" | "documento";
+};
+
+// Mensagem ou documento da equipe dentro de um processo do Societário. Mesma
+// régua da conversa livre: o e-mail diz que há novidade e em qual processo; o
+// texto e o arquivo ficam atrás do login do portal.
+export async function sendNovidadeNoProcessoEmail(input: SendNovidadeNoProcessoEmailInput): Promise<ResultadoDoAviso> {
+  const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
+  const url = `${baseUrl}/portal/processos/${input.processId}`;
+  const oQue = input.motivo === "mensagem" ? "deixou uma mensagem" : "anexou um documento";
+  const mensagens = input.destinatarios.map((d) => ({
+    to: d.email,
+    subject: `${input.motivo === "mensagem" ? "Nova mensagem" : "Novo documento"} no processo ${input.processoNome}`,
+    html: emailShell(
+      `
+    <p class="email-text" style="font-size:14px; line-height:1.6; margin:0 0 16px; font-family:Arial,Helvetica,sans-serif;">
+      Olá, ${escapeHtml(d.nome)}. A equipe ${oQue} no processo <strong>${escapeHtml(input.processoNome)}</strong>.
+    </p>
+    ${botaoDoEmail(url, "Abrir no portal")}
+  `,
+      "Portal do cliente"
+    ),
+  }));
+  return enviarAvisoIndividual(input.tenantId, "sendNovidadeNoProcessoEmail", mensagens);
+}
+
 export type SendAprovacaoPendenteEmailInput = {
   tenantId: string;
   destinatarios: { email: string; nome: string; quantidade: number }[];

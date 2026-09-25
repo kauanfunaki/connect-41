@@ -13,6 +13,7 @@ type NotificacaoParaLink = {
 export function linkDaNotificacao(n: NotificacaoParaLink): string | null {
   if (!n.entityId) return null;
   if (n.type.startsWith("WHATSAPP_")) return `/whatsapp/${n.entityId}`;
+  if (n.type.startsWith("PROCESS_")) return `/processos/${n.entityId}`;
   if (n.entityType === "COMPANY") return `/empresas/${n.entityId}`;
   if (n.entityType === "PERSON") return `/pessoas/${n.entityId}`;
   return null;
