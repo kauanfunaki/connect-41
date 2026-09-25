@@ -198,6 +198,26 @@ export async function upsertContactLink(
   });
 }
 
+/**
+ * Reflete a execução na linha da integração, que é o que o cartão de
+ * `/admin/integracoes` lê. Sem isto o cartão dizia "Nunca rodou" com a
+ * sincronização rodando a cada poucos minutos (visto em 25/09). Falha aqui não
+ * derruba a sincronização: é só o espelho do estado.
+ */
+async function registrarNaIntegracao(connectionId: string, erro: string | null): Promise<void> {
+  try {
+    const prisma = getPrisma();
+    const conexao = await prisma.chatwootConnection.findUnique({ where: { id: connectionId }, select: { integrationId: true } });
+    if (!conexao?.integrationId) return;
+    await prisma.tenantIntegration.update({
+      where: { id: conexao.integrationId },
+      data: { lastRunAt: new Date(), lastError: erro ? erro.slice(0, 500) : null },
+    });
+  } catch (err) {
+    console.error("[chatwoot:sync] não registrou na integração", connectionId, err);
+  }
+}
+
 export async function runChatwootSync(tenantId: string, type: "INITIAL" | "RECONCILIATION"): Promise<SyncOutcome> {
   const prisma = getPrisma();
   const resolved = await resolveConnectionCredentials(tenantId);
@@ -264,11 +284,13 @@ export async function runChatwootSync(tenantId: string, type: "INITIAL" | "RECON
     if (done) {
       await prisma.chatwootConnection.update({ where: { id: connectionId }, data: { lastSyncAt: new Date() } });
     }
+    await registrarNaIntegracao(connectionId, null);
 
     return { status: done ? "COMPLETED" : "PARTIAL", recordsRead, recordsCreated, recordsUpdated };
   } catch (err) {
     const message = err instanceof ChatwootError ? err.message : err instanceof Error ? err.message : "Erro desconhecido";
     console.error("[chatwoot:sync]", tenantId, message);
+    await registrarNaIntegracao(connectionId, message);
     await prisma.chatwootSyncRun.update({
       where: { id: run.id },
       data: { status: "FAILED", recordsRead, recordsCreated, recordsUpdated, error: message, finishedAt: new Date() },
