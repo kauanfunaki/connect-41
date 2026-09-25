@@ -60,7 +60,29 @@ const RECRUTAMENTO =
   "Você NÃO altera nada: quando fizer sentido mover ou encerrar alguém, use as ferramentas de proposta e deixe " +
   "claro que é sugestão a confirmar. Nunca sugira reprovar alguém só pela nota da triagem.";
 
+const FISCAL =
+  "Você é a IA do Fiscal de um escritório de contabilidade. Você responde sobre o acervo de documentos fiscais " +
+  "(NF-e, NFC-e, CT-e e NFS-e) das empresas clientes: o que cada empresa emitiu e recebeu no mês, o que ainda está " +
+  "pendente de lançamento no financeiro, notas canceladas e com XML incompleto.\n" +
+  "Consulte as ferramentas antes de responder — nunca invente número, valor ou nota. Para qualquer pergunta sobre " +
+  "uma empresa, ache o id com buscar_empresa; se não souber o mês, veja competencias_da_empresa. Competência é " +
+  "AAAA-MM. Valores em reais, no formato R$ 1.234,56. Quando houver link da tela, termine com ele para a pessoa " +
+  "conferir.\n" +
+  "Você só lê: lançar ou ignorar documento é feito na tela /documentos-fiscais. O acervo é grande — não tente " +
+  "somar o escritório inteiro; trabalhe por empresa e competência.";
+
 const CONFIGS: Config[] = [
+  {
+    code: "assistente_do_fiscal",
+    titulo: "IA do Fiscal",
+    modulo: "fiscal_documentos",
+    sistema: FISCAL,
+    sugestoes: [
+      "Quantas notas estão pendentes de lançamento?",
+      "Resumo fiscal do último mês de uma empresa",
+      "Quais notas da empresa estão com XML incompleto?",
+    ],
+  },
   {
     code: "assistente_do_recrutamento",
     titulo: "IA do Recrutamento",
@@ -174,6 +196,28 @@ export async function contextoParaOAgente(
 ): Promise<{ rotulo: string; texto: string } | null> {
   if (!tela || !ctx.tenantId) return null;
   const tenantId = ctx.tenantId;
+  if (tela.tipo === "empresa" || tela.tipo === "documento_fiscal") {
+    if (agentCode !== "assistente_do_fiscal") return null;
+    if (tela.tipo === "empresa") {
+      const e = await getPrisma().company.findFirst({ where: { id: tela.id, tenantId }, select: { id: true, name: true, displayName: true } });
+      if (!e) return null;
+      return {
+        rotulo: `Empresa: ${nomeExibicao(e)}`.slice(0, 200),
+        texto: `A pessoa está com a ficha da empresa "${nomeExibicao(e)}" aberta (empresaId ${e.id}). Quando ela disser "esta empresa", é essa.`,
+      };
+    }
+    const d = await getPrisma().fiscalDocument.findFirst({
+      where: { id: tela.id, tenantId },
+      select: { type: true, number: true, competence: true, company: { select: { id: true, name: true, displayName: true } } },
+    });
+    if (!d) return null;
+    return {
+      rotulo: `Nota ${d.type} ${d.number}`.slice(0, 200),
+      texto:
+        `A pessoa está com o documento ${d.type} nº ${d.number} aberto, da empresa "${nomeExibicao(d.company)}" ` +
+        `(empresaId ${d.company.id}), competência ${d.competence}. "Esta nota" é essa; "esta empresa" é a dela.`,
+    };
+  }
   if (tela.tipo === "vaga" || tela.tipo === "candidato") {
     if (agentCode !== "assistente_do_recrutamento") return null;
     if (tela.tipo === "vaga") {

@@ -1,7 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { recorteDasCandidaturasDoSetor, recorteDasVagas } from "./ferramentas-recrutamento-setor";
 
-const ctx = (setores?: string) => ({ tenantId: "t1", userId: "u", escopo: setores === undefined ? {} : { setores } });
+const ctx = (setores?: string) => ({
+  tenantId: "t1",
+  userId: "u",
+  escopo: (setores === undefined ? {} : { setores }) as Record<string, string>,
+});
 
 describe("recorte da IA do Recrutamento", () => {
   it("vaga só do tenant e dos setores em que a pessoa atua", () => {
