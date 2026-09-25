@@ -219,6 +219,32 @@ describe("OpenAI: limites e uso", () => {
     await expect(rodar(agente())).rejects.toThrow("Falha ao consultar a OpenAI (HTTP 401): Incorrect API key provided");
   });
 
+  it("resposta vazia por limite de tokens tenta de novo com limite maior e soma o uso", async () => {
+    // Visto em 25/09 no atendente do WhatsApp: o raciocínio comeu o limite e
+    // voltou sem texto nem ferramenta.
+    const vazia = {
+      status: "incomplete",
+      incomplete_details: { reason: "max_output_tokens" },
+      output: [{ type: "reasoning", summary: [] }],
+      usage: { input_tokens: 100, output_tokens: 2848 },
+    };
+    const f = roteiro(vazia, texto("a descrição completa"));
+    const r = await rodar(agente());
+
+    expect(f).toHaveBeenCalledTimes(2);
+    expect(corpoDa(f, 0).max_output_tokens).toBe(800 + 2048);
+    expect(corpoDa(f, 1).max_output_tokens).toBe((800 + 2048) * 3);
+    expect(r.valor).toBe("a descrição completa");
+    expect(r.rodadas).toBe(1);
+    expect(r.uso).toEqual({ entrada: 200, saida: 2868 });
+  });
+
+  it("incompleta com texto não repete: o texto já serve", async () => {
+    const f = roteiro({ ...texto("meio texto"), status: "incomplete", incomplete_details: { reason: "max_output_tokens" } });
+    await rodar(agente());
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+
   it("modelo legado não recebe include de raciocínio nem folga", async () => {
     const f = roteiro(texto("ok"));
     await rodar(agente(), "gpt-4.1");
