@@ -221,7 +221,7 @@ export function mensagemDoFinanceiro(c: Record<string, number>, gravou: boolean)
     n("baixas_conciliadas") || n("baixas_nao_conciliadas")
       ? `${n("baixas_conciliadas")} baixas conciliadas no Omie e ${n("baixas_nao_conciliadas")} ainda não`
       : null,
-    n("baixas_sem_titulo_no_connect") ? `${n("baixas_sem_titulo_no_connect")} baixas de títulos fora da janela` : null,
+    n("baixas_sem_titulo_no_connect") ? `${n("baixas_sem_titulo_no_connect")} baixas de títulos que o Connect ainda não tem (não importados ou vencidos antes da janela)` : null,
     n("contas_criadas") ? `${n("contas_criadas")} conta(s) do Omie ${gravou ? "criadas" : "a criar"} no Connect` : null,
     n("transferencias_novas")
       ? `${n("transferencias_novas")} transferências entre contas ${gravou ? "lançadas" : "a lançar"}`
