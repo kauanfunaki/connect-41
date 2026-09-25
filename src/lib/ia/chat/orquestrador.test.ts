@@ -21,6 +21,10 @@ describe("orquestrador do chat", () => {
     }
   });
 
+  it("só o Contábil (sem módulo no Connect) e 'outro' ficam sem IA", () => {
+    expect(SETORES_DO_ENCAMINHAMENTO.filter((s) => IA_DO_SETOR[s] === null)).toEqual(["contabil", "outro"]);
+  });
+
   it("a ferramenta oferece exatamente os setores que a rota entende", () => {
     const params = FERRAMENTAS_DO_ORQUESTRADOR.encaminhar_pergunta!.def.parametros as {
       properties: { setor: { enum: string[] } };
