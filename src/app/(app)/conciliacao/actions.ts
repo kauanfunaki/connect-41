@@ -27,6 +27,7 @@ import { motivoDoBloqueioDeBaixa } from "@/lib/financeiro/aprovacao/regras";
 import { sincronizarAcordos } from "@/lib/financeiro/cobranca/sincronizar";
 import { centroNaCriacao } from "@/lib/financeiro/centroDeCustoServidor";
 import { categoriaDaEmpresa } from "@/lib/financeiro/planoDeContas";
+import { conciliarContaPeloOmie } from "@/lib/financeiro/conciliacao/omieServidor";
 
 const MODULE = "bpo_conciliacao";
 
@@ -173,6 +174,8 @@ export type ResumoDaImportacao = {
   saldoDoBancoKey: string | null;
   semFitId: number;
   avisos: string[];
+  /** Linhas que já estavam conciliadas no Omie e saíram da fila na hora. */
+  conciliadasPeloOmie: number;
 };
 
 export type ResultadoDaImportacao = { error: string } | { ok: true; resumo: ResumoDaImportacao };
@@ -296,6 +299,8 @@ export async function importarOfx(formData: FormData): Promise<ResultadoDaImport
     saldoDoBancoKey: ex.saldo?.dataKey ?? null,
     semFitId,
     avisos,
+    // Conta ligada ao Omie: o que o BPO já conciliou lá sai da fila agora.
+    conciliadasPeloOmie: await conciliarContaPeloOmie(c.tenantId, conta.id),
   };
 
   await logAudit({
@@ -464,6 +469,7 @@ export async function desfazerConciliacao(transactionId: string): Promise<Result
           id: true,
           status: true,
           postedAt: true,
+          reconciledViaOmie: true,
           matches: {
             select: {
               id: true,
@@ -497,7 +503,15 @@ export async function desfazerConciliacao(transactionId: string): Promise<Result
       await sincronizarAcordos(tx, c.tenantId, restaurados);
       const voltou = await tx.bankTransaction.updateMany({
         where: { id: t.id, status: "CONCILIADA" },
-        data: { status: "PENDENTE", reconciledAt: null, reconciledById: null },
+        // Desfazer o que veio do Omie é dizer que ali o Omie errou: a próxima
+        // leitura não casa esta linha sozinha de novo.
+        data: {
+          status: "PENDENTE",
+          reconciledAt: null,
+          reconciledById: null,
+          reconciledViaOmie: false,
+          ...(t.reconciledViaOmie ? { omieAutoSkip: true } : {}),
+        },
       });
       if (voltou.count !== 1) throw new Recusa("Esta transação acabou de ser alterada por outra pessoa — atualize a tela.");
       return { restaurados, mantidos };
