@@ -38,7 +38,10 @@ export async function perguntarAoSocietario(pergunta: string): Promise<RespostaD
       // sobre ela — a checagem acima é a mesma da tela.
       escopo: {},
     });
-    return { texto: r.valor, propostas: r.propostas, truncado: r.truncado };
+    // Encaminhar para outro setor é coisa do chat do canto da tela; aqui, no
+    // cartão da fila, só valem as propostas que este cartão sabe aplicar.
+    const propostas = r.propostas.filter((p) => p.ferramenta !== "encaminhar_pergunta");
+    return { texto: r.valor, propostas, truncado: r.truncado };
   } catch (err) {
     console.error("[perguntarAoSocietario]", err);
     return { error: err instanceof Error ? err.message : "Erro ao falar com o assistente." };
