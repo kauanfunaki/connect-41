@@ -102,6 +102,12 @@ const PASSOS: Record<string, string> = {
   pendencias_de_clientes: "Consultando as pendências…",
   conciliacao_pendente: "Vendo a conciliação…",
   aprovacoes_aguardando: "Vendo as aprovações…",
+  colaboradores_da_empresa: "Consultando os colaboradores…",
+  buscar_colaborador: "Procurando o colaborador…",
+  ferias_do_dp: "Vendo as férias…",
+  rescisoes_em_andamento: "Vendo as rescisões…",
+  afastamentos_ativos: "Vendo os afastamentos…",
+  horas_extras_pendentes: "Somando as horas extras…",
   propor_mover_etapa: "Preparando uma sugestão…",
   propor_encerrar_candidatura: "Preparando uma sugestão…",
   buscar_nos_manuais: "Procurando nos manuais…",
@@ -188,14 +194,14 @@ export const SETORES_DO_ENCAMINHAMENTO = [
 
 export type SetorDoEncaminhamento = (typeof SETORES_DO_ENCAMINHAMENTO)[number];
 
-/** A IA do chat de cada setor — `null` onde ainda não há (Contábil, DP). */
+/** A IA do chat de cada setor — `null` onde ainda não há (Contábil: sem módulo no Connect). */
 export const IA_DO_SETOR: Record<SetorDoEncaminhamento, string | null> = {
   societario: "assistente_do_societario",
   recrutamento: "assistente_do_recrutamento",
   fiscal: "assistente_do_fiscal",
   bpo: "assistente_do_bpo",
   contabil: null,
-  dp: null,
+  dp: "assistente_do_dp",
   ajuda: "ajuda_do_connect",
   outro: null,
 };

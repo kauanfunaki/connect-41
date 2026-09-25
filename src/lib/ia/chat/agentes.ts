@@ -18,6 +18,8 @@ import { SISTEMA_DO_SOCIETARIO } from "@/lib/societario/assistente";
 import { nomeExibicao } from "@/lib/companyName";
 import { publicoPermite, type ContextoDaTela, type PropostaGravada, type SetorDoEncaminhamento } from "./regras";
 import { MODULOS_DO_BPO } from "@/lib/ia/ferramentas-bpo";
+import { MODULOS_DO_DP } from "@/lib/ia/ferramentas-dp";
+import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 
 export type AgenteDoChat = {
   code: string;
@@ -86,7 +88,29 @@ const BPO =
   "Você só lê: baixar, conciliar, aprovar e cobrar são feitos nas telas. Se o financeiro de uma empresa estiver " +
   "vazio, diga que os dados ainda não estão no Connect (a importação do Omie traz).";
 
+const DP =
+  "Você é a IA do DP (Departamento Pessoal) de um escritório de contabilidade que cuida dos colaboradores das " +
+  "empresas clientes. Você responde sobre quem está ativo, em férias, afastado ou em admissão; férias perto de " +
+  "vencer (vencidas são pagas em dobro); rescisões em andamento e o prazo legal de pagamento (10 dias do término, " +
+  "CLT art. 477 §6º); e horas extras ainda não enviadas para a folha.\n" +
+  "Consulte as ferramentas antes de responder — nunca invente colaborador, data ou prazo. Para uma empresa, ache o " +
+  "id com buscar_empresa; para uma pessoa, use buscar_colaborador. Destaque primeiro o que tem prazo vencido ou " +
+  "vencendo. Quando houver link da tela, termine com ele.\n" +
+  "Salário e motivo de afastamento só aparecem se a ferramenta os devolver; se ela avisar que o dado foi omitido, " +
+  "diga que o perfil da pessoa não tem acesso — nunca tente deduzir. Você só lê: lançar e aprovar é nas telas.";
+
 const CONFIGS: Config[] = [
+  {
+    code: "assistente_do_dp",
+    titulo: "IA do DP",
+    modulo: "dp_colaboradores",
+    sistema: DP,
+    sugestoes: [
+      "Quais férias estão perto de vencer?",
+      "Tem rescisão com prazo de pagamento vencendo?",
+      "Quem está afastado agora?",
+    ],
+  },
   {
     code: "assistente_do_bpo",
     titulo: "IA do BPO",
@@ -217,6 +241,19 @@ export async function escopoDoAgente(
     }
     return { modulos: modulos.join(",") };
   }
+  if (agentCode === "assistente_do_dp") {
+    const modulos: string[] = [];
+    for (const modulo of Object.keys(MODULOS_DO_DP)) {
+      const setor = (await setorDoModulo(ctx.tenantId, modulo)) ?? getModuleDef(modulo)?.sectorCode ?? null;
+      if (setor && canActOnSector(ctx, setor) && (await isModuleEnabled(ctx.tenantId, modulo))) modulos.push(modulo);
+    }
+    // Campo sensível: o que o papel não pode ver na tela não vai ao modelo.
+    const sensiveis: string[] = [];
+    for (const grupo of ["SALARIO", "DADOS_MEDICOS"] as const) {
+      if (await canViewSensitiveField(ctx, grupo)) sensiveis.push(grupo);
+    }
+    return { modulos: modulos.join(","), sensiveis: sensiveis.join(",") };
+  }
   if (agentCode === "assistente_do_recrutamento") {
     return { setores: todosOsSetores.filter((s) => canActOnSector(ctx, s)).join(",") };
   }
@@ -237,7 +274,7 @@ export async function contextoParaOAgente(
   if (!tela || !ctx.tenantId) return null;
   const tenantId = ctx.tenantId;
   if (tela.tipo === "empresa" || tela.tipo === "documento_fiscal") {
-    if (tela.tipo === "empresa" && agentCode !== "assistente_do_fiscal" && agentCode !== "assistente_do_bpo") return null;
+    if (tela.tipo === "empresa" && !["assistente_do_fiscal", "assistente_do_bpo", "assistente_do_dp"].includes(agentCode)) return null;
     if (tela.tipo === "documento_fiscal" && agentCode !== "assistente_do_fiscal") return null;
     if (tela.tipo === "empresa") {
       const e = await getPrisma().company.findFirst({ where: { id: tela.id, tenantId }, select: { id: true, name: true, displayName: true } });
@@ -332,6 +369,7 @@ const MODULO_DO_SETOR: Partial<Record<SetorDoEncaminhamento, string>> = {
   recrutamento: "recrutamento_vagas",
   fiscal: "fiscal_documentos",
   bpo: "bpo_contas_pagar",
+  dp: "dp_colaboradores",
 };
 
 /**
