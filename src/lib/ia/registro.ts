@@ -16,6 +16,7 @@ import { FERRAMENTAS_DE_SOCIETARIO } from "@/lib/ia/ferramentas-societario";
 import { FERRAMENTAS_DE_AJUDA } from "@/lib/ia/ferramentas-ajuda";
 import { FERRAMENTAS_DE_RECRUTAMENTO_DO_SETOR } from "@/lib/ia/ferramentas-recrutamento-setor";
 import { FERRAMENTAS_DE_FISCAL } from "@/lib/ia/ferramentas-fiscal";
+import { FERRAMENTAS_DE_BPO } from "@/lib/ia/ferramentas-bpo";
 
 const CONJUNTOS = [
   FERRAMENTAS_DE_RECRUTAMENTO,
@@ -24,6 +25,7 @@ const CONJUNTOS = [
   FERRAMENTAS_DE_AJUDA,
   FERRAMENTAS_DE_RECRUTAMENTO_DO_SETOR,
   FERRAMENTAS_DE_FISCAL,
+  FERRAMENTAS_DE_BPO,
 ];
 
 export function registrarTodasAsFerramentas(): void {
