@@ -30,7 +30,7 @@ import {
 } from "@/lib/ia/data";
 import { conversarComFerramentas } from "@/lib/ia/conversa";
 import { conversarComFerramentasOpenAi } from "@/lib/ia/conversa-openai";
-import type { ResultadoDoLaco } from "@/lib/ia/laco";
+import type { ResultadoDoLaco, TurnoAnterior } from "@/lib/ia/laco";
 import {
   humanizarTexto,
   normalizarAvaliacoes,
@@ -574,6 +574,10 @@ export async function conversarComAgente(params: {
   contexto?: ContextoDaChamada;
   /** O recorte da conversa — a vaga, a empresa. Ver `ContextoDaFerramenta`. */
   escopo?: Record<string, string>;
+  /** Trocas anteriores — só o chat passa. */
+  historico?: TurnoAnterior[];
+  /** Avisado a cada ferramenta pedida — o passo que o chat mostra. */
+  aoUsarFerramenta?: (nome: string) => void;
 }): Promise<ResultadoDoLaco<string>> {
   return executarAgente({
     tenantId: params.tenantId,
@@ -587,6 +591,8 @@ export async function conversarComAgente(params: {
         system: params.system + UNTRUSTED_CONTENT_GUARD,
         pergunta: params.pergunta,
         maxTokens: params.maxTokens,
+        historico: params.historico,
+        aoUsarFerramenta: params.aoUsarFerramenta,
         ctx: {
           tenantId: params.tenantId,
           userId: params.contexto?.userId ?? null,

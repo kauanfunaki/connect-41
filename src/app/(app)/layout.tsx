@@ -14,6 +14,8 @@ import { baseDomain, hostSuffix } from "@/lib/auth/activeSector";
 import { canManageMeetings } from "@/lib/integrations/oauth";
 import { formatInstantDateTime } from "@/lib/format";
 import { linkDaNotificacao } from "@/lib/notificacaoLink";
+import { ChatDeIA } from "@/components/shell/ChatDeIA";
+import { agentesDoChat } from "@/lib/ia/chat/agentes";
 
 export default async function AppLayout({
   children,
@@ -69,6 +71,14 @@ export default async function AppLayout({
   // abrir agora — fixada de módulo desligado depois continua guardada, só não
   // aparece (ver `telasFixadasVisiveis`).
   const telasFixadas = telasFixadasVisiveis(await codigosDeTelasFixadas(ctx.userId, tenantId), telasNavegaveis);
+
+  // O chat de IA do canto da tela: a lista vazia (fora do piloto, nenhum
+  // agente ligado, sem chave) é o que esconde o botão. Falha aqui não pode
+  // derrubar o app — sem chat é o estado seguro.
+  const agentesDoChatDeIA = await agentesDoChat(ctx).catch((err) => {
+    console.error("[chat-ia] agentes do chat", err);
+    return [];
+  });
 
   const prisma = getPrisma();
   const [unreadCount, me, accessibleTenants, recentNotifications] = await Promise.all([
@@ -134,6 +144,7 @@ export default async function AppLayout({
         <SessionKeeper />
         <MeetingAlertOverlay />
         {children}
+        <ChatDeIA agentes={agentesDoChatDeIA} />
       </AppShell>
     </ToastProvider>
   );

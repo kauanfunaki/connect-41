@@ -333,3 +333,32 @@ export async function ultimasChamadas(
     entityId: r.entityId,
   }));
 }
+
+/**
+ * Ligado e com chave, para uma lista de agentes, em duas consultas.
+ *
+ * É o que o chat do canto da tela confere em toda página — por isso não usa
+ * `prepararChamada`, que soma o gasto do mês e decifra a chave. O teto é
+ * conferido depois, na hora de perguntar.
+ */
+export async function estadoDosAgentes(
+  tenantId: string,
+  codes: string[]
+): Promise<Map<string, { ligado: boolean; temChave: boolean }>> {
+  const prisma = getPrisma();
+  const [linhas, chave] = await Promise.all([
+    prisma.tenantAgent.findMany({
+      where: { tenantId, agentCode: { in: codes } },
+      select: { agentCode: true, enabled: true, model: true, monthlyCapCents: true, monthlyCapCalls: true },
+    }),
+    prisma.tenantAiConfig.findUnique({ where: { tenantId }, select: { id: true } }),
+  ]);
+  const porCodigo = new Map(linhas.map((l) => [l.agentCode, l]));
+  const estados = new Map<string, { ligado: boolean; temChave: boolean }>();
+  for (const code of codes) {
+    const def = agenteDoCatalogo(code);
+    if (!def) continue;
+    estados.set(code, { ligado: configEfetiva(def, porCodigo.get(code) ?? null).enabled, temChave: chave !== null });
+  }
+  return estados;
+}

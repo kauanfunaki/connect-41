@@ -5,23 +5,13 @@ import { conversarComAgente } from "@/lib/ai";
 import type { PropostaDeEscrita } from "@/lib/ia/ferramentas";
 import { concluirEtapa, dispensarEtapa } from "./actions";
 import { setorDoModulo } from "@/lib/modules";
+import { SISTEMA_DO_SOCIETARIO as SISTEMA } from "@/lib/societario/assistente";
 
 const AGENTE = "assistente_do_societario";
 // `SETOR` é o de origem, usado só como padrão: o acesso segue o setor que opera
 // a fila de processos neste tenant — ver `setorDoModulo`.
 const SETOR = "societario";
 const MODULE = "societario_processos";
-
-const SISTEMA =
-  "Você ajuda o coordenador do Societário a enxergar a fila de processos de abertura, " +
-  "alteração e baixa de empresas. Consulte as ferramentas antes de responder — nunca invente " +
-  "processo, etapa, prazo ou protocolo.\n" +
-  "Responda em português do Brasil, direto, citando empresa e tipo de processo. Quando listar " +
-  "vários, priorize o que está parado há mais tempo e o que está em exigência.\n" +
-  "Você NÃO altera nada: quando vir uma etapa pronta para fechar ou que claramente não se " +
-  "aplica, use as ferramentas de proposta e deixe claro que é sugestão a confirmar. Não sugira " +
-  "concluir etapa que tenha item obrigatório pendente, nem etapa de órgão — essa se encerra " +
-  "pelo protocolo.";
 
 export type RespostaDoSocietario =
   | { error: string }
