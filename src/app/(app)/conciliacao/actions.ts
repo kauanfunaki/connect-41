@@ -26,6 +26,7 @@ import { tipoCompativel, validarSelecao } from "@/lib/financeiro/conciliacao/cas
 import { motivoDoBloqueioDeBaixa } from "@/lib/financeiro/aprovacao/regras";
 import { sincronizarAcordos } from "@/lib/financeiro/cobranca/sincronizar";
 import { centroNaCriacao } from "@/lib/financeiro/centroDeCustoServidor";
+import { categoriaDaEmpresa } from "@/lib/financeiro/planoDeContas";
 
 const MODULE = "bpo_conciliacao";
 
@@ -565,7 +566,7 @@ export async function criarLancamentoDaTransacao(formData: FormData): Promise<Re
 
   if (d.categoryId) {
     const categoria = await c.prisma.financeCategory.findFirst({
-      where: { id: d.categoryId, tenantId: c.tenantId, kind: d.kind },
+      where: categoriaDaEmpresa(c.tenantId, companyId, d.categoryId, d.kind),
       select: { id: true },
     });
     if (!categoria) return { error: "Categoria não encontrada para este tipo de lançamento." };

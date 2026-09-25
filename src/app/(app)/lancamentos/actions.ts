@@ -26,6 +26,7 @@ import { instanteDaData } from "@/lib/financeiro/periodo";
 import { contextoDeEntrada, registrarEnvios, avisarAprovadores } from "@/lib/financeiro/aprovacao/servidor";
 import { centroDoLancamento, type CentroConhecido } from "@/lib/financeiro/centroDeCusto";
 import { centroNaCriacao } from "@/lib/financeiro/centroDeCustoServidor";
+import { categoriaDaEmpresa, ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 
 const MODULE = "bpo_lancamentos";
 
@@ -82,7 +83,7 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
 
   if (d.categoryId) {
     const categoria = await c.prisma.financeCategory.findFirst({
-      where: { id: d.categoryId, tenantId: c.tenantId, kind: d.kind },
+      where: categoriaDaEmpresa(c.tenantId, companyId, d.categoryId, d.kind),
       select: { id: true },
     });
     // Tipo entra no `where`: categoria de receita num lançamento a pagar sairia
@@ -234,7 +235,7 @@ async function prepararParaEmpresa(tenantId: string, companyId: string, texto: s
   const prisma = getPrisma();
   const hojeKey = saoPauloParts(new Date()).dateKey;
   const categorias = await prisma.financeCategory.findMany({
-    where: { tenantId, active: true },
+    where: ondeDaEmpresa(tenantId, companyId),
     select: { id: true, name: true, kind: true },
   });
   const casaveis = categorias.map((c) => ({ id: c.id, nome: c.name, kind: c.kind }));

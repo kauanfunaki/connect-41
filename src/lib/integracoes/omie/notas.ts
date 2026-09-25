@@ -50,7 +50,7 @@ const MOTIVO_NA_MENSAGEM: Record<MotivoDeFora, string> = {
   denegada: "denegadas",
   outro_modelo: "de outro modelo",
   sem_chave: "sem chave de acesso",
-  outro_emitente: "de outro CNPJ emitente",
+  outro_emitente: "de outro CNPJ emitente (filial não cadastrada no Connect?)",
   data_invalida: "com data inválida",
 };
 
@@ -64,6 +64,7 @@ export function mensagemDaImportacao(c: Record<string, number>): string {
     `${n("novas")} novas no acervo`,
     n("reconhecidas") ? `${n("reconhecidas")} já estavam (SPED)` : null,
     n("atualizadas") ? `${n("atualizadas")} atualizadas` : null,
+    n("de_filiais") ? `${n("de_filiais")} delas de filiais, gravadas na filial` : null,
     ...(Object.keys(MOTIVO_NA_MENSAGEM) as MotivoDeFora[])
       .filter((m) => n(`fora_${m}`) > 0)
       .map((m) => `${n(`fora_${m}`)} ${MOTIVO_NA_MENSAGEM[m]}`),
@@ -105,9 +106,14 @@ function valorDe(v: unknown): number | null {
 
 /**
  * Traduz uma nota da lista, ou diz por que ela não entra.
- * `cnpjDaEmpresa` é o da empresa no Connect, só dígitos.
+ *
+ * `cnpjs` são os CNPJs (só dígitos) das empresas que esta conta do Omie
+ * alimenta: a da conta e as filiais cadastradas dela no Connect. Matriz e
+ * filiais costumam dividir a mesma base do Omie (25/09: Multi, BLD), e a nota
+ * da filial é da filial — quem chama escolhe a empresa pelo `emitenteDocumento`.
  */
-export function mapearNotaOmie(item: unknown, cnpjDaEmpresa: string): NotaDoOmie | { fora: MotivoDeFora } {
+export function mapearNotaOmie(item: unknown, cnpjs: string | ReadonlySet<string>): NotaDoOmie | { fora: MotivoDeFora } {
+  const doGrupo = typeof cnpjs === "string" ? new Set([cnpjs]) : cnpjs;
   const nota = obj(item);
   const ide = obj(nota.ide);
   const compl = obj(nota.compl);
@@ -124,7 +130,7 @@ export function mapearNotaOmie(item: unknown, cnpjDaEmpresa: string): NotaDoOmie
   if (chaveAcesso.length !== 44) return { fora: "sem_chave" };
   // Posições 7 a 20 da chave são o CNPJ do emitente.
   const emitenteDocumento = chaveAcesso.slice(6, 20);
-  if (emitenteDocumento !== cnpjDaEmpresa) return { fora: "outro_emitente" };
+  if (!doGrupo.has(emitenteDocumento)) return { fora: "outro_emitente" };
 
   const emitidoEm = instanteDoOmie(ide.dEmi, ide.hEmi);
   if (!emitidoEm) return { fora: "data_invalida" };

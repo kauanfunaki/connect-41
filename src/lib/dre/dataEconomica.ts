@@ -15,6 +15,7 @@
 // usam isto dizem isso na cara.
 
 import { getPrisma } from "@/lib/prisma";
+import { ondeDaEmpresa, padraoAntesDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { saoPauloParts } from "@/lib/agenda";
 import { chaveDaCategoria, calcularDre, type LancamentoDoDre, type Mapeamento, type ResultadoDoDre } from "./calculo";
 import { resolverCategorias } from "./mapeamento";
@@ -34,15 +35,21 @@ import {
 
 type Contexto = { mapeamento: Mapeamento; nomePorId: Map<string, string> };
 
-/** O de-para desta empresa: plano de contas do escritório + exceções da empresa. */
+/**
+ * O de-para desta empresa: o plano dela (padrão + categorias próprias, com as
+ * escondidas e inativas — lançamento antigo continua somando) + exceções.
+ */
 export async function contextoDoDre(tenantId: string, companyId: string): Promise<Contexto> {
   const prisma = getPrisma();
   const [categorias, excecoes] = await Promise.all([
-    prisma.financeCategory.findMany({ where: { tenantId }, select: { id: true, name: true, dreGroup: true } }),
+    prisma.financeCategory.findMany({
+      where: ondeDaEmpresa(tenantId, companyId, { apenasAtivas: false, incluirOcultas: true }),
+      select: { id: true, name: true, dreGroup: true, companyId: true },
+    }),
     prisma.dreCategoryMapping.findMany({ where: { tenantId, companyId }, select: { categoryId: true, grupo: true } }),
   ]);
   const resolvidas = resolverCategorias(
-    categorias.map((c) => ({ id: c.id, nome: c.name, dreGroup: c.dreGroup })),
+    padraoAntesDaEmpresa(categorias).map((c) => ({ id: c.id, nome: c.name, dreGroup: c.dreGroup })),
     excecoes
   );
   const mapeamento: Mapeamento = new Map();

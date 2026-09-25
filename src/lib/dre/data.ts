@@ -10,6 +10,7 @@
 // Por isso o filtro está num lugar só, aqui.
 
 import { getPrisma } from "@/lib/prisma";
+import { ondeDaEmpresa, padraoAntesDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import {
   calcularDre,
   impostoForaDoResultado,
@@ -71,8 +72,8 @@ export async function dreDoMes(
       select: { kind: true, amount: true, categoryId: true },
     }),
     prisma.financeCategory.findMany({
-      where: { tenantId },
-      select: { id: true, name: true, dreGroup: true },
+      where: ondeDaEmpresa(tenantId, companyId, { apenasAtivas: false, incluirOcultas: true }),
+      select: { id: true, name: true, dreGroup: true, companyId: true },
     }),
     prisma.dreCategoryMapping.findMany({
       where: { tenantId, companyId },
@@ -90,7 +91,7 @@ export async function dreDoMes(
   ]);
 
   const resolvidas = resolverCategorias(
-    categorias.map((c) => ({ id: c.id, nome: c.name, dreGroup: c.dreGroup })),
+    padraoAntesDaEmpresa(categorias).map((c) => ({ id: c.id, nome: c.name, dreGroup: c.dreGroup })),
     excecoes
   );
 
@@ -266,8 +267,8 @@ export async function dreDoAnoDaEmpresa(
       select: { kind: true, amount: true, categoryId: true, paidAt: true },
     }),
     prisma.financeCategory.findMany({
-      where: { tenantId },
-      select: { id: true, name: true, dreGroup: true },
+      where: ondeDaEmpresa(tenantId, companyId, { apenasAtivas: false, incluirOcultas: true }),
+      select: { id: true, name: true, dreGroup: true, companyId: true },
     }),
     prisma.dreCategoryMapping.findMany({
       where: { tenantId, companyId },
@@ -280,7 +281,7 @@ export async function dreDoAnoDaEmpresa(
   ]);
 
   const resolvidas = resolverCategorias(
-    categorias.map((c) => ({ id: c.id, nome: c.name, dreGroup: c.dreGroup })),
+    padraoAntesDaEmpresa(categorias).map((c) => ({ id: c.id, nome: c.name, dreGroup: c.dreGroup })),
     excecoes
   );
   const mapeamento = mapeamentoDe(resolvidas);

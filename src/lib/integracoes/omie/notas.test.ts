@@ -61,6 +61,13 @@ describe("mapearNotaOmie", () => {
     expect(mapearNotaOmie(nota({}, { compl: { cChaveNFe: "123" } }), CNPJ)).toEqual({ fora: "sem_chave" });
   });
 
+  it("aceita nota de filial quando o CNPJ dela está no grupo da conta (25/09)", () => {
+    // Matriz e filial dividem a base do Omie: a nota da filial é da filial.
+    const r = mapearNotaOmie(nota(), new Set(["11111111000111", CNPJ]));
+    expect("fora" in r ? r.fora : r.emitenteDocumento).toBe(CNPJ);
+    expect(mapearNotaOmie(nota(), new Set(["11111111000111"]))).toEqual({ fora: "outro_emitente" });
+  });
+
   it("marca cancelada pela data de cancelamento", () => {
     const r = mapearNotaOmie(nota({ dCan: "02/10/2026" }), CNPJ);
     expect("fora" in r ? null : r.situacao).toBe("CANCELADA");
@@ -87,7 +94,7 @@ describe("mensagemDaImportacao", () => {
   });
   it("mostra só o que aconteceu", () => {
     expect(mensagemDaImportacao({ lidas: 12, paginas: 1, novas: 5, reconhecidas: 3, atualizadas: 0, fora_entrada: 3, fora_outro_emitente: 1 })).toBe(
-      "12 notas lidas em 1 página(s): 5 novas no acervo, 3 já estavam (SPED), 3 entradas (chegam pelo SPED), 1 de outro CNPJ emitente."
+      "12 notas lidas em 1 página(s): 5 novas no acervo, 3 já estavam (SPED), 3 entradas (chegam pelo SPED), 1 de outro CNPJ emitente (filial não cadastrada no Connect?)."
     );
   });
 });

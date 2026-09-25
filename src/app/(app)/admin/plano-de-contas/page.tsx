@@ -9,6 +9,9 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { ToggleCategoriaButton } from "@/components/admin/ToggleCategoriaButton";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
+import { CarregarPlanoPadrao } from "@/components/admin/CarregarPlanoPadrao";
+import { GRUPOS } from "@/lib/dre/estrutura";
+import { grupoDeTexto } from "@/lib/dre/mapeamento";
 import { alternarCategoria } from "./actions";
 
 const LADOS = [
@@ -21,9 +24,11 @@ export default async function PlanoDeContasPage() {
   if (!isFullWrite(ctx.role)) notFound();
 
   const prisma = getPrisma();
+  // Só o padrão do escritório. As categorias de cada empresa (criadas no plano
+  // dela ou trazidas do Omie) ficam em Fornecedores e sacados › Plano de contas.
   const categorias = await prisma.financeCategory.findMany({
-    where: { tenantId: ctx.tenantId },
-    orderBy: [{ kind: "asc" }, { dreGroup: "asc" }, { name: "asc" }],
+    where: { tenantId: ctx.tenantId, companyId: null },
+    orderBy: [{ kind: "asc" }, { planGroup: "asc" }, { name: "asc" }],
   });
 
   const ativasParaPagar = categorias.filter((c) => c.kind === "PAGAR" && c.active).length;
@@ -39,11 +44,18 @@ export default async function PlanoDeContasPage() {
           </>
         }
         action={
-          <Button href="/admin/plano-de-contas/novo" variant="primary" className="font-medium">
-            + Nova categoria
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <CarregarPlanoPadrao />
+            <Button href="/admin/plano-de-contas/novo" variant="primary" className="font-medium">
+              + Nova categoria
+            </Button>
+          </div>
         }
       />
+      <p className="text-[12px] text-fg-muted -mt-2 mb-4 max-w-3xl">
+        Este é o plano padrão do escritório, que toda empresa herda. Cada empresa ajusta o dela — categoria própria, o que não
+        usa escondido, outra linha da DRE — em Fornecedores e sacados › Plano de contas.
+      </p>
 
       {ativasParaPagar === 0 && (
         <Card className="mb-6 border-warning/30 bg-warning/8">
@@ -94,8 +106,12 @@ export default async function PlanoDeContasPage() {
                           <p className={`text-[13px] ${c.active ? "text-fg" : "text-fg-muted line-through"}`}>
                             {c.name}
                           </p>
-                          {c.dreGroup && (
-                            <p className="text-[12px] text-fg-muted truncate">{c.dreGroup}</p>
+                          {(c.planGroup || c.dreGroup) && (
+                            <p className="text-[12px] text-fg-muted truncate">
+                              {[c.planGroup, c.dreGroup ? (GRUPOS.find((g) => g.code === grupoDeTexto(c.dreGroup))?.label ?? c.dreGroup) : null]
+                                .filter(Boolean)
+                                .join(" · DRE: ")}
+                            </p>
                           )}
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">

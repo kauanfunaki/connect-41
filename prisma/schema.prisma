@@ -569,10 +569,11 @@ model Tenant {
   digitalCertificates       DigitalCertificate[]
   processFees               ProcessFee[]
   dreMappings               DreCategoryMapping[]
+  hiddenFinanceCategories   FinanceCategoryHidden[]
   dreImports                DreImport[]
+  candidatoAcessos          CandidatoAcesso[]
 
   @@map("tenants")
-  candidatoAcessos CandidatoAcesso[]
 }
 
 // Quais blocos a tela /tarefas monta para cada setor.
@@ -1029,6 +1030,8 @@ model Company {
   licenses                 License[]
   digitalCertificates      DigitalCertificate[]
   dreMappings              DreCategoryMapping[]
+  financeCategories        FinanceCategory[]
+  hiddenFinanceCategories  FinanceCategoryHidden[]
   dreImports               DreImport[]
   processFees              ProcessFee[]
 
@@ -1079,32 +1082,32 @@ model CompanyService {
 }
 
 model Person {
-  id               String     @id @default(uuid())
-  tenantId         String
-  name             String     @db.VarChar(180)
-  cpf              String?    @db.VarChar(14)
-  email            String?    @db.VarChar(120)
-  phone            String?    @db.VarChar(30)
+  id                      String     @id @default(uuid())
+  tenantId                String
+  name                    String     @db.VarChar(180)
+  cpf                     String?    @db.VarChar(14)
+  email                   String?    @db.VarChar(120)
+  phone                   String?    @db.VarChar(30)
   /// O próprio candidato pediu, pela conta dele no portal de vagas, a
   /// exclusão dos dados (LGPD). Só registra: quem executa é o setor, porque
   /// pode haver obrigação de guardar (contratado, processo em andamento).
   dataDeletionRequestedAt DateTime?
-  photoUrl         String?    @db.VarChar(255)
-  birthDate        DateTime?
-  type             PersonType @default(CANDIDATO)
-  active           Boolean    @default(true)
-  currentCompanyId String?
+  photoUrl                String?    @db.VarChar(255)
+  birthDate               DateTime?
+  type                    PersonType @default(CANDIDATO)
+  active                  Boolean    @default(true)
+  currentCompanyId        String?
   // true = funcionário interno (RH da própria 41), false = colaborador/candidato
   // de empresa cliente. Frente separada da conta de acesso ao sistema (User) —
   // ver linkedUserId abaixo.
-  isInternal       Boolean    @default(false)
+  isInternal              Boolean    @default(false)
   // FK opcional pro User de acesso ao sistema (login/permissões) — só faz
   // sentido quando isInternal=true. Gestão de dados gerais (nome, endereço,
   // documentos) fica aqui em Person; gestão de acesso (senha, e-mail,
   // permissões) continua exclusivamente em /admin/usuarios (User).
-  linkedUserId     String?    @unique
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
+  linkedUserId            String?    @unique
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
 
   // ─── Dados trabalhistas (Núcleo de Colaboradores) ───────────────────────────
   rg                String?                @db.VarChar(20)
@@ -1644,51 +1647,51 @@ enum VagaContrato {
 }
 
 model Vaga {
-  id                String         @id @default(uuid())
-  tenantId          String
-  companyId         String
-  cargoId           String?
-  sectorCode        String         @db.VarChar(40)
-  title             String         @db.VarChar(180)
-  quantity          Int            @default(1)
-  responsibleUserId String?
-  openedAt          DateTime       @default(now())
-  closedAt          DateTime?
-  status            VagaStatus     @default(ABERTA)
-  priority          VagaPrioridade @default(MEDIA)
-  notes             String?        @db.Text
+  id                  String          @id @default(uuid())
+  tenantId            String
+  companyId           String
+  cargoId             String?
+  sectorCode          String          @db.VarChar(40)
+  title               String          @db.VarChar(180)
+  quantity            Int             @default(1)
+  responsibleUserId   String?
+  openedAt            DateTime        @default(now())
+  closedAt            DateTime?
+  status              VagaStatus      @default(ABERTA)
+  priority            VagaPrioridade  @default(MEDIA)
+  notes               String?         @db.Text
   // Portal público (/carreiras/[slug]) — isPublic expõe a vaga; a descrição
   // pública é separada de notes (que é anotação interna do recrutador).
-  isPublic          Boolean        @default(false)
-  publicDescription String?        @db.Text
+  isPublic            Boolean         @default(false)
+  publicDescription   String?         @db.Text
   /// Faixa salarial mensal, em reais. Opcional e só aparece no portal com
   /// `showSalary` — mostrar é decisão vaga a vaga do recrutador (Kauan,
   /// 23/09). Sem faixa, o portal diz "A combinar".
-  salaryMin         Decimal?       @db.Decimal(12, 2)
-  salaryMax         Decimal?       @db.Decimal(12, 2)
-  showSalary        Boolean        @default(false)
+  salaryMin           Decimal?        @db.Decimal(12, 2)
+  salaryMax           Decimal?        @db.Decimal(12, 2)
+  showSalary          Boolean         @default(false)
   /// Filtros do portal. Nulos em vaga antiga: ela aparece na lista sem filtro
   /// e some quando o candidato filtra por um valor — não se inventa modalidade.
-  workMode          VagaModalidade?
-  contractType      VagaContrato?
+  workMode            VagaModalidade?
+  contractType        VagaContrato?
   /// Benefícios, um por linha — a página da vaga mostra como lista.
-  benefits          String?        @db.Text
+  benefits            String?         @db.Text
   /// Último dia de inscrição, data-calendário (meia-noite UTC, como os outros
   /// campos de data do sistema). Vale até o fim desse dia em Brasília; depois
   /// a vaga sai do portal sozinha, sem ninguém precisar despublicar.
   applicationDeadline DateTime?
   /// Onde se trabalha, quando não é a cidade da empresa (filial, cliente).
   /// Nulo usa a cidade do cadastro da empresa, como antes.
-  workCity          String?        @db.VarChar(80)
-  workStateCode     String?        @db.VarChar(2)
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  workCity            String?         @db.VarChar(80)
+  workStateCode       String?         @db.VarChar(2)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id])
   company Company @relation(fields: [companyId], references: [id])
   cargo   Cargo?  @relation(fields: [cargoId], references: [id])
 
-  requisitos     VagaRequisitos[]
+  requisitos   VagaRequisitos[]
   candidaturas Candidatura[]
 
   @@index([tenantId, sectorCode, status])
@@ -1699,18 +1702,18 @@ model Vaga {
 // nem toda candidatura precisa de um Kanban por trás, mas quando existe reaproveita
 // o motor de Pipeline/Tags/Timeline já pronto para a visualização em colunas.
 model Candidatura {
-  id               String                 @id @default(uuid())
-  tenantId         String
-  vagaId           String
-  personId         String
-  pipelineItemId   String?                @unique
-  origin           String?                @db.VarChar(80)
-  resumeUrl        String?                @db.VarChar(255)
-  status           ProcessoSeletivoStatus @default(EM_ANDAMENTO)
-  stage            RecruitmentStage       @default(TRIAGEM)
-  rejectionReason  String?                @db.Text
-  withdrawalReason String?                @db.Text
-  hiredAt          DateTime?
+  id                   String                 @id @default(uuid())
+  tenantId             String
+  vagaId               String
+  personId             String
+  pipelineItemId       String?                @unique
+  origin               String?                @db.VarChar(80)
+  resumeUrl            String?                @db.VarChar(255)
+  status               ProcessoSeletivoStatus @default(EM_ANDAMENTO)
+  stage                RecruitmentStage       @default(TRIAGEM)
+  rejectionReason      String?                @db.Text
+  withdrawalReason     String?                @db.Text
+  hiredAt              DateTime?
   /// Perfil profissional extraído do currículo pela IA (sem dado pessoal — ver
   /// src/lib/recrutamento/triagem.ts). Cache: o currículo não muda, então
   /// reprocessar a vaga depois de trocar requisito só refaz a pontuação.
@@ -1718,19 +1721,19 @@ model Candidatura {
   perfilProfissionalEm DateTime?
   /// Última falha da pontuação automática (sem currículo, PDF ilegível…). Com
   /// ela preenchida o cron não tenta de novo; o botão manual segue valendo e limpa.
-  triagemFalha         String?   @db.VarChar(200)
+  triagemFalha         String?                @db.VarChar(200)
   triagemFalhaEm       DateTime?
   /// Respostas do candidato (R2), gravadas pelo atendente do WhatsApp ou
   /// corrigidas pelo recrutador. Não entram na nota da triagem.
-  pretensaoSalarial    Decimal?  @db.Decimal(12, 2)
-  disponibilidade      String?   @db.VarChar(120)
+  pretensaoSalarial    Decimal?               @db.Decimal(12, 2)
+  disponibilidade      String?                @db.VarChar(120)
   /// Minutos até o local de trabalho — nunca endereço (ver src/lib/recrutamento/respostas.ts).
   deslocamentoMinutos  Int?
   /// FonteDasRespostas: por campo, { origem WHATSAPP|RECRUTADOR, em }.
   respostasFonte       Json?
   notas                CandidaturaNota[]
-  createdAt        DateTime               @default(now())
-  updatedAt        DateTime               @updatedAt
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
 
   tenant          Tenant               @relation(fields: [tenantId], references: [id])
   vaga            Vaga                 @relation(fields: [vagaId], references: [id])
@@ -2374,29 +2377,75 @@ enum FinanceEntryStatus {
   CANCELADO
 }
 
-/// Plano de contas do tenant — a classificação que o DRE consome.
+/// Plano de contas — a classificação que o DRE consome.
+///
+/// ─── Padrão do escritório + particularidade de cada cliente (25/09) ─────────
+///
+/// `companyId` nulo é o **plano padrão do escritório**, que toda empresa
+/// herda. Com empresa, é uma **categoria só daquele cliente** — criada à mão no
+/// plano da empresa ou trazida do Omie dele. A empresa ainda pode esconder do
+/// seu plano o que não usa do padrão (`FinanceCategoryHidden`) e mudar a linha
+/// da DRE de qualquer uma (`DreCategoryMapping`). A regra de quais valem para
+/// uma empresa mora num lugar só: `src/lib/financeiro/planoDeContas.ts`.
+///
+/// `scope` repete `companyId` ("" no padrão) só para o unique: no MySQL, NULL
+/// não conflita com NULL, e o unique com `companyId` deixaria o padrão ter duas
+/// categorias com o mesmo nome.
 model FinanceCategory {
-  id       String           @id @default(uuid())
-  tenantId String
-  name     String           @db.VarChar(120)
-  kind     FinanceEntryKind
+  id        String           @id @default(uuid())
+  tenantId  String
+  companyId String?
+  scope     String           @default("") @db.VarChar(36)
+  name      String           @db.VarChar(120)
+  kind      FinanceEntryKind
   /// Agrupador do DRE (ex.: "Despesas operacionais"). Texto e não enum: o
   /// escritório monta o próprio, e engessar aqui obrigaria migration a cada
   /// linha nova de relatório.
-  dreGroup String?          @db.VarChar(120)
-  active   Boolean          @default(true)
+  dreGroup  String?          @db.VarChar(120)
+  /// O grupo do plano de contas, como o escritório ou o Omie escreve
+  /// ("Custo pessoal da ADM", "Despesas Administrativas"). Não é a linha da
+  /// DRE — é como a categoria aparece agrupada no plano.
+  planGroup String?          @db.VarChar(120)
+  /// Código da categoria no Omie do cliente ("2.01.03"). Só em categoria de
+  /// empresa trazida do Omie; é por ele que a conta do Omie acha a categoria.
+  omieCode  String?          @db.VarChar(20)
+  active    Boolean          @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant      Tenant                @relation(fields: [tenantId], references: [id])
+  tenant      Tenant                  @relation(fields: [tenantId], references: [id])
+  company     Company?                @relation(fields: [companyId], references: [id], onDelete: Restrict)
   entries     FinanceEntry[]
   padraoDe    FinanceCounterparty[]
   dreMappings DreCategoryMapping[]
+  ocultaEm    FinanceCategoryHidden[]
 
-  @@unique([tenantId, name, kind])
+  @@unique([tenantId, scope, name, kind])
   @@index([tenantId, kind])
+  @@index([tenantId, companyId])
   @@map("finance_categories")
+}
+
+/// Categoria do plano padrão que **esta empresa não usa** — some dos seletores
+/// dela. Não apaga nada: lançamento antigo continua na categoria, e a DRE
+/// continua somando. Categoria da própria empresa não passa por aqui: essa se
+/// desativa nela mesma.
+model FinanceCategoryHidden {
+  id         String @id @default(uuid())
+  tenantId   String
+  companyId  String
+  categoryId String
+
+  createdAt DateTime @default(now())
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id])
+  company  Company         @relation(fields: [companyId], references: [id])
+  category FinanceCategory @relation(fields: [categoryId], references: [id])
+
+  @@unique([companyId, categoryId])
+  @@index([tenantId, companyId])
+  @@map("finance_category_hidden")
 }
 
 /// Fornecedor ou cliente **da empresa do cliente** — não do escritório.
@@ -2481,6 +2530,11 @@ model FinanceEntry {
   /// documento duplicaria valor no financeiro, e o unique é quem impede.
   fiscalDocumentId String? @unique
 
+  /// Título do Omie que originou o lançamento (`nCodTitulo` dos movimentos
+  /// financeiros). É a chave da sincronização: o mesmo título lido de novo
+  /// atualiza a linha em vez de criar outra. Nulo em tudo o que não veio do Omie.
+  omieTitleId String? @db.VarChar(20)
+
   createdById  String?
   /// Quem conferiu o provisório. Nulo enquanto ninguém olhou.
   reviewedById String?
@@ -2536,6 +2590,7 @@ model FinanceEntry {
   collectionEvents      CollectionEvent[]
   reminderLogs          CollectionReminderLog[]
 
+  @@unique([companyId, omieTitleId])
   @@index([tenantId, companyId, competence])
   @@index([tenantId, companyId, kind, status])
   @@index([tenantId, dueDate])
