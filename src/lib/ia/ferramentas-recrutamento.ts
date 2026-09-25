@@ -20,6 +20,7 @@
 // as mesmas server actions de sempre, com `canActOnSector` e `revalidatePath`.
 
 import { getPrisma } from "@/lib/prisma";
+import type { Prisma } from "@/generated/prisma/client";
 import type { ContextoDaFerramenta, FerramentaRegistrada } from "@/lib/ia/ferramentas";
 
 /** Lê o id da vaga do recorte, ou falha alto. */
@@ -63,6 +64,134 @@ export function recorteDaCandidatura(
 
 const SEM_PARAMETROS = { type: "object", properties: {}, additionalProperties: false } as const;
 
+// ─── As leituras, compartilhadas com a IA do Recrutamento no chat ────────────
+//
+// O `where` vem de quem chama: aqui, o recorte da vaga da conversa; no chat
+// (`ferramentas-recrutamento-setor.ts`), o tenant e os setores da pessoa. A
+// leitura é a mesma para as duas IAs não verem a mesma candidatura de dois
+// jeitos.
+
+export async function lerVaga(where: Prisma.VagaWhereInput) {
+  const vaga = await getPrisma().vaga.findFirst({
+    where,
+    select: {
+      title: true,
+      quantity: true,
+      status: true,
+      priority: true,
+      openedAt: true,
+      publicDescription: true,
+      notes: true,
+      company: { select: { name: true, tradeName: true } },
+      cargo: { select: { name: true } },
+    },
+  });
+  if (!vaga) throw new Error("Vaga não encontrada.");
+  return {
+    titulo: vaga.title,
+    cargo: vaga.cargo?.name ?? null,
+    empresa: vaga.company.tradeName || vaga.company.name,
+    vagas: vaga.quantity,
+    status: vaga.status,
+    prioridade: vaga.priority,
+    abertaEm: vaga.openedAt.toISOString().slice(0, 10),
+    descricaoPublica: vaga.publicDescription,
+    anotacoesInternas: vaga.notes,
+  };
+}
+
+export async function lerCandidatos(where: Prisma.CandidaturaWhereInput) {
+  const candidaturas = await getPrisma().candidatura.findMany({
+    where,
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      vagaId: true,
+      stage: true,
+      status: true,
+      origin: true,
+      resumeUrl: true,
+      createdAt: true,
+      person: { select: { name: true, city: true, stateCode: true, education: true } },
+      _count: { select: { scorecards: true } },
+      notas: { select: { score: true, faixa: true }, orderBy: { createdAt: "desc" }, take: 1 },
+    },
+  });
+  return candidaturas.map((c) => ({
+    candidaturaId: c.id,
+    vagaId: c.vagaId,
+    nome: c.person.name,
+    etapa: c.stage,
+    situacao: c.status,
+    cidade: c.person.city,
+    uf: c.person.stateCode,
+    escolaridade: c.person.education,
+    origem: c.origin,
+    temCurriculo: c.resumeUrl !== null,
+    entrevistas: c._count.scorecards,
+    notaDaTriagem: c.notas[0] ? { nota: c.notas[0].score, faixa: c.notas[0].faixa } : null,
+    inscritoEm: c.createdAt.toISOString().slice(0, 10),
+  }));
+}
+
+/** Uma candidatura, ou `null` fora do recorte. */
+export async function lerCandidatura(where: Prisma.CandidaturaWhereInput) {
+  const c = await getPrisma().candidatura.findFirst({
+    where,
+    select: {
+      stage: true,
+      status: true,
+      origin: true,
+      rejectionReason: true,
+      withdrawalReason: true,
+      createdAt: true,
+      vaga: { select: { id: true, title: true } },
+      notas: { select: { score: true, faixa: true, resumo: true }, orderBy: { createdAt: "desc" }, take: 1 },
+      person: {
+        select: { name: true, email: true, phone: true, city: true, stateCode: true, education: true },
+      },
+      scorecards: {
+        select: {
+          stage: true,
+          comunicacao: true,
+          tecnico: true,
+          fitCultural: true,
+          experiencia: true,
+          recommendation: true,
+          notes: true,
+          evaluator: { select: { name: true } },
+        },
+      },
+    },
+  });
+  if (!c) return null;
+  return {
+    vaga: { vagaId: c.vaga.id, titulo: c.vaga.title },
+    nome: c.person.name,
+    contato: { email: c.person.email, telefone: c.person.phone },
+    cidade: c.person.city,
+    uf: c.person.stateCode,
+    escolaridade: c.person.education,
+    etapa: c.stage,
+    situacao: c.status,
+    origem: c.origin,
+    motivoDeReprovacao: c.rejectionReason,
+    motivoDeDesistencia: c.withdrawalReason,
+    inscritoEm: c.createdAt.toISOString().slice(0, 10),
+    notaDaTriagem: c.notas[0] ? { nota: c.notas[0].score, faixa: c.notas[0].faixa, resumo: c.notas[0].resumo } : null,
+    entrevistas: c.scorecards.map((s) => ({
+      avaliador: s.evaluator.name,
+      etapa: s.stage,
+      comunicacao: s.comunicacao,
+      tecnico: s.tecnico,
+      fitCultural: s.fitCultural,
+      experiencia: s.experiencia,
+      recomendacao: s.recommendation,
+      observacoes: s.notes,
+    })),
+  };
+}
+
 const PEDE_CANDIDATURA = {
   type: "object",
   properties: {
@@ -81,36 +210,7 @@ export const FERRAMENTAS_DE_RECRUTAMENTO: Record<string, FerramentaRegistrada> =
       parametros: SEM_PARAMETROS as unknown as Record<string, unknown>,
       natureza: "leitura",
     },
-    executar: async (_args, ctx) => {
-      const where = recorteDaVaga(ctx);
-      const prisma = getPrisma();
-      const vaga = await prisma.vaga.findFirst({
-        where,
-        select: {
-          title: true,
-          quantity: true,
-          status: true,
-          priority: true,
-          openedAt: true,
-          publicDescription: true,
-          notes: true,
-          company: { select: { name: true, tradeName: true } },
-          cargo: { select: { name: true } },
-        },
-      });
-      if (!vaga) throw new Error("Vaga não encontrada.");
-      return {
-        titulo: vaga.title,
-        cargo: vaga.cargo?.name ?? null,
-        empresa: vaga.company.tradeName || vaga.company.name,
-        vagas: vaga.quantity,
-        status: vaga.status,
-        prioridade: vaga.priority,
-        abertaEm: vaga.openedAt.toISOString().slice(0, 10),
-        descricaoPublica: vaga.publicDescription,
-        anotacoesInternas: vaga.notes,
-      };
-    },
+    executar: async (_args, ctx) => lerVaga(recorteDaVaga(ctx)),
   },
 
   listar_candidatos: {
@@ -121,37 +221,7 @@ export const FERRAMENTAS_DE_RECRUTAMENTO: Record<string, FerramentaRegistrada> =
       parametros: SEM_PARAMETROS as unknown as Record<string, unknown>,
       natureza: "leitura",
     },
-    executar: async (_args, ctx) => {
-      const where = recorteDasCandidaturas(ctx);
-      const prisma = getPrisma();
-      const candidaturas = await prisma.candidatura.findMany({
-        where,
-        orderBy: { createdAt: "asc" },
-        select: {
-          id: true,
-          stage: true,
-          status: true,
-          origin: true,
-          resumeUrl: true,
-          createdAt: true,
-          person: { select: { name: true, city: true, stateCode: true, education: true } },
-          _count: { select: { scorecards: true } },
-        },
-      });
-      return candidaturas.map((c) => ({
-        candidaturaId: c.id,
-        nome: c.person.name,
-        etapa: c.stage,
-        situacao: c.status,
-        cidade: c.person.city,
-        uf: c.person.stateCode,
-        escolaridade: c.person.education,
-        origem: c.origin,
-        temCurriculo: c.resumeUrl !== null,
-        entrevistas: c._count.scorecards,
-        inscritoEm: c.createdAt.toISOString().slice(0, 10),
-      }));
-    },
+    executar: async (_args, ctx) => lerCandidatos(recorteDasCandidaturas(ctx)),
   },
 
   ver_candidato: {
@@ -165,58 +235,9 @@ export const FERRAMENTAS_DE_RECRUTAMENTO: Record<string, FerramentaRegistrada> =
     executar: async (args, ctx) => {
       // Antes do banco: recorte ausente ou id malformado param aqui, sem
       // consulta nenhuma ter saído.
-      const where = recorteDaCandidatura(args, ctx);
-      const prisma = getPrisma();
-      const c = await prisma.candidatura.findFirst({
-        where,
-        select: {
-          stage: true,
-          status: true,
-          origin: true,
-          rejectionReason: true,
-          withdrawalReason: true,
-          createdAt: true,
-          person: {
-            select: { name: true, email: true, phone: true, city: true, stateCode: true, education: true },
-          },
-          scorecards: {
-            select: {
-              stage: true,
-              comunicacao: true,
-              tecnico: true,
-              fitCultural: true,
-              experiencia: true,
-              recommendation: true,
-              notes: true,
-              evaluator: { select: { name: true } },
-            },
-          },
-        },
-      });
+      const c = await lerCandidatura(recorteDaCandidatura(args, ctx));
       if (!c) throw new Error("Candidatura não encontrada nesta vaga.");
-      return {
-        nome: c.person.name,
-        contato: { email: c.person.email, telefone: c.person.phone },
-        cidade: c.person.city,
-        uf: c.person.stateCode,
-        escolaridade: c.person.education,
-        etapa: c.stage,
-        situacao: c.status,
-        origem: c.origin,
-        motivoDeReprovacao: c.rejectionReason,
-        motivoDeDesistencia: c.withdrawalReason,
-        inscritoEm: c.createdAt.toISOString().slice(0, 10),
-        entrevistas: c.scorecards.map((s) => ({
-          avaliador: s.evaluator.name,
-          etapa: s.stage,
-          comunicacao: s.comunicacao,
-          tecnico: s.tecnico,
-          fitCultural: s.fitCultural,
-          experiencia: s.experiencia,
-          recomendacao: s.recommendation,
-          observacoes: s.notes,
-        })),
-      };
+      return c;
     },
   },
 
