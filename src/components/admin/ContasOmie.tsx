@@ -121,35 +121,60 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
   // Empresas com prévia das contas feita nesta tela: só elas oferecem gravar.
   const [contasVistas, setContasVistas] = useState<Record<string, boolean>>({});
 
+  // A chamada ao servidor pode cair (deploy no meio, proxy devolvendo 503):
+  // sem isto a linha ficava "lendo" para sempre, sem mensagem — visto na
+  // bateria de testes de 25/09.
+  const FALHA_DE_REDE = "O servidor não respondeu. Tente de novo em alguns segundos.";
+
   async function lerContas(companyId: string, gravar: boolean) {
     setTestando(companyId);
-    const r = await contasDoOmieAction(companyId, gravar);
-    const prefixo = gravar ? "Contas importadas: " : "Prévia das contas (nada gravado): ";
-    setTeste((t) => ({ ...t, [companyId]: "error" in r ? { ok: false, texto: r.error } : { ok: true, texto: prefixo + (r.mensagem ?? "") } }));
-    if (!("error" in r) && !gravar) setContasVistas((v) => ({ ...v, [companyId]: true }));
-    setTestando(null);
+    try {
+      const r = await contasDoOmieAction(companyId, gravar);
+      const prefixo = gravar ? "Contas importadas: " : "Prévia das contas (nada gravado): ";
+      setTeste((t) => ({ ...t, [companyId]: "error" in r ? { ok: false, texto: r.error } : { ok: true, texto: prefixo + (r.mensagem ?? "") } }));
+      if (!("error" in r) && !gravar) setContasVistas((v) => ({ ...v, [companyId]: true }));
+    } catch {
+      setTeste((t) => ({ ...t, [companyId]: { ok: false, texto: FALHA_DE_REDE } }));
+    } finally {
+      setTestando(null);
+    }
   }
 
   async function previa(companyId: string) {
     setLendo(companyId);
-    const r = await previaDasNotasOmieAction(companyId);
-    setPrevias((p) => ({ ...p, [companyId]: r }));
-    setLendo(null);
+    try {
+      const r = await previaDasNotasOmieAction(companyId);
+      setPrevias((p) => ({ ...p, [companyId]: r }));
+    } catch {
+      setTeste((t) => ({ ...t, [companyId]: { ok: false, texto: FALHA_DE_REDE } }));
+    } finally {
+      setLendo(null);
+    }
   }
   const semConta = empresas.filter((e) => !contas.some((c) => c.companyId === e.id));
 
   async function importar(companyId: string) {
     setTestando(companyId);
-    const r = await importarNotasOmieAction(companyId);
-    setTeste((t) => ({ ...t, [companyId]: "error" in r ? { ok: false, texto: r.error } : { ok: true, texto: r.mensagem ?? "Notas lidas." } }));
-    setTestando(null);
+    try {
+      const r = await importarNotasOmieAction(companyId);
+      setTeste((t) => ({ ...t, [companyId]: "error" in r ? { ok: false, texto: r.error } : { ok: true, texto: r.mensagem ?? "Notas lidas." } }));
+    } catch {
+      setTeste((t) => ({ ...t, [companyId]: { ok: false, texto: FALHA_DE_REDE } }));
+    } finally {
+      setTestando(null);
+    }
   }
 
   async function testar(companyId: string) {
     setTestando(companyId);
-    const r = await testarContaOmieAction(companyId);
-    setTeste((t) => ({ ...t, [companyId]: "error" in r ? { ok: false, texto: r.error } : { ok: true, texto: r.mensagem ?? "Conectado." } }));
-    setTestando(null);
+    try {
+      const r = await testarContaOmieAction(companyId);
+      setTeste((t) => ({ ...t, [companyId]: "error" in r ? { ok: false, texto: r.error } : { ok: true, texto: r.mensagem ?? "Conectado." } }));
+    } catch {
+      setTeste((t) => ({ ...t, [companyId]: { ok: false, texto: FALHA_DE_REDE } }));
+    } finally {
+      setTestando(null);
+    }
   }
 
   return (
