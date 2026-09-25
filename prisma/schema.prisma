@@ -2535,6 +2535,22 @@ model FinanceEntry {
   /// atualiza a linha em vez de criar outra. Nulo em tudo o que não veio do Omie.
   omieTitleId String? @db.VarChar(20)
 
+  /// Movimento de conta corrente do Omie sem título (`nCodMovCC`) — hoje, as
+  /// transferências entre contas da empresa. É a chave delas como `omieTitleId`
+  /// é a dos títulos.
+  omieMovementId String? @db.VarChar(20)
+
+  /// A baixa do Omie (linhas `cTpLancamento: "CC"` dos movimentos): em que
+  /// conta corrente o dinheiro passou (`nCodCC`), o código da baixa, quanto
+  /// passou (`nValorMovCC`, já com juro e desconto) e quando o BPO conciliou
+  /// (`dDtConcilia`). Tudo nulo enquanto o título não tem baixa. O Omie é a
+  /// fonte da conciliação: é este `omieReconciledAt` que a tela de conciliação
+  /// do Connect usa para dar a linha do extrato como resolvida.
+  omieAccountId    String?   @db.VarChar(20)
+  omieBaixaId      String?   @db.VarChar(20)
+  omiePaidAmount   Decimal?  @db.Decimal(14, 2)
+  omieReconciledAt DateTime?
+
   createdById  String?
   /// Quem conferiu o provisório. Nulo enquanto ninguém olhou.
   reviewedById String?
@@ -2591,6 +2607,8 @@ model FinanceEntry {
   reminderLogs          CollectionReminderLog[]
 
   @@unique([companyId, omieTitleId])
+  @@unique([companyId, omieMovementId])
+  @@index([companyId, omieAccountId, omieReconciledAt])
   @@index([tenantId, companyId, competence])
   @@index([tenantId, companyId, kind, status])
   @@index([tenantId, dueDate])
@@ -3155,6 +3173,12 @@ model BankAccount {
   openingBalance     Decimal?  @db.Decimal(14, 2)
   openingBalanceDate DateTime?
 
+  /// A conta corrente do Omie que é esta (`nCodCC`), e o nome dela lá. Ligada
+  /// pela sincronização do financeiro quando banco e número conferem com uma
+  /// conta só; nula quando a empresa não usa Omie ou nada confere.
+  omieAccountId    String? @db.VarChar(20)
+  omieAccountLabel String? @db.VarChar(120)
+
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3165,6 +3189,7 @@ model BankAccount {
   transactions BankTransaction[]
 
   @@unique([tenantId, companyId, bankCode, accountDigits])
+  @@unique([companyId, omieAccountId])
   @@index([tenantId, companyId])
   @@map("bank_accounts")
 }
@@ -3216,6 +3241,12 @@ model BankTransaction {
   ignoredReason  String?               @db.VarChar(255)
   reconciledAt   DateTime?
   reconciledById String?
+  /// Conciliada porque a baixa correspondente já estava conciliada no Omie —
+  /// ninguém no Connect clicou.
+  reconciledViaOmie Boolean @default(false)
+  /// Alguém desfez uma conciliação que veio do Omie: a leitura seguinte não
+  /// casa esta linha sozinha de novo. Quem desfez sabia de algo.
+  omieAutoSkip      Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
