@@ -4182,6 +4182,22 @@ model CompanyPartner {
   /// Participação no capital, em porcento.
   sharePercent  Decimal? @db.Decimal(7, 4)
 
+  /// Como a Receita chama o papel dele ("Sócio-Administrador", "Titular").
+  qualification String?  @db.VarChar(80)
+  quotas        Int?
+  capitalAmount Decimal? @db.Decimal(14, 2)
+  /// Entrada e saída da sociedade. Sócio que sai **fica**, com a data de
+  /// saída: o distrato e a sucessão precisam do histórico, e a viabilidade
+  /// olha só quem está (`exitDate` nulo).
+  entryDate     DateTime?
+  exitDate      DateTime?
+  /// O CPF como a Receita divulga ("***504269**"). Só os seis do meio são
+  /// públicos; é com eles e com o nome que o sócio importado casa com o que já
+  /// estava cadastrado. Nulo quando o documento inteiro é conhecido.
+  documentMasked String? @db.VarChar(20)
+  /// De onde veio: "MANUAL" ou "RECEITA".
+  origin        String   @default("MANUAL") @db.VarChar(20)
+
   zipCode           String? @db.VarChar(10)
   addressStreet     String? @db.VarChar(180)
   addressNumber     String? @db.VarChar(20)
