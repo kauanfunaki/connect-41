@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CircleCheck, CircleDot, Circle, MessageSquare } from "lucide-react";
+import { ArrowLeft, CircleCheck, CircleDot, Circle } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -11,6 +11,11 @@ import { processoDoPortal } from "@/lib/societario/portal-data";
 import { SITUACAO_PARA_CLIENTE, STATUS_DA_ETAPA_PARA_CLIENTE, VARIANTE_PARA_CLIENTE } from "@/lib/societario/portal";
 import { moeda } from "@/lib/financeiro/formato";
 import { formatInstantDate } from "@/lib/format";
+import { ConversaDaPendencia } from "@/components/pendencias/ConversaDaPendencia";
+import { ResponderPendencia } from "@/components/pendencias/ResponderPendencia";
+import { DocumentosDoProcesso } from "@/components/societario/DocumentosDoProcesso";
+import { conversaDoProcesso } from "@/lib/societario/conversa";
+import { enviarMensagemNoProcessoCliente, adicionarDocumentosNoProcessoCliente } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +27,9 @@ const ICONE_DA_ETAPA = {
 
 /**
  * Um processo visto pelo cliente: em que pé está, as etapas, o que o órgão
- * pediu e as taxas. Observações, responsável, prioridade e checklist ficam só
- * com a equipe (ver `src/lib/societario/portal.ts`).
+ * pediu, as taxas, a conversa com a equipe e os documentos. Observações,
+ * responsável, prioridade e checklist ficam só com a equipe (ver
+ * `src/lib/societario/portal.ts`).
  */
 export default async function PortalProcessoPage({ params }: { params: Promise<{ id: string }> }) {
   const { sessao, escopo, modulos } = await contextoFinanceiroDoPortal();
@@ -33,6 +39,7 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
   const feriados = await feriadosDoTenant(sessao.tenantId);
   const p = await processoDoPortal(sessao.tenantId, escopo.companyIds ?? [], id, new Date(), feriados);
   if (!p) notFound();
+  const conversa = await conversaDoProcesso({ tenantId: sessao.tenantId, companyIds: escopo.companyIds ?? [] }, p.id);
 
   const situacao = SITUACAO_PARA_CLIENTE[p.situacao];
   const abertas = p.exigencias.filter((e) => !e.resolvidaEm);
@@ -161,10 +168,51 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
           </section>
         )}
 
-        {modulos.has("bpo_comunicacao") && (
-          <Link href="/portal/comunicacao" className="inline-flex items-center gap-1.5 text-[13px] text-brand hover:underline self-start">
-            <MessageSquare size={14} /> Falar com a equipe sobre este processo
-          </Link>
+        {conversa && (
+          <>
+            <section className="flex flex-col gap-2" aria-labelledby="documentos">
+              <h2 id="documentos" className="text-[14px] font-semibold text-fg">
+                Documentos
+              </h2>
+              <Card className="p-4">
+                <DocumentosDoProcesso
+                  processId={p.id}
+                  documentos={conversa.documentos}
+                  baseDoDownload="/portal/processos/documentos"
+                  acao={adicionarDocumentosNoProcessoCliente}
+                  ladoDeQuemVe="CLIENTE"
+                  dica="A equipe é avisada quando você envia."
+                />
+              </Card>
+            </section>
+
+            <section className="flex flex-col gap-2" aria-labelledby="conversa">
+              <h2 id="conversa" className="text-[14px] font-semibold text-fg">
+                Conversa com a equipe
+              </h2>
+              <Card className="p-4 flex flex-col gap-4">
+                {conversa.limitada && (
+                  <p className="text-[12px] text-fg-muted">Mostrando só as mensagens mais recentes.</p>
+                )}
+                {conversa.mensagens.length > 0 ? (
+                  <ConversaDaPendencia
+                    mensagens={conversa.mensagens}
+                    baseDoDownload="/portal/processos/documentos"
+                    ladoDeQuemVe="CLIENTE"
+                  />
+                ) : (
+                  <p className="text-[13px] text-fg-muted">Dúvida sobre este processo? Escreva aqui — fica tudo junto dele.</p>
+                )}
+                <ResponderPendencia
+                  alvo={p.id}
+                  campo="processId"
+                  acao={enviarMensagemNoProcessoCliente}
+                  rotulo="Enviar mensagem"
+                  dica="Anexe PDF, PNG, JPG ou XML de até 10 MB. A equipe é avisada quando você escreve."
+                />
+              </Card>
+            </section>
+          </>
         )}
       </div>
     </PageContainer>

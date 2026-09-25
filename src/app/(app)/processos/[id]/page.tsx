@@ -36,6 +36,12 @@ import { getSectorUsers } from "@/lib/sectorUsers";
 import { PRIORIDADE_LABEL, PRIORIDADE_VARIANTE } from "@/lib/societario/prioridade";
 import { prazoCombinado } from "@/lib/societario/dados-do-processo";
 import { campoDaData } from "@/lib/societario/datas";
+import { Card } from "@/components/ui/Card";
+import { ConversaDaPendencia } from "@/components/pendencias/ConversaDaPendencia";
+import { ResponderPendencia } from "@/components/pendencias/ResponderPendencia";
+import { DocumentosDoProcesso } from "@/components/societario/DocumentosDoProcesso";
+import { conversaDoProcesso } from "@/lib/societario/conversa";
+import { enviarMensagemNoProcesso, adicionarDocumentosAoProcesso } from "../conversa-actions";
 
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
 // setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -200,7 +206,10 @@ export default async function ProcessoDetalhePage({
 
   const empresaNome = nomeExibicao(processo.company);
 
-  const { taxas, custo } = await taxasDoProcesso(ctx.tenantId, processo.id);
+  const [{ taxas, custo }, conversa] = await Promise.all([
+    taxasDoProcesso(ctx.tenantId, processo.id),
+    conversaDoProcesso({ tenantId: ctx.tenantId, companyIds: null }, processo.id),
+  ]);
 
   // O responsável atual entra na lista mesmo que tenha saído do setor — senão o
   // formulário de editar mostraria "sem responsável" e salvaria isso sem querer.
@@ -319,6 +328,56 @@ export default async function ProcessoDetalhePage({
       <div className="mt-4">
         <TaxasDoProcesso taxas={taxas} custo={custo} />
       </div>
+
+      {conversa && (
+        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-start">
+          <section aria-labelledby="conversa-do-processo">
+            <Card className="p-4 flex flex-col gap-4">
+              <div className="flex flex-col gap-0.5">
+                <h2 id="conversa-do-processo" className="text-[14px] font-semibold text-fg">
+                  Conversa com o cliente
+                </h2>
+                <p className="text-[12px] text-fg-muted">
+                  O cliente vê tudo o que for escrito aqui no portal, e é avisado por e-mail. Para anotação
+                  interna, use as observações do processo.
+                </p>
+              </div>
+              {conversa.limitada && (
+                <p className="text-[12px] text-fg-muted">Mostrando só as mensagens mais recentes.</p>
+              )}
+              {conversa.mensagens.length > 0 && (
+                <ConversaDaPendencia
+                  mensagens={conversa.mensagens}
+                  baseDoDownload="/api/processos/documentos"
+                  ladoDeQuemVe="EQUIPE"
+                />
+              )}
+              <ResponderPendencia
+                alvo={processo.id}
+                campo="processId"
+                acao={enviarMensagemNoProcesso}
+                rotulo="Enviar ao cliente"
+                dica="Anexe PDF, PNG, JPG ou XML de até 10 MB."
+              />
+            </Card>
+          </section>
+          <section aria-labelledby="documentos-do-processo">
+            <Card className="p-4 flex flex-col gap-3">
+              <h2 id="documentos-do-processo" className="text-[14px] font-semibold text-fg">
+                Documentos <span className="text-fg-muted font-normal tabular-nums">({conversa.documentos.length})</span>
+              </h2>
+              <DocumentosDoProcesso
+                processId={processo.id}
+                documentos={conversa.documentos}
+                baseDoDownload="/api/processos/documentos"
+                acao={adicionarDocumentosAoProcesso}
+                ladoDeQuemVe="EQUIPE"
+                dica="O cliente vê e é avisado."
+              />
+            </Card>
+          </section>
+        </div>
+      )}
 
       <p className="mt-6 text-[11px] text-fg-muted">
         Roteiro versão {processo.template.version} — congelado na abertura, para o processo não

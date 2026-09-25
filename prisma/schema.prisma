@@ -538,6 +538,8 @@ model Tenant {
   valoraPropostas           ValoraProposta[]
   companyMessages           CompanyMessage[]
   companyMessageAttachments CompanyMessageAttachment[]
+  processMessages           ProcessMessage[]
+  processDocuments          ProcessDocument[]
   portalApprovalLimits      PortalApprovalLimit[]
   collectionContacts        CollectionContact[]
   collectionAgreements      CollectionAgreement[]
@@ -764,6 +766,8 @@ model User {
   clientRequestMessages       ClientRequestMessage[]     @relation("ClientRequestMessageAuthorUser")
   clientRequestAttachments    ClientRequestAttachment[]  @relation("ClientRequestAttachmentUser")
   companyMessages             CompanyMessage[]           @relation("CompanyMessageAuthorUser")
+  processMessages             ProcessMessage[]           @relation("ProcessMessageAuthorUser")
+  processDocuments            ProcessDocument[]          @relation("ProcessDocumentUser")
   financeApprovalEvents       FinanceApprovalEvent[]     @relation("FinanceApprovalEventUser")
   financeEntriesLost          FinanceEntry[]             @relation("FinanceEntryLossBy")
   financeEntriesCollecting    FinanceEntry[]             @relation("FinanceEntryCollectionOwner")
@@ -873,6 +877,8 @@ model PortalUser {
   clientRequestMessages    ClientRequestMessage[]    @relation("ClientRequestMessageAuthorPortal")
   clientRequestAttachments ClientRequestAttachment[] @relation("ClientRequestAttachmentPortal")
   companyMessages          CompanyMessage[]          @relation("CompanyMessageAuthorPortal")
+  processMessages          ProcessMessage[]          @relation("ProcessMessageAuthorPortal")
+  processDocuments         ProcessDocument[]         @relation("ProcessDocumentPortal")
   approvalLimits           PortalApprovalLimit[]
   financeApprovalEvents    FinanceApprovalEvent[]    @relation("FinanceApprovalEventPortal")
   pushSubscriptions        PortalPushSubscription[]
@@ -3243,16 +3249,16 @@ model BankTransaction {
   memo      String?  @db.VarChar(255)
   payeeName String?  @db.VarChar(180)
 
-  status         BankTransactionStatus @default(PENDENTE)
-  ignoredReason  String?               @db.VarChar(255)
-  reconciledAt   DateTime?
-  reconciledById String?
+  status            BankTransactionStatus @default(PENDENTE)
+  ignoredReason     String?               @db.VarChar(255)
+  reconciledAt      DateTime?
+  reconciledById    String?
   /// Conciliada porque a baixa correspondente já estava conciliada no Omie —
   /// ninguém no Connect clicou.
-  reconciledViaOmie Boolean @default(false)
+  reconciledViaOmie Boolean               @default(false)
   /// Alguém desfez uma conciliação que veio do Omie: a leitura seguinte não
   /// casa esta linha sozinha de novo. Quem desfez sabia de algo.
-  omieAutoSkip      Boolean @default(false)
+  omieAutoSkip      Boolean               @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -4189,20 +4195,20 @@ model CompanyPartner {
   sharePercent  Decimal? @db.Decimal(7, 4)
 
   /// Como a Receita chama o papel dele ("Sócio-Administrador", "Titular").
-  qualification String?  @db.VarChar(80)
-  quotas        Int?
-  capitalAmount Decimal? @db.Decimal(14, 2)
+  qualification  String?   @db.VarChar(80)
+  quotas         Int?
+  capitalAmount  Decimal?  @db.Decimal(14, 2)
   /// Entrada e saída da sociedade. Sócio que sai **fica**, com a data de
   /// saída: o distrato e a sucessão precisam do histórico, e a viabilidade
   /// olha só quem está (`exitDate` nulo).
-  entryDate     DateTime?
-  exitDate      DateTime?
+  entryDate      DateTime?
+  exitDate       DateTime?
   /// O CPF como a Receita divulga ("***504269**"). Só os seis do meio são
   /// públicos; é com eles e com o nome que o sócio importado casa com o que já
   /// estava cadastrado. Nulo quando o documento inteiro é conhecido.
-  documentMasked String? @db.VarChar(20)
+  documentMasked String?   @db.VarChar(20)
   /// De onde veio: "MANUAL" ou "RECEITA".
-  origin        String   @default("MANUAL") @db.VarChar(20)
+  origin         String    @default("MANUAL") @db.VarChar(20)
 
   zipCode           String? @db.VarChar(10)
   addressStreet     String? @db.VarChar(180)
@@ -4869,12 +4875,73 @@ model Process {
   steps     ProcessStep[]
   protocols ProcessProtocol[]
   fees      ProcessFee[]
+  messages  ProcessMessage[]
+  documents ProcessDocument[]
 
   @@index([tenantId, status])
   @@index([tenantId, companyId])
   @@index([tenantId, typeId, startedAt])
   @@index([tenantId, ownerUserId])
   @@map("processes")
+}
+
+/// Conversa entre a equipe e o cliente sobre **um** processo.
+///
+/// A conversa livre (`CompanyMessage`) é por empresa, e um processo societário
+/// dura semanas com muitas trocas — "manda o RG do sócio novo", "saiu a
+/// exigência da Junta". Misturado ao resto da empresa, o fio do processo se
+/// perde. Aqui é o mesmo formato (autor da equipe **ou** do portal, regra na
+/// aplicação), preso ao processo.
+model ProcessMessage {
+  id                 String   @id @default(uuid())
+  tenantId           String
+  processId          String
+  authorUserId       String?
+  authorPortalUserId String?
+  body               String   @db.Text
+  createdAt          DateTime @default(now())
+
+  tenant       Tenant            @relation(fields: [tenantId], references: [id])
+  process      Process           @relation(fields: [processId], references: [id], onDelete: Cascade)
+  authorUser   User?             @relation("ProcessMessageAuthorUser", fields: [authorUserId], references: [id], onDelete: SetNull)
+  authorPortal PortalUser?       @relation("ProcessMessageAuthorPortal", fields: [authorPortalUserId], references: [id], onDelete: SetNull)
+  documents    ProcessDocument[]
+
+  @@index([processId, createdAt])
+  @@index([tenantId])
+  @@map("process_messages")
+}
+
+/// Documento do processo: o que foi anexado na conversa **e** o que foi
+/// guardado direto na lista de documentos (sem mensagem — `messageId` nulo).
+/// Uma tabela só para a lista mostrar tudo o que o processo juntou, venha de
+/// onde vier.
+model ProcessDocument {
+  id                     String   @id @default(uuid())
+  tenantId               String
+  processId              String
+  messageId              String?
+  uploadedByUserId       String?
+  uploadedByPortalUserId String?
+  /// "Contrato social registrado", "RG do sócio" — opcional, só no envio direto.
+  description            String?  @db.VarChar(200)
+  fileName               String   @db.VarChar(255)
+  /// "<tenantId>/<uuid>.<ext>" sob storage/societario-processos — nunca vem do usuário.
+  fileUrl                String   @db.VarChar(255)
+  mimeType               String   @db.VarChar(100)
+  sizeBytes              Int
+  createdAt              DateTime @default(now())
+
+  tenant           Tenant          @relation(fields: [tenantId], references: [id])
+  process          Process         @relation(fields: [processId], references: [id], onDelete: Cascade)
+  message          ProcessMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  uploadedByUser   User?           @relation("ProcessDocumentUser", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  uploadedByPortal PortalUser?     @relation("ProcessDocumentPortal", fields: [uploadedByPortalUserId], references: [id], onDelete: SetNull)
+
+  @@index([processId, createdAt])
+  @@index([messageId])
+  @@index([tenantId])
+  @@map("process_documents")
 }
 
 model ProcessStep {

@@ -14,6 +14,7 @@ import { sendWebPushToPortalUsers } from "@/lib/webPush";
 export type AvisoDoPortal =
   | { tipo: "pendencia"; motivo: "nova" | "resposta" | "lembrete"; titulo: string; requestId: string }
   | { tipo: "mensagem"; empresaNome: string }
+  | { tipo: "processo"; motivo: "mensagem" | "documento"; processoNome: string; processId: string }
   | { tipo: "aprovacao"; quantidade: number };
 
 export type TextoEmPush = { title: string; body: string; url: string };
@@ -36,6 +37,14 @@ export function textoDoAviso(aviso: AvisoDoPortal): TextoEmPush {
         title: "Nova mensagem",
         body: `A equipe deixou uma mensagem sobre ${aviso.empresaNome}.`,
         url: "/portal/comunicacao",
+      };
+    case "processo":
+      // O nome do processo (tipo e empresa) é o que já aparece na lista do
+      // portal — nada do que foi escrito ou anexado.
+      return {
+        title: aviso.motivo === "mensagem" ? "Nova mensagem no processo" : "Novo documento no processo",
+        body: aviso.processoNome,
+        url: `/portal/processos/${aviso.processId}`,
       };
     case "aprovacao":
       return {
