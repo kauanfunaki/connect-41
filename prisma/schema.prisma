@@ -4617,6 +4617,14 @@ enum ProcessStatus {
   EM_EXIGENCIA
   CONCLUIDO
   CANCELADO
+  /// Parado esperando o cliente (documento, assinatura, decisão). Marcado pela
+  /// equipe, com motivo — não se deriva de protocolo. Sai da frente da fila.
+  AGUARDANDO_CLIENTE
+  /// Parado a pedido do cliente ou por decisão da equipe, sem previsão de volta.
+  SUSPENSO
+  /// Encerrado porque o órgão negou em definitivo. Diferente de cancelado: quem
+  /// encerrou foi o órgão, não o cliente nem a equipe.
+  INDEFERIDO
 }
 
 enum ProcessStepStatus {
@@ -4815,6 +4823,11 @@ model Process {
   title String? @db.VarChar(160)
 
   priority ProcessPriority @default(NORMAL)
+
+  /// Por que está em espera, suspenso, indeferido ou cancelado, e desde quando.
+  /// Só vale para esses quatro status; nulo nos demais.
+  statusReason    String?   @db.VarChar(300)
+  statusChangedAt DateTime?
 
   /// Prazo combinado com o cliente — data de calendário, gravada ao meio-dia
   /// UTC (ver `src/lib/societario/datas.ts`). É outra régua que o previsto do

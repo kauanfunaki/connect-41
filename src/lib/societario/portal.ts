@@ -14,9 +14,9 @@
 // pinta de vermelho o que estourou; para o cliente, o atraso quase sempre é do
 // órgão, e dizer "atrasado" sem dizer de quem é pior que dar os dois números.
 
-import type { SituacaoDoProcesso, StatusDaEtapa, Prazo } from "./processo";
+import type { SituacaoDoProcesso, StatusDaEtapa, StatusDoProcesso, Prazo } from "./processo";
 
-export type SituacaoParaCliente = SituacaoDoProcesso | "CANCELADO";
+export type SituacaoParaCliente = SituacaoDoProcesso | "CANCELADO" | "INDEFERIDO";
 
 export const SITUACAO_PARA_CLIENTE: Record<SituacaoParaCliente, { rotulo: string; explicacao: string }> = {
   EM_ANDAMENTO: { rotulo: "Em andamento", explicacao: "A equipe está preparando o processo." },
@@ -25,7 +25,13 @@ export const SITUACAO_PARA_CLIENTE: Record<SituacaoParaCliente, { rotulo: string
     rotulo: "Exigência do órgão",
     explicacao: "O órgão pediu um ajuste. A equipe resolve e avisa se precisar de algo seu.",
   },
+  AGUARDANDO_CLIENTE: {
+    rotulo: "Aguardando você",
+    explicacao: "O processo está parado esperando algo seu. A equipe já pediu; o motivo está abaixo.",
+  },
+  SUSPENSO: { rotulo: "Suspenso", explicacao: "O processo está parado. Fale com a equipe para retomar." },
   CONCLUIDO: { rotulo: "Concluído", explicacao: "Processo encerrado." },
+  INDEFERIDO: { rotulo: "Indeferido", explicacao: "O órgão negou o pedido. O motivo está abaixo." },
   CANCELADO: { rotulo: "Cancelado", explicacao: "Processo encerrado sem conclusão." },
 };
 
@@ -33,14 +39,19 @@ export const VARIANTE_PARA_CLIENTE: Record<SituacaoParaCliente, "success" | "war
   EM_ANDAMENTO: "info",
   AGUARDANDO_ORGAO: "info",
   EM_EXIGENCIA: "warning",
+  AGUARDANDO_CLIENTE: "warning",
+  SUSPENSO: "danger",
   CONCLUIDO: "success",
   CANCELADO: "danger",
+  INDEFERIDO: "danger",
 };
 
-export function situacaoParaCliente(situacao: SituacaoDoProcesso, cancelado: boolean): SituacaoParaCliente {
-  // Cancelado não tem `concludedAt`, então a situação derivada diria "em
-  // andamento" — o que, para o cliente, seria prometer trabalho que parou.
-  return cancelado ? "CANCELADO" : situacao;
+export function situacaoParaCliente(situacao: SituacaoDoProcesso, status: StatusDoProcesso): SituacaoParaCliente {
+  // Cancelado e indeferido não têm `concludedAt`, então a situação derivada
+  // diria "em andamento" — o que, para o cliente, seria prometer trabalho que
+  // parou.
+  if (status === "CANCELADO" || status === "INDEFERIDO") return status;
+  return situacao;
 }
 
 /** "4 a 7 dias úteis · 3 até agora"; sem previsão, só o que já passou. */

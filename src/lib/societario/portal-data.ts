@@ -7,7 +7,7 @@
 
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
-import { prazoDoProcesso, situacaoDoProcesso, type StatusDaEtapa } from "./processo";
+import { prazoDoProcesso, situacaoDoProcesso, type StatusDaEtapa, type StatusDoProcesso } from "./processo";
 import {
   etapasParaCliente,
   progressoDasEtapas,
@@ -26,6 +26,8 @@ export type ProcessoNoPortal = {
   titulo: string | null;
   empresaNome: string;
   situacao: SituacaoParaCliente;
+  /** Por que está esperando o cliente, suspenso, indeferido ou cancelado. */
+  motivo: string | null;
   previsao: string;
   iniciadoEm: Date;
   concluidoEm: Date | null;
@@ -37,6 +39,7 @@ const selecaoBase = {
   id: true,
   title: true,
   status: true,
+  statusReason: true,
   startedAt: true,
   concludedAt: true,
   company: { select: { name: true, displayName: true } },
@@ -59,7 +62,8 @@ const selecaoBase = {
 type Linha = {
   id: string;
   title: string | null;
-  status: string;
+  status: StatusDoProcesso;
+  statusReason: string | null;
   startedAt: Date;
   concludedAt: Date | null;
   company: { name: string; displayName: string | null };
@@ -94,7 +98,10 @@ function resumo(p: Linha, agora: Date, feriados: Set<string>): ProcessoNoPortal 
     tipoNome: p.type.name,
     titulo: p.title,
     empresaNome: nomeExibicao(p.company),
-    situacao: situacaoParaCliente(situacaoDoProcesso(p.protocols, concluido), p.status === "CANCELADO"),
+    situacao: situacaoParaCliente(situacaoDoProcesso(p.protocols, concluido, p.status), p.status),
+    // O motivo só acompanha as situações marcadas pela equipe; nos demais
+    // status a coluna é nula.
+    motivo: p.statusReason,
     previsao: textoDaPrevisao(prazoDoProcesso(p.type, p, agora, feriados), concluido),
     iniciadoEm: p.startedAt,
     concluidoEm: p.concludedAt,

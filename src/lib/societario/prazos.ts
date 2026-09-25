@@ -219,6 +219,8 @@ export const COLUNAS_DO_KANBAN: SituacaoDoProcesso[] = [
   "EM_ANDAMENTO",
   "AGUARDANDO_ORGAO",
   "EM_EXIGENCIA",
+  "AGUARDANDO_CLIENTE",
+  "SUSPENSO",
   "CONCLUIDO",
 ];
 

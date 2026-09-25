@@ -16,7 +16,8 @@ import {
   prazoDoProcesso,
   totalDeVoltas,
 } from "@/lib/societario/processo";
-import { SITUACAO_LABEL } from "@/components/societario/ProcessosFila";
+import { SITUACAO_LABEL, SITUACAO_VARIANTE } from "@/components/societario/ProcessosFila";
+import { SituacaoDoProcesso } from "@/components/societario/SituacaoDoProcesso";
 import { RoteiroDoProcesso, type EtapaNaTela } from "@/components/societario/RoteiroDoProcesso";
 import { TaxasDoProcesso } from "@/components/societario/TaxasDoProcesso";
 import { taxasDoProcesso } from "@/lib/societario/licencas-data";
@@ -27,6 +28,7 @@ import {
   deferirProtocolo,
   registrarExigencia,
   resolverExigencia,
+  mudarSituacaoDoProcesso,
   alternarItemDoChecklist,
 } from "../actions";
 import { EditarDadosDoProcesso } from "@/components/societario/EditarDadosDoProcesso";
@@ -62,6 +64,9 @@ export default async function ProcessoDetalhePage({
       id: true,
       startedAt: true,
       concludedAt: true,
+      status: true,
+      statusReason: true,
+      statusChangedAt: true,
       notes: true,
       title: true,
       priority: true,
@@ -129,7 +134,8 @@ export default async function ProcessoDetalhePage({
   if (!processo) notFound();
 
   const feriados = await feriadosDoTenant(ctx.tenantId);
-  const situacao = situacaoDoProcesso(processo.protocols, processo.concludedAt !== null);
+  const situacao = situacaoDoProcesso(processo.protocols, processo.concludedAt !== null, processo.status);
+  const encerradoSemConclusao = processo.status === "CANCELADO" || processo.status === "INDEFERIDO";
   const prazo = prazoDoProcesso(processo.type, processo, new Date(), feriados);
   const voltas = totalDeVoltas(processo.protocols);
 
@@ -225,17 +231,11 @@ export default async function ProcessoDetalhePage({
           />
         </div>
         <div className="flex items-center gap-3 flex-wrap text-[12px] text-fg-muted">
-          <Badge
-            variant={
-              situacao === "EM_EXIGENCIA"
-                ? "warning"
-                : situacao === "AGUARDANDO_ORGAO"
-                  ? "info"
-                  : "success"
-            }
-          >
-            {SITUACAO_LABEL[situacao]}
-          </Badge>
+          {encerradoSemConclusao ? (
+            <Badge variant="danger">{processo.status === "CANCELADO" ? "Cancelado" : "Indeferido"}</Badge>
+          ) : (
+            <Badge variant={SITUACAO_VARIANTE[situacao]}>{SITUACAO_LABEL[situacao]}</Badge>
+          )}
 
           {prazo.situacao === "sem_previsao" ? (
             <span>
@@ -291,11 +291,20 @@ export default async function ProcessoDetalhePage({
             Ver empresa
           </Link>
         </div>
+        {processo.statusReason && (
+          <p className="text-[13px] text-fg rounded-md border border-border bg-surface-2 px-3 py-2 break-words">
+            <span className="font-medium">Motivo:</span> {processo.statusReason}
+            {processo.statusChangedAt && (
+              <span className="text-fg-muted"> · desde {formatInstantDate(processo.statusChangedAt)}</span>
+            )}
+          </p>
+        )}
+        <SituacaoDoProcesso processoId={processo.id} status={processo.status} mudar={mudarSituacaoDoProcesso} />
       </div>
 
       <RoteiroDoProcesso
         etapas={etapas}
-        podeEditar={processo.concludedAt === null}
+        podeEditar={processo.concludedAt === null && !encerradoSemConclusao}
         acoes={{
           concluir: concluirEtapa,
           dispensar: dispensarEtapa,

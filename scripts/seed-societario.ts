@@ -150,6 +150,83 @@ const ROTEIRO_ALVARA: EtapaSeed[] = [
   { position: 7, label: "Envio ao cliente", actor: "ROBO" },
 ];
 
+// ─── Os três que vieram do protótipo (25/09) ─────────────────────────────────
+//
+// O 41-societario tinha estes três tipos que o fluxograma do setor não cobria.
+// Os roteiros vêm do seed dele, com o vocabulário do Connect: a etapa de
+// "registro / acompanhamento" é a do protocolo na Junta (robô observador), como
+// no roteiro de registro. Prazo também é o do protótipo — o setor não informou
+// e pode trocar pela tela.
+
+const ROTEIRO_DISTRATO: EtapaSeed[] = [
+  {
+    position: 1,
+    label: "Notificação de saída do sócio",
+    actor: "PESSOA",
+    items: [
+      "Notificação formal de saída",
+      "Documento de identificação do sócio retirante",
+      "Documento de identificação dos sócios que ficam ou sucedem",
+    ],
+  },
+  {
+    position: 2,
+    label: "Apuração de haveres",
+    actor: "PESSOA",
+    items: ["Balanço de determinação", "Cálculo do valor de haveres", "Forma e prazo de pagamento acordados"],
+  },
+  { position: 3, label: "Cláusulas de saída (não concorrência, confidencialidade)", actor: "PESSOA" },
+  { position: 4, label: "Elaboração do distrato ou da alteração contratual", actor: "PESSOA" },
+  { position: 5, label: "Sistemas da Junta", actor: "INTEGRACAO", organ: "Junta Comercial" },
+  { position: 6, label: "Sistemas da Receita", actor: "INTEGRACAO", organ: "Receita Federal" },
+  { position: 7, label: "Acompanhamento do registro", actor: "ROBO", organ: "Junta Comercial" },
+  { position: 8, label: "Cadastro e comunicação interna", actor: "PESSOA" },
+  {
+    position: 9,
+    label: "Envio de documentação ao cliente",
+    actor: "ROBO",
+    items: ["Distrato ou alteração registrada", "Comprovante de pagamento de haveres", "Termo de quitação"],
+  },
+];
+
+const ROTEIRO_REORGANIZACAO: EtapaSeed[] = [
+  {
+    position: 1,
+    label: "Reunir contratos sociais das empresas envolvidas",
+    actor: "PESSOA",
+    items: [
+      "Contrato social atualizado de cada empresa envolvida",
+      "Balanços patrimoniais",
+      "Certidões negativas de cada empresa",
+      "Ata de aprovação dos sócios",
+    ],
+  },
+  { position: 2, label: "Comparação e conciliação das cláusulas", actor: "PESSOA" },
+  { position: 3, label: "Definição da estrutura final com os sócios", actor: "PESSOA" },
+  { position: 4, label: "Elaboração do instrumento de fusão, cisão ou incorporação", actor: "PESSOA" },
+  { position: 5, label: "Sistemas da Junta", actor: "INTEGRACAO", organ: "Junta Comercial" },
+  { position: 6, label: "Sistemas da Receita", actor: "INTEGRACAO", organ: "Receita Federal" },
+  { position: 7, label: "Acompanhamento do registro", actor: "ROBO", organ: "Junta Comercial" },
+  { position: 8, label: "Cadastro e comunicação interna", actor: "PESSOA" },
+  { position: 9, label: "Envio de documentação ao cliente", actor: "ROBO" },
+];
+
+// O órgão da regularização muda com a pendência (Junta, Receita, Prefeitura…),
+// então a etapa de protocolo fica sem órgão fixo: quem protocola escolhe.
+const ROTEIRO_REGULARIZACAO: EtapaSeed[] = [
+  {
+    position: 1,
+    label: "Confirmar a pendência",
+    actor: "PESSOA",
+    items: ["Confirmar que a pendência existe", "Levantar a documentação necessária"],
+  },
+  { position: 2, label: "Coordenação decide se abre a regularização", actor: "PESSOA" },
+  { position: 3, label: "Levantar e regularizar a documentação", actor: "PESSOA" },
+  { position: 4, label: "Protocolo no órgão competente", actor: "PESSOA" },
+  { position: 5, label: "Confirmação da regularização", actor: "PESSOA" },
+  { position: 6, label: "Comunicação ao cliente", actor: "PESSOA" },
+];
+
 const TIPOS = [
   {
     code: "constituicao",
@@ -187,6 +264,33 @@ const TIPOS = [
     // O setor declara sem prazo médio — a tela não deve prometer previsão.
     variableFlow: true,
     roteiro: ROTEIRO_ALVARA,
+  },
+  {
+    code: "distrato_sucessao",
+    name: "Distrato e Sucessão de Sócio",
+    description: "Saída de sócio com apuração de haveres, cláusulas de saída e sucessão.",
+    expectedDaysMin: 10,
+    expectedDaysMax: 20,
+    variableFlow: false,
+    roteiro: ROTEIRO_DISTRATO,
+  },
+  {
+    code: "reorganizacao_societaria",
+    name: "Reorganização Societária",
+    description: "Fusão, cisão ou incorporação entre empresas.",
+    expectedDaysMin: 20,
+    expectedDaysMax: 45,
+    variableFlow: false,
+    roteiro: ROTEIRO_REORGANIZACAO,
+  },
+  {
+    code: "regularizacao",
+    name: "Regularização de Pendências",
+    description: "Licença vencida, CNAE desatualizado, cadastro divergente: o que está irregular e precisa ser acertado no órgão.",
+    expectedDaysMin: 5,
+    expectedDaysMax: 10,
+    variableFlow: false,
+    roteiro: ROTEIRO_REGULARIZACAO,
   },
 ];
 
