@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { SocioForm } from "@/components/empresas/SocioForm";
+import { campoDaData } from "@/lib/societario/datas";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -79,6 +80,12 @@ export default async function EditarSocioPage({
               // Decimal do Prisma: vira texto para o input, sem passar por
               // Number — 33.3333 não sobrevive a um `toFixed` distraído.
               sharePercent: socio.sharePercent === null ? null : String(socio.sharePercent),
+              qualification: socio.qualification,
+              quotas: socio.quotas === null ? null : String(socio.quotas),
+              capitalAmount: socio.capitalAmount === null ? null : String(socio.capitalAmount).replace(".", ","),
+              entryDate: campoDaData(socio.entryDate),
+              exitDate: campoDaData(socio.exitDate),
+              documentMasked: socio.documentMasked,
               zipCode: socio.zipCode,
               addressStreet: socio.addressStreet,
               addressNumber: socio.addressNumber,
