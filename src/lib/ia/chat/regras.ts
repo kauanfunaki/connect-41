@@ -206,6 +206,11 @@ export const IA_DO_SETOR: Record<SetorDoEncaminhamento, string | null> = {
   outro: null,
 };
 
+/** Os agentes que atendem no chat — o resto do catálogo são funções de IA dentro das telas. */
+export const AGENTES_DO_CHAT: ReadonlySet<string> = new Set(
+  Object.values(IA_DO_SETOR).filter((c): c is string => c !== null)
+);
+
 export type Encaminhamento = { setor: SetorDoEncaminhamento; motivo: string };
 
 /** O pedido de encaminhamento que a IA fez, se fez — o primeiro, com setor válido. */

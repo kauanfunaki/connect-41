@@ -15,6 +15,9 @@ import { PublicoDoChat } from "@/components/admin/PublicoDoChat";
 import { audienciaDoChat } from "@/lib/ia/chat/agentes";
 import { painelDoOrquestrador } from "@/lib/ia/chat/painel";
 import { PainelDoOrquestrador } from "@/components/admin/PainelDoOrquestrador";
+import { AGENTES_DO_CHAT } from "@/lib/ia/chat/regras";
+import { getSectorMaps } from "@/lib/sectors";
+import type { LinhaDeAgente } from "@/lib/ia/data";
 
 // Teto de gasto e chave de IA são configuração do tenant inteiro, não de setor
 // — mesmo critério da tela de Integrações.
@@ -31,12 +34,26 @@ export default async function AgentesDeIAPage() {
 
   // Sem config de tenant não há IA (a chave pelo ambiente saiu em 23/09). É o
   // que faz o aviso abaixo aparecer para quem precisa cadastrar a sua.
-  const [linhas, chamadas, audiencia, painel] = await Promise.all([
+  const [linhas, chamadas, audiencia, painel, { labels: nomesDosSetores }] = await Promise.all([
     listarAgentes(ctx.tenantId, config?.provider ?? null, config?.model ?? null, agora),
     ultimasChamadas(ctx.tenantId, 30),
     audienciaDoChat(ctx.tenantId),
     painelDoOrquestrador(ctx.tenantId, agora),
+    getSectorMaps(ctx.tenantId),
   ]);
+
+  // Duas coisas diferentes que a tela listava juntas: os agentes, que
+  // conversam no chat do canto da tela, e as funções de IA que rodam dentro de
+  // uma tela (triagem de currículo, resumo, WhatsApp). Misturadas, ninguém
+  // sabia qual liga o chat.
+  const doChat = linhas.filter((l) => AGENTES_DO_CHAT.has(l.def.code));
+  const outras = linhas.filter((l) => !AGENTES_DO_CHAT.has(l.def.code));
+  const porSetor = new Map<string, LinhaDeAgente[]>();
+  for (const l of outras) {
+    const setor = l.def.sectorCode ? (nomesDosSetores[l.def.sectorCode] ?? l.def.sectorCode) : "Geral";
+    porSetor.set(setor, [...(porSetor.get(setor) ?? []), l]);
+  }
+  const gastoDe = (ls: LinhaDeAgente[]) => ls.reduce((n, l) => n + l.gasto.centavos, 0);
 
   const totalCentavos = linhas.reduce((n, l) => n + l.gasto.centavos, 0);
   const totalChamadas = linhas.reduce((n, l) => n + l.gasto.chamadas, 0);
@@ -45,8 +62,8 @@ export default async function AgentesDeIAPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Agentes de IA"
-        subtitle="O que a IA fez neste mês, quanto custou e até onde pode ir. Só administradores veem esta tela."
+        title="Inteligência Artificial"
+        subtitle="Os agentes do chat e as demais funções de IA: o que fizeram neste mês, quanto custou e até onde podem ir. Só administradores veem esta tela."
       />
 
       {!config && (
@@ -83,14 +100,49 @@ export default async function AgentesDeIAPage() {
         </p>
       </Card>
 
-      <PublicoDoChat todos={audiencia === "TODOS"} disponivel={audiencia !== null} />
-      {painel && <PainelDoOrquestrador dados={painel} />}
-
-      <div className="flex flex-col gap-3 mb-6">
-        {linhas.map((linha) => (
+      <section className="flex flex-col gap-3 mb-8" aria-labelledby="agentes-do-chat">
+        <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-2">
+          <div>
+            <h2 id="agentes-do-chat" className="text-[17px] font-semibold text-fg">
+              Agentes — chat de IA
+            </h2>
+            <p className="text-[13px] text-fg-secondary max-w-[70ch]">
+              As IAs que conversam no chat do canto inferior direito, uma por setor, e a Ajuda do Connect. Ligar um
+              agente aqui é o que o faz aparecer no chat para quem opera aquele setor. O do Societário também atende o
+              cartão de perguntas da fila de processos.
+            </p>
+          </div>
+          <p className="text-[13px] tabular-nums text-fg-secondary">{moeda(gastoDe(doChat))} no mês</p>
+        </div>
+        <PublicoDoChat todos={audiencia === "TODOS"} disponivel={audiencia !== null} />
+        {painel && <PainelDoOrquestrador dados={painel} />}
+        {doChat.map((linha) => (
           <AgenteCard key={linha.def.code} linha={linha} podeEditar />
         ))}
-      </div>
+      </section>
+
+      <section className="flex flex-col gap-3 mb-8" aria-labelledby="outras-funcoes">
+        <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-2">
+          <div>
+            <h2 id="outras-funcoes" className="text-[17px] font-semibold text-fg">
+              Outras utilizações de IA
+            </h2>
+            <p className="text-[13px] text-fg-secondary max-w-[70ch]">
+              Funções que usam IA dentro de uma tela ou em segundo plano — ler currículo, pontuar candidato, resumir
+              empresa, atender no WhatsApp. Não aparecem no chat.
+            </p>
+          </div>
+          <p className="text-[13px] tabular-nums text-fg-secondary">{moeda(gastoDe(outras))} no mês</p>
+        </div>
+        {[...porSetor.entries()].map(([setor, ls]) => (
+          <div key={setor} className="flex flex-col gap-3">
+            <p className="text-[11px] uppercase tracking-wide text-fg-muted pt-1">{setor}</p>
+            {ls.map((linha) => (
+              <AgenteCard key={linha.def.code} linha={linha} podeEditar />
+            ))}
+          </div>
+        ))}
+      </section>
 
       <section className="flex flex-col gap-3">
         <div>
