@@ -149,6 +149,32 @@ async function transferir(threadId: string, motivo: string): Promise<void> {
   await avisarSobreConversa(threadId, { tipo: "transferida", motivo });
 }
 
+/**
+ * O que o candidato lê quando o robô passa a conversa sem ter respondido.
+ *
+ * Sem isto, para quem está do outro lado o robô simplesmente parou — visto em
+ * 25/09: a resposta saiu vazia, a conversa foi para uma pessoa, e o candidato
+ * mandou mais duas mensagens sem retorno. Não promete prazo: quem assume pode
+ * demorar, e prometer e não cumprir é pior.
+ */
+export const AVISO_DE_TRANSFERENCIA =
+  "Vou passar a sua conversa para uma pessoa da equipe de Recrutamento. Ela responde por aqui assim que puder.";
+
+/** Avisa o candidato da transferência. Falha no envio não impede a transferência. */
+async function avisarCandidato(params: {
+  tenantId: string;
+  threadId: string;
+  provedor: ProvedorWhatsapp;
+  config: ReturnType<typeof lerConfig>;
+  paraE164: string;
+}): Promise<void> {
+  try {
+    await enviarERegistrar({ ...params, texto: AVISO_DE_TRANSFERENCIA });
+  } catch (err) {
+    console.error("[whatsapp] aviso de transferência não saiu", params.threadId, err);
+  }
+}
+
 export type Conexao = {
   id: string;
   tenantId: string;
@@ -360,6 +386,7 @@ export async function atenderMensagem(
     const motivo = err instanceof Error ? err.message : "falha ao consultar o assistente";
     console.error("[whatsapp] agente falhou", thread.id, err);
     await transferir(thread.id, motivo);
+    await avisarCandidato({ tenantId: conexao.tenantId, threadId: thread.id, provedor, config, paraE164: m.de });
     return `transferido: ${motivo}`;
   }
 
@@ -374,6 +401,7 @@ export async function atenderMensagem(
 
   if (desfecho.tipo === "transferir") {
     await transferir(thread.id, desfecho.motivo);
+    await avisarCandidato({ tenantId: conexao.tenantId, threadId: thread.id, provedor, config, paraE164: m.de });
     // Guarda o que o robô teria dito, marcado como bloqueada: quem assumir a
     // conversa vê o rascunho, e a trilha não perde o que foi decidido não
     // mandar.
