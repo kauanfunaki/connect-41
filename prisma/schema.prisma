@@ -565,6 +565,8 @@ model Tenant {
   integrationRuns           IntegrationRun[]
   agents                    TenantAgent[]
   agentRuns                 AgentRun[]
+  agentConversations        AgentConversation[]
+  aiChatSettings            AiChatSettings?
   whatsappThreads           WhatsappThread[]
   whatsappMessages          WhatsappMessage[]
   licenses                  License[]
@@ -768,6 +770,7 @@ model User {
   companyMessages             CompanyMessage[]           @relation("CompanyMessageAuthorUser")
   processMessages             ProcessMessage[]           @relation("ProcessMessageAuthorUser")
   processDocuments            ProcessDocument[]          @relation("ProcessDocumentUser")
+  agentConversations          AgentConversation[]
   financeApprovalEvents       FinanceApprovalEvent[]     @relation("FinanceApprovalEventUser")
   financeEntriesLost          FinanceEntry[]             @relation("FinanceEntryLossBy")
   financeEntriesCollecting    FinanceEntry[]             @relation("FinanceEntryCollectionOwner")
@@ -5269,6 +5272,78 @@ model TenantAgent {
 /// 3. **Não referencia `TenantAgent`.** A chamada é fato sobre o que rodou, e
 ///    roda mesmo quando o cliente nunca criou linha de override. Amarrar as
 ///    duas faria a auditoria depender de uma configuração opcional.
+/// Quem vê o chat de IA do canto da tela, por escritório.
+///
+/// Tabela própria, e não coluna em `tenants`: o shell lê isto em toda página, e
+/// coluna nova em `tenants` derrubaria o app inteiro se o deploy chegasse antes
+/// da migration. Sem linha, vale o padrão — o piloto só com coordenadores.
+enum AiChatAudience {
+  COORDENADORES
+  TODOS
+}
+
+model AiChatSettings {
+  tenantId  String         @id
+  audience  AiChatAudience @default(COORDENADORES)
+  updatedAt DateTime       @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("ai_chat_settings")
+}
+
+/// Uma conversa do chat de IA — de uma pessoa com um agente.
+///
+/// A conversa é **da pessoa**: nenhuma tela mostra a conversa de outro, nem ao
+/// administrador (ele vê custo e falhas em `AgentRun`). Apagada 90 dias depois
+/// da última mensagem — ver `src/lib/ia/chat/conversas.ts`.
+model AgentConversation {
+  id        String   @id @default(uuid())
+  tenantId  String
+  userId    String
+  agentCode String   @db.VarChar(60)
+  /// A primeira pergunta, cortada — é o nome da conversa na lista.
+  title     String   @db.VarChar(120)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id])
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages AgentMessage[]
+
+  @@index([tenantId, userId, updatedAt])
+  @@index([updatedAt])
+  @@map("agent_conversations")
+}
+
+enum AgentMessageRole {
+  USUARIO
+  ASSISTENTE
+}
+
+model AgentMessage {
+  id             String           @id @default(uuid())
+  conversationId String
+  role           AgentMessageRole
+  content        String           @db.Text
+  /// As propostas de escrita da resposta, com o estado de cada uma
+  /// (`aplicada`). Só no assistente.
+  proposals      Json?
+  /// A execução que gerou a resposta — liga a mensagem ao custo.
+  runId          String?          @db.VarChar(191)
+  truncated      Boolean          @default(false)
+  /// A resposta falhou; `content` é o motivo mostrado à pessoa.
+  failed         Boolean          @default(false)
+  /// O que estava aberto na tela quando a pergunta foi feita ("Processo: …").
+  contextLabel   String?          @db.VarChar(200)
+  createdAt      DateTime         @default(now())
+
+  conversation AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("agent_messages")
+}
+
 model AgentRun {
   id        String @id @default(uuid())
   tenantId  String
