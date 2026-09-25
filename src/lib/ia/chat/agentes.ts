@@ -17,6 +17,7 @@ import { estadoDosAgentes } from "@/lib/ia/data";
 import { SISTEMA_DO_SOCIETARIO } from "@/lib/societario/assistente";
 import { nomeExibicao } from "@/lib/companyName";
 import { publicoPermite, type ContextoDaTela, type PropostaGravada } from "./regras";
+import { MODULOS_DO_BPO } from "@/lib/ia/ferramentas-bpo";
 
 export type AgenteDoChat = {
   code: string;
@@ -71,7 +72,29 @@ const FISCAL =
   "Você só lê: lançar ou ignorar documento é feito na tela /documentos-fiscais. O acervo é grande — não tente " +
   "somar o escritório inteiro; trabalhe por empresa e competência.";
 
+const BPO =
+  "Você é a IA do BPO de um escritório de contabilidade que faz o financeiro terceirizado de empresas clientes. " +
+  "Você responde sobre contas a pagar e a receber, o DRE do mês, as pendências com o cliente, a conciliação " +
+  "bancária e as contas aguardando aprovação do cliente.\n" +
+  "Consulte as ferramentas antes de responder — nunca invente valor, conta ou prazo. Para perguntas sobre uma " +
+  "empresa, ache o id com buscar_empresa. Competência é AAAA-MM. Valores em reais, no formato R$ 1.234,56. Quando " +
+  "houver link da tela, termine com ele para a pessoa conferir. Se uma ferramenta disser que a pessoa não tem " +
+  "acesso a uma tela, diga isso — não tente outro caminho.\n" +
+  "Você só lê: baixar, conciliar, aprovar e cobrar são feitos nas telas. Se o financeiro de uma empresa estiver " +
+  "vazio, diga que os dados ainda não estão no Connect (a importação do Omie traz).";
+
 const CONFIGS: Config[] = [
+  {
+    code: "assistente_do_bpo",
+    titulo: "IA do BPO",
+    modulo: "bpo_contas_pagar",
+    sistema: BPO,
+    sugestoes: [
+      "O que está vencido nas contas a pagar?",
+      "Quais pendências estão esperando o cliente?",
+      "Quais contas estão aguardando aprovação?",
+    ],
+  },
   {
     code: "assistente_do_fiscal",
     titulo: "IA do Fiscal",
@@ -175,8 +198,22 @@ export function setoresVisiveis(ctx: AuthContext, todos: string[]): string[] {
  * (`canActOnSector(vaga.sectorCode)`), então a IA não lê vaga que a pessoa não
  * poderia mexer.
  */
-export function escopoDoAgente(ctx: AuthContext, agentCode: string, todosOsSetores: string[]): Record<string, string> {
+export async function escopoDoAgente(
+  ctx: AuthContext,
+  agentCode: string,
+  todosOsSetores: string[]
+): Promise<Record<string, string>> {
   if (agentCode === "ajuda_do_connect") return { setores: setoresVisiveis(ctx, todosOsSetores).join(",") };
+  if (agentCode === "assistente_do_bpo") {
+    // Por módulo, e não pelo setor do agente: o DRE pode estar transferido
+    // para o Financeiro, e quem opera contas a pagar não herda o DRE por isso.
+    const modulos: string[] = [];
+    for (const modulo of Object.keys(MODULOS_DO_BPO)) {
+      const setor = (await setorDoModulo(ctx.tenantId, modulo)) ?? getModuleDef(modulo)?.sectorCode ?? null;
+      if (setor && canActOnSector(ctx, setor) && (await isModuleEnabled(ctx.tenantId, modulo))) modulos.push(modulo);
+    }
+    return { modulos: modulos.join(",") };
+  }
   if (agentCode === "assistente_do_recrutamento") {
     return { setores: todosOsSetores.filter((s) => canActOnSector(ctx, s)).join(",") };
   }
@@ -197,7 +234,8 @@ export async function contextoParaOAgente(
   if (!tela || !ctx.tenantId) return null;
   const tenantId = ctx.tenantId;
   if (tela.tipo === "empresa" || tela.tipo === "documento_fiscal") {
-    if (agentCode !== "assistente_do_fiscal") return null;
+    if (tela.tipo === "empresa" && agentCode !== "assistente_do_fiscal" && agentCode !== "assistente_do_bpo") return null;
+    if (tela.tipo === "documento_fiscal" && agentCode !== "assistente_do_fiscal") return null;
     if (tela.tipo === "empresa") {
       const e = await getPrisma().company.findFirst({ where: { id: tela.id, tenantId }, select: { id: true, name: true, displayName: true } });
       if (!e) return null;

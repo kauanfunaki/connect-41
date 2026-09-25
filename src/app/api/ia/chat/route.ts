@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
   const historico = await historicoDaConversa(conversa.id);
 
   const { labels } = await getSectorMaps(ctx.tenantId);
-  const escopo = escopoDoAgente(ctx, agente.code, Object.keys(labels));
+  const escopo = await escopoDoAgente(ctx, agente.code, Object.keys(labels));
 
   const codificador = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
