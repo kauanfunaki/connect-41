@@ -164,9 +164,57 @@ export function descreverProposta(p: {
     const etapa = typeof a.etapa === "string" ? (ETAPA_DO_FUNIL[a.etapa] ?? a.etapa) : "outra etapa";
     return `Mover${alvo || " o candidato"} para ${etapa}${motivo}`;
   }
+  if (p.ferramenta === "abrir_transferencia") return `Abrir uma transferência para ${p.alvo ?? "o setor"}`;
   if (p.ferramenta === "propor_encerrar_candidatura") {
     const desfecho = a.desfecho === "DESISTENTE" ? "desistente" : "reprovado";
     return `Encerrar${alvo || " a candidatura"} como ${desfecho}${motivo}`;
   }
   return p.descricao;
+}
+
+// ─── Orquestrador ────────────────────────────────────────────────────────────
+
+/** Os setores para onde uma IA pode encaminhar a pergunta. */
+export const SETORES_DO_ENCAMINHAMENTO = [
+  "societario",
+  "recrutamento",
+  "fiscal",
+  "bpo",
+  "contabil",
+  "dp",
+  "ajuda",
+  "outro",
+] as const;
+
+export type SetorDoEncaminhamento = (typeof SETORES_DO_ENCAMINHAMENTO)[number];
+
+/** A IA do chat de cada setor — `null` onde ainda não há (Contábil, DP). */
+export const IA_DO_SETOR: Record<SetorDoEncaminhamento, string | null> = {
+  societario: "assistente_do_societario",
+  recrutamento: "assistente_do_recrutamento",
+  fiscal: "assistente_do_fiscal",
+  bpo: "assistente_do_bpo",
+  contabil: null,
+  dp: null,
+  ajuda: "ajuda_do_connect",
+  outro: null,
+};
+
+export type Encaminhamento = { setor: SetorDoEncaminhamento; motivo: string };
+
+/** O pedido de encaminhamento que a IA fez, se fez — o primeiro, com setor válido. */
+export function encaminhamentoPedido(propostas: { ferramenta: string; argumentos: Record<string, unknown> }[]): Encaminhamento | null {
+  for (const p of propostas) {
+    if (p.ferramenta !== "encaminhar_pergunta") continue;
+    const setor = SETORES_DO_ENCAMINHAMENTO.find((s) => s === p.argumentos.setor);
+    if (!setor) continue;
+    const motivo = typeof p.argumentos.motivo === "string" ? p.argumentos.motivo.trim().slice(0, 300) : "";
+    return { setor, motivo };
+  }
+  return null;
+}
+
+/** A descrição que a transferência aberta pelo chat leva — a pergunta como foi feita. */
+export function descricaoDaTransferencia(pergunta: string, motivo: string): string {
+  return [`Pergunta feita no chat de IA: "${pergunta.trim()}"`, motivo ? `Assunto: ${motivo}` : ""].filter(Boolean).join("\n\n");
 }

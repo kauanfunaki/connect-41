@@ -2,7 +2,17 @@ import { NextRequest } from "next/server";
 import { getAuthContext } from "@/lib/auth/context";
 import { getSectorMaps } from "@/lib/sectors";
 import { conversarComAgente } from "@/lib/ai";
-import { agentesDoChat, contextoParaOAgente, escopoDoAgente, rotularPropostas, sistemaDoChat } from "@/lib/ia/chat/agentes";
+import {
+  agentesDoChat,
+  contextoParaOAgente,
+  escopoDoAgente,
+  podeAbrirTransferencia,
+  rotularPropostas,
+  setorDaTransferencia,
+  sistemaDoChat,
+  type AgenteDoChat,
+} from "@/lib/ia/chat/agentes";
+import { logAudit } from "@/lib/audit";
 import {
   apagarConversasVencidas,
   conversaParaPerguntar,
@@ -12,9 +22,13 @@ import {
 } from "@/lib/ia/chat/conversas";
 import {
   contextoDaTela,
+  descricaoDaTransferencia,
+  encaminhamentoPedido,
+  IA_DO_SETOR,
   LIMITE_DE_PERGUNTAS_POR_DIA,
   MAX_CARACTERES_DA_PERGUNTA,
   textoDoPasso,
+  type PropostaGravada,
 } from "@/lib/ia/chat/regras";
 
 export const dynamic = "force-dynamic";
@@ -102,29 +116,92 @@ export async function POST(req: NextRequest) {
       const minha = await gravarMensagem({ conversaId: conversa.id, papel: "usuario", texto: pergunta, contexto: contexto?.rotulo });
       enviar({ tipo: "mensagem", mensagem: minha });
 
-      try {
-        const r = await conversarComAgente({
+      /** Uma ida a um agente do chat, com o recorte e o contexto dele. */
+      const perguntarA = async (alvo: AgenteDoChat, comHistorico: boolean) => {
+        const ctxDoAlvo = alvo.code === agente.code ? contexto : await contextoParaOAgente(ctx, alvo.code, tela);
+        return conversarComAgente({
           tenantId: dono.tenantId,
-          agentCode: agente.code,
-          system: sistemaDoChat(agente.code) + (contexto ? `\n\n${contexto.texto}` : ""),
+          agentCode: alvo.code,
+          system: sistemaDoChat(alvo.code) + (ctxDoAlvo ? `\n\n${ctxDoAlvo.texto}` : ""),
           pergunta,
-          historico,
-          escopo,
+          historico: comHistorico ? historico : [],
+          escopo: alvo.code === agente.code ? escopo : await escopoDoAgente(ctx, alvo.code, Object.keys(labels)),
           contexto: { userId: dono.userId, entityType: "chat", entityId: conversa.id },
           aoUsarFerramenta: (nome) => enviar({ tipo: "passo", texto: textoDoPasso(nome) }),
         });
+      };
+      const propostasDe = (r: Awaited<ReturnType<typeof perguntarA>>): PropostaGravada[] =>
+        r.propostas
+          .filter((p) => p.ferramenta !== "encaminhar_pergunta")
+          .map((p) => ({ ferramenta: p.ferramenta, descricao: p.descricao, argumentos: p.argumentos ?? {} }));
+
+      try {
+        const r = await perguntarA(agente, true);
+        const pedido = encaminhamentoPedido(r.propostas.map((p) => ({ ferramenta: p.ferramenta, argumentos: p.argumentos ?? {} })));
+
+        // ─── Orquestrador ───────────────────────────────────────────────
+        // A IA disse que a pergunta é de outro setor. Se a pessoa tem a IA
+        // daquele setor, a pergunta vai para ela; se não tem (ou o setor não
+        // tem IA), o cartão oferece abrir uma transferência.
+        const codigoDoDestino = pedido ? IA_DO_SETOR[pedido.setor] : null;
+        const destino =
+          pedido && codigoDoDestino && codigoDoDestino !== agente.code
+            ? agentes.find((a) => a.code === codigoDoDestino) ?? null
+            : null;
+        const extras: PropostaGravada[] = [];
+        if (pedido && !destino && codigoDoDestino !== agente.code && podeAbrirTransferencia(ctx)) {
+          const setor = await setorDaTransferencia(ctx.tenantId, pedido.setor, Object.keys(labels));
+          if (setor) {
+            extras.push({
+              ferramenta: "abrir_transferencia",
+              descricao: "Abrir uma transferência",
+              argumentos: { setor, descricao: descricaoDaTransferencia(pergunta, pedido.motivo) },
+              alvo: labels[setor] ?? setor,
+            });
+          }
+        }
+
         const resposta = await gravarMensagem({
           conversaId: conversa.id,
           papel: "assistente",
-          texto: r.valor || "Não consegui montar uma resposta.",
-          propostas: await rotularPropostas(
-            dono.tenantId,
-            r.propostas.map((p) => ({ ferramenta: p.ferramenta, descricao: p.descricao, argumentos: p.argumentos ?? {} }))
-          ),
+          texto: r.valor || (pedido ? "Essa pergunta é de outro setor." : "Não consegui montar uma resposta."),
+          propostas: [...(await rotularPropostas(dono.tenantId, propostasDe(r))), ...extras],
           runId: (r as { runId?: string }).runId ?? null,
           truncada: r.truncado,
         });
         enviar({ tipo: "mensagem", mensagem: resposta });
+
+        if (pedido) {
+          await logAudit({
+            tenantId: dono.tenantId,
+            userId: dono.userId,
+            action: pedido.setor === "outro" ? "ia.chat.sem_ia" : "ia.chat.encaminhada",
+            entityType: "AgentConversation",
+            entityId: conversa.id,
+            // Só os setores e o desfecho — o painel do orquestrador conta,
+            // nunca lê a pergunta (a conversa é da pessoa).
+            metadata: {
+              de: agente.code,
+              para: pedido.setor,
+              desfecho: destino ? "respondida" : extras.length > 0 ? "transferencia_oferecida" : "sem_destino",
+            },
+          });
+        }
+
+        if (destino) {
+          enviar({ tipo: "passo", texto: `Passando para a ${destino.titulo}…` });
+          const r2 = await perguntarA(destino, false);
+          const resposta2 = await gravarMensagem({
+            conversaId: conversa.id,
+            papel: "assistente",
+            texto: r2.valor || "Não consegui montar uma resposta.",
+            propostas: await rotularPropostas(dono.tenantId, propostasDe(r2)),
+            runId: (r2 as { runId?: string }).runId ?? null,
+            truncada: r2.truncado,
+            contexto: `Respondido pela ${destino.titulo}`,
+          });
+          enviar({ tipo: "mensagem", mensagem: resposta2 });
+        }
       } catch (err) {
         console.error("[chat-ia]", agente.code, err);
         const texto = err instanceof Error ? err.message : "Erro ao falar com a IA.";

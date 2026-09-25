@@ -31,6 +31,8 @@ type Props = {
   mentionUsers?: MentionUser[];
   /** Membros elegíveis como responsável por setor de destino (setor + admins do tenant). */
   assigneeOptionsBySector?: Record<string, MentionUser[]>;
+  /** Preenchimento inicial — a transferência sugerida pelo chat de IA. */
+  inicial?: { toSectors: string[]; description: string };
 };
 
 // Uma transferência, N setores de destino: informações gerais valem pra todos
@@ -46,15 +48,16 @@ export function HandoffForm({
   people = [],
   mentionUsers = [],
   assigneeOptionsBySector = {},
+  inicial,
 }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const [entityType, setEntityType] = useState<EntityType>(fixedEntity?.entityType ?? "COMPANY");
   const [entityId, setEntityId] = useState("");
   const [fromSector, setFromSector] = useState("");
-  const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
+  const [selectedSectors, setSelectedSectors] = useState<string[]>(inicial?.toSectors ?? []);
   const [templateKey, setTemplateKey] = useState("");
   const [messageValue, setMessageValue] = useState("");
-  const [descriptionValue, setDescriptionValue] = useState("");
+  const [descriptionValue, setDescriptionValue] = useState(inicial?.description ?? "");
   const [instructions, setInstructions] = useState<Record<string, string>>({});
   const entityOptions = entityType === "COMPANY" ? companies : people;
   const { dialog: templateConfirmDialog, requestConfirm: requestTemplateConfirm } = useConfirm();

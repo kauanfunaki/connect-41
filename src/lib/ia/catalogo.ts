@@ -205,7 +205,9 @@ export const AGENT_CATALOG: AgenteDef[] = [
       "Lê a fila de processos e o detalhe de cada um para responder o coordenador e sugerir o que dá para destravar",
     faixa: "padrao",
     escreve: false,
-    ferramentas: ["listar_fila", "ver_processo", "propor_concluir_etapa", "propor_dispensar_etapa"],
+    // `encaminhar_pergunta` é do chat (orquestrador); o cartão da página
+    // `/processos` descarta a proposta — ver `perguntarAoSocietario`.
+    ferramentas: ["listar_fila", "ver_processo", "propor_concluir_etapa", "propor_dispensar_etapa", "encaminhar_pergunta"],
     tetoMensalCentavos: 30_000,
     tetoMensalChamadas: 800,
     padraoLigado: false,
@@ -226,6 +228,7 @@ export const AGENT_CATALOG: AgenteDef[] = [
       "buscar_candidato",
       "propor_mover_etapa",
       "propor_encerrar_candidatura",
+      "encaminhar_pergunta",
     ],
     tetoMensalCentavos: 30_000,
     tetoMensalChamadas: 3_000,
@@ -245,6 +248,7 @@ export const AGENT_CATALOG: AgenteDef[] = [
       "resumo_fiscal_do_mes",
       "listar_documentos_fiscais",
       "fila_de_lancamento",
+      "encaminhar_pergunta",
     ],
     tetoMensalCentavos: 30_000,
     tetoMensalChamadas: 3_000,
@@ -265,6 +269,7 @@ export const AGENT_CATALOG: AgenteDef[] = [
       "pendencias_de_clientes",
       "conciliacao_pendente",
       "aprovacoes_aguardando",
+      "encaminhar_pergunta",
     ],
     tetoMensalCentavos: 30_000,
     tetoMensalChamadas: 3_000,
@@ -278,7 +283,7 @@ export const AGENT_CATALOG: AgenteDef[] = [
       "Responde no chat do canto da tela como usar o Connect — onde fica cada função e o que dizem os manuais do escritório. Atende quem está num setor ainda sem IA própria",
     faixa: "rapido",
     escreve: false,
-    ferramentas: ["listar_minhas_telas", "buscar_nos_manuais"],
+    ferramentas: ["listar_minhas_telas", "buscar_nos_manuais", "encaminhar_pergunta"],
     // Pergunta de "onde fica" é curta e barata; o teto de chamadas é o que
     // segura um uso maior que o previsto no piloto.
     tetoMensalCentavos: 30_000,

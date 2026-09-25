@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AlertTriangle, ArrowLeft, History, Plus, Send, Sparkles, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -295,6 +296,7 @@ export function ChatDeIA({ agentes }: { agentes: AgenteDoChat[] }) {
                 </div>
               ) : (
                 <div key={m.id} className="self-start max-w-[95%] flex flex-col gap-2">
+                  {m.contexto && <span className="text-[10px] uppercase tracking-wide text-brand">{m.contexto}</span>}
                   <div
                     className={`rounded-lg border px-3 py-2 text-[13px] break-words ${
                       m.falhou ? "border-danger/30 bg-danger/5 text-danger" : "border-border bg-surface text-fg"
@@ -313,7 +315,17 @@ export function ChatDeIA({ agentes }: { agentes: AgenteDoChat[] }) {
                       {m.propostas.map((p, i) => (
                         <div key={i} className="flex items-center justify-between gap-2 border border-border rounded-md px-2.5 py-1.5">
                           <span className="text-[12px] text-fg">{descreverProposta(p)}</span>
-                          {p.aplicada ? (
+                          {p.ferramenta === "abrir_transferencia" ? (
+                            // Não aplica daqui: abre o formulário preenchido, e a
+                            // pessoa revisa empresa, setores e texto antes de mandar.
+                            <Link
+                              href={`/transferencias/novo?daIa=${m.id}&indice=${i}`}
+                              className="text-[12px] text-brand hover:underline shrink-0"
+                              onClick={() => setAberto(false)}
+                            >
+                              Abrir
+                            </Link>
+                          ) : p.aplicada ? (
                             <span className="text-[11px] text-success shrink-0">aplicado</span>
                           ) : (
                             <Button size="xs" variant="secondary" disabled={aplicando === `${m.id}:${i}`} onClick={() => aplicar(m, i)}>
