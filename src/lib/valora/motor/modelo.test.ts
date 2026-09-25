@@ -127,6 +127,13 @@ describe("Contábil", () => {
     expect(r.setores[0].atividades.map((a) => a.id)).not.toContain("CTB-17");
   });
 
+  it("DEFIS só no Simples, inclusive sem movimento", () => {
+    const ids = (r: ReturnType<typeof ctb>) => r.atividades.map((a) => a.id);
+    expect(ids(ctb({ regime: "SIMPLES" }))).toContain("CTB-P01");
+    expect(ids(ctb({ regime: "SIMPLES", semMovimento: true }))).toContain("CTB-P01");
+    expect(ids(ctb({ regime: "PRESUMIDO" }))).not.toContain("CTB-P01");
+  });
+
   it("sem movimento cobra o mínimo do setor e ainda entrega ECD/ECF", () => {
     const s = ctb({ regime: "SIMPLES", semMovimento: true });
     expect(s.minutosMes).toBeGreaterThan(0);
