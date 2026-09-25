@@ -13,6 +13,8 @@ import { moeda } from "@/lib/ia/tela";
 import { formatInstantDate } from "@/lib/format";
 import { PublicoDoChat } from "@/components/admin/PublicoDoChat";
 import { audienciaDoChat } from "@/lib/ia/chat/agentes";
+import { painelDoOrquestrador } from "@/lib/ia/chat/painel";
+import { PainelDoOrquestrador } from "@/components/admin/PainelDoOrquestrador";
 
 // Teto de gasto e chave de IA são configuração do tenant inteiro, não de setor
 // — mesmo critério da tela de Integrações.
@@ -29,10 +31,11 @@ export default async function AgentesDeIAPage() {
 
   // Sem config de tenant não há IA (a chave pelo ambiente saiu em 23/09). É o
   // que faz o aviso abaixo aparecer para quem precisa cadastrar a sua.
-  const [linhas, chamadas, audiencia] = await Promise.all([
+  const [linhas, chamadas, audiencia, painel] = await Promise.all([
     listarAgentes(ctx.tenantId, config?.provider ?? null, config?.model ?? null, agora),
     ultimasChamadas(ctx.tenantId, 30),
     audienciaDoChat(ctx.tenantId),
+    painelDoOrquestrador(ctx.tenantId, agora),
   ]);
 
   const totalCentavos = linhas.reduce((n, l) => n + l.gasto.centavos, 0);
@@ -81,6 +84,7 @@ export default async function AgentesDeIAPage() {
       </Card>
 
       <PublicoDoChat todos={audiencia === "TODOS"} disponivel={audiencia !== null} />
+      {painel && <PainelDoOrquestrador dados={painel} />}
 
       <div className="flex flex-col gap-3 mb-6">
         {linhas.map((linha) => (

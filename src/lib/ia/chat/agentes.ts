@@ -9,14 +9,14 @@
 // os dados, e porta sem essa checagem vaza.
 
 import { getPrisma } from "@/lib/prisma";
-import { canActOnSector, canViewSector, type AuthContext } from "@/lib/auth/context";
+import { canActOnSector, canViewSector, isFullWrite, type AuthContext } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { agenteDoCatalogo } from "@/lib/ia/catalogo";
 import { estadoDosAgentes } from "@/lib/ia/data";
 import { SISTEMA_DO_SOCIETARIO } from "@/lib/societario/assistente";
 import { nomeExibicao } from "@/lib/companyName";
-import { publicoPermite, type ContextoDaTela, type PropostaGravada } from "./regras";
+import { publicoPermite, type ContextoDaTela, type PropostaGravada, type SetorDoEncaminhamento } from "./regras";
 import { MODULOS_DO_BPO } from "@/lib/ia/ferramentas-bpo";
 
 export type AgenteDoChat = {
@@ -40,7 +40,10 @@ type Config = {
 const GUARDA_DO_CHAT =
   "\n\nVocê está no chat do canto da tela do Connect, conversando com uma pessoa da equipe do escritório. " +
   "Responda curto e em texto simples: frases diretas e, quando for lista, uma linha por item começando com '- '. " +
-  "Não use tabelas nem títulos.";
+  "Não use tabelas nem títulos.\n" +
+  "Se a pergunta for de OUTRO setor, não tente responder: chame encaminhar_pergunta com o setor certo e escreva só " +
+  "uma frase dizendo para qual setor a pergunta foi passada. O sistema entrega a pergunta à IA daquele setor ou " +
+  "oferece abrir uma transferência.";
 
 const AJUDA =
   "Você é a Ajuda do Connect, a plataforma interna do escritório de contabilidade 41. Você explica como usar o " +
@@ -321,4 +324,32 @@ export async function rotularPropostas(tenantId: string, propostas: PropostaGrav
     const alvo = typeof id === "string" ? nomes.get(id) : undefined;
     return alvo ? { ...p, alvo } : p;
   });
+}
+
+/** O módulo que diz o setor de cada IA — o setor pode ter sido transferido. */
+const MODULO_DO_SETOR: Partial<Record<SetorDoEncaminhamento, string>> = {
+  societario: "societario_processos",
+  recrutamento: "recrutamento_vagas",
+  fiscal: "fiscal_documentos",
+  bpo: "bpo_contas_pagar",
+};
+
+/**
+ * O código do setor, neste escritório, para onde abrir a transferência — ou
+ * `null` se ele não existir aqui (e aí não há cartão).
+ */
+export async function setorDaTransferencia(
+  tenantId: string,
+  setor: SetorDoEncaminhamento,
+  setoresDoTenant: string[]
+): Promise<string | null> {
+  if (setor === "ajuda" || setor === "outro") return null;
+  const modulo = MODULO_DO_SETOR[setor];
+  const codigo = modulo ? ((await setorDoModulo(tenantId, modulo)) ?? getModuleDef(modulo)?.sectorCode ?? setor) : setor;
+  return setoresDoTenant.includes(codigo) ? codigo : null;
+}
+
+/** Quem pode abrir transferência — a mesma regra de `/transferencias/novo`. */
+export function podeAbrirTransferencia(ctx: AuthContext): boolean {
+  return isFullWrite(ctx.role) || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.length > 0);
 }
