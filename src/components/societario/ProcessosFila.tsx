@@ -12,16 +12,20 @@ export const SITUACAO_LABEL: Record<SituacaoDoProcesso, string> = {
   EM_EXIGENCIA: "Em exigência",
   AGUARDANDO_ORGAO: "Aguardando órgão",
   EM_ANDAMENTO: "Em andamento",
+  AGUARDANDO_CLIENTE: "Aguardando cliente",
+  SUSPENSO: "Suspenso",
   CONCLUIDO: "Concluído",
 };
 
 // Cor por situação, e não uma cor só: quem abre esta tela precisa achar a
 // exigência sem ler. Atenção é o que depende de gente; informação é o que
 // depende do órgão.
-const SITUACAO_VARIANTE: Record<SituacaoDoProcesso, "danger" | "info" | "success" | "warning"> = {
+export const SITUACAO_VARIANTE: Record<SituacaoDoProcesso, "danger" | "info" | "success" | "warning"> = {
   EM_EXIGENCIA: "warning",
   AGUARDANDO_ORGAO: "info",
   EM_ANDAMENTO: "success",
+  AGUARDANDO_CLIENTE: "info",
+  SUSPENSO: "danger",
   CONCLUIDO: "success",
 };
 

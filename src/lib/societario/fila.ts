@@ -11,6 +11,7 @@ import {
   situacaoDoProcesso,
   prazoDoProcesso,
   totalDeVoltas,
+  STATUS_ENCERRADOS,
   type SituacaoDoProcesso,
   type Prazo,
 } from "./processo";
@@ -57,7 +58,11 @@ const PESO_DA_SITUACAO: Record<SituacaoDoProcesso, number> = {
   EM_EXIGENCIA: 0,
   AGUARDANDO_ORGAO: 1,
   EM_ANDAMENTO: 2,
-  CONCLUIDO: 3,
+  // Pausas marcadas pela equipe vão para o fim: não há o que fazer até o
+  // cliente mandar o que falta, ou até alguém retomar o suspenso.
+  AGUARDANDO_CLIENTE: 3,
+  SUSPENSO: 4,
+  CONCLUIDO: 5,
 };
 
 /**
@@ -133,7 +138,7 @@ export async function listarFila(
   const processos = await prisma.process.findMany({
     where: {
       tenantId,
-      status: { notIn: ["CONCLUIDO", "CANCELADO"] },
+      status: { notIn: STATUS_ENCERRADOS },
       companyId: filtro.empresaId || undefined,
       typeId: filtro.tipoId || undefined,
       ownerUserId: filtro.responsavelId === "nenhum" ? null : filtro.responsavelId || undefined,
@@ -143,6 +148,7 @@ export async function listarFila(
       id: true,
       startedAt: true,
       concludedAt: true,
+      status: true,
       ownerUserId: true,
       title: true,
       priority: true,
@@ -190,7 +196,7 @@ export async function listarFila(
       titulo: p.title,
       prioridade: p.priority,
       prazoCombinado: p.dueAt,
-      situacao: situacaoDoProcesso(p.protocols, p.concludedAt !== null),
+      situacao: situacaoDoProcesso(p.protocols, p.concludedAt !== null, p.status),
       prazo: prazoDoProcesso(p.type, p, agora, feriados),
       voltas: totalDeVoltas(p.protocols),
       etapasAgora: liberadas.map((id) => rotuloPor.get(id) ?? "—"),
@@ -211,6 +217,8 @@ export function contarPorSituacao(linhas: LinhaDaFila[]): Record<SituacaoDoProce
     EM_EXIGENCIA: 0,
     AGUARDANDO_ORGAO: 0,
     EM_ANDAMENTO: 0,
+    AGUARDANDO_CLIENTE: 0,
+    SUSPENSO: 0,
     CONCLUIDO: 0,
   };
   for (const l of linhas) contagem[l.situacao] += 1;

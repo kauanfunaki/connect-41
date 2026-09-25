@@ -12,6 +12,8 @@ import {
   situacaoDoProcesso,
   prazoDoProcesso,
   totalDeVoltas,
+  STATUS_ENCERRADOS,
+  STATUS_SEM_CONCLUSAO,
   type SituacaoDoProcesso,
   type Prazo,
 } from "./processo";
@@ -64,7 +66,7 @@ export async function itensDePrazo(tenantId: string, filtro: FiltroDePrazos): Pr
   const empresasDoDono = filtro.responsavelId
     ? (
         await prisma.process.findMany({
-          where: { tenantId, status: { notIn: ["CONCLUIDO", "CANCELADO"] }, ownerUserId: filtro.responsavelId },
+          where: { tenantId, status: { notIn: STATUS_ENCERRADOS }, ownerUserId: filtro.responsavelId },
           select: { companyId: true },
           distinct: ["companyId"],
         })
@@ -73,7 +75,7 @@ export async function itensDePrazo(tenantId: string, filtro: FiltroDePrazos): Pr
 
   const [processos, exigencias, taxas, licencas] = await Promise.all([
     prisma.process.findMany({
-      where: { tenantId, status: { notIn: ["CONCLUIDO", "CANCELADO"] }, ...dono, dueAt: recorteDeData },
+      where: { tenantId, status: { notIn: STATUS_ENCERRADOS }, ...dono, dueAt: recorteDeData },
       select: {
         id: true,
         title: true,
@@ -89,7 +91,7 @@ export async function itensDePrazo(tenantId: string, filtro: FiltroDePrazos): Pr
         tenantId,
         resolvedAt: null,
         dueAt: recorteDeData,
-        protocol: { process: { tenantId, status: { notIn: ["CONCLUIDO", "CANCELADO"] }, ...dono } },
+        protocol: { process: { tenantId, status: { notIn: STATUS_ENCERRADOS }, ...dono } },
       },
       select: {
         id: true,
@@ -114,8 +116,8 @@ export async function itensDePrazo(tenantId: string, filtro: FiltroDePrazos): Pr
         // Taxa de processo cancelado não é mais prazo de ninguém; a avulsa
         // (sem processo) continua sendo.
         ...(filtro.responsavelId
-          ? { process: { ownerUserId: filtro.responsavelId, status: { not: "CANCELADO" } } }
-          : { OR: [{ processId: null }, { process: { status: { not: "CANCELADO" } } }] }),
+          ? { process: { ownerUserId: filtro.responsavelId, status: { notIn: STATUS_SEM_CONCLUSAO } } }
+          : { OR: [{ processId: null }, { process: { status: { notIn: STATUS_SEM_CONCLUSAO } } }] }),
       },
       select: {
         id: true,
@@ -247,7 +249,7 @@ export async function listarExigencias(
       protocol: {
         process: {
           tenantId,
-          status: { not: "CANCELADO" },
+          status: { notIn: STATUS_SEM_CONCLUSAO },
           ownerUserId: filtro.responsavelId === "nenhum" ? null : filtro.responsavelId || undefined,
         },
       },
@@ -367,7 +369,9 @@ export type ProcessoDoCliente = {
   tipoNome: string;
   titulo: string | null;
   situacao: SituacaoDoProcesso;
+  /** Encerrado sem conclusão: cancelado ou indeferido. */
   cancelado: boolean;
+  encerradoComo: "CANCELADO" | "INDEFERIDO" | null;
   prazo: Prazo;
   voltas: number;
   prioridade: Prioridade;
@@ -469,8 +473,9 @@ export async function visaoDoCliente(
     id: p.id,
     tipoNome: p.type.name,
     titulo: p.title,
-    situacao: situacaoDoProcesso(p.protocols, p.concludedAt !== null),
-    cancelado: p.status === "CANCELADO",
+    situacao: situacaoDoProcesso(p.protocols, p.concludedAt !== null, p.status),
+    cancelado: STATUS_SEM_CONCLUSAO.includes(p.status),
+    encerradoComo: p.status === "CANCELADO" || p.status === "INDEFERIDO" ? p.status : null,
     prazo: prazoDoProcesso(p.type, p, agora, feriados),
     voltas: totalDeVoltas(p.protocols),
     prioridade: p.priority,
@@ -537,7 +542,7 @@ export async function processosParaRelatorio(
     where: {
       tenantId,
       OR: [
-        { status: { notIn: ["CONCLUIDO", "CANCELADO"] } },
+        { status: { notIn: STATUS_ENCERRADOS } },
         { status: "CONCLUIDO", concludedAt: { gte: inicio } },
       ],
     },
