@@ -110,3 +110,7 @@ ou arquivos além do que o navegador dá. TWA é o site, com moldura de app.
 "Adicionar à Tela de Início" pelo Safari — que já funciona, e é onde o push do
 iOS passa a valer. Um app de verdade na App Store precisa de Capacitor, dos
 US$ 99/ano e das decisões do Marcos.
+
+## Publicação na Google Play
+
+Ficha da loja, textos, imagens e roteiro do Play Console em [`play-store/README.md`](play-store/README.md).
