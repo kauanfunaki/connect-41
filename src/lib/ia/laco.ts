@@ -157,3 +157,44 @@ export type ResultadoDoLaco<T> = {
    */
   propostas: import("@/lib/ia/ferramentas").PropostaDeEscrita[];
 };
+
+// ─── Histórico de conversa ───────────────────────────────────────────────────
+
+/** Uma troca anterior da conversa, já em texto — sem as idas às ferramentas. */
+export type TurnoAnterior = { papel: "usuario" | "assistente"; texto: string };
+
+/** Quantas trocas anteriores vão junto. O resto fica na tela, não no custo. */
+export const MAX_TURNOS_DO_HISTORICO = 10;
+/** Teto de cada turno do histórico — resposta longa entra cortada. */
+export const MAX_CARACTERES_POR_TURNO = 4_000;
+
+/**
+ * O histórico no formato que os dois provedores aceitam: alternando papéis e
+ * começando pela pessoa.
+ *
+ * O banco pode ter dois turnos seguidos do mesmo papel — a pergunta cuja
+ * resposta falhou fica gravada sem resposta. Juntar os dois (e não descartar)
+ * mantém o que a pessoa disse; e o Anthropic recusa conversa que comece pelo
+ * assistente, que é o que sobra quando o corte de `MAX_TURNOS` cai no meio de
+ * uma troca.
+ */
+export function normalizarHistorico(turnos: TurnoAnterior[]): TurnoAnterior[] {
+  const recentes = turnos
+    .filter((t) => t.texto.trim().length > 0)
+    .slice(-MAX_TURNOS_DO_HISTORICO)
+    .map((t) => ({
+      papel: t.papel,
+      texto: t.texto.length > MAX_CARACTERES_POR_TURNO ? `${t.texto.slice(0, MAX_CARACTERES_POR_TURNO)}…` : t.texto,
+    }));
+  const juntos: TurnoAnterior[] = [];
+  for (const t of recentes) {
+    const ultimo = juntos[juntos.length - 1];
+    if (ultimo && ultimo.papel === t.papel) ultimo.texto = `${ultimo.texto}\n\n${t.texto}`;
+    else juntos.push({ ...t });
+  }
+  while (juntos.length > 0 && juntos[0].papel === "assistente") juntos.shift();
+  // A pergunta nova entra como turno da pessoa: o histórico precisa terminar no
+  // assistente, senão seriam duas falas seguidas dela.
+  while (juntos.length > 0 && juntos[juntos.length - 1].papel === "usuario") juntos.pop();
+  return juntos;
+}

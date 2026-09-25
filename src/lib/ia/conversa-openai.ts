@@ -31,7 +31,7 @@
 import { usoOpenAi } from "@/lib/ia/uso";
 import type { UsoDeTokens } from "@/lib/ia/custo";
 import type { FerramentaDef } from "@/lib/ia/ferramentas";
-import type { ResultadoDoLaco } from "@/lib/ia/laco";
+import { normalizarHistorico, type ResultadoDoLaco } from "@/lib/ia/laco";
 import {
   rodarLaco,
   ferramentasParaOLaco,
@@ -201,7 +201,13 @@ export async function conversarComFerramentasOpenAi(
   const tools = ferramentasParaOLaco(p.def).map(ferramentaOpenAi);
   const raciocina = ehModeloDeRaciocinio(p.model);
 
-  const itens: unknown[] = [{ role: "user", content: p.pergunta }];
+  const itens: unknown[] = [
+    ...normalizarHistorico(p.historico ?? []).map((t) => ({
+      role: t.papel === "usuario" ? "user" : "assistant",
+      content: t.texto,
+    })),
+    { role: "user", content: p.pergunta },
+  ];
   let ultimaSaida: ItemDaResponses[] = [];
 
   const adaptador: AdaptadorDeProvedor = {
@@ -281,5 +287,5 @@ export async function conversarComFerramentasOpenAi(
     },
   };
 
-  return rodarLaco(adaptador, p.def, p.ctx);
+  return rodarLaco(adaptador, p.def, p.ctx, p.aoUsarFerramenta);
 }

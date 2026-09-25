@@ -41,7 +41,9 @@ import {
   somarUsos,
   resultadoParaOModelo,
   MOTIVO_DA_TRUNCAGEM,
+  normalizarHistorico,
   type ResultadoDoLaco,
+  type TurnoAnterior,
 } from "@/lib/ia/laco";
 import type { UsoDeTokens } from "@/lib/ia/custo";
 
@@ -97,7 +99,8 @@ export type AdaptadorDeProvedor = {
 export async function rodarLaco(
   adaptador: AdaptadorDeProvedor,
   def: AgenteDef,
-  ctx: ContextoDaFerramenta
+  ctx: ContextoDaFerramenta,
+  aoUsarFerramenta?: (nome: string) => void
 ): Promise<ResultadoDoLaco<string>> {
   const usos: (UsoDeTokens | null)[] = [];
   const propostas: PropostaDeEscrita[] = [];
@@ -131,6 +134,13 @@ export async function rodarLaco(
 
     const respostas: RespostaAoPedido[] = [];
     for (const pedido of r.pedidos) {
+      // Só para a tela mostrar o passo ("consultando a fila…"). Falha aqui não
+      // pode derrubar a conversa já paga.
+      try {
+        aoUsarFerramenta?.(pedido.nome);
+      } catch {
+        // ignorado de propósito
+      }
       respostas.push(await atenderPedido(pedido, def, ctx, propostas));
     }
     adaptador.devolver(respostas);
@@ -217,6 +227,10 @@ export type ParametrosDaConversa = {
   pergunta: string;
   maxTokens?: number;
   ctx: ContextoDaFerramenta;
+  /** Trocas anteriores da conversa (chat). Normalizadas antes de ir ao provedor. */
+  historico?: TurnoAnterior[];
+  /** Avisado a cada ferramenta pedida — é o que o chat mostra como passo. */
+  aoUsarFerramenta?: (nome: string) => void;
   /** Só teste passa. Em produção o laço fala com o Anthropic. */
   chamarModelo?: ChamadaAoModelo;
 };
@@ -244,7 +258,12 @@ export async function conversarComFerramentas(
       });
     });
 
-  const messages: Anthropic.MessageParam[] = [{ role: "user", content: p.pergunta }];
+  const messages: Anthropic.MessageParam[] = [
+    ...normalizarHistorico(p.historico ?? []).map(
+      (t): Anthropic.MessageParam => ({ role: t.papel === "usuario" ? "user" : "assistant", content: t.texto })
+    ),
+    { role: "user", content: p.pergunta },
+  ];
   let ultima: Anthropic.Message | null = null;
 
   const adaptador: AdaptadorDeProvedor = {
@@ -288,5 +307,5 @@ export async function conversarComFerramentas(
     },
   };
 
-  return rodarLaco(adaptador, p.def, p.ctx);
+  return rodarLaco(adaptador, p.def, p.ctx, p.aoUsarFerramenta);
 }
