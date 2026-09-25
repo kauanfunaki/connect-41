@@ -31,6 +31,8 @@ const RECORTES: { chave: string; situacao?: SituacaoDoProcesso }[] = [
   { chave: "exigencia", situacao: "EM_EXIGENCIA" },
   { chave: "orgao", situacao: "AGUARDANDO_ORGAO" },
   { chave: "andamento", situacao: "EM_ANDAMENTO" },
+  { chave: "cliente", situacao: "AGUARDANDO_CLIENTE" },
+  { chave: "suspensos", situacao: "SUSPENSO" },
 ];
 
 export default async function ProcessosPage({

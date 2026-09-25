@@ -171,7 +171,7 @@ export const FERRAMENTAS_DE_SOCIETARIO: Record<string, FerramentaRegistrada> = {
         empresa: p.company.tradeName || p.company.name,
         tipo: p.type.name,
         status: p.status,
-        situacao: situacaoDoProcesso(protocolos, p.status === "CONCLUIDO"),
+        situacao: situacaoDoProcesso(protocolos, p.status === "CONCLUIDO", p.status),
         iniciadoEm: p.startedAt.toISOString().slice(0, 10),
         totalDeVoltas: totalDeVoltas(protocolos),
         voltasPorOrgao: [...voltas.entries()].map(([organId, n]) => ({

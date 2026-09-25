@@ -9,6 +9,8 @@ import {
   etapasLiberadas,
   proximaTentativa,
   itensObrigatoriosPendentes,
+  transicaoDeSituacao,
+  type AcaoDeSituacao,
 } from "@/lib/societario/processo";
 import {
   executorPara,
@@ -477,6 +479,57 @@ export async function resolverExigencia(requirementId: string): Promise<Processo
 
   revalidatePath(`/processos/${exigencia.protocol.processId}`);
   revalidatePath("/processos");
+  return null;
+}
+
+const ACOES_DE_SITUACAO = new Set<AcaoDeSituacao>(["aguardar_cliente", "suspender", "retomar", "indeferir", "cancelar"]);
+
+/**
+ * Pausa, encerra sem conclusão ou retoma o processo.
+ *
+ * É a única escrita de `status` fora de `sincronizarConclusao`: as situações
+ * que dependem de decisão de gente (esperar o cliente, suspender, o órgão
+ * negou, o cliente desistiu) não se derivam de protocolo. A regra de quem vai
+ * para onde está em `transicaoDeSituacao`; a gravação é condicional no status
+ * lido, para duas pessoas na mesma tela não se sobreporem.
+ */
+export async function mudarSituacaoDoProcesso(
+  processId: string,
+  acao: AcaoDeSituacao,
+  motivo: string
+): Promise<ProcessoState> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  if (!ACOES_DE_SITUACAO.has(acao)) return { error: "Ação desconhecida." };
+
+  const prisma = getPrisma();
+  const processo = await prisma.process.findFirst({
+    where: { id: processId, tenantId: ctx.tenantId },
+    select: { id: true, status: true, statusReason: true },
+  });
+  if (!processo) return { error: "Processo não encontrado." };
+
+  const t = transicaoDeSituacao(processo.status, acao, typeof motivo === "string" ? motivo : "");
+  if (!t.ok) return { error: t.erro };
+
+  const gravado = await prisma.process.updateMany({
+    where: { id: processo.id, status: processo.status },
+    data: { status: t.status, statusReason: t.motivo, statusChangedAt: new Date() },
+  });
+  if (gravado.count !== 1) return { error: "O processo acabou de mudar — atualize a tela." };
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "societario.processo.situacao",
+    entityType: "Process",
+    entityId: processo.id,
+    metadata: { de: processo.status, para: t.status, acao, motivo: t.motivo, motivoAnterior: processo.statusReason },
+  });
+
+  revalidatePath(`/processos/${processo.id}`);
+  revalidatePath("/processos");
+  revalidatePath("/processos/kanban");
   return null;
 }
 

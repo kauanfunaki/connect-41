@@ -136,7 +136,76 @@ export type SituacaoDoProcesso =
   | "EM_ANDAMENTO"
   | "AGUARDANDO_ORGAO"
   | "EM_EXIGENCIA"
+  | "AGUARDANDO_CLIENTE"
+  | "SUSPENSO"
   | "CONCLUIDO";
+
+/** O `Process.status` gravado. Espelha o enum do Prisma sem depender dele. */
+export type StatusDoProcesso =
+  | "EM_ANDAMENTO"
+  | "AGUARDANDO_ORGAO"
+  | "EM_EXIGENCIA"
+  | "CONCLUIDO"
+  | "CANCELADO"
+  | "AGUARDANDO_CLIENTE"
+  | "SUSPENSO"
+  | "INDEFERIDO";
+
+/**
+ * Os status que encerram o processo. Consulta de "processos abertos" filtra por
+ * esta lista — antes eram dois valores escritos à mão em cada `where`, e o
+ * terceiro (indeferido) teria entrado em uns e ficado de fora de outros.
+ */
+export const STATUS_ENCERRADOS: StatusDoProcesso[] = ["CONCLUIDO", "CANCELADO", "INDEFERIDO"];
+
+/** Encerrado sem conclusão: não teve prazo cumprido nem estourado. */
+export const STATUS_SEM_CONCLUSAO: StatusDoProcesso[] = ["CANCELADO", "INDEFERIDO"];
+
+export type AcaoDeSituacao = "aguardar_cliente" | "suspender" | "retomar" | "indeferir" | "cancelar";
+
+export const ROTULO_DA_ACAO: Record<AcaoDeSituacao, string> = {
+  aguardar_cliente: "Aguardando cliente",
+  suspender: "Suspender",
+  retomar: "Retomar",
+  indeferir: "Indeferido pelo órgão",
+  cancelar: "Cancelar",
+};
+
+/**
+ * O que cada ação faz com o status, ou por que não pode.
+ *
+ * Pausar e encerrar pedem motivo: "aguardando cliente" sem dizer o quê é
+ * pendência escondida, e cancelado sem motivo é a pergunta que alguém faz em
+ * três meses e ninguém sabe responder. Retomar volta a `EM_ANDAMENTO` — a
+ * situação fina (exigência, espera de órgão) volta a sair dos protocolos
+ * sozinha. Retomar vale também para encerrado sem conclusão, para desfazer
+ * engano; concluído não se retoma por aqui, porque quem reabre é a etapa.
+ */
+export function transicaoDeSituacao(
+  atual: StatusDoProcesso,
+  acao: AcaoDeSituacao,
+  motivo: string
+): { ok: true; status: StatusDoProcesso; motivo: string | null } | { ok: false; erro: string } {
+  const texto = motivo.trim().replace(/\s+/g, " ");
+  if (atual === "CONCLUIDO") return { ok: false, erro: "Processo concluído não muda de situação por aqui." };
+  if (acao === "retomar") {
+    if (!["AGUARDANDO_CLIENTE", "SUSPENSO", "CANCELADO", "INDEFERIDO"].includes(atual)) {
+      return { ok: false, erro: "O processo já está em andamento." };
+    }
+    return { ok: true, status: "EM_ANDAMENTO", motivo: null };
+  }
+  if (STATUS_SEM_CONCLUSAO.includes(atual)) return { ok: false, erro: "Processo encerrado: retome antes de mudar a situação." };
+  if (texto.length < 3) return { ok: false, erro: "Diga o motivo." };
+  if (texto.length > 300) return { ok: false, erro: "Motivo com mais de 300 caracteres." };
+  const destino: Record<Exclude<AcaoDeSituacao, "retomar">, StatusDoProcesso> = {
+    aguardar_cliente: "AGUARDANDO_CLIENTE",
+    suspender: "SUSPENSO",
+    indeferir: "INDEFERIDO",
+    cancelar: "CANCELADO",
+  };
+  if (atual === destino[acao]) return { ok: false, erro: "O processo já está nesta situação." };
+  return { ok: true, status: destino[acao], motivo: texto };
+}
 
 /**
  * Em que estado o processo está, derivado dos protocolos.
@@ -149,9 +218,15 @@ export type SituacaoDoProcesso =
  */
 export function situacaoDoProcesso(
   protocolos: Protocolo[],
-  concluido: boolean
+  concluido: boolean,
+  status?: StatusDoProcesso
 ): SituacaoDoProcesso {
   if (concluido) return "CONCLUIDO";
+  // Pausa marcada pela equipe ganha da situação derivada: se o processo tem
+  // exigência mas está esperando o cliente mandar o documento dela, a vez é do
+  // cliente, e a fila não deve cobrar a equipe por isso.
+  if (status === "SUSPENSO") return "SUSPENSO";
+  if (status === "AGUARDANDO_CLIENTE") return "AGUARDANDO_CLIENTE";
   if (protocolos.some((p) => p.outcome === "EXIGENCIA")) return "EM_EXIGENCIA";
   if (protocolos.some((p) => p.outcome === "PENDENTE")) return "AGUARDANDO_ORGAO";
   return "EM_ANDAMENTO";
