@@ -79,6 +79,7 @@ describe("AGENT_CATALOG", () => {
     ]);
     expect(agentesDoSetor(null).map((a) => a.code)).toEqual(["resumo_empresa", "ajuda_do_connect"]);
     expect(agentesDoSetor("fiscal").map((a) => a.code)).toEqual(["assistente_do_fiscal"]);
+    expect(agentesDoSetor("bpo").map((a) => a.code)).toEqual(["assistente_do_bpo"]);
   });
 });
 

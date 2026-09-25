@@ -251,6 +251,26 @@ export const AGENT_CATALOG: AgenteDef[] = [
     padraoLigado: false,
   },
   {
+    code: "assistente_do_bpo",
+    label: "IA do BPO (chat)",
+    sectorCode: "bpo",
+    description:
+      "Responde no chat do canto da tela sobre o financeiro dos clientes — contas a pagar e a receber, DRE do mês, pendências com o cliente, conciliação e aprovações — cada tela só para quem a opera",
+    faixa: "padrao",
+    escreve: false,
+    ferramentas: [
+      "buscar_empresa",
+      "contas_do_bpo",
+      "dre_do_mes",
+      "pendencias_de_clientes",
+      "conciliacao_pendente",
+      "aprovacoes_aguardando",
+    ],
+    tetoMensalCentavos: 30_000,
+    tetoMensalChamadas: 3_000,
+    padraoLigado: false,
+  },
+  {
     code: "ajuda_do_connect",
     label: "Ajuda do Connect (chat)",
     sectorCode: null,
