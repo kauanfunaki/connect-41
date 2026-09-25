@@ -6,6 +6,8 @@ import { logAudit } from "@/lib/audit";
 import { previaDasNotasOmie, salvarContaOmie, testarContaOmie } from "@/lib/integracoes/omie/contas";
 import { mensagemDaImportacao } from "@/lib/integracoes/omie/notas";
 import { sincronizarNotasDaEmpresa } from "@/lib/integracoes/omie/sincronizacao";
+import { sincronizarFinanceiroDaEmpresa } from "@/lib/integracoes/omie/sincronizacaoFinanceiro";
+import { mensagemDoFinanceiro } from "@/lib/integracoes/omie/financeiro";
 
 type Resultado = { error: string } | { ok: true; mensagem?: string };
 
@@ -59,4 +61,28 @@ export async function importarNotasOmieAction(companyId: string): Promise<Result
   revalidatePath("/admin/integracoes");
   if (!r.ok) return { error: r.erro };
   return { ok: true, mensagem: mensagemDaImportacao(r.counters) };
+}
+
+/**
+ * Contas a pagar e a receber do Omie da empresa. Com `gravar: false` é a
+ * prévia: lê tudo e só conta o que entraria — nada é gravado. A primeira
+ * gravação é sempre daqui; depois o cron mantém atualizado.
+ */
+export async function contasDoOmieAction(companyId: string, gravar: boolean): Promise<Resultado> {
+  const ctx = await contexto();
+  if (!ctx) return { error: "Sem permissão para configurar integrações." };
+  const r = await sincronizarFinanceiroDaEmpresa(ctx.tenantId!, companyId, "MANUAL", { gravar });
+  if (!r.ok) return { error: r.erro };
+  if (gravar) {
+    await logAudit({
+      tenantId: ctx.tenantId!,
+      userId: ctx.userId,
+      action: "integration.omie.financeiro",
+      entityType: "Company",
+      entityId: companyId,
+      metadata: r.counters,
+    });
+    for (const p of ["/admin/integracoes", "/pagar", "/receber", "/dre", "/dre/economica", "/fluxo-de-caixa", "/cadastros-financeiros"]) revalidatePath(p);
+  }
+  return { ok: true, mensagem: mensagemDoFinanceiro(r.counters, r.gravou) };
 }

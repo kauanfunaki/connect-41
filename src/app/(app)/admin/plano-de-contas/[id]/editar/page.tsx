@@ -19,7 +19,7 @@ export default async function EditarCategoriaPage({
 
   const prisma = getPrisma();
   const categoria = await prisma.financeCategory.findFirst({
-    where: { id, tenantId: ctx.tenantId },
+    where: { id, tenantId: ctx.tenantId, companyId: null },
   });
   if (!categoria) notFound();
 

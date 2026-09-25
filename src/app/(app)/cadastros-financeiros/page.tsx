@@ -15,6 +15,10 @@ import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePer
 import { NovaContraparte, EditarContraparte } from "@/components/financeiro/FormContraparte";
 import { NovoCentroDeCusto, EditarCentroDeCusto } from "@/components/financeiro/FormCentroDeCusto";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
+import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
+import { GRUPOS, TRANSFERENCIA } from "@/lib/dre/estrutura";
+import { grupoDeTexto } from "@/lib/dre/mapeamento";
+import { NovaCategoriaDaEmpresa, LinhaDaDre, EsconderDoPadrao, EditarCategoriaDaEmpresa } from "@/components/financeiro/PlanoDaEmpresa";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +30,7 @@ const ABAS = [
   { chave: "sacados", rotulo: "Sacados" },
   { chave: "todos", rotulo: "Todos" },
   { chave: "centros", rotulo: "Centros de custo" },
+  { chave: "plano", rotulo: "Plano de contas" },
 ] as const;
 
 function documento(d: string | null): string {
@@ -66,7 +71,7 @@ export default async function CadastrosFinanceirosPage({
   const cabecalho = (
     <PageHeader
       title="Fornecedores e sacados"
-      subtitle="As contrapartes e os centros de custo de cada empresa cliente, e o que a próxima conta herda."
+      subtitle="As contrapartes, os centros de custo e o plano de contas de cada empresa cliente, e o que a próxima conta herda."
     />
   );
   if (!companyId) {
@@ -85,6 +90,17 @@ export default async function CadastrosFinanceirosPage({
     select: { id: true, name: true, code: true, active: true },
     orderBy: { name: "asc" },
   });
+
+  if (aba === "plano") {
+    return (
+      <PageContainer>
+        {cabecalho}
+        <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba }} />
+        <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
+        <AbaDoPlano tenantId={ctx.tenantId} companyId={companyId} podeEditar={podeEditar} />
+      </PageContainer>
+    );
+  }
 
   if (aba === "centros") {
     return (
@@ -128,7 +144,7 @@ export default async function CadastrosFinanceirosPage({
       _count: { _all: true },
     }),
     prisma.financeCategory.findMany({
-      where: { tenantId: ctx.tenantId, kind: "PAGAR", active: true },
+      where: ondeDaEmpresa(ctx.tenantId, companyId, { kind: "PAGAR" }),
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
@@ -388,6 +404,123 @@ async function AbaDeCentros({
         já foi lançado nele. Centro de custo não é apagado. Na importação por CSV, a coluna <code>centro_de_custo</code> casa
         pelo nome ou pelo código.
       </p>
+    </>
+  );
+}
+
+/**
+ * O plano de contas **desta empresa**: o padrão do escritório, o que a empresa
+ * escondeu dele e as categorias só dela (criadas aqui ou trazidas do Omie).
+ */
+async function AbaDoPlano({ tenantId, companyId, podeEditar }: { tenantId: string; companyId: string; podeEditar: boolean }) {
+  const prisma = getPrisma();
+  const [categorias, ocultas, excecoes, uso] = await Promise.all([
+    prisma.financeCategory.findMany({
+      where: ondeDaEmpresa(tenantId, companyId, { apenasAtivas: false, incluirOcultas: true }),
+      select: { id: true, name: true, kind: true, planGroup: true, dreGroup: true, active: true, companyId: true, omieCode: true },
+      orderBy: [{ planGroup: "asc" }, { name: "asc" }],
+    }),
+    prisma.financeCategoryHidden.findMany({ where: { tenantId, companyId }, select: { categoryId: true } }),
+    prisma.dreCategoryMapping.findMany({ where: { tenantId, companyId }, select: { categoryId: true, grupo: true } }),
+    prisma.financeEntry.groupBy({ by: ["categoryId"], where: { tenantId, companyId, categoryId: { not: null } }, _count: { _all: true } }),
+  ]);
+  const oculta = new Set(ocultas.map((o) => o.categoryId));
+  const excecao = new Map(excecoes.map((e) => [e.categoryId, e.grupo]));
+  const lancamentos = new Map(uso.map((u) => [u.categoryId, u._count._all]));
+  const linhas = [
+    ...GRUPOS.map((g) => ({ code: g.code, label: g.label })),
+    { code: TRANSFERENCIA, label: "Fora do resultado (transferência)" },
+  ];
+  const rotulo = (codigo: string | null) => (codigo ? (linhas.find((l) => l.code === grupoDeTexto(codigo))?.label ?? codigo) : "sem linha");
+  const grupos = [...new Set(categorias.map((c) => c.planGroup).filter((g): g is string => !!g))].sort();
+  const daEmpresa = categorias.filter((c) => c.companyId).length;
+
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <p className="text-[12px] text-fg-muted max-w-2xl">
+          O plano padrão do escritório vale para todas as empresas. Aqui ele se ajusta a esta: categoria só dela, o que não se
+          usa escondido e a linha da DRE trocada. Nada é apagado — o que já foi lançado continua na DRE.
+          {daEmpresa > 0 && ` ${daEmpresa} categoria${daEmpresa > 1 ? "s" : ""} só desta empresa.`}
+        </p>
+        {podeEditar && <NovaCategoriaDaEmpresa companyId={companyId} linhas={linhas} grupos={grupos} />}
+      </div>
+      {categorias.length === 0 ? (
+        <EmptyState
+          title="Plano de contas vazio"
+          description="Carregue o plano padrão em Administração › Plano de contas, ou crie aqui uma categoria só desta empresa."
+          icon={<Layers />}
+        />
+      ) : (
+        (["PAGAR", "RECEBER"] as const).map((kind) => {
+          const doLado = categorias.filter((c) => c.kind === kind);
+          if (doLado.length === 0) return null;
+          return (
+            <div key={kind} className="mb-6">
+              <h3 className="text-[14px] font-medium text-fg mb-2">{kind === "PAGAR" ? "Despesas (a pagar)" : "Receitas (a receber)"}</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[760px] text-[13px]">
+                  <thead>
+                    <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                      <th className="py-2 pr-3 font-medium">Categoria</th>
+                      <th className="py-2 pr-3 font-medium">Grupo do plano</th>
+                      <th className="py-2 pr-3 font-medium">Linha da DRE nesta empresa</th>
+                      <th className="py-2 pr-3 font-medium text-right">Lançamentos</th>
+                      <th className="py-2 font-medium"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {doLado.map((c) => {
+                      const escondida = oculta.has(c.id);
+                      const propria = c.companyId !== null;
+                      return (
+                        <tr key={c.id} className={`border-b border-border-soft align-top ${escondida || !c.active ? "opacity-60" : ""}`}>
+                          <td className="py-2 pr-3">
+                            <span className="font-medium">{c.name}</span>
+                            <span className="ml-2 inline-flex gap-1 align-middle">
+                              {propria ? (
+                                <Badge variant="info">{c.omieCode ? "Do Omie" : "Desta empresa"}</Badge>
+                              ) : null}
+                              {escondida && <Badge variant="warning">Não usada aqui</Badge>}
+                              {!c.active && <Badge variant="warning">Inativa</Badge>}
+                            </span>
+                          </td>
+                          <td className="py-2 pr-3 text-fg-secondary">{c.planGroup ?? "—"}</td>
+                          <td className="py-2 pr-3">
+                            {podeEditar && !escondida ? (
+                              <LinhaDaDre
+                                companyId={companyId}
+                                categoryId={c.id}
+                                valor={propria ? (grupoDeTexto(c.dreGroup) ?? "") : (excecao.get(c.id) ?? "")}
+                                linhas={linhas}
+                                rotuloDoPadrao={propria ? undefined : rotulo(c.dreGroup)}
+                              />
+                            ) : (
+                              <span className="text-fg-secondary">{rotulo(excecao.get(c.id) ?? c.dreGroup)}</span>
+                            )}
+                          </td>
+                          <td className="py-2 pr-3 text-right tabular-nums">{lancamentos.get(c.id) ?? 0}</td>
+                          <td className="py-2">
+                            {podeEditar &&
+                              (propria ? (
+                                <EditarCategoriaDaEmpresa
+                                  categoria={{ id: c.id, nome: c.name, grupo: c.planGroup, linha: grupoDeTexto(c.dreGroup) ?? "", ativa: c.active }}
+                                  linhas={linhas}
+                                />
+                              ) : (
+                                <EsconderDoPadrao companyId={companyId} categoryId={c.id} oculta={escondida} />
+                              ))}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })
+      )}
     </>
   );
 }

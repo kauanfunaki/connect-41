@@ -21,6 +21,7 @@ import { competenciaValida, competenciaDoInstante } from "@/lib/financeiro/perio
 import { podeCancelarManual } from "@/lib/financeiro/manual";
 import { moeda } from "@/lib/financeiro/formato";
 import { centrosAtivosDaEmpresa } from "@/lib/financeiro/centroDeCustoServidor";
+import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 
 export const dynamic = "force-dynamic";
 
@@ -140,7 +141,7 @@ async function FormularioDaEmpresa({
       orderBy: { name: "asc" },
     }),
     prisma.financeCategory.findMany({
-      where: { tenantId, active: true },
+      where: ondeDaEmpresa(tenantId, companyId),
       select: { id: true, name: true, kind: true },
       orderBy: { name: "asc" },
     }),
