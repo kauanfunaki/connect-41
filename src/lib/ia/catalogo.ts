@@ -211,6 +211,27 @@ export const AGENT_CATALOG: AgenteDef[] = [
     padraoLigado: false,
   },
   {
+    code: "assistente_do_recrutamento",
+    label: "IA do Recrutamento (chat)",
+    sectorCode: "recrutamento",
+    description:
+      "Responde no chat do canto da tela sobre as vagas e os candidatos do setor — o que está parado, quem chegou, onde está cada candidato — e sugere mover ou encerrar candidaturas",
+    faixa: "padrao",
+    escreve: false,
+    ferramentas: [
+      "listar_vagas",
+      "ver_vaga_do_setor",
+      "listar_candidatos_da_vaga",
+      "ver_candidatura",
+      "buscar_candidato",
+      "propor_mover_etapa",
+      "propor_encerrar_candidatura",
+    ],
+    tetoMensalCentavos: 30_000,
+    tetoMensalChamadas: 3_000,
+    padraoLigado: false,
+  },
+  {
     code: "ajuda_do_connect",
     label: "Ajuda do Connect (chat)",
     sectorCode: null,

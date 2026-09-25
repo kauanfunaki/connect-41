@@ -19,6 +19,7 @@ import {
 } from "@/lib/ia/chat/conversas";
 import { lerPropostas } from "@/lib/ia/chat/regras";
 import { aplicarPropostaDoSocietario } from "@/app/(app)/processos/ia-actions";
+import { aplicarProposta as aplicarPropostaDaVaga } from "@/app/(app)/vagas/[id]/ia-actions";
 
 async function dono() {
   const ctx = await getAuthContext();
@@ -64,6 +65,17 @@ export async function aplicarPropostaDoChat(mensagemId: string, indice: number):
   let r: { error: string } | null;
   if (m.conversation.agentCode === "assistente_do_societario") {
     r = await aplicarPropostaDoSocietario({ ferramenta: p.ferramenta, descricao: p.descricao, argumentos: p.argumentos });
+  } else if (m.conversation.agentCode === "assistente_do_recrutamento") {
+    // A proposta traz só a candidatura; a vaga sai do banco, no tenant. E a
+    // action da vaga refaz o resto — setor, etapa válida, promoção a
+    // colaborador em CONTRATADO.
+    const candidaturaId = typeof p.argumentos.candidaturaId === "string" ? p.argumentos.candidaturaId : "";
+    const c = candidaturaId
+      ? await getPrisma().candidatura.findFirst({ where: { id: candidaturaId, tenantId: d.tenantId }, select: { vagaId: true } })
+      : null;
+    r = c
+      ? await aplicarPropostaDaVaga(c.vagaId, { ferramenta: p.ferramenta, descricao: p.descricao, argumentos: p.argumentos })
+      : { error: "Candidatura não encontrada." };
   } else {
     r = { error: "Esta IA não aplica propostas." };
   }

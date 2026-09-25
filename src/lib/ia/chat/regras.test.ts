@@ -52,6 +52,11 @@ describe("contextoDaTela", () => {
   });
   it("rota que não é processo vira só o caminho", () => {
     expect(contextoDaTela("/processos/kanban")).toEqual({ tipo: "tela", caminho: "/processos/kanban" });
+    const v = "3f2c1b9a-1234-4abc-9def-0123456789ab";
+    expect(contextoDaTela(`/vagas/${v}`)).toEqual({ tipo: "vaga", id: v });
+    expect(contextoDaTela(`/vagas/${v}/candidaturas/x`)).toEqual({ tipo: "vaga", id: v });
+    expect(contextoDaTela(`/candidatos/${v}`)).toEqual({ tipo: "candidato", id: v });
+    expect(contextoDaTela("/vagas/novo")).toEqual({ tipo: "tela", caminho: "/vagas/novo" });
     expect(contextoDaTela("/pagar")).toEqual({ tipo: "tela", caminho: "/pagar" });
     expect(contextoDaTela("lixo")).toBeNull();
   });
@@ -71,6 +76,15 @@ describe("passos e propostas", () => {
     expect(lidas).toEqual([{ ferramenta: "propor_concluir_etapa", descricao: "d", argumentos: { stepId: "s" }, aplicada: true }]);
     expect(lerPropostas("x")).toEqual([]);
   });
+  it("descreve as propostas do Recrutamento pelo nome do candidato", () => {
+    expect(
+      descreverProposta({ ferramenta: "propor_mover_etapa", descricao: "", argumentos: { etapa: "ENTREVISTA", motivo: "boa nota" }, alvo: "Maria" })
+    ).toBe("Mover Maria para Entrevista — boa nota");
+    expect(descreverProposta({ ferramenta: "propor_encerrar_candidatura", descricao: "", argumentos: { desfecho: "REPROVADO" } })).toBe(
+      "Encerrar a candidatura como reprovado"
+    );
+  });
+
   it("descreve a proposta com o motivo", () => {
     expect(descreverProposta({ ferramenta: "propor_dispensar_etapa", descricao: "", argumentos: { motivo: "não se aplica" } })).toBe(
       "Dispensar a etapa — não se aplica"

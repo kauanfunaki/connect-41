@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getAuthContext } from "@/lib/auth/context";
 import { getSectorMaps } from "@/lib/sectors";
 import { conversarComAgente } from "@/lib/ai";
-import { agentesDoChat, contextoParaOAgente, setoresVisiveis, sistemaDoChat } from "@/lib/ia/chat/agentes";
+import { agentesDoChat, contextoParaOAgente, escopoDoAgente, rotularPropostas, sistemaDoChat } from "@/lib/ia/chat/agentes";
 import {
   apagarConversasVencidas,
   conversaParaPerguntar,
@@ -81,14 +81,11 @@ export async function POST(req: NextRequest) {
   if (!agente) return erroSimples("A IA desta conversa não está mais disponível para você. Comece uma nova.", 403);
 
   const tela = contextoDaTela(typeof corpo.caminho === "string" ? corpo.caminho : "");
-  const contexto = await contextoParaOAgente(ctx.tenantId, agente.code, tela);
+  const contexto = await contextoParaOAgente(ctx, agente.code, tela);
   const historico = await historicoDaConversa(conversa.id);
 
-  const escopo: Record<string, string> = {};
-  if (agente.code === "ajuda_do_connect") {
-    const { labels } = await getSectorMaps(ctx.tenantId);
-    escopo.setores = setoresVisiveis(ctx, Object.keys(labels)).join(",");
-  }
+  const { labels } = await getSectorMaps(ctx.tenantId);
+  const escopo = escopoDoAgente(ctx, agente.code, Object.keys(labels));
 
   const codificador = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
@@ -120,7 +117,10 @@ export async function POST(req: NextRequest) {
           conversaId: conversa.id,
           papel: "assistente",
           texto: r.valor || "Não consegui montar uma resposta.",
-          propostas: r.propostas.map((p) => ({ ferramenta: p.ferramenta, descricao: p.descricao, argumentos: p.argumentos ?? {} })),
+          propostas: await rotularPropostas(
+            dono.tenantId,
+            r.propostas.map((p) => ({ ferramenta: p.ferramenta, descricao: p.descricao, argumentos: p.argumentos ?? {} }))
+          ),
           runId: (r as { runId?: string }).runId ?? null,
           truncada: r.truncado,
         });
