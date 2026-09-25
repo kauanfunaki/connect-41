@@ -26,6 +26,7 @@ describe("ehCaminhoDoPortal", () => {
 describe("ehRotaPublicaDoPortal", () => {
   it("entrar e recuperar senha dispensam sessão", () => {
     expect(ehRotaPublicaDoPortal("/portal/login")).toBe(true);
+    expect(ehRotaPublicaDoPortal("/portal/privacidade")).toBe(true);
     expect(ehRotaPublicaDoPortal("/portal/esqueci-senha")).toBe(true);
     expect(ehRotaPublicaDoPortal("/portal/redefinir-senha")).toBe(true);
     // O manifesto do PWA é buscado no login, antes de existir sessão.

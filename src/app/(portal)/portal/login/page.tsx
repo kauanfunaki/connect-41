@@ -12,7 +12,7 @@ export default async function PortalLoginPage() {
       <div className="w-full max-w-[380px]">
         <h1 className="text-[length:var(--fs-title)] font-semibold text-fg">Portal do Cliente</h1>
         <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1 mb-6">
-          Acesse os documentos fiscais da sua empresa.
+          Acompanhe a sua empresa com o escritório: documentos, pendências, aprovações e processos.
         </p>
         <PortalLoginForm action={entrarNoPortal} />
       </div>
