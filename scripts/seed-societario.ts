@@ -406,4 +406,10 @@ async function main() {
   }
 }
 
-main();
+// Sem fechar a conexão, o processo fica pendurado depois de terminar.
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exitCode = 1;
+  })
+  .finally(() => getPrisma().$disconnect());
