@@ -914,7 +914,12 @@ model ClientGroup {
   // Raiz do CNPJ (8 dígitos) quando o grupo é um CNPJ raiz com N
   // estabelecimentos. É dica de agrupamento e origem do backfill, NÃO
   // identidade: holding com raízes diferentes também é um grupo, e cliente
-  // pessoa física não tem nenhuma. Por isso é opcional e não é única.
+  // pessoa física não tem nenhuma. Por isso é opcional.
+  //
+  // Única por escritório desde 25/09: a mesma raiz em dois clientes é o mesmo
+  // cliente cadastrado duas vezes — o que um import rodado de novo faria em
+  // silêncio. Nulo não colide (MySQL permite vários), então pessoa física e
+  // holding sem raiz continuam como eram.
   cnpjRoot String? @db.VarChar(8)
   active   Boolean @default(true)
 
@@ -925,6 +930,7 @@ model ClientGroup {
   companies   Company[]
   portalUsers PortalUser[]
 
+  @@unique([tenantId, cnpjRoot])
   @@index([tenantId])
   @@map("client_groups")
 }
