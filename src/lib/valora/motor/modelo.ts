@@ -33,7 +33,7 @@ export const MODELO_41: Catalogo = {
       "nome": "Contábil",
       "capacidadeHorasMes": 1354.5,
       "custoMensal": 0,
-      "fatorCalibracao": 0.2944,
+      "fatorCalibracao": 0.2938,
       "minutosSemMovimento": 50
     }
   ],
@@ -1654,6 +1654,21 @@ export const MODELO_41: Catalogo = {
         "campo": "competenciasAtrasadas"
       },
       "implantacao": true
+    },
+    {
+      "id": "CTB-P01",
+      "setor": "CTB",
+      "grupo": "Premissa",
+      "nome": "DEFIS: declaração anual do Simples",
+      "frequencia": "anual",
+      "tempoMin": {
+        "SIMPLES": 30
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      },
+      "semMovimento": true
     }
   ],
   "complexidades": [
