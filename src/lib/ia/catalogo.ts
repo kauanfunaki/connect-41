@@ -232,6 +232,25 @@ export const AGENT_CATALOG: AgenteDef[] = [
     padraoLigado: false,
   },
   {
+    code: "assistente_do_fiscal",
+    label: "IA do Fiscal (chat)",
+    sectorCode: "fiscal",
+    description:
+      "Responde no chat do canto da tela sobre o acervo de documentos fiscais — o que a empresa emitiu e recebeu no mês, o que está pendente no financeiro, notas com XML incompleto — com link para a tela filtrada",
+    faixa: "padrao",
+    escreve: false,
+    ferramentas: [
+      "buscar_empresa",
+      "competencias_da_empresa",
+      "resumo_fiscal_do_mes",
+      "listar_documentos_fiscais",
+      "fila_de_lancamento",
+    ],
+    tetoMensalCentavos: 30_000,
+    tetoMensalChamadas: 3_000,
+    padraoLigado: false,
+  },
+  {
     code: "ajuda_do_connect",
     label: "Ajuda do Connect (chat)",
     sectorCode: null,

@@ -57,6 +57,9 @@ describe("contextoDaTela", () => {
     expect(contextoDaTela(`/vagas/${v}/candidaturas/x`)).toEqual({ tipo: "vaga", id: v });
     expect(contextoDaTela(`/candidatos/${v}`)).toEqual({ tipo: "candidato", id: v });
     expect(contextoDaTela("/vagas/novo")).toEqual({ tipo: "tela", caminho: "/vagas/novo" });
+    expect(contextoDaTela(`/empresas/${v}/socios`)).toEqual({ tipo: "empresa", id: v });
+    expect(contextoDaTela(`/documentos-fiscais/${v}`)).toEqual({ tipo: "documento_fiscal", id: v });
+    expect(contextoDaTela("/documentos-fiscais/entrada")).toEqual({ tipo: "tela", caminho: "/documentos-fiscais/entrada" });
     expect(contextoDaTela("/pagar")).toEqual({ tipo: "tela", caminho: "/pagar" });
     expect(contextoDaTela("lixo")).toBeNull();
   });
