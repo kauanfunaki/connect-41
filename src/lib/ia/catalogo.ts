@@ -276,6 +276,28 @@ export const AGENT_CATALOG: AgenteDef[] = [
     padraoLigado: false,
   },
   {
+    code: "assistente_do_dp",
+    label: "IA do DP (chat)",
+    sectorCode: "dp",
+    description:
+      "Responde no chat do canto da tela sobre os colaboradores dos clientes — quem está ativo, de férias ou afastado, férias vencendo, rescisões e o prazo legal de pagamento, horas extras pendentes. Salário e dado médico só para quem tem a permissão",
+    faixa: "padrao",
+    escreve: false,
+    ferramentas: [
+      "buscar_empresa",
+      "colaboradores_da_empresa",
+      "buscar_colaborador",
+      "ferias_do_dp",
+      "rescisoes_em_andamento",
+      "afastamentos_ativos",
+      "horas_extras_pendentes",
+      "encaminhar_pergunta",
+    ],
+    tetoMensalCentavos: 30_000,
+    tetoMensalChamadas: 3_000,
+    padraoLigado: false,
+  },
+  {
     code: "ajuda_do_connect",
     label: "Ajuda do Connect (chat)",
     sectorCode: null,
