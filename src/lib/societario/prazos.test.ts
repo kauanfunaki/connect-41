@@ -154,6 +154,8 @@ describe("colunasDoKanban", () => {
       "EM_ANDAMENTO",
       "AGUARDANDO_ORGAO",
       "EM_EXIGENCIA",
+      "AGUARDANDO_CLIENTE",
+      "SUSPENSO",
       "CONCLUIDO",
     ]);
     expect(colunas[2].linhas.map((l) => l.id)).toEqual(["2", "3"]);

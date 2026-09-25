@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import { etapasParaCliente, progressoDasEtapas, situacaoParaCliente, textoDaPrevisao } from "./portal";
 
 describe("situacaoParaCliente", () => {
-  it("cancelado vence a situação derivada", () => {
-    expect(situacaoParaCliente("EM_ANDAMENTO", true)).toBe("CANCELADO");
-    expect(situacaoParaCliente("EM_EXIGENCIA", false)).toBe("EM_EXIGENCIA");
+  it("cancelado e indeferido vencem a situação derivada", () => {
+    expect(situacaoParaCliente("EM_ANDAMENTO", "CANCELADO")).toBe("CANCELADO");
+    expect(situacaoParaCliente("EM_EXIGENCIA", "INDEFERIDO")).toBe("INDEFERIDO");
+    expect(situacaoParaCliente("EM_EXIGENCIA", "EM_ANDAMENTO")).toBe("EM_EXIGENCIA");
   });
 });
 

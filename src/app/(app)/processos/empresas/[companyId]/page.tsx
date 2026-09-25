@@ -21,7 +21,7 @@ import {
 } from "@/lib/societario/licencas";
 import { textoDoPrazo } from "@/lib/societario/prazos";
 import { PRIORIDADE_LABEL, PRIORIDADE_VARIANTE } from "@/lib/societario/prioridade";
-import { PrazoCelula, SITUACAO_LABEL } from "@/components/societario/ProcessosFila";
+import { PrazoCelula, SITUACAO_LABEL, SITUACAO_VARIANTE } from "@/components/societario/ProcessosFila";
 
 const MODULE = "societario_processos";
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
@@ -57,9 +57,9 @@ function LinhaDeProcesso({ p }: { p: ProcessoDoCliente }) {
       <div className="flex items-center gap-4 md:justify-end flex-wrap text-[12px] text-fg-muted">
         <PrazoCelula prazo={p.prazo} />
         {p.cancelado ? (
-          <Badge variant="info">Cancelado</Badge>
+          <Badge variant="danger">{p.encerradoComo === "INDEFERIDO" ? "Indeferido" : "Cancelado"}</Badge>
         ) : (
-          <Badge variant={p.situacao === "EM_EXIGENCIA" ? "warning" : p.situacao === "AGUARDANDO_ORGAO" ? "info" : "success"}>
+          <Badge variant={SITUACAO_VARIANTE[p.situacao]}>
             {SITUACAO_LABEL[p.situacao]}
           </Badge>
         )}

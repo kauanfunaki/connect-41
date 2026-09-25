@@ -65,6 +65,11 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
             )}
           </div>
           <p className="text-[13px] text-fg">{situacao.explicacao}</p>
+          {p.motivo && (
+            <p className="text-[13px] text-fg rounded-md bg-surface-2 px-3 py-2 break-words">
+              <span className="font-medium">Motivo:</span> {p.motivo}
+            </p>
+          )}
           <p className="text-[12px] text-fg-muted">{p.previsao}</p>
         </Card>
 

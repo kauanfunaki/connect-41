@@ -20,7 +20,7 @@ const RECORTES = [
   { chave: "encerrados", rotulo: "Encerrados" },
 ] as const;
 
-const encerrado = (p: ProcessoNoPortal) => p.situacao === "CONCLUIDO" || p.situacao === "CANCELADO";
+const encerrado = (p: ProcessoNoPortal) => ["CONCLUIDO", "CANCELADO", "INDEFERIDO"].includes(p.situacao);
 
 /**
  * Os processos societários das empresas do cliente: abertura, alteração,
@@ -44,6 +44,7 @@ export default async function PortalProcessosPage({
   const linhas = recorte === "abertos" ? abertos : todos.filter(encerrado);
   const variasEmpresas = new Set(todos.map((p) => p.empresaNome)).size > 1;
   const emExigencia = abertos.filter((p) => p.situacao === "EM_EXIGENCIA").length;
+  const aguardandoVoce = abertos.filter((p) => p.situacao === "AGUARDANDO_CLIENTE").length;
 
   return (
     <PageContainer>
@@ -53,7 +54,11 @@ export default async function PortalProcessosPage({
         itens={[
           { rotulo: "Em andamento", valor: String(abertos.length) },
           { rotulo: "Com exigência do órgão", valor: String(emExigencia), tom: emExigencia > 0 ? "text-warning" : "" },
-          { rotulo: "Aguardando o órgão", valor: String(abertos.filter((p) => p.situacao === "AGUARDANDO_ORGAO").length) },
+          {
+            rotulo: "Aguardando você",
+            valor: String(aguardandoVoce),
+            tom: aguardandoVoce > 0 ? "text-warning" : "",
+          },
           { rotulo: "Encerrados", valor: String(todos.length - abertos.length), tom: "text-fg-muted" },
         ]}
       />
@@ -90,6 +95,7 @@ export default async function PortalProcessosPage({
                     aberto em {formatInstantDate(p.iniciadoEm)}
                     {p.concluidoEm ? ` · concluído em ${formatInstantDate(p.concluidoEm)}` : ""}
                   </span>
+                  {p.motivo && <span className="text-[12px] text-fg break-words">{p.motivo}</span>}
                   <span className="text-[12px] text-fg-muted">{p.previsao}</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 md:justify-end shrink-0">
