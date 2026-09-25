@@ -91,3 +91,46 @@ describe("validação", () => {
     expect(normalizarPerfil({ regime: "XX", setores: ["FIS"] }, MODELO_41)).toBeNull();
   });
 });
+
+describe("Contábil", () => {
+  const cat = { ...MODELO_41, setores: MODELO_41.setores.map((s) => ({ ...s, custoMensal: 30000 })) };
+  const ctb = (extra: Partial<ReturnType<typeof perfilVazio>> = {}) =>
+    calcular(
+      cat,
+      {
+        ...perfilVazio(cat),
+        setores: ["CTB"],
+        volumes: { contasBancarias: 3, movimentacoesBancarias: 150, socios: 2 },
+        ...extra,
+      },
+      PARAMETROS_PADRAO,
+    ).setores[0];
+
+  it("fecha 1×/ano no Simples, 4× no Presumido e 12× no Real: o Real custa mais que o Presumido, que custa mais que o Simples", () => {
+    const simples = ctb({ regime: "SIMPLES" }).minutosMes;
+    const presumido = ctb({ regime: "PRESUMIDO" }).minutosMes;
+    const real = ctb({ regime: "REAL" }).minutosMes;
+    expect(presumido).toBeGreaterThan(simples);
+    expect(real).toBeGreaterThan(presumido);
+  });
+
+  it("mais movimentações bancárias, mais tempo", () => {
+    const pouco = ctb({ regime: "SIMPLES", volumes: { contasBancarias: 3, movimentacoesBancarias: 50, socios: 2 } });
+    const muito = ctb({ regime: "SIMPLES", volumes: { contasBancarias: 3, movimentacoesBancarias: 500, socios: 2 } });
+    expect(muito.minutosMes).toBeGreaterThan(pouco.minutosMes);
+  });
+
+  it("reunião, relatório para banco e refazer por atraso do cliente são avulsos", () => {
+    const r = calcular(cat, { ...perfilVazio(cat), setores: ["CTB"] }, PARAMETROS_PADRAO);
+    const avulsos = r.avulsos.map((a) => a.id);
+    expect(avulsos).toEqual(expect.arrayContaining(["CTB-17", "CTB-24", "CTB-25"]));
+    expect(r.setores[0].atividades.map((a) => a.id)).not.toContain("CTB-17");
+  });
+
+  it("sem movimento cobra o mínimo do setor e ainda entrega ECD/ECF", () => {
+    const s = ctb({ regime: "SIMPLES", semMovimento: true });
+    expect(s.minutosMes).toBeGreaterThan(0);
+    expect(s.atividades.map((a) => a.id)).toEqual(expect.arrayContaining(["CTB-21", "CTB-22"]));
+    expect(s.minutosMes).toBeLessThan(ctb({ regime: "SIMPLES" }).minutosMes);
+  });
+});
