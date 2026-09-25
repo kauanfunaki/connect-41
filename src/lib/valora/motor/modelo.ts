@@ -1,5 +1,5 @@
 // GERADO por valora/consolidacao/exportar_modelo.py — não editar à mão.
-// Catálogo modelo da 41: tempos dos questionários (Fiscal e DP, 23/09; Societário, 24/09) com as premissas da
+// Catálogo modelo da 41: tempos dos questionários (Fiscal e DP, 23/09; Societário, 24/09; Contábil, 25/09) com as premissas da
 // consolidação. Custos dos setores zerados até a planilha confidencial chegar.
 
 import type { Catalogo } from "./tipos";
@@ -27,6 +27,14 @@ export const MODELO_41: Catalogo = {
       "capacidadeHorasMes": 436.9,
       "custoMensal": 0,
       "fatorCalibracao": 0.9759
+    },
+    {
+      "codigo": "CTB",
+      "nome": "Contábil",
+      "capacidadeHorasMes": 1354.5,
+      "custoMensal": 0,
+      "fatorCalibracao": 0.2944,
+      "minutosSemMovimento": 50
     }
   ],
   "atividades": [
@@ -1223,6 +1231,429 @@ export const MODELO_41: Catalogo = {
         "valor": 1
       },
       "semMovimento": true
+    },
+    {
+      "id": "CTB-01",
+      "setor": "CTB",
+      "grupo": "Documentos",
+      "nome": "Cobrar e receber extratos, comprovantes e relatórios do cliente",
+      "frequencia": "mensal",
+      "tempoMin": {
+        "SIMPLES": 60.0,
+        "PRESUMIDO": 240.0,
+        "REAL": 240.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      }
+    },
+    {
+      "id": "CTB-02",
+      "setor": "CTB",
+      "grupo": "Lançamentos",
+      "nome": "Importar extratos bancários e de cartão (OFX, planilha)",
+      "frequencia": "mensal",
+      "tempoMin": {
+        "SIMPLES": 20.0,
+        "PRESUMIDO": 20.0,
+        "REAL": 20.0
+      },
+      "quantidade": {
+        "tipo": "volume",
+        "campo": "contasBancarias"
+      }
+    },
+    {
+      "id": "CTB-03",
+      "setor": "CTB",
+      "grupo": "Lançamentos",
+      "nome": "Classificar e lançar as movimentações bancárias",
+      "frequencia": "mensal",
+      "tempoMin": {
+        "SIMPLES": 600.0,
+        "PRESUMIDO": 960.0,
+        "REAL": 720.0
+      },
+      "quantidade": {
+        "tipo": "volume",
+        "campo": "movimentacoesBancarias",
+        "fator": 0.0067
+      }
+    },
+    {
+      "id": "CTB-04",
+      "setor": "CTB",
+      "grupo": "Lançamentos",
+      "nome": "Conciliar a conta bancária ou cartão e fechar o saldo",
+      "frequencia": "mensal",
+      "tempoMin": {
+        "SIMPLES": 30.0,
+        "PRESUMIDO": 30.0,
+        "REAL": 30.0
+      },
+      "quantidade": {
+        "tipo": "volume",
+        "campo": "contasBancarias"
+      }
+    },
+    {
+      "id": "CTB-05",
+      "setor": "CTB",
+      "grupo": "Lançamentos",
+      "nome": "Integrar os módulos fiscal e folha na contabilidade e conferir",
+      "frequencia": "mensal",
+      "tempoMin": {
+        "SIMPLES": 120.0,
+        "PRESUMIDO": 120.0,
+        "REAL": 120.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      }
+    },
+    {
+      "id": "CTB-06",
+      "setor": "CTB",
+      "grupo": "Lançamentos",
+      "nome": "Lançamentos manuais (provisões, apropriações, depreciação)",
+      "frequencia": "mensal",
+      "tempoMin": {
+        "SIMPLES": 60.0,
+        "PRESUMIDO": 60.0,
+        "REAL": 60.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      }
+    },
+    {
+      "id": "CTB-07",
+      "setor": "CTB",
+      "grupo": "Lançamentos",
+      "nome": "Controlar empréstimos, financiamentos e aplicações",
+      "frequencia": "mensal",
+      "tempoMin": {
+        "SIMPLES": 40.0,
+        "PRESUMIDO": 40.0,
+        "REAL": 40.0
+      },
+      "quantidade": {
+        "tipo": "volume",
+        "campo": "contratosFinanceiros"
+      }
+    },
+    {
+      "id": "CTB-08",
+      "setor": "CTB",
+      "grupo": "Lançamentos",
+      "nome": "Controlar o imobilizado e a depreciação",
+      "frequencia": "mensal",
+      "tempoMin": {
+        "SIMPLES": 15.0,
+        "PRESUMIDO": 15.0,
+        "REAL": 15.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      }
+    },
+    {
+      "id": "CTB-09",
+      "setor": "CTB",
+      "grupo": "Lançamentos",
+      "nome": "Controlar estoque e custo (CMV)",
+      "frequencia": "mensal",
+      "tempoMin": {
+        "SIMPLES": 10.0,
+        "PRESUMIDO": 10.0,
+        "REAL": 10.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      },
+      "condicao": "temICMS"
+    },
+    {
+      "id": "CTB-10",
+      "setor": "CTB",
+      "grupo": "Lançamentos",
+      "nome": "Lançar operações entre empresas do mesmo grupo",
+      "frequencia": "mensal",
+      "tempoMin": {
+        "SIMPLES": 5.0,
+        "PRESUMIDO": 5.0,
+        "REAL": 5.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      }
+    },
+    {
+      "id": "CTB-11",
+      "setor": "CTB",
+      "grupo": "Fechamento",
+      "nome": "Conciliar contas patrimoniais (clientes, fornecedores, impostos, adiantamentos)",
+      "frequencia": "mensal",
+      "tempoMin": {
+        "SIMPLES": 80.0,
+        "PRESUMIDO": 320.0,
+        "REAL": 960.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      }
+    },
+    {
+      "id": "CTB-12",
+      "setor": "CTB",
+      "grupo": "Fechamento",
+      "nome": "Fechar o mês: balancete e análise de contas",
+      "frequencia": "mensal",
+      "tempoMin": {
+        "SIMPLES": 80.0,
+        "PRESUMIDO": 320.0,
+        "REAL": 960.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      }
+    },
+    {
+      "id": "CTB-13",
+      "setor": "CTB",
+      "grupo": "Fechamento",
+      "nome": "Apurar IRPJ/CSLL do Lucro Real (LALUR/LACS, estimativas, suspensão)",
+      "frequencia": "trimestral",
+      "tempoMin": {
+        "REAL": 120.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      }
+    },
+    {
+      "id": "CTB-14",
+      "setor": "CTB",
+      "grupo": "Fechamento",
+      "nome": "Controlar a distribuição de lucros",
+      "frequencia": "anual",
+      "tempoMin": {
+        "SIMPLES": 60.0,
+        "PRESUMIDO": 60.0,
+        "REAL": 60.0
+      },
+      "quantidade": {
+        "tipo": "volume",
+        "campo": "socios"
+      }
+    },
+    {
+      "id": "CTB-16",
+      "setor": "CTB",
+      "grupo": "Relatórios",
+      "nome": "Preparar relatórios gerenciais (DRE, fluxo de caixa, indicadores)",
+      "frequencia": "anual",
+      "tempoMin": {
+        "SIMPLES": 30.0,
+        "PRESUMIDO": 120.0,
+        "REAL": 120.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      }
+    },
+    {
+      "id": "CTB-17",
+      "setor": "CTB",
+      "grupo": "Relatórios",
+      "nome": "Reunião de resultados com o cliente",
+      "frequencia": "evento",
+      "tempoMin": {
+        "SIMPLES": 40.0,
+        "PRESUMIDO": 40.0,
+        "REAL": 40.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      },
+      "avulso": true
+    },
+    {
+      "id": "CTB-18",
+      "setor": "CTB",
+      "grupo": "Atendimento",
+      "nome": "Atender o cliente (WhatsApp, e-mail, telefone, reunião)",
+      "frequencia": "mensal",
+      "tempoMin": {
+        "SIMPLES": 15.0,
+        "PRESUMIDO": 20.0,
+        "REAL": 60.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      }
+    },
+    {
+      "id": "CTB-19",
+      "setor": "CTB",
+      "grupo": "Revisão",
+      "nome": "Revisar o fechamento (sênior ou coordenação)",
+      "frequencia": "mensal",
+      "tempoMin": {
+        "SIMPLES": 25.0,
+        "PRESUMIDO": 160.0,
+        "REAL": 480.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      }
+    },
+    {
+      "id": "CTB-20",
+      "setor": "CTB",
+      "grupo": "Anual",
+      "nome": "Encerrar o exercício: balanço, DRE e demais demonstrações",
+      "frequencia": "anual",
+      "tempoMin": {
+        "SIMPLES": 60.0,
+        "PRESUMIDO": 60.0,
+        "REAL": 60.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      }
+    },
+    {
+      "id": "CTB-21",
+      "setor": "CTB",
+      "grupo": "Anual",
+      "nome": "ECD: gerar, validar e transmitir",
+      "frequencia": "anual",
+      "tempoMin": {
+        "SIMPLES": 90.0,
+        "PRESUMIDO": 90.0,
+        "REAL": 90.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      },
+      "semMovimento": true
+    },
+    {
+      "id": "CTB-22",
+      "setor": "CTB",
+      "grupo": "Anual",
+      "nome": "ECF: gerar, validar e transmitir",
+      "frequencia": "anual",
+      "tempoMin": {
+        "SIMPLES": 60.0,
+        "PRESUMIDO": 60.0,
+        "REAL": 60.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      },
+      "semMovimento": true
+    },
+    {
+      "id": "CTB-23",
+      "setor": "CTB",
+      "grupo": "Anual",
+      "nome": "Informe de rendimentos de lucros aos sócios",
+      "frequencia": "anual",
+      "tempoMin": {
+        "SIMPLES": 15.0,
+        "PRESUMIDO": 15.0,
+        "REAL": 15.0
+      },
+      "quantidade": {
+        "tipo": "volume",
+        "campo": "socios"
+      }
+    },
+    {
+      "id": "CTB-24",
+      "setor": "CTB",
+      "grupo": "Eventual",
+      "nome": "DECORE, declaração de faturamento ou relatório para banco",
+      "frequencia": "evento",
+      "tempoMin": {
+        "SIMPLES": 20.0,
+        "PRESUMIDO": 40.0,
+        "REAL": 40.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      },
+      "avulso": true
+    },
+    {
+      "id": "CTB-25",
+      "setor": "CTB",
+      "grupo": "Eventual",
+      "nome": "Refazer lançamentos por documento enviado fora do prazo",
+      "frequencia": "evento",
+      "tempoMin": {
+        "SIMPLES": 15.0,
+        "PRESUMIDO": 15.0,
+        "REAL": 15.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      },
+      "avulso": true
+    },
+    {
+      "id": "CTB-27",
+      "setor": "CTB",
+      "grupo": "Implantação",
+      "nome": "Implantar cliente novo (saldos iniciais, plano de contas, acessos)",
+      "frequencia": "evento",
+      "tempoMin": {
+        "SIMPLES": 60.0,
+        "PRESUMIDO": 60.0,
+        "REAL": 60.0
+      },
+      "quantidade": {
+        "tipo": "fixa",
+        "valor": 1
+      },
+      "implantacao": true
+    },
+    {
+      "id": "CTB-28",
+      "setor": "CTB",
+      "grupo": "Implantação",
+      "nome": "Regularizar contabilidade atrasada",
+      "frequencia": "evento",
+      "tempoMin": {
+        "SIMPLES": 4800.0,
+        "PRESUMIDO": 4800.0,
+        "REAL": 4800.0
+      },
+      "quantidade": {
+        "tipo": "volume",
+        "campo": "competenciasAtrasadas"
+      },
+      "implantacao": true
     }
   ],
   "complexidades": [
@@ -1375,6 +1806,60 @@ export const MODELO_41: Catalogo = {
       "setor": "SOC",
       "nome": "Município com processo não integrado à Junta Comercial",
       "pct": 50.0
+    },
+    {
+      "id": "CTB-C01",
+      "setor": "CTB",
+      "nome": "Cliente envia documentos ou informações fora do prazo",
+      "pct": 40.0
+    },
+    {
+      "id": "CTB-C02",
+      "setor": "CTB",
+      "nome": "Documentos desorganizados, incompletos, em papel ou foto",
+      "pct": 100.0
+    },
+    {
+      "id": "CTB-C03",
+      "setor": "CTB",
+      "nome": "Cliente pede muito atendimento (dúvidas, ligações, reuniões)",
+      "pct": 20.0
+    },
+    {
+      "id": "CTB-C04",
+      "setor": "CTB",
+      "nome": "Cliente com várias empresas ou filiais no mesmo grupo",
+      "pct": 30.0
+    },
+    {
+      "id": "CTB-C05",
+      "setor": "CTB",
+      "nome": "Períodos anteriores atrasados ou com erros herdados de outro contador",
+      "pct": 100.0
+    },
+    {
+      "id": "CTB-C07",
+      "setor": "CTB",
+      "nome": "Indústria com apuração de custos",
+      "pct": 5.0
+    },
+    {
+      "id": "CTB-C08",
+      "setor": "CTB",
+      "nome": "Contabilidade exigida em padrão completo (auditoria, investidores)",
+      "pct": 80.0
+    },
+    {
+      "id": "CTB-C09",
+      "setor": "CTB",
+      "nome": "Cliente sem controle financeiro próprio (tudo sai do extrato)",
+      "pct": 60.0
+    },
+    {
+      "id": "CTB-C10",
+      "setor": "CTB",
+      "nome": "Muitos cartões, maquininhas ou meios de pagamento",
+      "pct": 30.0
     }
   ],
   "campos": [
@@ -1454,6 +1939,30 @@ export const MODELO_41: Catalogo = {
       "chave": "licencas",
       "rotulo": "Alvarás e licenças que a empresa mantém",
       "ajuda": "Prefeitura, Bombeiros, Vigilância Sanitária, ambiental — cada uma renova uma vez por ano."
+    },
+    {
+      "tipo": "volume",
+      "chave": "contasBancarias",
+      "rotulo": "Contas bancárias e cartões",
+      "ajuda": "Cada conta e cada cartão empresarial."
+    },
+    {
+      "tipo": "volume",
+      "chave": "movimentacoesBancarias",
+      "rotulo": "Movimentações bancárias por mês",
+      "ajuda": "Somando todas as contas. Uma estimativa serve."
+    },
+    {
+      "tipo": "volume",
+      "chave": "contratosFinanceiros",
+      "rotulo": "Empréstimos, financiamentos e aplicações",
+      "ajuda": "Contratos ativos."
+    },
+    {
+      "tipo": "volume",
+      "chave": "socios",
+      "rotulo": "Sócios",
+      "ajuda": "Todos, com ou sem pró-labore."
     }
   ]
 };
