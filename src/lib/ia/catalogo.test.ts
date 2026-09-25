@@ -71,6 +71,7 @@ describe("AGENT_CATALOG", () => {
       "pontuador_de_vaga",
       "assistente_de_vaga",
       "atendente_de_candidato",
+      "assistente_do_recrutamento",
     ]);
     expect(agentesDoSetor("atendimento").map((a) => a.code)).toEqual([
       "avaliacao_escrita",

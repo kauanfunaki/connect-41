@@ -51,7 +51,9 @@ export function tituloDaConversa(pergunta: string): string {
   return linha.length > 80 ? `${linha.slice(0, 79)}…` : linha || "Conversa";
 }
 
-export type ContextoDaTela = { tipo: "processo"; id: string } | { tipo: "tela"; caminho: string };
+export type ContextoDaTela =
+  | { tipo: "processo" | "vaga" | "candidato"; id: string }
+  | { tipo: "tela"; caminho: string };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -67,6 +69,10 @@ export function contextoDaTela(caminho: string): ContextoDaTela | null {
   if (!limpo.startsWith("/")) return null;
   const processo = /^\/processos\/([^/]+)\/?$/.exec(limpo);
   if (processo && UUID.test(processo[1]!)) return { tipo: "processo", id: processo[1]! };
+  const vaga = /^\/vagas\/([^/]+)(?:\/.*)?$/.exec(limpo);
+  if (vaga && UUID.test(vaga[1]!)) return { tipo: "vaga", id: vaga[1]! };
+  const pessoa = /^\/candidatos\/([^/]+)\/?$/.exec(limpo);
+  if (pessoa && UUID.test(pessoa[1]!)) return { tipo: "candidato", id: pessoa[1]! };
   return { tipo: "tela", caminho: limpo.slice(0, 120) };
 }
 
@@ -77,6 +83,13 @@ const PASSOS: Record<string, string> = {
   propor_concluir_etapa: "Preparando uma sugestão…",
   propor_dispensar_etapa: "Preparando uma sugestão…",
   listar_minhas_telas: "Vendo as telas que você acessa…",
+  listar_vagas: "Consultando as vagas…",
+  ver_vaga_do_setor: "Lendo a vaga…",
+  listar_candidatos_da_vaga: "Consultando os candidatos…",
+  ver_candidatura: "Lendo a candidatura…",
+  buscar_candidato: "Procurando o candidato…",
+  propor_mover_etapa: "Preparando uma sugestão…",
+  propor_encerrar_candidatura: "Preparando uma sugestão…",
   buscar_nos_manuais: "Procurando nos manuais…",
 };
 
@@ -89,6 +102,8 @@ export type PropostaGravada = {
   ferramenta: string;
   descricao: string;
   argumentos: Record<string, unknown>;
+  /** De quem é a proposta, resolvido no servidor ("Maria Souza", "Registro na Junta"). */
+  alvo?: string;
   aplicada?: boolean;
 };
 
@@ -104,6 +119,7 @@ export function lerPropostas(bruto: unknown): PropostaGravada[] {
         ferramenta: o.ferramenta,
         descricao: typeof o.descricao === "string" ? o.descricao : "",
         argumentos: o.argumentos && typeof o.argumentos === "object" ? (o.argumentos as Record<string, unknown>) : {},
+        ...(typeof o.alvo === "string" ? { alvo: o.alvo } : {}),
         aplicada: o.aplicada === true,
       },
     ];
@@ -111,10 +127,32 @@ export function lerPropostas(bruto: unknown): PropostaGravada[] {
 }
 
 /** O que o cartão da proposta diz, em uma linha. */
-export function descreverProposta(p: { ferramenta: string; descricao: string; argumentos?: Record<string, unknown> }): string {
+const ETAPA_DO_FUNIL: Record<string, string> = {
+  TRIAGEM: "Triagem",
+  ENTREVISTA: "Entrevista",
+  TESTE: "Teste",
+  PROPOSTA: "Proposta",
+  CONTRATADO: "Contratado",
+};
+
+export function descreverProposta(p: {
+  ferramenta: string;
+  descricao: string;
+  argumentos?: Record<string, unknown>;
+  alvo?: string;
+}): string {
   const a = p.argumentos ?? {};
   const motivo = typeof a.motivo === "string" && a.motivo.trim() ? ` — ${a.motivo.trim()}` : "";
-  if (p.ferramenta === "propor_concluir_etapa") return `Concluir a etapa${motivo}`;
-  if (p.ferramenta === "propor_dispensar_etapa") return `Dispensar a etapa${motivo}`;
+  const alvo = p.alvo ? ` ${p.alvo}` : "";
+  if (p.ferramenta === "propor_concluir_etapa") return `Concluir a etapa${alvo ? ` "${p.alvo}"` : ""}${motivo}`;
+  if (p.ferramenta === "propor_dispensar_etapa") return `Dispensar a etapa${alvo ? ` "${p.alvo}"` : ""}${motivo}`;
+  if (p.ferramenta === "propor_mover_etapa") {
+    const etapa = typeof a.etapa === "string" ? (ETAPA_DO_FUNIL[a.etapa] ?? a.etapa) : "outra etapa";
+    return `Mover${alvo || " o candidato"} para ${etapa}${motivo}`;
+  }
+  if (p.ferramenta === "propor_encerrar_candidatura") {
+    const desfecho = a.desfecho === "DESISTENTE" ? "desistente" : "reprovado";
+    return `Encerrar${alvo || " a candidatura"} como ${desfecho}${motivo}`;
+  }
   return p.descricao;
 }

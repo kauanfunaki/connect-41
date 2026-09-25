@@ -16,7 +16,7 @@ import { agenteDoCatalogo } from "@/lib/ia/catalogo";
 import { estadoDosAgentes } from "@/lib/ia/data";
 import { SISTEMA_DO_SOCIETARIO } from "@/lib/societario/assistente";
 import { nomeExibicao } from "@/lib/companyName";
-import { publicoPermite, type ContextoDaTela } from "./regras";
+import { publicoPermite, type ContextoDaTela, type PropostaGravada } from "./regras";
 
 export type AgenteDoChat = {
   code: string;
@@ -50,7 +50,28 @@ const AJUDA =
   "Você NÃO tem acesso aos dados do escritório (empresas, lançamentos, processos). Se a pergunta for sobre os dados " +
   "de um setor, diga que a IA daquele setor responde isso, quando estiver disponível no chat.";
 
+const RECRUTAMENTO =
+  "Você é a IA do Recrutamento de um escritório de contabilidade. Você ajuda o recrutador a enxergar as vagas e " +
+  "os candidatos do setor: o que está parado, quem chegou, quem ainda não foi triado, onde está cada candidato. " +
+  "Consulte as ferramentas antes de responder — comece por listar_vagas; para achar alguém pelo nome, use " +
+  "buscar_candidato. Nunca invente candidato, nota, etapa ou vaga.\n" +
+  "Responda em português do Brasil, direto, citando candidato e vaga pelo nome. A nota da triagem é de 0 a 100 e " +
+  "foi dada por outra IA a partir dos requisitos da vaga: trate como indício, não como veredito.\n" +
+  "Você NÃO altera nada: quando fizer sentido mover ou encerrar alguém, use as ferramentas de proposta e deixe " +
+  "claro que é sugestão a confirmar. Nunca sugira reprovar alguém só pela nota da triagem.";
+
 const CONFIGS: Config[] = [
+  {
+    code: "assistente_do_recrutamento",
+    titulo: "IA do Recrutamento",
+    modulo: "recrutamento_vagas",
+    sistema: RECRUTAMENTO,
+    sugestoes: [
+      "Quais vagas estão abertas há mais tempo?",
+      "Quem chegou esta semana e ainda não foi triado?",
+      "Quais candidatos estão em entrevista?",
+    ],
+  },
   {
     code: "assistente_do_societario",
     titulo: "IA do Societário",
@@ -125,17 +146,54 @@ export function setoresVisiveis(ctx: AuthContext, todos: string[]): string[] {
 }
 
 /**
+ * O recorte que segue com a conversa — nunca vem do modelo.
+ *
+ * Ajuda: os setores que a pessoa **vê** (telas e manuais). Recrutamento: os
+ * setores em que ela **atua** — é a mesma regra das actions de vaga
+ * (`canActOnSector(vaga.sectorCode)`), então a IA não lê vaga que a pessoa não
+ * poderia mexer.
+ */
+export function escopoDoAgente(ctx: AuthContext, agentCode: string, todosOsSetores: string[]): Record<string, string> {
+  if (agentCode === "ajuda_do_connect") return { setores: setoresVisiveis(ctx, todosOsSetores).join(",") };
+  if (agentCode === "assistente_do_recrutamento") {
+    return { setores: todosOsSetores.filter((s) => canActOnSector(ctx, s)).join(",") };
+  }
+  return {};
+}
+
+/**
  * O que dizer ao agente sobre a tela aberta, já conferido no servidor.
  *
  * Processo só vira contexto para o agente do Societário e só se estiver no
  * tenant — o id veio do navegador. Para os outros, só o caminho da tela.
  */
 export async function contextoParaOAgente(
-  tenantId: string,
+  ctx: AuthContext,
   agentCode: string,
   tela: ContextoDaTela | null
 ): Promise<{ rotulo: string; texto: string } | null> {
-  if (!tela) return null;
+  if (!tela || !ctx.tenantId) return null;
+  const tenantId = ctx.tenantId;
+  if (tela.tipo === "vaga" || tela.tipo === "candidato") {
+    if (agentCode !== "assistente_do_recrutamento") return null;
+    if (tela.tipo === "vaga") {
+      const v = await getPrisma().vaga.findFirst({
+        where: { id: tela.id, tenantId },
+        select: { id: true, title: true, sectorCode: true },
+      });
+      if (!v || !canActOnSector(ctx, v.sectorCode)) return null;
+      return {
+        rotulo: `Vaga: ${v.title}`.slice(0, 200),
+        texto: `A pessoa está com a vaga "${v.title}" aberta (vagaId ${v.id}). Quando ela disser "esta vaga", é essa.`,
+      };
+    }
+    const pessoa = await getPrisma().person.findFirst({ where: { id: tela.id, tenantId }, select: { name: true } });
+    if (!pessoa) return null;
+    return {
+      rotulo: `Candidato: ${pessoa.name}`.slice(0, 200),
+      texto: `A pessoa está com a ficha do candidato "${pessoa.name}" aberta. Quando ela disser "este candidato", é esse — use buscar_candidato com o nome.`,
+    };
+  }
   if (tela.tipo === "processo") {
     if (agentCode !== "assistente_do_societario") return null;
     const p = await getPrisma().process.findFirst({
@@ -149,5 +207,36 @@ export async function contextoParaOAgente(
       texto: `A pessoa está com a tela do processo "${nome}" aberta (processoId ${p.id}). Quando ela disser "este processo" ou "este", é esse — use ver_processo com esse id.`,
     };
   }
+  if (tela.tipo !== "tela") return null;
   return { rotulo: tela.caminho, texto: `A pessoa está na tela ${tela.caminho} do Connect.` };
+}
+
+/**
+ * O nome de quem cada proposta afeta — o candidato, a etapa do processo —
+ * resolvido no servidor, no tenant. O cartão diz "Mover Maria Souza para
+ * Entrevista" em vez de "Mover o candidato", e a pessoa confere antes de
+ * aplicar. Id que não existe no tenant fica sem nome (e a aplicação recusa).
+ */
+export async function rotularPropostas(tenantId: string, propostas: PropostaGravada[]): Promise<PropostaGravada[]> {
+  const candidaturas = [...new Set(propostas.map((p) => p.argumentos.candidaturaId).filter((v): v is string => typeof v === "string"))];
+  const etapas = [...new Set(propostas.map((p) => p.argumentos.stepId).filter((v): v is string => typeof v === "string"))];
+  if (candidaturas.length === 0 && etapas.length === 0) return propostas;
+  const prisma = getPrisma();
+  const [cs, es] = await Promise.all([
+    candidaturas.length
+      ? prisma.candidatura.findMany({ where: { id: { in: candidaturas }, tenantId }, select: { id: true, person: { select: { name: true } } } })
+      : [],
+    etapas.length
+      ? prisma.processStep.findMany({ where: { id: { in: etapas }, tenantId }, select: { id: true, templateStep: { select: { label: true } } } })
+      : [],
+  ]);
+  const nomes = new Map<string, string>([
+    ...cs.map((c) => [c.id, c.person.name] as [string, string]),
+    ...es.map((e) => [e.id, e.templateStep.label] as [string, string]),
+  ]);
+  return propostas.map((p) => {
+    const id = p.argumentos.candidaturaId ?? p.argumentos.stepId;
+    const alvo = typeof id === "string" ? nomes.get(id) : undefined;
+    return alvo ? { ...p, alvo } : p;
+  });
 }
