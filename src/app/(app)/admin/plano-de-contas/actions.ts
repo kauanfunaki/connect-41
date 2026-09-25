@@ -7,6 +7,9 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { logAudit } from "@/lib/audit";
 import type { FinanceEntryKind } from "@/generated/prisma/enums";
+import { ondeDoPadrao } from "@/lib/financeiro/planoDeContas";
+import { planejarCarga } from "@/lib/financeiro/carregarPlanoPadrao";
+import { PLANO_PADRAO_41 } from "@/lib/financeiro/planoPadrao";
 
 export type PlanoDeContasState = { error: string } | null;
 
@@ -75,7 +78,8 @@ export async function atualizarCategoria(
 
   const prisma = getPrisma();
   const existente = await prisma.financeCategory.findFirst({
-    where: { id, tenantId: ctx.tenantId },
+    // Só o padrão do escritório: categoria de empresa se edita no plano dela.
+    where: { id, ...ondeDoPadrao(ctx.tenantId) },
   });
   if (!existente) return { error: "Categoria não encontrada." };
 
@@ -122,7 +126,8 @@ export async function alternarCategoria(id: string, ativa: boolean): Promise<voi
 
   const prisma = getPrisma();
   const existente = await prisma.financeCategory.findFirst({
-    where: { id, tenantId: ctx.tenantId },
+    // Só o padrão do escritório: categoria de empresa se edita no plano dela.
+    where: { id, ...ondeDoPadrao(ctx.tenantId) },
     select: { id: true, name: true },
   });
   if (!existente) return;
@@ -139,4 +144,58 @@ export async function alternarCategoria(id: string, ativa: boolean): Promise<voi
   });
 
   revalidatePath("/admin/plano-de-contas");
+}
+
+/**
+ * Carrega o plano padrão da 41 (`PLANO_PADRAO_41`) no plano do escritório.
+ * Rodar de novo não duplica nem desfaz ajuste — ver `planejarCarga`.
+ */
+export async function carregarPlanoPadrao(): Promise<{ error: string } | { ok: true; mensagem: string }> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { error: "Não autenticado" };
+  if (!isFullWrite(ctx.role)) return { error: "Sem permissão para editar o plano de contas." };
+
+  const prisma = getPrisma();
+  const existentes = await prisma.financeCategory.findMany({
+    where: ondeDoPadrao(ctx.tenantId),
+    select: { id: true, name: true, kind: true, planGroup: true, dreGroup: true },
+  });
+  const plano = planejarCarga(existentes, PLANO_PADRAO_41);
+
+  await prisma.$transaction(async (tx) => {
+    if (plano.criar.length > 0) {
+      await tx.financeCategory.createMany({
+        data: plano.criar.map((c) => ({
+          tenantId: ctx.tenantId!,
+          name: c.nome,
+          kind: c.kind,
+          planGroup: c.grupo,
+          dreGroup: c.dre,
+        })),
+      });
+    }
+    for (const m of plano.completar) {
+      await tx.financeCategory.update({
+        where: { id: m.id },
+        data: { ...(m.planGroup ? { planGroup: m.planGroup } : {}), ...(m.dreGroup ? { dreGroup: m.dreGroup } : {}) },
+      });
+    }
+  });
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "financeCategory.plano_padrao",
+    entityType: "FinanceCategory",
+    metadata: { criadas: plano.criar.length, completadas: plano.completar.length, jaCompletas: plano.jaCompletas },
+  });
+  revalidatePath("/admin/plano-de-contas");
+  revalidatePath("/cadastros-financeiros");
+  return {
+    ok: true,
+    mensagem:
+      `${plano.criar.length} categoria${plano.criar.length === 1 ? "" : "s"} nova${plano.criar.length === 1 ? "" : "s"}, ` +
+      `${plano.completar.length} completada${plano.completar.length === 1 ? "" : "s"} com grupo ou linha da DRE, ` +
+      `${plano.jaCompletas} já estava${plano.jaCompletas === 1 ? "" : "m"} em dia.`,
+  };
 }

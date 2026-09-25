@@ -279,7 +279,17 @@ function ChamarCli([string[]] $argumentos) {
   # 2>&1 num executável, com ErrorActionPreference=Stop, vira exceção no PowerShell 5.1.
   $ErrorActionPreference = 'Continue'
   $saidaCli = $senhaDoCofre | & $cli @argumentos 2>&1
-  if ($LASTEXITCODE -ne 0) { throw "keepassxc-cli falhou: $(($saidaCli | Out-String).Trim())" }
+  if ($LASTEXITCODE -ne 0) {
+    $msg = ($saidaCli | Out-String).Trim()
+    # Em algumas versões o keepassxc-cli sai com erro sem escrever nada quando a senha
+    # mestra ou o arquivo-chave não batem. Sem isso a mensagem ficava vazia.
+    if (-not $msg) {
+      $msg = "saiu com código $LASTEXITCODE sem mensagem. Causa mais comum: senha mestra ou arquivo-chave " +
+        "que não abrem este cofre. Para ver a mensagem do próprio KeePassXC, rode: " +
+        "& '$cli' db-info -k '$ArquivoChave' '$Cofre'"
+    }
+    throw "keepassxc-cli falhou: $msg"
+  }
   $saidaCli
 }
 

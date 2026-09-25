@@ -17,6 +17,7 @@ import {
 } from "@/lib/financeiro/lancamento";
 import { contextoDeEntrada, registrarEnvios, avisarAprovadores } from "@/lib/financeiro/aprovacao/servidor";
 import { centroNaCriacao } from "@/lib/financeiro/centroDeCustoServidor";
+import { categoriaDaEmpresa } from "@/lib/financeiro/planoDeContas";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
 // acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -70,6 +71,13 @@ export async function lancarDocumento(
     : null;
 
   const categoriaId = categoriaDoLancamento(opcoes.categoriaId, existente?.defaultCategoryId);
+  // O id vem do formulário (ou da contraparte): só vale categoria do plano desta empresa.
+  if (
+    categoriaId &&
+    !(await prisma.financeCategory.findFirst({ where: categoriaDaEmpresa(ctx.tenantId, doc.companyId, categoriaId), select: { id: true } }))
+  ) {
+    return { error: "Categoria não encontrada no plano de contas desta empresa." };
+  }
 
   const veredito = podeLancar({
     situacao: doc.situation,

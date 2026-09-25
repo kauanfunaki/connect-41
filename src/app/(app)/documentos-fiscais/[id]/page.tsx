@@ -33,6 +33,7 @@ import {
   DIRECAO_LABEL,
   competenciaLegivel,
 } from "@/lib/fiscal/rotulos";
+import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
 // acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -87,7 +88,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
   const categorias =
     veredito.pode && !doc.financeEntry
       ? await getPrisma().financeCategory.findMany({
-          where: { tenantId: ctx.tenantId, active: true, kind: direcao === "RECEBER" ? "RECEBER" : "PAGAR" },
+          where: ondeDaEmpresa(ctx.tenantId, doc.companyId, { kind: direcao === "RECEBER" ? "RECEBER" : "PAGAR" }),
           orderBy: { name: "asc" },
           select: { id: true, name: true },
         })
