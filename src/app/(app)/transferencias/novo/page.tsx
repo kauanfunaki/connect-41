@@ -11,13 +11,15 @@ import { scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import type { EntityType } from "@/generated/prisma/enums";
+import { mensagemComPropostas } from "@/lib/ia/chat/conversas";
+import { lerPropostas } from "@/lib/ia/chat/regras";
 
 export default async function NovoHandoffPage({
   searchParams,
 }: {
-  searchParams: Promise<{ entityType?: string; entityId?: string }>;
+  searchParams: Promise<{ entityType?: string; entityId?: string; daIa?: string; indice?: string }>;
 }) {
-  const { entityType: entityTypeRaw, entityId } = await searchParams;
+  const { entityType: entityTypeRaw, entityId, daIa, indice } = await searchParams;
   const ctx = await getAuthContext();
 
   // Solicitar handoff é capacidade de SECTOR_ADMIN (e ADMIN/SUPER_ADMIN) — SECTOR_USER
@@ -52,6 +54,21 @@ export default async function NovoHandoffPage({
     await Promise.all(allSectorOptions.map(async (s) => [s.value, await getSectorUsers(ctx.tenantId, s.value)] as const))
   );
 
+  // Transferência sugerida pelo chat de IA: a sugestão sai do banco, e só da
+  // conversa de quem está logado — o texto nunca viaja pela URL.
+  let inicial: { toSectors: string[]; description: string } | undefined;
+  if (daIa && ctx.userId) {
+    const m = await mensagemComPropostas({ tenantId: ctx.tenantId, userId: ctx.userId }, daIa);
+    const p = m ? lerPropostas(m.proposals)[Number(indice) || 0] : undefined;
+    const setor = typeof p?.argumentos.setor === "string" ? p.argumentos.setor : "";
+    if (p?.ferramenta === "abrir_transferencia" && allSectorOptions.some((s) => s.value === setor)) {
+      inicial = {
+        toSectors: [setor],
+        description: typeof p.argumentos.descricao === "string" ? p.argumentos.descricao : "",
+      };
+    }
+  }
+
   // Modo 1: entidade pré-selecionada (veio do botão "Solicitar Handoff" na ficha)
   if (entityId) {
     const entityType = entityTypeRaw === "PERSON" ? "PERSON" : "COMPANY";
@@ -76,6 +93,7 @@ export default async function NovoHandoffPage({
           fixedEntity={{ entityType: entityType as EntityType, entityId: entity.id, entityName: entity.name, entityCnpj }}
           mentionUsers={mentionUsers}
           assigneeOptionsBySector={assigneeOptionsBySector}
+          inicial={inicial}
         />
       </FormShell>
     );
@@ -106,6 +124,7 @@ export default async function NovoHandoffPage({
         people={people}
         mentionUsers={mentionUsers}
         assigneeOptionsBySector={assigneeOptionsBySector}
+        inicial={inicial}
       />
     </FormShell>
   );
