@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
-import { importarNotasOmieAction, previaDasNotasOmieAction, salvarContaOmieAction, testarContaOmieAction } from "@/app/(app)/admin/integracoes/omie-actions";
+import { contasDoOmieAction, importarNotasOmieAction, previaDasNotasOmieAction, salvarContaOmieAction, testarContaOmieAction } from "@/app/(app)/admin/integracoes/omie-actions";
 import type { ContaOmieNaTela } from "@/lib/integracoes/omie/contas";
 import type { Saude } from "@/lib/integracoes/execucao";
 import type { PreviaDeChamada } from "@/lib/integracoes/omie/contas";
@@ -118,6 +118,17 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
   const [testando, setTestando] = useState<string | null>(null);
   const [previas, setPrevias] = useState<Record<string, Previa>>({});
   const [lendo, setLendo] = useState<string | null>(null);
+  // Empresas com prévia das contas feita nesta tela: só elas oferecem gravar.
+  const [contasVistas, setContasVistas] = useState<Record<string, boolean>>({});
+
+  async function lerContas(companyId: string, gravar: boolean) {
+    setTestando(companyId);
+    const r = await contasDoOmieAction(companyId, gravar);
+    const prefixo = gravar ? "Contas importadas: " : "Prévia das contas (nada gravado): ";
+    setTeste((t) => ({ ...t, [companyId]: "error" in r ? { ok: false, texto: r.error } : { ok: true, texto: prefixo + (r.mensagem ?? "") } }));
+    if (!("error" in r) && !gravar) setContasVistas((v) => ({ ...v, [companyId]: true }));
+    setTestando(null);
+  }
 
   async function previa(companyId: string) {
     setLendo(companyId);
@@ -150,7 +161,10 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
             Uma conta do Omie para cada empresa cliente do BPO. A App Key e o App Secret ficam no Omie da empresa, em
             Configurações › Aplicativos — login e senha não servem para a API. &ldquo;Testar&rdquo; lê os dados da empresa
             no Omie e confere o CNPJ, para pegar chave colada na empresa errada. As notas de saída emitidas no Omie entram no
-            acervo fiscal a cada 30 minutos (ou em &ldquo;Importar notas&rdquo;) — só leitura: nada é alterado no Omie.
+            acervo fiscal a cada 30 minutos (ou em &ldquo;Importar notas&rdquo;), inclusive as das filiais cadastradas no Connect
+            com esta empresa como matriz — cadastre a conta na matriz. As contas a pagar e a receber do Omie entram no
+            financeiro da empresa em &ldquo;Importar contas&rdquo;, depois da prévia, e a partir daí se atualizam sozinhas a cada 6
+            horas. Só leitura: nada é alterado no Omie.
           </p>
         </div>
         {!novo && (
@@ -215,6 +229,16 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
                       {c.saude === "ok" && (
                         <Button variant="linkMuted" size="xs" disabled={lendo !== null} onClick={() => previa(c.companyId)}>
                           {lendo === c.companyId ? "Lendo…" : "Prévia das notas"}
+                        </Button>
+                      )}
+                      {c.saude === "ok" && (
+                        <Button variant="linkMuted" size="xs" disabled={testando !== null} onClick={() => lerContas(c.companyId, false)}>
+                          Prévia das contas
+                        </Button>
+                      )}
+                      {c.saude === "ok" && contasVistas[c.companyId] && (
+                        <Button variant="secondary" size="xs" disabled={testando !== null} onClick={() => lerContas(c.companyId, true)}>
+                          Importar contas
                         </Button>
                       )}
                     </td>

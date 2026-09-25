@@ -10,6 +10,9 @@ import { digitosDoDocumento } from "@/lib/financeiro/manual";
 import { lerEmail } from "@/lib/financeiro/cobranca/regua";
 import { chaveDaCategoria } from "@/lib/dre/calculo";
 import { validarCentroDeCusto } from "@/lib/financeiro/centroDeCusto";
+import { categoriaDaEmpresa, escopoDa, ondeDoPadrao } from "@/lib/financeiro/planoDeContas";
+import { grupoDeTexto } from "@/lib/dre/mapeamento";
+import { isPrismaUniqueError } from "@/lib/prismaErrors";
 
 const MODULE = "bpo_cadastros";
 
@@ -31,9 +34,9 @@ function documentoValido(doc: string | null): boolean {
 }
 
 /** Categoria padrão só de despesa: a herança é regra de contas a pagar. */
-async function categoriaDePagar(prisma: ReturnType<typeof getPrisma>, tenantId: string, id: string | null) {
+async function categoriaDePagar(prisma: ReturnType<typeof getPrisma>, tenantId: string, companyId: string, id: string | null) {
   if (!id) return true;
-  return !!(await prisma.financeCategory.findFirst({ where: { id, tenantId, kind: "PAGAR" }, select: { id: true } }));
+  return !!(await prisma.financeCategory.findFirst({ where: categoriaDaEmpresa(tenantId, companyId, id, "PAGAR"), select: { id: true } }));
 }
 
 /**
@@ -68,7 +71,7 @@ export async function criarContraparte(formData: FormData): Promise<ResultadoDoC
   if (!nome) return { error: "Informe o nome." };
   if (nome.length > 180) return { error: "Nome com mais de 180 caracteres." };
   if (!documentoValido(documento)) return { error: "Documento não é CPF (11 dígitos) nem CNPJ (14)." };
-  if (!(await categoriaDePagar(c.prisma, c.tenantId, categoriaId))) return { error: "Categoria não encontrada." };
+  if (!(await categoriaDePagar(c.prisma, c.tenantId, companyId, categoriaId))) return { error: "Categoria não encontrada." };
   if (!(await centroPadraoValido(c.prisma, c.tenantId, companyId, centroId))) {
     return { error: "Centro de custo não encontrado ou inativo nesta empresa." };
   }
@@ -141,7 +144,7 @@ export async function atualizarContraparte(formData: FormData): Promise<Resultad
   const novoDocumento = atual.document ? null : digitosDoDocumento(texto("documento"));
   if (!nome || nome.length > 180) return { error: "Nome obrigatório, até 180 caracteres." };
   if (!documentoValido(novoDocumento)) return { error: "Documento não é CPF (11 dígitos) nem CNPJ (14)." };
-  if (!(await categoriaDePagar(prisma, c.tenantId, categoriaId))) return { error: "Categoria não encontrada." };
+  if (!(await categoriaDePagar(prisma, c.tenantId, atual.companyId, categoriaId))) return { error: "Categoria não encontrada." };
   if (!(await centroPadraoValido(prisma, c.tenantId, atual.companyId, centroId, atual.defaultCostCenterId))) {
     return { error: "Centro de custo não encontrado ou inativo nesta empresa." };
   }
@@ -288,5 +291,201 @@ export async function atualizarCentroDeCusto(formData: FormData): Promise<Result
     },
   });
   revalidarCentros();
+  return { ok: true };
+}
+
+// ─── Plano de contas da empresa (25/09) ─────────────────────────────────────
+//
+// O padrão do escritório vale para todas; aqui a empresa ajusta o dela: cria
+// categoria própria, esconde do padrão o que não usa e muda a linha da DRE.
+// Nada é apagado — ver `src/lib/financeiro/planoDeContas.ts`.
+
+function revalidarPlano() {
+  for (const p of ["/cadastros-financeiros", "/lancamentos", "/conciliacao", "/documentos-fiscais", "/dre", "/dre/economica"]) {
+    revalidatePath(p);
+  }
+}
+
+function lerLinhaDaDre(valor: string): { ok: true; grupo: string | null } | { ok: false } {
+  if (!valor) return { ok: true, grupo: null };
+  const g = grupoDeTexto(valor);
+  return g ? { ok: true, grupo: g } : { ok: false };
+}
+
+function lerNome(valor: string): string | null {
+  const nome = valor.replace(/\s+/g, " ").trim();
+  return nome && nome.length <= 120 ? nome : null;
+}
+
+export async function criarCategoriaDaEmpresa(formData: FormData): Promise<ResultadoDoCadastro> {
+  const texto = (k: string) => String(formData.get(k) ?? "").trim();
+  const companyId = texto("companyId");
+  const c = await contexto(companyId);
+  if (!c.ok) return { error: c.erro };
+
+  const nome = lerNome(texto("nome"));
+  const kind = texto("kind");
+  if (!nome) return { error: "Informe o nome da categoria (até 120 caracteres)." };
+  if (kind !== "PAGAR" && kind !== "RECEBER") return { error: "Escolha se é despesa ou receita." };
+  const linha = lerLinhaDaDre(texto("linhaDre"));
+  if (!linha.ok) return { error: "Linha da DRE desconhecida." };
+
+  // O mesmo nome no padrão confundiria o seletor ("Salários" duas vezes) e o
+  // de-para da DRE, que é por nome. Quem quer outra linha para a do padrão muda
+  // a linha dela na lista, sem criar outra.
+  const noPadrao = await c.prisma.financeCategory.findFirst({
+    where: { ...ondeDoPadrao(c.tenantId), kind, name: nome },
+    select: { id: true },
+  });
+  if (noPadrao) return { error: `"${nome}" já existe no plano padrão. Para esta empresa, mude a linha da DRE dela na lista.` };
+
+  try {
+    const criada = await c.prisma.financeCategory.create({
+      data: {
+        tenantId: c.tenantId,
+        companyId,
+        scope: escopoDa(companyId),
+        name: nome,
+        kind,
+        planGroup: texto("grupoDoPlano").slice(0, 120) || null,
+        dreGroup: linha.grupo,
+      },
+      select: { id: true },
+    });
+    await logAudit({
+      tenantId: c.tenantId,
+      userId: c.ctx.userId,
+      action: "financeiro.categoria_da_empresa.criada",
+      entityType: "FinanceCategory",
+      entityId: criada.id,
+      metadata: { companyId, nome, kind },
+    });
+  } catch (err) {
+    if (isPrismaUniqueError(err)) return { error: `Esta empresa já tem a categoria "${nome}".` };
+    throw err;
+  }
+  revalidarPlano();
+  return { ok: true };
+}
+
+/** Nome, grupo, linha da DRE e situação de uma categoria **da empresa**. */
+export async function atualizarCategoriaDaEmpresa(formData: FormData): Promise<ResultadoDoCadastro> {
+  const texto = (k: string) => String(formData.get(k) ?? "").trim();
+  const id = texto("id");
+  const atual = await getPrisma().financeCategory.findFirst({
+    where: { id, companyId: { not: null } },
+    select: { companyId: true, kind: true },
+  });
+  if (!atual?.companyId) return { error: "Categoria não encontrada." };
+  const c = await contexto(atual.companyId);
+  if (!c.ok) return { error: c.erro };
+
+  const nome = lerNome(texto("nome"));
+  if (!nome) return { error: "Informe o nome da categoria (até 120 caracteres)." };
+  const linha = lerLinhaDaDre(texto("linhaDre"));
+  if (!linha.ok) return { error: "Linha da DRE desconhecida." };
+  const noPadrao = await c.prisma.financeCategory.findFirst({
+    where: { ...ondeDoPadrao(c.tenantId), kind: atual.kind, name: nome },
+    select: { id: true },
+  });
+  if (noPadrao) return { error: `"${nome}" já existe no plano padrão.` };
+
+  try {
+    await c.prisma.financeCategory.update({
+      where: { id },
+      data: {
+        name: nome,
+        planGroup: texto("grupoDoPlano").slice(0, 120) || null,
+        dreGroup: linha.grupo,
+        active: texto("ativa") !== "nao",
+      },
+    });
+  } catch (err) {
+    if (isPrismaUniqueError(err)) return { error: `Esta empresa já tem a categoria "${nome}".` };
+    throw err;
+  }
+  await logAudit({
+    tenantId: c.tenantId,
+    userId: c.ctx.userId,
+    action: "financeiro.categoria_da_empresa.alterada",
+    entityType: "FinanceCategory",
+    entityId: id,
+    metadata: { companyId: atual.companyId, nome },
+  });
+  revalidarPlano();
+  return { ok: true };
+}
+
+/** Esconde (ou volta a mostrar) uma categoria do padrão nesta empresa. */
+export async function esconderDoPadraoNaEmpresa(
+  companyId: string,
+  categoryId: string,
+  esconder: boolean
+): Promise<ResultadoDoCadastro> {
+  const c = await contexto(companyId);
+  if (!c.ok) return { error: c.erro };
+  const cat = await c.prisma.financeCategory.findFirst({
+    where: { id: categoryId, ...ondeDoPadrao(c.tenantId) },
+    select: { id: true },
+  });
+  if (!cat) return { error: "Só categorias do plano padrão podem ser escondidas; as da empresa se desativam." };
+
+  if (esconder) {
+    await c.prisma.financeCategoryHidden.upsert({
+      where: { companyId_categoryId: { companyId, categoryId } },
+      create: { tenantId: c.tenantId, companyId, categoryId },
+      update: {},
+    });
+  } else {
+    await c.prisma.financeCategoryHidden.deleteMany({ where: { companyId, categoryId } });
+  }
+  await logAudit({
+    tenantId: c.tenantId,
+    userId: c.ctx.userId,
+    action: esconder ? "financeiro.categoria_padrao.escondida" : "financeiro.categoria_padrao.mostrada",
+    entityType: "FinanceCategory",
+    entityId: categoryId,
+    metadata: { companyId },
+  });
+  revalidarPlano();
+  return { ok: true };
+}
+
+/**
+ * A linha da DRE de uma categoria **nesta empresa**. Na do padrão vira exceção
+ * da empresa (`DreCategoryMapping`), e vazio volta ao padrão; na da empresa é o
+ * próprio `dreGroup` dela.
+ */
+export async function linhaDaDreNaEmpresa(companyId: string, categoryId: string, valor: string): Promise<ResultadoDoCadastro> {
+  const c = await contexto(companyId);
+  if (!c.ok) return { error: c.erro };
+  const linha = lerLinhaDaDre(valor);
+  if (!linha.ok) return { error: "Linha da DRE desconhecida." };
+  const cat = await c.prisma.financeCategory.findFirst({
+    where: categoriaDaEmpresa(c.tenantId, companyId, categoryId),
+    select: { id: true, companyId: true },
+  });
+  if (!cat) return { error: "Categoria não encontrada no plano desta empresa." };
+
+  if (cat.companyId) {
+    await c.prisma.financeCategory.update({ where: { id: categoryId }, data: { dreGroup: linha.grupo } });
+  } else if (linha.grupo) {
+    await c.prisma.dreCategoryMapping.upsert({
+      where: { companyId_categoryId: { companyId, categoryId } },
+      create: { tenantId: c.tenantId, companyId, categoryId, grupo: linha.grupo },
+      update: { grupo: linha.grupo },
+    });
+  } else {
+    await c.prisma.dreCategoryMapping.deleteMany({ where: { companyId, categoryId } });
+  }
+  await logAudit({
+    tenantId: c.tenantId,
+    userId: c.ctx.userId,
+    action: "financeiro.categoria.linha_da_dre",
+    entityType: "FinanceCategory",
+    entityId: categoryId,
+    metadata: { companyId, linha: linha.grupo },
+  });
+  revalidarPlano();
   return { ok: true };
 }

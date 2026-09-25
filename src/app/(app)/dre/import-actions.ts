@@ -8,6 +8,7 @@ import { logAudit } from "@/lib/audit";
 import { lerExportDoOmie, mesesDoExport, mesDaData, ExportIlegivel, type Celula } from "@/lib/dre/omie";
 import { setorDoModulo } from "@/lib/modules";
 import { categoriasParaCriar } from "@/lib/dre/categoriasDoImport";
+import { escopoDa, ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 
 export type ResultadoDaImportacao =
   | { error: string }
@@ -106,14 +107,21 @@ export async function importarExportDoOmie(form: FormData): Promise<ResultadoDaI
       async (tx) => {
         // Categoria do arquivo que o plano de contas não tem ficaria fora do
         // DRE e sem onde classificar — ver src/lib/dre/categoriasDoImport.ts.
-        const existentes = await tx.financeCategory.findMany({ where: { tenantId }, select: { name: true } });
+        // Nasce no plano **desta empresa** (25/09): o arquivo é o Omie dela, e
+        // a categoria é particularidade dela, não do padrão do escritório.
+        const existentes = await tx.financeCategory.findMany({
+          where: ondeDaEmpresa(tenantId, companyId, { apenasAtivas: false, incluirOcultas: true }),
+          select: { name: true },
+        });
         const novas = categoriasParaCriar(
           leitura.linhas.map((l) => l.categoria),
           existentes.map((e) => e.name),
           leitura.origem
         );
         if (novas.length > 0) {
-          await tx.financeCategory.createMany({ data: novas.map((n) => ({ tenantId, ...n })) });
+          await tx.financeCategory.createMany({
+            data: novas.map((n) => ({ tenantId, companyId, scope: escopoDa(companyId), ...n })),
+          });
         }
         criadas = novas;
 

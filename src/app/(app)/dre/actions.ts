@@ -6,6 +6,7 @@ import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { grupoDeTexto } from "@/lib/dre/mapeamento";
 import { setorDoModulo } from "@/lib/modules";
+import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 
 export type AcaoDoDre = { error: string } | { success: true } | null;
 
@@ -50,7 +51,7 @@ export async function classificarCategoria(
   if (!valido) return { error: "Grupo do DRE desconhecido." };
 
   const categoria = await c.prisma.financeCategory.findFirst({
-    where: { id: categoryId, tenantId: c.tenantId },
+    where: { id: categoryId, ...ondeDaEmpresa(c.tenantId, companyId, { apenasAtivas: false, incluirOcultas: true }) },
     select: { id: true },
   });
   if (!categoria) return { error: "Categoria não encontrada." };

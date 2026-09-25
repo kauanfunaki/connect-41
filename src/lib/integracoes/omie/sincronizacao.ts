@@ -96,7 +96,29 @@ async function gravarNotas(tenantId: string, companyId: string, emitente: string
   return c;
 }
 
-/** Varre as notas emitidas de uma conta do Omie e grava no acervo. */
+/**
+ * A empresa da conta e as filiais cadastradas dela (`parentCompanyId`), por
+ * CNPJ. Matriz e filiais dividem a base do Omie; o Connect guarda cada uma como
+ * empresa, então a conta cadastrada na matriz alimenta as filiais também.
+ */
+export async function empresasDoGrupo(
+  tenantId: string,
+  companyId: string,
+  daConta: { name: string; cnpj: string }
+): Promise<{ cnpjs: Set<string>; porCnpj: Map<string, { id: string; name: string }> }> {
+  const filiais = await getPrisma().company.findMany({
+    where: { tenantId, parentCompanyId: companyId, cnpj: { not: null } },
+    select: { id: true, name: true, cnpj: true },
+  });
+  const porCnpj = new Map<string, { id: string; name: string }>([[daConta.cnpj, { id: companyId, name: daConta.name }]]);
+  for (const f of filiais) {
+    const doc = (f.cnpj ?? "").replace(/\D/g, "");
+    if (doc.length === 14 && !porCnpj.has(doc)) porCnpj.set(doc, { id: f.id, name: f.name });
+  }
+  return { cnpjs: new Set(porCnpj.keys()), porCnpj };
+}
+
+/** Varre as notas emitidas de uma conta do Omie e grava no acervo (a empresa da conta e as filiais dela). */
 export async function sincronizarNotasDaEmpresa(
   tenantId: string,
   companyId: string,
@@ -113,6 +135,7 @@ export async function sincronizarNotasDaEmpresa(
   const empresa = await prisma.company.findFirst({ where: { id: companyId, tenantId }, select: { name: true, cnpj: true } });
   const cnpj = (empresa?.cnpj ?? "").replace(/\D/g, "");
   if (!empresa || cnpj.length !== 14) return { companyId, ok: false, erro: "A empresa não tem CNPJ no Connect para conferir as notas." };
+  const grupo = await empresasDoGrupo(tenantId, companyId, { name: empresa.name, cnpj });
   const config = lerConfig(conexao.configEnc);
   if (!config.appKey || !config.appSecret) return { companyId, ok: false, erro: "Falta App Key ou App Secret." };
   const cred = { appKey: config.appKey, appSecret: config.appSecret };
@@ -138,14 +161,20 @@ export async function sincronizarNotasDaEmpresa(
 
         const traduzidas: NotaDoOmie[] = [];
         for (const item of notas) {
-          const r = mapearNotaOmie(item, cnpj);
+          const r = mapearNotaOmie(item, grupo.cnpjs);
           if ("fora" in r) cont[`fora_${r.fora}`] = (cont[`fora_${r.fora}`] ?? 0) + 1;
           else traduzidas.push(r);
         }
-        const g = await gravarNotas(tenantId, companyId, empresa.name, traduzidas);
-        cont.novas += g.novas;
-        cont.atualizadas += g.atualizadas;
-        cont.reconhecidas += g.reconhecidas;
+        // Cada nota vai para a empresa do CNPJ emitente: a da conta ou uma filial dela.
+        for (const [doc, destino] of grupo.porCnpj) {
+          const daEmpresa = traduzidas.filter((n) => n.emitenteDocumento === doc);
+          if (daEmpresa.length === 0) continue;
+          const g = await gravarNotas(tenantId, destino.id, destino.name, daEmpresa);
+          cont.novas += g.novas;
+          cont.atualizadas += g.atualizadas;
+          cont.reconhecidas += g.reconhecidas;
+          if (destino.id !== companyId) cont.de_filiais = (cont.de_filiais ?? 0) + daEmpresa.length;
+        }
 
         if (pagina >= totalDePaginas || notas.length === 0) {
           proxima = null;

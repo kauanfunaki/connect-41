@@ -34,6 +34,7 @@ import {
   type Motivo,
 } from "@/lib/financeiro/conciliacao/casamento";
 import { motivoDoBloqueioDeBaixa } from "@/lib/financeiro/aprovacao/regras";
+import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 
 export const dynamic = "force-dynamic";
 
@@ -411,7 +412,7 @@ async function ExtratoDaConta({
             orderBy: { name: "asc" },
           }),
           prisma.financeCategory.findMany({
-            where: { tenantId, active: true },
+            where: ondeDaEmpresa(tenantId, companyId),
             select: { id: true, name: true, kind: true },
             orderBy: { name: "asc" },
           }),
