@@ -82,6 +82,12 @@ export function ImportarOfx({ bankAccountId }: { bankAccountId: string }) {
               {resumo.saldoDoBancoKey && ` em ${dataCurta(resumo.saldoDoBancoKey)}`}
             </p>
           )}
+          {resumo.conciliadasPeloOmie > 0 && (
+            <p>
+              {resumo.conciliadasPeloOmie} {resumo.conciliadasPeloOmie === 1 ? "já estava conciliada" : "já estavam conciliadas"} no Omie e
+              {resumo.conciliadasPeloOmie === 1 ? " saiu" : " saíram"} da fila.
+            </p>
+          )}
           {resumo.zeradas > 0 && <p>{resumo.zeradas} com valor zero não foram importadas.</p>}
           {resumo.avisos.map((a) => (
             <p key={a} className="text-warning">

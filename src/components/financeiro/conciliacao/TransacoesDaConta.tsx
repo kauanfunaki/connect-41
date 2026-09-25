@@ -39,6 +39,8 @@ export type LinhaDaTransacao = {
   memo: string | null;
   nome: string | null;
   status: "PENDENTE" | "CONCILIADA" | "IGNORADA";
+  /** Conciliada porque a baixa já estava conciliada no Omie. */
+  viaOmie: boolean;
   ignoredReason: string | null;
   /**
    * Só em pendente, e só quando a regra de casamento tem certeza razoável. Com
@@ -160,7 +162,9 @@ export function TransacoesDaConta({
                   {moeda(l.centavos)}
                 </td>
                 <td className="py-2.5 pr-3">
-                  <Badge variant={STATUS[l.status].variante}>{STATUS[l.status].rotulo}</Badge>
+                  <Badge variant={STATUS[l.status].variante}>
+                    {l.status === "CONCILIADA" && l.viaOmie ? "Conciliada no Omie" : STATUS[l.status].rotulo}
+                  </Badge>
                 </td>
                 <td className="py-2.5">
                   {l.status === "PENDENTE" && (

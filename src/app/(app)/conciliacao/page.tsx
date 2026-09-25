@@ -115,6 +115,7 @@ export default async function ConciliacaoPage({
       openingBalance: true,
       openingBalanceDate: true,
       active: true,
+      omieAccountLabel: true,
       _count: { select: { transactions: true } },
     },
     orderBy: [{ active: "desc" }, { nickname: "asc" }],
@@ -160,6 +161,11 @@ export default async function ConciliacaoPage({
                     <span className="block text-[11px] text-fg-muted">
                       Banco {c.bankCode} · {c.agency ? `ag. ${c.agency} · ` : ""}c/{c.type === "POUPANCA" ? "p" : "c"} {c.accountNumber}
                     </span>
+                    {c.omieAccountLabel && (
+                      <span className="block text-[11px] text-fg-muted" title="O que o BPO conciliar nesta conta no Omie sai da fila daqui">
+                        Ligada ao Omie: {c.omieAccountLabel}
+                      </span>
+                    )}
                   </div>
                   {!c.active && <Badge variant="danger">Inativa</Badge>}
                 </div>
@@ -326,6 +332,7 @@ async function ExtratoDaConta({
         memo: true,
         payeeName: true,
         status: true,
+        reconciledViaOmie: true,
         ignoredReason: true,
         matches: {
           select: {
@@ -388,6 +395,7 @@ async function ExtratoDaConta({
       memo: t.memo,
       nome: t.payeeName,
       status: t.status,
+      viaOmie: t.reconciledViaOmie,
       ignoredReason: t.ignoredReason,
       sugestao,
       candidatosDeMesmoValor,
@@ -519,6 +527,8 @@ async function ExtratoDaConta({
       <p className="text-[11px] text-fg-muted mt-3">
         A sugestão aparece só quando um lançamento de mesmo valor se destaca pela data e pelo nome — nada é conciliado
         sem confirmação. Conciliar marca os lançamentos como pagos na data do extrato; desfazer devolve o estado anterior.
+        Em conta ligada ao Omie, a linha que bate no valor e no dia com uma única baixa já conciliada lá sai da fila
+        sozinha, como “Conciliada no Omie”.
       </p>
     </>
   );

@@ -21,15 +21,44 @@
 // - **Janela:** títulos com vencimento desde 1º de janeiro do ano passado, em
 //   páginas de 500, até 20 páginas por execução; conta grande continua de onde
 //   parou na próxima (`cursor` da linha `financeiro:{empresa}`).
+//
+// ─── Conciliação (25/09, Fase 1) ─────────────────────────────────────────────
+//
+// Depois dos títulos, a leitura passa às linhas de conta corrente
+// (`cTpLancamento: "CC"`, dos últimos 90 dias): a baixa de cada título grava
+// em que conta o dinheiro passou e quando o BPO conciliou, e o que não tem
+// título (transferência entre contas, tarifa e rendimento lançados do extrato)
+// vira lançamento. O cursor diz em que fase parou
+// (`t:3`, `c:7`; número puro é da versão anterior, e é página de título).
+// Antes de tudo, as contas bancárias do Connect são ligadas às do Omie (a que
+// só existe lá é criada aqui), e no
+// fim as linhas de extrato que batem com baixa conciliada lá saem da fila
+// (`conciliarEmpresaPeloOmie`). Tradução em `conciliacao.ts`.
+//
+// Limite conhecido: título com mais de uma baixa cujas linhas caiam em páginas
+// diferentes fica com a da última página. É pagamento parcial, e raro.
 
 import { getPrisma } from "@/lib/prisma";
+import { saoPauloParts } from "@/lib/agenda";
 import { executar, lerConfig } from "@/lib/integracoes/data";
 import { chaveDaCategoria } from "@/lib/dre/calculo";
 import { MAPEAMENTO_PADRAO } from "@/lib/dre/mapeamento-padrao";
 import { escopoDa, ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
+import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { chamarOmie } from "./cliente";
 import { instanciaDaEmpresa } from "./contas";
 import { lerCategorias, mapearMovimento, paginaDeCategorias, paginaDeMovimentos, type TituloDoOmie } from "./financeiro";
+import {
+  juntarBaixas,
+  lerContasCorrentes,
+  ligarContas,
+  mapearLinhaDeConta,
+  paginaDeContasCorrentes,
+  type BaixaDoOmie,
+  type LancamentoDeContaDoOmie,
+  mesmoNumero,
+} from "./conciliacao";
+import { conciliarEmpresaPeloOmie } from "@/lib/financeiro/conciliacao/omieServidor";
 
 export const PREFIXO_DO_FINANCEIRO = "financeiro:";
 export const instanciaDoFinanceiro = (companyId: string) => `${PREFIXO_DO_FINANCEIRO}${companyId}`;
@@ -52,6 +81,29 @@ export type ResumoDoFinanceiro =
 
 function janelaDesde(agora: Date): string {
   return `01/01/${agora.getFullYear() - 1}`;
+}
+
+type Fase = "t" | "c";
+
+/** O cursor da linha de progresso: fase e página. Número puro é da versão anterior (títulos). */
+export function lerCursor(cursor: string | null | undefined): { fase: Fase; pagina: number } {
+  const m = /^(?:([tc]):)?(\d+)$/.exec(cursor ?? "");
+  if (!m) return { fase: "t", pagina: 1 };
+  return { fase: (m[1] as Fase | undefined) ?? "t", pagina: Math.max(1, Number(m[2])) };
+}
+
+const NOME_DA_TRANSFERENCIA = "Transferência entre contas";
+const NOME_DO_LANCAMENTO_DE_CONTA = "Lançamento de conta corrente";
+
+/**
+ * As linhas de conta corrente vão só 90 dias para trás. Elas servem à
+ * conciliação, que é do extrato recente — e são muitas (176 páginas desde 2025
+ * na ER Dias). Os títulos continuam com a janela longa: a DRE precisa deles.
+ */
+function janelaDaConta(agora: Date): string {
+  const d = new Date(agora.getTime() - 90 * 24 * 60 * 60 * 1000);
+  const [ano, mes, dia] = saoPauloParts(d).dateKey.split("-");
+  return `${dia}/${mes}/${ano}`;
 }
 
 /** Todas as páginas de uma listagem de cadastro (categorias, clientes). */
@@ -139,7 +191,7 @@ export async function sincronizarFinanceiroDaEmpresa(
     const infoDoCodigo = new Map(doOmie.map((c) => [c.codigo, c]));
     const criadasAgora = new Map<string, string>();
 
-    async function categoriaDo(t: TituloDoOmie): Promise<string | null> {
+    async function categoriaDo(t: Pick<TituloDoOmie, "kind" | "categoriaCodigo">): Promise<string | null> {
       if (!t.categoriaCodigo) return null;
       const codigo = t.categoriaCodigo;
       const ja = porCodigo.get(codigo) ?? criadasAgora.get(`${t.kind}|${codigo}`);
@@ -187,7 +239,7 @@ export async function sincronizarFinanceiroDaEmpresa(
     const porDocumento = new Map(existentes.filter((e) => e.document).map((e) => [e.document!, e.id]));
     const porNomeDeContraparte = new Map(existentes.map((e) => [e.name.toLowerCase(), e.id]));
 
-    async function contraparteDo(t: TituloDoOmie): Promise<string> {
+    async function contraparteDo(t: Pick<TituloDoOmie, "contraparteCodigo" | "contraparteDocumento">): Promise<string> {
       const cadastro = t.contraparteCodigo ? doOmieContrapartes.get(t.contraparteCodigo) : undefined;
       const documento = t.contraparteDocumento ?? cadastro?.documento ?? null;
       const nome = cadastro?.nome ?? (documento ? `CPF/CNPJ ${documento}` : `Cliente/fornecedor ${t.contraparteCodigo ?? "sem código"} do Omie`);
@@ -209,11 +261,97 @@ export async function sincronizarFinanceiroDaEmpresa(
       return criada.id;
     }
 
-    // ─── títulos ───────────────────────────────────────────────────────────
-    let pagina = opcoes.gravar ? Math.max(1, Number(progresso?.cursor) || 1) : 1;
+    // ─── contas bancárias ──────────────────────────────────────────────────
+    const contasDoOmie = lerContasCorrentes(
+      await todasAsPaginas(cred, "geral/contacorrente", "ListarContasCorrentes", paginaDeContasCorrentes)
+    );
+    const contasDoConnect = await prisma.bankAccount.findMany({
+      where: { tenantId, companyId },
+      select: { id: true, bankCode: true, accountDigits: true, omieAccountId: true, omieAccountLabel: true },
+    });
+    const ligadas = ligarContas(contasDoConnect, contasDoOmie);
+    const jaUsadas = new Set(contasDoConnect.map((c) => c.omieAccountId).filter(Boolean));
+    for (const c of contasDoConnect) {
+      const omie = ligadas.get(c.id);
+      if (!omie) {
+        if (!c.omieAccountId) somar("contas_sem_par_no_omie");
+        continue;
+      }
+      if (c.omieAccountId === omie.id && c.omieAccountLabel === omie.rotulo) {
+        somar("contas_ligadas");
+        continue;
+      }
+      // Outra conta do Connect já ligada a esta do Omie: não tira de lá.
+      if (c.omieAccountId !== omie.id && jaUsadas.has(omie.id)) {
+        somar("contas_sem_par_no_omie");
+        continue;
+      }
+      somar("contas_ligadas");
+      if (opcoes.gravar) {
+        await prisma.bankAccount.update({ where: { id: c.id }, data: { omieAccountId: omie.id, omieAccountLabel: omie.rotulo } });
+        jaUsadas.add(omie.id);
+      }
+    }
+    // Conta ativa que só existe no Omie entra no Connect já ligada: o Omie é a
+    // fonte, e sem a conta aqui não há onde importar o extrato. Conta do
+    // Connect com o mesmo número que não ligou (dúvida) não ganha gêmea.
+    for (const o of contasDoOmie) {
+      if (o.inativa || jaUsadas.has(o.id)) continue;
+      if (contasDoConnect.some((c) => c.bankCode === o.banco && mesmoNumero(c.accountDigits, o.conta))) continue;
+      somar("contas_criadas");
+      if (!opcoes.gravar) continue;
+      try {
+        await prisma.bankAccount.create({
+          data: {
+            tenantId,
+            companyId,
+            nickname: o.rotulo.slice(0, 80),
+            bankCode: o.banco,
+            agency: o.agencia,
+            accountNumber: o.numero || o.conta,
+            accountDigits: o.conta,
+            omieAccountId: o.id,
+            omieAccountLabel: o.rotulo,
+          },
+        });
+        jaUsadas.add(o.id);
+      } catch (err) {
+        if (!isPrismaUniqueError(err)) throw err;
+      }
+    }
+
+    // Contraparte dos lançamentos de conta que não têm cliente/fornecedor no Omie.
+    const contrapartesPorNome = new Map<string, string>();
+    async function contraparteChamada(nome: string): Promise<string> {
+      const ja = contrapartesPorNome.get(nome) ?? porNomeDeContraparte.get(nome.toLowerCase());
+      if (ja) return ja;
+      const criada = await prisma.financeCounterparty.create({ data: { tenantId, companyId, name: nome }, select: { id: true } });
+      contrapartesPorNome.set(nome, criada.id);
+      porNomeDeContraparte.set(nome.toLowerCase(), criada.id);
+      return criada.id;
+    }
+
+    const inicio = opcoes.gravar ? lerCursor(progresso?.cursor) : { fase: "t" as Fase, pagina: 1 };
+    let fase = inicio.fase;
+    let pagina = inicio.pagina;
     let proxima: string | null = null;
+    let leuContas = false;
+    // Na prévia, uma página de cada fase — é amostra, não carga.
     const maxPaginas = opcoes.gravar ? MAX_PAGINAS : 2;
     for (let volta = 0; volta < maxPaginas; volta++) {
+      if (fase === "c") {
+        leuContas = true;
+        const fim = await lerPaginaDeConta(pagina);
+        if (fim || !opcoes.gravar) {
+          proxima = null;
+          break;
+        }
+        pagina++;
+        proxima = `c:${pagina}`;
+        continue;
+      }
+
+      // ─── títulos ─────────────────────────────────────────────────────────
       const corpo = await chamarOmie(cred, "financas/mf", "ListarMovimentos", {
         nPagina: pagina,
         nRegPorPagina: POR_PAGINA,
@@ -234,6 +372,7 @@ export async function sincronizarFinanceiroDaEmpresa(
         select: {
           id: true, omieTitleId: true, status: true, paidAt: true, amount: true, dueDate: true,
           categoryId: true, competence: true, closeReason: true, agreementId: true,
+          omieBaixaId: true, omieReconciledAt: true,
         },
       });
       const atualPorTitulo = new Map(jaNoConnect.map((e) => [e.omieTitleId!, e]));
@@ -281,7 +420,12 @@ export async function sincronizarFinanceiroDaEmpresa(
           continue;
         }
 
+        // Título que voltou a ficar em aberto (baixa estornada no Omie) perde a
+        // baixa que a fase de conta tinha gravado — senão a tela de
+        // conciliação o daria como conciliado sem pagamento.
+        const estornado = status !== "PAGO" && (atual.omieBaixaId !== null || atual.omieReconciledAt !== null);
         const mudou =
+          estornado ||
           atual.status !== dados.status ||
           (atual.paidAt?.getTime() ?? null) !== (dados.paidAt?.getTime() ?? null) ||
           atual.amount.toFixed(2) !== dados.amount ||
@@ -298,19 +442,148 @@ export async function sincronizarFinanceiroDaEmpresa(
             where: { id: atual.id },
             // Categoria só troca quando o Omie tem uma: a classificada no
             // Connect não some porque o Omie não a informou.
+            data: {
+              ...dados,
+              categoryId: dados.categoryId ?? atual.categoryId,
+              ...(estornado ? { omieBaixaId: null, omiePaidAmount: null, omieReconciledAt: null } : {}),
+            },
+          });
+        }
+      }
+
+      if (pagina >= totalDePaginas || itens.length === 0 || !opcoes.gravar) {
+        fase = "c";
+        pagina = 1;
+      } else {
+        pagina++;
+      }
+      proxima = `${fase}:${pagina}`;
+    }
+
+    if (opcoes.gravar && leuContas) {
+      somar("extrato_conciliado_pelo_omie", await conciliarEmpresaPeloOmie(tenantId, companyId));
+    }
+    return { cont, proxima };
+
+    /** Uma página das linhas de conta corrente. Devolve `true` na última. */
+    async function lerPaginaDeConta(n: number): Promise<boolean> {
+      const corpo = await chamarOmie(cred, "financas/mf", "ListarMovimentos", {
+        nPagina: n,
+        nRegPorPagina: POR_PAGINA,
+        dDtPagtoDe: janelaDaConta(agora),
+        cTpLancamento: "CC",
+      });
+      const { itens, totalDePaginas } = paginaDeMovimentos(corpo);
+      cont.paginas++;
+      somar("linhas_de_conta", itens.length);
+
+      const baixas: BaixaDoOmie[] = [];
+      const avulsos: LancamentoDeContaDoOmie[] = [];
+      for (const item of itens) {
+        const r = mapearLinhaDeConta(item);
+        if ("fora" in r) somar(`conta_fora_${r.fora}`);
+        else if (r.tipo === "baixa") baixas.push(r);
+        else avulsos.push(r);
+      }
+
+      // ─── baixas ──────────────────────────────────────────────────────────
+      const porTitulo = juntarBaixas(baixas);
+      const lancamentos = await prisma.financeEntry.findMany({
+        where: { tenantId, companyId, omieTitleId: { in: porTitulo.map((b) => b.omieTitleId) } },
+        select: { id: true, omieTitleId: true, omieAccountId: true, omieBaixaId: true, omiePaidAmount: true, omieReconciledAt: true },
+      });
+      const porId = new Map(lancamentos.map((l) => [l.omieTitleId!, l]));
+      for (const b of porTitulo) {
+        const l = porId.get(b.omieTitleId);
+        if (!l) {
+          // Título fora da janela (vencido antes dela) ou ainda não lido.
+          somar("baixas_sem_titulo_no_connect");
+          continue;
+        }
+        somar(b.conciliadoEm ? "baixas_conciliadas" : "baixas_nao_conciliadas");
+        const mudou =
+          l.omieAccountId !== b.contaId ||
+          l.omieBaixaId !== b.baixaId ||
+          (l.omiePaidAmount?.toFixed(2) ?? null) !== b.valor.toFixed(2) ||
+          (l.omieReconciledAt?.getTime() ?? null) !== (b.conciliadoEm?.getTime() ?? null);
+        if (!mudou) continue;
+        somar("baixas_atualizadas");
+        if (opcoes.gravar) {
+          await prisma.financeEntry.update({
+            where: { id: l.id },
+            data: {
+              omieAccountId: b.contaId,
+              omieBaixaId: b.baixaId,
+              omiePaidAmount: b.valor.toFixed(2),
+              omieReconciledAt: b.conciliadoEm,
+            },
+          });
+        }
+      }
+
+      // ─── lançamentos de conta sem título ─────────────────────────────────
+      const jaLancados = await prisma.financeEntry.findMany({
+        where: { tenantId, companyId, omieMovementId: { in: avulsos.map((t) => t.movimentoId) } },
+        select: {
+          id: true, omieMovementId: true, paidAt: true, amount: true, competence: true,
+          categoryId: true, omieAccountId: true, omieReconciledAt: true,
+        },
+      });
+      const porMovimento = new Map(jaLancados.map((e) => [e.omieMovementId!, e]));
+      for (const t of avulsos) {
+        const categoryId = await categoriaDo(t);
+        const dados = {
+          status: "PAGO",
+          paidAt: t.pagamento,
+          dueDate: t.pagamento,
+          amount: t.valor.toFixed(2),
+          competence: t.competencia,
+          categoryId: categoryId && !categoryId.startsWith("previa:") ? categoryId : null,
+          omieAccountId: t.contaId,
+          omiePaidAmount: t.valor.toFixed(2),
+          omieReconciledAt: t.conciliadoEm,
+        } as const;
+        const atual = porMovimento.get(t.movimentoId);
+        if (!atual) {
+          somar(t.transferencia ? "transferencias_novas" : "lancamentos_de_conta_novos");
+          if (opcoes.gravar) {
+            await prisma.financeEntry.create({
+              data: {
+                tenantId,
+                companyId,
+                kind: t.kind,
+                counterpartyId: t.transferencia
+                  ? await contraparteChamada(NOME_DA_TRANSFERENCIA)
+                  : t.contraparteCodigo || t.contraparteDocumento
+                    ? await contraparteDo(t)
+                    : await contraparteChamada(NOME_DO_LANCAMENTO_DE_CONTA),
+                description: `${t.transferencia ? NOME_DA_TRANSFERENCIA : NOME_DO_LANCAMENTO_DE_CONTA} (Omie)`,
+                omieMovementId: t.movimentoId,
+                ...dados,
+              },
+            });
+          }
+          continue;
+        }
+        const mudou =
+          (atual.paidAt?.getTime() ?? null) !== t.pagamento.getTime() ||
+          atual.amount.toFixed(2) !== dados.amount ||
+          atual.competence !== dados.competence ||
+          atual.omieAccountId !== dados.omieAccountId ||
+          (atual.omieReconciledAt?.getTime() ?? null) !== (t.conciliadoEm?.getTime() ?? null) ||
+          (dados.categoryId !== null && atual.categoryId !== dados.categoryId);
+        if (!mudou) continue;
+        somar("lancamentos_de_conta_atualizados");
+        if (opcoes.gravar) {
+          await prisma.financeEntry.update({
+            where: { id: atual.id },
             data: { ...dados, categoryId: dados.categoryId ?? atual.categoryId },
           });
         }
       }
 
-      if (pagina >= totalDePaginas || itens.length === 0) {
-        proxima = null;
-        break;
-      }
-      pagina++;
-      proxima = String(pagina);
+      return n >= totalDePaginas || itens.length === 0;
     }
-    return { cont, proxima };
   };
 
   emAndamento.add(chave);

@@ -24,6 +24,7 @@
 // outro nome vira contador de "fora", não erro nem dado inventado.
 
 import { instanteDoOmie } from "./notas";
+import { MOTIVO_DA_LINHA, type MotivoDaLinhaFora } from "./conciliacao";
 
 type Obj = Record<string, unknown>;
 const obj = (v: unknown): Obj => (v && typeof v === "object" && !Array.isArray(v) ? (v as Obj) : {});
@@ -212,5 +213,30 @@ export function mensagemDoFinanceiro(c: Record<string, number>, gravou: boolean)
       .filter((m) => n(`fora_${m}`) > 0)
       .map((m) => `${n(`fora_${m}`)} ${MOTIVO_DO_TITULO[m]}`),
   ].filter(Boolean);
-  return `${n("lidos")} movimentos lidos em ${n("paginas")} página(s): ${partes.join(", ")}.`;
+
+  // Conciliação: só aparece quando a leitura chegou às linhas de conta.
+  const conciliacao = [
+    n("contas_ligadas") ? `${n("contas_ligadas")} conta(s) bancária(s) ligada(s) ao Omie` : null,
+    n("contas_sem_par_no_omie") ? `${n("contas_sem_par_no_omie")} sem conta correspondente no Omie` : null,
+    n("baixas_conciliadas") || n("baixas_nao_conciliadas")
+      ? `${n("baixas_conciliadas")} baixas conciliadas no Omie e ${n("baixas_nao_conciliadas")} ainda não`
+      : null,
+    n("baixas_sem_titulo_no_connect") ? `${n("baixas_sem_titulo_no_connect")} baixas de títulos fora da janela` : null,
+    n("contas_criadas") ? `${n("contas_criadas")} conta(s) do Omie ${gravou ? "criadas" : "a criar"} no Connect` : null,
+    n("transferencias_novas")
+      ? `${n("transferencias_novas")} transferências entre contas ${gravou ? "lançadas" : "a lançar"}`
+      : null,
+    n("lancamentos_de_conta_novos")
+      ? `${n("lancamentos_de_conta_novos")} lançamentos de conta sem título (tarifa, rendimento…) ${gravou ? "lançados" : "a lançar"}`
+      : null,
+    n("extrato_conciliado_pelo_omie") ? `${n("extrato_conciliado_pelo_omie")} linhas do extrato conciliadas pelo Omie` : null,
+    ...(Object.keys(MOTIVO_DA_LINHA) as MotivoDaLinhaFora[])
+      .filter((m) => n(`conta_fora_${m}`) > 0)
+      .map((m) => `${n(`conta_fora_${m}`)} ${MOTIVO_DA_LINHA[m]}`),
+  ].filter(Boolean);
+
+  return (
+    `${n("lidos")} movimentos lidos em ${n("paginas")} página(s): ${partes.join(", ")}.` +
+    (conciliacao.length ? ` Conciliação: ${conciliacao.join(", ")}.` : "")
+  );
 }
