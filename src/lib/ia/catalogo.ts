@@ -211,6 +211,21 @@ export const AGENT_CATALOG: AgenteDef[] = [
     padraoLigado: false,
   },
   {
+    code: "ajuda_do_connect",
+    label: "Ajuda do Connect (chat)",
+    sectorCode: null,
+    description:
+      "Responde no chat do canto da tela como usar o Connect — onde fica cada função e o que dizem os manuais do escritório. Atende quem está num setor ainda sem IA própria",
+    faixa: "rapido",
+    escreve: false,
+    ferramentas: ["listar_minhas_telas", "buscar_nos_manuais"],
+    // Pergunta de "onde fica" é curta e barata; o teto de chamadas é o que
+    // segura um uso maior que o previsto no piloto.
+    tetoMensalCentavos: 30_000,
+    tetoMensalChamadas: 3_000,
+    padraoLigado: false,
+  },
+  {
     code: "resumo_agente",
     label: "Resumo de avaliações do atendente",
     sectorCode: "atendimento",

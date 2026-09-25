@@ -76,7 +76,7 @@ describe("AGENT_CATALOG", () => {
       "avaliacao_escrita",
       "resumo_agente",
     ]);
-    expect(agentesDoSetor(null).map((a) => a.code)).toEqual(["resumo_empresa"]);
+    expect(agentesDoSetor(null).map((a) => a.code)).toEqual(["resumo_empresa", "ajuda_do_connect"]);
   });
 });
 
