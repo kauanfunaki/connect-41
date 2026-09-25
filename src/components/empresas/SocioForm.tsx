@@ -27,6 +27,14 @@ type Props = {
     document?: string | null;
     administrator?: boolean;
     sharePercent?: string | null;
+    qualification?: string | null;
+    quotas?: string | null;
+    capitalAmount?: string | null;
+    /** "AAAA-MM-DD", como o input de data espera. */
+    entryDate?: string;
+    exitDate?: string;
+    /** O CPF como a Receita divulga, quando o inteiro não é conhecido. */
+    documentMasked?: string | null;
     zipCode?: string | null;
     addressStreet?: string | null;
     addressNumber?: string | null;
@@ -69,7 +77,15 @@ export function SocioForm({ action, companyId, cancelHref, enderecoDaEmpresa, de
       </CampoForm>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <CampoForm label="CPF ou CNPJ" htmlFor="document" helper="Opcional. Se preenchido, precisa ser válido.">
+        <CampoForm
+          label="CPF ou CNPJ"
+          htmlFor="document"
+          helper={
+            defaultValues?.documentMasked && !defaultValues?.document
+              ? `A Receita divulga só ${defaultValues.documentMasked}. Opcional; se preenchido, precisa ser válido.`
+              : "Opcional. Se preenchido, precisa ser válido."
+          }
+        >
           <Input id="document" name="document" type="text" inputMode="numeric" defaultValue={defaultValues?.document ?? ""} />
         </CampoForm>
 
@@ -82,6 +98,41 @@ export function SocioForm({ action, companyId, cancelHref, enderecoDaEmpresa, de
             suffix="%"
             defaultValue={defaultValues?.sharePercent ?? ""}
           />
+        </CampoForm>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <CampoForm label="Qualificação" htmlFor="qualification" helper="Como a Receita chama o papel.">
+          <Input
+            id="qualification"
+            name="qualification"
+            type="text"
+            maxLength={80}
+            placeholder="Sócio-Administrador"
+            defaultValue={defaultValues?.qualification ?? ""}
+          />
+        </CampoForm>
+        <CampoForm label="Quotas" htmlFor="quotas" helper="Do contrato social. Opcional.">
+          <Input id="quotas" name="quotas" type="text" inputMode="numeric" defaultValue={defaultValues?.quotas ?? ""} />
+        </CampoForm>
+        <CampoForm label="Capital" htmlFor="capitalAmount" helper="Valor integralizado. Opcional.">
+          <Input
+            id="capitalAmount"
+            name="capitalAmount"
+            type="text"
+            inputMode="decimal"
+            prefix="R$"
+            defaultValue={defaultValues?.capitalAmount ?? ""}
+          />
+        </CampoForm>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <CampoForm label="Entrada na sociedade" htmlFor="entryDate">
+          <Input id="entryDate" name="entryDate" type="date" defaultValue={defaultValues?.entryDate ?? ""} />
+        </CampoForm>
+        <CampoForm label="Saída da sociedade" htmlFor="exitDate" helper="Preencha quando o sócio sair: ele fica como ex-sócio.">
+          <Input id="exitDate" name="exitDate" type="date" defaultValue={defaultValues?.exitDate ?? ""} />
         </CampoForm>
       </div>
 
