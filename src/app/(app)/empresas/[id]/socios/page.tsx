@@ -210,8 +210,9 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
             </p>
             {resideNoLocal === null && (
               <p className="text-[12px] text-fg-muted mt-1">
-                Falta CEP ou número em algum endereço, ou só um dos lados tem complemento. Enquanto for assim, quem
-                preenche o Empresa Fácil responde essa pergunta à mão.
+                {socios.length === 0
+                  ? "Não há sócio atual para comparar: todos têm saída registrada. Cadastre o quadro vigente, ou quem preenche o Empresa Fácil responde à mão."
+                  : "Falta CEP ou número em algum endereço, ou só um dos lados tem complemento. Enquanto for assim, quem preenche o Empresa Fácil responde essa pergunta à mão."}
               </p>
             )}
             <p className="text-[12px] text-fg-muted mt-2 tabular-nums">

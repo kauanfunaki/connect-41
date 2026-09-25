@@ -81,8 +81,7 @@ export function BuscarSociosNaReceita({
         <Landmark size={14} /> Buscar na Receita
       </Button>
       <Modal open={aberto} onClose={() => !pendente && setAberto(false)} title="Sócios na Receita" maxWidth="max-w-lg">
-        <div className="p-5 flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Sócios na Receita</h2>
+        <div className="flex flex-col gap-4">
           {!resultado ? (
             <p className="text-[13px] text-fg-muted">Consultando o CNPJ na Receita…</p>
           ) : !resultado.ok ? (
