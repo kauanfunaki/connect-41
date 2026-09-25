@@ -8,6 +8,7 @@ import { canWriteEntity } from "@/lib/auth/policy";
 import { pick } from "@/lib/forms";
 import { cnpjRoot } from "@/lib/clientGroups";
 import { logAudit } from "@/lib/audit";
+import { isPrismaUniqueError } from "@/lib/prismaErrors";
 
 export type ClienteState = { error: string } | null;
 
@@ -24,6 +25,18 @@ function clienteData(form: FormData) {
     })(),
     active: form.get("active") === "on",
   };
+}
+
+/** "Já existe o cliente X com esta raiz" — o nome é o que a pessoa procura na lista. */
+async function mensagemDeRaizRepetida(tenantId: string, raiz: string | null, ignorarId?: string): Promise<string> {
+  if (!raiz) return "Já existe um cliente igual a este.";
+  const outro = await getPrisma().clientGroup.findFirst({
+    where: { tenantId, cnpjRoot: raiz, ...(ignorarId ? { id: { not: ignorarId } } : {}) },
+    select: { name: true },
+  });
+  return outro
+    ? `Já existe o cliente "${outro.name}" com a raiz de CNPJ ${raiz}. Use esse cliente em vez de criar outro.`
+    : `Já existe um cliente com a raiz de CNPJ ${raiz}.`;
 }
 
 function validar(data: ReturnType<typeof clienteData>): string | null {
@@ -50,6 +63,7 @@ export async function criarCliente(_prev: ClienteState, form: FormData): Promise
     const cliente = await prisma.clientGroup.create({ data: { tenantId: ctx.tenantId, ...data } });
     id = cliente.id;
   } catch (err) {
+    if (isPrismaUniqueError(err)) return { error: await mensagemDeRaizRepetida(ctx.tenantId, data.cnpjRoot) };
     console.error("[criarCliente]", err);
     return { error: "Erro ao criar cliente. Tente novamente." };
   }
@@ -88,6 +102,7 @@ export async function atualizarCliente(_prev: ClienteState, form: FormData): Pro
   try {
     await prisma.clientGroup.update({ where: { id }, data });
   } catch (err) {
+    if (isPrismaUniqueError(err)) return { error: await mensagemDeRaizRepetida(ctx.tenantId, data.cnpjRoot, id) };
     console.error("[atualizarCliente]", err);
     return { error: "Erro ao atualizar cliente." };
   }

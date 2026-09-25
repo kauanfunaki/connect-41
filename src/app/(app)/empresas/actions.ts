@@ -157,8 +157,23 @@ async function resolverClientGroupId(
   // filial da mesma raiz for cadastrada depois, o campo já diz a qual grupo ela
   // pertence — é dica de agrupamento, não identidade (holding tem raízes
   // diferentes e cliente pessoa física não tem nenhuma).
+  // A raiz já é de outro cliente: a empresa é filial (ou o mesmo cliente com
+  // outro nome). Criar um segundo cliente com a mesma raiz é o que a trava do
+  // banco recusa desde 25/09 — aqui a recusa vira orientação.
+  const raiz = cnpjRoot(cnpj);
+  if (raiz) {
+    const existente = await prisma.clientGroup.findFirst({
+      where: { tenantId, cnpjRoot: raiz },
+      select: { name: true },
+    });
+    if (existente) {
+      return {
+        error: `A raiz deste CNPJ já pertence ao cliente "${existente.name}". Escolha esse cliente em vez de criar um novo.`,
+      };
+    }
+  }
   const novo = await prisma.clientGroup.create({
-    data: { tenantId, name: escolha.name, cnpjRoot: cnpjRoot(cnpj) },
+    data: { tenantId, name: escolha.name, cnpjRoot: raiz },
     select: { id: true },
   });
   return { clientGroupId: novo.id };
