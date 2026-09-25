@@ -36,3 +36,11 @@ describe("ferramentas da IA do Fiscal", () => {
     });
   });
 });
+
+describe("busca de empresa da IA", () => {
+  it("usa todas as palavras que diferenciam, sem as vazias", async () => {
+    const { palavrasDaEmpresa } = await import("./ferramentas-fiscal");
+    expect(palavrasDaEmpresa("BLD LOGISTICA LTDA - Filial 14")).toEqual(["bld", "logistica", "filial", "14"]);
+    expect(palavrasDaEmpresa("Transportes da Serra e Cia")).toEqual(["transportes", "serra", "cia"]);
+  });
+});

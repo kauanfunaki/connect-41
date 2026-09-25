@@ -53,6 +53,17 @@ async function empresaDoTenant(argumentos: Record<string, unknown>, ctx: Context
   return e;
 }
 
+/**
+ * As palavras que a busca de empresa exige, todas. Achado na bateria de 25/09:
+ * buscar "BLD LOGISTICA" devolvia as 10 primeiras filiais em ordem alfabética,
+ * e a Filial 14 ficava de fora — a IA concluía que ela não existia. Com todas
+ * as palavras ("BLD LOGISTICA Filial 14"), o número da filial entra na busca.
+ */
+export function palavrasDaEmpresa(busca: string): string[] {
+  const vazias = new Set(["ltda", "me", "epp", "eireli", "s/a", "sa", "de", "da", "do", "das", "dos", "e"]);
+  return [...new Set(busca.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((p) => p && !vazias.has(p)))].slice(0, 6);
+}
+
 /** Só dígitos — o documento do emitente é gravado assim. */
 export function soDigitos(v: string | null | undefined): string {
   return (v ?? "").replace(/\D/g, "");
@@ -108,7 +119,8 @@ export const FERRAMENTAS_DE_FISCAL: Record<string, FerramentaRegistrada> = {
   buscar_empresa: {
     def: {
       nome: "buscar_empresa",
-      descricao: "Acha empresas do escritório pelo nome, nome fantasia ou CNPJ/CPF. Devolve o id que as outras ferramentas pedem.",
+      descricao:
+        "Acha empresas do escritório pelo nome, nome fantasia ou CNPJ/CPF — todas as palavras precisam aparecer, então inclua o que diferencia (ex.: 'BLD Filial 14'). Devolve o id que as outras ferramentas pedem. Se vier mais de uma empresa e não der para saber qual a pessoa quer, pergunte a ela em vez de escolher.",
       parametros: {
         type: "object",
         properties: { busca: { type: "string", description: "Parte do nome ou o CNPJ/CPF" } },
@@ -120,17 +132,17 @@ export const FERRAMENTAS_DE_FISCAL: Record<string, FerramentaRegistrada> = {
     executar: async (args, ctx) => {
       const busca = texto(args, "busca");
       const digitos = soDigitos(busca);
+      const palavras = palavrasDaEmpresa(busca);
+      const porDocumento = digitos.length >= 8 && digitos.length === busca.replace(/[\s./-]/g, "").length;
       const empresas = await getPrisma().company.findMany({
         where: {
           tenantId: ctx.tenantId,
-          OR: [
-            { name: { contains: busca } },
-            { displayName: { contains: busca } },
-            ...(digitos.length >= 8 ? [{ cnpj: { contains: digitos } }, { cpf: { contains: digitos } }] : []),
-          ],
+          ...(porDocumento
+            ? { OR: [{ cnpj: { contains: digitos } }, { cpf: { contains: digitos } }] }
+            : { AND: palavras.map((p) => ({ OR: [{ name: { contains: p } }, { displayName: { contains: p } }] })) }),
         },
         orderBy: { name: "asc" },
-        take: 10,
+        take: 25,
         select: { id: true, name: true, displayName: true, cnpj: true, cpf: true, status: true },
       });
       return empresas.map((e) => ({

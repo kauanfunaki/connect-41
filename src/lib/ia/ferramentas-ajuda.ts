@@ -93,20 +93,30 @@ export const FERRAMENTAS_DE_AJUDA: Record<string, FerramentaRegistrada> = {
     def: {
       nome: "buscar_nos_manuais",
       descricao:
-        "Procura nos manuais que o escritório escreveu (procedimentos, passo a passo). Devolve as páginas mais parecidas com um trecho. Use palavras-chave curtas; se não achar, tente sinônimos.",
+        "Procura nos manuais que o escritório escreveu (procedimentos, passo a passo). Devolve as páginas mais parecidas com um trecho. Use palavras-chave curtas; se não achar, tente sinônimos. Com termo \"\" (vazio), lista os manuais e as páginas que existem nos setores da pessoa — use para \"o que tem nos manuais\".",
       parametros: {
         type: "object",
-        properties: { termo: { type: "string", description: "Palavras-chave, ex.: 'conciliação extrato'" } },
+        properties: { termo: { type: "string", description: "Palavras-chave, ex.: 'conciliação extrato'; \"\" para listar os manuais" } },
         required: ["termo"],
         additionalProperties: false,
       },
       natureza: "leitura",
     },
     executar: async (args, ctx) => {
-      const palavras = palavrasDaBusca(typeof args.termo === "string" ? args.termo : "");
-      if (palavras.length === 0) throw new Error("Informe ao menos uma palavra com 3 letras ou mais.");
+      const termo = typeof args.termo === "string" ? args.termo.trim() : "";
       const setores = [...setoresDoEscopo(ctx)];
       if (setores.length === 0) return { paginas: [], aviso: "Nenhum setor no seu acesso." };
+      if (!termo) {
+        const manuais = await getPrisma().manualDocument.findMany({
+          where: { tenantId: ctx.tenantId, sectorCode: { in: setores } },
+          orderBy: { title: "asc" },
+          take: 50,
+          select: { title: true, sectorCode: true, pages: { select: { title: true }, orderBy: { order: "asc" }, take: 20 } },
+        });
+        return { manuais: manuais.map((m) => ({ manual: m.title, setor: m.sectorCode, paginas: m.pages.map((pg) => pg.title) })) };
+      }
+      const palavras = palavrasDaBusca(termo);
+      if (palavras.length === 0) throw new Error("Informe ao menos uma palavra com 3 letras ou mais, ou \"\" para listar os manuais.");
 
       // A collation do banco já ignora maiúscula e acento no `contains`.
       const candidatas = await getPrisma().manualPage.findMany({
