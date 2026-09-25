@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChartColumn, LogOut, Menu, X } from "lucide-react";
+import { ChartColumn, LogOut, Menu, TriangleAlert, X } from "lucide-react";
 import { NavItem } from "@/components/shell/NavLink";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { Button } from "@/components/ui/Button";
@@ -13,7 +13,7 @@ type Item = {
   /** O módulo que sustenta a tela; `null` = sempre visível. */
   modulo: string | null;
   icone: React.ReactNode;
-  secao: "Financeiro" | "Com a equipe" | null;
+  secao: "Financeiro" | "Societário" | "Com a equipe" | null;
 };
 
 // Cada tela aparece só se o módulo que a sustenta está ligado no tenant. O
@@ -27,12 +27,14 @@ const ITENS: Item[] = [
   { href: "/portal/pagar", rotulo: "Contas a pagar", modulo: "bpo_contas_pagar", icone: <ModuleIcon code="bpo_contas_pagar" />, secao: "Financeiro" },
   { href: "/portal/receber", rotulo: "Contas a receber", modulo: "bpo_contas_receber", icone: <ModuleIcon code="bpo_contas_receber" />, secao: "Financeiro" },
   { href: "/portal/cobranca", rotulo: "Cobrança", modulo: "bpo_cobranca", icone: <ModuleIcon code="bpo_cobranca" />, secao: "Financeiro" },
+  { href: "/portal/processos", rotulo: "Processos", modulo: "societario_processos", icone: <ModuleIcon code="societario_processos" />, secao: "Societário" },
+  { href: "/portal/exigencias", rotulo: "Exigências", modulo: "societario_processos", icone: <TriangleAlert size={16} />, secao: "Societário" },
   { href: "/portal/pendencias", rotulo: "Pendências", modulo: "bpo_pendencias", icone: <ModuleIcon code="bpo_pendencias" />, secao: "Com a equipe" },
   { href: "/portal/aprovacoes", rotulo: "Aprovações", modulo: "bpo_aprovacoes", icone: <ModuleIcon code="bpo_aprovacoes" />, secao: "Com a equipe" },
   { href: "/portal/comunicacao", rotulo: "Conversa", modulo: "bpo_comunicacao", icone: <ModuleIcon code="bpo_comunicacao" />, secao: "Com a equipe" },
 ];
 
-const SECOES = ["Financeiro", "Com a equipe"] as const;
+const SECOES = ["Financeiro", "Societário", "Com a equipe"] as const;
 
 /**
  * A moldura do portal: sidebar com as telas, no lugar das abas no topo.
