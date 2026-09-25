@@ -29,6 +29,7 @@
 // `schemaParaStrict`.
 
 import { usoOpenAi } from "@/lib/ia/uso";
+import type { UsoDeTokens } from "@/lib/ia/custo";
 import type { FerramentaDef } from "@/lib/ia/ferramentas";
 import type { ResultadoDoLaco } from "@/lib/ia/laco";
 import {
@@ -51,6 +52,27 @@ export const URL_DA_RESPONSES_API = "https://api.openai.com/v1/responses";
  * contido por quem chama (ver `politica.maxCaracteres`).
  */
 export const FOLGA_DE_RACIOCINIO = 2_048;
+
+/**
+ * Quantas vezes o limite cresce na segunda tentativa, quando a primeira voltou
+ * **incompleta por limite e sem nada** — nem texto, nem pedido de ferramenta.
+ *
+ * Visto em 25/09 no atendente do WhatsApp: numa rodada depois de consultar a
+ * vaga, o `gpt-5-nano` raciocinou até o limite (800 + 2.048) e devolveu vazio;
+ * o candidato foi transferido para uma pessoa e ficou sem resposta. Repetir com
+ * três vezes o limite custa frações de centavo nesse modelo, e só acontece
+ * quando a alternativa é o silêncio.
+ */
+export const MULTIPLICADOR_DA_SEGUNDA_TENTATIVA = 3;
+
+/** A primeira tentativa acabou no limite de tokens sem produzir nada utilizável? */
+export function acabouNoLimiteSemNada(
+  data: { status?: unknown; incomplete_details?: { reason?: unknown } | null },
+  texto: string,
+  pedidos: number
+): boolean {
+  return data.status === "incomplete" && data.incomplete_details?.reason === "max_output_tokens" && !texto && pedidos === 0;
+}
 
 /**
  * O modelo raciocina (e portanto aceita `reasoning.encrypted_content`)?
@@ -126,6 +148,24 @@ export function ferramentaOpenAi(f: FerramentaDef) {
 
 type ItemDaResponses = { type?: unknown; [campo: string]: unknown };
 
+/** O texto final de uma resposta: os `output_text` das mensagens, juntos. */
+function textoDaSaida(saida: ItemDaResponses[]): string {
+  return saida
+    .filter((i) => i.type === "message" && Array.isArray(i.content))
+    .flatMap((i) => i.content as ItemDaResponses[])
+    .filter((c) => c.type === "output_text" && typeof c.text === "string")
+    .map((c) => c.text as string)
+    .join("\n")
+    .trim();
+}
+
+/** Uso das duas tentativas de uma rodada. Uso desconhecido de um lado não zera o outro. */
+function somarUso(a: UsoDeTokens | null, b: UsoDeTokens | null): UsoDeTokens | null {
+  if (!a) return b;
+  if (!b) return a;
+  return { entrada: a.entrada + b.entrada, saida: a.saida + b.saida };
+}
+
 /** Os argumentos de um `function_call` — string JSON, que pode vir quebrada. */
 function lerArgumentos(bruto: unknown): PedidoDeFerramenta["argumentos"] {
   if (bruto === undefined || bruto === null || bruto === "") return {};
@@ -166,27 +206,43 @@ export async function conversarComFerramentasOpenAi(
 
   const adaptador: AdaptadorDeProvedor = {
     async rodada() {
-      const res = await fetch(URL_DA_RESPONSES_API, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${p.apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: p.model,
-          instructions: p.system,
-          input: itens,
-          store: false,
-          max_output_tokens: (p.maxTokens ?? 4096) + (raciocina ? FOLGA_DE_RACIOCINIO : 0),
-          ...(tools.length > 0 ? { tools } : {}),
-          ...(raciocina ? { include: ["reasoning.encrypted_content"] } : {}),
-        }),
-      });
-      if (!res.ok) throw await erroDaOpenAi(res);
-
-      const data = (await res.json()) as {
-        status?: unknown;
-        output?: unknown;
-        usage?: unknown;
-        error?: { message?: unknown } | null;
+      const limite = (p.maxTokens ?? 4096) + (raciocina ? FOLGA_DE_RACIOCINIO : 0);
+      const pedir = async (maxOutput: number) => {
+        const res = await fetch(URL_DA_RESPONSES_API, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${p.apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: p.model,
+            instructions: p.system,
+            input: itens,
+            store: false,
+            max_output_tokens: maxOutput,
+            ...(tools.length > 0 ? { tools } : {}),
+            ...(raciocina ? { include: ["reasoning.encrypted_content"] } : {}),
+          }),
+        });
+        if (!res.ok) throw await erroDaOpenAi(res);
+        return (await res.json()) as {
+          status?: unknown;
+          output?: unknown;
+          usage?: unknown;
+          error?: { message?: unknown } | null;
+          incomplete_details?: { reason?: unknown } | null;
+        };
       };
+
+      let data = await pedir(limite);
+      let usoDaPrimeira: ReturnType<typeof usoOpenAi> | null = null;
+      {
+        const saida0 = (Array.isArray(data.output) ? data.output : []) as ItemDaResponses[];
+        const texto0 = textoDaSaida(saida0);
+        const pedidos0 = saida0.filter((i) => i.type === "function_call").length;
+        if (acabouNoLimiteSemNada(data, texto0, pedidos0)) {
+          // O gasto da tentativa perdida também é gasto: soma no uso da rodada.
+          usoDaPrimeira = usoOpenAi(data.usage);
+          data = await pedir(limite * MULTIPLICADOR_DA_SEGUNDA_TENTATIVA);
+        }
+      }
       if (data.status === "failed") {
         const motivo = typeof data.error?.message === "string" ? data.error.message : "sem detalhe";
         throw new Error(`A OpenAI não concluiu a resposta: ${motivo}`);
@@ -195,13 +251,7 @@ export async function conversarComFerramentasOpenAi(
       const saida = (Array.isArray(data.output) ? data.output : []) as ItemDaResponses[];
       ultimaSaida = saida;
 
-      const texto = saida
-        .filter((i) => i.type === "message" && Array.isArray(i.content))
-        .flatMap((i) => i.content as ItemDaResponses[])
-        .filter((c) => c.type === "output_text" && typeof c.text === "string")
-        .map((c) => c.text as string)
-        .join("\n")
-        .trim();
+      const texto = textoDaSaida(saida);
 
       const pedidos: PedidoDeFerramenta[] = saida
         .filter((i) => i.type === "function_call")
@@ -213,7 +263,8 @@ export async function conversarComFerramentasOpenAi(
 
       // `input_tokens` já inclui os `cached_tokens`. O custo trata tudo como
       // entrada cheia, o que superestima um pouco — o lado seguro de um teto.
-      return { texto, pedidos, uso: usoOpenAi(data.usage) };
+      const uso = usoOpenAi(data.usage);
+      return { texto, pedidos, uso: usoDaPrimeira ? somarUso(usoDaPrimeira, uso) : uso };
     },
     devolver(respostas) {
       // Os itens de saída voltam inteiros e na ordem: é o que mantém o
