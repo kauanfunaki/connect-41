@@ -82,7 +82,7 @@ export default async function EditarSocioPage({
               sharePercent: socio.sharePercent === null ? null : String(socio.sharePercent),
               qualification: socio.qualification,
               quotas: socio.quotas === null ? null : String(socio.quotas),
-              capitalAmount: socio.capitalAmount === null ? null : String(socio.capitalAmount).replace(".", ","),
+              capitalAmount: socio.capitalAmount === null ? null : Number(socio.capitalAmount).toFixed(2).replace(".", ","),
               entryDate: campoDaData(socio.entryDate),
               exitDate: campoDaData(socio.exitDate),
               documentMasked: socio.documentMasked,

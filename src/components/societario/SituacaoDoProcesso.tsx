@@ -110,13 +110,12 @@ export function SituacaoDoProcesso({
       <Modal open={acao !== null} onClose={() => !pendente && setAcao(null)} title={acao ? AJUDA[acao].titulo : undefined}>
         {acao && (
           <form
-            className="p-5 flex flex-col gap-3"
+            className="flex flex-col gap-3"
             onSubmit={(e) => {
               e.preventDefault();
               executar(acao, motivo);
             }}
           >
-            <h2 className="text-[15px] font-semibold text-fg">{AJUDA[acao].titulo}</h2>
             <p className="text-[13px] text-fg-secondary">{AJUDA[acao].texto}</p>
             <label htmlFor="motivo-da-situacao" className="text-[12px] font-medium text-fg">
               Motivo

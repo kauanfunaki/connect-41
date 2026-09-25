@@ -112,7 +112,11 @@ function lerCampos(form: FormData): { ok: true; campos: Campos } | { ok: false; 
     campos: {
       name,
       document,
-      administrator: form.get("administrator") === "on",
+      // A qualificação da Receita já diz quem administra; sem isto, "Sócio-
+      // Administrador" com a caixa desmarcada ficava contraditório na tela.
+      administrator:
+        form.get("administrator") === "on" ||
+        /administrador|presidente|diretor|titular/i.test(texto(form, "qualification") ?? ""),
       sharePercent,
       zipCode: texto(form, "zipCode"),
       addressStreet: texto(form, "addressStreet"),
