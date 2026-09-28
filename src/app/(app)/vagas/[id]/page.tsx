@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { VagaPrioridade } from "@/generated/prisma/enums";
 import { VAGA_STATUS_LABEL, VAGA_STATUS_STYLE } from "@/lib/vagaStatus";
-import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
+import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
@@ -22,6 +22,8 @@ import { formatInstantDate } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { excluirVaga, encerrarVaga, reabrirVaga } from "../actions";
 import { adicionarCandidato, moverEtapaCandidatura, encerrarCandidatura } from "./actions";
+import { podeAgirNaVaga, ehCoordenadorDoRecrutamento, SETOR_RECRUTAMENTO } from "@/lib/recrutamento/acessoVagas";
+import { AcessoDosRecrutadores } from "@/components/vagas/AcessoDosRecrutadores";
 
 const PRIORITY_LABEL: Record<VagaPrioridade, string> = {
   BAIXA: "Baixa",
@@ -59,8 +61,28 @@ export default async function VagaPage({
     await prisma.tenant.findUnique({ where: { id: ctx.tenantId }, select: { slug: true } })
   )?.slug;
   const publicBaseUrl = process.env.APP_PUBLIC_URL ?? "";
-  const canAct = canActOnSector(ctx, vaga.sectorCode);
+  const canAct = await podeAgirNaVaga(ctx, vaga);
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
+
+  // Quem do Recrutamento vê a vaga — só a coordenação do Recrutamento enxerga
+  // e decide (28/09). Coordenadores e admins veem tudo de qualquer jeito, então
+  // a lista oferece só os recrutadores.
+  const coordenaRecrutamento = ehCoordenadorDoRecrutamento(ctx);
+  const [recrutadores, escolhidos] = coordenaRecrutamento
+    ? await Promise.all([
+        prisma.user.findMany({
+          where: {
+            tenantId: ctx.tenantId,
+            active: true,
+            role: "SECTOR_USER",
+            sectors: { some: { sectorCode: SETOR_RECRUTAMENTO } },
+          },
+          orderBy: { name: "asc" },
+          select: { id: true, name: true },
+        }),
+        prisma.vagaRecrutador.findMany({ where: { vagaId: id }, select: { userId: true } }),
+      ])
+    : [[], []];
 
   // Triagem (R1): requisitos atuais e a última nota de cada candidatura. Nota
   // de versão anterior dos requisitos aparece, mas marcada como desatualizada.
@@ -208,6 +230,16 @@ export default async function VagaPage({
           </div>
         )}
       </div>
+
+      {coordenaRecrutamento && (
+        <AcessoDosRecrutadores
+          vagaId={id}
+          restrita={vaga.restrictedToRecruiters}
+          escolhidos={escolhidos.map((e) => e.userId)}
+          recrutadores={recrutadores}
+          podeEditar={canManageSector(ctx, SETOR_RECRUTAMENTO)}
+        />
+      )}
 
       <TriagemDaVaga
         vagaId={id}
