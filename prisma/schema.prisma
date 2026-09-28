@@ -562,6 +562,7 @@ model Tenant {
   processChecklistItems     ProcessChecklistItem[]
   processProtocols          ProcessProtocol[]
   processRequirements       ProcessRequirement[]
+  avisosDeOrgao             AvisoDeOrgao[]
   integrations              TenantIntegration[]
   integrationRuns           IntegrationRun[]
   agents                    TenantAgent[]
@@ -802,6 +803,7 @@ model User {
   ownedProcesses              Process[]                  @relation("ProcessOwner")
   executedProcessSteps        ProcessStep[]              @relation("ProcessStepExecutor")
   whatsappThreadsAssumidas    WhatsappThread[]           @relation("WhatsappThreadResponsavel")
+  avisosDeOrgaoRevisados      AvisoDeOrgao[]             @relation("AvisoDeOrgaoRevisor")
   vagasPermitidas             VagaRecrutador[]           @relation("VagaRecrutadorUsuario")
   vagasRecrutadoresDefinidos  VagaRecrutador[]           @relation("VagaRecrutadorDefinidoPor")
 
@@ -4911,6 +4913,7 @@ model Process {
   protocols ProcessProtocol[]
   fees      ProcessFee[]
   messages  ProcessMessage[]
+  avisos    AvisoDeOrgao[]
   documents ProcessDocument[]
 
   @@index([tenantId, status])
@@ -5084,10 +5087,74 @@ model ProcessProtocol {
   organ        ProcessOrgan         @relation(fields: [organId], references: [id])
   requirements ProcessRequirement[]
   fees         ProcessFee[]
+  avisos       AvisoDeOrgao[]
 
   @@unique([processId, organId, attempt])
   @@index([tenantId, outcome])
   @@map("process_protocols")
+}
+
+/// O que o aviso do órgão parece dizer. É SUGESTÃO: uma pessoa confirma.
+enum AvisoSugestao {
+  EXIGENCIA
+  DEFERIDO
+  CANCELADO
+  /// Não deu para ler com segurança — palavra de mais de um desfecho, ou de
+  /// nenhum. Vai para a pessoa sem sugestão.
+  REVISAR
+}
+
+enum AvisoStatus {
+  PENDENTE
+  APLICADO
+  DESCARTADO
+}
+
+/// Aviso que um órgão mandou por e-mail — hoje, o Empresa Fácil/Junta para o
+/// societario@ (decisão de 24/09: o painel da Junta pede "não sou robô" a cada
+/// acesso, então o robô acompanha pelos e-mails). Chega pelo n8n, que lê a
+/// caixa por IMAP e entrega a `/api/cron/societario-avisos-email`.
+///
+/// **Modo sugestão (28/09):** o sistema lê o aviso, acha o protocolo e sugere o
+/// desfecho, mas quem aplica é uma pessoa — nunca o robô sozinho. Um e-mail
+/// pode falar de uma etapa só (o alvará) com as outras ainda abertas, e
+/// deferir por engano é o pior defeito possível aqui.
+model AvisoDeOrgao {
+  id           String   @id @default(uuid())
+  tenantId     String
+  /// Sigla do órgão (`JUCEPAR`), como em `ProcessOrgan.acronym`.
+  organAcronym String   @db.VarChar(20)
+  /// `Message-ID` do e-mail: o n8n pode entregar o mesmo aviso duas vezes.
+  messageId    String   @db.VarChar(255)
+  sender       String?  @db.VarChar(255)
+  subject      String?  @db.VarChar(500)
+  receivedAt   DateTime
+  /// O texto do e-mail, sem HTML, cortado — é o que a pessoa lê para decidir.
+  body         String   @db.Text
+
+  /// Número de protocolo achado no texto; nulo quando nenhum bateu.
+  protocolNumber String? @db.VarChar(80)
+  protocolId     String?
+  processId      String?
+
+  suggestion       AvisoSugestao
+  /// O trecho que parece descrever a exigência. A pessoa revisa antes de aplicar.
+  suggestionDetail String?       @db.Text
+
+  status           AvisoStatus @default(PENDENTE)
+  reviewedByUserId String?
+  reviewedAt       DateTime?
+  createdAt        DateTime    @default(now())
+
+  tenant     Tenant           @relation(fields: [tenantId], references: [id])
+  protocol   ProcessProtocol? @relation(fields: [protocolId], references: [id], onDelete: SetNull)
+  process    Process?         @relation(fields: [processId], references: [id], onDelete: SetNull)
+  reviewedBy User?            @relation("AvisoDeOrgaoRevisor", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, messageId])
+  @@index([tenantId, status, createdAt])
+  @@index([processId])
+  @@map("organ_notices")
 }
 
 /// A exigência que um protocolo devolveu — a caixa vermelha do fluxo.
