@@ -42,6 +42,9 @@ import { ResponderPendencia } from "@/components/pendencias/ResponderPendencia";
 import { DocumentosDoProcesso } from "@/components/societario/DocumentosDoProcesso";
 import { conversaDoProcesso } from "@/lib/societario/conversa";
 import { enviarMensagemNoProcesso, adicionarDocumentosAoProcesso } from "../conversa-actions";
+import { aplicarAviso, descartarAviso } from "../avisos-actions";
+import { AvisosDaJunta } from "@/components/societario/AvisosDaJunta";
+import { avisosPendentes } from "@/lib/societario/avisos";
 
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
 // setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -206,9 +209,10 @@ export default async function ProcessoDetalhePage({
 
   const empresaNome = nomeExibicao(processo.company);
 
-  const [{ taxas, custo }, conversa] = await Promise.all([
+  const [{ taxas, custo }, conversa, avisos] = await Promise.all([
     taxasDoProcesso(ctx.tenantId, processo.id),
     conversaDoProcesso({ tenantId: ctx.tenantId, companyIds: null }, processo.id),
+    avisosPendentes(ctx.tenantId, processo.id),
   ]);
 
   // O responsável atual entra na lista mesmo que tenha saído do setor — senão o
@@ -310,6 +314,20 @@ export default async function ProcessoDetalhePage({
         )}
         <SituacaoDoProcesso processoId={processo.id} status={processo.status} mudar={mudarSituacaoDoProcesso} />
       </div>
+
+      {avisos.length > 0 && (
+        <section aria-labelledby="avisos-da-junta" className="mb-4 flex flex-col gap-2">
+          <div>
+            <h2 id="avisos-da-junta" className="text-[14px] font-semibold text-fg">
+              Avisos da Junta por e-mail
+            </h2>
+            <p className="text-[12px] text-fg-muted">
+              O sistema leu o e-mail e sugere o desfecho. Confira o texto do órgão antes de aplicar.
+            </p>
+          </div>
+          <AvisosDaJunta avisos={avisos} acoes={{ aplicar: aplicarAviso, descartar: descartarAviso }} />
+        </section>
+      )}
 
       <RoteiroDoProcesso
         etapas={etapas}
