@@ -472,6 +472,7 @@ model Tenant {
   companyPartners           CompanyPartner[]
   cargos                    Cargo[]
   vagas                     Vaga[]
+  vagaRecrutadores          VagaRecrutador[]
   candidaturas              Candidatura[]
   exames                    ExameAdmissional[]
   interviewScorecards       InterviewScorecard[]
@@ -801,6 +802,8 @@ model User {
   ownedProcesses              Process[]                  @relation("ProcessOwner")
   executedProcessSteps        ProcessStep[]              @relation("ProcessStepExecutor")
   whatsappThreadsAssumidas    WhatsappThread[]           @relation("WhatsappThreadResponsavel")
+  vagasPermitidas             VagaRecrutador[]           @relation("VagaRecrutadorUsuario")
+  vagasRecrutadoresDefinidos  VagaRecrutador[]           @relation("VagaRecrutadorDefinidoPor")
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -1699,6 +1702,13 @@ model Vaga {
   /// Nulo usa a cidade do cadastro da empresa, como antes.
   workCity            String?         @db.VarChar(80)
   workStateCode       String?         @db.VarChar(2)
+  /// Quem do Recrutamento vê a vaga (decisão do Kauan, 28/09/2026). A vaga é
+  /// do setor que contrata, mas por padrão todo recrutador a enxerga. O
+  /// coordenador do Recrutamento pode restringir: com `true`, só os usuários
+  /// em `recrutadoresPermitidos` a veem pelo caminho do Recrutamento — lista
+  /// vazia esconde de todos os recrutadores. Quem é do setor dono da vaga, o
+  /// coordenador do Recrutamento e o admin não são afetados.
+  restrictedToRecruiters Boolean      @default(false)
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
 
@@ -1706,11 +1716,33 @@ model Vaga {
   company Company @relation(fields: [companyId], references: [id])
   cargo   Cargo?  @relation(fields: [cargoId], references: [id])
 
-  requisitos   VagaRequisitos[]
-  candidaturas Candidatura[]
+  requisitos             VagaRequisitos[]
+  candidaturas           Candidatura[]
+  recrutadoresPermitidos VagaRecrutador[]
 
   @@index([tenantId, sectorCode, status])
   @@map("vagas")
+}
+
+/// Recrutador que continua vendo uma vaga restrita (`Vaga.restrictedToRecruiters`).
+/// Só vale enquanto a vaga está restrita; tirar a restrição não apaga a lista,
+/// para o coordenador poder alternar sem refazer a escolha.
+model VagaRecrutador {
+  id          String   @id @default(uuid())
+  tenantId    String
+  vagaId      String
+  userId      String
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id])
+  vaga      Vaga   @relation(fields: [vagaId], references: [id], onDelete: Cascade)
+  user      User   @relation("VagaRecrutadorUsuario", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy User?  @relation("VagaRecrutadorDefinidoPor", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([vagaId, userId])
+  @@index([tenantId, userId])
+  @@map("vaga_recrutadores")
 }
 
 // Liga um Person (candidato) a uma Vaga. O vínculo com PipelineItem é opcional —

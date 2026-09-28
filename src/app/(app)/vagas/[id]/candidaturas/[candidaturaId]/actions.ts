@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { InterviewRecommendation } from "@/generated/prisma/enums";
-import { getAuthContext, canActOnSector } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
+import { podeAgirNaVaga } from "@/lib/recrutamento/acessoVagas";
 
 export type ScorecardState = { error: string } | null;
 
@@ -20,7 +21,7 @@ async function findCandidaturaInScope(vagaId: string, candidaturaId: string, ctx
   const prisma = getPrisma();
   return prisma.candidatura.findFirst({
     where: { id: candidaturaId, vagaId, tenantId: ctx.tenantId, vaga: { ...scopedVagaWhere(ctx) } },
-    include: { vaga: { select: { sectorCode: true } } },
+    include: { vaga: { select: { id: true, sectorCode: true, restrictedToRecruiters: true } } },
   });
 }
 
@@ -35,7 +36,7 @@ export async function salvarScorecard(
 
   const candidatura = await findCandidaturaInScope(vagaId, candidaturaId, ctx);
   if (!candidatura) return { error: "Candidatura não encontrada ou fora do seu escopo." };
-  if (!canActOnSector(ctx, candidatura.vaga.sectorCode)) {
+  if (!(await podeAgirNaVaga(ctx, candidatura.vaga))) {
     return { error: "Sem permissão para avaliar candidatos nesta vaga." };
   }
 
