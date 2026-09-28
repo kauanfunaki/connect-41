@@ -17,6 +17,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { nomeExibicao } from "@/lib/companyName";
 import { abrirProcesso } from "./actions";
+import { contarAvisosPendentes } from "@/lib/societario/avisos";
 
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
 // setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -53,7 +54,7 @@ export default async function ProcessosPage({
   const agora = new Date();
   const prisma = getPrisma();
 
-  const [empresas, tipos, responsaveis] = await Promise.all([
+  const [empresas, tipos, responsaveis, avisosPendentes] = await Promise.all([
     prisma.company.findMany({
       where: { tenantId: ctx.tenantId, status: { in: ["ACTIVE", "PROSPECT"] } },
       orderBy: { name: "asc" },
@@ -65,6 +66,7 @@ export default async function ProcessosPage({
       select: { id: true, name: true, expectedDaysMin: true, expectedDaysMax: true, variableFlow: true },
     }),
     getSectorUsers(ctx.tenantId, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR),
+    contarAvisosPendentes(ctx.tenantId),
   ]);
 
   // Os filtros da URL só valem quando são valores conhecidos: o parâmetro é
@@ -110,6 +112,11 @@ export default async function ProcessosPage({
           </p>
         </div>
         <div className="flex items-center gap-3">
+        {avisosPendentes > 0 && (
+          <Link href="/processos/avisos" className="text-[13px] text-warning hover:underline whitespace-nowrap font-medium">
+            {avisosPendentes} {avisosPendentes === 1 ? "aviso da Junta" : "avisos da Junta"} para conferir
+          </Link>
+        )}
         <Link
           href={filtrosNaUrl.size > 0 ? `/processos/kanban?${filtrosNaUrl}` : "/processos/kanban"}
           className="text-[13px] text-brand hover:underline whitespace-nowrap"

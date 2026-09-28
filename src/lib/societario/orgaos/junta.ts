@@ -250,7 +250,18 @@ function descricaoDaExigencia(etapas: EtapaDoPainel[]): string {
  *
  * Vive em código, e não num documento à parte, porque é a lista que alguém
  * consulta no momento em que abre o painel para levantar.
+ *
+ * **Desde 24/09 a Junta não é lida pelo painel:** ele pede CAPTCHA até dentro do
+ * mesmo protocolo (resposta da Ruli), e o acompanhamento passou a ser pelos
+ * avisos por e-mail — `junta-email.ts`, em modo sugestão desde 28/09. Os itens
+ * abaixo continuam valendo só se um dia o painel voltar a ser opção. O que
+ * falta para o e-mail está em `PENDENTE_DO_EMAIL`.
  */
+export const PENDENTE_DO_EMAIL = [
+  "Três e-mails reais do Empresa Fácil (exigência, deferimento e cancelamento) — para trocar as palavras genéricas de `junta-email.ts` pelas de verdade e, se o remetente for fixo, filtrar por ele",
+  "Confirmar se o e-mail de exigência traz o texto do que falta, ou só avisa que há exigência",
+] as const;
+
 export const CONTRATO_PENDENTE = [
   "Se, depois de uma pessoa resolver o CAPTCHA do login, a mesma sessão abre outros protocolos pela URL do painel sem pedir CAPTCHA de novo — é o que decide se vale o robô com uma pessoa no laço",
   "O HTML do painel (onde ficam nome da etapa, selo e a caixa ATENÇÃO), visto numa sessão aberta",
