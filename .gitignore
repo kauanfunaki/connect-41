@@ -65,6 +65,10 @@ backup-*.sql
 android/android.keystore
 android/*.keystore
 android/*.jks
+# Cópias de segurança da keystore, em qualquer subpasta (ex.: android/backup-key/).
+android/**/*.keystore
+android/**/*.jks
+android/backup-key/
 android/*.apk
 android/*.aab
 android/*.idsig
