@@ -9,4 +9,9 @@ describe("linkDaNotificacao", () => {
     expect(linkDaNotificacao({ type: "PROCESS_MESSAGE", entityId: "pr1" })).toBe("/processos/pr1");
     expect(linkDaNotificacao({ type: "MENTION", entityType: null, entityId: null })).toBeNull();
   });
+
+  it("aviso da Junta sem processo leva à lista de avisos", () => {
+    expect(linkDaNotificacao({ type: "AVISO_ORGAO_SEM_PROCESSO" })).toBe("/processos/avisos");
+    expect(linkDaNotificacao({ type: "PROCESS_AVISO_JUNTA", entityId: "pr1" })).toBe("/processos/pr1");
+  });
 });
