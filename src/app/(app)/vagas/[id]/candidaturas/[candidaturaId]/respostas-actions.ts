@@ -2,10 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canActOnSector } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { logAudit } from "@/lib/audit";
 import { aplicarRespostas, CAMPOS_DE_RESPOSTA, lerFonte, validarRespostas, type Respostas } from "@/lib/recrutamento/respostas";
+import { podeAgirNaVaga } from "@/lib/recrutamento/acessoVagas";
 
 /**
  * O recrutador corrige ou preenche as respostas do candidato. O que ele grava
@@ -22,10 +23,10 @@ export async function salvarRespostasDoCandidato(
   const prisma = getPrisma();
   const c = await prisma.candidatura.findFirst({
     where: { id: candidaturaId, vagaId, tenantId: ctx.tenantId, vaga: { ...scopedVagaWhere(ctx) } },
-    select: { id: true, respostasFonte: true, vaga: { select: { sectorCode: true } } },
+    select: { id: true, respostasFonte: true, vaga: { select: { id: true, sectorCode: true, restrictedToRecruiters: true } } },
   });
   if (!c) return { error: "Candidatura não encontrada ou fora do seu escopo." };
-  if (!canActOnSector(ctx, c.vaga.sectorCode)) return { error: "Sem permissão nesta vaga." };
+  if (!(await podeAgirNaVaga(ctx, c.vaga))) return { error: "Sem permissão nesta vaga." };
 
   const numero = (s: string) => (s.trim() === "" ? null : s.replace(/\./g, "").replace(",", "."));
   const { valores, descartados } = validarRespostas({

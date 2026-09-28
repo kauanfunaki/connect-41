@@ -9,6 +9,7 @@ import { enviarERegistrar } from "@/lib/whatsapp/envio";
 import { podeResponder, podeDevolverAoRobo, podeAssumir, podeSoltar } from "@/lib/whatsapp/conversas";
 import { provedorDaIntegracao } from "@/lib/whatsapp/provedores";
 import { setorDoModulo } from "@/lib/modules";
+import { podeAgirNaVaga } from "@/lib/recrutamento/acessoVagas";
 
 export type AcaoNaConversa = { error: string } | { success: true } | null;
 
@@ -225,10 +226,10 @@ export async function vincularCandidatura(
 
   const candidatura = await prisma.candidatura.findFirst({
     where: { id: candidaturaId, tenantId: tenantId },
-    select: { id: true, personId: true, vaga: { select: { sectorCode: true } } },
+    select: { id: true, personId: true, vaga: { select: { id: true, sectorCode: true, restrictedToRecruiters: true } } },
   });
   if (!candidatura) return { error: "Candidatura não encontrada." };
-  if (!canActOnSector(ctx, candidatura.vaga.sectorCode)) {
+  if (!(await podeAgirNaVaga(ctx, candidatura.vaga))) {
     return { error: "Sem permissão nesta vaga." };
   }
 

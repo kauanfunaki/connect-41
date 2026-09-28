@@ -1,4 +1,5 @@
 import { isFullAccess, scopedSectors, type AuthContext } from "@/lib/auth/context";
+import { ondeAsVagasVisiveis, regraDoRecrutador } from "@/lib/recrutamento/acessoVagas";
 
 // Filtro de setor de uma consulta, já considerando o SETOR ATIVO (subworkspace).
 // Sem setor ativo o resultado é idêntico ao que era antes: tenant inteiro para
@@ -38,9 +39,11 @@ export function scopedPipelineWhere(ctx: AuthContext) {
   return sectorWhere(ctx);
 }
 
-// Vaga é setor-scoped como Pipeline (mesmo campo sectorCode livre, sem FK).
+// Vaga é setor-scoped como Pipeline (mesmo campo sectorCode livre, sem FK), com
+// uma exceção: desde 28/09/2026 o Recrutamento vê as vagas de todos os setores,
+// menos as que o coordenador dele restringir — ver src/lib/recrutamento/acessoVagas.ts.
 export function scopedVagaWhere(ctx: AuthContext) {
-  return sectorWhere(ctx);
+  return ondeAsVagasVisiveis(ctx.tenantId, scopedSectors(ctx), regraDoRecrutador(ctx));
 }
 
 // Space é setor-scoped como Pipeline/Vaga (mesmo campo sectorCode livre, sem FK).

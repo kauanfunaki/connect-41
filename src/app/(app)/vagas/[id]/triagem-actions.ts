@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
+import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { isAiConfigured } from "@/lib/ai";
 import { logAudit } from "@/lib/audit";
 import { filaDoLote, pontuarCandidatura, requisitosAtuais, salvarRequisitos } from "@/lib/recrutamento/triagemServidor";
 import { ehBloqueioDoAgente } from "@/lib/recrutamento/triagem";
+import { podeAgirNaVaga } from "@/lib/recrutamento/acessoVagas";
 
 /**
  * Candidaturas por chamada do lote. Cada uma são até duas chamadas de IA
@@ -21,7 +22,7 @@ async function vagaDoContexto(vagaId: string) {
   if (!ctx.tenantId) return null;
   const vaga = await getPrisma().vaga.findFirst({
     where: { id: vagaId, ...scopedVagaWhere(ctx) },
-    select: { id: true, sectorCode: true, title: true },
+    select: { id: true, sectorCode: true, title: true, restrictedToRecruiters: true },
   });
   return vaga ? { ctx, tenantId: ctx.tenantId, vaga } : null;
 }
@@ -53,7 +54,7 @@ export type PassoDoLote = {
 export async function pontuarPassoDoLote(vagaId: string, modo: "pendentes" | "todas", pular: string[], feitas: string[]): Promise<{ error: string } | PassoDoLote> {
   const v = await vagaDoContexto(vagaId);
   if (!v) return { error: "Vaga não encontrada." };
-  if (!canActOnSector(v.ctx, v.vaga.sectorCode)) return { error: "Sem permissão para pontuar candidatos desta vaga." };
+  if (!(await podeAgirNaVaga(v.ctx, v.vaga))) return { error: "Sem permissão para pontuar candidatos desta vaga." };
   if (!(await isAiConfigured(v.tenantId))) return { error: "IA não configurada neste workspace." };
   const requisitos = await requisitosAtuais(v.tenantId, vagaId);
   if (!requisitos) return { error: "Cadastre os requisitos da vaga antes de pontuar." };
@@ -82,7 +83,7 @@ export async function pontuarPassoDoLote(vagaId: string, modo: "pendentes" | "to
 export async function pontuarUmaCandidatura(vagaId: string, candidaturaId: string): Promise<{ error: string } | { ok: true }> {
   const v = await vagaDoContexto(vagaId);
   if (!v) return { error: "Vaga não encontrada." };
-  if (!canActOnSector(v.ctx, v.vaga.sectorCode)) return { error: "Sem permissão." };
+  if (!(await podeAgirNaVaga(v.ctx, v.vaga))) return { error: "Sem permissão." };
   if (!(await isAiConfigured(v.tenantId))) return { error: "IA não configurada neste workspace." };
   const requisitos = await requisitosAtuais(v.tenantId, vagaId);
   if (!requisitos) return { error: "Cadastre os requisitos da vaga antes de pontuar." };

@@ -20,6 +20,7 @@ import { publicoPermite, type ContextoDaTela, type PropostaGravada, type SetorDo
 import { MODULOS_DO_BPO } from "@/lib/ia/ferramentas-bpo";
 import { MODULOS_DO_DP } from "@/lib/ia/ferramentas-dp";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
+import { acessoDoRecrutador } from "@/lib/recrutamento/acessoVagas";
 
 export type AgenteDoChat = {
   code: string;
@@ -284,7 +285,12 @@ export async function escopoDoAgente(
     return { modulos: modulos.join(","), sensiveis: sensiveis.join(",") };
   }
   if (agentCode === "assistente_do_recrutamento") {
-    return { setores: todosOsSetores.filter((s) => canActOnSector(ctx, s)).join(",") };
+    // Recrutador vê as vagas de todos os setores, menos as que o coordenador
+    // restringir (28/09) — a regra viaja com o recorte, calculada aqui.
+    return {
+      setores: todosOsSetores.filter((s) => canActOnSector(ctx, s)).join(","),
+      recrutador: acessoDoRecrutador(ctx),
+    };
   }
   return {};
 }
