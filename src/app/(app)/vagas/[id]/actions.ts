@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { PersonEmploymentStatus, PersonType, RecruitmentStage } from "@/generated/prisma/enums";
-import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
+import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
+import { podeAgirNaVaga } from "@/lib/recrutamento/acessoVagas";
 
 export type CandidaturaState = { error: string } | null;
 
@@ -36,7 +37,7 @@ export async function adicionarCandidato(
   const prisma = getPrisma();
   const vaga = await prisma.vaga.findFirst({ where: { id: vagaId, ...scopedVagaWhere(ctx) } });
   if (!vaga) return { error: "Vaga não encontrada." };
-  if (!canActOnSector(ctx, vaga.sectorCode)) {
+  if (!(await podeAgirNaVaga(ctx, vaga))) {
     return { error: "Sem permissão para adicionar candidatos nesta vaga." };
   }
 
@@ -81,7 +82,7 @@ export async function moverEtapaCandidatura(
     include: { vaga: true },
   });
   if (!candidatura) return { error: "Candidatura não encontrada ou fora do seu escopo." };
-  if (!canActOnSector(ctx, candidatura.vaga.sectorCode)) {
+  if (!(await podeAgirNaVaga(ctx, candidatura.vaga))) {
     return { error: "Sem permissão para mover candidatos nesta vaga." };
   }
 
@@ -120,10 +121,10 @@ export async function encerrarCandidatura(
   const prisma = getPrisma();
   const candidatura = await prisma.candidatura.findFirst({
     where: { id: candidaturaId, tenantId: ctx.tenantId, vagaId },
-    include: { vaga: { select: { sectorCode: true } } },
+    include: { vaga: { select: { id: true, sectorCode: true, restrictedToRecruiters: true } } },
   });
   if (!candidatura) return { error: "Candidatura não encontrada ou fora do seu escopo." };
-  if (!canActOnSector(ctx, candidatura.vaga.sectorCode)) {
+  if (!(await podeAgirNaVaga(ctx, candidatura.vaga))) {
     return { error: "Sem permissão para encerrar candidaturas nesta vaga." };
   }
 

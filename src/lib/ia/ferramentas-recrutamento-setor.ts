@@ -18,12 +18,18 @@ import type { Prisma } from "@/generated/prisma/client";
 import type { ContextoDaFerramenta, FerramentaRegistrada } from "@/lib/ia/ferramentas";
 import { lerCandidatos, lerCandidatura, lerVaga } from "@/lib/ia/ferramentas-recrutamento";
 import { setoresDoEscopo } from "@/lib/ia/ferramentas-ajuda";
+import { ondeAsVagasVisiveis, regraPeloAcesso } from "@/lib/recrutamento/acessoVagas";
 
-/** O `where` das vagas que a pessoa pode ver. Sem setor no recorte, nada. */
+/**
+ * O `where` das vagas que a pessoa pode ver: as dos setores em que atua e, para
+ * quem é do Recrutamento, as dos outros setores que o coordenador não restringiu
+ * (a mesma regra da tela — src/lib/recrutamento/acessoVagas.ts). Sem setor no
+ * recorte, nada.
+ */
 export function recorteDasVagas(ctx: ContextoDaFerramenta): Prisma.VagaWhereInput {
   const setores = [...setoresDoEscopo(ctx)];
   if (setores.length === 0) throw new Error("Nenhum setor de recrutamento no seu acesso.");
-  return { tenantId: ctx.tenantId, sectorCode: { in: setores } };
+  return ondeAsVagasVisiveis(ctx.tenantId, setores, regraPeloAcesso(ctx.escopo.recrutador, ctx.userId));
 }
 
 /** O `where` das candidaturas dessas vagas. */

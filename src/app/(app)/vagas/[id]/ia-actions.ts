@@ -1,11 +1,12 @@
 "use server";
 
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canActOnSector } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
 import { conversarComAgente } from "@/lib/ai";
 import type { PropostaDeEscrita } from "@/lib/ia/ferramentas";
 import { RecruitmentStage } from "@/generated/prisma/enums";
 import { moverEtapaCandidatura, encerrarCandidatura } from "./actions";
+import { podeAgirNaVaga } from "@/lib/recrutamento/acessoVagas";
 
 const AGENTE = "assistente_de_vaga";
 
@@ -42,10 +43,10 @@ export async function perguntarAoAssistente(
   const prisma = getPrisma();
   const vaga = await prisma.vaga.findFirst({
     where: { id: vagaId, tenantId: ctx.tenantId },
-    select: { sectorCode: true },
+    select: { id: true, sectorCode: true, restrictedToRecruiters: true },
   });
   if (!vaga) return { error: "Vaga não encontrada." };
-  if (!canActOnSector(ctx, vaga.sectorCode)) {
+  if (!(await podeAgirNaVaga(ctx, vaga))) {
     return { error: "Sem permissão para usar o assistente nesta vaga." };
   }
 

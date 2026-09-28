@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canActOnSector } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
@@ -24,6 +24,7 @@ import { salvarScorecard, excluirScorecard } from "./actions";
 import { agendarEntrevista, excluirEntrevista } from "./meeting-actions";
 import type { DiscScores, DiscDimension } from "@/lib/disc";
 import type { QuizScores } from "@/lib/quiz";
+import { podeAgirNaVaga } from "@/lib/recrutamento/acessoVagas";
 
 export default async function CandidaturaScorecardPage({
   params,
@@ -38,7 +39,7 @@ export default async function CandidaturaScorecardPage({
     where: { id: candidaturaId, vagaId, tenantId: ctx.tenantId, vaga: { ...scopedVagaWhere(ctx) } },
     include: {
       person: { select: { id: true, name: true, dataDeletionRequestedAt: true } },
-      vaga: { select: { id: true, title: true, sectorCode: true } },
+      vaga: { select: { id: true, title: true, sectorCode: true, restrictedToRecruiters: true } },
       scorecards: {
         orderBy: { createdAt: "asc" },
         include: { evaluator: { select: { id: true, name: true } } },
@@ -57,7 +58,7 @@ export default async function CandidaturaScorecardPage({
   });
   if (!candidatura) notFound();
 
-  const canAct = canActOnSector(ctx, candidatura.vaga.sectorCode);
+  const canAct = await podeAgirNaVaga(ctx, candidatura.vaga);
   const consolidation = consolidateScorecards(candidatura.scorecards);
   const myScorecard = candidatura.scorecards.find((s) => s.evaluator.id === ctx.userId);
 
