@@ -46,15 +46,21 @@ export const PALAVRAS_DE_SAIDA = ["parar", "pare", "sair", "cancelar", "descadas
  * qualquer cliente.
  */
 export function avisoDeRobo(nomeDoEscritorio: string): string {
+  // Tom de gente (pedido de 29/09: "menos robótico"), mas continua dizendo que
+  // é assistente virtual — quem escreve tem o direito de saber com quem fala.
   return (
-    `Oi! Aqui é o assistente virtual do Recrutamento da ${nomeDoEscritorio}. ` +
-    "Posso te ajudar com informações sobre o seu processo seletivo. " +
-    "Se preferir falar com uma pessoa, é só pedir. Para não receber mais mensagens, responda PARAR."
+    `Oi! 😊 Aqui é o assistente virtual do Recrutamento da ${nomeDoEscritorio}. ` +
+    "Posso te ajudar com o seu processo seletivo — e, se preferir falar com alguém da equipe, é só pedir. " +
+    "Se não quiser mais receber mensagens por aqui, é só mandar PARAR."
   );
 }
 
+/**
+ * A resposta ao PARAR. A promessa do fim é verdade: `voltouAConversar` reabre
+ * a conversa quando a pessoa escreve de novo.
+ */
 export const CONFIRMACAO_DE_SAIDA =
-  "Pronto, não vamos mais te enviar mensagens por aqui. Se mudar de ideia, é só escrever.";
+  "Tudo certo, não vamos mais te mandar mensagens por aqui. Se quiser falar com a gente de novo, é só mandar um oi. 🙂";
 
 /**
  * O texto é um pedido para parar?
@@ -70,6 +76,38 @@ export function pediuParaSair(texto: string): boolean {
     .toLowerCase()
     .replace(/[^a-z]/g, "");
   return PALAVRAS_DE_SAIDA.includes(limpo);
+}
+
+/**
+ * Palavras de quem está se despedindo. Mensagem feita só delas, logo depois
+ * do PARAR, é o "ok, obrigado" de quem acabou de sair — reabrir a conversa por
+ * isso seria responder a quem pediu silêncio.
+ */
+const SO_DESPEDIDA = new Set([
+  "ok", "okay", "okey", "blz", "beleza", "obrigado", "obrigada", "obg", "brigado", "brigada",
+  "valeu", "vlw", "ta", "bom", "certo", "entendi", "entendido", "tchau", "ate", "mais", "logo",
+  "muito", "show", "joia", "top", "perfeito", "combinado",
+]);
+
+/**
+ * Quem pediu para parar está escrevendo de novo para voltar?
+ *
+ * Até 29/09 o PARAR era para sempre: o robô ignorava tudo depois dele, embora
+ * a confirmação dissesse "se mudar de ideia, é só escrever" — no teste, o "Oi"
+ * seguinte ficou sem resposta. Escrever de novo é pedir para voltar; só não é
+ * quando a mensagem é despedida ("ok", "obrigado"), outro pedido de saída ou
+ * nem tem palavra (figurinha, emoji).
+ */
+export function voltouAConversar(texto: string): boolean {
+  if (pediuParaSair(texto)) return false;
+  const palavras = texto
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .split(/[^a-z]+/)
+    .filter(Boolean);
+  if (palavras.length === 0) return false;
+  return !palavras.every((p) => SO_DESPEDIDA.has(p));
 }
 
 export type EstadoDaConversa = {

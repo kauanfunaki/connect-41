@@ -70,6 +70,7 @@ export async function listarConversas(tenantId: string, agora: Date): Promise<Li
       lastInboundAt: true,
       candidaturaId: true,
       assignedTo: { select: { id: true, name: true } },
+      atendimentos: { orderBy: { abertoEm: "desc" }, take: 1, select: { encerradoEm: true } },
     },
   });
   if (threads.length === 0) return [];
@@ -130,6 +131,7 @@ export async function listarConversas(tenantId: string, agora: Date): Promise<Li
       lastInboundAt: t.lastInboundAt,
       candidaturaId: t.candidaturaId,
       janelaLivreHoras: janelaDe(janelas, t.integrationId),
+      atendimentoEncerradoEm: t.atendimentos[0]?.encerradoEm ?? null,
       naoRespondidas: naoRespondidas.get(t.id) ?? 0,
       responsavel: t.assignedTo ? { id: t.assignedTo.id, nome: t.assignedTo.name } : null,
     };
@@ -171,6 +173,11 @@ export type ConversaDetalhada = LinhaDeConversa & {
    * alguém desfez um vínculo. Nulo quando nada disso se aplica.
    */
   vinculoAutomatico: "confirmando" | "nao_confirmou" | null;
+  /**
+   * Cada atendimento encerrado, em ordem — a tela marca na conversa onde um
+   * terminou e o outro começou. `por` nulo é o próprio candidato (PARAR).
+   */
+  encerramentos: { em: Date; desfecho: string | null; por: string | null }[];
 };
 
 export async function lerConversa(
@@ -192,6 +199,10 @@ export async function lerConversa(
       linkPendingPersonId: true,
       linkFailedAt: true,
       assignedTo: { select: { id: true, name: true } },
+      atendimentos: {
+        orderBy: { abertoEm: "asc" },
+        select: { id: true, abertoEm: true, encerradoEm: true, desfecho: true, encerradoPor: { select: { name: true } } },
+      },
     },
   });
   if (!thread) return null;
@@ -209,6 +220,7 @@ export async function lerConversa(
         status: true,
         error: true,
         agentRunId: true,
+        automatica: true,
         mediaUrl: true,
         mediaFileName: true,
       },
@@ -237,6 +249,7 @@ export async function lerConversa(
   ]);
 
   const ultima = mensagens.length > 0 ? mensagens[mensagens.length - 1]! : null;
+  const ultimoAtendimento = thread.atendimentos.length > 0 ? thread.atendimentos[thread.atendimentos.length - 1]! : null;
   let naoRespondidas = 0;
   for (let i = mensagens.length - 1; i >= 0; i--) {
     if (mensagens[i]!.direction !== "ENTRADA") break;
@@ -256,6 +269,16 @@ export async function lerConversa(
     lastInboundAt: thread.lastInboundAt,
     candidaturaId: thread.candidaturaId,
     janelaLivreHoras: janelaDe(janelas, thread.integrationId),
+    atendimentoEncerradoEm: ultimoAtendimento?.encerradoEm ?? null,
+    encerramentos: thread.atendimentos
+      .filter((a) => a.encerradoEm)
+      .map((a) => ({
+        em: a.encerradoEm!,
+        desfecho: a.desfecho,
+        // Sem quem encerrou é o próprio candidato, pelo PARAR — ou uma pessoa
+        // que já não está no sistema.
+        por: a.encerradoPor?.name ?? null,
+      })),
     naoRespondidas,
     responsavel: thread.assignedTo ? { id: thread.assignedTo.id, nome: thread.assignedTo.name } : null,
     vinculoAutomatico: thread.candidaturaId
@@ -290,7 +313,9 @@ export async function lerConversa(
       createdAt: m.createdAt,
       status: m.status,
       error: m.error,
-      doRobo: m.agentRunId !== null,
+      // Texto fixo do Connect conta como do assistente: para o candidato, foi
+      // o assistente que escreveu. "time" fica só para o que uma pessoa mandou.
+      doRobo: m.agentRunId !== null || m.automatica,
       anexo: m.mediaUrl ? { nome: m.mediaFileName ?? "curriculo.pdf" } : null,
     })),
   };
@@ -332,7 +357,13 @@ export async function saudeDasConexoes(tenantId: string, agora: Date): Promise<C
         where: { tenantId, integrationId: c.id },
         orderBy: { updatedAt: "desc" },
         take: 200,
-        select: { id: true, handoffAt: true, optedOutAt: true, lastInboundAt: true },
+        select: {
+          id: true,
+          handoffAt: true,
+          optedOutAt: true,
+          lastInboundAt: true,
+          atendimentos: { orderBy: { abertoEm: "desc" }, take: 1, select: { encerradoEm: true } },
+        },
       });
       const ids = threads.map((t) => t.id);
 
@@ -361,6 +392,7 @@ export async function saudeDasConexoes(tenantId: string, agora: Date): Promise<C
         threads.map((t) => ({
           handoffAt: t.handoffAt,
           optedOutAt: t.optedOutAt,
+          encerrado: !!t.atendimentos[0]?.encerradoEm,
           ultimaEntradaEm: t.lastInboundAt,
           ultimaSaidaEm: ultimaSaidaPorThread.get(t.id) ?? null,
         })),

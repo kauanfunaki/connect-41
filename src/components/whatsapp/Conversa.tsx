@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Bot, User, AlertTriangle, Link2, Unlink, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -14,6 +14,7 @@ import {
   podeDevolverAoRobo,
   podeAssumir,
   podeSoltar,
+  podeEncerrar,
   telefoneLegivel,
   SITUACAO_LABEL,
   SITUACAO_VARIANTE,
@@ -23,11 +24,13 @@ import {
   devolverAoRobo,
   assumirConversa,
   soltarConversa,
+  encerrarAtendimento,
   vincularCandidatura,
   desvincularCandidatura,
   type AcaoNaConversa,
 } from "@/app/(app)/whatsapp/actions";
 import type { ConversaDetalhada } from "@/lib/whatsapp/data";
+import { DESFECHOS, DESFECHOS_DA_TELA, rotuloDoDesfecho } from "@/lib/whatsapp/atendimentos";
 import { FichaNaConversa } from "./FichaNaConversa";
 
 type Props = {
@@ -44,12 +47,21 @@ export function Conversa({ conversa, agora, candidaturas, userId }: Props) {
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [escolhida, setEscolhida] = useState("");
+  const [encerrando, setEncerrando] = useState(false);
+  const [desfecho, setDesfecho] = useState("");
 
   const situacao = situacaoDaConversa(conversa, agora);
   const resposta = podeResponder(conversa, agora);
   const devolucao = podeDevolverAoRobo(conversa);
   const assumir = podeAssumir({ optedOutAt: conversa.optedOutAt, assignedToId: conversa.responsavel?.id ?? null }, userId);
   const soltar = podeSoltar({ assignedToId: conversa.responsavel?.id ?? null }, userId);
+  const encerrar = podeEncerrar(conversa);
+  const ultimoEncerramento = conversa.encerramentos.at(-1) ?? null;
+
+  function fecharPainel() {
+    setEncerrando(false);
+    setDesfecho("");
+  }
 
   async function correr(fn: () => Promise<AcaoNaConversa>, limparTexto = false) {
     setOcupado(true);
@@ -105,6 +117,11 @@ export function Conversa({ conversa, agora, candidaturas, userId }: Props) {
                 Devolver ao assistente
               </Button>
             )}
+            {encerrar.pode && !encerrando && (
+              <Button variant="secondary" size="sm" disabled={ocupado} onClick={() => setEncerrando(true)}>
+                Encerrar atendimento
+              </Button>
+            )}
           </div>
         </div>
 
@@ -112,6 +129,52 @@ export function Conversa({ conversa, agora, candidaturas, userId }: Props) {
           <p className="flex items-start gap-2 text-[12px] text-warning bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
             <AlertTriangle size={14} className="mt-0.5 shrink-0" />
             O assistente passou para você: {conversa.handoffReason}
+          </p>
+        )}
+
+        {encerrando && (
+          <div className="flex flex-wrap items-end gap-2 bg-surface-hover border border-border rounded-md p-3">
+            <div className="flex-1 min-w-[14rem]">
+              <label htmlFor="desfecho" className="block text-[11px] text-fg-muted mb-1">
+                Como terminou este atendimento?
+              </label>
+              <Select id="desfecho" value={desfecho} onChange={(e) => setDesfecho(e.target.value)}>
+                <option value="">Selecione…</option>
+                {DESFECHOS_DA_TELA.map((d) => (
+                  <option key={d} value={d}>
+                    {DESFECHOS[d]}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <Button
+              size="sm"
+              disabled={ocupado || !desfecho}
+              onClick={() =>
+                correr(async () => {
+                  const r = await encerrarAtendimento(conversa.id, desfecho);
+                  if (r && "success" in r) fecharPainel();
+                  return r;
+                })
+              }
+            >
+              Encerrar
+            </Button>
+            <Button variant="linkMuted" size="sm" disabled={ocupado} onClick={fecharPainel}>
+              Cancelar
+            </Button>
+            <p className="basis-full text-[11px] text-fg-muted">
+              Nada é enviado ao candidato. A conversa volta ao assistente, sem responsável, e a próxima mensagem dele
+              abre um novo atendimento.
+            </p>
+          </div>
+        )}
+
+        {situacao === "encerrada" && ultimoEncerramento && (
+          <p className="text-[12px] text-fg-secondary">
+            Atendimento encerrado{ultimoEncerramento.por ? ` por ${ultimoEncerramento.por}` : ""} em{" "}
+            {formatInstantDateTime(ultimoEncerramento.em)} · {rotuloDoDesfecho(ultimoEncerramento.desfecho)}. A próxima
+            mensagem do candidato abre um novo atendimento com o assistente.
           </p>
         )}
 
@@ -178,7 +241,7 @@ export function Conversa({ conversa, agora, candidaturas, userId }: Props) {
 
       <Card className="p-4">
         <div className="flex flex-col gap-2 max-h-[28rem] overflow-y-auto">
-          {conversa.mensagens.map((m) => {
+          {comMarcasDeEncerramento(conversa, (m) => {
             const minha = m.direction === "SAIDA";
             return (
               <div key={m.id} className={minha ? "self-end max-w-[80%]" : "self-start max-w-[80%]"}>
@@ -250,7 +313,9 @@ export function Conversa({ conversa, agora, candidaturas, userId }: Props) {
             />
             <div className="flex items-center justify-between gap-2">
               <p className="text-[11px] text-fg-muted">
-                Responder assume a conversa — o assistente para de responder aqui.
+                {situacao === "encerrada"
+                  ? "Responder abre um novo atendimento e assume a conversa."
+                  : "Responder assume a conversa — o assistente para de responder aqui."}
               </p>
               <Button
                 disabled={ocupado || !texto.trim()}
@@ -266,4 +331,33 @@ export function Conversa({ conversa, agora, candidaturas, userId }: Props) {
       </Card>
     </div>
   );
+}
+
+type Mensagem = ConversaDetalhada["mensagens"][number];
+
+/**
+ * As mensagens com uma linha onde cada atendimento terminou: é o que mostra,
+ * numa conversa longa, que o "oi" de hoje abriu um atendimento novo.
+ */
+function comMarcasDeEncerramento(conversa: ConversaDetalhada, mensagem: (m: Mensagem) => ReactNode): ReactNode[] {
+  const marcas = conversa.encerramentos;
+  const itens: ReactNode[] = [];
+  let k = 0;
+  const marca = (i: number) => {
+    const e = marcas[i]!;
+    return (
+      <div key={`fim-${i}`} className="flex items-center gap-2 my-1 text-[11px] text-fg-muted" role="separator">
+        <span className="h-px flex-1 bg-border" />
+        Atendimento encerrado · {rotuloDoDesfecho(e.desfecho)}
+        {e.por ? ` · por ${e.por}` : ""} · {formatInstantDateTime(e.em)}
+        <span className="h-px flex-1 bg-border" />
+      </div>
+    );
+  };
+  for (const m of conversa.mensagens) {
+    while (k < marcas.length && marcas[k]!.em <= m.createdAt) itens.push(marca(k++));
+    itens.push(mensagem(m));
+  }
+  while (k < marcas.length) itens.push(marca(k++));
+  return itens;
 }
