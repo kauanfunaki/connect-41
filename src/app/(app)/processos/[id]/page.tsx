@@ -45,6 +45,8 @@ import { enviarMensagemNoProcesso, adicionarDocumentosAoProcesso } from "../conv
 import { aplicarAviso, descartarAviso } from "../avisos-actions";
 import { AvisosDaJunta } from "@/components/societario/AvisosDaJunta";
 import { avisosPendentes } from "@/lib/societario/avisos";
+import { HorasDoProcesso } from "@/components/societario/HorasDoProcesso";
+import { apagarHorasDoProcesso, iniciarCronometroDoProcesso, lancarHorasNoProcesso, pararCronometroDoProcesso } from "../horas-actions";
 
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
 // setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -81,6 +83,8 @@ export default async function ProcessoDetalhePage({
       priority: true,
       dueAt: true,
       ownerUserId: true,
+      activeTimerUserId: true,
+      activeTimerStartedAt: true,
       company: { select: { id: true, name: true, displayName: true } },
       owner: { select: { id: true, name: true } },
       type: {
@@ -208,6 +212,18 @@ export default async function ProcessoDetalhePage({
   });
 
   const empresaNome = nomeExibicao(processo.company);
+
+  const [horas, donoDoCronometro] = await Promise.all([
+    prisma.timeEntry.findMany({
+      where: { tenantId: ctx.tenantId, processId: processo.id },
+      orderBy: [{ loggedOn: "desc" }, { createdAt: "desc" }],
+      take: 50,
+      select: { id: true, minutes: true, note: true, loggedOn: true, userId: true, user: { select: { name: true } } },
+    }),
+    processo.activeTimerUserId
+      ? prisma.user.findUnique({ where: { id: processo.activeTimerUserId }, select: { name: true } }).then((u) => u?.name ?? null)
+      : Promise.resolve(null),
+  ]);
 
   const [{ taxas, custo }, conversa, avisos] = await Promise.all([
     taxasDoProcesso(ctx.tenantId, processo.id),
@@ -345,6 +361,36 @@ export default async function ProcessoDetalhePage({
 
       <div className="mt-4">
         <TaxasDoProcesso taxas={taxas} custo={custo} />
+      </div>
+
+      <div className="mt-4">
+        <HorasDoProcesso
+          processId={processo.id}
+          lancamentos={horas.map((h) => ({
+            id: h.id,
+            quem: h.user.name,
+            minutos: h.minutes,
+            dia: formatInstantDate(h.loggedOn),
+            nota: h.note,
+            meu: h.userId === ctx.userId,
+          }))}
+          cronometro={
+            processo.activeTimerUserId && processo.activeTimerStartedAt
+              ? {
+                  quem: donoDoCronometro ?? "Alguém",
+                  desdeIso: processo.activeTimerStartedAt.toISOString(),
+                  meu: processo.activeTimerUserId === ctx.userId,
+                }
+              : null
+          }
+          podeAgir={processo.concludedAt === null}
+          acoes={{
+            iniciar: iniciarCronometroDoProcesso,
+            parar: pararCronometroDoProcesso,
+            lancar: lancarHorasNoProcesso,
+            apagar: apagarHorasDoProcesso,
+          }}
+        />
       </div>
 
       {conversa && (
