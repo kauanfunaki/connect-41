@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AvisoDeVersaoNova } from "@/components/shell/AvisoDeVersaoNova";
 
 // `manifest` aqui, e não no layout raiz: é o que faz o navegador oferecer
 // **o portal** para instalar quando o cliente está no portal. O layout raiz
@@ -12,6 +13,14 @@ export const metadata: Metadata = {
 // nada de /admin. Separado do `(app)` de propósito: layout compartilhado é como
 // um componente interno vaza para dentro do portal por herança, sem ninguém
 // decidir que ele deveria estar ali.
+//
+// O aviso de versão nova entra por decisão (29/09): o portal instalado como
+// aplicativo fica aberto por dias, e é onde uma aba antiga mais aparece.
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
-  return <div className="min-h-screen bg-canvas">{children}</div>;
+  return (
+    <div className="min-h-screen bg-canvas">
+      <AvisoDeVersaoNova quem="O portal" />
+      {children}
+    </div>
+  );
 }

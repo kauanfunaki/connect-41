@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/shell/AppShell";
 import { SessionKeeper } from "@/components/shell/SessionKeeper";
 import { MeetingAlertOverlay } from "@/components/shell/MeetingAlertOverlay";
+import { AvisoDeVersaoNova } from "@/components/shell/AvisoDeVersaoNova";
 import { ToastProvider } from "@/components/ui/Toast";
 import { getSectorMaps } from "@/lib/sectors";
 import { ROLE_LABELS } from "@/lib/roles";
@@ -147,6 +148,7 @@ export default async function AppLayout({
       >
         <SessionKeeper />
         <MeetingAlertOverlay />
+        <AvisoDeVersaoNova />
         {children}
         <ChatDeIA agentes={agentesDoChatDeIA} />
       </AppShell>
