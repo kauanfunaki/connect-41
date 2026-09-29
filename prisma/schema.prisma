@@ -567,6 +567,7 @@ model Tenant {
   integrationRuns           IntegrationRun[]
   agents                    TenantAgent[]
   agentRuns                 AgentRun[]
+  agentProposals            AgentProposal[]
   agentConversations        AgentConversation[]
   aiChatSettings            AiChatSettings?
   whatsappThreads           WhatsappThread[]
@@ -804,6 +805,8 @@ model User {
   executedProcessSteps        ProcessStep[]              @relation("ProcessStepExecutor")
   whatsappThreadsAssumidas    WhatsappThread[]           @relation("WhatsappThreadResponsavel")
   avisosDeOrgaoRevisados      AvisoDeOrgao[]             @relation("AvisoDeOrgaoRevisor")
+  propostasPedidas            AgentProposal[]            @relation("AgentProposalPedidaPor")
+  propostasRevisadas          AgentProposal[]            @relation("AgentProposalRevisadaPor")
   vagasPermitidas             VagaRecrutador[]           @relation("VagaRecrutadorUsuario")
   vagasRecrutadoresDefinidos  VagaRecrutador[]           @relation("VagaRecrutadorDefinidoPor")
 
@@ -5483,6 +5486,69 @@ model AgentRun {
   @@index([tenantId, agentCode, startedAt])
   @@index([tenantId, startedAt])
   @@map("agent_runs")
+}
+
+enum PropostaStatus {
+  PENDENTE
+  /// Aplicada como a IA propôs.
+  APROVADA
+  /// Aplicada com mudança da pessoa — item desmarcado, valor corrigido. É o
+  /// número que o painel de qualidade mais olha: quanto a IA precisa de ajuste.
+  EDITADA
+  REJEITADA
+}
+
+/// Quão segura a IA disse estar. Informativo: a pessoa revisa de qualquer jeito.
+enum PropostaConfianca {
+  ALTA
+  MEDIA
+  BAIXA
+}
+
+/// O que um agente propôs e espera uma pessoa aprovar (28/09/2026, funções de
+/// IA do protótipo do Societário).
+///
+/// Diferente das propostas do chat (`AgentMessage.proposals`), que vivem na
+/// conversa de uma pessoa só: esta fica numa **fila do setor**, com quem pediu,
+/// quem revisou e o que foi de fato aplicado. É o que permite ao coordenador
+/// aprovar trabalho que outra pessoa disparou e ao painel de qualidade medir
+/// quanto a IA erra — `payload` é o que ela disse, `appliedPayload` o que valeu.
+///
+/// A regra da fundação continua: nada aqui escreve sozinho. Aprovar chama o
+/// mesmo caminho das telas.
+model AgentProposal {
+  id         String  @id @default(uuid())
+  tenantId   String
+  agentCode  String  @db.VarChar(60)
+  /// A execução que gerou a proposta — o custo vem dela.
+  runId      String? @db.VarChar(191)
+  sectorCode String  @db.VarChar(40)
+
+  /// Sobre o que é: `Company` (contrato social), nulo na varredura, que é do setor.
+  entityType String? @db.VarChar(40)
+  entityId   String? @db.VarChar(191)
+
+  /// Uma linha para a fila ("Varredura de 29/09: 4 pendências").
+  title      String             @db.VarChar(200)
+  payload    Json
+  confidence PropostaConfianca?
+
+  status         PropostaStatus @default(PENDENTE)
+  appliedPayload Json?
+  notes          String?        @db.Text
+
+  createdById  String?
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  tenant     Tenant @relation(fields: [tenantId], references: [id])
+  createdBy  User?  @relation("AgentProposalPedidaPor", fields: [createdById], references: [id], onDelete: SetNull)
+  reviewedBy User?  @relation("AgentProposalRevisadaPor", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, sectorCode, status, createdAt])
+  @@index([tenantId, agentCode, createdAt])
+  @@map("agent_proposals")
 }
 
 enum WhatsappDirection {

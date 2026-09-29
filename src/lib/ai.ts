@@ -126,6 +126,8 @@ async function executarAgente<T>(params: {
   agentCode: string;
   contexto?: ContextoDaChamada;
   chamar: (preparo: PreparoDaChamada) => Promise<ComUso<T>>;
+  /** Recebe o id da linha de auditoria assim que ela é aberta. */
+  aoAbrir?: (runId: string) => void;
 }): Promise<T> {
   const agora = new Date();
   const credenciais = await resolveCredentials(params.tenantId);
@@ -138,6 +140,7 @@ async function executarAgente<T>(params: {
     model: preparo.model,
     contexto: params.contexto,
   });
+  params.aoAbrir?.(runId);
 
   try {
     const { valor, uso } = await params.chamar(preparo);
@@ -629,7 +632,16 @@ export async function conversarComAgente(params: {
 /** Chamada de uma volta com saída estruturada, nos dois provedores. PDF opcional. */
 async function chamarComFormato(
   c: PreparoDaChamada,
-  p: { sistema: string; texto: string; pdfBase64?: string; nome: string; schema: Record<string, unknown>; maxTokens: number }
+  p: {
+    sistema: string;
+    texto: string;
+    pdfBase64?: string;
+    /** Nome do arquivo que a OpenAI recebe junto do PDF. */
+    nomeDoArquivo?: string;
+    nome: string;
+    schema: Record<string, unknown>;
+    maxTokens: number;
+  }
 ): Promise<ComUso<unknown>> {
   if (c.provider === "ANTHROPIC") {
     const client = new Anthropic({ apiKey: c.apiKey });
@@ -666,7 +678,7 @@ async function chamarComFormato(
         {
           role: "user",
           content: [
-            ...(p.pdfBase64 ? [{ type: "input_file", filename: "curriculo.pdf", file_data: `data:application/pdf;base64,${p.pdfBase64}` }] : []),
+            ...(p.pdfBase64 ? [{ type: "input_file", filename: p.nomeDoArquivo ?? "curriculo.pdf", file_data: `data:application/pdf;base64,${p.pdfBase64}` }] : []),
             { type: "input_text", text: p.texto },
           ],
         },
@@ -679,6 +691,48 @@ async function chamarComFormato(
   const text = data.output_text ?? data.output?.find((o: { type: string }) => o.type === "message")?.content?.[0]?.text;
   if (!text) throw new Error("Resposta da IA sem conteúdo.");
   return { valor: JSON.parse(text), uso: usoOpenAi(data.usage) };
+}
+
+/**
+ * Uma volta com saída estruturada, para agentes que só propõem (fila de
+ * propostas do Societário, 29/09). Devolve também o id da execução: a proposta
+ * guarda de onde veio, e o custo sai dela.
+ *
+ * O `schema` segue o modo estrito da OpenAI (todo campo em `required`,
+ * `additionalProperties: false`); a validação do conteúdo é de quem chama.
+ */
+export async function gerarEstruturado(params: {
+  tenantId: string;
+  agentCode: string;
+  sistema: string;
+  texto: string;
+  pdfBase64?: string;
+  nomeDoArquivo?: string;
+  nome: string;
+  schema: Record<string, unknown>;
+  maxTokens: number;
+  contexto?: ContextoDaChamada;
+}): Promise<{ valor: unknown; runId: string | null }> {
+  let runId: string | null = null;
+  const valor = await executarAgente({
+    tenantId: params.tenantId,
+    agentCode: params.agentCode,
+    contexto: params.contexto,
+    aoAbrir: (id) => {
+      runId = id;
+    },
+    chamar: (c) =>
+      chamarComFormato(c, {
+        sistema: params.sistema + UNTRUSTED_CONTENT_GUARD,
+        texto: params.texto,
+        pdfBase64: params.pdfBase64,
+        nomeDoArquivo: params.nomeDoArquivo,
+        nome: params.nome,
+        schema: params.schema,
+        maxTokens: params.maxTokens,
+      }),
+  });
+  return { valor, runId };
 }
 
 const campoDeTexto = (descricao: string) => ({ type: "string", description: descricao });
