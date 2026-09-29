@@ -9,6 +9,7 @@ import {
   type MeetingAlert,
 } from "@/app/(app)/agenda/alert-actions";
 import { Button } from "@/components/ui/Button";
+import { tratarVersaoAntiga } from "@/lib/versaoNova";
 
 const POLL_INTERVAL_MS = 45 * 1000;
 
@@ -26,13 +27,19 @@ export function MeetingAlertOverlay() {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const originalTitleRef = useRef<string | null>(null);
 
+  // Aba de uma versão anterior do Connect: a action não existe mais no
+  // servidor, e insistir só enche o log a cada 45 s. Para até recarregar.
+  const versaoAntigaRef = useRef(false);
+
   const refresh = useCallback(async () => {
+    if (versaoAntigaRef.current) return;
     try {
       const next = await buscarAlertasReuniao();
       setAlerts(next);
       setFetchedAt(Date.now());
-    } catch {
-      // erro de rede transitório — tenta de novo no próximo ciclo
+    } catch (err) {
+      if (tratarVersaoAntiga(err)) versaoAntigaRef.current = true;
+      // senão, erro de rede transitório — tenta de novo no próximo ciclo
     }
   }, []);
 
@@ -139,7 +146,13 @@ export function MeetingAlertOverlay() {
 
   function handleOk() {
     startTransition(async () => {
-      await confirmarCienciaReuniao(alert.meetingId);
+      try {
+        await confirmarCienciaReuniao(alert.meetingId);
+      } catch (err) {
+        // Versão antiga: fecha o bloco mesmo assim, senão ele cobre o aviso
+        // de recarregar e a pessoa fica presa atrás dele.
+        if (!tratarVersaoAntiga(err)) throw err;
+      }
       setAlerts((prev) => prev.filter((a) => a.meetingId !== alert.meetingId));
     });
   }

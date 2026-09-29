@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { AlertTriangle } from "lucide-react";
+import { ErroDeVersaoAntiga } from "@/components/shell/AvisoDeVersaoNova";
+import { ehVersaoAntiga } from "@/lib/versaoNova";
 
 export default function HomeError({
   error,
@@ -14,6 +16,8 @@ export default function HomeError({
   useEffect(() => {
     console.error("[home]", error);
   }, [error]);
+
+  if (ehVersaoAntiga(error)) return <ErroDeVersaoAntiga />;
 
   return (
     <div className="p-6 max-w-[1440px] mx-auto">
