@@ -53,7 +53,7 @@ export function nomeDoArquivoParaTela(nome: string | null): string {
 }
 
 export function mensagemDeCurriculoRecebido(vaga: string): string {
-  return `Recebi seu currículo e juntei à sua inscrição para a vaga ${vaga}. Obrigado!`;
+  return `Recebi seu currículo e já juntei à sua inscrição para a vaga ${vaga}. Obrigado! 📄`;
 }
 
 /**
@@ -61,4 +61,4 @@ export function mensagemDeCurriculoRecebido(vaga: string): string {
  * pessoa — e a conversa **é** transferida junto, para a promessa ser verdade.
  */
 export const CURRICULO_SEM_VINCULO =
-  "Recebi seu currículo. Vou passar para uma pessoa do time, que continua a conversa por aqui.";
+  "Recebi seu currículo! 📄 Vou chamar alguém da equipe pra continuar com você por aqui.";

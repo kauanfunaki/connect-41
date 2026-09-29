@@ -572,6 +572,7 @@ model Tenant {
   aiChatSettings            AiChatSettings?
   whatsappThreads           WhatsappThread[]
   whatsappMessages          WhatsappMessage[]
+  whatsappAtendimentos      WhatsappAtendimento[]
   licenses                  License[]
   digitalCertificates       DigitalCertificate[]
   processFees               ProcessFee[]
@@ -810,6 +811,7 @@ model User {
   ownedProcesses              Process[]                  @relation("ProcessOwner")
   executedProcessSteps        ProcessStep[]              @relation("ProcessStepExecutor")
   whatsappThreadsAssumidas    WhatsappThread[]           @relation("WhatsappThreadResponsavel")
+  whatsappAtendimentosEncerrados WhatsappAtendimento[]   @relation("WhatsappAtendimentoEncerradoPor")
   avisosDeOrgaoRevisados      AvisoDeOrgao[]             @relation("AvisoDeOrgaoRevisor")
   propostasPedidas            AgentProposal[]            @relation("AgentProposalPedidaPor")
   propostasRevisadas          AgentProposal[]            @relation("AgentProposalRevisadaPor")
@@ -5644,9 +5646,10 @@ model WhatsappThread {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant     Tenant            @relation(fields: [tenantId], references: [id])
-  assignedTo User?             @relation("WhatsappThreadResponsavel", fields: [assignedToId], references: [id], onDelete: SetNull)
-  messages   WhatsappMessage[]
+  tenant       Tenant                @relation(fields: [tenantId], references: [id])
+  assignedTo   User?                 @relation("WhatsappThreadResponsavel", fields: [assignedToId], references: [id], onDelete: SetNull)
+  messages     WhatsappMessage[]
+  atendimentos WhatsappAtendimento[]
 
   @@unique([integrationId, waPhone])
   @@index([tenantId, handoffAt])
@@ -5685,6 +5688,11 @@ model WhatsappMessage {
   mediaFileName String? @db.VarChar(180)
   mediaMimeType String? @db.VarChar(100)
 
+  /// Texto fixo que o Connect mandou sozinho — apresentação, confirmação do
+  /// PARAR, pergunta do nome, aviso de transferência. Sem isto a tela mostrava
+  /// essas mensagens como "time", como se uma pessoa tivesse escrito.
+  automatica Boolean @default(false)
+
   createdAt DateTime @default(now())
 
   tenant Tenant         @relation(fields: [tenantId], references: [id])
@@ -5694,6 +5702,35 @@ model WhatsappMessage {
   @@index([threadId, createdAt])
   @@index([tenantId, direction, createdAt])
   @@map("whatsapp_messages")
+}
+
+/// Um atendimento: do contato que abre até alguém encerrar — ou o candidato
+/// pedir para parar. A conversa (`WhatsappThread`) é o número; o atendimento é
+/// cada vez que ele volta. Sem isto não havia como fechar uma conversa: ela só
+/// ficava com o robô, com uma pessoa, ou calada para sempre.
+///
+/// Encerrar devolve a conversa ao assistente sem responsável, e a próxima
+/// mensagem do candidato abre um atendimento novo: o assistente se apresenta de
+/// novo e só lê o que foi dito dali em diante.
+model WhatsappAtendimento {
+  id       String @id @default(uuid())
+  tenantId String
+  threadId String
+
+  abertoEm    DateTime  @default(now())
+  encerradoEm DateTime?
+  /// Quem encerrou. Nulo com `encerradoEm` é o próprio candidato (PARAR).
+  encerradoPorId String?
+  /// Como terminou — os códigos estão em `src/lib/whatsapp/atendimentos.ts`.
+  desfecho String? @db.VarChar(40)
+
+  tenant       Tenant         @relation(fields: [tenantId], references: [id])
+  thread       WhatsappThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  encerradoPor User?          @relation("WhatsappAtendimentoEncerradoPor", fields: [encerradoPorId], references: [id], onDelete: SetNull)
+
+  @@index([threadId, abertoEm])
+  @@index([tenantId, encerradoEm])
+  @@map("whatsapp_atendimentos")
 }
 
 /// Uma licença que a empresa tem — alvará, sanitária, ambiental, AVCB.

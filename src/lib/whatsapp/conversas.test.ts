@@ -3,6 +3,7 @@ import {
   situacaoDaConversa,
   podeResponder,
   podeDevolverAoRobo,
+  podeEncerrar,
   ordenarConversas,
   telefoneLegivel,
   SITUACAO_LABEL,
@@ -23,11 +24,12 @@ function conversa(over: Partial<ConversaParaTela> = {}): ConversaParaTela {
     lastInboundAt: HA_UMA_HORA,
     candidaturaId: null,
     janelaLivreHoras: 24,
+    atendimentoEncerradoEm: null,
     ...over,
   };
 }
 
-const TODAS: SituacaoDaConversa[] = ["precisa_atencao", "com_robo", "encerrada", "fora_da_janela"];
+const TODAS: SituacaoDaConversa[] = ["precisa_atencao", "com_robo", "encerrada", "nao_quer", "fora_da_janela"];
 
 describe("situacaoDaConversa", () => {
   it("todo estado tem rótulo e cor", () => {
@@ -67,11 +69,36 @@ describe("situacaoDaConversa", () => {
   it("opt-out vence a transferência", () => {
     expect(
       situacaoDaConversa(conversa({ optedOutAt: HA_UMA_HORA, handoffAt: HA_UMA_HORA }), AGORA)
-    ).toBe("encerrada");
+    ).toBe("nao_quer");
   });
 
   it("só 'precisa de você' é vermelho", () => {
     expect(TODAS.filter((s) => SITUACAO_VARIANTE[s] === "danger")).toEqual(["precisa_atencao"]);
+  });
+});
+
+describe("atendimento encerrado", () => {
+  it("aparece como encerrado, e o opt-out continua valendo mais", () => {
+    expect(situacaoDaConversa(conversa({ atendimentoEncerradoEm: HA_UMA_HORA }), AGORA)).toBe("encerrada");
+    expect(SITUACAO_LABEL.encerrada).toBe("Encerrado");
+    expect(
+      situacaoDaConversa(conversa({ atendimentoEncerradoEm: HA_UMA_HORA, optedOutAt: HA_UMA_HORA }), AGORA)
+    ).toBe("nao_quer");
+  });
+
+  it("encerra o que está aberto, com o assistente ou com uma pessoa", () => {
+    expect(podeEncerrar(conversa()).pode).toBe(true);
+    expect(podeEncerrar(conversa({ handoffAt: HA_UMA_HORA })).pode).toBe(true);
+  });
+
+  it("não encerra duas vezes nem o que o candidato já encerrou com PARAR", () => {
+    expect(podeEncerrar(conversa({ atendimentoEncerradoEm: HA_UMA_HORA })).pode).toBe(false);
+    expect(podeEncerrar(conversa({ optedOutAt: HA_UMA_HORA })).pode).toBe(false);
+  });
+
+  // Uma pessoa pode retomar uma conversa encerrada: responder abre outro atendimento.
+  it("ainda deixa responder dentro da janela", () => {
+    expect(podeResponder(conversa({ atendimentoEncerradoEm: HA_UMA_HORA }), AGORA).pode).toBe(true);
   });
 });
 
@@ -130,7 +157,8 @@ describe("ordenarConversas", () => {
   it("quem precisa de gente vem primeiro, e a espera mais longa no topo", () => {
     const lista = [
       { nome: "robo", ...conversa() },
-      { nome: "encerrada", ...conversa({ optedOutAt: HA_UMA_HORA }) },
+      { nome: "nao-quer", ...conversa({ optedOutAt: HA_UMA_HORA }) },
+      { nome: "encerrada", ...conversa({ atendimentoEncerradoEm: HA_UMA_HORA }) },
       { nome: "atencao-recente", ...conversa({ handoffAt: HA_UMA_HORA, lastInboundAt: HA_UMA_HORA }) },
       { nome: "atencao-antiga", ...conversa({ handoffAt: HA_TRES_HORAS, lastInboundAt: HA_TRES_HORAS }) },
       { nome: "fora", ...conversa({ handoffAt: HA_UMA_HORA, lastInboundAt: HA_DOIS_DIAS }) },
@@ -141,6 +169,7 @@ describe("ordenarConversas", () => {
       "fora",
       "robo",
       "encerrada",
+      "nao-quer",
     ]);
   });
 

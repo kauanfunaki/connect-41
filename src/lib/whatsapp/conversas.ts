@@ -14,6 +14,11 @@ export type ConversaParaTela = {
   candidaturaId: string | null;
   /** Janela de mensagem livre do provedor desta conversa. `null` = sem janela. */
   janelaLivreHoras: number | null;
+  /**
+   * Quando o último atendimento foi encerrado, se não há outro aberto. Nulo é
+   * atendimento em curso. Ver `WhatsappAtendimento`.
+   */
+  atendimentoEncerradoEm: Date | null;
 };
 
 export type SituacaoDaConversa =
@@ -21,13 +26,16 @@ export type SituacaoDaConversa =
   | "precisa_atencao"
   /** O robô está conduzindo. */
   | "com_robo"
-  /** Pediu para não receber mais. */
+  /** Alguém encerrou o atendimento; a próxima mensagem do candidato abre outro. */
   | "encerrada"
+  /** Pediu para não receber mais. */
+  | "nao_quer"
   /** Transferida, mas passou da janela do provedor: só template resolve. */
   | "fora_da_janela";
 
 export function situacaoDaConversa(c: ConversaParaTela, agora: Date): SituacaoDaConversa {
-  if (c.optedOutAt) return "encerrada";
+  if (c.optedOutAt) return "nao_quer";
+  if (c.atendimentoEncerradoEm) return "encerrada";
   if (!c.handoffAt) return "com_robo";
   // Transferida: a pergunta seguinte é se ainda dá para responder. Separar os
   // dois estados existe porque a ação da pessoa é diferente — num caso ela
@@ -38,7 +46,8 @@ export function situacaoDaConversa(c: ConversaParaTela, agora: Date): SituacaoDa
 export const SITUACAO_LABEL: Record<SituacaoDaConversa, string> = {
   precisa_atencao: "Precisa de você",
   com_robo: "Com o assistente",
-  encerrada: "Não quer mensagens",
+  encerrada: "Encerrado",
+  nao_quer: "Não quer mensagens",
   fora_da_janela: "Fora da janela",
 };
 
@@ -46,6 +55,7 @@ export const SITUACAO_VARIANTE: Record<SituacaoDaConversa, "danger" | "warning" 
   precisa_atencao: "danger",
   com_robo: "success",
   encerrada: "info",
+  nao_quer: "info",
   fora_da_janela: "warning",
 };
 
@@ -58,7 +68,10 @@ export type VereditoDeResposta = { pode: true } | { pode: false; motivo: string 
  * explica isso para quem clicou — então a recusa é nossa, com o motivo em
  * português, antes de gastar a viagem.
  */
-export function podeResponder(c: ConversaParaTela, agora: Date): VereditoDeResposta {
+export function podeResponder(
+  c: Pick<ConversaParaTela, "optedOutAt" | "lastInboundAt" | "janelaLivreHoras">,
+  agora: Date
+): VereditoDeResposta {
   if (c.optedOutAt) {
     return { pode: false, motivo: "O candidato pediu para não receber mais mensagens por aqui." };
   }
@@ -86,6 +99,20 @@ export function podeDevolverAoRobo(c: Pick<ConversaParaTela, "optedOutAt" | "han
     return { pode: false, motivo: "O candidato pediu para não receber mais mensagens." };
   }
   if (!c.handoffAt) return { pode: false, motivo: "Esta conversa já está com o assistente." };
+  return { pode: true };
+}
+
+/**
+ * Dá para encerrar o atendimento?
+ *
+ * Qualquer atendimento aberto se encerra — com o assistente ou com uma pessoa.
+ * O de quem pediu para parar já está encerrado, pelo próprio candidato.
+ */
+export function podeEncerrar(
+  c: Pick<ConversaParaTela, "optedOutAt" | "atendimentoEncerradoEm">
+): VereditoDeResposta {
+  if (c.optedOutAt) return { pode: false, motivo: "O candidato pediu para parar — o atendimento já foi encerrado." };
+  if (c.atendimentoEncerradoEm) return { pode: false, motivo: "Este atendimento já foi encerrado." };
   return { pode: true };
 }
 
@@ -174,7 +201,8 @@ export function filtrarConversas<T extends ConversaParaTela & { responsavel: { i
  *
  * Quem precisa de gente primeiro, e dentro disso a espera mais longa no topo —
  * é a conversa que está sem resposta há mais tempo, e a que mais custa deixar
- * parada. Encerradas vão para o fim: não há o que fazer com elas.
+ * parada. Encerradas vão para o fim: não há o que fazer com elas — e as de
+ * quem pediu para parar, depois delas.
  */
 export function ordenarConversas<T extends ConversaParaTela>(conversas: T[], agora: Date): T[] {
   const peso: Record<SituacaoDaConversa, number> = {
@@ -182,6 +210,7 @@ export function ordenarConversas<T extends ConversaParaTela>(conversas: T[], ago
     fora_da_janela: 1,
     com_robo: 2,
     encerrada: 3,
+    nao_quer: 4,
   };
   return [...conversas].sort((a, b) => {
     const da = peso[situacaoDaConversa(a, agora)];
