@@ -38,6 +38,23 @@ function logarRecusa(connectionId: string, motivo: string, req: NextRequest): vo
   recusadasDesdeOLog = 0;
 }
 
+/**
+ * Entrega assinada mas fora do formato esperado. Até 29/09 isto voltava 422 em
+ * silêncio — foi assim que `message_created` sumia sem deixar rastro. Loga no
+ * máximo uma vez por hora por evento, só os caminhos dos campos, nunca valores.
+ */
+function logarFormato(connectionId: string, json: unknown, issues: { path: PropertyKey[]; code: string }[]): void {
+  const bruto = (json as { event?: unknown } | null)?.event;
+  const evento = typeof bruto === "string" ? bruto.slice(0, 40) : "?";
+  const chave = `${connectionId}:formato:${evento}`;
+  const agora = Date.now();
+  if (agora - (ULTIMO_LOG.get(chave) ?? 0) < INTERVALO_DO_LOG_MS) return;
+  ULTIMO_LOG.set(chave, agora);
+  console.error("[chatwoot:webhook] payload fora do formato", connectionId, evento, {
+    campos: issues.slice(0, 10).map((i) => `${i.path.map(String).join(".")} (${i.code})`),
+  });
+}
+
 // Chamado pelo Chatwoot (fora do app, sem sessão de usuário) — por isso está
 // em PUBLIC_PATHS no proxy. A autenticação de verdade é a assinatura HMAC
 // (X-Chatwoot-Signature), verificada aqui contra o segredo do webhook da
@@ -82,6 +99,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ con
 
   const parsed = chatwootWebhookEventSchema.safeParse(json);
   if (!parsed.success) {
+    logarFormato(connectionId, json, parsed.error.issues);
     return NextResponse.json({ error: "Payload fora do formato esperado." }, { status: 422 });
   }
   const payload = parsed.data;
