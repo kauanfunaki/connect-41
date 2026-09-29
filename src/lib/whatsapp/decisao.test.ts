@@ -8,6 +8,7 @@ import {
   decidirComARespostaDoAgente,
   prometeContatoHumano,
   montarMensagem,
+  semCumprimentoRepetido,
   avisoDeRobo,
   MAX_RESPOSTAS_POR_HORA,
   MAX_CARACTERES_DA_MENSAGEM,
@@ -168,6 +169,48 @@ describe("dentroDaJanelaLivre", () => {
 
   it("sem janela no provedor, qualquer conversa com mensagem recebida está dentro", () => {
     expect(dentroDaJanelaLivre(HA_DOIS_DIAS, AGORA, null)).toBe(true);
+  });
+});
+
+describe("motivo da transferência", () => {
+  // No teste de 29/09, um pedido de ajuda legítimo apareceu na tela como
+  // "o assistente sugeriu uma ação no processo seletivo".
+  it("mostra o motivo que o assistente deu ao pedir uma pessoa", () => {
+    const d = decidirComARespostaDoAgente({
+      texto: "…",
+      propostas: 1,
+      truncado: false,
+      motivoDaAjuda: "Candidato diz que se inscreveu, mas não achei inscrição com este número",
+    });
+    expect(d).toEqual({
+      tipo: "transferir",
+      motivo: "o assistente pediu ajuda: Candidato diz que se inscreveu, mas não achei inscrição com este número",
+    });
+  });
+
+  it("sem motivo, continua o texto genérico", () => {
+    expect(decidirComARespostaDoAgente({ texto: "x", propostas: 1, truncado: false })).toMatchObject({
+      motivo: "o assistente sugeriu uma ação no processo seletivo",
+    });
+  });
+});
+
+describe("semCumprimentoRepetido", () => {
+  it("tira o oi do começo, que a apresentação já fez", () => {
+    expect(semCumprimentoRepetido("Oi! Não achei nenhuma candidatura.")).toBe("Não achei nenhuma candidatura.");
+    expect(semCumprimentoRepetido("Olá, tudo bem? Posso ajudar.")).toBe("Tudo bem? Posso ajudar.");
+    expect(semCumprimentoRepetido("Bom dia! 😊 Como posso ajudar?")).toBe("😊 Como posso ajudar?");
+  });
+
+  it("não mexe no que não começa com cumprimento, nem deixa a mensagem vazia", () => {
+    expect(semCumprimentoRepetido("Oitenta vagas abertas")).toBe("Oitenta vagas abertas");
+    expect(semCumprimentoRepetido("Temos duas vagas.")).toBe("Temos duas vagas.");
+    expect(semCumprimentoRepetido("Oi!")).toBe("Oi!");
+  });
+
+  it("só vale na primeira mensagem, junto da apresentação", () => {
+    expect(montarMensagem("Oi! Tudo certo.", true, "Escritório").endsWith("\n\nTudo certo.")).toBe(true);
+    expect(montarMensagem("Oi! Tudo certo.", false, "Escritório")).toBe("Oi! Tudo certo.");
   });
 });
 
