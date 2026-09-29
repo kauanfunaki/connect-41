@@ -5,7 +5,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
-import { getAuthContext, canActOnSector } from "@/lib/auth/context";
+import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { listarFila, contarPorSituacao, feriadosDoTenant } from "@/lib/societario/fila";
 import type { SituacaoDoProcesso } from "@/lib/societario/processo";
@@ -18,6 +18,7 @@ import { getSectorUsers } from "@/lib/sectorUsers";
 import { nomeExibicao } from "@/lib/companyName";
 import { abrirProcesso } from "./actions";
 import { contarAvisosPendentes } from "@/lib/societario/avisos";
+import { contarPendentesDoSetor } from "@/lib/ia/propostas";
 
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
 // setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -68,6 +69,10 @@ export default async function ProcessosPage({
     getSectorUsers(ctx.tenantId, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR),
     contarAvisosPendentes(ctx.tenantId),
   ]);
+  // A IA do Societário é da coordenação (decisão de 28/09): só ela vê o atalho.
+  const setorDoSocietario = (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
+  const coordena = canManageSector(ctx, setorDoSocietario);
+  const propostasDaIa = coordena ? await contarPendentesDoSetor(ctx.tenantId, setorDoSocietario) : 0;
 
   // Os filtros da URL só valem quando são valores conhecidos: o parâmetro é
   // texto do usuário, e um id desconhecido viraria uma fila vazia sem motivo.
@@ -112,6 +117,11 @@ export default async function ProcessosPage({
           </p>
         </div>
         <div className="flex items-center gap-3">
+        {coordena && (
+          <Link href="/societario/ia" className="text-[13px] text-brand hover:underline whitespace-nowrap">
+            IA do Societário{propostasDaIa > 0 ? ` (${propostasDaIa} para revisar)` : ""}
+          </Link>
+        )}
         {avisosPendentes > 0 && (
           <Link href="/processos/avisos" className="text-[13px] text-warning hover:underline whitespace-nowrap font-medium">
             {avisosPendentes} {avisosPendentes === 1 ? "aviso da Junta" : "avisos da Junta"} para conferir

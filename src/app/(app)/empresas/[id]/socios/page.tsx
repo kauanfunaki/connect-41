@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Users } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext, canWrite, canManageSector } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { formatCnpj, formatCpf, formatInstantDate } from "@/lib/format";
 import { algumSocioResideNoEndereco, somaDasParticipacoes } from "@/lib/societario/socios";
@@ -19,6 +19,11 @@ import { BuscarSociosNaReceita } from "@/components/empresas/BuscarSociosNaRecei
 import { RegistrarSaidaDoSocio } from "@/components/empresas/RegistrarSaidaDoSocio";
 import { moeda } from "@/lib/financeiro/formato";
 import { excluirSocio, importarDaReceita, previaDaReceita, registrarSaida } from "./actions";
+import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { estadoDosAgentes } from "@/lib/ia/data";
+import { LerContratoSocial } from "@/components/societario/ia/LerContratoSocial";
+import { lerContratoSocialAction } from "@/app/(app)/societario/ia/actions";
+import { AGENTE_CONTRATO } from "@/lib/societario/iaDoSetor";
 
 const PERCENTUAL = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 4 });
 const INTEIRO = new Intl.NumberFormat("pt-BR");
@@ -79,6 +84,13 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
 
   const novoHref = `/empresas/${companyId}/socios/novo`;
 
+  // Ler contrato social pela IA: da coordenação do Societário (decisão de 28/09).
+  const coordenaSocietario =
+    (await isModuleEnabled(ctx.tenantId, "societario_processos")) &&
+    canManageSector(ctx, (await setorDoModulo(ctx.tenantId, "societario_processos")) ?? "societario");
+  const estadoDoLeitor = coordenaSocietario ? (await estadoDosAgentes(ctx.tenantId, [AGENTE_CONTRATO])).get(AGENTE_CONTRATO) : undefined;
+  const leitorDoContratoLigado = !!estadoDoLeitor && estadoDoLeitor.ligado && estadoDoLeitor.temChave;
+
   return (
     <PageContainer>
       <Breadcrumb
@@ -105,6 +117,12 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
           )
         }
       />
+
+      {coordenaSocietario && (
+        <div className="mb-4 flex">
+          <LerContratoSocial companyId={companyId} acao={lerContratoSocialAction} desligada={!leitorDoContratoLigado} />
+        </div>
+      )}
 
       {todos.length === 0 ? (
         <Card>
