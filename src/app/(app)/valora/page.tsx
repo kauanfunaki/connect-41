@@ -75,6 +75,11 @@ export default async function ValoraPage() {
         action={
           <div className="flex gap-2">
             {acesso.podeGerir && (
+              <Button href="/valora/diagnostico" variant="secondary" size="sm">
+                Diagnóstico da carteira
+              </Button>
+            )}
+            {acesso.podeGerir && (
               <Button href="/valora/parametros" variant="secondary" size="sm">
                 <Settings size={13} /> Parâmetros
               </Button>

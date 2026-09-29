@@ -1441,10 +1441,15 @@ model ChecklistItem {
 
 // Apontamento manual de tempo gasto numa tarefa/subtarefa — por usuário, sem
 // cronômetro ao vivo (lançamento simples: quantos minutos, quando, nota opcional).
+/// Hora trabalhada. Nasceu presa ao card (`pipelineItemId`); desde 29/09/2026
+/// também aceita processo do Societário (`processId`), para as horas de
+/// operação da Gestão (vindas do 41-gestao). Sempre um dos dois — o código
+/// garante, o banco não.
 model TimeEntry {
   id             String   @id @default(uuid())
   tenantId       String
-  pipelineItemId String
+  pipelineItemId String?
+  processId      String?
   userId         String
   minutes        Int
   note           String?  @db.VarChar(280)
@@ -1452,10 +1457,13 @@ model TimeEntry {
   createdAt      DateTime @default(now())
 
   tenant       Tenant       @relation(fields: [tenantId], references: [id])
-  pipelineItem PipelineItem @relation(fields: [pipelineItemId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id])
+  pipelineItem PipelineItem? @relation(fields: [pipelineItemId], references: [id], onDelete: Cascade)
+  process      Process?      @relation(fields: [processId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id])
 
   @@index([tenantId, pipelineItemId])
+  @@index([tenantId, loggedOn])
+  @@index([processId])
   @@map("time_entries")
 }
 
@@ -4910,6 +4918,11 @@ model Process {
 
   notes String? @db.Text
 
+  /// Cronômetro do processo, igual ao do card: quem está apontando e desde
+  /// quando. Um por vez; parar grava um `TimeEntry` (29/09, horas de operação).
+  activeTimerUserId    String?
+  activeTimerStartedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -4922,6 +4935,7 @@ model Process {
   protocols ProcessProtocol[]
   fees      ProcessFee[]
   messages  ProcessMessage[]
+  timeEntries TimeEntry[]
   avisos    AvisoDeOrgao[]
   documents ProcessDocument[]
 
