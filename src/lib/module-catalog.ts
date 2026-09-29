@@ -280,6 +280,19 @@ export const MODULE_CATALOG: ModuleDef[] = [
     group: "Relatórios",
   },
   {
+    // Veio do painel 41-gestao (29/09). Fica no setor Gestão para poder ser
+    // ligado e desligado por cliente, mas quem vê não é só o setor: a
+    // diretoria, os administradores e os coordenadores (ver
+    // `recorteDaGestao`), pelo item "Gestão" do menu geral.
+    code: "gestao_painel",
+    label: "Painel de Gestão",
+    sectorCode: "gestao",
+    description: "Todos os setores num lugar: o que começou, o que anda, o que parou e o que terminou, a carga de cada pessoa e os alertas de processo parado e prazo",
+    defaultEnabled: true,
+    icon: "ChartLine",
+    group: "Relatórios",
+  },
+  {
     code: "gestao_valora",
     label: "Valora",
     sectorCode: "gestao",
@@ -567,6 +580,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   gestao_cargos_salarios:  "/cargos-salarios",
   gestao_indicadores_rh:   "/indicadores-rh",
   gestao_valora:           "/valora",
+  gestao_painel:           "/gestao",
   bpo_senhas:              "/bpo-senhas",
   bpo_dre:                 "/dre",
   bpo_manual:              "/bpo-manual",

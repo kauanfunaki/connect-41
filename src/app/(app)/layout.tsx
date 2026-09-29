@@ -8,7 +8,8 @@ import { getAuthContext, isFullWrite, canViewSector } from "@/lib/auth/context";
 import { codigosDeTelasFixadas } from "@/lib/telasFixadas-data";
 import { telasFixadasVisiveis } from "@/lib/telasFixadas";
 import { getPrisma } from "@/lib/prisma";
-import { getSectorsWithEnabledModules, getTenantModuleStates } from "@/lib/modules";
+import { getSectorsWithEnabledModules, getTenantModuleStates, isModuleEnabled } from "@/lib/modules";
+import { recorteDaGestao } from "@/lib/gestao/regras";
 import { getModuleRoute } from "@/lib/module-catalog";
 import { baseDomain, hostSuffix } from "@/lib/auth/activeSector";
 import { canManageMeetings } from "@/lib/integrations/oauth";
@@ -27,6 +28,8 @@ export default async function AppLayout({
   const isAdmin = isFullWrite(role);
   const canManageFields = isAdmin || (role === "SECTOR_ADMIN" && sectors.length > 0);
   const canOpenAdmin = isAdmin || canManageFields;
+  // O painel de Gestão (29/09): diretoria, administradores e coordenadores.
+  const canOpenGestao = recorteDaGestao(ctx) !== null && (await isModuleEnabled(ctx.tenantId, "gestao_painel"));
   const { labels: sectorLabels, colors: sectorColors } = await getSectorMaps(tenantId);
   const sectorsWithModules = await getSectorsWithEnabledModules(tenantId);
   const visibleSectors = sectors
@@ -132,6 +135,7 @@ export default async function AppLayout({
         appDomain={baseDomain()}
         sectorHostSuffix={hostSuffix()}
         canOpenAdmin={canOpenAdmin}
+        canOpenGestao={canOpenGestao}
         canManageMeetings={canManageMeetings(ctx)}
         unreadCount={unreadCount}
         notifications={notifications}

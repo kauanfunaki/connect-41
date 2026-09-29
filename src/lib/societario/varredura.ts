@@ -96,7 +96,9 @@ function recorte(texto: string, max: number): string {
  */
 export function sinaisDaVarredura(
   dados: { processos: ProcessoParaVarrer[]; exigencias: ExigenciaParaVarrer[]; licencas: LicencaParaVarrer[] },
-  agora: Date
+  agora: Date,
+  /** O limite de parado do setor, o mesmo dos alertas da Gestão (`Sector.alertStalledDays`). */
+  diasParado = DIAS_PARADO
 ): Sinal[] {
   const sinais: Sinal[] = [];
 
@@ -132,7 +134,8 @@ export function sinaisDaVarredura(
         });
       }
     }
-    const limite = p.status === ESPERANDO_ORGAO ? DIAS_PARADO_NO_ORGAO : ATIVOS_COM_TRABALHO.has(p.status) ? DIAS_PARADO : null;
+    const limite =
+      p.status === ESPERANDO_ORGAO ? Math.max(diasParado, DIAS_PARADO_NO_ORGAO) : ATIVOS_COM_TRABALHO.has(p.status) ? diasParado : null;
     if (limite !== null) {
       const dias = diasEntre(p.ultimaMovimentacao, agora);
       if (dias >= limite) {

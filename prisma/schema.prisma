@@ -643,6 +643,12 @@ model Sector {
   color     String   @default("#586577") @db.VarChar(7)
   active    Boolean  @default(true)
   order     Int      @default(0)
+  /// Limites dos alertas da Gestão (29/09/2026, vindos do painel 41-gestao):
+  /// depois de quantos dias sem movimentação um processo ou card deste setor
+  /// conta como parado, e com quantos dias de antecedência o prazo avisa.
+  /// Nulo usa o padrão (`src/lib/gestao/regras.ts`).
+  alertStalledDays Int?
+  alertDueSoonDays Int?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
