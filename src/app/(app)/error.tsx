@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { AlertTriangle } from "lucide-react";
+import { ErroDeVersaoAntiga } from "@/components/shell/AvisoDeVersaoNova";
+import { ehVersaoAntiga } from "@/lib/versaoNova";
 
 // Error boundary compartilhado por todas as rotas autenticadas (antes só
 // /home tinha um próprio) — evita a tela branca genérica do Next quando uma
@@ -17,6 +19,8 @@ export default function AppError({
   useEffect(() => {
     console.error("[app]", error);
   }, [error]);
+
+  if (ehVersaoAntiga(error)) return <ErroDeVersaoAntiga />;
 
   return (
     <div className="p-6 max-w-[1440px] mx-auto">
