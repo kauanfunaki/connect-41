@@ -4,20 +4,24 @@
 export type ChatwootAttachment = {
   id: number;
   file_type: string;
-  file_size?: number;
-  data_url: string;
+  file_size?: number | null;
+  data_url?: string | null;
 };
 
 export type ChatwootSender = {
   id: number;
-  name?: string;
-  type?: string; // "contact" | "user" | "agent_bot"
+  name?: string | null;
+  // "contact" | "user" | "agent_bot" — o contato no webhook (Contact#webhook_data)
+  // não traz `type`.
+  type?: string;
 };
 
 export type ChatwootApiMessage = {
   id: number;
   content: string | null;
-  message_type: number; // 0 = incoming, 1 = outgoing, 2 = activity/template
+  // API: 0 = incoming, 1 = outgoing, 2 = activity, 3 = template.
+  // Webhook de mensagem: o nome ("incoming", "outgoing"…).
+  message_type: number | string;
   content_type: string; // "text", "input_select", etc.
   private: boolean;
   attachments?: ChatwootAttachment[];
@@ -51,6 +55,8 @@ export type ChatwootApiConversation = {
   };
   timestamp?: number; // last activity, unix seconds
   last_non_activity_message?: { content?: string | null } | null;
+  // No webhook não vem `last_non_activity_message`: vem `messages` com a última.
+  messages?: { content?: string | null; message_type?: number | string; private?: boolean }[];
 };
 
 export type ChatwootConversationsPage = {
@@ -81,10 +87,10 @@ export type ChatwootWebhookPayload = {
   account?: { id: number };
   conversation?: ChatwootApiConversation & { account_id?: number };
   content?: string | null;
-  message_type?: number;
-  content_type?: string;
+  message_type?: number | string;
+  content_type?: string | null;
   private?: boolean;
-  sender?: ChatwootSender;
+  sender?: ChatwootSender | null;
   attachments?: ChatwootAttachment[];
   created_at?: string | number;
   updated_at?: string | number;
