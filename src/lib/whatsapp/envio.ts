@@ -32,6 +32,8 @@ export async function enviarERegistrar(params: {
   paraE164: string;
   texto: string;
   agentRunId?: string | null;
+  /** Texto fixo mandado pelo Connect, sem pessoa e sem IA — ver `WhatsappMessage.automatica`. */
+  automatica?: boolean;
 }): Promise<ResultadoDoEnvio> {
   const prisma = getPrisma();
   const linha = await prisma.whatsappMessage.create({
@@ -42,6 +44,7 @@ export async function enviarERegistrar(params: {
       body: params.texto,
       status: "PENDENTE",
       agentRunId: params.agentRunId ?? null,
+      automatica: params.automatica ?? false,
     },
     select: { id: true },
   });

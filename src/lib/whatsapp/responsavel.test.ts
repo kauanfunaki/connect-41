@@ -39,7 +39,7 @@ describe("avisarMensagemNova", () => {
 });
 
 describe("filtrarConversas", () => {
-  const base = { optedOutAt: null, lastInboundAt: null, candidaturaId: null, janelaLivreHoras: 24 };
+  const base = { optedOutAt: null, lastInboundAt: null, candidaturaId: null, janelaLivreHoras: 24, atendimentoEncerradoEm: null };
   const comRobo = { ...base, id: "1", handoffAt: null, responsavel: null };
   const naFila = { ...base, id: "2", handoffAt: AGORA, responsavel: null };
   const minha = { ...base, id: "3", handoffAt: AGORA, responsavel: { id: "ana" } };

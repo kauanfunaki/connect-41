@@ -99,4 +99,11 @@ describe("contarEsperandoRobo", () => {
       )
     ).toBe(0);
   });
+
+  // O "obrigado" antes de alguém encerrar ficou sem resposta de propósito.
+  it("não conta atendimento encerrado", () => {
+    expect(
+      contarEsperandoRobo([{ ...base, encerrado: true, ultimaEntradaEm: minutosAtras(15), ultimaSaidaEm: null }], AGORA)
+    ).toBe(0);
+  });
 });

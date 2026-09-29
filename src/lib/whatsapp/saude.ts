@@ -114,11 +114,15 @@ export function avaliarConexao(s: SinaisDaConexao, agora: Date): SaudeDaConexao 
  *
  * Conta só as que estão **com o robô** (sem transferência nem opt-out): as
  * transferidas esperam uma pessoa, e isso a lista de conversas já mostra.
+ * Atendimento encerrado também não conta: a última mensagem sem resposta é o
+ * "obrigado" que veio antes de alguém encerrar, e ninguém deve nada a ela.
  */
 export function contarEsperandoRobo(
   conversas: {
     handoffAt: Date | null;
     optedOutAt: Date | null;
+    /** O último atendimento está encerrado. */
+    encerrado?: boolean;
     ultimaEntradaEm: Date | null;
     ultimaSaidaEm: Date | null;
   }[],
@@ -126,7 +130,7 @@ export function contarEsperandoRobo(
 ): number {
   const limite = agora.getTime() - MINUTOS_SEM_RESPOSTA_DO_ROBO * 60_000;
   return conversas.filter((c) => {
-    if (c.handoffAt || c.optedOutAt || !c.ultimaEntradaEm) return false;
+    if (c.handoffAt || c.optedOutAt || c.encerrado || !c.ultimaEntradaEm) return false;
     if (c.ultimaEntradaEm.getTime() > limite) return false;
     return !c.ultimaSaidaEm || c.ultimaSaidaEm.getTime() < c.ultimaEntradaEm.getTime();
   }).length;

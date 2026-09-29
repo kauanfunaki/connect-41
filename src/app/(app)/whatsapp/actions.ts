@@ -6,7 +6,9 @@ import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { lerConfig } from "@/lib/integracoes/data";
 import { enviarERegistrar } from "@/lib/whatsapp/envio";
-import { podeResponder, podeDevolverAoRobo, podeAssumir, podeSoltar } from "@/lib/whatsapp/conversas";
+import { podeResponder, podeDevolverAoRobo, podeAssumir, podeSoltar, podeEncerrar } from "@/lib/whatsapp/conversas";
+import { desfechoDaTela, LIMPEZA_AO_ENCERRAR } from "@/lib/whatsapp/atendimentos";
+import { atendimentoAberto, fecharAtendimentos, garantirAtendimentoAberto } from "@/lib/whatsapp/atendimentos-dados";
 import { provedorDaIntegracao } from "@/lib/whatsapp/provedores";
 import { setorDoModulo } from "@/lib/modules";
 import { podeAgirNaVaga } from "@/lib/recrutamento/acessoVagas";
@@ -79,6 +81,9 @@ export async function responderConversa(
   // tinha assumido, quem respondeu passa a ser o responsável — respondeu,
   // é dele. Se já era de outra pessoa, continua dela: responder uma vez não
   // é tomar a conversa.
+  // Responder numa conversa encerrada abre um atendimento novo, desta pessoa.
+  await garantirAtendimentoAberto(tenantId, thread.id, new Date());
+
   if (!thread.handoffAt || !thread.assignedToId) {
     const agora = new Date();
     await prisma.whatsappThread.update({
@@ -157,6 +162,8 @@ export async function assumirConversa(threadId: string): Promise<AcaoNaConversa>
   if (!veredito.pode) return { error: veredito.motivo };
 
   const agora = new Date();
+  // Assumir uma conversa encerrada é retomá-la: abre um atendimento novo.
+  await garantirAtendimentoAberto(tenantId, thread.id, agora);
   await prisma.whatsappThread.update({
     where: { id: thread.id },
     data: {
@@ -175,6 +182,41 @@ export async function assumirConversa(threadId: string): Promise<AcaoNaConversa>
     // De quem era: assumir a conversa de outra pessoa é permitido, e é isto que
     // responde "quem tirou de mim?".
     metadata: { anterior: thread.assignedToId },
+  });
+
+  revalidatePath(`/whatsapp/${thread.id}`);
+  revalidatePath("/whatsapp");
+  return { success: true };
+}
+
+/**
+ * Encerra o atendimento, com o desfecho escolhido.
+ *
+ * A conversa volta ao assistente, sem responsável, e a próxima mensagem do
+ * candidato abre um atendimento novo — o assistente se apresenta de novo e não
+ * lê o que veio antes. Nada é enviado ao candidato: encerrar é do lado de cá.
+ */
+export async function encerrarAtendimento(threadId: string, desfecho: string): Promise<AcaoNaConversa> {
+  const aberta = await abrirConversa(threadId);
+  if (!aberta.ok) return { error: aberta.erro };
+  const { ctx, tenantId, thread, prisma } = aberta;
+
+  if (!desfechoDaTela(desfecho)) return { error: "Escolha como o atendimento terminou." };
+  const aberto = await atendimentoAberto(thread.id);
+  const veredito = podeEncerrar({ optedOutAt: thread.optedOutAt, atendimentoEncerradoEm: aberto ? null : new Date() });
+  if (!veredito.pode) return { error: veredito.motivo };
+
+  const agora = new Date();
+  await prisma.whatsappThread.update({ where: { id: thread.id }, data: LIMPEZA_AO_ENCERRAR });
+  await fecharAtendimentos(thread.id, { agora, porId: ctx.userId, desfecho });
+
+  await logAudit({
+    tenantId,
+    userId: ctx.userId,
+    action: "whatsapp.close",
+    entityType: "WhatsappThread",
+    entityId: thread.id,
+    metadata: { desfecho, responsavelAnterior: thread.assignedToId },
   });
 
   revalidatePath(`/whatsapp/${thread.id}`);

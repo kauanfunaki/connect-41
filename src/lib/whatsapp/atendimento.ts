@@ -19,9 +19,12 @@ import {
   decidir,
   decidirComARespostaDoAgente,
   montarMensagem,
+  voltouAConversar,
   CONFIRMACAO_DE_SAIDA,
   type EstadoDaConversa,
 } from "@/lib/whatsapp/decisao";
+import { LIMPEZA_AO_ENCERRAR } from "@/lib/whatsapp/atendimentos";
+import { fecharAtendimentos, garantirAtendimentoAberto } from "@/lib/whatsapp/atendimentos-dados";
 import { enviarERegistrar, registrarBloqueio } from "@/lib/whatsapp/envio";
 import { avisarMensagemNova } from "@/lib/whatsapp/conversas";
 import { avisarSobreConversa } from "@/lib/whatsapp/avisos";
@@ -64,9 +67,18 @@ const AGENTE = "atendente_de_candidato";
  */
 function sistema(nomeDoEscritorio: string): string {
   return (
-    `Você é o atendente virtual do Recrutamento da ${nomeDoEscritorio}, falando por WhatsApp com um ` +
-    "candidato. Escreva em português do Brasil, curto — no máximo três frases —, educado e " +
-    "direto, como se estivesse no WhatsApp mesmo, sem formatação e sem listas longas.\n" +
+    `Você é o assistente virtual do Recrutamento da ${nomeDoEscritorio}, conversando por WhatsApp com um ` +
+    "candidato. Escreva como alguém simpático da equipe escreveria no WhatsApp: português do Brasil, " +
+    "natural e acolhedor, frases curtas (no máximo três), sem formatação, sem asteriscos e sem listas.\n" +
+    "Tom de conversa, não de sistema: chame a pessoa pelo primeiro nome quando souber; prefira " +
+    "\"não achei\" a \"não consegui localizar\" e \"deixa eu ver\" a \"verificarei\"; nada de " +
+    "\"prezado\", \"informamos\" ou \"sua solicitação\". Um emoji cai bem quando combina (😊, 🙌, 👍, 📄) — " +
+    "no máximo um por mensagem, e nenhum em assunto delicado, como reprovação, atraso ou reclamação. " +
+    "Não comece toda mensagem do mesmo jeito: responda direto ao que a pessoa escreveu. Se ainda " +
+    "não há mensagem sua na conversa, o sistema já põe antes do seu texto uma apresentação que " +
+    "cumprimenta — então não diga \"oi\" nem se apresente de novo.\n" +
+    "Se perguntarem se você é robô ou pessoa, diga com naturalidade que é o assistente virtual da " +
+    "equipe e que pode chamar alguém, se a pessoa preferir. Nunca finja ser uma pessoa.\n" +
     "Consulte as ferramentas antes de afirmar qualquer coisa sobre o processo da pessoa; nunca " +
     "invente etapa, prazo ou resultado.\n" +
     "VOCÊ NUNCA: reprova alguém, comenta, compara ou negocia salário, diz a faixa salarial da vaga, " +
@@ -158,7 +170,7 @@ async function transferir(threadId: string, motivo: string): Promise<void> {
  * demorar, e prometer e não cumprir é pior.
  */
 export const AVISO_DE_TRANSFERENCIA =
-  "Vou passar a sua conversa para uma pessoa da equipe de Recrutamento. Ela responde por aqui assim que puder.";
+  "Vou chamar alguém da equipe de Recrutamento para continuar com você por aqui. Assim que puderem, te respondem. 🙂";
 
 /** Avisa o candidato da transferência. Falha no envio não impede a transferência. */
 async function avisarCandidato(params: {
@@ -169,7 +181,7 @@ async function avisarCandidato(params: {
   paraE164: string;
 }): Promise<void> {
   try {
-    await enviarERegistrar({ ...params, texto: AVISO_DE_TRANSFERENCIA });
+    await enviarERegistrar({ ...params, texto: AVISO_DE_TRANSFERENCIA, automatica: true });
   } catch (err) {
     console.error("[whatsapp] aviso de transferência não saiu", params.threadId, err);
   }
@@ -206,9 +218,25 @@ export async function atenderMensagem(
   const novo = await registrarEntrada(conexao.tenantId, thread.id, m);
   if (!novo) return "reentrega ignorada";
 
+  // Quem pediu para parar e escreveu de novo — "oi", uma pergunta — está
+  // voltando: é o que a confirmação do PARAR promete. Um "ok, obrigado" logo
+  // depois do PARAR não é volta, e continua sem resposta. Ver `voltouAConversar`.
+  let optedOutAt = thread.optedOutAt;
+  if (optedOutAt && voltouAConversar(m.texto)) {
+    await prisma.whatsappThread.update({ where: { id: thread.id }, data: { optedOutAt: null } });
+    optedOutAt = null;
+  }
+
+  // O atendimento desta mensagem. Sem nenhum aberto — alguém encerrou, ou é a
+  // volta depois do PARAR —, esta mensagem abre um novo, a partir de `agora`
+  // (anterior à gravação da mensagem): o assistente se apresenta de novo e só lê
+  // o que foi dito daqui em diante. Quem continua calado não abre nada.
+  const atendimento = optedOutAt ? null : await garantirAtendimentoAberto(conexao.tenantId, thread.id, agora);
+  const desde = atendimento?.abertoEm ?? thread.createdAt;
+
   const [saidas, respostasNaUltimaHora] = await Promise.all([
     prisma.whatsappMessage.count({
-      where: { threadId: thread.id, direction: "SAIDA", status: "ENVIADA" },
+      where: { threadId: thread.id, direction: "SAIDA", status: "ENVIADA", createdAt: { gte: desde } },
     }),
     prisma.whatsappMessage.count({
       where: {
@@ -222,7 +250,7 @@ export async function atenderMensagem(
 
   const estado: EstadoDaConversa = {
     integracaoLigada: conexao.enabled,
-    optedOutAt: thread.optedOutAt,
+    optedOutAt,
     handoffAt: thread.handoffAt,
     // A janela conta da mensagem ANTERIOR: esta ainda não foi carimbada.
     lastInboundAt: thread.lastInboundAt,
@@ -257,21 +285,30 @@ export async function atenderMensagem(
   const config = lerConfig(conexao.configEnc);
 
   if (decisao.tipo === "confirmar_saida") {
+    // PARAR também encerra o atendimento, pelo próprio candidato: se ele
+    // voltar, volta para o assistente, num atendimento novo.
     await prisma.whatsappThread.update({
       where: { id: thread.id },
-      data: { optedOutAt: agora },
+      data: { optedOutAt: agora, ...LIMPEZA_AO_ENCERRAR },
     });
     // A marca vem antes do envio: se o envio falhar, a pessoa fica sem a
     // confirmação, o que é chato. Na ordem inversa ela ficaria sem a marca, o
-    // que é receber mensagem depois de ter pedido para parar.
-    await enviarERegistrar({
-      tenantId: conexao.tenantId,
-      threadId: thread.id,
-      provedor,
-      config,
-      paraE164: m.de,
-      texto: CONFIRMACAO_DE_SAIDA,
-    });
+    // que é receber mensagem depois de ter pedido para parar. O atendimento
+    // fecha depois da confirmação (a tela marca o fim depois dela), e fecha
+    // mesmo que o envio estoure.
+    try {
+      await enviarERegistrar({
+        tenantId: conexao.tenantId,
+        threadId: thread.id,
+        provedor,
+        config,
+        paraE164: m.de,
+        texto: CONFIRMACAO_DE_SAIDA,
+        automatica: true,
+      });
+    } finally {
+      await fecharAtendimentos(thread.id, { agora: new Date(), porId: null, desfecho: "PEDIU_PARA_PARAR" });
+    }
     return "saída confirmada";
   }
 
@@ -292,6 +329,7 @@ export async function atenderMensagem(
         config,
         paraE164: m.de,
         texto: montarMensagem(texto, decisao.apresentar, escritorio),
+        automatica: true,
       });
 
     if (thread.linkPendingPersonId) {
@@ -351,6 +389,7 @@ export async function atenderMensagem(
   const recentes = await prisma.whatsappMessage.findMany({
     where: {
       threadId: thread.id,
+      createdAt: { gte: desde },
       OR: [{ direction: "ENTRADA" }, { direction: "SAIDA", status: "ENVIADA" }],
     },
     orderBy: { createdAt: "desc" },
@@ -448,10 +487,12 @@ export async function tratarNaoTexto(
     integrationId: conexao.id,
     waPhone: i.de,
   });
+  // Arquivo, áudio ou figurinha não reabrem o PARAR: não dá para ler se é volta.
   if (thread.optedOutAt) return "ignorado: pediu para parar";
+  const atendimento = await garantirAtendimentoAberto(conexao.tenantId, thread.id, new Date());
 
   if (i.documento && provedor.baixarMidia && conexao.enabled) {
-    return tratarDocumento(conexao, provedor, thread, i, i.documento);
+    return tratarDocumento(conexao, provedor, thread, i, i.documento, atendimento.abertoEm);
   }
 
   if (thread.handoffAt) return "ignorado: já está com uma pessoa";
@@ -467,7 +508,9 @@ async function tratarDocumento(
   provedor: ProvedorWhatsapp,
   thread: ThreadDoAtendimento,
   i: MensagemIgnorada,
-  doc: DocumentoRecebido
+  doc: DocumentoRecebido,
+  /** Início do atendimento em curso — a apresentação conta a partir dele. */
+  desde: Date
 ): Promise<string> {
   const prisma = getPrisma();
   const agora = new Date();
@@ -533,7 +576,7 @@ async function tratarDocumento(
   });
 
   const saidas = await prisma.whatsappMessage.count({
-    where: { threadId: thread.id, direction: "SAIDA", status: "ENVIADA" },
+    where: { threadId: thread.id, direction: "SAIDA", status: "ENVIADA", createdAt: { gte: desde } },
   });
   const escritorio = await nomeDoEscritorio(conexao.tenantId);
   const responder = (texto: string) =>
@@ -544,6 +587,7 @@ async function tratarDocumento(
       config,
       paraE164: i.de,
       texto: montarMensagem(texto, saidas === 0, escritorio),
+      automatica: true,
     });
 
   const candidatura = thread.candidaturaId
