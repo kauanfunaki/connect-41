@@ -26,16 +26,30 @@ export const chatwootWebhookEventSchema = z.object({
     .passthrough()
     .optional(),
   content: z.string().nullable().optional(),
-  message_type: z.number().optional(),
-  content_type: z.string().optional(),
+  // A API manda o número do enum (0 = incoming…); o webhook de mensagem
+  // (Message#webhook_data, Chatwoot 4.18) manda o nome: "incoming".
+  message_type: z.union([z.number(), z.string()]).optional(),
+  content_type: z.string().nullable().optional(),
   private: z.boolean().optional(),
-  sender: z.object({ id: z.number(), name: z.string().optional(), type: z.string().optional() }).optional(),
+  // Mensagem sem remetente (atividade do sistema) vem com `sender: null`.
+  sender: z
+    .object({ id: z.number(), name: z.string().nullable().optional(), type: z.string().optional() })
+    .passthrough()
+    .nullable()
+    .optional(),
   attachments: z
-    .array(z.object({ id: z.number(), file_type: z.string(), file_size: z.number().optional(), data_url: z.string() }))
+    .array(
+      z
+        .object({ id: z.number(), file_type: z.string(), file_size: z.number().nullable().optional(), data_url: z.string().nullable().optional() })
+        .passthrough()
+    )
     .optional(),
   created_at: z.union([z.string(), z.number()]).optional(),
   updated_at: z.union([z.string(), z.number()]).optional(),
-});
+  // passthrough: conversation_* traz a conversa no topo do payload e contact_*
+  // traz o contato no topo — sem isto o zod descartava nome, telefone, status
+  // e meta antes de o processador ler (visto em 29/09, primeiro dia do webhook).
+}).passthrough();
 
 // Limite defensivo contra payload excessivo (Etapa 7 do pedido original) —
 // aplicado ANTES de fazer JSON.parse no corpo bruto do webhook.
