@@ -312,6 +312,36 @@ export const AGENT_CATALOG: AgenteDef[] = [
     tetoMensalChamadas: 3_000,
     padraoLigado: false,
   },
+  // As duas funções de IA do protótipo do Societário que vieram para o Connect
+  // (29/09). Não conversam: uma volta cada, e o que dizem vira proposta na fila
+  // do setor (`AgentProposal`) para o coordenador aprovar.
+  {
+    code: "varredura_do_societario",
+    label: "Varredura de pendências do Societário",
+    sectorCode: "societario",
+    description:
+      "Recebe as pendências que o Connect achou (exigência vencida, processo parado, prazo vencido, licença vencendo), ordena pela urgência e sugere o próximo passo; o coordenador aprova e o processo sobe de prioridade",
+    // Rápida: o que achar é do código; a IA só ordena e explica.
+    faixa: "rapido",
+    escreve: false,
+    ferramentas: [],
+    tetoMensalCentavos: 5_000,
+    tetoMensalChamadas: 1_000,
+    padraoLigado: false,
+  },
+  {
+    code: "leitor_de_contrato_social",
+    label: "Leitura de contrato social",
+    sectorCode: "societario",
+    description:
+      "Lê o PDF do contrato social e extrai os sócios com participação, quotas, capital e quem administra — o que a Receita não informa; o coordenador revisa antes de gravar",
+    faixa: "padrao",
+    escreve: false,
+    ferramentas: [],
+    tetoMensalCentavos: 10_000,
+    tetoMensalChamadas: 500,
+    padraoLigado: false,
+  },
   {
     code: "resumo_agente",
     label: "Resumo de avaliações do atendente",
