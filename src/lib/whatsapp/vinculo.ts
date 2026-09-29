@@ -25,13 +25,13 @@ export const MAX_TENTATIVAS_DO_NOME = 2;
 const MAX_CARACTERES_DO_NOME = 120;
 
 export const PERGUNTA_DO_NOME =
-  "Encontrei uma inscrição ligada a este número. Para eu consultar com segurança, me diga o seu nome completo, do jeito que você escreveu na inscrição.";
+  "Achei uma inscrição com este número! Pra eu conferir com segurança, me diz seu nome completo, do jeitinho que você escreveu na inscrição?";
 
 export const PEDIR_NOME_DE_NOVO =
-  "Não consegui confirmar esse nome junto a este número. Pode escrever o seu nome completo, do jeito que está na inscrição?";
+  "Hmm, não bateu com a inscrição deste número. Pode mandar seu nome completo de novo, igual está na inscrição?";
 
 export const NOME_NAO_CONFIRMADO =
-  "Não consegui confirmar a inscrição por aqui, então não vou mostrar dados de processo nesta conversa. Posso te mostrar as vagas abertas, ou você pode pedir para falar com uma pessoa do time.";
+  "Não consegui confirmar a inscrição por aqui, então não vou mostrar dados do processo nesta conversa, tá? Posso te mostrar as vagas abertas, ou chamar alguém da equipe pra te ajudar.";
 
 /**
  * O que vai na frente da mensagem do candidato quando o nome acabou de

@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   decidir,
   pediuParaSair,
+  voltouAConversar,
+  CONFIRMACAO_DE_SAIDA,
   dentroDaJanelaLivre,
   decidirComARespostaDoAgente,
   prometeContatoHumano,
@@ -28,6 +30,26 @@ function estado(over: Partial<EstadoDaConversa> = {}): EstadoDaConversa {
     ...over,
   };
 }
+
+describe("voltouAConversar", () => {
+  // No teste de 29/09, o "Oi" depois do PARAR ficou sem resposta.
+  it("quem escreve de novo depois do PARAR está voltando", () => {
+    for (const t of ["Oi", "oi, tudo bem?", "Bom dia", "Queria saber da vaga", "ok, mas e a entrevista?"]) {
+      expect(voltouAConversar(t), t).toBe(true);
+    }
+  });
+
+  it("despedida, outro PARAR ou mensagem sem palavra não reabre", () => {
+    for (const t of ["ok", "Ok, obrigado!", "obrigada", "vlw", "tá bom", "👍", "🙏🙏", "...", "PARAR", "sair"]) {
+      expect(voltouAConversar(t), t).toBe(false);
+    }
+  });
+
+  it("a confirmação do PARAR diz como voltar", () => {
+    expect(CONFIRMACAO_DE_SAIDA).toContain("oi");
+    expect(voltouAConversar("oi")).toBe(true);
+  });
+});
 
 describe("pediuParaSair", () => {
   it("reconhece as palavras em qualquer caixa, com acento e com pontuação", () => {
