@@ -205,6 +205,12 @@ export type RespostaDoAgente = {
   /** Quantas escritas o agente propôs. */
   propostas: number;
   truncado: boolean;
+  /**
+   * O motivo que o agente deu ao chamar `pedir_ajuda_humana`, quando chamou.
+   * É o que a tela mostra em "o assistente passou para você" — sem isso, um
+   * pedido de ajuda legítimo aparecia como "sugeriu uma ação no processo".
+   */
+  motivoDaAjuda?: string | null;
 };
 
 export type DesfechoDaResposta =
@@ -264,7 +270,11 @@ export function decidirComARespostaDoAgente(
   maxCaracteres: number = MAX_CARACTERES_DA_MENSAGEM
 ): DesfechoDaResposta {
   if (r.propostas > 0) {
-    return { tipo: "transferir", motivo: "o assistente sugeriu uma ação no processo seletivo" };
+    const pedido = r.motivoDaAjuda?.replace(/\s+/g, " ").trim();
+    return {
+      tipo: "transferir",
+      motivo: pedido ? `o assistente pediu ajuda: ${pedido}`.slice(0, 300) : "o assistente sugeriu uma ação no processo seletivo",
+    };
   }
   const texto = r.texto.trim();
   if (!texto) return { tipo: "transferir", motivo: "o assistente não conseguiu responder" };
@@ -282,7 +292,22 @@ export function decidirComARespostaDoAgente(
   return { tipo: "enviar", texto };
 }
 
+// Sem `\b`: para ele, "á" não é letra, e "Olá," escapava.
+const CUMPRIMENTO_NO_COMECO = /^\s*(oi+|ol[aá]|opa|e a[ií]|bom dia|boa tarde|boa noite)(?=[\s!,.?]|$)[\s!,.]*/i;
+
+/**
+ * Tira o "Oi!" do começo da resposta quando ela vai logo depois da
+ * apresentação — que já cumprimenta. Visto no teste de 29/09: "Oi! 😊 Aqui é o
+ * assistente… Oi! Não achei…". O prompt pede para não cumprimentar, mas prompt
+ * se contorna; aqui não. Se sobrar só o cumprimento, fica como veio.
+ */
+export function semCumprimentoRepetido(texto: string): string {
+  const resto = texto.replace(CUMPRIMENTO_NO_COMECO, "");
+  if (!/[a-zà-ú0-9]/i.test(resto)) return texto;
+  return resto.charAt(0).toUpperCase() + resto.slice(1);
+}
+
 /** Monta o corpo final, com a apresentação quando for a primeira vez. */
 export function montarMensagem(texto: string, apresentar: boolean, nomeDoEscritorio: string): string {
-  return apresentar ? `${avisoDeRobo(nomeDoEscritorio)}\n\n${texto}` : texto;
+  return apresentar ? `${avisoDeRobo(nomeDoEscritorio)}\n\n${semCumprimentoRepetido(texto)}` : texto;
 }

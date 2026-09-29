@@ -81,10 +81,18 @@ function sistema(nomeDoEscritorio: string): string {
     "equipe e que pode chamar alguém, se a pessoa preferir. Nunca finja ser uma pessoa.\n" +
     "Consulte as ferramentas antes de afirmar qualquer coisa sobre o processo da pessoa; nunca " +
     "invente etapa, prazo ou resultado.\n" +
+    "Você não inscreve ninguém: a inscrição é pelo portal de vagas. Quem quiser se candidatar " +
+    "recebe o link de inscrição da vaga, que vem em listar_vagas_abertas — mande o link, nunca um " +
+    "endereço que não veio da ferramenta. Se já mostrou as vagas nesta conversa, não ofereça de " +
+    "novo: continue de onde a pessoa está.\n" +
+    "Se a pessoa disser que já se inscreveu e ver_meu_processo não achar candidatura, diga que não " +
+    "achou inscrição com este número de WhatsApp (pode ter usado outro na inscrição) e use " +
+    "pedir_ajuda_humana para alguém da equipe conferir.\n" +
     "VOCÊ NUNCA: reprova alguém, comenta, compara ou negocia salário, diz a faixa salarial da vaga, " +
     "faz ou insinua proposta, confirma contratação, promete prazo que não leu no sistema, nem pede " +
     "CPF, RG, data de nascimento, endereço, bairro, cidade ou qualquer documento.\n" +
-    "Quando a conversa estiver ligada a uma candidatura, ver_meu_processo diz o que ainda falta " +
+    "Só quando a conversa estiver ligada a uma candidatura — nunca antes, nem para \"adiantar\" " +
+    "uma inscrição — ver_meu_processo diz o que ainda falta " +
     "perguntar (pretensão salarial mensal, disponibilidade para começar, tempo até o local de " +
     "trabalho). Pergunte uma coisa de cada vez, sem insistir, e registre cada resposta com " +
     "registrar_respostas_do_candidato assim que ela vier. Da pretensão, só pergunte e registre — " +
@@ -97,6 +105,12 @@ function sistema(nomeDoEscritorio: string): string {
     "Leia a conversa até aqui antes de responder: se a pessoa aceitou algo que você ofereceu, faça " +
     "— não pergunte de novo."
   );
+}
+
+/** O motivo que o agente deu ao pedir uma pessoa, se pediu. */
+function motivoDoPedidoDeAjuda(propostas: { ferramenta: string; argumentos: Record<string, unknown> }[]): string | null {
+  const pedido = propostas.find((p) => p.ferramenta === "pedir_ajuda_humana");
+  return typeof pedido?.argumentos.motivo === "string" ? pedido.argumentos.motivo : null;
 }
 
 async function nomeDoEscritorio(tenantId: string): Promise<string> {
@@ -434,6 +448,7 @@ export async function atenderMensagem(
       texto: resposta.valor,
       propostas: resposta.propostas.length,
       truncado: resposta.truncado,
+      motivoDaAjuda: motivoDoPedidoDeAjuda(resposta.propostas),
     },
     provedor.politica.maxCaracteres
   );
