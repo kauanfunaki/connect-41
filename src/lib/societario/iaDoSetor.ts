@@ -8,6 +8,7 @@ import { gerarEstruturado } from "@/lib/ai";
 import { criarProposta } from "@/lib/ia/propostas";
 import { nomeExibicao } from "@/lib/companyName";
 import { formatInstantDate } from "@/lib/format";
+import { limitesDoSetor } from "@/lib/gestao/regras";
 import {
   SISTEMA_DA_VARREDURA,
   lerAvaliacao,
@@ -35,8 +36,12 @@ function maisRecente(...datas: (Date | null | undefined)[]): Date {
 }
 
 /** Lê o que está aberto no Societário do tenant e devolve as pendências. */
-export async function sinaisDoTenant(tenantId: string, agora = new Date()): Promise<Sinal[]> {
+export async function sinaisDoTenant(tenantId: string, agora = new Date(), sectorCode = "societario"): Promise<Sinal[]> {
   const prisma = getPrisma();
+  const configDoSetor = await prisma.sector.findFirst({
+    where: { tenantId, code: sectorCode },
+    select: { alertStalledDays: true, alertDueSoonDays: true },
+  });
   const empresa = { select: { name: true, displayName: true } };
   const [processos, exigencias, licencas] = await Promise.all([
     prisma.process.findMany({
@@ -96,7 +101,8 @@ export async function sinaisDoTenant(tenantId: string, agora = new Date()): Prom
         })),
       licencas: licencas.map((l) => ({ id: l.id, tipo: l.kind, empresa: nomeExibicao(l.company), expiresAt: l.expiresAt! })),
     },
-    agora
+    agora,
+    limitesDoSetor(configDoSetor ?? undefined).diasParado
   );
 }
 
@@ -109,7 +115,7 @@ export type ResultadoDaVarredura = { tipo: "vazia" } | { tipo: "proposta"; propo
  */
 export async function rodarVarredura(params: { tenantId: string; userId: string; sectorCode: string }): Promise<ResultadoDaVarredura> {
   const agora = new Date();
-  const sinais = await sinaisDoTenant(params.tenantId, agora);
+  const sinais = await sinaisDoTenant(params.tenantId, agora, params.sectorCode);
   if (sinais.length === 0) return { tipo: "vazia" };
 
   const { valor, runId } = await gerarEstruturado({

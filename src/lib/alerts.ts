@@ -20,6 +20,7 @@ import { avisoDeContasAPagar, avisoDeOrcamento, avisoDePendenciasVencidas, maior
 import { serieEconomica } from "@/lib/dre/dataEconomica";
 import { orcamentosAprovados, MODULO_DE_ORCAMENTO } from "@/lib/dre/orcamento/dados";
 import { porGrupoOrcado } from "@/lib/dre/orcamento/grade";
+import { itensDaGestao } from "@/lib/gestao/itens";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -567,6 +568,71 @@ async function checkCertificadosVencendo(tenantId: string, today: Date): Promise
   return sent;
 }
 
+// ─── Gestão: processo ou card parado, prazo vencendo ─────────────────────────
+//
+// Veio do painel 41-gestao (29/09). A regra de "parado" e de "prazo" é a de
+// `src/lib/gestao/regras.ts`, com os limites de cada setor — a mesma que o
+// painel e a carga dos coordenadores mostram.
+//
+// Não repete o que já tem alerta próprio: transferência parada é de
+// `checkHandoffsParados`, e pendência do BPO vencida é de
+// `checkPendenciasVencidas`. Card não iniciado só avisa pelo prazo (é fila).
+//
+// Cada parada avisa uma vez: a chave leva a data da última movimentação, então
+// o item que andou e parou de novo avisa de novo — e o que continua parado não
+// avisa todo dia.
+const MODULO_GESTAO = "gestao_painel";
+
+async function coordenadoresDoSetor(tenantId: string, setor: string): Promise<string[]> {
+  const us = await getPrisma().user.findMany({
+    where: { tenantId, active: true, role: "SECTOR_ADMIN", sectors: { some: { sectorCode: setor } } },
+    select: { id: true },
+  });
+  return us.map((u) => u.id);
+}
+
+async function checkItensDaGestao(tenantId: string, today: Date): Promise<number> {
+  if (!(await isModuleEnabled(tenantId, MODULO_GESTAO))) return 0;
+  const itens = await itensDaGestao(tenantId, "todos", today);
+  const coordenadores = new Map<string, string[]>();
+  let sent = 0;
+
+  for (const { item, c } of itens) {
+    if (item.origem === "TRANSFERENCIA") continue;
+    const avisos: { chave: string; mensagem: string }[] = [];
+    if (c.parado !== null) {
+      avisos.push({
+        chave: `GESTAO_PARADO:${item.origem}:${item.id}:${item.ultimaMovimentacao.toISOString().slice(0, 10)}`,
+        mensagem: `Parado há ${c.parado} dias, sem nenhuma movimentação: ${item.titulo}`,
+      });
+    }
+    if (c.prazo && item.origem !== "PENDENCIA" && item.prazo) {
+      avisos.push({
+        chave: `GESTAO_PRAZO:${item.origem}:${item.id}:${item.prazo.toISOString().slice(0, 10)}:${c.prazo.situacao}`,
+        mensagem:
+          c.prazo.situacao === "VENCIDO"
+            ? `Prazo vencido há ${c.prazo.dias} ${c.prazo.dias === 1 ? "dia" : "dias"}: ${item.titulo}`
+            : c.prazo.dias === 0
+              ? `Prazo vence hoje: ${item.titulo}`
+              : `Prazo vence em ${c.prazo.dias} ${c.prazo.dias === 1 ? "dia" : "dias"}: ${item.titulo}`,
+      });
+    }
+    for (const aviso of avisos) {
+      if (!(await reservarPorChave(tenantId, aviso.chave, today))) continue;
+      const input = { tenantId, type: "GESTAO_ALERTA", message: aviso.mensagem.slice(0, 480) };
+      let destino = item.responsaveis;
+      if (destino.length === 0) {
+        if (!coordenadores.has(item.setor)) coordenadores.set(item.setor, await coordenadoresDoSetor(tenantId, item.setor));
+        destino = coordenadores.get(item.setor)!;
+      }
+      if (destino.length > 0) for (const userId of destino) await notifyUser(userId, input);
+      else await notifySector(item.setor, input);
+      sent++;
+    }
+  }
+  return sent;
+}
+
 async function runForTenant(tenantId: string, today: Date): Promise<TenantResult> {
   const checks: Array<[string, () => Promise<number>]> = [
     ["vacations", () => checkVacationsExpiring(tenantId, today)],
@@ -581,6 +647,7 @@ async function runForTenant(tenantId: string, today: Date): Promise<TenantResult
     ["pendências", () => checkPendenciasVencidas(tenantId, today)],
     ["orçamento", () => checkOrcamentoEstourado(tenantId, today)],
     ["certificados", () => checkCertificadosVencendo(tenantId, today)],
+    ["gestão", () => checkItensDaGestao(tenantId, today)],
   ];
 
   let sent = 0;
