@@ -54,6 +54,11 @@ export function threadDoEscopo(ctx: ContextoDaFerramenta): string {
 
 const SEM_PARAMETROS = { type: "object", properties: {}, additionalProperties: false } as const;
 
+/** O endereço de inscrição de uma vaga no portal de carreiras. */
+export function linkDeInscricao(baseUrl: string, tenantSlug: string, vagaId: string): string {
+  return `${baseUrl.replace(/\/$/, "")}/carreiras/${encodeURIComponent(tenantSlug)}/${encodeURIComponent(vagaId)}`;
+}
+
 const ETAPA_EM_PORTUGUES: Record<string, string> = {
   TRIAGEM: "em triagem",
   ENTREVISTA: "na etapa de entrevista",
@@ -158,7 +163,7 @@ export const FERRAMENTAS_DE_CANDIDATO: Record<string, FerramentaRegistrada> = {
     def: {
       nome: "listar_vagas_abertas",
       descricao:
-        "As vagas abertas e divulgadas publicamente, com a descrição pública. Use quando a pessoa perguntar se há outras oportunidades.",
+        "As vagas abertas e divulgadas publicamente, com a descrição pública e o link de inscrição no portal. Use quando a pessoa perguntar pelas vagas ou quiser se candidatar — quem quer se candidatar recebe o link.",
       parametros: SEM_PARAMETROS as unknown as Record<string, unknown>,
       natureza: "leitura",
     },
@@ -167,20 +172,28 @@ export const FERRAMENTAS_DE_CANDIDATO: Record<string, FerramentaRegistrada> = {
       // chave que decide o que aparece em `/carreiras` — se não está lá, não
       // sai por aqui.
       const prisma = getPrisma();
-      const vagas = await prisma.vaga.findMany({
-        where: { tenantId: ctx.tenantId, status: "ABERTA", isPublic: true },
-        orderBy: { openedAt: "desc" },
-        take: 20,
-        select: {
-          title: true,
-          publicDescription: true,
-          company: { select: { tradeName: true, name: true } },
-        },
-      });
+      const [vagas, tenant] = await Promise.all([
+        prisma.vaga.findMany({
+          where: { tenantId: ctx.tenantId, status: "ABERTA", isPublic: true },
+          orderBy: { openedAt: "desc" },
+          take: 20,
+          select: {
+            id: true,
+            title: true,
+            publicDescription: true,
+            company: { select: { tradeName: true, name: true } },
+          },
+        }),
+        prisma.tenant.findUnique({ where: { id: ctx.tenantId }, select: { slug: true } }),
+      ]);
+      // O mesmo endereço que a tela da vaga mostra como "link público". Sem a
+      // URL do app configurada, não há link — e o prompt proíbe inventar um.
+      const base = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
       return vagas.map((v) => ({
         vaga: v.title,
         empresa: v.company.tradeName || v.company.name,
         descricao: v.publicDescription,
+        ...(base && tenant?.slug ? { linkDeInscricao: linkDeInscricao(base, tenant.slug, v.id) } : {}),
       }));
     },
   },
