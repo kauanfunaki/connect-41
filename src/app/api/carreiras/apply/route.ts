@@ -121,7 +121,22 @@ export async function POST(req: NextRequest) {
     where: { tenantId: tenant.id, type: PersonType.CANDIDATO, email },
     select: { id: true },
   });
-  if (!person) {
+  if (person) {
+    // Quem se inscreve de novo traz o contato de agora: o telefone e a cidade
+    // desta inscrição passam a valer. Até 29/09 eram descartados — no teste,
+    // o WhatsApp não reconheceu o candidato porque o telefone novo nunca foi
+    // gravado. O nome fica como está: trocar nome por formulário público é
+    // como uma inscrição com o e-mail de outra pessoa renomearia o cadastro
+    // dela, e é pelo nome que o WhatsApp confirma quem é.
+    await prisma.person.update({
+      where: { id: person.id },
+      data: {
+        ...(phone ? { phone } : {}),
+        ...(city ? { city } : {}),
+        ...(stateCode && /^[A-Z]{2}$/.test(stateCode) ? { stateCode } : {}),
+      },
+    });
+  } else {
     person = await prisma.person.create({
       data: {
         tenantId: tenant.id,
