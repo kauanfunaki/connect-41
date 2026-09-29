@@ -13,6 +13,8 @@ type NotificacaoParaLink = {
 export function linkDaNotificacao(n: NotificacaoParaLink): string | null {
   // Aviso de órgão sem processo ligado: vai para a lista, onde a pessoa escolhe.
   if (n.type === "AVISO_ORGAO_SEM_PROCESSO") return "/processos/avisos";
+  // Alertas da Gestão (processo ou card parado, prazo): a lista mostra o item e o link dele.
+  if (n.type === "GESTAO_ALERTA") return "/gestao/alertas";
   if (!n.entityId) return null;
   if (n.type.startsWith("WHATSAPP_")) return `/whatsapp/${n.entityId}`;
   if (n.type.startsWith("PROCESS_")) return `/processos/${n.entityId}`;

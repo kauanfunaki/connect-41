@@ -25,6 +25,7 @@ import {
   Pin,
   X,
   MessageCircle,
+  Gauge,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { NotificationBell } from "@/components/shell/NotificationBell";
@@ -104,6 +105,8 @@ type Props = {
   appDomain: string | null;
   sectorHostSuffix: string;
   canOpenAdmin: boolean;
+  /** Diretoria, administradores e coordenadores — ver `recorteDaGestao`. */
+  canOpenGestao?: boolean;
   canManageMeetings: boolean;
   unreadCount: number;
   notifications: NotificationEntry[];
@@ -129,6 +132,7 @@ export function AppShell({
   appDomain,
   sectorHostSuffix,
   canOpenAdmin,
+  canOpenGestao = false,
   canManageMeetings,
   unreadCount,
   notifications,
@@ -227,6 +231,7 @@ export function AppShell({
               <NavItem href="/tarefas" icon={<ListTodo size={16} />} label="Tarefas" />
               <NavItem href="/conversas" icon={<MessageCircle size={16} />} label="Conversas" />
               <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />
+              {canOpenGestao && <NavItem href="/gestao" icon={<Gauge size={16} />} label="Gestão" />}
               {canManageMeetings && (
                 <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />
               )}
@@ -276,6 +281,7 @@ export function AppShell({
               <NavItem href="/tarefas" icon={<ListTodo size={16} />} label="Tarefas" />
               <NavItem href="/conversas" icon={<MessageCircle size={16} />} label="Conversas" />
               <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />
+              {canOpenGestao && <NavItem href="/gestao" icon={<Gauge size={16} />} label="Gestão" />}
               {canManageMeetings && (
                 <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />
               )}
