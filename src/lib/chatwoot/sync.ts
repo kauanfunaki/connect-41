@@ -112,7 +112,9 @@ export async function upsertConversation(
       lastActivityAt: normalized.lastActivityAt,
       resolvedAt,
       unreadCount: normalized.unreadCount,
-      lastMessagePreview: normalized.lastMessagePreview,
+      // Sem prévia não apaga a que existe: o webhook de status chega com a
+      // mensagem de atividade ("marcada como resolvida") como a última.
+      lastMessagePreview: normalized.lastMessagePreview ?? undefined,
       ...(messageCount !== undefined && messageCount !== null ? { messageCount } : {}),
       syncedAt: new Date(),
     },

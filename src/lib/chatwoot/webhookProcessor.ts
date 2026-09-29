@@ -2,7 +2,7 @@
 // deduplicado (ChatwootWebhookEvent) ao banco local. Reaproveita os mesmos
 // upserts da sincronização em lote (sync.ts) — mesma forma de dado, fonte diferente.
 import { getPrisma } from "@/lib/prisma";
-import { normalizeConversation, normalizeMessage } from "./mappers";
+import { conversationFromWebhook, messageTypeLabel, normalizeConversation, normalizeMessage, toUnixSeconds } from "./mappers";
 import { upsertConversation, upsertContactLink } from "./sync";
 import type { ChatwootWebhookPayload } from "./types";
 
@@ -10,8 +10,9 @@ export async function processWebhookEvent(tenantId: string, connectionId: string
   const prisma = getPrisma();
 
   if (payload.event === "conversation_created" || payload.event === "conversation_updated" || payload.event === "conversation_status_changed") {
-    if (!payload.conversation) return;
-    const normalized = normalizeConversation(payload.conversation);
+    const conversation = conversationFromWebhook(payload);
+    if (!conversation) return;
+    const normalized = normalizeConversation(conversation);
     await upsertConversation(prisma, tenantId, connectionId, normalized);
     return;
   }
@@ -21,6 +22,11 @@ export async function processWebhookEvent(tenantId: string, connectionId: string
     const normalizedConversation = normalizeConversation(payload.conversation);
     const { id: conversationId } = await upsertConversation(prisma, tenantId, connectionId, normalizedConversation);
 
+    // O contato no webhook (Contact#webhook_data) vem sem `type`; a API diz
+    // "contact". Mensagem recebida sem tipo é do contato.
+    const sender = payload.sender
+      ? { ...payload.sender, type: payload.sender.type ?? (messageTypeLabel(payload.message_type) === "incoming" ? "contact" : undefined) }
+      : undefined;
     const normalizedMessage = normalizeMessage({
       id: payload.id,
       content: payload.content ?? null,
@@ -28,9 +34,9 @@ export async function processWebhookEvent(tenantId: string, connectionId: string
       content_type: payload.content_type ?? "text",
       private: payload.private ?? false,
       attachments: payload.attachments,
-      sender: payload.sender,
-      created_at: typeof payload.created_at === "number" ? payload.created_at : Math.floor(Date.now() / 1000),
-      updated_at: typeof payload.updated_at === "number" ? payload.updated_at : undefined,
+      sender,
+      created_at: toUnixSeconds(payload.created_at) ?? Math.floor(Date.now() / 1000),
+      updated_at: toUnixSeconds(payload.updated_at),
     });
 
     const existingMessage = await prisma.chatwootMessage.findUnique({
@@ -77,8 +83,11 @@ export async function processWebhookEvent(tenantId: string, connectionId: string
     // Payload de contact_* traz o contato no topo (id/name/email/phone_number),
     // fora do shape de ChatwootWebhookPayload tipado acima — lido de forma
     // solta aqui pra não inflar o tipo principal com um caso raro.
-    const raw = payload as unknown as { id?: number; name?: string; email?: string; phone_number?: string };
+    const raw = payload as unknown as { id?: number; name?: string | null; email?: string | null; phone_number?: string | null };
     if (raw.id == null) return;
+    // Payload sem nenhum dos três campos não diz nada sobre o contato: gravar
+    // daria null por cima do cache e desfaria o vínculo automático.
+    if (raw.name === undefined && raw.email === undefined && raw.phone_number === undefined) return;
 
     // Só reprocessa vínculo se já existir uma linha pra este contato (criada
     // via alguma conversa sincronizada) — contato "novo" sem conversa ainda
