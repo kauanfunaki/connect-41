@@ -80,14 +80,20 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
         <span className="text-[13px] text-fg">{space.name}</span>
       </div>
 
-      <div className="flex items-center justify-between mb-6 mt-1">
-      <PageHeader title={space.name} />
-        {canCreate && (
-          <div className="flex items-center gap-2">
-            <NewFolderButton action={createFolderAction} />
-            <NewListButton action={createListAction} />
-          </div>
-        )}
+      {/* As ações moram no `action` do PageHeader (30/09): o cabeçalho estava
+          aninhado numa linha própria, com a margem dele somada à da linha. */}
+      <div className="mt-1">
+        <PageHeader
+          title={space.name}
+          action={
+            canCreate && (
+              <div className="flex items-center gap-2">
+                <NewFolderButton action={createFolderAction} />
+                <NewListButton action={createListAction} />
+              </div>
+            )
+          }
+        />
       </div>
 
       <div className="mb-6">

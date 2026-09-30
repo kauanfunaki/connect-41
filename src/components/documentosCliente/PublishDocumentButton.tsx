@@ -19,12 +19,15 @@ export function PublishDocumentButton({ action }: Props) {
     }
   }
 
+  // `sm`: fica ao lado do Editar e do Excluir, que são h-8 (30/09).
   return (
     <Button
       type="button"
       onClick={handleClick}
       disabled={isPending}
-      variant="primary" className="font-medium disabled:opacity-60"
+      variant="primary"
+      size="sm"
+      className="font-medium disabled:opacity-60"
     >
       {isPending ? "Publicando…" : "Publicar"}
    </Button>

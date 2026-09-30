@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -60,9 +62,10 @@ export default async function EmpresaRescisaoConfigPage({ params }: { params: Pr
         <p className="text-[13px] text-fg-secondary">
           Cada campo mostra de onde vem o valor atual. Alterar aqui afeta só esta empresa.
         </p>
-        <Link href="/admin/rescisao" className="inline-block mt-2 text-[12px] text-brand hover:underline">
-          Ver o padrão do escritório
-        </Link>
+        {/* Era link de texto sublinhado (30/09): é ação, então é botão. */}
+        <Button href="/admin/rescisao" variant="secondary" size="xs" className="mt-2">
+          Ver o padrão do escritório <ArrowRight size={11} />
+        </Button>
       </Card>
 
       <Card className="p-6">

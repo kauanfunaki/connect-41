@@ -1,8 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Link from "next/link";
-import { Copy, Check, MapPin, Mail, Phone, Camera, X } from "lucide-react";
+import { Copy, Check, MapPin, Mail, Phone, Camera, X, ArrowRightLeft, Pencil } from "lucide-react";
 import type { CompanyStatus } from "@/generated/prisma/enums";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { EntityOverflowMenu } from "@/components/ui/EntityOverflowMenu";
@@ -215,23 +214,21 @@ export function CompanyHeader({
           </div>
         </div>
 
+        {/* Eram links estilizados à mão (30/09): botão não é link. Altura `sm`
+            para casar com o "⋯" do lado, que é h-8. */}
         <div className="flex items-center gap-2 flex-shrink-0">
           {canRequestHandoff && (
-            <Link
-              href={`/transferencias/novo?entityType=COMPANY&entityId=${id}`}
-              className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
-            >
+            <Button href={`/transferencias/novo?entityType=COMPANY&entityId=${id}`} variant="secondary" size="sm">
+              <ArrowRightLeft size={14} />
               Solicitar Transferência
-            </Link>
+            </Button>
           )}
           {canEdit && (
             <>
-              <Link
-                href={`/empresas/${id}/editar`}
-                className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
-              >
+              <Button href={`/empresas/${id}/editar`} variant="secondary" size="sm">
+                <Pencil size={14} />
                 Editar
-              </Link>
+              </Button>
               <EntityOverflowMenu deleteAction={deleteAction} nome={name} />
             </>
           )}

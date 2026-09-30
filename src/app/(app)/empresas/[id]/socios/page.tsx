@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Users } from "lucide-react";
+import { Pencil, Users } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite, canManageSector } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
@@ -14,9 +13,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { BackButton } from "@/components/shared/BackButton";
-import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
 import { BuscarSociosNaReceita } from "@/components/empresas/BuscarSociosNaReceita";
-import { RegistrarSaidaDoSocio } from "@/components/empresas/RegistrarSaidaDoSocio";
+import { AcoesDoSocio } from "@/components/empresas/RegistrarSaidaDoSocio";
 import { moeda } from "@/lib/financeiro/formato";
 import { excluirSocio, importarDaReceita, previaDaReceita, registrarSaida } from "./actions";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -167,15 +165,15 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
                   <p className="text-[11.5px] text-fg-muted break-words">{endereco(s)}</p>
                 </div>
                 {podeEditar && (
-                  <div className="flex items-center gap-3 shrink-0">
-                    <Link
-                      href={`/empresas/${companyId}/socios/${s.id}/editar`}
-                      className="text-[12px] text-fg-muted hover:text-fg transition-colors"
-                    >
-                      Editar
-                    </Link>
-                    <RegistrarSaidaDoSocio socioId={s.id} companyId={companyId} nome={s.name} action={registrarSaida} />
-                    <DeleteFieldButton action={excluirSocio.bind(null, s.id, companyId)} nome={s.name} />
+                  <div className="shrink-0">
+                    <AcoesDoSocio
+                      socioId={s.id}
+                      companyId={companyId}
+                      nome={s.name}
+                      editarHref={`/empresas/${companyId}/socios/${s.id}/editar`}
+                      excluir={excluirSocio.bind(null, s.id, companyId)}
+                      registrarSaida={registrarSaida}
+                    />
                   </div>
                 )}
               </div>
@@ -199,12 +197,9 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
                       </p>
                     </div>
                     {podeEditar && (
-                      <Link
-                        href={`/empresas/${companyId}/socios/${s.id}/editar`}
-                        className="text-[12px] text-fg-muted hover:text-fg transition-colors shrink-0"
-                      >
-                        Editar
-                      </Link>
+                      <Button href={`/empresas/${companyId}/socios/${s.id}/editar`} variant="secondary" size="xs" className="shrink-0">
+                        <Pencil size={11} /> Editar
+                      </Button>
                     )}
                   </div>
                 ))}

@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import type { EmpresaState } from "@/app/(app)/empresas/actions";
 import { CompanyStatus } from "@/generated/prisma/enums";
 import { CustomFieldsSection, type CustomFieldInput } from "@/components/shared/CustomFieldsSection";
@@ -695,12 +694,10 @@ export function EmpresaForm({
             )}
           </div>
           <div className="flex items-center gap-3">
-            <Link
-              href={cancelHref}
-              className="h-9 px-4 rounded-md border border-border-strong text-[length:var(--fs-button)] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors inline-flex items-center"
-            >
+            {/* Era um Link estilizado à mão (30/09): o Cancelar é o botão secundário. */}
+            <Button href={cancelHref} variant="secondary">
               Cancelar
-            </Link>
+            </Button>
             {step < lastStep ? (
               <>
                 {isEdit && (

@@ -212,13 +212,10 @@ function CoverControls({
 
       {!coverUrl && (
         <div className={`${CANVAS_CLASS} !py-0 !pt-6`}>
-          <Button
-            variant="linkMuted"
-            className="text-[12px] hover:text-fg-secondary disabled:opacity-60"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={pending}
-          >
-            <ImagePlus size={13} /> {pending ? "Enviando…" : "Adicionar capa"}
+          {/* Era texto solto (30/09): botão fantasma, discreto em cima da folha,
+              com o texto alinhado ao título da página. */}
+          <Button variant="ghost" size="xs" className="-ml-2.5" onClick={() => fileInputRef.current?.click()} disabled={pending}>
+            <ImagePlus size={11} /> {pending ? "Enviando…" : "Adicionar capa"}
           </Button>
         </div>
       )}
@@ -604,8 +601,9 @@ export function ManualWorkspace({
                         />
                       ) : (
                         <Button
-                          variant="linkMuted"
-                          className="flex px-2 py-1 rounded-md text-[12px] hover:bg-surface-hover"
+                          variant="ghost"
+                          size="xs"
+                          className="h-6! px-2!"
                           onClick={() => { setCreatingPageFor(doc.id); setNewPageTitle(""); }}
                         >
                           <Plus size={11} /> Página
@@ -635,13 +633,9 @@ export function ManualWorkspace({
                 className="w-full !h-8 px-2 text-[13px]"
               />
             ) : (
-              <button
-                type="button"
-                onClick={() => setCreatingDoc(true)}
-                className="w-full flex items-center gap-1.5 h-8 px-2 rounded-md text-[12.5px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors"
-              >
+              <Button variant="ghost" size="sm" className="w-full justify-start! px-2!" onClick={() => setCreatingDoc(true)}>
                 <Plus size={13} /> Novo documento
-              </button>
+              </Button>
             )}
           </div>
         )}

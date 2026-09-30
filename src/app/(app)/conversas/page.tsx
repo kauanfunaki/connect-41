@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { MessageCircle, Building2, User, HelpCircle, Gauge, Settings } from "lucide-react";
+import { MessageCircle, Building2, User, HelpCircle, Gauge, Settings, ArrowLeft, ClipboardCheck, PenLine, Timer } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullAccess } from "@/lib/auth/context";
 import { scopedChatwootConversationWhere } from "@/lib/auth/scope";
@@ -11,6 +11,8 @@ import { chaveDoSegmento, indexarVinculosPorNome, normalizarNomeAtendente } from
 import { channelLabel, statusLabel } from "@/lib/chatwoot/labels";
 import { formatInstantDate } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Pagination } from "@/components/shared/Pagination";
+import { AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AtendimentosAccordion } from "@/components/conversas/AtendimentosAccordion";
 import { VincularContato } from "@/components/conversas/VincularContato";
@@ -66,43 +68,34 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
 
   return (
     <PageContainer>
-      <div className="flex items-start justify-between gap-3 mb-5">
-        <div>
-      <PageHeader title="Conversas" />
-          <p className="text-[13px] text-fg-muted mt-0.5">
-            {view === "avaliacao"
-              ? "Nota de 0-100 (Escrita + SLA) por atendimento resolvido no Chatwoot — gerada automaticamente pela IA."
-              : "Auditoria de atendimentos do Chatwoot. Somente leitura."}
-          </p>
-        </div>
-        {view === "avaliacao" && isFullAccess(ctx.role) && (
-          <Link
-            href="/admin/atendentes"
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border text-[12.5px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors flex-shrink-0"
-          >
-            <Settings size={13} /> Gerenciar atendentes
-          </Link>
-        )}
-      </div>
+      {/* Cabeçalho padrão (30/09): o PageHeader estava aninhado com o subtítulo
+          escrito à parte, e "Gerenciar atendentes" era um Link estilizado. */}
+      <PageHeader
+        title="Conversas"
+        subtitle={
+          view === "avaliacao"
+            ? "Nota de 0-100 (Escrita + SLA) por atendimento resolvido no Chatwoot — gerada automaticamente pela IA."
+            : "Auditoria de atendimentos do Chatwoot. Somente leitura."
+        }
+        action={
+          view === "avaliacao" &&
+          isFullAccess(ctx.role) && (
+            <Button href="/admin/atendentes" variant="secondary">
+              <Settings size={14} /> Gerenciar atendentes
+            </Button>
+          )
+        }
+      />
 
-      <div className="flex items-center gap-1 mb-5 border-b border-border">
-        <Link
-          href="/conversas"
-          className={`inline-flex items-center gap-1.5 h-9 px-3 text-[13px] font-medium border-b-2 -mb-px transition-colors ${
-            view === "lista" ? "border-brand text-fg" : "border-transparent text-fg-muted hover:text-fg"
-          }`}
-        >
-          <MessageCircle size={14} /> Atendimentos
-        </Link>
-        <Link
-          href="/conversas?view=avaliacao"
-          className={`inline-flex items-center gap-1.5 h-9 px-3 text-[13px] font-medium border-b-2 -mb-px transition-colors ${
-            view === "avaliacao" ? "border-brand text-fg" : "border-transparent text-fg-muted hover:text-fg"
-          }`}
-        >
-          <Gauge size={14} /> Avaliação
-        </Link>
-      </div>
+      {/* As duas visões são abas — trocam a tela. Eram abas escritas à mão; agora
+          são as `AbasDeLink` do resto do Connect. */}
+      <AbasDeLink
+        ativa={view}
+        abas={[
+          { chave: "lista", rotulo: "Atendimentos", href: "/conversas", icone: <MessageCircle /> },
+          { chave: "avaliacao", rotulo: "Avaliação", href: "/conversas?view=avaliacao", icone: <Gauge /> },
+        ]}
+      />
 
       {view === "avaliacao" ? <AvaliacaoView ctx={ctx} /> : <ListaAtendimentosView ctx={ctx} params={params} />}
     </PageContainer>
@@ -254,9 +247,9 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
         <div className="bg-surface border border-brand/30 rounded-lg px-4 py-3 mb-4">
           <div className="flex items-center justify-between gap-2 mb-1">
             <p className="text-[12px] font-medium text-brand">Atendimento aberto</p>
-            <Link href="/conversas" className="text-[11.5px] text-fg-muted hover:text-fg transition-colors">
-              ← Voltar à lista
-            </Link>
+            <Button href="/conversas" variant="secondary" size="xs">
+              <ArrowLeft size={11} /> Voltar à lista
+            </Button>
           </div>
           {focusedConversation ? (
             <AtendimentosAccordion atendimentos={[toResumo(focusedConversation)]} defaultOpenId={id} />
@@ -266,35 +259,23 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
         </div>
       )}
 
-      <p className="text-[12px] text-fg-muted -mt-3 mb-3">
+      <p className="text-[12px] text-fg-muted mb-3">
         {totalContacts} contato{totalContacts !== 1 ? "s" : ""}, {totalAtendimentos} atendimento{totalAtendimentos !== 1 ? "s" : ""} nesta página.
       </p>
 
-      {/* Filtros: busca + botão "Filtros" (período/atendente/status em popover, mesmo padrão da lista de tarefas por setor) + canal */}
+      {/* Filtros: busca + botão "Filtros" (período, atendente, status e canal).
+          O canal era uma fileira de pílulas embaixo (até 30/09): filtro mora no
+          botão, não em pílula. */}
       <ConversasFilterBar
         search={search ?? ""}
         status={status ?? ""}
         atendente={atendente ?? ""}
         de={de ?? ""}
         ate={ate ?? ""}
+        canal={canal && channelGroups.has(canal) ? canal : ""}
         assignees={assignees.map((a) => a.assigneeLabel!)}
+        canais={channelLabels.length > 1 ? channelLabels : []}
       />
-
-      {channelLabels.length > 1 && (
-        <div className="flex items-center gap-1 mb-4">
-          {channelLabels.map((label) => (
-            <Link
-              key={label}
-              href={buildUrl({ canal: label === canal ? undefined : label, page: "1" })}
-              className={`inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
-                label === canal ? "bg-surface-2 text-fg border border-border-strong" : "text-fg-muted hover:text-fg hover:bg-surface-2"
-              }`}
-            >
-              {label}
-            </Link>
-          ))}
-        </div>
-      )}
 
       {links.length === 0 && orphanConversations.length === 0 ? (
         <Card>
@@ -359,31 +340,13 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
         </div>
       )}
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <span className="text-[12px] text-fg-muted">
-            Página {pageNum} de {totalPages}
-          </span>
-          <div className="flex gap-1">
-            {pageNum > 1 && (
-              <Link
-                href={buildUrl({ page: String(pageNum - 1) })}
-                className="h-8 px-3 rounded-md text-[12px] text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors flex items-center"
-              >
-                ← Anterior
-              </Link>
-            )}
-            {pageNum < totalPages && (
-              <Link
-                href={buildUrl({ page: String(pageNum + 1) })}
-                className="h-8 px-3 rounded-md text-[12px] text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors flex items-center"
-              >
-                Próxima →
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
+      <Pagination
+        page={pageNum}
+        totalPages={totalPages}
+        buildHref={(p) => buildUrl({ page: String(p) })}
+        total={totalContacts}
+        rotulo={totalContacts === 1 ? "contato" : "contatos"}
+      />
     </>
   );
 }
@@ -556,12 +519,16 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
             <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">{secao.titulo}</h2>
             <p className="text-[length:var(--fs-helper)] text-fg-muted mt-0.5 mb-4">{secao.descricao}</p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border border border-border rounded-lg overflow-hidden mb-4">
-              <StatTile label="Atendimentos avaliados" value={total} />
-              <StatTile label="Nota média" value={Math.round(soma("scoreSum") / total)} />
-              <StatTile label="Escrita média" value={`${Math.round(soma("writingSum") / total)}/50`} />
-              <StatTile label="SLA médio" value={`${Math.round(soma("slaSum") / total)}/50`} />
-            </div>
+            {/* Eram quatro células coladas numa grade de 1px (até 30/09): viraram
+                os cartões de total do resto do Connect. */}
+            <FaixaDeTotais
+              itens={[
+                { rotulo: "Atendimentos avaliados", valor: String(total), icone: <ClipboardCheck /> },
+                { rotulo: "Nota média", valor: String(Math.round(soma("scoreSum") / total)), icone: <Gauge /> },
+                { rotulo: "Escrita média", valor: `${Math.round(soma("writingSum") / total)}/50`, icone: <PenLine /> },
+                { rotulo: "SLA médio", valor: `${Math.round(soma("slaSum") / total)}/50`, icone: <Timer /> },
+              ]}
+            />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {secao.grupos.map((group) => {
@@ -613,11 +580,3 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
   );
 }
 
-function StatTile({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="bg-surface px-4 py-3">
-      <p className="text-[20px] font-semibold text-fg tabular-nums leading-none">{value}</p>
-      <p className="text-[11px] text-fg-muted mt-1.5">{label}</p>
-    </div>
-  );
-}

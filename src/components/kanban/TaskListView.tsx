@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronRight, ChevronDown, Repeat } from "lucide-react";
+import { ChevronRight, ChevronDown, Plus, Repeat } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { formatCalendarDate } from "@/lib/format";
 import { Input } from "@/components/ui/Input";
@@ -62,10 +62,12 @@ type Props = {
 const ITEM_INDENT = 16; // item de 1º nível, medido a partir do cabeçalho de status
 const DEPTH_STEP = 20; // cada nível de subtarefa
 // Coluna da bolinha: precisa comportar recuo + chevron + bolinha no nível mais
-// fundo que a tela usa na prática (2). 96px cobre com folga.
-const DOT_COL = "w-24";
+// fundo que a tela usa na prática (2). 96px cobre com folga — mais os 8px da
+// borda, que eram padding do casco até o polimento de 30/09 e agora são da
+// própria célula (o cabeçalho com fundo precisa encostar na borda).
+const DOT_COL = "w-[104px]";
 // Alinha "+ Adicionar Tarefa" e o alvo de soltar com o texto dos itens.
-const CONTENT_OFFSET = 96;
+const CONTENT_OFFSET = 104;
 
 const PRIORITY_LABEL: Record<number, string> = { 0: "Normal", 1: "Alta", 2: "Urgente" };
 const PRIORITY_COLOR: Record<number, string> = {
@@ -164,9 +166,9 @@ function Row({
         onDrop={onDropOnRow ? (e) => { e.preventDefault(); e.stopPropagation(); onDropOnRow(item.id); } : undefined}
         // A linha divisória vive nos <td>, não no <tr>: com `border-collapse`
         // a borda declarada na linha não pinta de forma confiável.
-        className={`group hover:bg-surface-hover transition-colors [&>td]:border-b [&>td]:border-border/50 ${dragging ? "opacity-40" : ""} ${canAct ? "cursor-grab active:cursor-grabbing" : ""}`}
+        className={`c41-linha group hover:bg-surface-hover transition-colors [&>td]:border-b [&>td]:border-border/50 ${dragging ? "opacity-40" : ""} ${canAct ? "cursor-grab active:cursor-grabbing" : ""}`}
       >
-        <td className={`py-2 pl-2 pr-1 ${DOT_COL}`}>
+        <td className={`py-2 pl-4 pr-1 ${DOT_COL}`}>
           <div className="flex items-center gap-1" style={{ paddingLeft: `${ITEM_INDENT + depth * DEPTH_STEP}px` }}>
             {hasSubtasks ? (
               <IconButton
@@ -256,7 +258,7 @@ function Row({
             tela declaram colSpan={5} em vários pontos (cabeçalho de status,
             alvo de soltar, "+ Adicionar Tarefa"), e uma 6ª coluna obrigaria a
             revisar todos eles para ganhar 24px. */}
-        <td className="py-2 pr-2 w-28 text-right">
+        <td className="py-2 pr-4 w-[120px] text-right">
           <div className="flex items-center justify-end gap-1">
             {dueDate && (
               <span className={`inline-flex items-center gap-1 text-[11px] tnum ${isOverdue(dueDate) ? "text-danger font-semibold" : "text-fg-muted"}`}>
@@ -355,8 +357,9 @@ function TaskCard({
 
           {hasSubtasks && (
             <Button
-              variant="linkMuted"
-              className="flex flex-shrink-0"
+              variant="ghost"
+              size="xs"
+              className="flex-shrink-0 px-1.5"
               onClick={() => setExpanded((v) => !v)}
               aria-label={expanded ? "Recolher subtarefas" : "Expandir subtarefas"}
             >
@@ -538,13 +541,10 @@ function AddTaskInline({ stageId, createTaskAction }: { stageId: string; createT
   }
 
   return (
-    <Button
-      variant="linkMuted"
-      type="button"
-      onClick={() => setAdding(true)}
-      className="text-[12px]"
-    >
-      + Adicionar Tarefa
+    // Era texto solto (linkMuted) até 30/09: é ação, então é botão — fantasma,
+    // para não pesar em cada grupo, e com o texto alinhado ao título dos itens.
+    <Button variant="ghost" size="xs" type="button" onClick={() => setAdding(true)} className="-ml-2.5">
+      <Plus size={11} /> Adicionar Tarefa
     </Button>
   );
 }
@@ -586,7 +586,7 @@ function StageGroup({
       }}
     >
       <tr className="border-t border-border first:border-t-0">
-        <td colSpan={5} className="pt-3 pb-1.5 px-2">
+        <td colSpan={5} className="pt-3 pb-1.5 px-4">
           <StageGroupHeader
             stage={stage}
             count={items.length}
@@ -815,10 +815,12 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
       // Sem padding no topo: o padding do container ficava ACIMA do <thead>
       // sticky, então as linhas rolavam por dentro dessa faixa de 8px e
       // apareciam recortadas por cima do cabeçalho. Agora o respiro superior
-      // vive no próprio <th> (pt-2), que gruda junto.
-      className="scroll-y bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] px-2 pb-2 h-full overflow-y-auto"
+      // vive no próprio <th> (pt-2), que gruda junto. Sem padding dos lados
+      // também (30/09): o cabeçalho com fundo encosta na borda, como na tabela
+      // padrão, e o respiro de 8px passou para a primeira e a última célula.
+      className="scroll-y bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] pb-2 h-full overflow-y-auto"
     >
-      <div className="md:hidden">
+      <div className="md:hidden px-2 pt-2">
         {byStage.map(({ stage, items: stageItems }) => (
           <StageGroupCards
             key={stage.id}
@@ -844,13 +846,18 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
             thead/tr não pinta de forma confiável com position:sticky, e as
             linhas apareciam por trás do cabeçalho ao rolar. A borda inferior
             fecha visualmente a faixa fixa. */}
+        {/* Casco padrão sem a `.c41-tabela` (30/09): ela centraliza tudo, e
+            aqui a primeira coluna é uma árvore — tarefa e subtarefas se leem
+            pelo recuo à esquerda — com cabeçalhos de grupo em colSpan. Fica o
+            resto do padrão: cabeçalho com fundo, borda e fio azul no hover
+            (`c41-linha`). */}
         <thead className="sticky top-0 z-10">
           <tr className="text-left">
-            <th className={`${DOT_COL} bg-surface pt-2 pb-1.5 border-b border-border`} />
-            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-surface pt-2 pb-1.5 px-2 border-b border-border">Tarefa</th>
-            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-surface pt-2 pb-1.5 px-2 w-44 border-b border-border">Tags</th>
-            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-surface pt-2 pb-1.5 px-2 w-24 border-b border-border">Responsáveis</th>
-            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-surface pt-2 pb-1.5 px-2 w-28 text-right border-b border-border">Prazo</th>
+            <th className={`${DOT_COL} bg-table-header-bg pt-2.5 pb-2 border-b border-border`} />
+            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 border-b border-border">Tarefa</th>
+            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 w-44 border-b border-border">Tags</th>
+            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 w-24 border-b border-border">Responsáveis</th>
+            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 pl-2 pr-4 w-[120px] text-right border-b border-border">Prazo</th>
           </tr>
         </thead>
         {byStage.map(({ stage, items: stageItems }) => (

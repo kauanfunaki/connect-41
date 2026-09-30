@@ -68,7 +68,7 @@ export function ModulosDoSetor({
                 <div key={m.code} className="group relative">
                   <Link
                     href={`/setor/${code}/${m.code}`}
-                    className="block h-full bg-surface border border-border rounded-lg p-4 pr-11 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
+                    className="block h-full bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 pr-11 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
                   >
                     <div className="flex items-center gap-2.5">
                       <span
