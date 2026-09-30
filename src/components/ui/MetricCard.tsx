@@ -50,14 +50,14 @@ export function MetricCard({ label, value, href, icon, sub, highlight = false, d
   );
 
   const cls =
-    "reveal-in bg-surface border border-border rounded-lg px-4 py-3.5 flex flex-col gap-2 transition-[border-color,transform]";
+    "reveal-in bg-surface border border-border rounded-lg px-4 py-3.5 flex flex-col gap-2 shadow-[var(--c41-shadow-xs)] transition-[border-color,box-shadow,transform] duration-150";
 
   if (href) {
     return (
       <Link
         href={href}
         style={{ animationDelay: `${delay}ms` }}
-        className={`${cls} hover:border-border-strong hover:-translate-y-0.5`}
+        className={`${cls} hover:border-brand/40 hover:-translate-y-0.5 hover:shadow-[var(--c41-shadow-md)]`}
       >
         {content}
       </Link>

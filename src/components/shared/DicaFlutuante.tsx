@@ -5,8 +5,12 @@ import { createPortal } from "react-dom";
 
 type Dica = { texto: string; x: number; y: number; embaixo: boolean };
 
-/** O que ganha a dica: texto cortado de tabela, `title` de tabela e quem pedir com `data-dica`. */
-const ALVOS = "[data-dica], table .truncate, table [title]";
+/**
+ * O que ganha a dica: texto cortado de tabela, `title` de tabela, quem pedir
+ * com `data-dica` e texto cortado fora de tabela marcado com `c41-cortavel`
+ * (o valor dos cartões de total).
+ */
+const ALVOS = "[data-dica], table .truncate, table [title], .truncate.c41-cortavel";
 const ATRASO_MS = 300;
 
 function cortado(el: HTMLElement): boolean {

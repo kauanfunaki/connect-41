@@ -90,7 +90,7 @@ export function Popover({ trigger, children, align = "left", width = 240, "aria-
             role="dialog"
             aria-label={ariaLabel}
             style={{ width, top: pos?.top ?? -9999, left: pos?.left ?? -9999 }}
-            className="fixed z-50 bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] p-3 text-left text-[length:var(--fs-dropdown)]"
+            className="c41-surgir fixed z-50 bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] p-3 text-left text-[length:var(--fs-dropdown)]"
           >
             {typeof children === "function" ? children({ close }) : children}
           </div>,

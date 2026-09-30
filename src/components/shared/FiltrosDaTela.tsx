@@ -55,6 +55,7 @@ export function FiltrosDaTela({ campos, className = "" }: { campos: CampoDeFiltr
   }
 
   const ativos = campos.filter((c) => params.get(c.chave));
+  const umSo = campos.length === 1;
   const campo = campos.find((c) => c.chave === campoAberto) ?? campos[0];
   const valorAtual = campo ? (params.get(campo.chave) ?? "") : "";
 
@@ -74,12 +75,13 @@ export function FiltrosDaTela({ campos, className = "" }: { campos: CampoDeFiltr
 
   return (
     <div className={`flex flex-wrap items-center gap-2 ${className}`.trim()}>
-      <FilterButton activeCount={ativos.length} align="left" width={460}>
+      <FilterButton activeCount={ativos.length} align="left" width={umSo ? 300 : 460}>
         {({ close }) => (
           <div className="flex flex-col gap-2 -m-1">
-            <div className="flex min-h-[248px]">
-              {/* Os campos: cada um diz o que está escolhido nele agora. */}
-              <ul className="w-[150px] flex-shrink-0 border-r border-border pr-2 flex flex-col gap-0.5">
+            <div className={`flex ${umSo ? "" : "min-h-[248px]"}`}>
+              {/* Os campos: cada um diz o que está escolhido nele agora. Com um
+                  campo só (o portal), a coluna não tem o que escolher e some. */}
+              <ul className={`w-[150px] flex-shrink-0 border-r border-border pr-2 flex flex-col gap-0.5 ${umSo ? "hidden" : ""}`}>
                 {campos.map((c) => {
                   const ativo = c.chave === campo?.chave;
                   return (
@@ -108,7 +110,10 @@ export function FiltrosDaTela({ campos, className = "" }: { campos: CampoDeFiltr
 
               {/* As opções do campo escolhido. */}
               {campo && (
-                <div className="flex-1 min-w-0 pl-2 flex flex-col gap-1.5">
+                <div className={`flex-1 min-w-0 flex flex-col gap-1.5 ${umSo ? "" : "pl-2"}`}>
+                  {umSo && (
+                    <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-fg-muted">{campo.rotulo}</p>
+                  )}
                   {campo.opcoes.length > COM_BUSCA && (
                     <Input
                       compact
