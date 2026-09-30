@@ -155,10 +155,12 @@ export default async function AdminPage() {
               {cards
                 .filter((c) => c.group === groupKey)
                 .map((c) => (
+                  // Sombra em repouso e o cartão que sobe no hover — o mesmo
+                  // atalho das telas de setor (polimento de 30/09).
                   <Link
                     key={c.href}
                     href={c.href}
-                    className="group bg-surface border border-border rounded-lg p-5 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
+                    className="group bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 hover:border-brand/40 hover:-translate-y-0.5 hover:shadow-[var(--c41-shadow-md)] transition-[border-color,box-shadow,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
                   >
                     <span className="inline-flex w-10 h-10 rounded-lg items-center justify-center mb-4 bg-brand-subtle text-brand">
                       {c.icon}

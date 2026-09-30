@@ -70,9 +70,10 @@ export default async function SectorFolderPage({ params }: { params: Promise<{ c
         <span className="text-[13px] text-fg">{folder.name}</span>
       </div>
 
-      <div className="flex items-center justify-between mb-6 mt-1">
-      <PageHeader title={folder.name} />
-        {canCreate && <NewListButton action={createListAction} />}
+      {/* A ação mora no `action` do PageHeader (30/09): o cabeçalho estava
+          aninhado numa linha própria, com a margem dele somada à da linha. */}
+      <div className="mt-1">
+        <PageHeader title={folder.name} action={canCreate && <NewListButton action={createListAction} />} />
       </div>
 
       <div>

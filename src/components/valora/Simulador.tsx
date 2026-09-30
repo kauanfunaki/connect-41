@@ -153,27 +153,31 @@ export function Simulador({
         <Card className="p-4">
           <details>
             <summary className="text-[13px] font-semibold cursor-pointer">Detalhamento por atividade</summary>
-            <div className="overflow-x-auto mt-3">
+            {/* Casco padrão dentro do cartão (30/09); a atividade, texto
+                corrido com o código na frente, fica à esquerda. */}
+            <div className="c41-tabela overflow-x-auto rounded-lg border border-border mt-3">
               <table className="w-full min-w-[560px] text-[12px]">
                 <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-                    <th className="py-2 pr-3 font-medium">Atividade</th>
-                    <th className="py-2 pr-3 font-medium text-right">Vezes/mês</th>
-                    <th className="py-2 pr-3 font-medium text-right">Min por vez</th>
-                    <th className="py-2 font-medium text-right">Min/mês</th>
+                  <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-wide text-fg-muted">
+                    <th className="px-3">Atividade</th>
+                    <th className="px-3">Vezes/mês</th>
+                    <th className="px-3">Min por vez</th>
+                    <th className="px-3">Min/mês</th>
                   </tr>
                 </thead>
                 <tbody>
                   {r.setores.flatMap((s) =>
                     s.atividades.map((a) => (
-                      <tr key={`${s.codigo}-${a.id}`} className="border-b border-border-soft">
-                        <td className="py-1.5 pr-3">
-                          <span className="text-fg-muted tabular-nums mr-2">{a.id}</span>
-                          {a.nome}
+                      <tr key={`${s.codigo}-${a.id}`} className="border-b border-border">
+                        <td className="px-3">
+                          <span className="block text-left">
+                            <span className="text-fg-muted tabular-nums mr-2">{a.id}</span>
+                            {a.nome}
+                          </span>
                         </td>
-                        <td className="py-1.5 pr-3 text-right tabular-nums">{num(a.vezesMes, 2)}</td>
-                        <td className="py-1.5 pr-3 text-right tabular-nums">{num(a.minutosExecucao)}</td>
-                        <td className="py-1.5 text-right tabular-nums">{num(a.minutosMes)}</td>
+                        <td className="px-3 tabular-nums">{num(a.vezesMes, 2)}</td>
+                        <td className="px-3 tabular-nums">{num(a.minutosExecucao)}</td>
+                        <td className="px-3 tabular-nums">{num(a.minutosMes)}</td>
                       </tr>
                     )),
                   )}

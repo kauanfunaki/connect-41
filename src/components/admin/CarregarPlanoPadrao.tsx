@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Download } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { carregarPlanoPadrao } from "@/app/(app)/admin/plano-de-contas/actions";
 
@@ -14,10 +15,12 @@ export function CarregarPlanoPadrao() {
   const [pendente, startTransition] = useTransition();
 
   if (!confirmando) {
+    // Secundário com ícone: no cabeçalho, o primário é "+ Nova categoria" —
+    // dois azuis cheios lado a lado não diziam qual era a ação da tela.
     return (
       <span className="inline-flex items-center gap-2">
-        <Button size="sm" onClick={() => { setMensagem(null); setConfirmando(true); }}>
-          Carregar o plano padrão da 41
+        <Button variant="secondary" onClick={() => { setMensagem(null); setConfirmando(true); }}>
+          <Download size={14} /> Carregar o plano padrão da 41
         </Button>
         {mensagem && <span className={`text-[12px] ${mensagem.ok ? "text-success" : "text-danger"}`}>{mensagem.texto}</span>}
       </span>
@@ -40,7 +43,7 @@ export function CarregarPlanoPadrao() {
       >
         Carregar
       </Button>
-      <Button variant="linkMuted" size="xs" onClick={() => setConfirmando(false)}>
+      <Button variant="secondary" size="sm" onClick={() => setConfirmando(false)}>
         Cancelar
       </Button>
     </span>

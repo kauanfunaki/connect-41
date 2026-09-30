@@ -40,13 +40,9 @@ export function NewListButton({ action }: Props) {
               <Textarea id="list-description" name="description" rows={3} placeholder="Opcional" autoFocus />
             </CampoForm>
           ) : (
-            <Button
-              variant="linkMuted"
-              type="button"
-              onClick={() => setShowDescription(true)}
-              className="text-[12px]"
-            >
-              + descrição
+            // Era texto solto (30/09): abre um campo, então é botão.
+            <Button variant="secondary" size="xs" type="button" onClick={() => setShowDescription(true)}>
+              <Plus size={11} /> descrição
             </Button>
           )}
           {state?.error && <p className="text-[12px] text-danger">{state.error}</p>}

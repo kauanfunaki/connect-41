@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Columns3, List, Search } from "lucide-react";
+import { Columns3, List, Search, X } from "lucide-react";
 import { KanbanBoard } from "@/components/kanban/KanbanBoard";
 import { TaskListView, type TaskRow, type StageOption } from "@/components/kanban/TaskListView";
 import { Select } from "@/components/ui/Select";
@@ -199,16 +199,18 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
           </div>
         </FilterButton>
 
+        {/* Era texto solto (30/09): ação é botão, no desenho do "Limpar filtros
+            das colunas" das tabelas. */}
         {activeFilterCount > 0 && (
           <Button
-            variant="linkMuted"
+            variant="secondary"
+            size="xs"
             type="button"
             onClick={() => {
             setSearch(""); setAssigneeFilter(""); setCreatorFilter(""); setTagFilter(""); setPriorityFilter(""); setDueFilter("");
             }}
-            className="text-[12px]"
           >
-            Limpar filtros
+            <X size={11} /> Limpar filtros
           </Button>
         )}
 

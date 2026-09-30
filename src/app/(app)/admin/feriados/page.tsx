@@ -5,7 +5,7 @@ import { CalendarDays } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { formatCalendarDate } from "@/lib/format";
-import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
+import { AcoesDoItem } from "@/components/admin/AcoesDoItem";
 import { AddFeriadoForm } from "@/components/admin/AddFeriadoForm";
 import { ImportFeriadosButton } from "@/components/admin/ImportFeriadosButton";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -51,8 +51,14 @@ export default async function FeriadosPage() {
             <div key={f.id} className="flex items-center justify-between px-4 py-2.5">
               <p className="text-[13px] text-fg">{f.name}</p>
               <div className="flex items-center gap-3">
-                <span className="text-[12px] text-fg-muted">{formatCalendarDate(f.date)}</span>
-                <DeleteFieldButton action={excluirFeriado.bind(null, f.id)} nome={f.name} />
+                <span className="text-[12px] text-fg-muted tnum">{formatCalendarDate(f.date)}</span>
+                {/* Excluir no "⋯" (polimento de 30/09): era texto vermelho colado na data. */}
+                <AcoesDoItem
+                  excluir={{
+                    action: excluirFeriado.bind(null, f.id),
+                    titulo: `Excluir o feriado "${f.name}"?`,
+                  }}
+                />
               </div>
             </div>
           ))}

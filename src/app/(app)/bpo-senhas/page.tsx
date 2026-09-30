@@ -37,14 +37,11 @@ export default async function BpoSenhasPage() {
     <PageContainer>
       <BackButton className="mb-3" />
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
-      <PageHeader title="Repositório de Senhas" />
-          <p className="text-[13px] text-fg-muted mt-1">
-            Credenciais de portais, bancos e sistemas de clientes — centralizadas com auditoria de acesso.
-          </p>
-        </div>
-      </div>
+      {/* Subtítulo no próprio PageHeader (30/09) — estava escrito à parte. */}
+      <PageHeader
+        title="Repositório de Senhas"
+        subtitle="Credenciais de portais, bancos e sistemas de clientes — centralizadas com auditoria de acesso."
+      />
 
       <BpoCredentialsList
         credentials={credentials.map((c) => ({

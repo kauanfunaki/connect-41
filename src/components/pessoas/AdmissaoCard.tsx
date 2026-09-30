@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
-import { UserPlus } from "lucide-react";
+import { RefreshCw, UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { gerarLinkAdmissao, concluirAdmissao } from "@/app/(app)/pessoas/[id]/admissao-actions";
 
@@ -116,12 +116,10 @@ export function AdmissaoCard({ personId, initialLink, canManage }: Props) {
           </div>
           {emailNote && <p className="text-[12px] text-fg-muted mb-3">{emailNote}</p>}
           {canManage && (
-            <Button
-              variant="linkMuted"
-              className="text-[12px] underline disabled:opacity-60"
-              onClick={handleGerar}
-              disabled={pending}
-            >
+            // Era texto sublinhado (até 30/09) — é uma ação, e das que desfazem
+            // algo (invalida o link enviado): botão, para não passar por prosa.
+            <Button variant="secondary" size="xs" onClick={handleGerar} disabled={pending}>
+              <RefreshCw size={11} />
               {pending ? "Gerando…" : "Gerar novo link (invalida o atual)"}
             </Button>
           )}

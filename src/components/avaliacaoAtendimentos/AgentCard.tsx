@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { MessageCircle, ChevronRight, Sparkles, EyeOff } from "lucide-react";
-import Link from "next/link";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { SlideOver } from "@/components/ui/SlideOver";
 import { ScoreRing } from "@/components/avaliacaoAtendimentos/ScoreRing";
@@ -102,7 +101,7 @@ export function AgentCard({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group text-left bg-surface border border-border rounded-lg p-5 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
+        className="group text-left bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
       >
         <AvatarImage src={avatarUrl} name={label} size={44} bordered={false} className="mb-3" />
         <p className="text-[14px] font-semibold text-fg truncate">{label}</p>
@@ -133,22 +132,21 @@ export function AgentCard({
               <h3 className="text-[12px] font-semibold text-fg-muted uppercase tracking-wide mb-1.5">Justificativa da IA</h3>
               <p className="text-[13.5px] text-fg leading-relaxed whitespace-pre-wrap">{selected.reasoning}</p>
             </div>
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <Link
-                href={`/conversas?id=${selected.conversationLocalId}`}
-                className="inline-flex items-center gap-1.5 text-[13px] font-medium text-brand hover:underline"
-              >
+            {/* Eram dois links sublinhados (30/09): as duas são ações, e tirar
+                da avaliação muda a nota de alguém — botão de perigo. */}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <Button href={`/conversas?id=${selected.conversationLocalId}`} variant="secondary" size="sm">
                 <MessageCircle size={14} /> Abrir conversa em Conversas
-              </Link>
+              </Button>
               {excludeConversationAction && (
-                <button
-                  type="button"
+                <Button
+                  variant="danger"
+                  size="sm"
                   disabled={excluindo}
                   onClick={() => void excluirAtendimento(selected.conversationLocalId)}
-                  className="inline-flex items-center gap-1.5 text-[13px] font-medium text-danger hover:underline disabled:opacity-60"
                 >
                   <EyeOff size={14} /> {excluindo ? "Tirando…" : "Tirar da avaliação"}
-                </button>
+                </Button>
               )}
             </div>
             {erroExclusao && <p className="text-[12.5px] text-danger">{erroExclusao}</p>}
@@ -177,13 +175,8 @@ export function AgentCard({
                   <Sparkles size={12} className="text-brand" /> Resumo geral
                 </h3>
                 {canGenerateSummary && (
-                  <Button
-                    variant="link"
-                    className="text-[11.5px] font-medium disabled:opacity-60 flex-shrink-0"
-                    onClick={handleGenerateSummary}
-                    disabled={isPending}
-                  >
-                    {isPending ? "Gerando…" : summary ? "Atualizar" : "Gerar resumo"}
+                  <Button variant="secondary" size="xs" className="flex-shrink-0" onClick={handleGenerateSummary} disabled={isPending}>
+                    <Sparkles size={11} /> {isPending ? "Gerando…" : summary ? "Atualizar" : "Gerar resumo"}
                   </Button>
                 )}
               </div>

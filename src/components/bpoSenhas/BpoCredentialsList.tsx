@@ -3,7 +3,11 @@
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Eye, EyeOff, Copy, Pencil, Trash2, Plus, KeyRound, Search } from "lucide-react";
+import { Eye, EyeOff, Copy, Pencil, Trash2, Plus, KeyRound, Search, MoreHorizontal } from "lucide-react";
+import { IconButton } from "@/components/ui/IconButton";
+import { Popover, ItemDoMenu } from "@/components/ui/Popover";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { Modal } from "@/components/ui/Modal";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
@@ -157,6 +161,52 @@ function EditCredentialModal({
   );
 }
 
+/**
+ * Editar e excluir a credencial: "Editar" em botão, e o Excluir no "⋯" — era
+ * um par de ícones soltos (até 30/09), e a lixeira ficava a um clique
+ * acidental do lápis. Mesmo desenho das linhas de Cadastros.
+ */
+function AcoesDaCredencial({ onEditar, onExcluir }: { onEditar: () => void; onExcluir: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+      <Button variant="secondary" size="xs" onClick={onEditar}>
+        <Pencil size={11} /> Editar
+      </Button>
+      <Popover
+        align="right"
+        width={180}
+        aria-label="Mais ações da credencial"
+        trigger={({ open, toggle }) => (
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label="Mais ações"
+            aria-expanded={open}
+            className={`h-7 w-7 rounded-md border inline-flex items-center justify-center transition-colors ${
+              open ? "border-brand/40 bg-brand-subtle text-fg" : "border-border-strong text-fg-muted hover:text-fg hover:bg-surface-hover"
+            }`}
+          >
+            <MoreHorizontal size={14} />
+          </button>
+        )}
+      >
+        {({ close }) => (
+          <ItemDoMenu
+            icone={<Trash2 />}
+            danger
+            onClick={() => {
+              close();
+              onExcluir();
+            }}
+          >
+            Excluir
+          </ItemDoMenu>
+        )}
+      </Popover>
+    </span>
+  );
+}
+
 function PasswordCell({ credentialId, revealAction }: { credentialId: string; revealAction: Props["revealAction"] }) {
   const [password, setPassword] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -178,19 +228,19 @@ function PasswordCell({ credentialId, revealAction }: { credentialId: string; re
   return (
     <div className="flex items-center gap-1.5">
       <span className="tnum text-fg-secondary">{password ?? "••••••••"}</span>
-      <Button
-        variant="linkMuted"
-        className="p-1"
+      <IconButton
+        size="sm"
         onClick={() => (password ? setPassword(null) : reveal())}
         disabled={isPending}
         aria-label={password ? "Ocultar senha" : "Revelar senha"}
+        title={password ? "Ocultar senha" : "Revelar senha"}
       >
         {password ? <EyeOff size={13} /> : <Eye size={13} />}
-      </Button>
+      </IconButton>
       {password && (
-        <Button variant="linkMuted" className="p-1" onClick={copy} aria-label="Copiar senha">
+        <IconButton size="sm" onClick={copy} aria-label="Copiar senha" title="Copiar senha">
           <Copy size={13} />
-        </Button>
+        </IconButton>
       )}
     </div>
   );
@@ -252,55 +302,98 @@ export function BpoCredentialsList({ credentials, companies, canManage, createAc
           <EmptyState icon={<KeyRound />} title="Nenhuma credencial encontrada" description="Tente ajustar a busca." />
         </Card>
       ) : (
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
-        <div className="scroll-x overflow-x-auto">
-          <table className="w-full min-w-[760px] text-[length:var(--fs-body)]">
-            <thead>
-              <tr className="border-b border-border bg-table-header-bg">
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Título</th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Empresa</th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Usuário</th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Senha</th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Criada por</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {filteredCredentials.map((row) => (
-                <tr key={row.id} className="border-b border-border last:border-0 hover:bg-surface-hover transition-colors">
-                  <td className="px-4 py-3 font-medium text-fg">
-                    {row.title}
-                    {row.url && (
-                      <a href={row.url} target="_blank" rel="noopener noreferrer" className="block text-[11px] text-brand hover:underline truncate max-w-[220px]">
-                        {row.url}
-                      </a>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-fg-secondary">{row.companyName ?? "Geral"}</td>
-                  <td className="px-4 py-3 text-fg-secondary">{row.username ?? "—"}</td>
-                  <td className="px-4 py-3"><PasswordCell credentialId={row.id} revealAction={revealAction} /></td>
-                  <td className="px-4 py-3 text-fg-secondary">
-                    {row.createdByName}
-                    <span className="block text-[11px] text-fg-muted">{row.createdAtLabel}</span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {canManage && (
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="linkMuted" className="p-1.5" onClick={() => setEditingId(row.id)} aria-label="Editar">
-                          <Pencil size={14} />
-                        </Button>
-                        <button type="button" onClick={() => handleDelete(row)} className="text-fg-muted hover:text-danger p-1.5" aria-label="Excluir">
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    )}
-                  </td>
+      // Tabela no casco padrão, com funil em Empresa e Criada por (30/09) — a
+      // lista inteira já está aqui, então o funil filtra no navegador, junto
+      // com a busca. No celular, cartões: a tabela de 760px rolava de lado.
+      <>
+        <CartoesNoCelular>
+          {filteredCredentials.map((row) => (
+            <Cartao key={row.id}>
+              <TopoDoCartao nome={row.title} />
+              <InfoDoCartao>
+                {row.companyName ?? "Geral"}
+                {row.username ? ` · ${row.username}` : ""}
+              </InfoDoCartao>
+              {row.url && (
+                <a href={row.url} target="_blank" rel="noopener noreferrer" className="block text-[11px] text-brand hover:underline truncate">
+                  {row.url}
+                </a>
+              )}
+              <div className="mt-1.5">
+                <PasswordCell credentialId={row.id} revealAction={revealAction} />
+              </div>
+              <PeDoCartao>
+                <span className="text-[11.5px] text-fg-muted">
+                  {row.createdByName} · {row.createdAtLabel}
+                </span>
+                {canManage && (
+                  <span className="ml-auto">
+                    <AcoesDaCredencial onEditar={() => setEditingId(row.id)} onExcluir={() => handleDelete(row)} />
+                  </span>
+                )}
+              </PeDoCartao>
+            </Cartao>
+          ))}
+        </CartoesNoCelular>
+
+        <TabelaFiltravel
+          linhas={filteredCredentials.map((row) => ({
+            id: row.id,
+            valores: { empresa: row.companyName ?? "Geral", criador: row.createdByName },
+          }))}
+        >
+          <TabelaNoDesktop padrao>
+            <table className="w-full min-w-[760px] text-[length:var(--fs-body)]">
+              <thead>
+                <tr className="border-b border-border text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                  <th className="px-4 py-3">Título</th>
+                  <th className="px-4 py-3">
+                    <FiltroDaColuna rotulo="Empresa" chave="empresa" />
+                  </th>
+                  <th className="px-4 py-3">Usuário</th>
+                  <th className="px-4 py-3">Senha</th>
+                  <th className="px-4 py-3">
+                    <FiltroDaColuna rotulo="Criada por" chave="criador" align="right" />
+                  </th>
+                  {canManage && (
+                    <th className="px-4 py-3">
+                      <span className="sr-only">Ações</span>
+                    </th>
+                  )}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+              </thead>
+              <tbody>
+                {filteredCredentials.map((row) => (
+                  <LinhaFiltravel key={row.id} id={row.id} className="border-b border-border">
+                    <td className="px-4 py-3 font-medium text-fg">
+                      {row.title}
+                      {row.url && (
+                        <a href={row.url} target="_blank" rel="noopener noreferrer" className="block text-[11px] font-normal text-brand hover:underline truncate max-w-[220px]" title={row.url}>
+                          {row.url}
+                        </a>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-fg-secondary">{row.companyName ?? "Geral"}</td>
+                    <td className="px-4 py-3 text-fg-secondary">{row.username ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      <PasswordCell credentialId={row.id} revealAction={revealAction} />
+                    </td>
+                    <td className="px-4 py-3 text-fg-secondary">
+                      {row.createdByName}
+                      <span className="block text-[11px] text-fg-muted">{row.createdAtLabel}</span>
+                    </td>
+                    {canManage && (
+                      <td className="px-4 py-3">
+                        <AcoesDaCredencial onEditar={() => setEditingId(row.id)} onExcluir={() => handleDelete(row)} />
+                      </td>
+                    )}
+                  </LinhaFiltravel>
+                ))}
+              </tbody>
+            </table>
+          </TabelaNoDesktop>
+        </TabelaFiltravel>
+      </>
       )}
 
       {editingRow && (

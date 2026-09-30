@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import Link from "next/link";
 import { Textarea } from "@/components/ui/Textarea";
 import { CampoForm as Field } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
@@ -112,12 +111,10 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
         >
           {isPending ? "Adicionando…" : "Adicionar"}
         </Button>
-        <Link
-          href={cancelHref}
-          className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
-        >
+        {/* Era um Link estilizado à mão (30/09): o Cancelar é o botão secundário. */}
+        <Button href={cancelHref} variant="secondary">
           Cancelar
-        </Link>
+        </Button>
       </div>
     </form>
   );

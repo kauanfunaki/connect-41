@@ -1,18 +1,24 @@
 "use client";
 
 import { usePathname, useSearchParams } from "next/navigation";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { BellRing, Clock, LayoutDashboard, Users } from "lucide-react";
+import { AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
 
 type Aba = "painel" | "alertas" | "coordenadores" | "horas";
 
-const ABAS: { key: Aba; label: string; href: string }[] = [
-  { key: "painel", label: "Painel", href: "/gestao" },
-  { key: "alertas", label: "Alertas", href: "/gestao/alertas" },
-  { key: "coordenadores", label: "Coordenadores", href: "/gestao/coordenadores" },
-  { key: "horas", label: "Horas de operação", href: "/gestao/horas" },
+const ABAS: { chave: Aba; rotulo: string; href: string; icone: React.ReactNode }[] = [
+  { chave: "painel", rotulo: "Painel", href: "/gestao", icone: <LayoutDashboard /> },
+  { chave: "alertas", rotulo: "Alertas", href: "/gestao/alertas", icone: <BellRing /> },
+  { chave: "coordenadores", rotulo: "Coordenadores", href: "/gestao/coordenadores", icone: <Users /> },
+  { chave: "horas", rotulo: "Horas de operação", href: "/gestao/horas", icone: <Clock /> },
 ];
 
-/** As abas da Gestão. O filtro de setor acompanha a troca de aba. */
+/**
+ * As abas da Gestão. O filtro de setor acompanha a troca de aba.
+ *
+ * Eram um `SegmentedControl` (até 30/09) — o mesmo desenho dos seletores que
+ * mudam um valor. Aba troca a tela, e tem o desenho de aba do Connect.
+ */
 export function AbasDaGestao() {
   const pathname = usePathname();
   const params = useSearchParams();
@@ -25,10 +31,9 @@ export function AbasDaGestao() {
         ? "horas"
         : "painel";
   return (
-    <SegmentedControl<Aba>
-      label="Telas da Gestão"
-      active={ativa}
-      items={ABAS.map((a) => ({ ...a, href: setor ? `${a.href}?setor=${encodeURIComponent(setor)}` : a.href }))}
+    <AbasDeLink
+      abas={ABAS.map((a) => ({ ...a, href: setor ? `${a.href}?setor=${encodeURIComponent(setor)}` : a.href }))}
+      ativa={ativa}
     />
   );
 }

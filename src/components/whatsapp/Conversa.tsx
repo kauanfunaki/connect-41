@@ -102,8 +102,11 @@ export function Conversa({ conversa, agora, candidaturas, userId }: Props) {
                 Assumir
               </Button>
             )}
+            {/* "Soltar" e o "Cancelar" do encerramento eram texto cinza, e o
+                "desfazer" do vínculo, texto azul (30/09): botão não é link. Só
+                o desenho mudou — as ações são as mesmas. */}
             {soltar.pode && (
-              <Button variant="linkMuted" size="sm" disabled={ocupado} onClick={() => correr(() => soltarConversa(conversa.id))}>
+              <Button variant="secondary" size="sm" disabled={ocupado} onClick={() => correr(() => soltarConversa(conversa.id))}>
                 Soltar
               </Button>
             )}
@@ -160,7 +163,7 @@ export function Conversa({ conversa, agora, candidaturas, userId }: Props) {
             >
               Encerrar
             </Button>
-            <Button variant="linkMuted" size="sm" disabled={ocupado} onClick={fecharPainel}>
+            <Button variant="secondary" size="sm" disabled={ocupado} onClick={fecharPainel}>
               Cancelar
             </Button>
             <p className="basis-full text-[11px] text-fg-muted">
@@ -187,14 +190,14 @@ export function Conversa({ conversa, agora, candidaturas, userId }: Props) {
           <div className="flex flex-wrap items-center gap-2 text-[12px] text-fg-secondary">
             <Link2 size={13} />
             Ligada a uma candidatura.
-            <button
-              type="button"
-              className="text-brand hover:underline inline-flex items-center gap-1"
+            <Button
+              variant="secondary"
+              size="xs"
               disabled={ocupado}
               onClick={() => correr(() => desvincularCandidatura(conversa.id))}
             >
-              <Unlink size={12} /> desfazer
-            </button>
+              <Unlink size={11} /> desfazer
+            </Button>
             {conversa.ficha && <FichaNaConversa ficha={conversa.ficha} />}
           </div>
         ) : (

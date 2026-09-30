@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Trash2, X } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { getRecentLinkedIds, pushRecentLinkedId } from "@/lib/kanbanRecentLinks";
 import { IconButton } from "@/components/ui/IconButton";
@@ -99,13 +99,9 @@ export function LinkedItemsSection({ canAct, basePath, links, candidates, create
             )}
           </div>
         ) : (
-          <Button
-            variant="linkMuted"
-            type="button"
-            onClick={() => setPicking(true)}
-            className="text-[12px]"
-          >
-            + Vincular tarefa
+          // Era texto solto (30/09): ação é botão.
+          <Button variant="secondary" size="xs" type="button" onClick={() => setPicking(true)}>
+            <Plus size={11} /> Vincular tarefa
           </Button>
         )
       )}

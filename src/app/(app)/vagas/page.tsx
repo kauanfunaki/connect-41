@@ -2,26 +2,48 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Briefcase } from "lucide-react";
+import { ArrowRight, Briefcase, CheckCircle2, DoorOpen, Loader, XCircle } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { VagaStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
-import { CompanyFilterSelect } from "@/components/shared/CompanyFilterSelect";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Pagination } from "@/components/shared/Pagination";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
+import { FiltroDaColunaNaUrl } from "@/components/shared/FiltroDeColunas";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
+import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { formatInstantDate } from "@/lib/format";
+import { lerLista } from "@/lib/filtrosDaListaDeEmpresas";
 import { VAGA_STATUS_LABEL, VAGA_STATUS_STYLE, VAGA_STATUS_ORDER } from "@/lib/vagaStatus";
 
 const PER_PAGE = 30;
 
+// O rótulo do cartão vai no plural — o cartão conta vagas, o selo nomeia uma.
+const ROTULO_DO_CARTAO: Record<VagaStatus, string> = {
+  ABERTA: "Abertas",
+  EM_ANDAMENTO: "Em andamento",
+  ENCERRADA: "Encerradas",
+  CANCELADA: "Canceladas",
+};
+
+const ICONE_DO_STATUS: Record<VagaStatus, React.ReactNode> = {
+  ABERTA: <DoorOpen />,
+  EM_ANDAMENTO: <Loader />,
+  ENCERRADA: <CheckCircle2 />,
+  CANCELADA: <XCircle />,
+};
+
 export default async function VagasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; sectorCode?: string; companyId?: string; page?: string }>;
+  searchParams: Promise<{ status?: string; sectorCode?: string | string[]; companyId?: string; page?: string }>;
 }) {
   const { status, sectorCode, companyId, page } = await searchParams;
+  // Funil da coluna Setor (30/09): parâmetro repetido, um por setor escolhido.
+  const setores = lerLista(sectorCode);
   const ctx = await getAuthContext();
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
 
@@ -32,14 +54,17 @@ export default async function VagasPage({
 
   const pageNum = Math.max(1, parseInt(page ?? "1"));
   const prisma = getPrisma();
-  const where = {
-    ...scopedVagaWhere(ctx),
-    ...(statusFilter ? { status: statusFilter } : {}),
-    ...(sectorCode ? { sectorCode } : {}),
-    ...(companyId ? { companyId } : {}),
-  };
 
-  const [vagas, total, companies] = await Promise.all([
+  // O setor da URL entra num `AND` com o escopo, e não por cima dele: antes era
+  // `{ ...scopedVagaWhere(ctx), sectorCode }`, e o `sectorCode` da URL
+  // substituía o `sectorCode: { in: [...] }` do escopo — quem digitasse outro
+  // setor no endereço via as vagas dele.
+  const base = { ...scopedVagaWhere(ctx), ...(companyId ? { companyId } : {}) };
+  const ondeSetor = setores.length > 0 ? { sectorCode: { in: setores } } : {};
+  const ondeStatus = statusFilter ? { status: statusFilter } : {};
+  const where = { AND: [base, ondeSetor, ondeStatus] };
+
+  const [vagas, total, companies, porStatus, porSetor] = await Promise.all([
     prisma.vaga.findMany({
       where,
       orderBy: { openedAt: "desc" },
@@ -56,19 +81,44 @@ export default async function VagasPage({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
+    // Os cartões contam cada situação sem o filtro de situação (senão, com
+    // "Abertas" escolhido, os outros três cartões mostrariam zero); o funil de
+    // setor conta sem o próprio filtro, em cascata com o resto.
+    prisma.vaga.groupBy({ by: ["status"], where: { AND: [base, ondeSetor] }, _count: { _all: true } }),
+    prisma.vaga.groupBy({ by: ["sectorCode"], where: { AND: [base, ondeStatus] }, _count: { _all: true } }),
   ]);
   const totalPages = Math.ceil(total / PER_PAGE);
 
+  const contagem = Object.fromEntries(VAGA_STATUS_ORDER.map((s) => [s, 0])) as Record<VagaStatus, number>;
+  for (const g of porStatus) contagem[g.status] = g._count._all;
+  const semFiltroDeStatus = VAGA_STATUS_ORDER.reduce((soma, s) => soma + contagem[s], 0);
+
+  const rotuloDoSetor = (code: string) => sectorLabels[code] ?? code;
+  const opcoesDeSetor = porSetor
+    .map((g) => ({ valor: g.sectorCode, rotulo: rotuloDoSetor(g.sectorCode), n: g._count._all }))
+    .sort((a, b) => a.rotulo.localeCompare(b.rotulo, "pt-BR", { sensitivity: "base" }));
+
+  // Carrega o funil (parâmetro repetido) junto: sem ele, virar a página ou
+  // clicar num cartão apagava o filtro de setor.
   function buildUrl(overrides: Record<string, string | undefined>) {
     const q = new URLSearchParams();
-    const merged = { status, sectorCode, companyId, page, ...overrides };
+    const merged = { status, companyId, page, ...overrides };
     for (const [k, v] of Object.entries(merged)) if (v) q.set(k, v);
-    return `/vagas?${q.toString()}`;
+    for (const s of setores) q.append("sectorCode", s);
+    const s = q.toString();
+    return s ? `/vagas?${s}` : "/vagas";
   }
 
   const canCreateAny = vagas.length === 0
     ? true // ainda não dá pra saber o setor; o form em /vagas/novo faz a checagem real
     : vagas.some((v) => canManageSector(ctx, v.sectorCode));
+
+  const seloDoStatus = (s: VagaStatus) => (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap ${VAGA_STATUS_STYLE[s]}`}>
+      {VAGA_STATUS_LABEL[s]}
+    </span>
+  );
+  const candidatos = (n: number) => `${n} candidato${n !== 1 ? "s" : ""}`;
 
   return (
     <PageContainer>
@@ -84,40 +134,40 @@ export default async function VagasPage({
           </Button>
         )}</>}
       />
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
-        {/* "Todas" é um chip de verdade e fica ativo quando não há filtro — antes
-            nenhum chip aparecia selecionado nesse estado, e a única saída era um
-            link "Limpar" que só existia depois de filtrar. */}
-        <div className="flex items-center gap-1 flex-wrap" role="group" aria-label="Filtrar por status">
-          <Link
-            href={buildUrl({ status: undefined, page: undefined })}
-            aria-current={!statusFilter ? "true" : undefined}
-            className={`inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
-              !statusFilter
-                ? "bg-surface-2 text-fg border border-border-strong"
-                : "text-fg-muted hover:text-fg hover:bg-surface-2"
-            }`}
-          >
-            Todas
-          </Link>
-          {VAGA_STATUS_ORDER.map((s) => (
-            <Link
-              key={s}
-              href={buildUrl({ status: s, page: undefined })}
-              aria-current={statusFilter === s ? "true" : undefined}
-              className={`inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
-                statusFilter === s
-                  ? "bg-surface-2 text-fg border border-border-strong"
-                  : "text-fg-muted hover:text-fg hover:bg-surface-2"
-              }`}
-            >
-              {VAGA_STATUS_LABEL[s]}
-            </Link>
-          ))}
-        </div>
 
-        <CompanyFilterSelect companies={companies} value={companyId ?? ""} />
-      </div>
+      {/* As quatro situações em cartão, com a contagem, e cada uma abre o seu
+          recorte — eram pílulas sem número (conferência de 30/09). Clicar no
+          cartão do recorte aberto volta para todas. */}
+      <FaixaDeTotais
+        itens={VAGA_STATUS_ORDER.map((s) => ({
+          rotulo: ROTULO_DO_CARTAO[s],
+          valor: String(contagem[s]),
+          icone: ICONE_DO_STATUS[s],
+          tom: s === "ENCERRADA" || s === "CANCELADA" ? "text-fg-muted" : undefined,
+          detalhe: statusFilter === s ? "mostrando agora" : undefined,
+          href: buildUrl({ status: statusFilter === s ? undefined : s, page: undefined }),
+        }))}
+      />
+
+      {/* Situação e empresa no botão "Filtros" — eram pílulas e um select que
+          navegava sozinho. Setor é o funil da coluna. */}
+      <FiltrosDaTela
+        className="mb-4"
+        campos={[
+          {
+            chave: "status",
+            rotulo: "Situação",
+            vazioLabel: `Todas (${semFiltroDeStatus})`,
+            opcoes: VAGA_STATUS_ORDER.map((s) => ({ value: s, label: `${VAGA_STATUS_LABEL[s]} (${contagem[s]})` })),
+          },
+          {
+            chave: "companyId",
+            rotulo: "Empresa",
+            vazioLabel: "Todas as empresas",
+            opcoes: companies.map((c) => ({ value: c.id, label: c.name })),
+          },
+        ]}
+      />
 
       {vagas.length === 0 ? (
         <Card>
@@ -138,31 +188,93 @@ export default async function VagasPage({
           />
         </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
-          {vagas.map((v) => (
-            <Link
-              key={v.id}
-              href={`/vagas/${v.id}`}
-              className="flex items-center justify-between px-4 py-3 hover:bg-surface-2 transition-colors"
-            >
-              <div>
-                <div className="flex items-center gap-2 mb-0.5">
-                  <p className="text-[13px] text-fg font-medium">{v.title}</p>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${VAGA_STATUS_STYLE[v.status]}`}>
-                    {VAGA_STATUS_LABEL[v.status]}
-                  </span>
-                </div>
-                <p className="text-[12px] text-fg-muted">
-                  {v.company.name} · {sectorLabels[v.sectorCode] ?? v.sectorCode} · {v._count.candidaturas} candidato{v._count.candidaturas !== 1 ? "s" : ""}
-                </p>
-              </div>
-              <span className="text-[12px] text-fg-muted">{v.quantity} vaga{v.quantity !== 1 ? "s" : ""}</span>
-            </Link>
-          ))}
-        </div>
+        <>
+          <CartoesNoCelular>
+            {vagas.map((v) => (
+              <Link key={v.id} href={`/vagas/${v.id}`} className="block">
+                <Cartao className="hover:border-brand/40 transition-colors">
+                  <TopoDoCartao nome={v.title} />
+                  <InfoDoCartao>
+                    {v.company.name} · {rotuloDoSetor(v.sectorCode)}
+                  </InfoDoCartao>
+                  <PeDoCartao>
+                    {seloDoStatus(v.status)}
+                    <span className="text-[11.5px] text-fg-muted tabular-nums">{candidatos(v._count.candidaturas)}</span>
+                    <span className="ml-auto text-[11.5px] text-fg-muted tabular-nums">
+                      {v.quantity} vaga{v.quantity !== 1 ? "s" : ""}
+                    </span>
+                  </PeDoCartao>
+                </Cartao>
+              </Link>
+            ))}
+          </CartoesNoCelular>
+
+          {/* Era uma lista de linhas-link, com setor, candidatos e quantidade
+              numa frase só (até 30/09). Virou tabela no padrão do Connect —
+              centralizada, com o funil de setor. A lista é paginada, então o
+              funil filtra no servidor (`FiltroDaColunaNaUrl`). */}
+          <TabelaNoDesktop padrao>
+            <table className="w-full table-fixed min-w-[900px] text-[length:var(--fs-ui)]">
+              <colgroup>
+                <col />
+                <col className="w-[160px]" />
+                <col className="w-[132px]" />
+                <col className="w-[112px]" />
+                <col className="w-[104px]" />
+                <col className="w-[112px]" />
+                <col className="w-[96px]" />
+              </colgroup>
+              <thead>
+                <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                  <th className="px-4 py-3">Vaga</th>
+                  <th className="px-4 py-3">
+                    <FiltroDaColunaNaUrl rotulo="Setor" chave="sectorCode" opcoes={opcoesDeSetor} />
+                  </th>
+                  <th className="px-4 py-3">Situação</th>
+                  <th className="px-4 py-3">Candidatos</th>
+                  <th className="px-4 py-3">Quantidade</th>
+                  <th className="px-4 py-3">Aberta em</th>
+                  <th className="px-4 py-3">
+                    <span className="sr-only">Abrir</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {vagas.map((v) => (
+                  <tr key={v.id} className="border-b border-border">
+                    <td className="px-4 py-3 min-w-0">
+                      <Link
+                        href={`/vagas/${v.id}`}
+                        className="block font-semibold text-fg hover:text-brand transition-colors truncate"
+                        title={v.title}
+                      >
+                        {v.title}
+                      </Link>
+                      <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate" title={v.company.name}>
+                        {v.company.name}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-fg-secondary truncate" title={rotuloDoSetor(v.sectorCode)}>
+                      {rotuloDoSetor(v.sectorCode)}
+                    </td>
+                    <td className="px-4 py-3">{seloDoStatus(v.status)}</td>
+                    <td className="px-4 py-3 text-fg-secondary">{v._count.candidaturas}</td>
+                    <td className="px-4 py-3 text-fg-secondary">{v.quantity}</td>
+                    <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{formatInstantDate(v.openedAt)}</td>
+                    <td className="px-4 py-3">
+                      <Button href={`/vagas/${v.id}`} variant="secondary" size="xs">
+                        Abrir <ArrowRight size={11} />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TabelaNoDesktop>
+        </>
       )}
 
-      <Pagination page={pageNum} totalPages={totalPages} buildHref={(p) => buildUrl({ page: String(p) })} />
+      <Pagination page={pageNum} totalPages={totalPages} buildHref={(p) => buildUrl({ page: String(p) })} total={total} rotulo="vagas" />
     </PageContainer>
   );
 }

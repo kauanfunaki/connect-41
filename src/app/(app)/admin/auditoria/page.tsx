@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
@@ -6,11 +5,12 @@ import { ScrollText } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
+import { Pagination } from "@/components/shared/Pagination";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
 import { formatInstantDateTime } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { AuditoriaFilters } from "@/components/admin/AuditoriaFilters";
 import { Button } from "@/components/ui/Button";
 
 const ACTION_LABEL: Record<string, string> = {
@@ -150,35 +150,50 @@ export default async function AuditoriaPage({
           exclusão em Empresas, Pessoas, Transferências e Configurações.</>}
       />
 
-      <AuditoriaFilters
-        users={users.map((u) => ({ value: u.id, label: u.name }))}
-        actions={actionRows.map((r) => ({ value: r.action, label: ACTION_LABEL[r.action] ?? r.action }))}
-        entityTypes={entityTypeRows.map((r) => ({ value: r.entityType as string, label: r.entityType as string }))}
-        userId={userId ?? ""}
-        action={action ?? ""}
-        entityType={entityType ?? ""}
-      />
-
-      <form method="GET" action="/admin/auditoria" className="flex items-end gap-3 mb-4">
-        {userId && <input type="hidden" name="userId" value={userId} />}
-        {action && <input type="hidden" name="action" value={action} />}
-        {entityType && <input type="hidden" name="entityType" value={entityType} />}
-        <div>
-          <label className="block text-[11px] text-fg-muted mb-1">De</label>
-          <Input type="date" name="from" defaultValue={from ?? ""} className="w-auto" />
-        </div>
-        <div>
-          <label className="block text-[11px] text-fg-muted mb-1">Até</label>
-          <Input type="date" name="to" defaultValue={to ?? ""} className="w-auto" />
-        </div>
-        <Button
-          variant="secondary"
-          size="md"
-          type="submit"
-        >
-          Filtrar
-        </Button>
-      </form>
+      {/* Usuário, ação e entidade no botão "Filtros" — eram três selects que
+          navegavam sozinhos, com um "Limpar filtros" em texto cinza. O período
+          fica ao lado, porque data se digita, não se escolhe numa lista
+          (conferência de 30/09). */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <FiltrosDaTela
+          campos={[
+            {
+              chave: "userId",
+              rotulo: "Usuário",
+              vazioLabel: "Todos os usuários",
+              opcoes: users.map((u) => ({ value: u.id, label: u.name })),
+            },
+            {
+              chave: "action",
+              rotulo: "Ação",
+              vazioLabel: "Todas as ações",
+              opcoes: actionRows.map((r) => ({ value: r.action, label: ACTION_LABEL[r.action] ?? r.action })),
+            },
+            {
+              chave: "entityType",
+              rotulo: "Entidade",
+              vazioLabel: "Todas as entidades",
+              opcoes: entityTypeRows.map((r) => ({ value: r.entityType as string, label: r.entityType as string })),
+            },
+          ]}
+        />
+        <form method="GET" action="/admin/auditoria" className="flex flex-wrap items-center gap-2">
+          {userId && <input type="hidden" name="userId" value={userId} />}
+          {action && <input type="hidden" name="action" value={action} />}
+          {entityType && <input type="hidden" name="entityType" value={entityType} />}
+          <Input compact type="date" name="from" defaultValue={from ?? ""} className="w-40" aria-label="De" />
+          <span className="text-[12px] text-fg-muted">a</span>
+          <Input compact type="date" name="to" defaultValue={to ?? ""} className="w-40" aria-label="Até" />
+          <Button type="submit" variant="secondary" size="sm">
+            Filtrar período
+          </Button>
+          {(from || to) && (
+            <Button href={buildUrl({ from: undefined, to: undefined, page: undefined })} variant="ghost" size="sm">
+              Limpar período
+            </Button>
+          )}
+        </form>
+      </div>
 
       {logs.length === 0 ? (
         <Card>
@@ -188,62 +203,62 @@ export default async function AuditoriaPage({
           />
         </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
-          {logs.map((log) => {
-            const detail = describeMetadata(log.metadata);
-            return (
-              <div key={log.id} className="flex items-start justify-between gap-4 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-[13px] text-fg">
-                    <span className="font-medium">{log.user.name}</span>{" "}
-                    {ACTION_LABEL[log.action] ?? log.action}
-                    {log.entityType && (
-                      <Badge variant="info" className="ml-2">
-                        {log.entityType}
-                      </Badge>
-                    )}
-                  </p>
-                  {detail && <p className="text-[11px] text-fg-muted font-mono mt-0.5 truncate">{detail}</p>}
-                </div>
-                <span className="text-[12px] text-fg-muted tnum flex-shrink-0">
-                  {formatInstantDateTime(log.createdAt, {
-                    day: "2-digit",
-                    month: "short",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-              </div>
-            );
-          })}
+        // Tabela no casco padrão (era uma lista de linhas soltas). Sem funil
+        // nas colunas: a trilha é paginada no servidor, e usuário, ação e
+        // entidade já estão no botão "Filtros" logo acima.
+        <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
+          <table className="w-full min-w-[760px] text-[13px]">
+            <thead>
+              <tr className="border-b border-border text-[11px] uppercase tracking-wide text-fg-muted">
+                <th className="px-4 py-3">Quando</th>
+                <th className="px-4 py-3">Usuário</th>
+                <th className="px-4 py-3">Ação</th>
+                <th className="px-4 py-3">Entidade</th>
+                <th className="px-4 py-3">Detalhe</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map((log) => {
+                const detail = describeMetadata(log.metadata);
+                return (
+                  <tr key={log.id} className="border-b border-border">
+                    <td className="px-4 py-3 text-fg-muted whitespace-nowrap">
+                      {formatInstantDateTime(log.createdAt, {
+                        day: "2-digit",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </td>
+                    <td className="px-4 py-3 font-medium text-fg">{log.user.name}</td>
+                    <td className="px-4 py-3 text-fg-secondary">{ACTION_LABEL[log.action] ?? log.action}</td>
+                    <td className="px-4 py-3">
+                      {log.entityType ? <Badge variant="info">{log.entityType}</Badge> : <span className="text-fg-muted">—</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      {detail ? (
+                        <span className="block max-w-[320px] text-[11px] text-fg-muted font-mono truncate" title={detail}>
+                          {detail}
+                        </span>
+                      ) : (
+                        <span className="text-fg-muted">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <span className="text-[12px] text-fg-muted">
-            Página {pageNum} de {totalPages}
-          </span>
-          <div className="flex gap-1">
-            {pageNum > 1 && (
-              <Link
-                href={buildUrl({ page: String(pageNum - 1) })}
-                className="h-8 px-3 rounded-md text-[12px] text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors flex items-center"
-              >
-                ← Anterior
-              </Link>
-            )}
-            {pageNum < totalPages && (
-              <Link
-                href={buildUrl({ page: String(pageNum + 1) })}
-                className="h-8 px-3 rounded-md text-[12px] text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors flex items-center"
-              >
-                Próxima →
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
+      <Pagination
+        page={pageNum}
+        totalPages={totalPages}
+        buildHref={(p) => buildUrl({ page: String(p) })}
+        total={total}
+        rotulo={total === 1 ? "ação" : "ações"}
+      />
     </PageContainer>
   );
 }

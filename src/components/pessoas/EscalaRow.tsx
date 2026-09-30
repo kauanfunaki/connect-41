@@ -2,28 +2,13 @@
 
 import { useActionState, useState } from "react";
 import type { ScheduleState } from "@/app/(app)/pessoas/[id]/escala/actions";
-import { ScheduleStatus } from "@/generated/prisma/enums";
+import type { ScheduleStatus } from "@/generated/prisma/enums";
 import { Select } from "@/components/ui/Select";
-import { useConfirm } from "@/components/ui/useConfirm";
 import { Button } from "@/components/ui/Button";
+import { MenuDoRegistro } from "./MenuDoRegistro";
+import { SITUACAO_DA_ESCALA, COR_DA_ESCALA } from "./rotulosDoDP";
 
-const STATUS_LABEL: Record<ScheduleStatus, string> = {
-  PLANEJADA:  "Planejada",
-  CONFIRMADA: "Confirmada",
-  ALTERADA:   "Alterada",
-  CANCELADA:  "Cancelada",
-  REALIZADA:  "Realizada",
-};
-
-const STATUS_STYLE: Record<ScheduleStatus, string> = {
-  PLANEJADA:  "bg-surface-2 text-fg-muted border-border",
-  CONFIRMADA: "bg-brand/10 text-brand border-brand/25",
-  ALTERADA:   "bg-warning/10 text-warning border-warning/25",
-  CANCELADA:  "bg-danger/10 text-danger border-danger/25",
-  REALIZADA:  "bg-success/10 text-success border-success/25",
-};
-
-const STATUS_OPTIONS = Object.keys(STATUS_LABEL) as ScheduleStatus[];
+const STATUS_OPTIONS = Object.keys(SITUACAO_DA_ESCALA) as ScheduleStatus[];
 
 export type EscalaItem = {
   id: string;
@@ -44,20 +29,23 @@ type Props = {
 export function EscalaRow({ escala, updateAction, removeAction, canManage }: Props) {
   const [state, formAction, isPending] = useActionState(updateAction, null);
   const [status, setStatus] = useState(escala.status);
-  const { dialog, requestConfirm } = useConfirm();
 
   return (
     <div className="py-3 border-b border-border last:border-0">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <p className="text-[13px] text-fg">
           {escala.dateLabel}
           {escala.shiftName && ` — ${escala.shiftName}`}
           {escala.dayOff && " · Folga"}
           {escala.isHoliday && " · Feriado"}
         </p>
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${STATUS_STYLE[escala.status]}`}>
-          {STATUS_LABEL[escala.status]}
-        </span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${COR_DA_ESCALA[escala.status]}`}>
+            {SITUACAO_DA_ESCALA[escala.status]}
+          </span>
+          {/* Remover saiu de ao lado do "Atualizar" para o "⋯" (30/09). */}
+          {canManage && <MenuDoRegistro titulo="Remover este dia da escala?" onRemover={removeAction} />}
+        </div>
       </div>
 
       {canManage && (
@@ -69,7 +57,7 @@ export function EscalaRow({ escala, updateAction, removeAction, canManage }: Pro
               onChange={(e) => setStatus(e.target.value as ScheduleStatus)}
             >
               {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+                <option key={s} value={s}>{SITUACAO_DA_ESCALA[s]}</option>
               ))}
             </Select>
           </div>
@@ -81,18 +69,10 @@ export function EscalaRow({ escala, updateAction, removeAction, canManage }: Pro
           >
             {isPending ? "Salvando…" : "Atualizar"}
           </Button>
-          <Button
-            variant="danger"
-            size="md"
-            onClick={() => requestConfirm({ title: "Remover este dia da escala?", destructive: true, confirmLabel: "Remover" }, removeAction)}
-          >
-            Remover
-          </Button>
         </form>
       )}
 
       {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
-      {dialog}
     </div>
   );
 }

@@ -12,6 +12,8 @@ import { DetailSection } from "@/components/kanban/DetailSection";
 import { TaskFieldsPanel } from "@/components/kanban/TaskFieldsPanel";
 import { CompletionBanner } from "@/components/kanban/CompletionBanner";
 import { DeleteTaskButton } from "@/components/kanban/DeleteTaskButton";
+import { Button } from "@/components/ui/Button";
+import { ArrowRight } from "lucide-react";
 import {
   moverItem,
   adicionarNota,
@@ -301,24 +303,19 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
           </h1>
           {canDelete && <DeleteTaskButton entityName={title} deleteAction={deleteAction} />}
         </div>
-        {entity && !item.title && (
-          <Link
-            href={item.entityType === "COMPANY" ? `/empresas/${entity.id}` : `/pessoas/${entity.id}`}
-            className="text-[13px] text-brand hover:underline"
-          >
-            Ver ficha completa →
-          </Link>
-        )}
-        {entity && item.title && (
-          <p className="text-[13px] text-fg-muted">
-            {entity.name} ·{" "}
-            <Link
+        {/* "Ver ficha completa" era link azul (30/09): botão não é link. O nome
+            da empresa/pessoa segue ao lado quando a tarefa tem título próprio. */}
+        {entity && (
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            {item.title && <span className="text-[13px] text-fg-muted">{entity.name}</span>}
+            <Button
               href={item.entityType === "COMPANY" ? `/empresas/${entity.id}` : `/pessoas/${entity.id}`}
-              className="text-brand hover:underline"
+              variant="secondary"
+              size="xs"
             >
-              Ver ficha completa →
-            </Link>
-          </p>
+              Ver ficha completa <ArrowRight size={11} />
+            </Button>
+          </div>
         )}
       </div>
 

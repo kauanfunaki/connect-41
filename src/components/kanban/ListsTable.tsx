@@ -22,50 +22,83 @@ type Props = {
   deleteAction?: (pipelineId: string) => Promise<PipelineState>;
 };
 
-// Layout em tabela da seção "Listas" (Espaço e Pasta): Nome | Cor | Progresso
-// X/Y | Início | Término.
+const DATA_CURTA = { day: "2-digit", month: "short" } as const;
+
+/**
+ * A seção "Listas" do Espaço e da Pasta: Lista | Progresso X/Y | Início | Término.
+ *
+ * Era uma pilha de linhas-link sem cabeçalho (até 30/09) — as duas datas
+ * apareciam lado a lado sem dizer qual era qual. Virou tabela no casco padrão
+ * (`.c41-tabela`), com o nome como link e o "…" na última célula; antes o menu
+ * flutuava por cima da linha, porque a linha inteira era um <Link> e botão
+ * dentro de link é HTML inválido. Sem funil: o nome é único e são poucas listas
+ * por espaço. No celular ficam só o nome e o menu, como antes.
+ */
 export function ListsTable({ lists, basePath, deleteAction }: Props) {
   if (lists.length === 0) return null;
 
   return (
-    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
-      {lists.map((l) => {
-        const pct = l.total > 0 ? Math.round((l.done / l.total) * 100) : 0;
-        return (
-          // O menu é irmão do <Link> (ver DeleteEntityMenu) — daí o wrapper
-          // relativo em vez de um <Link> direto como filho do divide-y.
-          <div key={l.id} className="relative">
-            <Link
-              href={`${basePath}/${l.id}`}
-              className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-hover transition-colors"
-            >
-              <span className="w-[9px] h-[9px] rounded-full flex-shrink-0" style={{ background: l.color ?? "#586577" }} />
-              <span className="flex-1 min-w-0 truncate text-[13px] text-fg font-medium">{l.name}</span>
-              {l.total > 0 && (
-                <div className="hidden sm:flex items-center gap-2 flex-shrink-0 w-32">
-                  <div className="flex-1 h-1.5 rounded-full bg-surface-hover overflow-hidden">
-                    <div className="h-full bg-brand" style={{ width: `${pct}%` }} />
-                  </div>
-                  <span className="text-[11px] text-fg-muted tnum flex-shrink-0">{l.done}/{l.total}</span>
-                </div>
-              )}
-              <span className="text-[11px] text-fg-muted flex-shrink-0 w-20 hidden md:inline">
-                {l.startDate ? formatCalendarDate(l.startDate, { day: "2-digit", month: "short" }) : "—"}
-              </span>
-              <span className="text-[11px] text-fg-muted flex-shrink-0 w-20 hidden md:inline">
-                {l.endDate ? formatCalendarDate(l.endDate, { day: "2-digit", month: "short" }) : "—"}
-              </span>
-              {/* Reserva a faixa do menu para o conteúdo não passar por baixo dele. */}
-              {deleteAction && <span className="w-6 flex-shrink-0" />}
-            </Link>
+    <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
+      <table className="w-full text-[length:var(--fs-ui)]">
+        <thead>
+          <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+            <th className="px-4 py-3">Lista</th>
+            <th className="px-4 py-3 w-44 hidden sm:table-cell">Progresso</th>
+            <th className="px-4 py-3 w-28 hidden md:table-cell">Início</th>
+            <th className="px-4 py-3 w-28 hidden md:table-cell">Término</th>
             {deleteAction && (
-              <div className="absolute top-1/2 -translate-y-1/2 right-3">
-                <DeleteEntityMenu kind="lista" name={l.name} action={deleteAction.bind(null, l.id)} />
-              </div>
+              <th className="px-4 py-3 w-14">
+                <span className="sr-only">Ações</span>
+              </th>
             )}
-          </div>
-        );
-      })}
+          </tr>
+        </thead>
+        <tbody>
+          {lists.map((l) => {
+            const pct = l.total > 0 ? Math.round((l.done / l.total) * 100) : 0;
+            return (
+              <tr key={l.id} className="border-b border-border">
+                <td className="px-4 py-2.5">
+                  <Link
+                    href={`${basePath}/${l.id}`}
+                    className="inline-flex items-center gap-2 max-w-full font-medium text-fg hover:text-brand transition-colors"
+                  >
+                    <span className="w-[9px] h-[9px] rounded-full flex-shrink-0" style={{ background: l.color ?? "#586577" }} />
+                    <span className="truncate max-w-[28rem]" title={l.name}>
+                      {l.name}
+                    </span>
+                  </Link>
+                </td>
+                <td className="px-4 py-2.5 hidden sm:table-cell">
+                  {l.total > 0 ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-24 h-1.5 rounded-full bg-surface-hover overflow-hidden">
+                        <div className="h-full bg-brand" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-[11px] text-fg-muted tnum flex-shrink-0">
+                        {l.done}/{l.total}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-fg-muted">—</span>
+                  )}
+                </td>
+                <td className="px-4 py-2.5 text-[12px] text-fg-muted whitespace-nowrap hidden md:table-cell">
+                  {l.startDate ? formatCalendarDate(l.startDate, DATA_CURTA) : "—"}
+                </td>
+                <td className="px-4 py-2.5 text-[12px] text-fg-muted whitespace-nowrap hidden md:table-cell">
+                  {l.endDate ? formatCalendarDate(l.endDate, DATA_CURTA) : "—"}
+                </td>
+                {deleteAction && (
+                  <td className="px-4 py-2.5">
+                    <DeleteEntityMenu kind="lista" name={l.name} action={deleteAction.bind(null, l.id)} />
+                  </td>
+                )}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }

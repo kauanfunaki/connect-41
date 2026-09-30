@@ -2,13 +2,14 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
-import { Eye, Download, PenLine } from "lucide-react";
+import { Eye, Download, PenLine, Pencil } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
-import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
+import { DeleteButton } from "@/components/ui/DeleteButton";
+import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
 import { PublishDocumentButton } from "@/components/documentosCliente/PublishDocumentButton";
@@ -59,35 +60,38 @@ export default async function DocumentoClienteDetailPage({
       </div>
       <BackButton className="mb-3" />
 
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-      <PageHeader title={document.title} />
-            <Badge variant={document.status === "PUBLISHED" ? "success" : "warning"}>
-              {document.status === "PUBLISHED" ? "Publicado" : "Rascunho"}
-            </Badge>
-            {document.requiresSignature && <Badge variant="info">Requer assinatura</Badge>}
-          </div>
-          <p className="text-[13px] text-fg-muted">
-            criado por {document.createdBy.name} em {formatInstantDate(document.createdAt)}
-          </p>
-        </div>
-        {canManage && (
-          <div className="flex items-center gap-3 flex-shrink-0">
-            {document.status === "DRAFT" && (
-              <>
-                <Link href={`/empresas/${companyId}/documentos-cliente/${document.id}/editar`} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-                  Editar
-                </Link>
-                {document.recipients.length === 0 && (
-                  <DeleteFieldButton action={excluirDocumento.bind(null, document.id, companyId)} nome={document.title} />
-                )}
-                <PublishDocumentButton action={publicarDocumento.bind(null, document.id, companyId)} />
-              </>
-            )}
-          </div>
-        )}
-      </div>
+      {/* O PageHeader estava aninhado dentro de uma linha com os selos, e as
+          ações eram "Editar" e "Excluir" em texto (30/09): agora é o cabeçalho
+          padrão, com os selos junto do título e as ações em botão. */}
+      <PageHeader
+        title={
+          <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            {document.title}
+            <span className="inline-flex items-center gap-2">
+              <Badge variant={document.status === "PUBLISHED" ? "success" : "warning"}>
+                {document.status === "PUBLISHED" ? "Publicado" : "Rascunho"}
+              </Badge>
+              {document.requiresSignature && <Badge variant="info">Requer assinatura</Badge>}
+            </span>
+          </span>
+        }
+        subtitle={<>criado por {document.createdBy.name} em {formatInstantDate(document.createdAt)}</>}
+        action={
+          canManage &&
+          document.status === "DRAFT" && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button href={`/empresas/${companyId}/documentos-cliente/${document.id}/editar`} variant="secondary" size="sm">
+                <Pencil size={14} />
+                Editar
+              </Button>
+              {document.recipients.length === 0 && (
+                <DeleteButton action={excluirDocumento.bind(null, document.id, companyId)} nome={document.title} />
+              )}
+              <PublishDocumentButton action={publicarDocumento.bind(null, document.id, companyId)} />
+            </div>
+          )
+        }
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-5">

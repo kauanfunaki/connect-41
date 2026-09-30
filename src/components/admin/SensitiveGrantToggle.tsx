@@ -31,8 +31,10 @@ export function SensitiveGrantToggle({ action, granted, label }: Props) {
         checked ? "bg-brand border-brand" : "bg-surface-2 border-border"
       }`}
     >
+      {/* `left-0` explícito: dentro do casco padrão a célula centraliza o
+          conteúdo flex, e sem ele a bolinha partiria do meio do trilho. */}
       <span
-        className={`absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${
+        className={`absolute top-0.5 left-0 h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${
           checked ? "translate-x-[18px]" : "translate-x-0.5"
         }`}
       />

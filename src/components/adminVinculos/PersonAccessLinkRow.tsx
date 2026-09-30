@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Select } from "@/components/ui/Select";
+import { LinhaFiltravel } from "@/components/shared/FiltroDeColunas";
 
 export type LinkableUser = { id: string; name: string; email: string };
 export type LinkableAgent = { id: string; chatwootAgentName: string; linkedUserId: string | null };
@@ -57,44 +58,57 @@ export function PersonAccessLinkRow({
 
   const user = users.find((u) => u.id === userId);
 
+  // Uma linha da tabela de vínculos (era uma fileira de flex com cabeçalho de
+  // mentira até 30/09). `LinhaFiltravel` some quando o funil das colunas não a
+  // deixa passar.
   return (
-    <div className="flex items-center gap-4 px-4 py-3">
-      <Link href={`/pessoas/${personId}`} className="flex-1 min-w-0 text-[13.5px] text-fg hover:text-brand transition-colors truncate">
-        {personName}
-      </Link>
+    <LinhaFiltravel id={personId} className="border-b border-border">
+      <td className="px-4 py-3">
+        <Link
+          href={`/pessoas/${personId}`}
+          className="block max-w-[280px] text-[13.5px] text-fg hover:text-brand transition-colors truncate"
+          title={personName}
+        >
+          {personName}
+        </Link>
+      </td>
 
-      <div className="w-56 flex-shrink-0">
-        {canEdit ? (
-          <Select value={userId} disabled={isPending} onChange={(e) => handleUserChange(e.target.value)}>
-            <option value="">Não vinculado</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-            ))}
-          </Select>
-        ) : (
-          <p className="text-[13px] text-fg truncate">{user ? `${user.name} (${user.email})` : "Não vinculado"}</p>
-        )}
-      </div>
-
-      {agentLinks && (
-        <div className="w-56 flex-shrink-0">
+      <td className="px-4 py-3">
+        <div className="w-56 mx-auto">
           {canEdit ? (
-            <Select
-              value={agentLinkId}
-              disabled={isPending || !userId}
-              title={!userId ? "Vincule uma conta primeiro" : undefined}
-              onChange={(e) => handleAgentChange(e.target.value)}
-            >
+            <Select value={userId} disabled={isPending} onChange={(e) => handleUserChange(e.target.value)}>
               <option value="">Não vinculado</option>
-              {agentLinks.map((a) => (
-                <option key={a.id} value={a.id}>{a.chatwootAgentName}</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
               ))}
             </Select>
           ) : (
-            <p className="text-[13px] text-fg truncate">{currentAgentLink?.chatwootAgentName ?? "Não vinculado"}</p>
+            <p className="text-[13px] text-fg truncate">{user ? `${user.name} (${user.email})` : "Não vinculado"}</p>
           )}
         </div>
+      </td>
+
+      {agentLinks && (
+        <td className="px-4 py-3">
+          <div className="w-56 mx-auto">
+            {canEdit ? (
+              <Select
+                value={agentLinkId}
+                disabled={isPending || !userId}
+                title={!userId ? "Vincule uma conta primeiro" : undefined}
+                onChange={(e) => handleAgentChange(e.target.value)}
+              >
+                <option value="">Não vinculado</option>
+                {agentLinks.map((a) => (
+                  <option key={a.id} value={a.id}>{a.chatwootAgentName}</option>
+                ))}
+              </Select>
+            ) : (
+              <p className="text-[13px] text-fg truncate">{currentAgentLink?.chatwootAgentName ?? "Não vinculado"}</p>
+            )}
+          </div>
+        </td>
       )}
-    </div>
+    </LinhaFiltravel>
   );
 }

@@ -93,13 +93,15 @@ export function NotaDaTriagem({
             </span>
           </div>
           {ultima.resumo && <p className="text-[13px] text-fg-secondary mb-3">{ultima.resumo}</p>}
-          <div className="overflow-x-auto">
+          {/* Casco padrão dentro do cartão (`.c41-tabela`, polimento de
+              30/09): cabeçalho com fundo, respiro nas pontas e centralizada. */}
+          <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
             <table className="w-full min-w-[620px] text-[12px]">
               <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-                  <th className="py-2 pr-3 font-medium">Requisito</th>
-                  <th className="py-2 pr-3 font-medium">Veredito</th>
-                  <th className="py-2 font-medium">Evidência no currículo</th>
+                <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                  <th className="py-2 px-3">Requisito</th>
+                  <th className="py-2 px-3">Veredito</th>
+                  <th className="py-2 px-3">Evidência no currículo</th>
                 </tr>
               </thead>
               <tbody>
@@ -108,14 +110,14 @@ export function NotaDaTriagem({
                   const v: Veredito = a?.veredito ?? "SEM_EVIDENCIA";
                   return (
                     <tr key={r.id} className="border-b border-border-soft align-top">
-                      <td className="py-1.5 pr-3">
+                      <td className="py-1.5 px-3">
                         {r.texto}
                         <span className="block text-[11px] text-fg-muted">
                           {r.tipo === "OBRIGATORIO" ? "obrigatório" : "desejável"} · peso {r.peso}
                         </span>
                       </td>
-                      <td className={`py-1.5 pr-3 font-medium ${COR_DO_VEREDITO[v]}`}>{ROTULO_DO_VEREDITO[v]}</td>
-                      <td className="py-1.5 text-fg-secondary">{a?.evidencia || "—"}</td>
+                      <td className={`py-1.5 px-3 font-medium whitespace-nowrap ${COR_DO_VEREDITO[v]}`}>{ROTULO_DO_VEREDITO[v]}</td>
+                      <td className="py-1.5 px-3 text-fg-secondary">{a?.evidencia || "—"}</td>
                     </tr>
                   );
                 })}

@@ -104,6 +104,12 @@ export default async function EmpresasPage({
   };
   const where = { AND: [whereBase, ondeRegime, ondeLocal] };
   const temFiltroDeColuna = regimes.length > 0 || locais.length > 0;
+  const semFiltroDeColuna = (() => {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries({ search, status, cliente })) if (v) q.set(k, v);
+    const texto = q.toString();
+    return texto ? `/empresas?${texto}` : "/empresas";
+  })();
 
   // Quantas estão escondidas agora — a tela avisa em vez de deixar o usuário achar
   // que a base encolheu.
@@ -239,8 +245,14 @@ export default async function EmpresasPage({
                 : "Comece cadastrando a primeira empresa do tenant."
             }
             action={
-              !search && !statusFilter && !temFiltroDeColuna && canCreate ? (
-                <Link href="/empresas/nova"><Button>+ Nova Empresa</Button></Link>
+              // O funil some junto com a tabela quando esvazia a lista: sem este
+              // botão, a pessoa ficava sem como desfazer o filtro das colunas.
+              temFiltroDeColuna ? (
+                <Button href={semFiltroDeColuna} variant="secondary" size="sm">
+                  Limpar filtros das colunas
+                </Button>
+              ) : !search && !statusFilter && canCreate ? (
+                <Button href="/empresas/nova">+ Nova Empresa</Button>
               ) : undefined
             }
           />

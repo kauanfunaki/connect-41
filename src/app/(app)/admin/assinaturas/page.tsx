@@ -1,13 +1,13 @@
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Building2 } from "lucide-react";
+import { Building2, Receipt } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { AssinaturaRow } from "@/components/admin/AssinaturaRow";
 import { EmptyState } from "@/components/ui/EmptyState";
-import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 
 export default async function AssinaturasPage() {
   const ctx = await getAuthContext();
@@ -31,17 +31,17 @@ export default async function AssinaturasPage() {
 
   return (
     <PageContainer>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-      <PageHeader title="Assinaturas" />
-          <p className="text-[13px] text-fg-muted mt-0.5">
-            Plano, modo de gestão e status de cobrança de cada cliente.
-          </p>
-        </div>
-        <Link href="/admin/planos" className="text-[12px] text-brand hover:underline flex-shrink-0">
-          Gerenciar catálogo de planos →
-        </Link>
-      </div>
+      {/* O atalho para o catálogo era texto azul com seta ao lado do título;
+          no cabeçalho, ação é botão (polimento de 30/09). */}
+      <PageHeader
+        title="Assinaturas"
+        subtitle="Plano, modo de gestão e status de cobrança de cada cliente."
+        action={
+          <Button href="/admin/planos" variant="secondary">
+            <Receipt size={14} /> Gerenciar catálogo de planos
+          </Button>
+        }
+      />
 
       {tenants.length === 0 ? (
         <Card>

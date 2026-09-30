@@ -1,35 +1,33 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { ItemDoMenu } from "@/components/ui/Popover";
+import { AcoesDoCadastro } from "@/components/empresas/AcoesDoCadastro";
 import type { SocioState } from "@/app/(app)/empresas/[id]/socios/actions";
+
+type AcaoDaSaida = (prev: SocioState, form: FormData) => Promise<SocioState>;
 
 /**
  * Registrar a saída do sócio sem abrir o formulário inteiro: só a data. O
  * sócio passa para "Ex-sócios" e deixa de contar na viabilidade.
  */
-export function RegistrarSaidaDoSocio({
+function FormDaSaida({
   socioId,
   companyId,
   nome,
   action,
+  onVoltar,
 }: {
   socioId: string;
   companyId: string;
   nome: string;
-  action: (prev: SocioState, form: FormData) => Promise<SocioState>;
+  action: AcaoDaSaida;
+  onVoltar: () => void;
 }) {
-  const [aberto, setAberto] = useState(false);
   const [state, formAction, pendente] = useActionState(action, null);
-
-  if (!aberto) {
-    return (
-      <button type="button" onClick={() => setAberto(true)} className="text-[12px] text-fg-muted hover:text-fg transition-colors">
-        Registrar saída
-      </button>
-    );
-  }
 
   return (
     <form action={formAction} className="flex flex-col items-end gap-1">
@@ -43,11 +41,57 @@ export function RegistrarSaidaDoSocio({
         <Button type="submit" size="xs" disabled={pendente}>
           {pendente ? "Salvando…" : "Salvar"}
         </Button>
-        <Button type="button" size="xs" variant="ghost" disabled={pendente} onClick={() => setAberto(false)}>
+        <Button type="button" size="xs" variant="ghost" disabled={pendente} onClick={onVoltar}>
           Voltar
         </Button>
       </div>
       {state?.error && <span className="text-[11px] text-danger">{state.error}</span>}
     </form>
+  );
+}
+
+/**
+ * As ações da linha do sócio atual: "Editar" em botão, e "Registrar saída" e
+ * "Excluir" no "⋯" (polimento de 30/09 — eram três textos soltos lado a lado).
+ * Escolher "Registrar saída" troca as ações pelo campo da data, como antes.
+ */
+export function AcoesDoSocio({
+  socioId,
+  companyId,
+  nome,
+  editarHref,
+  excluir,
+  registrarSaida,
+}: {
+  socioId: string;
+  companyId: string;
+  nome: string;
+  editarHref: string;
+  excluir: () => Promise<void>;
+  registrarSaida: AcaoDaSaida;
+}) {
+  const [registrando, setRegistrando] = useState(false);
+
+  if (registrando) {
+    return <FormDaSaida socioId={socioId} companyId={companyId} nome={nome} action={registrarSaida} onVoltar={() => setRegistrando(false)} />;
+  }
+
+  return (
+    <AcoesDoCadastro
+      editarHref={editarHref}
+      nome={nome}
+      excluir={excluir}
+      itensExtras={(close) => (
+        <ItemDoMenu
+          icone={<LogOut />}
+          onClick={() => {
+            close();
+            setRegistrando(true);
+          }}
+        >
+          Registrar saída
+        </ItemDoMenu>
+      )}
+    />
   );
 }

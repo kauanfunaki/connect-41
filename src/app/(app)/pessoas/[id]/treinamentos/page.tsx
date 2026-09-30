@@ -7,18 +7,9 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { getAuthContext } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
-import { TrainingParticipantStatus } from "@/generated/prisma/enums";
 import { formatCalendarDate } from "@/lib/format";
-
-const TRAINING_STATUS_LABEL: Record<TrainingParticipantStatus, string> = {
-  PLANEJADO: "Planejado",
-  CONVOCADO: "Convocado",
-  REALIZADO: "Realizado",
-  AUSENTE:   "Ausente",
-  REPROVADO: "Reprovado",
-  CONCLUIDO: "Concluído",
-  VENCIDO:   "Vencido",
-};
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { SITUACAO_DO_PARTICIPANTE, COR_DO_PARTICIPANTE, SeloDoDP } from "@/components/pessoas/rotulosDoDP";
 
 export default async function TreinamentosPessoaPage({
   params,
@@ -52,25 +43,60 @@ export default async function TreinamentosPessoaPage({
       <BackButton className="mb-3" />
       <PageHeader title="Treinamentos" />
 
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-        {trainingParticipations.length === 0 ? (
+      {trainingParticipations.length === 0 ? (
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
           <p className="text-[13px] text-fg-muted">Nenhum treinamento registrado ainda.</p>
-        ) : (
-          <div className="divide-y divide-border">
-            {trainingParticipations.map((p) => (
-              <div key={p.id} className="flex items-center justify-between py-2.5">
-                <Link
-                  href={`/treinamentos/${p.class.training.id}/turmas/${p.class.id}`}
-                  className="text-[13px] text-brand hover:underline"
-                >
-                  {p.class.training.name} — {formatCalendarDate(p.class.date)}
-                </Link>
-                <span className="text-[12px] text-fg-muted">{TRAINING_STATUS_LABEL[p.status]}</span>
-              </div>
-            ))}
+        </div>
+      ) : (
+        // Era uma lista de linhas com o treinamento em link azul (até 30/09);
+        // virou tabela no casco padrão, com funil.
+        <TabelaFiltravel
+          linhas={trainingParticipations.map((p) => ({
+            id: p.id,
+            valores: {
+              treinamento: p.class.training.name,
+              turma: p.class.date.toISOString().slice(0, 10),
+              situacao: SITUACAO_DO_PARTICIPANTE[p.status],
+            },
+          }))}
+        >
+          <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
+            <table className="w-full min-w-[560px] text-[length:var(--fs-ui)]">
+              <thead>
+                <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                  <th className="px-4 py-3">
+                    <FiltroDaColuna rotulo="Treinamento" chave="treinamento" />
+                  </th>
+                  <th className="px-4 py-3">
+                    <FiltroDaColuna rotulo="Turma" chave="turma" tipo="data" />
+                  </th>
+                  <th className="px-4 py-3">
+                    <FiltroDaColuna rotulo="Situação" chave="situacao" align="right" />
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {trainingParticipations.map((p) => (
+                  <LinhaFiltravel key={p.id} id={p.id} className="border-b border-border">
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/treinamentos/${p.class.training.id}/turmas/${p.class.id}`}
+                        className="font-semibold text-fg hover:text-brand transition-colors"
+                      >
+                        {p.class.training.name}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{formatCalendarDate(p.class.date)}</td>
+                    <td className="px-4 py-3">
+                      <SeloDoDP cor={COR_DO_PARTICIPANTE[p.status]}>{SITUACAO_DO_PARTICIPANTE[p.status]}</SeloDoDP>
+                    </td>
+                  </LinhaFiltravel>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
+        </TabelaFiltravel>
+      )}
     </PageContainer>
   );
 }

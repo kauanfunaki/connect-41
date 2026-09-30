@@ -220,13 +220,10 @@ export function AdmissaoForm({ token, defaults }: Props) {
               <div key={i} className="border border-border rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[12px] font-medium text-fg-muted">Dependente {i + 1}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeDep(i)}
-                    className="text-[12px] text-danger hover:underline"
-                  >
+                  {/* Era texto vermelho sublinhado (até 30/09): botão. */}
+                  <Button variant="danger" size="xs" onClick={() => removeDep(i)}>
                     Remover
-                  </button>
+                  </Button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <CampoForm label="Nome completo" htmlFor={`dep-name-${i}`}>

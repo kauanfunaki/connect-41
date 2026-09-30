@@ -1,15 +1,19 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
+import { ArrowRight, Pencil } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
-import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
+import { MenuDoRegistro } from "@/components/pessoas/MenuDoRegistro";
 import { excluirTreinamento } from "../actions";
 import { criarTurma, excluirTurma } from "./actions";
 import { AddTurmaForm } from "@/components/treinamentos/AddTurmaForm";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { formatCalendarDate } from "@/lib/format";
 
 export default async function TreinamentoPage({
@@ -38,29 +42,25 @@ export default async function TreinamentoPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/treinamentos" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Treinamentos</Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg truncate">{training.name}</span>
-      </div>
+      <Breadcrumb items={[{ label: "Treinamentos", href: "/treinamentos" }, { label: training.name, truncate: true }]} />
 
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-      <PageHeader title={training.name} />
-          {training.workloadHours && <p className="text-[13px] text-fg-muted mt-0.5">{training.workloadHours.toString()}h de carga horária</p>}
-        </div>
-        {canManage && (
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Link
-              href={`/treinamentos/${id}/editar`}
-              className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
-            >
-              Editar
-            </Link>
-            <DeleteButton action={deleteAction} nome={training.name} />
-          </div>
-        )}
-      </div>
+      {/* Carga horária e ações iam num cabeçalho montado à mão, com "Editar"
+          em link com cara de botão (até 30/09); agora é o PageHeader. */}
+      <PageHeader
+        title={training.name}
+        subtitle={training.workloadHours ? <>{training.workloadHours.toString()}h de carga horária</> : undefined}
+        action={
+          canManage && (
+            <div className="flex items-center gap-2">
+              <Button href={`/treinamentos/${id}/editar`} variant="secondary" size="sm">
+                <Pencil size={14} />
+                Editar
+              </Button>
+              <DeleteButton action={deleteAction} nome={training.name} />
+            </div>
+          )
+        }
+      />
 
       {training.description && (
         <Card className="p-5 mb-4">
@@ -76,25 +76,72 @@ export default async function TreinamentoPage({
         {training.classes.length === 0 ? (
           <p className="text-[13px] text-fg-muted mb-3">Nenhuma turma criada ainda.</p>
         ) : (
-          <div className="divide-y divide-border mb-3">
-            {training.classes.map((c) => (
-              <div key={c.id} className="flex items-center justify-between py-2.5">
-                <Link href={`/treinamentos/${id}/turmas/${c.id}`} className="text-[13px] text-brand hover:underline">
-                  {formatCalendarDate(c.date)}
-                  {c.shift && ` — ${c.shift}`}
-                </Link>
-                <div className="flex items-center gap-3">
-                  <span className="text-[12px] text-fg-muted">
-                    {c._count.participants} participante{c._count.participants !== 1 ? "s" : ""}
-                    {c.instructor && ` · ${c.instructor}`}
-                  </span>
-                  {canManage && (
-                    <DeleteFieldButton action={excluirTurma.bind(null, id, c.id)} nome={`turma de ${formatCalendarDate(c.date)}`} />
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+          // Era uma lista de linhas com a data em link azul e o "Excluir" em
+          // texto vermelho (até 30/09). Virou tabela com funil; a exclusão foi
+          // para o "⋯", com o diálogo certo — o de antes falava em "campo".
+          <TabelaFiltravel
+            linhas={training.classes.map((c) => ({
+              id: c.id,
+              valores: {
+                data: c.date.toISOString().slice(0, 10),
+                turno: c.shift ?? "",
+                instrutor: c.instructor ?? "",
+              },
+            }))}
+          >
+            <div className="c41-tabela overflow-x-auto rounded-lg border border-border mb-4">
+              <table className="w-full min-w-[640px] text-[length:var(--fs-ui)]">
+                <thead>
+                  <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                    <th className="px-4 py-3">
+                      <FiltroDaColuna rotulo="Data" chave="data" tipo="data" />
+                    </th>
+                    <th className="px-4 py-3">
+                      <FiltroDaColuna rotulo="Turno" chave="turno" />
+                    </th>
+                    <th className="px-4 py-3">
+                      <FiltroDaColuna rotulo="Instrutor" chave="instrutor" align="right" />
+                    </th>
+                    <th className="px-4 py-3">Participantes</th>
+                    <th className="px-4 py-3">
+                      <span className="sr-only">Ações</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {training.classes.map((c) => (
+                    <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border">
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <Link href={`/treinamentos/${id}/turmas/${c.id}`} className="font-semibold text-fg hover:text-brand transition-colors">
+                          {formatCalendarDate(c.date)}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 text-fg-secondary">{c.shift ?? <span className="text-fg-muted">—</span>}</td>
+                      <td className="px-4 py-3 text-fg-secondary">{c.instructor ?? <span className="text-fg-muted">—</span>}</td>
+                      <td className="px-4 py-3 text-fg-muted">
+                        {c._count.participants} participante{c._count.participants !== 1 ? "s" : ""}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <Button href={`/treinamentos/${id}/turmas/${c.id}`} variant="secondary" size="xs">
+                            Abrir <ArrowRight size={11} />
+                          </Button>
+                          {canManage && (
+                            <MenuDoRegistro
+                              rotulo="Excluir"
+                              titulo={`Excluir a turma de ${formatCalendarDate(c.date)}?`}
+                              descricao="Os participantes da turma saem junto."
+                              onRemover={excluirTurma.bind(null, id, c.id)}
+                            />
+                          )}
+                        </div>
+                      </td>
+                    </LinhaFiltravel>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </TabelaFiltravel>
         )}
 
         {canManage && <AddTurmaForm action={criarTurmaAction} />}

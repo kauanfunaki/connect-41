@@ -48,7 +48,8 @@ export default async function KanbanListPage() {
             icon={<Columns3 />}
             title="Nenhum kanban cadastrado ainda"
             description="Crie o primeiro kanban do setor pra começar a organizar o funil."
-            action={canCreate ? <Link href="/kanban/novo"><Button>+ Novo Kanban</Button></Link> : undefined}
+            // Era um <button> dentro de um <Link> (HTML inválido): o Button com href já é o link.
+            action={canCreate ? <Button href="/kanban/novo">+ Novo Kanban</Button> : undefined}
           />
         </Card>
       ) : (

@@ -186,27 +186,27 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
               Excluir os rótulos passam da largura do popover e o último ficava
               cortado (só a lixeira e o "E" de Excluir apareciam). */}
           <div className="flex flex-wrap items-center gap-1 px-2.5 py-2 border-t border-border bg-surface-hover/40">
-            <a
-              href={meeting.meetingUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[12px] font-medium hover:bg-surface-hover transition-colors"
-              style={{ color: accent }}
-            >
-              <Video size={12} /> Entrar <ExternalLink size={10} />
-            </a>
-            <CopyLinkButton url={meeting.meetingUrl} className="h-7 px-2.5 rounded-md hover:bg-surface-hover" />
+            {/* Eram três textos com fundo no hover ao lado de um Excluir com
+                borda (30/09): as quatro ações agora são botões xs com borda. A
+                cor do provedor fica no ícone do Entrar. */}
+            <Button href={meeting.meetingUrl} target="_blank" rel="noopener noreferrer" variant="secondary" size="xs">
+              <Video size={11} style={{ color: accent }} /> Entrar <ExternalLink size={10} />
+            </Button>
+            <CopyLinkButton
+              url={meeting.meetingUrl}
+              className="h-7 px-2.5 rounded-md border border-border-strong font-semibold hover:bg-surface-hover"
+            />
             {canEdit && (
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="xs"
                 onClick={() => {
                   setEditing(true);
                   setOpen(false);
                 }}
-                className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors"
               >
                 <Pencil size={11} /> Editar
-              </button>
+              </Button>
             )}
             <Button
               variant="danger"

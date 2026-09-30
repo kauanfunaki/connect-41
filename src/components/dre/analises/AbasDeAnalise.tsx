@@ -2,12 +2,24 @@
 // próprio dado: só a aba aberta consulta o banco.
 
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, Info } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeftRight,
+  ArrowRight,
+  BarChart3,
+  CalendarClock,
+  Info,
+  Percent,
+  Scissors,
+  ShieldAlert,
+  Target,
+  TrendingUp,
+} from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Select } from "@/components/ui/Select";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { saoPauloParts } from "@/lib/agenda";
 import {
   serieEconomica,
@@ -236,6 +248,37 @@ export async function AbaComparativos({
   const outras = empresas.filter((e) => e.id !== companyId);
   const outra = outras.find((e) => e.id === empresa2) ?? outras[0];
 
+  // Modo, regime e a outra empresa no botão "Filtros" (conferência de 30/09):
+  // eram um formulário GET com três `<select>` e "Comparar". Cada escolha
+  // navega na hora e preserva aba, empresa e mês. O padrão de cada campo é o
+  // "sem filtro" (vazio), como o "Em aberto" de /pagar.
+  const filtros = (
+    <FiltrosDaTela
+      className="mb-4"
+      campos={[
+        {
+          chave: "modo",
+          rotulo: "Comparação",
+          vazioLabel: MODOS[0].rotulo,
+          opcoes: modosDisponiveis.filter((m) => m.chave !== MODOS[0].chave).map((m) => ({ value: m.chave, label: m.rotulo })),
+        },
+        ...(contraOrcado
+          ? []
+          : [{ chave: "regime", rotulo: "Regime", vazioLabel: "Competência", opcoes: [{ value: "caixa", label: "Caixa" }] }]),
+        ...(modo === "empresa" && outras.length > 0
+          ? [
+              {
+                chave: "empresa2",
+                rotulo: "Comparar com",
+                vazioLabel: outras[0]!.nome,
+                opcoes: outras.slice(1).map((e) => ({ value: e.id, label: e.nome })),
+              },
+            ]
+          : []),
+      ]}
+    />
+  );
+
   let rotuloA = rotuloDaCompetencia(mes);
   let rotuloB = "";
   let atual;
@@ -245,17 +288,22 @@ export async function AbaComparativos({
   if (contraOrcado) {
     const { ano, mes: numeroDoMes } = partesDaCompetencia(mes);
     orcamento = (await orcamentosAprovados(tenantId, companyId, [ano])).get(ano) ?? null;
+    // Os filtros continuam na tela vazia: sem eles, quem escolheu um modo de
+    // orçado sem versão aprovada não tinha como voltar para outro modo.
     if (!orcamento) {
       return (
-        <EmptyState
-          title={`Sem orçamento aprovado para ${ano}`}
-          description="O comparativo usa a versão aprovada do ano. Crie e aprove uma versão em Orçamento."
-          action={
-            <Link href={`/dre/orcamento?empresa=${companyId}&ano=${ano}`} className="text-brand hover:underline text-[13px]">
-              Abrir orçamento
-            </Link>
-          }
-        />
+        <>
+          {filtros}
+          <EmptyState
+            title={`Sem orçamento aprovado para ${ano}`}
+            description="O comparativo usa a versão aprovada do ano. Crie e aprove uma versão em Orçamento."
+            action={
+              <Button href={`/dre/orcamento?empresa=${companyId}&ano=${ano}`} variant="secondary" size="sm">
+                <Target size={14} /> Abrir orçamento
+              </Button>
+            }
+          />
+        </>
       );
     }
     const meses = modo === "orcado" ? [numeroDoMes] : mesesDoAcumulado(numeroDoMes);
@@ -265,7 +313,13 @@ export async function AbaComparativos({
     atual = await resultadoDoPeriodo(tenantId, companyId, periodo, "competencia");
     comparado = resultadoDePorGrupo(porGrupoOrcado(orcamento.grade, meses));
   } else if (modo === "empresa") {
-    if (!outra) return <EmptyState title="Não há outra empresa para comparar" />;
+    if (!outra)
+      return (
+        <>
+          {filtros}
+          <EmptyState title="Não há outra empresa para comparar" />
+        </>
+      );
     rotuloA = empresas.find((e) => e.id === companyId)?.nome ?? "Empresa";
     rotuloB = outra.nome;
     [atual, comparado] = await Promise.all([
@@ -293,36 +347,7 @@ export async function AbaComparativos({
 
   return (
     <>
-      <form method="get" action="/dre/analises" className="flex flex-wrap items-center gap-2 mb-4">
-        <input type="hidden" name="aba" value="comparativos" />
-        <input type="hidden" name="empresa" value={companyId} />
-        <input type="hidden" name="mes" value={mes} />
-        <Select compact name="modo" defaultValue={modo} className="w-80 max-w-full" aria-label="Modo">
-          {modosDisponiveis.map((m) => (
-            <option key={m.chave} value={m.chave}>
-              {m.rotulo}
-            </option>
-          ))}
-        </Select>
-        {!contraOrcado && (
-          <Select compact name="regime" defaultValue={regime} className="w-44" aria-label="Regime">
-            <option value="competencia">Competência</option>
-            <option value="caixa">Caixa</option>
-          </Select>
-        )}
-        {modo === "empresa" && outra && (
-          <Select compact name="empresa2" defaultValue={outra.id} className="w-72 max-w-full" aria-label="Comparar com">
-            {outras.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.nome}
-              </option>
-            ))}
-          </Select>
-        )}
-        <Button type="submit" variant="secondary" size="sm">
-          Comparar
-        </Button>
-      </form>
+      {filtros}
       <TabelaComparada linhas={linhas} rotuloA={rotuloA} rotuloB={rotuloB} />
       <NotaDeFonte>
         Variação sobre o valor absoluto do comparado: despesa que vai de −100 para −150 aparece como −50%, piora.
@@ -396,22 +421,19 @@ export async function AbaForecast({ tenantId, companyId, mes, metodo: metodoBrut
 
   return (
     <>
-      <nav className="flex flex-wrap gap-1.5 mb-4">
-        {METODOS_DE_PROJECAO.map((m) => (
-          <Link
-            key={m.chave}
-            href={`/dre/analises?aba=forecast&empresa=${companyId}&mes=${mes}&metodo=${m.chave}`}
-            aria-current={m.chave === metodo ? "page" : undefined}
-            className={
-              m.chave === metodo
-                ? "h-8 px-3 inline-flex items-center rounded-md border border-border-strong text-fg text-[12px]"
-                : "h-8 px-3 inline-flex items-center rounded-md border border-border text-fg-muted text-[12px] hover:bg-surface-hover"
-            }
-          >
-            {m.rotulo}
-          </Link>
-        ))}
-      </nav>
+      {/* O método de projeção no botão "Filtros" — era uma fileira de pílulas
+          (conferência de 30/09). A tendência é o padrão, sem parâmetro. */}
+      <FiltrosDaTela
+        className="mb-4"
+        campos={[
+          {
+            chave: "metodo",
+            rotulo: "Método",
+            vazioLabel: METODOS_DE_PROJECAO[0]!.rotulo,
+            opcoes: METODOS_DE_PROJECAO.slice(1).map((m) => ({ value: m.chave, label: m.rotulo })),
+          },
+        ]}
+      />
       <div className="overflow-x-auto border border-border rounded-lg bg-surface">
         <table className="w-full min-w-[680px] text-[13px]">
           <thead>
@@ -583,6 +605,17 @@ export async function AbaIndicadores({ tenantId, companyId, mes }: Base) {
 
 const COR_DA_PRIORIDADE = { Alta: "danger", Média: "warning", Baixa: "success" } as const;
 
+/** Um ícone por pergunta, para a lista se ler de relance. */
+const ICONE_DA_PERGUNTA: Record<ChaveDaPergunta, React.ReactNode> = {
+  margem_caiu: <Percent />,
+  lucro_x_caixa: <ArrowLeftRight />,
+  despesa_cresceu: <TrendingUp />,
+  queda_operacional: <BarChart3 />,
+  caixa_60_dias: <CalendarClock />,
+  reduzir_despesas: <Scissors />,
+  cliente_risco: <ShieldAlert />,
+};
+
 export async function AbaCfo({ tenantId, companyId, mes, pergunta }: Base & { pergunta?: string }) {
   const chave = PERGUNTAS_DO_CFO.find((p) => p.chave === pergunta)?.chave as ChaveDaPergunta | undefined;
   const href = (p: string) => `/dre/analises?aba=cfo&empresa=${companyId}&mes=${mes}&pergunta=${p}`;
@@ -623,60 +656,85 @@ export async function AbaCfo({ tenantId, companyId, mes, pergunta }: Base & { pe
 
   return (
     <>
-      <div className="flex flex-wrap gap-2 mb-4">
-        {PERGUNTAS_DO_CFO.map((p) => (
-          <Link
-            key={p.chave}
-            href={href(p.chave)}
-            aria-current={p.chave === chave ? "page" : undefined}
-            className={`rounded-full border px-3 py-1.5 text-[12px] transition-colors ${
-              p.chave === chave ? "border-brand/40 bg-brand/8 text-brand" : "border-border text-fg-secondary hover:bg-surface-hover"
-            }`}
-          >
-            {p.rotulo}
-          </Link>
-        ))}
+      {/* As perguntas eram pílulas redondas (até 30/09). Cada uma troca a
+          resposta inteira — é aba, não filtro —, mas sete perguntas longas numa
+          fileira de abas passavam da largura da tela e sumiam na rolagem. Aqui
+          viram abas na vertical, à esquerda da resposta, com o mesmo desenho
+          da aba do Connect (texto, e o fio azul na ativa). */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,300px)_minmax(0,1fr)] items-start">
+        <nav aria-label="Perguntas do CFO" className="flex flex-col border-l border-border">
+          {PERGUNTAS_DO_CFO.map((p) => {
+            const ativa = p.chave === chave;
+            return (
+              <Link
+                key={p.chave}
+                href={href(p.chave)}
+                aria-current={ativa ? "page" : undefined}
+                className={`relative flex items-start gap-2 pl-3.5 pr-2 py-2 rounded-r-md text-[length:var(--fs-ui)] leading-snug transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+                  ativa ? "text-brand font-medium" : "text-fg-secondary hover:text-fg hover:bg-surface-hover"
+                }`}
+              >
+                {ativa && <span aria-hidden className="absolute -left-px top-1.5 bottom-1.5 w-[2px] rounded-full bg-brand" />}
+                <span className="mt-0.5 flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{ICONE_DA_PERGUNTA[p.chave]}</span>
+                {p.rotulo}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="min-w-0">
+          {!resposta && (
+            <Card className="p-5">
+              <p className="text-[13px] text-fg-muted">Escolha uma pergunta para ver o diagnóstico de {rotuloDaCompetencia(mes)}.</p>
+            </Card>
+          )}
+
+          {resposta && (
+            <Card className="p-5 flex flex-col gap-4">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="text-[15px] font-semibold text-fg">{resposta.titulo}</h3>
+                <Badge variant={COR_DA_PRIORIDADE[resposta.prioridade]}>Prioridade {resposta.prioridade.toLowerCase()}</Badge>
+              </div>
+              <Secao titulo="Diagnóstico" texto={resposta.diagnostico} />
+              {resposta.evidencias.length > 0 && (
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-fg-muted mb-1">Evidências</p>
+                  <ul className="flex flex-col gap-0.5 text-[13px] text-fg-secondary">
+                    {resposta.evidencias.map((e) => (
+                      <li key={e}>· {e}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Secao titulo="Causa provável" texto={resposta.causaProvavel} />
+                <Secao titulo="Impacto" texto={resposta.impacto} />
+                <Secao titulo="Recomendação" texto={resposta.recomendacao} />
+              </div>
+              {resposta.planoDeAcao.length > 0 && (
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-fg-muted mb-1">Plano de ação</p>
+                  <ol className="list-decimal pl-5 text-[13px] flex flex-col gap-0.5">
+                    {resposta.planoDeAcao.map((p) => (
+                      <li key={p}>{p}</li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+              {/* Era link de texto no pé do cartão; é ação, então é botão (30/09). */}
+              <div>
+                <Button
+                  href={resposta.origem.href.includes("empresa=") ? resposta.origem.href : `${resposta.origem.href}${resposta.origem.href.includes("?") ? "&" : "?"}empresa=${companyId}`}
+                  variant="secondary"
+                  size="sm"
+                >
+                  Ver de onde vem: {resposta.origem.rotulo} <ArrowRight size={14} />
+                </Button>
+              </div>
+            </Card>
+          )}
+        </div>
       </div>
-
-      {!resposta && <p className="text-[13px] text-fg-muted">Escolha uma pergunta para ver o diagnóstico de {rotuloDaCompetencia(mes)}.</p>}
-
-      {resposta && (
-        <Card className="p-5 flex flex-col gap-4">
-          <div className="flex items-start justify-between gap-3">
-            <h3 className="text-[15px] font-semibold text-fg">{resposta.titulo}</h3>
-            <Badge variant={COR_DA_PRIORIDADE[resposta.prioridade]}>Prioridade {resposta.prioridade.toLowerCase()}</Badge>
-          </div>
-          <Secao titulo="Diagnóstico" texto={resposta.diagnostico} />
-          {resposta.evidencias.length > 0 && (
-            <div>
-              <p className="text-[11px] uppercase tracking-wide text-fg-muted mb-1">Evidências</p>
-              <ul className="flex flex-col gap-0.5 text-[13px] text-fg-secondary">
-                {resposta.evidencias.map((e) => (
-                  <li key={e}>· {e}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Secao titulo="Causa provável" texto={resposta.causaProvavel} />
-            <Secao titulo="Impacto" texto={resposta.impacto} />
-            <Secao titulo="Recomendação" texto={resposta.recomendacao} />
-          </div>
-          {resposta.planoDeAcao.length > 0 && (
-            <div>
-              <p className="text-[11px] uppercase tracking-wide text-fg-muted mb-1">Plano de ação</p>
-              <ol className="list-decimal pl-5 text-[13px] flex flex-col gap-0.5">
-                {resposta.planoDeAcao.map((p) => (
-                  <li key={p}>{p}</li>
-                ))}
-              </ol>
-            </div>
-          )}
-          <Link href={resposta.origem.href.includes("empresa=") ? resposta.origem.href : `${resposta.origem.href}${resposta.origem.href.includes("?") ? "&" : "?"}empresa=${companyId}`} className="inline-flex items-center gap-1 text-[13px] text-brand hover:underline">
-            Ver de onde vem: {resposta.origem.rotulo} <ArrowRight size={13} />
-          </Link>
-        </Card>
-      )}
 
       <NotaDeFonte>
         Perguntas fixas, com resposta calculada sobre os dados do mês — nenhuma chamada a IA externa, e nada é alterado.

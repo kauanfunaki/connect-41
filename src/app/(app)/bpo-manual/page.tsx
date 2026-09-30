@@ -47,11 +47,13 @@ export default async function BpoManualPage() {
     <PageContainer className="h-full flex flex-col">
       <BackButton className="mb-3 flex-shrink-0" />
 
-      <div className="mb-6 flex-shrink-0">
-      <PageHeader title="Repositório de Manuais" />
-        <p className="text-[13px] text-fg-muted mt-1">
-          Instruções internas do setor — escritas pelos colaboradores para alinhamento em ausências e férias.
-        </p>
+      {/* Subtítulo no próprio PageHeader (30/09) — estava escrito à parte, com
+          o cabeçalho aninhado num bloco com margem própria. */}
+      <div className="flex-shrink-0">
+        <PageHeader
+          title="Repositório de Manuais"
+          subtitle="Instruções internas do setor — escritas pelos colaboradores para alinhamento em ausências e férias."
+        />
       </div>
 
       {/* flex-1 min-h-0 é o que dá ao workspace uma altura definida igual ao

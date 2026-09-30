@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import Link from "next/link";
 import type { SetorState } from "@/app/(app)/admin/setores/actions";
 import { SECTOR_COLOR_PALETTE } from "@/lib/sector-constants";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -118,12 +117,9 @@ export function SetorForm({ action, cancelHref, defaultValues }: Props) {
         >
           {isPending ? "Salvando…" : "Salvar"}
         </Button>
-        <Link
-          href={cancelHref}
-          className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
-        >
+        <Button href={cancelHref} variant="secondary">
           Cancelar
-        </Link>
+        </Button>
       </div>
     </form>
   );

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
@@ -7,6 +6,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { TrainingForm } from "@/components/treinamentos/TrainingForm";
 import { atualizarTreinamento } from "../../actions";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 
 export default async function EditarTreinamentoPage({
   params,
@@ -23,13 +23,13 @@ export default async function EditarTreinamentoPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/treinamentos" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Treinamentos</Link>
-        <span className="text-fg-muted">/</span>
-        <Link href={`/treinamentos/${id}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate max-w-[200px]">{training.name}</Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Editar</span>
-      </div>
+      <Breadcrumb
+        items={[
+          { label: "Treinamentos", href: "/treinamentos" },
+          { label: training.name, href: `/treinamentos/${id}`, truncate: true },
+          { label: "Editar" },
+        ]}
+      />
       <PageHeader title="Editar Treinamento" />
 
       <Card className="p-6">

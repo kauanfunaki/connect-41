@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
@@ -6,7 +5,7 @@ import { Clock } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
-import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
+import { AcoesDoCadastro } from "@/components/empresas/AcoesDoCadastro";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -85,21 +84,13 @@ export default async function TurnosPage({
       ) : (
         <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
           {turnos.map((t) => (
-            <div key={t.id} className="flex items-center justify-between px-4 py-3">
+            <div key={t.id} className="flex items-center justify-between gap-4 px-4 py-3">
               <div>
                 <p className="text-[13px] text-fg font-medium">{t.name}</p>
                 <p className="text-[12px] text-fg-muted">{t.startTime} — {t.endTime}</p>
               </div>
               {canManage && (
-                <div className="flex items-center gap-3">
-                  <Link
-                    href={`/empresas/${companyId}/turnos/${t.id}/editar`}
-                    className="text-[12px] text-fg-muted hover:text-fg transition-colors"
-                  >
-                    Editar
-                  </Link>
-                  <DeleteFieldButton action={excluirTurno.bind(null, t.id, companyId)} nome={t.name} />
-                </div>
+                <AcoesDoCadastro editarHref={`/empresas/${companyId}/turnos/${t.id}/editar`} excluir={excluirTurno.bind(null, t.id, companyId)} nome={t.name} />
               )}
             </div>
           ))}

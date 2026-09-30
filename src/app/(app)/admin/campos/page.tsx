@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -7,7 +6,7 @@ import { ListChecks } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
-import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
+import { AcoesDoItem } from "@/components/admin/AcoesDoItem";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { excluirCampo } from "./actions";
@@ -93,15 +92,15 @@ export default async function CamposPage() {
                           {FIELD_TYPE_LABEL[f.fieldType] ?? f.fieldType} · <span className="font-mono">{f.key}</span>
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Link
-                          href={`/admin/campos/${f.id}/editar`}
-                          className="text-[12px] text-fg-muted hover:text-fg transition-colors"
-                        >
-                          Editar
-                        </Link>
-                        <DeleteFieldButton action={excluirCampo.bind(null, f.id)} nome={f.label} />
-                      </div>
+                      {/* Editar é botão e Excluir vai no "⋯" (polimento de 30/09). */}
+                      <AcoesDoItem
+                        editar={`/admin/campos/${f.id}/editar`}
+                        excluir={{
+                          action: excluirCampo.bind(null, f.id),
+                          titulo: `Excluir o campo "${f.label}"?`,
+                          descricao: "Todos os valores preenchidos nele serão perdidos.",
+                        }}
+                      />
                     </div>
                   ))}
                 </div>

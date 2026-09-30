@@ -7,6 +7,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import {
   agruparPorFamilia,
   detectarDivergenciasNome,
@@ -116,12 +117,16 @@ export default async function CargosSalariosPage() {
           />
         </Card>
       ) : (
-        <div className="space-y-4">
+        // Cada família é uma tabela no casco padrão, com o seu próprio funil
+        // (30/09): era um card com a tabela solta dentro e o nível fixo na
+        // rolagem. O funil fica por família — um filtro único para a matriz
+        // inteira deixaria famílias vazias na tela, com o cabeçalho de pé.
+        <div className="space-y-6">
           {grupos.map((g) => {
             const invertidoIds = new Set(g.degrausInvertidos.map((d) => d.cargo.id));
             return (
-              <Card key={g.family} className="overflow-hidden">
-                <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border bg-surface-2 flex-wrap">
+              <section key={g.family}>
+                <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
                   <h2 className="text-[13px] font-semibold text-fg">{g.label}</h2>
                   <span className="text-[12px] text-fg-muted">
                     {g.cargos.length} cargo{g.cargos.length !== 1 ? "s" : ""} · {g.totalPessoas} colaborador
@@ -129,57 +134,74 @@ export default async function CargosSalariosPage() {
                   </span>
                 </div>
 
-                <div className="scroll-x overflow-x-auto">
-                  <table className="w-full text-[13px]" style={{ minWidth: "760px" }}>
-                    <thead>
-                      <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-fg-muted">
-                        <th scope="col" className="px-4 py-2.5 font-medium sticky left-0 bg-surface">Nível</th>
-                        <th scope="col" className="px-4 py-2.5 font-medium">Cargo</th>
-                        <th scope="col" className="px-4 py-2.5 font-medium">Empresa</th>
-                        <th scope="col" className="px-4 py-2.5 font-medium">Área</th>
-                        <th scope="col" className="px-4 py-2.5 font-medium text-right">Pessoas</th>
-                        {canViewSalary && <th scope="col" className="px-4 py-2.5 font-medium text-right">Faixa salarial</th>}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {g.cargos.map((c) => (
-                        <tr key={c.id} className="hover:bg-surface-2 transition-colors">
-                          <td className="px-4 py-2.5 sticky left-0 bg-surface">
-                            {c.seniority ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border bg-brand/10 text-brand border-brand/25 whitespace-nowrap">
-                                {SENIORITY_LABEL[c.seniority]}
-                              </span>
-                            ) : (
-                              <span className="text-[12px] text-fg-muted">—</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-2.5 text-fg font-medium">
-                            <Link
-                              href={`/empresas/${companyIdByCargo.get(c.id)}/cargos/${c.id}/editar`}
-                              className="hover:text-brand transition-colors"
-                            >
-                              {c.name}
-                            </Link>
-                            {invertidoIds.has(c.id) && canViewSalary && (
-                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border bg-warning/10 text-warning border-warning/25">
-                                degrau invertido
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-4 py-2.5 text-fg-muted">{c.companyName}</td>
-                          <td className="px-4 py-2.5 text-fg-muted">{c.area ?? "—"}</td>
-                          <td className="px-4 py-2.5 text-fg-muted tnum text-right">{c.peopleCount}</td>
-                          {canViewSalary && (
-                            <td className="px-4 py-2.5 text-fg-muted tnum text-right whitespace-nowrap">
-                              {fmt(c.salaryRangeMin)} – {fmt(c.salaryRangeMax)}
-                            </td>
-                          )}
+                <TabelaFiltravel
+                  linhas={g.cargos.map((c) => ({
+                    id: c.id,
+                    valores: {
+                      nivel: c.seniority ? SENIORITY_LABEL[c.seniority] : "",
+                      empresa: c.companyName,
+                      area: c.area ?? "",
+                    },
+                  }))}
+                >
+                  <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
+                    <table className="w-full min-w-[760px] text-[13px]">
+                      <thead>
+                        <tr className="border-b border-border text-[11px] uppercase tracking-wide text-fg-muted">
+                          <th scope="col" className="px-4 py-2.5 font-medium">
+                            <FiltroDaColuna rotulo="Nível" chave="nivel" />
+                          </th>
+                          <th scope="col" className="px-4 py-2.5 font-medium">Cargo</th>
+                          <th scope="col" className="px-4 py-2.5 font-medium">
+                            <FiltroDaColuna rotulo="Empresa" chave="empresa" />
+                          </th>
+                          <th scope="col" className="px-4 py-2.5 font-medium">
+                            <FiltroDaColuna rotulo="Área" chave="area" align={canViewSalary ? "left" : "right"} />
+                          </th>
+                          <th scope="col" className="px-4 py-2.5 font-medium">Pessoas</th>
+                          {canViewSalary && <th scope="col" className="px-4 py-2.5 font-medium">Faixa salarial</th>}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
+                      </thead>
+                      <tbody>
+                        {g.cargos.map((c) => (
+                          <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border">
+                            <td className="px-4 py-2.5">
+                              {c.seniority ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border bg-brand/10 text-brand border-brand/25 whitespace-nowrap">
+                                  {SENIORITY_LABEL[c.seniority]}
+                                </span>
+                              ) : (
+                                <span className="text-[12px] text-fg-muted">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-2.5 text-fg font-medium">
+                              <Link
+                                href={`/empresas/${companyIdByCargo.get(c.id)}/cargos/${c.id}/editar`}
+                                className="hover:text-brand transition-colors"
+                              >
+                                {c.name}
+                              </Link>
+                              {invertidoIds.has(c.id) && canViewSalary && (
+                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border bg-warning/10 text-warning border-warning/25">
+                                  degrau invertido
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-2.5 text-fg-muted">{c.companyName}</td>
+                            <td className="px-4 py-2.5 text-fg-muted">{c.area ?? "—"}</td>
+                            <td className="px-4 py-2.5 text-fg-muted tnum">{c.peopleCount}</td>
+                            {canViewSalary && (
+                              <td className="px-4 py-2.5 text-fg-muted tnum whitespace-nowrap">
+                                {fmt(c.salaryRangeMin)} – {fmt(c.salaryRangeMax)}
+                              </td>
+                            )}
+                          </LinhaFiltravel>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </TabelaFiltravel>
+              </section>
             );
           })}
         </div>

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -7,7 +6,7 @@ import { Tag as TagIcon } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
-import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
+import { AcoesDoItem } from "@/components/admin/AcoesDoItem";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { excluirTag } from "./actions";
@@ -76,15 +75,15 @@ export default async function TagsPage() {
                       <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: t.color }} />
                       <p className="text-[13px] text-fg">{t.name}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={`/admin/tags/${t.id}/editar`}
-                        className="text-[12px] text-fg-muted hover:text-fg transition-colors"
-                      >
-                        Editar
-                      </Link>
-                      <DeleteFieldButton action={excluirTag.bind(null, t.id)} nome={t.name} />
-                    </div>
+                    {/* Editar é botão e Excluir vai no "⋯" (polimento de 30/09). */}
+                    <AcoesDoItem
+                      editar={`/admin/tags/${t.id}/editar`}
+                      excluir={{
+                        action: excluirTag.bind(null, t.id),
+                        titulo: `Excluir a tag "${t.name}"?`,
+                        descricao: "Ela sai de todos os itens de kanban e cadastros em que estiver marcada.",
+                      }}
+                    />
                   </div>
                 ))}
               </div>

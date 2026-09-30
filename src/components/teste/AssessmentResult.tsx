@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { DiscBars } from "./DiscBars";
 import type { DiscScores, DiscDimension } from "@/lib/disc";
 import type { QuizScores } from "@/lib/quiz";
@@ -47,9 +48,9 @@ export function AssessmentResult(props: Props) {
       </div>
       {!compact && <p className="text-[12px] text-fg-muted mt-2">{templateName}</p>}
       {compact && detailHref && (
-        <Link href={detailHref} className="inline-block mt-3 text-[12px] text-brand hover:underline">
-          Ver detalhe completo
-        </Link>
+        <Button href={detailHref} variant="secondary" size="xs" className="mt-3">
+          Ver detalhe completo <ArrowRight size={11} />
+        </Button>
       )}
     </div>
   );

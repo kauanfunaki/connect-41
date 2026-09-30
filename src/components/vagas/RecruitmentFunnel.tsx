@@ -2,12 +2,20 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { ClipboardCheck, FileText, LogOut, MoreHorizontal, UserX } from "lucide-react";
 import { ACTIVE_STAGES, STAGE_LABEL, type Stage } from "@/lib/recruitmentFunnel";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
+import { Popover, ItemDoMenu } from "@/components/ui/Popover";
 import { ROTULO_DA_FAIXA, type Faixa } from "@/lib/recrutamento/triagem";
+
+// O desenho do `Button` secondary xs num `<a>` comum: o currículo é rota de
+// arquivo (/api), e o `Link` do Next que o `Button` usa com `href` tentaria
+// pré-carregá-lo só de o cartão aparecer na tela.
+const BOTAO_XS_EM_ANCORA =
+  "inline-flex items-center justify-center gap-1.5 h-7 px-2.5 rounded-md border border-border-strong text-[length:var(--fs-button-sm)] font-semibold text-fg hover:bg-surface-hover transition-colors active:translate-y-px";
 
 export type FunnelCard = {
   id: string;
@@ -76,6 +84,12 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
         setError(result.error);
       }
     });
+  }
+
+  function abrirEncerramento(c: FunnelCard, outcome: EncerrarTarget["outcome"]) {
+    setMotivo("");
+    setDialogError(null);
+    setEncerrarTarget({ cardId: c.id, personName: c.personName, outcome });
   }
 
   function confirmEncerrar() {
@@ -201,46 +215,64 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
                       </div>
                     )}
 
-                    <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-                      <Link
-                        href={`/vagas/${vagaId}/candidaturas/${c.id}`}
-                        className="inline-flex items-center h-8 px-2 rounded-md text-[12px] font-medium text-brand hover:bg-brand/8 transition-colors"
-                      >
+                    {/* Botão não é link (conferência de 30/09): "Avaliar" e
+                        "Currículo" eram texto colorido. Reprovar e Desistiu
+                        encerram a candidatura e foram para o "⋯" — do lado
+                        do "Avaliar", um clique errado tirava a pessoa do
+                        board. O diálogo com o motivo continua o mesmo. */}
+                    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                      <Button href={`/vagas/${vagaId}/candidaturas/${c.id}`} variant="secondary" size="xs">
+                        <ClipboardCheck size={11} />
                         Avaliar{c.scorecardCount > 0 ? ` (${c.scorecardCount})` : ""}
-                      </Link>
+                      </Button>
                       {c.hasResume && (
-                        <a
-                          href={`/api/resumes/${c.id}`}
-                          className="inline-flex items-center h-8 px-2 rounded-md text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors"
-                        >
-                          Currículo
+                        <a href={`/api/resumes/${c.id}`} className={BOTAO_XS_EM_ANCORA}>
+                          <FileText size={11} /> Currículo
                         </a>
                       )}
                       {canManage && !isContratado && (
-                        <>
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => {
-                              setMotivo("");
-                              setDialogError(null);
-                              setEncerrarTarget({ cardId: c.id, personName: c.personName, outcome: "REPROVADO" });
-                            }}
-                          >
-                            Reprovar
-                          </Button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setMotivo("");
-                              setDialogError(null);
-                              setEncerrarTarget({ cardId: c.id, personName: c.personName, outcome: "DESISTENTE" });
-                            }}
-                            className="inline-flex items-center h-8 px-2 rounded-md text-[12px] text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors"
-                          >
-                            Desistiu
-                          </button>
-                        </>
+                        <Popover
+                          align="right"
+                          width={180}
+                          aria-label={`Encerrar a candidatura de ${c.personName}`}
+                          trigger={({ open, toggle }) => (
+                            <button
+                              type="button"
+                              onClick={toggle}
+                              aria-label={`Mais ações para ${c.personName}`}
+                              aria-expanded={open}
+                              className={`ml-auto h-7 w-7 rounded-md border inline-flex items-center justify-center transition-colors ${
+                                open ? "border-brand/40 bg-brand-subtle text-fg" : "border-border-strong text-fg-muted hover:text-fg hover:bg-surface-hover"
+                              }`}
+                            >
+                              <MoreHorizontal size={14} />
+                            </button>
+                          )}
+                        >
+                          {({ close }) => (
+                            <>
+                              <ItemDoMenu
+                                icone={<UserX />}
+                                danger
+                                onClick={() => {
+                                  close();
+                                  abrirEncerramento(c, "REPROVADO");
+                                }}
+                              >
+                                Reprovar
+                              </ItemDoMenu>
+                              <ItemDoMenu
+                                icone={<LogOut />}
+                                onClick={() => {
+                                  close();
+                                  abrirEncerramento(c, "DESISTENTE");
+                                }}
+                              >
+                                Desistiu
+                              </ItemDoMenu>
+                            </>
+                          )}
+                        </Popover>
                       )}
                     </div>
                   </article>

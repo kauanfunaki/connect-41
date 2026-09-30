@@ -3,7 +3,9 @@ import { getAuthContext } from "@/lib/auth/context";
 import { getRelatorioPendencias, type PendenciaRow } from "@/lib/relatoriosRH";
 import { formatCalendarDate } from "@/lib/format";
 import { RelatorioHeader } from "@/components/relatorios/RelatorioHeader";
-import { RelatorioTable, RelatorioBadge, ResumoChips, type BadgeTone } from "@/components/relatorios/RelatorioTable";
+import { RelatorioTable, RelatorioBadge, TOM_DO_TOTAL, type BadgeTone } from "@/components/relatorios/RelatorioTable";
+import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FileWarning, Stethoscope, UserPlus, CalendarClock } from "lucide-react";
 
 export const metadata = { title: "Pendências documentais e operacionais" };
 
@@ -28,13 +30,15 @@ export default async function RelatorioPendenciasPage() {
         subtitle="Consolida numa lista só o que hoje aparecia espalhado por ficha: documento com vencimento, admissão em aberto e exame sem ASO conferido."
       />
 
-      <ResumoChips
-        items={[
-          { label: "documentos vencidos", count: count("DOCUMENTO_VENCIDO"), tone: "danger" },
-          { label: "exames sem ASO", count: count("EXAME_PENDENTE"), tone: "warning" },
-          { label: "admissões incompletas", count: count("ADMISSAO_INCOMPLETA"), tone: "warning" },
-          { label: "vencendo em 30 dias", count: count("DOCUMENTO_VENCENDO"), tone: "neutral" },
-        ]}
+      {/* As contagens eram selos soltos numa linha (até 30/09); viraram os
+          cartões de total. O recorte fino fica no funil da coluna Pendência. */}
+      <FaixaDeTotais
+        itens={[
+          { rotulo: "Documentos vencidos", n: count("DOCUMENTO_VENCIDO"), tone: "danger" as const, icone: <FileWarning /> },
+          { rotulo: "Exames sem ASO", n: count("EXAME_PENDENTE"), tone: "warning" as const, icone: <Stethoscope /> },
+          { rotulo: "Admissões incompletas", n: count("ADMISSAO_INCOMPLETA"), tone: "warning" as const, icone: <UserPlus /> },
+          { rotulo: "Vencendo em 30 dias", n: count("DOCUMENTO_VENCENDO"), tone: "neutral" as const, icone: <CalendarClock /> },
+        ].map((i) => ({ rotulo: i.rotulo, valor: String(i.n), icone: i.icone, tom: i.n > 0 ? TOM_DO_TOTAL[i.tone] : undefined }))}
       />
 
       <RelatorioTable<PendenciaRow>
@@ -44,8 +48,12 @@ export default async function RelatorioPendenciasPage() {
         emptyTitle="Nenhuma pendência em aberto."
         emptyDescription="Documentos, admissões e exames estão todos em dia."
         columns={[
-          { header: "Colaborador", render: (r) => r.personName },
-          { header: "Pendência", render: (r) => <RelatorioBadge tone={TIPO[r.tipo].tone}>{TIPO[r.tipo].label}</RelatorioBadge> },
+          { header: "Colaborador", render: (r) => r.personName, filtro: { chave: "colaborador", valor: (r) => r.personName } },
+          {
+            header: "Pendência",
+            render: (r) => <RelatorioBadge tone={TIPO[r.tipo].tone}>{TIPO[r.tipo].label}</RelatorioBadge>,
+            filtro: { chave: "pendencia", valor: (r) => TIPO[r.tipo].label },
+          },
           { header: "Detalhe", render: (r) => r.descricao },
           {
             header: "Referência",

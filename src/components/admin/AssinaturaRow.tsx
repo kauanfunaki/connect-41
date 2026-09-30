@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { Pencil, Settings2 } from "lucide-react";
 import { salvarAssinatura, type AssinaturaState } from "@/app/(app)/admin/assinaturas/actions";
 import { MANAGEMENT_MODE_LABEL, SUBSCRIPTION_STATUS_LABEL } from "@/lib/subscription-labels";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -150,11 +151,9 @@ export function AssinaturaRow({ tenant, subscription, plans, activeUsers }: Prop
           </p>
         )}
       </div>
-      <Button
-        variant="linkMuted"
-        onClick={() => setEditing(true)}
-        className="text-[12px] flex-shrink-0"
-      >
+      {/* Botão, e não texto cinza (polimento de 30/09). */}
+      <Button variant="secondary" size="xs" onClick={() => setEditing(true)} className="flex-shrink-0">
+        {subscription ? <Pencil size={11} /> : <Settings2 size={11} />}
         {subscription ? "Editar" : "Configurar"}
       </Button>
     </div>

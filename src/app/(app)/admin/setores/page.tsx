@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
@@ -43,12 +43,11 @@ export default async function SetoresPage() {
                   </span>
                 )}
               </div>
-              <Link
-                href={`/admin/setores/${s.id}/editar`}
-                className="text-[12px] text-fg-muted hover:text-fg transition-colors flex-shrink-0"
-              >
-                Editar
-              </Link>
+              {/* Botão, e não texto cinza (polimento de 30/09). Sem "⋯":
+                  setor não se exclui, e desativar é pela edição. */}
+              <Button href={`/admin/setores/${s.id}/editar`} variant="secondary" size="xs" className="flex-shrink-0">
+                <Pencil size={11} /> Editar
+              </Button>
             </div>
           ))}
         </div>

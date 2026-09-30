@@ -6,7 +6,8 @@ import { BackButton } from "@/components/shared/BackButton";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { MetricCard } from "@/components/ui/MetricCard";
+import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { CircleDashed, Clock, Handshake, TrendingDown } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { acessoAoValora, configDoValora } from "@/lib/valora/servidor";
 import { custosDoTenant, horasDoPeriodo, periodoDaUrl } from "@/lib/gestao/horas";
@@ -60,12 +61,21 @@ export default async function DiagnosticoDaCarteiraPage() {
         subtitle={`O que cada cliente paga contra o que custou de verdade, pelas horas apontadas nos ${periodo.rotulo.toLowerCase()}.`}
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <MetricCard label="Clientes com proposta fechada" value={propostas.length} />
-        <MetricCard label="Com horas apontadas" value={linhas.length} />
-        <MetricCard label="Abaixo da margem mínima" value={abaixoDoPiso} highlight={abaixoDoPiso > 0} sub={`piso de ${cfg.parametros.margemPisoPct}%`} />
-        <MetricCard label="Sem horas no período" value={semHoras} />
-      </div>
+      {/* Os números do topo no cartão padrão, com ícone (30/09). */}
+      <FaixaDeTotais
+        itens={[
+          { rotulo: "Clientes com proposta fechada", valor: String(propostas.length), icone: <Handshake /> },
+          { rotulo: "Com horas apontadas", valor: String(linhas.length), icone: <Clock /> },
+          {
+            rotulo: "Abaixo da margem mínima",
+            valor: String(abaixoDoPiso),
+            icone: <TrendingDown />,
+            tom: abaixoDoPiso > 0 ? "text-warning" : undefined,
+            detalhe: `piso de ${cfg.parametros.margemPisoPct}%`,
+          },
+          { rotulo: "Sem horas no período", valor: String(semHoras), icone: <CircleDashed />, tom: "text-fg-muted" },
+        ]}
+      />
 
       {!custos.configurado && (
         <p className="mb-4 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[13px] text-fg-secondary">
@@ -85,51 +95,55 @@ export default async function DiagnosticoDaCarteiraPage() {
           />
         </Card>
       ) : (
-        <Card className="p-4 overflow-x-auto">
-          <table className="w-full min-w-[820px] text-[13px]">
-            <thead>
-              <tr className="text-left text-[12px] text-fg-muted">
-                <th className="pb-2 pr-3 font-medium">Cliente</th>
-                <th className="pb-2 pr-3 font-medium text-right">Honorário</th>
-                <th className="pb-2 pr-3 font-medium text-right">Horas/mês</th>
-                <th className="pb-2 pr-3 font-medium text-right">Custo real/mês</th>
-                <th className="pb-2 pr-3 font-medium text-right">Margem real</th>
-                <th className="pb-2 font-medium text-right">Alvo do Valora</th>
-              </tr>
-            </thead>
-            <tbody>
-              {linhas.map((l) => (
-                <tr key={l.companyId} className="border-t border-border align-top">
-                  <td className="py-2 pr-3">
-                    <Link href={`/empresas/${l.companyId}`} className="hover:underline">
-                      {l.cliente}
-                    </Link>
-                    {l.temHoraSemCusto && <span className="block text-[11px] text-fg-muted">tem horas em setor sem custo no Valora</span>}
-                  </td>
-                  <td className="py-2 pr-3 text-right tabular-nums">{MOEDA.format(l.honorario)}</td>
-                  <td className="py-2 pr-3 text-right tabular-nums">{UMA_CASA.format(l.horasMes)} h</td>
-                  <td className="py-2 pr-3 text-right tabular-nums">{MOEDA.format(l.custoMes)}</td>
-                  <td className="py-2 pr-3 text-right tabular-nums">
-                    {l.margemPct === null ? (
-                      "—"
-                    ) : l.margemPct < cfg.parametros.margemPisoPct ? (
-                      <Badge variant="danger">{UMA_CASA.format(l.margemPct)}%</Badge>
-                    ) : l.margemPct < cfg.parametros.margemAlvoPct ? (
-                      <Badge variant="warning">{UMA_CASA.format(l.margemPct)}%</Badge>
-                    ) : (
-                      <Badge variant="success">{UMA_CASA.format(l.margemPct)}%</Badge>
-                    )}
-                  </td>
-                  <td className="py-2 text-right tabular-nums text-fg-secondary">{l.alvo === null ? "—" : MOEDA.format(l.alvo)}</td>
+        <>
+          {/* Casco padrão, centralizado (30/09). Sem funil: um cliente por
+              linha, e o resto é valor — nada que se repita para filtrar. */}
+          <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
+            <table className="w-full min-w-[820px] text-[length:var(--fs-ui)]">
+              <thead>
+                <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                  <th className="px-3">Cliente</th>
+                  <th className="px-3">Honorário</th>
+                  <th className="px-3">Horas/mês</th>
+                  <th className="px-3">Custo real/mês</th>
+                  <th className="px-3">Margem real</th>
+                  <th className="px-3">Alvo do Valora</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {linhas.map((l) => (
+                  <tr key={l.companyId} className="border-b border-border align-top">
+                    <td className="px-3">
+                      <Link href={`/empresas/${l.companyId}`} className="font-medium text-fg hover:text-brand transition-colors">
+                        {l.cliente}
+                      </Link>
+                      {l.temHoraSemCusto && <span className="block text-[11px] text-fg-muted">tem horas em setor sem custo no Valora</span>}
+                    </td>
+                    <td className="px-3 tabular-nums">{MOEDA.format(l.honorario)}</td>
+                    <td className="px-3 tabular-nums">{UMA_CASA.format(l.horasMes)} h</td>
+                    <td className="px-3 tabular-nums">{MOEDA.format(l.custoMes)}</td>
+                    <td className="px-3 tabular-nums">
+                      {l.margemPct === null ? (
+                        "—"
+                      ) : l.margemPct < cfg.parametros.margemPisoPct ? (
+                        <Badge variant="danger">{UMA_CASA.format(l.margemPct)}%</Badge>
+                      ) : l.margemPct < cfg.parametros.margemAlvoPct ? (
+                        <Badge variant="warning">{UMA_CASA.format(l.margemPct)}%</Badge>
+                      ) : (
+                        <Badge variant="success">{UMA_CASA.format(l.margemPct)}%</Badge>
+                      )}
+                    </td>
+                    <td className="px-3 tabular-nums text-fg-secondary">{l.alvo === null ? "—" : MOEDA.format(l.alvo)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <p className="mt-3 text-[12px] text-fg-muted">
             Margem real = (honorário − impostos e variáveis de {cfg.parametros.variaveisPct}% − custo real) ÷ honorário. Vermelho: abaixo do piso de{" "}
             {cfg.parametros.margemPisoPct}%; amarelo: abaixo do alvo de {cfg.parametros.margemAlvoPct}%.
           </p>
-        </Card>
+        </>
       )}
     </PageContainer>
   );

@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import Link from "next/link";
 import type { VagaState } from "@/app/(app)/vagas/actions";
 import { VagaPrioridade, type VagaContrato, type VagaModalidade } from "@/generated/prisma/enums";
 import { CONTRATO_LABEL, MODALIDADE_LABEL } from "@/lib/carreiras/portal";
@@ -220,9 +219,9 @@ export function VagaForm({ action, cancelHref, companies, cargos, users, sectorO
         >
           {isPending ? "Salvando…" : "Salvar"}
         </Button>
-        <Link href={cancelHref} className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center">
+        <Button href={cancelHref} variant="secondary">
           Cancelar
-        </Link>
+        </Button>
       </div>
     </form>
   );

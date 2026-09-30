@@ -18,11 +18,10 @@ export default async function GestaoLayout({ children }: { children: React.React
   return (
     <PageContainer>
       <PageHeader title="Gestão" subtitle={subtitulo} />
-      <div className="mb-5">
-        <Suspense>
-          <AbasDaGestao />
-        </Suspense>
-      </div>
+      {/* A aba já traz o próprio respiro embaixo (`AbasDeLink`). */}
+      <Suspense>
+        <AbasDaGestao />
+      </Suspense>
       {children}
     </PageContainer>
   );
