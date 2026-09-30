@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { ROTULO_DA_FAIXA } from "@/lib/recrutamento/triagem";
 import { resumoDasRespostas, faltaPerguntar, ROTULO_DA_RESPOSTA } from "@/lib/recrutamento/respostas";
 import type { FichaDaCandidatura } from "@/lib/whatsapp/data";
@@ -30,9 +31,10 @@ export function FichaNaConversa({ ficha }: { ficha: FichaDaCandidatura }) {
       {falta.length > 0 && (
         <p className="text-fg-muted">Falta perguntar: {falta.map((c) => ROTULO_DA_RESPOSTA[c].toLowerCase()).join(", ")}.</p>
       )}
-      <Link href={`/vagas/${ficha.vagaId}/candidaturas/${ficha.candidaturaId}`} className="text-brand hover:underline">
-        Abrir candidatura
-      </Link>
+      {/* Botão, e não link de texto (30/09): é a ação de abrir a candidatura. */}
+      <Button href={`/vagas/${ficha.vagaId}/candidaturas/${ficha.candidaturaId}`} variant="secondary" size="xs" className="mt-1.5">
+        Abrir candidatura <ArrowRight size={11} />
+      </Button>
     </div>
   );
 }

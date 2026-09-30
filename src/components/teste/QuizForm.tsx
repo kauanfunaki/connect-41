@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { ArrowDown } from "lucide-react";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { useTestDraft } from "./useTestDraft";
 import { Button } from "@/components/ui/Button";
@@ -105,11 +106,7 @@ export function QuizForm({ token, questions }: Props) {
           <p className="text-[13px] text-fg">
             Recuperamos as respostas que você já tinha marcado neste link. Continue de onde parou.
           </p>
-          <Button
-            variant="linkMuted"
-            className="text-[12px] flex-shrink-0"
-            onClick={dismissRestoredNotice}
-          >
+          <Button variant="secondary" size="xs" className="flex-shrink-0" onClick={dismissRestoredNotice}>
             Ok
           </Button>
         </div>
@@ -126,8 +123,8 @@ export function QuizForm({ token, questions }: Props) {
             {answeredCount} de {questions.length} respondidas
           </span>
           {!allAnswered && answeredCount > 0 && (
-            <Button variant="link" className="text-[12px]" onClick={goToFirstIncomplete}>
-              Ir à próxima pendente
+            <Button variant="secondary" size="xs" onClick={goToFirstIncomplete}>
+              <ArrowDown size={11} /> Ir à próxima pendente
             </Button>
           )}
         </div>

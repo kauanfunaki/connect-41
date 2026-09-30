@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { DISC_LABEL, type DiscScores, type DiscDimension } from "@/lib/disc";
 
 type Props = {
@@ -42,10 +43,11 @@ export function DiscBars({ scores, primaryProfile, secondaryProfile, compact = f
         ))}
       </div>
 
+      {/* Botão, e não link de texto (30/09): é a ação de abrir o teste. */}
       {compact && detailHref && (
-        <Link href={detailHref} className="inline-block mt-3 text-[12px] text-brand hover:underline">
-          Ver detalhe completo
-        </Link>
+        <Button href={detailHref} variant="secondary" size="xs" className="mt-3">
+          Ver detalhe completo <ArrowRight size={11} />
+        </Button>
       )}
     </div>
   );

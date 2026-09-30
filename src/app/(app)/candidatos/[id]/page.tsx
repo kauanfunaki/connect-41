@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { Pencil } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -122,12 +124,15 @@ export default async function CandidatoPage({
         <span className="text-[13px] text-fg truncate">{person.name}</span>
       </div>
 
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-      <PageHeader title={person.name} />
+      {/* Selo, CPF e ações dentro do próprio `PageHeader` (polimento de
+          30/09), como na ficha da vaga. "Editar" era um link desenhado à mão
+          como botão. */}
+      <PageHeader
+        title={
+          <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+            {person.name}
             <span
-              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium tracking-normal border ${
                 person.active
                   ? "bg-success/10 text-success border-success/25"
                   : "bg-surface-2 text-fg-muted border-border"
@@ -135,22 +140,20 @@ export default async function CandidatoPage({
             >
               {person.active ? "Ativo" : "Inativo"}
             </span>
-          </div>
-          {person.cpf && <p className="text-[13px] text-fg-muted tnum mt-0.5">CPF: {maskCpf(person.cpf)}</p>}
-        </div>
-
-        {canEdit && (
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Link
-              href={`/candidatos/${id}/editar`}
-              className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
-            >
-              Editar
-            </Link>
-            <DeleteButton action={deleteAction} nome={person.name} />
-          </div>
-        )}
-      </div>
+          </span>
+        }
+        subtitle={person.cpf ? <span className="tnum">CPF: {maskCpf(person.cpf)}</span> : undefined}
+        action={
+          canEdit && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button href={`/candidatos/${id}/editar`} variant="secondary" size="sm">
+                <Pencil size={14} /> Editar
+              </Button>
+              <DeleteButton action={deleteAction} nome={person.name} />
+            </div>
+          )
+        }
+      />
 
       {/* Tags / Skills — banco de talentos */}
       <Card className="p-5 mb-4">

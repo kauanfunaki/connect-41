@@ -41,7 +41,8 @@ export function ConversasLista({ conversas, agora, userId, filtrada = false }: P
       {conversas.map((c) => {
         const situacao = situacaoDaConversa(c, agora);
         return (
-          <Card key={c.id} className="p-0 overflow-hidden">
+          // A borda acende no hover, como os cartões das outras filas (30/09).
+          <Card key={c.id} className="p-0 overflow-hidden hover:border-brand/40 transition-colors">
             <Link
               href={`/whatsapp/${c.id}`}
               className="block p-3.5 hover:bg-surface-hover transition-colors"

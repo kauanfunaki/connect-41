@@ -2,7 +2,8 @@
 
 // Peças interativas da conta do candidato (portal de vagas). Os dados chegam
 // prontos da página; aqui só os formulários e as confirmações em duas etapas —
-// sem `confirm()` do navegador, que some em alguns celulares.
+// sem `confirm()` do navegador, que some em alguns celulares. Desde 30/09 as
+// ações são botões com caixa — eram texto cinza, e "botão não é link".
 
 import { useActionState, useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
@@ -61,7 +62,7 @@ export function Desistir({ slug, candidaturaId, vaga }: { slug: string; candidat
   const [pendente, start] = useTransition();
   if (!confirmando) {
     return (
-      <Button variant="linkMuted" size="xs" onClick={() => setConfirmando(true)}>
+      <Button variant="secondary" size="xs" onClick={() => setConfirmando(true)}>
         Desistir desta vaga
       </Button>
     );
@@ -73,7 +74,7 @@ export function Desistir({ slug, candidaturaId, vaga }: { slug: string; candidat
         <Button size="xs" variant="secondary" disabled={pendente} onClick={() => start(async () => setEstado(await desistir(slug, candidaturaId)))}>
           {pendente ? "Enviando…" : "Sim, desistir"}
         </Button>
-        <Button size="xs" variant="linkMuted" onClick={() => setConfirmando(false)}>
+        <Button size="xs" variant="secondary" onClick={() => setConfirmando(false)}>
           Cancelar
         </Button>
       </div>
@@ -113,7 +114,7 @@ export function PedirExclusao({ slug, pedidoEm }: { slug: string; pedidoEm: stri
   }
   if (!confirmando) {
     return (
-      <Button variant="linkMuted" size="xs" onClick={() => setConfirmando(true)}>
+      <Button variant="secondary" size="xs" onClick={() => setConfirmando(true)}>
         Pedir a exclusão dos meus dados
       </Button>
     );
@@ -128,7 +129,7 @@ export function PedirExclusao({ slug, pedidoEm }: { slug: string; pedidoEm: stri
         <Button size="xs" variant="secondary" disabled={pendente} onClick={() => start(async () => setEstado(await pedirExclusao(slug)))}>
           {pendente ? "Enviando…" : "Confirmar pedido"}
         </Button>
-        <Button size="xs" variant="linkMuted" onClick={() => setConfirmando(false)}>
+        <Button size="xs" variant="secondary" onClick={() => setConfirmando(false)}>
           Cancelar
         </Button>
       </div>

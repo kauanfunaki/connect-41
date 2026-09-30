@@ -1,8 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { MessagesSquare, UserCheck, UserX } from "lucide-react";
 import { getAuthContext, canActOnSector, isFullWrite } from "@/lib/auth/context";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { ConversasLista } from "@/components/whatsapp/ConversasLista";
 import { EstadoDasConexoes } from "@/components/whatsapp/EstadoDasConexoes";
 import { listarConversas, saudeDasConexoes } from "@/lib/whatsapp/data";
@@ -18,6 +19,12 @@ const RECORTES: { chave: RecorteDaLista; rotulo: string }[] = [
   { chave: "sem_responsavel", rotulo: "Sem responsável" },
   { chave: "minhas", rotulo: "Minhas" },
 ];
+
+const ICONE_DO_RECORTE: Record<RecorteDaLista, React.ReactNode> = {
+  todas: <MessagesSquare />,
+  sem_responsavel: <UserX />,
+  minhas: <UserCheck />,
+};
 
 export default async function ConversasDeWhatsappPage({
   searchParams,
@@ -43,25 +50,23 @@ export default async function ConversasDeWhatsappPage({
         subtitle="As conversas com candidatos. O assistente responde o que sabe; o que sai do combinado aparece aqui, esperando alguém."
       />
       <EstadoDasConexoes conexoes={conexoes} podeConfigurar={isFullWrite(ctx.role)} />
-      <nav className="flex flex-wrap gap-1 border-b border-border mb-3" aria-label="Recorte das conversas">
-        {RECORTES.map((r) => {
+      {/* Os recortes em cartão, com a contagem (conferência de 30/09): eram
+          abas, e aba troca a tela — aqui é a mesma lista, recortada. Clicar no
+          cartão do recorte aberto volta para todas. */}
+      <FaixaDeTotais
+        itens={RECORTES.map((r) => {
           const n = filtrarConversas(conversas, r.chave, ctx.userId).length;
           const ativo = r.chave === recorte;
-          return (
-            <Link
-              key={r.chave}
-              href={r.chave === "todas" ? "/whatsapp" : `/whatsapp?ver=${r.chave}`}
-              aria-current={ativo ? "page" : undefined}
-              className={`px-3.5 h-10 inline-flex items-center gap-1.5 text-[13px] font-medium border-b-2 -mb-px transition-colors ${
-                ativo ? "border-brand text-brand" : "border-transparent text-fg-secondary hover:text-fg"
-              }`}
-            >
-              {r.rotulo}
-              <span className="text-[11px] text-fg-muted tabular-nums">{n}</span>
-            </Link>
-          );
+          return {
+            rotulo: r.rotulo,
+            valor: String(n),
+            icone: ICONE_DO_RECORTE[r.chave],
+            tom: r.chave === "sem_responsavel" && n > 0 ? "text-warning" : undefined,
+            detalhe: ativo ? "mostrando agora" : undefined,
+            href: r.chave === "todas" || ativo ? "/whatsapp" : `/whatsapp?ver=${r.chave}`,
+          };
         })}
-      </nav>
+      />
       <ConversasLista conversas={filtrarConversas(conversas, recorte, ctx.userId)} agora={agora} userId={ctx.userId} filtrada={recorte !== "todas"} />
     </PageContainer>
   );

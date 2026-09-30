@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
-import { ClipboardList } from "lucide-react";
+import { Check, ClipboardList, Copy, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { gerarLinkTeste } from "@/app/(app)/testes/actions";
 import { AssessmentResult } from "./AssessmentResult";
@@ -126,23 +126,16 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
             <div className="flex-1">
               <Input readOnly value={linkUrl} onFocus={(e) => e.target.select()} />
             </div>
-            <Button
-              variant="secondary"
-              size="md"
-              className="bg-surface-hover hover:border-brand flex-shrink-0"
-              onClick={handleCopy}
-            >
+            <Button variant="secondary" className="flex-shrink-0" onClick={handleCopy}>
+              {copied ? <Check size={14} /> : <Copy size={14} />}
               {copied ? "Copiado!" : "Copiar"}
             </Button>
           </div>
           {emailNote && <p className="text-[12px] text-fg-muted mb-3">{emailNote}</p>}
           {canManage && (
-            <Button
-              variant="linkMuted"
-              className="text-[12px] underline disabled:opacity-60"
-              onClick={handleGerar}
-              disabled={pending}
-            >
+            // Era texto cinza sublinhado (30/09): botão não é link.
+            <Button variant="secondary" size="sm" onClick={handleGerar} disabled={pending}>
+              <RefreshCw size={13} />
               {pending ? "Gerando…" : "Gerar novo link (invalida o atual)"}
             </Button>
           )}

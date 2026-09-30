@@ -1,5 +1,5 @@
-import Link from "next/link";
-import { CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Plug, XCircle } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { formatInstantDateTime } from "@/lib/format";
 import type { ConexaoNaTela } from "@/lib/whatsapp/data";
@@ -21,15 +21,13 @@ const ESTILO: Record<NivelDeSaude, { icone: typeof CheckCircle2; cor: string; bo
 export function EstadoDasConexoes({ conexoes, podeConfigurar }: { conexoes: ConexaoNaTela[]; podeConfigurar: boolean }) {
   if (conexoes.length === 0) {
     return (
-      <Card className="p-4 mb-4 text-[13px] text-fg-muted">
+      <Card className="p-4 mb-4 flex flex-wrap items-center justify-between gap-3 text-[13px] text-fg-muted">
         Nenhum número de WhatsApp conectado.
+        {/* Botão, e não link de texto (30/09): é a ação de conectar. */}
         {podeConfigurar && (
-          <>
-            {" "}
-            <Link href="/admin/integracoes" className="text-brand hover:underline">
-              Conectar em Integrações
-            </Link>
-          </>
+          <Button href="/admin/integracoes" variant="secondary" size="sm">
+            <Plug size={13} /> Conectar em Integrações
+          </Button>
         )}
       </Card>
     );

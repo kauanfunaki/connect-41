@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { Pencil, UserPlus } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { VagaPrioridade } from "@/generated/prisma/enums";
@@ -147,27 +149,26 @@ export default async function VagaPage({
         <span className="text-[13px] text-fg truncate">{vaga.title}</span>
       </div>
 
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-      <PageHeader title={vaga.title} />
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${VAGA_STATUS_STYLE[vaga.status]}`}>
+      {/* Selo, empresa e ações dentro do próprio `PageHeader` (polimento de
+          30/09): eram um cabeçalho montado em volta dele, e o selo ficava
+          centrado na margem de baixo do título, e não no título. "Editar" era
+          um link desenhado à mão como botão. */}
+      <PageHeader
+        title={
+          <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+            {vaga.title}
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium tracking-normal border ${VAGA_STATUS_STYLE[vaga.status]}`}>
               {VAGA_STATUS_LABEL[vaga.status]}
             </span>
-          </div>
-          <p className="text-[13px] text-fg-muted">
-            {vaga.company.name} · {sectorLabels[vaga.sectorCode] ?? vaga.sectorCode}
-          </p>
-        </div>
-
-        {canManage && (
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Link
-              href={`/vagas/${id}/editar`}
-              className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
-            >
-              Editar
-            </Link>
+          </span>
+        }
+        subtitle={<>{vaga.company.name} · {sectorLabels[vaga.sectorCode] ?? vaga.sectorCode}</>}
+        action={
+          canManage && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button href={`/vagas/${id}/editar`} variant="secondary" size="sm">
+              <Pencil size={14} /> Editar
+            </Button>
             {vaga.status !== "ENCERRADA" ? (
               <ConfirmActionButton
                 action={encerrarAction}
@@ -189,8 +190,9 @@ export default async function VagaPage({
             )}
             <DeleteButton action={deleteAction} nome={vaga.title} />
           </div>
-        )}
-      </div>
+          )
+        }
+      />
 
       {/* Detalhes */}
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
@@ -257,10 +259,11 @@ export default async function VagaPage({
           <h2 className="text-[14px] font-semibold text-fg">
             Funil de recrutamento ({vaga.candidaturas.length} candidato{vaga.candidaturas.length !== 1 ? "s" : ""})
           </h2>
+          {/* Era link de texto azul (30/09): botão não é link. */}
           {canAct && (
-            <Link href="/candidatos/nova" className="text-[12px] text-brand hover:underline">
-              + Novo Candidato
-            </Link>
+            <Button href="/candidatos/nova" variant="secondary" size="xs">
+              <UserPlus size={11} /> Novo Candidato
+            </Button>
           )}
         </div>
 
