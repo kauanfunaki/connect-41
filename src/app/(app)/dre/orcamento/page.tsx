@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Target } from "lucide-react";
+import { ArrowLeftRight, BadgeCheck, FilePen, Target } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -13,7 +12,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
-import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
+import { Button } from "@/components/ui/Button";
+import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
 import { NovaVersao } from "@/components/dre/orcamento/NovaVersao";
 import { GradeDoOrcamento } from "@/components/dre/orcamento/GradeDoOrcamento";
 import { AcoesDaVersao } from "@/components/dre/orcamento/AcoesDaVersao";
@@ -31,10 +31,6 @@ const MODULE = MODULO_DE_ORCAMENTO;
 // Setor que opera o módulo neste tenant (ver `setorDoModulo`); o do catálogo
 // é só o padrão.
 const SECTOR = getModuleDef(MODULE)!.sectorCode;
-
-const PILULA =
-  "h-8 px-3 inline-flex items-center gap-2 rounded-md border border-border text-fg-secondary text-[12px] hover:bg-surface-hover transition-colors";
-const PILULA_ATIVA = "h-8 px-3 inline-flex items-center gap-2 rounded-md border border-brand/40 bg-brand/8 text-brand text-[12px] font-medium";
 
 /**
  * Orçamento anual por grupo da DRE, por empresa.
@@ -109,14 +105,21 @@ export default async function OrcamentoPage({
         <Input compact type="number" name="ano" defaultValue={ano} min={2000} max={2100} className="w-24" aria-label="Ano" />
       </FiltroDePeriodo>
 
-      <div className="flex flex-wrap items-center gap-1.5 mb-4">
-        {doAno.map((v) => (
-          <Link key={v.id} href={href(v.id)} aria-current={v.id === selecionada?.id ? "page" : undefined} className={v.id === selecionada?.id ? PILULA_ATIVA : PILULA}>
-            {v.name}
-            {v.status === "APROVADO" && <Badge variant="success">Aprovada</Badge>}
-          </Link>
-        ))}
-      </div>
+      {/* As versões do ano são abas, e não pílulas (conferência de 30/09):
+          escolher uma troca a grade inteira, o cabeçalho e as ações — é outra
+          tela, não um recorte da mesma. A aprovada leva o selo no ícone e no
+          nome, que a aba não tem lugar para o `Badge`. */}
+      {doAno.length > 0 && (
+        <AbasDeLink
+          abas={doAno.map((v) => ({
+            chave: v.id,
+            rotulo: v.status === "APROVADO" ? `${v.name} · aprovada` : v.name,
+            href: href(v.id),
+            icone: v.status === "APROVADO" ? <BadgeCheck className="text-success" /> : <FilePen />,
+          }))}
+          ativa={selecionada?.id ?? ""}
+        />
+      )}
       {podeEditar && (
         <div className="mb-4">
           <NovaVersao
@@ -158,13 +161,11 @@ export default async function OrcamentoPage({
               )}
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              {/* Era link de texto; é ação, então é botão (30/09). */}
               {aprovada && (
-                <Link
-                  href={`/dre/economica?empresa=${companyId}&mes=${competenciaDe(ano, mesDoComparativo)}`}
-                  className="text-[12px] text-brand hover:underline"
-                >
-                  Ver orçado × realizado
-                </Link>
+                <Button href={`/dre/economica?empresa=${companyId}&mes=${competenciaDe(ano, mesDoComparativo)}`} variant="secondary" size="sm">
+                  <ArrowLeftRight size={14} /> Ver orçado × realizado
+                </Button>
               )}
               {coordena && (
                 <AcoesDaVersao

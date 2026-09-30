@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { MessageSquareReply } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -22,10 +23,12 @@ export function EditarProposta({ proposta }: { proposta: Proposta }) {
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
 
+  // Botão de verdade, e não texto cinza (conferência de 30/09: botão não é
+  // link) — é a ação da linha da proposta.
   if (!aberto) {
     return (
-      <Button variant="linkMuted" size="xs" className="text-[11px]" onClick={() => setAberto(true)}>
-        Registrar retorno
+      <Button variant="secondary" size="xs" onClick={() => setAberto(true)}>
+        <MessageSquareReply size={11} /> Registrar retorno
       </Button>
     );
   }
@@ -62,7 +65,7 @@ export function EditarProposta({ proposta }: { proposta: Proposta }) {
         <Button type="submit" size="xs" disabled={pendente}>
           Salvar
         </Button>
-        <Button variant="linkMuted" size="xs" onClick={() => setAberto(false)}>
+        <Button variant="secondary" size="xs" onClick={() => setAberto(false)}>
           Cancelar
         </Button>
       </div>

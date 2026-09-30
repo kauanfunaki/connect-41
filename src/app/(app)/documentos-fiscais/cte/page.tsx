@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Truck } from "lucide-react";
+import { Truck, FileText, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -135,6 +134,10 @@ export default async function CtePage({
         </Card>
       ) : (
         <>
+          {/* Fica formulário, e não o botão "Filtros" (30/09): a raiz é o
+              contexto da consulta — uma por vez, sem "todas" — e o intervalo de
+              datas mora fora do botão pela própria regra. E enviar pelo
+              formulário descarta o cursor, que é de uma janela só. */}
           <form className="flex flex-wrap items-end gap-3 mb-5" action="/documentos-fiscais/cte">
             <CampoForm label="Cliente (raiz do CNPJ)" htmlFor="raiz">
               <Select id="raiz" name="raiz" defaultValue={raiz}>
@@ -174,21 +177,25 @@ export default async function CtePage({
             </Card>
           ) : (
             <>
-              <div className="overflow-x-auto border border-border rounded-lg bg-surface">
-                <table className="w-full text-[13px] border-collapse">
+              {/* Casco padrão (30/09). Sem funil por coluna: a página é um
+                  pedaço de 100 da janela, por cursor, e o SPED só filtra por
+                  raiz e rota — funil nas linhas da tela mentiria sobre as
+                  outras páginas. */}
+              <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
+                <table className="w-full text-[length:var(--fs-ui)] border-collapse">
                   <thead>
-                    <tr className="bg-surface-2 text-fg-muted">
-                      <th className="text-left font-medium px-3 py-2">Número</th>
-                      <th className="text-left font-medium px-3 py-2">Série</th>
-                      <th className="text-left font-medium px-3 py-2">Competência</th>
-                      <th className="text-left font-medium px-3 py-2">Emitente</th>
-                      <th className="text-left font-medium px-3 py-2">Sentido</th>
-                      <th className="text-left font-medium px-3 py-2">PDF</th>
+                    <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                      <th className="px-3 py-2">Número</th>
+                      <th className="px-3 py-2">Série</th>
+                      <th className="px-3 py-2">Competência</th>
+                      <th className="px-3 py-2">Emitente</th>
+                      <th className="px-3 py-2">Sentido</th>
+                      <th className="px-3 py-2">PDF</th>
                     </tr>
                   </thead>
                   <tbody>
                     {documentos.map((d) => (
-                      <tr key={d.identificador} className="border-t border-border-soft">
+                      <tr key={d.identificador} className="border-b border-border">
                         <td className="px-3 py-2 text-fg tabular-nums">{d.numero}</td>
                         <td className="px-3 py-2 text-fg-muted">{d.serie ?? "—"}</td>
                         <td className="px-3 py-2 text-fg tabular-nums">{d.competencia}</td>
@@ -205,14 +212,17 @@ export default async function CtePage({
                         </td>
                         <td className="px-3 py-2">
                           {d.renderizavel && d.chave ? (
-                            <a
-                              href={`/api/documentos-fiscais/cte/pdf?chave=${encodeURIComponent(d.chave)}&raiz=${encodeURIComponent(raiz)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-brand hover:underline"
-                            >
-                              Abrir
-                            </a>
+                            // Botão, e não link de texto (30/09) — mas num
+                            // formulário GET, e não no `Button href`: o `href`
+                            // vira `<Link>`, que pré-carrega a rota ao aparecer
+                            // na tela, e aqui cada linha pediria o PDF ao SPED.
+                            <form action="/api/documentos-fiscais/cte/pdf" method="get" target="_blank" className="inline-flex">
+                              <input type="hidden" name="chave" value={d.chave} />
+                              <input type="hidden" name="raiz" value={raiz} />
+                              <Button type="submit" variant="secondary" size="xs">
+                                <FileText size={11} /> Abrir
+                              </Button>
+                            </form>
                           ) : (
                             <span className="text-fg-muted">sem XML</span>
                           )}
@@ -228,13 +238,12 @@ export default async function CtePage({
                   {documentos.length} CT-e nesta página. O valor não vem na listagem — só dentro do
                   XML, por documento.
                 </p>
+                {/* Só "próxima": a paginação é por cursor, sem total nem
+                    volta — por isso não é o `Pagination`. */}
                 {proximoCursor && (
-                  <Link
-                    href={url({ cursor: proximoCursor })}
-                    className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
-                  >
-                    Próxima página
-                  </Link>
+                  <Button href={url({ cursor: proximoCursor })} variant="secondary" size="sm">
+                    Próxima página <ChevronRight size={14} />
+                  </Button>
                 )}
               </div>
             </>

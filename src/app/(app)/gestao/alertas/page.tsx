@@ -37,7 +37,7 @@ export default async function AlertasDaGestaoPage({ searchParams }: { searchPara
 
   return (
     <div className="flex flex-col gap-6">
-      <FiltroDeSetor base="/gestao/alertas" setores={g.setores} ativo={setor} />
+      <FiltroDeSetor setores={g.setores} />
 
       <section aria-labelledby="lista" className="flex flex-col gap-2">
         <h2 id="lista" className="text-[14px] font-semibold text-fg">
@@ -75,14 +75,18 @@ export default async function AlertasDaGestaoPage({ searchParams }: { searchPara
             dias; card que ainda não começou só avisa pelo prazo.
           </p>
         </div>
-        <Card className="p-4 overflow-x-auto">
-          <table className="w-full min-w-[520px]">
+        {/* Casco padrão (30/09). Sem funil: é uma linha por setor, de ajuste,
+            e o setor já se escolhe no "Filtros" acima. */}
+        <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
+          <table className="w-full min-w-[520px] text-[length:var(--fs-ui)]">
             <thead>
-              <tr className="text-left text-[12px] text-fg-muted">
-                <th className="pb-2 pr-3 font-medium">Setor</th>
-                <th className="pb-2 pr-3 font-medium">Dias para parado</th>
-                <th className="pb-2 pr-3 font-medium">Aviso de prazo (dias)</th>
-                <th />
+              <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                <th className="px-3">Setor</th>
+                <th className="px-3">Dias para parado</th>
+                <th className="px-3">Aviso de prazo (dias)</th>
+                <th className="px-3">
+                  <span className="sr-only">Salvar</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -103,7 +107,7 @@ export default async function AlertasDaGestaoPage({ searchParams }: { searchPara
               })}
             </tbody>
           </table>
-        </Card>
+        </div>
       </section>
     </div>
   );

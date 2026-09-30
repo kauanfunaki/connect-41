@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
@@ -19,7 +20,7 @@ export default async function NovaSimulacaoPage() {
         subtitle="Preencha com o cliente: cada resposta liga uma atividade dos setores, e o honorário sai do tempo que ela custa."
         action={
           <Button href="/valora" variant="secondary" size="sm">
-            Voltar às propostas
+            <ArrowLeft size={14} /> Voltar às propostas
           </Button>
         }
       />

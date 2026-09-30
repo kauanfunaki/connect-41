@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import { Upload } from "lucide-react";
+import { Upload, FileText, Truck, Hourglass, CheckCircle2, EyeOff } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FileText, Truck } from "lucide-react";
+import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -62,32 +62,42 @@ export default async function DocumentosFiscaisPage({
 
   const semNenhum = total === 0 && !params.q && !params.empresa && !params.competencia && !params.tipo && !params.destino;
 
+  // O cartão de destino é atalho para o recorte, mantendo os outros filtros; o
+  // do recorte ativo volta para todos (o mesmo gesto de /processos).
+  const hrefDoDestino = (destino: string) => {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (k !== "pagina" && k !== "destino" && typeof v === "string" && v) q.set(k, v);
+    }
+    if (destino !== params.destino) q.set("destino", destino);
+    const s = q.toString();
+    return s ? `/documentos-fiscais?${s}` : "/documentos-fiscais";
+  };
+
   return (
     <PageContainer>
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <PageHeader title="Documentos Fiscais" />
-          <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
+      {/* Os dois atalhos eram links pintados à mão para parecer botão; agora são
+          o `Button` (conferência de 30/09: botão não é link). */}
+      <PageHeader
+        title="Documentos Fiscais"
+        subtitle={
+          <>
             NF-e, NFC-e e NFS-e por empresa e competência. O acervo espelha o que já foi
             emitido — nada é emitido aqui. <strong>CT-e não entra no acervo</strong>: são milhões
             por mês e vêm sem valor apurado, então ficam na consulta ao vivo.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Link
-            href="/documentos-fiscais/cte"
-            className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-[length:var(--fs-button)] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors"
-          >
-            <Truck size={16} /> Consultar CT-e
-          </Link>
-          <Link
-            href="/documentos-fiscais/entrada"
-            className="inline-flex items-center gap-2 rounded-md bg-brand px-3 py-2 text-[length:var(--fs-button)] font-medium text-white hover:bg-brand-hover transition-colors"
-          >
-            <Upload size={16} /> Entrada de XML
-          </Link>
-        </div>
-      </div>
+          </>
+        }
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <Button href="/documentos-fiscais/cte" variant="secondary">
+              <Truck size={14} /> Consultar CT-e
+            </Button>
+            <Button href="/documentos-fiscais/entrada">
+              <Upload size={14} /> Entrada de XML
+            </Button>
+          </div>
+        }
+      />
 
       {semNenhum ? (
         <Card>
@@ -99,24 +109,23 @@ export default async function DocumentosFiscaisPage({
         </Card>
       ) : (
         <>
-          <div className="grid grid-cols-3 gap-px bg-border border border-border rounded-lg overflow-hidden mb-4">
-            {(["PENDENTE", "LANCADO", "IGNORADO"] as const).map((d) => (
-              <div key={d} className="bg-surface px-4 py-3">
-                <p className="text-[20px] font-semibold text-fg tabular-nums leading-none">
-                  {INTEIRO.format(resumo[d].total)}
-                  {resumo[d].limitado ? "+" : ""}
-                </p>
-                <p className="text-[11px] text-fg-muted mt-1.5">
-                  {d === "PENDENTE" ? "Pendentes de decisão" : d === "LANCADO" ? "Lançados" : "Ignorados"}
-                </p>
-              </div>
-            ))}
-          </div>
+          {/* Eram três células coladas numa grade de 1px; viraram os cartões do
+              padrão (30/09), e cada um abre o recorte do destino que conta. */}
+          <FaixaDeTotais
+            itens={(["PENDENTE", "LANCADO", "IGNORADO"] as const).map((d) => ({
+              rotulo: d === "PENDENTE" ? "Pendentes de decisão" : d === "LANCADO" ? "Lançados" : "Ignorados",
+              valor: `${INTEIRO.format(resumo[d].total)}${resumo[d].limitado ? "+" : ""}`,
+              icone: d === "PENDENTE" ? <Hourglass /> : d === "LANCADO" ? <CheckCircle2 /> : <EyeOff />,
+              tom: d === "LANCADO" ? "text-success" : d === "IGNORADO" ? "text-fg-muted" : undefined,
+              detalhe: params.destino === d ? "mostrando agora" : undefined,
+              href: hrefDoDestino(d),
+            }))}
+          />
 
           <AcervoFiltros empresas={empresas} competencias={competencias} />
 
           {documentos.length === 0 ? (
-            <Card className="mt-4">
+            <Card>
               <EmptyState
                 icon={<FileText />}
                 title="Nenhum documento com estes filtros"

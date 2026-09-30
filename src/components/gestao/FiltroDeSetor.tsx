@@ -1,35 +1,25 @@
-import Link from "next/link";
+import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDaTela";
 
-/** Chips de setor. "Todos" some quando a pessoa só enxerga um setor. */
-export function FiltroDeSetor({
-  base,
-  setores,
-  ativo,
-}: {
-  base: string;
-  setores: { value: string; label: string }[];
-  ativo: string | null;
-}) {
+type Setor = { value: string; label: string };
+
+/**
+ * O campo "Setor" do botão "Filtros". `null` quando a pessoa só enxerga um
+ * setor — não há o que escolher.
+ */
+export function campoDeSetor(setores: Setor[]): CampoDeFiltro | null {
   if (setores.length <= 1) return null;
-  const chip = (ligado: boolean) =>
-    `inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
-      ligado ? "bg-surface-2 text-fg border border-border-strong" : "text-fg-muted hover:text-fg hover:bg-surface-2"
-    }`;
-  return (
-    <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Filtrar por setor">
-      <Link href={base} aria-current={!ativo ? "true" : undefined} className={chip(!ativo)}>
-        Todos os setores
-      </Link>
-      {setores.map((s) => (
-        <Link
-          key={s.value}
-          href={`${base}?setor=${encodeURIComponent(s.value)}`}
-          aria-current={ativo === s.value ? "true" : undefined}
-          className={chip(ativo === s.value)}
-        >
-          {s.label}
-        </Link>
-      ))}
-    </div>
-  );
+  return { chave: "setor", rotulo: "Setor", vazioLabel: "Todos os setores", opcoes: setores };
+}
+
+/**
+ * O setor da Gestão no botão "Filtros".
+ *
+ * Eram chips de link, um por setor (até 30/09) — o desenho de pílula que a
+ * conferência reprovou para filtro: ninguém distinguia do seletor de abas logo
+ * acima. O parâmetro continua `setor` na URL, então as abas o carregam junto.
+ */
+export function FiltroDeSetor({ setores }: { setores: Setor[] }) {
+  const campo = campoDeSetor(setores);
+  if (!campo) return null;
+  return <FiltrosDaTela campos={[campo]} />;
 }
