@@ -139,6 +139,34 @@ export async function listarPendencias(
   };
 }
 
+/**
+ * As abertas por status, e quantas de cada já passaram do prazo — o painel da
+ * Home (30/09). Mesma régua de vencida da fila acima, sem carregar as linhas.
+ */
+export async function resumoDasPendencias(
+  escopo: EscopoDePendencias,
+  agora: Date
+): Promise<{ aguardando: number; respondidas: number; vencidasAguardando: number; vencidasRespondidas: number }> {
+  const prisma = getPrisma();
+  const base = whereDoEscopo(escopo);
+  const abertas: Prisma.ClientRequestWhereInput = { status: { in: ["ABERTA", "RESPONDIDA"] } };
+  const [porStatus, vencidasPorStatus] = await Promise.all([
+    prisma.clientRequest.groupBy({ by: ["status"], where: { AND: [base, abertas] }, _count: { _all: true } }),
+    prisma.clientRequest.groupBy({
+      by: ["status"],
+      where: { AND: [base, abertas, { dueDate: { lt: inicioDeHoje(agora) } }] },
+      _count: { _all: true },
+    }),
+  ]);
+  const conta = (lista: typeof porStatus, s: StatusDaPendencia) => lista.find((p) => p.status === s)?._count._all ?? 0;
+  return {
+    aguardando: conta(porStatus, "ABERTA"),
+    respondidas: conta(porStatus, "RESPONDIDA"),
+    vencidasAguardando: conta(vencidasPorStatus, "ABERTA"),
+    vencidasRespondidas: conta(vencidasPorStatus, "RESPONDIDA"),
+  };
+}
+
 /** Quantas esperam o cliente — o número da home do portal. */
 export async function pendenciasAguardandoCliente(escopo: EscopoDePendencias): Promise<number> {
   return getPrisma().clientRequest.count({ where: { ...whereDoEscopo(escopo), status: "ABERTA" } });

@@ -6,14 +6,15 @@ import { getAuthContext } from "@/lib/auth/context";
 import { serializeHomeWidgets, type HomeWidgetKey } from "@/lib/homeWidgets";
 import type { ActionState } from "@/lib/actionState";
 
-// Salva quais blocos da Home o usuário quer ver e em que ordem. Preferência é
-// pessoal e não concede acesso a nada — a Home continua filtrando widget
-// restrito por papel — então basta estar autenticado.
-export async function salvarWidgetsHome(keys: HomeWidgetKey[]): Promise<ActionState> {
+// Salva quais blocos da Home o usuário quer ver, em que ordem, e quais ele
+// desmarcou (os ocultos — ver `parseHomeWidgets`). Preferência é pessoal e
+// não concede acesso a nada — a Home continua filtrando widget restrito por
+// papel e painel de setor por acesso — então basta estar autenticado.
+export async function salvarWidgetsHome(keys: HomeWidgetKey[], ocultos: HomeWidgetKey[] = []): Promise<ActionState> {
   const ctx = await getAuthContext();
   if (!ctx.userId || !ctx.tenantId) return { error: "Não autenticado" };
 
-  const homeWidgets = serializeHomeWidgets(keys);
+  const homeWidgets = serializeHomeWidgets(keys, ocultos);
 
   try {
     const prisma = getPrisma();

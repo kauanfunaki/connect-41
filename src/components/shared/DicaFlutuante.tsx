@@ -12,6 +12,8 @@ type Dica = { texto: string; x: number; y: number; embaixo: boolean };
  */
 const ALVOS = "[data-dica], table .truncate, table [title], .truncate.c41-cortavel";
 const ATRASO_MS = 300;
+/** Gráfico (`data-dica-rapida`): quem passa o mouse numa barra está lendo, não passando. */
+const ATRASO_RAPIDO_MS = 60;
 
 function cortado(el: HTMLElement): boolean {
   return el.scrollWidth > el.clientWidth + 1;
@@ -73,7 +75,7 @@ export function DicaFlutuante() {
         const r = el.getBoundingClientRect();
         const embaixo = r.top < 56;
         setDica({ texto, x: r.left + r.width / 2, y: embaixo ? r.bottom + 8 : r.top - 8, embaixo });
-      }, ATRASO_MS);
+      }, el.hasAttribute("data-dica-rapida") ? ATRASO_RAPIDO_MS : ATRASO_MS);
     }
 
     function sair(e: MouseEvent) {
