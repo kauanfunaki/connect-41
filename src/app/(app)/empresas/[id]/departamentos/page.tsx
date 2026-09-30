@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
@@ -6,7 +5,7 @@ import { Network } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
-import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
+import { AcoesDoCadastro } from "@/components/empresas/AcoesDoCadastro";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -85,18 +84,10 @@ export default async function DepartamentosPage({
       ) : (
         <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
           {departments.map((d) => (
-            <div key={d.id} className="flex items-center justify-between px-4 py-3">
+            <div key={d.id} className="flex items-center justify-between gap-4 px-4 py-3">
               <p className="text-[13px] text-fg font-medium">{d.name}</p>
               {canManage && (
-                <div className="flex items-center gap-3">
-                  <Link
-                    href={`/empresas/${companyId}/departamentos/${d.id}/editar`}
-                    className="text-[12px] text-fg-muted hover:text-fg transition-colors"
-                  >
-                    Editar
-                  </Link>
-                  <DeleteFieldButton action={excluirDepartment.bind(null, d.id, companyId)} nome={d.name} />
-                </div>
+                <AcoesDoCadastro editarHref={`/empresas/${companyId}/departamentos/${d.id}/editar`} excluir={excluirDepartment.bind(null, d.id, companyId)} nome={d.name} />
               )}
             </div>
           ))}

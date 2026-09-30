@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Sparkles, Trash2 } from "lucide-react";
+import { Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -97,7 +97,7 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
         </div>
         {requisitos && !editando && podeEditar && (
           <Button variant="secondary" size="sm" onClick={() => setEditando(true)}>
-            Editar requisitos
+            <Pencil size={13} /> Editar requisitos
           </Button>
         )}
       </div>
@@ -128,8 +128,9 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
               </Button>
             </div>
           ))}
-          <Button variant="linkMuted" size="xs" onClick={() => setLinhas((ls) => [...ls, { tipo: "DESEJAVEL", texto: "", peso: 2 }])}>
-            <Plus size={12} /> Adicionar requisito
+          {/* Botão, e não texto cinza (30/09): é ação do formulário. */}
+          <Button variant="secondary" size="xs" onClick={() => setLinhas((ls) => [...ls, { tipo: "DESEJAVEL", texto: "", peso: 2 }])}>
+            <Plus size={11} /> Adicionar requisito
           </Button>
           <div className="flex flex-wrap items-end gap-3 pt-2">
             <label className="flex flex-col gap-1 text-[12px] text-fg-secondary">
@@ -149,7 +150,7 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
               Salvar requisitos
             </Button>
             {requisitos && (
-              <Button variant="linkMuted" size="xs" onClick={() => setEditando(false)}>
+              <Button variant="secondary" size="sm" onClick={() => setEditando(false)}>
                 Cancelar
               </Button>
             )}

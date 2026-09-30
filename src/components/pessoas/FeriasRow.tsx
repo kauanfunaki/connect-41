@@ -2,35 +2,14 @@
 
 import { useActionState, useState } from "react";
 import type { VacationState } from "@/app/(app)/pessoas/[id]/ferias/actions";
-import { VacationStatus } from "@/generated/prisma/enums";
+import type { VacationStatus } from "@/generated/prisma/enums";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { useConfirm } from "@/components/ui/useConfirm";
 import { Button } from "@/components/ui/Button";
+import { MenuDoRegistro } from "./MenuDoRegistro";
+import { SITUACAO_DAS_FERIAS, COR_DAS_FERIAS } from "./rotulosDoDP";
 
-const STATUS_LABEL: Record<VacationStatus, string> = {
-  PLANEJADA:  "Planejada",
-  SOLICITADA: "Solicitada",
-  EM_ANALISE: "Em análise",
-  APROVADA:   "Aprovada",
-  PROGRAMADA: "Programada",
-  EM_GOZO:    "Em gozo",
-  CONCLUIDA:  "Concluída",
-  CANCELADA:  "Cancelada",
-};
-
-const STATUS_STYLE: Record<VacationStatus, string> = {
-  PLANEJADA:  "bg-surface-2 text-fg-muted border-border",
-  SOLICITADA: "bg-brand/10 text-brand border-brand/25",
-  EM_ANALISE: "bg-warning/10 text-warning border-warning/25",
-  APROVADA:   "bg-brand/10 text-brand border-brand/25",
-  PROGRAMADA: "bg-brand/10 text-brand border-brand/25",
-  EM_GOZO:    "bg-success/10 text-success border-success/25",
-  CONCLUIDA:  "bg-success/10 text-success border-success/25",
-  CANCELADA:  "bg-danger/10 text-danger border-danger/25",
-};
-
-const STATUS_OPTIONS = Object.keys(STATUS_LABEL) as VacationStatus[];
+const STATUS_OPTIONS = Object.keys(SITUACAO_DAS_FERIAS) as VacationStatus[];
 
 export type FeriasItem = {
   id: string;
@@ -51,11 +30,10 @@ type Props = {
 export function FeriasRow({ ferias, updateAction, removeAction, canManage }: Props) {
   const [state, formAction, isPending] = useActionState(updateAction, null);
   const [status, setStatus] = useState(ferias.status);
-  const { dialog, requestConfirm } = useConfirm();
 
   return (
     <div className="py-3 border-b border-border last:border-0">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[13px] text-fg">
             Aquisitivo: {ferias.acquisitivePeriodLabel} · {ferias.days} dias
@@ -64,15 +42,17 @@ export function FeriasRow({ ferias, updateAction, removeAction, canManage }: Pro
             <p className="text-[12px] text-fg-muted">Concessivo: {ferias.concessivePeriodLabel}</p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {ferias.isVencida && (
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border bg-danger/10 text-danger border-danger/25">
               Vencida
             </span>
           )}
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${STATUS_STYLE[ferias.status]}`}>
-            {STATUS_LABEL[ferias.status]}
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${COR_DAS_FERIAS[ferias.status]}`}>
+            {SITUACAO_DAS_FERIAS[ferias.status]}
           </span>
+          {/* Remover saiu de ao lado do "Atualizar" para o "⋯" (30/09). */}
+          {canManage && <MenuDoRegistro titulo="Remover este registro de férias?" onRemover={removeAction} />}
         </div>
       </div>
 
@@ -85,7 +65,7 @@ export function FeriasRow({ ferias, updateAction, removeAction, canManage }: Pro
               onChange={(e) => setStatus(e.target.value as VacationStatus)}
             >
               {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+                <option key={s} value={s}>{SITUACAO_DAS_FERIAS[s]}</option>
               ))}
             </Select>
           </div>
@@ -103,18 +83,10 @@ export function FeriasRow({ ferias, updateAction, removeAction, canManage }: Pro
           >
             {isPending ? "Salvando…" : "Atualizar"}
           </Button>
-          <Button
-            variant="danger"
-            size="md"
-            onClick={() => requestConfirm({ title: "Remover este registro de férias?", destructive: true, confirmLabel: "Remover" }, removeAction)}
-          >
-            Remover
-          </Button>
         </form>
       )}
 
       {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
-      {dialog}
     </div>
   );
 }

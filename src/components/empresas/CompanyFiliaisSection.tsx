@@ -3,6 +3,7 @@ import { Building2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusDot } from "@/components/shared/StatusDot";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { formatCnpj } from "@/lib/format";
 import { nomeExibicao } from "@/lib/companyName";
 import type { CompanyStatus } from "@/generated/prisma/enums";
@@ -24,6 +25,12 @@ type Props = {
   statusLabel: Record<CompanyStatus, string>;
   statusColor: Record<CompanyStatus, string>;
 };
+
+/** "Cidade/UF", ou o que houver dos dois — o mesmo texto na célula e no funil. */
+function localDe(f: Empresa): string | null {
+  if (f.city && f.stateCode) return `${f.city}/${f.stateCode}`;
+  return f.city ?? f.stateCode ?? null;
+}
 
 export function CompanyFiliaisSection({ matriz, filiais, statusLabel, statusColor }: Props) {
   // Uma empresa é uma coisa ou outra, nunca as duas ao mesmo tempo na prática —
@@ -54,42 +61,52 @@ export function CompanyFiliaisSection({ matriz, filiais, statusLabel, statusColo
         </Card>
       )}
 
+      {/* Tabela no casco padrão (30/09), com o título fora dela: dentro de um
+          Card eram duas bordas. Todas as filiais já vêm, então o funil de
+          status e de localização filtra no navegador. */}
       {filiais.length > 0 && (
-        <Card className="p-0 overflow-hidden">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg px-5 pt-5 pb-3">
-            Filiais ({filiais.length})
-          </h2>
-          <div className="scroll-x overflow-x-auto">
-            <table className="w-full min-w-[560px] text-[length:var(--fs-body)]">
-              <thead>
-                <tr className="border-y border-border bg-table-header-bg">
-                  <th className="text-left px-5 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
-                  <th className="text-left px-5 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">CNPJ</th>
-                  <th className="text-left px-5 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
-                  <th className="text-left px-5 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Localização</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filiais.map((f) => (
-                  <tr key={f.id} className="border-b border-border last:border-0 hover:bg-surface-hover transition-colors">
-                    <td className="px-5 py-3">
-                      <Link href={`/empresas/${f.id}`} className="font-medium text-fg hover:text-brand transition-colors">
-                        {nomeExibicao(f)}
-                      </Link>
-                    </td>
-                    <td className="px-5 py-3 text-fg-secondary tnum">{formatCnpj(f.cnpj)}</td>
-                    <td className="px-5 py-3">
-                      <StatusDot color={statusColor[f.status]} label={statusLabel[f.status]} />
-                    </td>
-                    <td className="px-5 py-3 text-fg-secondary">
-                      {f.city && f.stateCode ? `${f.city}/${f.stateCode}` : f.city ?? f.stateCode ?? "—"}
-                    </td>
+        <section>
+          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3">Filiais ({filiais.length})</h2>
+          <TabelaFiltravel
+            linhas={filiais.map((f) => ({
+              id: f.id,
+              valores: { status: statusLabel[f.status], local: localDe(f) ?? "" },
+            }))}
+          >
+            <div className="c41-tabela scroll-x overflow-x-auto bg-surface border border-border rounded-lg">
+              <table className="w-full min-w-[560px] text-[length:var(--fs-body)]">
+                <thead>
+                  <tr className="border-b border-border text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                    <th className="px-5 py-3">Nome</th>
+                    <th className="px-5 py-3">CNPJ</th>
+                    <th className="px-5 py-3">
+                      <FiltroDaColuna rotulo="Status" chave="status" />
+                    </th>
+                    <th className="px-5 py-3">
+                      <FiltroDaColuna rotulo="Localização" chave="local" align="right" />
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+                </thead>
+                <tbody>
+                  {filiais.map((f) => (
+                    <LinhaFiltravel key={f.id} id={f.id} className="border-b border-border">
+                      <td className="px-5 py-3">
+                        <Link href={`/empresas/${f.id}`} className="font-medium text-fg hover:text-brand transition-colors">
+                          {nomeExibicao(f)}
+                        </Link>
+                      </td>
+                      <td className="px-5 py-3 text-fg-secondary tnum">{formatCnpj(f.cnpj)}</td>
+                      <td className="px-5 py-3">
+                        <StatusDot color={statusColor[f.status]} label={statusLabel[f.status]} />
+                      </td>
+                      <td className="px-5 py-3 text-fg-secondary">{localDe(f) ?? "—"}</td>
+                    </LinhaFiltravel>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </TabelaFiltravel>
+        </section>
       )}
     </div>
   );

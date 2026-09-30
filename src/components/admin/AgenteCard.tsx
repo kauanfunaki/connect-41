@@ -84,15 +84,17 @@ export function AgenteCard({ linha, podeEditar }: Props) {
 
       {podeEditar && (
         <>
-          <button
-            type="button"
+          {/* Botão, e não texto azul (polimento de 30/09): abre o formulário. */}
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => setAberto((v) => !v)}
-            className="flex items-center gap-1 text-[13px] text-brand hover:underline self-start"
+            className="self-start"
             aria-expanded={aberto}
           >
             <ChevronDown size={14} className={aberto ? "rotate-180 transition-transform" : "transition-transform"} />
             {aberto ? "Fechar" : "Configurar"}
-          </button>
+          </Button>
 
           {aberto && (
             <form action={formAction} className="border-t border-border-soft pt-3 flex flex-col gap-3">

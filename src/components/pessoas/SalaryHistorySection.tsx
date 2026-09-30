@@ -35,27 +35,46 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
       {history.length === 0 ? (
         <p className="text-[13px] text-fg-muted mb-4">Nenhum reajuste registrado ainda.</p>
       ) : (
-        <div className="divide-y divide-border mb-4">
-          {history.map((h) => (
-            <div key={h.id} className="py-2.5">
-              <div className="flex items-center justify-between">
-                <p className="text-[13px] text-fg">
-                  {h.previousSalary ? `R$ ${h.previousSalary} → ` : ""}R$ {h.newSalary}
-                  {h.changePercent && (
-                    <span className={`ml-2 text-[12px] ${Number(h.changePercent) >= 0 ? "text-success" : "text-danger"}`}>
-                      ({Number(h.changePercent) >= 0 ? "+" : ""}{h.changePercent}%)
+        // Era uma lista de linhas (até 30/09); virou tabela no casco padrão.
+        // Sem funil: data e valores são únicos por linha — filtro não ajuda.
+        <div className="c41-tabela overflow-x-auto rounded-lg border border-border mb-4">
+          <table className="w-full min-w-[640px] text-[length:var(--fs-ui)]">
+            <thead>
+              <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                <th className="px-4 py-3">Vigência</th>
+                <th className="px-4 py-3">Salário</th>
+                <th className="px-4 py-3">Variação</th>
+                <th className="px-4 py-3">Novo cargo</th>
+                <th className="px-4 py-3">Motivo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {history.map((h) => (
+                <tr key={h.id} className="border-b border-border">
+                  <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{h.effectiveDateLabel}</td>
+                  <td className="px-4 py-3 text-fg whitespace-nowrap">
+                    {h.previousSalary ? <span className="text-fg-muted">R$ {h.previousSalary} → </span> : ""}R$ {h.newSalary}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {h.changePercent ? (
+                      <span className={Number(h.changePercent) >= 0 ? "text-success" : "text-danger"}>
+                        {Number(h.changePercent) >= 0 ? "+" : ""}
+                        {h.changePercent}%
+                      </span>
+                    ) : (
+                      <span className="text-fg-muted">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-fg-secondary">{h.cargoName ?? <span className="text-fg-muted">—</span>}</td>
+                  <td className="px-4 py-3 text-fg-muted">
+                    <span className="block max-w-[260px] truncate" title={h.reason ?? undefined}>
+                      {h.reason ?? "—"}
                     </span>
-                  )}
-                </p>
-                <span className="text-[12px] text-fg-muted">{h.effectiveDateLabel}</span>
-              </div>
-              {(h.cargoName || h.reason) && (
-                <p className="text-[12px] text-fg-muted mt-0.5">
-                  {[h.cargoName ? `Novo cargo: ${h.cargoName}` : null, h.reason].filter(Boolean).join(" · ")}
-                </p>
-              )}
-            </div>
-          ))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 

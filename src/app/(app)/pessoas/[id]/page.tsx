@@ -14,10 +14,13 @@ import {
   Star,
   GraduationCap,
   FileSpreadsheet,
+  KeyRound,
 } from "lucide-react";
 import { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
 import { excluirPessoa } from "../actions";
 import { BackButton } from "@/components/shared/BackButton";
+import { Button } from "@/components/ui/Button";
+import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PersonHeader } from "@/components/pessoas/PersonHeader";
 import { PersonDetailTabs } from "@/components/pessoas/PersonDetailTabs";
@@ -218,10 +221,12 @@ export default async function PessoaPage({
           <p className="text-[13px] text-fg">
             {linkedUser ? `${linkedUser.name} (${linkedUser.email})` : "Não vinculada"}
           </p>
+          {/* Era um link de texto (até 30/09): é uma ação, virou botão. */}
           {canEdit && (
-            <Link href="/admin/atendentes" className="text-[11.5px] text-brand hover:underline mt-2 inline-block">
+            <Button href="/admin/atendentes" variant="secondary" size="xs" className="mt-3">
+              <KeyRound size={11} />
               Gerenciar vínculo em Admin → Vínculos de Acesso
-            </Link>
+            </Button>
           )}
         </Card>
       )}
@@ -388,26 +393,11 @@ export default async function PessoaPage({
     />
   );
 
-  const listaDeOrigem = person.isInternal
-    ? { href: "/pessoas", raiz: "Cadastros", label: "Pessoas" }
-    : { href: "/colaboradores-clientes", raiz: "Recrutamento", label: "Colaboradores de clientes" };
-
   return (
     <PageContainer>
-      {/* Breadcrumb — a lista de origem depende de quem é a pessoa. Colaborador
-          de cliente saiu de /pessoas em 2026-09-02; mandar todo mundo para lá
-          levaria a uma lista onde metade das fichas não aparece. */}
-      <div className="flex items-center gap-2 mb-5">
-        <Link href={listaDeOrigem.href} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          {listaDeOrigem.raiz}
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <Link href={listaDeOrigem.href} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          {listaDeOrigem.label}
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg truncate">{person.name}</span>
-      </div>
+      {/* A lista de origem depende de quem é a pessoa (ver PessoaBreadcrumb);
+          era uma cópia à mão da mesma trilha das sub-páginas até 30/09. */}
+      <PessoaBreadcrumb isInternal={person.isInternal} personId={id} personName={person.name} />
       <BackButton className="mb-3" />
 
       <PersonHeader

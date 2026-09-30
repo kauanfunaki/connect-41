@@ -1,7 +1,9 @@
 "use client";
 
+import { Power, PowerOff } from "lucide-react";
+import { ItemDoMenu } from "@/components/ui/Popover";
 import { useConfirm } from "@/components/ui/useConfirm";
-import { Button } from "@/components/ui/Button";
+import { MenuDeMaisAcoes } from "@/components/admin/AcoesDoItem";
 
 type Props = {
   action: () => Promise<void>;
@@ -9,6 +11,13 @@ type Props = {
   nome: string;
 };
 
+/**
+ * Desativar/reativar um plano do catálogo, no "⋯" da linha.
+ *
+ * Era um botão vermelho "Desativar" fixo em cada plano. Desde o polimento de
+ * 30/09, ação rara e que tira algo de circulação vai no menu — a mesma regra
+ * das linhas de Cadastros. A confirmação continua a de antes.
+ */
 export function TogglePlanoButton({ action, active, nome }: Props) {
   const { dialog, requestConfirm } = useConfirm();
 
@@ -20,13 +29,20 @@ export function TogglePlanoButton({ action, active, nome }: Props) {
 
   return (
     <>
-      <Button
-        variant={active ? "danger" : "success"}
-        size="sm"
-        onClick={handleClick}
-      >
-        {active ? "Desativar" : "Ativar"}
-      </Button>
+      <MenuDeMaisAcoes rotulo={`Mais ações do plano ${nome}`}>
+        {(fechar) => (
+          <ItemDoMenu
+            icone={active ? <PowerOff /> : <Power />}
+            danger={active}
+            onClick={() => {
+              fechar();
+              handleClick();
+            }}
+          >
+            {active ? "Desativar" : "Ativar"}
+          </ItemDoMenu>
+        )}
+      </MenuDeMaisAcoes>
       {dialog}
     </>
   );

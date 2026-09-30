@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import Link from "next/link";
 import type { CampoState } from "@/app/(app)/admin/campos/actions";
 import type { CustomFieldType, EntityType } from "@/generated/prisma/enums";
 import { CampoForm as Field } from "@/components/ui/CampoForm";
@@ -146,12 +145,9 @@ export function CampoForm({ action, cancelHref, sectorOptions, defaultValues }: 
         >
           {isPending ? "Salvando…" : "Salvar"}
         </Button>
-        <Link
-          href={cancelHref}
-          className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
-        >
+        <Button href={cancelHref} variant="secondary">
           Cancelar
-        </Link>
+        </Button>
       </div>
     </form>
   );

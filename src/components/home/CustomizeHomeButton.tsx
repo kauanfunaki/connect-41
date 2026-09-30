@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { ArrowDown, ArrowUp, SlidersHorizontal } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -153,24 +154,25 @@ export function CustomizeHomeButton({ selected, showRestricted, saveAction, rese
                           <span className="block text-[11.5px] text-fg-muted truncate">{def.description}</span>
                         </label>
                         <div className="flex items-center gap-0.5 flex-shrink-0">
-                          <Button
-                            variant="linkMuted"
-                            className="w-7 h-7 justify-center rounded-md hover:bg-surface-hover disabled:opacity-[var(--c41-disabled-op)] disabled:hover:bg-transparent disabled:hover:text-fg-muted"
+                          {/* Setas de ordem: botão de ícone do app (30/09), e não texto com caixa emprestada. */}
+                          <IconButton
+                            size="sm"
+                            className="disabled:hover:bg-transparent disabled:hover:text-fg-muted"
                             onClick={() => move(entry.key, -1)}
                             disabled={index === 0}
                             aria-label={`Mover ${def.label} para cima`}
                           >
                             <ArrowUp size={14} />
-                          </Button>
-                          <Button
-                            variant="linkMuted"
-                            className="w-7 h-7 justify-center rounded-md hover:bg-surface-hover disabled:opacity-[var(--c41-disabled-op)] disabled:hover:bg-transparent disabled:hover:text-fg-muted"
+                          </IconButton>
+                          <IconButton
+                            size="sm"
+                            className="disabled:hover:bg-transparent disabled:hover:text-fg-muted"
                             onClick={() => move(entry.key, 1)}
                             disabled={index === slotEntries.length - 1}
                             aria-label={`Mover ${def.label} para baixo`}
                           >
                             <ArrowDown size={14} />
-                          </Button>
+                          </IconButton>
                         </div>
                       </div>
                     );

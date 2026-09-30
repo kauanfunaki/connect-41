@@ -3,32 +3,13 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { TrainingParticipantState } from "@/app/(app)/treinamentos/[id]/turmas/[classId]/actions";
-import { TrainingParticipantStatus } from "@/generated/prisma/enums";
+import type { TrainingParticipantStatus } from "@/generated/prisma/enums";
 import { Select } from "@/components/ui/Select";
-import { useConfirm } from "@/components/ui/useConfirm";
 import { Button } from "@/components/ui/Button";
+import { MenuDoRegistro } from "@/components/pessoas/MenuDoRegistro";
+import { SITUACAO_DO_PARTICIPANTE, COR_DO_PARTICIPANTE } from "@/components/pessoas/rotulosDoDP";
 
-const STATUS_LABEL: Record<TrainingParticipantStatus, string> = {
-  PLANEJADO: "Planejado",
-  CONVOCADO: "Convocado",
-  REALIZADO: "Realizado",
-  AUSENTE:   "Ausente",
-  REPROVADO: "Reprovado",
-  CONCLUIDO: "Concluído",
-  VENCIDO:   "Vencido",
-};
-
-const STATUS_STYLE: Record<TrainingParticipantStatus, string> = {
-  PLANEJADO: "bg-surface-2 text-fg-muted border-border",
-  CONVOCADO: "bg-brand/10 text-brand border-brand/25",
-  REALIZADO: "bg-success/10 text-success border-success/25",
-  AUSENTE:   "bg-warning/10 text-warning border-warning/25",
-  REPROVADO: "bg-danger/10 text-danger border-danger/25",
-  CONCLUIDO: "bg-success/10 text-success border-success/25",
-  VENCIDO:   "bg-danger/10 text-danger border-danger/25",
-};
-
-const STATUS_OPTIONS = Object.keys(STATUS_LABEL) as TrainingParticipantStatus[];
+const STATUS_OPTIONS = Object.keys(SITUACAO_DO_PARTICIPANTE) as TrainingParticipantStatus[];
 
 export type ParticipanteItem = {
   id: string;
@@ -47,17 +28,20 @@ type Props = {
 export function ParticipanteRow({ participante, updateAction, removeAction, canManage }: Props) {
   const [state, formAction, isPending] = useActionState(updateAction, null);
   const [status, setStatus] = useState(participante.status);
-  const { dialog, requestConfirm } = useConfirm();
 
   return (
     <div className="py-2.5 border-b border-border last:border-0">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <Link href={`/pessoas/${participante.personId}`} className="text-[13px] text-brand hover:underline">
           {participante.personName}
         </Link>
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${STATUS_STYLE[participante.status]}`}>
-          {STATUS_LABEL[participante.status]}
-        </span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${COR_DO_PARTICIPANTE[participante.status]}`}>
+            {SITUACAO_DO_PARTICIPANTE[participante.status]}
+          </span>
+          {/* Remover saiu de ao lado do "Atualizar" para o "⋯" (30/09). */}
+          {canManage && <MenuDoRegistro titulo="Remover este participante da turma?" onRemover={removeAction} />}
+        </div>
       </div>
 
       {canManage && (
@@ -69,7 +53,7 @@ export function ParticipanteRow({ participante, updateAction, removeAction, canM
               onChange={(e) => setStatus(e.target.value as TrainingParticipantStatus)}
             >
               {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+                <option key={s} value={s}>{SITUACAO_DO_PARTICIPANTE[s]}</option>
               ))}
             </Select>
           </div>
@@ -81,18 +65,10 @@ export function ParticipanteRow({ participante, updateAction, removeAction, canM
           >
             {isPending ? "Salvando…" : "Atualizar"}
           </Button>
-          <Button
-            variant="danger"
-            size="md"
-            onClick={() => requestConfirm({ title: "Remover este participante da turma?", destructive: true, confirmLabel: "Remover" }, removeAction)}
-          >
-            Remover
-          </Button>
         </form>
       )}
 
       {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
-      {dialog}
     </div>
   );
 }

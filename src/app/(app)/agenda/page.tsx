@@ -1,5 +1,5 @@
-import Link from "next/link";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { getPrisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getAuthContext } from "@/lib/auth/context";
@@ -111,15 +111,17 @@ export default async function AgendaPage({
         <PageHeader title="Agenda" subtitle={VIEW_HELPER[view]} />
 
         {contasVencidas.length > 0 && (
-          <div className="mb-4 flex items-start gap-2 text-[length:var(--fs-helper)] text-danger bg-danger-bg border border-danger/30 rounded-lg px-3 py-2">
-            <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
-            <p>
+          // "Reconectar agora" era link sublinhado no fim da frase (30/09): é a
+          // ação do aviso, então é botão, à direita dele.
+          <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-[length:var(--fs-helper)] text-danger bg-danger-bg border border-danger/30 rounded-lg px-3 py-2">
+            <AlertTriangle size={14} className="flex-shrink-0" />
+            <p className="flex-1 min-w-[16rem]">
               Sua conta {contasVencidas.join(" e ")} expirou — reuniões novas não vão gerar link até
-              você reconectar.{" "}
-              <Link href="/admin/integracoes" className="underline font-medium hover:no-underline">
-                Reconectar agora
-              </Link>
+              você reconectar.
             </p>
+            <Button href="/admin/integracoes" variant="danger" size="xs">
+              <RefreshCw size={11} /> Reconectar agora
+            </Button>
           </div>
         )}
       </div>

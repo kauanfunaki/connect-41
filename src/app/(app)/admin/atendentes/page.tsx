@@ -12,6 +12,7 @@ import { PersonAccessLinkRow } from "@/components/adminVinculos/PersonAccessLink
 import { vincularUsuarioPessoa } from "@/app/(app)/pessoas/actions";
 import { vincularAgenteChatwoot, definirPapelDoRemetente } from "./actions";
 import { ToggleAgenteButton } from "@/components/adminVinculos/ToggleAgenteButton";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { normalizarNomeAtendente } from "@/lib/chatwoot/evaluation";
 
 // Tela única de vínculos de acesso: Pessoa (colaborador interno) <-> User
@@ -92,26 +93,55 @@ export default async function AdminAtendentesPage() {
           />
         </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
-          <div className="flex items-center gap-4 px-4 py-2 text-[11px] font-medium text-fg-muted uppercase tracking-wide">
-            <span className="flex-1">Pessoa</span>
-            <span className="w-56 flex-shrink-0">Conta (User)</span>
-            {hasChatwoot && <span className="w-56 flex-shrink-0">Atendente Chatwoot</span>}
+        // Tabela de verdade no casco padrão — era uma lista de fileiras flex com
+        // um cabeçalho de texto solto. O funil nas duas colunas de vínculo acha
+        // quem ainda está "Não vinculado" sem ler a lista (polimento de 30/09).
+        <TabelaFiltravel
+          linhas={people.map((p) => {
+            const conta = p.linkedUserId ? users.find((u) => u.id === p.linkedUserId) : undefined;
+            const atendente = p.linkedUserId ? agentLinks.find((a) => a.linkedUserId === p.linkedUserId) : undefined;
+            return {
+              id: p.id,
+              valores: {
+                conta: conta ? conta.name : "Não vinculado",
+                atendente: atendente ? atendente.chatwootAgentName : "Não vinculado",
+              },
+            };
+          })}
+        >
+          <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
+            <table className="w-full min-w-[640px] text-[13px]">
+              <thead>
+                <tr className="border-b border-border text-[11px] text-fg-muted uppercase tracking-wide">
+                  <th className="px-4 py-3">Pessoa</th>
+                  <th className="px-4 py-3">
+                    <FiltroDaColuna rotulo="Conta (User)" chave="conta" align={hasChatwoot ? "left" : "right"} />
+                  </th>
+                  {hasChatwoot && (
+                    <th className="px-4 py-3">
+                      <FiltroDaColuna rotulo="Atendente Chatwoot" chave="atendente" align="right" />
+                    </th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {people.map((p) => (
+                  <PersonAccessLinkRow
+                    key={p.id}
+                    personId={p.id}
+                    personName={p.name}
+                    linkedUserId={p.linkedUserId}
+                    users={users}
+                    agentLinks={hasChatwoot ? agentLinks : null}
+                    canEdit={canEdit}
+                    vincularUsuarioAction={vincularUsuarioPessoa}
+                    vincularAgenteAction={vincularAgenteChatwoot}
+                  />
+                ))}
+              </tbody>
+            </table>
           </div>
-          {people.map((p) => (
-            <PersonAccessLinkRow
-              key={p.id}
-              personId={p.id}
-              personName={p.name}
-              linkedUserId={p.linkedUserId}
-              users={users}
-              agentLinks={hasChatwoot ? agentLinks : null}
-              canEdit={canEdit}
-              vincularUsuarioAction={vincularUsuarioPessoa}
-              vincularAgenteAction={vincularAgenteChatwoot}
-            />
-          ))}
-        </div>
+        </TabelaFiltravel>
       )}
 
       {hasChatwoot && (
@@ -126,52 +156,76 @@ export default async function AdminAtendentesPage() {
             ela vira &quot;quem atendeu&quot;, porque a mensagem de encerramento é sempre a última.
             Vale para as próximas avaliações — o histórico só muda quando a repontuação roda.
           </p>
-          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
-            <div className="flex items-center gap-4 px-4 py-2 text-[11px] font-medium text-fg-muted uppercase tracking-wide">
-              <span className="flex-1">Atendente do Chatwoot</span>
-              <span className="w-32 flex-shrink-0">Recepção</span>
-              <span className="w-32 flex-shrink-0">Automação</span>
-            </div>
-            {linhasDeRemetente.map((r) => {
+          {/* Tabela no casco padrão, com funil nos dois papéis (polimento de 30/09). */}
+          <TabelaFiltravel
+            linhas={linhasDeRemetente.map((r) => {
               const papel = papelPorNome.get(r.chave);
-              return (
-                <div key={r.chave} className="flex items-center gap-4 px-4 py-2.5">
-                  <span className="flex-1 min-w-0">
-                    <span className="text-[length:var(--fs-ui)] text-fg">{r.nome}</span>
-                    <span className="ml-2 text-[length:var(--fs-micro)] text-fg-muted tnum">
-                      {r.mensagens > 0 ? `${r.mensagens} mensagens` : "sem mensagens ainda"}
-                    </span>
-                  </span>
-                  <span className="w-32 flex-shrink-0">
-                    <ToggleAgenteButton
-                      nome={r.nome}
-                      ligado={papel?.isReception ?? false}
-                      rotuloLigado="Recepção"
-                      rotuloDesligado="Setor"
-                      canEdit={canEdit}
-                      action={async (ligado: boolean) => {
-                        "use server";
-                        await definirPapelDoRemetente(r.nome, { isReception: ligado });
-                      }}
-                    />
-                  </span>
-                  <span className="w-32 flex-shrink-0">
-                    <ToggleAgenteButton
-                      nome={r.nome}
-                      ligado={papel?.isAutomation ?? false}
-                      rotuloLigado="Automação"
-                      rotuloDesligado="Pessoa"
-                      canEdit={canEdit}
-                      action={async (ligado: boolean) => {
-                        "use server";
-                        await definirPapelDoRemetente(r.nome, { isAutomation: ligado });
-                      }}
-                    />
-                  </span>
-                </div>
-              );
+              return {
+                id: r.chave,
+                valores: {
+                  recepcao: papel?.isReception ? "Recepção" : "Setor",
+                  automacao: papel?.isAutomation ? "Automação" : "Pessoa",
+                },
+              };
             })}
-          </div>
+          >
+            <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
+              <table className="w-full min-w-[560px] text-[13px]">
+                <thead>
+                  <tr className="border-b border-border text-[11px] text-fg-muted uppercase tracking-wide">
+                    <th className="px-4 py-3">Atendente do Chatwoot</th>
+                    <th className="px-4 py-3">
+                      <FiltroDaColuna rotulo="Recepção" chave="recepcao" />
+                    </th>
+                    <th className="px-4 py-3">
+                      <FiltroDaColuna rotulo="Automação" chave="automacao" align="right" />
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {linhasDeRemetente.map((r) => {
+                    const papel = papelPorNome.get(r.chave);
+                    return (
+                      <LinhaFiltravel key={r.chave} id={r.chave} className="border-b border-border">
+                        <td className="px-4 py-3">
+                          <span className="text-[length:var(--fs-ui)] text-fg">{r.nome}</span>
+                          <span className="ml-2 text-[length:var(--fs-micro)] text-fg-muted tnum">
+                            {r.mensagens > 0 ? `${r.mensagens} mensagens` : "sem mensagens ainda"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <ToggleAgenteButton
+                            nome={r.nome}
+                            ligado={papel?.isReception ?? false}
+                            rotuloLigado="Recepção"
+                            rotuloDesligado="Setor"
+                            canEdit={canEdit}
+                            action={async (ligado: boolean) => {
+                              "use server";
+                              await definirPapelDoRemetente(r.nome, { isReception: ligado });
+                            }}
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <ToggleAgenteButton
+                            nome={r.nome}
+                            ligado={papel?.isAutomation ?? false}
+                            rotuloLigado="Automação"
+                            rotuloDesligado="Pessoa"
+                            canEdit={canEdit}
+                            action={async (ligado: boolean) => {
+                              "use server";
+                              await definirPapelDoRemetente(r.nome, { isAutomation: ligado });
+                            }}
+                          />
+                        </td>
+                      </LinhaFiltravel>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </TabelaFiltravel>
         </section>
       )}
     </PageContainer>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
@@ -80,9 +81,9 @@ export function TemplateForm({ action, defaults, cancelHref }: Props) {
             <div className="flex items-center justify-between">
               <span className="text-[12px] font-medium text-fg-muted">Pergunta {i + 1}</span>
               {questions.length > 1 && (
-                <button type="button" onClick={() => removeQuestion(i)} className="text-[12px] text-danger hover:underline">
-                  Remover
-                </button>
+                <Button variant="danger" size="xs" onClick={() => removeQuestion(i)}>
+                  <Trash2 size={11} /> Remover
+                </Button>
               )}
             </div>
 
@@ -113,25 +114,23 @@ export function TemplateForm({ action, defaults, cancelHref }: Props) {
                     />
                   </div>
                   {q.options.length > 2 && (
-                    <button
-                      type="button"
+                    <Button
+                      variant="ghost"
+                      size="xs"
                       onClick={() => removeOption(i, oi)}
-                      className="text-[12px] text-fg-muted hover:text-danger transition-colors flex-shrink-0"
+                      className="flex-shrink-0 hover:text-danger!"
+                      aria-label={`Remover a alternativa ${oi + 1}`}
                     >
-                      ✕
-                    </button>
+                      <X size={13} />
+                    </Button>
                   )}
                 </div>
               ))}
             </div>
 
             {q.options.length < 6 && (
-              <Button
-                variant="linkMuted"
-                className="text-[12px] underline"
-                onClick={() => addOption(i)}
-              >
-                + Adicionar alternativa
+              <Button variant="secondary" size="xs" onClick={() => addOption(i)}>
+                <Plus size={11} /> Adicionar alternativa
               </Button>
             )}
           </div>
@@ -140,13 +139,8 @@ export function TemplateForm({ action, defaults, cancelHref }: Props) {
 
       <input type="hidden" name="q_count" value={questions.length} />
 
-      <Button
-        variant="secondary"
-        size="md"
-        className="bg-surface-hover hover:border-brand"
-        onClick={addQuestion}
-      >
-        + Adicionar pergunta
+      <Button variant="secondary" onClick={addQuestion}>
+        <Plus size={14} /> Adicionar pergunta
       </Button>
 
       <div className="flex items-center gap-3 pt-2 border-t border-border">
@@ -157,9 +151,9 @@ export function TemplateForm({ action, defaults, cancelHref }: Props) {
         >
           {isPending ? "Salvando…" : defaults ? "Atualizar modelo" : "Criar modelo"}
        </Button>
-        <a href={cancelHref} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
+        <Button href={cancelHref} variant="secondary">
           Cancelar
-        </a>
+        </Button>
       </div>
 
       {state?.error && <p className="text-[13px] text-danger">{state.error}</p>}

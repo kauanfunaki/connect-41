@@ -722,6 +722,61 @@ Tarefas não mudou: está no Quadro para virar o "Meu Dia".
   viraram botões; tabelas no casco padrão; filtros do kanban no "Filtros".
 - Rótulo cortado do `MetricCard` ganhou a dica (`c41-cortavel`).
 
+### Ondas finais — todas as áreas restantes (30/09)
+
+Feitas em frentes paralelas, uma por área, com as mesmas regras e peças; um
+commit por área no PR #65. Portal do cliente (recortes no "Filtros", cartões
+com atalho), Fiscal (acervo, CT-e, entrada), Gestão (painel, alertas,
+coordenadores, horas), Valora, DRE (orçamento com versões em abas; análises com
+seletores no "Filtros" e perguntas do CFO em abas verticais), Administração
+(todas as 33 telas), Recrutamento (vagas, candidatos, testes, WhatsApp,
+carreiras públicas), DP (listas viraram tabelas com funil; ficha e abas com
+ações em botão e "⋯") e telas gerais (ficha da empresa, Kanban, Conversas,
+Agenda, BPO manual e senhas, setor).
+
+Achados no caminho, corrigidos:
+
+- **Segurança — `/vagas`:** o `sectorCode` da URL entrava por cima do escopo
+  de acesso (`{ ...scopedVagaWhere(ctx), sectorCode }`). Agora num `AND`.
+- Seleção em massa de usuários levava linhas escondidas pelo funil.
+- Conversas: aplicar os outros filtros descartava o canal.
+- Diálogos de exclusão de cargo, turno, tag, feriado, turma, parecer e teste
+  diziam "Excluir o campo…" (vinham do `DeleteFieldButton` dos campos
+  personalizados). O componente saiu.
+- `<Button>` dentro de `<Link>` (HTML inválido) no Kanban e em Empresas.
+
+**Sobras para as peças compartilhadas** (levantadas pelas frentes, não feitas):
+
+1. `Pagination` sem total conhecido (acervo fiscal no teto da contagem usa uma
+   cópia local).
+2. `Button` com `href` sempre vira `<Link>` com pré-carregamento — rota de
+   arquivo (CSV, PDF, exportação) usa formulário GET ou `<a>`. Aceitar
+   `prefetch={false}`.
+3. `FiltroDeColunas`: expor as linhas visíveis (`useLinhasVisiveis`) para a
+   seleção em massa respeitar o funil sem contorno por tela; e um jeito de
+   esconder o grupo inteiro quando o funil zera as linhas dele.
+4. `FiltroDaColunaNaUrl`: quando o funil esvazia a lista, tabela e funil somem
+   juntos — Empresas, Candidatos e Testes ganharam "Limpar" no estado vazio; o
+   ideal é o componente resolver.
+5. Um "⋯" compartilhado (`MenuDeMaisAcoes`) — hoje o mesmo gatilho está em
+   `AcoesDeLinha`, `AcoesDaLicenca`, `AcoesDoItem`, `AcoesDoCadastro`,
+   `MenuDoRegistro`, `AcoesDoModelo`; e o do `EntityOverflowMenu` tem outro
+   tamanho.
+6. `.c41-tabela` com modificador para primeira coluna à esquerda (árvore do
+   `TaskListView`, nome das Empresas).
+7. `FaixaDeTotais` com `className` (o `mb-5` embutido pede contorno em
+   contêiner com `gap`); `AbasDeLink` aceitar selo no rótulo; `Button` com
+   rótulo de `loading` configurável; `CopyLinkButton` com variante de botão;
+   `ConfirmActionButton`/`DeleteButton` sobre o `Button`.
+8. `lerLista` (hoje em `lib/filtrosDaListaDeEmpresas`) numa lib genérica de
+   filtro na URL; `lib/fiscal/data` aceitar lista em tipo/destino para o funil
+   do acervo sem contagem cara.
+
+**Comportamento a conferir, fora do design:** "Estornar lançamento" e "Tirar
+da avaliação" não pedem confirmação; o `<Select>` de empresa da entrada de XML
+tem ~394 opções sem busca; excluir um documento para cliente não redireciona
+(a pessoa fica na página do documento apagado).
+
 ---
 
 ## Sequenciamento

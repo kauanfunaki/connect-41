@@ -7,7 +7,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedAssessmentLinkWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
-import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
+import { ExcluirComConfirmacao } from "@/components/vagas/ExcluirComConfirmacao";
 import { AssessmentResult } from "@/components/teste/AssessmentResult";
 import { formatInstantDate } from "@/lib/format";
 import { excluirLinkTeste } from "../actions";
@@ -69,7 +69,14 @@ export default async function TesteDetailPage({ params }: { params: Promise<{ id
               Aguardando resposta do candidato. Link expira em {formatInstantDate(link.expiresAt)}.
             </p>
             {linkUrl && <p className="text-[12px] text-fg-muted break-all mb-4">{linkUrl}</p>}
-            {canManage && <DeleteFieldButton action={excluirLinkTeste.bind(null, link.id)} nome="este teste" />}
+            {canManage && (
+              <ExcluirComConfirmacao
+                action={excluirLinkTeste.bind(null, link.id)}
+                titulo="Excluir este teste?"
+                descricao="O link enviado ao candidato deixa de funcionar. Esta ação não pode ser desfeita."
+                size="sm"
+              />
+            )}
           </>
         ) : (
           <>

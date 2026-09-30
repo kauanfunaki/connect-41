@@ -5,8 +5,8 @@ import type { BenefitAssignmentState } from "@/app/(app)/pessoas/[id]/beneficios
 import { BenefitStatus } from "@/generated/prisma/enums";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { useConfirm } from "@/components/ui/useConfirm";
 import { Button } from "@/components/ui/Button";
+import { MenuDoRegistro } from "./MenuDoRegistro";
 
 const STATUS_LABEL: Record<BenefitStatus, string> = {
   ATIVO:     "Ativo",
@@ -46,11 +46,10 @@ type Props = {
 export function BeneficioRow({ beneficio, updateAction, removeAction, canManage }: Props) {
   const [state, formAction, isPending] = useActionState(updateAction, null);
   const [status, setStatus] = useState(beneficio.status);
-  const { dialog, requestConfirm } = useConfirm();
 
   return (
     <div className="py-3 border-b border-border last:border-0">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[13px] text-fg">{beneficio.benefitName}</p>
           <p className="text-[12px] text-fg-muted">
@@ -60,9 +59,13 @@ export function BeneficioRow({ beneficio, updateAction, removeAction, canManage 
             {beneficio.discountValue && ` · desconto R$ ${beneficio.discountValue}`}
           </p>
         </div>
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${STATUS_STYLE[beneficio.status]}`}>
-          {STATUS_LABEL[beneficio.status]}
-        </span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${STATUS_STYLE[beneficio.status]}`}>
+            {STATUS_LABEL[beneficio.status]}
+          </span>
+          {/* Remover saiu de ao lado do "Atualizar" para o "⋯" (30/09). */}
+          {canManage && <MenuDoRegistro titulo="Remover este benefício do colaborador?" onRemover={removeAction} />}
+        </div>
       </div>
 
       {canManage && (
@@ -89,18 +92,10 @@ export function BeneficioRow({ beneficio, updateAction, removeAction, canManage 
           >
             {isPending ? "Salvando…" : "Atualizar"}
           </Button>
-          <Button
-            variant="danger"
-            size="md"
-            onClick={() => requestConfirm({ title: "Remover este benefício do colaborador?", destructive: true, confirmLabel: "Remover" }, removeAction)}
-          >
-            Remover
-          </Button>
         </form>
       )}
 
       {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
-      {dialog}
     </div>
   );
 }

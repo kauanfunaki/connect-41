@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -26,7 +28,7 @@ export default async function ParametrosDoValoraPage() {
         subtitle="Quanto custa cada setor e que margem o preço tem de entregar. Os tempos das atividades vêm dos questionários dos setores."
         action={
           <Button href="/valora" variant="secondary" size="sm">
-            Voltar às propostas
+            <ArrowLeft size={14} /> Voltar às propostas
           </Button>
         }
       />
@@ -38,58 +40,76 @@ export default async function ParametrosDoValoraPage() {
           Tempo por execução declarado por cada setor, antes do fator. Muda quando os questionários são refeitos — não por
           aqui.
         </p>
-        {catalogo.setores.map((s) => (
-          <details key={s.codigo} className="border-t border-border-soft py-2">
-            <summary className="cursor-pointer text-[13px] font-medium">
-              {s.nome} <span className="text-fg-muted font-normal">· {catalogo.atividades.filter((a) => a.setor === s.codigo).length} atividades</span>
-            </summary>
-            <div className="overflow-x-auto mt-2">
-              <table className="w-full min-w-[820px] text-[12px]">
-                <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-                    <th className="py-2 pr-3 font-medium">Atividade</th>
-                    <th className="py-2 pr-3 font-medium">Frequência</th>
-                    <th className="py-2 pr-3 font-medium">Quando entra</th>
-                    {REGIMES.map((r) => (
-                      <th key={r} className="py-2 pr-3 font-medium text-right">
-                        {ROTULO_REGIME[r]}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {catalogo.atividades
-                    .filter((a) => a.setor === s.codigo)
-                    .map((a) => (
-                      <tr key={a.id} className="border-b border-border-soft align-top">
-                        <td className="py-1.5 pr-3">
-                          <span className="text-fg-muted tabular-nums mr-2">{a.id}</span>
-                          {a.nome}
-                          {a.implantacao && <span className="text-fg-muted"> (implantação)</span>}
-                          {a.avulso && <span className="text-fg-muted"> (avulso, por execução)</span>}
-                        </td>
-                        <td className="py-1.5 pr-3 text-fg-secondary">{FREQUENCIA[a.frequencia]}</td>
-                        <td className="py-1.5 pr-3 text-fg-secondary">
-                          {a.condicao ? (campos.get(a.condicao) ?? "Tem funcionários") : "Sempre"}
-                          {a.quantidade.tipo === "volume" && (
-                            <span className="block text-[11px] text-fg-muted">
-                              × {campos.get(a.quantidade.campo) ?? a.quantidade.campo}
-                              {a.quantidade.fator !== undefined && ` × ${num(a.quantidade.fator, 2)}`}
-                            </span>
-                          )}
-                        </td>
+        {catalogo.setores.map((s) => {
+          const atividades = catalogo.atividades.filter((a) => a.setor === s.codigo);
+          const quandoEntra = (a: (typeof atividades)[number]) => (a.condicao ? (campos.get(a.condicao) ?? "Tem funcionários") : "Sempre");
+          return (
+            <details key={s.codigo} className="border-t border-border-soft py-2">
+              <summary className="cursor-pointer text-[13px] font-medium">
+                {s.nome} <span className="text-fg-muted font-normal">· {atividades.length} atividades</span>
+              </summary>
+              {/* Casco padrão, com funil em frequência e em "quando entra" — as
+                  duas colunas de valor repetido (30/09). A atividade fica
+                  alinhada à esquerda: é texto corrido com o código na frente. */}
+              <TabelaFiltravel
+                linhas={atividades.map((a) => ({
+                  id: a.id,
+                  valores: { frequencia: FREQUENCIA[a.frequencia], quando: quandoEntra(a) },
+                }))}
+              >
+                <div className="c41-tabela overflow-x-auto rounded-lg border border-border mt-2">
+                  <table className="w-full min-w-[820px] text-[12px]">
+                    <thead>
+                      <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-wide text-fg-muted">
+                        <th className="px-3">Atividade</th>
+                        <th className="px-3">
+                          <FiltroDaColuna rotulo="Frequência" chave="frequencia" />
+                        </th>
+                        <th className="px-3">
+                          <FiltroDaColuna rotulo="Quando entra" chave="quando" />
+                        </th>
                         {REGIMES.map((r) => (
-                          <td key={r} className="py-1.5 pr-3 text-right tabular-nums">
-                            {a.tempoMin[r] ? `${num(a.tempoMin[r]!)} min` : "—"}
-                          </td>
+                          <th key={r} className="px-3">
+                            {ROTULO_REGIME[r]}
+                          </th>
                         ))}
                       </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          </details>
-        ))}
+                    </thead>
+                    <tbody>
+                      {atividades.map((a) => (
+                        <LinhaFiltravel key={a.id} id={a.id} className="border-b border-border align-top">
+                          <td className="px-3">
+                            <span className="block text-left">
+                              <span className="text-fg-muted tabular-nums mr-2">{a.id}</span>
+                              {a.nome}
+                              {a.implantacao && <span className="text-fg-muted"> (implantação)</span>}
+                              {a.avulso && <span className="text-fg-muted"> (avulso, por execução)</span>}
+                            </span>
+                          </td>
+                          <td className="px-3 text-fg-secondary">{FREQUENCIA[a.frequencia]}</td>
+                          <td className="px-3 text-fg-secondary">
+                            {quandoEntra(a)}
+                            {a.quantidade.tipo === "volume" && (
+                              <span className="block text-[11px] text-fg-muted">
+                                × {campos.get(a.quantidade.campo) ?? a.quantidade.campo}
+                                {a.quantidade.fator !== undefined && ` × ${num(a.quantidade.fator, 2)}`}
+                              </span>
+                            )}
+                          </td>
+                          {REGIMES.map((r) => (
+                            <td key={r} className="px-3 tabular-nums whitespace-nowrap">
+                              {a.tempoMin[r] ? `${num(a.tempoMin[r]!)} min` : "—"}
+                            </td>
+                          ))}
+                        </LinhaFiltravel>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </TabelaFiltravel>
+            </details>
+          );
+        })}
       </Card>
     </PageContainer>
   );

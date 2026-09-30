@@ -7,7 +7,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
-import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
+import { ExcluirComConfirmacao } from "@/components/vagas/ExcluirComConfirmacao";
 import { ScorecardForm } from "@/components/vagas/ScorecardForm";
 import { NotaDaTriagem } from "@/components/vagas/NotaDaTriagem";
 import { RespostasDoCandidato } from "@/components/vagas/RespostasDoCandidato";
@@ -267,7 +267,10 @@ export default async function CandidaturaScorecardPage({
                   <div className="flex items-center gap-3 mt-1.5">
                     <span className="text-[11px] text-fg-muted">{formatInstantDate(s.createdAt)}</span>
                     {s.evaluator.id === ctx.userId && (
-                      <DeleteFieldButton action={excluirScorecard.bind(null, vagaId, candidaturaId, s.id)} nome="seu parecer" />
+                      <ExcluirComConfirmacao
+                        action={excluirScorecard.bind(null, vagaId, candidaturaId, s.id)}
+                        titulo="Excluir o seu parecer?"
+                      />
                     )}
                   </div>
                 </div>

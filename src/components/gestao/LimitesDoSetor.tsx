@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import type { AcaoDaGestao } from "@/app/(app)/gestao/actions";
 
-/** Uma linha da tabela de limites: dias para "parado" e antecedência do aviso de prazo. */
+/**
+ * Uma linha da tabela de limites: dias para "parado" e antecedência do aviso de prazo.
+ * Vive no casco padrão (`.c41-tabela`), que dá o respiro e centraliza as células.
+ */
 export function LimitesDoSetor({
   setor,
   rotulo,
@@ -32,9 +35,9 @@ export function LimitesDoSetor({
   const mudou = parado !== (diasParado === null ? "" : String(diasParado)) || aviso !== (diasAvisoPrazo === null ? "" : String(diasAvisoPrazo));
 
   return (
-    <tr className="border-t border-border">
-      <td className="py-2 pr-3 text-[13px] text-fg">{rotulo}</td>
-      <td className="py-2 pr-3">
+    <tr className="border-b border-border">
+      <td className="px-3 font-medium text-fg">{rotulo}</td>
+      <td className="px-3">
         <Input
           aria-label={`Dias para parado em ${rotulo}`}
           inputMode="numeric"
@@ -45,7 +48,7 @@ export function LimitesDoSetor({
           className="w-32 tabular-nums"
         />
       </td>
-      <td className="py-2 pr-3">
+      <td className="px-3">
         <Input
           aria-label={`Aviso de prazo em ${rotulo}`}
           inputMode="numeric"
@@ -56,7 +59,7 @@ export function LimitesDoSetor({
           className="w-32 tabular-nums"
         />
       </td>
-      <td className="py-2 text-right">
+      <td className="px-3 whitespace-nowrap">
         {podeEditar && mudou && (
           <Button
             size="sm"

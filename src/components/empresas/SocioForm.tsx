@@ -6,6 +6,8 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Button } from "@/components/ui/Button";
+import { Copy } from "lucide-react";
 
 type Props = {
   action: (prev: SocioState, form: FormData) => Promise<SocioState>;
@@ -145,13 +147,10 @@ export function SocioForm({ action, companyId, cancelHref, enderecoDaEmpresa, de
       <div className="border-t border-border pt-5">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
           <h2 className="text-[14px] font-semibold text-fg">Endereço</h2>
-          <button
-            type="button"
-            onClick={copiarEndereco}
-            className="text-[12px] text-brand hover:underline"
-          >
-            Copiar o endereço da empresa
-          </button>
+          {/* Era link azul (30/09): copiar é ação, então é botão. */}
+          <Button type="button" variant="secondary" size="xs" onClick={copiarEndereco}>
+            <Copy size={11} /> Copiar o endereço da empresa
+          </Button>
         </div>
         <p className="text-[12px] text-fg-muted mb-4">
           É daqui que sai a resposta de “Reside no local?” na viabilidade do Empresa Fácil. Sem CEP e número, a pergunta

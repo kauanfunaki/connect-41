@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
@@ -44,9 +44,10 @@ export default async function WorkspacesPage() {
                     Inativo
                   </span>
                 )}
-                <Link href={`/admin/workspaces/${t.id}`} className="text-[12px] text-fg-muted hover:text-fg transition-colors">
-                  Gerenciar acesso
-                </Link>
+                {/* Botão, e não texto cinza (polimento de 30/09). */}
+                <Button href={`/admin/workspaces/${t.id}`} variant="secondary" size="xs">
+                  <KeyRound size={11} /> Gerenciar acesso
+                </Button>
               </div>
             </div>
           ))}

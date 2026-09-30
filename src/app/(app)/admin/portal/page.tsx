@@ -42,11 +42,12 @@ export default async function AdminPortalPage() {
   return (
     <PageContainer>
       <BackButton className="mb-3" />
-      <PageHeader title="Acessos do Portal" />
-      <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1 mb-6">
-        Contas de clientes que entram no portal para ver os próprios documentos fiscais. Cada conta
-        enxerga as empresas de um cliente — e só elas.
-      </p>
+      {/* A explicação era um parágrafo solto depois do cabeçalho; é o subtítulo dele. */}
+      <PageHeader
+        title="Acessos do Portal"
+        subtitle="Contas de clientes que entram no portal para ver os próprios documentos fiscais. Cada conta
+          enxerga as empresas de um cliente — e só elas."
+      />
 
       {grupos.length === 0 ? (
         <Card>

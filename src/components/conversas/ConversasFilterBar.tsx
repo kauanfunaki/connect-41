@@ -22,7 +22,10 @@ type Props = {
   atendente: string;
   de: string;
   ate: string;
+  canal: string;
   assignees: string[];
+  /** Rótulos de canal para o filtro; vazio quando só há um canal (não há o que escolher). */
+  canais: string[];
 };
 
 // Usa o FilterButton compartilhado — o mesmo de /empresas, /pessoas e
@@ -33,7 +36,11 @@ type Props = {
 //
 // A busca por texto fica fora do painel de propósito (é "ao vivo", não combina
 // com o padrão aplicar/fechar do filtro estruturado), igual às outras telas.
-export function ConversasFilterBar({ search: initialSearch, status, atendente, de, ate, assignees }: Props) {
+//
+// O canal entrou no painel no polimento de 30/09 — era uma fileira de pílulas
+// embaixo da barra, e filtro não é pílula. De quebra, aplicar os outros filtros
+// deixou de descartar o canal escolhido (o `buildUrl` daqui não o levava).
+export function ConversasFilterBar({ search: initialSearch, status, atendente, de, ate, canal, assignees, canais }: Props) {
   const router = useRouter();
   const [search, setSearch] = useState(initialSearch);
   // Rascunho local: só vira URL no "Aplicar". As datas não têm um momento
@@ -43,12 +50,13 @@ export function ConversasFilterBar({ search: initialSearch, status, atendente, d
   const [draftAtendente, setDraftAtendente] = useState(atendente);
   const [draftDe, setDraftDe] = useState(de);
   const [draftAte, setDraftAte] = useState(ate);
+  const [draftCanal, setDraftCanal] = useState(canal);
 
-  const activeFilterCount = [status, atendente, de, ate].filter(Boolean).length;
+  const activeFilterCount = [status, atendente, de, ate, canal].filter(Boolean).length;
 
   function buildUrl(extra: Record<string, string | undefined>) {
     const q = new URLSearchParams();
-    const merged = { search, status, atendente, de, ate, ...extra };
+    const merged = { search, status, atendente, de, ate, canal, ...extra };
     for (const [k, v] of Object.entries(merged)) if (v) q.set(k, v);
     return `/conversas?${q.toString()}`;
   }
@@ -67,6 +75,7 @@ export function ConversasFilterBar({ search: initialSearch, status, atendente, d
         atendente: draftAtendente || undefined,
         de: draftDe || undefined,
         ate: draftAte || undefined,
+        canal: draftCanal || undefined,
       }),
     );
   }
@@ -76,7 +85,8 @@ export function ConversasFilterBar({ search: initialSearch, status, atendente, d
     setDraftAtendente("");
     setDraftDe("");
     setDraftAte("");
-    router.push(buildUrl({ page: undefined, status: undefined, atendente: undefined, de: undefined, ate: undefined }));
+    setDraftCanal("");
+    router.push(buildUrl({ page: undefined, status: undefined, atendente: undefined, de: undefined, ate: undefined, canal: undefined }));
   }
 
   return (
@@ -139,6 +149,17 @@ export function ConversasFilterBar({ search: initialSearch, status, atendente, d
                 ))}
               </Select>
             </FilterButtonSection>
+
+            {canais.length > 0 && (
+              <FilterButtonSection label="Canal">
+                <Select compact aria-label="Canal" value={draftCanal} onChange={(e) => setDraftCanal(e.target.value)}>
+                  <option value="">Todo canal</option>
+                  {canais.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </Select>
+              </FilterButtonSection>
+            )}
 
             <div className="flex items-center gap-2 pt-1">
               <Button type="button" size="sm" onClick={() => applyDraft(close)}>

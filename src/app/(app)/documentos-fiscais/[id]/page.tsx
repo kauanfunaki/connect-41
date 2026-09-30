@@ -99,16 +99,19 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
     <PageContainer>
       <BackButton className="mb-3" />
 
-      <div className="flex items-start justify-between gap-4 mb-1">
-        <PageHeader title={`${TIPO_LABEL[doc.type]} nº ${doc.number}${doc.series ? `/${doc.series}` : ""}`} />
-        <div className="flex items-center gap-1.5 flex-shrink-0 pt-1">
-          <Badge variant={SITUACAO_VARIANTE[doc.situation]}>{SITUACAO_LABEL[doc.situation]}</Badge>
-          <Badge variant={DESTINO_VARIANTE[doc.destination]}>{DESTINO_LABEL[doc.destination]}</Badge>
-        </div>
-      </div>
-      <p className="text-[length:var(--fs-helper)] text-fg-muted mb-6">
-        {nomeExibicao(doc.company)} · {competenciaLegivel(doc.competence)}
-      </p>
+      {/* Empresa e competência no subtítulo do próprio cabeçalho, e os selos no
+          lugar das ações: eram um parágrafo solto embaixo, com o respiro do
+          cabeçalho entre o título e ele. */}
+      <PageHeader
+        title={`${TIPO_LABEL[doc.type]} nº ${doc.number}${doc.series ? `/${doc.series}` : ""}`}
+        subtitle={`${nomeExibicao(doc.company)} · ${competenciaLegivel(doc.competence)}`}
+        action={
+          <div className="flex items-center gap-1.5">
+            <Badge variant={SITUACAO_VARIANTE[doc.situation]}>{SITUACAO_LABEL[doc.situation]}</Badge>
+            <Badge variant={DESTINO_VARIANTE[doc.destination]}>{DESTINO_LABEL[doc.destination]}</Badge>
+          </div>
+        }
+      />
 
       {doc.removedAtOrigin && (
         <Card className="p-4 mb-4 border-danger/40 bg-danger-bg">

@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import Link from "next/link";
 import type { HandoffState } from "@/app/(app)/transferencias/actions";
 import type { EntityType } from "@/generated/prisma/enums";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -311,12 +310,10 @@ export function HandoffForm({
         >
           {isPending ? "Enviando…" : "Solicitar Transferência"}
         </Button>
-        <Link
-          href={cancelHref}
-          className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
-        >
+        {/* Era um Link estilizado à mão (30/09): o Cancelar é o botão secundário. */}
+        <Button href={cancelHref} variant="secondary">
           Cancelar
-        </Link>
+        </Button>
       </div>
       {templateConfirmDialog}
     </form>

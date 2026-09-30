@@ -4,7 +4,7 @@ import { TriangleAlert } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { exigenciasDoPortal } from "@/lib/societario/portal-data";
@@ -38,13 +38,11 @@ export default async function PortalExigenciasPage({
     <PageContainer>
       <PortalCabecalho titulo="Exigências" descricao="O que os órgãos pediram nos processos das suas empresas." />
 
-      <AbasDeLink
-        abas={RECORTES.map((r) => ({
-          chave: r.chave,
-          rotulo: r.rotulo,
-          href: r.chave === "abertas" ? "/portal/exigencias" : `/portal/exigencias?recorte=${r.chave}`,
-        }))}
-        ativa={recorte}
+      {/* Abertas/resolvidas é filtro da mesma lista: mora no "Filtros"
+          (regra da conferência de 30/09). */}
+      <FiltrosDaTela
+        className="mb-4"
+        campos={[{ chave: "recorte", rotulo: "Situação", vazioLabel: "Abertas", opcoes: [{ value: "resolvidas", label: "Resolvidas" }] }]}
       />
 
       {linhas.length === 0 ? (

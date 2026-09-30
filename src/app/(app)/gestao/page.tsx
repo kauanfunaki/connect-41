@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { ArrowRight, CheckCircle2, Loader, PauseCircle, PlayCircle, UserX } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { MetricCard } from "@/components/ui/MetricCard";
+import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { FiltroDeSetor } from "@/components/gestao/FiltroDeSetor";
 import { ItemDaGestao, SelosDoItem, ORIGEM } from "@/components/gestao/ItemDaGestao";
 import { getPrisma } from "@/lib/prisma";
@@ -15,11 +17,11 @@ import { reatribuirItem } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-const COLUNAS: { key: Coluna; titulo: string; vazio: string }[] = [
-  { key: "INICIADO", titulo: "Iniciados", vazio: "Nada esperando começar." },
-  { key: "ANDAMENTO", titulo: "Em andamento", vazio: "Nada em andamento." },
-  { key: "PARADO", titulo: "Paralisados", vazio: "Nada parado." },
-  { key: "CONCLUIDO", titulo: "Concluídos (30 dias)", vazio: "Nada concluído nos últimos 30 dias." },
+const COLUNAS: { key: Coluna; titulo: string; vazio: string; icone: React.ReactNode }[] = [
+  { key: "INICIADO", titulo: "Iniciados", vazio: "Nada esperando começar.", icone: <PlayCircle /> },
+  { key: "ANDAMENTO", titulo: "Em andamento", vazio: "Nada em andamento.", icone: <Loader /> },
+  { key: "PARADO", titulo: "Paralisados", vazio: "Nada parado.", icone: <PauseCircle /> },
+  { key: "CONCLUIDO", titulo: "Concluídos (30 dias)", vazio: "Nada concluído nos últimos 30 dias.", icone: <CheckCircle2 /> },
 ];
 const POR_COLUNA = 8;
 const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -59,13 +61,32 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
 
   return (
     <div className="flex flex-col gap-6">
-      <FiltroDeSetor base="/gestao" setores={g.setores} ativo={setor} />
+      <FiltroDeSetor setores={g.setores} />
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        {COLUNAS.map((c) => (
-          <MetricCard key={c.key} label={c.titulo} value={porColuna.get(c.key)!.length} highlight={c.key === "PARADO" && porColuna.get(c.key)!.length > 0} />
-        ))}
-        <MetricCard label="Sem responsável" value={semResponsavel} highlight={semResponsavel > 0} sub="em aberto" />
+      {/* As contagens por situação no cartão padrão das telas (30/09), com
+          ícone. O `-mb-5` desconta o respiro da faixa: aqui quem espaça é o
+          `gap` da coluna. */}
+      <div className="-mb-5">
+        <FaixaDeTotais
+          itens={[
+            ...COLUNAS.map((c) => {
+              const n = porColuna.get(c.key)!.length;
+              return {
+                rotulo: c.titulo,
+                valor: String(n),
+                icone: c.icone,
+                tom: c.key === "PARADO" && n > 0 ? "text-warning" : c.key === "CONCLUIDO" ? "text-success" : undefined,
+              };
+            }),
+            {
+              rotulo: "Sem responsável",
+              valor: String(semResponsavel),
+              icone: <UserX />,
+              tom: semResponsavel > 0 ? "text-warning" : undefined,
+              detalhe: "em aberto",
+            },
+          ]}
+        />
       </div>
 
       <section aria-labelledby="atencao" className="flex flex-col gap-2">
@@ -74,9 +95,9 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
             Precisam de atenção ({atencao.length})
           </h2>
           {atencao.length > 12 && (
-            <Link href={setor ? `/gestao/alertas?setor=${setor}` : "/gestao/alertas"} className="text-[12px] text-brand hover:underline">
-              Ver todos
-            </Link>
+            <Button href={setor ? `/gestao/alertas?setor=${setor}` : "/gestao/alertas"} variant="secondary" size="xs">
+              Ver todos <ArrowRight size={11} />
+            </Button>
           )}
         </div>
         {atencao.length === 0 ? (

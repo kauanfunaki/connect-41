@@ -325,6 +325,9 @@ function Composer({
   );
 }
 
+/** Botão de ação do comentário: o `ghost xs` mais baixo e com a letra do rodapé. */
+const ACAO_DO_COMENTARIO = "h-6! px-2! text-[11px]! font-medium!";
+
 function CommentActions({
   canAct,
   canModify,
@@ -338,16 +341,19 @@ function CommentActions({
   onEdit?: () => void;
   onDelete: () => void;
 }) {
+  // Eram textos soltos (linkMuted) até 30/09: viraram botões fantasmas, que
+  // ganham fundo no hover como qualquer botão. Baixos (h-6) para não empurrar
+  // o comentário, e recuados à esquerda para o texto seguir alinhado ao corpo.
   return (
-    <div className="flex items-center gap-2 mt-1">
+    <div className="flex items-center gap-0.5 mt-1 -ml-2">
       {canAct && onReply && (
-        <Button variant="linkMuted" type="button" onClick={onReply} className="text-[11px]">Responder</Button>
+        <Button variant="ghost" size="xs" type="button" onClick={onReply} className={ACAO_DO_COMENTARIO}>Responder</Button>
       )}
       {canModify && onEdit && (
-        <Button variant="linkMuted" type="button" onClick={onEdit} className="text-[11px]">Editar</Button>
+        <Button variant="ghost" size="xs" type="button" onClick={onEdit} className={ACAO_DO_COMENTARIO}>Editar</Button>
       )}
       {canModify && (
-        <Button variant="linkMuted" type="button" onClick={onDelete} className="text-[11px] hover:text-danger">Excluir</Button>
+        <Button variant="ghost" size="xs" type="button" onClick={onDelete} className={`${ACAO_DO_COMENTARIO} hover:text-danger! hover:bg-danger/8!`}>Excluir</Button>
       )}
     </div>
   );
@@ -443,7 +449,7 @@ function Comment({
                     {r.content ? renderRichText(r.content, mentionUsers) : null}
                   </p>
                   {r.canModify && (
-                    <Button variant="linkMuted" type="button" onClick={() => confirmDelete(r.id)} className="text-[length:var(--fs-micro)] hover:text-danger mt-0.5">Excluir</Button>
+                    <Button variant="ghost" size="xs" type="button" onClick={() => confirmDelete(r.id)} className={`${ACAO_DO_COMENTARIO} hover:text-danger! hover:bg-danger/8! mt-0.5 -ml-2`}>Excluir</Button>
                   )}
                 </div>
               </div>

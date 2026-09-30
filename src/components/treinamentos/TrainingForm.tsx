@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import Link from "next/link";
 import type { TrainingState } from "@/app/(app)/treinamentos/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
@@ -61,9 +60,10 @@ export function TrainingForm({ action, cancelHref, defaultValues }: Props) {
         >
           {isPending ? "Salvando…" : "Salvar"}
         </Button>
-        <Link href={cancelHref} className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center">
+        {/* Era um link com cara de botão (até 30/09). */}
+        <Button href={cancelHref} variant="secondary" size="md">
           Cancelar
-        </Link>
+        </Button>
       </div>
     </form>
   );
