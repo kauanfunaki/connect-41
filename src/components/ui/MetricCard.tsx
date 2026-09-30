@@ -34,7 +34,7 @@ export function MetricCard({ label, value, href, icon, sub, highlight = false, d
             {icon}
           </span>
         )}
-        <p className="text-[length:var(--fs-helper)] text-fg-muted truncate">{label}</p>
+        <p className="text-[length:var(--fs-helper)] text-fg-muted truncate c41-cortavel">{label}</p>
       </div>
       <div className="flex items-baseline gap-2">
         <p

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { AlertTriangle, CalendarClock, ShieldCheck, ListChecks } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -8,6 +8,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { LicencasFila } from "@/components/societario/LicencasFila";
 import { NovaLicenca } from "@/components/societario/LicencaForm";
+import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { resumoDasLicencas } from "@/lib/societario/licencas-data";
 import { situacaoDaLicenca, AVISO_EM_DIAS, type SituacaoDaLicenca } from "@/lib/societario/licencas";
 
@@ -72,48 +74,55 @@ export default async function LicencasPage({
         />
       </div>
 
-      {(vencidas > 0 || aRenovar > 0) && (
-        <p className="text-[13px] text-fg mb-4">
-          {vencidas > 0 && (
-            <span className="text-danger font-medium">
-              {vencidas} {vencidas === 1 ? "licença vencida" : "licenças vencidas"}
-            </span>
-          )}
-          {vencidas > 0 && aRenovar > 0 && <span className="text-fg-muted"> · </span>}
-          {aRenovar > 0 && (
-            <span className="text-warning font-medium">
-              {aRenovar} {aRenovar === 1 ? "a renovar" : "a renovar"}
-            </span>
-          )}
-        </p>
-      )}
-
-      <div className="flex flex-wrap gap-1.5 mb-4">
-        {RECORTES.map((r) => {
-          const ativo = r.chave === chave;
-          const total =
-            r.chave === "todas"
-              ? linhas.length
-              : r.chave === "atencao"
-                ? vencidas + aRenovar
-                : linhas.filter((l) => situacaoDaLicenca(l, hoje) === r.situacao).length;
-          return (
-            <Link
-              key={r.chave}
-              href={r.chave === "atencao" ? "/licencas" : `/licencas?recorte=${r.chave}`}
-              aria-current={ativo ? "page" : undefined}
-              className={
-                ativo
-                  ? "h-8 px-3 inline-flex items-center gap-1.5 rounded-md border border-brand/40 bg-brand/8 text-brand text-[12px] font-medium"
-                  : "h-8 px-3 inline-flex items-center gap-1.5 rounded-md border border-border text-fg-secondary text-[12px] hover:bg-surface-hover transition-colors"
-              }
-            >
-              {r.rotulo}
-              <span className="tabular-nums text-fg-muted">{total}</span>
-            </Link>
-          );
-        })}
-      </div>
+      {/* Quatro números em cartão, cada um abrindo o seu recorte — eram uma
+          frase-resumo e cinco pílulas (conferência de 30/09). */}
+      <FaixaDeTotais
+        itens={[
+          {
+            rotulo: "Precisa de ação",
+            valor: String(vencidas + aRenovar),
+            icone: <ListChecks />,
+            tom: vencidas + aRenovar > 0 ? "text-warning" : undefined,
+            detalhe: chave === "atencao" ? "mostrando agora" : undefined,
+            href: "/licencas",
+          },
+          {
+            rotulo: "Vencidas",
+            valor: String(vencidas),
+            icone: <AlertTriangle />,
+            tom: vencidas > 0 ? "text-danger" : undefined,
+            detalhe: chave === "vencida" ? "mostrando agora" : undefined,
+            href: "/licencas?recorte=vencida",
+          },
+          {
+            rotulo: "A renovar",
+            valor: String(aRenovar),
+            icone: <CalendarClock />,
+            tom: aRenovar > 0 ? "text-warning" : undefined,
+            detalhe: chave === "renovar" ? "mostrando agora" : undefined,
+            href: "/licencas?recorte=renovar",
+          },
+          {
+            rotulo: "Vigentes",
+            valor: String(linhas.filter((l) => situacaoDaLicenca(l, hoje) === "vigente").length),
+            icone: <ShieldCheck />,
+            tom: "text-success",
+            detalhe: chave === "vigente" ? "mostrando agora" : undefined,
+            href: "/licencas?recorte=vigente",
+          },
+        ]}
+      />
+      <FiltrosDaTela
+        className="mb-4"
+        campos={[
+          {
+            chave: "recorte",
+            rotulo: "Situação",
+            vazioLabel: "Precisa de ação",
+            opcoes: RECORTES.filter((r) => r.chave !== "atencao").map((r) => ({ value: r.chave, label: r.rotulo })),
+          },
+        ]}
+      />
 
       <LicencasFila
         linhas={filtradas}

@@ -12,6 +12,8 @@ import {
 import { campoDaData } from "@/lib/societario/datas";
 import type { LinhaDeLicenca } from "@/lib/societario/licencas-data";
 import { AcoesDaLicenca } from "./AcoesDaLicenca";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { saoPauloParts } from "@/lib/agenda";
 import type { OrgaoDaLicenca } from "./LicencaForm";
 
 type Props = {
@@ -56,16 +58,28 @@ export function LicencasFila({ linhas, hoje, filtrado, orgaos }: Props) {
   }
 
   return (
+    <TabelaFiltravel
+      linhas={linhas.map((l) => ({
+        id: l.id,
+        valores: {
+          empresa: l.empresaNome,
+          licenca: l.kind,
+          orgao: l.orgaoNome ?? "",
+          validade: l.expiresAt ? saoPauloParts(l.expiresAt).dateKey : "",
+          situacao: SITUACAO_LABEL[situacaoDaLicenca(l, hoje)],
+        },
+      }))}
+    >
     <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
       <table className="w-full min-w-[920px] text-[13px]">
         <thead>
-          <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-            <th className="py-2 pr-3 font-medium">Empresa</th>
-            <th className="py-2 pr-3 font-medium">Licença</th>
-            <th className="py-2 pr-3 font-medium">Órgão</th>
+          <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+            <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Empresa" chave="empresa" /></th>
+            <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Licença" chave="licenca" /></th>
+            <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Órgão" chave="orgao" /></th>
             <th className="py-2 pr-3 font-medium">Número</th>
-            <th className="py-2 pr-3 font-medium">Validade</th>
-            <th className="py-2 pr-3 font-medium">Situação</th>
+            <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Validade" chave="validade" tipo="data" /></th>
+            <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Situação" chave="situacao" align="right" /></th>
             <th className="py-2 font-medium">
               <span className="sr-only">Ações</span>
             </th>
@@ -76,7 +90,7 @@ export function LicencasFila({ linhas, hoje, filtrado, orgaos }: Props) {
             const situacao = situacaoDaLicenca(l, hoje);
             const prazo = prazoEmPalavras(l.expiresAt, hoje);
             return (
-              <tr key={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
+              <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
                 <td className="py-2.5 pr-3">
                   <Link href={`/empresas/${l.companyId}`} className="font-medium hover:text-brand transition-colors">
                     {l.empresaNome}
@@ -120,11 +134,12 @@ export function LicencasFila({ linhas, hoje, filtrado, orgaos }: Props) {
                     }}
                   />
                 </td>
-              </tr>
+              </LinhaFiltravel>
             );
           })}
         </tbody>
       </table>
     </div>
+    </TabelaFiltravel>
   );
 }
