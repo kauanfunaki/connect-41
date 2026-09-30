@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MessageSquareWarning, Paperclip } from "lucide-react";
+import { Hourglass, MessagesSquare, AlertTriangle, CheckCircle2, MessageSquareWarning, Paperclip } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { SeloDoPrazo, SeloDoStatus } from "@/components/pendencias/SelosDaPendencia";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
@@ -46,22 +47,39 @@ export default async function PortalPendenciasPage({
         somenteLeitura={false}
       />
 
+      {/* Os números levam ao recorte que contam, e o recorte mora no
+          "Filtros" — as abas "Em andamento | Encerradas" eram filtro da mesma
+          lista (regra da conferência de 30/09, que vale também aqui). */}
       <FaixaDeTotais
         itens={[
-          { rotulo: "Aguardando você", valor: String(contadores.aguardando), tom: contadores.aguardando > 0 ? "text-warning" : "" },
-          { rotulo: "Com a equipe", valor: String(contadores.respondidas) },
-          { rotulo: "Vencidas", valor: String(contadores.vencidas), tom: contadores.vencidas > 0 ? "text-danger" : "" },
-          { rotulo: "Encerradas", valor: String(contadores.encerradas), tom: "text-fg-muted" },
+          {
+            rotulo: "Aguardando você",
+            valor: String(contadores.aguardando),
+            tom: contadores.aguardando > 0 ? "text-warning" : "",
+            icone: <Hourglass />,
+            href: "/portal/pendencias",
+          },
+          { rotulo: "Com a equipe", valor: String(contadores.respondidas), icone: <MessagesSquare />, href: "/portal/pendencias" },
+          {
+            rotulo: "Vencidas",
+            valor: String(contadores.vencidas),
+            tom: contadores.vencidas > 0 ? "text-danger" : "",
+            icone: <AlertTriangle />,
+            href: "/portal/pendencias",
+          },
+          {
+            rotulo: "Encerradas",
+            valor: String(contadores.encerradas),
+            tom: "text-fg-muted",
+            icone: <CheckCircle2 />,
+            detalhe: recorte === "encerradas" ? "mostrando agora" : undefined,
+            href: "/portal/pendencias?recorte=encerradas",
+          },
         ]}
       />
-
-      <AbasDeLink
-        abas={RECORTES.map((r) => ({
-          chave: r.chave,
-          rotulo: r.rotulo,
-          href: r.chave === "andamento" ? "/portal/pendencias" : `/portal/pendencias?recorte=${r.chave}`,
-        }))}
-        ativa={recorte}
+      <FiltrosDaTela
+        className="mb-4"
+        campos={[{ chave: "recorte", rotulo: "Situação", vazioLabel: "Em andamento", opcoes: [{ value: "encerradas", label: "Encerradas" }] }]}
       />
 
       {linhas.length === 0 ? (
