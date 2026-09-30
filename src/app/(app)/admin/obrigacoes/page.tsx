@@ -8,8 +8,10 @@ import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AddObrigacaoForm } from "@/components/admin/AddObrigacaoForm";
-import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
+import { AcoesDoItem } from "@/components/admin/AcoesDoItem";
 import { ToggleObrigacaoButton } from "@/components/admin/ToggleObrigacaoButton";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { criarObrigacao, alternarObrigacao, excluirObrigacao } from "./actions";
 
 const WEEKDAY_LABELS: Record<number, string> = {
@@ -21,6 +23,22 @@ const WEEKDAY_LABELS: Record<number, string> = {
   6: "sábado",
   7: "domingo",
 };
+
+/** O nome da frequência, sem o dia — é o que o funil da coluna oferece. */
+const FREQUENCY_NAME: Record<string, string> = {
+  DAILY: "Diária",
+  WEEKLY: "Semanal",
+  BIWEEKLY: "Quinzenal",
+  MONTHLY: "Mensal",
+};
+
+function excluirDaObrigacao(o: { id: string; title: string }) {
+  return {
+    action: excluirObrigacao.bind(null, o.id),
+    titulo: `Excluir a obrigação "${o.title}"?`,
+    descricao: "Nenhum item novo será gerado. Os itens de kanban já criados ficam.",
+  };
+}
 
 function frequencyLabel(o: { frequency: string; dayOfMonth: number | null; dayOfWeek: number | null }): string {
   switch (o.frequency) {
@@ -90,26 +108,107 @@ export default async function ObrigacoesPage() {
           />
         </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
-          {obligations.map((o) => (
-            <div key={o.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-              <div className="min-w-0">
-                <p className="text-[13px] text-fg font-medium truncate">
-                  {o.title}
-                  {!o.active && <span className="ml-2 text-[11px] font-normal text-fg-muted">(inativa)</span>}
-                </p>
-                <p className="text-[11px] text-fg-muted mt-0.5 truncate">
-                  {o.company.name} · {sectorLabel(labels, o.sectorCode)} · kanban {o.pipeline.name} · {frequencyLabel(o)}
-                  {o.responsible ? ` · ${o.responsible.name}` : " · notifica o setor"}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <ToggleObrigacaoButton action={alternarObrigacao.bind(null, o.id)} ativo={o.active} nome={o.title} />
-                <DeleteFieldButton action={excluirObrigacao.bind(null, o.id)} nome={o.title} />
-              </div>
-            </div>
-          ))}
-        </div>
+        <>
+          <CartoesNoCelular>
+            {obligations.map((o) => (
+              <Cartao key={o.id}>
+                <TopoDoCartao nome={o.title} />
+                <InfoDoCartao>
+                  {o.company.name} · {sectorLabel(labels, o.sectorCode)} · kanban {o.pipeline.name}
+                </InfoDoCartao>
+                <InfoDoCartao>
+                  {frequencyLabel(o)} · {o.responsible ? o.responsible.name : "notifica o setor"}
+                </InfoDoCartao>
+                <PeDoCartao>
+                  <ToggleObrigacaoButton action={alternarObrigacao.bind(null, o.id)} ativo={o.active} nome={o.title} />
+                  <AcoesDoItem className="ml-auto" excluir={excluirDaObrigacao(o)} />
+                </PeDoCartao>
+              </Cartao>
+            ))}
+          </CartoesNoCelular>
+
+          {/* Era uma lista com tudo numa linha cinza ("empresa · setor · kanban ·
+              frequência · responsável"). Virou tabela no casco padrão, com funil
+              nas colunas que se repetem (polimento de 30/09): com dezenas de
+              obrigações, achar "as mensais da Fulana" era ler a lista inteira. */}
+          <TabelaFiltravel
+            linhas={obligations.map((o) => ({
+              id: o.id,
+              valores: {
+                empresa: o.company.name,
+                setor: sectorLabel(labels, o.sectorCode),
+                kanban: o.pipeline.name,
+                frequencia: FREQUENCY_NAME[o.frequency] ?? "Mensal",
+                responsavel: o.responsible?.name ?? "Notifica o setor",
+                situacao: o.active ? "Ativa" : "Inativa",
+              },
+            }))}
+          >
+            <TabelaNoDesktop padrao>
+              <table className="w-full min-w-[1000px] text-[13px]">
+                <thead>
+                  <tr className="border-b border-border text-[11px] uppercase tracking-wide text-fg-muted">
+                    <th className="px-4 py-3">Obrigação</th>
+                    <th className="px-4 py-3">
+                      <FiltroDaColuna rotulo="Empresa" chave="empresa" />
+                    </th>
+                    <th className="px-4 py-3">
+                      <FiltroDaColuna
+                        rotulo="Setor"
+                        campos={[
+                          { chave: "setor", rotulo: "Setor" },
+                          { chave: "kanban", rotulo: "Kanban" },
+                        ]}
+                      />
+                    </th>
+                    <th className="px-4 py-3">
+                      <FiltroDaColuna rotulo="Frequência" chave="frequencia" />
+                    </th>
+                    <th className="px-4 py-3">
+                      <FiltroDaColuna rotulo="Responsável" chave="responsavel" />
+                    </th>
+                    <th className="px-4 py-3">
+                      <FiltroDaColuna rotulo="Situação" chave="situacao" align="right" />
+                    </th>
+                    <th className="px-4 py-3">
+                      <span className="sr-only">Ações</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {obligations.map((o) => (
+                    <LinhaFiltravel key={o.id} id={o.id} className="border-b border-border">
+                      <td className="px-4 py-3">
+                        <span className="block max-w-[260px] font-medium text-fg truncate" title={o.title}>
+                          {o.title}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="block max-w-[220px] text-fg-secondary truncate" title={o.company.name}>
+                          {o.company.name}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="block text-fg-secondary">{sectorLabel(labels, o.sectorCode)}</span>
+                        <span className="block text-[11px] text-fg-muted">kanban {o.pipeline.name}</span>
+                      </td>
+                      <td className="px-4 py-3 text-fg-secondary whitespace-nowrap">{frequencyLabel(o)}</td>
+                      <td className="px-4 py-3 text-fg-secondary">
+                        {o.responsible ? o.responsible.name : <span className="text-fg-muted">notifica o setor</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <ToggleObrigacaoButton action={alternarObrigacao.bind(null, o.id)} ativo={o.active} nome={o.title} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <AcoesDoItem excluir={excluirDaObrigacao(o)} />
+                      </td>
+                    </LinhaFiltravel>
+                  ))}
+                </tbody>
+              </table>
+            </TabelaNoDesktop>
+          </TabelaFiltravel>
+        </>
       )}
     </PageContainer>
   );

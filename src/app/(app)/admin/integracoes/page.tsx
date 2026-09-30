@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
 import { Video, Check, Sparkles, MessageCircle, Headset, AlertTriangle } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -240,12 +240,10 @@ export default async function IntegracoesPage({
               lastSyncAtLabel={chatwootConnection?.lastSyncAt ? formatInstantDate(chatwootConnection.lastSyncAt) : null}
             />
           </Card>
-          <Link
-            href="/admin/atendentes"
-            className="inline-flex items-center gap-1.5 mt-3 text-[12.5px] font-medium text-brand hover:underline"
-          >
-            <Headset size={13} /> Gerenciar vínculos de acesso (contas e atendentes)
-          </Link>
+          {/* Botão, e não texto azul (polimento de 30/09): leva a outra tela. */}
+          <Button href="/admin/atendentes" variant="secondary" size="sm" className="mt-3">
+            <Headset size={14} /> Gerenciar vínculos de acesso (contas e atendentes)
+          </Button>
         </div>
       )}
     </PageContainer>

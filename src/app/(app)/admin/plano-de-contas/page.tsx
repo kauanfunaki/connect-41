@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Landmark } from "lucide-react";
 import { Card } from "@/components/ui/Card";
@@ -6,13 +5,21 @@ import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { ToggleCategoriaButton } from "@/components/admin/ToggleCategoriaButton";
+import { AcoesDeLinha } from "@/components/shared/AcoesDeLinha";
+import { StatusDot } from "@/components/shared/StatusDot";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { CarregarPlanoPadrao } from "@/components/admin/CarregarPlanoPadrao";
 import { GRUPOS } from "@/lib/dre/estrutura";
 import { grupoDeTexto } from "@/lib/dre/mapeamento";
 import { alternarCategoria } from "./actions";
+
+/** A linha da DRE pelo nome que a tela mostra; texto que não é grupo conhecido aparece como está. */
+function linhaDaDre(dreGroup: string): string {
+  return GRUPOS.find((g) => g.code === grupoDeTexto(dreGroup))?.label ?? dreGroup;
+}
 
 const LADOS = [
   { kind: "PAGAR" as const, titulo: "Contas a pagar", nota: "Categoria é obrigatória no lançamento" },
@@ -99,36 +106,108 @@ export default async function PlanoDeContasPage() {
                     Nenhuma categoria deste lado.
                   </p>
                 ) : (
-                  <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
-                    {doLado.map((c) => (
-                      <div key={c.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                        <div className="min-w-0">
-                          <p className={`text-[13px] ${c.active ? "text-fg" : "text-fg-muted line-through"}`}>
-                            {c.name}
-                          </p>
-                          {(c.planGroup || c.dreGroup) && (
-                            <p className="text-[12px] text-fg-muted truncate">
-                              {[c.planGroup, c.dreGroup ? (GRUPOS.find((g) => g.code === grupoDeTexto(c.dreGroup))?.label ?? c.dreGroup) : null]
-                                .filter(Boolean)
-                                .join(" · DRE: ")}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <Link
-                            href={`/admin/plano-de-contas/${c.id}/editar`}
-                            className="text-[12px] text-fg-muted hover:text-fg transition-colors"
-                          >
-                            Editar
-                          </Link>
-                          <ToggleCategoriaButton
-                            action={alternarCategoria.bind(null, c.id, !c.active)}
-                            ativa={c.active}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <>
+                    <CartoesNoCelular>
+                      {doLado.map((c) => (
+                        <Cartao key={c.id}>
+                          <TopoDoCartao nome={<span className={c.active ? "" : "text-fg-muted line-through"}>{c.name}</span>} />
+                          {c.planGroup && <InfoDoCartao>{c.planGroup}</InfoDoCartao>}
+                          {c.dreGroup && <InfoDoCartao>DRE: {linhaDaDre(c.dreGroup)}</InfoDoCartao>}
+                          <PeDoCartao>
+                            <StatusDot
+                              color={c.active ? "var(--c41-success)" : "var(--c41-fg-muted)"}
+                              label={c.active ? "Ativa" : "Inativa"}
+                            />
+                            <AcoesDeLinha
+                              className="ml-auto"
+                              foraDeOperacao={!c.active}
+                              onToggle={alternarCategoria.bind(null, c.id, !c.active)}
+                              editarHref={`/admin/plano-de-contas/${c.id}/editar`}
+                            />
+                          </PeDoCartao>
+                        </Cartao>
+                      ))}
+                    </CartoesNoCelular>
+
+                    {/* Era uma lista com grupo e linha da DRE numa linha cinza.
+                        Com as 189 categorias do plano padrão, virou tabela no
+                        casco padrão com funil em grupo, DRE e situação
+                        (polimento de 30/09). Editar é botão; desativar foi
+                        para o "⋯". Continua sem excluir, de propósito: a FK
+                        dos lançamentos é `ON DELETE SET NULL`, e apagar
+                        desclassificaria os lançamentos antigos. */}
+                    <TabelaFiltravel
+                      linhas={doLado.map((c) => ({
+                        id: c.id,
+                        valores: {
+                          grupo: c.planGroup ?? "",
+                          dre: c.dreGroup ? linhaDaDre(c.dreGroup) : "",
+                          situacao: c.active ? "Ativa" : "Inativa",
+                        },
+                      }))}
+                    >
+                      <TabelaNoDesktop padrao>
+                        <table className="w-full min-w-[820px] text-[13px]">
+                          <thead>
+                            <tr className="border-b border-border text-[11px] uppercase tracking-wide text-fg-muted">
+                              <th className="px-4 py-3">Categoria</th>
+                              <th className="px-4 py-3">
+                                <FiltroDaColuna rotulo="Grupo" chave="grupo" />
+                              </th>
+                              <th className="px-4 py-3">
+                                <FiltroDaColuna rotulo="Linha da DRE" chave="dre" />
+                              </th>
+                              <th className="px-4 py-3">
+                                <FiltroDaColuna rotulo="Situação" chave="situacao" align="right" />
+                              </th>
+                              <th className="px-4 py-3">
+                                <span className="sr-only">Ações</span>
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {doLado.map((c) => (
+                              <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border">
+                                <td className="px-4 py-3">
+                                  <span
+                                    className={`block max-w-[280px] truncate ${c.active ? "text-fg" : "text-fg-muted line-through"}`}
+                                    title={c.name}
+                                  >
+                                    {c.name}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  {c.planGroup ? (
+                                    <span className="block max-w-[240px] truncate text-fg-secondary" title={c.planGroup}>
+                                      {c.planGroup}
+                                    </span>
+                                  ) : (
+                                    <span className="text-fg-muted">—</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-fg-secondary">
+                                  {c.dreGroup ? linhaDaDre(c.dreGroup) : <span className="text-fg-muted">—</span>}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <StatusDot
+                                    color={c.active ? "var(--c41-success)" : "var(--c41-fg-muted)"}
+                                    label={c.active ? "Ativa" : "Inativa"}
+                                  />
+                                </td>
+                                <td className="px-4 py-3">
+                                  <AcoesDeLinha
+                                    foraDeOperacao={!c.active}
+                                    onToggle={alternarCategoria.bind(null, c.id, !c.active)}
+                                    editarHref={`/admin/plano-de-contas/${c.id}/editar`}
+                                  />
+                                </td>
+                              </LinhaFiltravel>
+                            ))}
+                          </tbody>
+                        </table>
+                      </TabelaNoDesktop>
+                    </TabelaFiltravel>
+                  </>
                 )}
               </div>
             );

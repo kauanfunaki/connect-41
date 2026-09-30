@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import Link from "next/link";
 import type { WorkspaceState } from "@/app/(app)/admin/workspaces/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
@@ -40,12 +39,9 @@ export function WorkspaceForm({ action, cancelHref }: Props) {
         >
           {isPending ? "Criando…" : "Criar Workspace"}
         </Button>
-        <Link
-          href={cancelHref}
-          className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
-        >
+        <Button href={cancelHref} variant="secondary">
           Cancelar
-        </Link>
+        </Button>
       </div>
     </form>
   );

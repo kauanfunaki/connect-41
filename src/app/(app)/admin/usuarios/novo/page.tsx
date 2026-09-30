@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
@@ -36,12 +38,9 @@ export default async function NovoUsuarioPage() {
           <p className="text-[13px] text-fg">{seatCheck.reason}</p>
         </div>
 
-        <Link
-          href="/admin/usuarios"
-          className="inline-flex items-center h-9 px-4 mt-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors"
-        >
-          Voltar para Usuários
-        </Link>
+        <Button href="/admin/usuarios" variant="secondary" className="mt-4">
+          <ArrowLeft size={14} /> Voltar para Usuários
+        </Button>
       </PageContainer>
     );
   }

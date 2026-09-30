@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Blocks, ChevronDown } from "lucide-react";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { MODULE_CATALOG } from "@/lib/module-catalog";
 import { DEFAULT_SECTOR_LABELS } from "@/lib/sector-constants";
@@ -59,13 +60,12 @@ export function PlanModulesEditor({ planId, allowedModuleCodes, action }: Props)
   }
 
   return (
-    <div className="mt-1.5">
-      <Button
-        variant="link"
-        onClick={() => setOpen((v) => !v)}
-        className="text-[11px]"
-      >
+    <div className="mt-2">
+      {/* Botão, e não texto azul (polimento de 30/09): abre um editor. */}
+      <Button variant="secondary" size="xs" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+        <Blocks size={11} />
         {open ? "Fechar módulos" : "Módulos deste plano"}
+        <ChevronDown size={11} className={open ? "rotate-180 transition-transform" : "transition-transform"} />
       </Button>
 
       {open && (

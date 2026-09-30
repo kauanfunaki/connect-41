@@ -118,10 +118,12 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
         </p>
       )}
 
-      <button
-        type="button"
+      {/* Botão, e não texto azul (polimento de 30/09): abre o formulário. */}
+      <Button
+        variant="secondary"
+        size="sm"
         onClick={() => setAberto((v) => !v)}
-        className="flex items-center gap-1 text-[13px] text-brand hover:underline self-start"
+        className="self-start"
         aria-expanded={aberto}
       >
         <ChevronDown
@@ -129,7 +131,7 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
           className={aberto ? "rotate-180 transition-transform" : "transition-transform"}
         />
         {aberto ? "Fechar" : i.conectada ? "Configurar" : "Conectar"}
-      </button>
+      </Button>
 
       {aberto && (
         <form action={formAction} className="border-t border-border-soft pt-3 flex flex-col gap-3">

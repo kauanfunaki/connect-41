@@ -1,7 +1,12 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
+import { Power, PowerOff, Send } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { ItemDoMenu } from "@/components/ui/Popover";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
+import { MenuDeMaisAcoes } from "@/components/admin/AcoesDoItem";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
@@ -40,6 +45,34 @@ export function PortalAcessosList({ acessos, clientes, criarAction, enviarLinkAc
       const r = await enviarLinkAction(id);
       setMensagem("error" in r ? r.error : "Link enviado.");
     });
+  }
+
+  // "Enviar link" é botão; desativar/reativar vai no "⋯" — era texto cinza
+  // colado no "Enviar link", a um clique de tirar o acesso de um cliente
+  // (polimento de 30/09).
+  function acoes(a: Acesso) {
+    return (
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+        <Button variant="secondary" size="xs" disabled={pendente || !a.ativo} onClick={() => enviarLink(a.id)}>
+          <Send size={11} /> Enviar link
+        </Button>
+        <MenuDeMaisAcoes rotulo={`Mais ações de ${a.nome}`}>
+          {(fechar) => (
+            <ItemDoMenu
+              icone={a.ativo ? <PowerOff /> : <Power />}
+              danger={a.ativo}
+              disabled={pendente}
+              onClick={() => {
+                fechar();
+                startTransition(() => void alternarAction(a.id, !a.ativo));
+              }}
+            >
+              {a.ativo ? "Desativar" : "Reativar"}
+            </ItemDoMenu>
+          )}
+        </MenuDeMaisAcoes>
+      </span>
+    );
   }
 
   return (
@@ -100,36 +133,77 @@ export function PortalAcessosList({ acessos, clientes, criarAction, enviarLinkAc
         {acessos.length === 0 ? (
           <p className="text-[length:var(--fs-helper)] text-fg-muted">Nenhum acesso criado ainda.</p>
         ) : (
-          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
-            {acessos.map((a) => (
-              <div key={a.id} className="flex items-center gap-4 px-4 py-3 flex-wrap">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[length:var(--fs-ui)] text-fg truncate">{a.nome}</p>
-                  <p className="text-[length:var(--fs-micro)] text-fg-muted truncate">
+          <>
+            <CartoesNoCelular>
+              {acessos.map((a) => (
+                <Cartao key={a.id}>
+                  <TopoDoCartao nome={a.nome} />
+                  <InfoDoCartao>
                     {a.email} · {a.cliente}
-                    {a.ultimoAcesso ? ` · entrou em ${a.ultimoAcesso}` : " · nunca entrou"}
-                  </p>
-                </div>
-                <StatusDot color={a.ativo ? "var(--c41-success)" : "var(--c41-fg-muted)"} label={a.ativo ? "Ativo" : "Inativo"} />
-                <Button
-                  variant="link"
-                  className="text-[length:var(--fs-ui)] font-medium disabled:opacity-50"
-                  disabled={pendente || !a.ativo}
-                  onClick={() => enviarLink(a.id)}
-                >
-                  Enviar link
-                </Button>
-                <button
-                  type="button"
-                  disabled={pendente}
-                  onClick={() => startTransition(() => void alternarAction(a.id, !a.ativo))}
-                  className="text-[length:var(--fs-ui)] text-fg-secondary hover:text-fg disabled:opacity-50"
-                >
-                  {a.ativo ? "Desativar" : "Reativar"}
-                </button>
-              </div>
-            ))}
-          </div>
+                  </InfoDoCartao>
+                  <InfoDoCartao>{a.ultimoAcesso ? `entrou em ${a.ultimoAcesso}` : "nunca entrou"}</InfoDoCartao>
+                  <PeDoCartao>
+                    <StatusDot color={a.ativo ? "var(--c41-success)" : "var(--c41-fg-muted)"} label={a.ativo ? "Ativo" : "Inativo"} />
+                    <span className="ml-auto">{acoes(a)}</span>
+                  </PeDoCartao>
+                </Cartao>
+              ))}
+            </CartoesNoCelular>
+
+            {/* Era uma lista com cliente e último acesso numa linha cinza, e as
+                ações em texto azul e cinza. Virou tabela no casco padrão, com
+                funil em cliente e situação (polimento de 30/09). */}
+            <TabelaFiltravel
+              linhas={acessos.map((a) => ({
+                id: a.id,
+                valores: { cliente: a.cliente, situacao: a.ativo ? "Ativo" : "Inativo" },
+              }))}
+            >
+              <TabelaNoDesktop padrao>
+                <table className="w-full min-w-[760px] text-[length:var(--fs-ui)]">
+                  <thead>
+                    <tr className="border-b border-border text-[11px] uppercase tracking-wide text-fg-muted">
+                      <th className="px-4 py-3">Nome</th>
+                      <th className="px-4 py-3">
+                        <FiltroDaColuna rotulo="Cliente" chave="cliente" />
+                      </th>
+                      <th className="px-4 py-3">Último acesso</th>
+                      <th className="px-4 py-3">
+                        <FiltroDaColuna rotulo="Situação" chave="situacao" align="right" />
+                      </th>
+                      <th className="px-4 py-3">
+                        <span className="sr-only">Ações</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {acessos.map((a) => (
+                      <LinhaFiltravel key={a.id} id={a.id} className="border-b border-border">
+                        <td className="px-4 py-3">
+                          <span className="block max-w-[280px] text-fg truncate" title={a.nome}>
+                            {a.nome}
+                          </span>
+                          <span className="block max-w-[280px] text-[length:var(--fs-micro)] text-fg-muted truncate" title={a.email}>
+                            {a.email}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="block max-w-[240px] text-fg-secondary truncate" title={a.cliente}>
+                            {a.cliente}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{a.ultimoAcesso ?? "nunca entrou"}</td>
+                        <td className="px-4 py-3">
+                          <StatusDot color={a.ativo ? "var(--c41-success)" : "var(--c41-fg-muted)"} label={a.ativo ? "Ativo" : "Inativo"} />
+                        </td>
+                        <td className="px-4 py-3">{acoes(a)}</td>
+                      </LinhaFiltravel>
+                    ))}
+                  </tbody>
+                </table>
+              </TabelaNoDesktop>
+            </TabelaFiltravel>
+          </>
         )}
         {mensagem && <p className="text-[length:var(--fs-helper)] text-fg-muted mt-3">{mensagem}</p>}
       </div>

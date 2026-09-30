@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Activity, CircleHelp, Wallet } from "lucide-react";
+import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -78,27 +80,27 @@ export default async function AgentesDeIAPage() {
         </Card>
       )}
 
-      <Card className="p-4 mb-5">
-        <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <div>
-            <p className="text-[11px] uppercase tracking-wide text-fg-muted">Gasto no mês</p>
-            <p className="text-[22px] font-semibold tabular-nums text-fg">{moeda(totalCentavos)}</p>
-          </div>
-          <p className="text-[13px] text-fg-secondary tabular-nums">
-            {totalChamadas} {totalChamadas === 1 ? "chamada" : "chamadas"}
-            {totalSemCusto > 0 && (
-              // O total só significa alguma coisa quando esta parte é zero, e
-              // por isso ela fica ao lado do número, não num rodapé.
-              <span className="text-warning"> · {totalSemCusto} sem custo apurado</span>
-            )}
-          </p>
-        </div>
-        <p className="text-[12px] text-fg-muted mt-2">
-          O mês começa à meia-noite de São Paulo. Os valores usam a tabela de preço escrita em{" "}
-          {formatInstantDate(new Date(PRECOS_ESCRITOS_EM))} — enquanto ela não for conferida contra a
-          página de preços do provedor, quem protege de verdade é o teto de chamadas.
-        </p>
-      </Card>
+      {/* Os números do mês em cartão, como nas outras telas (polimento de
+          30/09) — era um bloco com o total e as chamadas numa linha só. "Sem
+          custo apurado" continua ao lado do total, e não num rodapé: o total só
+          significa alguma coisa quando esse cartão está em zero. */}
+      <FaixaDeTotais
+        itens={[
+          { rotulo: "Gasto no mês", valor: moeda(totalCentavos), icone: <Wallet /> },
+          { rotulo: "Chamadas", valor: String(totalChamadas), icone: <Activity /> },
+          {
+            rotulo: "Sem custo apurado",
+            valor: String(totalSemCusto),
+            icone: <CircleHelp />,
+            tom: totalSemCusto > 0 ? "text-warning" : "text-fg-muted",
+          },
+        ]}
+      />
+      <p className="text-[12px] text-fg-muted -mt-2 mb-5">
+        O mês começa à meia-noite de São Paulo. Os valores usam a tabela de preço escrita em{" "}
+        {formatInstantDate(new Date(PRECOS_ESCRITOS_EM))} — enquanto ela não for conferida contra a
+        página de preços do provedor, quem protege de verdade é o teto de chamadas.
+      </p>
 
       <section className="flex flex-col gap-3 mb-8" aria-labelledby="agentes-do-chat">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-2">
@@ -152,9 +154,7 @@ export default async function AgentesDeIAPage() {
             nesta ficha”.
           </p>
         </div>
-        <Card className="p-4">
-          <ChamadasDeIA chamadas={chamadas} agora={agora} />
-        </Card>
+        <ChamadasDeIA chamadas={chamadas} agora={agora} />
       </section>
     </PageContainer>
   );

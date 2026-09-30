@@ -45,10 +45,11 @@ export default async function WorkspaceDetailPage({
         <span className="text-[13px] text-fg truncate max-w-[200px]">{tenant.name}</span>
       </div>
 
-      <div className="mb-6">
-      <PageHeader title={tenant.name} />
-        <p className="text-[13px] text-fg-muted mt-0.5 font-mono">{tenant.cnpj ? formatCnpj(tenant.cnpj) : tenant.slug}</p>
-      </div>
+      {/* O CNPJ era um parágrafo solto embaixo do cabeçalho; é o subtítulo dele. */}
+      <PageHeader
+        title={tenant.name}
+        subtitle={<span className="font-mono">{tenant.cnpj ? formatCnpj(tenant.cnpj) : tenant.slug}</span>}
+      />
 
       <Card className="p-5 mb-4">
         <h2 className="text-[13px] font-semibold text-fg mb-3">Foto do workspace</h2>

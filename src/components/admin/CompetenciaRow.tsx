@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
+import { AcoesDoItem } from "@/components/admin/AcoesDoItem";
 import { Input } from "@/components/ui/Input";
 import type { CompetencyState } from "@/app/(app)/admin/competencias/actions";
 import { Button } from "@/components/ui/Button";
@@ -67,16 +67,12 @@ export function CompetenciaRow({ competencia, updateAction, deleteAction }: Prop
         <p className="text-[13px] text-fg">{competencia.name}</p>
         {competencia.description && <p className="text-[12px] text-fg-muted">{competencia.description}</p>}
       </div>
-      <div className="flex items-center gap-3">
-        <Button
-          variant="linkMuted"
-          onClick={() => setEditing(true)}
-          className="text-[12px]"
-        >
-          Editar
-        </Button>
-        <DeleteFieldButton action={deleteAction} nome={competencia.name} />
-      </div>
+      {/* Editar é botão e Excluir vai no "⋯" (polimento de 30/09). */}
+      <AcoesDoItem
+        className="flex-shrink-0"
+        editar={() => setEditing(true)}
+        excluir={{ action: deleteAction, titulo: `Excluir a competência "${competencia.name}"?` }}
+      />
     </div>
   );
 }
