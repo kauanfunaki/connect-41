@@ -16,28 +16,31 @@ import type { ActionState } from "@/lib/actionState";
 
 const SLOT_LABEL: Record<HomeWidgetSlot, string> = {
   top: "Topo",
+  paineis: "Painéis",
   main: "Coluna principal",
   side: "Coluna lateral",
 };
 
-const SLOT_ORDER: HomeWidgetSlot[] = ["top", "main", "side"];
+const SLOT_ORDER: HomeWidgetSlot[] = ["top", "paineis", "main", "side"];
 
 type Entry = { key: HomeWidgetKey; visible: boolean };
 
 type Props = {
   /** Widgets visíveis, na ordem escolhida pelo usuário. */
   selected: HomeWidgetKey[];
-  /** Se o usuário enxerga os blocos restritos (visão de workspace). */
-  showRestricted: boolean;
-  saveAction: (keys: HomeWidgetKey[]) => Promise<ActionState>;
+  /**
+   * Os blocos que este usuário pode ligar: tira os restritos (visão de
+   * workspace) de quem não tem, e os painéis dos setores que ele não enxerga.
+   */
+  disponiveis: HomeWidgetKey[];
+  saveAction: (keys: HomeWidgetKey[], ocultos: HomeWidgetKey[]) => Promise<ActionState>;
   resetAction: () => Promise<ActionState>;
 };
 
 // Monta a lista editável: primeiro os visíveis na ordem salva, depois os
-// ocultos na ordem do catálogo (é onde um widget novo aparece pra quem já
-// personalizou — desmarcado, mas visível na tela de personalização).
-function buildEntries(selected: HomeWidgetKey[], showRestricted: boolean): Entry[] {
-  const available = HOME_WIDGETS.filter((w) => !w.restricted || showRestricted);
+// ocultos na ordem do catálogo.
+function buildEntries(selected: HomeWidgetKey[], disponiveis: HomeWidgetKey[]): Entry[] {
+  const available = HOME_WIDGETS.filter((w) => disponiveis.includes(w.key));
   const visible = selected.filter((key) => available.some((w) => w.key === key));
   const hidden = available.filter((w) => !visible.includes(w.key)).map((w) => w.key);
   return [
@@ -46,15 +49,15 @@ function buildEntries(selected: HomeWidgetKey[], showRestricted: boolean): Entry
   ];
 }
 
-export function CustomizeHomeButton({ selected, showRestricted, saveAction, resetAction }: Props) {
+export function CustomizeHomeButton({ selected, disponiveis, saveAction, resetAction }: Props) {
   const [open, setOpen] = useState(false);
-  const [entries, setEntries] = useState<Entry[]>(() => buildEntries(selected, showRestricted));
+  const [entries, setEntries] = useState<Entry[]>(() => buildEntries(selected, disponiveis));
   const [isPending, startTransition] = useTransition();
   const toast = useToast();
 
   function openModal() {
     // Reabrir depois de cancelar não pode manter o rascunho descartado.
-    setEntries(buildEntries(selected, showRestricted));
+    setEntries(buildEntries(selected, disponiveis));
     setOpen(true);
   }
 
@@ -85,8 +88,9 @@ export function CustomizeHomeButton({ selected, showRestricted, saveAction, rese
 
   function save() {
     const keys = entries.filter((e) => e.visible).map((e) => e.key);
+    const ocultos = entries.filter((e) => !e.visible).map((e) => e.key);
     startTransition(async () => {
-      const result = await saveAction(keys);
+      const result = await saveAction(keys, ocultos);
       if (result?.error) {
         toast.error(result.error);
         return;
