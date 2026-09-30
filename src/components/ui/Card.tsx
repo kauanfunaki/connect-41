@@ -13,7 +13,7 @@ type Props = React.HTMLAttributes<HTMLElement> & {
 // casos; esses continuam como <div> cru.
 export function Card({ children, className = "", as: As = "div", ...rest }: Props) {
   return (
-    <As className={`bg-surface border border-border rounded-lg ${className}`.trim()} {...rest}>
+    <As className={`bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] ${className}`.trim()} {...rest}>
       {children}
     </As>
   );

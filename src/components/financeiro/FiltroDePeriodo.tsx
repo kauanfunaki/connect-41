@@ -122,14 +122,19 @@ function seloDoTom(tom?: string): string {
  * cartão de verdade: ícone, hover e o valor como a coisa maior do bloco. Com
  * `href`, o cartão vira atalho e sobe no hover; sem, só a borda acende.
  */
+//
+// Quatro por linha só a partir de `xl`, e o valor em 30px só em `2xl`: com a
+// sidebar de 240px, numa tela de 1024px cada cartão ficava com ~170px e o valor
+// em reais saía cortado ("R$ 14.0…") — visto no polimento de 30/09. Dinheiro
+// não se corta; se ainda assim não couber, `c41-cortavel` dá a dica inteira.
 export function FaixaDeTotais({ itens }: { itens: ItemDeTotal[] }) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+    <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-5">
       {itens.map((i) => {
         const conteudo = (
           <>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[length:var(--fs-helper)] font-medium text-fg-muted truncate">{i.rotulo}</span>
+              <span className="text-[length:var(--fs-helper)] font-medium text-fg-muted truncate c41-cortavel">{i.rotulo}</span>
               {i.icone && (
                 <span
                   className={`inline-flex w-8 h-8 rounded-lg items-center justify-center flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${seloDoTom(i.tom)}`}
@@ -139,7 +144,7 @@ export function FaixaDeTotais({ itens }: { itens: ItemDeTotal[] }) {
               )}
             </div>
             <span
-              className={`block font-display text-[length:var(--fs-metric)] font-semibold tabular-nums leading-tight truncate ${i.tom ?? "text-fg"}`}
+              className={`block font-display text-[length:var(--fs-title)] 2xl:text-[length:var(--fs-metric)] font-semibold tabular-nums leading-tight tracking-[-0.01em] truncate c41-cortavel ${i.tom ?? "text-fg"}`}
             >
               {i.valor}
             </span>
@@ -147,12 +152,12 @@ export function FaixaDeTotais({ itens }: { itens: ItemDeTotal[] }) {
           </>
         );
         const cls =
-          "group bg-surface border border-border rounded-lg px-4 py-3.5 flex flex-col gap-1.5 min-w-0 shadow-[var(--c41-shadow-sm)] transition-[border-color,box-shadow,transform] duration-150";
+          "group bg-surface border border-border rounded-lg px-4 py-3.5 flex flex-col gap-1.5 min-w-0 shadow-[var(--c41-shadow-xs)] transition-[border-color,box-shadow,transform] duration-150";
         return i.href ? (
           <Link
             key={i.rotulo}
             href={i.href}
-            className={`${cls} hover:border-brand/40 hover:-translate-y-0.5 hover:shadow-[var(--c41-shadow-lg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40`}
+            className={`${cls} hover:border-brand/40 hover:-translate-y-0.5 hover:shadow-[var(--c41-shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40`}
           >
             {conteudo}
           </Link>

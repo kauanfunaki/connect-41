@@ -5,13 +5,24 @@ type Props = {
   icon?: React.ReactNode;
 };
 
+// Estado vazio: o ícone ganhou moldura (anel tracejado + disco na cor da
+// marca) no polimento de 30/09 — solto e cinza, ele parecia erro de
+// carregamento, e não "ainda não há nada aqui".
 export function EmptyState({ title, description, action, icon }: Props) {
   return (
-    <div className="py-16 px-6 flex flex-col items-center text-center gap-2">
-      {icon && <span className="text-fg-muted mb-1 [&>svg]:w-8 [&>svg]:h-8">{icon}</span>}
-      <p className="text-[length:var(--fs-body)] font-semibold text-fg">{title}</p>
-      {description && <p className="text-[length:var(--fs-helper)] text-fg-muted max-w-[360px]">{description}</p>}
-      {action && <div className="mt-2">{action}</div>}
+    <div className="py-14 px-6 flex flex-col items-center text-center">
+      {icon && (
+        <span className="relative mb-5 inline-flex size-20 items-center justify-center">
+          <span aria-hidden className="absolute inset-0 rounded-full border border-dashed border-border-strong" />
+          <span aria-hidden className="absolute inset-3 rounded-full bg-brand-subtle" />
+          <span className="relative text-brand [&>svg]:w-6 [&>svg]:h-6">{icon}</span>
+        </span>
+      )}
+      <p className="font-display text-[length:var(--fs-card-title)] font-semibold text-fg tracking-[-0.01em]">{title}</p>
+      {description && (
+        <p className="text-[length:var(--fs-helper)] text-fg-muted max-w-[400px] mt-1.5 leading-relaxed">{description}</p>
+      )}
+      {action && <div className="mt-5">{action}</div>}
     </div>
   );
 }

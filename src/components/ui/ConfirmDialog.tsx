@@ -54,7 +54,7 @@ export function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="c41-esmaecer fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget && !pending) onCancel();
       }}
@@ -65,7 +65,7 @@ export function ConfirmDialog({
         aria-modal="true"
         tabIndex={-1}
         aria-labelledby={titleId}
-        className="w-full max-w-sm rounded-lg border border-border bg-surface p-5 shadow-lg"
+        className="c41-surgir w-full max-w-sm rounded-lg border border-border-strong bg-surface-elevated p-5 shadow-[var(--c41-shadow-lg)]"
       >
         <h2 id={titleId} className="text-[15px] font-semibold text-fg mb-1.5">
           {title}
