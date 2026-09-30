@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-/** `grupo`: subtítulo dentro do painel — o setor com muitas telas (o BPO tem 18) lista por grupo. */
-export type TelaDoPainel = { label: string; href: string; icon?: React.ReactNode; grupo?: string };
+export type TelaDoPainel = { label: string; href: string; icon?: React.ReactNode };
+
+/** Um painel aberto por vez: quem abre avisa, e os outros fecham. */
+const EVENTO_ABRIU = "c41-painel-do-item";
 
 const ABRE_MS = 90;
 const FECHA_MS = 180;
@@ -19,7 +21,8 @@ function ativa(pathname: string, href: string): boolean {
 /**
  * O painel que abre **ao lado da sidebar** quando o mouse para num item que tem
  * telas dentro — Cadastros, os grupos de um setor (Contas, Banco e caixa…),
- * Gestão, e os setores em "Todos os setores".
+ * e Gestão. Os setores em "Todos os setores" não têm painel: o clique
+ * entra no ambiente do setor (decisão de 30/09).
  *
  * Referência pedida pelo Kauan em 30/09 (o menu do HubStrom): ver o que tem
  * dentro sem abrir a tela do grupo nem esticar a sidebar. O clique no item
@@ -43,6 +46,7 @@ export function PainelDoItem({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const id = useId();
   const [aberto, setAberto] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const itemRef = useRef<HTMLDivElement>(null);
@@ -69,6 +73,19 @@ export function PainelDoItem({
   }
 
   useEffect(() => () => clearTimeout(timer.current), []);
+
+  // Foco de teclado num item e o mouse noutro abriam dois painéis ao mesmo
+  // tempo (visto em 30/09): abrir um fecha os outros.
+  useEffect(() => {
+    function outroAbriu(e: Event) {
+      if ((e as CustomEvent<string>).detail !== id) setAberto(false);
+    }
+    window.addEventListener(EVENTO_ABRIU, outroAbriu);
+    return () => window.removeEventListener(EVENTO_ABRIU, outroAbriu);
+  }, [id]);
+  useEffect(() => {
+    if (aberto) window.dispatchEvent(new CustomEvent(EVENTO_ABRIU, { detail: id }));
+  }, [aberto, id]);
 
   // Posição antes da pintura e a cada rolagem da sidebar; a altura só existe
   // depois do painel na tela, daí a segunda passada.
@@ -132,14 +149,10 @@ export function PainelDoItem({
               {titulo}
             </p>
             <ul className="flex flex-col gap-0.5">
-              {telas.map((t, i) => {
+              {telas.map((t) => {
                 const atual = ativa(pathname, t.href);
-                const novoGrupo = t.grupo && t.grupo !== telas[i - 1]?.grupo;
                 return (
                   <li key={t.href}>
-                    {novoGrupo && (
-                      <p className={`px-2.5 pb-1 text-[10.5px] font-semibold uppercase tracking-wider text-fg-muted ${i > 0 ? "pt-2.5" : "pt-0.5"}`}>{t.grupo}</p>
-                    )}
                     <Link
                       href={t.href}
                       role="menuitem"

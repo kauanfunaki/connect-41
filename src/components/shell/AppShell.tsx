@@ -39,7 +39,7 @@ import { ModuleIcon, Icone } from "@/components/shared/ModuleIcon";
 import { RegistroDeTelasRecentes } from "@/components/shell/TelasRecentes";
 import { agruparModulos, slugDoGrupo, ICONE_DO_GRUPO } from "@/lib/module-catalog";
 import type { TelaNavegavel } from "@/lib/buscaDeTelas";
-import { ContextSwitcher } from "@/components/shell/ContextSwitcher";
+import { ContextSwitcher, trocarSetor } from "@/components/shell/ContextSwitcher";
 import { PainelDoItem, type TelaDoPainel } from "@/components/shell/PainelDoItem";
 import { ABAS_DA_GESTAO } from "@/components/gestao/AbasDaGestao";
 import { Button } from "@/components/ui/Button";
@@ -70,18 +70,6 @@ const TELAS_DE_CADASTROS: TelaDoPainel[] = [
   { label: "Clientes", href: "/clientes", icon: <BriefcaseBusiness /> },
   { label: "Pessoas", href: "/pessoas", icon: <Users /> },
 ];
-/**
- * As telas de um setor para o painel. Acima de 8 vão agrupadas (Contas, Banco e
- * caixa…), na ordem dos grupos do menu do próprio setor; até 8, em lista.
- */
-function telasDoSetor(telas: TelaNavegavel[]): TelaDoPainel[] {
-  const grupos = agruparModulos(telas);
-  const agrupar = telas.length > 8 && grupos.length > 1;
-  return grupos.flatMap(({ grupo, itens }) =>
-    itens.map((t) => ({ label: t.label, href: t.href, icon: <ModuleIcon code={t.code} />, grupo: agrupar ? grupo : undefined }))
-  );
-}
-
 const TELAS_DA_GESTAO: TelaDoPainel[] = ABAS_DA_GESTAO.map((a) => ({ label: a.rotulo, href: a.href, icon: a.icone }));
 
 /**
@@ -347,15 +335,17 @@ export function AppShell({
                   <p className="px-2.5 pt-4 pb-1.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wider">
                     Meus Setores
                   </p>
+                  {/* Sem painel ao lado: o clique entra no ambiente do setor
+                      (decisão de 30/09 — as telas de todos os setores juntas
+                      poluíam a vista de quem tem acesso a todos). */}
                   {sectors.map((s) => (
-                    <PainelDoItem
+                    <SectorNavItem
                       key={s.code}
-                      titulo={s.label}
-                      cor={s.color}
-                      telas={telasDoSetor(telasNavegaveis.filter((t) => t.setor === s.label))}
-                    >
-                      <SectorNavItem href={`/setor/${s.code}`} label={s.label} color={s.color} icon={SECTOR_ICONS[s.code]} />
-                    </PainelDoItem>
+                      label={s.label}
+                      color={s.color}
+                      icon={SECTOR_ICONS[s.code]}
+                      onEntrar={() => trocarSetor(s.code, appDomain, sectorHostSuffix)}
+                    />
                   ))}
                 </>
               )}
