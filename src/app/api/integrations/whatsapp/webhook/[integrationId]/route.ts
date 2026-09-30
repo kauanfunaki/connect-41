@@ -93,6 +93,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ int
   // Então esperamos — e a reentrega é tratada onde ela realmente se resolve: o
   // `waMessageId` único em `WhatsappMessage`. Se o provedor reentregar, a
   // segunda passada para na gravação da entrada e não gera segunda resposta.
+  //
+  // Desde 30/09 a espera pode ser maior: cada conversa atende uma mensagem por
+  // vez, e mensagens seguidas esperam alguns segundos para virar uma resposta
+  // só (`src/lib/whatsapp/fila.ts`). A reentrega continua morrendo no mesmo lugar.
   for (const m of evento.mensagens) {
     try {
       const desfecho = await atenderMensagem(conexao, provedor, m);

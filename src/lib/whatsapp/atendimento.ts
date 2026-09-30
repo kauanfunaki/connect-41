@@ -18,13 +18,17 @@ import { lerConfig } from "@/lib/integracoes/data";
 import {
   decidir,
   decidirComARespostaDoAgente,
-  montarMensagem,
+  montarMensagens,
+  pausaAntesDe,
+  pediuParaSair,
   voltouAConversar,
   CONFIRMACAO_DE_SAIDA,
   type EstadoDaConversa,
+  type Parte,
 } from "@/lib/whatsapp/decisao";
 import { LIMPEZA_AO_ENCERRAR } from "@/lib/whatsapp/atendimentos";
-import { fecharAtendimentos, garantirAtendimentoAberto } from "@/lib/whatsapp/atendimentos-dados";
+import { atendimentoAberto, fecharAtendimentos, garantirAtendimentoAberto } from "@/lib/whatsapp/atendimentos-dados";
+import { esperar, naFila } from "@/lib/whatsapp/fila";
 import { enviarERegistrar, registrarBloqueio } from "@/lib/whatsapp/envio";
 import { avisarMensagemNova } from "@/lib/whatsapp/conversas";
 import { avisarSobreConversa } from "@/lib/whatsapp/avisos";
@@ -69,11 +73,16 @@ function sistema(nomeDoEscritorio: string): string {
   return (
     `Você é o assistente virtual do Recrutamento da ${nomeDoEscritorio}, conversando por WhatsApp com um ` +
     "candidato. Escreva como alguém simpático da equipe escreveria no WhatsApp: português do Brasil, " +
-    "natural e acolhedor, frases curtas (no máximo três), sem formatação, sem asteriscos e sem listas.\n" +
-    "Tom de conversa, não de sistema: chame a pessoa pelo primeiro nome quando souber; prefira " +
+    "natural e acolhedor, sem formatação, sem asteriscos e sem listas. Mensagens curtas: quando tiver " +
+    "mais de uma ideia, separe com uma linha em branco — cada bloco vira uma mensagem no WhatsApp, " +
+    "e são no máximo três.\n" +
+    "Chame a pessoa pelo primeiro nome só quando ver_meu_processo trouxer primeiroNome. Sem ele, não " +
+    "use nome nenhum: nunca invente um, nunca use o nome que aparece no WhatsApp e nunca use o seu.\n" +
+    "Tom de conversa, não de sistema: prefira " +
     "\"não achei\" a \"não consegui localizar\" e \"deixa eu ver\" a \"verificarei\"; nada de " +
     "\"prezado\", \"informamos\" ou \"sua solicitação\". Um emoji cai bem quando combina (😊, 🙌, 👍, 📄) — " +
     "no máximo um por mensagem, e nenhum em assunto delicado, como reprovação, atraso ou reclamação. " +
+    "Se a pessoa mandou várias mensagens seguidas, responda a todas de uma vez. " +
     "Não comece toda mensagem do mesmo jeito: responda direto ao que a pessoa escreveu. Se ainda " +
     "não há mensagem sua na conversa, o sistema já põe antes do seu texto uma apresentação que " +
     "cumprimenta — então não diga \"oi\" nem se apresente de novo.\n" +
@@ -118,15 +127,15 @@ async function nomeDoEscritorio(tenantId: string): Promise<string> {
   return tenant?.name.trim() || "nossa empresa";
 }
 
-/** Grava a mensagem recebida. `false` quando já tínhamos visto este id. */
+/** Grava a mensagem recebida e diz quando. `null` quando já tínhamos visto este id. */
 async function registrarEntrada(
   tenantId: string,
   threadId: string,
   m: MensagemRecebida
-): Promise<boolean> {
+): Promise<{ createdAt: Date } | null> {
   const prisma = getPrisma();
   try {
-    await prisma.whatsappMessage.create({
+    return await prisma.whatsappMessage.create({
       data: {
         tenantId,
         threadId,
@@ -134,13 +143,13 @@ async function registrarEntrada(
         waMessageId: m.waMessageId,
         body: m.texto,
       },
+      select: { createdAt: true },
     });
-    return true;
   } catch {
     // Violação da chave única em `waMessageId` — reentrega do provedor. É o
     // caminho normal, não erro: é exatamente aqui que a segunda resposta ao
     // candidato morre.
-    return false;
+    return null;
   }
 }
 
@@ -156,13 +165,76 @@ async function acharOuCriarThread(params: {
     },
   });
   if (existente) return existente;
-  return prisma.whatsappThread.create({
-    data: {
-      tenantId: params.tenantId,
-      integrationId: params.integrationId,
-      waPhone: params.waPhone,
-    },
+  try {
+    return await prisma.whatsappThread.create({
+      data: {
+        tenantId: params.tenantId,
+        integrationId: params.integrationId,
+        waPhone: params.waPhone,
+      },
+    });
+  } catch (err) {
+    // Duas primeiras mensagens de um número novo chegando juntas: a outra criou
+    // a conversa primeiro. Usa a dela.
+    const criadaPelaOutra = await prisma.whatsappThread.findUnique({
+      where: { integrationId_waPhone: { integrationId: params.integrationId, waPhone: params.waPhone } },
+    });
+    if (criadaPelaOutra) return criadaPelaOutra;
+    throw err;
+  }
+}
+
+/** Mensagens seguidas esperam este tanto por outras, para virar uma resposta só. */
+export const JANELA_DA_RAJADA_MS = 4_000;
+
+type Destino = {
+  tenantId: string;
+  threadId: string;
+  provedor: ProvedorWhatsapp;
+  config: ReturnType<typeof lerConfig>;
+  paraE164: string;
+};
+
+/**
+ * Manda as partes de uma resposta, uma de cada vez, com a pausa de quem
+ * digita. A apresentação e o texto fixo saem marcados como automáticos; o que
+ * o agente escreveu leva a execução dele. Se uma parte falha, as seguintes não
+ * saem: o candidato leria o fim sem o começo.
+ */
+async function enviarPartes(destino: Destino, partes: Parte[], agentRunId: string | null): Promise<boolean> {
+  for (const [i, parte] of partes.entries()) {
+    if (i > 0) await esperar(pausaAntesDe(parte.texto));
+    const r = await enviarERegistrar({
+      ...destino,
+      texto: parte.texto,
+      ...(parte.fixa || !agentRunId ? { automatica: true } : { agentRunId }),
+    });
+    if (!r.ok) return false;
+  }
+  return true;
+}
+
+/**
+ * O atendimento em que a mensagem entra. Sem nenhum aberto, abre um começando
+ * pela primeira mensagem que chegou depois do último fechamento — numa rajada,
+ * as mensagens que vieram juntas são todas deste atendimento.
+ */
+async function atendimentoDaMensagem(tenantId: string, threadId: string, chegouEm: Date) {
+  const aberto = await atendimentoAberto(threadId);
+  if (aberto) return aberto;
+  const prisma = getPrisma();
+  const fechado = await prisma.whatsappAtendimento.findFirst({
+    where: { threadId, encerradoEm: { not: null } },
+    orderBy: { encerradoEm: "desc" },
+    select: { encerradoEm: true },
   });
+  const primeira = await prisma.whatsappMessage.findFirst({
+    where: { threadId, direction: "ENTRADA", ...(fechado?.encerradoEm ? { createdAt: { gt: fechado.encerradoEm } } : {}) },
+    orderBy: { createdAt: "asc" },
+    select: { createdAt: true },
+  });
+  const inicio = primeira && primeira.createdAt < chegouEm ? primeira.createdAt : chegouEm;
+  return garantirAtendimentoAberto(tenantId, threadId, inicio);
 }
 
 async function transferir(threadId: string, motivo: string): Promise<void> {
@@ -220,32 +292,71 @@ export async function atenderMensagem(
   provedor: ProvedorWhatsapp,
   m: MensagemRecebida
 ): Promise<string> {
-  const agora = new Date();
-  const prisma = getPrisma();
-
-  const thread = await acharOuCriarThread({
+  const inicial = await acharOuCriarThread({
     tenantId: conexao.tenantId,
     integrationId: conexao.id,
     waPhone: m.de,
   });
 
-  const novo = await registrarEntrada(conexao.tenantId, thread.id, m);
-  if (!novo) return "reentrega ignorada";
+  // A entrada é gravada fora da fila, na hora: é assim que a mensagem que
+  // está esperando a vez descobre que chegou outra depois dela.
+  const entrada = await registrarEntrada(conexao.tenantId, inicial.id, m);
+  if (!entrada) return "reentrega ignorada";
+
+  return naFila(inicial.id, () => atenderNaVez(conexao, provedor, m, inicial.id, entrada.createdAt));
+}
+
+/** O atendimento de uma mensagem, já na vez dela — ver `src/lib/whatsapp/fila.ts`. */
+async function atenderNaVez(
+  conexao: Conexao,
+  provedor: ProvedorWhatsapp,
+  m: MensagemRecebida,
+  threadId: string,
+  chegouEm: Date
+): Promise<string> {
+  const prisma = getPrisma();
+
+  // ─── Rajada ───────────────────────────────────────────────────────────────
+  //
+  // Quem escreve em rajada ("kkkk", "kkkkk", "e a vaga?") recebe uma resposta
+  // só, que leva todas em conta: esta mensagem espera um pouco, e se outra
+  // chegou depois, é a outra que responde — o agente lê as duas no histórico.
+  // O PARAR não espera: é atendido na hora, na ordem em que chegou.
+  if (!pediuParaSair(m.texto)) {
+    await esperar(chegouEm.getTime() + JANELA_DA_RAJADA_MS - Date.now());
+    const seguinte = await prisma.whatsappMessage.findFirst({
+      where: { threadId, direction: "ENTRADA", createdAt: { gt: chegouEm } },
+      select: { id: true },
+    });
+    if (seguinte) return "agrupada: a mensagem seguinte responde por esta também";
+  }
+
+  // Lida de novo, e não a de quando a mensagem chegou: quem estava antes na
+  // fila pode ter mudado a conversa (PARAR, vínculo, transferência).
+  const thread = await prisma.whatsappThread.findUniqueOrThrow({ where: { id: threadId } });
+  const agora = new Date();
 
   // Quem pediu para parar e escreveu de novo — "oi", uma pergunta — está
   // voltando: é o que a confirmação do PARAR promete. Um "ok, obrigado" logo
   // depois do PARAR não é volta, e continua sem resposta. Ver `voltouAConversar`.
+  // Vale qualquer mensagem depois do PARAR, não só esta: numa rajada "oi" +
+  // "ok", o "oi" já é a volta.
   let optedOutAt = thread.optedOutAt;
-  if (optedOutAt && voltouAConversar(m.texto)) {
-    await prisma.whatsappThread.update({ where: { id: thread.id }, data: { optedOutAt: null } });
-    optedOutAt = null;
+  if (optedOutAt) {
+    const depoisDoParar = await prisma.whatsappMessage.findMany({
+      where: { threadId, direction: "ENTRADA", createdAt: { gt: optedOutAt } },
+      select: { body: true },
+    });
+    if (depoisDoParar.some((d) => voltouAConversar(d.body))) {
+      await prisma.whatsappThread.update({ where: { id: thread.id }, data: { optedOutAt: null } });
+      optedOutAt = null;
+    }
   }
 
   // O atendimento desta mensagem. Sem nenhum aberto — alguém encerrou, ou é a
-  // volta depois do PARAR —, esta mensagem abre um novo, a partir de `agora`
-  // (anterior à gravação da mensagem): o assistente se apresenta de novo e só lê
-  // o que foi dito daqui em diante. Quem continua calado não abre nada.
-  const atendimento = optedOutAt ? null : await garantirAtendimentoAberto(conexao.tenantId, thread.id, agora);
+  // volta depois do PARAR —, ela abre um novo: o assistente se apresenta de
+  // novo e só lê o que foi dito dali em diante. Quem continua calado não abre nada.
+  const atendimento = optedOutAt ? null : await atendimentoDaMensagem(conexao.tenantId, thread.id, chegouEm);
   const desde = atendimento?.abertoEm ?? thread.createdAt;
 
   const [saidas, respostasNaUltimaHora] = await Promise.all([
@@ -336,15 +447,11 @@ export async function atenderMensagem(
   let acabouDeConfirmar = false;
   if (!thread.personId && !thread.candidaturaId && !thread.linkFailedAt) {
     const enviar = (texto: string) =>
-      enviarERegistrar({
-        tenantId: conexao.tenantId,
-        threadId: thread.id,
-        provedor,
-        config,
-        paraE164: m.de,
-        texto: montarMensagem(texto, decisao.apresentar, escritorio),
-        automatica: true,
-      });
+      enviarPartes(
+        { tenantId: conexao.tenantId, threadId: thread.id, provedor, config, paraE164: m.de },
+        montarMensagens(texto, decisao.apresentar, escritorio),
+        null
+      );
 
     if (thread.linkPendingPersonId) {
       const pessoa = await prisma.person.findFirst({
@@ -468,15 +575,11 @@ export async function atenderMensagem(
     return `transferido: ${desfecho.motivo}`;
   }
 
-  await enviarERegistrar({
-    tenantId: conexao.tenantId,
-    threadId: thread.id,
-    provedor,
-    config,
-    paraE164: m.de,
-    texto: montarMensagem(desfecho.texto, decisao.apresentar, escritorio),
-    agentRunId: resposta.runId ?? null,
-  });
+  await enviarPartes(
+    { tenantId: conexao.tenantId, threadId: thread.id, provedor, config, paraE164: m.de },
+    montarMensagens(desfecho.texto, decisao.apresentar, escritorio),
+    resposta.runId ?? null
+  );
 
   // A resposta prometeu uma pessoa sem o agente chamar a ferramenta: a mensagem
   // já saiu, então a promessa passa a ser verdade — transferir **depois** de
@@ -497,11 +600,21 @@ export async function tratarNaoTexto(
   provedor: ProvedorWhatsapp,
   i: MensagemIgnorada
 ): Promise<string> {
-  const thread = await acharOuCriarThread({
+  const inicial = await acharOuCriarThread({
     tenantId: conexao.tenantId,
     integrationId: conexao.id,
     waPhone: i.de,
   });
+  return naFila(inicial.id, () => tratarNaoTextoNaVez(conexao, provedor, i, inicial.id));
+}
+
+async function tratarNaoTextoNaVez(
+  conexao: Conexao,
+  provedor: ProvedorWhatsapp,
+  i: MensagemIgnorada,
+  threadId: string
+): Promise<string> {
+  const thread = await getPrisma().whatsappThread.findUniqueOrThrow({ where: { id: threadId } });
   // Arquivo, áudio ou figurinha não reabrem o PARAR: não dá para ler se é volta.
   if (thread.optedOutAt) return "ignorado: pediu para parar";
   const atendimento = await garantirAtendimentoAberto(conexao.tenantId, thread.id, new Date());
@@ -595,15 +708,11 @@ async function tratarDocumento(
   });
   const escritorio = await nomeDoEscritorio(conexao.tenantId);
   const responder = (texto: string) =>
-    enviarERegistrar({
-      tenantId: conexao.tenantId,
-      threadId: thread.id,
-      provedor,
-      config,
-      paraE164: i.de,
-      texto: montarMensagem(texto, saidas === 0, escritorio),
-      automatica: true,
-    });
+    enviarPartes(
+      { tenantId: conexao.tenantId, threadId: thread.id, provedor, config, paraE164: i.de },
+      montarMensagens(texto, saidas === 0, escritorio),
+      null
+    );
 
   const candidatura = thread.candidaturaId
     ? await prisma.candidatura.findFirst({

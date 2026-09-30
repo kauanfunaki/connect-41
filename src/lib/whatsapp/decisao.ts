@@ -307,7 +307,53 @@ export function semCumprimentoRepetido(texto: string): string {
   return resto.charAt(0).toUpperCase() + resto.slice(1);
 }
 
-/** Monta o corpo final, com a apresentação quando for a primeira vez. */
-export function montarMensagem(texto: string, apresentar: boolean, nomeDoEscritorio: string): string {
-  return apresentar ? `${avisoDeRobo(nomeDoEscritorio)}\n\n${semCumprimentoRepetido(texto)}` : texto;
+/** No máximo quantas mensagens uma resposta vira. */
+export const MAX_PARTES_DA_RESPOSTA = 3;
+
+/** Bloco menor que isto ("Claro!", "Achei aqui:") não vira mensagem sozinho. */
+const MIN_CARACTERES_DA_PARTE = 20;
+
+/**
+ * Divide a resposta em mensagens pelos parágrafos, como uma pessoa escreve no
+ * WhatsApp. Pedido do teste de 30/09: uma resposta num bloco só ficava longa
+ * demais para ler. Bloco curto demais gruda no seguinte, e o que passa do
+ * limite vai junto na última — nunca se corta frase.
+ */
+export function dividirEmMensagens(texto: string, max: number = MAX_PARTES_DA_RESPOSTA): string[] {
+  const blocos = texto
+    .split(/\n\s*\n/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+  const juntos: string[] = [];
+  for (const b of blocos) {
+    const ultimo = juntos.at(-1);
+    if (ultimo !== undefined && ultimo.length < MIN_CARACTERES_DA_PARTE) juntos[juntos.length - 1] = `${ultimo}\n${b}`;
+    else juntos.push(b);
+  }
+  if (juntos.length <= max) return juntos;
+  return [...juntos.slice(0, max - 1), juntos.slice(max - 1).join("\n\n")];
+}
+
+export type Parte = {
+  texto: string;
+  /** Texto fixo do Connect (a apresentação), e não escrito pelo agente. */
+  fixa: boolean;
+};
+
+/**
+ * As mensagens que saem, na ordem. A apresentação, quando é a primeira vez,
+ * vai numa mensagem própria — antes ela e a resposta saíam num bloco só.
+ */
+export function montarMensagens(texto: string, apresentar: boolean, nomeDoEscritorio: string): Parte[] {
+  const partes = dividirEmMensagens(apresentar ? semCumprimentoRepetido(texto) : texto).map((t) => ({ texto: t, fixa: false }));
+  return apresentar ? [{ texto: avisoDeRobo(nomeDoEscritorio), fixa: true }, ...partes] : partes;
+}
+
+/**
+ * A pausa antes de mandar a próxima mensagem, como quem digita: maior para
+ * texto maior, sem passar de 2,5 s. Três mensagens coladas no mesmo segundo
+ * parecem disparo, não conversa.
+ */
+export function pausaAntesDe(texto: string): number {
+  return Math.min(2_500, 700 + texto.length * 12);
 }
