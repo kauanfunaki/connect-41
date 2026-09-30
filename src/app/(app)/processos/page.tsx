@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
@@ -107,16 +106,12 @@ export default async function ProcessosPage({
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
-
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <PageHeader title="Processos" />
-          <p className="text-[13px] text-fg-muted mt-1">
-            Constituição, alteração contratual, baixa e alvarás — com protocolo, exigência e prazo.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
+      {/* Sem "Voltar": é a página principal do setor, e o menu é o caminho de volta. */}
+      <PageHeader
+        title="Processos"
+        subtitle="Constituição, alteração contratual, baixa e alvarás — com protocolo, exigência e prazo."
+        action={
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         {coordena && (
           <Link href="/societario/ia" className="text-[13px] text-brand hover:underline whitespace-nowrap">
             IA do Societário{propostasDaIa > 0 ? ` (${propostasDaIa} para revisar)` : ""}
@@ -151,7 +146,8 @@ export default async function ProcessosPage({
           abrirAction={abrirProcesso}
         />
         </div>
-      </div>
+        }
+      />
 
       <div className="flex flex-wrap gap-1.5 mb-3">
         {RECORTES.map((r) => {
