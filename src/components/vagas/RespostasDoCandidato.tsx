@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -54,7 +55,7 @@ export function RespostasDoCandidato({
         </div>
         {podeEditar && !editando && (
           <Button variant="secondary" size="sm" onClick={() => setEditando(true)}>
-            Corrigir
+            <Pencil size={13} /> Corrigir
           </Button>
         )}
       </div>
@@ -88,7 +89,7 @@ export function RespostasDoCandidato({
             <Button type="submit" size="sm" loading={pendente} disabled={pendente}>
               Salvar
             </Button>
-            <Button variant="linkMuted" size="xs" onClick={() => setEditando(false)}>
+            <Button variant="secondary" size="sm" onClick={() => setEditando(false)}>
               Cancelar
             </Button>
             {erro && <span className="text-[12px] text-danger">{erro}</span>}

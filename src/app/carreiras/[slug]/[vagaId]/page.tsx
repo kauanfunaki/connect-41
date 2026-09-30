@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -123,9 +124,10 @@ export default async function VagaPublicaPage({
     <div className="min-h-screen py-10 px-4">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
       <div className="max-w-2xl mx-auto">
-        <Link href={`/carreiras/${slug}`} className="text-[12px] text-fg-muted hover:text-fg transition-colors">
-          ← Todas as vagas
-        </Link>
+        {/* Botão sem caixa, com a seta (30/09): era texto cinza com "←". */}
+        <Button href={`/carreiras/${slug}`} variant="ghost" size="sm" className="-ml-3">
+          <ArrowLeft size={14} /> Todas as vagas
+        </Button>
 
         <header className="mt-4 mb-6">
           <h1 className="text-[22px] font-semibold text-fg tracking-[-0.01em]">{vaga.title}</h1>

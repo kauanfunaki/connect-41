@@ -16,10 +16,12 @@ import {
   urlDaLista,
   whereDoPrazo,
 } from "@/lib/carreiras/portal";
+import { Search, UserRound, X } from "lucide-react";
 import { EtiquetasDaVaga } from "@/components/carreiras/EtiquetasDaVaga";
 import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
+import { Pagination } from "@/components/shared/Pagination";
 
 export async function generateMetadata({
   params,
@@ -113,40 +115,64 @@ export default async function CarreirasPage({
           <p className="text-[13px] text-fg-muted mt-1">
             Vagas abertas — {tenant.name}
           </p>
-          <Link href={`/carreiras/${slug}/minha-conta`} className="inline-block text-[12px] text-brand hover:underline mt-2">
-            Já se candidatou? Acompanhe suas candidaturas
-          </Link>
+          {/* Botão, e não link de texto (30/09): é a porta de entrada da conta
+              do candidato. */}
+          <Button href={`/carreiras/${slug}/minha-conta`} variant="secondary" size="sm" className="mt-3">
+            <UserRound size={13} /> Já se candidatou? Acompanhe suas candidaturas
+          </Button>
         </header>
 
         {todas.length > 0 && (
-          // GET puro: a busca vira URL, funciona sem JavaScript e pode ser
-          // compartilhada como link (vagas remotas em Curitiba, por exemplo).
-          <form method="get" className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 mb-5 space-y-3" role="search">
-            <label htmlFor="q" className="sr-only">Buscar vaga</label>
-            <Input id="q" name="q" type="search" defaultValue={filtros.busca} placeholder="Buscar por cargo, área ou palavra-chave" />
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <Filtro nome="cidade" rotulo="Cidade" valor={filtros.cidade} opcoes={opcoes.cidades.map((c) => [c, c])} />
-              <Filtro nome="area" rotulo="Área" valor={filtros.area} opcoes={opcoes.areas.map((a) => [a, a])} />
-              <Filtro nome="modalidade" rotulo="Modalidade" valor={filtros.modalidade} opcoes={opcoes.modalidades.map((m) => [m, MODALIDADE_LABEL[m]])} />
-              <Filtro nome="contrato" rotulo="Contrato" valor={filtros.contrato} opcoes={opcoes.contratos.map((c) => [c, CONTRATO_LABEL[c]])} />
+          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 mb-5 space-y-3">
+            <div className="flex flex-wrap items-start gap-2">
+              {/* A busca por texto fica fora do "Filtros", num GET puro: vira
+                  URL, funciona sem JavaScript e pode ser compartilhada como
+                  link. Os filtros escolhidos vão junto, escondidos — senão
+                  buscar apagava a cidade escolhida. */}
+              <form method="get" role="search" className="flex flex-1 min-w-[16rem] items-center gap-2">
+                <label htmlFor="q" className="sr-only">Buscar vaga</label>
+                <Input id="q" name="q" type="search" defaultValue={filtros.busca} placeholder="Buscar por cargo, área ou palavra-chave" />
+                {(["cidade", "area", "modalidade", "contrato"] as const).map((k) =>
+                  filtros[k] ? <input key={k} type="hidden" name={k} value={filtros[k]} /> : null
+                )}
+                <Button type="submit" variant="primary">
+                  <Search size={14} /> Buscar
+                </Button>
+              </form>
+              {/* Cidade, área, modalidade e contrato no botão "Filtros" — eram
+                  quatro selects numa grade dentro do formulário (conferência
+                  de 30/09). Cada escolha navega na hora e preserva a busca. */}
+              <FiltrosDaTela
+                campos={[
+                  { chave: "cidade", rotulo: "Cidade", vazioLabel: "Todas", opcoes: opcoes.cidades.map((c) => ({ value: c, label: c })) },
+                  { chave: "area", rotulo: "Área", vazioLabel: "Todas", opcoes: opcoes.areas.map((a) => ({ value: a, label: a })) },
+                  {
+                    chave: "modalidade",
+                    rotulo: "Modalidade",
+                    vazioLabel: "Todas",
+                    opcoes: opcoes.modalidades.map((m) => ({ value: m, label: MODALIDADE_LABEL[m] })),
+                  },
+                  {
+                    chave: "contrato",
+                    rotulo: "Contrato",
+                    vazioLabel: "Todos",
+                    opcoes: opcoes.contratos.map((c) => ({ value: c, label: CONTRATO_LABEL[c] })),
+                  },
+                ].filter((c) => c.opcoes.length > 0)}
+              />
             </div>
             <div className="flex items-center justify-between gap-3">
               <p className="text-[12px] text-fg-muted tabular-nums">
                 {filtradas.length === 1 ? "1 vaga" : `${filtradas.length} vagas`}
                 {filtrando && ` de ${todas.length}`}
               </p>
-              <div className="flex items-center gap-3">
-                {filtrando && (
-                  <Link href={`/carreiras/${slug}`} className="text-[12px] text-fg-muted hover:text-fg transition-colors">
-                    Limpar filtros
-                  </Link>
-                )}
-                <Button type="submit" variant="primary" size="sm">
-                  Buscar
+              {filtrando && (
+                <Button href={`/carreiras/${slug}`} variant="ghost" size="xs">
+                  <X size={11} /> Limpar filtros
                 </Button>
-              </div>
+              )}
             </div>
-          </form>
+          </div>
         )}
 
         {todas.length === 0 ? (
@@ -157,9 +183,9 @@ export default async function CarreirasPage({
         ) : vagas.length === 0 ? (
           <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-8 text-center">
             <p className="text-[14px] text-fg">Nenhuma vaga com esses filtros.</p>
-            <Link href={`/carreiras/${slug}`} className="text-[12px] text-brand hover:underline mt-1 inline-block">
+            <Button href={`/carreiras/${slug}`} variant="secondary" size="sm" className="mt-3">
               Ver todas as {todas.length} vagas abertas
-            </Link>
+            </Button>
           </div>
         ) : (
           <div className="space-y-3">
@@ -205,45 +231,18 @@ export default async function CarreirasPage({
                 </Link>
               );
             })}
-            {totalDePaginas > 1 && (
-              <nav className="flex items-center justify-between gap-3 pt-2" aria-label="Páginas">
-                {pagina > 1 ? (
-                  <Link href={urlDaLista(slug, filtros, pagina - 1)} className="text-[13px] text-brand hover:underline">
-                    ← Anteriores
-                  </Link>
-                ) : (
-                  <span />
-                )}
-                <span className="text-[12px] text-fg-muted tabular-nums">
-                  Página {pagina} de {totalDePaginas}
-                </span>
-                {pagina < totalDePaginas ? (
-                  <Link href={urlDaLista(slug, filtros, pagina + 1)} className="text-[13px] text-brand hover:underline">
-                    Próximas →
-                  </Link>
-                ) : (
-                  <span />
-                )}
-              </nav>
-            )}
+            {/* A paginação do app, em botões — era uma cópia local em texto
+                azul (30/09). */}
+            <Pagination
+              page={pagina}
+              totalPages={totalDePaginas}
+              buildHref={(p) => urlDaLista(slug, filtros, p)}
+              total={filtradas.length}
+              rotulo="vagas"
+            />
           </div>
         )}
       </div>
     </div>
-  );
-}
-
-/** Um filtro de lista. Sem opção, fica desabilitado em vez de sumir — o layout não pula. */
-function Filtro({ nome, rotulo, valor, opcoes }: { nome: string; rotulo: string; valor: string; opcoes: [string, string][] }) {
-  return (
-    <label className="flex flex-col gap-1 text-[11px] text-fg-muted">
-      {rotulo}
-      <Select name={nome} defaultValue={valor} disabled={opcoes.length === 0}>
-        <option value="">Todas</option>
-        {opcoes.map(([v, t]) => (
-          <option key={v} value={v}>{t}</option>
-        ))}
-      </Select>
-    </label>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { ArrowDown } from "lucide-react";
 import { DISC_BANK, TOTAL_BLOCKS } from "@/lib/discBank";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { ChoicePill } from "./ChoicePill";
@@ -118,11 +119,7 @@ export function DiscForm({ token }: Props) {
           <p className="text-[13px] text-fg">
             Recuperamos as respostas que você já tinha marcado neste link. Continue de onde parou.
           </p>
-          <Button
-            variant="linkMuted"
-            className="text-[12px] flex-shrink-0"
-            onClick={dismissRestoredNotice}
-          >
+          <Button variant="secondary" size="xs" className="flex-shrink-0" onClick={dismissRestoredNotice}>
             Ok
           </Button>
         </div>
@@ -144,12 +141,8 @@ export function DiscForm({ token }: Props) {
             {answeredCount} de {TOTAL_BLOCKS} respondidos
           </span>
           {!allAnswered && answeredCount > 0 && (
-            <Button
-              variant="link"
-              className="text-[12px]"
-              onClick={goToFirstIncomplete}
-            >
-              Ir ao próximo pendente
+            <Button variant="secondary" size="xs" onClick={goToFirstIncomplete}>
+              <ArrowDown size={11} /> Ir ao próximo pendente
             </Button>
           )}
         </div>

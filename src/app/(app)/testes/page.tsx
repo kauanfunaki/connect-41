@@ -1,15 +1,21 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { ClipboardList } from "lucide-react";
+import { ArrowRight, CheckCircle2, ClipboardList, FileQuestion, Hourglass } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite, canActOnSector } from "@/lib/auth/context";
 import { scopedAssessmentLinkWhere, scopedPersonWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Pagination } from "@/components/shared/Pagination";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
+import { FiltroDaColunaNaUrl } from "@/components/shared/FiltroDeColunas";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
+import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { NovoTesteForm } from "@/components/teste/NovoTesteForm";
 import { formatInstantDate } from "@/lib/format";
+import { lerLista } from "@/lib/filtrosDaListaDeEmpresas";
 import type { AssessmentLinkStatus } from "@/generated/prisma/enums";
 import { setorDoModulo } from "@/lib/modules";
 
@@ -29,12 +35,20 @@ const STATUS_STYLE: Record<AssessmentLinkStatus, string> = {
   RESPONDIDO: "bg-success/10 text-success border-success/25",
 };
 
+const STATUS_ORDEM: AssessmentLinkStatus[] = ["PENDENTE", "RESPONDIDO"];
+
+// O funil da coluna Teste escolhe o tipo: "DISC", o id de um modelo de
+// múltipla escolha, ou este valor para o de múltipla escolha sem modelo.
+const SEM_MODELO = "MULTIPLA";
+
 export default async function TestesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; page?: string }>;
+  /** `teste` é o funil da coluna Teste — parâmetro repetido. */
+  searchParams: Promise<{ status?: string; page?: string; teste?: string | string[] }>;
 }) {
-  const { status, page } = await searchParams;
+  const { status, page, teste } = await searchParams;
+  const testesEscolhidos = lerLista(teste);
   const ctx = await getAuthContext();
 
   const statusFilter =
@@ -42,14 +56,25 @@ export default async function TestesPage({
 
   const pageNum = Math.max(1, parseInt(page ?? "1"));
   const prisma = getPrisma();
-  const where = {
-    ...scopedAssessmentLinkWhere(ctx),
-    ...(statusFilter ? { status: statusFilter } : {}),
-  };
+
+  // Funil da coluna Teste (polimento de 30/09). A lista é paginada, então
+  // filtra aqui, na base inteira — ver `FiltroDaColunaNaUrl`.
+  const idsDeModelo = testesEscolhidos.filter((t) => t !== "DISC" && t !== SEM_MODELO && t !== "");
+  const alternativasDeTeste = [
+    ...(testesEscolhidos.includes("DISC") ? [{ type: "DISC" as const }] : []),
+    ...(idsDeModelo.length > 0 ? [{ type: "MULTIPLA_ESCOLHA" as const, templateId: { in: idsDeModelo } }] : []),
+    ...(testesEscolhidos.includes(SEM_MODELO) ? [{ type: "MULTIPLA_ESCOLHA" as const, templateId: null }] : []),
+  ];
+  // Valor desconhecido na URL não pode virar "tudo".
+  const ondeTeste =
+    testesEscolhidos.length === 0 ? {} : alternativasDeTeste.length > 0 ? { OR: alternativasDeTeste } : { id: { in: [] as string[] } };
+  const base = scopedAssessmentLinkWhere(ctx);
+  const ondeStatus = statusFilter ? { status: statusFilter } : {};
+  const where = { AND: [base, ondeTeste, ondeStatus] };
 
   const canCreate = canWrite(ctx.role) && canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
 
-  const [links, total, candidatos, templates] = await Promise.all([
+  const [links, total, candidatos, templates, porStatus, porTeste] = await Promise.all([
     prisma.assessmentLink.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -76,15 +101,73 @@ export default async function TestesPage({
           select: { id: true, name: true },
         })
       : Promise.resolve([]),
+    // Os cartões contam cada situação sem o filtro de situação; o funil de
+    // teste conta sem o próprio filtro — em cascata, como no Excel.
+    prisma.assessmentLink.groupBy({ by: ["status"], where: { AND: [base, ondeTeste] }, _count: { _all: true } }),
+    prisma.assessmentLink.groupBy({ by: ["type", "templateId"], where: { AND: [base, ondeStatus] }, _count: { _all: true } }),
   ]);
   const totalPages = Math.ceil(total / PER_PAGE);
 
+  const contagem: Record<AssessmentLinkStatus, number> = { PENDENTE: 0, RESPONDIDO: 0 };
+  for (const g of porStatus) contagem[g.status] = g._count._all;
+
+  // Os nomes dos modelos do funil — inclusive os arquivados, que continuam
+  // nos testes já enviados.
+  const idsNosGrupos = porTeste.map((g) => g.templateId).filter((id): id is string => id !== null);
+  const nomesDosModelos = idsNosGrupos.length
+    ? await prisma.assessmentTemplate.findMany({ where: { tenantId: ctx.tenantId, id: { in: idsNosGrupos } }, select: { id: true, name: true } })
+    : [];
+  const nomeDoModelo = new Map(nomesDosModelos.map((t) => [t.id, t.name]));
+  const somaPorTeste = new Map<string, { rotulo: string; n: number }>();
+  for (const g of porTeste) {
+    const valor = g.type === "DISC" ? "DISC" : (g.templateId ?? SEM_MODELO);
+    const rotulo = g.type === "DISC" ? "DISC" : g.templateId ? (nomeDoModelo.get(g.templateId) ?? "Modelo excluído") : "Múltipla escolha";
+    const atual = somaPorTeste.get(valor);
+    somaPorTeste.set(valor, { rotulo, n: (atual?.n ?? 0) + g._count._all });
+  }
+  const opcoesDeTeste = [...somaPorTeste.entries()]
+    .map(([valor, { rotulo, n }]) => ({ valor, rotulo, n }))
+    .sort((a, b) => a.rotulo.localeCompare(b.rotulo, "pt-BR", { sensitivity: "base" }));
+
+  // Carrega o funil (parâmetro repetido) junto: sem ele, virar a página ou
+  // clicar num cartão apagava o filtro de teste.
   function buildUrl(overrides: Record<string, string | undefined>) {
     const q = new URLSearchParams();
     const merged = { status, page, ...overrides };
     for (const [k, v] of Object.entries(merged)) if (v) q.set(k, v);
-    return `/testes?${q.toString()}`;
+    for (const t of testesEscolhidos) q.append("teste", t);
+    const s = q.toString();
+    return s ? `/testes?${s}` : "/testes";
   }
+
+  const nomeDoTeste = (l: (typeof links)[number]) => (l.type === "DISC" ? "DISC" : (l.template?.name ?? "Múltipla escolha"));
+
+  // O resultado em uma etiqueta: o perfil no DISC, o acerto na múltipla escolha.
+  const resultado = (l: (typeof links)[number]) => {
+    if (l.status !== "RESPONDIDO") return null;
+    if (l.type === "DISC" && l.primaryProfile) {
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border bg-brand/10 text-brand border-brand/25 whitespace-nowrap">
+          Perfil {l.primaryProfile}
+          {l.secondaryProfile ?? ""}
+        </span>
+      );
+    }
+    if (l.type === "MULTIPLA_ESCOLHA") {
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border bg-brand/10 text-brand border-brand/25 whitespace-nowrap">
+          {(l.scores as { pct: number } | null)?.pct ?? 0}% de acertos
+        </span>
+      );
+    }
+    return null;
+  };
+
+  const seloDoStatus = (s: AssessmentLinkStatus) => (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border whitespace-nowrap ${STATUS_STYLE[s]}`}>
+      {STATUS_LABEL[s]}
+    </span>
+  );
 
   return (
     <PageContainer>
@@ -92,33 +175,49 @@ export default async function TestesPage({
         title="Testes"
         subtitle={<>{total} teste{total !== 1 ? "s" : ""}</>}
         action={<>{canCreate && (
-          <Link href="/testes/templates" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-            Modelos de teste
-          </Link>
+          // Era um link de texto cinza (30/09): botão não é link.
+          <Button href="/testes/templates" variant="secondary">
+            <FileQuestion size={14} /> Modelos de teste
+          </Button>
         )}</>}
       />
       {canCreate && <NovoTesteForm candidatos={candidatos} templates={templates} />}
 
-      <div className="flex items-center gap-1 mb-4">
-        {(["PENDENTE", "RESPONDIDO"] as AssessmentLinkStatus[]).map((s) => (
-          <Link
-            key={s}
-            href={buildUrl({ status: s, page: undefined })}
-            className={`inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
-              statusFilter === s
-                ? "bg-surface-2 text-fg border border-border-strong"
-                : "text-fg-muted hover:text-fg hover:bg-surface-2"
-            }`}
-          >
-            {STATUS_LABEL[s]}
-          </Link>
-        ))}
-        {statusFilter && (
-          <Link href={buildUrl({ status: undefined, page: undefined })} className="text-[12px] text-fg-muted hover:text-fg ml-1">
-            Limpar
-          </Link>
-        )}
-      </div>
+      {/* As duas situações em cartão, com a contagem — eram pílulas sem número
+          e um "Limpar" (conferência de 30/09). Clicar no cartão do recorte
+          aberto volta para todos. */}
+      <FaixaDeTotais
+        itens={[
+          {
+            rotulo: "Aguardando resposta",
+            valor: String(contagem.PENDENTE),
+            icone: <Hourglass />,
+            tom: contagem.PENDENTE > 0 ? "text-warning" : undefined,
+            detalhe: statusFilter === "PENDENTE" ? "mostrando agora" : undefined,
+            href: buildUrl({ status: statusFilter === "PENDENTE" ? undefined : "PENDENTE", page: undefined }),
+          },
+          {
+            rotulo: "Respondidos",
+            valor: String(contagem.RESPONDIDO),
+            icone: <CheckCircle2 />,
+            tom: "text-success",
+            detalhe: statusFilter === "RESPONDIDO" ? "mostrando agora" : undefined,
+            href: buildUrl({ status: statusFilter === "RESPONDIDO" ? undefined : "RESPONDIDO", page: undefined }),
+          },
+        ]}
+      />
+
+      <FiltrosDaTela
+        className="mb-4"
+        campos={[
+          {
+            chave: "status",
+            rotulo: "Situação",
+            vazioLabel: `Todos (${contagem.PENDENTE + contagem.RESPONDIDO})`,
+            opcoes: STATUS_ORDEM.map((s) => ({ value: s, label: `${STATUS_LABEL[s]} (${contagem[s]})` })),
+          },
+        ]}
+      />
 
       {links.length === 0 ? (
         <Card>
@@ -126,41 +225,100 @@ export default async function TestesPage({
             icon={<ClipboardList />}
             title="Nenhum teste encontrado"
             description="Ajuste os filtros ou envie o primeiro teste pra um candidato acima."
+            action={
+              // Sem linhas, a tabela some e o funil some com ela.
+              testesEscolhidos.length > 0 ? (
+                <Button href={statusFilter ? `/testes?status=${statusFilter}` : "/testes"} variant="secondary" size="sm">
+                  Limpar o filtro de teste
+                </Button>
+              ) : undefined
+            }
           />
         </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
-          {links.map((l) => (
-            <Link key={l.id} href={`/testes/${l.id}`} className="flex items-center justify-between px-4 py-3 hover:bg-surface-2 transition-colors">
-              <div>
-                <div className="flex items-center gap-2 mb-0.5">
-                  <p className="text-[13px] text-fg font-medium">{l.person.name}</p>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${STATUS_STYLE[l.status]}`}>
-                    {STATUS_LABEL[l.status]}
-                  </span>
-                  {l.status === "RESPONDIDO" && l.type === "DISC" && l.primaryProfile && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border bg-brand/10 text-brand border-brand/25">
-                      Perfil {l.primaryProfile}
-                      {l.secondaryProfile ?? ""}
-                    </span>
-                  )}
-                  {l.status === "RESPONDIDO" && l.type === "MULTIPLA_ESCOLHA" && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border bg-brand/10 text-brand border-brand/25">
-                      {(l.scores as { pct: number } | null)?.pct ?? 0}% de acertos
-                    </span>
-                  )}
-                </div>
-                <p className="text-[12px] text-fg-muted">
-                  {l.type === "DISC" ? "DISC" : l.template?.name ?? "Múltipla escolha"}
-                  {l.candidatura ? ` · ${l.candidatura.vaga.title}` : ""} · enviado em {formatInstantDate(l.createdAt)}
-                </p>
-              </div>
-            </Link>
-          ))}
-        </div>
+        <>
+          <CartoesNoCelular>
+            {links.map((l) => (
+              <Link key={l.id} href={`/testes/${l.id}`} className="block">
+                <Cartao className="hover:border-brand/40 transition-colors">
+                  <TopoDoCartao nome={l.person.name} />
+                  <InfoDoCartao>
+                    {nomeDoTeste(l)}
+                    {l.candidatura ? ` · ${l.candidatura.vaga.title}` : ""}
+                  </InfoDoCartao>
+                  <PeDoCartao>
+                    {seloDoStatus(l.status)}
+                    {resultado(l)}
+                    <span className="ml-auto text-[11.5px] text-fg-muted">enviado em {formatInstantDate(l.createdAt)}</span>
+                  </PeDoCartao>
+                </Cartao>
+              </Link>
+            ))}
+          </CartoesNoCelular>
+
+          {/* Era uma lista de linhas-link com tudo numa frase (até 30/09).
+              Virou tabela no padrão do Connect, com o funil de teste. */}
+          <TabelaNoDesktop padrao>
+            <table className="w-full table-fixed min-w-[880px] text-[length:var(--fs-ui)]">
+              <colgroup>
+                <col />
+                <col className="w-[180px]" />
+                <col className="w-[200px]" />
+                <col className="w-[116px]" />
+                <col className="w-[124px]" />
+                <col className="w-[112px]" />
+                <col className="w-[96px]" />
+              </colgroup>
+              <thead>
+                <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                  <th className="px-4 py-3">Candidato</th>
+                  <th className="px-4 py-3">
+                    <FiltroDaColunaNaUrl rotulo="Teste" chave="teste" opcoes={opcoesDeTeste} />
+                  </th>
+                  <th className="px-4 py-3">Vaga</th>
+                  <th className="px-4 py-3">Situação</th>
+                  <th className="px-4 py-3">Resultado</th>
+                  <th className="px-4 py-3">Enviado em</th>
+                  <th className="px-4 py-3">
+                    <span className="sr-only">Abrir</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {links.map((l) => (
+                  <tr key={l.id} className="border-b border-border">
+                    <td className="px-4 py-3 min-w-0">
+                      <Link
+                        href={`/testes/${l.id}`}
+                        className="block font-semibold text-fg hover:text-brand transition-colors truncate"
+                        title={l.person.name}
+                      >
+                        {l.person.name}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-fg-secondary truncate" title={nomeDoTeste(l)}>
+                      {nomeDoTeste(l)}
+                    </td>
+                    <td className="px-4 py-3 text-fg-secondary truncate" title={l.candidatura?.vaga.title}>
+                      {l.candidatura ? l.candidatura.vaga.title : <span className="text-fg-muted">—</span>}
+                    </td>
+                    <td className="px-4 py-3">{seloDoStatus(l.status)}</td>
+                    <td className="px-4 py-3">{resultado(l) ?? <span className="text-fg-muted">—</span>}</td>
+                    <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{formatInstantDate(l.createdAt)}</td>
+                    <td className="px-4 py-3">
+                      <Button href={`/testes/${l.id}`} variant="secondary" size="xs">
+                        Abrir <ArrowRight size={11} />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TabelaNoDesktop>
+        </>
       )}
 
-      <Pagination page={pageNum} totalPages={totalPages} buildHref={(p) => buildUrl({ page: String(p) })} />
+      <Pagination page={pageNum} totalPages={totalPages} buildHref={(p) => buildUrl({ page: String(p) })} total={total} rotulo="testes" />
     </PageContainer>
   );
 }

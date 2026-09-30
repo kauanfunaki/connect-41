@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { CalendarClock, ClipboardList, Video } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarClock, ClipboardList, LogOut, Video } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -36,9 +35,10 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
   return (
     <div className="min-h-screen py-10 px-4">
       <div className="max-w-2xl mx-auto">
-        <Link href={`/carreiras/${slug}`} className="text-[12px] text-fg-muted hover:text-fg transition-colors">
-          ← Vagas abertas
-        </Link>
+        {/* Botão sem caixa, com a seta (30/09): era texto cinza com "←". */}
+        <Button href={`/carreiras/${slug}`} variant="ghost" size="sm" className="-ml-3">
+          <ArrowLeft size={14} /> Vagas abertas
+        </Button>
 
         {!conta ? (
           <div className="mt-4 max-w-md mx-auto">
@@ -60,7 +60,9 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
                 <p className="text-[13px] text-fg-muted mt-1">Suas candidaturas em {tenant.name}.</p>
               </div>
               <form action={sair.bind(null, slug)}>
-                <Button type="submit" variant="linkMuted" size="sm">Sair</Button>
+                <Button type="submit" variant="secondary" size="sm">
+                  <LogOut size={13} /> Sair
+                </Button>
               </form>
             </header>
 
@@ -76,9 +78,9 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
                         {t.template?.name ?? (t.type === "DISC" ? "Perfil comportamental (DISC)" : "Teste")}
                         <span className="text-fg-muted text-[12px]"> · até {formatInstantDate(t.expiresAt)}</span>
                       </span>
-                      <Link href={`/teste/${t.token}`} className="text-[13px] text-brand hover:underline">
-                        Responder →
-                      </Link>
+                      <Button href={`/teste/${t.token}`} variant="primary" size="sm">
+                        Responder <ArrowRight size={13} />
+                      </Button>
                     </li>
                   ))}
                 </ul>
@@ -126,9 +128,9 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
                               <CalendarClock size={14} className="text-brand" />
                               Entrevista em {formatInstantDateTime(m.startAt, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                             </span>
-                            <a href={m.meetingUrl} target="_blank" rel="noopener noreferrer" className="text-[13px] text-brand hover:underline inline-flex items-center gap-1">
+                            <Button href={m.meetingUrl} target="_blank" rel="noopener noreferrer" variant="secondary" size="sm">
                               <Video size={13} /> Entrar na reunião
-                            </a>
+                            </Button>
                           </li>
                         ))}
                       </ul>
