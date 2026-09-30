@@ -1,114 +1,144 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import { FolderKanban, FolderClosed, ListTodo } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { notFound } from "next/navigation";
-import { LayoutGrid } from "lucide-react";
-import { getAuthContext, canViewSector, canManageSector } from "@/lib/auth/context";
-import { ModulosDoSetor } from "@/components/setor/ModulosDoSetor";
-import { codigosDeTelasFixadas } from "@/lib/telasFixadas-data";
-import { getTenantModuleStates } from "@/lib/modules";
-import { getSectorMaps, sectorLabel } from "@/lib/sectors";
-import { getPrisma } from "@/lib/prisma";
-import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { NewSpaceButton } from "@/components/kanban/NewSpaceButton";
 import { DeleteEntityMenu } from "@/components/kanban/DeleteEntityMenu";
 import { criarEspaco, excluirEspaco } from "@/app/(app)/kanban/spaces-actions";
+import { getAuthContext, canViewSector, canManageSector } from "@/lib/auth/context";
+import { getSectorMaps, sectorLabel } from "@/lib/sectors";
+import { getPrisma } from "@/lib/prisma";
+import { boardPath } from "@/lib/kanbanPaths";
 
-export default async function SectorHubPage({
-  params,
-}: {
-  params: Promise<{ code: string }>;
-}) {
+/** Quantas listas o cartão do espaço mostra pelo nome antes do "+N". */
+const LISTAS_NO_CARTAO = 4;
+
+/**
+ * Os espaços do setor — e só eles.
+ *
+ * Até 30/09 esta tela abria com os cartões de todas as telas do setor e os
+ * espaços só no fim. O Kauan pediu que "Espaços" fosse exclusivo da separação
+ * espaço → pasta → lista → tarefa: as telas o menu já mostra (e agora vivem em
+ * `/setor/[code]/telas`). Cada cartão mostra as listas do espaço, para achar a
+ * lista sem abrir espaço por espaço.
+ */
+export default async function EspacosDoSetorPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const ctx = await getAuthContext();
-
   if (!canViewSector(ctx, code)) notFound();
 
   const prisma = getPrisma();
-  const [allModules, { labels: sectorLabels, colors: sectorColors }, fixadas, spaces] = await Promise.all([
-    getTenantModuleStates(ctx.tenantId),
+  const [{ labels, colors }, spaces] = await Promise.all([
     getSectorMaps(ctx.tenantId),
-    codigosDeTelasFixadas(ctx.userId, ctx.tenantId),
     prisma.space.findMany({
       where: { tenantId: ctx.tenantId, sectorCode: code },
       orderBy: { order: "asc" },
-      include: { _count: { select: { pipelines: true, folders: true } } },
+      select: {
+        id: true,
+        name: true,
+        color: true,
+        _count: { select: { folders: true, pipelines: { where: { active: true } } } },
+        pipelines: {
+          where: { active: true },
+          orderBy: { createdAt: "asc" },
+          take: LISTAS_NO_CARTAO,
+          select: { id: true, name: true, color: true },
+        },
+      },
     }),
   ]);
 
-  const modules = allModules.filter((m) => m.sectorCode === code && m.enabled);
-  const sectorColor = sectorColors[code] ?? "#586577";
-  const canCreateSpace = canManageSector(ctx, code);
+  const setor = sectorLabel(labels, code);
+  const corDoSetor = colors[code] ?? "#586577";
+  const podeCriar = canManageSector(ctx, code);
 
   return (
     <PageContainer>
       <PageHeader
-        title={sectorLabel(sectorLabels, code)}
-        subtitle="Módulos disponíveis para este setor."
+        title="Espaços"
+        subtitle={
+          <span className="inline-flex items-center gap-1.5">
+            <span className="size-2 rounded-full flex-shrink-0" style={{ background: corDoSetor }} aria-hidden />
+            {setor} · as listas e quadros de tarefas do setor, organizados em espaços e pastas
+          </span>
+        }
+        action={podeCriar ? <NewSpaceButton action={criarEspaco.bind(null, code)} /> : undefined}
       />
 
-      {modules.length === 0 ? (
+      {spaces.length === 0 ? (
         <Card>
           <EmptyState
-            icon={<LayoutGrid size={20} />}
-            title="Nenhum módulo ativo para este setor"
-            description="Módulos são ativados pelo administrador em Configurações."
+            icon={<FolderKanban />}
+            title="Nenhum espaço criado ainda"
+            description={
+              podeCriar
+                ? "Um espaço agrupa pastas e listas de tarefas do setor. Crie o primeiro no botão acima."
+                : "Um espaço agrupa pastas e listas de tarefas do setor. Quem coordena o setor é quem cria."
+            }
           />
         </Card>
       ) : (
-        // Em grupos, na ordem do catálogo: quinze cartões iguais em quatro
-        // colunas é uma parede, e o setor não trabalha em ordem alfabética —
-        // trabalha por assunto. Mesma tela da rota filtrada por grupo, que é
-        // onde a sidebar cai (ver `ModulosDoSetor`).
-        <ModulosDoSetor code={code} modulos={modules} cor={sectorColor} fixadas={fixadas} />
-      )}
-
-      <div className="mt-8">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[13px] font-semibold text-fg">Espaços</h2>
-          {canCreateSpace && <NewSpaceButton action={criarEspaco.bind(null, code)} />}
-        </div>
-        {spaces.length === 0 ? (
-          <Card>
-            <EmptyState
-              icon={<LayoutGrid />}
-              title="Nenhum espaço criado ainda"
-              description="Um espaço agrupa pastas e listas (kanbans) deste setor."
-            />
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {spaces.map((s, i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 items-stretch">
+          {spaces.map((s, i) => {
+            const restantes = s._count.pipelines - s.pipelines.length;
+            return (
               // O menu "…" é irmão do <Link>, não filho: <button> dentro de <a>
               // é inválido e o clique navegaria junto.
-              <div
-                key={s.id}
-                style={{ animationDelay: `${Math.min(i, 8) * 35}ms` }}
-                className="reveal-in relative"
-              >
-                <Link
-                  href={`/setor/${code}/espacos/${s.id}`}
-                  className="block bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform]"
-                >
-                  <div className="flex items-center gap-2 mb-1 pr-6">
-                    <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: s.color }} />
-                    <p className="text-[13px] font-medium text-fg">{s.name}</p>
-                  </div>
-                  <p className="text-[12px] text-fg-muted">
-                    {s._count.folders} {s._count.folders === 1 ? "pasta" : "pastas"} · {s._count.pipelines} {s._count.pipelines === 1 ? "lista" : "listas"}
-                  </p>
-                </Link>
-                {canCreateSpace && (
-                  <div className="absolute top-2.5 right-2.5">
+              <div key={s.id} style={{ animationDelay: `${Math.min(i, 8) * 35}ms` }} className="reveal-in relative">
+                <div className="h-full flex flex-col bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] hover:border-border-strong transition-colors overflow-hidden">
+                  <span className="h-[3px] flex-shrink-0" style={{ background: s.color }} aria-hidden />
+                  <Link href={`/setor/${code}/espacos/${s.id}`} className="group block px-4 pt-3.5 pb-3">
+                    <p className="font-display text-[15px] font-semibold text-fg group-hover:text-brand transition-colors pr-8 truncate">
+                      {s.name}
+                    </p>
+                    <p className="mt-1 flex items-center gap-3 text-[12px] text-fg-muted">
+                      <span className="inline-flex items-center gap-1">
+                        <FolderClosed size={13} /> {s._count.folders} {s._count.folders === 1 ? "pasta" : "pastas"}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <ListTodo size={13} /> {s._count.pipelines} {s._count.pipelines === 1 ? "lista" : "listas"}
+                      </span>
+                    </p>
+                  </Link>
+                  {s.pipelines.length > 0 && (
+                    <ul className="mt-auto border-t border-border px-2 py-1.5">
+                      {s.pipelines.map((p) => (
+                        <li key={p.id}>
+                          <Link
+                            href={boardPath(p)}
+                            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors"
+                          >
+                            <span className="size-1.5 rounded-full flex-shrink-0" style={{ background: p.color ?? s.color }} aria-hidden />
+                            <span className="truncate">{p.name}</span>
+                          </Link>
+                        </li>
+                      ))}
+                      {restantes > 0 && (
+                        <li>
+                          <Link
+                            href={`/setor/${code}/espacos/${s.id}`}
+                            className="block rounded-md px-2 py-1.5 text-[12px] text-fg-muted hover:text-brand transition-colors"
+                          >
+                            + {restantes} {restantes === 1 ? "outra lista" : "outras listas"}
+                          </Link>
+                        </li>
+                      )}
+                    </ul>
+                  )}
+                </div>
+                {podeCriar && (
+                  <div className="absolute top-3 right-2.5">
                     <DeleteEntityMenu kind="espaço" name={s.name} action={excluirEspaco.bind(null, s.id)} />
                   </div>
                 )}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </PageContainer>
   );
 }

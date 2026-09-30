@@ -11,6 +11,8 @@ import { MonthGrid } from "./MonthGrid";
 import { saoPauloParts, shiftAgendaDate, agendaTitle, type AgendaView } from "@/lib/agenda";
 import type { MeetingState } from "@/app/(app)/agenda/actions";
 import type { CalendarDay, CompanyOption, MeetingActions, MeetingRow, UserOption } from "./types";
+import type { SetoresDaAgenda } from "./PrazoItem";
+import type { PrazoDaAgenda } from "@/lib/prazosDaAgenda";
 import { Button } from "@/components/ui/Button";
 
 const VIEW_LABEL: Record<AgendaView, string> = { dia: "Dia", semana: "Semana", mes: "Mês" };
@@ -41,6 +43,11 @@ type Props = {
   allUsers: UserOption[];
   companies: CompanyOption[];
   currentUserId: string;
+  /** Prazos do período — de todos os setores que a pessoa enxerga. */
+  prazos: PrazoDaAgenda[];
+  setores: SetoresDaAgenda;
+  /** Coordenador ou administrador: só eles criam reunião (ver canManageMeetings). */
+  podeAgendar: boolean;
 };
 
 export function agendaHref(view: AgendaView, dateKey: string): string {
@@ -64,6 +71,9 @@ export function AgendaCalendar({
   allUsers,
   companies,
   currentUserId,
+  prazos,
+  setores,
+  podeAgendar,
 }: Props) {
   const [dialogSlot, setDialogSlot] = useState<{ start: string; end: string } | null>(null);
 
@@ -121,15 +131,12 @@ export function AgendaCalendar({
             }))}
           />
 
-          <Button
-            variant="primary"
-            size="md"
-            className="rounded-full"
-            onClick={openDialogForNow}
-          >
-            <Plus size={14} />
-            Nova reunião
-          </Button>
+          {podeAgendar && (
+            <Button variant="primary" size="md" className="rounded-full" onClick={openDialogForNow}>
+              <Plus size={14} />
+              Nova reunião
+            </Button>
+          )}
         </div>
       </div>
 
@@ -140,10 +147,19 @@ export function AgendaCalendar({
             meetings={meetings}
             actions={actions}
             monthKey={dateKey}
-            onDayClick={(day) => openDialogFor(day, defaultSlotHour())}
+            onDayClick={podeAgendar ? (day) => openDialogFor(day, defaultSlotHour()) : undefined}
+            prazos={prazos}
+            setores={setores}
           />
         ) : (
-          <TimeGrid days={days} meetings={meetings} actions={actions} onSlotClick={openDialogFor} />
+          <TimeGrid
+            days={days}
+            meetings={meetings}
+            actions={actions}
+            onSlotClick={podeAgendar ? openDialogFor : undefined}
+            prazos={prazos}
+            setores={setores}
+          />
         )}
       </div>
 
