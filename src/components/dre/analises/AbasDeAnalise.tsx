@@ -582,9 +582,11 @@ export async function AbaIndicadores({ tenantId, companyId, mes }: Base) {
             {indicadores
               .filter((i) => i.categoria === cat)
               .map((i) => (
-                <Card key={i.codigo} className="p-3.5 flex flex-col gap-1">
+                // Mesmo padding (p-4) e mesmo tamanho de número (20px) dos
+                // cartões de atraso médio da primeira aba — eram p-3.5 e 19px.
+                <Card key={i.codigo} className="p-4 flex flex-col gap-1">
                   <p className="text-[12px] text-fg-muted">{i.rotulo}</p>
-                  <p className={`text-[19px] font-semibold tabular-nums ${i.valor === null ? "text-fg-muted" : ""}`}>{valorDoIndicador(i)}</p>
+                  <p className={`text-[20px] font-semibold tabular-nums ${i.valor === null ? "text-fg-muted" : ""}`}>{valorDoIndicador(i)}</p>
                   <p className="text-[11px] text-fg-muted font-mono">{i.formula}</p>
                   <p className="text-[11px] text-fg-muted">{i.leitura}</p>
                   {i.motivo && <p className="text-[11px] italic text-warning">{i.motivo}</p>}
@@ -706,7 +708,7 @@ export async function AbaCfo({ tenantId, companyId, mes, pergunta }: Base & { pe
                   </ul>
                 </div>
               )}
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-3">
                 <Secao titulo="Causa provável" texto={resposta.causaProvavel} />
                 <Secao titulo="Impacto" texto={resposta.impacto} />
                 <Secao titulo="Recomendação" texto={resposta.recomendacao} />
@@ -747,7 +749,7 @@ export async function AbaCfo({ tenantId, companyId, mes, pergunta }: Base & { pe
 function Secao({ titulo, texto }: { titulo: string; texto: string }) {
   return (
     <div>
-      <p className="text-[11px] uppercase tracking-wide text-fg-muted">{titulo}</p>
+      <p className="text-[11px] uppercase tracking-wide text-fg-muted mb-1">{titulo}</p>
       <p className="text-[13px] text-fg">{texto}</p>
     </div>
   );

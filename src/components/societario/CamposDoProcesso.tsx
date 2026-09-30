@@ -1,4 +1,5 @@
 import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { MAX_TITULO } from "@/lib/societario/dados-do-processo";
@@ -40,7 +41,7 @@ export function CamposDoProcesso({ responsaveis, valores, prefixo }: Props) {
         />
       </CampoForm>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <FieldGrid>
         <CampoForm label="Responsável" htmlFor={`${prefixo}-responsavel`}>
           <Select id={`${prefixo}-responsavel`} name="ownerUserId" defaultValue={valores.responsavelId}>
             <option value="">Sem responsável</option>
@@ -60,14 +61,22 @@ export function CamposDoProcesso({ responsaveis, valores, prefixo }: Props) {
             ))}
           </Select>
         </CampoForm>
-      </div>
+      </FieldGrid>
 
       <CampoForm
         label="Prazo combinado"
         htmlFor={`${prefixo}-prazo`}
         helper="Opcional — a data prometida ao cliente. O prazo previsto do tipo continua sendo contado em dias úteis."
       >
-        <Input id={`${prefixo}-prazo`} name="dueAt" type="date" defaultValue={valores.prazoCombinado} />
+        {/* Largura de data, não a do modal: esticada, o dia ficava num canto e o
+            calendário no outro. A explicação continua na largura toda embaixo. */}
+        <Input
+          id={`${prefixo}-prazo`}
+          name="dueAt"
+          type="date"
+          defaultValue={valores.prazoCombinado}
+          className="sm:w-44"
+        />
       </CampoForm>
     </>
   );

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -10,6 +9,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { DocumentsSection } from "@/components/documents/DocumentsSection";
 import { listDocuments } from "@/lib/documents";
 import { ItemConferenciaRow, type CheckState } from "@/components/rescisao/ItemConferenciaRow";
@@ -122,21 +122,17 @@ export default async function ConferenciaRescisaoPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6 flex-wrap">
-        <Link href={person.isInternal ? "/pessoas" : "/colaboradores-clientes"} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          {person.isInternal ? "Cadastros" : "Colaboradores de clientes"}
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <Link href={`/pessoas/${id}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate max-w-[200px]">
-          {person.name}
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <Link href={`/pessoas/${id}/desligamento`} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Desligamento
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Conferência</span>
-      </div>
+      <Breadcrumb
+        items={[
+          {
+            label: person.isInternal ? "Cadastros" : "Colaboradores de clientes",
+            href: person.isInternal ? "/pessoas" : "/colaboradores-clientes",
+          },
+          { label: person.name, href: `/pessoas/${id}`, truncate: true },
+          { label: "Desligamento", href: `/pessoas/${id}/desligamento` },
+          { label: "Conferência" },
+        ]}
+      />
       <BackButton className="mb-3" />
 
       <PageHeader
@@ -163,7 +159,7 @@ export default async function ConferenciaRescisaoPage({
 
       {/* Prazo legal — contagem de prazo é seguro fazer, cálculo de verba não. */}
       <Card className="p-5 mb-4">
-        <h2 className="text-[14px] font-semibold text-fg mb-3">Dados da rescisão</h2>
+        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3">Dados da rescisão</h2>
         <DadosRescisaoForm
           action={salvarDadosRescisao.bind(null, id, terminationId)}
           defaults={{
@@ -215,7 +211,7 @@ export default async function ConferenciaRescisaoPage({
       {referencia && (
         <Card className="p-5 mb-4">
           <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
-            <h2 className="text-[14px] font-semibold text-fg">Cálculo de referência</h2>
+            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">Cálculo de referência</h2>
             <span className="text-[11px] text-fg-muted">motor v{referencia.calculo.motorVersao}</span>
           </div>
           <p className="text-[12px] text-fg-muted mb-3">
@@ -258,7 +254,7 @@ export default async function ConferenciaRescisaoPage({
             </p>
             {/* Era um link de texto (até 30/09): é uma ação, virou botão. */}
             <Button href="/admin/rescisao" variant="secondary" size="xs">
-              <Settings2 size={11} />
+              <Settings2 size={12} />
               Configurar cálculo
             </Button>
           </div>
@@ -274,7 +270,7 @@ export default async function ConferenciaRescisaoPage({
       {/* Resumo */}
       <Card className="p-5 mb-4">
         <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-          <h2 className="text-[14px] font-semibold text-fg">Resumo da conferência</h2>
+          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">Resumo da conferência</h2>
           <span className="text-[12px] text-fg-muted tnum">{resumo.progressoPct}% tratado</span>
         </div>
         <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
@@ -306,9 +302,9 @@ export default async function ConferenciaRescisaoPage({
       {feriasEmAberto.length > 0 && (
         <Card className="p-5 mb-4">
           <div className="flex items-center justify-between gap-3 mb-1 flex-wrap">
-            <h2 className="text-[14px] font-semibold text-fg">Férias em aberto (base de conferência)</h2>
+            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">Férias em aberto (base de conferência)</h2>
             <Button href={`/pessoas/${id}/ferias`} variant="secondary" size="xs">
-              <Palmtree size={11} />
+              <Palmtree size={12} />
               Abrir módulo de Férias
             </Button>
           </div>
@@ -348,7 +344,7 @@ export default async function ConferenciaRescisaoPage({
       {/* Checklist agrupado */}
       {RESCISAO_GROUP_ORDER.map((group) => (
         <Card key={group} className="p-5 mb-4">
-          <h2 className="text-[14px] font-semibold text-fg mb-1">{RESCISAO_GROUP_LABEL[group]}</h2>
+          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-1">{RESCISAO_GROUP_LABEL[group]}</h2>
           <div className="divide-y divide-border">
             {itemsByGroup(group).map((item) => (
               <ItemConferenciaRow

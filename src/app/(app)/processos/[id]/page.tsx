@@ -242,12 +242,14 @@ export default async function ProcessoDetalhePage({
     <PageContainer>
       <BackButton className="mb-3" />
 
-      <div className="mb-5 flex flex-col gap-2">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 flex flex-col gap-1">
-            <PageHeader title={`${processo.type.name} — ${empresaNome}`} />
-            {processo.title && <p className="text-[14px] text-fg-secondary">{processo.title}</p>}
-          </div>
+      {/* Título do processo como subtítulo do cabeçalho e "Editar dados" no
+          `action`: o PageHeader dentro de uma coluna própria deixava o título
+          do processo 28px abaixo do nome (a margem do cabeçalho) e o botão
+          alinhado ao traço do setor, não ao título. */}
+      <PageHeader
+        title={`${processo.type.name} — ${empresaNome}`}
+        subtitle={processo.title ?? undefined}
+        action={
           <EditarDadosDoProcesso
             processoId={processo.id}
             responsaveis={responsaveis}
@@ -258,8 +260,11 @@ export default async function ProcessoDetalhePage({
               prazoCombinado: campoDaData(processo.dueAt),
             }}
           />
-        </div>
-        <div className="flex items-center gap-3 flex-wrap text-[12px] text-fg-muted">
+        }
+      />
+
+      <div className="mb-6 flex flex-col gap-3">
+        <div className="flex items-center gap-x-3 gap-y-2 flex-wrap text-[12px] text-fg-muted">
           {encerradoSemConclusao ? (
             <Badge variant="danger">{processo.status === "CANCELADO" ? "Cancelado" : "Indeferido"}</Badge>
           ) : (
@@ -331,39 +336,45 @@ export default async function ProcessoDetalhePage({
         <SituacaoDoProcesso processoId={processo.id} status={processo.status} mudar={mudarSituacaoDoProcesso} />
       </div>
 
-      {avisos.length > 0 && (
-        <section aria-labelledby="avisos-da-junta" className="mb-4 flex flex-col gap-2">
-          <div>
-            <h2 id="avisos-da-junta" className="text-[14px] font-semibold text-fg">
-              Avisos da Junta por e-mail
-            </h2>
-            <p className="text-[12px] text-fg-muted">
-              O sistema leu o e-mail e sugere o desfecho. Confira o texto do órgão antes de aplicar.
-            </p>
-          </div>
-          <AvisosDaJunta avisos={avisos} acoes={{ aplicar: aplicarAviso, descartar: descartarAviso }} />
+      {/* Uma pilha só, com o mesmo respiro entre todas as seções — eram
+          mb-4/mt-4 soltos em cada bloco. O roteiro ganhou título, como as
+          outras seções da página. */}
+      <div className="flex flex-col gap-5">
+        {avisos.length > 0 && (
+          <section aria-labelledby="avisos-da-junta" className="flex flex-col gap-3">
+            <div className="flex flex-col gap-0.5">
+              <h2 id="avisos-da-junta" className="text-[14px] font-semibold text-fg">
+                Avisos da Junta por e-mail
+              </h2>
+              <p className="text-[12px] text-fg-muted">
+                O sistema leu o e-mail e sugere o desfecho. Confira o texto do órgão antes de aplicar.
+              </p>
+            </div>
+            <AvisosDaJunta avisos={avisos} acoes={{ aplicar: aplicarAviso, descartar: descartarAviso }} />
+          </section>
+        )}
+
+        <section aria-labelledby="roteiro-do-processo" className="flex flex-col gap-3">
+          <h2 id="roteiro-do-processo" className="text-[14px] font-semibold text-fg">
+            Roteiro
+          </h2>
+          <RoteiroDoProcesso
+            etapas={etapas}
+            podeEditar={processo.concludedAt === null && !encerradoSemConclusao}
+            acoes={{
+              concluir: concluirEtapa,
+              dispensar: dispensarEtapa,
+              protocolar,
+              deferir: deferirProtocolo,
+              exigir: registrarExigencia,
+              resolverExigencia,
+              alternarItem: alternarItemDoChecklist,
+            }}
+          />
         </section>
-      )}
 
-      <RoteiroDoProcesso
-        etapas={etapas}
-        podeEditar={processo.concludedAt === null && !encerradoSemConclusao}
-        acoes={{
-          concluir: concluirEtapa,
-          dispensar: dispensarEtapa,
-          protocolar,
-          deferir: deferirProtocolo,
-          exigir: registrarExigencia,
-          resolverExigencia,
-          alternarItem: alternarItemDoChecklist,
-        }}
-      />
-
-      <div className="mt-4">
         <TaxasDoProcesso taxas={taxas} custo={custo} />
-      </div>
 
-      <div className="mt-4">
         <HorasDoProcesso
           processId={processo.id}
           lancamentos={horas.map((h) => ({
@@ -391,57 +402,59 @@ export default async function ProcessoDetalhePage({
             apagar: apagarHorasDoProcesso,
           }}
         />
-      </div>
 
-      {conversa && (
-        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-start">
-          <section aria-labelledby="conversa-do-processo">
-            <Card className="p-4 flex flex-col gap-4">
-              <div className="flex flex-col gap-0.5">
-                <h2 id="conversa-do-processo" className="text-[14px] font-semibold text-fg">
-                  Conversa com o cliente
-                </h2>
-                <p className="text-[12px] text-fg-muted">
-                  O cliente vê tudo o que for escrito aqui no portal, e é avisado por e-mail. Para anotação
-                  interna, use as observações do processo.
-                </p>
-              </div>
-              {conversa.limitada && (
-                <p className="text-[12px] text-fg-muted">Mostrando só as mensagens mais recentes.</p>
-              )}
-              {conversa.mensagens.length > 0 && (
-                <ConversaDaPendencia
-                  mensagens={conversa.mensagens}
-                  baseDoDownload="/api/processos/documentos"
-                  ladoDeQuemVe="EQUIPE"
+        {/* Os dois cartões lado a lado com a mesma altura (a grade estica, o
+            cartão ocupa a célula inteira). */}
+        {conversa && (
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+            <section aria-labelledby="conversa-do-processo" className="min-w-0">
+              <Card className="p-4 flex flex-col gap-4 h-full">
+                <div className="flex flex-col gap-0.5">
+                  <h2 id="conversa-do-processo" className="text-[14px] font-semibold text-fg">
+                    Conversa com o cliente
+                  </h2>
+                  <p className="text-[12px] text-fg-muted">
+                    O cliente vê tudo o que for escrito aqui no portal, e é avisado por e-mail. Para anotação
+                    interna, use as observações do processo.
+                  </p>
+                </div>
+                {conversa.limitada && (
+                  <p className="text-[12px] text-fg-muted">Mostrando só as mensagens mais recentes.</p>
+                )}
+                {conversa.mensagens.length > 0 && (
+                  <ConversaDaPendencia
+                    mensagens={conversa.mensagens}
+                    baseDoDownload="/api/processos/documentos"
+                    ladoDeQuemVe="EQUIPE"
+                  />
+                )}
+                <ResponderPendencia
+                  alvo={processo.id}
+                  campo="processId"
+                  acao={enviarMensagemNoProcesso}
+                  rotulo="Enviar ao cliente"
+                  dica="Anexe PDF, PNG, JPG ou XML de até 10 MB."
                 />
-              )}
-              <ResponderPendencia
-                alvo={processo.id}
-                campo="processId"
-                acao={enviarMensagemNoProcesso}
-                rotulo="Enviar ao cliente"
-                dica="Anexe PDF, PNG, JPG ou XML de até 10 MB."
-              />
-            </Card>
-          </section>
-          <section aria-labelledby="documentos-do-processo">
-            <Card className="p-4 flex flex-col gap-3">
-              <h2 id="documentos-do-processo" className="text-[14px] font-semibold text-fg">
-                Documentos <span className="text-fg-muted font-normal tabular-nums">({conversa.documentos.length})</span>
-              </h2>
-              <DocumentosDoProcesso
-                processId={processo.id}
-                documentos={conversa.documentos}
-                baseDoDownload="/api/processos/documentos"
-                acao={adicionarDocumentosAoProcesso}
-                ladoDeQuemVe="EQUIPE"
-                dica="O cliente vê e é avisado."
-              />
-            </Card>
-          </section>
-        </div>
-      )}
+              </Card>
+            </section>
+            <section aria-labelledby="documentos-do-processo" className="min-w-0">
+              <Card className="p-4 flex flex-col gap-4 h-full">
+                <h2 id="documentos-do-processo" className="text-[14px] font-semibold text-fg">
+                  Documentos <span className="text-fg-muted font-normal tabular-nums">({conversa.documentos.length})</span>
+                </h2>
+                <DocumentosDoProcesso
+                  processId={processo.id}
+                  documentos={conversa.documentos}
+                  baseDoDownload="/api/processos/documentos"
+                  acao={adicionarDocumentosAoProcesso}
+                  ladoDeQuemVe="EQUIPE"
+                  dica="O cliente vê e é avisado."
+                />
+              </Card>
+            </section>
+          </div>
+        )}
+      </div>
 
       <p className="mt-6 text-[11px] text-fg-muted">
         Roteiro versão {processo.template.version} — congelado na abertura, para o processo não

@@ -58,7 +58,7 @@ export function ImportarRelatorio() {
         }}
       />
       <Button size="sm" loading={pendente} disabled={pendente} onClick={() => input.current?.click()}>
-        <Upload size={13} /> Importar relatório
+        <Upload size={14} /> Importar relatório
       </Button>
       {mensagem && (
         <span className={`text-[11px] max-w-[420px] text-right ${mensagem.tom === "erro" ? "text-danger" : "text-fg-muted"}`}>{mensagem.texto}</span>

@@ -38,7 +38,9 @@ export function SetorDoModuloSelect({ action, atual, opcoes, nome }: Props) {
 
   return (
     <>
-      <Select compact value={valor} onChange={handleChange} aria-label={`Setor que opera ${nome}`}>
+      {/* Largura fixa: com a do conteúdo, cada linha de Módulos tinha o select
+          de um tamanho, e a coluna de controles ficava serrilhada. */}
+      <Select compact className="w-44" value={valor} onChange={handleChange} aria-label={`Setor que opera ${nome}`}>
         {opcoes.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}

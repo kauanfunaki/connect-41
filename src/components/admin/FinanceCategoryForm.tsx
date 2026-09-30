@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import type { PlanoDeContasState } from "@/app/(app)/admin/plano-de-contas/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
@@ -51,73 +52,75 @@ export function FinanceCategoryForm({
         </p>
       )}
 
-      {!isEdit ? (
-        <CampoForm label="Lado do plano" htmlFor="kind" required>
-          <Select id="kind" name="kind" required defaultValue={defaultValues?.kind ?? ""}>
-            <option value="">Selecionar…</option>
-            <option value="PAGAR">Contas a pagar (despesa)</option>
-            <option value="RECEBER">Contas a receber (receita)</option>
-          </Select>
-        </CampoForm>
-      ) : (
-        <p className="text-[12px] text-fg-muted">
+      {isEdit && (
+        <p className="text-[length:var(--fs-helper)] text-fg-muted">
           O lado do plano não pode ser alterado depois de criado — mudá-lo viraria o sinal de
           todo lançamento já classificado nesta categoria.
         </p>
       )}
 
-      <CampoForm label="Nome da categoria" htmlFor="name" required>
-        <Input
-          id="name"
-          name="name"
-          type="text"
-          required
-          defaultValue={defaultValues?.name ?? ""}
-          placeholder="Ex: Fretes, Energia elétrica, Honorários…"
-        />
-      </CampoForm>
+      <FieldGrid>
+        {!isEdit && (
+          <CampoForm label="Lado do plano" htmlFor="kind" required>
+            <Select id="kind" name="kind" required defaultValue={defaultValues?.kind ?? ""}>
+              <option value="">Selecionar…</option>
+              <option value="PAGAR">Contas a pagar (despesa)</option>
+              <option value="RECEBER">Contas a receber (receita)</option>
+            </Select>
+          </CampoForm>
+        )}
+        <CampoForm label="Nome da categoria" htmlFor="name" required>
+          <Input
+            id="name"
+            name="name"
+            type="text"
+            required
+            defaultValue={defaultValues?.name ?? ""}
+            placeholder="Ex: Fretes, Energia elétrica, Honorários…"
+          />
+        </CampoForm>
+      </FieldGrid>
 
       {/* ─── Seletor, e não texto livre ────────────────────────────────────
           Era campo aberto com autocomplete do que já existia, e o DRE só soma
           o que casa com um dos doze grupos da estrutura. Quem digitasse
           "Despesas Operacionais" via a categoria sumir do relatório sem erro
           nenhum — e ninguém confere o que não reclama. */}
-      <CampoForm label="Grupo do DRE" htmlFor="dreGroup">
-        <Select id="dreGroup" name="dreGroup" defaultValue={grupoInicial}>
-          <option value="">Ainda não classificada</option>
-          {GRUPOS.map((g) => (
-            <option key={g.code} value={g.code}>
-              {g.label}
-            </option>
-          ))}
-          <option value={TRANSFERENCIA}>Transferência entre contas (fora do DRE)</option>
-        </Select>
-      </CampoForm>
-      <p className="text-[12px] text-fg-muted -mt-4">
-        É onde a categoria entra no DRE. Deixar em branco não é erro — a categoria aparece na fila
-        de classificação, com o valor, na tela do DRE.
-      </p>
-      {/* Só aparece quando havia texto livre que não casa com nenhum grupo:
-          é o que precisa ser reclassificado, e escondê-lo faria a pessoa
-          perder o valor antigo sem saber que perdeu. */}
-      {valorAntigoSolto && (
-        <p className="text-[12px] text-warning -mt-3">
-          Esta categoria estava marcada como <strong>{defaultValues?.dreGroup}</strong>, que não é
-          um grupo do DRE. Escolha um acima — enquanto não escolher, ela não soma em nenhuma linha.
-        </p>
-      )}
-
-      <div className="flex items-center gap-3 pt-2">
-        <Button
-          variant="primary"
-          size="md"
-          type="submit"
-          disabled={isPending}
+      {/* O texto de ajuda era um parágrafo solto puxado para cima com margem
+          negativa; agora é o helper do próprio campo. */}
+      <div className="space-y-1.5">
+        <CampoForm
+          label="Grupo do DRE"
+          htmlFor="dreGroup"
+          helper="É onde a categoria entra no DRE. Deixar em branco não é erro — a categoria aparece na fila de classificação, com o valor, na tela do DRE."
         >
-          {isPending ? "Salvando…" : "Salvar"}
-        </Button>
+          <Select id="dreGroup" name="dreGroup" defaultValue={grupoInicial}>
+            <option value="">Ainda não classificada</option>
+            {GRUPOS.map((g) => (
+              <option key={g.code} value={g.code}>
+                {g.label}
+              </option>
+            ))}
+            <option value={TRANSFERENCIA}>Transferência entre contas (fora do DRE)</option>
+          </Select>
+        </CampoForm>
+        {/* Só aparece quando havia texto livre que não casa com nenhum grupo:
+            é o que precisa ser reclassificado, e escondê-lo faria a pessoa
+            perder o valor antigo sem saber que perdeu. */}
+        {valorAntigoSolto && (
+          <p className="text-[length:var(--fs-helper)] text-warning">
+            Esta categoria estava marcada como <strong>{defaultValues?.dreGroup}</strong>, que não é
+            um grupo do DRE. Escolha um acima — enquanto não escolher, ela não soma em nenhuma linha.
+          </p>
+        )}
+      </div>
+
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
         <Button href={cancelHref} variant="secondary">
           Cancelar
+        </Button>
+        <Button type="submit" disabled={isPending}>
+          {isPending ? "Salvando…" : "Salvar"}
         </Button>
       </div>
     </form>

@@ -27,7 +27,6 @@ export function PublishDocumentButton({ action }: Props) {
       disabled={isPending}
       variant="primary"
       size="sm"
-      className="font-medium disabled:opacity-60"
     >
       {isPending ? "Publicando…" : "Publicar"}
    </Button>

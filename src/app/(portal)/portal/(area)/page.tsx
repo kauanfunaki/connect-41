@@ -72,7 +72,7 @@ export default async function PortalPage({
         <>
           <PortalCompetenciaFiltro competencias={competencias} />
           {documentos.length === 0 ? (
-            <Card className="mt-4">
+            <Card>
               <EmptyState
                 icon={<FileText />}
                 title="Nenhum documento nesta competência"

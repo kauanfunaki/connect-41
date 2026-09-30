@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { TagForm } from "@/components/admin/TagForm";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { criarTag } from "../actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getSectorMaps } from "@/lib/sectors";
@@ -20,18 +20,14 @@ export default async function NovaTagPage() {
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/admin/tags" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Tags
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Nova Tag</span>
-      </div>
+      <Breadcrumb items={[{ label: "Tags", href: "/admin/tags" }, { label: "Nova Tag" }]} />
       <PageHeader title="Nova Tag" />
 
-      <Card className="p-6">
-        <TagForm action={criarTag} cancelHref="/admin/tags" sectorOptions={sectorOptions} />
-      </Card>
+      <div className="max-w-[720px]">
+        <Card className="p-6">
+          <TagForm action={criarTag} cancelHref="/admin/tags" sectorOptions={sectorOptions} />
+        </Card>
+      </div>
     </PageContainer>
   );
 }

@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { formatCalendarDate } from "@/lib/format";
 import { nomeExibicao } from "@/lib/companyName";
 import { TIPO_LABEL, competenciaLegivel } from "@/lib/fiscal/rotulos";
@@ -52,7 +53,7 @@ export function PortalDocumentosTable({ documentos, total, totalLimitado, temPro
   const variasEmpresas = new Set(documentos.map((d) => nomeExibicao(d.company))).size > 1;
 
   return (
-    <div className="mt-4">
+    <div>
       <CartoesNoCelular>
         {linhas.map(({ d, contraparte }) => (
           <Cartao key={d.id}>
@@ -120,22 +121,26 @@ export function PortalDocumentosTable({ documentos, total, totalLimitado, temPro
         </table>
       </TabelaNoDesktop>
 
+      {/* O desenho do shared/Pagination (botões `sm` com seta, mesma distância da
+          tabela), que não serve direto aqui porque a última página pode não
+          ser conhecida. Eram links de `py-1.5` feitos à mão, e no celular o
+          texto e os botões disputavam uma linha só. */}
       {temPaginas && (
-        <div className="flex items-center justify-between mt-3 text-[length:var(--fs-ui)] text-fg-muted">
-          <span className="tnum">
+        <nav className="flex flex-wrap items-center justify-between gap-3 mt-4" aria-label="Paginação">
+          <span className="text-[length:var(--fs-ui)] text-fg-muted tnum">
             {ultimaPagina === null
               ? `mais de ${INTEIRO.format(total)} documentos · página ${pagina}`
               : `${total} documento${total === 1 ? "" : "s"} · página ${pagina} de ${ultimaPagina}`}
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex gap-1.5">
             <Pagina n={pagina - 1} desabilitado={pagina <= 1} filtros={filtrosDaUrl}>
-              Anterior
+              <ChevronLeft size={14} /> Anterior
             </Pagina>
             <Pagina n={pagina + 1} desabilitado={!temProxima} filtros={filtrosDaUrl}>
-              Próxima
+              Próxima <ChevronRight size={14} />
             </Pagina>
           </div>
-        </div>
+        </nav>
       )}
     </div>
   );
@@ -153,18 +158,20 @@ function Pagina({
   children: React.ReactNode;
 }) {
   if (desabilitado) {
-    return <span className="px-3 py-1.5 rounded-md border border-border opacity-50">{children}</span>;
+    return (
+      <Button variant="secondary" size="sm" disabled>
+        {children}
+      </Button>
+    );
   }
-  const query: Record<string, string> = { pagina: String(n) };
+  const query = new URLSearchParams({ pagina: String(n) });
   for (const [k, v] of Object.entries(filtros)) {
-    if (k !== "pagina" && v) query[k] = v;
+    if (k !== "pagina" && v) query.set(k, v);
   }
+  // Só a query, como o `href={{ query }}` de antes: a página segue a mesma.
   return (
-    <Link
-      href={{ query }}
-      className="px-3 py-1.5 rounded-md border border-border text-fg hover:bg-surface-hover transition-colors"
-    >
+    <Button href={`?${query.toString()}`} variant="secondary" size="sm">
       {children}
-    </Link>
+    </Button>
   );
 }

@@ -29,13 +29,16 @@ export async function AvisosDaHome({
   const aprovar = aprovacoes?.contas.filter((c) => c.dentroDoTeto).length ?? 0;
   if (pendencias === 0 && aprovar === 0 && emCobranca === 0) return null;
 
-  const cartao =
-    "flex items-center gap-3 rounded-md border border-warning/40 bg-warning-bg px-4 py-3 text-[13px] hover:border-warning transition-colors";
+  // Raio, ícone de 16px e respiro de 16px até o bloco de baixo: os mesmos dos
+  // cartões de total das outras telas do portal. Eram `rounded-md`, ícone de
+  // 18px e 24px abaixo.
+  const base = "flex items-center gap-3 rounded-lg border px-4 py-3 text-[13px] transition-colors";
+  const cartao = `${base} border-warning/40 bg-warning-bg hover:border-warning`;
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
       {pendencias > 0 && (
         <Link href="/portal/pendencias" className={cartao}>
-          <MessageSquareWarning size={18} className="text-warning shrink-0" />
+          <MessageSquareWarning size={16} className="text-warning shrink-0" />
           <span>
             <strong className="tabular-nums">{pendencias}</strong>{" "}
             {pendencias === 1 ? "pendência aguardando a sua resposta" : "pendências aguardando a sua resposta"}
@@ -44,7 +47,7 @@ export async function AvisosDaHome({
       )}
       {aprovar > 0 && (
         <Link href="/portal/aprovacoes" className={cartao}>
-          <ShieldCheck size={18} className="text-warning shrink-0" />
+          <ShieldCheck size={16} className="text-warning shrink-0" />
           <span>
             <strong className="tabular-nums">{aprovar}</strong>{" "}
             {aprovar === 1 ? "conta a pagar aguardando a sua aprovação" : "contas a pagar aguardando a sua aprovação"}
@@ -56,9 +59,9 @@ export async function AvisosDaHome({
       {emCobranca > 0 && (
         <Link
           href="/portal/cobranca"
-          className="flex items-center gap-3 rounded-md border border-border bg-surface px-4 py-3 text-[13px] hover:border-border-strong transition-colors"
+          className={`${base} border-border bg-surface hover:border-border-strong`}
         >
-          <Handshake size={18} className="text-fg-muted shrink-0" />
+          <Handshake size={16} className="text-fg-muted shrink-0" />
           <span>
             <strong className="tabular-nums">{emCobranca}</strong>{" "}
             {emCobranca === 1 ? "título a receber em cobrança" : "títulos a receber em cobrança"}

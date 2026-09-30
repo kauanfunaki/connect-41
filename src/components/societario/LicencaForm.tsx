@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
@@ -60,11 +61,12 @@ function Formulario({ onClose, orgaos, empresas, licenca }: Omit<ModalProps, "op
       {licenca && <input type="hidden" name="id" value={licenca.id} />}
 
       {licenca ? (
-        <div className="flex flex-col gap-1">
-          <span className="text-[length:var(--fs-label)] font-medium text-fg">Empresa</span>
-          <span className="text-[13px] text-fg-secondary">{licenca.empresaNome}</span>
+        // Na edição a empresa é fixa: campo só de leitura, com o mesmo rótulo e
+        // a mesma altura dos outros, em vez de um texto solto de outro tamanho.
+        <CampoForm label="Empresa" htmlFor={`${prefixo}-empresa`}>
+          <Input id={`${prefixo}-empresa`} value={licenca.empresaNome} readOnly />
           <input type="hidden" name="companyId" value={licenca.companyId} />
-        </div>
+        </CampoForm>
       ) : (
         <CampoForm label="Empresa" htmlFor={`${prefixo}-empresa`} required>
           <SearchableSelect id={`${prefixo}-empresa`} name="companyId" options={empresas ?? []} placeholder="Buscar empresa…" />
@@ -92,7 +94,8 @@ function Formulario({ onClose, orgaos, empresas, licenca }: Omit<ModalProps, "op
         </datalist>
       </CampoForm>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      {/* Número é curto: coluna estreita, e o órgão fica com o resto. */}
+      <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_11rem]">
         <CampoForm label="Órgão" htmlFor={`${prefixo}-orgao`}>
           <Select id={`${prefixo}-orgao`} name="organId" defaultValue={licenca?.organId ?? ""}>
             <option value="">Sem órgão cadastrado</option>
@@ -106,9 +109,9 @@ function Formulario({ onClose, orgaos, empresas, licenca }: Omit<ModalProps, "op
         <CampoForm label="Número" htmlFor={`${prefixo}-numero`}>
           <Input id={`${prefixo}-numero`} name="number" maxLength={MAX_NUMERO} defaultValue={licenca?.number ?? ""} />
         </CampoForm>
-      </div>
+      </FieldGrid>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <FieldGrid>
         <CampoForm label="Emissão" htmlFor={`${prefixo}-emissao`}>
           <Input id={`${prefixo}-emissao`} name="issuedAt" type="date" defaultValue={licenca?.issuedAt ?? ""} />
         </CampoForm>
@@ -119,7 +122,7 @@ function Formulario({ onClose, orgaos, empresas, licenca }: Omit<ModalProps, "op
         >
           <Input id={`${prefixo}-validade`} name="expiresAt" type="date" defaultValue={licenca?.expiresAt ?? ""} />
         </CampoForm>
-      </div>
+      </FieldGrid>
 
       <CampoForm label="Observações" htmlFor={`${prefixo}-obs`}>
         <Textarea id={`${prefixo}-obs`} name="notes" rows={3} maxLength={MAX_OBSERVACOES} defaultValue={licenca?.notes ?? ""} />
@@ -129,7 +132,7 @@ function Formulario({ onClose, orgaos, empresas, licenca }: Omit<ModalProps, "op
         <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{estado.error}</p>
       )}
 
-      <div className="flex justify-end gap-2">
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
         <Button variant="secondary" type="button" onClick={onClose}>
           Cancelar
         </Button>
@@ -146,7 +149,7 @@ export function NovaLicenca({ empresas, orgaos }: { empresas: Opcao[]; orgaos: O
   const [aberto, setAberto] = useState(false);
   return (
     <>
-      <Button variant="primary" size="sm" onClick={() => setAberto(true)}>
+      <Button variant="primary" onClick={() => setAberto(true)}>
         <Plus size={14} /> Nova licença
       </Button>
       <LicencaModal open={aberto} onClose={() => setAberto(false)} empresas={empresas} orgaos={orgaos} />

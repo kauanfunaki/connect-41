@@ -40,6 +40,11 @@ const faixaPrevista = (min: number | null, max: number | null) =>
 
 const TH = "py-2 pr-3 font-medium";
 const TD = "py-2 pr-3 tabular-nums";
+// Cartão de seção como o do detalhe do processo: título de 14px com a
+// explicação logo embaixo, e o conteúdo a um `gap` — eram `mb-1`/`mb-3` soltos.
+const SECAO = "p-4 flex flex-col gap-3";
+const TITULO = "text-[14px] font-semibold text-fg";
+const EXPLICACAO = "text-[12px] text-fg-muted";
 
 /** Quantas linhas de custo a tela mostra — o total soma todas. */
 const LINHAS_DE_CUSTO = 30;
@@ -92,24 +97,26 @@ export default async function RelatoriosDoSocietarioPage({
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <MetricCard label="Abertos agora" value={abertos.length} icon={<FolderOpen size={15} />} />
-        <MetricCard label="Abertos com prazo estourado" value={estouradosAbertos} highlight={estouradosAbertos > 0} icon={<AlertTriangle size={15} />} />
-        <MetricCard label={`Concluídos em ${periodo.rotulo}`} value={processos.length - abertos.length} icon={<CheckCircle2 size={15} />} />
+        <MetricCard label="Abertos agora" value={abertos.length} icon={<FolderOpen size={16} />} />
+        <MetricCard label="Abertos com prazo estourado" value={estouradosAbertos} highlight={estouradosAbertos > 0} icon={<AlertTriangle size={16} />} />
+        <MetricCard label={`Concluídos em ${periodo.rotulo}`} value={processos.length - abertos.length} icon={<CheckCircle2 size={16} />} />
         <MetricCard
           label="Processos com volta"
-          icon={<RotateCcw size={15} />}
+          icon={<RotateCcw size={16} />}
           value={voltas.percentualComVolta === null ? "—" : `${voltas.percentualComVolta}%`}
           sub={`${voltas.totalDeVoltas} ${voltas.totalDeVoltas === 1 ? "volta" : "voltas"}`}
         />
       </div>
 
       <div className="flex flex-col gap-5">
-        <Card as="section" className="p-4">
-          <h2 className="text-[15px] font-semibold mb-1">SLA por tipo</h2>
-          <p className="text-[12px] text-fg-muted mb-3">
-            Dias úteis consumidos contra o previsto do tipo. As voltas ficam na mesma linha porque são a causa do
-            estouro.
-          </p>
+        <Card as="section" className={SECAO}>
+          <div className="flex flex-col gap-0.5">
+            <h2 className={TITULO}>SLA por tipo</h2>
+            <p className={EXPLICACAO}>
+              Dias úteis consumidos contra o previsto do tipo. As voltas ficam na mesma linha porque são a causa do
+              estouro.
+            </p>
+          </div>
           <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
             <table className="w-full min-w-[760px] text-[13px]">
               <thead>
@@ -155,11 +162,13 @@ export default async function RelatoriosDoSocietarioPage({
           </div>
         </Card>
 
-        <Card as="section" className="p-4">
-          <h2 className="text-[15px] font-semibold mb-1">Processos que mais voltaram</h2>
-          <p className="text-[12px] text-fg-muted mb-3">
-            {voltas.comVolta} de {voltas.processos} processos tiveram ao menos uma reapresentação.
-          </p>
+        <Card as="section" className={SECAO}>
+          <div className="flex flex-col gap-0.5">
+            <h2 className={TITULO}>Processos que mais voltaram</h2>
+            <p className={EXPLICACAO}>
+              {voltas.comVolta} de {voltas.processos} processos tiveram ao menos uma reapresentação.
+            </p>
+          </div>
           {maisVoltas.length === 0 ? (
             <p className="text-[13px] text-fg-muted">Nenhuma volta de exigência no período.</p>
           ) : (
@@ -192,12 +201,14 @@ export default async function RelatoriosDoSocietarioPage({
           )}
         </Card>
 
-        <Card as="section" className="p-4">
-          <h2 className="text-[15px] font-semibold mb-1">Produtividade por responsável</h2>
-          <p className="text-[12px] text-fg-muted mb-3">
-            Concluídos em {periodo.rotulo}, ao lado da carteira aberta. O crédito é do responsável atual do processo —
-            não há histórico de redistribuição.
-          </p>
+        <Card as="section" className={SECAO}>
+          <div className="flex flex-col gap-0.5">
+            <h2 className={TITULO}>Produtividade por responsável</h2>
+            <p className={EXPLICACAO}>
+              Concluídos em {periodo.rotulo}, ao lado da carteira aberta. O crédito é do responsável atual do processo —
+              não há histórico de redistribuição.
+            </p>
+          </div>
           <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
             <table className="w-full min-w-[680px] text-[13px]">
               <thead>
@@ -235,9 +246,9 @@ export default async function RelatoriosDoSocietarioPage({
           </div>
         </Card>
 
-        <Card as="section" className="p-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
-            <h2 className="text-[15px] font-semibold">Custo em taxas por processo</h2>
+        <Card as="section" className={SECAO}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className={TITULO}>Custo em taxas por processo</h2>
             <p className="text-[13px] tabular-nums">
               <strong>{moeda(totais.totalCentavos)}</strong>
               {totais.custoDasVoltasCentavos > 0 && (
@@ -277,12 +288,14 @@ export default async function RelatoriosDoSocietarioPage({
                   ))}
                 </tbody>
               </table>
-              {custos.length > LINHAS_DE_CUSTO && (
-                <p className="mt-2 text-[12px] text-fg-muted">
-                  Mostrando os {LINHAS_DE_CUSTO} mais caros de {custos.length}; o total acima soma todos.
-                </p>
-              )}
             </div>
+          )}
+          {/* Fora da caixa da tabela: dentro, a nota ficava colada na borda,
+              sem o recuo das células. */}
+          {custos.length > LINHAS_DE_CUSTO && (
+            <p className={EXPLICACAO}>
+              Mostrando os {LINHAS_DE_CUSTO} mais caros de {custos.length}; o total acima soma todos.
+            </p>
           )}
         </Card>
       </div>

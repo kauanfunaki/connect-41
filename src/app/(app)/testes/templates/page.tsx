@@ -7,6 +7,7 @@ import { FileQuestion } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
@@ -15,11 +16,11 @@ import { setorDoModulo } from "@/lib/modules";
 
 function seloDoModelo(ativo: boolean) {
   return ativo ? (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-success/10 text-success border border-success/25">
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-success/10 text-success border border-success/25">
       Ativo
     </span>
   ) : (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-surface-2 text-fg-muted border border-border">
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-surface-2 text-fg-muted border border-border">
       Arquivado
     </span>
   );
@@ -43,13 +44,7 @@ export default async function TemplatesPage() {
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-3">
-        <Link href="/testes" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Testes
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Modelos</span>
-      </div>
+      <Breadcrumb items={[{ label: "Testes", href: "/testes" }, { label: "Modelos" }]} />
 
       <PageHeader
         title="Modelos de teste"

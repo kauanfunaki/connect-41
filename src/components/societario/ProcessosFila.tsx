@@ -252,7 +252,7 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
                   <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{formatInstantDate(l.iniciadoEm)}</td>
                   <td className="px-4 py-3">
                     <Button href={`/processos/${l.id}`} variant="secondary" size="xs">
-                      Abrir <ArrowRight size={11} />
+                      Abrir <ArrowRight size={12} />
                     </Button>
                   </td>
                 </LinhaFiltravel>

@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Button } from "@/components/ui/Button";
 import { DeleteButton } from "@/components/ui/DeleteButton";
 import type { EdicaoState } from "@/app/(app)/documentos-fiscais/[id]/editar";
@@ -47,7 +48,7 @@ export function EditarDocumentoCard({
   if (bloqueado) {
     return (
       <Card className="p-5 mt-4">
-        <h2 className="text-[length:var(--fs-ui)] font-medium text-fg mb-1">Corrigir documento</h2>
+        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-1">Corrigir documento</h2>
         <p className="text-[length:var(--fs-helper)] text-fg-muted">
           Este documento já virou lançamento. Estorne antes de corrigir ou excluir — assim o
           financeiro não fica com valor diferente do da nota.
@@ -59,8 +60,8 @@ export function EditarDocumentoCard({
   return (
     <Card className="p-5 mt-4">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-[length:var(--fs-ui)] font-medium text-fg mb-1">Corrigir documento</h2>
+        <div className="min-w-0">
+          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-1">Corrigir documento</h2>
           <p className="text-[length:var(--fs-helper)] text-fg-muted">
             {editadoEm
               ? `Corrigido à mão em ${editadoEm}. O que o XML dizia está na auditoria.`
@@ -98,33 +99,40 @@ export function EditarDocumentoCard({
               />
             </CampoForm>
 
-            <div className="grid grid-cols-2 gap-3">
+            {/* Em grade, com a largura de cada campo pelo conteúdo: série é curta,
+                emitente e destinatário dividem a linha, e valor, emissão e
+                competência ficam juntos. Eram duas colunas fixas também no
+                celular, e a dica da competência vinha num parágrafo com
+                margem negativa embaixo do campo. */}
+            <FieldGrid columns="sm:grid-cols-[1fr_120px]">
               <CampoForm label="Número" htmlFor="number" required>
                 <Input id="number" name="number" defaultValue={valores.number} required />
               </CampoForm>
               <CampoForm label="Série" htmlFor="series">
                 <Input id="series" name="series" defaultValue={valores.series ?? ""} />
               </CampoForm>
-            </div>
+            </FieldGrid>
 
-            <CampoForm label="Emitente" htmlFor="issuerName" required>
-              <Input id="issuerName" name="issuerName" defaultValue={valores.issuerName} required />
-            </CampoForm>
+            <FieldGrid>
+              <CampoForm label="Emitente" htmlFor="issuerName" required>
+                <Input id="issuerName" name="issuerName" defaultValue={valores.issuerName} required />
+              </CampoForm>
+              <CampoForm label="Destinatário" htmlFor="recipientName">
+                <Input
+                  id="recipientName"
+                  name="recipientName"
+                  defaultValue={valores.recipientName ?? ""}
+                />
+              </CampoForm>
+            </FieldGrid>
 
-            <CampoForm label="Destinatário" htmlFor="recipientName">
-              <Input
-                id="recipientName"
-                name="recipientName"
-                defaultValue={valores.recipientName ?? ""}
-              />
-            </CampoForm>
-
-            <div className="grid grid-cols-2 gap-3">
+            <FieldGrid columns="sm:grid-cols-3">
               <CampoForm label="Valor" htmlFor="amount">
                 <Input
                   id="amount"
                   name="amount"
                   inputMode="decimal"
+                  prefix="R$"
                   defaultValue={valores.amount ?? ""}
                   placeholder="1234,56"
                 />
@@ -132,25 +140,27 @@ export function EditarDocumentoCard({
               <CampoForm label="Emissão" htmlFor="issuedAt">
                 <Input id="issuedAt" name="issuedAt" type="date" defaultValue={valores.issuedAt} />
               </CampoForm>
-            </div>
-
-            <CampoForm label="Competência" htmlFor="competence">
-              <Input
-                id="competence"
-                name="competence"
-                defaultValue={valores.competence}
-                placeholder="AAAA-MM"
-              />
-            </CampoForm>
-            <p className="text-[12px] text-fg-muted -mt-3">
-              Em branco, volta a seguir a data de emissão.
-            </p>
+              <CampoForm label="Competência" htmlFor="competence" helper="Em branco, volta a seguir a data de emissão.">
+                <Input
+                  id="competence"
+                  name="competence"
+                  defaultValue={valores.competence}
+                  placeholder="AAAA-MM"
+                />
+              </CampoForm>
+            </FieldGrid>
 
             {/* `loading` já troca o rótulo por "Salvando…" e desabilita — era o
-                que o ternário fazia à mão. */}
-            <Button type="submit" variant="primary" loading={isPending}>
-              Salvar correção
-            </Button>
+                que o ternário fazia à mão. Rodapé padrão, com o Cancelar que
+                faltava (fecha, como o "Fechar" do cabeçalho). */}
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+              <Button variant="secondary" onClick={() => setAberto(false)} disabled={isPending}>
+                Cancelar
+              </Button>
+              <Button type="submit" variant="primary" loading={isPending}>
+                Salvar correção
+              </Button>
+            </div>
           </form>
 
           <div className="mt-6 pt-4 border-t border-border">

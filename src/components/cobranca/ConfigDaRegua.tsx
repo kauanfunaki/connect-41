@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { CampoForm } from "@/components/ui/CampoForm";
+import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { salvarRegua, alternarEmpresaNaRegua } from "@/app/(app)/cobranca/actions";
 
@@ -29,8 +29,11 @@ export function ConfigDaRegua({ ligada, passos, podeEditar }: { ligada: boolean;
   }
 
   return (
+    // Grade sem `items-end`: com ele, o texto de ajuda embaixo dos passos
+    // puxava o campo para cima e a situação ficava 20px abaixo dele. O botão
+    // vai em AlinhadoAoCampo, na altura dos campos.
     <form
-      className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end"
+      className="grid grid-cols-1 md:grid-cols-[180px_minmax(0,20rem)_auto] gap-4"
       onSubmit={(e) => {
         e.preventDefault();
         const dados = new FormData(e.currentTarget);
@@ -58,13 +61,13 @@ export function ConfigDaRegua({ ligada, passos, podeEditar }: { ligada: boolean;
         <Input id="regua-passos" name="passos" defaultValue={passos} disabled={!podeEditar} />
       </CampoForm>
       {podeEditar && (
-        <div className="flex flex-wrap items-center gap-2 pb-0.5">
-          <Button type="submit" size="sm" disabled={pendente}>
+        <AlinhadoAoCampo>
+          <Button type="submit" disabled={pendente}>
             {pendente ? "Salvando…" : "Salvar"}
           </Button>
           {erro && <span className="text-[12px] text-danger">{erro}</span>}
           {salvo && <span className="text-[12px] text-success">Salvo.</span>}
-        </div>
+        </AlinhadoAoCampo>
       )}
       {dialog}
     </form>
@@ -106,7 +109,9 @@ export function EmpresaNaRegua({
           ))}
         </Select>
       )}
-      <Button size="xs" variant="secondary" disabled={pendente || !escolhida} onClick={() => alternar(escolhida)}>
+      {/* Ao lado do seletor compacto (32px), o botão é `sm`; sozinho na linha
+          da lista, `xs`, como as outras ações de linha. */}
+      <Button size={empresas ? "sm" : "xs"} variant="secondary" disabled={pendente || !escolhida} onClick={() => alternar(escolhida)}>
         {fora ? "Tirar da régua" : "Devolver à régua"}
       </Button>
       {erro && <span className="text-[11px] text-danger">{erro}</span>}

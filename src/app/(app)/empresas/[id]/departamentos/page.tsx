@@ -55,7 +55,7 @@ export default async function DepartamentosPage({
           canManage && (
             <Button
               href={novoHref}
-              variant="primary" className="font-medium"
+              variant="primary"
             >
               + Novo Departamento
             </Button>
@@ -73,7 +73,7 @@ export default async function DepartamentosPage({
               canManage && (
                 <Button
                   href={novoHref}
-                  variant="primary" className="font-medium"
+                  variant="primary"
                 >
                   + Cadastrar departamento
                 </Button>

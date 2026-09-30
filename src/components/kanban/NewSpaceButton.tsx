@@ -32,7 +32,7 @@ export function NewSpaceButton({ action, label = "Novo Espaço" }: Props) {
       <Button
         type="button"
         onClick={() => setOpen(true)}
-        variant="primary" className="font-medium"
+        variant="primary"
       >
         <Plus size={14} /> {label}
      </Button>
@@ -42,20 +42,22 @@ export function NewSpaceButton({ action, label = "Novo Espaço" }: Props) {
             submitted.current = true;
             formAction(form);
           }}
-          className="space-y-3"
+          className="space-y-4"
         >
           <CampoForm label="Nome" htmlFor="space-name" required>
             <Input id="space-name" name="name" required autoFocus placeholder="ex: BLD" />
           </CampoForm>
-          {state?.error && <p className="text-[12px] text-danger">{state.error}</p>}
-          <Button
-            variant="primary"
-            type="submit"
-            disabled={isPending}
-            className="w-full"
-          >
-            {isPending ? "Criando…" : "Criar"}
-          </Button>
+          {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
+          {/* Rodapé de modal no padrão (30/09): Cancelar e Criar à direita,
+              com divisor — era um "Criar" de largura inteira, sem Cancelar. */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button variant="primary" type="submit" disabled={isPending}>
+              {isPending ? "Criando…" : "Criar"}
+            </Button>
+          </div>
         </form>
       </Modal>
     </>

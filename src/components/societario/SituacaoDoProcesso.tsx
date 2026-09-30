@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CirclePause, CircleX, Hourglass, Play, Ban } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { CampoForm } from "@/components/ui/CampoForm";
 import { Modal } from "@/components/ui/Modal";
 import { Textarea } from "@/components/ui/Textarea";
 import { ROTULO_DA_ACAO, type AcaoDeSituacao, type StatusDoProcesso } from "@/lib/societario/processo";
@@ -33,11 +34,11 @@ const AJUDA: Record<Exclude<AcaoDeSituacao, "retomar">, { titulo: string; texto:
 };
 
 const ICONE: Record<AcaoDeSituacao, React.ReactNode> = {
-  aguardar_cliente: <Hourglass size={13} />,
-  suspender: <CirclePause size={13} />,
-  retomar: <Play size={13} />,
-  indeferir: <Ban size={13} />,
-  cancelar: <CircleX size={13} />,
+  aguardar_cliente: <Hourglass size={14} />,
+  suspender: <CirclePause size={14} />,
+  retomar: <Play size={14} />,
+  indeferir: <Ban size={14} />,
+  cancelar: <CircleX size={14} />,
 };
 
 /** As ações que fazem sentido a partir do status atual — as mesmas que `transicaoDeSituacao` aceita. */
@@ -92,11 +93,13 @@ export function SituacaoDoProcesso({
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex flex-wrap items-center gap-1.5">
+      {/* `sm` (h-8): é a barra de ações do cabeçalho do processo, no tamanho
+          das barras de ferramenta do resto do app. */}
+      <div className="flex flex-wrap items-center gap-2">
         {acoes.map((a) => (
           <Button
             key={a}
-            size="xs"
+            size="sm"
             variant={a === "retomar" ? "primary" : "secondary"}
             disabled={pendente}
             onClick={() => (a === "retomar" ? executar("retomar", "") : (setErro(null), setAcao(a)))}
@@ -105,32 +108,33 @@ export function SituacaoDoProcesso({
           </Button>
         ))}
       </div>
-      {erro && !acao && <span className="text-[11px] text-danger">{erro}</span>}
+      {erro && !acao && <span className="text-[12px] text-danger">{erro}</span>}
 
       <Modal open={acao !== null} onClose={() => !pendente && setAcao(null)} title={acao ? AJUDA[acao].titulo : undefined}>
         {acao && (
           <form
-            className="flex flex-col gap-3"
+            className="flex flex-col gap-4"
             onSubmit={(e) => {
               e.preventDefault();
               executar(acao, motivo);
             }}
           >
             <p className="text-[13px] text-fg-secondary">{AJUDA[acao].texto}</p>
-            <label htmlFor="motivo-da-situacao" className="text-[12px] font-medium text-fg">
-              Motivo
-            </label>
-            <Textarea
-              id="motivo-da-situacao"
-              value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-              maxLength={300}
-              rows={3}
-              placeholder={AJUDA[acao].exemplo}
-              autoFocus
-            />
-            {erro && <span className="text-[12px] text-danger">{erro}</span>}
-            <div className="flex justify-end gap-2">
+            <CampoForm label="Motivo" htmlFor="motivo-da-situacao" required>
+              <Textarea
+                id="motivo-da-situacao"
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+                maxLength={300}
+                rows={3}
+                placeholder={AJUDA[acao].exemplo}
+                autoFocus
+              />
+            </CampoForm>
+            {erro && (
+              <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{erro}</p>
+            )}
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
               <Button type="button" variant="secondary" disabled={pendente} onClick={() => setAcao(null)}>
                 Voltar
               </Button>

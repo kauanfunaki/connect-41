@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { ArrowRight, Lock } from "lucide-react";
@@ -79,7 +80,7 @@ export default async function CicloPage({
         }
       />
 
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
+      <Card className="p-5">
         <h2 className="text-[14px] font-semibold text-fg mb-3">
           Avaliações {ciclo.evaluations.length > 0 && `(${ciclo.evaluations.length})`}
         </h2>
@@ -148,7 +149,7 @@ export default async function CicloPage({
         {canManage && ciclo.active && (
           <SelecionarColaboradorForm cycleId={id} colaboradores={colaboradores} />
         )}
-      </div>
+      </Card>
     </PageContainer>
   );
 }

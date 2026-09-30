@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
@@ -21,16 +21,10 @@ export default async function NovoKanbanPage() {
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/kanban" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Kanban
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Novo Kanban</span>
-      </div>
+      <Breadcrumb items={[{ label: "Kanban", href: "/kanban" }, { label: "Novo Kanban" }]} />
       <PageHeader title="Novo Kanban" />
 
-      <Card className="p-6">
+      <Card className="p-6 w-full max-w-[720px]">
         <PipelineForm action={criarPipeline} sectorOptions={sectorOptions} />
       </Card>
     </PageContainer>

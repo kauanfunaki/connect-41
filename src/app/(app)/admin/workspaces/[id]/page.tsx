@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
@@ -7,6 +6,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { ToggleAccessButton } from "@/components/admin/ToggleAccessButton";
 import { WorkspaceLogoUpload } from "@/components/admin/WorkspaceLogoUpload";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { concederAcesso, revogarAcesso } from "../actions";
 import { formatCnpj } from "@/lib/format";
 
@@ -37,13 +37,7 @@ export default async function WorkspaceDetailPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/admin/workspaces" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Workspaces
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg truncate max-w-[200px]">{tenant.name}</span>
-      </div>
+      <Breadcrumb items={[{ label: "Workspaces", href: "/admin/workspaces" }, { label: tenant.name, truncate: true }]} />
 
       {/* O CNPJ era um parágrafo solto embaixo do cabeçalho; é o subtítulo dele. */}
       <PageHeader
@@ -51,14 +45,17 @@ export default async function WorkspaceDetailPage({
         subtitle={<span className="font-mono">{tenant.cnpj ? formatCnpj(tenant.cnpj) : tenant.slug}</span>}
       />
 
+      {/* Os dois blocos no mesmo componente de cartão (o segundo era um div
+          com as classes copiadas) e com o mesmo cabeçalho: título e, embaixo,
+          a explicação. */}
       <Card className="p-5 mb-4">
-        <h2 className="text-[13px] font-semibold text-fg mb-3">Foto do workspace</h2>
+        <h2 className="text-[14px] font-semibold text-fg mb-3">Foto do workspace</h2>
         <WorkspaceLogoUpload tenantId={tenant.id} tenantName={tenant.name} logoUrl={tenant.logoUrl} />
       </Card>
 
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-        <h2 className="text-[13px] font-semibold text-fg mb-1">Acesso de Super Admins</h2>
-        <p className="text-[12px] text-fg-muted mb-4">
+      <Card className="p-5">
+        <h2 className="text-[14px] font-semibold text-fg">Acesso de Super Admins</h2>
+        <p className="text-[length:var(--fs-helper)] text-fg-muted mt-0.5 mb-4">
           Super Admins titulares de outros workspaces podem ganhar acesso pra visualizar este também, sem precisar
           de uma conta separada.
         </p>
@@ -73,7 +70,7 @@ export default async function WorkspaceDetailPage({
                 ? revogarAcesso.bind(null, id, u.id)
                 : concederAcesso.bind(null, id, u.id);
               return (
-                <div key={u.id} className="flex items-center justify-between py-2.5">
+                <div key={u.id} className="flex items-center justify-between gap-3 py-2.5">
                   <div className="min-w-0">
                     <p className="text-[13px] text-fg truncate">{u.name}</p>
                     <p className="text-[11px] text-fg-muted truncate">{u.email}</p>
@@ -84,7 +81,7 @@ export default async function WorkspaceDetailPage({
             })}
           </div>
         )}
-      </div>
+      </Card>
     </PageContainer>
   );
 }

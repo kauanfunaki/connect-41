@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Check, CircleSlash, FileStack, AlertTriangle, Bot, Plug, User } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Badge } from "@/components/ui/Badge";
@@ -165,7 +166,7 @@ function EtapaCard({
 
   return (
     <div
-      className={`rounded-lg border p-3.5 flex flex-col gap-2.5 ${
+      className={`rounded-lg border p-4 flex flex-col gap-3 ${
         encerrada
           ? "border-border bg-surface/60"
           : etapa.liberada
@@ -180,8 +181,8 @@ function EtapaCard({
             <span className={`text-[13px] font-semibold ${encerrada ? "text-fg-muted" : ""}`}>
               {etapa.rotulo}
             </span>
-            <span title={EXECUTOR_TITULO[etapa.executorEsperado]} className="text-fg-muted">
-              <Icone size={12} />
+            <span title={EXECUTOR_TITULO[etapa.executorEsperado]} className="inline-flex text-fg-muted">
+              <Icone size={14} />
             </span>
             {etapa.orgaoNome && <span className="text-[11px] text-fg-muted">{etapa.orgaoNome}</span>}
             {etapa.opcional && !encerrada && (
@@ -190,9 +191,9 @@ function EtapaCard({
           </div>
           {etapa.descricao && <p className="text-[12px] text-fg-muted">{etapa.descricao}</p>}
         </div>
-        {etapa.status === "CONCLUIDA" && <Check size={15} className="text-success shrink-0" />}
+        {etapa.status === "CONCLUIDA" && <Check size={16} className="text-success shrink-0" />}
         {etapa.status === "DISPENSADA" && (
-          <CircleSlash size={15} className="text-fg-muted shrink-0" />
+          <CircleSlash size={16} className="text-fg-muted shrink-0" />
         )}
       </div>
 
@@ -239,25 +240,28 @@ function EtapaCard({
         </div>
       )}
 
+      {/* Barra de ações da etapa: campo compacto (h-8) e botões `sm` (h-8) na
+          mesma linha. Era Input h-8 ao lado de botão h-7, desencontrados. */}
       {podeEditar && etapa.liberada && !encerrada && (
-        <div className="flex flex-wrap items-center gap-2 pt-0.5">
+        <div className="flex flex-wrap items-center gap-2">
           {etapa.orgaoNome ? (
             !protocoloAberto && (
               <>
                 <Input
                   compact
+                  aria-label="Número do protocolo"
                   value={numero}
                   onChange={(e) => setNumero(e.target.value)}
                   placeholder="Nº do protocolo (opcional)"
-                  className="max-w-[220px]"
+                  className="sm:w-56"
                 />
                 <Button
                   variant="secondary"
-                  size="xs"
+                  size="sm"
                   disabled={pendente}
                   onClick={() => executar(() => acoes.protocolar(etapa.id, numero))}
                 >
-                  <FileStack size={12} />
+                  <FileStack size={14} />
                   {etapa.protocolos.length > 0 ? "Reapresentar" : "Protocolar"}
                 </Button>
               </>
@@ -265,11 +269,11 @@ function EtapaCard({
           ) : (
             <Button
               variant="secondary"
-              size="xs"
+              size="sm"
               disabled={pendente}
               onClick={() => executar(() => acoes.concluir(etapa.id))}
             >
-              <Check size={12} /> Concluir
+              <Check size={14} /> Concluir
             </Button>
           )}
           {etapa.opcional && (
@@ -318,8 +322,8 @@ function Protocolo({
         {protocolo.desfecho === "EXIGENCIA" && <Badge variant="warning">Exigência</Badge>}
         {protocolo.desfecho === "PENDENTE" && <Badge variant="info">Aguardando</Badge>}
         {protocolo.porRobo && (
-          <span title="Apurado pelo observador de protocolo" className="text-fg-muted">
-            <Bot size={12} />
+          <span title="Apurado pelo observador de protocolo" className="inline-flex text-fg-muted">
+            <Bot size={14} />
           </span>
         )}
       </div>
@@ -340,65 +344,76 @@ function Protocolo({
       {protocolo.exigencias.map((ex) => (
         <div
           key={ex.id}
-          className="text-[12px] rounded-md border border-warning/30 bg-warning/8 px-2.5 py-1.5 flex flex-col gap-1"
+          className="text-[12px] rounded-md border border-warning/30 bg-warning/8 px-3 py-2 flex flex-col gap-1.5"
         >
           <span className="flex items-start gap-1.5">
-            <AlertTriangle size={12} className="text-warning mt-0.5 shrink-0" />
+            <AlertTriangle size={14} className="text-warning mt-px shrink-0" />
             <span className={ex.resolvidaEm ? "line-through text-fg-muted" : ""}>{ex.descricao}</span>
           </span>
           <span className="text-[11px] text-fg-muted">
             {ex.prazoAte ? `Prazo do órgão: ${formatInstantDate(ex.prazoAte)}` : "Sem prazo do órgão"}
             {ex.resolvidaEm && ` · cumprida em ${formatInstantDate(ex.resolvidaEm)}`}
           </span>
+          {/* Botão como os outros do cartão — era um link de 11px, fácil de
+              não ver numa ação que fecha a exigência. */}
           {podeEditar && !ex.resolvidaEm && (
             <Button
-              variant="linkMuted"
-              size="xs"
+              variant="secondary"
+              size="sm"
               disabled={pendente}
               onClick={() => executar(() => acoes.resolverExigencia(ex.id))}
-              className="text-[11px] self-start"
+              className="self-start"
             >
-              Marcar como cumprida
+              <Check size={14} /> Marcar como cumprida
             </Button>
           )}
         </div>
       ))}
 
       {podeEditar && protocolo.desfecho === "PENDENTE" && (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           {!abrindoExigencia ? (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="secondary"
-                size="xs"
+                size="sm"
                 disabled={pendente}
                 onClick={() => executar(() => acoes.deferir(protocolo.id))}
               >
                 Deferido
               </Button>
-              <Button variant="secondary" size="xs" onClick={() => setAbrindoExigencia(true)}>
+              <Button variant="secondary" size="sm" onClick={() => setAbrindoExigencia(true)}>
                 Exigência
               </Button>
             </div>
           ) : (
-            <div className="flex flex-col gap-1.5">
-              <Textarea
-                rows={2}
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                placeholder="O que o órgão exigiu"
-              />
-              <div className="flex items-center gap-2 flex-wrap">
+            // Formulário com rótulo em cima de cada campo: a data solta ao lado
+            // dos botões não dizia de que prazo era.
+            <div className="flex flex-col gap-3 rounded-md border border-border bg-surface p-3">
+              <CampoForm label="O que o órgão exigiu" htmlFor={`exigencia-${protocolo.id}`}>
+                <Textarea
+                  id={`exigencia-${protocolo.id}`}
+                  rows={2}
+                  value={descricao}
+                  onChange={(e) => setDescricao(e.target.value)}
+                />
+              </CampoForm>
+              <CampoForm label="Prazo do órgão" htmlFor={`prazo-exigencia-${protocolo.id}`} helper="Opcional.">
                 <Input
-                  compact
+                  id={`prazo-exigencia-${protocolo.id}`}
                   type="date"
                   value={prazo}
                   onChange={(e) => setPrazo(e.target.value)}
-                  className="max-w-[180px]"
+                  className="sm:w-44"
                 />
+              </CampoForm>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Button variant="secondary" size="sm" onClick={() => setAbrindoExigencia(false)}>
+                  Cancelar
+                </Button>
                 <Button
-                  variant="secondary"
-                  size="xs"
+                  variant="primary"
+                  size="sm"
                   disabled={pendente}
                   onClick={() =>
                     executar(async () => {
@@ -413,9 +428,6 @@ function Protocolo({
                   }
                 >
                   Registrar exigência
-                </Button>
-                <Button variant="linkMuted" size="xs" onClick={() => setAbrindoExigencia(false)}>
-                  Cancelar
                 </Button>
               </div>
             </div>

@@ -33,7 +33,7 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
       <input type="hidden" name="entityType" value={entityType} />
 
       {state?.error && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">
           {state.error}
         </p>
       )}
@@ -70,8 +70,9 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
       </Field>
 
       {tags.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-[12px] font-medium text-fg">Tags</p>
+        // Grupo com título no estilo do rótulo de campo (era um <p> de 12px).
+        <fieldset className="min-w-0">
+          <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">Tags</legend>
           <div className="flex flex-wrap gap-2">
             {tags.map((t) => (
               <label
@@ -88,7 +89,7 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
               </label>
             ))}
           </div>
-        </div>
+        </fieldset>
       )}
 
       {/* Pesquisável, e não uma parede de checkbox: com centenas de pessoas na
@@ -103,17 +104,15 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
         <AttendeePicker users={sectorUsers} name="assignees" label="Responsáveis" />
       )}
 
-      <div className="flex items-center gap-3 pt-2">
-        <Button
-          variant="primary"
-          type="submit"
-          disabled={isPending}
-        >
-          {isPending ? "Adicionando…" : "Adicionar"}
-        </Button>
-        {/* Era um Link estilizado à mão (30/09): o Cancelar é o botão secundário. */}
+      {/* Rodapé no padrão dos formulários (30/09): Cancelar à esquerda do
+          primário, os dois à direita, com o divisor em cima. Estava ao
+          contrário e alinhado à esquerda. */}
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
         <Button href={cancelHref} variant="secondary">
           Cancelar
+        </Button>
+        <Button variant="primary" type="submit" disabled={isPending}>
+          {isPending ? "Adicionando…" : "Adicionar"}
         </Button>
       </div>
     </form>

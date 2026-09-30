@@ -3,6 +3,8 @@
 import { useActionState } from "react";
 import type { CargoState } from "@/app/(app)/empresas/[id]/cargos/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
+import { FormSection } from "@/components/ui/FormSection";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
@@ -35,86 +37,98 @@ type Props = {
 export function CargoForm({ action, companyId, cancelHref, defaultValues, familiasExistentes = [] }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
 
+  // Revisão de alinhamento (30/09): três seções. A faixa salarial ganhou
+  // título próprio e as colunas viraram "Inicial / Intermediária / Final" —
+  // "Faixa Salarial Intermediária" não cabia numa coluna de um terço, quebrava
+  // em duas linhas e derrubava o campo dela abaixo dos vizinhos.
   return (
     <form action={formAction} className="space-y-6">
       <input type="hidden" name="companyId" value={companyId} />
       {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
 
       {state?.error && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">
           {state.error}
         </p>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <CampoForm label="Nome do Cargo" htmlFor="name" required>
-          <Input id="name" name="name" type="text" required defaultValue={defaultValues?.name ?? ""} />
-        </CampoForm>
-        <CampoForm label="Área" htmlFor="area">
-          <Input id="area" name="area" type="text" defaultValue={defaultValues?.area ?? ""} />
-        </CampoForm>
-      </div>
+      <div>
+        <FormSection title="Cargo">
+          <FieldGrid>
+            <CampoForm label="Nome do Cargo" htmlFor="name" required>
+              <Input id="name" name="name" type="text" required defaultValue={defaultValues?.name ?? ""} />
+            </CampoForm>
+            <CampoForm label="Área" htmlFor="area">
+              <Input id="area" name="area" type="text" defaultValue={defaultValues?.area ?? ""} />
+            </CampoForm>
+          </FieldGrid>
 
-      {/* Família + senioridade formam a trilha de carreira usada pela matriz
-          em /cargos-salarios. Ambos opcionais: cargo sem classificação continua
-          válido, só cai no grupo "sem família". */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <CampoForm
-          label="Família de cargos"
-          htmlFor="family"
-          helper="Agrupa a mesma trilha em níveis diferentes (ex: Contábil, Fiscal, Atendimento)."
-        >
-          <Input
-            id="family"
-            name="family"
-            type="text"
-            list="familias-existentes"
-            defaultValue={defaultValues?.family ?? ""}
-            placeholder="ex: Contábil"
-          />
-          {familiasExistentes.length > 0 && (
-            <datalist id="familias-existentes">
-              {familiasExistentes.map((f) => (
-                <option key={f} value={f} />
-              ))}
-            </datalist>
-          )}
-        </CampoForm>
-        <CampoForm label="Nível de senioridade" htmlFor="seniority">
-          <Select id="seniority" name="seniority" defaultValue={defaultValues?.seniority ?? ""}>
-            <option value="">Não definido</option>
-            {SENIORITY_ORDER.map((s) => (
-              <option key={s} value={s}>
-                {SENIORITY_LABEL[s]}
-              </option>
-            ))}
-          </Select>
-        </CampoForm>
-      </div>
+          {/* Família + senioridade formam a trilha de carreira usada pela matriz
+              em /cargos-salarios. Ambos opcionais: cargo sem classificação continua
+              válido, só cai no grupo "sem família". */}
+          <FieldGrid>
+            <CampoForm
+              label="Família de cargos"
+              htmlFor="family"
+              helper="Agrupa a mesma trilha em níveis diferentes (ex: Contábil, Fiscal, Atendimento)."
+            >
+              <Input
+                id="family"
+                name="family"
+                type="text"
+                list="familias-existentes"
+                defaultValue={defaultValues?.family ?? ""}
+                placeholder="ex: Contábil"
+              />
+              {familiasExistentes.length > 0 && (
+                <datalist id="familias-existentes">
+                  {familiasExistentes.map((f) => (
+                    <option key={f} value={f} />
+                  ))}
+                </datalist>
+              )}
+            </CampoForm>
+            <CampoForm label="Nível de senioridade" htmlFor="seniority">
+              <Select id="seniority" name="seniority" defaultValue={defaultValues?.seniority ?? ""}>
+                <option value="">Não definido</option>
+                {SENIORITY_ORDER.map((s) => (
+                  <option key={s} value={s}>
+                    {SENIORITY_LABEL[s]}
+                  </option>
+                ))}
+              </Select>
+            </CampoForm>
+          </FieldGrid>
 
-      <CampoForm label="Descrição" htmlFor="description">
-        <Textarea id="description" name="description" rows={2} defaultValue={defaultValues?.description ?? ""} />
-      </CampoForm>
+          <CampoForm label="Descrição" htmlFor="description">
+            <Textarea id="description" name="description" rows={2} defaultValue={defaultValues?.description ?? ""} />
+          </CampoForm>
+        </FormSection>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <CampoForm label="Requisitos Técnicos" htmlFor="technicalRequirements">
-          <Textarea id="technicalRequirements" name="technicalRequirements" rows={3} defaultValue={defaultValues?.technicalRequirements ?? ""} />
-        </CampoForm>
-        <CampoForm label="Requisitos Comportamentais" htmlFor="behavioralRequirements">
-          <Textarea id="behavioralRequirements" name="behavioralRequirements" rows={3} defaultValue={defaultValues?.behavioralRequirements ?? ""} />
-        </CampoForm>
-      </div>
+        <FormSection title="Requisitos">
+          <FieldGrid>
+            <CampoForm label="Técnicos" htmlFor="technicalRequirements">
+              <Textarea id="technicalRequirements" name="technicalRequirements" rows={3} defaultValue={defaultValues?.technicalRequirements ?? ""} />
+            </CampoForm>
+            <CampoForm label="Comportamentais" htmlFor="behavioralRequirements">
+              <Textarea id="behavioralRequirements" name="behavioralRequirements" rows={3} defaultValue={defaultValues?.behavioralRequirements ?? ""} />
+            </CampoForm>
+          </FieldGrid>
+        </FormSection>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <CampoForm label="Faixa Salarial Inicial" htmlFor="salaryRangeMin">
-          <Input id="salaryRangeMin" name="salaryRangeMin" type="number" step="0.01" defaultValue={defaultValues?.salaryRangeMin ?? ""} prefix="R$" placeholder="0,00" />
-        </CampoForm>
-        <CampoForm label="Faixa Salarial Intermediária" htmlFor="salaryRangeMid">
-          <Input id="salaryRangeMid" name="salaryRangeMid" type="number" step="0.01" defaultValue={defaultValues?.salaryRangeMid ?? ""} prefix="R$" placeholder="0,00" />
-        </CampoForm>
-        <CampoForm label="Faixa Salarial Final" htmlFor="salaryRangeMax">
-          <Input id="salaryRangeMax" name="salaryRangeMax" type="number" step="0.01" defaultValue={defaultValues?.salaryRangeMax ?? ""} prefix="R$" placeholder="0,00" />
-        </CampoForm>
+        <FormSection title="Faixa salarial">
+          <FieldGrid columns="sm:grid-cols-3">
+            <CampoForm label="Inicial" htmlFor="salaryRangeMin">
+              <Input id="salaryRangeMin" name="salaryRangeMin" type="number" step="0.01" defaultValue={defaultValues?.salaryRangeMin ?? ""} prefix="R$" placeholder="0,00" />
+            </CampoForm>
+            <CampoForm label="Intermediária" htmlFor="salaryRangeMid">
+              <Input id="salaryRangeMid" name="salaryRangeMid" type="number" step="0.01" defaultValue={defaultValues?.salaryRangeMid ?? ""} prefix="R$" placeholder="0,00" />
+            </CampoForm>
+            <CampoForm label="Final" htmlFor="salaryRangeMax">
+              <Input id="salaryRangeMax" name="salaryRangeMax" type="number" step="0.01" defaultValue={defaultValues?.salaryRangeMax ?? ""} prefix="R$" placeholder="0,00" />
+            </CampoForm>
+          </FieldGrid>
+        </FormSection>
       </div>
 
       <FormFooter cancelHref={cancelHref} pending={isPending} />

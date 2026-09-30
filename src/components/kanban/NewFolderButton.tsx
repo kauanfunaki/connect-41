@@ -34,19 +34,21 @@ export function NewFolderButton({ action }: Props) {
         <FolderPlus size={14} /> Nova pasta
       </Button>
       <Modal open={open} onClose={() => setOpen(false)} title="Nova pasta">
-        <form action={(form) => { submitted.current = true; formAction(form); }} className="space-y-3">
+        <form action={(form) => { submitted.current = true; formAction(form); }} className="space-y-4">
           <CampoForm label="Nome" htmlFor="folder-name" required>
             <Input id="folder-name" name="name" required autoFocus placeholder="ex: Financeiro" />
           </CampoForm>
-          {state?.error && <p className="text-[12px] text-danger">{state.error}</p>}
-          <Button
-            variant="primary"
-            type="submit"
-            disabled={isPending}
-            className="w-full"
-          >
-            {isPending ? "Criando…" : "Criar"}
-          </Button>
+          {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
+          {/* Rodapé de modal no padrão (30/09): Cancelar e Criar à direita,
+              com divisor — era um "Criar" de largura inteira, sem Cancelar. */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button variant="primary" type="submit" disabled={isPending}>
+              {isPending ? "Criando…" : "Criar"}
+            </Button>
+          </div>
         </form>
       </Modal>
     </>

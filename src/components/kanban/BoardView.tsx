@@ -202,15 +202,17 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
         {/* Era texto solto (30/09): ação é botão, no desenho do "Limpar filtros
             das colunas" das tabelas. */}
         {activeFilterCount > 0 && (
+          // `sm` (h-8), a altura da busca e do Filtros ao lado — era `xs`, um
+          // degrau abaixo na mesma barra.
           <Button
             variant="secondary"
-            size="xs"
+            size="sm"
             type="button"
             onClick={() => {
             setSearch(""); setAssigneeFilter(""); setCreatorFilter(""); setTagFilter(""); setPriorityFilter(""); setDueFilter("");
             }}
           >
-            <X size={11} /> Limpar filtros
+            <X size={14} /> Limpar filtros
           </Button>
         )}
 

@@ -100,7 +100,7 @@ export function SearchableSelect({
         variant="secondary"
         size={compact ? "sm" : "md"}
         className={`w-full flex justify-between gap-2 bg-surface text-left ${
-          compact ? "text-[13px]" : "text-[length:var(--fs-body)]"
+          compact ? "text-[13px]" : "text-[length:var(--fs-input)]"
         } hover:border-border-strong focus:outline-none focus:ring-2 focus:ring-brand/40`}
         id={id}
         onClick={() => setAberto((a) => !a)}

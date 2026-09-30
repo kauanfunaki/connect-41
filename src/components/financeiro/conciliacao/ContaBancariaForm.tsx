@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Modal } from "@/components/ui/Modal";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { salvarContaBancaria, alterarContaAtiva } from "@/app/(app)/conciliacao/actions";
@@ -67,55 +68,56 @@ export function ContaBancariaForm({ companyId, conta }: { companyId: string; con
           <input type="hidden" name="companyId" value={companyId} />
           {conta && <input type="hidden" name="id" value={conta.id} />}
 
-          <CampoForm label="Nome da conta" htmlFor={`${prefixo}-nickname`} required helper="Como a equipe chama esta conta — ex.: Itaú movimento.">
-            <Input id={`${prefixo}-nickname`} name="nickname" maxLength={80} defaultValue={conta?.nickname} required />
-          </CampoForm>
+          <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_180px]">
+            <CampoForm label="Nome da conta" htmlFor={`${prefixo}-nickname`} required helper="Como a equipe chama esta conta — ex.: Itaú movimento.">
+              <Input id={`${prefixo}-nickname`} name="nickname" maxLength={80} defaultValue={conta?.nickname} required />
+            </CampoForm>
+            <CampoForm label="Tipo" htmlFor={`${prefixo}-type`} required>
+              <Select id={`${prefixo}-type`} name="type" defaultValue={conta?.type ?? "CORRENTE"}>
+                <option value="CORRENTE">Conta corrente</option>
+                <option value="POUPANCA">Poupança</option>
+              </Select>
+            </CampoForm>
+          </FieldGrid>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <CampoForm label="Banco (COMPE)" htmlFor={`${prefixo}-bank`} required helper="001, 237, 341…">
-              <Input id={`${prefixo}-bank`} name="bankCode" inputMode="numeric" maxLength={4} defaultValue={conta?.bankCode} readOnly={travado} required />
-            </CampoForm>
-            <CampoForm label="Agência" htmlFor={`${prefixo}-agency`}>
-              <Input id={`${prefixo}-agency`} name="agency" inputMode="numeric" maxLength={10} defaultValue={conta?.agency ?? ""} />
-            </CampoForm>
-            <CampoForm label="Conta com dígito" htmlFor={`${prefixo}-number`} required>
-              <Input id={`${prefixo}-number`} name="accountNumber" maxLength={30} placeholder="12345-6" defaultValue={conta?.accountNumber} readOnly={travado} required />
-            </CampoForm>
+          {/* Banco e agência são números curtos: coluna estreita, e a conta
+              fica com o resto. A nota do travamento vale para a linha toda. */}
+          <div className="flex flex-col gap-2">
+            <FieldGrid columns="sm:grid-cols-[120px_140px_minmax(0,1fr)]">
+              <CampoForm label="Banco (COMPE)" htmlFor={`${prefixo}-bank`} required helper="001, 237, 341…">
+                <Input id={`${prefixo}-bank`} name="bankCode" inputMode="numeric" maxLength={4} defaultValue={conta?.bankCode} readOnly={travado} required />
+              </CampoForm>
+              <CampoForm label="Agência" htmlFor={`${prefixo}-agency`}>
+                <Input id={`${prefixo}-agency`} name="agency" inputMode="numeric" maxLength={10} defaultValue={conta?.agency ?? ""} />
+              </CampoForm>
+              <CampoForm label="Conta com dígito" htmlFor={`${prefixo}-number`} required>
+                <Input id={`${prefixo}-number`} name="accountNumber" maxLength={30} placeholder="12345-6" defaultValue={conta?.accountNumber} readOnly={travado} required />
+              </CampoForm>
+            </FieldGrid>
+            {travado && (
+              <p className="text-[length:var(--fs-helper)] text-fg-muted">
+                Banco e número não mudam depois do primeiro extrato importado: são eles que conferem o arquivo.
+              </p>
+            )}
           </div>
-          {travado && (
-            <p className="text-[11px] text-fg-muted -mt-2">
-              Banco e número não mudam depois do primeiro extrato importado: são eles que conferem o arquivo.
-            </p>
-          )}
 
-          <CampoForm label="Tipo" htmlFor={`${prefixo}-type`} required>
-            <Select id={`${prefixo}-type`} name="type" defaultValue={conta?.type ?? "CORRENTE"}>
-              <option value="CORRENTE">Conta corrente</option>
-              <option value="POUPANCA">Poupança</option>
-            </Select>
-          </CampoForm>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <CampoForm
-              label="Saldo inicial (R$)"
-              htmlFor={`${prefixo}-saldo`}
-              helper="Opcional. Negativo se começou no cheque especial."
-            >
-              <Input id={`${prefixo}-saldo`} name="openingBalance" inputMode="decimal" placeholder="-1.234,56" defaultValue={conta?.saldoInicial ?? ""} />
+          <FieldGrid>
+            <CampoForm label="Saldo inicial" htmlFor={`${prefixo}-saldo`} helper="Opcional. Negativo se começou no cheque especial.">
+              <Input id={`${prefixo}-saldo`} name="openingBalance" prefix="R$" inputMode="decimal" placeholder="-1.234,56" defaultValue={conta?.saldoInicial ?? ""} />
             </CampoForm>
             <CampoForm label="Saldo no início do dia" htmlFor={`${prefixo}-saldo-data`} helper="O extrato é somado a partir desta data, inclusive.">
               <Input id={`${prefixo}-saldo-data`} type="date" name="openingBalanceDate" defaultValue={conta?.saldoInicialKey ?? ""} />
             </CampoForm>
-          </div>
+          </FieldGrid>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button type="submit" size="sm" disabled={pendente}>
-              {pendente ? "Salvando…" : "Salvar"}
-            </Button>
-            <Button type="button" variant="secondary" size="sm" onClick={() => setAberto(false)}>
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
+            {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
+            <Button type="button" variant="secondary" onClick={() => setAberto(false)}>
               Cancelar
             </Button>
-            {erro && <span className="text-[12px] text-danger">{erro}</span>}
+            <Button type="submit" disabled={pendente}>
+              {pendente ? "Salvando…" : "Salvar"}
+            </Button>
           </div>
         </form>
       </Modal>

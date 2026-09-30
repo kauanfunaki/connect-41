@@ -29,17 +29,19 @@ export function ImportarDoOmie({ companyId }: { companyId: string }) {
 
   return (
     <Card className="p-4 flex flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <Upload size={15} className="text-brand" />
-        <h2 className="text-[14px] font-semibold text-fg">Importar do Omie</h2>
-      </div>
+      <h2 className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-fg">
+        <Upload size={16} className="text-brand" />
+        Importar do Omie
+      </h2>
       <p className="text-[12px] text-fg-secondary max-w-[62ch]">
         A planilha de Contas a Pagar ou a Receber exportada do Omie, com as colunas como elas vêm.
         Cada linha vai para o mês da <strong>data de crédito ou débito no extrato</strong> — que é a
         data que o DRE de caixa usa. Importar de novo o mesmo mês substitui o que estava lá.
       </p>
 
-      <form ref={formRef} onSubmit={enviar} className="flex flex-wrap items-center gap-2">
+      {/* O botão do arquivo no desenho do `Button` secundário e na altura do
+          "Importar" ao lado (36px, formulário) — era 32px e borda mais clara. */}
+      <form ref={formRef} onSubmit={enviar} className="flex flex-wrap items-center gap-3">
         <input type="hidden" name="companyId" value={companyId} />
         <input
           type="file"
@@ -47,9 +49,9 @@ export function ImportarDoOmie({ companyId }: { companyId: string }) {
           accept=".xlsx"
           required
           aria-label="Planilha exportada do Omie"
-          className="text-[12px] text-fg-secondary file:mr-3 file:h-8 file:px-3 file:rounded-md file:border file:border-border file:bg-surface file:text-fg file:text-[12px] file:cursor-pointer"
+          className="min-w-0 max-w-full text-[length:var(--fs-ui)] text-fg-secondary file:mr-3 file:h-9 file:px-4 file:rounded-md file:border file:border-border-strong file:bg-transparent file:text-fg file:text-[length:var(--fs-ui)] file:font-semibold file:cursor-pointer hover:file:bg-surface-hover"
         />
-        <Button type="submit" size="sm" disabled={enviando}>
+        <Button type="submit" disabled={enviando}>
           {enviando ? "Lendo…" : "Importar"}
         </Button>
       </form>

@@ -3,6 +3,8 @@
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { criarPlano, type PlanoState } from "@/app/(app)/admin/planos/actions";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 
@@ -11,81 +13,70 @@ export function NovoPlanoForm() {
   const [state, formAction, isPending] = useActionState<PlanoState, FormData>(criarPlano, null);
   const [billingType, setBillingType] = useState<"FLAT_MONTHLY" | "PER_USER_MONTHLY">("FLAT_MONTHLY");
 
+  // Fechado, só o botão. Aberto, o botão some e o formulário traz o próprio
+  // rodapé (Cancelar, Criar plano) — antes o "Cancelar" era o mesmo botão lá
+  // em cima, longe do "Criar plano", que ficava sozinho embaixo à esquerda.
+  if (!open) {
+    return <Button onClick={() => setOpen(true)}>+ Novo plano</Button>;
+  }
+
+  // Os campos só tinham placeholder: preenchidos, ninguém sabia mais o que era
+  // cada valor. Agora têm rótulo, como todo formulário.
   return (
-    <div>
-      {/* Aberto, o mesmo botão vira "Cancelar" — e Cancelar não é a ação
-          principal da tela: fica secundário (polimento de 30/09). */}
-      <Button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        variant={open ? "secondary" : "primary"}
-        className="font-medium"
-      >
-        {open ? "Cancelar" : "+ Novo plano"}
-      </Button>
+    <form
+      action={formAction}
+      className="p-4 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] space-y-4 max-w-2xl"
+    >
+      <CampoForm label="Nome do plano" htmlFor="plano-nome" required>
+        <Input id="plano-nome" name="name" required placeholder="Ex: Gerenciado Essencial" />
+      </CampoForm>
 
-      {open && (
-        <form action={formAction} className="mt-4 p-4 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] space-y-3 max-w-xl">
-          <Input
-            name="name"
+      <FieldGrid>
+        <CampoForm label="Modo de gestão" htmlFor="plano-modo" required>
+          <Select id="plano-modo" name="managementMode" required>
+            <option value="MANAGED">Frente 1 — Gerenciado pela 41 Tech</option>
+            <option value="SELF_SERVICE">Frente 2 — Cliente administra</option>
+          </Select>
+        </CampoForm>
+
+        <CampoForm label="Cobrança" htmlFor="plano-cobranca" required>
+          <Select
+            id="plano-cobranca"
+            name="billingType"
             required
-            placeholder="Nome do plano (ex: Gerenciado Essencial)"
-          />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Select name="managementMode" required>
-              <option value="MANAGED">Frente 1 — Gerenciado pela 41 Tech</option>
-              <option value="SELF_SERVICE">Frente 2 — Cliente administra</option>
-            </Select>
-
-            <Select
-              name="billingType"
-              required
-              value={billingType}
-              onChange={(e) => setBillingType(e.target.value as typeof billingType)}
-            >
-              <option value="FLAT_MONTHLY">Valor fixo mensal</option>
-              <option value="PER_USER_MONTHLY">Por usuário/mês</option>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {billingType === "FLAT_MONTHLY" ? (
-              <Input
-                name="basePrice"
-                required
-                placeholder="Valor mensal"
-                inputMode="decimal"
-                prefix="R$"
-              />
-            ) : (
-              <Input
-                name="pricePerUser"
-                required
-                placeholder="Valor por usuário"
-                inputMode="decimal"
-                prefix="R$"
-              />
-            )}
-            <Input
-              name="setupFee"
-              placeholder="Taxa de implantação"
-              inputMode="decimal"
-              prefix="R$"
-            />
-          </div>
-
-          <Button
-            type="submit"
-            disabled={isPending}
-            variant="primary" className="font-medium disabled:opacity-60"
+            value={billingType}
+            onChange={(e) => setBillingType(e.target.value as typeof billingType)}
           >
-            {isPending ? "Criando…" : "Criar plano"}
-         </Button>
+            <option value="FLAT_MONTHLY">Valor fixo mensal</option>
+            <option value="PER_USER_MONTHLY">Por usuário/mês</option>
+          </Select>
+        </CampoForm>
 
-          {state?.error && <p className="text-[12px] text-danger">{state.error}</p>}
-        </form>
-      )}
-    </div>
+        {billingType === "FLAT_MONTHLY" ? (
+          <CampoForm label="Valor mensal" htmlFor="plano-valor" required>
+            <Input id="plano-valor" name="basePrice" required inputMode="decimal" prefix="R$" />
+          </CampoForm>
+        ) : (
+          <CampoForm label="Valor por usuário" htmlFor="plano-valor" required>
+            <Input id="plano-valor" name="pricePerUser" required inputMode="decimal" prefix="R$" />
+          </CampoForm>
+        )}
+        <CampoForm label="Taxa de implantação" htmlFor="plano-implantacao">
+          <Input id="plano-implantacao" name="setupFee" inputMode="decimal" prefix="R$" />
+        </CampoForm>
+      </FieldGrid>
+
+      <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
+        {state?.error && (
+          <p className="mr-auto text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>
+        )}
+        <Button variant="secondary" onClick={() => setOpen(false)}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={isPending}>
+          {isPending ? "Criando…" : "Criar plano"}
+        </Button>
+      </div>
+    </form>
   );
 }

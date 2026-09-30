@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import type { ObligationState } from "@/app/(app)/admin/obrigacoes/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
@@ -42,9 +43,20 @@ export function AddObrigacaoForm({ action, companies, pipelines, users }: Props)
   const [frequency, setFrequency] = useState<Frequency>("MONTHLY");
   const selected = pipelines.find((p) => p.id === pipelineId);
 
+  // Três linhas por assunto — o quê e de quem; para onde vai e quem é avisado;
+  // quando. Eram cinco campos numa grade de quatro colunas (o responsável caía
+  // sozinho na linha de baixo, e "dia do mês" ocupava um quarto da tela para
+  // dois dígitos), e o título, que é o nome da obrigação, vinha por último.
+  const temDia = frequency !== "DAILY";
   return (
-    <form action={formAction} className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 mb-6 space-y-3">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    <form
+      action={formAction}
+      className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 mb-6 space-y-4"
+    >
+      <FieldGrid>
+        <CampoForm label="Título da obrigação" htmlFor="title" required>
+          <Input id="title" name="title" type="text" required placeholder="ex: DAS — Simples Nacional" maxLength={160} />
+        </CampoForm>
         <CampoForm label="Empresa" htmlFor="companyId" required>
           <SearchableSelect
             id="companyId"
@@ -53,6 +65,9 @@ export function AddObrigacaoForm({ action, companies, pipelines, users }: Props)
             placeholder="Buscar empresa…"
           />
         </CampoForm>
+      </FieldGrid>
+
+      <FieldGrid>
         <CampoForm label="Kanban de destino" htmlFor="pipelineId" required>
           <Select
             id="pipelineId"
@@ -67,6 +82,17 @@ export function AddObrigacaoForm({ action, companies, pipelines, users }: Props)
             ))}
           </Select>
         </CampoForm>
+        <CampoForm label="Responsável (opcional)" htmlFor="responsibleId">
+          <Select id="responsibleId" name="responsibleId" defaultValue="">
+            <option value="">— Notificar o setor —</option>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>{u.name}</option>
+            ))}
+          </Select>
+        </CampoForm>
+      </FieldGrid>
+
+      <FieldGrid columns={temDia ? "sm:grid-cols-[160px_180px_minmax(0,1fr)]" : "sm:grid-cols-[160px_minmax(0,1fr)]"}>
         <CampoForm label="Frequência" htmlFor="frequency" required>
           <Select
             id="frequency"
@@ -96,39 +122,21 @@ export function AddObrigacaoForm({ action, companies, pipelines, users }: Props)
             </Select>
           </CampoForm>
         )}
-        <CampoForm label="Responsável (opcional)" htmlFor="responsibleId">
-          <Select id="responsibleId" name="responsibleId" defaultValue="">
-            <option value="">— Notificar o setor —</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>{u.name}</option>
-            ))}
-          </Select>
-        </CampoForm>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <CampoForm label="Título da obrigação" htmlFor="title" required>
-          <Input id="title" name="title" type="text" required placeholder="ex: DAS — Simples Nacional" maxLength={160} />
-        </CampoForm>
         <CampoForm label="Instruções (opcional)" htmlFor="description">
           <Input id="description" name="description" type="text" placeholder="entram na descrição do item do kanban" />
         </CampoForm>
-      </div>
+      </FieldGrid>
 
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-[11px] text-fg-muted">
+      <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
+        <p className="mr-auto min-w-0 text-[length:var(--fs-helper)] text-fg-muted">
           {FREQUENCY_HINTS[frequency]}
           {selected ? ` Kanban: "${selected.name}" (${selected.sectorLabel}).` : ""}
         </p>
-        <Button
-          type="submit"
-          disabled={isPending}
-          variant="primary" className="font-medium disabled:opacity-60 flex-shrink-0"
-        >
+        <Button type="submit" disabled={isPending}>
           {isPending ? "Cadastrando…" : "Cadastrar Obrigação"}
-       </Button>
+        </Button>
       </div>
-      {state?.error && <p className="text-[13px] text-danger">{state.error}</p>}
+      {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
     </form>
   );
 }

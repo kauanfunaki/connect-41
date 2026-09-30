@@ -59,7 +59,7 @@ export function AssistenteDaVaga({ vagaId }: { vagaId: string }) {
     <Card as="section" className="p-4 flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <Sparkles size={16} className="text-brand" />
-        <h2 className="text-[15px] font-semibold text-fg">Assistente da vaga</h2>
+        <h2 className="text-[14px] font-semibold text-fg">Assistente da vaga</h2>
       </div>
       <p className="text-[13px] text-fg-secondary max-w-[60ch]">
         Pergunte sobre os candidatos desta vaga. O assistente lê as fichas e as entrevistas e pode
@@ -74,7 +74,7 @@ export function AssistenteDaVaga({ vagaId }: { vagaId: string }) {
         rows={2}
         aria-label="Pergunta ao assistente"
       />
-      <div>
+      <div className="flex justify-end">
         <Button onClick={perguntar} disabled={pensando || !pergunta.trim()}>
           {pensando ? "Consultando…" : "Perguntar"}
         </Button>
@@ -108,7 +108,7 @@ export function AssistenteDaVaga({ vagaId }: { vagaId: string }) {
                     key={i}
                     className="flex flex-wrap items-center justify-between gap-2 border border-border rounded-md px-3 py-2"
                   >
-                    <span className="text-[13px] text-fg">{descreverProposta(p)}</span>
+                    <span className="min-w-0 text-[13px] text-fg">{descreverProposta(p)}</span>
                     {feito === "ok" ? (
                       <span className="text-[12px] text-success">aplicado</span>
                     ) : (

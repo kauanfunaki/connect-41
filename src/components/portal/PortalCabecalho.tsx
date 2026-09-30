@@ -5,6 +5,11 @@ import { PageHeader } from "@/components/ui/PageHeader";
  *
  * A navegação, o nome do grupo e o sair moravam aqui, repetidos em cada tela, e
  * foram para a sidebar (`PortalShell`) em 18/09.
+ *
+ * A descrição vai no `subtitle` do PageHeader, como nas telas internas e no
+ * detalhe da pendência e do processo. Era um parágrafo solto depois dele: caía
+ * 28px abaixo do título (o `mb-7` do PageHeader) e só 16px acima do conteúdo —
+ * mais perto do que descrevia de baixo do que do próprio título.
  */
 export function PortalCabecalho({
   titulo,
@@ -17,12 +22,14 @@ export function PortalCabecalho({
   somenteLeitura?: boolean;
 }) {
   return (
-    <div className="mb-4">
-      <PageHeader title={titulo} />
-      <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
-        {descricao}
-        {somenteLeitura && " Só leitura."}
-      </p>
-    </div>
+    <PageHeader
+      title={titulo}
+      subtitle={
+        <>
+          {descricao}
+          {somenteLeitura && " Só leitura."}
+        </>
+      }
+    />
   );
 }

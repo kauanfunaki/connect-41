@@ -26,7 +26,7 @@ export function ClientDocumentForm({ action, companyId, documentId, cancelHref, 
       {documentId && <input type="hidden" name="id" value={documentId} />}
 
       {state && "error" in state && state.error && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{state.error}</p>
+        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">{state.error}</p>
       )}
 
       <CampoForm label="Título" htmlFor="title" required>
@@ -40,7 +40,7 @@ export function ClientDocumentForm({ action, companyId, documentId, cancelHref, 
       <CampoForm
         label="Anexo (opcional)"
         htmlFor="file"
-        helper={defaultValues?.fileName ? `Arquivo atual: ${defaultValues.fileName}. Selecionar um novo substitui o anterior.` : "PDF, JPG, PNG ou WEBP — até 10MB."}
+        helper={defaultValues?.fileName ? `Arquivo atual: ${defaultValues.fileName}. Selecionar um novo substitui o anterior.` : "PDF, JPG, PNG ou WEBP — até 20 MB."}
       >
         <FileDropzoneField id="file" name="file" accept=".jpg,.jpeg,.png,.webp,.pdf" maxSizeMb={20} />
       </CampoForm>

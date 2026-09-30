@@ -4,7 +4,9 @@ import { useActionState } from "react";
 import type { CandidatoState } from "@/app/(app)/candidatos/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
+import { FieldGrid } from "@/components/ui/FieldGrid";
+import { FormSection } from "@/components/ui/FormSection";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 export type CandidatoDefaultValues = {
   id?: string;
@@ -31,11 +33,13 @@ type Props = {
   defaultValues?: CandidatoDefaultValues;
 };
 
+// Campos curtos (data, CPF, RG, CEP, número, UF) em colunas estreitas fixas —
+// eram grades de colunas iguais, e a UF de 2 letras ocupava um quarto da tela.
 export function CandidatoForm({ action, cancelHref, defaultValues }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form action={formAction} className="flex flex-col gap-6">
       {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
 
       {state?.error && (
@@ -44,130 +48,105 @@ export function CandidatoForm({ action, cancelHref, defaultValues }: Props) {
         </p>
       )}
 
-      {/* ── Identificação ─────────────────────────────── */}
-      <Section title="Identificação">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <CampoForm label="Nome" htmlFor="name" required>
-            <Input
-              id="name"
-              name="name"
-              type="text"
-              required
-              defaultValue={defaultValues?.name ?? ""}
-              placeholder="Nome completo"
-            />
-          </CampoForm>
-          <CampoForm label="Data de Nascimento" htmlFor="birthDate">
-            <Input
-              id="birthDate"
-              name="birthDate"
-              type="date"
-              defaultValue={defaultValues?.birthDate ?? ""}
-            />
-          </CampoForm>
-        </div>
+      <div>
+        <FormSection title="Identificação">
+          <FieldGrid columns="sm:grid-cols-[1fr_180px]">
+            <CampoForm label="Nome" htmlFor="name" required>
+              <Input
+                id="name"
+                name="name"
+                type="text"
+                required
+                defaultValue={defaultValues?.name ?? ""}
+                placeholder="Nome completo"
+              />
+            </CampoForm>
+            <CampoForm label="Data de Nascimento" htmlFor="birthDate">
+              <Input
+                id="birthDate"
+                name="birthDate"
+                type="date"
+                defaultValue={defaultValues?.birthDate ?? ""}
+              />
+            </CampoForm>
+          </FieldGrid>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <CampoForm label="CPF" htmlFor="cpf">
-            <Input
-              id="cpf"
-              name="cpf"
-              type="text"
-              defaultValue={defaultValues?.cpf ?? ""}
-              placeholder="000.000.000-00"
-              maxLength={14}
-            />
-          </CampoForm>
-          <CampoForm label="RG" htmlFor="rg">
-            <Input id="rg" name="rg" type="text" defaultValue={defaultValues?.rg ?? ""} />
-          </CampoForm>
-          <CampoForm label="Escolaridade" htmlFor="education">
-            <Input id="education" name="education" type="text" defaultValue={defaultValues?.education ?? ""} />
-          </CampoForm>
-        </div>
-      </Section>
+          <FieldGrid columns="sm:grid-cols-[180px_180px_1fr]">
+            <CampoForm label="CPF" htmlFor="cpf">
+              <Input
+                id="cpf"
+                name="cpf"
+                type="text"
+                defaultValue={defaultValues?.cpf ?? ""}
+                placeholder="000.000.000-00"
+                maxLength={14}
+              />
+            </CampoForm>
+            <CampoForm label="RG" htmlFor="rg">
+              <Input id="rg" name="rg" type="text" defaultValue={defaultValues?.rg ?? ""} />
+            </CampoForm>
+            <CampoForm label="Escolaridade" htmlFor="education">
+              <Input id="education" name="education" type="text" defaultValue={defaultValues?.education ?? ""} />
+            </CampoForm>
+          </FieldGrid>
+        </FormSection>
 
-      {/* ── Contato ───────────────────────────────────── */}
-      <Section title="Contato">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <CampoForm label="E-mail" htmlFor="email">
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              defaultValue={defaultValues?.email ?? ""}
-              placeholder="nome@email.com"
-            />
-          </CampoForm>
-          <CampoForm label="Telefone" htmlFor="phone">
-            <Input
-              id="phone"
-              name="phone"
-              type="tel"
-              defaultValue={defaultValues?.phone ?? ""}
-              placeholder="(41) 99999-9999"
-              pattern="[\d\s()\-+]{8,20}"
-              maxLength={20}
-              title="Informe um número de telefone válido"
-            />
-          </CampoForm>
-        </div>
-      </Section>
+        <FormSection title="Contato">
+          <FieldGrid columns="sm:grid-cols-[1fr_220px]">
+            <CampoForm label="E-mail" htmlFor="email">
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                defaultValue={defaultValues?.email ?? ""}
+                placeholder="nome@email.com"
+              />
+            </CampoForm>
+            <CampoForm label="Telefone" htmlFor="phone">
+              <Input
+                id="phone"
+                name="phone"
+                type="tel"
+                defaultValue={defaultValues?.phone ?? ""}
+                placeholder="(41) 99999-9999"
+                pattern="[\d\s()\-+]{8,20}"
+                maxLength={20}
+                title="Informe um número de telefone válido"
+              />
+            </CampoForm>
+          </FieldGrid>
+        </FormSection>
 
-      {/* ── Endereço ──────────────────────────────────── */}
-      <Section title="Endereço">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <CampoForm label="CEP" htmlFor="zipCode">
-            <Input id="zipCode" name="zipCode" type="text" defaultValue={defaultValues?.zipCode ?? ""} />
-          </CampoForm>
-          <CampoForm label="Logradouro" htmlFor="addressStreet">
-            <Input id="addressStreet" name="addressStreet" type="text" defaultValue={defaultValues?.addressStreet ?? ""} />
-          </CampoForm>
-          <CampoForm label="Número" htmlFor="addressNumber">
-            <Input id="addressNumber" name="addressNumber" type="text" defaultValue={defaultValues?.addressNumber ?? ""} />
-          </CampoForm>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <CampoForm label="Complemento" htmlFor="addressComplement">
-            <Input id="addressComplement" name="addressComplement" type="text" defaultValue={defaultValues?.addressComplement ?? ""} />
-          </CampoForm>
-          <CampoForm label="Bairro" htmlFor="neighborhood">
-            <Input id="neighborhood" name="neighborhood" type="text" defaultValue={defaultValues?.neighborhood ?? ""} />
-          </CampoForm>
-          <CampoForm label="Cidade" htmlFor="city">
-            <Input id="city" name="city" type="text" defaultValue={defaultValues?.city ?? ""} />
-          </CampoForm>
-          <CampoForm label="UF" htmlFor="stateCode">
-            <Input id="stateCode" name="stateCode" type="text" maxLength={2} defaultValue={defaultValues?.stateCode ?? ""} />
-          </CampoForm>
-        </div>
-      </Section>
-
-      {/* Actions */}
-      <div className="flex items-center gap-3 pt-2">
-        <Button
-          variant="primary"
-          size="md"
-          type="submit"
-          disabled={isPending}
-        >
-          {isPending ? "Salvando…" : "Salvar"}
-        </Button>
-        <Button href={cancelHref} variant="secondary">
-          Cancelar
-        </Button>
+        <FormSection title="Endereço">
+          <FieldGrid columns="sm:grid-cols-[140px_1fr_120px]">
+            <CampoForm label="CEP" htmlFor="zipCode">
+              <Input id="zipCode" name="zipCode" type="text" defaultValue={defaultValues?.zipCode ?? ""} />
+            </CampoForm>
+            <CampoForm label="Logradouro" htmlFor="addressStreet">
+              <Input id="addressStreet" name="addressStreet" type="text" defaultValue={defaultValues?.addressStreet ?? ""} />
+            </CampoForm>
+            <CampoForm label="Número" htmlFor="addressNumber">
+              <Input id="addressNumber" name="addressNumber" type="text" defaultValue={defaultValues?.addressNumber ?? ""} />
+            </CampoForm>
+          </FieldGrid>
+          <FieldGrid columns="sm:grid-cols-[1fr_1fr_1fr_88px]">
+            <CampoForm label="Complemento" htmlFor="addressComplement">
+              <Input id="addressComplement" name="addressComplement" type="text" defaultValue={defaultValues?.addressComplement ?? ""} />
+            </CampoForm>
+            <CampoForm label="Bairro" htmlFor="neighborhood">
+              <Input id="neighborhood" name="neighborhood" type="text" defaultValue={defaultValues?.neighborhood ?? ""} />
+            </CampoForm>
+            <CampoForm label="Cidade" htmlFor="city">
+              <Input id="city" name="city" type="text" defaultValue={defaultValues?.city ?? ""} />
+            </CampoForm>
+            <CampoForm label="UF" htmlFor="stateCode">
+              <Input id="stateCode" name="stateCode" type="text" maxLength={2} defaultValue={defaultValues?.stateCode ?? ""} />
+            </CampoForm>
+          </FieldGrid>
+        </FormSection>
       </div>
-    </form>
-  );
-}
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-4">
-      <h3 className="text-[11px] font-semibold text-fg-muted uppercase tracking-wider border-b border-border pb-2">
-        {title}
-      </h3>
-      {children}
-    </div>
+      <FormFooter cancelHref={cancelHref} pending={isPending} />
+    </form>
   );
 }

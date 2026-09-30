@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { Button } from "@/components/ui/Button";
 import type { PayrollCompetencyState } from "@/app/(app)/empresas/[id]/folha/actions";
-import { CampoForm } from "@/components/ui/CampoForm";
+import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 
 type Props = {
@@ -16,26 +16,24 @@ export function AbrirCompetenciaForm({ action, companyId }: Props) {
   const now = new Date();
 
   return (
-    <form action={formAction} className="flex items-end gap-3 flex-wrap mb-6">
+    <form action={formAction} className="mb-6 space-y-2">
       <input type="hidden" name="companyId" value={companyId} />
-      <div className="w-24">
+      {/* Mês e ano são números curtos: colunas estreitas fixas, também no
+          celular; o botão desce para a linha de baixo só lá. */}
+      <div className="grid grid-cols-2 sm:grid-cols-[96px_112px_auto] sm:justify-start gap-4">
         <CampoForm label="Mês" htmlFor="month">
           <Input id="month" name="month" type="number" min={1} max={12} defaultValue={now.getMonth() + 1} />
         </CampoForm>
-      </div>
-      <div className="w-28">
         <CampoForm label="Ano" htmlFor="year">
           <Input id="year" name="year" type="number" min={2000} defaultValue={now.getFullYear()} />
         </CampoForm>
+        <AlinhadoAoCampo className="col-span-2 sm:col-span-1">
+          <Button type="submit" disabled={isPending}>
+            {isPending ? "Abrindo…" : "Abrir Competência"}
+          </Button>
+        </AlinhadoAoCampo>
       </div>
-      <Button
-        type="submit"
-        disabled={isPending}
-        variant="primary" className="font-medium disabled:opacity-60"
-      >
-        {isPending ? "Abrindo…" : "Abrir Competência"}
-     </Button>
-      {state?.error && <p className="text-[13px] text-danger w-full">{state.error}</p>}
+      {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
     </form>
   );
 }

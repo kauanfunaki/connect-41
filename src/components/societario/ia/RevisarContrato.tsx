@@ -116,7 +116,9 @@ export function RevisarContrato({
     });
 
   const TH = "py-2 pr-2 text-left font-medium text-[12px] text-fg-muted whitespace-nowrap";
-  const TD = "py-1.5 pr-2 align-top";
+  // Tudo centralizado na altura da linha: as caixas de marcar tinham `pt-3`
+  // chutado para acompanhar o Input, e ficavam 4px acima do centro dele.
+  const TD = "py-2 pr-2 align-middle";
 
   return (
     <div className="flex flex-col gap-4">
@@ -135,9 +137,9 @@ export function RevisarContrato({
               <th className={`${TH} pl-3`}>Gravar</th>
               <th className={TH}>Nome</th>
               <th className={TH}>CPF / CNPJ</th>
-              <th className={TH}>Participação %</th>
+              <th className={TH}>Participação</th>
               <th className={TH}>Quotas</th>
-              <th className={TH}>Capital (R$)</th>
+              <th className={TH}>Capital</th>
               <th className={TH}>Administra</th>
               <th className={TH}>Qualificação</th>
               <th className={TH}>Entrada</th>
@@ -146,7 +148,7 @@ export function RevisarContrato({
           <tbody className="divide-y divide-border">
             {linhas.map((l, i) => (
               <tr key={i} className={l.incluir ? "" : "opacity-50"}>
-                <td className={`${TD} pl-3 pt-3`}>
+                <td className={`${TD} pl-3`}>
                   <Checkbox id={`inc-${i}`} aria-label={`Gravar ${l.nome}`} checked={l.incluir} disabled={!podeAplicar} onChange={(e) => mudar(i, "incluir", e.target.checked)} />
                 </td>
                 <td className={TD}>
@@ -156,15 +158,15 @@ export function RevisarContrato({
                   <Input aria-label="CPF ou CNPJ" value={l.documento} disabled={!podeAplicar} onChange={(e) => mudar(i, "documento", e.target.value)} className="w-40 tabular-nums" />
                 </td>
                 <td className={TD}>
-                  <Input aria-label="Participação" inputMode="decimal" value={l.participacao} disabled={!podeAplicar} onChange={(e) => mudar(i, "participacao", e.target.value)} className="w-24 tabular-nums" />
+                  <Input aria-label="Participação" inputMode="decimal" suffix="%" value={l.participacao} disabled={!podeAplicar} onChange={(e) => mudar(i, "participacao", e.target.value)} className="w-28 tabular-nums" />
                 </td>
                 <td className={TD}>
                   <Input aria-label="Quotas" inputMode="numeric" value={l.quotas} disabled={!podeAplicar} onChange={(e) => mudar(i, "quotas", e.target.value)} className="w-28 tabular-nums" />
                 </td>
                 <td className={TD}>
-                  <Input aria-label="Capital" inputMode="decimal" value={l.capital} disabled={!podeAplicar} onChange={(e) => mudar(i, "capital", e.target.value)} className="w-32 tabular-nums" />
+                  <Input aria-label="Capital" inputMode="decimal" prefix="R$" value={l.capital} disabled={!podeAplicar} onChange={(e) => mudar(i, "capital", e.target.value)} className="w-40 tabular-nums" />
                 </td>
-                <td className={`${TD} pt-3`}>
+                <td className={TD}>
                   <Checkbox id={`adm-${i}`} aria-label="Administra" checked={l.administrador} disabled={!podeAplicar} onChange={(e) => mudar(i, "administrador", e.target.checked)} />
                 </td>
                 <td className={TD}>
@@ -180,7 +182,7 @@ export function RevisarContrato({
       </div>
 
       <section aria-labelledby="previa" className="rounded-lg border border-border bg-surface p-4 flex flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 id="previa" className="text-[14px] font-semibold text-fg">
             O que vai mudar no cadastro de sócios
           </h3>
@@ -231,8 +233,11 @@ export function RevisarContrato({
 
       {msg && <p className={`text-[13px] ${msg.tipo === "erro" ? "text-danger" : "text-success"}`}>{msg.texto}</p>}
 
+      {/* Rodapé do formulário: rejeitar (a saída destrutiva) à esquerda, e o
+          primário sozinho à direita. Estavam juntos, e o campo do motivo, ao
+          abrir, empurrava o "Gravar" para longe. */}
       {podeAplicar && (
-        <div className="flex flex-wrap items-start justify-end gap-2">
+        <div className="flex flex-wrap items-start justify-between gap-3 pt-4 border-t border-border">
           <RejeitarProposta propostaId={propostaId} rejeitar={acoes.rejeitar} />
           <Button
             variant="primary"

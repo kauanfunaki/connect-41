@@ -151,11 +151,12 @@ export function HandoffForm({
         <>
           <input type="hidden" name="entityType" value={fixedEntity.entityType} />
           <input type="hidden" name="entityId" value={fixedEntity.entityId} />
+          {/* Rótulo/valor no padrão da ficha (era 11px sobre 14px). */}
           <div>
-            <p className="text-[length:var(--fs-micro)] text-fg-muted mb-0.5">
+            <p className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">
               {fixedEntity.entityType === "COMPANY" ? "Empresa" : "Pessoa"}
             </p>
-            <p className="text-[14px] text-fg font-medium">{fixedEntity.entityName}</p>
+            <p className="text-[length:var(--fs-body)] text-fg font-medium">{fixedEntity.entityName}</p>
           </div>
         </>
       ) : (
@@ -196,7 +197,7 @@ export function HandoffForm({
       )}
 
       {state?.error && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">
           {state.error}
         </p>
       )}
@@ -225,13 +226,13 @@ export function HandoffForm({
         </CampoForm>
       </div>
 
-      <CampoForm
-        label="Setores de destino"
-        htmlFor="toSectors"
-        required
-        helper="Preenchido automaticamente quando o modelo escolhido já indica os setores — ajuste manualmente se precisar."
-      >
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 border border-border rounded-md px-3.5 py-3">
+      {/* Grupo de caixas é <fieldset> com <legend> no estilo do rótulo de
+          campo (30/09): o rótulo apontava para um id que não existia. */}
+      <fieldset className="min-w-0 flex flex-col gap-1.5">
+        <legend className="text-[length:var(--fs-label)] font-medium leading-5 text-fg mb-1.5">
+          Setores de destino<span className="text-danger"> *</span>
+        </legend>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 border border-border rounded-md px-3.5 py-3">
           {destinationOptions.map((s) => (
             <Checkbox
               key={s.value}
@@ -244,10 +245,13 @@ export function HandoffForm({
             />
           ))}
           {destinationOptions.length === 0 && (
-            <p className="text-[13px] text-fg-muted">Nenhum setor disponível.</p>
+            <p className="text-[length:var(--fs-helper)] text-fg-muted">Nenhum setor disponível.</p>
           )}
         </div>
-      </CampoForm>
+        <p className="text-[length:var(--fs-helper)] text-fg-muted">
+          Preenchido automaticamente quando o modelo escolhido já indica os setores — ajuste manualmente se precisar.
+        </p>
+      </fieldset>
 
       <CampoForm
         label="Informações adicionais"
@@ -282,7 +286,8 @@ export function HandoffForm({
 
       {selectedInOrder.length > 0 && (
         <div className="space-y-4 border-t border-border pt-5">
-          <p className="text-[13px] font-semibold text-fg">Instrução por setor</p>
+          {/* Título no estilo dos títulos de seção de formulário (FormSection). */}
+          <h3 className="text-[12.5px] font-semibold text-fg-muted uppercase tracking-wider">Instrução por setor</h3>
           {selectedInOrder.map((s) => (
             <CampoForm key={s.value} label={`Instrução para ${s.label}`} htmlFor={`instruction_${s.value}`}>
               <Textarea
@@ -301,18 +306,14 @@ export function HandoffForm({
         </div>
       )}
 
-      <div className="flex items-center gap-3 pt-2">
-        <Button
-          variant="primary"
-          size="md"
-          type="submit"
-          disabled={isPending}
-        >
-          {isPending ? "Enviando…" : "Solicitar Transferência"}
-        </Button>
-        {/* Era um Link estilizado à mão (30/09): o Cancelar é o botão secundário. */}
+      {/* Rodapé no padrão (30/09): Cancelar à esquerda do primário, os dois
+          à direita, com divisor. Estava ao contrário e alinhado à esquerda. */}
+      <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
         <Button href={cancelHref} variant="secondary">
           Cancelar
+        </Button>
+        <Button variant="primary" type="submit" disabled={isPending}>
+          {isPending ? "Enviando…" : "Solicitar Transferência"}
         </Button>
       </div>
       {templateConfirmDialog}

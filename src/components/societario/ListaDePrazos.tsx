@@ -46,8 +46,8 @@ export function ListaDePrazos({ itens, hoje, mostrarResponsavel = false }: Props
             href={item.href}
             className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-x-6 gap-y-1 px-1 py-3 border-b border-border-soft hover:bg-surface-hover transition-colors"
           >
-            <div className="min-w-0 flex items-start gap-2.5">
-              <Icone size={15} className="mt-0.5 shrink-0 text-fg-muted" aria-hidden />
+            <div className="min-w-0 flex items-start gap-2">
+              <Icone size={16} className="mt-0.5 shrink-0 text-fg-muted" aria-hidden />
               <div className="min-w-0 flex flex-col gap-0.5">
                 <span className="text-[13px] font-medium truncate">{item.titulo}</span>
                 <span className="text-[12px] text-fg-muted truncate">
@@ -57,7 +57,9 @@ export function ListaDePrazos({ itens, hoje, mostrarResponsavel = false }: Props
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-3 md:justify-end pl-[25px] md:pl-0">
+            {/* No celular a data desce e fica alinhada ao título, não ao ícone:
+                o recuo é o ícone (16px) mais o espaço (8px). */}
+            <div className="flex items-center gap-3 md:justify-end pl-6 md:pl-0">
               {item.valorCentavos !== null && (
                 <span className="text-[12px] tabular-nums text-fg-secondary">{MOEDA.format(item.valorCentavos / 100)}</span>
               )}

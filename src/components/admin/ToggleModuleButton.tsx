@@ -20,9 +20,12 @@ export function ToggleModuleButton({ action, enabled, nome }: Props) {
 
   return (
     <>
+      {/* Largura fixa: "Ativar" e "Desativar" têm tamanhos diferentes, e o
+          select ao lado mudava de posição de uma linha para outra. */}
       <Button
         variant={enabled ? "danger" : "success"}
         size="sm"
+        className="w-24"
         onClick={handleClick}
       >
         {enabled ? "Desativar" : "Ativar"}

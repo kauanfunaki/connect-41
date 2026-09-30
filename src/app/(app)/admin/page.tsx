@@ -169,7 +169,7 @@ export default async function AdminPage() {
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-[14px] font-semibold text-fg">{c.title}</p>
                       <ArrowRight
-                        size={15}
+                        size={16}
                         className="text-fg-muted flex-shrink-0 -translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all"
                       />
                     </div>

@@ -28,7 +28,7 @@ export function PessoaBreadcrumb({
   const link = "text-[13px] text-fg-muted hover:text-fg transition-colors";
 
   return (
-    <div className="flex items-center gap-2 mb-6">
+    <div className="flex flex-wrap items-center gap-2 mb-6 min-w-0">
       <Link href={origem.href} className={link}>{origem.raiz}</Link>
       <span className="text-fg-muted">/</span>
       <Link href={origem.href} className={link}>{origem.label}</Link>

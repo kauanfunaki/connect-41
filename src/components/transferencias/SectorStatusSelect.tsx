@@ -33,7 +33,9 @@ export function SectorStatusSelect({ action, current }: Props) {
   }
 
   return (
-    <Select defaultValue={current} onChange={handleChange} disabled={pending} className="w-auto">
+    // compact (h-8): fica no cabeçalho do cartão do setor, ao lado do selo,
+    // e não num formulário.
+    <Select compact aria-label="Situação do setor" defaultValue={current} onChange={handleChange} disabled={pending} className="w-auto">
       {STATUSES.map((s) => (
         <option key={s} value={s}>
           {HANDOFF_STATUS_LABEL[s]}

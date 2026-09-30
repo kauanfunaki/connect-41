@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Modal } from "@/components/ui/Modal";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
@@ -194,7 +195,7 @@ export function TransacoesDaConta({
                       {l.sugestao?.bloqueio ? (
                         <div className="flex flex-col gap-0.5 rounded-md border border-warning/30 bg-warning/10 px-2.5 py-1.5 max-w-[420px]">
                           <span className="inline-flex items-center gap-1 text-[11px] font-medium text-warning">
-                            <Lock size={11} /> Casa com uma conta travada na aprovação · {l.sugestao.motivo}
+                            <Lock size={12} /> Casa com uma conta travada na aprovação · {l.sugestao.motivo}
                           </span>
                           <ResumoDoLancamento l={l.sugestao} />
                           <span className="text-[11px] text-fg-secondary">
@@ -204,7 +205,7 @@ export function TransacoesDaConta({
                       ) : l.sugestao ? (
                         <div className="flex flex-col gap-0.5 rounded-md border border-brand/30 bg-brand/5 px-2.5 py-1.5">
                           <span className="inline-flex items-center gap-1 text-[11px] font-medium text-brand">
-                            <Sparkles size={11} /> Sugestão · {l.sugestao.motivo}
+                            <Sparkles size={12} /> Sugestão · {l.sugestao.motivo}
                           </span>
                           <ResumoDoLancamento l={l.sugestao} />
                         </div>
@@ -220,17 +221,17 @@ export function TransacoesDaConta({
                         <div className="flex flex-wrap items-center gap-1.5">
                           {l.sugestao && !l.sugestao.bloqueio && (
                             <Button size="xs" onClick={() => confirmarSugestao(l)}>
-                              <Check size={11} /> Confirmar
+                              <Check size={12} /> Confirmar
                             </Button>
                           )}
                           <Button size="xs" variant="secondary" onClick={() => setEscolhendo(l)}>
-                            <ListChecks size={11} /> Escolher lançamentos
+                            <ListChecks size={12} /> Escolher lançamentos
                           </Button>
                           <Button size="xs" variant="secondary" onClick={() => setCriando(l)}>
-                            <Plus size={11} /> Criar lançamento
+                            <Plus size={12} /> Criar lançamento
                           </Button>
                           <Button size="xs" variant="ghost" onClick={() => setIgnorando(l)}>
-                            <EyeOff size={11} /> Ignorar
+                            <EyeOff size={12} /> Ignorar
                           </Button>
                         </div>
                       )}
@@ -244,7 +245,7 @@ export function TransacoesDaConta({
                       ))}
                       {podeAgir && (
                         <Button variant="secondary" size="xs" onClick={() => desfazer(l)}>
-                          <Undo2 size={11} /> Desfazer
+                          <Undo2 size={12} /> Desfazer
                         </Button>
                       )}
                     </div>
@@ -255,7 +256,7 @@ export function TransacoesDaConta({
                       <span className="text-[12px] text-fg-secondary">{l.ignoredReason}</span>
                       {podeAgir && (
                         <Button variant="secondary" size="xs" onClick={() => reabrir(l)}>
-                          <RotateCcw size={11} /> Reabrir
+                          <RotateCcw size={12} /> Reabrir
                         </Button>
                       )}
                     </div>
@@ -346,7 +347,7 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
 
   return (
     <Modal open onClose={onClose} title="Escolher lançamentos" maxWidth="max-w-3xl">
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
         <p className="text-[12px] text-fg-secondary">
           {dataCurta(transacao.dataKey)} · {descricaoDaTransacao(transacao)} ·{" "}
           <strong className={tomDoValor(transacao.centavos)}>{moeda(transacao.centavos)}</strong>. Marque um ou mais
@@ -394,7 +395,7 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
                           </span>
                           {l.bloqueio && (
                             <span className="flex items-center gap-1 text-[11px] text-warning">
-                              <Lock size={10} /> {l.bloqueio}
+                              <Lock size={12} className="flex-shrink-0" /> {l.bloqueio}
                             </span>
                           )}
                         </label>
@@ -409,19 +410,19 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
         </div>
         {limitado && <p className="text-[11px] text-fg-muted">Mostrando os 200 primeiros. Refine pela busca.</p>}
 
-        <div className="flex flex-wrap items-center justify-between gap-2 text-[12px]">
-          <span className="tabular-nums">
+        {erro && <p className="text-[12px] text-danger">{erro}</p>}
+        <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
+          <span className="mr-auto text-[12px] tabular-nums">
             Selecionado: <strong>{moeda(soma)}</strong> de {moeda(alvo)}
             {marcados.size > 0 && falta !== 0 && (
               <span className="text-danger"> · {falta > 0 ? `faltam ${moeda(falta)}` : `passou ${moeda(-falta)}`}</span>
             )}
           </span>
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={onClose}>
+          <div className="flex items-center gap-3">
+            <Button variant="secondary" onClick={onClose}>
               Cancelar
             </Button>
             <Button
-              size="sm"
               disabled={salvando || marcados.size === 0 || falta !== 0}
               onClick={() => {
                 setErro(null);
@@ -436,7 +437,6 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
             </Button>
           </div>
         </div>
-        {erro && <p className="text-[12px] text-danger">{erro}</p>}
       </div>
     </Modal>
   );
@@ -523,17 +523,17 @@ function CriarLancamento({
         </CampoForm>
 
         {contraparte === NOVA && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_200px]">
             <CampoForm label="Nome da nova contraparte" htmlFor="criar-nome" required>
               <Input id="criar-nome" name="contraparteNome" maxLength={180} defaultValue={transacao.nome ?? ""} required />
             </CampoForm>
             <CampoForm label="CPF ou CNPJ" htmlFor="criar-doc" helper="Opcional. Com documento, a ficha existente é reaproveitada.">
               <Input id="criar-doc" name="contraparteDocumento" inputMode="numeric" />
             </CampoForm>
-          </div>
+          </FieldGrid>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_180px]">
           <CampoForm
             label="Categoria"
             htmlFor="criar-categoria"
@@ -552,7 +552,7 @@ function CriarLancamento({
           <CampoForm label="Competência" htmlFor="criar-competencia" required helper="Padrão: o mês do extrato.">
             <Input id="criar-competencia" type="month" name="competencia" defaultValue={transacao.dataKey.slice(0, 7)} required />
           </CampoForm>
-        </div>
+        </FieldGrid>
 
         {centros.length > 0 && (
           <CampoForm
@@ -575,14 +575,14 @@ function CriarLancamento({
           <Input id="criar-descricao" name="descricao" maxLength={255} defaultValue={(transacao.memo ?? transacao.nome ?? "").slice(0, 255)} />
         </CampoForm>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="submit" size="sm" disabled={pendente}>
-            {pendente ? "Criando…" : "Criar e conciliar"}
-          </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={onClose}>
+        <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
+          {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
+          <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
           </Button>
-          {erro && <span className="text-[12px] text-danger">{erro}</span>}
+          <Button type="submit" disabled={pendente}>
+            {pendente ? "Criando…" : "Criar e conciliar"}
+          </Button>
         </div>
       </form>
     </Modal>
@@ -599,7 +599,7 @@ function IgnorarTransacao({ transacao, onClose }: { transacao: LinhaDaTransacao;
   return (
     <Modal open onClose={onClose} title="Ignorar transação">
       <form
-        className="flex flex-col gap-3"
+        className="flex flex-col gap-4"
         onSubmit={(e) => {
           e.preventDefault();
           setErro(null);
@@ -617,14 +617,14 @@ function IgnorarTransacao({ transacao, onClose }: { transacao: LinhaDaTransacao;
         <CampoForm label="Motivo" htmlFor="ignorar-motivo" required helper="Ex.: resgate automático da aplicação, estorno no mesmo dia.">
           <Textarea id="ignorar-motivo" value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={255} required />
         </CampoForm>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="submit" size="sm" disabled={pendente || motivo.trim().length < 3}>
-            {pendente ? "Ignorando…" : "Ignorar"}
-          </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={onClose}>
+        <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
+          {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
+          <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
           </Button>
-          {erro && <span className="text-[12px] text-danger">{erro}</span>}
+          <Button type="submit" disabled={pendente || motivo.trim().length < 3}>
+            {pendente ? "Ignorando…" : "Ignorar"}
+          </Button>
         </div>
       </form>
     </Modal>

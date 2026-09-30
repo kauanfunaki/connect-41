@@ -9,6 +9,9 @@ import type { AcaoDaGestao } from "@/app/(app)/gestao/actions";
 /**
  * Uma linha da tabela de limites: dias para "parado" e antecedência do aviso de prazo.
  * Vive no casco padrão (`.c41-tabela`), que dá o respiro e centraliza as células.
+ *
+ * Campos `compact` (32px), a altura do "Salvar" `sm` da mesma linha — eram de
+ * formulário (36px), e o botão ficava 4px mais baixo que eles.
  */
 export function LimitesDoSetor({
   setor,
@@ -45,6 +48,7 @@ export function LimitesDoSetor({
           placeholder={`${padrao.diasParado} (padrão)`}
           disabled={!podeEditar}
           onChange={(e) => setParado(e.target.value)}
+          compact
           className="w-32 tabular-nums"
         />
       </td>
@@ -56,6 +60,7 @@ export function LimitesDoSetor({
           placeholder={`${padrao.diasAvisoPrazo} (padrão)`}
           disabled={!podeEditar}
           onChange={(e) => setAviso(e.target.value)}
+          compact
           className="w-32 tabular-nums"
         />
       </td>

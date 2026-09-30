@@ -28,7 +28,7 @@ export function CompanyHistorySection({ pipelineItems, activities, entityLabel =
   return (
     <div className="space-y-4">
       <Card className="p-5">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3">Pipelines</h2>
+        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">Pipelines</h2>
         {pipelineItems.length === 0 ? (
           <EmptyState icon={<Columns3 />} title="Nenhum pipeline vinculado" description={`Esta ${entityLabel} ainda não está em nenhum Kanban.`} />
         ) : (
@@ -48,7 +48,7 @@ export function CompanyHistorySection({ pipelineItems, activities, entityLabel =
       </Card>
 
       <Card className="p-5">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3">Atividades</h2>
+        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">Atividades</h2>
         <ActivityTimeline activities={activities} emptyLabel="Nenhuma atividade registrada nos pipelines desta empresa." />
       </Card>
     </div>

@@ -108,33 +108,22 @@ export function LancamentoCard({
             </Badge>
             <Badge variant={STATUS_VARIANTE[lancamento.status]}>{STATUS_LABEL[lancamento.status]}</Badge>
           </div>
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-[length:var(--fs-ui)]">
-            <div className="flex justify-between gap-4 border-b border-border py-1.5">
-              <dt className="text-fg-muted">Valor</dt>
-              <dd className="text-fg tnum">{lancamento.amountLabel}</dd>
-            </div>
-            <div className="flex justify-between gap-4 border-b border-border py-1.5">
-              <dt className="text-fg-muted">Vencimento</dt>
-              <dd className="text-fg tnum">{lancamento.dueDateLabel}</dd>
-            </div>
-            <div className="flex justify-between gap-4 border-b border-border py-1.5">
-              <dt className="text-fg-muted">Contraparte</dt>
-              <dd className="text-fg truncate">{lancamento.contraparte}</dd>
-            </div>
-            <div className="flex justify-between gap-4 border-b border-border py-1.5">
-              <dt className="text-fg-muted">Categoria</dt>
-              <dd className="text-fg truncate">{lancamento.categoria ?? "—"}</dd>
-            </div>
+          {/* Rótulo em cima e valor embaixo, como as fichas "Documento" e
+              "Partes" logo acima — era rótulo à esquerda e valor empurrado
+              para a direita, com fio embaixo, o único desenho diferente da
+              página. */}
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+            <ItemDaFicha rotulo="Valor" valor={lancamento.amountLabel} numerico />
+            <ItemDaFicha rotulo="Vencimento" valor={lancamento.dueDateLabel} numerico />
+            <ItemDaFicha rotulo="Contraparte" valor={lancamento.contraparte} />
+            <ItemDaFicha rotulo="Categoria" valor={lancamento.categoria ?? "—"} />
             {lancamento.centroDeCusto !== undefined && (
-              <div className="flex justify-between gap-4 border-b border-border py-1.5">
-                <dt className="text-fg-muted">Centro de custo</dt>
-                <dd className="text-fg truncate">{lancamento.centroDeCusto ?? "—"}</dd>
-              </div>
+              <ItemDaFicha rotulo="Centro de custo" valor={lancamento.centroDeCusto ?? "—"} />
             )}
           </dl>
 
           {podeDecidir && (
-            <div className="mt-4">
+            <div className="flex items-center justify-end gap-3 pt-4 mt-5 border-t border-border">
               <Button type="button" variant="secondary" onClick={estornar} disabled={pendente}>
                 {pendente ? "Estornando…" : "Estornar lançamento"}
               </Button>
@@ -201,7 +190,7 @@ export function LancamentoCard({
               </CampoForm>
             )}
           </FieldGrid>
-          <div className="mt-4">
+          <div className="flex items-center justify-end gap-3 pt-4 mt-5 border-t border-border">
             <Button type="button" onClick={lancar} disabled={pendente}>
               {pendente ? "Lançando…" : "Lançar"}
             </Button>
@@ -211,5 +200,15 @@ export function LancamentoCard({
 
       {erro && <p className="text-[length:var(--fs-helper)] text-danger mt-3">{erro}</p>}
     </Card>
+  );
+}
+
+/** Um par rótulo/valor da ficha, no desenho do `InfoRow` das fichas vizinhas. */
+function ItemDaFicha({ rotulo, valor, numerico = false }: { rotulo: string; valor: string; numerico?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">{rotulo}</dt>
+      <dd className={`text-[length:var(--fs-body)] text-fg truncate ${numerico ? "tnum" : ""}`}>{valor}</dd>
+    </div>
   );
 }

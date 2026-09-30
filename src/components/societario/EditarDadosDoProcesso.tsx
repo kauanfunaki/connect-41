@@ -17,8 +17,8 @@ export function EditarDadosDoProcesso({ processoId, responsaveis, valores }: Pro
   const [aberto, setAberto] = useState(false);
   return (
     <>
-      <Button variant="secondary" size="sm" onClick={() => setAberto(true)}>
-        <Pencil size={13} /> Editar dados
+      <Button variant="secondary" onClick={() => setAberto(true)}>
+        <Pencil size={14} /> Editar dados
       </Button>
       <Modal open={aberto} onClose={() => setAberto(false)} title="Dados do processo" maxWidth="max-w-lg">
         {/* Montado só quando aberto, para o formulário refletir o que está gravado agora. */}
@@ -51,7 +51,7 @@ function Formulario({ processoId, responsaveis, valores, onFechar }: Props & { o
         <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{estado.error}</p>
       )}
 
-      <div className="flex justify-end gap-2">
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
         <Button variant="secondary" type="button" onClick={onFechar}>
           Cancelar
         </Button>

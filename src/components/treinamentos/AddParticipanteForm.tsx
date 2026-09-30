@@ -3,7 +3,8 @@
 import { useActionState } from "react";
 import { Button } from "@/components/ui/Button";
 import type { TrainingParticipantState } from "@/app/(app)/treinamentos/[id]/turmas/[classId]/actions";
-import { CampoForm } from "@/components/ui/CampoForm";
+import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Select } from "@/components/ui/Select";
 
 type PersonOption = { id: string; name: string };
@@ -17,8 +18,10 @@ export function AddParticipanteForm({ action, candidatos }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
 
   return (
-    <form action={formAction} className="border-t border-border pt-4 flex items-end gap-3 flex-wrap">
-      <div className="w-64">
+    <form action={formAction} className="border-t border-border pt-4 space-y-2">
+      {/* Mesmo desenho do "Avaliar Colaborador" do ciclo: escolha + ação na
+          mesma linha, o botão alinhado ao controle e não ao rótulo. */}
+      <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_auto]" className="max-w-xl">
         <CampoForm label="Colaborador" htmlFor="personId" required>
           <Select id="personId" name="personId" required>
             <option value="">Selecione</option>
@@ -27,15 +30,13 @@ export function AddParticipanteForm({ action, candidatos }: Props) {
             ))}
           </Select>
         </CampoForm>
-      </div>
-      <Button
-        type="submit"
-        disabled={isPending}
-        variant="primary" className="font-medium disabled:opacity-60"
-      >
-        {isPending ? "Adicionando…" : "Adicionar Participante"}
-     </Button>
-      {state?.error && <p className="text-[13px] text-danger w-full">{state.error}</p>}
+        <AlinhadoAoCampo>
+          <Button type="submit" disabled={isPending}>
+            {isPending ? "Adicionando…" : "Adicionar Participante"}
+          </Button>
+        </AlinhadoAoCampo>
+      </FieldGrid>
+      {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
     </form>
   );
 }

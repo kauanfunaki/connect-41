@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { Download, Eye, FileSearch, KeyRound, Plus, PlugZap, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
@@ -56,9 +58,11 @@ function FormConta({ empresas, inicial, onFim }: { empresas: { id: string; nome:
   const [appSecret, setAppSecret] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
+  // A tela pode ter dois destes abertos (conta nova e troca de chave numa linha).
+  const id = useId();
   return (
     <form
-      className="grid gap-3 md:grid-cols-3 items-end"
+      className="space-y-4"
       onSubmit={(e) => {
         e.preventDefault();
         setErro(null);
@@ -69,41 +73,45 @@ function FormConta({ empresas, inicial, onFim }: { empresas: { id: string; nome:
         });
       }}
     >
-      {inicial ? (
-        <input type="hidden" name="companyId" value={companyId} />
-      ) : (
-        <label className="flex flex-col gap-1 text-[12px] text-fg-secondary">
-          <span className="font-medium">Empresa</span>
-          <SearchableSelect
-            name="companyId"
-            options={empresas.map((e) => ({ value: e.id, label: e.nome }))}
-            placeholder="Buscar empresa…"
-            onChange={setCompanyId}
+      {/* Rótulo padrão (CampoForm) no lugar do <label> de 12px cinza, e
+          rodapé com Cancelar antes de Salvar, à direita. Na troca de chave só
+          há dois campos, e eles dividem a linha em duas colunas, sem um terço
+          vazio no fim. */}
+      {inicial && <input type="hidden" name="companyId" value={companyId} />}
+      <FieldGrid columns={inicial ? "sm:grid-cols-2" : "md:grid-cols-3"}>
+        {!inicial && (
+          <CampoForm label="Empresa" htmlFor={`${id}-empresa`}>
+            <SearchableSelect
+              id={`${id}-empresa`}
+              name="companyId"
+              options={empresas.map((e) => ({ value: e.id, label: e.nome }))}
+              placeholder="Buscar empresa…"
+              onChange={setCompanyId}
+            />
+          </CampoForm>
+        )}
+        <CampoForm label="App Key" htmlFor={`${id}-app-key`}>
+          <Input id={`${id}-app-key`} value={appKey} onChange={(e) => setAppKey(e.target.value)} autoComplete="off" />
+        </CampoForm>
+        <CampoForm label="App Secret" htmlFor={`${id}-app-secret`}>
+          <Input
+            id={`${id}-app-secret`}
+            type="password"
+            value={appSecret}
+            onChange={(e) => setAppSecret(e.target.value)}
+            autoComplete="new-password"
+            placeholder={inicial ? "Em branco mantém o atual" : ""}
           />
-        </label>
-      )}
-      <label className="flex flex-col gap-1 text-[12px] text-fg-secondary">
-        <span className="font-medium">App Key</span>
-        <Input value={appKey} onChange={(e) => setAppKey(e.target.value)} autoComplete="off" />
-      </label>
-      <label className="flex flex-col gap-1 text-[12px] text-fg-secondary">
-        <span className="font-medium">App Secret</span>
-        <Input
-          type="password"
-          value={appSecret}
-          onChange={(e) => setAppSecret(e.target.value)}
-          autoComplete="new-password"
-          placeholder={inicial ? "Em branco mantém o atual" : ""}
-        />
-      </label>
-      <div className="md:col-span-3 flex items-center gap-2">
-        <Button type="submit" size="sm" loading={pendente} disabled={pendente}>
-          Salvar
-        </Button>
-        <Button variant="secondary" size="sm" onClick={onFim}>
+        </CampoForm>
+      </FieldGrid>
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        {erro && <span className="mr-auto text-[length:var(--fs-helper)] font-medium text-danger">{erro}</span>}
+        <Button variant="secondary" onClick={onFim}>
           Cancelar
         </Button>
-        {erro && <span className="text-[12px] text-danger">{erro}</span>}
+        <Button type="submit" loading={pendente} disabled={pendente}>
+          Salvar
+        </Button>
       </div>
     </form>
   );
@@ -197,13 +205,13 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
         </div>
         {!novo && (
           <Button size="sm" onClick={() => setNovo(true)}>
-            <Plus size={13} /> Adicionar empresa
+            <Plus size={14} /> Adicionar empresa
           </Button>
         )}
       </div>
 
       {novo && (
-        <div className="mb-4 rounded-md border border-border p-3">
+        <div className="mb-4 rounded-md border border-border p-4">
           <FormConta empresas={semConta} onFim={() => setNovo(false)} />
         </div>
       )}

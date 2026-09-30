@@ -72,7 +72,8 @@ export function SectorAssigneePicker({ name, options, defaultValue = [] }: Props
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Buscar responsável…"
               icon={<Search size={14} />}
-              className="h-8 text-[12px]"
+              compact
+              aria-label="Buscar responsável"
             />
             {/* Sem close() ao escolher: em multi-seleção o normal é marcar
                 vários seguidos, e fechar a cada clique obrigaria a reabrir. */}

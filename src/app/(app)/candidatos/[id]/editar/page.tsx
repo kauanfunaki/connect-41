@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
@@ -7,6 +6,7 @@ import { CandidatoForm } from "@/components/candidatos/CandidatoForm";
 import { atualizarCandidato } from "../../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 
 function toDateInput(d: Date | null): string | undefined {
   return d ? d.toISOString().slice(0, 10) : undefined;
@@ -30,20 +30,9 @@ export default async function EditarCandidatoPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/candidatos" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Candidatos
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <Link
-          href={`/candidatos/${id}`}
-          className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate max-w-[200px]"
-        >
-          {person.name}
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Editar</span>
-      </div>
+      <Breadcrumb
+        items={[{ label: "Candidatos", href: "/candidatos" }, { label: person.name, href: `/candidatos/${id}`, truncate: true }, { label: "Editar" }]}
+      />
       <PageHeader title="Editar Candidato" />
 
       <Card className="p-6">

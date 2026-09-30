@@ -3,6 +3,7 @@
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import type { TrocaSenhaState } from "@/app/(app)/configuracoes/actions";
@@ -56,22 +57,28 @@ export function AlterarSenhaForm({ action }: Props) {
         Ao trocar a senha, todas as sessões abertas são encerradas — inclusive esta. Você vai precisar entrar de novo.
       </p>
 
-      <CampoForm label="Senha atual" htmlFor="currentPassword" required>
-        <Input id="currentPassword" name="currentPassword" type="password" autoComplete="current-password" required />
-      </CampoForm>
+      {/* A senha atual na largura de uma coluna, alinhada às duas de baixo —
+          esticada na linha toda, era o dobro das outras. */}
+      <FieldGrid>
+        <CampoForm label="Senha atual" htmlFor="currentPassword" required>
+          <Input id="currentPassword" name="currentPassword" type="password" autoComplete="current-password" required />
+        </CampoForm>
+      </FieldGrid>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <FieldGrid>
         <CampoForm label="Nova senha" htmlFor="newPassword" required helper="Mínimo de 8 caracteres.">
           <Input id="newPassword" name="newPassword" type="password" autoComplete="new-password" minLength={8} required />
         </CampoForm>
         <CampoForm label="Confirmar nova senha" htmlFor="confirmPassword" required>
           <Input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" minLength={8} required />
         </CampoForm>
-      </div>
+      </FieldGrid>
 
-      <Button type="submit" loading={isPending}>
-        Alterar senha
-      </Button>
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+        <Button type="submit" loading={isPending}>
+          Alterar senha
+        </Button>
+      </div>
     </form>
   );
 }

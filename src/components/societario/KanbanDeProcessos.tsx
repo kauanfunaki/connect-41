@@ -75,7 +75,7 @@ export function KanbanDeProcessos({ colunas, agora }: Props) {
                       <span className="truncate">{l.responsavelNome ?? "sem responsável"}</span>
                       {l.voltas > 0 && (
                         <span className="inline-flex items-center gap-1 text-danger whitespace-nowrap">
-                          <AlertCircle size={11} />
+                          <AlertCircle size={12} />
                           {l.voltas} {l.voltas === 1 ? "volta" : "voltas"}
                         </span>
                       )}

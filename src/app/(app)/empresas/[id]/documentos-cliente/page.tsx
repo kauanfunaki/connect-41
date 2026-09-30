@@ -57,7 +57,7 @@ export default async function DocumentosClientePage({
           canManage && (
             <Button
               href={novoHref}
-              variant="primary" className="font-medium"
+              variant="primary"
             >
               + Novo Documento
             </Button>
@@ -75,7 +75,7 @@ export default async function DocumentosClientePage({
               canManage && (
                 <Button
                   href={novoHref}
-                  variant="primary" className="font-medium"
+                  variant="primary"
                 >
                   + Criar documento
                 </Button>

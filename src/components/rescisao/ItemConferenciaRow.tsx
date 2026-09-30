@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/Textarea";
 import type { ConferenciaState } from "@/app/(app)/pessoas/[id]/desligamento/[terminationId]/conferencia/actions";
 import type { RescisaoCheckItem } from "@/lib/rescisaoChecklist";
 import { Button } from "@/components/ui/Button";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { CornerDownLeft } from "lucide-react";
 
 export type CheckState = {
@@ -195,68 +197,69 @@ export function ItemConferenciaRow({ item, current, referencia, action, canEdit 
       )}
 
       {open && canEdit && (
-        <form action={formAction} className="mt-3 grid grid-cols-1 sm:grid-cols-[160px_160px_1fr] gap-3 items-start">
-          <div>
-            <label htmlFor={`status-${item.key}`} className="block text-[11px] text-fg-muted mb-1">
-              Situação
-            </label>
-            <Select
-              id={`status-${item.key}`}
-              name="status"
-              value={status}
-              onChange={(e) => setStatus(e.target.value as CheckState["status"])}
-            >
-              {STATUS_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </Select>
-          </div>
+        // Os rótulos eram 11px cinza montados à mão (até 30/09), e o "Salvar
+        // item" ficava à esquerda; agora é o CampoForm, com o rodapé à direita.
+        <form action={formAction} className="mt-3 space-y-4">
+          <FieldGrid columns={item.hasValue ? "sm:grid-cols-[180px_180px_minmax(0,1fr)]" : "sm:grid-cols-[180px_minmax(0,1fr)]"}>
+            <CampoForm label="Situação" htmlFor={`status-${item.key}`}>
+              <Select
+                id={`status-${item.key}`}
+                name="status"
+                value={status}
+                onChange={(e) => setStatus(e.target.value as CheckState["status"])}
+              >
+                {STATUS_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </Select>
+            </CampoForm>
 
-          {item.hasValue && (
-            <div>
-              <label htmlFor={`valor-${item.key}`} className="block text-[11px] text-fg-muted mb-1">
-                Valor informado
-              </label>
-              <Input
-                id={`valor-${item.key}`}
-                name="informedValue"
-                type="text"
-                inputMode="decimal"
-                value={valorInformado}
-                onChange={(e) => setValorInformado(e.target.value)}
-                placeholder="0,00"
+            {item.hasValue && (
+              <CampoForm label="Valor informado" htmlFor={`valor-${item.key}`}>
+                <Input
+                  id={`valor-${item.key}`}
+                  name="informedValue"
+                  type="text"
+                  inputMode="decimal"
+                  prefix="R$"
+                  value={valorInformado}
+                  onChange={(e) => setValorInformado(e.target.value)}
+                  placeholder="0,00"
+                />
+              </CampoForm>
+            )}
+
+            {/* O "(obrigatória)" vermelho no rótulo virou o asterisco de campo
+                obrigatório, com a regra no texto de ajuda. */}
+            <CampoForm
+              label="Observação"
+              htmlFor={`note-${item.key}`}
+              required={status === "DIVERGENTE"}
+              helper={status === "DIVERGENTE" ? "Obrigatória quando o item diverge." : undefined}
+            >
+              <Textarea
+                id={`note-${item.key}`}
+                name="note"
+                rows={2}
+                defaultValue={current?.note ?? notaSugerida}
+                maxLength={1000}
+                placeholder={
+                  status === "DIVERGENTE" ? "O que divergiu e qual o valor esperado…" : "Anotação da conferência (opcional)"
+                }
               />
-            </div>
-          )}
+            </CampoForm>
+          </FieldGrid>
 
-          <div className={item.hasValue ? "" : "sm:col-span-2"}>
-            <label htmlFor={`note-${item.key}`} className="block text-[11px] text-fg-muted mb-1">
-              Observação {status === "DIVERGENTE" && <span className="text-danger">(obrigatória)</span>}
-            </label>
-            <Textarea
-              id={`note-${item.key}`}
-              name="note"
-              rows={2}
-              defaultValue={current?.note ?? notaSugerida}
-              maxLength={1000}
-              placeholder={
-                status === "DIVERGENTE" ? "O que divergiu e qual o valor esperado…" : "Anotação da conferência (opcional)"
-              }
-            />
-          </div>
-
-          <div className="sm:col-span-3 flex items-center gap-3">
-            <Button
-              variant="primary"
-              size="md"
-              type="submit"
-              disabled={isPending}
-            >
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {state?.error && <p className="mr-auto text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
+            <Button variant="secondary" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isPending}>
               {isPending ? "Salvando…" : "Salvar item"}
             </Button>
-            {state?.error && <p className="text-[13px] text-danger">{state.error}</p>}
           </div>
         </form>
       )}

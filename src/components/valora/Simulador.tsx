@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/Card";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { salvarProposta } from "@/app/(app)/valora/actions";
 import {
   calcular,
@@ -53,44 +55,59 @@ export function Simulador({
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_22rem] items-start">
       <div className="space-y-4">
+        {/* Revisão de alinhamento (30/09): rótulos no `CampoForm`, campos no
+            `FieldGrid` e as caixas de marcar em grade, com título — eram uma
+            fileira corrida, com "Empresa sem movimento" no meio dos setores. */}
         <Card className="p-4">
-          <h2 className="text-[13px] font-semibold mb-3">Cliente</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-[12px] text-fg-secondary">
-              <span className="font-medium">Nome</span>
-              <Input value={cliente} onChange={(e) => setCliente(e.target.value)} maxLength={160} placeholder="Razão social ou nome do prospect" />
-            </label>
-            <label className="flex flex-col gap-1 text-[12px] text-fg-secondary">
-              <span className="font-medium">Regime</span>
-              <Select value={perfil.regime} onChange={(e) => muda({ regime: e.target.value as Regime })}>
+          <h2 className="text-[14px] font-semibold text-fg mb-4">Cliente</h2>
+          <FieldGrid>
+            <CampoForm label="Nome" htmlFor="simulacao-cliente">
+              <Input
+                id="simulacao-cliente"
+                value={cliente}
+                onChange={(e) => setCliente(e.target.value)}
+                maxLength={160}
+                placeholder="Razão social ou nome do prospect"
+              />
+            </CampoForm>
+            <CampoForm label="Regime" htmlFor="simulacao-regime">
+              <Select id="simulacao-regime" value={perfil.regime} onChange={(e) => muda({ regime: e.target.value as Regime })}>
                 {REGIMES.map((x) => (
                   <option key={x} value={x}>
                     {ROTULO_REGIME[x]}
                   </option>
                 ))}
               </Select>
-            </label>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[13px]">
-            {catalogo.setores.map((s) => (
-              <Checkbox
-                key={s.codigo}
-                label={s.nome}
-                checked={perfil.setores.includes(s.codigo)}
-                onChange={(e) => muda({ setores: alterna(perfil.setores, s.codigo, e.target.checked) })}
-              />
-            ))}
+            </CampoForm>
+          </FieldGrid>
+          <fieldset className="mt-4">
+            <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">Setores</legend>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
+              {catalogo.setores.map((s) => (
+                <Checkbox
+                  key={s.codigo}
+                  label={s.nome}
+                  checked={perfil.setores.includes(s.codigo)}
+                  onChange={(e) => muda({ setores: alterna(perfil.setores, s.codigo, e.target.checked) })}
+                />
+              ))}
+            </div>
+          </fieldset>
+          <div className="mt-4">
             <Checkbox label="Empresa sem movimento" checked={perfil.semMovimento} onChange={(e) => muda({ semMovimento: e.target.checked })} />
           </div>
         </Card>
 
+        {/* Duas colunas, e não três: os rótulos vêm do catálogo e chegam a 40
+            letras ("Alvarás e licenças que a empresa mantém"); em três colunas
+            quebravam em duas linhas e desciam o campo em relação ao vizinho. */}
         <Card className="p-4">
-          <h2 className="text-[13px] font-semibold mb-3">Volumes</h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <h2 className="text-[14px] font-semibold text-fg mb-4">Volumes</h2>
+          <FieldGrid>
             {volumes.map((c) => (
-              <label key={c.chave} className="flex flex-col gap-1 text-[12px] text-fg-secondary">
-                <span className="font-medium">{c.rotulo}</span>
+              <CampoForm key={c.chave} label={c.rotulo} htmlFor={`simulacao-volume-${c.chave}`} helper={c.ajuda}>
                 <Input
+                  id={`simulacao-volume-${c.chave}`}
                   type="number"
                   min={0}
                   inputMode="numeric"
@@ -98,39 +115,41 @@ export function Simulador({
                   placeholder="0"
                   onChange={(e) => muda({ volumes: { ...perfil.volumes, [c.chave]: Math.max(0, Number(e.target.value) || 0) } })}
                 />
-                {c.ajuda && <span className="text-[11px] text-fg-muted">{c.ajuda}</span>}
-              </label>
+              </CampoForm>
             ))}
-          </div>
+          </FieldGrid>
         </Card>
 
         <Card className="p-4">
-          <h2 className="text-[13px] font-semibold mb-3">Operação</h2>
-          <div className="grid gap-2 sm:grid-cols-2 text-[13px]">
+          <h2 className="text-[14px] font-semibold text-fg mb-4">Operação</h2>
+          <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
             {marcadores.map((c) => (
-              <div key={c.chave}>
+              <div key={c.chave} className="min-w-0">
                 <Checkbox
                   label={c.rotulo}
                   checked={!!perfil.marcadores[c.chave]}
                   onChange={(e) => muda({ marcadores: { ...perfil.marcadores, [c.chave]: e.target.checked } })}
                 />
-                {c.ajuda && <span className="block pl-6 text-[11px] text-fg-muted">{c.ajuda}</span>}
+                {c.ajuda && <span className="block pl-6 mt-0.5 text-[length:var(--fs-helper)] text-fg-muted">{c.ajuda}</span>}
               </div>
             ))}
           </div>
         </Card>
 
         <Card className="p-4">
-          <h2 className="text-[13px] font-semibold mb-1">Situações que dão mais trabalho</h2>
-          <p className="text-[12px] text-fg-muted mb-3">O percentual é o que cada setor disse que a situação acrescenta ao tempo dele.</p>
-          <div className="grid gap-4 md:grid-cols-2">
+          <h2 className="text-[14px] font-semibold text-fg mb-1">Situações que dão mais trabalho</h2>
+          <p className="text-[12px] text-fg-muted mb-4">O percentual é o que cada setor disse que a situação acrescenta ao tempo dele.</p>
+          <div className="grid gap-5 md:grid-cols-2">
             {catalogo.setores.map((s) => {
               const doSetor = catalogo.complexidades.filter((c) => c.setor === s.codigo);
               if (doSetor.length === 0) return null;
+              // Um grupo por setor, com o título no desenho de rótulo de campo;
+              // as caixas uma embaixo da outra (a `Checkbox` com rótulo é
+              // inline-flex, e sem `flex-col` duas curtas dividiam a linha).
               return (
-                <div key={s.codigo}>
-                  <p className="text-[11px] uppercase tracking-wide text-fg-muted mb-2">{s.nome}</p>
-                  <div className="space-y-1.5 text-[13px]">
+                <fieldset key={s.codigo} className="min-w-0">
+                  <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">{s.nome}</legend>
+                  <div className="flex flex-col items-start gap-2">
                     {doSetor.map((c) => (
                       <Checkbox
                         key={c.id}
@@ -144,7 +163,7 @@ export function Simulador({
                       />
                     ))}
                   </div>
-                </div>
+                </fieldset>
               );
             })}
           </div>
@@ -152,7 +171,7 @@ export function Simulador({
 
         <Card className="p-4">
           <details>
-            <summary className="text-[13px] font-semibold cursor-pointer">Detalhamento por atividade</summary>
+            <summary className="text-[14px] font-semibold text-fg cursor-pointer">Detalhamento por atividade</summary>
             {/* Casco padrão dentro do cartão (30/09); a atividade, texto
                 corrido com o código na frente, fica à esquerda. */}
             <div className="c41-tabela overflow-x-auto rounded-lg border border-border mt-3">
@@ -197,7 +216,7 @@ export function Simulador({
           <p className="text-[28px] font-semibold tabular-nums leading-tight">{brl(r.mensal.alvo)}</p>
           <p className="text-[12px] text-fg-muted">alvo, com {parametros.margemAlvoPct}% de margem</p>
         </div>
-        <dl className="grid grid-cols-2 gap-2 text-[12px]">
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-[12px]">
           <div>
             <dt className="text-fg-muted">Piso</dt>
             <dd className="font-medium tabular-nums">{brl(r.mensal.piso)}</dd>
@@ -262,7 +281,7 @@ export function Simulador({
 
         {podeSalvar && (
           <form
-            className="border-t border-border-soft pt-3 space-y-2"
+            className="border-t border-border-soft pt-4 space-y-3"
             onSubmit={(e) => {
               e.preventDefault();
               setErro(null);
@@ -273,12 +292,19 @@ export function Simulador({
               });
             }}
           >
-            <label className="flex flex-col gap-1 text-[12px] text-fg-secondary">
-              <span className="font-medium">Preço oferecido (opcional)</span>
-              <Input prefix="R$" inputMode="decimal" value={oferecido} onChange={(e) => setOferecido(e.target.value)} placeholder="0,00" />
-            </label>
-            <Button type="submit" size="sm" loading={pendente} disabled={pendente} className="w-full">
-              <Save size={13} /> Salvar proposta
+            <CampoForm label="Preço oferecido (opcional)" htmlFor="simulacao-oferecido">
+              <Input
+                id="simulacao-oferecido"
+                prefix="R$"
+                inputMode="decimal"
+                value={oferecido}
+                onChange={(e) => setOferecido(e.target.value)}
+                placeholder="0,00"
+              />
+            </CampoForm>
+            {/* 36px, a altura do campo logo acima (era `sm`, de barra de ferramentas). */}
+            <Button type="submit" loading={pendente} disabled={pendente} className="w-full">
+              <Save size={14} /> Salvar proposta
             </Button>
             {erro && <p className="text-[12px] text-danger">{erro}</p>}
           </form>

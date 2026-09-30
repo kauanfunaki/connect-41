@@ -7,6 +7,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { ExcluirComConfirmacao } from "@/components/vagas/ExcluirComConfirmacao";
 import { ScorecardForm } from "@/components/vagas/ScorecardForm";
 import { NotaDaTriagem } from "@/components/vagas/NotaDaTriagem";
@@ -117,15 +118,13 @@ export default async function CandidaturaScorecardPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/vagas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Vagas</Link>
-        <span className="text-fg-muted">/</span>
-        <Link href={`/vagas/${vagaId}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate max-w-[160px]">
-          {candidatura.vaga.title}
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg truncate">{candidatura.person.name}</span>
-      </div>
+      <Breadcrumb
+        items={[
+          { label: "Vagas", href: "/vagas" },
+          { label: candidatura.vaga.title, href: `/vagas/${vagaId}`, truncate: true },
+          { label: candidatura.person.name, truncate: true },
+        ]}
+      />
       <BackButton className="mb-3" />
 
       <PageHeader
@@ -240,12 +239,12 @@ export default async function CandidaturaScorecardPage({
               const avg = scorecardAverage(s);
               return (
                 <div key={s.id} className="py-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-[13px] font-medium text-fg">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="min-w-0 text-[13px] font-medium text-fg">
                       {s.evaluator.name}
                       {s.evaluator.id === ctx.userId && <span className="text-[11px] text-fg-muted font-normal"> (você)</span>}
                     </p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-shrink-0 items-center gap-2">
                       <span className="text-[12px] text-fg-muted tnum">{avg != null ? `${avg.toFixed(1)}/5` : "sem nota"}</span>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${
                         s.recommendation === "AVANCAR" ? "bg-success/10 text-success border-success/25"

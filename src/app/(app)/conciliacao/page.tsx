@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Landmark } from "lucide-react";
+import { Landmark, History } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -131,7 +131,7 @@ export default async function ConciliacaoPage({
       {cabecalho}
       <FiltroDePeriodo acao="/conciliacao" empresas={empresas} empresaId={companyId} />
 
-      <div className="flex items-center justify-between gap-3 mb-2">
+      <div className="flex items-center justify-between gap-3 mb-3">
         <h2 className="text-[14px] font-semibold text-fg">Contas bancárias</h2>
         {podeAgir && <ContaBancariaForm companyId={companyId} />}
       </div>
@@ -149,7 +149,7 @@ export default async function ConciliacaoPage({
           {contas.map((c) => {
             const selecionada = conta?.id === c.id;
             return (
-              <Card key={c.id} className={`p-3.5 flex flex-col gap-2 ${selecionada ? "border-brand/60" : ""}`}>
+              <Card key={c.id} className={`p-4 flex flex-col gap-2 min-w-0 ${selecionada ? "border-brand/60" : ""}`}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <Link
@@ -171,8 +171,10 @@ export default async function ConciliacaoPage({
                   {!c.active && <Badge variant="danger">Inativa</Badge>}
                 </div>
                 <BlocoDoSaldo situacao={saldos.get(c.id)!} />
+                {/* mt-auto: os botões ficam no pé do cartão, na mesma altura
+                    em todos da linha, tenha o saldo uma linha ou quatro. */}
                 {podeAgir && (
-                  <div className="flex items-center gap-3">
+                  <div className="mt-auto flex items-center gap-2 pt-1">
                     <ContaBancariaForm
                       companyId={companyId}
                       conta={{
@@ -444,8 +446,11 @@ async function ExtratoDaConta({
             {conta.active ? "Sem permissão para importar extrato." : "Conta inativa: reative para importar extrato."}
           </Card>
         )}
-        <Card className="p-4 flex flex-col gap-2">
-          <h3 className="text-[13px] font-semibold text-fg">Importações recentes</h3>
+        <Card className="p-4 flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <History size={16} className="text-brand" />
+            <h3 className="text-[14px] font-semibold text-fg">Importações recentes</h3>
+          </div>
           {importacoes.length === 0 ? (
             <p className="text-[12px] text-fg-muted">Nenhum extrato importado nesta conta.</p>
           ) : (

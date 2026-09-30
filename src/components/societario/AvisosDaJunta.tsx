@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -74,7 +76,7 @@ function CartaoDoAviso({ aviso, acoes, mostrarProcesso }: { aviso: AvisoNaTela; 
   }
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-4 flex flex-col gap-3">
+    <Card className="p-4 flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2 text-[12px] text-fg-muted">
         <Badge variant={sugestao.variante}>{sugestao.rotulo}</Badge>
         <span>Recebido em {formatInstantDate(aviso.recebidoEm)}</span>
@@ -92,13 +94,9 @@ function CartaoDoAviso({ aviso, acoes, mostrarProcesso }: { aviso: AvisoNaTela; 
       {aviso.assunto && <p className="text-[13px] font-medium text-fg">{aviso.assunto}</p>}
 
       <div>
-        <button
-          type="button"
-          onClick={() => setAbrirTexto((v) => !v)}
-          className="text-[12px] text-brand hover:underline"
-        >
+        <Button variant="link" onClick={() => setAbrirTexto((v) => !v)} className="text-[12px]">
           {abrirTexto ? "Esconder o e-mail" : "Ler o e-mail do órgão"}
-        </button>
+        </Button>
         {abrirTexto && (
           <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-md bg-surface-2 p-3 text-[12px] text-fg-secondary font-sans">
             {aviso.remetente ? `De: ${aviso.remetente}\n\n` : ""}
@@ -118,19 +116,28 @@ function CartaoDoAviso({ aviso, acoes, mostrarProcesso }: { aviso: AvisoNaTela; 
               { key: "DEFERIDO", label: "Marcar deferido" },
             ]}
           />
+          {/* Rótulo em cima dos dois campos, como no roteiro do processo: o
+              prazo tinha o rótulo ao lado, em 12px, e a descrição nenhum. */}
           {desfecho === "EXIGENCIA" && (
-            <div className="flex flex-col gap-2">
-              <Textarea
-                aria-label="O que o órgão pediu"
-                rows={4}
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                placeholder="O que o órgão pediu para corrigir"
-              />
-              <div className="flex items-center gap-2 text-[12px] text-fg-muted">
-                <label htmlFor={`prazo-${aviso.id}`}>Prazo do órgão (opcional)</label>
-                <Input id={`prazo-${aviso.id}`} type="date" value={prazo} onChange={(e) => setPrazo(e.target.value)} className="w-40" />
-              </div>
+            <div className="flex flex-col gap-4">
+              <CampoForm label="O que o órgão pediu" htmlFor={`exigencia-${aviso.id}`}>
+                <Textarea
+                  id={`exigencia-${aviso.id}`}
+                  rows={4}
+                  value={descricao}
+                  onChange={(e) => setDescricao(e.target.value)}
+                  placeholder="O que o órgão pediu para corrigir"
+                />
+              </CampoForm>
+              <CampoForm label="Prazo do órgão" htmlFor={`prazo-${aviso.id}`} helper="Opcional.">
+                <Input
+                  id={`prazo-${aviso.id}`}
+                  type="date"
+                  value={prazo}
+                  onChange={(e) => setPrazo(e.target.value)}
+                  className="sm:w-44"
+                />
+              </CampoForm>
             </div>
           )}
           {desfecho === "DEFERIDO" && aviso.sugestao !== "DEFERIDO" && (
@@ -153,8 +160,15 @@ function CartaoDoAviso({ aviso, acoes, mostrarProcesso }: { aviso: AvisoNaTela; 
 
       {erro && <p className="text-[12px] text-danger">{erro}</p>}
 
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button variant="secondary" disabled={pendente} onClick={() => rodar(() => acoes.descartar(aviso.id))}>
+      {/* Descartar tira o aviso da fila: fica separado, à esquerda, e o
+          primário ("Aplicar") por último, à direita. */}
+      <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
+        <Button
+          variant="secondary"
+          disabled={pendente}
+          onClick={() => rodar(() => acoes.descartar(aviso.id))}
+          className={aviso.aplicavel ? "mr-auto" : undefined}
+        >
           Descartar
         </Button>
         {aviso.aplicavel && (
@@ -167,6 +181,6 @@ function CartaoDoAviso({ aviso, acoes, mostrarProcesso }: { aviso: AvisoNaTela; 
           </Button>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

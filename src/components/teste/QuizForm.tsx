@@ -199,11 +199,13 @@ export function QuizForm({ token, questions }: Props) {
         })}
       </div>
 
-      <Checkbox
-        name="consent"
-        value="true"
-        label="Confirmo que as respostas são minhas e autorizo o uso dos meus dados pessoais para este processo seletivo (LGPD)."
-      />
+      {/* Caixa no topo do texto, e não centrada nele: no celular a frase
+          quebra em três linhas, e o `Checkbox` com rótulo centraliza a caixa
+          no meio do parágrafo. */}
+      <label htmlFor="consent" className="flex items-start gap-2.5 text-[length:var(--fs-label)] text-fg-secondary cursor-pointer">
+        <Checkbox id="consent" name="consent" value="true" className="mt-0.5" />
+        <span>Confirmo que as respostas são minhas e autorizo o uso dos meus dados pessoais para este processo seletivo (LGPD).</span>
+      </label>
 
       <Button
         variant="primary"

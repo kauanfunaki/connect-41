@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import type { TagState } from "@/app/(app)/admin/tags/actions";
 import { SECTOR_COLOR_PALETTE } from "@/lib/sector-constants";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
@@ -36,34 +37,40 @@ export function TagForm({ action, cancelHref, sectorOptions, defaultValues }: Pr
         </p>
       )}
 
-      {!isEdit ? (
-        <CampoForm label="Setor" htmlFor="sectorCode" required>
-          <Select id="sectorCode" name="sectorCode" required>
-            <option value="">Selecionar…</option>
-            {sectorOptions.map((s) => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-          </Select>
-        </CampoForm>
-      ) : (
-        <p className="text-[12px] text-fg-muted">
+      {isEdit && (
+        <p className="text-[length:var(--fs-helper)] text-fg-muted">
           O setor não pode ser alterado após criado — exclua e recrie a tag se precisar mudar.
         </p>
       )}
 
-      <CampoForm label="Nome da tag" htmlFor="name" required>
-        <Input
-          id="name"
-          name="name"
-          type="text"
-          required
-          defaultValue={defaultValues?.name ?? ""}
-          placeholder="Ex: Urgente, Aguardando documento…"
-        />
-      </CampoForm>
+      {/* Setor e nome lado a lado; na edição, o nome fica sozinho na primeira
+          coluna, na mesma largura. */}
+      <FieldGrid>
+        {!isEdit && (
+          <CampoForm label="Setor" htmlFor="sectorCode" required>
+            <Select id="sectorCode" name="sectorCode" required>
+              <option value="">Selecionar…</option>
+              {sectorOptions.map((s) => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </Select>
+          </CampoForm>
+        )}
+        <CampoForm label="Nome da tag" htmlFor="name" required>
+          <Input
+            id="name"
+            name="name"
+            type="text"
+            required
+            defaultValue={defaultValues?.name ?? ""}
+            placeholder="Ex: Urgente, Aguardando documento…"
+          />
+        </CampoForm>
+      </FieldGrid>
 
-      <div className="space-y-2">
-        <p className="text-[12px] font-medium text-fg">Cor</p>
+      {/* O rótulo "Cor" era 12px, menor que o dos campos de cima. */}
+      <fieldset>
+        <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">Cor</legend>
         <div className="flex flex-wrap items-center gap-2">
           {SECTOR_COLOR_PALETTE.map((c) => (
             <label key={c} className="cursor-pointer">
@@ -71,6 +78,7 @@ export function TagForm({ action, cancelHref, sectorOptions, defaultValues }: Pr
                 type="radio"
                 name="colorRadio"
                 value={c}
+                aria-label={`Cor ${c}`}
                 defaultChecked={(defaultValues?.color ?? SECTOR_COLOR_PALETTE[0]) === c}
                 className="peer sr-only"
                 onChange={(e) => {
@@ -87,19 +95,14 @@ export function TagForm({ action, cancelHref, sectorOptions, defaultValues }: Pr
           ))}
           <input type="hidden" name="color" defaultValue={defaultValues?.color ?? SECTOR_COLOR_PALETTE[0]} />
         </div>
-      </div>
+      </fieldset>
 
-      <div className="flex items-center gap-3 pt-2">
-        <Button
-          variant="primary"
-          size="md"
-          type="submit"
-          disabled={isPending}
-        >
-          {isPending ? "Salvando…" : "Salvar"}
-        </Button>
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
         <Button href={cancelHref} variant="secondary">
           Cancelar
+        </Button>
+        <Button type="submit" disabled={isPending}>
+          {isPending ? "Salvando…" : "Salvar"}
         </Button>
       </div>
     </form>

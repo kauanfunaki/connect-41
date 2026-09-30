@@ -374,16 +374,19 @@ export function UsuariosTable({
         </Button>
         {sectorOptions.length > 0 && (
           <>
-            <div className="w-44">
-              <Select
-                value={bulkSector}
-                onChange={(e) => setBulkSector(e.target.value)}
-              >
-                {sectorOptions.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </Select>
-            </div>
+            {/* Compacto, na altura dos botões sm da barra (era o select de
+                formulário, 4px mais alto que os vizinhos). */}
+            <Select
+              compact
+              className="w-44"
+              aria-label="Setor a atribuir"
+              value={bulkSector}
+              onChange={(e) => setBulkSector(e.target.value)}
+            >
+              {sectorOptions.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </Select>
             <Button
               variant="primary"
               size="sm"

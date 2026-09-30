@@ -1,93 +1,115 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
+import { Modal } from "@/components/ui/Modal";
 import { criarContraparte, atualizarContraparte } from "@/app/(app)/cadastros-financeiros/actions";
 
 type Categoria = { id: string; nome: string };
 /** Centros ativos da empresa — o que se pode escolher como padrão. */
 type Centro = { id: string; nome: string };
 
+// Cadastro e edição num modal, como a conta bancária da conciliação. Até 30/09
+// o cadastro abria um cartão no meio da barra de filtros e a edição empilhava
+// seis campos sem rótulo dentro da célula da tabela — só o placeholder dizia
+// o que era cada um, e ele some quando o campo tem valor.
+
+/** Rodapé dos dois modais: erro à esquerda, Cancelar e o primário à direita. */
+function Rodape({ erro, pendente, rotulo, onCancelar }: { erro: string | null; pendente: boolean; rotulo: string; onCancelar: () => void }) {
+  return (
+    <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
+      {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
+      <Button type="button" variant="secondary" onClick={onCancelar}>
+        Cancelar
+      </Button>
+      <Button type="submit" disabled={pendente}>
+        {pendente ? "Salvando…" : rotulo}
+      </Button>
+    </div>
+  );
+}
+
 export function NovaContraparte({ companyId, categorias, centros = [] }: { companyId: string; categorias: Categoria[]; centros?: Centro[] }) {
+  const id = useId();
   const [aberto, setAberto] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
 
-  if (!aberto) {
-    return (
-      <Button size="sm" onClick={() => setAberto(true)}>
-        <Plus size={13} /> Novo cadastro
-      </Button>
-    );
-  }
-
   return (
-    <Card className="p-4 mb-4">
-      <form
-        className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const dados = new FormData(e.currentTarget);
+    <>
+      <Button
+        size="sm"
+        onClick={() => {
           setErro(null);
-          startTransition(async () => {
-            const r = await criarContraparte(dados);
-            if ("error" in r) setErro(r.error);
-            else setAberto(false);
-          });
+          setAberto(true);
         }}
       >
-        <input type="hidden" name="companyId" value={companyId} />
-        <label className="flex flex-col gap-1 text-[12px] text-fg-secondary md:col-span-2">
-          <span className="font-medium">Nome</span>
-          <Input name="nome" maxLength={180} required />
-        </label>
-        <label className="flex flex-col gap-1 text-[12px] text-fg-secondary">
-          <span className="font-medium">CPF ou CNPJ</span>
-          <Input name="documento" inputMode="numeric" />
-        </label>
-        <label className="flex flex-col gap-1 text-[12px] text-fg-secondary md:col-span-2">
-          <span className="font-medium">E-mail (lembretes de cobrança)</span>
-          <Input name="email" type="email" maxLength={180} />
-        </label>
-        <label className="flex flex-col gap-1 text-[12px] text-fg-secondary">
-          <span className="font-medium">Categoria padrão (pagar)</span>
-          <Select name="defaultCategoryId" defaultValue="">
-            <option value="">Nenhuma</option>
-            {categorias.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nome}
-              </option>
-            ))}
-          </Select>
-        </label>
-        {centros.length > 0 && (
-          <label className="flex flex-col gap-1 text-[12px] text-fg-secondary">
-            <span className="font-medium">Centro de custo padrão</span>
-            <Select name="defaultCostCenterId" defaultValue="">
-              <option value="">Nenhum</option>
-              {centros.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </Select>
-          </label>
-        )}
-        <div className="flex items-center gap-2 md:col-span-4">
-          <Button type="submit" size="sm" disabled={pendente}>
-            Cadastrar
-          </Button>
-          <Button variant="secondary" size="xs" onClick={() => setAberto(false)}>
-            Cancelar
-          </Button>
-          {erro && <span className="text-[12px] text-danger">{erro}</span>}
-        </div>
-      </form>
-    </Card>
+        <Plus size={13} /> Novo cadastro
+      </Button>
+      <Modal open={aberto} onClose={() => !pendente && setAberto(false)} title="Novo cadastro" maxWidth="max-w-xl">
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const dados = new FormData(e.currentTarget);
+            setErro(null);
+            startTransition(async () => {
+              const r = await criarContraparte(dados);
+              if ("error" in r) setErro(r.error);
+              else setAberto(false);
+            });
+          }}
+        >
+          <input type="hidden" name="companyId" value={companyId} />
+          <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_200px]">
+            <CampoForm label="Nome" htmlFor={`${id}-nome`} required>
+              <Input id={`${id}-nome`} name="nome" maxLength={180} required />
+            </CampoForm>
+            <CampoForm label="CPF ou CNPJ" htmlFor={`${id}-documento`}>
+              <Input id={`${id}-documento`} name="documento" inputMode="numeric" />
+            </CampoForm>
+          </FieldGrid>
+          <CampoForm label="E-mail" htmlFor={`${id}-email`} helper="Para onde vão os lembretes da régua de cobrança.">
+            <Input id={`${id}-email`} name="email" type="email" maxLength={180} />
+          </CampoForm>
+          <FieldGrid>
+            <CampoForm
+              label="Categoria padrão"
+              htmlFor={`${id}-categoria`}
+              helper="Vale para contas a pagar."
+              className={centros.length > 0 ? "" : "sm:col-span-2"}
+            >
+              <Select id={`${id}-categoria`} name="defaultCategoryId" defaultValue="">
+                <option value="">Nenhuma</option>
+                {categorias.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                  </option>
+                ))}
+              </Select>
+            </CampoForm>
+            {centros.length > 0 && (
+              <CampoForm label="Centro de custo padrão" htmlFor={`${id}-centro`}>
+                <Select id={`${id}-centro`} name="defaultCostCenterId" defaultValue="">
+                  <option value="">Nenhum</option>
+                  {centros.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                    </option>
+                  ))}
+                </Select>
+              </CampoForm>
+            )}
+          </FieldGrid>
+          <Rodape erro={erro} pendente={pendente} rotulo="Cadastrar" onCancelar={() => setAberto(false)} />
+        </form>
+      </Modal>
+    </>
   );
 }
 
@@ -116,69 +138,91 @@ export function EditarContraparte({
     contraparte.defaultCostCenterId && !centros.some((c) => c.id === contraparte.defaultCostCenterId)
       ? [...centros, { id: contraparte.defaultCostCenterId, nome: `${contraparte.centroPadraoNome ?? "Centro atual"} (inativo)` }]
       : centros;
+  const id = useId();
   const [aberto, setAberto] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
 
-  if (!aberto) {
-    return (
-      <Button variant="secondary" size="xs" onClick={() => setAberto(true)}>
+  return (
+    <>
+      <Button
+        variant="secondary"
+        size="xs"
+        onClick={() => {
+          setErro(null);
+          setAberto(true);
+        }}
+      >
         Editar
       </Button>
-    );
-  }
-
-  return (
-    <form
-      className="flex flex-col gap-2 min-w-[260px]"
-      onSubmit={(e) => {
-        e.preventDefault();
-        const dados = new FormData(e.currentTarget);
-        setErro(null);
-        startTransition(async () => {
-          const r = await atualizarContraparte(dados);
-          if ("error" in r) setErro(r.error);
-          else setAberto(false);
-        });
-      }}
-    >
-      <input type="hidden" name="id" value={contraparte.id} />
-      <Input compact name="nome" defaultValue={contraparte.nome} maxLength={180} required aria-label="Nome" />
-      {/* Documento só se preenche: trocar o CNPJ de ficha com histórico
-          desfaria o casamento com as notas — ver `atualizarContraparte`. */}
-      {!contraparte.documento && <Input compact name="documento" placeholder="CPF ou CNPJ" inputMode="numeric" aria-label="Documento" />}
-      <Input compact name="email" type="email" defaultValue={contraparte.email ?? ""} maxLength={180} placeholder="E-mail para cobrança" aria-label="E-mail" />
-      <Select compact name="defaultCategoryId" defaultValue={contraparte.defaultCategoryId ?? ""} aria-label="Categoria padrão">
-        <option value="">Sem categoria padrão</option>
-        {categorias.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.nome}
-          </option>
-        ))}
-      </Select>
-      {opcoesDeCentro.length > 0 && (
-        <Select compact name="defaultCostCenterId" defaultValue={contraparte.defaultCostCenterId ?? ""} aria-label="Centro de custo padrão">
-          <option value="">Sem centro de custo padrão</option>
-          {opcoesDeCentro.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nome}
-            </option>
-          ))}
-        </Select>
-      )}
-      <Select compact name="ativo" defaultValue={contraparte.ativo ? "1" : "0"} aria-label="Situação">
-        <option value="1">Ativo</option>
-        <option value="0">Inativo</option>
-      </Select>
-      <div className="flex items-center gap-2">
-        <Button type="submit" size="xs" disabled={pendente}>
-          Salvar
-        </Button>
-        <Button variant="secondary" size="xs" onClick={() => setAberto(false)}>
-          Cancelar
-        </Button>
-      </div>
-      {erro && <span className="text-[11px] text-danger">{erro}</span>}
-    </form>
+      <Modal open={aberto} onClose={() => !pendente && setAberto(false)} title="Editar cadastro" maxWidth="max-w-xl">
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const dados = new FormData(e.currentTarget);
+            setErro(null);
+            startTransition(async () => {
+              const r = await atualizarContraparte(dados);
+              if ("error" in r) setErro(r.error);
+              else setAberto(false);
+            });
+          }}
+        >
+          <input type="hidden" name="id" value={contraparte.id} />
+          <FieldGrid columns={contraparte.documento ? "sm:grid-cols-1" : "sm:grid-cols-[minmax(0,1fr)_200px]"}>
+            <CampoForm label="Nome" htmlFor={`${id}-nome`} required>
+              <Input id={`${id}-nome`} name="nome" defaultValue={contraparte.nome} maxLength={180} required />
+            </CampoForm>
+            {/* Documento só se preenche: trocar o CNPJ de ficha com histórico
+                desfaria o casamento com as notas — ver `atualizarContraparte`. */}
+            {!contraparte.documento && (
+              <CampoForm label="CPF ou CNPJ" htmlFor={`${id}-documento`}>
+                <Input id={`${id}-documento`} name="documento" inputMode="numeric" />
+              </CampoForm>
+            )}
+          </FieldGrid>
+          <CampoForm label="E-mail" htmlFor={`${id}-email`} helper="Para onde vão os lembretes da régua de cobrança.">
+            <Input id={`${id}-email`} name="email" type="email" defaultValue={contraparte.email ?? ""} maxLength={180} />
+          </CampoForm>
+          <FieldGrid>
+            <CampoForm
+              label="Categoria padrão"
+              htmlFor={`${id}-categoria`}
+              helper="Vale para contas a pagar."
+              className={opcoesDeCentro.length > 0 ? "" : "sm:col-span-2"}
+            >
+              <Select id={`${id}-categoria`} name="defaultCategoryId" defaultValue={contraparte.defaultCategoryId ?? ""}>
+                <option value="">Sem categoria padrão</option>
+                {categorias.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                  </option>
+                ))}
+              </Select>
+            </CampoForm>
+            {opcoesDeCentro.length > 0 && (
+              <CampoForm label="Centro de custo padrão" htmlFor={`${id}-centro`}>
+                <Select id={`${id}-centro`} name="defaultCostCenterId" defaultValue={contraparte.defaultCostCenterId ?? ""}>
+                  <option value="">Sem centro de custo padrão</option>
+                  {opcoesDeCentro.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                    </option>
+                  ))}
+                </Select>
+              </CampoForm>
+            )}
+          </FieldGrid>
+          <CampoForm label="Situação" htmlFor={`${id}-ativo`}>
+            <Select id={`${id}-ativo`} name="ativo" defaultValue={contraparte.ativo ? "1" : "0"} className="sm:max-w-[200px]">
+              <option value="1">Ativo</option>
+              <option value="0">Inativo</option>
+            </Select>
+          </CampoForm>
+          <Rodape erro={erro} pendente={pendente} rotulo="Salvar" onCancelar={() => setAberto(false)} />
+        </form>
+      </Modal>
+    </>
   );
 }

@@ -3,8 +3,9 @@
 import { useActionState, useState } from "react";
 import type { CampoState } from "@/app/(app)/admin/campos/actions";
 import type { CustomFieldType, EntityType } from "@/generated/prisma/enums";
-import { CampoForm as Field } from "@/components/ui/CampoForm";
+import { AlinhadoAoCampo, CampoForm as Field } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
@@ -52,7 +53,7 @@ export function CampoForm({ action, cancelHref, sectorOptions, defaultValues }: 
       )}
 
       {!isEdit && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FieldGrid>
           <Field label="Setor" htmlFor="sectorCode" required>
             <Select id="sectorCode" name="sectorCode" required>
               <option value="">Selecionar…</option>
@@ -67,11 +68,11 @@ export function CampoForm({ action, cancelHref, sectorOptions, defaultValues }: 
               <option value="PERSON">Pessoas</option>
             </Select>
           </Field>
-        </div>
+        </FieldGrid>
       )}
 
       {isEdit && (
-        <p className="text-[12px] text-fg-muted">
+        <p className="text-[length:var(--fs-helper)] text-fg-muted">
           Setor e tipo de entidade não podem ser alterados após criado — exclua e recrie o campo se precisar mudar.
         </p>
       )}
@@ -87,7 +88,9 @@ export function CampoForm({ action, cancelHref, sectorOptions, defaultValues }: 
         />
       </Field>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* A caixa de "obrigatório" dispensa o rótulo em cima; a ordem (só na
+          edição) é um número curto e ganha coluna estreita na mesma linha. */}
+      <FieldGrid columns={isEdit ? "sm:grid-cols-[minmax(0,1fr)_8rem_minmax(0,1fr)]" : "sm:grid-cols-2"}>
         <Field label="Tipo do campo" htmlFor="fieldType" required>
           <Select
             id="fieldType"
@@ -101,20 +104,28 @@ export function CampoForm({ action, cancelHref, sectorOptions, defaultValues }: 
             ))}
           </Select>
         </Field>
-        <Field label="Obrigatório" htmlFor="required">
-          <div className="h-9 flex items-center">
-            <Checkbox
-              id="required"
-              name="required"
-              defaultChecked={defaultValues?.required ?? false}
-              label="Preenchimento obrigatório"
+        {isEdit && (
+          <Field label="Ordem" htmlFor="order">
+            <Input
+              id="order"
+              name="order"
+              type="number"
+              defaultValue={defaultValues?.order ?? 0}
             />
-          </div>
-        </Field>
-      </div>
+          </Field>
+        )}
+        <AlinhadoAoCampo>
+          <Checkbox
+            id="required"
+            name="required"
+            defaultChecked={defaultValues?.required ?? false}
+            label="Preenchimento obrigatório"
+          />
+        </AlinhadoAoCampo>
+      </FieldGrid>
 
       {fieldType === "SELECT" && (
-        <Field label="Opções (separadas por vírgula)" htmlFor="options" required>
+        <Field label="Opções" htmlFor="options" required helper="Separadas por vírgula.">
           <Input
             id="options"
             name="options"
@@ -125,28 +136,12 @@ export function CampoForm({ action, cancelHref, sectorOptions, defaultValues }: 
         </Field>
       )}
 
-      {isEdit && (
-        <Field label="Ordem" htmlFor="order">
-          <Input
-            id="order"
-            name="order"
-            type="number"
-            defaultValue={defaultValues?.order ?? 0}
-          />
-        </Field>
-      )}
-
-      <div className="flex items-center gap-3 pt-2">
-        <Button
-          variant="primary"
-          size="md"
-          type="submit"
-          disabled={isPending}
-        >
-          {isPending ? "Salvando…" : "Salvar"}
-        </Button>
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
         <Button href={cancelHref} variant="secondary">
           Cancelar
+        </Button>
+        <Button type="submit" disabled={isPending}>
+          {isPending ? "Salvando…" : "Salvar"}
         </Button>
       </div>
     </form>
