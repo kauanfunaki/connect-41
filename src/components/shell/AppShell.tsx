@@ -31,7 +31,7 @@ import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { NotificationBell } from "@/components/shell/NotificationBell";
 import { ProfileMenu } from "@/components/shell/ProfileMenu";
 import { GlobalSearch } from "@/components/shell/GlobalSearch";
-import { NavItem, SectorNavItem, CadastrosNavItem, GrupoNavItem } from "@/components/shell/NavLink";
+import { NavItem, SectorNavItem, CadastrosNavItem, GrupoNavItem, classeDoItem } from "@/components/shell/NavLink";
 import { ModuleIcon, Icone } from "@/components/shared/ModuleIcon";
 import { RegistroDeTelasRecentes } from "@/components/shell/TelasRecentes";
 import { agruparModulos, slugDoGrupo, ICONE_DO_GRUPO } from "@/lib/module-catalog";
@@ -146,7 +146,12 @@ export function AppShell({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-canvas">
+    // `--c41-setor` leva a cor do setor ativo a tudo que está dentro: a barra
+    // do item ativo, o traço do título, o brilho da direita (globals.css).
+    <div
+      className="flex h-screen overflow-hidden bg-canvas"
+      style={activeSector ? ({ "--c41-setor": activeSector.color } as React.CSSProperties) : undefined}
+    >
       {/* Backdrop — só em telas pequenas, quando a sidebar vira drawer sobreposto. */}
       {mobileOpen && (
         <div
@@ -311,10 +316,7 @@ export function AppShell({
         {/* Footer: configurações. Admin cai na administração do workspace;
             todo mundo tem /configuracoes (conta própria) no menu de perfil. */}
         <div className="border-t border-border px-3 py-3 flex-shrink-0">
-          <Link
-            href={canOpenAdmin ? "/admin" : "/configuracoes"}
-            className="flex items-center gap-2.5 px-2.5 py-2 -ml-3 pl-[calc(0.625rem+0.75rem)] rounded-lg text-[14px] font-medium text-fg-secondary hover:text-fg transition-colors"
-          >
+          <Link href={canOpenAdmin ? "/admin" : "/configuracoes"} className={classeDoItem(false, "text-[14px] font-medium")}>
             <Settings size={16} className="flex-shrink-0" />
             Configurações
           </Link>
@@ -358,7 +360,7 @@ export function AppShell({
         )}
 
         {/* Page content */}
-        <main className="scroll-y scroll-gutter-stable flex-1 overflow-y-auto">
+        <main className="c41-atmosfera scroll-y scroll-gutter-stable flex-1 overflow-y-auto">
           {/* Anota a tela aberta como recente (no navegador) — é o que o Ctrl+K
               oferece antes de a pessoa digitar. */}
           <RegistroDeTelasRecentes />

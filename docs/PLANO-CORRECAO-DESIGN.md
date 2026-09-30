@@ -633,6 +633,37 @@ já têm o "Filtros"; falta o funil nas colunas e o centralizado).
 
 ---
 
+## Polimento do Perímetro — onda 1 (30/09)
+
+Decisão do Kauan: **polir o Perímetro**, sem identidade nova (azul 41, IBM Plex
++ Space Grotesk, logo e cores de setor ficam). A onda 1 é a base comum — muda
+todas as telas de uma vez, sem tocar tela por tela:
+
+| O quê | Onde |
+|---|---|
+| Sombra em três degraus: `--c41-shadow-xs` (cartão e casco de tabela), `-sm`, `-md` (hover de cartão-atalho), `-lg` (painel) | `globals.css`, `Card`, `FaixaDeTotais`, `MetricCard` |
+| `--c41-setor`: a cor do setor ativo, posta pelo `AppShell`; fora de setor e no portal é o azul | `AppShell`, `globals.css` |
+| Brilho do topo da área de conteúdo (azul à esquerda, cor do setor à direita), rolando com a página | `.c41-atmosfera` no `<main>` do app e do portal |
+| Traço de 3px na cor do setor acima do título de toda tela | `PageHeader` |
+| Item do menu: fundo de seleção + barra na cor do setor; as 4 variantes de item viraram uma função (`classeDoItem`) | `NavLink`, `AppShell`, `PortalShell` |
+| Entrada da tela: blocos sobem 6px em sequência (`backwards` — nenhum transform sobra para prender modal) | `.c41-pagina` no `PageContainer` |
+| Painéis surgem (menu, popover, modal, confirmação, slide-over) | `.c41-surgir`, `.c41-esmaecer` |
+| Linha de tabela acende inteira no hover, com o fio azul à esquerda; números tabulares | `.c41-tabela` |
+| Estado vazio com ícone emoldurado (anel tracejado + disco) e título na fonte de display | `EmptyState` |
+| Botão afunda 1px ao clicar; primário com brilho interno | `Button` |
+| Cartões de total: 2 por linha até `xl`, valor em 22px até `2xl` — em 1024px o valor em reais saía cortado | `FaixaDeTotais` |
+| Competência do portal no botão "Filtros", com busca | `PortalCompetenciaFiltro` |
+
+**Não entrou:** cabeçalho de tabela fixo na rolagem. O casco tem rolagem
+lateral (`overflow-x-auto`), e isso prende o `sticky` dentro dele — só
+funcionaria dando altura própria à tabela, o que muda o jeito de rolar a tela.
+
+**Próximas ondas** (tela a tela, na ordem dos testes): Home e telas comuns
+(Empresas, Pessoas, Clientes, Tarefas, Transferências), Societário, DP,
+Recrutamento, Fiscal, Gestão, Admin, login e portal.
+
+---
+
 ## Sequenciamento
 
 ```
