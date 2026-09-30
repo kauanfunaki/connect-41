@@ -4,8 +4,9 @@ import { AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
-import { Select } from "@/components/ui/Select";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { saoPauloParts } from "@/lib/agenda";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getAuthContext, canActOnSector, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -53,13 +54,6 @@ export default async function ExigenciasPage({
   const agora = new Date();
   const linhas = await listarExigencias(ctx.tenantId, { situacao, responsavelId: responsavelFiltro });
 
-  const hrefDoRecorte = (chave: SituacaoDaExigencia) => {
-    const q = new URLSearchParams();
-    if (chave !== "abertas") q.set("situacao", chave);
-    if (responsavelFiltro) q.set("responsavel", responsavelFiltro);
-    const s = q.toString();
-    return s ? `/societario/exigencias?${s}` : "/societario/exigencias";
-  };
 
   return (
     <PageContainer>
@@ -69,45 +63,25 @@ export default async function ExigenciasPage({
       />
       <AbasDePrazos ativa="exigencias" />
 
-      <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
-        <div className="flex flex-wrap gap-1.5">
-          {RECORTES.map((r) => (
-            <Link
-              key={r.chave}
-              href={hrefDoRecorte(r.chave)}
-              aria-current={r.chave === situacao ? "page" : undefined}
-              className={
-                r.chave === situacao
-                  ? "h-8 px-3 inline-flex items-center rounded-md border border-brand/40 bg-brand/8 text-brand text-[12px] font-medium"
-                  : "h-8 px-3 inline-flex items-center rounded-md border border-border text-fg-secondary text-[12px] hover:bg-surface-hover transition-colors"
-              }
-            >
-              {r.rotulo}
-            </Link>
-          ))}
-        </div>
-
-        <form method="get" action="/societario/exigencias" className="flex flex-wrap items-end gap-2">
-          {situacao !== "abertas" && <input type="hidden" name="situacao" value={situacao} />}
-          <div className="flex flex-col gap-1">
-            <label htmlFor="filtro-responsavel" className="text-[11px] text-fg-muted">
-              Responsável do processo
-            </label>
-            <Select id="filtro-responsavel" name="responsavel" defaultValue={responsavelFiltro ?? ""} compact>
-              <option value="">Todos</option>
-              <option value="nenhum">Sem responsável</option>
-              {responsaveis.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <Button type="submit" size="sm" variant="secondary">
-            Filtrar
-          </Button>
-        </form>
-      </div>
+      {/* Situação e responsável no botão "Filtros" — eram pílulas e um
+          formulário com "Filtrar" (conferência de 30/09). */}
+      <FiltrosDaTela
+        className="mb-4"
+        campos={[
+          {
+            chave: "situacao",
+            rotulo: "Situação",
+            vazioLabel: "Abertas",
+            opcoes: RECORTES.filter((r) => r.chave !== "abertas").map((r) => ({ value: r.chave, label: r.rotulo })),
+          },
+          {
+            chave: "responsavel",
+            rotulo: "Responsável",
+            vazioLabel: "Todos",
+            opcoes: [{ value: "nenhum", label: "Sem responsável" }, ...responsaveis.map((r) => ({ value: r.id, label: r.name }))],
+          },
+        ]}
+      />
 
       {linhas.length === 0 ? (
         <EmptyState
@@ -116,16 +90,37 @@ export default async function ExigenciasPage({
           icon={<AlertTriangle />}
         />
       ) : (
+        <TabelaFiltravel
+          linhas={linhas.map((e) => ({
+            id: e.id,
+            valores: {
+              processo: e.tipoNome,
+              empresa: e.empresaNome,
+              orgao: e.orgaoNome,
+              prazo: e.dueAt ? saoPauloParts(e.dueAt).dateKey : "",
+              situacao: e.resolvedAt ? "Cumprida" : "Aberta",
+              responsavel: e.responsavelNome ?? "",
+            },
+          }))}
+        >
         <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
           <table className="w-full min-w-[860px] text-[13px]">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+              <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                 <th className="py-2 pr-3 font-medium">Exigência</th>
-                <th className="py-2 pr-3 font-medium">Processo</th>
-                <th className="py-2 pr-3 font-medium">Órgão</th>
-                <th className="py-2 pr-3 font-medium">Prazo do órgão</th>
-                <th className="py-2 pr-3 font-medium">Situação</th>
-                <th className="py-2 pr-3 font-medium">Responsável</th>
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna
+                    rotulo="Processo"
+                    campos={[
+                      { chave: "processo", rotulo: "Tipo" },
+                      { chave: "empresa", rotulo: "Empresa" },
+                    ]}
+                  />
+                </th>
+                <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Órgão" chave="orgao" /></th>
+                <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Prazo do órgão" chave="prazo" tipo="data" /></th>
+                <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Situação" chave="situacao" /></th>
+                <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Responsável" chave="responsavel" align="right" /></th>
                 <th className="py-2 font-medium" />
               </tr>
             </thead>
@@ -133,7 +128,7 @@ export default async function ExigenciasPage({
               {linhas.map((e) => {
                 const faixa = e.dueAt && !e.resolvedAt ? faixaDoPrazo(e.dueAt, agora) : null;
                 return (
-                  <tr key={e.id} className="border-b border-border-soft align-top">
+                  <LinhaFiltravel key={e.id} id={e.id} className="border-b border-border-soft align-top">
                     <td className="py-2.5 pr-3 max-w-[320px]">
                       <span className={e.resolvedAt ? "text-fg-muted" : "text-fg"}>{e.descricao}</span>
                       <span className="block text-[11px] text-fg-muted">Aberta em {formatInstantDate(e.raisedAt)}</span>
@@ -195,12 +190,13 @@ export default async function ExigenciasPage({
                         <ResolverExigencia exigenciaId={e.id} resolver={resolverExigencia} />
                       )}
                     </td>
-                  </tr>
+                  </LinhaFiltravel>
                 );
               })}
             </tbody>
           </table>
         </div>
+        </TabelaFiltravel>
       )}
     </PageContainer>
   );

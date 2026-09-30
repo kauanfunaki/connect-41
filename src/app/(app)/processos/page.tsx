@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
-import { Select } from "@/components/ui/Select";
+import { Sparkles, Mail, Columns3, AlertTriangle, Landmark, Loader, UserRound, PauseCircle } from "lucide-react";
+import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { listarFila, contarPorSituacao, feriadosDoTenant } from "@/lib/societario/fila";
@@ -35,6 +36,15 @@ const RECORTES: { chave: string; situacao?: SituacaoDoProcesso }[] = [
   { chave: "cliente", situacao: "AGUARDANDO_CLIENTE" },
   { chave: "suspensos", situacao: "SUSPENSO" },
 ];
+
+const ICONE_DA_SITUACAO: Record<SituacaoDoProcesso, React.ReactNode> = {
+  EM_EXIGENCIA: <AlertTriangle />,
+  AGUARDANDO_ORGAO: <Landmark />,
+  EM_ANDAMENTO: <Loader />,
+  AGUARDANDO_CLIENTE: <UserRound />,
+  SUSPENSO: <PauseCircle />,
+  CONCLUIDO: <PauseCircle />,
+};
 
 export default async function ProcessosPage({
   searchParams,
@@ -112,22 +122,24 @@ export default async function ProcessosPage({
         subtitle="Constituição, alteração contratual, baixa e alvarás — com protocolo, exigência e prazo."
         action={
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        {coordena && (
-          <Link href="/societario/ia" className="text-[13px] text-brand hover:underline whitespace-nowrap">
-            IA do Societário{propostasDaIa > 0 ? ` (${propostasDaIa} para revisar)` : ""}
-          </Link>
-        )}
+        {/* Eram três links de texto (30/09): botão não é link. O aviso da Junta
+            mantém a cor de atenção — é trabalho esperando conferência. */}
         {avisosPendentes > 0 && (
-          <Link href="/processos/avisos" className="text-[13px] text-warning hover:underline whitespace-nowrap font-medium">
-            {avisosPendentes} {avisosPendentes === 1 ? "aviso da Junta" : "avisos da Junta"} para conferir
-          </Link>
+          <Button href="/processos/avisos" variant="secondary" className="text-warning! border-warning/40! hover:bg-warning-bg!">
+            <Mail size={14} />
+            {avisosPendentes} {avisosPendentes === 1 ? "aviso da Junta" : "avisos da Junta"}
+          </Button>
         )}
-        <Link
-          href={filtrosNaUrl.size > 0 ? `/processos/kanban?${filtrosNaUrl}` : "/processos/kanban"}
-          className="text-[13px] text-brand hover:underline whitespace-nowrap"
-        >
+        {coordena && (
+          <Button href="/societario/ia" variant="secondary">
+            <Sparkles size={14} />
+            IA do Societário{propostasDaIa > 0 ? ` · ${propostasDaIa}` : ""}
+          </Button>
+        )}
+        <Button href={filtrosNaUrl.size > 0 ? `/processos/kanban?${filtrosNaUrl}` : "/processos/kanban"} variant="secondary">
+          <Columns3 size={14} />
           Ver no kanban
-        </Link>
+        </Button>
         <NovoProcessoForm
           empresas={empresas.map((e) => ({ value: e.id, label: nomeExibicao(e) }))}
           tipos={tipos.map((t) => ({
@@ -149,72 +161,52 @@ export default async function ProcessosPage({
         }
       />
 
-      <div className="flex flex-wrap gap-1.5 mb-3">
-        {RECORTES.map((r) => {
-          const ativo = r.chave === recorte.chave;
-          const total = r.situacao ? contagem[r.situacao] : todas.length;
-          const rotulo = r.situacao ? SITUACAO_LABEL[r.situacao] : "Todos";
-          return (
-            <Link
-              key={r.chave}
-              href={hrefDoRecorte(r.chave)}
-              aria-current={ativo ? "page" : undefined}
-              className={
-                ativo
-                  ? "h-8 px-3 inline-flex items-center gap-1.5 rounded-md border border-brand/40 bg-brand/8 text-brand text-[12px] font-medium"
-                  : "h-8 px-3 inline-flex items-center gap-1.5 rounded-md border border-border text-fg-secondary text-[12px] hover:bg-surface-hover transition-colors"
-              }
-            >
-              {rotulo}
-              <span className="tabular-nums text-fg-muted">{total}</span>
-            </Link>
-          );
+      {/* As cinco situações em cartão, com a contagem, e cada uma abre o seu
+          recorte — eram pílulas (conferência de 30/09). A ordem é a da fila:
+          o que depende de gente primeiro. */}
+      <FaixaDeTotais
+        itens={RECORTES.filter((r) => r.situacao).map((r) => {
+          const situacao = r.situacao!;
+          return {
+            rotulo: SITUACAO_LABEL[situacao],
+            valor: String(contagem[situacao]),
+            icone: ICONE_DA_SITUACAO[situacao],
+            tom: situacao === "EM_EXIGENCIA" && contagem[situacao] > 0 ? "text-warning" : situacao === "SUSPENSO" && contagem[situacao] > 0 ? "text-danger" : undefined,
+            detalhe: r.chave === recorte.chave ? "mostrando agora" : undefined,
+            href: hrefDoRecorte(r.chave === recorte.chave ? "todos" : r.chave),
+          };
         })}
-      </div>
+      />
 
-      {/* Filtro por GET: a URL guarda o recorte, e quem manda o link para um
-          colega manda a mesma fila que está vendo. */}
-      <form method="get" action="/processos" className="flex flex-wrap items-end gap-2 mb-4">
-        {recorte.chave !== "todos" && <input type="hidden" name="situacao" value={recorte.chave} />}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="filtro-responsavel" className="text-[11px] text-fg-muted">
-            Responsável
-          </label>
-          <Select id="filtro-responsavel" name="responsavel" defaultValue={responsavelFiltro ?? ""} compact>
-            <option value="">Todos</option>
-            <option value="nenhum">Sem responsável</option>
-            {responsaveis.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="filtro-prioridade" className="text-[11px] text-fg-muted">
-            Prioridade
-          </label>
-          <Select id="filtro-prioridade" name="prioridade" defaultValue={prioridadeFiltro ?? ""} compact>
-            <option value="">Todas</option>
-            {PRIORIDADES.map((p) => (
-              <option key={p} value={p}>
-                {PRIORIDADE_LABEL[p]}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <Button type="submit" size="sm" variant="secondary">
-          Filtrar
-        </Button>
-        {filtroAtivo && (
-          <Link
-            href={recorte.chave === "todos" ? "/processos" : `/processos?situacao=${recorte.chave}`}
-            className="h-8 inline-flex items-center text-[12px] text-brand hover:underline"
-          >
-            Limpar filtros
-          </Link>
-        )}
-      </form>
+      {/* Situação, responsável e prioridade no botão "Filtros" — eram pílulas e
+          um formulário com "Filtrar". Continua por GET: a URL guarda o recorte,
+          e quem manda o link manda a mesma fila. */}
+      <FiltrosDaTela
+        className="mb-4"
+        campos={[
+          {
+            chave: "situacao",
+            rotulo: "Situação",
+            vazioLabel: `Todos (${todas.length})`,
+            opcoes: RECORTES.filter((r) => r.situacao).map((r) => ({
+              value: r.chave,
+              label: `${SITUACAO_LABEL[r.situacao!]} (${contagem[r.situacao!]})`,
+            })),
+          },
+          {
+            chave: "responsavel",
+            rotulo: "Responsável",
+            vazioLabel: "Todos",
+            opcoes: [{ value: "nenhum", label: "Sem responsável" }, ...responsaveis.map((r) => ({ value: r.id, label: r.name }))],
+          },
+          {
+            chave: "prioridade",
+            rotulo: "Prioridade",
+            vazioLabel: "Todas",
+            opcoes: PRIORIDADES.map((p) => ({ value: p, label: PRIORIDADE_LABEL[p] })),
+          },
+        ]}
+      />
 
       <ProcessosFila
         linhas={linhas}

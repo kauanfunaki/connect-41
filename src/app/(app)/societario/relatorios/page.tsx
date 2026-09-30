@@ -3,6 +3,8 @@ import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { MetricCard } from "@/components/ui/MetricCard";
+import { FolderOpen, AlertTriangle, CheckCircle2, RotateCcw } from "lucide-react";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { Card } from "@/components/ui/Card";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -76,29 +78,26 @@ export default async function RelatoriosDoSocietarioPage({
         subtitle="Processos abertos agora, mais os concluídos no período. Prazo em dias úteis, descontados os feriados do escritório."
       />
 
-      <div className="flex flex-wrap gap-1.5 mb-5">
-        {PERIODOS.map((p) => (
-          <Link
-            key={p.chave}
-            href={`/societario/relatorios?periodo=${p.chave}`}
-            aria-current={p.chave === periodo.chave ? "page" : undefined}
-            className={
-              p.chave === periodo.chave
-                ? "h-8 px-3 inline-flex items-center rounded-md border border-brand/40 bg-brand/8 text-brand text-[12px] font-medium"
-                : "h-8 px-3 inline-flex items-center rounded-md border border-border text-fg-secondary text-[12px] hover:bg-surface-hover transition-colors"
-            }
-          >
-            {p.rotulo}
-          </Link>
-        ))}
-      </div>
+      {/* O período no botão "Filtros" — eram pílulas (conferência de 30/09). */}
+      <FiltrosDaTela
+        className="mb-5"
+        campos={[
+          {
+            chave: "periodo",
+            rotulo: "Período",
+            vazioLabel: `Últimos ${PERIODOS[1].rotulo}`,
+            opcoes: PERIODOS.filter((p) => p !== PERIODOS[1]).map((p) => ({ value: p.chave, label: `Últimos ${p.rotulo}` })),
+          },
+        ]}
+      />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <MetricCard label="Abertos agora" value={abertos.length} />
-        <MetricCard label="Abertos com prazo estourado" value={estouradosAbertos} highlight={estouradosAbertos > 0} />
-        <MetricCard label={`Concluídos em ${periodo.rotulo}`} value={processos.length - abertos.length} />
+        <MetricCard label="Abertos agora" value={abertos.length} icon={<FolderOpen size={15} />} />
+        <MetricCard label="Abertos com prazo estourado" value={estouradosAbertos} highlight={estouradosAbertos > 0} icon={<AlertTriangle size={15} />} />
+        <MetricCard label={`Concluídos em ${periodo.rotulo}`} value={processos.length - abertos.length} icon={<CheckCircle2 size={15} />} />
         <MetricCard
           label="Processos com volta"
+          icon={<RotateCcw size={15} />}
           value={voltas.percentualComVolta === null ? "—" : `${voltas.percentualComVolta}%`}
           sub={`${voltas.totalDeVoltas} ${voltas.totalDeVoltas === 1 ? "volta" : "voltas"}`}
         />
@@ -111,10 +110,10 @@ export default async function RelatoriosDoSocietarioPage({
             Dias úteis consumidos contra o previsto do tipo. As voltas ficam na mesma linha porque são a causa do
             estouro.
           </p>
-          <div className="overflow-x-auto">
+          <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
             <table className="w-full min-w-[760px] text-[13px]">
               <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className={TH}>Tipo</th>
                   <th className={TH}>Previsto</th>
                   <th className={TH}>Processos</th>
@@ -164,10 +163,10 @@ export default async function RelatoriosDoSocietarioPage({
           {maisVoltas.length === 0 ? (
             <p className="text-[13px] text-fg-muted">Nenhuma volta de exigência no período.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[560px] text-[13px]">
                 <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                  <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className={TH}>Processo</th>
                     <th className={TH}>Voltas</th>
                     <th className={TH}>Dias úteis</th>
@@ -199,10 +198,10 @@ export default async function RelatoriosDoSocietarioPage({
             Concluídos em {periodo.rotulo}, ao lado da carteira aberta. O crédito é do responsável atual do processo —
             não há histórico de redistribuição.
           </p>
-          <div className="overflow-x-auto">
+          <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
             <table className="w-full min-w-[680px] text-[13px]">
               <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className={TH}>Responsável</th>
                   <th className={TH}>Concluídos</th>
                   <th className={TH}>Média de dias</th>
@@ -249,10 +248,10 @@ export default async function RelatoriosDoSocietarioPage({
           {custos.length === 0 ? (
             <p className="text-[13px] text-fg-muted">Nenhuma taxa registrada nos processos do período.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[680px] text-[13px]">
                 <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                  <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className={TH}>Processo</th>
                     <th className={TH}>Voltas</th>
                     <th className={TH}>Total</th>
