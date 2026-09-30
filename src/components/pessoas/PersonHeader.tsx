@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Copy, Check, Building2, Mail, Phone } from "lucide-react";
+import { Copy, Check, Building2, Mail, Phone, Pencil, ArrowRightLeft } from "lucide-react";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { EntityOverflowMenu } from "@/components/ui/EntityOverflowMenu";
 import { AvatarImage } from "@/components/shared/AvatarImage";
@@ -135,22 +135,19 @@ export function PersonHeader({
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Eram links com cara de botão (até 30/09); viraram o Button. */}
           {canRequestHandoff && (
-            <Link
-              href={`/transferencias/novo?entityType=PERSON&entityId=${id}`}
-              className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
-            >
+            <Button href={`/transferencias/novo?entityType=PERSON&entityId=${id}`} variant="secondary" size="sm">
+              <ArrowRightLeft size={14} />
               Solicitar Transferência
-            </Link>
+            </Button>
           )}
           {canEdit && (
             <>
-              <Link
-                href={`/pessoas/${id}/editar`}
-                className="h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
-              >
+              <Button href={`/pessoas/${id}/editar`} variant="secondary" size="sm">
+                <Pencil size={14} />
                 Editar
-              </Link>
+              </Button>
               <EntityOverflowMenu deleteAction={deleteAction} nome={name} />
             </>
           )}

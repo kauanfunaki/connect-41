@@ -3,7 +3,9 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { getAuthContext } from "@/lib/auth/context";
 import { getRelatorioDistorcoes, type DistorcaoRow } from "@/lib/relatoriosRH";
 import { RelatorioHeader } from "@/components/relatorios/RelatorioHeader";
-import { RelatorioTable, RelatorioBadge, ResumoChips } from "@/components/relatorios/RelatorioTable";
+import { RelatorioTable, RelatorioBadge } from "@/components/relatorios/RelatorioTable";
+import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { TrendingDown, TrendingUp } from "lucide-react";
 
 export const metadata = { title: "Distorções salariais" };
 
@@ -32,10 +34,12 @@ export default async function RelatorioDistorcoesPage() {
         subtitle="Compara o salário atual com a faixa cadastrada no cargo. Só aparece quem está fora da faixa — quem está dentro não é distorção."
       />
 
-      <ResumoChips
-        items={[
-          { label: "abaixo da faixa", count: abaixo, tone: "warning" },
-          { label: "acima da faixa", count: acima, tone: "brand" },
+      {/* As contagens eram selos soltos numa linha (até 30/09); viraram os
+          cartões de total. O recorte fino fica no funil da coluna Situação. */}
+      <FaixaDeTotais
+        itens={[
+          { rotulo: "Abaixo da faixa", valor: String(abaixo), icone: <TrendingDown />, tom: abaixo > 0 ? "text-warning" : undefined },
+          { rotulo: "Acima da faixa", valor: String(acima), icone: <TrendingUp />, tom: acima > 0 ? "text-brand" : undefined },
         ]}
       />
 
@@ -48,10 +52,11 @@ export default async function RelatorioDistorcoesPage() {
         minWidth="820px"
         columns={[
           { header: "Colaborador", render: (r) => r.personName },
-          { header: "Cargo", render: (r) => r.cargoName ?? "—" },
-          { header: "Empresa", render: (r) => r.companyName ?? "—" },
+          { header: "Cargo", render: (r) => r.cargoName ?? "—", filtro: { chave: "cargo", valor: (r) => r.cargoName ?? "" } },
+          { header: "Empresa", render: (r) => r.companyName ?? "—", filtro: { chave: "empresa", valor: (r) => r.companyName ?? "" } },
           {
             header: "Situação",
+            filtro: { chave: "situacao", valor: (r) => (r.tipo === "ABAIXO_FAIXA" ? "Abaixo da faixa" : "Acima da faixa") },
             render: (r) => (
               <RelatorioBadge tone={r.tipo === "ABAIXO_FAIXA" ? "warning" : "brand"}>
                 {r.tipo === "ABAIXO_FAIXA" ? "Abaixo da faixa" : "Acima da faixa"}

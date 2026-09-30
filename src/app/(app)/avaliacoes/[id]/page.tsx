@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
+import { ArrowRight, Lock } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
 import { excluirCiclo, encerrarCiclo } from "../actions";
 import { SelecionarColaboradorForm } from "@/components/avaliacoes/SelecionarColaboradorForm";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { formatCalendarDate } from "@/lib/format";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { formatCalendarDate, formatInstantDate } from "@/lib/format";
+import { saoPauloParts } from "@/lib/agenda";
 import { Button } from "@/components/ui/Button";
 
 export default async function CicloPage({
@@ -41,40 +45,39 @@ export default async function CicloPage({
   const deleteAction = excluirCiclo.bind(null, id);
   const encerrarAction = encerrarCiclo.bind(null, id);
 
+  const media = (e: (typeof ciclo.evaluations)[number]) =>
+    e.averageScore != null ? e.averageScore.toString() : "Sem nota";
+
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/avaliacoes" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Avaliações</Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg truncate">{ciclo.name}</span>
-      </div>
+      <Breadcrumb items={[{ label: "Avaliações", href: "/avaliacoes" }, { label: ciclo.name, truncate: true }]} />
 
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-      <PageHeader title={ciclo.name} />
-          <p className="text-[13px] text-fg-muted mt-0.5">
+      {/* Período e ações iam num cabeçalho montado à mão (até 30/09). */}
+      <PageHeader
+        title={ciclo.name}
+        subtitle={
+          <>
             {formatCalendarDate(ciclo.startDate)}
             {ciclo.endDate && ` — ${formatCalendarDate(ciclo.endDate)}`}
             {!ciclo.active && " · Encerrado"}
-          </p>
-        </div>
-        {canManage && (
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {ciclo.active && (
-              <form action={encerrarAction}>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  type="submit"
-                >
-                  Encerrar Ciclo
-                </Button>
-              </form>
-            )}
-            <DeleteButton action={deleteAction} nome={ciclo.name} />
-          </div>
-        )}
-      </div>
+          </>
+        }
+        action={
+          canManage && (
+            <div className="flex items-center gap-2">
+              {ciclo.active && (
+                <form action={encerrarAction}>
+                  <Button variant="secondary" size="sm" type="submit">
+                    <Lock size={14} />
+                    Encerrar Ciclo
+                  </Button>
+                </form>
+              )}
+              <DeleteButton action={deleteAction} nome={ciclo.name} />
+            </div>
+          )
+        }
+      />
 
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-[14px] font-semibold text-fg mb-3">
@@ -84,20 +87,62 @@ export default async function CicloPage({
         {ciclo.evaluations.length === 0 ? (
           <p className="text-[13px] text-fg-muted mb-3">Nenhuma avaliação registrada ainda.</p>
         ) : (
-          <div className="divide-y divide-border mb-3">
-            {ciclo.evaluations.map((e) => (
-              <Link
-                key={e.id}
-                href={`/avaliacoes/${id}/avaliar/${e.person.id}`}
-                className="flex items-center justify-between py-2.5 hover:bg-surface-2 transition-colors px-2 -mx-2 rounded-md"
-              >
-                <p className="text-[13px] text-fg">{e.person.name}</p>
-                <span className="text-[12px] text-fg-muted">
-                  {e.averageScore != null ? `Média: ${e.averageScore.toString()}` : "Sem nota"}
-                </span>
-              </Link>
-            ))}
-          </div>
+          // Era uma lista de linhas-link (até 30/09); virou tabela com funil.
+          // A tela de avaliar só abre para quem edita — o botão segue a regra.
+          <TabelaFiltravel
+            linhas={ciclo.evaluations.map((e) => ({
+              id: e.id,
+              valores: { media: media(e), data: saoPauloParts(e.evaluationDate).dateKey },
+            }))}
+          >
+            <div className="c41-tabela overflow-x-auto rounded-lg border border-border mb-4">
+              <table className="w-full min-w-[560px] text-[length:var(--fs-ui)]">
+                <thead>
+                  <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                    <th className="px-4 py-3">Colaborador</th>
+                    <th className="px-4 py-3">
+                      <FiltroDaColuna rotulo="Média" chave="media" />
+                    </th>
+                    <th className="px-4 py-3">
+                      <FiltroDaColuna rotulo="Avaliado em" chave="data" tipo="data" align="right" />
+                    </th>
+                    {canManage && (
+                      <th className="px-4 py-3">
+                        <span className="sr-only">Abrir</span>
+                      </th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {ciclo.evaluations.map((e) => (
+                    <LinhaFiltravel key={e.id} id={e.id} className="border-b border-border">
+                      <td className="px-4 py-3">
+                        {canManage ? (
+                          <Link
+                            href={`/avaliacoes/${id}/avaliar/${e.person.id}`}
+                            className="font-semibold text-fg hover:text-brand transition-colors"
+                          >
+                            {e.person.name}
+                          </Link>
+                        ) : (
+                          <span className="font-semibold text-fg">{e.person.name}</span>
+                        )}
+                      </td>
+                      <td className={`px-4 py-3 ${e.averageScore != null ? "text-fg-secondary" : "text-fg-muted"}`}>{media(e)}</td>
+                      <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{formatInstantDate(e.evaluationDate)}</td>
+                      {canManage && (
+                        <td className="px-4 py-3">
+                          <Button href={`/avaliacoes/${id}/avaliar/${e.person.id}`} variant="secondary" size="xs">
+                            Abrir <ArrowRight size={11} />
+                          </Button>
+                        </td>
+                      )}
+                    </LinhaFiltravel>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </TabelaFiltravel>
         )}
 
         {canManage && ciclo.active && (

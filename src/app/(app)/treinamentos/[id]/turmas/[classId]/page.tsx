@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -7,6 +6,7 @@ import { adicionarParticipante, atualizarParticipante, removerParticipante } fro
 import { AddParticipanteForm } from "@/components/treinamentos/AddParticipanteForm";
 import { ParticipanteRow } from "@/components/treinamentos/ParticipanteRow";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { formatCalendarDate } from "@/lib/format";
 
 export default async function TurmaPage({
@@ -39,15 +39,13 @@ export default async function TurmaPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/treinamentos" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Treinamentos</Link>
-        <span className="text-fg-muted">/</span>
-        <Link href={`/treinamentos/${trainingId}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate max-w-[200px]">
-          {trainingClass.training.name}
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">{formatCalendarDate(trainingClass.date)}</span>
-      </div>
+      <Breadcrumb
+        items={[
+          { label: "Treinamentos", href: "/treinamentos" },
+          { label: trainingClass.training.name, href: `/treinamentos/${trainingId}`, truncate: true },
+          { label: formatCalendarDate(trainingClass.date) },
+        ]}
+      />
       <PageHeader
         title={<>{trainingClass.training.name} — {formatCalendarDate(trainingClass.date)}</>}
         subtitle={[trainingClass.shift, trainingClass.instructor].filter(Boolean).join(" · ") || "Sem turno/instrutor definidos"}

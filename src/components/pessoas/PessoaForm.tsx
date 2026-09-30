@@ -2,7 +2,6 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { PessoaCreateState } from "@/app/(app)/pessoas/actions";
 import { PersonEmploymentStatus, type DocumentCategory } from "@/generated/prisma/enums";
@@ -675,13 +674,15 @@ export function PessoaForm({
                           {d.file.name}
                           <span className="text-fg-muted"> · {CATEGORY_LABEL[d.category]}</span>
                         </span>
-                        <button
-                          type="button"
+                        {/* Era texto vermelho sublinhado (até 30/09): botão. */}
+                        <Button
+                          variant="danger"
+                          size="xs"
+                          className="flex-shrink-0"
                           onClick={() => setPendingDocs((prev) => prev.filter((_, j) => j !== i))}
-                          className="text-[12px] text-danger hover:underline flex-shrink-0"
                         >
                           Remover
-                        </button>
+                        </Button>
                       </li>
                     ))}
                   </ul>
@@ -767,12 +768,10 @@ export function PessoaForm({
             )}
           </div>
           <div className="flex items-center gap-3">
-            <Link
-              href={cancelHref}
-              className="h-9 px-4 rounded-md border border-border-strong text-[length:var(--fs-button)] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors inline-flex items-center"
-            >
+            {/* Era um link com cara de botão (até 30/09). */}
+            <Button href={cancelHref} variant="secondary">
               Cancelar
-            </Link>
+            </Button>
             {step < lastStep ? (
               <>
                 {isEditing && (

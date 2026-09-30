@@ -9,6 +9,8 @@ import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { buildS2200Preview } from "@/lib/esocialS2200";
 import { formatCalendarDate } from "@/lib/format";
+import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { CheckCircle2, CircleDashed } from "lucide-react";
 
 export default async function EsocialS2200Page({
   params,
@@ -86,17 +88,24 @@ export default async function EsocialS2200Page({
         </p>
       </div>
 
-      {/* Resumo de completude */}
-      <div className="flex items-center gap-3 mb-4">
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-medium bg-success/10 text-success border border-success/25">
-          {preview.filledCount} preenchido{preview.filledCount !== 1 ? "s" : ""}
-        </span>
-        {preview.pendingCount > 0 && (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-medium bg-warning/10 text-warning border border-warning/25">
-            {preview.pendingCount} pendente{preview.pendingCount !== 1 ? "s" : ""}
-          </span>
-        )}
-      </div>
+      {/* Resumo de completude — eram dois selos soltos (até 30/09); viraram
+          os cartões de total. */}
+      <FaixaDeTotais
+        itens={[
+          {
+            rotulo: `Campo${preview.filledCount !== 1 ? "s" : ""} preenchido${preview.filledCount !== 1 ? "s" : ""}`,
+            valor: String(preview.filledCount),
+            icone: <CheckCircle2 />,
+            tom: "text-success",
+          },
+          {
+            rotulo: `Campo${preview.pendingCount !== 1 ? "s" : ""} pendente${preview.pendingCount !== 1 ? "s" : ""}`,
+            valor: String(preview.pendingCount),
+            icone: <CircleDashed />,
+            tom: preview.pendingCount > 0 ? "text-warning" : "text-fg-muted",
+          },
+        ]}
+      />
 
       <div className="space-y-4">
         {preview.groups.map((g) => (

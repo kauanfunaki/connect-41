@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
@@ -8,6 +7,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { EvaluationForm } from "@/components/avaliacoes/EvaluationForm";
 import { registrarAvaliacao } from "./actions";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function AvaliarColaboradorPage({
@@ -35,13 +35,13 @@ export default async function AvaliarColaboradorPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/avaliacoes" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Avaliações</Link>
-        <span className="text-fg-muted">/</span>
-        <Link href={`/avaliacoes/${cycleId}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate max-w-[200px]">{cycle.name}</Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">{person.name}</span>
-      </div>
+      <Breadcrumb
+        items={[
+          { label: "Avaliações", href: "/avaliacoes" },
+          { label: cycle.name, href: `/avaliacoes/${cycleId}`, truncate: true },
+          { label: person.name },
+        ]}
+      />
       <PageHeader title={`Avaliar ${person.name}`} />
 
       {competencies.length === 0 ? (

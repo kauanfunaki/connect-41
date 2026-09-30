@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import type { ConferenciaState } from "@/app/(app)/pessoas/[id]/desligamento/[terminationId]/conferencia/actions";
 import type { RescisaoCheckItem } from "@/lib/rescisaoChecklist";
 import { Button } from "@/components/ui/Button";
+import { CornerDownLeft } from "lucide-react";
 
 export type CheckState = {
   status: "PENDENTE" | "CONFERIDO" | "DIVERGENTE" | "NAO_APLICAVEL";
@@ -179,11 +180,14 @@ export function ItemConferenciaRow({ item, current, referencia, action, canEdit 
           )}
 
           {referencia.situacao === "CALCULADO" && referencia.valorLabel && item.hasValue && (
+            // Era um link azul (até 30/09): preenche o campo, é ação — botão.
             <Button
-              variant="link"
-              className="mt-2 text-[12px]"
+              variant="secondary"
+              size="xs"
+              className="mt-2"
               onClick={() => setValorInformado(referencia.valorLabel!.replace("R$ ", ""))}
             >
+              <CornerDownLeft size={11} />
               Usar {referencia.valorLabel} como valor informado
             </Button>
           )}
