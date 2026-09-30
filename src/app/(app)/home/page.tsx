@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, Suspense } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import Link from "next/link";
 import {
@@ -22,7 +22,19 @@ import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getSectorsWithEnabledModules } from "@/lib/modules";
 import { boardPath } from "@/lib/kanbanPaths";
 import { formatCalendarDate, formatInstantDate, formatInstantTime } from "@/lib/format";
-import { parseHomeWidgets, visibleWidgets, type HomeWidgetKey } from "@/lib/homeWidgets";
+import { parseHomeWidgets, visibleWidgets, widgetsDisponiveis, type HomeWidgetKey } from "@/lib/homeWidgets";
+import { acessoDosPaineis } from "@/lib/home/acessoDosPaineis";
+import {
+  PainelCarregando,
+  PainelDeCertificados,
+  PainelDeContas,
+  PainelDePendencias,
+  PainelDeProcessos,
+  PainelDeRecrutamento,
+  PainelDeSemanas,
+  PainelDeTarefas,
+  PainelDoDP,
+} from "@/components/home/Paineis";
 import { salvarWidgetsHome, restaurarWidgetsHome } from "./actions";
 
 const ACTIVITY_LABEL: Record<string, string> = {
@@ -287,9 +299,10 @@ export default async function HomePage() {
 
   // Widget "seus setores" — só setores com módulo habilitado; métrica agora é
   // volume de trabalho (abertos/vencidos), não "N módulos disponíveis".
-  const [{ labels: sectorLabels, colors: sectorColors }, sectorsWithModules] = await Promise.all([
+  const [{ labels: sectorLabels, colors: sectorColors }, sectorsWithModules, paineis] = await Promise.all([
     getSectorMaps(ctx.tenantId),
     getSectorsWithEnabledModules(ctx.tenantId),
+    acessoDosPaineis(ctx),
   ]);
   // Com setor ativo, o widget mostra só ele — a Home do BPO não lista onze
   // setores dos quais dez não são dele.
@@ -354,12 +367,46 @@ export default async function HomePage() {
   const pendingForMe = vencidosCount + hojeCount + incomingHandoffsRaw.length;
   const nextMeeting = upcomingMeetings[0] && upcomingMeetings[0].startAt <= todayEnd ? upcomingMeetings[0] : null;
 
+  // Painéis de setor (30/09): cada um com a própria consulta, dentro de um
+  // Suspense — a Home aparece sem esperar o mais lento, e o painel entra
+  // quando o dado chega. Sem acesso, o painel nem é montado.
+  function painelDoSetor(
+    chave: HomeWidgetKey,
+    Componente: (p: Parameters<typeof PainelDeContas>[0]) => Promise<React.ReactNode>
+  ): React.ReactNode {
+    const acesso = paineis.get(chave);
+    if (!acesso) return null;
+    const setor = { rotulo: sectorLabel(sectorLabels, acesso.setor), cor: sectorColors[acesso.setor] ?? "#586577" };
+    return (
+      <Suspense fallback={<PainelCarregando />}>
+        <Componente ctx={ctx} acesso={acesso} setor={setor} />
+      </Suspense>
+    );
+  }
+
   // Cada bloco da Home vira uma entrada deste mapa; o que entra na tela e em
   // que ordem é decidido logo abaixo por visibleWidgets(), a partir do que o
   // usuário escolheu em "Personalizar". Bloco sem dado (ex.: nenhuma reunião
   // hoje) continua sendo null como antes — a preferência só decide se ele
   // *pode* aparecer, não força um card vazio.
   const widgetNodes: Record<HomeWidgetKey, React.ReactNode> = {
+    "painel-tarefas": (
+      <PainelDeTarefas
+        itens={openPipelineItemsRaw}
+        atribuidas={assignedToMe.length}
+        escopo={ctx.activeSector ? sectorLabel(sectorLabels, ctx.activeSector) : "Seus setores"}
+        inicioDeHoje={todayStart}
+        fimDeHoje={todayEnd}
+      />
+    ),
+    "painel-contas": painelDoSetor("painel-contas", PainelDeContas),
+    "painel-semanas": painelDoSetor("painel-semanas", PainelDeSemanas),
+    "painel-pendencias": painelDoSetor("painel-pendencias", PainelDePendencias),
+    "painel-processos": painelDoSetor("painel-processos", PainelDeProcessos),
+    "painel-dp": painelDoSetor("painel-dp", PainelDoDP),
+    "painel-recrutamento": painelDoSetor("painel-recrutamento", PainelDeRecrutamento),
+    "painel-certificados": painelDoSetor("painel-certificados", PainelDeCertificados),
+
     indicadores: (
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         <MetricCard
@@ -604,8 +651,10 @@ export default async function HomePage() {
     ),
   };
 
-  const restrictedOpts = { showRestricted: showWorkspaceOverview };
+  const restrictedOpts = { showRestricted: showWorkspaceOverview, paineisDoSetor: new Set(paineis.keys()) };
+  const disponiveis = widgetsDisponiveis(restrictedOpts);
   const topWidgets = visibleWidgets("top", selectedWidgets, restrictedOpts);
+  const painelWidgets = visibleWidgets("paineis", selectedWidgets, restrictedOpts);
   const mainWidgets = visibleWidgets("main", selectedWidgets, restrictedOpts);
   const sideWidgets = visibleWidgets("side", selectedWidgets, restrictedOpts);
   // Com uma das colunas vazia o grid de duas colunas jogaria a sobrevivente na
@@ -625,7 +674,7 @@ export default async function HomePage() {
             <p className="hidden sm:block text-[length:var(--fs-helper)] text-fg-muted tnum">{today}</p>
             <CustomizeHomeButton
               selected={selectedWidgets}
-              showRestricted={showWorkspaceOverview}
+              disponiveis={disponiveis}
               saveAction={salvarWidgetsHome}
               resetAction={restaurarWidgetsHome}
             />
@@ -641,6 +690,16 @@ export default async function HomePage() {
       {topWidgets.map((key) => (
         <Fragment key={key}>{widgetNodes[key]}</Fragment>
       ))}
+
+      {/* Painéis: a grade de gráficos (30/09). Duas colunas até telas bem
+          largas — com a sidebar, três painéis a 1440px apertam as barras. */}
+      {painelWidgets.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 min-[1760px]:grid-cols-3 gap-4 mb-4 items-stretch">
+          {painelWidgets.map((key) => (
+            <Fragment key={key}>{widgetNodes[key]}</Fragment>
+          ))}
+        </div>
+      )}
 
       {/* Corpo: coluna principal (meu trabalho) + coluna lateral */}
       {(mainWidgets.length > 0 || sideWidgets.length > 0) && (
@@ -663,7 +722,7 @@ export default async function HomePage() {
         </div>
       )}
 
-      {topWidgets.length === 0 && mainWidgets.length === 0 && sideWidgets.length === 0 && (
+      {topWidgets.length === 0 && painelWidgets.length === 0 && mainWidgets.length === 0 && sideWidgets.length === 0 && (
         <p className="text-[length:var(--fs-body)] text-fg-muted">
           Todos os blocos estão ocultos. Use <span className="text-fg font-medium">Personalizar</span> para trazer algum de volta.
         </p>
