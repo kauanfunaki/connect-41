@@ -186,7 +186,7 @@ export default async function TarefasPage() {
       />
 
       {visiveis.size === 0 ? (
-        <div className="bg-surface border border-border rounded-lg p-5">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
           <EmptyState
             icon={<ListTodo />}
             title="Nada configurado para o seu setor"
@@ -198,7 +198,7 @@ export default async function TarefasPage() {
         <div className="flex flex-col gap-4 min-w-0">
           {/* Transferências sob minha responsabilidade */}
           {mostraTransferencias && (
-          <div className="bg-surface border border-border rounded-lg p-5">
+          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
             <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5 flex items-center gap-2">
               <ArrowRightLeft size={15} className="text-fg-muted" /> Transferências em aberto
             </h2>
@@ -250,7 +250,7 @@ export default async function TarefasPage() {
 
           {/* Cards de kanban atribuídos a mim */}
           {mostraCards && (
-          <div className="bg-surface border border-border rounded-lg p-5">
+          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
             <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5 flex items-center gap-2">
               <Columns3 size={15} className="text-fg-muted" /> Meus cards de kanban
             </h2>
@@ -286,7 +286,7 @@ export default async function TarefasPage() {
 
         {/* Próximas reuniões */}
         {mostraReunioes && (
-        <div className="bg-surface border border-border rounded-lg p-5 h-fit">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 h-fit">
           <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5 flex items-center gap-2">
             <Video size={15} className="text-fg-muted" /> Próximas reuniões
           </h2>

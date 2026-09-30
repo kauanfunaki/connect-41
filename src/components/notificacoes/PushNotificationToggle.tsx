@@ -140,7 +140,7 @@ export function PushNotificationToggle({
   if (status === "unconfigured" && semChaves === "esconder") return null;
 
   return (
-    <div className="bg-surface border border-border rounded-lg p-4 mb-4 flex items-center justify-between gap-4">
+    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 mb-4 flex items-center justify-between gap-4">
       <div>
         <p className="text-[13px] font-medium text-fg">Notificações no navegador</p>
         <p className="text-[12px] text-fg-muted mt-0.5">

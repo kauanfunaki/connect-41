@@ -84,7 +84,7 @@ export default async function DocumentosClientePage({
           />
         </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
           {documentos.map((d) => {
             const viewedCount = d.recipients.filter((r) => r.firstViewedAt).length;
             return (

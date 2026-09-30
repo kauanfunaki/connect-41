@@ -55,7 +55,7 @@ function Section({
     <div className="mb-6">
       <h2 className={`text-[13px] font-semibold mb-2 ${danger ? "text-danger" : "text-fg"}`}>{title}</h2>
       {items.length === 0 ? (
-        <div className="bg-surface border border-border rounded-lg py-8 text-center text-[13px] text-fg-muted">{empty}</div>
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] py-8 text-center text-[13px] text-fg-muted">{empty}</div>
       ) : (
         <Card className="divide-y divide-border">
           {items.map((v) => (

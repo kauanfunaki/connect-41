@@ -193,7 +193,7 @@ export default async function VagaPage({
       </div>
 
       {/* Detalhes */}
-      <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
         <h2 className="text-[14px] font-semibold text-fg mb-4">Detalhes</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="Cargo" value={vaga.cargo?.name} />
@@ -252,7 +252,7 @@ export default async function VagaPage({
       />
 
       {/* Funil de recrutamento */}
-      <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-[14px] font-semibold text-fg">
             Funil de recrutamento ({vaga.candidaturas.length} candidato{vaga.candidaturas.length !== 1 ? "s" : ""})

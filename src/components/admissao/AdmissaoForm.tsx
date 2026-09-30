@@ -130,7 +130,7 @@ export function AdmissaoForm({ token, defaults }: Props) {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Dados pessoais */}
-      <section className="bg-surface border border-border rounded-lg p-5">
+      <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-[15px] font-semibold text-fg mb-4">Dados pessoais</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <CampoForm label="CPF" htmlFor="cpf">
@@ -158,7 +158,7 @@ export function AdmissaoForm({ token, defaults }: Props) {
       </section>
 
       {/* Endereço */}
-      <section className="bg-surface border border-border rounded-lg p-5">
+      <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-[15px] font-semibold text-fg mb-4">Endereço</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <CampoForm label="CEP" htmlFor="zipCode">
@@ -186,7 +186,7 @@ export function AdmissaoForm({ token, defaults }: Props) {
       </section>
 
       {/* Dados bancários */}
-      <section className="bg-surface border border-border rounded-lg p-5">
+      <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-[15px] font-semibold text-fg mb-4">Dados bancários</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <CampoForm label="Banco" htmlFor="bankName">
@@ -210,7 +210,7 @@ export function AdmissaoForm({ token, defaults }: Props) {
       </section>
 
       {/* Dependentes */}
-      <section className="bg-surface border border-border rounded-lg p-5">
+      <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-[15px] font-semibold text-fg mb-1">Dependentes</h2>
         <p className="text-[12px] text-fg-muted mb-4">Filhos, cônjuge ou outros dependentes (imposto de renda / salário-família). Opcional.</p>
 
@@ -266,7 +266,7 @@ export function AdmissaoForm({ token, defaults }: Props) {
       </section>
 
       {/* Documentos */}
-      <section className="bg-surface border border-border rounded-lg p-5">
+      <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-[15px] font-semibold text-fg mb-1">Documentos</h2>
         <p className="text-[12px] text-fg-muted mb-4">PDF, JPG, PNG ou WEBP, até 10MB cada. Envie o que tiver em mãos — o RH confirma o restante depois.</p>
         <div className="space-y-3">

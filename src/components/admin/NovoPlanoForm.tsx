@@ -22,7 +22,7 @@ export function NovoPlanoForm() {
      </Button>
 
       {open && (
-        <form action={formAction} className="mt-4 p-4 bg-surface border border-border rounded-lg space-y-3 max-w-xl">
+        <form action={formAction} className="mt-4 p-4 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] space-y-3 max-w-xl">
           <Input
             name="name"
             required

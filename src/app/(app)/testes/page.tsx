@@ -129,7 +129,7 @@ export default async function TestesPage({
           />
         </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
           {links.map((l) => (
             <Link key={l.id} href={`/testes/${l.id}`} className="flex items-center justify-between px-4 py-3 hover:bg-surface-2 transition-colors">
               <div>

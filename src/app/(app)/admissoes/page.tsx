@@ -45,7 +45,7 @@ export default async function AdmissoesPage() {
           <EmptyState icon={<UserPlus />} title="Nenhuma admissão em andamento" description="Admissões iniciadas na ficha de cada pessoa aparecem aqui enquanto estiverem em andamento." />
         </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
           {people.map((p) => {
             const pendingExams = p.exames.filter((e) => PENDING_EXAM_STATUSES.has(e.status)).length;
             const docCount = docCountMap.get(p.id) ?? 0;

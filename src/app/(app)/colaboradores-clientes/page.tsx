@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Pagination } from "@/components/shared/Pagination";
 import { Users } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -171,23 +172,7 @@ export default async function ColaboradoresClientesPage({
         />
       )}
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <span className="text-[12px] text-fg-muted">Página {pageNum} de {totalPages}</span>
-          <div className="flex gap-1">
-            {pageNum > 1 && (
-              <Link href={buildUrl({ page: String(pageNum - 1) })} className="h-8 px-3 rounded-md text-[12px] text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors flex items-center">
-                ← Anterior
-              </Link>
-            )}
-            {pageNum < totalPages && (
-              <Link href={buildUrl({ page: String(pageNum + 1) })} className="h-8 px-3 rounded-md text-[12px] text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors flex items-center">
-                Próxima →
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
+      <Pagination page={pageNum} totalPages={totalPages} buildHref={(n) => buildUrl({ page: String(n) })} total={total} rotulo="colaboradores" />
     </PageContainer>
   );
 }

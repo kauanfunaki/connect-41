@@ -89,7 +89,7 @@ export default async function SectorHubPage({
               >
                 <Link
                   href={`/setor/${code}/espacos/${s.id}`}
-                  className="block bg-surface border border-border rounded-lg p-4 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform]"
+                  className="block bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform]"
                 >
                   <div className="flex items-center gap-2 mb-1 pr-6">
                     <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: s.color }} />

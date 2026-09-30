@@ -18,6 +18,8 @@ import { nomeExibicao, razaoSocialSecundaria } from "@/lib/companyName";
 import { resumirRegime } from "@/lib/taxRegime";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { Button } from "@/components/ui/Button";
+import { FiltroDaColunaNaUrl } from "@/components/shared/FiltroDeColunas";
+import type { OpcaoDoFunil } from "@/lib/filtrosDaListaDeEmpresas";
 
 type Row = {
   id: string;
@@ -46,6 +48,8 @@ type Props = {
   statusColor: Record<CompanyStatus, string>;
   atualizarStatusEmMassa: (ids: string[], status: CompanyStatus) => Promise<void>;
   excluirEmpresasEmMassa: (ids: string[]) => Promise<void>;
+  /** Opções do funil de Regime e Localização, contadas no servidor sobre a base filtrada. */
+  filtrosDeColuna?: { regime: OpcaoDoFunil[]; local: OpcaoDoFunil[] };
 };
 
 const STATUS_OPTIONS: { value: CompanyStatus; label: string }[] = [
@@ -63,6 +67,7 @@ export function EmpresasTable({
   statusColor,
   atualizarStatusEmMassa,
   excluirEmpresasEmMassa,
+  filtrosDeColuna,
 }: Props) {
   // A consulta já vem ordenada por (cliente, empresa) — aqui é só quebrar em
   // blocos para desenhar o cabeçalho de cada cliente.
@@ -109,7 +114,7 @@ export function EmpresasTable({
     return (
       <tr
         key={c.id}
-        className={`border-b border-border last:border-0 transition-colors ${
+        className={`c41-linha border-b border-border last:border-0 transition-colors ${
           selected.has(c.id) ? "bg-selected-bg" : "hover:bg-surface-hover"
         }`}
       >
@@ -168,18 +173,20 @@ export function EmpresasTable({
             {ehFilial && <span className="ml-1 shrink-0 text-[11.5px] text-fg-muted">filial</span>}
           </div>
         </td>
-        <td className="px-4 py-3 text-fg-secondary tnum whitespace-nowrap">{formatDocumento(c.kind, c.cnpj, c.cpf)}</td>
-        <td className="px-4 py-3 whitespace-nowrap">
+        <td className="px-4 py-3 text-center text-[length:var(--fs-ui)] text-fg-secondary tnum whitespace-nowrap">
+          {formatDocumento(c.kind, c.cnpj, c.cpf)}
+        </td>
+        <td className="px-4 py-3 text-center whitespace-nowrap">
           <StatusDot color={statusColor[c.status]} label={statusLabel[c.status]} />
         </td>
         {/* Resumido e sem quebra: o rótulo do Acessórias chega a 73 caracteres
             e esticava a linha em seis, empurrando as ações para fora da tela.
             O texto inteiro fica no title. */}
-        <td className="px-4 py-3 text-fg-secondary truncate" title={c.taxRegime ?? undefined}>
+        <td className="px-4 py-3 text-center text-[length:var(--fs-ui)] text-fg-secondary truncate" title={c.taxRegime ?? undefined}>
           {resumirRegime(c.taxRegime) ?? "—"}
         </td>
         <td
-          className="px-4 py-3 text-fg-secondary truncate"
+          className="px-4 py-3 text-center text-[length:var(--fs-ui)] text-fg-secondary truncate"
           title={c.city && c.stateCode ? `${c.city}/${c.stateCode}` : undefined}
         >
           {c.city && c.stateCode ? `${c.city}/${c.stateCode}` : c.city ?? c.stateCode ?? "—"}
@@ -188,7 +195,7 @@ export function EmpresasTable({
             as ações eram a primeira coisa a sair. Sem borda, porque agora ela
             apareceria o tempo todo sem haver rolagem. */}
         <td
-          className={`px-4 py-3 text-right whitespace-nowrap sticky right-0 ${
+          className={`px-4 py-3 text-center whitespace-nowrap sticky right-0 ${
             selected.has(c.id) ? "bg-selected-bg" : "bg-surface"
           }`}
         >
@@ -389,7 +396,7 @@ export function EmpresasTable({
 
   return (
     <>
-      <div className="bg-surface border border-border rounded-lg overflow-hidden">
+      <div className="bg-surface border border-border rounded-lg overflow-hidden shadow-[var(--c41-shadow-xs)]">
         {companies.length === 0 ? (
           <EmptyState icon={<Building2 />} title="Nenhuma empresa encontrada" />
         ) : (
@@ -434,20 +441,22 @@ export function EmpresasTable({
               TODAS as larguras quando o conteúdo muda, então expandir uma matriz
               deslocava as colunas da tabela inteira. Larguras declaradas uma vez
               deixam o expandir e o recolher inertes. */}
-          <table className="w-full table-fixed min-w-[1020px] text-[length:var(--fs-body)]">
+          <table className="w-full table-fixed min-w-[960px] text-[length:var(--fs-body)]">
             <colgroup>
               {canCreate && <col className="w-11" />}
-              {/* Nome não declara largura: fica com o espaço que sobrar. */}
+              {/* Nome não declara largura: fica com o espaço que sobrar. Em
+                  30/09 ele sobrava com ~80px de texto numa tela de 1280px
+                  ("041 CON…"), porque documento, regime e local somavam 550px
+                  fixos. Os três desceram para 13px (a informação de apoio) e
+                  para as larguras abaixo; o nome ganhou ~180px. */}
               <col />
-              {/* 190px, e não 150: um CNPJ formatado é `00.000.000/0000-00`,
-                  18 caracteres em `tnum` a 15px — sozinho já passa de 150px, e
-                  com o `px-4` de cada lado o texto encostava na coluna de
-                  Status. Medido no print da conferência de 09/09. */}
-              <col className="w-[190px]" />
-              <col className="w-[120px]" />
-              <col className="w-[190px]" />
-              <col className="w-[170px]" />
-              <col className="w-[130px]" />
+              {/* 168px: CNPJ formatado são 18 caracteres `tnum`, que a 13px
+                  dão ~135px, mais o `px-4` de cada lado. */}
+              <col className="w-[168px]" />
+              <col className="w-[112px]" />
+              <col className="w-[150px]" />
+              <col className="w-[160px]" />
+              <col className="w-[124px]" />
             </colgroup>
             <thead>
               <tr className="border-b border-border bg-table-header-bg">
@@ -461,10 +470,18 @@ export function EmpresasTable({
                     data de cadastro não decide nada numa lista operacional) e o
                     ID do Acessórias desceu para a segunda linha do nome. */}
                 <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">CNPJ</th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Regime</th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Localização</th>
+                <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">CNPJ</th>
+                <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
+                <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                  {filtrosDeColuna ? <FiltroDaColunaNaUrl rotulo="Regime" chave="regime" opcoes={filtrosDeColuna.regime} /> : "Regime"}
+                </th>
+                <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                  {filtrosDeColuna ? (
+                    <FiltroDaColunaNaUrl rotulo="Localização" chave="local" opcoes={filtrosDeColuna.local} align="right" />
+                  ) : (
+                    "Localização"
+                  )}
+                </th>
                 <th className="px-4 py-3 sticky right-0 bg-table-header-bg" />
               </tr>
             </thead>

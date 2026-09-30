@@ -662,6 +662,38 @@ funcionaria dando altura própria à tabela, o que muda o jeito de rolar a tela.
 (Empresas, Pessoas, Clientes, Tarefas, Transferências), Societário, DP,
 Recrutamento, Fiscal, Gestão, Admin, login e portal.
 
+### Onda 2 — telas comuns (30/09)
+
+- **Funil que filtra no servidor** (`FiltroDaColunaNaUrl`), para tabela
+  paginada: numa lista de 20 por página, filtrar só as linhas da tela engana.
+  Opções e contagens saem de um `groupBy` na base inteira, em cascata; a escolha
+  vai para a URL como parâmetro repetido e a página volta para 1. A lista do
+  funil (`ListaDeValores`) é a mesma do funil do navegador. Primeiro uso:
+  Regime e Localização em `/empresas` (`src/lib/filtrosDaListaDeEmpresas.ts`,
+  com testes).
+- **Empresas:** a coluna Nome ficava com ~80px de texto em 1280px — documento,
+  regime e local desceram para 13px e larguras menores; o nome ganhou ~180px.
+  Colunas centralizadas, **menos o nome**: é a árvore matriz → filial, e
+  centralizar desmancha o recuo. O botão de status passou a preservar os outros
+  filtros da URL (trocava o status e apagava o regime).
+- **Ações da linha** (`AcoesDeLinha`, Empresas/Pessoas/Clientes): "Editar" é
+  botão; Inativar/Reativar foi para o menu "⋯".
+- **Paginação** (`Pagination`): botões, com o total; as três cópias locais
+  (Empresas, Pessoas, Clientes, Colaboradores de clientes) usam o componente.
+- **Pessoas, Clientes, Colaboradores de clientes:** casco padrão (centralizado,
+  fio azul). Sem funil por coluna: são valores quase todos únicos (CPF, e-mail,
+  nome) e a situação já está no "Filtros".
+- **Transferências:** as pílulas Novas/Resolvendo/Finalizadas viraram cartões
+  de total clicáveis, com a contagem, e o botão "Filtros" (situação e
+  prioridade); o cartão da lista acende no hover.
+- **Sombra dos painéis escritos à mão** (`bg-surface border border-border
+  rounded-lg` sem `Card`): 163 ocorrências em 121 arquivos ganharam a sombra
+  xs do `Card`, por script.
+- Cabeçalho da tabela padrão não quebra linha ("RAIZ DO CNPJ" quebrava).
+- `FaixaDeTotais` com 3 cartões ocupa a linha inteira em `xl`.
+
+Tarefas não mudou: está no Quadro para virar o "Meu Dia".
+
 ---
 
 ## Sequenciamento

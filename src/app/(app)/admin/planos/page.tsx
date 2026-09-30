@@ -43,7 +43,7 @@ export default async function PlanosPage() {
           />
         </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg divide-y divide-border mt-6">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border mt-6">
           {plans.map((p) => (
             <div key={p.id} className="flex items-start justify-between px-4 py-3 gap-4">
               <div className="min-w-0 flex-1">

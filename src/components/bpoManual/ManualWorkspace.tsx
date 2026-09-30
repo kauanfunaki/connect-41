@@ -483,7 +483,7 @@ export function ManualWorkspace({
     // sobra da viewport, então o card nunca empurra a página e a única rolagem
     // é a interna — árvore de documentos à esquerda, canvas à direita.
     // overflow-hidden pro canto arredondado recortar essas áreas de rolagem.
-    <div className="bg-surface border border-border rounded-lg overflow-hidden flex h-full min-h-0">
+    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden flex h-full min-h-0">
       <div className="w-72 flex-shrink-0 flex flex-col border-r border-border p-3">
         <div className="flex-1 min-h-0 overflow-y-auto space-y-0.5">
           {documents.map((doc) => {
