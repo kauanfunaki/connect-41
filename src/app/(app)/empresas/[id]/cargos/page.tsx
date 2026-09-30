@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
@@ -6,7 +5,7 @@ import { Briefcase } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
-import { DeleteFieldButton } from "@/components/admin/DeleteFieldButton";
+import { AcoesDoCadastro } from "@/components/empresas/AcoesDoCadastro";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -85,21 +84,13 @@ export default async function CargosPage({
       ) : (
         <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
           {cargos.map((c) => (
-            <div key={c.id} className="flex items-center justify-between px-4 py-3">
+            <div key={c.id} className="flex items-center justify-between gap-4 px-4 py-3">
               <div>
                 <p className="text-[13px] text-fg font-medium">{c.name}</p>
                 {c.area && <p className="text-[12px] text-fg-muted">{c.area}</p>}
               </div>
               {canManage && (
-                <div className="flex items-center gap-3">
-                  <Link
-                    href={`/empresas/${companyId}/cargos/${c.id}/editar`}
-                    className="text-[12px] text-fg-muted hover:text-fg transition-colors"
-                  >
-                    Editar
-                  </Link>
-                  <DeleteFieldButton action={excluirCargo.bind(null, c.id, companyId)} nome={c.name} />
-                </div>
+                <AcoesDoCadastro editarHref={`/empresas/${companyId}/cargos/${c.id}/editar`} excluir={excluirCargo.bind(null, c.id, companyId)} nome={c.name} />
               )}
             </div>
           ))}

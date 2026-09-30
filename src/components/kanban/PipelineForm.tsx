@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import Link from "next/link";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 import { CampoForm as Field } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
@@ -80,12 +79,8 @@ export function PipelineForm({ action, sectorOptions }: Props) {
           <h3 className="text-[11px] font-semibold text-fg-muted uppercase tracking-wider">
             Estágios
           </h3>
-          <Button
-            variant="link"
-            type="button"
-            onClick={addStage}
-            className="text-[12px]"
-          >
+          {/* Era link azul (30/09): ação é botão. */}
+          <Button variant="secondary" size="xs" type="button" onClick={addStage}>
             + Adicionar estágio
           </Button>
         </div>
@@ -135,12 +130,10 @@ export function PipelineForm({ action, sectorOptions }: Props) {
         >
           {isPending ? "Criando…" : "Criar Kanban"}
         </Button>
-        <Link
-          href="/kanban"
-          className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
-        >
+        {/* Era um Link estilizado à mão (30/09): o Cancelar é o botão secundário. */}
+        <Button href="/kanban" variant="secondary">
           Cancelar
-        </Link>
+        </Button>
       </div>
     </form>
   );

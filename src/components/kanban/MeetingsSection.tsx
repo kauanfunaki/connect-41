@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
-import { Video, ExternalLink, Trash2 } from "lucide-react";
+import { Video, ExternalLink, Plus, Trash2, X } from "lucide-react";
 import type { MeetingState } from "@/app/(app)/kanban/meetings-actions";
 import type { MeetingProvider } from "@/generated/prisma/enums";
 import { Input } from "@/components/ui/Input";
@@ -51,13 +51,17 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
           Reuniões
         </h2>
         {canSchedule && (
-          <Button
-            variant="link"
-            type="button"
-            onClick={() => setOpen((o) => !o)}
-            className="text-[12px] font-medium"
-          >
-            {open ? "Cancelar" : "+ Agendar reunião"}
+          // Eram links azuis (30/09): "Agendar" e "Cancelar" são ações.
+          <Button variant="secondary" size="xs" type="button" onClick={() => setOpen((o) => !o)}>
+            {open ? (
+              <>
+                <X size={11} /> Cancelar
+              </>
+            ) : (
+              <>
+                <Plus size={11} /> Agendar reunião
+              </>
+            )}
           </Button>
         )}
       </div>
@@ -117,14 +121,10 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <CopyLinkButton url={m.meetingUrl} />
-                  <a
-                    href={m.meetingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[12px] text-brand hover:underline"
-                  >
-                    Entrar <ExternalLink size={12} />
-                  </a>
+                  {/* Entrar é a ação da linha: botão, e não link azul (30/09). */}
+                  <Button href={m.meetingUrl} target="_blank" rel="noopener noreferrer" variant="secondary" size="xs">
+                    Entrar <ExternalLink size={11} />
+                  </Button>
                   {canSchedule && (
                     <button
                       type="button"

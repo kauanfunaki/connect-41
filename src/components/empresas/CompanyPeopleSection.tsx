@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Users } from "lucide-react";
+import { ArrowRight, Users } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -19,12 +20,10 @@ export function CompanyPeopleSection({ companyId, people }: Props) {
     <Card className="p-5">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">Pessoas vinculadas</h2>
-        <Link
-          href={`/colaboradores-clientes?companyId=${companyId}`}
-          className="text-[length:var(--fs-helper)] text-brand hover:underline"
-        >
-          Ver todas
-        </Link>
+        {/* Era link de texto (30/09): ação de cabeçalho de seção é botão. */}
+        <Button href={`/colaboradores-clientes?companyId=${companyId}`} variant="secondary" size="xs">
+          Ver todas <ArrowRight size={11} />
+        </Button>
       </div>
 
       {people.length === 0 ? (

@@ -276,12 +276,9 @@ export function TaskFieldsPanel({
         </FieldRow>
       )}
 
-      <Button
-        variant="linkMuted"
-        type="button"
-        onClick={() => setCollapseEmpty((v) => !v)}
-        className="text-[11px] mt-1"
-      >
+      {/* Era texto solto (30/09): alternar a lista é ação, então é botão —
+          fantasma, no pé do painel, com o texto alinhado aos rótulos. */}
+      <Button variant="ghost" size="xs" type="button" onClick={() => setCollapseEmpty((v) => !v)} className="mt-1 -ml-2.5 self-start">
         {collapseEmpty ? "Mostrar todos os campos" : "Recolher campos vazios"}
       </Button>
     </div>

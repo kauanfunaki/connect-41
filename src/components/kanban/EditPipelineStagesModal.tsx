@@ -150,13 +150,9 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
             ))}
           </div>
 
-          <Button
-            variant="link"
-            type="button"
-            onClick={addRow}
-            className="text-[12px]"
-          >
-            <Plus size={13} /> Adicionar estágio
+          {/* Era link azul (30/09): ação é botão. */}
+          <Button variant="secondary" size="xs" type="button" onClick={addRow} className="self-start">
+            <Plus size={11} /> Adicionar estágio
           </Button>
 
           {colorAdjusted && (

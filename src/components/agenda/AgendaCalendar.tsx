@@ -95,12 +95,10 @@ export function AgendaCalendar({
             >
               <ChevronLeft size={15} />
             </Link>
-            <Link
-              href={agendaHref(view, todayKey)}
-              className="h-7 px-2.5 flex items-center rounded-md text-[12.5px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors"
-            >
+            {/* Era texto com fundo no hover (30/09): "Hoje" é ação, com borda de botão. */}
+            <Button href={agendaHref(view, todayKey)} variant="secondary" size="xs">
               Hoje
-            </Link>
+            </Button>
             <Link
               href={agendaHref(view, shiftAgendaDate(view, dateKey, 1))}
               className="w-7 h-7 flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors"

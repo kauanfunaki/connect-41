@@ -86,13 +86,15 @@ export function DescriptionEditor({ canAct, description, action }: Props) {
           dangerouslySetInnerHTML={{ __html: description }}
         />
       ) : (
-        <Button
-          variant="linkMuted"
-          className="text-[length:var(--fs-body)] italic hover:text-fg-secondary"
+        // Era um link de texto em itálico (até 30/09). É o campo vazio, então
+        // tem cara de campo: a área tracejada que se clica para escrever.
+        <button
+          type="button"
           onClick={openEditing}
+          className="w-full text-left rounded-md border border-dashed border-border-strong px-3 py-2.5 text-[length:var(--fs-body)] text-fg-muted hover:text-fg-secondary hover:bg-surface-hover transition-colors"
         >
           Adicionar uma descrição...
-        </Button>
+        </button>
       )}
     </div>
   );
