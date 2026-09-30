@@ -133,7 +133,7 @@ export function ClientesTable({ clientes, canCreate, alternarAtivo, inativarEmMa
 
   return (
     <>
-      <div className="bg-surface border border-border rounded-lg overflow-hidden">
+      <div className="bg-surface border border-border rounded-lg overflow-hidden shadow-[var(--c41-shadow-xs)]">
       {clientes.length === 0 ? (
         <EmptyState icon={<Building2 />} title="Nenhum cliente encontrado" />
       ) : (
@@ -151,7 +151,7 @@ export function ClientesTable({ clientes, canCreate, alternarAtivo, inativarEmMa
             {clientes.map((c) => cartaoCliente(c))}
           </div>
 
-          <div className="scroll-x overflow-x-auto hidden md:block">
+          <div className="c41-tabela scroll-x overflow-x-auto hidden md:block">
           <table className="w-full min-w-[640px] text-[length:var(--fs-body)]">
             <thead>
               <tr className="border-b border-border bg-table-header-bg">
@@ -160,10 +160,10 @@ export function ClientesTable({ clientes, canCreate, alternarAtivo, inativarEmMa
                     <Checkbox checked={todosMarcados} onChange={marcarTodos} aria-label="Selecionar todos" />
                   </th>
                 )}
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Raiz do CNPJ</th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Empresas</th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Situação</th>
+                <th className="px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
+                <th className="px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Raiz do CNPJ</th>
+                <th className="px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Empresas</th>
+                <th className="px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Situação</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>

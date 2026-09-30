@@ -121,7 +121,7 @@ export default async function CarreirasPage({
         {todas.length > 0 && (
           // GET puro: a busca vira URL, funciona sem JavaScript e pode ser
           // compartilhada como link (vagas remotas em Curitiba, por exemplo).
-          <form method="get" className="bg-surface border border-border rounded-lg p-4 mb-5 space-y-3" role="search">
+          <form method="get" className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 mb-5 space-y-3" role="search">
             <label htmlFor="q" className="sr-only">Buscar vaga</label>
             <Input id="q" name="q" type="search" defaultValue={filtros.busca} placeholder="Buscar por cargo, área ou palavra-chave" />
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -150,12 +150,12 @@ export default async function CarreirasPage({
         )}
 
         {todas.length === 0 ? (
-          <div className="bg-surface border border-border rounded-lg p-8 text-center">
+          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-8 text-center">
             <p className="text-[14px] text-fg">Nenhuma vaga aberta no momento.</p>
             <p className="text-[12px] text-fg-muted mt-1">Volte em breve — novas oportunidades aparecem aqui.</p>
           </div>
         ) : vagas.length === 0 ? (
-          <div className="bg-surface border border-border rounded-lg p-8 text-center">
+          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-8 text-center">
             <p className="text-[14px] text-fg">Nenhuma vaga com esses filtros.</p>
             <Link href={`/carreiras/${slug}`} className="text-[12px] text-brand hover:underline mt-1 inline-block">
               Ver todas as {todas.length} vagas abertas
@@ -169,7 +169,7 @@ export default async function CarreirasPage({
                 <Link
                   key={v.id}
                   href={`/carreiras/${slug}/${v.id}`}
-                  className="block bg-surface border border-border rounded-lg p-5 hover:border-border-strong hover:bg-surface-hover transition-colors"
+                  className="block bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 hover:border-border-strong hover:bg-surface-hover transition-colors"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">

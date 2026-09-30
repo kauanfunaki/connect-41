@@ -48,7 +48,7 @@ export default async function EscalasPage() {
           {Object.entries(grouped).map(([date, items]) => (
             <div key={date}>
               <h2 className="text-[13px] font-semibold text-fg mb-2">{date}</h2>
-              <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+              <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
                 {items.map((e) => (
                   <Link
                     key={e.id}

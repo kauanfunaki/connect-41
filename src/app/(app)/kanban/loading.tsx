@@ -13,7 +13,7 @@ export default function LoadingKanban() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="bg-surface border border-border rounded-lg p-4 space-y-2">
+          <div key={i} className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 space-y-2">
             <div className="c41-skeleton w-2/3 h-4" />
             <div className="c41-skeleton w-1/2 h-3" />
           </div>

@@ -83,7 +83,7 @@ export function AgendaCalendar({
   }
 
   return (
-    <div className="bg-surface border border-border rounded-lg overflow-hidden h-full flex flex-col min-h-0">
+    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden h-full flex flex-col min-h-0">
       <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border flex-wrap flex-shrink-0">
         <div className="flex items-center gap-3 flex-wrap">
           <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">{agendaTitle(view, dateKey)}</h2>

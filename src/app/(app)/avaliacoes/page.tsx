@@ -39,7 +39,7 @@ export default async function AvaliacoesPage() {
           />
         </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
           {ciclos.map((c) => (
             <Link
               key={c.id}

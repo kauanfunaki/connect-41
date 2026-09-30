@@ -100,7 +100,7 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
               <div key={f.id} className="relative">
                 <Link
                   href={`/setor/${code}/pastas/${f.id}`}
-                  className="flex items-center gap-2.5 bg-surface border border-border rounded-lg px-4 py-3 pr-10 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform]"
+                  className="flex items-center gap-2.5 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] px-4 py-3 pr-10 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform]"
                 >
                   <FolderIcon size={16} className="text-fg-muted flex-shrink-0" />
                   <div className="min-w-0">
@@ -122,7 +122,7 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
       <div>
         <h2 className="text-[13px] font-semibold text-fg mb-2.5">Listas</h2>
         {looseLists.length === 0 ? (
-          <div className="bg-surface border border-border rounded-lg">
+          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)]">
             <EmptyState title="Nenhuma lista solta neste espaço" description="Listas fora de pasta aparecem aqui." />
           </div>
         ) : (

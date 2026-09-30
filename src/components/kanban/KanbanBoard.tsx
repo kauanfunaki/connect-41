@@ -65,7 +65,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
   }
 
   return (
-    <div className="scroll-x bg-surface border border-border rounded-lg p-4 h-full overflow-x-auto flex gap-3">
+    <div className="scroll-x bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 h-full overflow-x-auto flex gap-3">
       {stages.map((stage) => {
         const color = stage.color ?? FALLBACK_COLOR;
         const stageItems = items.filter((i) => i.stageId === stage.id);

@@ -44,7 +44,7 @@ export function DescriptionEditor({ canAct, description, action }: Props) {
 
   if (!canAct) {
     return (
-      <div className="bg-surface border border-border rounded-lg p-5">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-[13px] font-semibold text-fg mb-3">Descrição</h2>
         {description ? (
           <div className={RICH_TEXT_CLASS} dangerouslySetInnerHTML={{ __html: description }} />
@@ -56,7 +56,7 @@ export function DescriptionEditor({ canAct, description, action }: Props) {
   }
 
   return (
-    <div className="bg-surface border border-border rounded-lg p-5">
+    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-[13px] font-semibold text-fg">Descrição</h2>
         {!editing && (

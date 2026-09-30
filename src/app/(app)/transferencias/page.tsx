@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { ArrowRightLeft, ArrowRight } from "lucide-react";
+import { ArrowRightLeft, ArrowRight, Inbox, Loader, CheckCircle2 } from "lucide-react";
+import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps } from "@/lib/sectors";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -19,7 +21,7 @@ import {
   HANDOFF_PRIORITY_LABEL,
   HANDOFF_PRIORITY_BADGE,
 } from "@/lib/handoffs";
-import type { HandoffSectorStatus } from "@/generated/prisma/enums";
+import type { HandoffSectorStatus, HandoffPriority } from "@/generated/prisma/enums";
 
 const FILTER_TABS: { value: HandoffSectorStatus; label: string }[] = [
   { value: "NEW", label: "Novas" },
@@ -30,9 +32,9 @@ const FILTER_TABS: { value: HandoffSectorStatus; label: string }[] = [
 export default async function HandoffsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; prioridade?: string }>;
 }) {
-  const { status } = await searchParams;
+  const { status, prioridade } = await searchParams;
   const ctx = await getAuthContext();
   const canCreate = isFullWrite(ctx.role) || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.length > 0);
   const { labels: sectorLabels, colors: sectorColors } = await getSectorMaps(ctx.tenantId);
@@ -52,9 +54,15 @@ export default async function HandoffsPage({
 
   // Status agregado (Nova = nenhum setor começou; Finalizada = todos terminaram;
   // Resolvendo = qualquer coisa no meio) — derivado dos setores, não armazenado.
-  const handoffs = allHandoffs.filter(
+  const prioridadeFiltro = prioridade && prioridade in HANDOFF_PRIORITY_LABEL ? (prioridade as HandoffPriority) : null;
+  const naPrioridade = allHandoffs.filter((h) => !prioridadeFiltro || h.priority === prioridadeFiltro);
+  const contagem: Record<HandoffSectorStatus, number> = { NEW: 0, IN_PROGRESS: 0, DONE: 0 };
+  for (const h of naPrioridade) contagem[aggregateHandoffStatus(h.sectors.map((s) => s.status))]++;
+  const handoffs = naPrioridade.filter(
     (h) => aggregateHandoffStatus(h.sectors.map((s) => s.status)) === statusFilter
   );
+  const hrefDaSituacao = (s: HandoffSectorStatus) =>
+    `/transferencias?status=${s}${prioridadeFiltro ? `&prioridade=${prioridadeFiltro}` : ""}`;
 
   // Resolve nomes das entidades (Company ou Person)
   const companyIds = handoffs.filter((h) => h.entityType === "COMPANY").map((h) => h.entityId);
@@ -87,24 +95,36 @@ export default async function HandoffsPage({
           </Button>
         )}</>}
       />
-      <div className="flex items-center gap-1 mb-4">
-        {FILTER_TABS.map((tab) => {
-          const isActive = tab.value === statusFilter;
-          return (
-            <Link
-              key={tab.value}
-              href={`/transferencias?status=${tab.value}`}
-              className={`inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium transition-colors ${
-                isActive
-                  ? "bg-surface-2 text-fg border border-border-strong"
-                  : "text-fg-muted hover:text-fg hover:bg-surface-2"
-              }`}
-            >
-              {tab.label}
-            </Link>
-          );
-        })}
-      </div>
+      {/* As três situações em cartão, com a contagem, e cada uma leva à sua
+          lista — eram pílulas, que a conferência de 30/09 reprovou como filtro.
+          A situação e a prioridade escolhem-se também no "Filtros". */}
+      <FaixaDeTotais
+        itens={FILTER_TABS.map((t) => ({
+          rotulo: t.label,
+          valor: String(contagem[t.value]),
+          icone: t.value === "NEW" ? <Inbox /> : t.value === "IN_PROGRESS" ? <Loader /> : <CheckCircle2 />,
+          tom: t.value === "NEW" ? (contagem.NEW > 0 ? "text-warning" : undefined) : t.value === "DONE" ? "text-success" : undefined,
+          detalhe: t.value === statusFilter ? "mostrando agora" : undefined,
+          href: hrefDaSituacao(t.value),
+        }))}
+      />
+      <FiltrosDaTela
+        className="mb-4"
+        campos={[
+          {
+            chave: "status",
+            rotulo: "Situação",
+            vazioLabel: "Novas",
+            opcoes: FILTER_TABS.filter((t) => t.value !== "NEW").map((t) => ({ value: t.value, label: t.label })),
+          },
+          {
+            chave: "prioridade",
+            rotulo: "Prioridade",
+            vazioLabel: "Todas",
+            opcoes: (Object.keys(HANDOFF_PRIORITY_LABEL) as HandoffPriority[]).map((p) => ({ value: p, label: HANDOFF_PRIORITY_LABEL[p] })),
+          },
+        ]}
+      />
 
       {handoffs.length === 0 ? (
         <Card>
@@ -119,7 +139,10 @@ export default async function HandoffsPage({
           {handoffs.map((h) => {
             const aggregate = aggregateHandoffStatus(h.sectors.map((s) => s.status));
             return (
-              <Card key={h.id} className="p-4">
+              <Card
+                key={h.id}
+                className="p-4 transition-[border-color,box-shadow,transform] duration-150 hover:border-brand/40 hover:shadow-[var(--c41-shadow-md)] hover:-translate-y-px"
+              >
                 <Link href={`/transferencias/${h.id}`} className="group flex items-start gap-3">
                   <span className="w-9 h-9 rounded-lg bg-surface-hover border border-border flex items-center justify-center text-fg-secondary flex-shrink-0">
                     <ArrowRightLeft size={16} />

@@ -574,7 +574,8 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 .c41-tabela > table > tbody > tr:hover {
   background: var(--c41-surface-hover);
 }
-.c41-tabela > table > tbody > tr:hover > :first-child {
+.c41-tabela > table > tbody > tr:hover > :first-child,
+tr.c41-linha:hover > :first-child {
   box-shadow: inset 3px 0 0 var(--c41-brand);
 }
 .c41-tabela > table > tbody > tr > td {
@@ -582,6 +583,10 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 }
 .c41-tabela > table > thead > tr > th {
   letter-spacing: .04em;
+  /* Cabeçalho numa linha só ("RAIZ DO CNPJ" quebrava em duas e desalinhava
+     a altura do cabeçalho inteiro). A coluna estreita ganha a largura do
+     rótulo; a tabela já rola de lado quando não cabe. */
+  white-space: nowrap;
 }
 
 /* ----- Dica do texto cortado (DicaFlutuante): só opacidade — o transform

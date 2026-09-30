@@ -55,7 +55,7 @@ export default async function WorkspaceDetailPage({
         <WorkspaceLogoUpload tenantId={tenant.id} tenantName={tenant.name} logoUrl={tenant.logoUrl} />
       </Card>
 
-      <div className="bg-surface border border-border rounded-lg p-5">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-[13px] font-semibold text-fg mb-1">Acesso de Super Admins</h2>
         <p className="text-[12px] text-fg-muted mb-4">
           Super Admins titulares de outros workspaces podem ganhar acesso pra visualizar este também, sem precisar

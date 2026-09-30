@@ -153,13 +153,13 @@ export default async function VagaPublicaPage({
         </header>
 
         {vaga.publicDescription && (
-          <div className="bg-surface border border-border rounded-lg p-5 mb-6">
+          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-6">
             <SimpleMarkdown text={vaga.publicDescription} className="text-[13.5px] text-fg leading-relaxed" />
           </div>
         )}
 
         {beneficios.length > 0 && (
-          <div className="bg-surface border border-border rounded-lg p-5 mb-6">
+          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-6">
             <h2 className="text-[14px] font-semibold text-fg mb-2">Benefícios</h2>
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
               {beneficios.map((b) => (

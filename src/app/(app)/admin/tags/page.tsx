@@ -69,7 +69,7 @@ export default async function TagsPage() {
               <h2 className="text-[15px] font-medium text-fg mb-2">
                 {sectorLabel(sectorLabels, sectorCode)}
               </h2>
-              <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+              <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
                 {list.map((t) => (
                   <div key={t.id} className="flex items-center justify-between px-4 py-2.5">
                     <div className="flex items-center gap-2.5">

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { FilterButton } from "@/components/ui/FilterButton";
 import { STATUS_TODOS } from "@/lib/companyStatusFilter";
 
@@ -18,12 +19,14 @@ type Props = {
 // Server Component pro FilterButton — só dado serializável atravessa essa
 // fronteira. Por isso o filtro de status inteiro (não só o botão) vira um
 // componente cliente, recebendo apenas strings/arrays simples da página.
-export function EmpresasFilterButton({ search, page, statusFilter, tabs }: Props) {
+export function EmpresasFilterButton({ statusFilter, tabs }: Props) {
+  // Parte da URL atual, e não do zero: o funil das colunas (regime, local) e o
+  // filtro de cliente moram nela, e trocar o status apagava os dois.
+  const params = useSearchParams();
   function buildUrl(status: string | undefined) {
-    const q = new URLSearchParams();
-    if (search) q.set("search", search);
+    const q = new URLSearchParams(params.toString());
     if (status) q.set("status", status);
-    if (page) q.set("page", page);
+    else q.delete("status");
     q.set("page", "1");
     return `/empresas?${q.toString()}`;
   }

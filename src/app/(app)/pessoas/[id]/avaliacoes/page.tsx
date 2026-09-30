@@ -40,7 +40,7 @@ export default async function AvaliacoesPessoaPage({
       <BackButton className="mb-3" />
       <PageHeader title="Avaliações de Desempenho" />
 
-      <div className="bg-surface border border-border rounded-lg p-5">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         {evaluations.length === 0 ? (
           <p className="text-[13px] text-fg-muted">Nenhuma avaliação registrada ainda.</p>
         ) : (

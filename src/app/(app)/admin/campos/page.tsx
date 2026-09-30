@@ -82,7 +82,7 @@ export default async function CamposPage() {
                   {sectorLabel(sectorLabels, sectorCode)} ·{" "}
                   {entityType === "COMPANY" ? "Empresas" : "Pessoas"}
                 </h2>
-                <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+                <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
                   {list.map((f) => (
                     <div key={f.id} className="flex items-center justify-between px-4 py-2.5">
                       <div>

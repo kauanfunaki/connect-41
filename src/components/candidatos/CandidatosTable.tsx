@@ -153,7 +153,7 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
 
   return (
     <>
-      <div className="bg-surface border border-border rounded-lg overflow-hidden">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
         {candidatos.length === 0 ? (
           <EmptyState icon={<UserSearch />} title="Nenhum candidato encontrado." />
         ) : (

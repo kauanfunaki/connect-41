@@ -128,7 +128,7 @@ export function DiscForm({ token }: Props) {
         </div>
       )}
 
-      <section className="bg-surface border border-border rounded-lg p-5">
+      <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <p className="text-[13px] text-fg-secondary">
           Em cada grupo de 4 palavras, marque a que <strong>mais</strong> combina com você e a que{" "}
           <strong>menos</strong> combina. Não existe resposta certa ou errada — responda com a primeira impressão.

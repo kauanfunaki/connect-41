@@ -505,7 +505,7 @@ export function ActivityFeed({ items, canAct, mentionUsers, pipelineItemId, task
   const hiddenCount = chronological.length - bySummary.length;
 
   return (
-    <div className="bg-surface border border-border rounded-lg p-5 flex flex-col h-full min-h-[400px]">
+    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 flex flex-col h-full min-h-[400px]">
       <div className="flex items-center justify-between gap-2 mb-3 flex-shrink-0">
         <h2 className="text-[13px] font-semibold text-fg">Comentários e atividade</h2>
         <div className="flex items-center gap-2">

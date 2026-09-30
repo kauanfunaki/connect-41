@@ -43,7 +43,7 @@ export function AddObrigacaoForm({ action, companies, pipelines, users }: Props)
   const selected = pipelines.find((p) => p.id === pipelineId);
 
   return (
-    <form action={formAction} className="bg-surface border border-border rounded-lg p-4 mb-6 space-y-3">
+    <form action={formAction} className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 mb-6 space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <CampoForm label="Empresa" htmlFor="companyId" required>
           <SearchableSelect

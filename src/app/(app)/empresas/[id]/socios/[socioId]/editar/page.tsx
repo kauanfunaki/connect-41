@@ -66,7 +66,7 @@ export default async function EditarSocioPage({
       <PageHeader title="Editar Sócio" subtitle={company.name} />
 
       <div className="w-full max-w-[720px]">
-        <div className="bg-surface border border-border rounded-lg p-6">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-6">
           <SocioForm
             action={atualizarSocio}
             companyId={companyId}

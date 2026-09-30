@@ -53,7 +53,7 @@ export default async function TurmaPage({
         subtitle={[trainingClass.shift, trainingClass.instructor].filter(Boolean).join(" · ") || "Sem turno/instrutor definidos"}
       />
 
-      <div className="bg-surface border border-border rounded-lg p-5">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-[14px] font-semibold text-fg mb-3">
           Participantes {trainingClass.participants.length > 0 && `(${trainingClass.participants.length})`}
         </h2>

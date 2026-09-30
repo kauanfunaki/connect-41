@@ -115,7 +115,7 @@ export function QuizForm({ token, questions }: Props) {
         </div>
       )}
 
-      <section className="bg-surface border border-border rounded-lg p-5">
+      <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <p className="text-[13px] text-fg-secondary">Escolha uma alternativa em cada pergunta.</p>
         <p className="text-[12px] text-fg-muted mt-2">Suas respostas ficam salvas neste aparelho enquanto você responde.</p>
       </section>

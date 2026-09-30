@@ -32,7 +32,7 @@ export default async function AfastamentosPage() {
           <EmptyState icon={<Stethoscope />} title="Nenhum afastamento ativo" description="Afastamentos lançados na ficha de cada pessoa aparecem aqui enquanto estiverem ativos." />
         </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
           {absences.map((a) => (
             <Link
               key={a.id}

@@ -58,7 +58,7 @@ export function AcessoDosRecrutadores({ vagaId, restrita, escolhidos, recrutador
         : `Só ${marcados.size === 1 ? "1 recrutador vê" : `${marcados.size} recrutadores veem`} esta vaga.`;
 
   return (
-    <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
       <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
         <div>
           <h2 className="text-[14px] font-semibold text-fg">Quem do Recrutamento vê esta vaga</h2>

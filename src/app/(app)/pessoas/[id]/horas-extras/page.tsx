@@ -45,7 +45,7 @@ export default async function HorasExtrasPage({
       <BackButton className="mb-3" />
       <PageHeader title="Horas Extras" />
 
-      <div className="bg-surface border border-border rounded-lg p-5">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         {overtimeEntries.length === 0 ? (
           <p className="text-[13px] text-fg-muted mb-3">Nenhum lançamento de horas extras ainda.</p>
         ) : (

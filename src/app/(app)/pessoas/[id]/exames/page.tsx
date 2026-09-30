@@ -45,7 +45,7 @@ export default async function ExamesPage({
       <BackButton className="mb-3" />
       <PageHeader title="Exames Admissionais" />
 
-      <div className="bg-surface border border-border rounded-lg p-5">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         {exames.length === 0 ? (
           <p className="text-[13px] text-fg-muted mb-3">Nenhum exame registrado ainda.</p>
         ) : (
