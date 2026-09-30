@@ -87,7 +87,7 @@ export function NovaCategoriaDaEmpresa({ companyId, linhas, grupos }: { companyI
           <Button type="submit" size="sm" disabled={pendente}>
             Cadastrar
           </Button>
-          <Button variant="linkMuted" size="xs" onClick={() => setAberto(false)}>
+          <Button variant="secondary" size="xs" onClick={() => setAberto(false)}>
             Cancelar
           </Button>
           {erro && <span className="text-[12px] text-danger">{erro}</span>}
@@ -148,9 +148,8 @@ export function EsconderDoPadrao({ companyId, categoryId, oculta }: { companyId:
   return (
     <span className="inline-flex items-center gap-2">
       <Button
-        variant="linkMuted"
+        variant="secondary"
         size="xs"
-        className="text-[11px]"
         disabled={pendente}
         onClick={() =>
           startTransition(async () => {
@@ -180,7 +179,7 @@ export function EditarCategoriaDaEmpresa({
 
   if (!aberto) {
     return (
-      <Button variant="linkMuted" size="xs" className="text-[11px]" onClick={() => setAberto(true)}>
+      <Button variant="secondary" size="xs" onClick={() => setAberto(true)}>
         Editar
       </Button>
     );
@@ -214,7 +213,7 @@ export function EditarCategoriaDaEmpresa({
         <Button type="submit" size="xs" disabled={pendente}>
           Salvar
         </Button>
-        <Button variant="linkMuted" size="xs" onClick={() => setAberto(false)}>
+        <Button variant="secondary" size="xs" onClick={() => setAberto(false)}>
           Cancelar
         </Button>
       </div>

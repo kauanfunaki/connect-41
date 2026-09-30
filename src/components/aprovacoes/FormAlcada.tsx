@@ -74,8 +74,8 @@ export function AlternarAlcada({ id, ativa }: { id: string; ativa: boolean }) {
   return (
     <span className="inline-flex flex-col items-start">
       <Button
-        variant="linkMuted"
-        className="text-[11px]"
+        variant="secondary"
+        size="xs"
         disabled={pendente}
         onClick={() =>
           startTransition(async () => {

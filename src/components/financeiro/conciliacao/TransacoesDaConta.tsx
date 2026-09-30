@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Modal } from "@/components/ui/Modal";
 import { useConfirm } from "@/components/ui/useConfirm";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import {
   confirmarConciliacao,
   desfazerConciliacao,
@@ -138,22 +139,45 @@ export function TransacoesDaConta({
     });
   }
 
+  const rotuloDoStatus = (l: LinhaDaTransacao) => (l.status === "CONCILIADA" && l.viaOmie ? "Conciliada no Omie" : STATUS[l.status].rotulo);
+
   return (
     <>
-      <div className="overflow-x-auto">
+      {/* Casco padrão e funil nas colunas (conferência de 30/09). Continua com
+          rolagem lateral no celular: é grade de extrato, não lista de cartões. */}
+      <TabelaFiltravel
+        linhas={linhas.map((l) => ({
+          id: l.id,
+          valores: {
+            data: l.dataKey,
+            extrato: l.nome ?? "",
+            tipo: l.centavos < 0 ? "Saída" : "Entrada",
+            situacao: rotuloDoStatus(l),
+          },
+        }))}
+      >
+      <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
         <table className="w-full min-w-[900px] text-[13px]">
           <thead>
-            <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-              <th className="py-2 pr-3 font-medium">Data</th>
-              <th className="py-2 pr-3 font-medium">Extrato</th>
-              <th className="py-2 pr-3 font-medium text-right">Valor</th>
-              <th className="py-2 pr-3 font-medium">Situação</th>
+            <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+              <th className="py-2 pr-3 font-medium">
+                <FiltroDaColuna rotulo="Data" chave="data" tipo="data" />
+              </th>
+              <th className="py-2 pr-3 font-medium">
+                <FiltroDaColuna rotulo="Extrato" campos={[{ chave: "extrato", rotulo: "Nome no extrato" }]} />
+              </th>
+              <th className="py-2 pr-3 font-medium">
+                <FiltroDaColuna rotulo="Valor" campos={[{ chave: "tipo", rotulo: "Entrada ou saída" }]} />
+              </th>
+              <th className="py-2 pr-3 font-medium">
+                <FiltroDaColuna rotulo="Situação" chave="situacao" />
+              </th>
               <th className="py-2 font-medium">Lançamento</th>
             </tr>
           </thead>
           <tbody>
             {linhas.map((l) => (
-              <tr key={l.id} className="border-b border-border-soft align-top">
+              <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft align-top">
                 <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">{dataCurta(l.dataKey)}</td>
                 <td className="py-2.5 pr-3 max-w-[300px]">
                   <span className="block break-words">{descricaoDaTransacao(l)}</span>
@@ -162,9 +186,7 @@ export function TransacoesDaConta({
                   {moeda(l.centavos)}
                 </td>
                 <td className="py-2.5 pr-3">
-                  <Badge variant={STATUS[l.status].variante}>
-                    {l.status === "CONCILIADA" && l.viaOmie ? "Conciliada no Omie" : STATUS[l.status].rotulo}
-                  </Badge>
+                  <Badge variant={STATUS[l.status].variante}>{rotuloDoStatus(l)}</Badge>
                 </td>
                 <td className="py-2.5">
                   {l.status === "PENDENTE" && (
@@ -221,7 +243,7 @@ export function TransacoesDaConta({
                         <ResumoDoLancamento key={v.id} l={v} />
                       ))}
                       {podeAgir && (
-                        <Button variant="linkMuted" className="text-[11px]" onClick={() => desfazer(l)}>
+                        <Button variant="secondary" size="xs" onClick={() => desfazer(l)}>
                           <Undo2 size={11} /> Desfazer
                         </Button>
                       )}
@@ -232,18 +254,19 @@ export function TransacoesDaConta({
                     <div className="flex flex-col gap-1 items-start">
                       <span className="text-[12px] text-fg-secondary">{l.ignoredReason}</span>
                       {podeAgir && (
-                        <Button variant="linkMuted" className="text-[11px]" onClick={() => reabrir(l)}>
+                        <Button variant="secondary" size="xs" onClick={() => reabrir(l)}>
                           <RotateCcw size={11} /> Reabrir
                         </Button>
                       )}
                     </div>
                   )}
                 </td>
-              </tr>
+              </LinhaFiltravel>
             ))}
           </tbody>
         </table>
       </div>
+      </TabelaFiltravel>
 
       {dialog}
       {escolhendo && <EscolherLancamentos transacao={escolhendo} onClose={() => setEscolhendo(null)} />}

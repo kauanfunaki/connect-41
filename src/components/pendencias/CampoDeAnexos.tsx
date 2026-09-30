@@ -22,7 +22,7 @@ export function CampoDeAnexos({ idBase }: { idBase: string }) {
         <FileDropzoneField key={i} id={`${idBase}-${i}`} name="anexos" accept={ACCEPT_DOS_ANEXOS} maxSizeMb={10} compacto />
       ))}
       {quantidade < MAXIMO_DE_ANEXOS && (
-        <Button type="button" variant="linkMuted" className="text-[12px] self-start" onClick={() => setQuantidade((q) => q + 1)}>
+        <Button type="button" variant="secondary" size="xs" className="self-start" onClick={() => setQuantidade((q) => q + 1)}>
           <Plus size={12} /> Outro anexo
         </Button>
       )}

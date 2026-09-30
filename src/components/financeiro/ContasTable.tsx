@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FileText, AlertCircle } from "lucide-react";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatInstantDate } from "@/lib/format";
@@ -23,6 +24,12 @@ const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL
 
 export function moeda(cents: number): string {
   return MOEDA.format(reaisDeCentavos(cents));
+}
+
+/** "2026-09" → "09/2026", o jeito que a competência é falada no escritório. */
+export function competenciaNaTela(c: string): string {
+  const m = /^(\d{4})-(\d{2})$/.exec(c);
+  return m ? `${m[2]}/${m[1]}` : c;
 }
 
 export const SITUACAO_LABEL: Record<SituacaoDaConta, string> = {
@@ -92,15 +99,16 @@ export function ContasTable({
     );
   }
 
+  // Cancelada por renegociação ou perda diz o nome: "cancelada" esconderia que
+  // a dívida continua num acordo, ou que alguém decidiu dar por perdida.
+  const rotuloDaSituacao = (l: LinhaDaConta) =>
+    l.closeReason === "RENEGOCIADO" ? "Renegociada" : l.closeReason === "PERDA" ? "Perda" : SITUACAO_LABEL[l.situacao];
+
   // Os selos e as ações são os mesmos nas duas formas; ficam em função para a
   // tabela e o cartão não descolarem um do outro com o tempo.
   const selos = (l: LinhaDaConta) => (
     <>
-      <Badge variant={SITUACAO_VARIANTE[l.situacao]}>
-        {/* Cancelada por renegociação ou perda diz o nome: "cancelada" esconderia
-            que a dívida continua num acordo, ou que alguém decidiu dar por perdida. */}
-        {l.closeReason === "RENEGOCIADO" ? "Renegociada" : l.closeReason === "PERDA" ? "Perda" : SITUACAO_LABEL[l.situacao]}
-      </Badge>
+      <Badge variant={SITUACAO_VARIANTE[l.situacao]}>{rotuloDaSituacao(l)}</Badge>
       {cobranca && cobranca.get(l.id) && cobranca.get(l.id) !== "EM_DIA" && l.closeReason !== "PERDA" && (
         <Link href={`/cobranca/${l.id}`} className="inline-flex" title="Abrir na cobrança">
           <SeloDaCobranca situacao={cobranca.get(l.id) ?? null} />
@@ -113,24 +121,8 @@ export function ContasTable({
     </>
   );
 
-  // Atalhos para fora da tabela. Ficavam junto dos selos e disputavam espaço
-  // com eles; agora ficam com as ações da linha.
-  const atalhos = (l: LinhaDaConta) =>
-    (l.documentoId || (podeAbrirPendencia && l.situacao !== "CANCELADA")) && (
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[length:var(--fs-badge)]">
-        {l.documentoId && (
-          <Link href={`/documentos-fiscais/${l.documentoId}`} className="text-brand hover:underline whitespace-nowrap">
-            ver nota
-          </Link>
-        )}
-        {podeAbrirPendencia && l.situacao !== "CANCELADA" && (
-          <Link href={`/pendencias?nova=1&lancamento=${l.id}`} className="text-brand hover:underline whitespace-nowrap">
-            abrir pendência
-          </Link>
-        )}
-      </div>
-    );
-
+  // "Ver nota" e "abrir pendência" eram texto azul embaixo dos botões; desde
+  // a conferência de 30/09 vão no menu "⋯" das ações da linha.
   const acoes = (l: LinhaDaConta) => (
     <AcoesDaConta
       entryId={l.id}
@@ -140,6 +132,8 @@ export function ContasTable({
       aPagar={kind === "PAGAR"}
       bloqueioDeBaixa={motivoDoBloqueioDeBaixa(l)}
       podeEnviar={moduloDeAprovacao && podeEnviarParaAprovacao({ ...l, kind, paidAt: l.pagoEm }).pode}
+      notaHref={l.documentoId ? `/documentos-fiscais/${l.documentoId}` : null}
+      pendenciaHref={podeAbrirPendencia ? `/pendencias?nova=1&lancamento=${l.id}` : null}
       acoes={{
         conferir: conferirConta,
         pagar: marcarComoPago,
@@ -148,6 +142,21 @@ export function ContasTable({
       }}
     />
   );
+
+  // O que cada coluna oferece no funil — calculado aqui, no servidor, porque é
+  // o mesmo dado que a célula mostra.
+  const valoresDasLinhas = linhas.map((l) => ({
+    id: l.id,
+    valores: {
+      vencimento: l.vencimentoKey,
+      contraparte: l.contraparteNome,
+      empresa: l.empresaNome,
+      categoria: l.categoriaNome ?? "",
+      centro: l.centroDeCustoNome ?? "",
+      competencia: competenciaNaTela(l.competencia),
+      situacao: rotuloDaSituacao(l),
+    },
+  }));
 
   return (
     <>
@@ -173,7 +182,7 @@ export function ContasTable({
                 {l.descricao && <InfoDoCartao className="break-words">{l.descricao}</InfoDoCartao>}
                 <InfoDoCartao className="mt-1 tabular-nums">
                   vence {formatInstantDate(l.vencimento)}
-                  {l.pagoEm && ` · pago em ${formatInstantDate(l.pagoEm)}`} · comp. {l.competencia}
+                  {l.pagoEm && ` · pago em ${formatInstantDate(l.pagoEm)}`} · comp. {competenciaNaTela(l.competencia)}
                 </InfoDoCartao>
                 <InfoDoCartao className="break-words">
                   {l.empresaNome}
@@ -186,10 +195,7 @@ export function ContasTable({
                   </span>
                 )}
                 <PeDoCartao>{selos(l)}</PeDoCartao>
-                <div className="mt-2 flex flex-col gap-1.5">
-                  {acoes(l)}
-                  {atalhos(l)}
-                </div>
+                <div className="mt-2 flex">{acoes(l)}</div>
               </div>
             </div>
           </Cartao>
@@ -200,32 +206,56 @@ export function ContasTable({
           colunas de largura fixa e cabeçalho com fundo. Até 30/09 eram nove
           colunas soltas — empresa, categoria e centro quebravam em três linhas
           e as ações saíam da tela. Empresa vai embaixo da contraparte e centro
-          embaixo da categoria: são o contexto da linha, não o que se compara. */}
-      <TabelaNoDesktop className="bg-surface border border-border rounded-lg">
-        <table className="w-full table-fixed min-w-[1080px] text-[length:var(--fs-ui)]">
+          embaixo da categoria: são o contexto da linha, não o que se compara.
+          Centralizada, com funil em cada coluna — conferência de 30/09. */}
+      <TabelaFiltravel linhas={valoresDasLinhas}>
+      <TabelaNoDesktop padrao>
+        <table className="w-full table-fixed min-w-[1100px] text-[length:var(--fs-ui)]">
           <colgroup>
             {selecionarCentro && <col className="w-11" />}
-            <col className="w-[104px]" />
+            <col className="w-[116px]" />
             <col />
             <col className="w-[172px]" />
-            <col className="w-[96px]" />
+            <col className="w-[116px]" />
             <col className="w-[120px]" />
-            <col className="w-[168px]" />
-            <col className="w-[200px]" />
+            <col className="w-[160px]" />
+            <col className="w-[216px]" />
           </colgroup>
           <thead>
-            <tr className="border-b border-border bg-table-header-bg text-left text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+            <tr className="border-b border-border bg-table-header-bg text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
               {selecionarCentro && (
                 <th className="pl-4 pr-1 py-3">
                   <MarcarTodasAsContas />
                 </th>
               )}
-              <th className="px-4 py-3">Vencimento</th>
-              <th className="px-4 py-3">{kind === "PAGAR" ? "Fornecedor" : "Cliente"}</th>
-              <th className="px-4 py-3">Categoria</th>
-              <th className="px-4 py-3">Competência</th>
-              <th className="px-4 py-3 text-right">Valor</th>
-              <th className="px-4 py-3">Situação</th>
+              <th className="px-4 py-3">
+                <FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" />
+              </th>
+              <th className="px-4 py-3">
+                <FiltroDaColuna
+                  rotulo={kind === "PAGAR" ? "Fornecedor" : "Cliente"}
+                  campos={[
+                    { chave: "contraparte", rotulo: kind === "PAGAR" ? "Fornecedor" : "Cliente" },
+                    { chave: "empresa", rotulo: "Empresa" },
+                  ]}
+                />
+              </th>
+              <th className="px-4 py-3">
+                <FiltroDaColuna
+                  rotulo="Categoria"
+                  campos={[
+                    { chave: "categoria", rotulo: "Categoria" },
+                    ...(mostrarCentro ? [{ chave: "centro", rotulo: "Centro de custo" }] : []),
+                  ]}
+                />
+              </th>
+              <th className="px-4 py-3">
+                <FiltroDaColuna rotulo="Competência" chave="competencia" />
+              </th>
+              <th className="px-4 py-3">Valor</th>
+              <th className="px-4 py-3">
+                <FiltroDaColuna rotulo="Situação" chave="situacao" align="right" />
+              </th>
               <th className="px-4 py-3">
                 <span className="sr-only">Ações</span>
               </th>
@@ -233,7 +263,7 @@ export function ContasTable({
           </thead>
           <tbody>
             {linhas.map((l) => (
-              <tr key={l.id} className="border-b border-border last:border-b-0 align-top hover:bg-surface-hover transition-colors">
+              <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border last:border-b-0 align-top hover:bg-surface-hover transition-colors">
                 {selecionarCentro && (
                   <td className="pl-4 pr-1 py-3">
                     <Checkbox name="entryIds" value={l.id} form={FORM_DO_CENTRO} aria-label={`Selecionar ${l.contraparteNome}`} />
@@ -276,22 +306,18 @@ export function ContasTable({
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-fg-muted tabular-nums">{l.competencia}</td>
-                <td className="px-4 py-3 text-right tabular-nums font-medium whitespace-nowrap">{moeda(l.valorCentavos)}</td>
+                <td className="px-4 py-3 text-fg-muted tabular-nums">{competenciaNaTela(l.competencia)}</td>
+                <td className="px-4 py-3 tabular-nums font-medium whitespace-nowrap">{moeda(l.valorCentavos)}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap items-center gap-1.5">{selos(l)}</div>
                 </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-col gap-1.5">
-                    {acoes(l)}
-                    {atalhos(l)}
-                  </div>
-                </td>
-              </tr>
+                <td className="px-4 py-3">{acoes(l)}</td>
+              </LinhaFiltravel>
             ))}
           </tbody>
         </table>
       </TabelaNoDesktop>
+      </TabelaFiltravel>
     </>
   );
 }

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, Undo2, CircleDollarSign, Send } from "lucide-react";
+import { Check, Undo2, CircleDollarSign, Send, MoreHorizontal, FileText, MessageSquareWarning } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Popover, ItemDoMenu } from "@/components/ui/Popover";
 import type { AcaoDeContaState } from "@/lib/financeiro/acoes";
 import type { SituacaoDaConta } from "@/lib/financeiro/contas";
 
@@ -15,6 +16,15 @@ type Acoes = {
   enviarParaAprovacao?: (entryId: string) => Promise<{ error: string } | { ok: true; aviso?: string | null }>;
 };
 
+/**
+ * As ações de uma conta: o que se faz nela (conferir, pagar) em botão, e o que
+ * leva para fora dela num menu "⋯".
+ *
+ * Até 30/09 "ver nota", "abrir pendência" e "enviar p/ aprovação" eram texto
+ * azul solto embaixo dos botões, e a baixa abria data e "Confirmar" dentro da
+ * célula, empurrando o resto para fora da tabela. A conferência do Kauan
+ * reprovou os dois: link não é botão, e a baixa agora abre num painel próprio.
+ */
 export function AcoesDaConta({
   entryId,
   situacao,
@@ -24,6 +34,8 @@ export function AcoesDaConta({
   aPagar,
   bloqueioDeBaixa = null,
   podeEnviar = false,
+  notaHref = null,
+  pendenciaHref = null,
 }: {
   entryId: string;
   situacao: SituacaoDaConta;
@@ -36,10 +48,14 @@ export function AcoesDaConta({
   bloqueioDeBaixa?: string | null;
   /** A conta pode ir para a fila de aprovação (`podeEnviarParaAprovacao`) e há action para isso. */
   podeEnviar?: boolean;
+  /** Documento fiscal que originou a conta. */
+  notaHref?: string | null;
+  /** Abrir pendência para o cliente sobre esta conta — só com o módulo ligado. */
+  pendenciaHref?: string | null;
 }) {
   const [erro, setErro] = useState<string | null>(null);
+  const [erroDaBaixa, setErroDaBaixa] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
-  const [abrindoBaixa, setAbrindoBaixa] = useState(false);
   const [data, setData] = useState(hojeISO);
   const [pendente, startTransition] = useTransition();
 
@@ -52,114 +68,157 @@ export function AcoesDaConta({
     });
   }
 
-  if (situacao === "CANCELADA") {
-    return <span className="text-[11px] text-fg-muted">—</span>;
+  function enviar(fechar: () => void) {
+    const enviarParaAprovacao = acoes.enviarParaAprovacao;
+    if (!enviarParaAprovacao) return;
+    fechar();
+    setErro(null);
+    startTransition(async () => {
+      const r = await enviarParaAprovacao(entryId);
+      if ("error" in r) setErro(r.error);
+      else setAviso(r.aviso ?? null);
+    });
   }
 
-  if (situacao === "PAGA") {
+  const paga = situacao === "PAGA";
+  const cancelada = situacao === "CANCELADA";
+  const podeEnviarAgora = !paga && !cancelada && podeEnviar && !!acoes.enviarParaAprovacao;
+  const temMenu = !!notaHref || (!!pendenciaHref && !cancelada) || podeEnviarAgora || paga;
+
+  const menu = temMenu && (
+    <Popover
+      align="right"
+      width={220}
+      aria-label="Mais ações da conta"
+      trigger={({ open, toggle }) => (
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label="Mais ações"
+          aria-expanded={open}
+          className={`h-7 w-7 rounded-md border inline-flex items-center justify-center transition-colors ${
+            open ? "border-brand/40 bg-brand-subtle text-fg" : "border-border-strong text-fg-muted hover:text-fg hover:bg-surface-hover"
+          }`}
+        >
+          <MoreHorizontal size={14} />
+        </button>
+      )}
+    >
+      {({ close }) => (
+        <div className="flex flex-col gap-0.5">
+          {notaHref && (
+            <ItemDoMenu href={notaHref} icone={<FileText />} onClick={close}>
+              Ver nota fiscal
+            </ItemDoMenu>
+          )}
+          {pendenciaHref && !cancelada && (
+            <ItemDoMenu href={pendenciaHref} icone={<MessageSquareWarning />} onClick={close}>
+              Abrir pendência
+            </ItemDoMenu>
+          )}
+          {podeEnviarAgora && (
+            <ItemDoMenu icone={<Send />} disabled={pendente} onClick={() => enviar(close)}>
+              Enviar para aprovação
+            </ItemDoMenu>
+          )}
+          {paga && (
+            <ItemDoMenu
+              icone={<Undo2 />}
+              disabled={pendente}
+              onClick={() => {
+                close();
+                executar(() => acoes.desfazer(entryId));
+              }}
+            >
+              Desfazer {aPagar ? "pagamento" : "recebimento"}
+            </ItemDoMenu>
+          )}
+        </div>
+      )}
+    </Popover>
+  );
+
+  if (cancelada || paga) {
     return (
       <div className="flex flex-col gap-1 items-start">
-        <Button
-          variant="linkMuted"
-          size="xs"
-          disabled={pendente}
-          onClick={() => executar(() => acoes.desfazer(entryId))}
-          className="text-[11px]"
-        >
-          <Undo2 size={11} /> Desfazer baixa
-        </Button>
-        {erro && <span className="text-[11px] text-danger">{erro}</span>}
+        {menu || <span className="text-[11px] text-fg-muted">—</span>}
+        {erro && <span className="text-[11px] text-danger max-w-[220px]">{erro}</span>}
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-1 items-start">
-      {!abrindoBaixa ? (
-        <div className="flex items-center gap-1.5">
-          {/* Conferir só aparece enquanto há o que conferir — botão que sempre
-              recusa é ruído em toda linha. */}
-          {status === "PROVISORIO" && (
-            <Button
-              variant="secondary"
-              size="xs"
-              disabled={pendente}
-              onClick={() => executar(() => acoes.conferir(entryId))}
-            >
-              <Check size={11} /> Conferir
-            </Button>
-          )}
-          {/* Travado pela aprovação: o botão fica, desabilitado e com o motivo
-              embaixo — sumir com ele faria a pessoa procurar a baixa noutro lugar. */}
-          <Button
-            variant="secondary"
-            size="xs"
-            onClick={() => setAbrindoBaixa(true)}
-            disabled={bloqueioDeBaixa !== null}
-            title={bloqueioDeBaixa ?? undefined}
-          >
+      <div className="flex items-center gap-1.5">
+        {/* Conferir só aparece enquanto há o que conferir — botão que sempre
+            recusa é ruído em toda linha. */}
+        {status === "PROVISORIO" && (
+          <Button variant="secondary" size="xs" disabled={pendente} onClick={() => executar(() => acoes.conferir(entryId))}>
+            <Check size={11} /> Conferir
+          </Button>
+        )}
+        {/* Travado pela aprovação: o botão fica, desabilitado e com o motivo
+            embaixo — sumir com ele faria a pessoa procurar a baixa noutro lugar. */}
+        {bloqueioDeBaixa !== null ? (
+          <Button variant="secondary" size="xs" disabled title={bloqueioDeBaixa}>
             <CircleDollarSign size={11} /> {aPagar ? "Pagar" : "Receber"}
           </Button>
-          {podeEnviar && acoes.enviarParaAprovacao && (
-            <Button
-              variant="linkMuted"
-              size="xs"
-              className="text-[11px]"
-              disabled={pendente}
-              onClick={() => {
-                const enviar = acoes.enviarParaAprovacao!;
-                setErro(null);
-                startTransition(async () => {
-                  const r = await enviar(entryId);
-                  if ("error" in r) setErro(r.error);
-                  else setAviso(r.aviso ?? null);
-                });
-              }}
-            >
-              <Send size={11} /> Enviar p/ aprovação
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="flex items-center gap-1.5">
-          <Input
-            compact
-            type="date"
-            value={data}
-            max={hojeISO}
-            onChange={(e) => setData(e.target.value)}
-            className="max-w-[150px]"
-            aria-label="Data do pagamento"
-          />
-          <Button
-            variant="secondary"
-            size="xs"
-            disabled={pendente}
-            onClick={() =>
-              executar(
-                () => acoes.pagar(entryId, data),
-                () => setAbrindoBaixa(false)
-              )
-            }
+        ) : (
+          <Popover
+            align="right"
+            width={260}
+            aria-label={aPagar ? "Registrar pagamento" : "Registrar recebimento"}
+            trigger={({ toggle }) => (
+              <Button
+                variant="secondary"
+                size="xs"
+                onClick={() => {
+                  setErroDaBaixa(null);
+                  setData(hojeISO);
+                  toggle();
+                }}
+              >
+                <CircleDollarSign size={11} /> {aPagar ? "Pagar" : "Receber"}
+              </Button>
+            )}
           >
-            Confirmar
-          </Button>
-          <Button
-            variant="linkMuted"
-            size="xs"
-            onClick={() => {
-              setAbrindoBaixa(false);
-              setErro(null);
-            }}
-            className="text-[11px]"
-          >
-            Cancelar
-          </Button>
-        </div>
-      )}
-      {bloqueioDeBaixa && !abrindoBaixa && <span className="text-[11px] text-fg-muted max-w-[260px]">{bloqueioDeBaixa}</span>}
-      {erro && <span className="text-[11px] text-danger max-w-[260px]">{erro}</span>}
-      {aviso && <span className="text-[11px] text-warning max-w-[260px]">{aviso}</span>}
+            {({ close }) => (
+              <form
+                className="flex flex-col gap-2.5"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setErroDaBaixa(null);
+                  startTransition(async () => {
+                    const r = await acoes.pagar(entryId, data);
+                    if (r?.error) setErroDaBaixa(r.error);
+                    else close();
+                  });
+                }}
+              >
+                <label className="flex flex-col gap-1">
+                  <span className="text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                    {aPagar ? "Data do pagamento" : "Data do recebimento"}
+                  </span>
+                  <Input compact type="date" value={data} max={hojeISO} onChange={(e) => setData(e.target.value)} autoFocus />
+                </label>
+                {erroDaBaixa && <span className="text-[11px] text-danger">{erroDaBaixa}</span>}
+                <div className="flex justify-end gap-1.5">
+                  <Button variant="secondary" size="sm" onClick={close}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" variant="primary" size="sm" disabled={pendente || !data}>
+                    {pendente ? "Salvando…" : "Confirmar"}
+                  </Button>
+                </div>
+              </form>
+            )}
+          </Popover>
+        )}
+        {menu}
+      </div>
+      {bloqueioDeBaixa && <span className="text-[11px] text-fg-muted max-w-[220px]">{bloqueioDeBaixa}</span>}
+      {erro && <span className="text-[11px] text-danger max-w-[220px]">{erro}</span>}
+      {aviso && <span className="text-[11px] text-warning max-w-[220px]">{aviso}</span>}
     </div>
   );
 }
