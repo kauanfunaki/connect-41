@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
+import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { AlertTriangle, CheckCircle2, CircleDashed, MinusCircle, Palmtree, Settings2 } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
@@ -146,6 +149,18 @@ export default async function ConferenciaRescisaoPage({
         }
       />
 
+      {/* As quatro contagens eram selos dentro do "Resumo" (até 30/09); subiram
+          para os cartões de total, no topo, como nas outras telas. O resumo
+          continua com a barra de progresso e a lista de divergências. */}
+      <FaixaDeTotais
+        itens={[
+          { rotulo: "Conferidos", valor: String(resumo.conferidos), icone: <CheckCircle2 />, tom: resumo.conferidos > 0 ? "text-success" : undefined },
+          { rotulo: "Divergentes", valor: String(resumo.divergentes), icone: <AlertTriangle />, tom: resumo.divergentes > 0 ? "text-danger" : undefined },
+          { rotulo: "Pendentes", valor: String(resumo.pendentes), icone: <CircleDashed />, tom: resumo.pendentes > 0 ? "text-warning" : undefined },
+          { rotulo: "Não se aplica", valor: String(resumo.naoAplicaveis), icone: <MinusCircle />, tom: "text-fg-muted" },
+        ]}
+      />
+
       {/* Prazo legal — contagem de prazo é seguro fazer, cálculo de verba não. */}
       <Card className="p-5 mb-4">
         <h2 className="text-[14px] font-semibold text-fg mb-3">Dados da rescisão</h2>
@@ -241,9 +256,11 @@ export default async function ConferenciaRescisaoPage({
               {referencia.config.valores.toleranciaPct}%
               {referencia.config.valores.cctNome ? ` · CCT: ${referencia.config.valores.cctNome}` : ""}
             </p>
-            <Link href="/admin/rescisao" className="text-[12px] text-brand hover:underline">
+            {/* Era um link de texto (até 30/09): é uma ação, virou botão. */}
+            <Button href="/admin/rescisao" variant="secondary" size="xs">
+              <Settings2 size={11} />
               Configurar cálculo
-            </Link>
+            </Button>
           </div>
 
           {referencia.config.valores.cctObservacoes && (
@@ -260,25 +277,11 @@ export default async function ConferenciaRescisaoPage({
           <h2 className="text-[14px] font-semibold text-fg">Resumo da conferência</h2>
           <span className="text-[12px] text-fg-muted tnum">{resumo.progressoPct}% tratado</span>
         </div>
-        <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden mb-3">
+        <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
           <div
             className={`h-full rounded-full ${resumo.divergentes > 0 ? "bg-danger" : "bg-brand"}`}
             style={{ width: `${resumo.progressoPct}%` }}
           />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-success/10 text-success border border-success/25">
-            {resumo.conferidos} conferido{resumo.conferidos !== 1 ? "s" : ""}
-          </span>
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-danger/10 text-danger border border-danger/25">
-            {resumo.divergentes} divergente{resumo.divergentes !== 1 ? "s" : ""}
-          </span>
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-surface-2 text-fg-muted border border-border">
-            {resumo.pendentes} pendente{resumo.pendentes !== 1 ? "s" : ""}
-          </span>
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-surface-2 text-fg-secondary border border-border">
-            {resumo.naoAplicaveis} não se aplica
-          </span>
         </div>
 
         {divergentes.length > 0 && (
@@ -304,9 +307,10 @@ export default async function ConferenciaRescisaoPage({
         <Card className="p-5 mb-4">
           <div className="flex items-center justify-between gap-3 mb-1 flex-wrap">
             <h2 className="text-[14px] font-semibold text-fg">Férias em aberto (base de conferência)</h2>
-            <Link href={`/pessoas/${id}/ferias`} className="text-[12px] text-brand hover:underline">
+            <Button href={`/pessoas/${id}/ferias`} variant="secondary" size="xs">
+              <Palmtree size={11} />
               Abrir módulo de Férias
-            </Link>
+            </Button>
           </div>
           <p className="text-[12px] text-fg-muted mb-3">
             {feriasVencidas.length > 0

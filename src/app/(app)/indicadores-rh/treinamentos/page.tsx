@@ -3,7 +3,9 @@ import { getAuthContext } from "@/lib/auth/context";
 import { getRelatorioTreinamentos, type TreinamentoRow, type TreinamentoSituacao } from "@/lib/relatoriosRH";
 import { formatCalendarDate } from "@/lib/format";
 import { RelatorioHeader } from "@/components/relatorios/RelatorioHeader";
-import { RelatorioTable, RelatorioBadge, ResumoChips, type BadgeTone } from "@/components/relatorios/RelatorioTable";
+import { RelatorioTable, RelatorioBadge, TOM_DO_TOTAL, type BadgeTone } from "@/components/relatorios/RelatorioTable";
+import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { AlertTriangle, Clock, CircleDashed, CheckCircle2 } from "lucide-react";
 
 export const metadata = { title: "Relatório de Treinamentos" };
 
@@ -29,13 +31,15 @@ export default async function RelatorioTreinamentosPage() {
         subtitle="Validade calculada a partir da data da turma e da validade do treinamento — reciclagem vencida aparece no topo."
       />
 
-      <ResumoChips
-        items={[
-          { label: "vencidos", count: count("VENCIDO"), tone: "danger" },
-          { label: "a vencer (60 dias)", count: count("A_VENCER"), tone: "warning" },
-          { label: "não realizados", count: count("PENDENTE"), tone: "neutral" },
-          { label: "válidos", count: count("VALIDO"), tone: "success" },
-        ]}
+      {/* As contagens eram selos soltos numa linha (até 30/09); viraram os
+          cartões de total. O recorte fino fica no funil da coluna Situação. */}
+      <FaixaDeTotais
+        itens={[
+          { rotulo: "Vencidos", n: count("VENCIDO"), tone: "danger" as const, icone: <AlertTriangle /> },
+          { rotulo: "A vencer (60 dias)", n: count("A_VENCER"), tone: "warning" as const, icone: <Clock /> },
+          { rotulo: "Não realizados", n: count("PENDENTE"), tone: "neutral" as const, icone: <CircleDashed /> },
+          { rotulo: "Válidos", n: count("VALIDO"), tone: "success" as const, icone: <CheckCircle2 /> },
+        ].map((i) => ({ rotulo: i.rotulo, valor: String(i.n), icone: i.icone, tom: i.n > 0 ? TOM_DO_TOTAL[i.tone] : undefined }))}
       />
 
       <RelatorioTable<TreinamentoRow>
@@ -45,10 +49,19 @@ export default async function RelatorioTreinamentosPage() {
         emptyTitle="Nenhuma participação em treinamento registrada."
         emptyDescription="Cadastre turmas e participantes no módulo de Treinamentos."
         columns={[
-          { header: "Colaborador", render: (r) => r.personName },
-          { header: "Treinamento", render: (r) => r.trainingName },
-          { header: "Situação", render: (r) => <RelatorioBadge tone={SITUACAO[r.situacao].tone}>{SITUACAO[r.situacao].label}</RelatorioBadge> },
-          { header: "Turma em", numeric: true, render: (r) => formatCalendarDate(r.classDate) },
+          { header: "Colaborador", render: (r) => r.personName, filtro: { chave: "colaborador", valor: (r) => r.personName } },
+          { header: "Treinamento", render: (r) => r.trainingName, filtro: { chave: "treinamento", valor: (r) => r.trainingName } },
+          {
+            header: "Situação",
+            render: (r) => <RelatorioBadge tone={SITUACAO[r.situacao].tone}>{SITUACAO[r.situacao].label}</RelatorioBadge>,
+            filtro: { chave: "situacao", valor: (r) => SITUACAO[r.situacao].label },
+          },
+          {
+            header: "Turma em",
+            numeric: true,
+            render: (r) => formatCalendarDate(r.classDate),
+            filtro: { chave: "turma", valor: (r) => r.classDate.toISOString().slice(0, 10), tipo: "data" },
+          },
           {
             header: "Válido até",
             numeric: true,

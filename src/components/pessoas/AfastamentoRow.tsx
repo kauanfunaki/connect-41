@@ -2,42 +2,14 @@
 
 import { useActionState, useState } from "react";
 import type { AbsenceState } from "@/app/(app)/pessoas/[id]/afastamentos/actions";
-import { AbsenceType, AbsenceStatus } from "@/generated/prisma/enums";
+import type { AbsenceType, AbsenceStatus } from "@/generated/prisma/enums";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { useConfirm } from "@/components/ui/useConfirm";
 import { Button } from "@/components/ui/Button";
+import { MenuDoRegistro } from "./MenuDoRegistro";
+import { TIPO_DO_AFASTAMENTO, SITUACAO_DO_AFASTAMENTO, COR_DO_AFASTAMENTO } from "./rotulosDoDP";
 
-const TYPE_LABEL: Record<AbsenceType, string> = {
-  FALTA:             "Falta",
-  ATESTADO_PARCIAL:  "Atestado parcial",
-  ATESTADO_INTEGRAL: "Atestado integral",
-  LICENCA:           "Licença",
-  AFASTAMENTO:       "Afastamento",
-  RETORNO:           "Retorno",
-};
-
-const STATUS_LABEL: Record<AbsenceStatus, string> = {
-  LANCADO:          "Lançado",
-  EM_ANALISE:       "Em análise",
-  APROVADO:         "Aprovado",
-  REPROVADO:        "Reprovado",
-  AFASTADO:         "Afastado",
-  RETORNO_PREVISTO: "Retorno previsto",
-  CONCLUIDO:        "Concluído",
-};
-
-const STATUS_STYLE: Record<AbsenceStatus, string> = {
-  LANCADO:          "bg-surface-2 text-fg-muted border-border",
-  EM_ANALISE:       "bg-warning/10 text-warning border-warning/25",
-  APROVADO:         "bg-brand/10 text-brand border-brand/25",
-  REPROVADO:        "bg-danger/10 text-danger border-danger/25",
-  AFASTADO:         "bg-warning/10 text-warning border-warning/25",
-  RETORNO_PREVISTO: "bg-brand/10 text-brand border-brand/25",
-  CONCLUIDO:        "bg-success/10 text-success border-success/25",
-};
-
-const STATUS_OPTIONS = Object.keys(STATUS_LABEL) as AbsenceStatus[];
+const STATUS_OPTIONS = Object.keys(SITUACAO_DO_AFASTAMENTO) as AbsenceStatus[];
 
 export type AfastamentoItem = {
   id: string;
@@ -60,14 +32,13 @@ type Props = {
 export function AfastamentoRow({ afastamento, updateAction, removeAction, canManage, canViewMedical }: Props) {
   const [state, formAction, isPending] = useActionState(updateAction, null);
   const [status, setStatus] = useState(afastamento.status);
-  const { dialog, requestConfirm } = useConfirm();
 
   return (
     <div className="py-3 border-b border-border last:border-0">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[13px] text-fg">
-            {TYPE_LABEL[afastamento.type]} — {afastamento.startDateLabel}
+            {TIPO_DO_AFASTAMENTO[afastamento.type]} — {afastamento.startDateLabel}
             {afastamento.returnDateLabel && ` até ${afastamento.returnDateLabel}`}
             {afastamento.lostDays != null && ` · ${afastamento.lostDays} dia(s) perdido(s)`}
           </p>
@@ -75,9 +46,13 @@ export function AfastamentoRow({ afastamento, updateAction, removeAction, canMan
             <p className="text-[12px] text-fg-muted mt-0.5">{afastamento.reason}</p>
           )}
         </div>
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${STATUS_STYLE[afastamento.status]}`}>
-          {STATUS_LABEL[afastamento.status]}
-        </span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${COR_DO_AFASTAMENTO[afastamento.status]}`}>
+            {SITUACAO_DO_AFASTAMENTO[afastamento.status]}
+          </span>
+          {/* Remover saiu de ao lado do "Atualizar" para o "⋯" (30/09). */}
+          {canManage && <MenuDoRegistro titulo="Remover este registro?" onRemover={removeAction} />}
+        </div>
       </div>
 
       {canManage && (
@@ -89,7 +64,7 @@ export function AfastamentoRow({ afastamento, updateAction, removeAction, canMan
               onChange={(e) => setStatus(e.target.value as AbsenceStatus)}
             >
               {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+                <option key={s} value={s}>{SITUACAO_DO_AFASTAMENTO[s]}</option>
               ))}
             </Select>
           </div>
@@ -104,18 +79,10 @@ export function AfastamentoRow({ afastamento, updateAction, removeAction, canMan
           >
             {isPending ? "Salvando…" : "Atualizar"}
           </Button>
-          <Button
-            variant="danger"
-            size="md"
-            onClick={() => requestConfirm({ title: "Remover este registro?", destructive: true, confirmLabel: "Remover" }, removeAction)}
-          >
-            Remover
-          </Button>
         </form>
       )}
 
       {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
-      {dialog}
     </div>
   );
 }

@@ -2,32 +2,13 @@
 
 import { useActionState, useState } from "react";
 import type { OvertimeState } from "@/app/(app)/pessoas/[id]/horas-extras/actions";
-import { DayType, OvertimeStatus } from "@/generated/prisma/enums";
+import type { DayType, OvertimeStatus } from "@/generated/prisma/enums";
 import { Select } from "@/components/ui/Select";
-import { useConfirm } from "@/components/ui/useConfirm";
 import { Button } from "@/components/ui/Button";
+import { MenuDoRegistro } from "./MenuDoRegistro";
+import { TIPO_DO_DIA, SITUACAO_DA_HORA_EXTRA, COR_DA_HORA_EXTRA } from "./rotulosDoDP";
 
-const DAY_TYPE_LABEL: Record<DayType, string> = {
-  UTIL: "Dia útil", FOLGA: "Folga", DOMINGO: "Domingo", FERIADO: "Feriado", NOTURNO: "Noturno",
-};
-
-const STATUS_LABEL: Record<OvertimeStatus, string> = {
-  LANCADO:             "Lançado",
-  PENDENTE_APROVACAO:  "Pendente de aprovação",
-  APROVADO:            "Aprovado",
-  REPROVADO:           "Reprovado",
-  ENVIADO_FOLHA:       "Enviado para folha",
-};
-
-const STATUS_STYLE: Record<OvertimeStatus, string> = {
-  LANCADO:            "bg-surface-2 text-fg-muted border-border",
-  PENDENTE_APROVACAO: "bg-warning/10 text-warning border-warning/25",
-  APROVADO:           "bg-success/10 text-success border-success/25",
-  REPROVADO:          "bg-danger/10 text-danger border-danger/25",
-  ENVIADO_FOLHA:      "bg-brand/10 text-brand border-brand/25",
-};
-
-const STATUS_OPTIONS = Object.keys(STATUS_LABEL) as OvertimeStatus[];
+const STATUS_OPTIONS = Object.keys(SITUACAO_DA_HORA_EXTRA) as OvertimeStatus[];
 
 export type HoraExtraItem = {
   id: string;
@@ -48,21 +29,24 @@ type Props = {
 export function HoraExtraRow({ entry, updateAction, removeAction, canManage }: Props) {
   const [state, formAction, isPending] = useActionState(updateAction, null);
   const [status, setStatus] = useState(entry.status);
-  const { dialog, requestConfirm } = useConfirm();
 
   return (
     <div className="py-3 border-b border-border last:border-0">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[13px] text-fg">
-            {entry.dateLabel} — {DAY_TYPE_LABEL[entry.dayType]}
+            {entry.dateLabel} — {TIPO_DO_DIA[entry.dayType]}
             {entry.overtimeHours && ` · ${entry.overtimeHours}h extras`}
           </p>
           {entry.justification && <p className="text-[12px] text-fg-muted mt-0.5">{entry.justification}</p>}
         </div>
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${STATUS_STYLE[entry.status]}`}>
-          {STATUS_LABEL[entry.status]}
-        </span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${COR_DA_HORA_EXTRA[entry.status]}`}>
+            {SITUACAO_DA_HORA_EXTRA[entry.status]}
+          </span>
+          {/* Remover saiu de ao lado do "Atualizar" para o "⋯" (30/09). */}
+          {canManage && <MenuDoRegistro titulo="Remover este lançamento?" onRemover={removeAction} />}
+        </div>
       </div>
 
       {canManage && (
@@ -74,7 +58,7 @@ export function HoraExtraRow({ entry, updateAction, removeAction, canManage }: P
               onChange={(e) => setStatus(e.target.value as OvertimeStatus)}
             >
               {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+                <option key={s} value={s}>{SITUACAO_DA_HORA_EXTRA[s]}</option>
               ))}
             </Select>
           </div>
@@ -86,18 +70,10 @@ export function HoraExtraRow({ entry, updateAction, removeAction, canManage }: P
           >
             {isPending ? "Salvando…" : "Atualizar"}
           </Button>
-          <Button
-            variant="danger"
-            size="md"
-            onClick={() => requestConfirm({ title: "Remover este lançamento?", destructive: true, confirmLabel: "Remover" }, removeAction)}
-          >
-            Remover
-          </Button>
         </form>
       )}
 
       {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
-      {dialog}
     </div>
   );
 }

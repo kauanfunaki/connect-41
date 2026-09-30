@@ -5,8 +5,8 @@ import type { ExameState } from "@/app/(app)/pessoas/[id]/exames/actions";
 import { ExameAdmissionalStatus } from "@/generated/prisma/enums";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { useConfirm } from "@/components/ui/useConfirm";
 import { Button } from "@/components/ui/Button";
+import { MenuDoRegistro } from "./MenuDoRegistro";
 
 const STATUS_LABEL: Record<ExameAdmissionalStatus, string> = {
   SOLICITADO:             "Solicitado",
@@ -50,11 +50,10 @@ type Props = {
 export function ExameRow({ exame, updateAction, removeAction, canManage }: Props) {
   const [state, formAction, isPending] = useActionState(updateAction, null);
   const [status, setStatus] = useState(exame.status);
-  const { dialog, requestConfirm } = useConfirm();
 
   return (
     <div className="py-3 border-b border-border last:border-0">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[13px] text-fg font-medium">{exame.clinicName ?? "Clínica não informada"}</p>
           <p className="text-[12px] text-fg-muted">
@@ -64,9 +63,13 @@ export function ExameRow({ exame, updateAction, removeAction, canManage }: Props
           </p>
           {exame.notes && <p className="text-[12px] text-fg-muted mt-0.5">{exame.notes}</p>}
         </div>
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${STATUS_STYLE[exame.status]}`}>
-          {STATUS_LABEL[exame.status]}
-        </span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${STATUS_STYLE[exame.status]}`}>
+            {STATUS_LABEL[exame.status]}
+          </span>
+          {/* Remover saiu de ao lado do "Atualizar" para o "⋯" (30/09). */}
+          {canManage && <MenuDoRegistro titulo="Remover este exame?" onRemover={removeAction} />}
+        </div>
       </div>
 
       {canManage && (
@@ -93,18 +96,10 @@ export function ExameRow({ exame, updateAction, removeAction, canManage }: Props
           >
             {isPending ? "Salvando…" : "Atualizar"}
           </Button>
-          <Button
-            variant="danger"
-            size="md"
-            onClick={() => requestConfirm({ title: "Remover este exame?", destructive: true, confirmLabel: "Remover" }, removeAction)}
-          >
-            Remover
-          </Button>
         </form>
       )}
 
       {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
-      {dialog}
     </div>
   );
 }

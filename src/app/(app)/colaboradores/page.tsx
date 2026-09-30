@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { ArrowRight, UserPlus, UserMinus, Palmtree } from "lucide-react";
+import { UserPlus, UserMinus, Palmtree } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 
 // Hub que une Admissão (bloco 1), Rescisão/Desligamento (bloco 2) e Férias
 // (bloco 3) do levantamento de DP/RH — mesma decisão de agrupamento do
@@ -28,29 +28,6 @@ export default async function ColaboradoresPage() {
     }),
   ]);
 
-  const sections = [
-    {
-      href: "/admissoes",
-      icon: <UserPlus size={20} />,
-      label: "Admissões",
-      count: admissoes,
-      hint: `${admissoes} em andamento`,
-    },
-    {
-      href: "/desligamentos",
-      icon: <UserMinus size={20} />,
-      label: "Rescisões",
-      count: desligamentos,
-      hint: `${desligamentos} em processo`,
-    },
-    {
-      href: "/ferias",
-      icon: <Palmtree size={20} />,
-      label: "Férias",
-      count: ferias,
-      hint: `${ferias} em aberto`,
-    },
-  ];
 
   return (
     <PageContainer>
@@ -59,28 +36,16 @@ export default async function ColaboradoresPage() {
         subtitle="Admissões, rescisões e férias — ciclo de vida do colaborador em um só lugar."
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {sections.map((s) => (
-          <Link
-            key={s.href}
-            href={s.href}
-            className="group bg-surface border border-border rounded-lg p-5 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
-          >
-            <span className="inline-flex w-10 h-10 rounded-lg items-center justify-center mb-4 bg-brand-500/10 text-brand-500">
-              {s.icon}
-            </span>
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[14px] font-semibold text-fg">{s.label}</p>
-              <ArrowRight
-                size={15}
-                className="text-fg-muted flex-shrink-0 -translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all"
-              />
-            </div>
-            <p className="text-[20px] font-semibold text-fg tnum mt-2">{s.count}</p>
-            <p className="text-[12.5px] text-fg-muted mt-0.5">{s.hint}</p>
-          </Link>
-        ))}
-      </div>
+      {/* Os três atalhos eram cartões montados à mão (até 30/09); agora são
+          os cartões de total do resto do app — o número grande, o ícone e o
+          cartão que leva à tela. */}
+      <FaixaDeTotais
+        itens={[
+          { rotulo: "Admissões", valor: String(admissoes), icone: <UserPlus />, detalhe: "em andamento", href: "/admissoes" },
+          { rotulo: "Rescisões", valor: String(desligamentos), icone: <UserMinus />, detalhe: "em processo", href: "/desligamentos" },
+          { rotulo: "Férias", valor: String(ferias), icone: <Palmtree />, detalhe: "em aberto", href: "/ferias" },
+        ]}
+      />
     </PageContainer>
   );
 }
