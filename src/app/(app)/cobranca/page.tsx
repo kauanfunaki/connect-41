@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlarmClock, Handshake, Mail } from "lucide-react";
+import { AlarmClock, Handshake, Mail, FileWarning, Wallet, PhoneOff, MailX, ListChecks, Settings2, ArrowRight } from "lucide-react";
 import { getAuthContext, canViewSector, canActOnSector, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
@@ -12,10 +12,10 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Select } from "@/components/ui/Select";
-import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { Button } from "@/components/ui/Button";
 import { AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { SeloDaCobranca, SeloDoAcordo } from "@/components/cobranca/SeloDaCobranca";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { AcaoComMotivo } from "@/components/cobranca/AcaoComMotivo";
@@ -84,9 +84,9 @@ export default async function CobrancaPage({ searchParams }: { searchParams: Pro
       <div className="mt-4">
         <AbasDeLink
           abas={[
-            { chave: "fila", rotulo: "Fila", href: "/cobranca" },
-            { chave: "acordos", rotulo: "Acordos", href: "/cobranca?aba=acordos" },
-            { chave: "regua", rotulo: "Régua", href: "/cobranca?aba=regua" },
+            { chave: "fila", rotulo: "Fila", href: "/cobranca", icone: <ListChecks /> },
+            { chave: "acordos", rotulo: "Acordos", href: "/cobranca?aba=acordos", icone: <Handshake /> },
+            { chave: "regua", rotulo: "Régua", href: "/cobranca?aba=regua", icone: <Settings2 /> },
           ]}
           ativa={aba}
         />
@@ -134,55 +134,54 @@ async function Fila({
     <>
       <FaixaDeTotais
         itens={[
-          { rotulo: situacao === "PERDA" ? "Títulos perdidos" : "Títulos vencidos", valor: String(fila.totais.titulos) },
-          { rotulo: "Valor", valor: moeda(fila.totais.centavos), tom: fila.totais.centavos > 0 && situacao !== "PERDA" ? "text-danger" : "" },
-          { rotulo: "Sem contato", valor: String(fila.totais.semContato), tom: fila.totais.semContato > 0 ? "text-danger" : "" },
-          { rotulo: "Sacado sem e-mail", valor: String(fila.totais.semEmail), tom: fila.totais.semEmail > 0 ? "text-warning" : "text-fg-muted" },
+          { rotulo: situacao === "PERDA" ? "Títulos perdidos" : "Títulos vencidos", valor: String(fila.totais.titulos), icone: <FileWarning /> },
+          {
+            rotulo: "Valor",
+            valor: moeda(fila.totais.centavos),
+            tom: fila.totais.centavos > 0 && situacao !== "PERDA" ? "text-danger" : "",
+            icone: <Wallet />,
+          },
+          {
+            rotulo: "Sem contato",
+            valor: String(fila.totais.semContato),
+            tom: fila.totais.semContato > 0 ? "text-danger" : "",
+            icone: <PhoneOff />,
+            href: `/cobranca?situacao=VENCIDO_SEM_CONTATO${empresaId ? `&empresa=${empresaId}` : ""}`,
+          },
+          {
+            rotulo: "Sacado sem e-mail",
+            valor: String(fila.totais.semEmail),
+            tom: fila.totais.semEmail > 0 ? "text-warning" : "text-fg-muted",
+            icone: <MailX />,
+          },
         ]}
       />
 
-      <form method="get" action="/cobranca" className="flex flex-wrap items-center gap-2 mb-4">
-        <SearchableSelect
-          key={empresaId ?? ""}
-          name="empresa"
-          compact
-          className="w-72 max-w-full"
-          aria-label="Empresa"
-          options={empresas.map((e) => ({ value: e.id, label: e.nome }))}
-          defaultValue={empresaId ?? ""}
-          vazioLabel="Todas as empresas"
-          placeholder="Buscar empresa…"
-        />
-        <Select compact name="faixa" defaultValue={faixa ?? ""} className="w-40" aria-label="Faixa de atraso">
-          <option value="">Qualquer atraso</option>
-          {FAIXAS.map((f) => (
-            <option key={f.chave} value={f.chave}>
-              {f.rotulo}
-            </option>
-          ))}
-        </Select>
-        <Select compact name="situacao" defaultValue={situacao ?? ""} className="w-48" aria-label="Situação">
-          <option value="">Todas as situações</option>
-          {SITUACOES.map((s) => (
-            <option key={s} value={s}>
-              {ROTULO_DA_SITUACAO[s]}
-            </option>
-          ))}
-        </Select>
-        <Select compact name="responsavel" defaultValue={responsavelBruto} className="w-48" aria-label="Responsável">
-          <option value="">Qualquer responsável</option>
-          <option value="eu">Meus</option>
-          <option value="sem">Sem responsável</option>
-          {usuarios.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.name}
-            </option>
-          ))}
-        </Select>
-        <Button type="submit" variant="secondary" size="sm">
-          Aplicar
-        </Button>
-      </form>
+      {/* Quatro filtros no botão "Filtros" — eram quatro selects e um
+          "Aplicar" numa fileira (conferência de 30/09). */}
+      <FiltrosDaTela
+        className="mb-4"
+        campos={[
+          { chave: "empresa", rotulo: "Empresa", vazioLabel: "Todas", opcoes: empresas.map((e) => ({ value: e.id, label: e.nome })) },
+          { chave: "faixa", rotulo: "Atraso", vazioLabel: "Qualquer atraso", opcoes: FAIXAS.map((f) => ({ value: f.chave, label: f.rotulo })) },
+          {
+            chave: "situacao",
+            rotulo: "Situação",
+            vazioLabel: "Todas as situações",
+            opcoes: SITUACOES.map((s) => ({ value: s, label: ROTULO_DA_SITUACAO[s] })),
+          },
+          {
+            chave: "responsavel",
+            rotulo: "Responsável",
+            vazioLabel: "Qualquer responsável",
+            opcoes: [
+              { value: "eu", label: "Meus" },
+              { value: "sem", label: "Sem responsável" },
+              ...usuarios.map((u) => ({ value: u.id, label: u.name })),
+            ],
+          },
+        ]}
+      />
 
       {fila.paraHoje.length > 0 && (
         <Card className="p-4 mb-4 border-warning/40">
@@ -267,31 +266,63 @@ function TabelaDaFila({ linhas, hojeKey }: { linhas: LinhaDeCobranca[]; hojeKey:
             )}
             <PeDoCartao>
               <SeloDaCobranca situacao={l.situacao} />
-              <Link href={`/cobranca/${l.id}`} className="text-brand hover:underline text-[12px] ml-auto">
-                abrir
-              </Link>
+              <Button href={`/cobranca/${l.id}`} variant="secondary" size="xs" className="ml-auto">
+                Abrir <ArrowRight size={11} />
+              </Button>
             </PeDoCartao>
           </Cartao>
         ))}
       </CartoesNoCelular>
 
+      <TabelaFiltravel
+        linhas={linhas.map((l) => ({
+          id: l.id,
+          valores: {
+            vencimento: saoPauloParts(l.vencimento).dateKey,
+            sacado: l.sacadoNome,
+            empresa: l.empresaNome,
+            situacao: l.situacao ? ROTULO_DA_SITUACAO[l.situacao] : "",
+            proximaAcao: l.acao.quandoKey ?? "",
+            responsavel: l.responsavelNome ?? "",
+            regua: regua(l),
+          },
+        }))}
+      >
       <TabelaNoDesktop padrao>
       <table className="w-full min-w-[1080px] text-[13px]">
         <thead>
-          <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-            <th className="py-2 pr-3 font-medium">Vencimento</th>
-            <th className="py-2 pr-3 font-medium">Sacado</th>
-            <th className="py-2 pr-3 font-medium text-right">Valor</th>
-            <th className="py-2 pr-3 font-medium">Situação</th>
-            <th className="py-2 pr-3 font-medium">Próxima ação</th>
-            <th className="py-2 pr-3 font-medium">Responsável</th>
-            <th className="py-2 pr-3 font-medium">Régua</th>
+          <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+            <th className="py-2 pr-3 font-medium">
+              <FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" />
+            </th>
+            <th className="py-2 pr-3 font-medium">
+              <FiltroDaColuna
+                rotulo="Sacado"
+                campos={[
+                  { chave: "sacado", rotulo: "Sacado" },
+                  { chave: "empresa", rotulo: "Empresa" },
+                ]}
+              />
+            </th>
+            <th className="py-2 pr-3 font-medium">Valor</th>
+            <th className="py-2 pr-3 font-medium">
+              <FiltroDaColuna rotulo="Situação" chave="situacao" />
+            </th>
+            <th className="py-2 pr-3 font-medium">
+              <FiltroDaColuna rotulo="Próxima ação" chave="proximaAcao" tipo="data" />
+            </th>
+            <th className="py-2 pr-3 font-medium">
+              <FiltroDaColuna rotulo="Responsável" chave="responsavel" />
+            </th>
+            <th className="py-2 pr-3 font-medium">
+              <FiltroDaColuna rotulo="Régua" chave="regua" align="right" />
+            </th>
             <th className="py-2 font-medium"></th>
           </tr>
         </thead>
         <tbody>
           {linhas.map((l) => (
-            <tr key={l.id} className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
+            <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
               <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">
                 {formatInstantDate(l.vencimento)}
                 <span className="block text-[11px] text-fg-muted">{l.diasDeAtraso === 1 ? "1 dia" : `${l.diasDeAtraso} dias`}</span>
@@ -332,15 +363,16 @@ function TabelaDaFila({ linhas, hojeKey }: { linhas: LinhaDeCobranca[]; hojeKey:
                 )}
               </td>
               <td className="py-2.5">
-                <Link href={`/cobranca/${l.id}`} className="text-brand hover:underline text-[12px] whitespace-nowrap">
-                  abrir
-                </Link>
+                <Button href={`/cobranca/${l.id}`} variant="secondary" size="xs">
+                  Abrir <ArrowRight size={11} />
+                </Button>
               </td>
-            </tr>
+            </LinhaFiltravel>
           ))}
         </tbody>
       </table>
       </TabelaNoDesktop>
+      </TabelaFiltravel>
     </>
   );
 }
@@ -362,39 +394,21 @@ async function Acordos({
 }) {
   const filtroStatus = STATUS_DE_ACORDO.find((s) => s === status) ?? null;
   const { acordos, contagem } = await listarAcordos({ tenantId, companyIds: empresaId ? [empresaId] : null }, { status: filtroStatus });
-  const href = (s: StatusDoAcordo | null) => {
-    const q = new URLSearchParams({ aba: "acordos" });
-    if (empresaId) q.set("empresa", empresaId);
-    if (s) q.set("status", s);
-    return `/cobranca?${q.toString()}`;
-  };
 
   return (
     <>
-      <form method="get" action="/cobranca" className="flex flex-wrap items-center gap-2 mb-4">
-        <input type="hidden" name="aba" value="acordos" />
-        {filtroStatus && <input type="hidden" name="status" value={filtroStatus} />}
-        <SearchableSelect
-          key={empresaId ?? ""}
-          name="empresa"
-          compact
-          className="w-72 max-w-full"
-          aria-label="Empresa"
-          options={empresas.map((e) => ({ value: e.id, label: e.nome }))}
-          defaultValue={empresaId ?? ""}
-          vazioLabel="Todas as empresas"
-          placeholder="Buscar empresa…"
-        />
-        <Button type="submit" variant="secondary" size="sm">
-          Aplicar
-        </Button>
-      </form>
-      <AbasDeLink
-        abas={[
-          { chave: "todos", rotulo: "Todos", href: href(null) },
-          ...STATUS_DE_ACORDO.map((s) => ({ chave: s, rotulo: `${ROTULO_DO_ACORDO[s]} (${contagem[s] ?? 0})`, href: href(s) })),
+      {/* Situação (com a contagem de cada uma) e empresa no botão "Filtros". */}
+      <FiltrosDaTela
+        className="mb-4"
+        campos={[
+          {
+            chave: "status",
+            rotulo: "Situação",
+            vazioLabel: "Todos",
+            opcoes: STATUS_DE_ACORDO.map((s) => ({ value: s, label: `${ROTULO_DO_ACORDO[s]} (${contagem[s] ?? 0})` })),
+          },
+          { chave: "empresa", rotulo: "Empresa", vazioLabel: "Todas", opcoes: empresas.map((e) => ({ value: e.id, label: e.nome })) },
         ]}
-        ativa={filtroStatus ?? "todos"}
       />
 
       {acordos.length === 0 ? (
@@ -476,9 +490,9 @@ async function Acordos({
                               ) : p.status === "CANCELADO" ? (
                                 <Badge variant="info">Cancelada</Badge>
                               ) : (
-                                <Link href={`/cobranca/${p.id}`} className="text-brand hover:underline">
-                                  em aberto
-                                </Link>
+                                <Button href={`/cobranca/${p.id}`} variant="secondary" size="xs">
+                                  Em aberto <ArrowRight size={11} />
+                                </Button>
                               )}
                             </td>
                           </tr>
@@ -591,21 +605,50 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
             ))}
           </CartoesNoCelular>
 
+          <TabelaFiltravel
+            linhas={d.envios.map((e) => ({
+              id: e.id,
+              valores: {
+                quando: saoPauloParts(e.em).dateKey,
+                sacado: e.sacadoNome,
+                empresa: e.empresaNome,
+                para: e.para,
+                passo: `${e.passo} dias`,
+                resultado: e.ok ? "Enviado" : "Erro",
+              },
+            }))}
+          >
           <TabelaNoDesktop padrao>
           <table className="w-full min-w-[880px] text-[13px]">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-                <th className="py-2 pr-3 font-medium">Quando</th>
-                <th className="py-2 pr-3 font-medium">Sacado</th>
-                <th className="py-2 pr-3 font-medium">Para</th>
-                <th className="py-2 pr-3 font-medium">Passo</th>
-                <th className="py-2 pr-3 font-medium text-right">Valor</th>
-                <th className="py-2 font-medium">Resultado</th>
+              <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna rotulo="Quando" chave="quando" tipo="data" />
+                </th>
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna
+                    rotulo="Sacado"
+                    campos={[
+                      { chave: "sacado", rotulo: "Sacado" },
+                      { chave: "empresa", rotulo: "Empresa" },
+                    ]}
+                  />
+                </th>
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna rotulo="Para" chave="para" />
+                </th>
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna rotulo="Passo" chave="passo" />
+                </th>
+                <th className="py-2 pr-3 font-medium">Valor</th>
+                <th className="py-2 font-medium">
+                  <FiltroDaColuna rotulo="Resultado" chave="resultado" align="right" />
+                </th>
               </tr>
             </thead>
             <tbody>
               {d.envios.map((e) => (
-                <tr key={e.id} className="border-b border-border-soft align-top">
+                <LinhaFiltravel key={e.id} id={e.id} className="border-b border-border-soft align-top">
                   <td className="py-2 pr-3 tabular-nums whitespace-nowrap">{formatInstantDateTime(e.em)}</td>
                   <td className="py-2 pr-3">
                     <Link href={`/cobranca/${e.entryId}`} className="font-medium hover:underline">
@@ -620,11 +663,12 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
                     {e.ok ? <Badge variant="success">Enviado</Badge> : <Badge variant="danger">Erro</Badge>}
                     {!e.ok && e.erro && <span className="block text-[11px] text-danger mt-1 max-w-[280px]">{e.erro}</span>}
                   </td>
-                </tr>
+                </LinhaFiltravel>
               ))}
             </tbody>
           </table>
           </TabelaNoDesktop>
+          </TabelaFiltravel>
         </>
       )}
     </>

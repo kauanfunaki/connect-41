@@ -106,7 +106,7 @@ export function EmpresaNaRegua({
           ))}
         </Select>
       )}
-      <Button size="xs" variant={fora ? "secondary" : "linkMuted"} disabled={pendente || !escolhida} onClick={() => alternar(escolhida)}>
+      <Button size="xs" variant="secondary" disabled={pendente || !escolhida} onClick={() => alternar(escolhida)}>
         {fora ? "Tirar da régua" : "Devolver à régua"}
       </Button>
       {erro && <span className="text-[11px] text-danger">{erro}</span>}

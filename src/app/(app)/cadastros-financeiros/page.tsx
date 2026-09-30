@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Layers, Users } from "lucide-react";
+import { Layers, Users, Truck, HandCoins, ListTree } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/Badge";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { Input } from "@/components/ui/Input";
 import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { NovaContraparte, EditarContraparte } from "@/components/financeiro/FormContraparte";
 import { NovoCentroDeCusto, EditarCentroDeCusto } from "@/components/financeiro/FormCentroDeCusto";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
@@ -26,11 +27,11 @@ const MODULE = "bpo_cadastros";
 const SECTOR = getModuleDef(MODULE)!.sectorCode;
 
 const ABAS = [
-  { chave: "fornecedores", rotulo: "Fornecedores" },
-  { chave: "sacados", rotulo: "Sacados" },
-  { chave: "todos", rotulo: "Todos" },
-  { chave: "centros", rotulo: "Centros de custo" },
-  { chave: "plano", rotulo: "Plano de contas" },
+  { chave: "fornecedores", rotulo: "Fornecedores", icone: <Truck /> },
+  { chave: "sacados", rotulo: "Sacados", icone: <HandCoins /> },
+  { chave: "todos", rotulo: "Todos", icone: <Users /> },
+  { chave: "centros", rotulo: "Centros de custo", icone: <Layers /> },
+  { chave: "plano", rotulo: "Plano de contas", icone: <ListTree /> },
 ] as const;
 
 function documento(d: string | null): string {
@@ -237,17 +238,28 @@ export default async function CadastrosFinanceirosPage({
             })}
           </CartoesNoCelular>
 
+          <TabelaFiltravel
+            linhas={visiveis.map((c) => ({
+              id: c.id,
+              valores: {
+                nome: c.name,
+                categoria: c.defaultCategory?.name ?? "",
+                centro: c.defaultCostCenter?.name ?? "",
+                situacao: c.active ? "Ativo" : "Inativo",
+              },
+            }))}
+          >
           <TabelaNoDesktop padrao>
           <table className="w-full min-w-[920px] text-[13px]">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-                <th className="py-2 pr-3 font-medium">Nome</th>
+              <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Nome" chave="nome" /></th>
                 <th className="py-2 pr-3 font-medium">Documento</th>
-                <th className="py-2 pr-3 font-medium">Categoria padrão</th>
-                <th className="py-2 pr-3 font-medium">Centro padrão</th>
-                <th className="py-2 pr-3 font-medium text-right">Contas a pagar</th>
-                <th className="py-2 pr-3 font-medium text-right">Contas a receber</th>
-                <th className="py-2 pr-3 font-medium">Situação</th>
+                <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Categoria padrão" chave="categoria" /></th>
+                <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Centro padrão" chave="centro" /></th>
+                <th className="py-2 pr-3 font-medium">Contas a pagar</th>
+                <th className="py-2 pr-3 font-medium">Contas a receber</th>
+                <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Situação" chave="situacao" align="right" /></th>
                 <th className="py-2 font-medium"></th>
               </tr>
             </thead>
@@ -255,7 +267,7 @@ export default async function CadastrosFinanceirosPage({
               {visiveis.map((c) => {
                 const n = contas.get(c.id) ?? { pagar: 0, receber: 0 };
                 return (
-                  <tr key={c.id} className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
+                  <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
                     <td className="py-2.5 pr-3">
                       <span className="font-medium">{c.name}</span>
                       {c.email && <span className="block text-[11px] text-fg-muted">{c.email}</span>}
@@ -291,12 +303,13 @@ export default async function CadastrosFinanceirosPage({
                         />
                       )}
                     </td>
-                  </tr>
+                  </LinhaFiltravel>
                 );
               })}
             </tbody>
           </table>
           </TabelaNoDesktop>
+          </TabelaFiltravel>
           <p className="text-[11px] text-fg-muted mt-3">
             Inativo continua nas contas antigas e deixa de aparecer no lançamento manual. Cadastro não é apagado: a ficha é
             o que liga as notas e as contas de um mesmo fornecedor. O e-mail é para onde vai o lembrete da régua de
@@ -372,7 +385,7 @@ async function AbaDeCentros({
       <TabelaNoDesktop padrao>
       <table className="w-full min-w-[720px] text-[13px]">
         <thead>
-          <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+          <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
             <th className="py-2 pr-3 font-medium">Nome</th>
             <th className="py-2 pr-3 font-medium">Código</th>
             <th className="py-2 pr-3 font-medium text-right">Lançamentos</th>
@@ -458,10 +471,10 @@ async function AbaDoPlano({ tenantId, companyId, podeEditar }: { tenantId: strin
           return (
             <div key={kind} className="mb-6">
               <h3 className="text-[14px] font-medium text-fg mb-2">{kind === "PAGAR" ? "Despesas (a pagar)" : "Receitas (a receber)"}</h3>
-              <div className="overflow-x-auto">
+              <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
                 <table className="w-full min-w-[760px] text-[13px]">
                   <thead>
-                    <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                    <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                       <th className="py-2 pr-3 font-medium">Categoria</th>
                       <th className="py-2 pr-3 font-medium">Grupo do plano</th>
                       <th className="py-2 pr-3 font-medium">Linha da DRE nesta empresa</th>

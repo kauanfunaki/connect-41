@@ -1,11 +1,12 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, FileText } from "lucide-react";
+import { AlertTriangle, FileText, CalendarDays, CalendarRange } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { SeletorDeEmpresaQueNavega } from "@/components/shared/SeletorDeEmpresaQueNavega";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
+import { AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { RelatorioDoDre, moeda } from "@/components/dre/RelatorioDoDre";
@@ -88,25 +89,13 @@ export default async function DrePage({
           subtitle="Demonstrativo de resultado de caixa — os doze meses lado a lado."
         />
         <SeletorDeEmpresa empresas={empresas} companyId={companyId} />
-        <div className="flex flex-wrap items-center gap-1.5 my-4">
-          <Link href={`/dre?empresa=${companyId}`} className={ABA}>
-            Por mês
-          </Link>
-          <Link href={`/dre?empresa=${companyId}&visao=ano&ano=${anoEscolhido}`} className={ABA_ATIVA}>
-            Ano inteiro
-          </Link>
-          <span className="w-px h-6 bg-border mx-1" />
-          {anos.map((a) => (
-            <Link
-              key={a}
-              href={`/dre?empresa=${companyId}&visao=ano&ano=${a}`}
-              aria-current={a === anoEscolhido ? "page" : undefined}
-              className={a === anoEscolhido ? ABA_ATIVA : ABA}
-            >
-              {a}
-            </Link>
-          ))}
+        <div className="mt-4">
+          <AbasDaVisao companyId={companyId} ativa="ano" ano={anoEscolhido} />
         </div>
+        <FiltrosDaTela
+          className="mb-4"
+          campos={[{ chave: "ano", rotulo: "Ano", vazioLabel: `Mais recente (${anos[0] ?? anoEscolhido})`, opcoes: anos.map((a) => ({ value: String(a), label: String(a) })) }]}
+        />
         {/* Os dois avisos que só a visão mensal tinha. Uma categoria que
             some R$ 200 por mês some R$ 2.400 no ano — e doze avisos pequenos
             passam onde um grande não passaria. */}
@@ -194,29 +183,22 @@ export default async function DrePage({
 
       <SeletorDeEmpresa empresas={empresas} companyId={companyId} />
 
-      <div className="flex flex-wrap items-center gap-1.5 my-4">
-        <Link href={`/dre?empresa=${companyId}`} className={ABA_ATIVA}>
-          Por mês
-        </Link>
-        <Link href={`/dre?empresa=${companyId}&visao=ano&ano=${escolhido.ano}`} className={ABA}>
-          Ano inteiro
-        </Link>
-        <span className="w-px h-6 bg-border mx-1" />
-        {meses.slice(0, 18).map((m) => {
-          const chave = `${m.ano}-${m.mes}`;
-          const ativo = m.ano === escolhido.ano && m.mes === escolhido.mes;
-          return (
-            <Link
-              key={chave}
-              href={`/dre?empresa=${companyId}&mes=${chave}`}
-              aria-current={ativo ? "page" : undefined}
-              className={ativo ? ABA_ATIVA : ABA}
-            >
-              {MESES[m.mes - 1]}/{String(m.ano).slice(2)}
-            </Link>
-          );
-        })}
+      <div className="mt-4">
+        <AbasDaVisao companyId={companyId} ativa="mes" ano={escolhido.ano} />
       </div>
+      {/* O mês numa lista com busca, e não 18 pílulas numa fileira — a regra
+          da conferência de 30/09 para competência. */}
+      <FiltrosDaTela
+        className="mb-4"
+        campos={[
+          {
+            chave: "mes",
+            rotulo: "Mês",
+            vazioLabel: meses[0] ? `Mais recente (${MESES[meses[0].mes - 1]}/${meses[0].ano})` : "Mais recente",
+            opcoes: meses.map((m) => ({ value: `${m.ano}-${m.mes}`, label: `${MESES[m.mes - 1]}/${m.ano}` })),
+          },
+        ]}
+      />
 
       {/* Existe porque a regra é um chute até o BPO confirmar — e um chute que
           muda o resultado precisa aparecer na tela, não só no código. */}
@@ -272,10 +254,18 @@ export default async function DrePage({
   );
 }
 
-const ABA =
-  "h-8 px-3 inline-flex items-center rounded-md border border-border text-fg-secondary text-[12px] hover:bg-surface-hover transition-colors";
-const ABA_ATIVA =
-  "h-8 px-3 inline-flex items-center rounded-md border border-brand/40 bg-brand/8 text-brand text-[12px] font-medium";
+/** "Por mês" e "Ano inteiro" trocam a tela — são abas, não filtro. */
+function AbasDaVisao({ companyId, ativa, ano }: { companyId: string; ativa: "mes" | "ano"; ano: number }) {
+  return (
+    <AbasDeLink
+      ativa={ativa}
+      abas={[
+        { chave: "mes", rotulo: "Por mês", href: `/dre?empresa=${companyId}`, icone: <CalendarDays /> },
+        { chave: "ano", rotulo: "Ano inteiro", href: `/dre?empresa=${companyId}&visao=ano&ano=${ano}`, icone: <CalendarRange /> },
+      ]}
+    />
+  );
+}
 
 function SeletorDeEmpresa({
   empresas,

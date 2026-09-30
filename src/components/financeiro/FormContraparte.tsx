@@ -81,7 +81,7 @@ export function NovaContraparte({ companyId, categorias, centros = [] }: { compa
           <Button type="submit" size="sm" disabled={pendente}>
             Cadastrar
           </Button>
-          <Button variant="linkMuted" size="xs" onClick={() => setAberto(false)}>
+          <Button variant="secondary" size="xs" onClick={() => setAberto(false)}>
             Cancelar
           </Button>
           {erro && <span className="text-[12px] text-danger">{erro}</span>}
@@ -122,7 +122,7 @@ export function EditarContraparte({
 
   if (!aberto) {
     return (
-      <Button variant="linkMuted" size="xs" className="text-[11px]" onClick={() => setAberto(true)}>
+      <Button variant="secondary" size="xs" onClick={() => setAberto(true)}>
         Editar
       </Button>
     );
@@ -174,7 +174,7 @@ export function EditarContraparte({
         <Button type="submit" size="xs" disabled={pendente}>
           Salvar
         </Button>
-        <Button variant="linkMuted" size="xs" onClick={() => setAberto(false)}>
+        <Button variant="secondary" size="xs" onClick={() => setAberto(false)}>
           Cancelar
         </Button>
       </div>

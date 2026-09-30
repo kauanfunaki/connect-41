@@ -56,39 +56,112 @@ export function FiltroDePeriodo({ acao, empresas, empresaId, permitirTodas, mes,
   );
 }
 
-const ABA =
-  "h-8 px-3 inline-flex items-center rounded-md border border-border text-fg-secondary text-[12px] hover:bg-surface-hover transition-colors";
-const ABA_ATIVA =
-  "h-8 px-3 inline-flex items-center rounded-md border border-brand/40 bg-brand/8 text-brand text-[12px] font-medium";
-
-/** Abas por link — a mesma pílula de `/dre` e dos recortes de `/pagar`. */
-export function AbasDeLink({ abas, ativa }: { abas: { chave: string; rotulo: string; href: string }[]; ativa: string }) {
+/**
+ * Abas por link, no desenho das abas de Cadastros (`ui/Tabs`): texto com a
+ * barra embaixo da ativa, sobre uma linha que atravessa a página.
+ *
+ * Até 30/09 eram pílulas com borda — o mesmo desenho dos filtros logo abaixo,
+ * e a conferência do Kauan apontou que ninguém distinguia "troca a tela" de
+ * "filtra a lista". Aba é isto; filtro é o botão "Filtros" (`FiltrosDaTela`).
+ */
+export function AbasDeLink({
+  abas,
+  ativa,
+}: {
+  abas: { chave: string; rotulo: string; href: string; icone?: React.ReactNode }[];
+  ativa: string;
+}) {
   return (
-    <nav className="flex flex-wrap items-center gap-1.5 mb-4" aria-label="Abas">
-      {abas.map((a) => (
-        <Link
-          key={a.chave}
-          href={a.href}
-          aria-current={a.chave === ativa ? "page" : undefined}
-          className={a.chave === ativa ? ABA_ATIVA : ABA}
-        >
-          {a.rotulo}
-        </Link>
-      ))}
+    <nav className="scroll-x-hidden flex items-center gap-1 border-b border-border overflow-x-auto mb-4" aria-label="Abas">
+      {abas.map((a) => {
+        const ativo = a.chave === ativa;
+        return (
+          <Link
+            key={a.chave}
+            href={a.href}
+            aria-current={ativo ? "page" : undefined}
+            className={`relative flex items-center gap-1.5 px-3.5 h-10 text-[length:var(--fs-label)] font-medium whitespace-nowrap transition-colors rounded-t-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+              ativo ? "text-brand" : "text-fg-secondary hover:text-fg hover:bg-surface-hover"
+            }`}
+          >
+            {a.icone && <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{a.icone}</span>}
+            {a.rotulo}
+            {ativo && <span className="absolute left-2.5 right-2.5 -bottom-px h-[2px] rounded-full bg-brand" />}
+          </Link>
+        );
+      })}
     </nav>
   );
 }
 
-/** A faixa de números do topo, como a de `/pagar`. */
-export function FaixaDeTotais({ itens }: { itens: { rotulo: string; valor: string; tom?: string }[] }) {
+type ItemDeTotal = {
+  rotulo: string;
+  valor: string;
+  /** Classe de cor do valor (`text-danger`, `text-warning`, `text-brand`, `text-fg-muted`). Pinta o ícone junto. */
+  tom?: string;
+  icone?: React.ReactNode;
+  /** Linha de apoio embaixo do valor. */
+  detalhe?: string;
+  /** Torna o cartão um atalho — em /pagar, "Vencido" abre o recorte de vencidas. */
+  href?: string;
+};
+
+/** A cor do selo do ícone sai do tom do valor, para os dois não brigarem. */
+function seloDoTom(tom?: string): string {
+  if (tom?.includes("danger")) return "bg-danger/10 text-danger";
+  if (tom?.includes("warning")) return "bg-warning/10 text-warning";
+  if (tom?.includes("success")) return "bg-success/10 text-success";
+  if (tom?.includes("muted")) return "bg-surface-2 text-fg-muted";
+  return "bg-brand-subtle text-brand";
+}
+
+/**
+ * Os números do topo das telas do BPO e do portal.
+ *
+ * Eram quatro células coladas numa grade de 1px (30/09), e a conferência pediu
+ * cartão de verdade: ícone, hover e o valor como a coisa maior do bloco. Com
+ * `href`, o cartão vira atalho e sobe no hover; sem, só a borda acende.
+ */
+export function FaixaDeTotais({ itens }: { itens: ItemDeTotal[] }) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border border border-border rounded-md overflow-hidden mb-4">
-      {itens.map((i) => (
-        <div key={i.rotulo} className="bg-surface px-3.5 py-3">
-          <span className="block text-[11px] uppercase tracking-wide text-fg-muted">{i.rotulo}</span>
-          <span className={`block text-[17px] font-semibold tabular-nums mt-0.5 ${i.tom ?? ""}`}>{i.valor}</span>
-        </div>
-      ))}
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+      {itens.map((i) => {
+        const conteudo = (
+          <>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[length:var(--fs-helper)] font-medium text-fg-muted truncate">{i.rotulo}</span>
+              {i.icone && (
+                <span
+                  className={`inline-flex w-8 h-8 rounded-lg items-center justify-center flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${seloDoTom(i.tom)}`}
+                >
+                  {i.icone}
+                </span>
+              )}
+            </div>
+            <span
+              className={`block font-display text-[length:var(--fs-metric)] font-semibold tabular-nums leading-tight truncate ${i.tom ?? "text-fg"}`}
+            >
+              {i.valor}
+            </span>
+            {i.detalhe && <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate">{i.detalhe}</span>}
+          </>
+        );
+        const cls =
+          "group bg-surface border border-border rounded-lg px-4 py-3.5 flex flex-col gap-1.5 min-w-0 shadow-[var(--c41-shadow-sm)] transition-[border-color,box-shadow,transform] duration-150";
+        return i.href ? (
+          <Link
+            key={i.rotulo}
+            href={i.href}
+            className={`${cls} hover:border-brand/40 hover:-translate-y-0.5 hover:shadow-[var(--c41-shadow-lg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40`}
+          >
+            {conteudo}
+          </Link>
+        ) : (
+          <div key={i.rotulo} className={`${cls} hover:border-border-strong`}>
+            {conteudo}
+          </div>
+        );
+      })}
     </div>
   );
 }

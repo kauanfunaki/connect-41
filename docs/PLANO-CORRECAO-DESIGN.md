@@ -601,6 +601,38 @@ limpos em cada sub-etapa.
 
 ---
 
+## Regras de 30/09 — abas, filtros e tabelas (conferência do BPO)
+
+Saíram da conferência do redesign do BPO feita pelo Kauan em 30/09, na véspera
+do teste da coordenadora. Valem para o app inteiro; os componentes abaixo são o
+jeito de cumprir cada uma sem reescrever a regra em cada tela.
+
+| Regra | Componente | Onde já está |
+|---|---|---|
+| **Aba troca a tela** e tem cara de aba: texto com a barra embaixo, sobre uma linha — o desenho de Cadastros. Nunca pílula com borda. | `AbasDeLink` (`financeiro/FiltroDePeriodo.tsx`), com `icone` opcional; `ui/Tabs` quando a troca é no cliente | todas as telas que usam `AbasDeLink` (BPO, portal, certificados, hub do setor) |
+| **Filtro mora no botão "Filtros"**, que abre um painel: campos à esquerda, opções à direita, **com busca** quando passam de 7. Competência, mês e ano **nunca** numa fileira de botões ou checkbox. O que está filtrado aparece em fichas com "×" ao lado do botão. | `shared/FiltrosDaTela` (GET, URL copiável, volta para a página 1) | pagar/receber, lançamentos*, pendências, aprovações, cobrança (fila e acordos), conciliação, DRE |
+| **Filtro por coluna, como o Excel**: funil no cabeçalho, lista de valores com contagem e busca, em cascata. Filtra as linhas que a tela já trouxe, no navegador; o recorte grande continua no "Filtros". | `shared/FiltroDeColunas` (`TabelaFiltravel` + `FiltroDaColuna` + `LinhaFiltravel`) | as mesmas telas do BPO, mais cadastros financeiros e envios da régua |
+| **Tabela centralizada**: cabeçalho e células, inclusive valor. | `.c41-tabela` em `globals.css` (via `<TabelaNoDesktop padrao>` ou a classe no casco) | toda tabela no casco padrão |
+| **Texto cortado tem dica estilizada** com o nome inteiro (não o `title` do navegador). | `shared/DicaFlutuante`, montado nos layouts do app e do portal; pega `.truncate` e `title` dentro de tabela, e `data-dica` em qualquer lugar | global |
+| **Botão não é link.** Ação de linha é botão (`secondary`/`danger` `xs`); o que leva para fora da linha vai num menu "⋯". Texto azul sublinhado só em prosa. | `ui/Popover` + `ItemDoMenu` | contas (ver nota, abrir pendência, enviar para aprovação, desfazer baixa), cobrança ("Abrir"), cadastros e conciliação |
+| **Painel que abre dentro de tabela** usa `Popover` (portal no `body`), não `Dropdown` — o casco com rolagem lateral corta o que é `absolute`. | `ui/Popover` | baixa de conta, menu "⋯", funil das colunas |
+| **Cartão de total** tem ícone, hover e o valor como a coisa maior; com `href`, vira atalho para o recorte que conta. | `FaixaDeTotais` | BPO e portal |
+
+\* Em lançamentos, empresa e mês continuam no `FiltroDePeriodo`: são o contexto
+da página (uma empresa por vez), não um recorte da lista.
+
+**Exceção deliberada:** as grades de relatório (`RelatorioDoDre`,
+`RelatorioAnual`) seguem alinhadas como planilha — rótulo à esquerda com recuo de
+hierarquia, número à direita. Centralizar desmancha a leitura da DRE.
+
+**Falta aplicar** nos outros setores, na ordem do cronograma de testes:
+Societário (até 12/10 — `/processos`, `/licencas`, `/societario/exigencias`,
+`/societario/agenda` e `/societario/relatorios` ainda têm pílulas de filtro), depois
+DP, Recrutamento, Fiscal, Gestão e as telas comuns (Empresas, Pessoas e Clientes
+já têm o "Filtros"; falta o funil nas colunas e o centralizado).
+
+---
+
 ## Sequenciamento
 
 ```

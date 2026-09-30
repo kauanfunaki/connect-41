@@ -42,7 +42,7 @@ export function ContaBancariaForm({ companyId, conta }: { companyId: string; con
   return (
     <>
       {conta ? (
-        <Button variant="linkMuted" className="text-[11px]" onClick={() => setAberto(true)}>
+        <Button variant="secondary" size="xs" onClick={() => setAberto(true)}>
           Editar
         </Button>
       ) : (
@@ -128,8 +128,8 @@ export function AlternarContaAtiva({ bankAccountId, ativa }: { bankAccountId: st
   return (
     <>
       <Button
-        variant="linkMuted"
-        className="text-[11px]"
+        variant="secondary"
+        size="xs"
         onClick={() =>
           requestConfirm(
             ativa

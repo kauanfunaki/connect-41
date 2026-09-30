@@ -11,6 +11,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
 import { FormLancamentoManual } from "@/components/financeiro/FormLancamentoManual";
 import { ImportarLancamentosCsv } from "@/components/financeiro/ImportarLancamentosCsv";
@@ -251,17 +252,30 @@ async function ListaDeManuais({
         })}
       </CartoesNoCelular>
 
+      <TabelaFiltravel
+        linhas={linhas.map((l) => ({
+          id: l.id,
+          valores: {
+            tipo: l.kind === "PAGAR" ? "A pagar" : "A receber",
+            contraparte: l.counterparty.name,
+            categoria: l.category?.name ?? "",
+            centro: l.costCenter?.name ?? "",
+            vencimento: saoPauloParts(l.dueDate).dateKey,
+            status: statusDe(l).rotulo,
+          },
+        }))}
+      >
       <TabelaNoDesktop padrao>
       <table className="w-full min-w-[880px] text-[13px]">
         <thead>
-          <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-            <th className="py-2 pr-3 font-medium">Tipo</th>
-            <th className="py-2 pr-3 font-medium">Contraparte</th>
-            <th className="py-2 pr-3 font-medium">Categoria</th>
-            <th className="py-2 pr-3 font-medium">Centro de custo</th>
-            <th className="py-2 pr-3 font-medium">Vencimento</th>
-            <th className="py-2 pr-3 font-medium text-right">Valor</th>
-            <th className="py-2 pr-3 font-medium">Status</th>
+          <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+            <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Tipo" chave="tipo" /></th>
+            <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Contraparte" chave="contraparte" /></th>
+            <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Categoria" chave="categoria" /></th>
+            <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Centro de custo" chave="centro" /></th>
+            <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" /></th>
+            <th className="py-2 pr-3 font-medium">Valor</th>
+            <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Status" chave="status" align="right" /></th>
             <th className="py-2 font-medium"></th>
           </tr>
         </thead>
@@ -269,7 +283,7 @@ async function ListaDeManuais({
           {linhas.map((l) => {
             const status = statusDe(l);
             return (
-              <tr key={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
+              <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
                 <td className={`py-2.5 pr-3 text-[12px] font-medium ${l.kind === "PAGAR" ? "text-danger" : "text-success"}`}>
                   {l.kind === "PAGAR" ? "A pagar" : "A receber"}
                 </td>
@@ -290,12 +304,13 @@ async function ListaDeManuais({
                 <td className="py-2.5">
                   {podeCancelar && podeCancelarManual(l).pode && <CancelarLancamento entryId={l.id} />}
                 </td>
-              </tr>
+              </LinhaFiltravel>
             );
           })}
         </tbody>
       </table>
       </TabelaNoDesktop>
+      </TabelaFiltravel>
       <p className="text-[11px] text-fg-muted mt-3">
         Lançamento não é apagado: cancelar tira dos totais e fica no histórico de auditoria. A baixa de um lançamento
         em aberto é feita em Contas a pagar ou a receber, como a de qualquer conta.
