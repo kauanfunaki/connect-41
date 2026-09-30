@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, UserRound, ShieldCheck, KeyRound, Palette, Bell, Settings2 } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
@@ -42,7 +43,7 @@ export default async function ConfiguracoesPage() {
         subtitle="Sua conta e suas preferências neste workspace."
       />
 
-      <Secao titulo="Perfil">
+      <Secao titulo="Perfil" descricao="Seu nome e sua foto, como aparecem para a equipe." icone={<UserRound />}>
         <PerfilForm
           action={atualizarMeuPerfil}
           defaultName={me.name}
@@ -51,7 +52,7 @@ export default async function ConfiguracoesPage() {
         />
       </Secao>
 
-      <Secao titulo="Acesso" descricao="Definido por um administrador do workspace.">
+      <Secao titulo="Acesso" descricao="Seu papel e os setores em que você atua. Quem define é um administrador do workspace." icone={<ShieldCheck />}>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <dt className="text-[length:var(--fs-helper)] text-fg-muted">Papel</dt>
@@ -68,15 +69,15 @@ export default async function ConfiguracoesPage() {
         </dl>
       </Secao>
 
-      <Secao titulo="Segurança">
+      <Secao titulo="Segurança" descricao="Troque a sua senha de acesso ao Connect." icone={<KeyRound />}>
         <AlterarSenhaForm action={alterarMinhaSenha} />
       </Secao>
 
-      <Secao titulo="Aparência">
+      <Secao titulo="Aparência" descricao="Escolha o tema claro, o escuro, ou siga o tema do seu aparelho." icone={<Palette />}>
         <TemaSelector />
       </Secao>
 
-      <Secao titulo="Notificações">
+      <Secao titulo="Notificações" descricao="Avisos no celular e no navegador, e o histórico do que chegou." icone={<Bell />}>
         <PushNotificationToggle
         publicKey={getVapidPublicKey()}
         acoes={{ salvar: salvarPushSubscription, remover: removerPushSubscription }}
@@ -91,26 +92,49 @@ export default async function ConfiguracoesPage() {
       </Secao>
 
       {isFullWrite(ctx.role) && (
-        <p className="text-[length:var(--fs-helper)] text-fg-muted">
-          Procurando as configurações do workspace (usuários, setores, integrações)?{" "}
-          <Link href="/admin" className="text-brand hover:underline">
-            Abrir administração
-          </Link>
-          .
-        </p>
+        <Secao
+          titulo="Workspace"
+          descricao="Usuários, setores, módulos, integrações e o resto do que vale para todo mundo."
+          icone={<Settings2 />}
+        >
+          <Button href="/admin" variant="secondary">
+            <Settings2 size={14} /> Abrir administração
+          </Button>
+        </Secao>
       )}
     </PageContainer>
   );
 }
 
-function Secao({ titulo, descricao, children }: { titulo: string; descricao?: string; children: React.ReactNode }) {
+/**
+ * Uma seção de configuração: o que é (ícone, título, descrição) à esquerda e
+ * o controle à direita, com uma divisória entre as seções — o enquadramento
+ * das configurações do HubStrom que o Kauan trouxe como referência em 30/09.
+ * Era um título solto e um cartão por seção, empilhados.
+ */
+function Secao({
+  titulo,
+  descricao,
+  icone,
+  children,
+}: {
+  titulo: string;
+  descricao?: string;
+  icone: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="mb-8">
-      <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-1">{titulo}</h2>
-      {descricao && <p className="text-[length:var(--fs-helper)] text-fg-muted mb-3">{descricao}</p>}
-      <div className={`bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 space-y-3 ${descricao ? "" : "mt-3"}`}>
-        {children}
+    <section className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] gap-x-10 gap-y-4 py-8 border-t border-border first-of-type:border-t-0 first-of-type:pt-2">
+      <div className="flex items-start gap-3.5">
+        <span className="inline-flex size-10 flex-shrink-0 items-center justify-center rounded-lg border border-border bg-surface-hover text-fg-secondary [&>svg]:w-[18px] [&>svg]:h-[18px]">
+          {icone}
+        </span>
+        <div className="min-w-0">
+          <h2 className="font-display text-[length:var(--fs-section)] font-semibold text-fg leading-tight">{titulo}</h2>
+          {descricao && <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1 leading-relaxed max-w-[42ch]">{descricao}</p>}
+        </div>
       </div>
+      <div className="min-w-0 space-y-3">{children}</div>
     </section>
   );
 }

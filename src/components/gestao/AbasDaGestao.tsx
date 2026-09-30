@@ -6,7 +6,7 @@ import { AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
 
 type Aba = "painel" | "alertas" | "coordenadores" | "horas";
 
-const ABAS: { chave: Aba; rotulo: string; href: string; icone: React.ReactNode }[] = [
+export const ABAS_DA_GESTAO: { chave: Aba; rotulo: string; href: string; icone: React.ReactNode }[] = [
   { chave: "painel", rotulo: "Painel", href: "/gestao", icone: <LayoutDashboard /> },
   { chave: "alertas", rotulo: "Alertas", href: "/gestao/alertas", icone: <BellRing /> },
   { chave: "coordenadores", rotulo: "Coordenadores", href: "/gestao/coordenadores", icone: <Users /> },
@@ -32,7 +32,7 @@ export function AbasDaGestao() {
         : "painel";
   return (
     <AbasDeLink
-      abas={ABAS.map((a) => ({ ...a, href: setor ? `${a.href}?setor=${encodeURIComponent(setor)}` : a.href }))}
+      abas={ABAS_DA_GESTAO.map((a) => ({ ...a, href: setor ? `${a.href}?setor=${encodeURIComponent(setor)}` : a.href }))}
       ativa={ativa}
     />
   );
