@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FileStack } from "lucide-react";
+import { FileStack, Loader, TriangleAlert, Hourglass, CheckCircle2 } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { feriadosDoTenant } from "@/lib/societario/fila";
@@ -50,26 +51,44 @@ export default async function PortalProcessosPage({
     <PageContainer>
       <PortalCabecalho titulo="Processos" descricao="Abertura, alterações, baixa e licenças das suas empresas." />
 
+      {/* Números que levam ao recorte, e o recorte no "Filtros" — eram abas
+          (regra da conferência de 30/09). */}
       <FaixaDeTotais
         itens={[
-          { rotulo: "Em andamento", valor: String(abertos.length) },
-          { rotulo: "Com exigência do órgão", valor: String(emExigencia), tom: emExigencia > 0 ? "text-warning" : "" },
+          {
+            rotulo: "Em andamento",
+            valor: String(abertos.length),
+            icone: <Loader />,
+            detalhe: recorte === "abertos" ? "mostrando agora" : undefined,
+            href: "/portal/processos",
+          },
+          {
+            rotulo: "Com exigência do órgão",
+            valor: String(emExigencia),
+            tom: emExigencia > 0 ? "text-warning" : "",
+            icone: <TriangleAlert />,
+            href: "/portal/processos",
+          },
           {
             rotulo: "Aguardando você",
             valor: String(aguardandoVoce),
             tom: aguardandoVoce > 0 ? "text-warning" : "",
+            icone: <Hourglass />,
+            href: "/portal/processos",
           },
-          { rotulo: "Encerrados", valor: String(todos.length - abertos.length), tom: "text-fg-muted" },
+          {
+            rotulo: "Encerrados",
+            valor: String(todos.length - abertos.length),
+            tom: "text-fg-muted",
+            icone: <CheckCircle2 />,
+            detalhe: recorte === "encerrados" ? "mostrando agora" : undefined,
+            href: "/portal/processos?recorte=encerrados",
+          },
         ]}
       />
-
-      <AbasDeLink
-        abas={RECORTES.map((r) => ({
-          chave: r.chave,
-          rotulo: r.rotulo,
-          href: r.chave === "abertos" ? "/portal/processos" : `/portal/processos?recorte=${r.chave}`,
-        }))}
-        ativa={recorte}
+      <FiltrosDaTela
+        className="mb-4"
+        campos={[{ chave: "recorte", rotulo: "Situação", vazioLabel: "Em andamento", opcoes: [{ value: "encerrados", label: "Encerrados" }] }]}
       />
 
       {linhas.length === 0 ? (
