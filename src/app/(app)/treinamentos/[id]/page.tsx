@@ -68,7 +68,7 @@ export default async function TreinamentoPage({
         </Card>
       )}
 
-      <div className="bg-surface border border-border rounded-lg p-5">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-[14px] font-semibold text-fg mb-3">
           Turmas {training.classes.length > 0 && `(${training.classes.length})`}
         </h2>

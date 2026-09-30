@@ -52,7 +52,7 @@ export default async function TreinamentosPage() {
           />
         </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
           {treinamentos.map((t) => (
             <Link
               key={t.id}

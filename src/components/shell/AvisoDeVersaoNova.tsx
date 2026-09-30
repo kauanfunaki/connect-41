@@ -67,7 +67,7 @@ export function AvisoDeVersaoNova({ quem = "O Connect" }: Props) {
 export function ErroDeVersaoAntiga() {
   return (
     <div className="p-6 max-w-[1440px] mx-auto">
-      <div className="bg-surface border border-border rounded-lg p-10 flex flex-col items-center text-center gap-3">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-10 flex flex-col items-center text-center gap-3">
         <span className="w-10 h-10 rounded-lg bg-brand/10 text-brand flex items-center justify-center">
           <RefreshCw size={18} />
         </span>

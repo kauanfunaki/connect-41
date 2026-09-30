@@ -171,7 +171,7 @@ export default async function CandidatoPage({
       </div>
 
       {/* Identificação */}
-      <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
         <h2 className="text-[14px] font-semibold text-fg mb-4">Identificação</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="CPF" value={maskCpf(person.cpf)} mono />
@@ -189,7 +189,7 @@ export default async function CandidatoPage({
       </div>
 
       {/* Contato */}
-      <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
         <h2 className="text-[14px] font-semibold text-fg mb-4">Contato</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="E-mail" value={person.email} />
@@ -199,7 +199,7 @@ export default async function CandidatoPage({
 
       {/* Endereço */}
       {fullAddress && (
-        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
           <h2 className="text-[14px] font-semibold text-fg mb-4">Endereço</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
             <InfoRow label="Logradouro" value={[person.addressStreet, person.addressNumber].filter(Boolean).join(", ")} />
@@ -212,7 +212,7 @@ export default async function CandidatoPage({
       )}
 
       {/* Candidaturas */}
-      <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
         <h2 className="text-[14px] font-semibold text-fg mb-3">
           Candidaturas {candidaturas.length > 0 && `(${candidaturas.length})`}
         </h2>

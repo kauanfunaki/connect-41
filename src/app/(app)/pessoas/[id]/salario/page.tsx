@@ -62,7 +62,7 @@ export default async function SalarioPage({
       <BackButton className="mb-3" />
       <PageHeader title="Dados Bancários e Salário" />
 
-      <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           {canViewSalary && (
             <InfoRow

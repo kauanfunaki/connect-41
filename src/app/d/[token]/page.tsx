@@ -64,7 +64,7 @@ export default async function ClientDocumentViewPage({
         <h1 className="text-[20px] font-semibold text-fg tracking-[-0.01em] mb-6">{doc.title}</h1>
 
         <div
-          className="bg-surface border border-border rounded-lg p-6 text-[14px] text-fg leading-relaxed [&_a]:text-brand [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h1]:text-[18px] [&_h1]:font-semibold [&_h2]:text-[16px] [&_h2]:font-semibold [&_h3]:text-[14px] [&_h3]:font-semibold"
+          className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-6 text-[14px] text-fg leading-relaxed [&_a]:text-brand [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h1]:text-[18px] [&_h1]:font-semibold [&_h2]:text-[16px] [&_h2]:font-semibold [&_h3]:text-[14px] [&_h3]:font-semibold"
           dangerouslySetInnerHTML={{ __html: bodyHtml }}
         />
 

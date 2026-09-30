@@ -70,7 +70,7 @@ export default async function KanbanListPage() {
                     key={p.id}
                     href={boardPath(p)}
                     style={{ animationDelay: `${Math.min(i, 8) * 35}ms` }}
-                    className="reveal-in bg-surface border border-border rounded-lg p-4 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform]"
+                    className="reveal-in bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform]"
                   >
                     <p className="text-[13px] font-medium text-fg mb-1">{p.name}</p>
                     <p className="text-[12px] text-fg-muted">

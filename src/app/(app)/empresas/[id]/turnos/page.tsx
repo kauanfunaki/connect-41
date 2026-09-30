@@ -83,7 +83,7 @@ export default async function TurnosPage({
           />
         </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
           {turnos.map((t) => (
             <div key={t.id} className="flex items-center justify-between px-4 py-3">
               <div>

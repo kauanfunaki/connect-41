@@ -100,7 +100,7 @@ export function PortalAcessosList({ acessos, clientes, criarAction, enviarLinkAc
         {acessos.length === 0 ? (
           <p className="text-[length:var(--fs-helper)] text-fg-muted">Nenhum acesso criado ainda.</p>
         ) : (
-          <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
             {acessos.map((a) => (
               <div key={a.id} className="flex items-center gap-4 px-4 py-3 flex-wrap">
                 <div className="min-w-0 flex-1">

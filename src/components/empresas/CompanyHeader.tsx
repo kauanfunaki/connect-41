@@ -125,7 +125,7 @@ export function CompanyHeader({
   }
 
   return (
-    <div className="bg-surface border border-border rounded-lg p-6 mb-5">
+    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-6 mb-5">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-start gap-4 min-w-0">
           <div className="relative flex-shrink-0 group">

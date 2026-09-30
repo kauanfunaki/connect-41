@@ -95,11 +95,11 @@ export default async function PlanoDeContasPage() {
                   <span className="text-[12px] text-fg-muted">{nota}</span>
                 </div>
                 {doLado.length === 0 ? (
-                  <p className="text-[13px] text-fg-muted px-4 py-3 bg-surface border border-border rounded-lg">
+                  <p className="text-[13px] text-fg-muted px-4 py-3 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)]">
                     Nenhuma categoria deste lado.
                   </p>
                 ) : (
-                  <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+                  <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
                     {doLado.map((c) => (
                       <div key={c.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
                         <div className="min-w-0">

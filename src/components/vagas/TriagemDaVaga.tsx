@@ -85,7 +85,7 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
   }
 
   return (
-    <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
         <div>
           <h2 className="text-[14px] font-semibold text-fg">Triagem de currículos</h2>

@@ -90,7 +90,7 @@ export default async function ObrigacoesPage() {
           />
         </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
           {obligations.map((o) => (
             <div key={o.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
               <div className="min-w-0">

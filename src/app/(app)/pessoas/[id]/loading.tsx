@@ -16,7 +16,7 @@ export default function LoadingPessoa() {
         </div>
 
         {[0, 1, 2].map((i) => (
-          <div key={i} className="bg-surface border border-border rounded-lg p-5 mb-4">
+          <div key={i} className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
             <div className="h-4 w-32 bg-surface-2 rounded mb-4" />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
               {[0, 1, 2, 3].map((j) => (

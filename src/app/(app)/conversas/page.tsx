@@ -312,7 +312,7 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
             const linkedLabel = link.person?.name ?? link.company?.name ?? null;
             const linkedHref = link.person ? `/pessoas/${link.person.id}` : link.company ? `/empresas/${link.company.id}` : null;
             return (
-              <div key={link.id} className="bg-surface border border-border rounded-lg px-4 py-3">
+              <div key={link.id} className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="w-8 h-8 rounded-full bg-brand-subtle text-brand flex items-center justify-center flex-shrink-0">
@@ -341,7 +341,7 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
           })}
 
           {orphanConversations.length > 0 && (
-            <div className="bg-surface border border-border rounded-lg px-4 py-3">
+            <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] px-4 py-3">
               <div className="flex items-center gap-2 mb-1">
                 <span className="w-8 h-8 rounded-full bg-surface-hover text-fg-muted flex items-center justify-center flex-shrink-0">
                   <HelpCircle size={15} />

@@ -210,7 +210,7 @@ export default async function CandidaturaScorecardPage({
 
       {/* Consolidado */}
       {consolidation.count > 0 && (
-        <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
           <h2 className="text-[14px] font-semibold text-fg mb-3">Consolidado ({consolidation.count} parecer{consolidation.count !== 1 ? "es" : ""})</h2>
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-[13px] text-fg">
@@ -230,7 +230,7 @@ export default async function CandidaturaScorecardPage({
       )}
 
       {/* Pareceres */}
-      <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
         <h2 className="text-[14px] font-semibold text-fg mb-3">Pareceres</h2>
         {candidatura.scorecards.length === 0 ? (
           <p className="text-[13px] text-fg-muted">Nenhum parecer ainda.</p>

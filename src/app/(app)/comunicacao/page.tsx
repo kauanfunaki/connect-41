@@ -104,7 +104,7 @@ export default async function ComunicacaoPage({
             <Link
               key={c.empresaId}
               href={`/comunicacao?empresa=${c.empresaId}`}
-              className="block bg-surface border border-border rounded-lg px-4 py-3 hover:border-border-strong hover:bg-surface-hover transition-colors"
+              className="block bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] px-4 py-3 hover:border-border-strong hover:bg-surface-hover transition-colors"
             >
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium text-fg">{c.empresaNome}</span>

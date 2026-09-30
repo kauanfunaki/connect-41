@@ -188,7 +188,7 @@ export default async function AuditoriaPage({
           />
         </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
           {logs.map((log) => {
             const detail = describeMetadata(log.metadata);
             return (

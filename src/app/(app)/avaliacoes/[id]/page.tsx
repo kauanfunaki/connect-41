@@ -76,7 +76,7 @@ export default async function CicloPage({
         )}
       </div>
 
-      <div className="bg-surface border border-border rounded-lg p-5">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-[14px] font-semibold text-fg mb-3">
           Avaliações {ciclo.evaluations.length > 0 && `(${ciclo.evaluations.length})`}
         </h2>

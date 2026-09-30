@@ -61,7 +61,7 @@ export function SkeletonMetrics({ cartoes = 4 }: { cartoes?: number }) {
   return (
     <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: `repeat(auto-fit, minmax(11rem, 1fr))` }}>
       {Array.from({ length: cartoes }).map((_, i) => (
-        <div key={i} className="bg-surface border border-border rounded-lg px-4 py-3 space-y-2">
+        <div key={i} className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] px-4 py-3 space-y-2">
           <SkeletonLine w="w-24" h="h-3" />
           <SkeletonLine w="w-16" h="h-6" />
         </div>
@@ -91,7 +91,7 @@ export function SkeletonCardList({ cards = 4, linhas = 2 }: { cards?: number; li
   return (
     <div className="space-y-3">
       {Array.from({ length: cards }).map((_, i) => (
-        <div key={i} className="bg-surface border border-border rounded-lg px-4 py-3 space-y-2.5">
+        <div key={i} className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] px-4 py-3 space-y-2.5">
           <div className="flex items-center justify-between gap-2">
             <SkeletonLine w="w-52" h="h-3.5" />
             <SkeletonLine w="w-20" h="h-3.5" />
@@ -119,7 +119,7 @@ export function SkeletonBlocks({ blocos = 3, linhas = 3 }: { blocos?: number; li
   return (
     <div className="space-y-4">
       {Array.from({ length: blocos }).map((_, i) => (
-        <div key={i} className="bg-surface border border-border rounded-lg p-5 space-y-3">
+        <div key={i} className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 space-y-3">
           <SkeletonLine w="w-24" h="h-3" />
           {Array.from({ length: linhas }).map((_, j) => (
             <SkeletonLine key={j} w={j % 2 === 0 ? "w-64" : "w-48"} h="h-3.5" />
@@ -140,7 +140,7 @@ export function SkeletonTiles({ tiles = 6 }: { tiles?: number }) {
   return (
     <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(15rem, 1fr))" }}>
       {Array.from({ length: tiles }).map((_, i) => (
-        <div key={i} className="bg-surface border border-border rounded-lg p-4 space-y-2.5">
+        <div key={i} className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 space-y-2.5">
           <SkeletonLine w="w-8" h="h-8" />
           <SkeletonLine w="w-32" h="h-3.5" />
           <SkeletonLine w="w-full" h="h-3" />
@@ -161,12 +161,12 @@ export function SkeletonTiles({ tiles = 6 }: { tiles?: number }) {
 export function SkeletonWorkspace() {
   return (
     <div className="flex gap-4 h-full min-h-96">
-      <div className="w-64 flex-shrink-0 bg-surface border border-border rounded-lg p-4 space-y-3">
+      <div className="w-64 flex-shrink-0 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 space-y-3">
         {Array.from({ length: 6 }).map((_, i) => (
           <SkeletonLine key={i} w={i % 3 === 0 ? "w-40" : "w-32"} h="h-3.5" />
         ))}
       </div>
-      <div className="flex-1 bg-surface border border-border rounded-lg p-5 space-y-3">
+      <div className="flex-1 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 space-y-3">
         <SkeletonLine w="w-56" h="h-5" />
         {Array.from({ length: 8 }).map((_, i) => (
           <SkeletonLine key={i} w={i % 4 === 3 ? "w-2/3" : "w-full"} h="h-3" />

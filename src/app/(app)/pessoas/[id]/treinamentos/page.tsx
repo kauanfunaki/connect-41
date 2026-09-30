@@ -52,7 +52,7 @@ export default async function TreinamentosPessoaPage({
       <BackButton className="mb-3" />
       <PageHeader title="Treinamentos" />
 
-      <div className="bg-surface border border-border rounded-lg p-5">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         {trainingParticipations.length === 0 ? (
           <p className="text-[13px] text-fg-muted">Nenhum treinamento registrado ainda.</p>
         ) : (

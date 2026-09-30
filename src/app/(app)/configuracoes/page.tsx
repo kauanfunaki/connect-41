@@ -108,7 +108,7 @@ function Secao({ titulo, descricao, children }: { titulo: string; descricao?: st
     <section className="mb-8">
       <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-1">{titulo}</h2>
       {descricao && <p className="text-[length:var(--fs-helper)] text-fg-muted mb-3">{descricao}</p>}
-      <div className={`bg-surface border border-border rounded-lg p-5 space-y-3 ${descricao ? "" : "mt-3"}`}>
+      <div className={`bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 space-y-3 ${descricao ? "" : "mt-3"}`}>
         {children}
       </div>
     </section>

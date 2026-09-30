@@ -62,7 +62,7 @@ export default async function IndicadoresRhPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {cards.map((c) => (
-          <div key={c.label} className="bg-surface border border-border rounded-lg p-4">
+          <div key={c.label} className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4">
             <p className="text-[11px] text-fg-muted uppercase tracking-wide mb-1">{c.label}</p>
             <p className="text-[20px] font-semibold text-fg tnum">{c.value}</p>
             {c.hint && <p className="text-[11px] text-fg-muted mt-0.5">{c.hint}</p>}
@@ -77,7 +77,7 @@ export default async function IndicadoresRhPage() {
             <Link
               key={r.href}
               href={r.href}
-              className="group bg-surface border border-border rounded-lg p-4 hover:border-border-strong hover:bg-surface-hover transition-colors"
+              className="group bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 hover:border-border-strong hover:bg-surface-hover transition-colors"
             >
               <span className="inline-flex w-9 h-9 rounded-lg items-center justify-center bg-brand/10 text-brand mb-3">
                 {r.icon}

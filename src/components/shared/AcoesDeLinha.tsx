@@ -1,6 +1,8 @@
 "use client";
 
+import { MoreHorizontal, Pencil, Power, PowerOff } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Popover, ItemDoMenu } from "@/components/ui/Popover";
 
 type Props = {
   /** Quem está fora de operação (inativo, cancelado) volta com "Reativar". */
@@ -11,26 +13,52 @@ type Props = {
 };
 
 /**
- * O par Inativar/Editar que fecha a linha de /empresas, /pessoas e /clientes.
+ * As ações que fecham a linha de /empresas, /pessoas e /clientes.
  *
- * Eram três cópias do mesmo markup, e já tinham começado a divergir — uma com
- * `whitespace-nowrap` no span, as outras sem. Com os cartões de mobile seriam
- * seis. O rótulo é a única regra que mora aqui: "Reativar" quando está fora de
- * operação, "Inativar" quando está dentro.
- *
- * `linkMuted` é o que os três já eram escritos à mão: texto apagado que
- * escurece no hover, sem caixa. O tamanho vem daqui e não da variante porque a
- * variante não fixa fonte de propósito.
+ * Eram três cópias do mesmo markup, e já tinham começado a divergir — por isso
+ * moram aqui. Desde o polimento de 30/09 seguem a regra da conferência do BPO,
+ * "botão não é link": **Editar** é botão, e Inativar/Reativar foi para o menu
+ * "⋯" — é a ação rara e a que tira o cadastro da lista, então não fica a um
+ * clique acidental do Editar. O rótulo é a única regra de negócio daqui:
+ * "Reativar" quando está fora de operação, "Inativar" quando está dentro.
  */
 export function AcoesDeLinha({ foraDeOperacao, onToggle, editarHref, className = "" }: Props) {
   return (
-    <span className={`inline-flex items-center gap-3 whitespace-nowrap ${className}`.trim()}>
-      <Button variant="linkMuted" className="text-[13px] font-medium" onClick={onToggle}>
-        {foraDeOperacao ? "Reativar" : "Inativar"}
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap ${className}`.trim()}>
+      <Button variant="secondary" size="xs" href={editarHref}>
+        <Pencil size={11} /> Editar
       </Button>
-      <Button variant="linkMuted" href={editarHref} className="text-[13px] font-medium">
-        Editar
-      </Button>
+      <Popover
+        align="right"
+        width={180}
+        aria-label="Mais ações"
+        trigger={({ open, toggle }) => (
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label="Mais ações"
+            aria-expanded={open}
+            className={`h-7 w-7 rounded-md border inline-flex items-center justify-center transition-colors ${
+              open ? "border-brand/40 bg-brand-subtle text-fg" : "border-border-strong text-fg-muted hover:text-fg hover:bg-surface-hover"
+            }`}
+          >
+            <MoreHorizontal size={14} />
+          </button>
+        )}
+      >
+        {({ close }) => (
+          <ItemDoMenu
+            icone={foraDeOperacao ? <Power /> : <PowerOff />}
+            danger={!foraDeOperacao}
+            onClick={() => {
+              close();
+              onToggle();
+            }}
+          >
+            {foraDeOperacao ? "Reativar" : "Inativar"}
+          </ItemDoMenu>
+        )}
+      </Popover>
     </span>
   );
 }

@@ -43,7 +43,7 @@ export default async function AssinaturaPage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          <div className="bg-surface border border-border rounded-lg p-5">
+          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
             <p className="text-[11px] text-fg-muted uppercase tracking-wide mb-1">Plano</p>
             <p className="text-[18px] font-semibold text-fg">{subscription.plan.name}</p>
             <p className="text-[13px] text-fg-muted mt-1">
@@ -61,7 +61,7 @@ export default async function AssinaturaPage() {
           </div>
 
           {seatLimit != null && (
-            <div className="bg-surface border border-border rounded-lg p-5">
+            <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
               <p className="text-[11px] text-fg-muted uppercase tracking-wide mb-1">Usuários</p>
               <p className="text-[18px] font-semibold text-fg tnum">{activeUsers} / {seatLimit}</p>
               <div className="w-full h-2 rounded-full bg-surface-2 mt-2 overflow-hidden">

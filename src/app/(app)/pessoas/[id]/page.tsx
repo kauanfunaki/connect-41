@@ -170,7 +170,7 @@ export default async function PessoaPage({
       )}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* Identificação */}
-      <div className="bg-surface border border-border rounded-lg p-5">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-[14px] font-semibold text-fg mb-4">Identificação</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="Nome"               value={person.name} />
@@ -201,7 +201,7 @@ export default async function PessoaPage({
       )}
 
       {/* Contato */}
-      <div className="bg-surface border border-border rounded-lg p-5">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-[14px] font-semibold text-fg mb-4">Contato</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           <InfoRow label="E-mail"   value={person.email} />
@@ -228,7 +228,7 @@ export default async function PessoaPage({
 
       {/* Endereço */}
       {fullAddress && (
-        <div className="bg-surface border border-border rounded-lg p-5">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
           <h2 className="text-[14px] font-semibold text-fg mb-4">Endereço</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
             <InfoRow label="Logradouro"  value={[person.addressStreet, person.addressNumber].filter(Boolean).join(", ")} />
@@ -246,7 +246,7 @@ export default async function PessoaPage({
   const vinculoContent = (
     <div className="space-y-4">
       {/* Vínculo */}
-      <div className="bg-surface border border-border rounded-lg p-5">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-[14px] font-semibold text-fg mb-4">Vínculo</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           {person.currentCompany ? (
@@ -281,7 +281,7 @@ export default async function PessoaPage({
     <div className="space-y-4">
       {/* Dados Trabalhistas */}
       {person.type === "COLABORADOR" && (
-        <div className="bg-surface border border-border rounded-lg p-5">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
           <h2 className="text-[14px] font-semibold text-fg mb-4">Dados Trabalhistas</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
             <InfoRow label="Status" value={STATUS_LABEL[person.employmentStatus]} />
@@ -302,7 +302,7 @@ export default async function PessoaPage({
 
       {/* Dependentes */}
       {person.type === "COLABORADOR" && dependentes.length > 0 && (
-        <div className="bg-surface border border-border rounded-lg p-5">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
           <h2 className="text-[14px] font-semibold text-fg mb-4">Dependentes</h2>
           <div className="divide-y divide-border">
             {dependentes.map((d) => (
@@ -333,7 +333,7 @@ export default async function PessoaPage({
 
       {/* Campos Adicionais (setoriais) */}
       {customFields.length > 0 && (
-        <div className="bg-surface border border-border rounded-lg p-5">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
           <h2 className="text-[14px] font-semibold text-fg mb-4">Campos Adicionais</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
             {customFields.map((f) => (

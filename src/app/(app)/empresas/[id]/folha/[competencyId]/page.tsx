@@ -111,7 +111,7 @@ export default async function CompetenciaPage({
         </div>
       )}
 
-      <div className="bg-surface border border-border rounded-lg p-5">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-[14px] font-semibold text-fg mb-3">Lançamentos</h2>
 
         {competencia.entries.length === 0 ? (
