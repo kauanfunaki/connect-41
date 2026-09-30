@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
@@ -12,7 +11,7 @@ import { saoPauloParts } from "@/lib/agenda";
 import { getModuleDef } from "@/lib/module-catalog";
 import { ContasTable, moeda } from "./ContasTable";
 import { AnaliseDeContas } from "./AnaliseDeContas";
-import { AbasDeLink } from "./FiltroDePeriodo";
+import { AbasDeLink, FaixaDeTotais } from "./FiltroDePeriodo";
 import { situacoesDeCobranca, MODULO_DE_COBRANCA } from "@/lib/financeiro/cobranca/consultas";
 import { DefinirCentroDasContas } from "./DefinirCentroDasContas";
 
@@ -130,51 +129,27 @@ export async function ContasPage({
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
+      {/* Sem "Voltar": é página principal do setor, não uma ficha aberta de
+          uma lista — o menu é o caminho de volta. */}
+      <PageHeader
+        title={aPagar ? "Contas a pagar" : "Contas a receber"}
+        subtitle={
+          aPagar
+            ? "O que as empresas têm a pagar, do documento fiscal à baixa — pelo valor líquido, já com as retenções."
+            : "O que as empresas têm a receber, do documento fiscal emitido ao recebimento."
+        }
+      />
 
-      <div className="mb-5">
-        <PageHeader title={aPagar ? "Contas a pagar" : "Contas a receber"} />
-        <p className="text-[13px] text-fg-muted mt-1">
-          {aPagar
-            ? "O que sai. Nasce do documento fiscal e herda o valor dele — com retenção, pelo líquido."
-            : "O que entra. Nasce do documento fiscal emitido pela empresa."}
-        </p>
-      </div>
-
-      {/* Três números, e o primeiro é o que a pessoa procura: quanto falta.
+      {/* Quatro números, e o primeiro é o que a pessoa procura: quanto falta.
           Vencido em destaque porque é o que já custa. */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border border border-border rounded-md overflow-hidden mb-4">
-        <div className="bg-surface px-3.5 py-3">
-          <span className="block text-[11px] uppercase tracking-wide text-fg-muted">Em aberto</span>
-          <span className="block text-[17px] font-semibold tabular-nums mt-0.5">
-            {moeda(resultado.totais.emAberto)}
-          </span>
-        </div>
-        <div className="bg-surface px-3.5 py-3">
-          <span className="block text-[11px] uppercase tracking-wide text-fg-muted">Vencido</span>
-          <span
-            className={`block text-[17px] font-semibold tabular-nums mt-0.5 ${
-              resultado.totais.vencido > 0 ? "text-danger" : ""
-            }`}
-          >
-            {moeda(resultado.totais.vencido)}
-          </span>
-        </div>
-        <div className="bg-surface px-3.5 py-3">
-          <span className="block text-[11px] uppercase tracking-wide text-fg-muted">Vence hoje</span>
-          <span className="block text-[17px] font-semibold tabular-nums mt-0.5">
-            {moeda(resultado.totais.venceHoje)}
-          </span>
-        </div>
-        <div className="bg-surface px-3.5 py-3">
-          <span className="block text-[11px] uppercase tracking-wide text-fg-muted">
-            {aPagar ? "Pago" : "Recebido"}
-          </span>
-          <span className="block text-[17px] font-semibold tabular-nums mt-0.5 text-fg-muted">
-            {moeda(resultado.totais.pago)}
-          </span>
-        </div>
-      </div>
+      <FaixaDeTotais
+        itens={[
+          { rotulo: "Em aberto", valor: moeda(resultado.totais.emAberto) },
+          { rotulo: "Vencido", valor: moeda(resultado.totais.vencido), tom: resultado.totais.vencido > 0 ? "text-danger" : undefined },
+          { rotulo: "Vence hoje", valor: moeda(resultado.totais.venceHoje) },
+          { rotulo: aPagar ? "Pago" : "Recebido", valor: moeda(resultado.totais.pago), tom: "text-fg-muted" },
+        ]}
+      />
 
       <AbasDeLink
         abas={[
@@ -204,7 +179,8 @@ export async function ContasPage({
         })}
 
         {competencias.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 ml-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:ml-3 sm:pl-3 sm:border-l sm:border-border">
+            <span className="text-[length:var(--fs-badge)] text-fg-muted mr-0.5">Competência</span>
             <Link
               href={comParam("competencia", undefined)}
               className={
@@ -213,7 +189,7 @@ export async function ContasPage({
                   : "h-8 px-2.5 inline-flex items-center rounded-md border border-border text-fg-muted text-[12px] hover:bg-surface-hover transition-colors"
               }
             >
-              Todas as competências
+              Todas
             </Link>
             {competencias.slice(0, 6).map((c) => (
               <Link

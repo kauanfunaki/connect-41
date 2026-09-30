@@ -162,6 +162,9 @@
   --color-table-header-bg: var(--c41-table-header-bg);
   --color-border:          var(--c41-border);
   --color-border-strong:   var(--c41-border-strong);
+  /* Divisória entre linhas de tabela. Usada em 46 arquivos sem nunca ter sido
+     definida: a borda caía na cor do texto, quase preta (visto em 30/09). */
+  --color-border-soft:     var(--c41-border);
   --color-fg:              var(--c41-fg);
   --color-fg-secondary:    var(--c41-fg-secondary);
   --color-fg-muted:        var(--c41-fg-muted);
@@ -441,4 +444,32 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   background: linear-gradient(90deg, var(--c41-surface-hover), var(--c41-border), var(--c41-surface-hover));
   background-size: 200% 100%;
   animation: c41-skeleton 1.4s infinite;
+}
+
+
+/* Tabela no padrão do Connect, via <TabelaNoDesktop padrao> (redesign de 30/09).
+   Fora de @layer de propósito: vence as utilidades de espaçamento das células
+   (py-2 pr-3), que as telas do financeiro repetem em toda linha. Só a tabela
+   principal — o ">" deixa de fora as tabelas dentro de uma célula. */
+.c41-tabela > table > thead > tr {
+  background: var(--c41-table-header-bg);
+  border-bottom: 1px solid var(--c41-border);
+}
+.c41-tabela > table > thead > tr > th {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  font-weight: 600;
+}
+.c41-tabela > table > :is(thead, tbody) > tr > :is(th, td):first-child {
+  padding-left: 1rem;
+}
+.c41-tabela > table > :is(thead, tbody) > tr > :is(th, td):last-child {
+  padding-right: 1rem;
+}
+.c41-tabela > table > tbody > tr > td {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+.c41-tabela > table > tbody > tr:last-child {
+  border-bottom: 0;
 }
