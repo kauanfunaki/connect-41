@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Home,
   ContactRound,
@@ -26,17 +27,21 @@ import {
   X,
   MessageCircle,
   Gauge,
+  Building2,
+  Users,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { NotificationBell } from "@/components/shell/NotificationBell";
 import { ProfileMenu } from "@/components/shell/ProfileMenu";
 import { GlobalSearch } from "@/components/shell/GlobalSearch";
-import { NavItem, SectorNavItem, CadastrosNavItem, GrupoNavItem, classeDoItem } from "@/components/shell/NavLink";
+import { NavItem, SectorNavItem, CadastrosNavItem, GrupoNavItem } from "@/components/shell/NavLink";
 import { ModuleIcon, Icone } from "@/components/shared/ModuleIcon";
 import { RegistroDeTelasRecentes } from "@/components/shell/TelasRecentes";
 import { agruparModulos, slugDoGrupo, ICONE_DO_GRUPO } from "@/lib/module-catalog";
 import type { TelaNavegavel } from "@/lib/buscaDeTelas";
 import { ContextSwitcher } from "@/components/shell/ContextSwitcher";
+import { PainelDoItem, type TelaDoPainel } from "@/components/shell/PainelDoItem";
+import { ABAS_DA_GESTAO } from "@/components/gestao/AbasDaGestao";
 import { Button } from "@/components/ui/Button";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
@@ -57,6 +62,27 @@ const SECTOR_ICONS: Record<string, React.ReactNode> = {
   corretora: <ShieldCheck size={16} />,
   gestao: <LayoutGrid size={16} />,
 };
+
+// O que o painel ao lado da sidebar mostra para os itens que têm telas dentro
+// (pedido de 30/09, referência do HubStrom).
+const TELAS_DE_CADASTROS: TelaDoPainel[] = [
+  { label: "Empresas", href: "/empresas", icon: <Building2 /> },
+  { label: "Clientes", href: "/clientes", icon: <BriefcaseBusiness /> },
+  { label: "Pessoas", href: "/pessoas", icon: <Users /> },
+];
+/**
+ * As telas de um setor para o painel. Acima de 8 vão agrupadas (Contas, Banco e
+ * caixa…), na ordem dos grupos do menu do próprio setor; até 8, em lista.
+ */
+function telasDoSetor(telas: TelaNavegavel[]): TelaDoPainel[] {
+  const grupos = agruparModulos(telas);
+  const agrupar = telas.length > 8 && grupos.length > 1;
+  return grupos.flatMap(({ grupo, itens }) =>
+    itens.map((t) => ({ label: t.label, href: t.href, icon: <ModuleIcon code={t.code} />, grupo: agrupar ? grupo : undefined }))
+  );
+}
+
+const TELAS_DA_GESTAO: TelaDoPainel[] = ABAS_DA_GESTAO.map((a) => ({ label: a.rotulo, href: a.href, icon: a.icone }));
 
 /**
  * As telas que a pessoa fixou, logo acima das telas do setor.
@@ -144,6 +170,9 @@ export function AppShell({
   children,
 }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+  const emConfiguracoes = pathname.startsWith("/admin") || pathname.startsWith("/configuracoes");
+  const corDoSetor = activeSector?.color;
 
   return (
     // `--c41-setor` leva a cor do setor ativo a tudo que está dentro: a barra
@@ -232,11 +261,17 @@ export function AppShell({
                 Geral
               </p>
               <NavItem href={`/setor/${activeSector.code}`} icon={<FolderKanban size={16} />} label="Espaços" />
-              <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
+              <PainelDoItem titulo="Cadastros" telas={TELAS_DE_CADASTROS} cor={corDoSetor}>
+                <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
+              </PainelDoItem>
               <NavItem href="/tarefas" icon={<ListTodo size={16} />} label="Tarefas" />
               <NavItem href="/conversas" icon={<MessageCircle size={16} />} label="Conversas" />
               <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />
-              {canOpenGestao && <NavItem href="/gestao" icon={<Gauge size={16} />} label="Gestão" />}
+              {canOpenGestao && (
+                <PainelDoItem titulo="Gestão" telas={TELAS_DA_GESTAO} cor={corDoSetor}>
+                  <NavItem href="/gestao" icon={<Gauge size={16} />} label="Gestão" />
+                </PainelDoItem>
+              )}
               {canManageMeetings && (
                 <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />
               )}
@@ -265,14 +300,22 @@ export function AppShell({
                     <NavItem key={m.code} href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} />
                   ));
                 }
+                // A tela do grupo continua (é o clique); o painel ao lado mostra
+                // as telas dele sem precisar abri-la.
                 return grupos.map(({ grupo, itens }) => (
-                  <GrupoNavItem
+                  <PainelDoItem
                     key={grupo}
-                    label={grupo}
-                    href={`/setor/${activeSector.code}/grupo/${slugDoGrupo(grupo)}`}
-                    icon={<Icone nome={ICONE_DO_GRUPO[grupo]} />}
-                    itens={itens}
-                  />
+                    titulo={grupo}
+                    cor={activeSector.color}
+                    telas={itens.map((i) => ({ label: i.label, href: i.href, icon: <ModuleIcon code={i.code} /> }))}
+                  >
+                    <GrupoNavItem
+                      label={grupo}
+                      href={`/setor/${activeSector.code}/grupo/${slugDoGrupo(grupo)}`}
+                      icon={<Icone nome={ICONE_DO_GRUPO[grupo]} />}
+                      itens={itens}
+                    />
+                  </PainelDoItem>
                 ));
               })()}
             </>
@@ -282,11 +325,17 @@ export function AppShell({
                 Geral
               </p>
               <NavItem href="/home" icon={<Home size={16} />} label="Início" />
-              <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
+              <PainelDoItem titulo="Cadastros" telas={TELAS_DE_CADASTROS} cor={corDoSetor}>
+                <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
+              </PainelDoItem>
               <NavItem href="/tarefas" icon={<ListTodo size={16} />} label="Tarefas" />
               <NavItem href="/conversas" icon={<MessageCircle size={16} />} label="Conversas" />
               <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />
-              {canOpenGestao && <NavItem href="/gestao" icon={<Gauge size={16} />} label="Gestão" />}
+              {canOpenGestao && (
+                <PainelDoItem titulo="Gestão" telas={TELAS_DA_GESTAO} cor={corDoSetor}>
+                  <NavItem href="/gestao" icon={<Gauge size={16} />} label="Gestão" />
+                </PainelDoItem>
+              )}
               {canManageMeetings && (
                 <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />
               )}
@@ -299,13 +348,14 @@ export function AppShell({
                     Meus Setores
                   </p>
                   {sectors.map((s) => (
-                    <SectorNavItem
+                    <PainelDoItem
                       key={s.code}
-                      href={`/setor/${s.code}`}
-                      label={s.label}
-                      color={s.color}
-                      icon={SECTOR_ICONS[s.code]}
-                    />
+                      titulo={s.label}
+                      cor={s.color}
+                      telas={telasDoSetor(telasNavegaveis.filter((t) => t.setor === s.label))}
+                    >
+                      <SectorNavItem href={`/setor/${s.code}`} label={s.label} color={s.color} icon={SECTOR_ICONS[s.code]} />
+                    </PainelDoItem>
                   ))}
                 </>
               )}
@@ -313,14 +363,6 @@ export function AppShell({
           )}
         </nav>
 
-        {/* Footer: configurações. Admin cai na administração do workspace;
-            todo mundo tem /configuracoes (conta própria) no menu de perfil. */}
-        <div className="border-t border-border px-3 py-3 flex-shrink-0">
-          <Link href={canOpenAdmin ? "/admin" : "/configuracoes"} className={classeDoItem(false, "text-[14px] font-medium")}>
-            <Settings size={16} className="flex-shrink-0" />
-            Configurações
-          </Link>
-        </div>
       </aside>
 
       {/* ── Main area ── */}
@@ -342,6 +384,22 @@ export function AppShell({
           <div className="flex items-center gap-2.5 flex-shrink-0">
             <ThemeToggle />
             <NotificationBell unreadCount={unreadCount} notifications={notifications} />
+            {/* Configurações saiu do rodapé da sidebar para o topo, só o ícone,
+                ao lado de notificação e perfil (pedido de 30/09). Admin cai na
+                administração do workspace; os outros, na própria conta. */}
+            <Link
+              href={canOpenAdmin ? "/admin" : "/configuracoes"}
+              aria-label="Configurações"
+              data-dica="Configurações"
+              aria-current={emConfiguracoes ? "page" : undefined}
+              className={`w-[38px] h-[38px] inline-flex items-center justify-center rounded-md border transition-colors ${
+                emConfiguracoes
+                  ? "bg-surface border-border-strong text-fg shadow-sm"
+                  : "bg-surface-hover border-border text-fg-secondary hover:text-fg hover:border-border-strong"
+              }`}
+            >
+              <Settings size={16} />
+            </Link>
             <ProfileMenu name={profileName} roleLabel={profileRoleLabel} photoUrl={profilePhotoUrl} />
           </div>
         </header>
