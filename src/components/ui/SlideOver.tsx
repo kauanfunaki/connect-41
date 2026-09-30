@@ -27,7 +27,7 @@ export function SlideOver({ open, onClose, title, onBack, width = "max-w-md", ch
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60"
+      className="c41-esmaecer fixed inset-0 z-50 bg-black/60"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

@@ -11,6 +11,9 @@ type Props = {
 // conforme o modo. O Kauan pediu o contrário em 18/09: o mesmo dimensionamento
 // em todas as telas, para dar simetria. Formulário que precise de coluna mais
 // estreita resolve dentro da tela, sem mexer na moldura.
+//
+// `c41-pagina` (globals.css) faz os blocos da tela entrarem em sequência —
+// polimento de 30/09. Só opacidade e 6px; nada de transform que sobre.
 export function PageContainer({ children, className = "" }: Props) {
-  return <div className={`p-6 max-w-[1440px] mx-auto ${className}`.trim()}>{children}</div>;
+  return <div className={`c41-pagina p-6 max-w-[1440px] mx-auto ${className}`.trim()}>{children}</div>;
 }
