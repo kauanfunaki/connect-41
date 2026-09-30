@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { AlertCircle, Clock, Play } from "lucide-react";
+import { AlertCircle, ArrowRight, Clock, Play } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { saoPauloParts } from "@/lib/agenda";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatInstantDate } from "@/lib/format";
@@ -77,6 +81,15 @@ type Props = {
   agora: Date;
 };
 
+/**
+ * A fila de processos: tabela no computador, cartões no celular.
+ *
+ * Era uma lista de linhas-link sem colunas (até 30/09). Virou tabela no padrão
+ * do Connect — centralizada, com funil por coluna — na onda 3 do polimento:
+ * com 40 processos abertos, achar "os da Fulana em exigência" era ler a fila
+ * inteira. A fila inteira do filtro já vem do servidor, então o funil filtra no
+ * navegador (`TabelaFiltravel`).
+ */
 export function ProcessosFila({ linhas, filtrado, agora }: Props) {
   if (linhas.length === 0) {
     return filtrado ? (
@@ -94,60 +107,160 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
     );
   }
 
-  return (
-    <div className="flex flex-col">
-      {linhas.map((l) => {
-        const combinado = l.prazoCombinado ? prazoCombinado(l.prazoCombinado, agora) : null;
-        return (
-          <Link
-            key={l.id}
-            href={`/processos/${l.id}`}
-            className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-x-6 gap-y-2 px-1 py-3.5 border-b border-border-soft hover:bg-surface-hover transition-colors"
-          >
-            <div className="min-w-0 flex flex-col gap-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[13px] font-semibold truncate">{l.empresaNome}</span>
-                <span className="text-[12px] text-fg-muted">{l.tipoNome}</span>
-                {/* Normal é o caso comum e não ganha selo: selo em toda linha
-                    deixa de chamar atenção onde importa. */}
-                {l.prioridade !== "NORMAL" && (
-                  <Badge variant={PRIORIDADE_VARIANTE[l.prioridade]}>{PRIORIDADE_LABEL[l.prioridade]}</Badge>
-                )}
-                {/* A volta só aparece quando existe: "0 voltas" em toda linha
-                    vira ruído e some justamente onde deveria chamar atenção. */}
-                {l.voltas > 0 && (
-                  <span className="inline-flex items-center gap-1 text-[11px] text-danger">
-                    <AlertCircle size={12} />
-                    {l.voltas} {l.voltas === 1 ? "volta" : "voltas"}
-                  </span>
-                )}
-              </div>
-              {l.titulo && <span className="text-[12px] text-fg-secondary truncate">{l.titulo}</span>}
-              <span className="text-[12px] text-fg-muted truncate">
-                {l.etapasAgora.length > 0 ? l.etapasAgora.join(" · ") : "Nada liberado no roteiro"}
-              </span>
-            </div>
+  const combinadoDe = (l: LinhaDaFila) => (l.prazoCombinado ? prazoCombinado(l.prazoCombinado, agora) : null);
 
-            <div className="flex items-center gap-4 md:justify-end flex-wrap">
-              <div className="flex flex-col items-start md:items-end gap-0.5">
-                <PrazoCelula prazo={l.prazo} />
-                {combinado && l.prazoCombinado && (
-                  <span className={`text-[11px] whitespace-nowrap ${COR_DO_PRAZO_COMBINADO[combinado.situacao]}`}>
-                    {combinado.texto} · {formatInstantDate(l.prazoCombinado)}
-                  </span>
-                )}
-              </div>
-              <Badge variant={SITUACAO_VARIANTE[l.situacao]}>{SITUACAO_LABEL[l.situacao]}</Badge>
-              <span className="hidden lg:inline text-[12px] text-fg-muted whitespace-nowrap">
-                {l.responsavelNome ?? "sem responsável"}
-              </span>
-              <span className="hidden xl:inline text-[12px] text-fg-muted whitespace-nowrap tabular-nums">
-                {formatInstantDate(l.iniciadoEm)}
-              </span>
-            </div>
+  // Os selos que acompanham o nome — prioridade fora do normal e as voltas.
+  // Normal não ganha selo: selo em toda linha deixa de chamar atenção onde importa.
+  const selos = (l: LinhaDaFila) => (
+    <>
+      {l.prioridade !== "NORMAL" && <Badge variant={PRIORIDADE_VARIANTE[l.prioridade]}>{PRIORIDADE_LABEL[l.prioridade]}</Badge>}
+      {l.voltas > 0 && (
+        <span className="inline-flex items-center gap-1 text-[11px] text-danger whitespace-nowrap">
+          <AlertCircle size={12} />
+          {l.voltas} {l.voltas === 1 ? "volta" : "voltas"}
+        </span>
+      )}
+    </>
+  );
+
+  const prazos = (l: LinhaDaFila) => {
+    const combinado = combinadoDe(l);
+    return (
+      <>
+        <PrazoCelula prazo={l.prazo} />
+        {combinado && l.prazoCombinado && (
+          <span className={`block text-[11px] whitespace-nowrap ${COR_DO_PRAZO_COMBINADO[combinado.situacao]}`}>
+            {combinado.texto} · {formatInstantDate(l.prazoCombinado)}
+          </span>
+        )}
+      </>
+    );
+  };
+
+  return (
+    <>
+      <CartoesNoCelular>
+        {linhas.map((l) => (
+          <Link key={l.id} href={`/processos/${l.id}`} className="block">
+            <Cartao className="hover:border-brand/40 transition-colors">
+              <TopoDoCartao nome={l.empresaNome} />
+              <InfoDoCartao>
+                {l.tipoNome}
+                {l.titulo ? ` · ${l.titulo}` : ""}
+              </InfoDoCartao>
+              <InfoDoCartao>{l.etapasAgora.length > 0 ? l.etapasAgora.join(" · ") : "Nada liberado no roteiro"}</InfoDoCartao>
+              <div className="mt-1.5">{prazos(l)}</div>
+              <PeDoCartao>
+                <Badge variant={SITUACAO_VARIANTE[l.situacao]}>{SITUACAO_LABEL[l.situacao]}</Badge>
+                {selos(l)}
+                <span className="ml-auto text-[11.5px] text-fg-muted">{l.responsavelNome ?? "sem responsável"}</span>
+              </PeDoCartao>
+            </Cartao>
           </Link>
-        );
-      })}
-    </div>
+        ))}
+      </CartoesNoCelular>
+
+      <TabelaFiltravel
+        linhas={linhas.map((l) => ({
+          id: l.id,
+          valores: {
+            empresa: l.empresaNome,
+            tipo: l.tipoNome,
+            prioridade: PRIORIDADE_LABEL[l.prioridade],
+            situacao: SITUACAO_LABEL[l.situacao],
+            responsavel: l.responsavelNome ?? "",
+            inicio: saoPauloParts(l.iniciadoEm).dateKey,
+          },
+        }))}
+      >
+        <TabelaNoDesktop padrao>
+          <table className="w-full table-fixed min-w-[1040px] text-[length:var(--fs-ui)]">
+            <colgroup>
+              <col />
+              <col className="w-[120px]" />
+              <col className="w-[190px]" />
+              <col className="w-[160px]" />
+              <col className="w-[150px]" />
+              <col className="w-[112px]" />
+              <col className="w-[96px]" />
+            </colgroup>
+            <thead>
+              <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                <th className="px-4 py-3">
+                  <FiltroDaColuna
+                    rotulo="Processo"
+                    campos={[
+                      { chave: "empresa", rotulo: "Empresa" },
+                      { chave: "tipo", rotulo: "Tipo" },
+                    ]}
+                  />
+                </th>
+                <th className="px-4 py-3">
+                  <FiltroDaColuna rotulo="Prioridade" chave="prioridade" />
+                </th>
+                <th className="px-4 py-3">Prazo</th>
+                <th className="px-4 py-3">
+                  <FiltroDaColuna rotulo="Situação" chave="situacao" />
+                </th>
+                <th className="px-4 py-3">
+                  <FiltroDaColuna rotulo="Responsável" chave="responsavel" />
+                </th>
+                <th className="px-4 py-3">
+                  <FiltroDaColuna rotulo="Início" chave="inicio" tipo="data" align="right" />
+                </th>
+                <th className="px-4 py-3">
+                  <span className="sr-only">Abrir</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {linhas.map((l) => (
+                <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border align-top">
+                  <td className="px-4 py-3 min-w-0">
+                    <Link
+                      href={`/processos/${l.id}`}
+                      className="block font-semibold text-fg hover:text-brand transition-colors truncate"
+                      title={l.empresaNome}
+                    >
+                      {l.empresaNome}
+                    </Link>
+                    <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate" title={l.titulo ?? l.tipoNome}>
+                      {l.tipoNome}
+                      {l.titulo ? ` · ${l.titulo}` : ""}
+                    </span>
+                    <span
+                      className="block text-[length:var(--fs-micro)] text-fg-muted truncate"
+                      title={l.etapasAgora.join(" · ") || undefined}
+                    >
+                      {l.etapasAgora.length > 0 ? l.etapasAgora.join(" · ") : "Nada liberado no roteiro"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {l.prioridade === "NORMAL" && l.voltas === 0 ? (
+                      <span className="text-fg-muted">Normal</span>
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-1.5">{selos(l)}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">{prazos(l)}</td>
+                  <td className="px-4 py-3">
+                    <Badge variant={SITUACAO_VARIANTE[l.situacao]}>{SITUACAO_LABEL[l.situacao]}</Badge>
+                  </td>
+                  <td className="px-4 py-3 text-fg-secondary truncate" title={l.responsavelNome ?? undefined}>
+                    {l.responsavelNome ?? <span className="text-fg-muted">sem responsável</span>}
+                  </td>
+                  <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{formatInstantDate(l.iniciadoEm)}</td>
+                  <td className="px-4 py-3">
+                    <Button href={`/processos/${l.id}`} variant="secondary" size="xs">
+                      Abrir <ArrowRight size={11} />
+                    </Button>
+                  </td>
+                </LinhaFiltravel>
+              ))}
+            </tbody>
+          </table>
+        </TabelaNoDesktop>
+      </TabelaFiltravel>
+    </>
   );
 }

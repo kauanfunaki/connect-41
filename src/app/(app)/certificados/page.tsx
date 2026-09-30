@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { KeyRound } from "lucide-react";
+import { KeyRound, AlertTriangle, CalendarClock, CalendarRange, Unlink } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Badge } from "@/components/ui/Badge";
@@ -8,7 +8,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
-import { AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { ImportarRelatorio } from "@/components/certificados/ImportarRelatorio";
 import { acessoAosCertificados, listarCertificados } from "@/lib/certificados/servidor";
 import { atuaisPorDocumento, ROTULO_DA_SITUACAO, situacaoDoCertificado, type SituacaoDoCertificado } from "@/lib/certificados/certificados";
@@ -83,17 +84,31 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <MetricCard label="Vencidos" value={emUso.filter((c) => c.situacao === "vencido").length} highlight />
-        <MetricCard label="Vencem em 30 dias" value={emUso.filter((c) => c.dias >= 0 && c.dias <= 30).length} />
-        <MetricCard label="Vencem em 60 dias" value={emUso.filter((c) => c.dias >= 0 && c.dias <= 60).length} />
-        <MetricCard label="Sem empresa no Connect" value={emUso.filter((c) => !c.company).length} />
+        <MetricCard label="Vencidos" value={emUso.filter((c) => c.situacao === "vencido").length} highlight icon={<AlertTriangle size={15} />} href={href("renovar")} />
+        <MetricCard label="Vencem em 30 dias" value={emUso.filter((c) => c.dias >= 0 && c.dias <= 30).length} icon={<CalendarClock size={15} />} href={href("renovar")} />
+        <MetricCard label="Vencem em 60 dias" value={emUso.filter((c) => c.dias >= 0 && c.dias <= 60).length} icon={<CalendarRange size={15} />} href={href("renovar")} />
+        <MetricCard label="Sem empresa no Connect" value={emUso.filter((c) => !c.company).length} icon={<Unlink size={15} />} href={href("sem-empresa")} />
       </div>
 
-      <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
-      <form method="get" action="/certificados" className="mb-4">
-        {aba !== "renovar" && <input type="hidden" name="aba" value={aba} />}
-        <Input compact name="q" defaultValue={params.q ?? ""} placeholder="Buscar por titular, documento ou entrada do cofre…" className="w-80 max-w-full" />
-      </form>
+      {/* O recorte (a renovar, em uso, sem empresa, substituídos) é filtro da
+          mesma lista, não outra tela: foi das abas para o "Filtros" no
+          polimento de 30/09. A busca fica ao lado, porque se digita. */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <form method="get" action="/certificados">
+          {aba !== "renovar" && <input type="hidden" name="aba" value={aba} />}
+          <Input compact name="q" defaultValue={params.q ?? ""} placeholder="Buscar por titular, documento ou entrada do cofre…" className="w-80 max-w-full" />
+        </form>
+        <FiltrosDaTela
+          campos={[
+            {
+              chave: "aba",
+              rotulo: "Situação",
+              vazioLabel: "A renovar",
+              opcoes: ABAS.filter((a) => a.chave !== "renovar").map((a) => ({ value: a.chave, label: a.rotulo })),
+            },
+          ]}
+        />
+      </div>
 
       {visiveis.length === 0 ? (
         <EmptyState
@@ -123,21 +138,33 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
             ))}
           </CartoesNoCelular>
 
+          <TabelaFiltravel
+            linhas={visiveis.map((c) => ({
+              id: c.id,
+              valores: {
+                titular: c.company ? nomeExibicao(c.company) : c.titular,
+                tipo: c.tipo === "CPF" ? "e-CPF" : "e-CNPJ",
+                vencimento: c.expiresAt.toISOString().slice(0, 10),
+                situacao: ROTULO_DA_SITUACAO[c.situacao],
+                cofre: c.cofreEntrada ?? "",
+              },
+            }))}
+          >
           <TabelaNoDesktop padrao>
             <table className="w-full min-w-[980px] text-[13px]">
               <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-                  <th className="py-2 pr-3 font-medium">Titular</th>
-                  <th className="py-2 pr-3 font-medium">Documento</th>
-                  <th className="py-2 pr-3 font-medium">Vencimento</th>
-                  <th className="py-2 pr-3 font-medium text-right">Dias</th>
-                  <th className="py-2 pr-3 font-medium">Situação</th>
-                  <th className="py-2 font-medium">Entrada do cofre</th>
+                <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                  <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Titular" chave="titular" /></th>
+                  <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Documento" campos={[{ chave: "tipo", rotulo: "Tipo" }]} /></th>
+                  <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" /></th>
+                  <th className="py-2 pr-3 font-medium">Dias</th>
+                  <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Situação" chave="situacao" /></th>
+                  <th className="py-2 font-medium"><FiltroDaColuna rotulo="Entrada do cofre" chave="cofre" align="right" /></th>
                 </tr>
               </thead>
               <tbody>
                 {visiveis.map((c) => (
-                  <tr key={c.id} className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
+                  <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
                     <td className="py-2.5 pr-3">
                       {c.company ? (
                         <Link href={`/empresas/${c.company.id}`} className="font-medium hover:underline">
@@ -161,11 +188,12 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
                       {c.cofreEntrada ?? "—"}
                       {c.conferir && <span className="block text-[11px] text-warning">{c.conferir}</span>}
                     </td>
-                  </tr>
+                  </LinhaFiltravel>
                 ))}
               </tbody>
             </table>
           </TabelaNoDesktop>
+          </TabelaFiltravel>
           <p className="text-[11px] text-fg-muted mt-3">
             Vencimento lido de dentro do certificado. Quando o mesmo CNPJ/CPF tem um certificado mais novo, o antigo vira
             &ldquo;substituído&rdquo; e para de avisar. Avisos saem para o setor a 60, 30, 15 e 7 dias e no vencimento.

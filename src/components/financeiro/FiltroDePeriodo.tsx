@@ -129,7 +129,14 @@ function seloDoTom(tom?: string): string {
 // não se corta; se ainda assim não couber, `c41-cortavel` dá a dica inteira.
 // Classes por extenso: o Tailwind não enxerga nome de classe montado em tempo
 // de execução. Três cartões (Transferências) ocupam a linha inteira.
-const COLUNAS_XL: Record<number, string> = { 2: "xl:grid-cols-2", 3: "xl:grid-cols-3", 4: "xl:grid-cols-4" };
+const COLUNAS_XL: Record<number, string> = {
+  2: "xl:grid-cols-2",
+  3: "xl:grid-cols-3",
+  4: "xl:grid-cols-4",
+  // As cinco situações do processo do Societário: três por linha no meio do
+  // caminho, para não deixar um cartão sozinho numa linha de dois.
+  5: "md:grid-cols-3 xl:grid-cols-5",
+};
 
 export function FaixaDeTotais({ itens }: { itens: ItemDeTotal[] }) {
   return (

@@ -694,6 +694,34 @@ Recrutamento, Fiscal, Gestão, Admin, login e portal.
 
 Tarefas não mudou: está no Quadro para virar o "Meu Dia".
 
+### Onda 3 — Societário (30/09)
+
+- **Fila de processos virou tabela** (`ProcessosFila`): era uma lista de
+  linhas-link sem colunas. Agora casco padrão, centralizada, funil em
+  Processo (empresa e tipo), Prioridade, Situação, Responsável e Início, botão
+  "Abrir" e cartões no celular.
+- **/processos:** as seis pílulas de situação viraram cinco cartões de total
+  clicáveis (com "mostrando agora"); situação, responsável e prioridade foram
+  para o "Filtros" (era formulário com "Filtrar"); os três links do cabeçalho
+  ("IA do Societário", avisos da Junta, "Ver no kanban") viraram botões — o dos
+  avisos mantém a cor de atenção. `FaixaDeTotais` aceita 5 cartões.
+- **/licencas:** frase-resumo e pílulas viraram quatro cartões de total
+  (Precisa de ação, Vencidas, A renovar, Vigentes) e o "Filtros"; funil na
+  tabela; ações da linha no desenho de Cadastros ("Editar" + "⋯" com
+  Revogar/Reativar).
+- **Exigências e Agenda de prazos:** pílulas e formulário para o "Filtros"; na
+  Agenda, semana/mês virou "Agrupar" no "Filtros" (a tela já tem a linha de
+  abas Exigências | Agenda). Funil na tabela de exigências. `AbasDePrazos`
+  passou a usar `AbasDeLink`.
+- **Relatórios:** período no "Filtros"; métricas com ícone; as quatro tabelas
+  no casco padrão.
+- **Certificados:** o recorte (a renovar, em uso, sem empresa, substituídos)
+  foi das abas para o "Filtros" — é filtro da mesma lista; métricas com ícone e
+  atalho; funil na tabela.
+- **Visão por empresa, Minha área, Kanban de processos:** links do cabeçalho
+  viraram botões; tabelas no casco padrão; filtros do kanban no "Filtros".
+- Rótulo cortado do `MetricCard` ganhou a dica (`c41-cortavel`).
+
 ---
 
 ## Sequenciamento
