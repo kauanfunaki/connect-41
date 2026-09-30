@@ -1,10 +1,7 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { CalendarDays } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Button } from "@/components/ui/Button";
-import { Select } from "@/components/ui/Select";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -21,6 +18,7 @@ import {
   type VisaoDaAgenda,
 } from "@/lib/societario/prazos";
 import { itensDePrazo } from "@/lib/societario/painel-data";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { AbasDePrazos } from "@/components/societario/AbasDePrazos";
 import { ListaDePrazos } from "@/components/societario/ListaDePrazos";
 
@@ -75,13 +73,6 @@ export default async function AgendaDePrazosPage({
     )}`;
   };
 
-  const hrefDaVisao = (chave: VisaoDaAgenda) => {
-    const q = new URLSearchParams();
-    if (chave !== "semana") q.set("visao", chave);
-    if (responsavelFiltro) q.set("responsavel", responsavelFiltro);
-    const s = q.toString();
-    return s ? `/societario/agenda?${s}` : "/societario/agenda";
-  };
 
   return (
     <PageContainer>
@@ -93,44 +84,26 @@ export default async function AgendaDePrazosPage({
       />
       <AbasDePrazos ativa="agenda" />
 
-      <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
-        <div className="flex flex-wrap gap-1.5">
-          {VISOES.map((v) => (
-            <Link
-              key={v.chave}
-              href={hrefDaVisao(v.chave)}
-              aria-current={v.chave === visao ? "page" : undefined}
-              className={
-                v.chave === visao
-                  ? "h-8 px-3 inline-flex items-center rounded-md border border-brand/40 bg-brand/8 text-brand text-[12px] font-medium"
-                  : "h-8 px-3 inline-flex items-center rounded-md border border-border text-fg-secondary text-[12px] hover:bg-surface-hover transition-colors"
-              }
-            >
-              {v.rotulo}
-            </Link>
-          ))}
-        </div>
-
-        <form method="get" action="/societario/agenda" className="flex flex-wrap items-end gap-2">
-          {visao !== "semana" && <input type="hidden" name="visao" value={visao} />}
-          <div className="flex flex-col gap-1">
-            <label htmlFor="filtro-responsavel" className="text-[11px] text-fg-muted">
-              Responsável do processo
-            </label>
-            <Select id="filtro-responsavel" name="responsavel" defaultValue={responsavelFiltro ?? ""} compact>
-              <option value="">Todos</option>
-              {responsaveis.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <Button type="submit" size="sm" variant="secondary">
-            Filtrar
-          </Button>
-        </form>
-      </div>
+      {/* Agrupamento e responsável no botão "Filtros" — eram pílulas e um
+          formulário com "Filtrar" (conferência de 30/09). A tela já tem uma
+          linha de abas (Exigências | Agenda); uma segunda confundiria. */}
+      <FiltrosDaTela
+        className="mb-5"
+        campos={[
+          {
+            chave: "visao",
+            rotulo: "Agrupar",
+            vazioLabel: "Por semana",
+            opcoes: VISOES.filter((v) => v.chave !== "semana").map((v) => ({ value: v.chave, label: `Por ${v.rotulo.toLowerCase()}` })),
+          },
+          {
+            chave: "responsavel",
+            rotulo: "Responsável",
+            vazioLabel: "Todos",
+            opcoes: responsaveis.map((r) => ({ value: r.id, label: r.name })),
+          },
+        ]}
+      />
 
       {grupos.length === 0 ? (
         <EmptyState

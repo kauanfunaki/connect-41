@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { Building2 } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { AlertCircle } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -105,9 +107,9 @@ export default async function VisaoSocietariaDoClientePage({
           visao.empresa.nome !== visao.empresa.razaoSocial ? `${visao.empresa.razaoSocial} · visão do Societário` : "Visão do Societário"
         }
         action={
-          <Link href={`/empresas/${visao.empresa.id}`} className="text-[13px] text-brand hover:underline">
-            Cadastro da empresa
-          </Link>
+          <Button href={`/empresas/${visao.empresa.id}`} variant="secondary">
+            <Building2 size={14} /> Cadastro da empresa
+          </Button>
         }
       />
 
@@ -133,10 +135,10 @@ export default async function VisaoSocietariaDoClientePage({
           {licencas.length === 0 ? (
             <p className="text-[13px] text-fg-muted">Nenhuma licença cadastrada.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[560px] text-[13px]">
                 <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                  <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className={TH}>Licença</th>
                     <th className={TH}>Órgão</th>
                     <th className={TH}>Validade</th>
@@ -175,10 +177,10 @@ export default async function VisaoSocietariaDoClientePage({
           {visao.exigencias.length === 0 ? (
             <p className="text-[13px] text-fg-muted">Nenhuma exigência nos processos desta empresa.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[640px] text-[13px]">
                 <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                  <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className={TH}>Exigência</th>
                     <th className={TH}>Processo</th>
                     <th className={TH}>Prazo do órgão</th>
@@ -234,10 +236,10 @@ export default async function VisaoSocietariaDoClientePage({
           {visao.taxas.length === 0 ? (
             <p className="text-[13px] text-fg-muted">Nenhuma taxa registrada.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[600px] text-[13px]">
                 <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                  <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className={TH}>Taxa</th>
                     <th className={TH}>Processo</th>
                     <th className={TH}>Valor</th>

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
+import { Columns3 } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { CheckCircle2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -49,9 +50,9 @@ export default async function MinhaAreaPage() {
         title="Minha área"
         subtitle="O que está na sua mão, por prazo: processos de que você é responsável, as exigências e taxas deles, e licenças vencendo nessas empresas."
         action={
-          <Link href={`/processos/kanban?responsavel=${ctx.userId}`} className="text-[13px] text-brand hover:underline">
-            Meus processos no kanban
-          </Link>
+          <Button href={`/processos/kanban?responsavel=${ctx.userId}`} variant="secondary">
+            <Columns3 size={14} /> Meus processos no kanban
+          </Button>
         }
       />
 

@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
+import { List } from "lucide-react";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Button } from "@/components/ui/Button";
-import { Select } from "@/components/ui/Select";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
@@ -56,7 +56,6 @@ export default async function KanbanDeProcessosPage({
     prioridade: ehPrioridade(params.prioridade) ? params.prioridade : undefined,
     tipoId: tipos.some((t) => t.id === params.tipo) ? params.tipo : undefined,
   };
-  const filtroAtivo = Boolean(filtro.responsavelId || filtro.prioridade || filtro.tipoId);
 
   const agora = new Date();
   const [abertos, concluidos] = await Promise.all([
@@ -72,62 +71,27 @@ export default async function KanbanDeProcessosPage({
         title="Kanban de processos"
         subtitle="A coluna é a situação que os protocolos dizem — muda quando o desfecho é registrado no processo, não arrastando o cartão."
         action={
-          <Link href="/processos" className="text-[13px] text-brand hover:underline">
-            Ver como lista
-          </Link>
+          <Button href="/processos" variant="secondary">
+            <List size={14} /> Ver como lista
+          </Button>
         }
       />
 
-      <form method="get" action="/processos/kanban" className="flex flex-wrap items-end gap-2 mb-4">
-        <div className="flex flex-col gap-1">
-          <label htmlFor="filtro-responsavel" className="text-[11px] text-fg-muted">
-            Responsável
-          </label>
-          <Select id="filtro-responsavel" name="responsavel" defaultValue={filtro.responsavelId ?? ""} compact>
-            <option value="">Todos</option>
-            <option value="nenhum">Sem responsável</option>
-            {responsaveis.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="filtro-prioridade" className="text-[11px] text-fg-muted">
-            Prioridade
-          </label>
-          <Select id="filtro-prioridade" name="prioridade" defaultValue={filtro.prioridade ?? ""} compact>
-            <option value="">Todas</option>
-            {PRIORIDADES.map((p) => (
-              <option key={p} value={p}>
-                {PRIORIDADE_LABEL[p]}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="filtro-tipo" className="text-[11px] text-fg-muted">
-            Tipo
-          </label>
-          <Select id="filtro-tipo" name="tipo" defaultValue={filtro.tipoId ?? ""} compact>
-            <option value="">Todos</option>
-            {tipos.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <Button type="submit" size="sm" variant="secondary">
-          Filtrar
-        </Button>
-        {filtroAtivo && (
-          <Link href="/processos/kanban" className="h-8 inline-flex items-center text-[12px] text-brand hover:underline">
-            Limpar filtros
-          </Link>
-        )}
-      </form>
+      {/* Responsável, prioridade e tipo no botão "Filtros" — era um
+          formulário com três selects e "Filtrar" (conferência de 30/09). */}
+      <FiltrosDaTela
+        className="mb-4"
+        campos={[
+          {
+            chave: "responsavel",
+            rotulo: "Responsável",
+            vazioLabel: "Todos",
+            opcoes: [{ value: "nenhum", label: "Sem responsável" }, ...responsaveis.map((r) => ({ value: r.id, label: r.name }))],
+          },
+          { chave: "prioridade", rotulo: "Prioridade", vazioLabel: "Todas", opcoes: PRIORIDADES.map((p) => ({ value: p, label: PRIORIDADE_LABEL[p] })) },
+          { chave: "tipo", rotulo: "Tipo", vazioLabel: "Todos", opcoes: tipos.map((t) => ({ value: t.id, label: t.name })) },
+        ]}
+      />
 
       <KanbanDeProcessos colunas={colunas} agora={agora} />
     </PageContainer>
