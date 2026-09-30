@@ -56,7 +56,7 @@ export function LicencasFila({ linhas, hoje, filtrado, orgaos }: Props) {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
       <table className="w-full min-w-[920px] text-[13px]">
         <thead>
           <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
