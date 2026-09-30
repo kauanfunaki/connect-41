@@ -14,7 +14,8 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { ContaBancariaForm, AlternarContaAtiva } from "@/components/financeiro/conciliacao/ContaBancariaForm";
 import { ImportarOfx } from "@/components/financeiro/conciliacao/ImportarOfx";
 import { TransacoesDaConta, type LinhaDaTransacao } from "@/components/financeiro/conciliacao/TransacoesDaConta";
@@ -291,7 +292,6 @@ async function ExtratoDaConta({
   const de = dataValida(params.de);
   const ate = dataValida(params.ate);
 
-  const base = `/conciliacao?empresa=${companyId}&conta=${conta.id}${de ? `&de=${de}` : ""}${ate ? `&ate=${ate}` : ""}`;
 
   const [importacoes, transacoes] = await Promise.all([
     prisma.bankStatementImport.findMany({
@@ -470,27 +470,40 @@ async function ExtratoDaConta({
         </Card>
       </div>
 
-      <AbasDeLink
-        abas={SITUACOES.map((s) => ({ chave: s.chave, rotulo: s.rotulo, href: `${base}&situacao=${s.chave}` }))}
-        ativa={situacao.chave}
-      />
-
-      <form method="get" action="/conciliacao" className="flex flex-wrap items-center gap-2 mb-4">
-        <input type="hidden" name="empresa" value={companyId} />
-        <input type="hidden" name="conta" value={conta.id} />
-        <input type="hidden" name="situacao" value={situacao.chave} />
-        <Input compact type="date" name="de" defaultValue={de ?? ""} className="w-40" aria-label="De" />
-        <span className="text-[12px] text-fg-muted">a</span>
-        <Input compact type="date" name="ate" defaultValue={ate ?? ""} className="w-40" aria-label="Até" />
-        <Button type="submit" variant="secondary" size="sm">
-          Filtrar período
-        </Button>
-        {(de || ate) && (
-          <Link href={`/conciliacao?empresa=${companyId}&conta=${conta.id}&situacao=${situacao.chave}`} className="text-[12px] text-fg-muted hover:text-fg">
-            Limpar
-          </Link>
-        )}
-      </form>
+      {/* Situação no botão "Filtros"; o período fica ao lado, porque data se
+          digita — não se escolhe numa lista (conferência de 30/09). */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <FiltrosDaTela
+          campos={[
+            {
+              chave: "situacao",
+              rotulo: "Situação",
+              vazioLabel: "Pendentes",
+              opcoes: SITUACOES.filter((s) => s.chave !== "pendentes").map((s) => ({ value: s.chave, label: s.rotulo })),
+            },
+          ]}
+        />
+        <form method="get" action="/conciliacao" className="flex flex-wrap items-center gap-2">
+          <input type="hidden" name="empresa" value={companyId} />
+          <input type="hidden" name="conta" value={conta.id} />
+          {situacao.chave !== "pendentes" && <input type="hidden" name="situacao" value={situacao.chave} />}
+          <Input compact type="date" name="de" defaultValue={de ?? ""} className="w-40" aria-label="De" />
+          <span className="text-[12px] text-fg-muted">a</span>
+          <Input compact type="date" name="ate" defaultValue={ate ?? ""} className="w-40" aria-label="Até" />
+          <Button type="submit" variant="secondary" size="sm">
+            Filtrar período
+          </Button>
+          {(de || ate) && (
+            <Button
+              href={`/conciliacao?empresa=${companyId}&conta=${conta.id}${situacao.chave !== "pendentes" ? `&situacao=${situacao.chave}` : ""}`}
+              variant="ghost"
+              size="sm"
+            >
+              Limpar período
+            </Button>
+          )}
+        </form>
+      </div>
 
       {linhas.length === 0 ? (
         <EmptyState

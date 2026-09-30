@@ -2,6 +2,7 @@ import { AppShell } from "@/components/shell/AppShell";
 import { SessionKeeper } from "@/components/shell/SessionKeeper";
 import { MeetingAlertOverlay } from "@/components/shell/MeetingAlertOverlay";
 import { AvisoDeVersaoNova } from "@/components/shell/AvisoDeVersaoNova";
+import { DicaFlutuante } from "@/components/shared/DicaFlutuante";
 import { ToastProvider } from "@/components/ui/Toast";
 import { getSectorMaps } from "@/lib/sectors";
 import { ROLE_LABELS } from "@/lib/roles";
@@ -149,6 +150,7 @@ export default async function AppLayout({
         <SessionKeeper />
         <MeetingAlertOverlay />
         <AvisoDeVersaoNova />
+        <DicaFlutuante />
         {children}
         <ChatDeIA agentes={agentesDoChatDeIA} />
       </AppShell>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MessageSquareWarning, Paperclip } from "lucide-react";
+import { MessageSquareWarning, Paperclip, Hourglass, MessageCircleReply, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -9,15 +9,15 @@ import { formatInstantDate } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { SearchableSelect } from "@/components/shared/SearchableSelect";
-import { Button } from "@/components/ui/Button";
-import { Checkbox } from "@/components/ui/Checkbox";
-import { AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { saoPauloParts } from "@/lib/agenda";
 import { NovaPendencia, type LancamentoVinculado } from "@/components/pendencias/NovaPendencia";
 import { SeloDoPrazo, SeloDoStatus } from "@/components/pendencias/SelosDaPendencia";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { listarPendencias, RECORTES_DE_PENDENCIA, type RecorteDePendencia } from "@/lib/financeiro/pendencias/consultas";
-import { ROTULO_DO_TIPO } from "@/lib/financeiro/pendencias/regras";
+import { ROTULO_DO_TIPO, ROTULO_DO_STATUS, ROTULO_DO_PRAZO } from "@/lib/financeiro/pendencias/regras";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { moeda } from "@/lib/financeiro/formato";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
@@ -89,39 +89,55 @@ export default async function PendenciasPage({
         }
       />
 
+      {/* Cada cartão abre o recorte que ele conta. */}
       <div className="mt-4">
         <FaixaDeTotais
           itens={[
-            { rotulo: "Aguardando cliente", valor: String(contadores.aguardando) },
-            { rotulo: "Respondidas", valor: String(contadores.respondidas), tom: contadores.respondidas > 0 ? "text-brand" : "" },
-            { rotulo: "Vencidas", valor: String(contadores.vencidas), tom: contadores.vencidas > 0 ? "text-danger" : "" },
-            { rotulo: "Encerradas", valor: String(contadores.encerradas), tom: "text-fg-muted" },
+            {
+              rotulo: "Aguardando cliente",
+              valor: String(contadores.aguardando),
+              icone: <Hourglass />,
+              href: href({ recorte: "aguardando", vencidas: undefined }),
+            },
+            {
+              rotulo: "Respondidas",
+              valor: String(contadores.respondidas),
+              tom: contadores.respondidas > 0 ? "text-brand" : "",
+              icone: <MessageCircleReply />,
+              href: href({ recorte: "respondidas", vencidas: undefined }),
+            },
+            {
+              rotulo: "Vencidas",
+              valor: String(contadores.vencidas),
+              tom: contadores.vencidas > 0 ? "text-danger" : "",
+              icone: <AlertTriangle />,
+              href: href({ recorte: undefined, vencidas: "1" }),
+            },
+            {
+              rotulo: "Encerradas",
+              valor: String(contadores.encerradas),
+              tom: "text-fg-muted",
+              icone: <CheckCircle2 />,
+              href: href({ recorte: "encerradas", vencidas: undefined }),
+            },
           ]}
         />
       </div>
 
-      <form method="get" action="/pendencias" className="flex flex-wrap items-center gap-3 mb-4">
-        {recorte !== "andamento" && <input type="hidden" name="recorte" value={recorte} />}
-        <SearchableSelect
-          key={empresaId ?? ""}
-          name="empresa"
-          compact
-          className="w-72 max-w-full"
-          aria-label="Empresa"
-          options={empresas.map((e) => ({ value: e.id, label: e.nome }))}
-          defaultValue={empresaId ?? ""}
-          vazioLabel="Todas as empresas"
-          placeholder="Buscar empresa…"
-        />
-        <Checkbox name="vencidas" value="1" defaultChecked={vencidas} label="Só vencidas" />
-        <Button type="submit" variant="secondary" size="sm">
-          Aplicar
-        </Button>
-      </form>
-
-      <AbasDeLink
-        abas={RECORTES_DE_PENDENCIA.map((r) => ({ chave: r.chave, rotulo: r.rotulo, href: href({ recorte: r.chave === "andamento" ? undefined : r.chave }) }))}
-        ativa={recorte}
+      {/* Situação, empresa e prazo no botão "Filtros" — eram uma fileira de
+          pílulas mais um formulário com "Aplicar" (conferência de 30/09). */}
+      <FiltrosDaTela
+        className="mb-4"
+        campos={[
+          {
+            chave: "recorte",
+            rotulo: "Situação",
+            vazioLabel: "Em andamento",
+            opcoes: RECORTES_DE_PENDENCIA.filter((r) => r.chave !== "andamento").map((r) => ({ value: r.chave, label: r.rotulo })),
+          },
+          { chave: "empresa", rotulo: "Empresa", vazioLabel: "Todas", opcoes: empresas.map((e) => ({ value: e.id, label: e.nome })) },
+          { chave: "vencidas", rotulo: "Prazo", vazioLabel: "Todos os prazos", opcoes: [{ value: "1", label: "Só vencidas" }] },
+        ]}
       />
 
       {linhas.length === 0 ? (
@@ -161,20 +177,49 @@ export default async function PendenciasPage({
           {limitado && <p className="text-[11px] text-fg-muted mt-1">Mostrando as 500 primeiras. Filtre por empresa para ver o resto.</p>}
         </CartoesNoCelular>
 
+        <TabelaFiltravel
+          linhas={linhas.map((l) => ({
+            id: l.id,
+            valores: {
+              tipo: ROTULO_DO_TIPO[l.tipo],
+              empresa: l.empresaNome,
+              prazo: l.prazo ? saoPauloParts(l.prazo).dateKey : "",
+              status: ROTULO_DO_STATUS[l.status],
+              situacaoDoPrazo: ROTULO_DO_PRAZO[l.situacaoDoPrazo],
+              atualizada: saoPauloParts(l.atualizadaEm).dateKey,
+            },
+          }))}
+        >
         <TabelaNoDesktop padrao>
           <table className="w-full min-w-[860px] text-[13px]">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-                <th className="py-2 pr-3 font-medium">Pendência</th>
-                <th className="py-2 pr-3 font-medium">Empresa</th>
-                <th className="py-2 pr-3 font-medium">Prazo</th>
-                <th className="py-2 pr-3 font-medium">Situação</th>
-                <th className="py-2 font-medium">Atualizada</th>
+              <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna rotulo="Pendência" campos={[{ chave: "tipo", rotulo: "Tipo" }]} />
+                </th>
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna rotulo="Empresa" chave="empresa" />
+                </th>
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna rotulo="Prazo" chave="prazo" tipo="data" />
+                </th>
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna
+                    rotulo="Situação"
+                    campos={[
+                      { chave: "status", rotulo: "Status" },
+                      { chave: "situacaoDoPrazo", rotulo: "Prazo" },
+                    ]}
+                  />
+                </th>
+                <th className="py-2 font-medium">
+                  <FiltroDaColuna rotulo="Atualizada" chave="atualizada" tipo="data" align="right" />
+                </th>
               </tr>
             </thead>
             <tbody>
               {linhas.map((l) => (
-                <tr key={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
+                <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
                   <td className="py-2.5 pr-3">
                     <Link href={`/pendencias/${l.id}`} className="font-medium text-brand hover:underline">
                       {l.titulo}
@@ -198,12 +243,13 @@ export default async function PendenciasPage({
                     </div>
                   </td>
                   <td className="py-2.5 tabular-nums whitespace-nowrap text-fg-muted">{formatInstantDate(l.atualizadaEm)}</td>
-                </tr>
+                </LinhaFiltravel>
               ))}
             </tbody>
           </table>
           {limitado && <p className="text-[11px] text-fg-muted mt-3">Mostrando as 500 primeiras. Filtre por empresa para ver o resto.</p>}
         </TabelaNoDesktop>
+        </TabelaFiltravel>
         </>
       )}
     </PageContainer>

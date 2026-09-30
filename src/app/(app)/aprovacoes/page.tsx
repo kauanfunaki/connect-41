@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Hourglass, Wallet, XCircle, Ban, ListChecks, Scale } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, canActOnSector, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -13,6 +13,9 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { FiltroDePeriodo, AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { saoPauloParts } from "@/lib/agenda";
 import { DecisaoDaEquipe } from "@/components/aprovacoes/DecisaoDaEquipe";
 import { HistoricoDaAprovacao, SeloDaAprovacao, type EventoDaAprovacao } from "@/components/aprovacoes/HistoricoDaAprovacao";
 import { FormAlcada, AlternarAlcada } from "@/components/aprovacoes/FormAlcada";
@@ -59,9 +62,9 @@ export default async function AprovacoesPage({
   const empresaId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : null;
 
   const abas = [
-    { chave: "fila", rotulo: "Fila", href: `/aprovacoes${empresaId ? `?empresa=${empresaId}` : ""}` },
+    { chave: "fila", rotulo: "Fila", href: `/aprovacoes${empresaId ? `?empresa=${empresaId}` : ""}`, icone: <ListChecks /> },
     ...(gerencia
-      ? [{ chave: "alcadas", rotulo: "Alçadas", href: `/aprovacoes?aba=alcadas${empresaId ? `&empresa=${empresaId}` : ""}` }]
+      ? [{ chave: "alcadas", rotulo: "Alçadas", href: `/aprovacoes?aba=alcadas${empresaId ? `&empresa=${empresaId}` : ""}`, icone: <Scale /> }]
       : []),
   ];
 
@@ -192,20 +195,42 @@ async function Fila({
     <>
       <FaixaDeTotais
         itens={[
-          { rotulo: "Aguardando", valor: String(aguardando?._count._all ?? 0), tom: aguardando ? "text-warning" : "" },
-          { rotulo: "Valor aguardando", valor: moeda(aguardando?._sum.amount ? centavosDeDecimal(aguardando._sum.amount) : 0) },
-          { rotulo: "Reprovadas", valor: String(reprovadas?._count._all ?? 0), tom: reprovadas ? "text-danger" : "" },
-          { rotulo: "Valor reprovado", valor: moeda(reprovadas?._sum.amount ? centavosDeDecimal(reprovadas._sum.amount) : 0), tom: "text-fg-muted" },
+          {
+            rotulo: "Aguardando",
+            valor: String(aguardando?._count._all ?? 0),
+            tom: aguardando ? "text-warning" : "",
+            icone: <Hourglass />,
+            href: hrefSituacao("aguardando"),
+          },
+          { rotulo: "Valor aguardando", valor: moeda(aguardando?._sum.amount ? centavosDeDecimal(aguardando._sum.amount) : 0), icone: <Wallet /> },
+          {
+            rotulo: "Reprovadas",
+            valor: String(reprovadas?._count._all ?? 0),
+            tom: reprovadas ? "text-danger" : "",
+            icone: <XCircle />,
+            href: hrefSituacao("reprovadas"),
+          },
+          {
+            rotulo: "Valor reprovado",
+            valor: moeda(reprovadas?._sum.amount ? centavosDeDecimal(reprovadas._sum.amount) : 0),
+            tom: "text-fg-muted",
+            icone: <Ban />,
+          },
         ]}
       />
-      <FiltroDePeriodo
-        acao="/aprovacoes"
-        empresas={empresas}
-        empresaId={empresaId}
-        permitirTodas
-        extras={{ situacao: situacao.chave === "todas" ? undefined : situacao.chave }}
+      {/* Situação e empresa no botão "Filtros" (conferência de 30/09). */}
+      <FiltrosDaTela
+        className="mb-4"
+        campos={[
+          {
+            chave: "situacao",
+            rotulo: "Situação",
+            vazioLabel: "Aguardando e reprovadas",
+            opcoes: SITUACOES.filter((s) => s.chave !== "todas").map((s) => ({ value: s.chave, label: s.rotulo })),
+          },
+          { chave: "empresa", rotulo: "Empresa", vazioLabel: "Todas", opcoes: empresas.map((e) => ({ value: e.id, label: e.nome })) },
+        ]}
       />
-      <AbasDeLink abas={SITUACOES.map((s) => ({ chave: s.chave, rotulo: s.rotulo, href: hrefSituacao(s.chave) }))} ativa={situacao.chave} />
 
       {linhas.length === 0 ? (
         <EmptyState
@@ -243,21 +268,47 @@ async function Fila({
             ))}
           </CartoesNoCelular>
 
+          <TabelaFiltravel
+            linhas={decididas.map(({ l }) => ({
+              id: l.id,
+              valores: {
+                vencimento: saoPauloParts(l.dueDate).dateKey,
+                fornecedor: l.counterparty.name,
+                lancadaPor: l.createdBy?.name ?? "",
+                empresa: nomeExibicao(l.company),
+                aprovacao: l.approvalStatus === "AGUARDANDO" ? "Aguardando" : l.approvalStatus === "REPROVADO" ? "Reprovada" : l.approvalStatus,
+              },
+            }))}
+          >
           <TabelaNoDesktop padrao>
           <table className="w-full min-w-[960px] text-[13px]">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-                <th className="py-2 pr-3 font-medium">Vencimento</th>
-                <th className="py-2 pr-3 font-medium">Fornecedor</th>
-                <th className="py-2 pr-3 font-medium">Empresa</th>
-                <th className="py-2 pr-3 font-medium text-right">Valor</th>
-                <th className="py-2 pr-3 font-medium">Aprovação</th>
+              <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" />
+                </th>
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna
+                    rotulo="Fornecedor"
+                    campos={[
+                      { chave: "fornecedor", rotulo: "Fornecedor" },
+                      { chave: "lancadaPor", rotulo: "Lançada por" },
+                    ]}
+                  />
+                </th>
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna rotulo="Empresa" chave="empresa" />
+                </th>
+                <th className="py-2 pr-3 font-medium">Valor</th>
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna rotulo="Aprovação" chave="aprovacao" align="right" />
+                </th>
                 <th className="py-2 font-medium"></th>
               </tr>
             </thead>
             <tbody>
               {decididas.map(({ l, valorCentavos, descricao, decidir, eventos, ultimoMotivo }) => (
-                  <tr key={l.id} className="border-b border-border-soft align-top">
+                  <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft align-top">
                     <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">{formatInstantDate(l.dueDate)}</td>
                     <td className="py-2.5 pr-3">
                       <span className="font-medium">{l.counterparty.name}</span>
@@ -281,11 +332,12 @@ async function Fila({
                         reenviar={podeAgir && l.approvalStatus === "REPROVADO" && podeEnviarParaAprovacao(l).pode}
                       />
                     </td>
-                  </tr>
+                  </LinhaFiltravel>
               ))}
             </tbody>
           </table>
           </TabelaNoDesktop>
+          </TabelaFiltravel>
           {linhas.length > LIMITE && <p className="text-[11px] text-fg-muted mt-3">Mostrando as {LIMITE} primeiras. Filtre por empresa.</p>}
         </>
       )}

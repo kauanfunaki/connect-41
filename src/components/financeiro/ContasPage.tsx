@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Wallet, AlertTriangle, CalendarClock, CheckCircle2, List, BarChart3 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
@@ -9,11 +9,12 @@ import { nomeExibicao } from "@/lib/companyName";
 import { listarContas, competenciasComContas, type TipoDeConta } from "@/lib/financeiro/data";
 import { saoPauloParts } from "@/lib/agenda";
 import { getModuleDef } from "@/lib/module-catalog";
-import { ContasTable, moeda } from "./ContasTable";
+import { ContasTable, moeda, competenciaNaTela } from "./ContasTable";
 import { AnaliseDeContas } from "./AnaliseDeContas";
 import { AbasDeLink, FaixaDeTotais } from "./FiltroDePeriodo";
 import { situacoesDeCobranca, MODULO_DE_COBRANCA } from "@/lib/financeiro/cobranca/consultas";
 import { DefinirCentroDasContas } from "./DefinirCentroDasContas";
+import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDaTela";
 
 const RECORTES = [
   { chave: "abertas", rotulo: "Em aberto" },
@@ -70,7 +71,7 @@ export async function ContasPage({
   const podeAbrirPendencia = pendenciasLigado && canActOnSector(ctx, setorDePendencias ?? "bpo");
   const podeEnviarParaAprovacao = kind === "PAGAR" && aprovacoesLigado && canActOnSector(ctx, setorDeAprovacoes ?? "bpo");
 
-  const [resultado, competencias, empresas] = await Promise.all([
+  const [resultado, competencias, empresas, empresasComContas] = await Promise.all([
     listarContas(
       ctx.tenantId,
       kind,
@@ -83,6 +84,9 @@ export async function ContasPage({
       orderBy: { name: "asc" },
       select: { id: true, name: true, displayName: true },
     }),
+    // O filtro de empresa oferece só quem tem conta deste lado — são quase
+    // quatrocentas empresas no escritório, e a maioria não é cliente do BPO.
+    prisma.financeEntry.groupBy({ by: ["companyId"], where: { tenantId: ctx.tenantId, kind } }),
   ]);
 
   const aPagar = kind === "PAGAR";
@@ -127,6 +131,33 @@ export async function ContasPage({
     return s ? `${base}?${s}` : base;
   }
 
+  const comConta = new Set(empresasComContas.map((e) => e.companyId));
+  const filtros: CampoDeFiltro[] = [
+    // A análise lê sempre o em aberto (ver acima), então lá a situação não é filtro.
+    ...(aba === "contas"
+      ? [
+          {
+            chave: "recorte",
+            rotulo: "Situação",
+            vazioLabel: "Em aberto",
+            opcoes: RECORTES.filter((r) => r.chave !== "abertas").map((r) => ({ value: r.chave, label: r.rotulo })),
+          },
+        ]
+      : []),
+    {
+      chave: "competencia",
+      rotulo: "Competência",
+      vazioLabel: "Todas",
+      opcoes: competencias.map((c) => ({ value: c, label: competenciaNaTela(c) })),
+    },
+    {
+      chave: "empresa",
+      rotulo: "Empresa",
+      vazioLabel: "Todas",
+      opcoes: empresas.filter((e) => comConta.has(e.id) || e.id === params.empresa).map((e) => ({ value: e.id, label: nomeExibicao(e) })),
+    },
+  ];
+
   return (
     <PageContainer>
       {/* Sem "Voltar": é página principal do setor, não uma ficha aberta de
@@ -141,72 +172,42 @@ export async function ContasPage({
       />
 
       {/* Quatro números, e o primeiro é o que a pessoa procura: quanto falta.
-          Vencido em destaque porque é o que já custa. */}
+          Vencido em destaque porque é o que já custa. Os dois primeiros são
+          atalho para o recorte que eles contam. */}
       <FaixaDeTotais
         itens={[
-          { rotulo: "Em aberto", valor: moeda(resultado.totais.emAberto) },
-          { rotulo: "Vencido", valor: moeda(resultado.totais.vencido), tom: resultado.totais.vencido > 0 ? "text-danger" : undefined },
-          { rotulo: "Vence hoje", valor: moeda(resultado.totais.venceHoje) },
-          { rotulo: aPagar ? "Pago" : "Recebido", valor: moeda(resultado.totais.pago), tom: "text-fg-muted" },
+          {
+            rotulo: "Em aberto",
+            valor: moeda(resultado.totais.emAberto),
+            icone: <Wallet />,
+            href: aba === "contas" ? comParam("recorte", undefined) : undefined,
+          },
+          {
+            rotulo: "Vencido",
+            valor: moeda(resultado.totais.vencido),
+            tom: resultado.totais.vencido > 0 ? "text-danger" : undefined,
+            icone: <AlertTriangle />,
+            href: aba === "contas" ? comParam("recorte", "vencidas") : undefined,
+          },
+          {
+            rotulo: "Vence hoje",
+            valor: moeda(resultado.totais.venceHoje),
+            tom: resultado.totais.venceHoje > 0 ? "text-warning" : undefined,
+            icone: <CalendarClock />,
+          },
+          { rotulo: aPagar ? "Pago" : "Recebido", valor: moeda(resultado.totais.pago), tom: "text-success", icone: <CheckCircle2 /> },
         ]}
       />
 
       <AbasDeLink
         abas={[
-          { chave: "contas", rotulo: "Contas", href: comParam("aba", undefined) },
-          { chave: "analise", rotulo: "Análise — atraso e ranking", href: comParam("aba", "analise") },
+          { chave: "contas", rotulo: "Contas", href: comParam("aba", undefined), icone: <List /> },
+          { chave: "analise", rotulo: "Análise — atraso e ranking", href: comParam("aba", "analise"), icone: <BarChart3 /> },
         ]}
         ativa={aba}
       />
 
-      <div className="flex flex-wrap items-center gap-1.5 mb-4">
-        {aba === "contas" && RECORTES.map((r) => {
-          const ativo = r.chave === recorte;
-          return (
-            <Link
-              key={r.chave}
-              href={comParam("recorte", r.chave === "abertas" ? undefined : r.chave)}
-              aria-current={ativo ? "page" : undefined}
-              className={
-                ativo
-                  ? "h-8 px-3 inline-flex items-center rounded-md border border-brand/40 bg-brand/8 text-brand text-[12px] font-medium"
-                  : "h-8 px-3 inline-flex items-center rounded-md border border-border text-fg-secondary text-[12px] hover:bg-surface-hover transition-colors"
-              }
-            >
-              {r.rotulo}
-            </Link>
-          );
-        })}
-
-        {competencias.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 sm:ml-3 sm:pl-3 sm:border-l sm:border-border">
-            <span className="text-[length:var(--fs-badge)] text-fg-muted mr-0.5">Competência</span>
-            <Link
-              href={comParam("competencia", undefined)}
-              className={
-                !params.competencia
-                  ? "h-8 px-2.5 inline-flex items-center rounded-md border border-border-strong text-fg text-[12px]"
-                  : "h-8 px-2.5 inline-flex items-center rounded-md border border-border text-fg-muted text-[12px] hover:bg-surface-hover transition-colors"
-              }
-            >
-              Todas
-            </Link>
-            {competencias.slice(0, 6).map((c) => (
-              <Link
-                key={c}
-                href={comParam("competencia", c)}
-                className={
-                  params.competencia === c
-                    ? "h-8 px-2.5 inline-flex items-center rounded-md border border-border-strong text-fg text-[12px] tabular-nums"
-                    : "h-8 px-2.5 inline-flex items-center rounded-md border border-border text-fg-muted text-[12px] tabular-nums hover:bg-surface-hover transition-colors"
-                }
-              >
-                {c}
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
+      <FiltrosDaTela campos={filtros} className="mb-4" />
 
       {aba === "analise" ? (
         <AnaliseDeContas linhas={resultado.linhas} hojeKey={saoPauloParts(agora).dateKey} aPagar={aPagar} />
@@ -225,15 +226,6 @@ export async function ContasPage({
             mostrarCentro={podeDefinirCentro}
           />
         </>
-      )}
-
-      {empresas.length > 0 && params.empresa && (
-        <p className="mt-4 text-[12px] text-fg-muted">
-          Filtrado por {nomeExibicao(empresas.find((e) => e.id === params.empresa) ?? empresas[0])} ·{" "}
-          <Link href={comParam("empresa", undefined)} className="text-brand hover:underline">
-            limpar
-          </Link>
-        </p>
       )}
     </PageContainer>
   );
