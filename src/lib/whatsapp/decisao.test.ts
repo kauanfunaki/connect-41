@@ -7,7 +7,9 @@ import {
   dentroDaJanelaLivre,
   decidirComARespostaDoAgente,
   prometeContatoHumano,
-  montarMensagem,
+  montarMensagens,
+  dividirEmMensagens,
+  pausaAntesDe,
   semCumprimentoRepetido,
   avisoDeRobo,
   MAX_RESPOSTAS_POR_HORA,
@@ -209,8 +211,12 @@ describe("semCumprimentoRepetido", () => {
   });
 
   it("só vale na primeira mensagem, junto da apresentação", () => {
-    expect(montarMensagem("Oi! Tudo certo.", true, "Escritório").endsWith("\n\nTudo certo.")).toBe(true);
-    expect(montarMensagem("Oi! Tudo certo.", false, "Escritório")).toBe("Oi! Tudo certo.");
+    expect(montarMensagens("Oi! Tudo certo por aqui, e com você?", true, "Escritório").at(-1)?.texto).toBe(
+      "Tudo certo por aqui, e com você?"
+    );
+    expect(montarMensagens("Oi! Tudo certo por aqui, e com você?", false, "Escritório")[0]?.texto).toBe(
+      "Oi! Tudo certo por aqui, e com você?"
+    );
   });
 });
 
@@ -297,15 +303,15 @@ describe("prometeContatoHumano", () => {
   });
 });
 
-describe("montarMensagem", () => {
+describe("montarMensagens", () => {
   // O primeiro contato tem de dizer que é robô e como sair. É o que torna o
   // "PARAR" uma opção real, e não um segredo de quem escreveu o código.
-  it("a apresentação diz que é robô, de qual escritório, e como sair", () => {
-    const m = montarMensagem("Oi!", true, "Escritório Exemplo");
-    expect(m).toContain(avisoDeRobo("Escritório Exemplo"));
-    expect(m).toContain("Escritório Exemplo");
-    expect(m).toContain("PARAR");
-    expect(m).toContain("Oi!");
+  it("a apresentação vem numa mensagem própria, fixa, e diz que é robô, de qual escritório e como sair", () => {
+    const [apresentacao, resposta] = montarMensagens("Temos duas vagas abertas agora.", true, "Escritório Exemplo");
+    expect(apresentacao).toEqual({ texto: avisoDeRobo("Escritório Exemplo"), fixa: true });
+    expect(apresentacao!.texto).toContain("Escritório Exemplo");
+    expect(apresentacao!.texto).toContain("PARAR");
+    expect(resposta).toEqual({ texto: "Temos duas vagas abertas agora.", fixa: false });
   });
 
   // Regressão de 14/09: o texto dizia "41 Contábil" para o candidato de
@@ -315,6 +321,46 @@ describe("montarMensagem", () => {
   });
 
   it("depois da primeira, não se apresenta de novo", () => {
-    expect(montarMensagem("Oi!", false, "Escritório Exemplo")).toBe("Oi!");
+    expect(montarMensagens("Oi!", false, "Escritório Exemplo")).toEqual([{ texto: "Oi!", fixa: false }]);
+  });
+});
+
+describe("dividirEmMensagens", () => {
+  // Pedido do teste de 30/09: resposta num bloco só era longa demais.
+  it("cada parágrafo vira uma mensagem", () => {
+    expect(dividirEmMensagens("Temos duas vagas abertas no momento.\n\nQuer que eu mande o link de alguma delas?")).toEqual([
+      "Temos duas vagas abertas no momento.",
+      "Quer que eu mande o link de alguma delas?",
+    ]);
+  });
+
+  it("parágrafo curto demais gruda no seguinte", () => {
+    expect(dividirEmMensagens("Claro!\n\nA vaga de Analista é na Fiel Transportes.")).toEqual([
+      "Claro!\nA vaga de Analista é na Fiel Transportes.",
+    ]);
+  });
+
+  it("não passa de três: o que sobra vai junto na última, sem cortar frase", () => {
+    const texto = [
+      "Primeira ideia completa aqui.",
+      "Segunda ideia completa aqui.",
+      "Terceira ideia completa aqui.",
+      "Quarta ideia completa aqui.",
+    ].join("\n\n");
+    const partes = dividirEmMensagens(texto);
+    expect(partes).toHaveLength(3);
+    expect(partes[2]).toBe("Terceira ideia completa aqui.\n\nQuarta ideia completa aqui.");
+  });
+
+  it("uma linha só continua uma mensagem só, e vazio não vira mensagem", () => {
+    expect(dividirEmMensagens("Sua candidatura está em triagem.")).toEqual(["Sua candidatura está em triagem."]);
+    expect(dividirEmMensagens("   \n\n  ")).toEqual([]);
+  });
+});
+
+describe("pausaAntesDe", () => {
+  it("cresce com o texto e não passa de 2,5 s", () => {
+    expect(pausaAntesDe("ok")).toBeLessThan(pausaAntesDe("uma mensagem bem mais comprida que a outra"));
+    expect(pausaAntesDe("x".repeat(5_000))).toBe(2_500);
   });
 });
