@@ -40,7 +40,7 @@ export default async function PortalPage({
   return (
     <PageContainer>
       <PortalCabecalho
-        titulo="Documentos Fiscais"
+        titulo="Documentos fiscais"
         descricao="Notas emitidas e recebidas pelas suas empresas."
         somenteLeitura={false}
       />
