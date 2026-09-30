@@ -60,7 +60,13 @@ export default async function PortalDrePage({
 
   let conteudo: React.ReactNode;
   if (!mes) {
-    conteudo = <EmptyState icon={<FileText />} title="Ainda não há DRE para esta empresa" />;
+    conteudo = (
+      <EmptyState
+        icon={<FileText />}
+        title="Ainda não há DRE para esta empresa"
+        description="A DRE aparece aqui quando a equipe lançar os pagamentos e recebimentos do mês."
+      />
+    );
   } else if (regime === "caixa") {
     const { ano, mes: m } = partesDaCompetencia(mes);
     const { resultado, lancamentos } = await dreDoMes(escopo.tenantId, companyId, { ano, mes: m });
@@ -88,7 +94,9 @@ export default async function PortalDrePage({
         acao="/portal/dre"
         empresas={empresas.length > 1 ? empresas : undefined}
         empresaId={companyId}
-        mes={mes ?? ""}
+        // Sem mês com movimento, não há o que escolher: o campo vazio ("-- de ----")
+        // só confundia.
+        mes={mes ?? undefined}
         extras={{ empresa: empresas.length > 1 ? undefined : companyId, regime: regime === "caixa" ? undefined : regime }}
       />
       {competenciaLiberada && (

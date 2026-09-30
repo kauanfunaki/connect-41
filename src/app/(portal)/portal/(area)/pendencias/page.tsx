@@ -88,7 +88,7 @@ export default async function PortalPendenciasPage({
                 )}
               </InfoDoCartao>
               <InfoDoCartao className="tabular-nums">
-                prazo {l.prazo ? formatInstantDate(l.prazo) : "—"}
+                {l.prazo ? `prazo ${formatInstantDate(l.prazo)}` : "sem prazo"}
               </InfoDoCartao>
               <PeDoCartao>
                 <SeloDoStatus status={l.status} lado="CLIENTE" />
@@ -98,7 +98,7 @@ export default async function PortalPendenciasPage({
           ))}
         </CartoesNoCelular>
 
-        <TabelaNoDesktop>
+        <TabelaNoDesktop padrao>
           <table className="w-full min-w-[720px] text-[13px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">

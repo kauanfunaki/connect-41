@@ -39,6 +39,9 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
 
   const hojeKey = saoPauloParts(new Date()).dateKey;
   const contas = await contasDoEscopo(escopo, kind, hojeKey);
+  // A empresa do cliente só aparece quando o acesso cobre mais de uma — ele
+  // sabe quem é; repetir o próprio nome em toda linha só empurrava o resto.
+  const variasEmpresas = new Set(contas.map((c) => c.empresaNome)).size > 1;
   const totais = totalizar(contas);
   const aPagar = kind === "PAGAR";
   // A aprovação é de conta a pagar; o link só existe se a tela de aprovações existir para este cliente.
@@ -62,7 +65,15 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
 
       {contas.length === 0 ? (
         <Card>
-          <EmptyState icon={<Wallet />} title={aPagar ? "Nenhuma conta a pagar" : "Nenhuma conta a receber"} />
+          <EmptyState
+            icon={<Wallet />}
+            title={aPagar ? "Nenhuma conta a pagar" : "Nenhuma conta a receber"}
+            description={
+              aPagar
+                ? "Quando a equipe lançar as contas da sua empresa, elas aparecem aqui com o vencimento e a situação."
+                : "Quando a equipe lançar o que sua empresa tem a receber, aparece aqui com o vencimento e a situação."
+            }
+          />
         </Card>
       ) : (
         <>
@@ -78,10 +89,11 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
                 vence {formatInstantDate(c.vencimento)}
                 {c.pagoEm && ` · liquidada em ${formatInstantDate(c.pagoEm)}`}
               </InfoDoCartao>
-              <InfoDoCartao className="break-words">
-                {c.empresaNome}
-                {c.categoriaNome ? ` · ${c.categoriaNome}` : ""}
-              </InfoDoCartao>
+              {(variasEmpresas || c.categoriaNome) && (
+                <InfoDoCartao className="break-words">
+                  {[variasEmpresas ? c.empresaNome : null, c.categoriaNome].filter(Boolean).join(" · ")}
+                </InfoDoCartao>
+              )}
               <PeDoCartao>
                 <Badge variant={SITUACAO[c.situacao].variante}>{SITUACAO[c.situacao].rotulo}</Badge>
                 {c.aprovacao &&
@@ -97,13 +109,12 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
           ))}
         </CartoesNoCelular>
 
-        <TabelaNoDesktop>
-          <table className="w-full min-w-[760px] text-[13px]">
+        <TabelaNoDesktop padrao>
+          <table className="w-full min-w-[720px] text-[13px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                 <th className="py-2 pr-3 font-medium">Vencimento</th>
                 <th className="py-2 pr-3 font-medium">{aPagar ? "Fornecedor" : "Cliente"}</th>
-                <th className="py-2 pr-3 font-medium">Empresa</th>
                 <th className="py-2 pr-3 font-medium">Categoria</th>
                 <th className="py-2 pr-3 font-medium text-right">Valor</th>
                 <th className="py-2 font-medium">Situação</th>
@@ -119,8 +130,8 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
                   <td className="py-2.5 pr-3">
                     <span className="font-medium">{c.contraparteNome}</span>
                     {c.descricao && <span className="block text-[11px] text-fg-muted truncate max-w-[240px]">{c.descricao}</span>}
+                    {variasEmpresas && <span className="block text-[11px] text-fg-muted truncate max-w-[240px]">{c.empresaNome}</span>}
                   </td>
-                  <td className="py-2.5 pr-3 text-fg-secondary">{c.empresaNome}</td>
                   <td className="py-2.5 pr-3 text-fg-secondary">{c.categoriaNome ?? "—"}</td>
                   <td className="py-2.5 pr-3 text-right tabular-nums font-medium">{moeda(c.valorCentavos)}</td>
                   <td className="py-2.5">
