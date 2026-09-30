@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -40,27 +39,29 @@ export default async function PermissoesSensiveisPage() {
           Sem concessão explícita, o acesso é negado — inclusive para Admin. Toda mudança fica na auditoria."
       />
 
-      <Card className="overflow-x-auto">
+      {/* Casco padrão (polimento de 30/09). Sem funil: é uma matriz fixa de
+          quatro papéis por quatro grupos, não uma lista. */}
+      <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
         <table className="w-full min-w-[560px]">
           <thead>
-            <tr className="border-b border-border">
-              <th className="text-left px-4 py-3 text-[11px] font-medium text-fg-muted uppercase tracking-wide">Papel</th>
+            <tr className="border-b border-border text-[11px] text-fg-muted uppercase tracking-wide">
+              <th className="px-4 py-3">Papel</th>
               {FIELD_GROUPS.map((f) => (
-                <th key={f.code} className="text-center px-4 py-3 text-[11px] font-medium text-fg-muted uppercase tracking-wide">
+                <th key={f.code} className="px-4 py-3">
                   {f.label}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody>
             {ROLES.map((r) => (
-              <tr key={r.code}>
+              <tr key={r.code} className="border-b border-border">
                 <td className="px-4 py-3">
                   <p className="text-[13px] text-fg font-medium">{r.label}</p>
                   <p className="text-[11px] text-fg-muted">{r.hint}</p>
                 </td>
                 {FIELD_GROUPS.map((f) => (
-                  <td key={f.code} className="px-4 py-3 text-center">
+                  <td key={f.code} className="px-4 py-3">
                     <SensitiveGrantToggle
                       action={alternarPermissaoSensivel.bind(null, r.code, f.code)}
                       granted={granted.has(`${r.code}:${f.code}`)}
@@ -72,7 +73,7 @@ export default async function PermissoesSensiveisPage() {
             ))}
           </tbody>
         </table>
-      </Card>
+      </div>
 
       <p className="text-[12px] text-fg-muted mt-3">
         Suporte (SUPER_ADMIN) sempre tem acesso — não aparece na matriz.

@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
-import { UserRoundCog } from "lucide-react";
+import { Pencil, Power, PowerOff, UserRoundCog } from "lucide-react";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { StatusDot } from "@/components/shared/StatusDot";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { ItemDoMenu } from "@/components/ui/Popover";
 import { Select } from "@/components/ui/Select";
-import { ToggleActiveButton } from "@/components/admin/ToggleActiveButton";
+import { useConfirm } from "@/components/ui/useConfirm";
+import { MenuDeMaisAcoes } from "@/components/admin/AcoesDoItem";
 
 type SectorTag = { code: string; label: string; color: string };
 type Row = {
@@ -30,6 +33,31 @@ type Props = {
   atribuirSetorEmMassa: (ids: string[], sectorCode: string) => Promise<void>;
 };
 
+/**
+ * A caixa de seleção de uma linha da tabela, que avisa quando está na tela.
+ *
+ * O funil das colunas esconde a linha desmontando-a (`LinhaFiltravel`), e a
+ * seleção mora aqui em cima: sem este aviso, "Selecionar todos" com o funil em
+ * "Operador" marcaria também os administradores escondidos — e o "Desativar" em
+ * massa os levaria junto. Ao sair da tela, a linha também sai da seleção.
+ */
+function CaixaDaLinha({
+  id,
+  nome,
+  marcada,
+  onAlternar,
+  registrar,
+}: {
+  id: string;
+  nome: string;
+  marcada: boolean;
+  onAlternar: () => void;
+  registrar: (id: string) => () => void;
+}) {
+  useEffect(() => registrar(id), [id, registrar]);
+  return <Checkbox checked={marcada} onChange={onAlternar} aria-label={`Selecionar ${nome}`} />;
+}
+
 export function UsuariosTable({
   users,
   currentUserId,
@@ -39,14 +67,34 @@ export function UsuariosTable({
   atribuirSetorEmMassa,
 }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // As linhas selecionáveis que o funil das colunas deixou na tela.
+  const [naTela, setNaTela] = useState<Set<string>>(new Set());
   const [bulkSector, setBulkSector] = useState(sectorOptions[0]?.value ?? "");
   const [, startTransition] = useTransition();
+  const { dialog, requestConfirm } = useConfirm();
 
-  const selectableUsers = users.filter((u) => u.id !== currentUserId);
-  const allSelected = selectableUsers.length > 0 && selected.size === selectableUsers.length;
+  const registrarNaTela = useCallback((id: string) => {
+    setNaTela((atual) => new Set(atual).add(id));
+    return () => {
+      setNaTela((atual) => {
+        const novo = new Set(atual);
+        novo.delete(id);
+        return novo;
+      });
+      setSelected((atual) => {
+        if (!atual.has(id)) return atual;
+        const novo = new Set(atual);
+        novo.delete(id);
+        return novo;
+      });
+    };
+  }, []);
+
+  const selecionaveis = users.filter((u) => u.id !== currentUserId && naTela.has(u.id));
+  const allSelected = selecionaveis.length > 0 && selecionaveis.every((u) => selected.has(u.id));
 
   function toggleAll() {
-    setSelected(allSelected ? new Set() : new Set(selectableUsers.map((u) => u.id)));
+    setSelected(allSelected ? new Set() : new Set(selecionaveis.map((u) => u.id)));
   }
 
   function toggleOne(id: string) {
@@ -56,6 +104,49 @@ export function UsuariosTable({
       else next.add(id);
       return next;
     });
+  }
+
+  /**
+   * Desativar/reativar uma conta, pelo "⋯" da linha. Era um interruptor
+   * "Ativo" na coluna de ações — o mesmo dado da coluna Status, duas colunas
+   * adiante, e a um clique acidental de tirar o acesso de alguém. O texto da
+   * confirmação é o de antes.
+   */
+  function alternarAtivo(u: Row) {
+    const title = u.active ? `Desativar "${u.name}"?` : `Reativar "${u.name}"?`;
+    const description = u.active ? "A pessoa perderá acesso ao Connect." : undefined;
+    requestConfirm(
+      { title, description, destructive: u.active, confirmLabel: u.active ? "Desativar" : "Reativar" },
+      () => alternarAtivoUsuario(u.id, !u.active)
+    );
+  }
+
+  // Editar é botão; desativar/reativar vai no "⋯" (conferência de 30/09).
+  function acoes(u: Row) {
+    const isSelf = u.id === currentUserId;
+    return (
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+        <Button variant="secondary" size="xs" href={`/admin/usuarios/${u.id}/editar`}>
+          <Pencil size={11} /> Editar
+        </Button>
+        {!isSelf && (
+          <MenuDeMaisAcoes rotulo={`Mais ações de ${u.name}`}>
+            {(fechar) => (
+              <ItemDoMenu
+                icone={u.active ? <PowerOff /> : <Power />}
+                danger={u.active}
+                onClick={() => {
+                  fechar();
+                  alternarAtivo(u);
+                }}
+              >
+                {u.active ? "Desativar" : "Reativar"}
+              </ItemDoMenu>
+            )}
+          </MenuDeMaisAcoes>
+        )}
+      </span>
+    );
   }
 
   // Os chips de setor são idênticos na tabela e no cartão, com a mesma regra de
@@ -88,16 +179,12 @@ export function UsuariosTable({
 
   /**
    * O mesmo usuário, em cartão, para telas estreitas — a tabela é
-   * `min-w-[900px]` dentro de um `overflow-x-auto`.
-   *
-   * O `StatusDot` só aparece para a própria conta. Nas outras, o
-   * `ToggleActiveButton` logo abaixo já escreve "Ativo"/"Inativo" no próprio
-   * botão: na tabela as duas coisas moram em colunas distantes, no cartão
-   * ficariam lado a lado dizendo a mesma palavra duas vezes.
+   * `min-w-[900px]` dentro de um `overflow-x-auto`. O status aparece para
+   * todas as contas: desde que o interruptor foi para o "⋯", é o único lugar
+   * do cartão que diz se a conta está ativa.
    */
   function cartaoUsuario(u: Row) {
     const isSelf = u.id === currentUserId;
-    const toggleAction = alternarAtivoUsuario.bind(null, u.id, !u.active);
 
     return (
       <div
@@ -132,23 +219,16 @@ export function UsuariosTable({
         </div>
 
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-fg-secondary">
-          {isSelf && (
-            <StatusDot
-              color={u.active ? "var(--c41-success)" : "var(--c41-fg-muted)"}
-              label={u.active ? "Ativo" : "Inativo"}
-            />
-          )}
+          <StatusDot
+            color={u.active ? "var(--c41-success)" : "var(--c41-fg-muted)"}
+            label={u.active ? "Ativo" : "Inativo"}
+          />
           <span>{u.roleLabel}</span>
         </div>
 
         <div className="mt-2">{chipsDeSetor(u)}</div>
 
-        <div className="mt-2.5 flex items-center justify-end gap-3">
-          <Button variant="linkMuted" href={`/admin/usuarios/${u.id}/editar`} className="text-[13px] font-medium">
-            Editar
-          </Button>
-          {!isSelf && <ToggleActiveButton action={toggleAction} ativo={u.active} nome={u.name} />}
-        </div>
+        <div className="mt-2.5 flex items-center justify-end">{acoes(u)}</div>
       </div>
     );
   }
@@ -170,53 +250,85 @@ export function UsuariosTable({
     });
   }
 
+  if (users.length === 0) {
+    return (
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)]">
+        <EmptyState icon={<UserRoundCog />} title="Nenhum usuário cadastrado ainda" />
+      </div>
+    );
+  }
+
   return (
     <>
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
-        {users.length === 0 ? (
-          <EmptyState icon={<UserRoundCog />} title="Nenhum usuário cadastrado ainda" />
-        ) : (
-          <>
-          {/* Abaixo de md, cartões; de md para cima, a tabela. */}
-          <div className="md:hidden">
-            <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border bg-table-header-bg">
-              <Checkbox checked={allSelected} onChange={toggleAll} aria-label="Selecionar todos" />
-              <span className="text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
-                Selecionar todos
-              </span>
-            </div>
-            {users.map((u) => cartaoUsuario(u))}
-          </div>
+      {/* Abaixo de md, cartões; de md para cima, a tabela. As duas
+          compartilham a seleção — quem esconde uma delas é o CSS. */}
+      <div className="md:hidden bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
+        <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border bg-table-header-bg">
+          <Checkbox checked={allSelected} onChange={toggleAll} aria-label="Selecionar todos" />
+          <span className="text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+            Selecionar todos
+          </span>
+        </div>
+        {users.map((u) => cartaoUsuario(u))}
+      </div>
 
-          <div className="scroll-x overflow-x-auto hidden md:block">
+      {/* Casco padrão e funil nas colunas de valor repetido — papel, setores e
+          status (polimento de 30/09). A lista vem inteira, então o funil filtra
+          no navegador. Setores filtra pela combinação que a pessoa tem. */}
+      <TabelaFiltravel
+        linhas={users.map((u) => ({
+          id: u.id,
+          valores: {
+            papel: u.roleLabel,
+            setores: u.sectors
+              .map((s) => s.label)
+              .sort((a, b) => a.localeCompare(b, "pt-BR"))
+              .join(", "),
+            status: u.active ? "Ativo" : "Inativo",
+          },
+        }))}
+      >
+        <div className="c41-tabela scroll-x overflow-x-auto hidden md:block bg-surface border border-border rounded-lg">
           <table className="w-full min-w-[900px] text-[length:var(--fs-body)]">
             <thead>
-              <tr className="border-b border-border bg-table-header-bg">
+              <tr className="border-b border-border bg-table-header-bg text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
                 <th className="w-10 px-4 py-3">
-                  <Checkbox checked={allSelected} onChange={toggleAll} />
+                  <Checkbox checked={allSelected} onChange={toggleAll} aria-label="Selecionar todos" />
                 </th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">E-mail</th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Papel</th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Setores</th>
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
-                <th className="px-4 py-3" />
+                <th className="px-4 py-3">Nome</th>
+                <th className="px-4 py-3">E-mail</th>
+                <th className="px-4 py-3">
+                  <FiltroDaColuna rotulo="Papel" chave="papel" />
+                </th>
+                <th className="px-4 py-3">
+                  <FiltroDaColuna rotulo="Setores" chave="setores" />
+                </th>
+                <th className="px-4 py-3">
+                  <FiltroDaColuna rotulo="Status" chave="status" align="right" />
+                </th>
+                <th className="px-4 py-3">
+                  <span className="sr-only">Ações</span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {users.map((u) => {
                 const isSelf = u.id === currentUserId;
-                const toggleAction = alternarAtivoUsuario.bind(null, u.id, !u.active);
                 return (
-                  <tr
+                  <LinhaFiltravel
                     key={u.id}
-                    className={`border-b border-border last:border-0 transition-colors ${
-                      selected.has(u.id) ? "bg-selected-bg" : "hover:bg-surface-hover"
-                    }`}
+                    id={u.id}
+                    className={`border-b border-border last:border-0 ${selected.has(u.id) ? "bg-selected-bg" : ""}`}
                   >
                     <td className="px-4 py-3">
                       {!isSelf && (
-                        <Checkbox checked={selected.has(u.id)} onChange={() => toggleOne(u.id)} />
+                        <CaixaDaLinha
+                          id={u.id}
+                          nome={u.name}
+                          marcada={selected.has(u.id)}
+                          onAlternar={() => toggleOne(u.id)}
+                          registrar={registrarNaTela}
+                        />
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -234,23 +346,16 @@ export function UsuariosTable({
                         label={u.active ? "Ativo" : "Inativo"}
                       />
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button variant="linkMuted" href={`/admin/usuarios/${u.id}/editar`} className="text-[13px] font-medium">
-                          Editar
-                        </Button>
-                        {!isSelf && <ToggleActiveButton action={toggleAction} ativo={u.active} nome={u.name} />}
-                      </div>
-                    </td>
-                  </tr>
+                    <td className="px-4 py-3">{acoes(u)}</td>
+                  </LinhaFiltravel>
                 );
               })}
             </tbody>
           </table>
-          </div>
-          </>
-        )}
-      </div>
+        </div>
+      </TabelaFiltravel>
+
+      {dialog}
 
       <BulkActionBar count={selected.size} onClear={() => setSelected(new Set())}>
         <Button

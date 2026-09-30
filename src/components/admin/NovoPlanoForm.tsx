@@ -13,13 +13,16 @@ export function NovoPlanoForm() {
 
   return (
     <div>
+      {/* Aberto, o mesmo botão vira "Cancelar" — e Cancelar não é a ação
+          principal da tela: fica secundário (polimento de 30/09). */}
       <Button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        variant="primary" className="font-medium"
+        variant={open ? "secondary" : "primary"}
+        className="font-medium"
       >
         {open ? "Cancelar" : "+ Novo plano"}
-     </Button>
+      </Button>
 
       {open && (
         <form action={formAction} className="mt-4 p-4 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] space-y-3 max-w-xl">

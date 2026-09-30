@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import Link from "next/link";
 import type { UsuarioState } from "@/app/(app)/admin/usuarios/actions";
 import type { UserRole } from "@/generated/prisma/enums";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -143,18 +142,21 @@ export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, de
               ({selectedSectors.size} de {sectorOptions.length})
             </span>
           </p>
-          <div className="flex items-center gap-3">
+          {/* Botões, e não texto azul/cinza (polimento de 30/09). Os cartões
+              de setor logo abaixo continuam: são caixas de marcar do próprio
+              formulário, não filtro de lista. */}
+          <div className="flex items-center gap-1.5">
             <Button
-              variant="link"
+              variant="secondary"
+              size="xs"
               onClick={() => setSelectedSectors(new Set(sectorOptions.map((s) => s.value)))}
-              className="text-[12px]"
             >
               Selecionar todos
             </Button>
             <Button
-              variant="linkMuted"
+              variant="secondary"
+              size="xs"
               onClick={() => setSelectedSectors(new Set())}
-              className="text-[12px] hover:underline"
             >
               Limpar
             </Button>
@@ -197,12 +199,9 @@ export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, de
         >
           {isPending ? "Salvando…" : "Salvar"}
         </Button>
-        <Link
-          href={cancelHref}
-          className="h-9 px-4 rounded-md border border-border text-[13px] text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors inline-flex items-center"
-        >
+        <Button href={cancelHref} variant="secondary">
           Cancelar
-        </Link>
+        </Button>
       </div>
     </form>
   );

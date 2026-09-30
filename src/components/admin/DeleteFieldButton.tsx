@@ -1,5 +1,6 @@
 "use client";
 
+import { Trash2 } from "lucide-react";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { Button } from "@/components/ui/Button";
 
@@ -18,10 +19,13 @@ export function DeleteFieldButton({ action, nome }: Props) {
     );
   }
 
+  // Botão de verdade, e não texto vermelho (polimento de 30/09: "botão não é
+  // link"). Serve às telas de fora da Administração que ainda o usam — nas
+  // listas de admin a exclusão foi para o "⋯" de `AcoesDoItem`.
   return (
     <>
-      <Button variant="link" onClick={handleClick} className="text-[12px] text-danger">
-        Excluir
+      <Button variant="danger" size="xs" onClick={handleClick}>
+        <Trash2 size={11} /> Excluir
       </Button>
       {dialog}
     </>
