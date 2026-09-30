@@ -36,9 +36,13 @@ export function MetricCard({ label, value, href, icon, sub, highlight = false, d
         )}
         <p className="text-[length:var(--fs-helper)] text-fg-muted truncate c41-cortavel">{label}</p>
       </div>
-      <div className="flex items-baseline gap-2">
+      {/* `min-w-0` + `truncate`: um valor em reais passava da borda do cartão
+          numa grade de quatro colunas (visto em Indicadores de RH, 30/09). O
+          valor encolhe de 30 para 22px até `2xl`, como o da FaixaDeTotais, e o
+          que ainda cortar ganha a dica. */}
+      <div className="flex items-baseline gap-2 min-w-0">
         <p
-          className={`font-display text-[length:var(--fs-metric)] font-semibold tnum leading-none ${
+          className={`font-display text-[length:var(--fs-title)] 2xl:text-[length:var(--fs-metric)] font-semibold tnum leading-none min-w-0 truncate c41-cortavel ${
             highlight ? "text-warning" : "text-fg"
           }`}
         >
@@ -50,7 +54,7 @@ export function MetricCard({ label, value, href, icon, sub, highlight = false, d
   );
 
   const cls =
-    "reveal-in bg-surface border border-border rounded-lg px-4 py-3.5 flex flex-col gap-2 shadow-[var(--c41-shadow-xs)] transition-[border-color,box-shadow,transform] duration-150";
+    "reveal-in min-w-0 bg-surface border border-border rounded-lg px-4 py-3.5 flex flex-col gap-2 shadow-[var(--c41-shadow-xs)] transition-[border-color,box-shadow,transform] duration-150";
 
   if (href) {
     return (
