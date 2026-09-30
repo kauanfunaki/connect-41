@@ -61,6 +61,11 @@
   --c41-danger-bg:       rgba(201,58,80,.10);
   --c41-info:            var(--c41-info-light);
   --c41-info-bg:         rgba(44,111,190,.10);
+  /* Gráficos (painéis da Home, 30/09): "próximo" é o passo da marca para o
+     que vem adiante; "neutro" é o sem-situação. Validados contra a superfície
+     com o validador do método de dataviz. */
+  --c41-grafico-proximo: var(--c41-brand-500);
+  --c41-grafico-neutro:  #958FA3;
   --c41-focus-ring:      rgba(31,94,234,.35);
   --c41-selected-bg:     rgba(31,94,234,.08);
   --c41-disabled-op:     .45;
@@ -101,6 +106,8 @@
   --c41-danger-bg:       rgba(235,100,120,.14);
   --c41-info:            var(--c41-info-dark);
   --c41-info-bg:         rgba(91,159,227,.14);
+  --c41-grafico-proximo: var(--c41-brand-400);
+  --c41-grafico-neutro:  #6E6879;
   --c41-focus-ring:      rgba(92,139,240,.45);
   --c41-selected-bg:     rgba(31,94,234,.22);
   --c41-disabled-op:     .42;
@@ -139,6 +146,8 @@
     --c41-danger-bg:       rgba(235,100,120,.14);
     --c41-info:            var(--c41-info-dark);
     --c41-info-bg:         rgba(91,159,227,.14);
+    --c41-grafico-proximo: var(--c41-brand-400);
+    --c41-grafico-neutro:  #6E6879;
     --c41-focus-ring:      rgba(92,139,240,.45);
     --c41-selected-bg:     rgba(31,94,234,.22);
     --c41-disabled-op:     .42;
