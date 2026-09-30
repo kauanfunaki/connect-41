@@ -54,6 +54,12 @@ export function threadDoEscopo(ctx: ContextoDaFerramenta): string {
 
 const SEM_PARAMETROS = { type: "object", properties: {}, additionalProperties: false } as const;
 
+/** "MARIA DA SILVA" → "Maria". Nome composto só pela primeira palavra. */
+export function primeiroNome(nomeCompleto: string): string {
+  const primeira = nomeCompleto.trim().split(/\s+/)[0] ?? "";
+  return primeira.charAt(0).toLocaleUpperCase("pt-BR") + primeira.slice(1).toLocaleLowerCase("pt-BR");
+}
+
 /** O endereço de inscrição de uma vaga no portal de carreiras. */
 export function linkDeInscricao(baseUrl: string, tenantSlug: string, vagaId: string): string {
   return `${baseUrl.replace(/\/$/, "")}/carreiras/${encodeURIComponent(tenantSlug)}/${encodeURIComponent(vagaId)}`;
@@ -121,6 +127,11 @@ export const FERRAMENTAS_DE_CANDIDATO: Record<string, FerramentaRegistrada> = {
         };
       }
 
+      // O primeiro nome, para o assistente chamar a pessoa pelo nome. Só aqui,
+      // com o vínculo confirmado: no teste de 30/09, sem nome nenhum, ele
+      // chamou o candidato de "Claude".
+      const pessoa = await prisma.person.findFirst({ where: { id: personId, tenantId: ctx.tenantId }, select: { name: true } });
+
       const candidaturas = await prisma.candidatura.findMany({
         where: { personId, tenantId: ctx.tenantId },
         orderBy: { createdAt: "desc" },
@@ -146,6 +157,7 @@ export const FERRAMENTAS_DE_CANDIDATO: Record<string, FerramentaRegistrada> = {
 
       return {
         identificado: true,
+        ...(pessoa ? { primeiroNome: primeiroNome(pessoa.name) } : {}),
         ...(ligada ? { faltaPerguntar: falta } : {}),
         candidaturas: candidaturas.map((c) => ({
           vaga: c.vaga.title,
