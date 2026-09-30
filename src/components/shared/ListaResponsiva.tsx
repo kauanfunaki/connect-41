@@ -17,8 +17,15 @@ export function CartoesNoCelular({ children, className = "" }: { children: React
   return <div className={`md:hidden flex flex-col gap-2 ${className}`}>{children}</div>;
 }
 
-export function TabelaNoDesktop({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`overflow-x-auto hidden md:block ${className}`}>{children}</div>;
+/**
+ * `padrao` põe a tabela no padrão do Connect (a de Empresas): casco com borda,
+ * cabeçalho com fundo e respiro nas pontas — sem mexer nas classes de cada
+ * célula. As regras estão em `.c41-tabela` (globals.css) e valem só para a
+ * tabela principal, não para as de dentro de uma célula.
+ */
+export function TabelaNoDesktop({ children, className = "", padrao = false }: { children: ReactNode; className?: string; padrao?: boolean }) {
+  const casco = padrao ? "c41-tabela bg-surface border border-border rounded-lg" : "";
+  return <div className={`overflow-x-auto hidden md:block ${casco} ${className}`.trim()}>{children}</div>;
 }
 
 export function Cartao({ children, className = "" }: { children: ReactNode; className?: string }) {

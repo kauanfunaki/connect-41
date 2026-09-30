@@ -19,12 +19,17 @@ type Props = Omit<React.InputHTMLAttributes<HTMLInputElement>, "prefix"> & {
 
 export function Input({ error = false, icon, prefix, suffix, compact = false, className = "", disabled, readOnly, ...rest }: Props) {
   const sizeClass = compact ? "h-8 text-[13px]" : "h-9 text-[length:var(--fs-input)]";
+  // `w-full` é o padrão de formulário; quem passa largura própria (o mês do
+  // filtro, as horas do processo) quer a dele. Com os dois, o `w-40` perdia
+  // para o `w-full` no CSS, e o filtro de mês esticava pela tela inteira,
+  // empurrando o "Aplicar" para outra linha (visto no redesign de 30/09).
+  const largura = /(^|\s)w-(?!full(\s|$))\S+/.test(className) ? "" : "w-full";
   // Variante com prefixo/sufixo: a borda e o focus ring vivem no wrapper
   // (focus-within), e o input interno fica transparente e sem borda.
   if (prefix || suffix) {
     return (
       <div
-        className={`flex items-stretch w-full ${compact ? "h-8" : "h-9"} rounded-md border bg-input-bg overflow-hidden transition-colors ${
+        className={`flex items-stretch ${largura} ${compact ? "h-8" : "h-9"} rounded-md border bg-input-bg overflow-hidden transition-colors ${
           error
             ? "border-danger focus-within:shadow-[0_0_0_3px_var(--c41-danger-bg)]"
             : "border-border-strong focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)]"
@@ -54,7 +59,7 @@ export function Input({ error = false, icon, prefix, suffix, compact = false, cl
     <input
       disabled={disabled}
       readOnly={readOnly}
-      className={`w-full ${sizeClass} ${icon ? "pl-9" : "px-3"} pr-3 rounded-md border bg-input-bg text-fg placeholder:text-fg-muted outline-none transition-colors ${
+      className={`${largura} ${sizeClass} ${icon ? "pl-9" : "px-3"} pr-3 rounded-md border bg-input-bg text-fg placeholder:text-fg-muted outline-none transition-colors ${
         error
           ? "border-danger focus:shadow-[0_0_0_3px_var(--c41-danger-bg)]"
           : "border-border-strong focus:border-brand focus:shadow-[0_0_0_3px_var(--c41-focus-ring)]"

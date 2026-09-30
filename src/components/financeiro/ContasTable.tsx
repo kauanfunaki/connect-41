@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 // Constante de módulo comum, e não do componente de cliente: importada de um
 // arquivo "use client", chegaria aqui como referência de cliente, não string.
 import { FORM_DO_CENTRO } from "@/lib/financeiro/centroDeCusto";
+import { MarcarTodasAsContas } from "./DefinirCentroDasContas";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 
 const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -109,18 +110,26 @@ export function ContasTable({
       {/* Selo só enquanto pesa sobre a conta, ou aprovada ainda em aberto:
           depois de paga ou cancelada, a aprovação é histórico. */}
       {seloDeAprovacaoVisivel(l) && <SeloDaAprovacao status={l.approvalStatus} />}
-      {l.documentoId && (
-        <Link href={`/documentos-fiscais/${l.documentoId}`} className="text-brand hover:underline text-[12px] whitespace-nowrap">
-          ver nota
-        </Link>
-      )}
-      {podeAbrirPendencia && l.situacao !== "CANCELADA" && (
-        <Link href={`/pendencias?nova=1&lancamento=${l.id}`} className="text-brand hover:underline text-[12px] whitespace-nowrap">
-          abrir pendência
-        </Link>
-      )}
     </>
   );
+
+  // Atalhos para fora da tabela. Ficavam junto dos selos e disputavam espaço
+  // com eles; agora ficam com as ações da linha.
+  const atalhos = (l: LinhaDaConta) =>
+    (l.documentoId || (podeAbrirPendencia && l.situacao !== "CANCELADA")) && (
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[length:var(--fs-badge)]">
+        {l.documentoId && (
+          <Link href={`/documentos-fiscais/${l.documentoId}`} className="text-brand hover:underline whitespace-nowrap">
+            ver nota
+          </Link>
+        )}
+        {podeAbrirPendencia && l.situacao !== "CANCELADA" && (
+          <Link href={`/pendencias?nova=1&lancamento=${l.id}`} className="text-brand hover:underline whitespace-nowrap">
+            abrir pendência
+          </Link>
+        )}
+      </div>
+    );
 
   const acoes = (l: LinhaDaConta) => (
     <AcoesDaConta
@@ -177,78 +186,111 @@ export function ContasTable({
                   </span>
                 )}
                 <PeDoCartao>{selos(l)}</PeDoCartao>
-                <div className="mt-2">{acoes(l)}</div>
+                <div className="mt-2 flex flex-col gap-1.5">
+                  {acoes(l)}
+                  {atalhos(l)}
+                </div>
               </div>
             </div>
           </Cartao>
         ))}
       </CartoesNoCelular>
 
-      <TabelaNoDesktop>
-      <table className="w-full min-w-[880px] text-[13px]">
-        <thead>
-          <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-            {selecionarCentro && <th className="py-2 pr-2 font-medium w-6" aria-label="Selecionar"></th>}
-            <th className="py-2 pr-3 font-medium">Vencimento</th>
-            <th className="py-2 pr-3 font-medium">
-              {kind === "PAGAR" ? "Fornecedor" : "Cliente"}
-            </th>
-            <th className="py-2 pr-3 font-medium">Empresa</th>
-            <th className="py-2 pr-3 font-medium">Categoria</th>
-            {mostrarCentro && <th className="py-2 pr-3 font-medium">Centro de custo</th>}
-            <th className="py-2 pr-3 font-medium">Competência</th>
-            <th className="py-2 pr-3 font-medium text-right">Valor</th>
-            <th className="py-2 pr-3 font-medium">Situação</th>
-            <th className="py-2 font-medium"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {linhas.map((l) => (
-            <tr key={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
+      {/* No padrão das tabelas do Connect (a de Empresas): casco com borda,
+          colunas de largura fixa e cabeçalho com fundo. Até 30/09 eram nove
+          colunas soltas — empresa, categoria e centro quebravam em três linhas
+          e as ações saíam da tela. Empresa vai embaixo da contraparte e centro
+          embaixo da categoria: são o contexto da linha, não o que se compara. */}
+      <TabelaNoDesktop className="bg-surface border border-border rounded-lg">
+        <table className="w-full table-fixed min-w-[1080px] text-[length:var(--fs-ui)]">
+          <colgroup>
+            {selecionarCentro && <col className="w-11" />}
+            <col className="w-[104px]" />
+            <col />
+            <col className="w-[172px]" />
+            <col className="w-[96px]" />
+            <col className="w-[120px]" />
+            <col className="w-[168px]" />
+            <col className="w-[200px]" />
+          </colgroup>
+          <thead>
+            <tr className="border-b border-border bg-table-header-bg text-left text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
               {selecionarCentro && (
-                <td className="py-2.5 pr-2">
-                  <Checkbox name="entryIds" value={l.id} form={FORM_DO_CENTRO} aria-label={`Selecionar ${l.contraparteNome}`} />
-                </td>
+                <th className="pl-4 pr-1 py-3">
+                  <MarcarTodasAsContas />
+                </th>
               )}
-              <td className="py-2.5 pr-3 whitespace-nowrap tabular-nums">
-                {formatInstantDate(l.vencimento)}
-                {l.pagoEm && (
-                  <span className="block text-[11px] text-fg-muted">
-                    pago em {formatInstantDate(l.pagoEm)}
-                  </span>
-                )}
-              </td>
-              <td className="py-2.5 pr-3">
-                <span className="font-medium">{l.contraparteNome}</span>
-                {l.descricao && (
-                  <span className="block text-[11px] text-fg-muted truncate max-w-[240px]">
-                    {l.descricao}
-                  </span>
-                )}
-              </td>
-              <td className="py-2.5 pr-3 text-fg-secondary">{l.empresaNome}</td>
-              <td className="py-2.5 pr-3">
-                {l.categoriaNome ?? (
-                  // Categoria é obrigatória em PAGAR (`categoriaObrigatoria`), então
-                  // a ausência aqui é pendência de classificação, não campo vazio.
-                  <span className="inline-flex items-center gap-1 text-warning text-[12px]">
-                    <AlertCircle size={12} /> sem categoria
-                  </span>
-                )}
-              </td>
-              {mostrarCentro && <td className="py-2.5 pr-3 text-fg-secondary">{l.centroDeCustoNome ?? "—"}</td>}
-              <td className="py-2.5 pr-3 text-fg-muted tabular-nums">{l.competencia}</td>
-              <td className="py-2.5 pr-3 text-right tabular-nums font-medium">
-                {moeda(l.valorCentavos)}
-              </td>
-              <td className="py-2.5 pr-3">
-                <div className="flex items-center gap-2">{selos(l)}</div>
-              </td>
-              <td className="py-2.5">{acoes(l)}</td>
+              <th className="px-4 py-3">Vencimento</th>
+              <th className="px-4 py-3">{kind === "PAGAR" ? "Fornecedor" : "Cliente"}</th>
+              <th className="px-4 py-3">Categoria</th>
+              <th className="px-4 py-3">Competência</th>
+              <th className="px-4 py-3 text-right">Valor</th>
+              <th className="px-4 py-3">Situação</th>
+              <th className="px-4 py-3">
+                <span className="sr-only">Ações</span>
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {linhas.map((l) => (
+              <tr key={l.id} className="border-b border-border last:border-b-0 align-top hover:bg-surface-hover transition-colors">
+                {selecionarCentro && (
+                  <td className="pl-4 pr-1 py-3">
+                    <Checkbox name="entryIds" value={l.id} form={FORM_DO_CENTRO} aria-label={`Selecionar ${l.contraparteNome}`} />
+                  </td>
+                )}
+                <td className="px-4 py-3 whitespace-nowrap tabular-nums">
+                  {formatInstantDate(l.vencimento)}
+                  {l.pagoEm && (
+                    <span className="block text-[length:var(--fs-micro)] text-fg-muted">pago em {formatInstantDate(l.pagoEm)}</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 min-w-0">
+                  <span className="block font-medium truncate" title={l.contraparteNome}>
+                    {l.contraparteNome}
+                  </span>
+                  {l.descricao && (
+                    <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate" title={l.descricao}>
+                      {l.descricao}
+                    </span>
+                  )}
+                  <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate" title={l.empresaNome}>
+                    {l.empresaNome}
+                  </span>
+                </td>
+                <td className="px-4 py-3 min-w-0">
+                  {l.categoriaNome ? (
+                    <span className="block truncate" title={l.categoriaNome}>
+                      {l.categoriaNome}
+                    </span>
+                  ) : (
+                    // Categoria é obrigatória em PAGAR (`categoriaObrigatoria`), então
+                    // a ausência aqui é pendência de classificação, não campo vazio.
+                    <span className="inline-flex items-center gap-1 text-warning">
+                      <AlertCircle size={12} /> sem categoria
+                    </span>
+                  )}
+                  {mostrarCentro && (
+                    <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate">
+                      {l.centroDeCustoNome ?? "sem centro de custo"}
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-fg-muted tabular-nums">{l.competencia}</td>
+                <td className="px-4 py-3 text-right tabular-nums font-medium whitespace-nowrap">{moeda(l.valorCentavos)}</td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap items-center gap-1.5">{selos(l)}</div>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-col gap-1.5">
+                    {acoes(l)}
+                    {atalhos(l)}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </TabelaNoDesktop>
     </>
   );
