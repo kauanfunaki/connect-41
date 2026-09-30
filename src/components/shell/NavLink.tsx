@@ -138,25 +138,25 @@ export function CadastrosNavItem({ icon, label }: CadastrosNavItemProps) {
 }
 
 type SectorNavItemProps = {
-  href: string;
   label: string;
   color: string;
   icon?: React.ReactNode;
+  /** Troca o ambiente para o setor (ver `trocarSetor` no ContextSwitcher). */
+  onEntrar: () => void;
 };
 
-export function SectorNavItem({ href, label, color, icon }: SectorNavItemProps) {
-  const pathname = usePathname();
-  const active = isActivePath(pathname, href);
-
+/**
+ * Um setor na lista de "Todos os setores". Desde 30/09 o clique **entra no
+ * ambiente do setor** (a sidebar passa a ser a dele), em vez de abrir o hub
+ * `/setor/{code}` dentro do modo geral — pedido do Kauan: listar as telas de
+ * todos os setores juntas, para quem tem acesso a todos, poluía demais.
+ */
+export function SectorNavItem({ label, color, icon, onEntrar }: SectorNavItemProps) {
   return (
-    <Link
-      href={href}
-      className={classeDoItem(active, `text-[13px] ${active ? "font-medium" : ""}`)}
-    >
-      {active && <BarraAtiva />}
+    <button type="button" onClick={onEntrar} className={classeDoItem(false, "w-[calc(100%+0.75rem)] text-[13px]")}>
       <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: color }} />
-      {icon && <span className={`flex-shrink-0 [&>svg]:w-[15px] [&>svg]:h-[15px] ${active ? "text-brand" : ""}`}>{icon}</span>}
+      {icon && <span className="flex-shrink-0 [&>svg]:w-[15px] [&>svg]:h-[15px]">{icon}</span>}
       {label}
-    </Link>
+    </button>
   );
 }

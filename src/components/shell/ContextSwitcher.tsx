@@ -74,7 +74,9 @@ function trocarTenant(tenantId: string, dominio: string | null, sufixo: string):
   window.location.href = destino(null, dominio, sufixo);
 }
 
-function trocarSetor(code: string, dominio: string | null, sufixo: string): void {
+// Exportada: o item do setor na sidebar ("Todos os setores") troca o ambiente
+// pelo mesmo caminho do seletor — cookie e, com domínio-base, o host do setor.
+export function trocarSetor(code: string, dominio: string | null, sufixo: string): void {
   const alvo = code === TODOS ? null : code;
   gravarSetor(alvo, dominio);
   window.location.href = destino(alvo, dominio, sufixo);
