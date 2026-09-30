@@ -275,7 +275,7 @@ function TabelaDaFila({ linhas, hojeKey }: { linhas: LinhaDeCobranca[]; hojeKey:
         ))}
       </CartoesNoCelular>
 
-      <TabelaNoDesktop>
+      <TabelaNoDesktop padrao>
       <table className="w-full min-w-[1080px] text-[13px]">
         <thead>
           <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
@@ -591,7 +591,7 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
             ))}
           </CartoesNoCelular>
 
-          <TabelaNoDesktop>
+          <TabelaNoDesktop padrao>
           <table className="w-full min-w-[880px] text-[13px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">

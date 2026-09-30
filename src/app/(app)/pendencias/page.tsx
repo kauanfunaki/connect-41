@@ -161,7 +161,7 @@ export default async function PendenciasPage({
           {limitado && <p className="text-[11px] text-fg-muted mt-1">Mostrando as 500 primeiras. Filtre por empresa para ver o resto.</p>}
         </CartoesNoCelular>
 
-        <TabelaNoDesktop>
+        <TabelaNoDesktop padrao>
           <table className="w-full min-w-[860px] text-[13px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
