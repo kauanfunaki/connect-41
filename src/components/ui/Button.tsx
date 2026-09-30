@@ -48,7 +48,7 @@ type Props = ButtonProps | LinkProps;
 //   com 10 consumidores) é borda translúcida, sem fundo em repouso, tingindo
 //   levemente no hover — adotado aqui ao pé da letra.
 const VARIANT_CLASS: Record<Variant, string> = {
-  primary: "bg-brand text-on-brand hover:bg-brand-hover",
+  primary: "bg-brand text-on-brand hover:bg-brand-hover shadow-[var(--c41-shadow-xs),inset_0_1px_0_rgba(255,255,255,.14)]",
   secondary: "border border-border-strong text-fg hover:bg-surface-hover",
   ghost: "bg-transparent text-fg-secondary hover:bg-surface-hover hover:text-fg",
   danger: "border border-danger/30 text-danger hover:bg-danger/8",
@@ -98,8 +98,11 @@ const SIZE_CLASS: Record<Size, string> = {
   lg: "h-10 px-5 text-[14px]",
 };
 
+// `active:translate-y-px`: o botão afunda 1px ao ser pressionado (polimento de
+// 30/09) — o retorno tátil que faltava num app de muito clique. Desabilitado
+// não afunda.
 const BASE =
-  "inline-flex items-center justify-center gap-1.5 rounded-md font-semibold transition-colors disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed";
+  "inline-flex items-center justify-center gap-1.5 rounded-md font-semibold transition-[color,background-color,border-color,box-shadow,transform] duration-150 active:translate-y-px disabled:active:translate-y-0 disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed";
 
 // Sem `justify-center`, sem `font-semibold` e sem raio de botão: o alvo é uma
 // palavra no meio de uma frase, não um controle com área própria.

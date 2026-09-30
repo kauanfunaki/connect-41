@@ -34,6 +34,23 @@ function isActivePath(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+/**
+ * O desenho de todo item da sidebar. O item encosta na borda esquerda da
+ * coluna (`-ml-3`) para a barra do ativo ficar colada nela; por isso o fundo
+ * arredonda só à direita. Ativo: fundo de seleção, texto azul e a barra **na
+ * cor do setor** — o fio que liga o menu ao traço do título da tela
+ * (polimento de 30/09). Eram quatro cópias destas classes, uma por tipo de item.
+ */
+export function classeDoItem(active: boolean, extra = ""): string {
+  return `relative flex items-center gap-2.5 py-2 pr-2.5 -ml-3 pl-[calc(0.625rem+0.75rem)] rounded-r-lg transition-colors ${
+    active ? "text-brand bg-selected-bg" : "text-fg-secondary hover:text-fg hover:bg-surface-hover"
+  } ${extra}`.trim();
+}
+
+function BarraAtiva() {
+  return <span aria-hidden className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-[var(--c41-setor)]" />;
+}
+
 export function NavItem({ href, icon, label, exact = false }: NavItemProps) {
   const pathname = usePathname();
   const active = exact ? pathname === href : isActivePath(pathname, href);
@@ -41,11 +58,9 @@ export function NavItem({ href, icon, label, exact = false }: NavItemProps) {
   return (
     <Link
       href={href}
-      className={`relative flex items-center gap-2.5 px-2.5 py-2 -ml-3 pl-[calc(0.625rem+0.75rem)] rounded-lg text-[14px] font-medium transition-colors ${
-        active ? "text-brand" : "text-fg-secondary hover:text-fg"
-      }`}
+      className={classeDoItem(active, "text-[14px] font-medium")}
     >
-      {active && <span className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-brand" />}
+      {active && <BarraAtiva />}
       <span className={`flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${active ? "text-brand" : ""}`}>{icon}</span>
       {label}
     </Link>
@@ -82,11 +97,9 @@ export function GrupoNavItem({
   return (
     <Link
       href={href}
-      className={`relative flex items-center gap-2.5 px-2.5 py-2 -ml-3 pl-[calc(0.625rem+0.75rem)] rounded-lg text-[14px] font-medium transition-colors ${
-        active ? "text-brand" : "text-fg-secondary hover:text-fg"
-      }`}
+      className={classeDoItem(active, "text-[14px] font-medium")}
     >
-      {active && <span className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-brand" />}
+      {active && <BarraAtiva />}
       <span className={`flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${active ? "text-brand" : ""}`}>{icon}</span>
       <span className="truncate">{label}</span>
       <span className={`ml-auto text-[11px] tabular-nums ${active ? "text-brand/70" : "text-fg-muted/70"}`}>
@@ -115,11 +128,9 @@ export function CadastrosNavItem({ icon, label }: CadastrosNavItemProps) {
   return (
     <Link
       href={href}
-      className={`relative flex items-center gap-2.5 px-2.5 py-2 -ml-3 pl-[calc(0.625rem+0.75rem)] rounded-lg text-[14px] font-medium transition-colors ${
-        active ? "text-brand" : "text-fg-secondary hover:text-fg"
-      }`}
+      className={classeDoItem(active, "text-[14px] font-medium")}
     >
-      {active && <span className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-brand" />}
+      {active && <BarraAtiva />}
       <span className={`flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${active ? "text-brand" : ""}`}>{icon}</span>
       {label}
     </Link>
@@ -140,11 +151,9 @@ export function SectorNavItem({ href, label, color, icon }: SectorNavItemProps) 
   return (
     <Link
       href={href}
-      className={`relative flex items-center gap-2.5 px-2.5 py-2 -ml-3 pl-[calc(0.625rem+0.75rem)] rounded-lg text-[13px] transition-colors ${
-        active ? "text-brand font-medium" : "text-fg-secondary hover:text-fg"
-      }`}
+      className={classeDoItem(active, `text-[13px] ${active ? "font-medium" : ""}`)}
     >
-      {active && <span className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-brand" />}
+      {active && <BarraAtiva />}
       <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: color }} />
       {icon && <span className={`flex-shrink-0 [&>svg]:w-[15px] [&>svg]:h-[15px] ${active ? "text-brand" : ""}`}>{icon}</span>}
       {label}

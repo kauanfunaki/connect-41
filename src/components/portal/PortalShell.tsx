@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ChartColumn, LogOut, Menu, TriangleAlert, X } from "lucide-react";
-import { NavItem } from "@/components/shell/NavLink";
+import { NavItem, classeDoItem } from "@/components/shell/NavLink";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { Button } from "@/components/ui/Button";
 import { sairDoPortal } from "@/app/(portal)/portal/login/actions";
@@ -120,7 +120,7 @@ export function PortalShell({
           <form action={sairDoPortal}>
             <button
               type="submit"
-              className="w-full flex items-center gap-2.5 px-2.5 py-2 -ml-3 pl-[calc(0.625rem+0.75rem)] rounded-lg text-[14px] font-medium text-fg-secondary hover:text-fg transition-colors"
+              className={classeDoItem(false, "w-[calc(100%+0.75rem)] text-[14px] font-medium")}
             >
               <LogOut size={16} className="flex-shrink-0" />
               Sair
@@ -143,7 +143,7 @@ export function PortalShell({
           </button>
           <span className="text-[14px] font-medium text-fg truncate">{grupoNome ?? "Portal do cliente"}</span>
         </header>
-        <main className="scroll-y scroll-gutter-stable flex-1 overflow-y-auto">{children}</main>
+        <main className="c41-atmosfera scroll-y scroll-gutter-stable flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>
   );

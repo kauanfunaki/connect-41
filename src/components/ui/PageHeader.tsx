@@ -15,8 +15,12 @@ export function PageHeader({ title, subtitle, action }: Props) {
   return (
     <div className="flex flex-wrap items-end justify-between mb-7 gap-x-4 gap-y-3">
       <div className="min-w-0 flex-1 basis-[18rem]">
-        <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.01em]">{title}</h1>
-        {subtitle && <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">{subtitle}</p>}
+        {/* O traço na cor do setor é a assinatura da tela (polimento de 30/09):
+            diz de quem ela é sem ocupar uma linha de texto. Fora de setor, e no
+            portal, é o azul da marca. */}
+        <span aria-hidden className="block h-[3px] w-7 rounded-full bg-[var(--c41-setor)] mb-3" />
+        <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.02em] leading-tight">{title}</h1>
+        {subtitle && <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1.5 max-w-[78ch] leading-relaxed">{subtitle}</p>}
       </div>
       {action && <div className="flex-shrink-0">{action}</div>}
     </div>

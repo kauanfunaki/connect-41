@@ -418,8 +418,10 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 }
 
 /* ----- Reveal genérico: stagger de entrada em grids/listas (Home, Kanban list) ----- */
+/* `backwards`: com `both` o translateY(0) final ficava preso no elemento e
+   anulava o hover que sobe o cartão (MetricCard) — animação vence classe. */
 .reveal-in {
-  animation: kanban-card-in 0.28s ease-out both;
+  animation: kanban-card-in 0.28s ease-out backwards;
 }
 @media (prefers-reduced-motion: reduce) {
   .kanban-card-enter, .reveal-in { animation: none; }
@@ -489,6 +491,97 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 /* Sublinha com largura máxima (descrição cortada) centraliza como bloco. */
 .c41-tabela > table > tbody > tr > td > .block {
   margin-inline: auto;
+}
+
+/* ==========================================================================
+   Polimento do Perímetro — onda 1 (30/09)
+   --------------------------------------------------------------------------
+   A identidade não muda (azul 41, Plex + Space Grotesk, cores de setor). O
+   que muda é profundidade e ritmo: três degraus de sombra, um brilho leve no
+   topo de cada tela, a cor do setor como fio de identidade (barra do menu,
+   traço do título, brilho da direita) e movimento só onde ele informa — a
+   tela chegando, o painel abrindo.
+   ========================================================================== */
+:root {
+  --c41-shadow-xs: 0 1px 2px rgba(20,15,30,.06);
+  --c41-shadow-md: 0 10px 28px -8px rgba(20,15,30,.16);
+  --c41-glow:      rgba(31,94,234,.11);
+  /* Cor do setor ativo. O AppShell troca por `activeSector.color`; fora de
+     setor (e no portal) é o azul da marca. */
+  --c41-setor:     var(--c41-brand);
+}
+:root[data-theme="dark"] {
+  --c41-shadow-xs: 0 1px 2px rgba(0,0,0,.45);
+  --c41-shadow-md: 0 12px 32px -8px rgba(0,0,0,.65);
+  --c41-glow:      rgba(92,139,240,.15);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --c41-shadow-xs: 0 1px 2px rgba(0,0,0,.45);
+    --c41-shadow-md: 0 12px 32px -8px rgba(0,0,0,.65);
+    --c41-glow:      rgba(92,139,240,.15);
+  }
+}
+
+/* O brilho do topo da área de conteúdo: azul à esquerda, a cor do setor à
+   direita, os dois sumindo antes da primeira dobra. `local` faz o brilho rolar
+   junto com a página — fica no cabeçalho, não atrás da tabela. */
+.c41-atmosfera {
+  background:
+    radial-gradient(ellipse 1000px 360px at 12% -100px, var(--c41-glow), transparent 70%),
+    radial-gradient(ellipse 760px 300px at 96% -130px, color-mix(in srgb, var(--c41-setor) 13%, transparent), transparent 70%),
+    var(--c41-canvas);
+  background-attachment: local;
+}
+
+/* A tela chegando: os blocos do PageContainer sobem 6px em sequência.
+   `backwards`, e não `both`: terminada a animação o bloco fica SEM transform
+   — um transform que sobra vira containing block de todo `position: fixed`
+   dentro dele, e os modais da página abririam presos no bloco. */
+@keyframes c41-sobe {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.c41-pagina > * { animation: c41-sobe .34s cubic-bezier(.2,.7,.2,1) backwards; }
+.c41-pagina > :nth-child(2) { animation-delay: 40ms; }
+.c41-pagina > :nth-child(3) { animation-delay: 80ms; }
+.c41-pagina > :nth-child(4) { animation-delay: 120ms; }
+.c41-pagina > :nth-child(5) { animation-delay: 160ms; }
+.c41-pagina > :nth-child(n+6) { animation-delay: 200ms; }
+
+/* Painel abrindo (menu, popover, filtro, modal): nasce 4px acima e quase no
+   tamanho — rápido o bastante para não atrasar quem já sabe onde vai clicar. */
+@keyframes c41-surgir {
+  from { opacity: 0; transform: translateY(-4px) scale(.985); }
+  to   { opacity: 1; transform: none; }
+}
+.c41-surgir { animation: c41-surgir .14s ease-out backwards; transform-origin: top center; }
+@keyframes c41-esmaecer { from { opacity: 0; } to { opacity: 1; } }
+.c41-esmaecer { animation: c41-esmaecer .16s ease-out backwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .c41-pagina > *, .c41-surgir, .c41-esmaecer { animation: none; }
+}
+
+/* Tabela padrão: o casco descola do fundo, a linha acende inteira no hover e
+   ganha o fio azul na borda esquerda — o olho acompanha a linha até a ação. */
+.c41-tabela {
+  box-shadow: var(--c41-shadow-xs);
+}
+.c41-tabela > table > tbody > tr {
+  transition: background-color .12s ease;
+}
+.c41-tabela > table > tbody > tr:hover {
+  background: var(--c41-surface-hover);
+}
+.c41-tabela > table > tbody > tr:hover > :first-child {
+  box-shadow: inset 3px 0 0 var(--c41-brand);
+}
+.c41-tabela > table > tbody > tr > td {
+  font-variant-numeric: tabular-nums;
+}
+.c41-tabela > table > thead > tr > th {
+  letter-spacing: .04em;
 }
 
 /* ----- Dica do texto cortado (DicaFlutuante): só opacidade — o transform
