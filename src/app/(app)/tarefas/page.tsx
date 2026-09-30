@@ -1,172 +1,222 @@
 import Link from "next/link";
+import {
+  AlarmClock,
+  CalendarClock,
+  CalendarDays,
+  CheckCircle2,
+  Columns3,
+  Loader,
+  PauseCircle,
+  PlayCircle,
+  Sparkles,
+  UserX,
+  Video,
+} from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { ArrowRightLeft, Columns3, ListTodo, Video } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { PageContainer } from "@/components/shared/PageContainer";
+import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { ConfigurarTarefasButton } from "@/components/tarefas/ConfigurarTarefasButton";
+import { LinhaDoDia } from "@/components/tarefas/LinhaDoDia";
+import { PrazoItem } from "@/components/agenda/PrazoItem";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, isFullAccess, scopedSectors } from "@/lib/auth/context";
-import { scopedPipelineWhere } from "@/lib/auth/scope";
+import { getAuthContext, scopedSectors } from "@/lib/auth/context";
 import { getSectorMaps, getActiveSectors } from "@/lib/sectors";
 import { parseTaskWidgets, visibleTaskWidgets, type TaskWidgetKey } from "@/lib/taskWidgets";
-import { ConfigurarTarefasButton } from "@/components/tarefas/ConfigurarTarefasButton";
+import { itensDaGestao } from "@/lib/gestao/itens";
+import { cargaPorPessoa, recorteDaGestao } from "@/lib/gestao/regras";
+import { nomesDasPessoas } from "@/lib/gestao/telas";
+import { andando, paraComecar, pedeAgora, resumirDia } from "@/lib/meuDia";
+import { prazosDoPeriodo } from "@/lib/prazosDaAgenda";
+import { addDaysToKey, saoPauloParts, weekdayLabel } from "@/lib/agenda";
+import { formatCalendarDate, formatInstantDate, formatInstantTime } from "@/lib/format";
 import { salvarWidgetsSetor, restaurarWidgetsSetor } from "./actions";
-import { PageContainer } from "@/components/shared/PageContainer";
-import { Badge } from "@/components/ui/Badge";
-import { SectorChip } from "@/components/ui/SectorChip";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
-import {
-  HANDOFF_STATUS_LABEL,
-  HANDOFF_STATUS_BADGE,
-  HANDOFF_PRIORITY_LABEL,
-  HANDOFF_PRIORITY_BADGE,
-} from "@/lib/handoffs";
-import type { HandoffPriority, Prisma } from "@/generated/prisma/client";
-import { boardPath } from "@/lib/kanbanPaths";
 
-const PRIORITY_ORDER: Record<HandoffPriority, number> = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+export const dynamic = "force-dynamic";
 
-// Tela de Tarefas: as obrigações de quem está logado, num lugar só.
+/** Quantos itens cada bloco mostra antes do "+N". */
+const POR_BLOCO = 8;
+
+// Meu dia (30/09) — a antiga tela de Tarefas, virada na primeira tela do
+// expediente. Pedido do Kauan: ao começar o dia, a pessoa abre aqui para ver o
+// que precisa fazer; é a Gestão (que mede tudo o que está rodando) em escala
+// de uma pessoa, e o coordenador troca para o time.
 //
-// QUAIS blocos aparecem é configurado pelo SUPER_ADMIN, por setor
-// (SectorTaskView / src/lib/taskWidgets.ts). Transferências, cards de kanban e
-// reuniões servem todo mundo hoje, mas deixam de descrever o trabalho de um
-// setor assim que ele ganha módulos próprios — daí a tela não ser fixa. Setor
-// sem configuração mostra tudo, e quem está em mais de um setor vê a união.
-export default async function TarefasPage() {
-  const ctx = await getAuthContext();
-  const prisma = getPrisma();
-  const [{ labels: sectorLabels, colors: sectorColors }, taskViews] = await Promise.all([
-    getSectorMaps(ctx.tenantId),
-    prisma.sectorTaskView.findMany({
-      where: { tenantId: ctx.tenantId },
-      select: { sectorCode: true, widgets: true },
-    }),
-  ]);
+// Os itens são os mesmos da Gestão — processo, card, pendência e
+// transferência —, com a mesma régua de parado e de prazo (`classificar`).
+// "Meu" é onde a pessoa responde; "Meu time" são os setores que ela coordena.
+//
+// A configuração por setor (SectorTaskView, do SUPER_ADMIN) continua valendo:
+// sem "transferências" ou sem "cards", essas origens saem; sem "reuniões", o
+// bloco de reuniões sai.
+type ItemDoDia = Awaited<ReturnType<typeof itensDaGestao>>[number];
 
+/** Um bloco do Meu dia: título, contagem e os itens (até POR_BLOCO). */
+function Bloco({
+  titulo,
+  icone,
+  lista,
+  vazio,
+  visaoTime,
+  setores,
+  nomeDe,
+}: {
+  titulo: string;
+  icone: React.ReactNode;
+  lista: ItemDoDia[];
+  vazio: string;
+  visaoTime: boolean;
+  setores: Record<string, { rotulo: string; cor: string }>;
+  nomeDe: Map<string, string>;
+}) {
+  const resto = lista.length - POR_BLOCO;
+  return (
+    <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
+      <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border">
+        <h2 className="flex items-center gap-2 text-[14px] font-semibold text-fg [&>svg]:size-4 [&>svg]:text-fg-muted">
+          {icone}
+          {titulo}
+        </h2>
+        <span className="text-[12px] text-fg-muted tnum">{lista.length}</span>
+      </header>
+      {lista.length === 0 ? (
+        <p className="px-4 py-5 text-[length:var(--fs-body)] text-fg-muted">{vazio}</p>
+      ) : (
+        <ul className="divide-y divide-border">
+          {lista.slice(0, POR_BLOCO).map((x) => (
+            <LinhaDoDia
+              key={`${x.item.origem}-${x.item.id}`}
+              item={x.item}
+              c={x.c}
+              setor={setores[x.item.setor] ?? { rotulo: x.item.setor, cor: "#586577" }}
+              responsaveis={visaoTime ? x.item.responsaveis.map((id) => nomeDe.get(id) ?? "—") : undefined}
+            />
+          ))}
+        </ul>
+      )}
+      {resto > 0 && (
+        <p className="px-4 py-2.5 border-t border-border text-[12px] text-fg-muted">
+          + {resto} {resto === 1 ? "outro" : "outros"} — veja todos no{" "}
+          <Link href="/kanban" className="font-medium text-fg-secondary hover:text-brand">
+            quadro de tarefas
+          </Link>
+          {visaoTime && (
+            <>
+              {" "}ou na{" "}
+              <Link href="/gestao" className="font-medium text-fg-secondary hover:text-brand">
+                Gestão
+              </Link>
+            </>
+          )}
+          .
+        </p>
+      )}
+    </section>
+  );
+}
+
+export default async function MeuDiaPage({ searchParams }: { searchParams: Promise<{ visao?: string }> }) {
+  const ctx = await getAuthContext();
+  const params = await searchParams;
+  const prisma = getPrisma();
+  const agora = new Date();
+  const hojeKey = saoPauloParts(agora).dateKey;
+
+  const recorte = recorteDaGestao(ctx);
+  const podeVerTime = recorte !== null;
+  const visaoTime = params.visao === "time" && podeVerTime;
+  // Com setor ativo, as duas visões ficam nele (quando é um setor que a pessoa coordena).
+  const setoresDaVisao: "todos" | string[] = visaoTime
+    ? recorte === "todos"
+      ? ctx.activeSector
+        ? [ctx.activeSector]
+        : "todos"
+      : ctx.activeSector && recorte!.includes(ctx.activeSector)
+        ? [ctx.activeSector]
+        : recorte!
+    : ctx.activeSector
+      ? [ctx.activeSector]
+      : "todos";
+
+  const [{ labels, colors }, taskViews] = await Promise.all([
+    getSectorMaps(ctx.tenantId),
+    prisma.sectorTaskView.findMany({ where: { tenantId: ctx.tenantId }, select: { sectorCode: true, widgets: true } }),
+  ]);
   const configBySector: Record<string, TaskWidgetKey[]> = {};
   for (const v of taskViews) configBySector[v.sectorCode] = parseTaskWidgets(v.widgets);
-
-  // Com setor ativo, quem manda é a configuração DAQUELE setor; em "Todos",
-  // continua sendo a união dos setores da pessoa — o comportamento anterior.
-  // (`scopedSectors` devolve null para full access em "Todos"; aí cai em
-  // ctx.sectors, e lista vazia já significa "widgets padrão" lá dentro.)
   const visiveis = new Set(visibleTaskWidgets(scopedSectors(ctx) ?? ctx.sectors, configBySector));
-  const mostraTransferencias = visiveis.has("transferencias");
-  const mostraCards = visiveis.has("cards-kanban");
   const mostraReunioes = visiveis.has("reunioes");
 
-  // Só o SUPER_ADMIN configura — o gate de verdade está na action; esconder o
-  // botão é só para não oferecer o que vai ser recusado.
   const podeConfigurar = ctx.role === "SUPER_ADMIN";
   const setoresParaConfigurar = podeConfigurar
     ? (await getActiveSectors(ctx.tenantId)).map((s) => ({ code: s.code, label: s.label }))
     : [];
 
-  // Instruções de transferência em aberto que são responsabilidade minha:
-  // - colaborador: as designadas pra mim;
-  // - coordenador (SECTOR_ADMIN): tudo do(s) setor(es) que coordena;
-  // - gerência geral (ADMIN/SUPER_ADMIN/READONLY): tudo do tenant.
-  const instrucaoWhere: Prisma.HandoffSectorWhereInput = isFullAccess(ctx.role)
-    ? { tenantId: ctx.tenantId, status: { not: "DONE" } }
-    : ctx.role === "SECTOR_ADMIN" && ctx.sectors.length > 0
-      ? {
-          tenantId: ctx.tenantId,
-          status: { not: "DONE" },
-          OR: [{ sectorCode: { in: ctx.sectors } }, { assignees: { some: { userId: ctx.userId } } }],
-        }
-      : { tenantId: ctx.tenantId, status: { not: "DONE" }, assignees: { some: { userId: ctx.userId } } };
-
-  // Bloco escondido não consulta o banco: a configuração do setor deixa de ser
-  // só visual e vira menos trabalho por request.
-  const now = new Date();
-  const [instrucoesRaw, meusCards, reunioes] = await Promise.all([
-    mostraTransferencias
-      ? prisma.handoffSector.findMany({
-          where: instrucaoWhere,
-          include: {
-            assignees: { include: { user: { select: { name: true } } } },
-            handoff: {
-              select: {
-                id: true,
-                fromSector: true,
-                priority: true,
-                message: true,
-                entityType: true,
-                entityId: true,
-                createdAt: true,
-                requester: { select: { name: true } },
-              },
-            },
-          },
-        })
-      : Promise.resolve([]),
-    mostraCards && ctx.userId
-      ? prisma.pipelineItem.findMany({
-          where: {
-            tenantId: ctx.tenantId,
-            pipeline: scopedPipelineWhere(ctx),
-            stage: { isTerminal: false },
-            assignees: { some: { userId: ctx.userId } },
-          },
-          orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
-          select: {
-            id: true,
-            entityId: true,
-            entityType: true,
-            title: true,
-            dueDate: true,
-            pipelineId: true,
-            stage: { select: { name: true } },
-            pipeline: { select: { name: true, sectorCode: true } },
-          },
-        })
-      : Promise.resolve([]),
+  const [todos, reunioes, prazos] = await Promise.all([
+    itensDaGestao(ctx.tenantId, setoresDaVisao, agora, visaoTime ? {} : { responsavel: ctx.userId }),
     mostraReunioes && ctx.userId
       ? prisma.meeting.findMany({
           where: {
             tenantId: ctx.tenantId,
-            endAt: { gte: now },
+            endAt: { gte: agora },
             OR: [{ createdByUserId: ctx.userId }, { attendees: { some: { userId: ctx.userId } } }],
           },
           orderBy: { startAt: "asc" },
-          take: 5,
+          take: 4,
+          select: { id: true, title: true, startAt: true, meetingUrl: true },
         })
       : Promise.resolve([]),
+    prazosDoPeriodo(ctx, hojeKey, addDaysToKey(hojeKey, 6)),
   ]);
 
-  // Urgente primeiro; empate resolve pela mais antiga.
-  const instrucoes = instrucoesRaw.sort(
-    (a, b) =>
-      PRIORITY_ORDER[a.handoff.priority] - PRIORITY_ORDER[b.handoff.priority] ||
-      a.handoff.createdAt.getTime() - b.handoff.createdAt.getTime()
+  const itens = todos.filter(
+    (x) =>
+      (x.item.origem !== "TRANSFERENCIA" || visiveis.has("transferencias")) && (x.item.origem !== "CARD" || visiveis.has("cards-kanban"))
   );
+  const resumo = resumirDia(itens, agora);
+  const agoraLista = pedeAgora(itens);
+  const andandoLista = andando(itens);
+  const filaLista = paraComecar(itens);
 
-  // Nomes das entidades referenciadas
-  const companyIds = new Set<string>();
-  const personIds = new Set<string>();
-  for (const i of instrucoes) (i.handoff.entityType === "COMPANY" ? companyIds : personIds).add(i.handoff.entityId);
-  for (const c of meusCards) {
-    if (!c.entityId) continue; // tarefa sem empresa/pessoa associada
-    (c.entityType === "COMPANY" ? companyIds : personIds).add(c.entityId);
-  }
-  const [companies, people] = await Promise.all([
-    companyIds.size > 0
-      ? prisma.company.findMany({ where: { id: { in: Array.from(companyIds) } }, select: { id: true, name: true } })
-      : Promise.resolve([]),
-    personIds.size > 0
-      ? prisma.person.findMany({ where: { id: { in: Array.from(personIds) } }, select: { id: true, name: true } })
-      : Promise.resolve([]),
-  ]);
-  const entityNames: Record<string, string> = {};
-  companies.forEach((c) => (entityNames[c.id] = c.name));
-  people.forEach((p) => (entityNames[p.id] = p.name));
+  const carga = visaoTime
+    ? Array.from(cargaPorPessoa(itens).values()).sort((a, b) => b.vencidos - a.vencidos || b.abertos - a.abertos)
+    : [];
+  const semResponsavel = visaoTime ? itens.filter((x) => x.c.coluna !== "CONCLUIDO" && x.item.responsaveis.length === 0).length : 0;
+  const nomeDe = visaoTime ? await nomesDasPessoas(ctx.tenantId, itens.flatMap((x) => x.item.responsaveis)) : new Map<string, string>();
+
+  const setorDe = (code: string) => ({ rotulo: labels[code] ?? code, cor: colors[code] ?? "#586577" });
+  const setores = Object.fromEntries(Object.keys(labels).map((code) => [code, setorDe(code)]));
+
+  const quantosPedem = agoraLista.length;
+  const dataDeHoje = formatInstantDate(agora, { weekday: "long", day: "numeric", month: "long" });
+  const subtitulo = visaoTime
+    ? `${dataDeHoje} · ${quantosPedem ? `${quantosPedem} ${quantosPedem === 1 ? "item pede" : "itens pedem"} o time agora` : "nada pede o time agora"}`
+    : `${dataDeHoje} · ${quantosPedem ? `${quantosPedem} ${quantosPedem === 1 ? "coisa pede" : "coisas pedem"} você agora` : "nada atrasado nem parado"}`;
+
+  const prazosPorDia = new Map<string, typeof prazos>();
+  for (const p of prazos) prazosPorDia.set(p.dia, [...(prazosPorDia.get(p.dia) ?? []), p]);
+  const diasComPrazo = Array.from(prazosPorDia.keys()).sort();
+
+  const contexto = { visaoTime, setores, nomeDe };
 
   return (
     <PageContainer>
       <PageHeader
-        title="Tarefas"
-        subtitle="Suas obrigações em aberto, conforme o que cada setor acompanha aqui"
+        title={visaoTime ? "Meu time" : "Meu dia"}
+        subtitle={<span className="first-letter:uppercase inline-block">{subtitulo}</span>}
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {podeVerTime && (
+              <SegmentedControl
+                label="Visão"
+                active={visaoTime ? "time" : "meu"}
+                items={[
+                  { key: "meu", label: "Meu dia", href: "/tarefas" },
+                  { key: "time", label: "Meu time", href: "/tarefas?visao=time" },
+                ]}
+              />
+            )}
             {podeConfigurar && (
               <ConfigurarTarefasButton
                 sectors={setoresParaConfigurar}
@@ -175,149 +225,173 @@ export default async function TarefasPage() {
                 resetAction={restaurarWidgetsSetor}
               />
             )}
-            <Link
-              href="/kanban"
-              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md border border-border text-[13px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors"
-            >
-              <Columns3 size={14} /> Ver quadros
-            </Link>
+            <Button href="/kanban" variant="secondary" size="sm">
+              <Columns3 size={14} /> Quadros
+            </Button>
           </div>
         }
       />
 
-      {visiveis.size === 0 ? (
-        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-          <EmptyState
-            icon={<ListTodo />}
-            title="Nada configurado para o seu setor"
-            description="O super admin ainda não definiu quais obrigações aparecem aqui para o seu setor."
+      <FaixaDeTotais
+        itens={[
+          {
+            rotulo: "Atrasados",
+            valor: String(resumo.atrasados),
+            icone: <AlarmClock />,
+            tom: resumo.atrasados > 0 ? "text-danger" : undefined,
+            detalhe: "prazo já passou",
+          },
+          {
+            rotulo: "Vencem em breve",
+            valor: String(resumo.vencendo),
+            icone: <CalendarClock />,
+            tom: resumo.vencendo > 0 ? "text-warning" : undefined,
+            detalhe: "nos próximos dias",
+          },
+          {
+            rotulo: "Parados",
+            valor: String(resumo.parados),
+            icone: <PauseCircle />,
+            tom: resumo.parados > 0 ? "text-warning" : undefined,
+            detalhe: "sem movimento ou esperando",
+          },
+          { rotulo: "Em andamento", valor: String(resumo.andamento), icone: <Loader />, detalhe: "alguém está fazendo" },
+          {
+            rotulo: "Feitos na semana",
+            valor: String(resumo.concluidosNaSemana),
+            icone: <CheckCircle2 />,
+            tom: resumo.concluidosNaSemana > 0 ? "text-success" : undefined,
+            detalhe: "últimos 7 dias",
+          },
+        ]}
+      />
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1.7fr_1fr] gap-4 items-start">
+        <div className="flex flex-col gap-4 min-w-0">
+          <Bloco
+            {...contexto}
+            titulo={visaoTime ? "Pede o time agora" : "Pede você agora"}
+            icone={<AlarmClock />}
+            lista={agoraLista}
+            vazio={visaoTime ? "Nada atrasado nem parado no time." : "Nada atrasado nem parado. Bom trabalho."}
+          />
+          <Bloco {...contexto} titulo="Em andamento" icone={<Loader />} lista={andandoLista} vazio="Nada em andamento sem alerta." />
+          <Bloco
+            {...contexto}
+            titulo="Para começar"
+            icone={<PlayCircle />}
+            lista={filaLista}
+            vazio={visaoTime ? "Nada na fila do time." : "Nada na sua fila."}
           />
         </div>
-      ) : (
-      <div className="grid grid-cols-1 lg:grid-cols-[1.7fr_1fr] gap-4">
+
         <div className="flex flex-col gap-4 min-w-0">
-          {/* Transferências sob minha responsabilidade */}
-          {mostraTransferencias && (
-          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5 flex items-center gap-2">
-              <ArrowRightLeft size={15} className="text-fg-muted" /> Transferências em aberto
-            </h2>
-            {instrucoes.length === 0 ? (
-              <EmptyState
-                icon={<ListTodo />}
-                title="Nenhuma transferência pendente"
-                description="Instruções de transferência do seu setor ou designadas a você aparecem aqui."
-              />
+          {visaoTime && (
+            <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
+              <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border">
+                <h2 className="text-[14px] font-semibold text-fg">Carga do time</h2>
+                {semResponsavel > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[12px] font-medium text-warning">
+                    <UserX size={13} /> {semResponsavel} sem responsável
+                  </span>
+                )}
+              </header>
+              {carga.length === 0 ? (
+                <p className="px-4 py-5 text-[length:var(--fs-body)] text-fg-muted">Ninguém com item em aberto.</p>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {carga.slice(0, 10).map((p) => {
+                    const maior = Math.max(1, ...carga.map((x) => x.abertos));
+                    return (
+                      <li key={p.userId} className="px-4 py-2.5">
+                        <div className="flex items-center justify-between gap-3 text-[13px]">
+                          <span className="truncate font-medium text-fg">{nomeDe.get(p.userId) ?? "—"}</span>
+                          <span className="flex-shrink-0 text-fg-muted tnum">{p.abertos} em aberto</span>
+                        </div>
+                        <div className="mt-1.5 flex items-center gap-2">
+                          <span className="h-1.5 flex-1 rounded-full bg-surface-hover overflow-hidden">
+                            <span className="block h-full rounded-full bg-brand" style={{ width: `${(p.abertos / maior) * 100}%` }} />
+                          </span>
+                          {p.vencidos > 0 && <span className="text-[11px] font-medium text-danger tnum">{p.vencidos} atrasado{p.vencidos === 1 ? "" : "s"}</span>}
+                          {p.parados > 0 && <span className="text-[11px] font-medium text-warning tnum">{p.parados} parado{p.parados === 1 ? "" : "s"}</span>}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
+          )}
+
+          {mostraReunioes && (
+            <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
+              <header className="flex items-center gap-2 px-4 py-3 border-b border-border">
+                <Video size={16} className="text-fg-muted" />
+                <h2 className="text-[14px] font-semibold text-fg">Próximas reuniões</h2>
+              </header>
+              {reunioes.length === 0 ? (
+                <p className="px-4 py-5 text-[length:var(--fs-body)] text-fg-muted">Nenhuma reunião marcada.</p>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {reunioes.map((m) => {
+                    const hoje = saoPauloParts(m.startAt).dateKey === hojeKey;
+                    return (
+                      <li key={m.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                        <div className="min-w-0">
+                          <p className="truncate text-[13px] font-medium text-fg">{m.title}</p>
+                          <p className="text-[12px] text-fg-muted tnum">
+                            {hoje ? "Hoje" : formatInstantDate(m.startAt, { weekday: "short", day: "2-digit", month: "2-digit" })},{" "}
+                            {formatInstantTime(m.startAt, { hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        </div>
+                        <Button href={m.meetingUrl} target="_blank" rel="noopener noreferrer" variant={hoje ? "primary" : "secondary"} size="xs">
+                          Entrar
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
+          )}
+
+          <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
+            <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border">
+              <h2 className="flex items-center gap-2 text-[14px] font-semibold text-fg">
+                <CalendarDays size={16} className="text-fg-muted" /> Prazos da semana
+              </h2>
+              <Link href="/agenda?view=semana" className="text-[12px] font-medium text-fg-secondary hover:text-brand">
+                Abrir agenda
+              </Link>
+            </header>
+            {diasComPrazo.length === 0 ? (
+              <p className="px-4 py-5 text-[length:var(--fs-body)] text-fg-muted">
+                <Sparkles size={14} className="inline -mt-0.5 mr-1 text-fg-muted" />
+                Nenhum prazo nos seus setores nos próximos 7 dias.
+              </p>
             ) : (
-              <div className="space-y-3">
-                {instrucoes.map((i) => (
-                  <Link
-                    key={i.id}
-                    href={`/transferencias/${i.handoff.id}`}
-                    className="block group border border-border rounded-lg px-4 py-3 hover:border-border-strong hover:bg-surface-hover transition-colors"
-                  >
-                    <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                      <SectorChip
-                        label={sectorLabels[i.sectorCode] ?? i.sectorCode}
-                        color={sectorColors[i.sectorCode] ?? "#586577"}
-                      />
-                      <Badge variant={HANDOFF_STATUS_BADGE[i.status]}>{HANDOFF_STATUS_LABEL[i.status]}</Badge>
-                      <Badge variant={HANDOFF_PRIORITY_BADGE[i.handoff.priority]}>
-                        {HANDOFF_PRIORITY_LABEL[i.handoff.priority]}
-                      </Badge>
+              <ul className="divide-y divide-border">
+                {diasComPrazo.map((dia) => (
+                  <li key={dia} className="px-4 py-2.5">
+                    <p className="mb-1.5 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                      {dia === hojeKey
+                        ? "Hoje"
+                        : dia === addDaysToKey(hojeKey, 1)
+                          ? "Amanhã"
+                          : `${weekdayLabel(dia)}, ${formatCalendarDate(new Date(`${dia}T12:00:00Z`), { day: "2-digit", month: "2-digit" })}`}
+                    </p>
+                    <div className="space-y-1">
+                      {prazosPorDia.get(dia)!.slice(0, 5).map((p) => (
+                        <PrazoItem key={p.chave} prazo={p} setores={setores} />
+                      ))}
                     </div>
-                    <p className="text-[length:var(--fs-body)] font-medium text-fg group-hover:text-brand transition-colors">
-                      {entityNames[i.handoff.entityId] ?? "(removido)"}
-                    </p>
-                    {(i.instruction ?? i.handoff.message) && (
-                      <p className="text-[length:var(--fs-helper)] text-fg-secondary mt-0.5 line-clamp-2">
-                        {i.instruction ?? i.handoff.message}
-                      </p>
-                    )}
-                    <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1">
-                      De {sectorLabels[i.handoff.fromSector] ?? i.handoff.fromSector} · {i.handoff.requester.name} ·{" "}
-                      {formatInstantDate(i.handoff.createdAt, { day: "2-digit", month: "short" })} ·{" "}
-                      {i.assignees.length > 0
-                        ? `${i.assignees.length > 1 ? "Responsáveis" : "Responsável"}: ${i.assignees.map((a) => a.user.name).join(", ")}`
-                        : "Sem responsável"}
-                    </p>
-                  </Link>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
-          </div>
-          )}
-
-          {/* Cards de kanban atribuídos a mim */}
-          {mostraCards && (
-          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5 flex items-center gap-2">
-              <Columns3 size={15} className="text-fg-muted" /> Meus cards de kanban
-            </h2>
-            {meusCards.length === 0 ? (
-              <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhum card atribuído a você.</p>
-            ) : (
-              <div className="space-y-1">
-                {meusCards.map((c) => (
-                  <Link
-                    key={c.id}
-                    href={`${boardPath({ id: c.pipelineId })}/itens/${c.id}`}
-                    className="flex items-center justify-between gap-3 py-2 group"
-                  >
-                    <span className="text-[length:var(--fs-body)] text-fg group-hover:text-brand transition-colors truncate min-w-0">
-                      {c.title ?? (c.entityId ? entityNames[c.entityId] : null) ?? "(sem título)"}
-                      <span className="text-fg-muted font-normal">
-                        {" · "}
-                        {sectorLabels[c.pipeline.sectorCode] ?? c.pipeline.sectorCode}
-                        {" · "}
-                        {c.stage.name}
-                      </span>
-                    </span>
-                    <span className="flex-shrink-0 text-[length:var(--fs-helper)] text-fg-muted">
-                      {c.dueDate ? formatInstantDate(c.dueDate, { day: "2-digit", month: "short" }) : "Sem prazo"}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-          )}
+          </section>
         </div>
-
-        {/* Próximas reuniões */}
-        {mostraReunioes && (
-        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 h-fit">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5 flex items-center gap-2">
-            <Video size={15} className="text-fg-muted" /> Próximas reuniões
-          </h2>
-          {reunioes.length === 0 ? (
-            <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhuma reunião agendada.</p>
-          ) : (
-            <div className="space-y-3">
-              {reunioes.map((m) => (
-                <div key={m.id} className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[length:var(--fs-body)] font-medium text-fg truncate">{m.title}</p>
-                    <p className="text-[length:var(--fs-helper)] text-fg-muted">
-                      {formatInstantDateTime(m.startAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                  </div>
-                  <a
-                    href={m.meetingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-shrink-0 text-[12.5px] font-medium text-brand border border-brand/30 rounded-full px-3 py-1 hover:bg-brand-subtle transition-colors"
-                  >
-                    Entrar
-                  </a>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        )}
       </div>
-      )}
     </PageContainer>
   );
 }

@@ -14,7 +14,7 @@ export type TelaNavegavel = {
 };
 
 /** Sem acento e em minúsculas: quem digita "conciliacao" tem de achar "Conciliação". */
-function normalizar(texto: string): string {
+export function normalizar(texto: string): string {
   return texto
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")

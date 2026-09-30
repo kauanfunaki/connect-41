@@ -72,7 +72,7 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
         return;
       }
       setOpen(false);
-      toast.success("Tela de Tarefas configurada para este setor.");
+      toast.success("Meu dia configurado para este setor.");
     });
   }
 
@@ -99,16 +99,16 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
         size="md"
         className="bg-surface-hover hover:border-brand"
         onClick={openModal}
-        title="Configurar a tela de Tarefas"
-        aria-label="Configurar a tela de Tarefas"
+        title="Configurar o Meu dia"
+        aria-label="Configurar o Meu dia"
       >
         <SlidersHorizontal size={14} />
         <span className="hidden sm:inline">Configurar</span>
       </Button>
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Configurar a tela de Tarefas" maxWidth="max-w-lg">
+      <Modal open={open} onClose={() => setOpen(false)} title="Configurar o Meu dia" maxWidth="max-w-lg">
         <p className="text-[length:var(--fs-helper)] text-fg-muted mb-4">
-          Escolha o que aparece em Tarefas para cada setor. Vale para todo mundo do
+          Escolha o que aparece no Meu dia para cada setor. Vale para todo mundo do
           setor — quem participa de mais de um vê a soma dos blocos.
         </p>
 
@@ -156,7 +156,7 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
 
         {selected.length === 0 && (
           <p className="text-[12px] text-fg-secondary bg-surface-hover border border-border rounded-md px-3 py-2 mt-4">
-            Sem nenhum bloco marcado, quem é só de {sectorLabel} vai abrir Tarefas numa
+            Sem nenhum bloco marcado, quem é só de {sectorLabel} vai abrir o Meu dia numa
             tela vazia. É uma escolha válida enquanto o setor não tiver módulos próprios —
             só não é acidente.
           </p>

@@ -9,7 +9,7 @@ export type ModuloDoSetor = { code: string; label: string; description: string }
 /**
  * Os módulos de um setor em cartões, agrupados.
  *
- * Uma implementação só para a tela do setor inteira (`/setor/bpo`) e para a
+ * Uma implementação só para a tela com todas as telas do setor (`/setor/bpo/telas`) e para a
  * filtrada por grupo (`/setor/bpo/grupo/contas`), que é onde a sidebar cai ao
  * clicar no grupo: duas telas parecidas escritas duas vezes é como uma delas
  * envelhece sozinha.
@@ -43,7 +43,7 @@ export function ModulosDoSetor({
         <AbasDeLink
           ativa={grupoAtivo ?? "tudo"}
           abas={[
-            { chave: "tudo", rotulo: "Tudo", href: `/setor/${code}` },
+            { chave: "tudo", rotulo: "Tudo", href: `/setor/${code}/telas` },
             ...grupos.map((g) => ({
               chave: g.grupo,
               rotulo: `${g.grupo} · ${g.itens.length}`,

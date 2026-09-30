@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { MeetingItem } from "./MeetingItem";
+import { PrazoItem, type SetoresDaAgenda } from "./PrazoItem";
+import type { PrazoDaAgenda } from "@/lib/prazosDaAgenda";
 import { saoPauloParts, weekdayLabel, dayNumber } from "@/lib/agenda";
 import type { CalendarDay, MeetingActions, MeetingRow } from "./types";
 
@@ -30,13 +32,27 @@ type Props = {
   days: CalendarDay[];
   meetings: MeetingRow[];
   actions: MeetingActions;
-  onSlotClick: (dateKey: string, hour: number) => void;
+  /** Sem permissão de agendar, clicar num horário não faz nada. */
+  onSlotClick?: (dateKey: string, hour: number) => void;
+  prazos: PrazoDaAgenda[];
+  setores: SetoresDaAgenda;
 };
+
+/** Quantos prazos a faixa de dia inteiro mostra por dia, na semana, antes do "+N". */
+const PRAZOS_POR_DIA_NA_SEMANA = 3;
 
 // Grade com eixo de horas — serve às visões de dia (1 coluna) e semana (7).
 // A única diferença entre elas é quantos dias entram em `days`, então não
 // existe um DayGrid separado: seria o mesmo componente com um número fixo.
-export function TimeGrid({ days, meetings, actions, onSlotClick }: Props) {
+export function TimeGrid({ days, meetings, actions, onSlotClick, prazos, setores }: Props) {
+  const prazosByDay = useMemo(() => {
+    const map = new Map<string, PrazoDaAgenda[]>();
+    for (const p of prazos) map.set(p.dia, [...(map.get(p.dia) ?? []), p]);
+    return map;
+  }, [prazos]);
+  const temPrazo = days.some((d) => prazosByDay.has(d.dateKey));
+  const umDia = days.length === 1;
+
   const meetingsByDay = useMemo(() => {
     const map = new Map<string, (MeetingRow & { top: string; height: string; compact: boolean })[]>();
     for (const m of meetings) {
@@ -95,6 +111,39 @@ export function TimeGrid({ days, meetings, actions, onSlotClick }: Props) {
           ))}
         </div>
 
+        {/* Prazos do dia (30/09): vencimentos, prazos combinados, férias,
+            exames — tudo que é do dia inteiro, e não de uma hora. */}
+        {temPrazo && (
+          <div className="grid flex-shrink-0 border-b border-border" style={{ gridTemplateColumns: gridTemplate }}>
+            <div className="flex items-start justify-end pr-2 pt-1.5">
+              <span className="text-[length:var(--fs-micro)] text-fg-muted leading-none">Prazos</span>
+            </div>
+            {days.map((d) => {
+              const lista = prazosByDay.get(d.dateKey) ?? [];
+              const visiveis = umDia ? lista : lista.slice(0, PRAZOS_POR_DIA_NA_SEMANA);
+              const resto = lista.length - visiveis.length;
+              return (
+                <div
+                  key={d.dateKey}
+                  className={`border-l border-border p-1 min-w-0 max-h-[104px] overflow-y-auto scroll-y ${umDia ? "flex flex-wrap gap-1 [&>*]:w-auto [&>*]:max-w-full" : "space-y-0.5"}`}
+                >
+                  {visiveis.map((p) => (
+                    <PrazoItem key={p.chave} prazo={p} setores={setores} />
+                  ))}
+                  {resto > 0 && (
+                    <a
+                      href={`/agenda?view=dia&date=${d.dateKey}`}
+                      className="block px-1 text-[length:var(--fs-micro)] font-medium text-fg-muted hover:text-brand transition-colors"
+                    >
+                      +{resto} mais
+                    </a>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         <div className="grid flex-1 min-h-0" style={{ gridTemplateColumns: gridTemplate }}>
           {/* Cada rótulo se centra na linha que abre a sua hora. O da primeira
               hora saiu daqui pro cabeçalho — ver comentário acima.
@@ -119,13 +168,17 @@ export function TimeGrid({ days, meetings, actions, onSlotClick }: Props) {
           {days.map((d) => (
             <div key={d.dateKey} className="relative border-l border-border grid" style={{ gridTemplateRows: ROWS_TEMPLATE }}>
               {HOURS.map((h) => (
-                <button
-                  key={h}
-                  type="button"
-                  onClick={() => onSlotClick(d.dateKey, h)}
-                  className="w-full border-b border-border/60 hover:bg-surface-hover transition-colors block last:border-b-0"
-                  aria-label={`Criar reunião ${weekdayLabel(d.dateKey)} ${dayNumber(d.dateKey)} às ${h}:00`}
-                />
+                onSlotClick ? (
+                  <button
+                    key={h}
+                    type="button"
+                    onClick={() => onSlotClick(d.dateKey, h)}
+                    className="w-full border-b border-border/60 hover:bg-surface-hover transition-colors block last:border-b-0"
+                    aria-label={`Criar reunião ${weekdayLabel(d.dateKey)} ${dayNumber(d.dateKey)} às ${h}:00`}
+                  />
+                ) : (
+                  <div key={h} className="w-full border-b border-border/60 last:border-b-0" aria-hidden />
+                )
               ))}
 
               {d.isToday && <NowIndicator />}

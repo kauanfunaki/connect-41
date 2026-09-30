@@ -15,15 +15,26 @@ import {
   parseAgendaView,
   parseAgendaDate,
 } from "@/lib/agenda";
-import { redirect } from "next/navigation";
+import { prazosDoPeriodo } from "@/lib/prazosDaAgenda";
+import { getSectorMaps } from "@/lib/sectors";
 
 const VIEW_HELPER: Record<string, string> = {
-  dia: "As reuniões do dia — clique num horário vazio para agendar direto por aqui.",
-  semana: "Suas reuniões da semana — clique num horário vazio para agendar direto por aqui.",
-  mes: "O mês inteiro de relance — clique num dia para agendar ou abrir a visão de dia.",
+  dia: "Os prazos e as reuniões do dia — clique num horário vazio para agendar.",
+  semana: "Os prazos dos seus setores e as suas reuniões da semana.",
+  mes: "O mês inteiro de relance — clique no dia para abrir a visão de dia.",
+};
+const VIEW_HELPER_SEM_REUNIAO: Record<string, string> = {
+  dia: "Os prazos do dia nos seus setores: vencimentos, prazos combinados, férias e exames.",
+  semana: "Os prazos da semana nos seus setores: vencimentos, prazos combinados, férias e exames.",
+  mes: "Os prazos do mês nos seus setores — clique no dia para ver tudo dele.",
 };
 
-// Agenda interativa em três visões (dia, semana e mês). Visão e data de
+// Agenda interativa em três visões (dia, semana e mês).
+//
+// 30/09: deixou de ser só de reuniões (e só de coordenadores). O Kauan pediu
+// para ver se ela servia aos outros setores; serve — agora ela mostra os
+// prazos de cada setor que a pessoa enxerga (`prazosDoPeriodo`), e reunião
+// continua sendo criada só por coordenador e administrador. Visão e data de
 // referência vivem na URL (?view=&date=), então link direto, voltar/avançar do
 // navegador e o "+N mais" da visão mensal funcionam sem estado de cliente.
 // Reunião pode ser criada direto por aqui (clique num horário/dia vazio ou
@@ -36,7 +47,7 @@ export default async function AgendaPage({
 }) {
   const { view: viewRaw, date: dateRaw } = await searchParams;
   const ctx = await getAuthContext();
-  if (!canManageMeetings(ctx)) redirect("/home");
+  const podeAgendar = canManageMeetings(ctx);
 
   const view = parseAgendaView(viewRaw);
   const dateKey = parseAgendaDate(dateRaw);
@@ -46,7 +57,7 @@ export default async function AgendaPage({
   const rangeEnd = saoPauloDateTimeToUtc(days[days.length - 1], 23, 59);
 
   const prisma = getPrisma();
-  const [meetingsRaw, oauthAccounts, allUsers, companies] = await Promise.all([
+  const [meetingsRaw, oauthAccounts, allUsers, companies, prazos, { labels, colors }] = await Promise.all([
     prisma.meeting.findMany({
       where: {
         tenantId: ctx.tenantId,
@@ -59,18 +70,30 @@ export default async function AgendaPage({
         company: { select: { id: true, name: true, externalId: true } },
       },
     }),
-    prisma.oAuthAccount.findMany({ where: { tenantId: ctx.tenantId, userId: ctx.userId }, select: { provider: true } }),
-    prisma.user.findMany({
-      where: { tenantId: ctx.tenantId, active: true },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    }),
-    prisma.company.findMany({
-      where: { tenantId: ctx.tenantId, status: "ACTIVE" },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    }),
+    // Conta conectada, pessoas e empresas só servem para criar reunião.
+    podeAgendar
+      ? prisma.oAuthAccount.findMany({ where: { tenantId: ctx.tenantId, userId: ctx.userId }, select: { provider: true } })
+      : Promise.resolve([]),
+    podeAgendar
+      ? prisma.user.findMany({
+          where: { tenantId: ctx.tenantId, active: true },
+          orderBy: { name: "asc" },
+          select: { id: true, name: true },
+        })
+      : Promise.resolve([]),
+    podeAgendar
+      ? prisma.company.findMany({
+          where: { tenantId: ctx.tenantId, status: "ACTIVE" },
+          orderBy: { name: "asc" },
+          select: { id: true, name: true },
+        })
+      : Promise.resolve([]),
+    prazosDoPeriodo(ctx, days[0], days[days.length - 1]),
+    getSectorMaps(ctx.tenantId),
   ]);
+  const setores = Object.fromEntries(Object.keys(labels).map((code) => [code, { rotulo: labels[code], cor: colors[code] ?? "#586577" }]));
+  // A legenda só com os setores que têm prazo à vista.
+  const setoresComPrazo = Array.from(new Set(prazos.map((p) => p.setor))).filter((code) => setores[code]);
 
   const hasGoogle = oauthAccounts.some((a) => a.provider === "GOOGLE");
   const hasMicrosoft = oauthAccounts.some((a) => a.provider === "MICROSOFT");
@@ -108,7 +131,17 @@ export default async function AgendaPage({
     // em vez de a página rolar. Mesmo arranjo de /kanban/[id] e /bpo-manual.
     <PageContainer className="h-full flex flex-col">
       <div className="flex-shrink-0">
-        <PageHeader title="Agenda" subtitle={VIEW_HELPER[view]} />
+        <PageHeader title="Agenda" subtitle={(podeAgendar ? VIEW_HELPER : VIEW_HELPER_SEM_REUNIAO)[view]} />
+        {setoresComPrazo.length > 0 && (
+          <ul className="mb-3 -mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-fg-secondary" aria-label="Setores dos prazos">
+            {setoresComPrazo.map((code) => (
+              <li key={code} className="inline-flex items-center gap-1.5">
+                <span className="size-2.5 rounded-[3px]" style={{ background: setores[code].cor }} aria-hidden />
+                {setores[code].rotulo}
+              </li>
+            ))}
+          </ul>
+        )}
 
         {contasVencidas.length > 0 && (
           // "Reconectar agora" era link sublinhado no fim da frase (30/09): é a
@@ -140,6 +173,9 @@ export default async function AgendaPage({
           allUsers={allUsers}
           companies={companies}
           currentUserId={ctx.userId}
+          prazos={prazos}
+          setores={setores}
+          podeAgendar={podeAgendar}
         />
       </div>
     </PageContainer>

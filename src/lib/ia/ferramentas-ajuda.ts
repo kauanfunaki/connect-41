@@ -16,14 +16,21 @@ import { getModuleRoute } from "@/lib/module-catalog";
 
 const SEM_PARAMETROS = { type: "object", properties: {}, additionalProperties: false } as const;
 
-/** As telas que servem a todo setor — ficam fora do catálogo de módulos. */
+/**
+ * As telas que servem a todo setor — ficam fora do catálogo de módulos. É a
+ * mesma lista da central /ajuda: o que o agente responde e o que a pessoa lê
+ * não podem divergir. (30/09: Conversas saiu — é módulo da Controladoria — e
+ * Tarefas virou Meu dia.)
+ */
 export const TELAS_GERAIS = [
-  { tela: "Início", caminho: "/home", descricao: "Resumo do dia: tarefas, transferências e avisos." },
+  { tela: "Início", caminho: "/home", descricao: "Resumo do dia com os painéis dos seus setores; o botão Personalizar escolhe o que aparece." },
+  { tela: "Meu dia", caminho: "/tarefas", descricao: "O que é seu para hoje: o que venceu, o que vence, o que parou e o que está andando, de todos os setores. Coordenador vê também o time." },
   { tela: "Cadastros", caminho: "/empresas", descricao: "Empresas, pessoas e clientes do escritório." },
-  { tela: "Tarefas", caminho: "/tarefas", descricao: "Tarefas atribuídas a você e ao seu setor." },
-  { tela: "Conversas", caminho: "/conversas", descricao: "Histórico de atendimentos (Chatwoot) ligado a empresas e pessoas." },
   { tela: "Transferências", caminho: "/transferencias", descricao: "Passar um assunto para outro setor, com prazo e prioridade." },
+  { tela: "Agenda", caminho: "/agenda", descricao: "Os prazos dos seus setores no calendário e, para coordenadores, as reuniões." },
+  { tela: "Espaços", caminho: "/setor/{setor}", descricao: "As listas e quadros de tarefas do setor, organizados em espaços e pastas." },
   { tela: "Busca", caminho: "Ctrl+K", descricao: "Acha qualquer tela, empresa ou pessoa pelo nome." },
+  { tela: "Ajuda", caminho: "/ajuda", descricao: "Esta central: o que cada tela faz e os primeiros passos no Connect." },
 ] as const;
 
 /** Os setores do recorte — nunca do modelo. */
