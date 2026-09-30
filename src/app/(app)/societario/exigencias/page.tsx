@@ -116,7 +116,7 @@ export default async function ExigenciasPage({
           icon={<AlertTriangle />}
         />
       ) : (
-        <div className="overflow-x-auto">
+        <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
           <table className="w-full min-w-[860px] text-[13px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">

@@ -123,7 +123,7 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
             ))}
           </CartoesNoCelular>
 
-          <TabelaNoDesktop>
+          <TabelaNoDesktop padrao>
             <table className="w-full min-w-[980px] text-[13px]">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
