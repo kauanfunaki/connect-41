@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import type { ProcessoState } from "@/app/(app)/processos/actions";
 
@@ -25,12 +26,14 @@ export function ResolverExigencia({
   const [pendente, startTransition] = useTransition();
 
   return (
+    // Botão de linha como os das outras tabelas do setor ("Abrir", "Editar"):
+    // era um link cinza de 12px, a única ação da linha que não parecia botão.
     <div className="flex flex-col items-start gap-1">
       <Button
-        variant="linkMuted"
+        variant="secondary"
         size="xs"
         disabled={pendente}
-        className="text-[12px] whitespace-nowrap"
+        className="whitespace-nowrap"
         onClick={() => {
           setErro(null);
           startTransition(async () => {
@@ -40,7 +43,7 @@ export function ResolverExigencia({
           });
         }}
       >
-        {pendente ? "Salvando…" : "Marcar como cumprida"}
+        <Check size={12} /> {pendente ? "Salvando…" : "Marcar como cumprida"}
       </Button>
       {erro && <span className="text-[11px] text-danger">{erro}</span>}
     </div>

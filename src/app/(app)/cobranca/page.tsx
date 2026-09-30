@@ -186,7 +186,7 @@ async function Fila({
       {fila.paraHoje.length > 0 && (
         <Card className="p-4 mb-4 border-warning/40">
           <h2 className="text-[14px] font-semibold mb-2 flex items-center gap-2">
-            <AlarmClock size={15} className="text-warning" /> Próximas ações de hoje
+            <AlarmClock size={16} className="text-warning" /> Próximas ações de hoje
           </h2>
           <ul className="flex flex-col gap-1.5 text-[13px]">
             {fila.paraHoje.slice(0, 30).map((l) => (
@@ -267,7 +267,7 @@ function TabelaDaFila({ linhas, hojeKey }: { linhas: LinhaDeCobranca[]; hojeKey:
             <PeDoCartao>
               <SeloDaCobranca situacao={l.situacao} />
               <Button href={`/cobranca/${l.id}`} variant="secondary" size="xs" className="ml-auto">
-                Abrir <ArrowRight size={11} />
+                Abrir <ArrowRight size={12} />
               </Button>
             </PeDoCartao>
           </Cartao>
@@ -364,7 +364,7 @@ function TabelaDaFila({ linhas, hojeKey }: { linhas: LinhaDeCobranca[]; hojeKey:
               </td>
               <td className="py-2.5">
                 <Button href={`/cobranca/${l.id}`} variant="secondary" size="xs">
-                  Abrir <ArrowRight size={11} />
+                  Abrir <ArrowRight size={12} />
                 </Button>
               </td>
             </LinhaFiltravel>
@@ -491,7 +491,7 @@ async function Acordos({
                                 <Badge variant="info">Cancelada</Badge>
                               ) : (
                                 <Button href={`/cobranca/${p.id}`} variant="secondary" size="xs">
-                                  Em aberto <ArrowRight size={11} />
+                                  Em aberto <ArrowRight size={12} />
                                 </Button>
                               )}
                             </td>

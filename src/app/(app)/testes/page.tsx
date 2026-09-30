@@ -147,7 +147,7 @@ export default async function TestesPage({
     if (l.status !== "RESPONDIDO") return null;
     if (l.type === "DISC" && l.primaryProfile) {
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border bg-brand/10 text-brand border-brand/25 whitespace-nowrap">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border bg-brand/10 text-brand border-brand/25 whitespace-nowrap">
           Perfil {l.primaryProfile}
           {l.secondaryProfile ?? ""}
         </span>
@@ -155,7 +155,7 @@ export default async function TestesPage({
     }
     if (l.type === "MULTIPLA_ESCOLHA") {
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border bg-brand/10 text-brand border-brand/25 whitespace-nowrap">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border bg-brand/10 text-brand border-brand/25 whitespace-nowrap">
           {(l.scores as { pct: number } | null)?.pct ?? 0}% de acertos
         </span>
       );
@@ -164,7 +164,7 @@ export default async function TestesPage({
   };
 
   const seloDoStatus = (s: AssessmentLinkStatus) => (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border whitespace-nowrap ${STATUS_STYLE[s]}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap ${STATUS_STYLE[s]}`}>
       {STATUS_LABEL[s]}
     </span>
   );

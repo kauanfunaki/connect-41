@@ -36,7 +36,7 @@ export default async function KanbanListPage() {
         action={<>{canCreate && (
           <Button
             href="/kanban/novo"
-            variant="primary" className="font-medium"
+            variant="primary"
           >
             + Novo Kanban
           </Button>

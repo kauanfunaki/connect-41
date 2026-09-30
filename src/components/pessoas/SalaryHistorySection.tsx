@@ -3,7 +3,9 @@
 import { useActionState } from "react";
 import { Button } from "@/components/ui/Button";
 import type { SalaryChangeState } from "@/app/(app)/pessoas/[id]/salario/actions";
-import { CampoForm } from "@/components/ui/CampoForm";
+import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
+import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 
@@ -29,11 +31,11 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
 
   return (
-    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
-      <h2 className="text-[14px] font-semibold text-fg mb-3">Histórico Salarial</h2>
+    <Card className="p-5 mb-4">
+      <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">Histórico Salarial</h2>
 
       {history.length === 0 ? (
-        <p className="text-[13px] text-fg-muted mb-4">Nenhum reajuste registrado ainda.</p>
+        <p className="text-[length:var(--fs-helper)] text-fg-muted mb-4">Nenhum reajuste registrado ainda.</p>
       ) : (
         // Era uma lista de linhas (até 30/09); virou tabela no casco padrão.
         // Sem funil: data e valores são únicos por linha — filtro não ajuda.
@@ -78,19 +80,19 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
         </div>
       )}
 
-      <form action={formAction} className="flex items-end gap-3 flex-wrap border-t border-border pt-4">
-        <div className="w-44">
+      {/* Revisão de alinhamento (30/09): era uma fileira `items-end` de
+          larguras soltas, que quebrava em lugares diferentes conforme a tela,
+          e o rótulo "Novo Cargo (promoção)" não cabia na coluna. Agora é a
+          grade dos formulários da ficha, com o botão alinhado ao campo. */}
+      <form action={formAction} className="border-t border-border pt-5">
+        <FieldGrid columns="sm:grid-cols-2 xl:grid-cols-[180px_180px_minmax(0,240px)_minmax(0,1fr)_auto]">
           <CampoForm label="Novo Salário" htmlFor="newSalary" required>
             <Input id="newSalary" name="newSalary" type="number" step="0.01" required prefix="R$" placeholder="0,00" />
           </CampoForm>
-        </div>
-        <div className="w-40">
           <CampoForm label="Data do Reajuste" htmlFor="effectiveDate" required>
             <Input id="effectiveDate" name="effectiveDate" type="date" required />
           </CampoForm>
-        </div>
-        <div className="w-52">
-          <CampoForm label="Novo Cargo (promoção)" htmlFor="cargoId">
+          <CampoForm label="Novo cargo" htmlFor="cargoId" helper="Só em promoção.">
             <Select id="cargoId" name="cargoId" defaultValue="">
               <option value="">Sem alteração</option>
               {cargos.map((c) => (
@@ -98,25 +100,21 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
               ))}
             </Select>
           </CampoForm>
-        </div>
-        <div className="flex-1 min-w-[160px]">
           <CampoForm label="Motivo" htmlFor="reason">
             <Input id="reason" name="reason" type="text" />
           </CampoForm>
-        </div>
-        <Button
-          type="submit"
-          disabled={isPending}
-          variant="primary" className="font-medium disabled:opacity-60"
-        >
-          {isPending ? "Registrando…" : "Registrar Reajuste"}
-       </Button>
+          <AlinhadoAoCampo>
+            <Button type="submit" disabled={isPending}>
+              {isPending ? "Registrando…" : "Registrar Reajuste"}
+            </Button>
+          </AlinhadoAoCampo>
+        </FieldGrid>
       </form>
       {state?.error && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2 mt-3">
+        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2 mt-3">
           {state.error}
         </p>
       )}
-    </div>
+    </Card>
   );
 }

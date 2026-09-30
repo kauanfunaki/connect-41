@@ -83,8 +83,8 @@ export default async function CamposPage() {
                 </h2>
                 <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
                   {list.map((f) => (
-                    <div key={f.id} className="flex items-center justify-between px-4 py-2.5">
-                      <div>
+                    <div key={f.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                      <div className="min-w-0">
                         <p className="text-[13px] text-fg">
                           {f.label} {f.required && <span className="text-danger">*</span>}
                         </p>

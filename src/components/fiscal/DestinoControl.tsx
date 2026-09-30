@@ -85,7 +85,7 @@ export function DestinoControl({ documentoId, destinoAtual, motivoAtual, podeDec
       )}
 
       {pedindoMotivo && (
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 space-y-4">
           <CampoForm
             label="Por que fica fora do financeiro?"
             htmlFor="motivo"
@@ -99,12 +99,13 @@ export function DestinoControl({ documentoId, destinoAtual, motivoAtual, podeDec
               placeholder="Ex.: nota de teste do emissor, já lançada manualmente no Omie…"
             />
           </CampoForm>
-          <div className="flex items-center gap-2">
-            <Button type="button" onClick={() => aplicar("IGNORADO", motivo)} disabled={pendente || !motivo.trim()}>
-              {pendente ? "Salvando…" : "Ignorar documento"}
-            </Button>
+          {/* Rodapé padrão: Cancelar à esquerda do primário, os dois à direita. */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
             <Button type="button" variant="secondary" onClick={() => setPedindoMotivo(false)} disabled={pendente}>
               Cancelar
+            </Button>
+            <Button type="button" onClick={() => aplicar("IGNORADO", motivo)} disabled={pendente || !motivo.trim()}>
+              {pendente ? "Salvando…" : "Ignorar documento"}
             </Button>
           </div>
         </div>

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 
 type Props = {
@@ -15,12 +14,11 @@ type Props = {
 export function FormFooter({ cancelHref, pending, submitLabel = "Salvar", cancelLabel = "Cancelar" }: Props) {
   return (
     <div className="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-border">
-      <Link
-        href={cancelHref}
-        className="h-9 px-4 rounded-md border border-border-strong text-[length:var(--fs-button)] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover transition-colors inline-flex items-center"
-      >
+      {/* Era um Link com classes próprias — 15px e font-medium ao lado de um
+          Salvar de 13px semibold (apontado por 4 agentes na revisão de 30/09). */}
+      <Button href={cancelHref} variant="secondary">
         {cancelLabel}
-      </Link>
+      </Button>
       <Button type="submit" loading={pending}>
         {submitLabel}
       </Button>

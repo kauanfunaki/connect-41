@@ -24,7 +24,7 @@ function nomeDaIa(code: string): string {
 export function PainelDoOrquestrador({ dados }: { dados: Dados }) {
   const semIa = Object.values(dados.semIa).reduce((n, v) => n + v, 0);
   return (
-    <Card className="p-4 mb-5 flex flex-col gap-4">
+    <Card className="p-4 flex flex-col gap-4">
       <div>
         <p className="text-[14px] font-semibold text-fg">Orquestrador do chat — últimos {DIAS_DO_PAINEL} dias</p>
         <p className="text-[12px] text-fg-secondary max-w-[70ch]">

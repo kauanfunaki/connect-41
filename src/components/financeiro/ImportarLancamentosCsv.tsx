@@ -5,6 +5,7 @@ import { Upload, Check } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import { previsualizarImportacao, confirmarImportacao } from "@/app/(app)/lancamentos/actions";
 import type { PreviaDaImportacao } from "@/lib/financeiro/importacaoCsv";
 import { moeda } from "@/lib/financeiro/formato";
@@ -18,13 +19,16 @@ export function ImportarLancamentosCsv({ companyId }: { companyId: string }) {
   const [resultado, setResultado] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
+  const [versao, setVersao] = useState(0);
 
-  async function ler(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
+  async function ler(f: File | null) {
     setPrevia(null);
     setResultado(null);
     setErro(null);
-    if (!f) return;
+    if (!f) {
+      setTexto(null);
+      return;
+    }
     const conteudo = await f.text();
     setTexto(conteudo);
     setArquivo(f.name);
@@ -49,6 +53,7 @@ export function ImportarLancamentosCsv({ companyId }: { companyId: string }) {
       );
       setPrevia(null);
       setTexto(null);
+      setVersao((v) => v + 1);
     });
   }
 
@@ -58,7 +63,7 @@ export function ImportarLancamentosCsv({ companyId }: { companyId: string }) {
   return (
     <Card className="p-4 flex flex-col gap-3">
       <div className="flex items-center gap-2">
-        <Upload size={15} className="text-brand" />
+        <Upload size={16} className="text-brand" />
         <h2 className="text-[14px] font-semibold text-fg">Importar lançamentos por CSV</h2>
       </div>
       <p className="text-[12px] text-fg-secondary max-w-[70ch]">
@@ -70,13 +75,10 @@ export function ImportarLancamentosCsv({ companyId }: { companyId: string }) {
       </p>
       <pre className="text-[11px] bg-surface-hover border border-border rounded-md px-3 py-2 overflow-x-auto">{MODELO}</pre>
 
-      <input
-        type="file"
-        accept=".csv,text/csv"
-        onChange={ler}
-        aria-label="Arquivo CSV de lançamentos"
-        className="text-[12px] text-fg-secondary file:mr-3 file:h-8 file:px-3 file:rounded-md file:border file:border-border file:bg-surface file:text-fg file:text-[12px] file:cursor-pointer"
-      />
+      {/* A mesma faixa do extrato OFX na conciliação — era o botão nativo do
+          navegador, estilizado à mão. O teto de 2 MB é o da action. Remonta
+          depois de importar, para esquecer o arquivo já enviado. */}
+      <FileDropzoneField key={versao} name="arquivo" accept=".csv" maxSizeMb={2} compacto onFileChange={ler} />
 
       {pendente && <p className="text-[12px] text-fg-muted">Lendo…</p>}
       {previa && !previa.ok && <p className="text-[13px] text-danger">{previa.erro}</p>}

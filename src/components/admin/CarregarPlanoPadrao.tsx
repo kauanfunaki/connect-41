@@ -27,11 +27,15 @@ export function CarregarPlanoPadrao() {
     );
   }
 
+  // Botões md, e não sm: dividem o cabeçalho com o "+ Nova categoria", que é
+  // md — dois tamanhos na mesma linha. Cancelar antes do primário.
   return (
     <span className="inline-flex flex-wrap items-center gap-2 text-[12px] text-fg-secondary">
-      <span>Cria as 189 categorias do plano padronizado que faltarem. Nada que já existe é apagado ou reclassificado.</span>
+      <span className="max-w-[46ch]">Cria as 189 categorias do plano padronizado que faltarem. Nada que já existe é apagado ou reclassificado.</span>
+      <Button variant="secondary" onClick={() => setConfirmando(false)}>
+        Cancelar
+      </Button>
       <Button
-        size="sm"
         disabled={pendente}
         onClick={() =>
           startTransition(async () => {
@@ -42,9 +46,6 @@ export function CarregarPlanoPadrao() {
         }
       >
         Carregar
-      </Button>
-      <Button variant="secondary" size="sm" onClick={() => setConfirmando(false)}>
-        Cancelar
       </Button>
     </span>
   );

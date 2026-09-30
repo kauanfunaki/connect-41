@@ -3,7 +3,8 @@
 import { useActionState } from "react";
 import { Button } from "@/components/ui/Button";
 import type { CandidaturaState } from "@/app/(app)/vagas/[id]/actions";
-import { CampoForm } from "@/components/ui/CampoForm";
+import { AlinhadoAoCampo, CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 
@@ -14,12 +15,15 @@ type Props = {
   candidatos: PersonOption[];
 };
 
+// Grade em vez de `flex items-end` com larguras fixas (w-56/w-48): no celular
+// os dois campos estouravam a coluna, e o botão só caía alinhado enquanto
+// nenhum campo tivesse texto de ajuda embaixo.
 export function AddCandidatoForm({ action, candidatos }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
 
   return (
-    <form action={formAction} className="flex items-end gap-3 flex-wrap border-t border-border pt-4">
-      <div className="w-56">
+    <form action={formAction} className="border-t border-border pt-4 space-y-3">
+      <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_200px_auto] lg:grid-cols-[320px_220px_auto]">
         <CampoForm label="Candidato" htmlFor="personId" required>
           <Select id="personId" name="personId" required>
             <option value="">Selecione</option>
@@ -28,22 +32,16 @@ export function AddCandidatoForm({ action, candidatos }: Props) {
             ))}
           </Select>
         </CampoForm>
-      </div>
-      <div className="w-48">
         <CampoForm label="Origem" htmlFor="origin">
           <Input id="origin" name="origin" type="text" placeholder="ex: LinkedIn" />
         </CampoForm>
-      </div>
-      <Button
-        type="submit"
-        disabled={isPending}
-        variant="primary" className="font-medium disabled:opacity-60"
-      >
-        {isPending ? "Vinculando…" : "Vincular Candidato"}
-     </Button>
-      {state?.error && (
-        <p className="text-[13px] text-danger w-full">{state.error}</p>
-      )}
+        <AlinhadoAoCampo>
+          <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
+            {isPending ? "Vinculando…" : "Vincular Candidato"}
+          </Button>
+        </AlinhadoAoCampo>
+      </FieldGrid>
+      {state?.error && <p className="text-[13px] text-danger">{state.error}</p>}
     </form>
   );
 }

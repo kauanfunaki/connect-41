@@ -4,6 +4,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
 import { ClienteForm } from "@/components/clientes/ClienteForm";
 import { atualizarCliente } from "../../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -32,16 +33,20 @@ export default async function EditarClientePage({
       />
       <BackButton className="mb-3" />
       <PageHeader title="Editar Cliente" />
-      <ClienteForm
-        action={atualizarCliente}
-        cancelHref="/clientes"
-        defaultValues={{
-          id: cliente.id,
-          name: cliente.name,
-          cnpjRoot: cliente.cnpjRoot ?? undefined,
-          active: cliente.active,
-        }}
-      />
+      <div className="w-full max-w-[720px]">
+        <Card className="p-6">
+          <ClienteForm
+            action={atualizarCliente}
+            cancelHref="/clientes"
+            defaultValues={{
+              id: cliente.id,
+              name: cliente.name,
+              cnpjRoot: cliente.cnpjRoot ?? undefined,
+              active: cliente.active,
+            }}
+          />
+        </Card>
+      </div>
     </PageContainer>
   );
 }

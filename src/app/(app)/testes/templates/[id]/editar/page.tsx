@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { TemplateForm } from "@/components/teste/TemplateForm";
 import { atualizarTemplate } from "../../actions";
 
@@ -22,13 +22,7 @@ export default async function EditarTemplatePage({ params }: { params: Promise<{
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/testes/templates" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Modelos
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Editar</span>
-      </div>
+      <Breadcrumb items={[{ label: "Testes", href: "/testes" }, { label: "Modelos", href: "/testes/templates" }, { label: "Editar" }]} />
       <PageHeader title="Editar modelo de teste" />
 
       <Card className="p-6">

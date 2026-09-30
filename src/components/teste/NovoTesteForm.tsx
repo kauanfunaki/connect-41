@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
-import { CampoForm } from "@/components/ui/CampoForm";
+import { AlinhadoAoCampo, CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Select } from "@/components/ui/Select";
 import { TestTypeSelect, type TemplateOption, type TestTypeValue } from "@/components/teste/TestTypeSelect";
 import { gerarLinkTeste } from "@/app/(app)/testes/actions";
@@ -43,8 +44,11 @@ export function NovoTesteForm({ candidatos, templates }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-end gap-3 flex-wrap border-b border-border pb-4 mb-4">
-      <div className="w-64">
+    // Grade, e não `flex items-end` com larguras fixas (w-64/w-56): no celular
+    // os campos estouravam a tela, e o botão só ficava alinhado enquanto
+    // nenhum campo tivesse texto de ajuda embaixo.
+    <form onSubmit={handleSubmit} className="border-b border-border pb-4 mb-4 space-y-3">
+      <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:grid-cols-[320px_280px_auto]">
         <CampoForm label="Candidato" htmlFor="personId" required>
           <Select id="personId" value={personId} onChange={(e) => setPersonId(e.target.value)} required>
             <option value="">Selecione</option>
@@ -53,18 +57,14 @@ export function NovoTesteForm({ candidatos, templates }: Props) {
             ))}
           </Select>
         </CampoForm>
-      </div>
-      <div className="w-56">
         <TestTypeSelect templates={templates} value={testType} onChange={setTestType} id="novo-teste-type" />
-      </div>
-      <Button
-        type="submit"
-        disabled={pending || !personId}
-        variant="primary" className="font-medium disabled:opacity-60"
-      >
-        {pending ? "Enviando…" : "+ Novo teste"}
-     </Button>
-      {error && <p className="text-[13px] text-danger w-full">{error}</p>}
+        <AlinhadoAoCampo>
+          <Button type="submit" disabled={pending || !personId} className="w-full sm:w-auto">
+            {pending ? "Enviando…" : "+ Novo teste"}
+          </Button>
+        </AlinhadoAoCampo>
+      </FieldGrid>
+      {error && <p className="text-[13px] text-danger">{error}</p>}
     </form>
   );
 }

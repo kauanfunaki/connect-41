@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import type { WorkspaceState } from "@/app/(app)/admin/workspaces/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
@@ -22,25 +23,22 @@ export function WorkspaceForm({ action, cancelHref }: Props) {
         </p>
       )}
 
-      <CampoForm label="Nome do cliente" htmlFor="name" required>
-        <Input id="name" name="name" type="text" required placeholder="Razão Social do cliente" />
-      </CampoForm>
+      {/* CNPJ na mesma linha, na largura dele: tem 18 caracteres. */}
+      <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_14rem]">
+        <CampoForm label="Nome do cliente" htmlFor="name" required>
+          <Input id="name" name="name" type="text" required placeholder="Razão Social do cliente" />
+        </CampoForm>
+        <CampoForm label="CNPJ" htmlFor="cnpj" required>
+          <Input id="cnpj" name="cnpj" type="text" required placeholder="00.000.000/0000-00" />
+        </CampoForm>
+      </FieldGrid>
 
-      <CampoForm label="CNPJ" htmlFor="cnpj" required>
-        <Input id="cnpj" name="cnpj" type="text" required placeholder="00.000.000/0000-00" />
-      </CampoForm>
-
-      <div className="flex items-center gap-3 pt-2">
-        <Button
-          variant="primary"
-          size="md"
-          type="submit"
-          disabled={isPending}
-        >
-          {isPending ? "Criando…" : "Criar Workspace"}
-        </Button>
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
         <Button href={cancelHref} variant="secondary">
           Cancelar
+        </Button>
+        <Button type="submit" disabled={isPending}>
+          {isPending ? "Criando…" : "Criar Workspace"}
         </Button>
       </div>
     </form>

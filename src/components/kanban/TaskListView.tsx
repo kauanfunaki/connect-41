@@ -181,7 +181,10 @@ function Row({
                 <ChevronRight size={14} className={`transition-transform ${expanded ? "rotate-90" : ""}`} />
               </IconButton>
             ) : (
-              <span className="w-[14px] flex-shrink-0" />
+              // Mesma largura do botão de expandir (IconButton `sm`, 28px): com
+              // 14px, o título da tarefa sem subtarefas começava 14px antes do
+              // da tarefa com subtarefas logo acima.
+              <span className="w-7 flex-shrink-0" />
             )}
 
             <button
@@ -494,7 +497,9 @@ function StageGroupHeader({
             if (e.key === "Escape") { setNameValue(stage.name); setEditingName(false); }
           }}
           autoFocus
-          className="h-6 w-40 text-[12px]"
+          compact
+          aria-label="Nome do status"
+          className="w-40"
         />
       ) : (
         <h3
@@ -534,8 +539,10 @@ function AddTaskInline({ stageId, createTaskAction }: { stageId: string; createT
         }}
         onBlur={() => { if (!newTitle.trim()) setAdding(false); }}
         autoFocus
+        compact
+        aria-label="Nome da nova tarefa"
         placeholder="Nome da tarefa…"
-        className="h-8 max-w-xs"
+        className="max-w-xs"
       />
     );
   }

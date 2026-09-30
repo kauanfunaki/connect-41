@@ -22,6 +22,7 @@ import { RecruitmentFunnel, type FunnelCard } from "@/components/vagas/Recruitme
 import { computeFunnelConversion, type Stage } from "@/lib/recruitmentFunnel";
 import { formatInstantDate } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { excluirVaga, encerrarVaga, reabrirVaga } from "../actions";
 import { adicionarCandidato, moverEtapaCandidatura, encerrarCandidatura } from "./actions";
 import { podeAgirNaVaga, ehCoordenadorDoRecrutamento, SETOR_RECRUTAMENTO } from "@/lib/recrutamento/acessoVagas";
@@ -143,11 +144,7 @@ export default async function VagaPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/vagas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Vagas</Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg truncate">{vaga.title}</span>
-      </div>
+      <Breadcrumb items={[{ label: "Vagas", href: "/vagas" }, { label: vaga.title, truncate: true }]} />
 
       {/* Selo, empresa e ações dentro do próprio `PageHeader` (polimento de
           30/09): eram um cabeçalho montado em volta dele, e o selo ficava
@@ -197,7 +194,7 @@ export default async function VagaPage({
       {/* Detalhes */}
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
         <h2 className="text-[14px] font-semibold text-fg mb-4">Detalhes</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-8 gap-y-4">
           <InfoRow label="Cargo" value={vaga.cargo?.name} />
           <InfoRow label="Quantidade" value={String(vaga.quantity)} />
           <InfoRow label="Prioridade" value={PRIORITY_LABEL[vaga.priority]} />
@@ -214,13 +211,13 @@ export default async function VagaPage({
         </div>
         {vaga.notes && (
           <div className="mt-3 pt-3 border-t border-border">
-            <p className="text-[length:var(--fs-micro)] text-fg-muted mb-0.5">Observações</p>
+            <p className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">Observações</p>
             <p className="text-[13px] text-fg whitespace-pre-wrap">{vaga.notes}</p>
           </div>
         )}
         {vaga.isPublic && tenantSlug && (
           <div className="mt-3 pt-3 border-t border-border">
-            <p className="text-[length:var(--fs-micro)] text-fg-muted mb-0.5">Portal público</p>
+            <p className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">Portal público</p>
             <a
               href={`${publicBaseUrl}/carreiras/${tenantSlug}/${vaga.id}`}
               target="_blank"
@@ -255,8 +252,8 @@ export default async function VagaPage({
 
       {/* Funil de recrutamento */}
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[14px] font-semibold text-fg">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <h2 className="min-w-0 text-[14px] font-semibold text-fg">
             Funil de recrutamento ({vaga.candidaturas.length} candidato{vaga.candidaturas.length !== 1 ? "s" : ""})
           </h2>
           {/* Era link de texto azul (30/09): botão não é link. */}
@@ -307,11 +304,11 @@ export default async function VagaPage({
                 </h3>
                 <div className="space-y-1.5">
                   {encerrados.map((c) => (
-                    <div key={c.id} className="flex items-center justify-between text-[12px]">
-                      <Link href={`/candidatos/${c.person.id}`} className="text-fg-secondary hover:text-brand transition-colors">
+                    <div key={c.id} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-[12px]">
+                      <Link href={`/candidatos/${c.person.id}`} className="min-w-0 text-fg-secondary hover:text-brand transition-colors">
                         {c.person.name}
                       </Link>
-                      <span className="text-fg-muted">
+                      <span className="min-w-0 text-fg-muted">
                         {c.status === "REPROVADO" ? "Reprovado" : "Desistente"}
                         {(c.rejectionReason || c.withdrawalReason) && ` · ${c.rejectionReason ?? c.withdrawalReason}`}
                       </span>
@@ -340,8 +337,8 @@ export default async function VagaPage({
 
 function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
   return (
-    <div>
-      <p className="text-[length:var(--fs-micro)] text-fg-muted mb-0.5">{label}</p>
+    <div className="min-w-0">
+      <p className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">{label}</p>
       <p className="text-[13px] text-fg">{value ?? "—"}</p>
     </div>
   );

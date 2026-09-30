@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { montarLinhas } from "@/lib/dre/calculo";
 import { simularCenario, CENARIOS_PRONTOS, PREMISSAS_ZERADAS, type PremissasDoCenario } from "@/lib/dre/analises";
 import { rotuloEconomico, LINHA_DE_RESULTADO, LINHA_OPERACIONAL } from "@/lib/dre/economica";
@@ -45,41 +47,48 @@ export function SimuladorDeCenarios({ bases }: { bases: BaseDoCenario[] }) {
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <Card className="p-4 flex flex-col gap-4">
+      <Card className="p-4 flex flex-col gap-5">
         <h3 className="text-[14px] font-semibold text-fg">Premissas</h3>
+        {/* As duas escolhas por botão ganharam rótulo em cima, como os campos
+            abaixo — o "Partir de:" era texto solto no começo da fileira. */}
         {bases.length > 1 && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[12px] text-fg-secondary">Partir de:</span>
-            {bases.map((b) => (
-              <Button key={b.chave} size="sm" variant={b.chave === baseEscolhida.chave ? "primary" : "secondary"} onClick={() => setChaveDaBase(b.chave)}>
-                {b.rotulo}
+          <fieldset>
+            <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">Partir de</legend>
+            <div className="flex flex-wrap gap-2">
+              {bases.map((b) => (
+                <Button key={b.chave} size="sm" variant={b.chave === baseEscolhida.chave ? "primary" : "secondary"} onClick={() => setChaveDaBase(b.chave)}>
+                  {b.rotulo}
+                </Button>
+              ))}
+            </div>
+          </fieldset>
+        )}
+        <fieldset>
+          <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">Cenário</legend>
+          <div className="flex flex-wrap gap-2">
+            {CENARIOS_PRONTOS.map((c) => (
+              <Button
+                key={c.chave}
+                size="sm"
+                variant={pronto === c.chave ? "primary" : "secondary"}
+                onClick={() => {
+                  setPronto(c.chave);
+                  setPremissas(c.premissas);
+                }}
+              >
+                {c.rotulo}
               </Button>
             ))}
-          </div>
-        )}
-        <div className="flex flex-wrap gap-1.5">
-          {CENARIOS_PRONTOS.map((c) => (
-            <Button
-              key={c.chave}
-              size="sm"
-              variant={pronto === c.chave ? "primary" : "secondary"}
-              onClick={() => {
-                setPronto(c.chave);
-                setPremissas(c.premissas);
-              }}
-            >
-              {c.rotulo}
+            <Button size="sm" variant={pronto === "personalizado" ? "primary" : "secondary"} onClick={() => setPronto("personalizado")}>
+              Personalizado
             </Button>
-          ))}
-          <Button size="sm" variant={pronto === "personalizado" ? "primary" : "secondary"} onClick={() => setPronto("personalizado")}>
-            Personalizado
-          </Button>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          </div>
+        </fieldset>
+        <FieldGrid>
           {CAMPOS.map((c) => (
-            <label key={c.chave} className="flex flex-col gap-1 text-[12px] text-fg-secondary">
-              <span className="font-medium">{c.rotulo}</span>
+            <CampoForm key={c.chave} label={c.rotulo} htmlFor={`premissa-${c.chave}`} helper={c.dica}>
               <Input
+                id={`premissa-${c.chave}`}
                 type="number"
                 step="0.5"
                 suffix="%"
@@ -89,10 +98,9 @@ export function SimuladorDeCenarios({ bases }: { bases: BaseDoCenario[] }) {
                   setPremissas((p) => ({ ...p, [c.chave]: Number(e.target.value) || 0 }));
                 }}
               />
-              <span className="text-[11px] text-fg-muted">{c.dica}</span>
-            </label>
+            </CampoForm>
           ))}
-        </div>
+        </FieldGrid>
       </Card>
 
       <Card className="p-0 overflow-hidden">

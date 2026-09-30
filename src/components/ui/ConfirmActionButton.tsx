@@ -60,7 +60,7 @@ export function ConfirmActionButton({
         }}
         className={
           className ??
-          "h-8 px-3 rounded-md border border-border text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors"
+          "inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-md border border-border-strong text-[length:var(--fs-button-sm)] font-semibold text-fg hover:bg-surface-hover transition-colors"
         }
       >
         {label}

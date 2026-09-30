@@ -29,7 +29,9 @@ export function PasswordField({
         type="button"
         onClick={() => setVisible((v) => !v)}
         tabIndex={-1}
-        className="text-fg-muted hover:text-fg transition-colors flex-shrink-0"
+        // Área de toque de 28px (o olho sozinho tinha 16), puxada para a borda
+        // da caixa para o ícone seguir onde estava.
+        className="inline-flex items-center justify-center w-7 h-7 -mr-1.5 rounded-md text-fg-muted hover:text-fg transition-colors flex-shrink-0"
         aria-label={visible ? "Ocultar senha" : "Mostrar senha"}
       >
         {visible ? (

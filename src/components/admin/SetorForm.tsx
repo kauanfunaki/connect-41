@@ -3,8 +3,9 @@
 import { useActionState } from "react";
 import type { SetorState } from "@/app/(app)/admin/setores/actions";
 import { SECTOR_COLOR_PALETTE } from "@/lib/sector-constants";
-import { CampoForm } from "@/components/ui/CampoForm";
+import { AlinhadoAoCampo, CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
@@ -37,29 +38,31 @@ export function SetorForm({ action, cancelHref, defaultValues }: Props) {
         </p>
       )}
 
-      <CampoForm label="Nome do setor" htmlFor="label" required>
-        <Input
-          id="label"
-          name="label"
-          type="text"
-          required
-          defaultValue={defaultValues?.label ?? ""}
-          placeholder="Ex: Trabalhista, Marketing…"
-        />
-      </CampoForm>
-
-      {isEdit && defaultValues?.code && (
-        <CampoForm
-          label="Código"
-          htmlFor="code"
-          helper="Gerado a partir do nome na criação — não pode ser alterado (já é usado em kanban, usuários e transferências)."
-        >
-          <Input id="code" type="text" value={defaultValues.code} disabled className="font-mono" />
+      <FieldGrid>
+        <CampoForm label="Nome do setor" htmlFor="label" required>
+          <Input
+            id="label"
+            name="label"
+            type="text"
+            required
+            defaultValue={defaultValues?.label ?? ""}
+            placeholder="Ex: Trabalhista, Marketing…"
+          />
         </CampoForm>
-      )}
 
-      <div className="space-y-2">
-        <p className="text-[length:var(--fs-label)] font-medium text-fg">Cor</p>
+        {isEdit && defaultValues?.code && (
+          <CampoForm
+            label="Código"
+            htmlFor="code"
+            helper="Gerado a partir do nome na criação — não pode ser alterado (já é usado em kanban, usuários e transferências)."
+          >
+            <Input id="code" type="text" value={defaultValues.code} disabled className="font-mono" />
+          </CampoForm>
+        )}
+      </FieldGrid>
+
+      <fieldset>
+        <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">Cor</legend>
         <div className="flex flex-wrap items-center gap-2">
           {SECTOR_COLOR_PALETTE.map((c) => (
             <label key={c} className="cursor-pointer">
@@ -67,6 +70,7 @@ export function SetorForm({ action, cancelHref, defaultValues }: Props) {
                 type="radio"
                 name="colorRadio"
                 value={c}
+                aria-label={`Cor ${c}`}
                 defaultChecked={(defaultValues?.color ?? SECTOR_COLOR_PALETTE[0]) === c}
                 className="peer sr-only"
                 onChange={(e) => {
@@ -83,10 +87,12 @@ export function SetorForm({ action, cancelHref, defaultValues }: Props) {
           ))}
           <input type="hidden" name="color" defaultValue={defaultValues?.color ?? SECTOR_COLOR_PALETTE[0]} />
         </div>
-      </div>
+      </fieldset>
 
+      {/* Ordem é um número de um ou dois dígitos: coluna estreita. A caixa de
+          "ativo" dispensa o rótulo "Status" em cima — o dela já diz tudo. */}
       {isEdit && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FieldGrid columns="sm:grid-cols-[8rem_minmax(0,1fr)]">
           <CampoForm label="Ordem" htmlFor="order">
             <Input
               id="order"
@@ -95,30 +101,23 @@ export function SetorForm({ action, cancelHref, defaultValues }: Props) {
               defaultValue={defaultValues?.order ?? 0}
             />
           </CampoForm>
-          <CampoForm label="Status" htmlFor="active">
-            <div className="h-9 flex items-center">
-              <Checkbox
-                id="active"
-                name="active"
-                defaultChecked={defaultValues?.active ?? true}
-                label="Setor ativo"
-              />
-            </div>
-          </CampoForm>
-        </div>
+          <AlinhadoAoCampo>
+            <Checkbox
+              id="active"
+              name="active"
+              defaultChecked={defaultValues?.active ?? true}
+              label="Setor ativo"
+            />
+          </AlinhadoAoCampo>
+        </FieldGrid>
       )}
 
-      <div className="flex items-center gap-3 pt-2">
-        <Button
-          variant="primary"
-          size="md"
-          type="submit"
-          disabled={isPending}
-        >
-          {isPending ? "Salvando…" : "Salvar"}
-        </Button>
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
         <Button href={cancelHref} variant="secondary">
           Cancelar
+        </Button>
+        <Button type="submit" disabled={isPending}>
+          {isPending ? "Salvando…" : "Salvar"}
         </Button>
       </div>
     </form>

@@ -40,10 +40,10 @@ export function AssistenteDoSocietario() {
 
   return (
     <Card as="section" className="p-4 flex flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <Sparkles size={16} className="text-brand" />
-        <h2 className="text-[15px] font-semibold text-fg">Assistente do Societário</h2>
-      </div>
+      <h2 className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-fg">
+        <Sparkles size={16} className="text-brand" aria-hidden />
+        Assistente do Societário
+      </h2>
       <p className="text-[13px] text-fg-secondary max-w-[62ch]">
         Pergunte sobre a fila — o que está parado, o que está em exigência, o que dá para
         destravar. Ele lê os mesmos processos que você vê e{" "}
@@ -57,7 +57,7 @@ export function AssistenteDoSocietario() {
         rows={2}
         aria-label="Pergunta ao assistente do Societário"
       />
-      <div>
+      <div className="flex justify-end">
         <Button onClick={perguntar} disabled={pensando || !pergunta.trim()}>
           {pensando ? "Consultando…" : "Perguntar"}
         </Button>

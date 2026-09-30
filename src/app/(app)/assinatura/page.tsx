@@ -42,56 +42,60 @@ export default async function AssinaturaPage() {
           <EmptyState icon={<CreditCard />} title="Nenhuma assinatura configurada ainda." description="Fale com a 41 Tech." />
         </Card>
       ) : (
+        // Plano, usuários e implantação lado a lado, com a mesma altura e o
+        // mesmo cabeçalho (rótulo em cima, valor embaixo). Eram quatro faixas
+        // da largura da tela, duas em Card e duas em div com as classes
+        // copiadas; o recado de contato passa a ser só texto, embaixo.
         <div className="space-y-4">
-          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-            <p className="text-[11px] text-fg-muted uppercase tracking-wide mb-1">Plano</p>
-            <p className="text-[18px] font-semibold text-fg">{subscription.plan.name}</p>
-            <p className="text-[13px] text-fg-muted mt-1">
-              {subscription.plan.billingType === "FLAT_MONTHLY"
-                ? `${fmt(subscription.plan.basePrice)}/mês`
-                : `${fmt(subscription.plan.pricePerUser)}/usuário/mês`}
-              {" · "}
-              Status: {SUBSCRIPTION_STATUS_LABEL[subscription.status]}
-            </p>
-            {subscription.currentPeriodEnd && (
-              <p className="text-[12px] text-fg-muted mt-1">
-                Próxima renovação: {formatCalendarDate(subscription.currentPeriodEnd)}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
+            <Card className="p-5 h-full">
+              <p className="text-[length:var(--fs-helper)] text-fg-muted mb-1">Plano</p>
+              <p className="text-[18px] font-semibold text-fg">{subscription.plan.name}</p>
+              <p className="text-[13px] text-fg-muted mt-1">
+                {subscription.plan.billingType === "FLAT_MONTHLY"
+                  ? `${fmt(subscription.plan.basePrice)}/mês`
+                  : `${fmt(subscription.plan.pricePerUser)}/usuário/mês`}
+                {" · "}
+                Status: {SUBSCRIPTION_STATUS_LABEL[subscription.status]}
               </p>
-            )}
-          </div>
-
-          {seatLimit != null && (
-            <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-              <p className="text-[11px] text-fg-muted uppercase tracking-wide mb-1">Usuários</p>
-              <p className="text-[18px] font-semibold text-fg tnum">{activeUsers} / {seatLimit}</p>
-              <div className="w-full h-2 rounded-full bg-surface-2 mt-2 overflow-hidden">
-                <div
-                  className={`h-full rounded-full ${seatsUsedPct === 100 ? "bg-danger" : "bg-brand"}`}
-                  style={{ width: `${seatsUsedPct}%` }}
-                />
-              </div>
-              {seatsUsedPct === 100 && (
-                <p className="text-[12px] text-danger mt-2">
-                  Limite atingido — novos usuários não podem ser criados até um upgrade.
+              {subscription.currentPeriodEnd && (
+                <p className="text-[12px] text-fg-muted mt-1">
+                  Próxima renovação: {formatCalendarDate(subscription.currentPeriodEnd)}
                 </p>
               )}
-            </div>
-          )}
+            </Card>
 
-          <Card className="p-5">
-            <p className="text-[11px] text-fg-muted uppercase tracking-wide mb-1">Implantação</p>
-            <p className="text-[13px] text-fg">
-              {subscription.setupFeePaidAt
-                ? `Paga em ${formatInstantDate(subscription.setupFeePaidAt)}`
-                : `Pendente${subscription.setupFeeAmount ? ` — ${fmt(subscription.setupFeeAmount)}` : ""}`}
-            </p>
-          </Card>
+            {seatLimit != null && (
+              <Card className="p-5 h-full">
+                <p className="text-[length:var(--fs-helper)] text-fg-muted mb-1">Usuários</p>
+                <p className="text-[18px] font-semibold text-fg tnum">{activeUsers} / {seatLimit}</p>
+                <div className="w-full h-2 rounded-full bg-surface-2 mt-2 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${seatsUsedPct === 100 ? "bg-danger" : "bg-brand"}`}
+                    style={{ width: `${seatsUsedPct}%` }}
+                  />
+                </div>
+                {seatsUsedPct === 100 && (
+                  <p className="text-[12px] text-danger mt-2">
+                    Limite atingido — novos usuários não podem ser criados até um upgrade.
+                  </p>
+                )}
+              </Card>
+            )}
 
-          <Card className="p-5">
-            <p className="text-[13px] text-fg-muted">
-              Precisa de mais usuários ou trocar de plano? Entre em contato com a 41 Tech.
-            </p>
-          </Card>
+            <Card className="p-5 h-full">
+              <p className="text-[length:var(--fs-helper)] text-fg-muted mb-1">Implantação</p>
+              <p className="text-[18px] font-semibold text-fg">
+                {subscription.setupFeePaidAt
+                  ? `Paga em ${formatInstantDate(subscription.setupFeePaidAt)}`
+                  : `Pendente${subscription.setupFeeAmount ? ` — ${fmt(subscription.setupFeeAmount)}` : ""}`}
+              </p>
+            </Card>
+          </div>
+
+          <p className="text-[length:var(--fs-helper)] text-fg-muted">
+            Precisa de mais usuários ou trocar de plano? Entre em contato com a 41 Tech.
+          </p>
         </div>
       )}
     </PageContainer>

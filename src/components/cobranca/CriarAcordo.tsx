@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { moeda } from "@/lib/financeiro/formato";
 import { centavosDeTexto } from "@/lib/financeiro/manual";
 import { gerarParcelas, MAXIMO_DE_PARCELAS, TAMANHO_MAXIMO_DA_NOTA } from "@/lib/financeiro/cobranca/acordo";
@@ -78,10 +79,12 @@ export function CriarAcordo({
         <Handshake size={13} /> Criar acordo
       </Button>
       <Modal open={aberto} onClose={fechar} title={`Acordo com ${sacadoNome}`} maxWidth="max-w-2xl">
-        <div className="flex flex-col gap-4 p-5">
-          <div>
-            <p className="text-[12px] font-medium text-fg mb-2">Títulos vencidos deste sacado nesta empresa</p>
-            <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto">
+        {/* Sem p-5 próprio: o Modal já dá o respiro, e os dois somados
+            deixavam o conteúdo 20px mais para dentro que o título. */}
+        <div className="flex flex-col gap-4">
+          <fieldset>
+            <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">Títulos vencidos deste sacado nesta empresa</legend>
+            <div className="flex flex-col items-start gap-2 max-h-48 overflow-y-auto">
               {candidatos.map((c) => (
                 <Checkbox
                   key={c.id}
@@ -106,11 +109,21 @@ export function CriarAcordo({
             <p className="text-[12px] text-fg-muted mt-2">
               Soma dos originais: <strong className="tabular-nums text-fg">{moeda(original)}</strong>
             </p>
-          </div>
+          </fieldset>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* Parcelas é um número de dois dígitos e a data tem largura fixa:
+              colunas estreitas, e o valor fica com o resto. */}
+          <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_110px_180px]">
             <CampoForm label="Valor do acordo" htmlFor="acordo-valor" helper="Vazio = soma dos originais.">
-              <Input id="acordo-valor" value={valor} onChange={(e) => setValor(e.target.value)} placeholder={moeda(original)} disabled={confirmando} inputMode="decimal" />
+              <Input
+                id="acordo-valor"
+                prefix="R$"
+                value={valor}
+                onChange={(e) => setValor(e.target.value)}
+                placeholder={moeda(original).replace(/^R\$\s*/, "")}
+                disabled={confirmando}
+                inputMode="decimal"
+              />
             </CampoForm>
             <CampoForm label="Parcelas" htmlFor="acordo-parcelas" required>
               <Input id="acordo-parcelas" type="number" min={1} max={MAXIMO_DE_PARCELAS} value={parcelas} onChange={(e) => setParcelas(e.target.value)} disabled={confirmando} />
@@ -118,7 +131,7 @@ export function CriarAcordo({
             <CampoForm label="1ª parcela vence em" htmlFor="acordo-primeiro" required helper="As seguintes, todo mês no mesmo dia.">
               <Input id="acordo-primeiro" type="date" min={hojeISO} value={primeiro} onChange={(e) => setPrimeiro(e.target.value)} disabled={confirmando} />
             </CampoForm>
-          </div>
+          </FieldGrid>
           <CampoForm label="Observação interna" htmlFor="acordo-notas">
             <Textarea id="acordo-notas" rows={2} maxLength={TAMANHO_MAXIMO_DA_NOTA} value={notas} onChange={(e) => setNotas(e.target.value)} disabled={confirmando} />
           </CampoForm>
@@ -158,22 +171,29 @@ export function CriarAcordo({
             </div>
           )}
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
+            {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
             {!confirmando ? (
-              <Button
-                size="sm"
-                disabled={selecionados.size === 0 || simulacao.length === 0}
-                onClick={() => {
-                  setErro(null);
-                  setConfirmando(true);
-                }}
-              >
-                Revisar e confirmar
-              </Button>
+              <>
+                <Button variant="secondary" onClick={fechar}>
+                  Cancelar
+                </Button>
+                <Button
+                  disabled={selecionados.size === 0 || simulacao.length === 0}
+                  onClick={() => {
+                    setErro(null);
+                    setConfirmando(true);
+                  }}
+                >
+                  Revisar e confirmar
+                </Button>
+              </>
             ) : (
               <>
+                <Button variant="secondary" disabled={pendente} onClick={() => setConfirmando(false)}>
+                  Voltar
+                </Button>
                 <Button
-                  size="sm"
                   disabled={pendente}
                   onClick={() => {
                     const dados = new FormData();
@@ -198,12 +218,8 @@ export function CriarAcordo({
                 >
                   {pendente ? "Criando…" : `Confirmar: encerrar ${selecionados.size} título(s) e criar ${simulacao.length} parcela(s)`}
                 </Button>
-                <Button size="sm" variant="secondary" disabled={pendente} onClick={() => setConfirmando(false)}>
-                  Voltar
-                </Button>
               </>
             )}
-            {erro && <span className="text-[12px] text-danger">{erro}</span>}
           </div>
         </div>
       </Modal>

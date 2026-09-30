@@ -34,12 +34,9 @@ export function AccessRequestForm({
       <div className="text-center py-2 space-y-3">
         <p className="text-[14px] font-semibold text-fg">{successTitle}</p>
         <p className="text-[13px] text-fg-muted leading-relaxed">{successMessage}</p>
-        <Link
-          href="/login"
-          className="inline-flex items-center justify-center h-9 px-4 rounded-md border border-border text-[13px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-2 transition-colors mt-2"
-        >
+        <Button href="/login" variant="secondary" className="mt-2">
           Voltar para o login
-        </Link>
+        </Button>
       </div>
     );
   }
@@ -81,7 +78,7 @@ export function AccessRequestForm({
         type="submit"
         size="md"
         disabled={isPending}
-        className="w-full mt-1 active:scale-[0.99]"
+        className="w-full mt-1"
       >
         {isPending ? submitLabelPending : submitLabel}
       </Button>

@@ -529,8 +529,12 @@ export function EmpresasTable({
         >
           Inativar
         </Button>
+        {/* compact (h-8), como os botões `sm` da barra — era o Select de
+            formulário (h-9) entre dois botões de 32px. */}
         <div className="w-40">
           <Select
+            compact
+            aria-label="Novo status"
             value={bulkStatus}
             onChange={(e) => setBulkStatus(e.target.value as CompanyStatus)}
           >

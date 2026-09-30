@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { salvarRespostasDoCandidato } from "@/app/(app)/vagas/[id]/candidaturas/[candidaturaId]/respostas-actions";
 import { CAMPOS_DE_RESPOSTA, ROTULO_DA_RESPOSTA, type CampoDeResposta, type FonteDasRespostas, type Respostas } from "@/lib/recrutamento/respostas";
@@ -62,7 +64,7 @@ export function RespostasDoCandidato({
 
       {editando ? (
         <form
-          className="grid gap-3 sm:grid-cols-3 items-end"
+          className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
             setErro(null);
@@ -73,34 +75,37 @@ export function RespostasDoCandidato({
             });
           }}
         >
-          <label className="flex flex-col gap-1 text-[12px] text-fg-secondary">
-            <span className="font-medium">{ROTULO_DA_RESPOSTA.pretensaoSalarial}</span>
-            <Input prefix="R$" inputMode="decimal" value={form.pretensaoSalarial} onChange={(e) => setForm({ ...form, pretensaoSalarial: e.target.value })} />
-          </label>
-          <label className="flex flex-col gap-1 text-[12px] text-fg-secondary">
-            <span className="font-medium">{ROTULO_DA_RESPOSTA.disponibilidade}</span>
-            <Input maxLength={120} value={form.disponibilidade} onChange={(e) => setForm({ ...form, disponibilidade: e.target.value })} placeholder="Ex.: imediata, em 15 dias" />
-          </label>
-          <label className="flex flex-col gap-1 text-[12px] text-fg-secondary">
-            <span className="font-medium">{ROTULO_DA_RESPOSTA.deslocamentoMinutos}</span>
-            <Input suffix="min" inputMode="numeric" value={form.deslocamentoMinutos} onChange={(e) => setForm({ ...form, deslocamentoMinutos: e.target.value })} />
-          </label>
-          <div className="sm:col-span-3 flex items-center gap-2">
-            <Button type="submit" size="sm" loading={pendente} disabled={pendente}>
-              Salvar
-            </Button>
-            <Button variant="secondary" size="sm" onClick={() => setEditando(false)}>
+          {/* Mesmas três colunas da leitura, para o campo cair onde estava o
+              valor que ele corrige. Rótulo curto aqui: os da leitura têm ~30
+              letras e quebravam em duas linhas na coluna de um terço, descendo
+              o campo; a unidade já vem no R$ e no "min". */}
+          <FieldGrid columns="sm:grid-cols-3">
+            <CampoForm label="Pretensão salarial" htmlFor="resposta-pretensao" helper="Por mês.">
+              <Input id="resposta-pretensao" prefix="R$" inputMode="decimal" value={form.pretensaoSalarial} onChange={(e) => setForm({ ...form, pretensaoSalarial: e.target.value })} />
+            </CampoForm>
+            <CampoForm label="Disponibilidade" htmlFor="resposta-disponibilidade">
+              <Input id="resposta-disponibilidade" maxLength={120} value={form.disponibilidade} onChange={(e) => setForm({ ...form, disponibilidade: e.target.value })} placeholder="Ex.: imediata, em 15 dias" />
+            </CampoForm>
+            <CampoForm label="Tempo até o local" htmlFor="resposta-deslocamento">
+              <Input id="resposta-deslocamento" suffix="min" inputMode="numeric" value={form.deslocamentoMinutos} onChange={(e) => setForm({ ...form, deslocamentoMinutos: e.target.value })} />
+            </CampoForm>
+          </FieldGrid>
+          {erro && <p className="text-[13px] text-danger">{erro}</p>}
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
+            <p className="mr-auto text-[12px] text-fg-muted">O que você salvar aqui o atendente não sobrescreve.</p>
+            <Button variant="secondary" onClick={() => setEditando(false)}>
               Cancelar
             </Button>
-            {erro && <span className="text-[12px] text-danger">{erro}</span>}
-            <span className="text-[11px] text-fg-muted ml-auto">O que você salvar aqui o atendente não sobrescreve.</span>
+            <Button type="submit" loading={pendente} disabled={pendente}>
+              Salvar
+            </Button>
           </div>
         </form>
       ) : (
-        <dl className="grid gap-3 sm:grid-cols-3">
+        <dl className="grid gap-4 sm:grid-cols-3">
           {CAMPOS_DE_RESPOSTA.map((c) => (
             <div key={c}>
-              <dt className="text-[length:var(--fs-micro)] text-fg-muted mb-0.5">{ROTULO_DA_RESPOSTA[c]}</dt>
+              <dt className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">{ROTULO_DA_RESPOSTA[c]}</dt>
               <dd className="text-[13px] text-fg tnum">{mostrar(c, respostas)}</dd>
               {fonte[c] && (
                 <dd className="text-[11px] text-fg-muted">

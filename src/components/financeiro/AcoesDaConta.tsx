@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { Check, Undo2, CircleDollarSign, Send, MoreHorizontal, FileText, MessageSquareWarning } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { CampoForm } from "@/components/ui/CampoForm";
 import { Popover, ItemDoMenu } from "@/components/ui/Popover";
 import type { AcaoDeContaState } from "@/lib/financeiro/acoes";
 import type { SituacaoDaConta } from "@/lib/financeiro/contas";
@@ -58,6 +59,7 @@ export function AcoesDaConta({
   const [aviso, setAviso] = useState<string | null>(null);
   const [data, setData] = useState(hojeISO);
   const [pendente, startTransition] = useTransition();
+  const idDaData = useId();
 
   function executar(fn: () => Promise<AcaoDeContaState>, aoTerminar?: () => void) {
     setErro(null);
@@ -154,14 +156,14 @@ export function AcoesDaConta({
             recusa é ruído em toda linha. */}
         {status === "PROVISORIO" && (
           <Button variant="secondary" size="xs" disabled={pendente} onClick={() => executar(() => acoes.conferir(entryId))}>
-            <Check size={11} /> Conferir
+            <Check size={12} /> Conferir
           </Button>
         )}
         {/* Travado pela aprovação: o botão fica, desabilitado e com o motivo
             embaixo — sumir com ele faria a pessoa procurar a baixa noutro lugar. */}
         {bloqueioDeBaixa !== null ? (
           <Button variant="secondary" size="xs" disabled title={bloqueioDeBaixa}>
-            <CircleDollarSign size={11} /> {aPagar ? "Pagar" : "Receber"}
+            <CircleDollarSign size={12} /> {aPagar ? "Pagar" : "Receber"}
           </Button>
         ) : (
           <Popover
@@ -178,7 +180,7 @@ export function AcoesDaConta({
                   toggle();
                 }}
               >
-                <CircleDollarSign size={11} /> {aPagar ? "Pagar" : "Receber"}
+                <CircleDollarSign size={12} /> {aPagar ? "Pagar" : "Receber"}
               </Button>
             )}
           >
@@ -195,14 +197,10 @@ export function AcoesDaConta({
                   });
                 }}
               >
-                <label className="flex flex-col gap-1">
-                  <span className="text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
-                    {aPagar ? "Data do pagamento" : "Data do recebimento"}
-                  </span>
-                  <Input compact type="date" value={data} max={hojeISO} onChange={(e) => setData(e.target.value)} autoFocus />
-                </label>
-                {erroDaBaixa && <span className="text-[11px] text-danger">{erroDaBaixa}</span>}
-                <div className="flex justify-end gap-1.5">
+                <CampoForm label={aPagar ? "Data do pagamento" : "Data do recebimento"} htmlFor={idDaData} error={erroDaBaixa ?? undefined}>
+                  <Input id={idDaData} compact type="date" value={data} max={hojeISO} onChange={(e) => setData(e.target.value)} autoFocus />
+                </CampoForm>
+                <div className="flex justify-end gap-2">
                   <Button variant="secondary" size="sm" onClick={close}>
                     Cancelar
                   </Button>

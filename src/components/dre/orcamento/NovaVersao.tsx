@@ -7,19 +7,11 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { criarVersao } from "@/app/(app)/dre/orcamento/actions";
 
 type VersaoDeOrigem = { id: string; nome: string; ano: number; aprovada: boolean };
-
-function Campo({ rotulo, children, dica }: { rotulo: string; children: React.ReactNode; dica?: string }) {
-  return (
-    <label className="flex flex-col gap-1 text-[12px] text-fg-secondary">
-      <span className="font-medium">{rotulo}</span>
-      {children}
-      {dica && <span className="text-[11px] text-fg-muted">{dica}</span>}
-    </label>
-  );
-}
 
 /**
  * Cria uma versão do ano: vazia, cópia de outra versão com reajuste, ou o
@@ -47,15 +39,16 @@ export function NovaVersao({
   if (!aberto) {
     return (
       <Button size="sm" onClick={() => setAberto(true)}>
-        <Plus size={13} /> Nova versão
+        <Plus size={14} /> Nova versão
       </Button>
     );
   }
 
   return (
-    <Card className="p-4 mb-4 w-full">
+    // Sem `mb-4` próprio: a página já embrulha o formulário com o respiro.
+    <Card className="p-4 w-full">
       <form
-        className="flex flex-col gap-3"
+        className="flex flex-col gap-4"
         onSubmit={(e) => {
           e.preventDefault();
           const dados = new FormData(e.currentTarget);
@@ -73,22 +66,22 @@ export function NovaVersao({
       >
         <input type="hidden" name="companyId" value={companyId} />
         <input type="hidden" name="ano" value={ano} />
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-start">
-          <Campo rotulo={`Nome da versão (${ano})`}>
-            <Input name="nome" maxLength={80} required defaultValue={jaTemVersao ? "" : "Original"} placeholder="Ex.: Revisão de junho" />
-          </Campo>
-          <Campo rotulo="Partir de">
-            <Select name="origem" value={origem} onChange={(e) => setOrigem(e.target.value as typeof origem)}>
+        <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-4">
+          <CampoForm label={`Nome da versão (${ano})`} htmlFor="versao-nome" required>
+            <Input id="versao-nome" name="nome" maxLength={80} required defaultValue={jaTemVersao ? "" : "Original"} placeholder="Ex.: Revisão de junho" />
+          </CampoForm>
+          <CampoForm label="Partir de" htmlFor="versao-origem">
+            <Select id="versao-origem" name="origem" value={origem} onChange={(e) => setOrigem(e.target.value as typeof origem)}>
               <option value="vazia">Grade vazia</option>
               <option value="copia" disabled={versoes.length === 0}>
                 Outra versão, com reajuste
               </option>
               <option value="realizado">Realizado de um ano, com reajuste</option>
             </Select>
-          </Campo>
+          </CampoForm>
           {origem === "copia" && (
-            <Campo rotulo="Versão de origem">
-              <Select name="versaoOrigemId" required defaultValue="">
+            <CampoForm label="Versão de origem" htmlFor="versao-origem-id" required>
+              <Select id="versao-origem-id" name="versaoOrigemId" required defaultValue="">
                 <option value="" disabled>
                   Escolha…
                 </option>
@@ -99,28 +92,29 @@ export function NovaVersao({
                   </option>
                 ))}
               </Select>
-            </Campo>
+            </CampoForm>
           )}
           {origem === "realizado" && (
-            <Campo rotulo="Ano do realizado" dica="A DRE econômica de cada mês daquele ano, grupo a grupo.">
-              <Input name="anoOrigem" type="number" min={2000} max={2100} defaultValue={ano - 1} required />
-            </Campo>
+            <CampoForm label="Ano do realizado" htmlFor="versao-ano-origem" required helper="A DRE econômica de cada mês daquele ano, grupo a grupo.">
+              <Input id="versao-ano-origem" name="anoOrigem" type="number" min={2000} max={2100} defaultValue={ano - 1} required />
+            </CampoForm>
           )}
           {origem !== "vazia" && (
-            <Campo rotulo="Reajuste" dica="Aplicado em cada célula, arredondado em centavos.">
-              <Input name="reajuste" inputMode="decimal" suffix="%" placeholder="0" />
-            </Campo>
+            <CampoForm label="Reajuste" htmlFor="versao-reajuste" helper="Aplicado em cada célula, arredondado em centavos.">
+              <Input id="versao-reajuste" name="reajuste" inputMode="decimal" suffix="%" placeholder="0" />
+            </CampoForm>
           )}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="submit" size="sm" disabled={pendente}>
-            {pendente ? "Criando…" : "Criar versão"}
-          </Button>
-          {/* Botão, e não texto cinza (30/09) — na altura do "Criar versão" ao lado. */}
-          <Button variant="secondary" size="sm" onClick={() => setAberto(false)}>
+        </FieldGrid>
+        {/* Rodapé padrão: Cancelar antes do primário, os dois em 36px e à
+            direita; o erro fica à esquerda, na mesma linha. */}
+        <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
+          {erro && <span className="mr-auto text-[length:var(--fs-helper)] text-danger">{erro}</span>}
+          <Button variant="secondary" onClick={() => setAberto(false)}>
             Cancelar
           </Button>
-          {erro && <span className="text-[12px] text-danger">{erro}</span>}
+          <Button type="submit" disabled={pendente}>
+            {pendente ? "Criando…" : "Criar versão"}
+          </Button>
         </div>
       </form>
     </Card>

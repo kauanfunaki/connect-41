@@ -34,6 +34,10 @@ export default async function PortalPendenciaPage({ params }: { params: Promise<
       <Link href="/portal/pendencias" className="inline-flex items-center gap-1.5 text-[13px] text-fg-muted hover:text-fg mb-3">
         <ArrowLeft size={14} /> Pendências
       </Link>
+      {/* Os selos no `action` do cabeçalho: ficavam numa linha solta entre o
+          título e a conversa, 40px abaixo de um e 16px acima da outra. Assim
+          vão à direita do título no desktop e descem para baixo dele no
+          celular, e a conversa fica à distância de sempre. */}
       <PageHeader
         title={p.titulo}
         subtitle={
@@ -42,11 +46,13 @@ export default async function PortalPendenciaPage({ params }: { params: Promise<
             {p.prazo && <> · prazo {formatInstantDate(p.prazo)}</>}
           </>
         }
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <SeloDoStatus status={p.status} lado="CLIENTE" />
+            <SeloDoPrazo situacao={p.situacaoDoPrazo} status={p.status} />
+          </div>
+        }
       />
-      <div className="flex flex-wrap items-center gap-2 mt-3 mb-4">
-        <SeloDoStatus status={p.status} lado="CLIENTE" />
-        <SeloDoPrazo situacao={p.situacaoDoPrazo} status={p.status} />
-      </div>
 
       <ConversaDaPendencia
         abertura={{ descricao: p.descricao, anexos: p.anexosDaAbertura, por: p.abertaPor, em: p.abertaEm }}

@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { RefreshCw } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { Select } from "@/components/ui/Select";
+import { AlinhadoAoCampo, CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import type { ImportFeriadosResult } from "@/app/(app)/admin/feriados/actions";
 import { Button } from "@/components/ui/Button";
 
@@ -36,10 +38,13 @@ export function ImportFeriadosButton({ action }: Props) {
     });
   }
 
+  // Com rótulo, como o cadastro manual logo abaixo no mesmo cartão: o ano era
+  // um select sem nome, um pouco acima da linha dos outros campos.
   return (
-    <div className="flex items-center gap-2 mb-2">
-      <div className="w-24">
+    <FieldGrid columns="sm:grid-cols-[7rem_auto]" className="sm:justify-start">
+      <CampoForm label="Ano" htmlFor="ano-dos-feriados">
         <Select
+          id="ano-dos-feriados"
           value={year}
           onChange={(e) => setYear(Number(e.target.value))}
           disabled={pending}
@@ -48,16 +53,13 @@ export function ImportFeriadosButton({ action }: Props) {
             <option key={y} value={y}>{y}</option>
           ))}
         </Select>
-      </div>
-      <Button
-        variant="secondary"
-        size="md"
-        onClick={handleImport}
-        disabled={pending}
-      >
-        <RefreshCw size={13} className={pending ? "animate-spin" : ""} />
-        {pending ? "Importando…" : "Importar feriados nacionais"}
-      </Button>
-    </div>
+      </CampoForm>
+      <AlinhadoAoCampo>
+        <Button variant="secondary" onClick={handleImport} disabled={pending}>
+          <RefreshCw size={14} className={pending ? "animate-spin" : ""} />
+          {pending ? "Importando…" : "Importar feriados nacionais"}
+        </Button>
+      </AlinhadoAoCampo>
+    </FieldGrid>
   );
 }

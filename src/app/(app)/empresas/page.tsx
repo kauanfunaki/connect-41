@@ -185,7 +185,7 @@ export default async function EmpresasPage({
         action={<>{canCreate && (
           <Button
             href="/empresas/nova"
-            variant="primary" className="font-medium"
+            variant="primary"
           >
             + Nova Empresa
           </Button>

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
@@ -47,17 +47,14 @@ export default async function DocumentoClienteDetailPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Cadastros</Link>
-        <span className="text-fg-muted">/</span>
-        <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Empresas</Link>
-        <span className="text-fg-muted">/</span>
-        <Link href={`/empresas/${companyId}/documentos-cliente`} className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate max-w-[200px]">
-          Documentos para Cliente
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg truncate max-w-[200px]">{document.title}</span>
-      </div>
+      <Breadcrumb
+        items={[
+          { label: "Cadastros", href: "/empresas" },
+          { label: "Empresas", href: "/empresas" },
+          { label: "Documentos para Cliente", href: `/empresas/${companyId}/documentos-cliente`, truncate: true },
+          { label: document.title, truncate: true },
+        ]}
+      />
       <BackButton className="mb-3" />
 
       {/* O PageHeader estava aninhado dentro de uma linha com os selos, e as
@@ -95,8 +92,8 @@ export default async function DocumentoClienteDetailPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-5">
-          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-6">
-            <h2 className="text-[14px] font-semibold text-fg mb-3">Conteúdo</h2>
+          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
+            <h2 className="text-[14px] font-semibold text-fg mb-4">Conteúdo</h2>
             <div
               className="text-[14px] text-fg leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h2]:text-[16px] [&_h2]:font-semibold"
               dangerouslySetInnerHTML={{ __html: document.bodyHtml }}
@@ -109,7 +106,7 @@ export default async function DocumentoClienteDetailPage({
           </div>
 
           {canManage && document.status === "PUBLISHED" && (
-            <Card className="p-6">
+            <Card className="p-5">
               <h2 className="text-[14px] font-semibold text-fg mb-4">Enviar por e-mail</h2>
               <SendDocumentForm action={enviarDocumento} documentId={document.id} companyId={companyId} companyEmail={company.email} />
             </Card>

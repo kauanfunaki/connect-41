@@ -95,33 +95,36 @@ export function ApplyForm({ slug, vagaId, carimbo }: Props) {
 
       {/* As mesmas três perguntas do WhatsApp do Recrutamento — respondidas
           aqui, o robô não pergunta de novo. Nenhuma pede endereço: o tempo até
-          o local é o que importa, e ele é opcional. */}
-      <fieldset className="space-y-3 border-t border-border pt-4">
-        <legend className="text-[length:var(--fs-label)] font-medium text-fg">Algumas perguntas rápidas</legend>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <CampoForm label="Pretensão salarial (R$ por mês)" htmlFor="pretensaoSalarial" required>
-            <Input id="pretensaoSalarial" name="pretensaoSalarial" type="number" inputMode="decimal" min={1} step="0.01" required />
-          </CampoForm>
-          <CampoForm label="Quando pode começar?" htmlFor="disponibilidade" required>
-            <Select id="disponibilidade" name="disponibilidade" defaultValue="" required>
-              <option value="" disabled>Selecione</option>
-              {DISPONIBILIDADES.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </Select>
-          </CampoForm>
-          <CampoForm label="Tempo até o local (minutos)" htmlFor="deslocamentoMinutos">
-            <Input id="deslocamentoMinutos" name="deslocamentoMinutos" type="number" inputMode="numeric" min={0} max={600} step={1} placeholder="Opcional" />
-          </CampoForm>
-        </div>
-      </fieldset>
-
-      <div className="space-y-1.5">
-        <label htmlFor="resume" className="block text-[length:var(--fs-label)] font-medium text-fg">
-          Currículo (PDF, opcional)
-        </label>
-        <FileDropzoneField id="resume" name="resume" accept=".pdf" maxSizeMb={MAX_MB_DO_CURRICULO} />
+          o local é o que importa, e ele é opcional.
+          O fio de cima fica num <div> por fora: borda no próprio <fieldset>
+          faz a legenda "morder" o fio. Os rótulos longos ("Pretensão salarial
+          (R$ por mês)") quebravam em duas linhas na coluna de um terço e
+          desciam o campo; a unidade foi para o R$ e o "min" do campo. */}
+      <div className="border-t border-border pt-4">
+        <fieldset className="space-y-3">
+          <legend className="text-[length:var(--fs-label)] font-medium text-fg">Algumas perguntas rápidas</legend>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <CampoForm label="Pretensão salarial" htmlFor="pretensaoSalarial" required helper="Por mês.">
+              <Input id="pretensaoSalarial" name="pretensaoSalarial" type="number" inputMode="decimal" min={1} step="0.01" required prefix="R$" />
+            </CampoForm>
+            <CampoForm label="Quando pode começar?" htmlFor="disponibilidade" required>
+              <Select id="disponibilidade" name="disponibilidade" defaultValue="" required>
+                <option value="" disabled>Selecione</option>
+                {DISPONIBILIDADES.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </Select>
+            </CampoForm>
+            <CampoForm label="Tempo até o local" htmlFor="deslocamentoMinutos">
+              <Input id="deslocamentoMinutos" name="deslocamentoMinutos" type="number" inputMode="numeric" min={0} max={600} step={1} placeholder="Opcional" suffix="min" />
+            </CampoForm>
+          </div>
+        </fieldset>
       </div>
+
+      <CampoForm label="Currículo (PDF, opcional)" htmlFor="resume">
+        <FileDropzoneField id="resume" name="resume" accept=".pdf" maxSizeMb={MAX_MB_DO_CURRICULO} />
+      </CampoForm>
 
       {/* Campo-armadilha: invisível para quem usa o formulário, preenchido por
           robô que completa todo campo que acha. Fora da tela em vez de
@@ -133,11 +136,12 @@ export function ApplyForm({ slug, vagaId, carimbo }: Props) {
         <Input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
       </div>
 
-      <Checkbox
-        name="consent"
-        value="true"
-        label="Autorizo o uso dos meus dados pessoais para participação neste processo seletivo (LGPD)."
-      />
+      {/* Caixa no topo do texto: no celular a frase quebra em duas ou três
+          linhas, e o `Checkbox` com rótulo centraliza a caixa no parágrafo. */}
+      <label htmlFor="consent" className="flex items-start gap-2.5 text-[length:var(--fs-label)] text-fg-secondary cursor-pointer">
+        <Checkbox id="consent" name="consent" value="true" className="mt-0.5" />
+        <span>Autorizo o uso dos meus dados pessoais para participação neste processo seletivo (LGPD).</span>
+      </label>
 
       <Button
         variant="primary"

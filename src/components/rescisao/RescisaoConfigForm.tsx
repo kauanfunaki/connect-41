@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
@@ -69,7 +70,7 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
         <p className="text-[12px] text-fg-muted mb-3">
           Os percentuais são fixos em lei — o que varia por empresa é o grau apurado no laudo e a incidência.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FieldGrid>
           <CampoForm label="Grau de insalubridade" htmlFor="insalubridadeGrau" helper={heranca("insalubridadeGrau")}>
             <Select id="insalubridadeGrau" name="insalubridadeGrau" defaultValue={valores.insalubridadeGrau} disabled={!canEdit}>
               {GRAU_OPTIONS.map((o) => (
@@ -89,9 +90,9 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
               ))}
             </Select>
           </CampoForm>
-        </div>
+        </FieldGrid>
 
-        <div className="mt-3 space-y-2">
+        <div className="mt-4 space-y-2">
           <Checkbox
             name="periculosidadeAplica"
             value="true"
@@ -111,14 +112,15 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
 
       <section className="pt-4 border-t border-border">
         <h2 className="text-[14px] font-semibold text-fg mb-3">Médias de variáveis</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <CampoForm label="Janela (meses)" htmlFor="mediaMeses" helper={heranca("mediaMeses") ?? "Entre 3 e 12."}>
+        <FieldGrid columns="sm:grid-cols-3">
+          <CampoForm label="Janela" htmlFor="mediaMeses" helper={heranca("mediaMeses") ?? "Entre 3 e 12."}>
             <Input
               id="mediaMeses"
               name="mediaMeses"
               type="number"
               min={3}
               max={12}
+              suffix="meses"
               defaultValue={valores.mediaMeses}
               disabled={!canEdit}
             />
@@ -144,14 +146,16 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
               ))}
             </Select>
           </CampoForm>
-        </div>
+        </FieldGrid>
       </section>
 
       <section className="pt-4 border-t border-border">
         <h2 className="text-[14px] font-semibold text-fg mb-3">Conferência</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Um campo só, de percentual: na coluna de um terço, a mesma das
+            médias acima — era meia tela para um número de até 5. */}
+        <FieldGrid columns="sm:grid-cols-3">
           <CampoForm
-            label="Tolerância de divergência (%)"
+            label="Tolerância de divergência"
             htmlFor="toleranciaPct"
             helper={heranca("toleranciaPct") ?? "Máximo 5% — acima disso divergências reais deixariam de acender."}
           >
@@ -162,13 +166,14 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
               step="0.1"
               min={0}
               max={5}
+              suffix="%"
               defaultValue={valores.toleranciaPct}
               disabled={!canEdit}
             />
           </CampoForm>
-        </div>
+        </FieldGrid>
 
-        <div className="mt-3">
+        <div className="mt-4">
           <Checkbox
             name="tercoApresentadoSeparado"
             value="true"
@@ -176,7 +181,7 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
             disabled={!canEdit}
             label="A contabilidade apresenta o 1/3 constitucional como item separado"
           />
-          <p className="text-[11px] text-fg-muted mt-1 ml-6">
+          <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1 ml-6">
             Desmarque se ela envia o 1/3 embutido nas férias — o item deixa de acusar divergência.
           </p>
         </div>
@@ -188,7 +193,7 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
           Marcadas aqui deixam de entrar no total — mas continuam aparecendo na conferência com o valor que teriam,
           pra ninguém esconder verba devida sem querer.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
           {RESCISAO_CHECKLIST.filter((i) => i.hasValue).map((i) => (
             <Checkbox
               key={i.key}
@@ -226,7 +231,7 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
       </section>
 
       {canEdit && (
-        <div className="pt-4 border-t border-border">
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
           <Button
             variant="primary"
             size="md"

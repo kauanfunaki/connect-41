@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
@@ -7,6 +6,7 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getSectorMaps } from "@/lib/sectors";
 import { VagaForm } from "@/components/vagas/VagaForm";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { criarVaga } from "../actions";
 
 export default async function NovaVagaPage() {
@@ -38,11 +38,7 @@ export default async function NovaVagaPage() {
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/vagas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Vagas</Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Nova</span>
-      </div>
+      <Breadcrumb items={[{ label: "Vagas", href: "/vagas" }, { label: "Nova" }]} />
       <PageHeader title="Nova Vaga" />
 
       <Card className="p-6">

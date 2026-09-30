@@ -34,7 +34,7 @@ export function CancelarLancamento({ entryId }: { entryId: string }) {
           )
         }
       >
-        <Ban size={11} /> Cancelar
+        <Ban size={12} /> Cancelar
       </Button>
       {dialog}
     </>

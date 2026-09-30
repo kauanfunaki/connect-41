@@ -1,3 +1,5 @@
+import { CampoForm } from "@/components/ui/CampoForm";
+
 export function AuthShell({
   subtitle,
   children,
@@ -56,6 +58,9 @@ export function AuthShell({
   );
 }
 
+// O rótulo é o do CampoForm, e a caixa copia a do ui/Input (borda, fundo e
+// anel de foco): eram 12px no rótulo e no texto, e a caixa tinha o anel e o
+// fundo próprios. O ícone dentro da caixa é o que fica só daqui.
 export function AuthField({
   label,
   htmlFor,
@@ -68,17 +73,16 @@ export function AuthField({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-[12px] font-medium text-fg">
-        {label}
-      </label>
-      <div className="flex items-center gap-2 h-9 px-3 rounded-md border border-border bg-canvas focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20 transition-colors">
+    <CampoForm label={label} htmlFor={htmlFor}>
+      <div className="flex items-center gap-2 h-9 px-3 rounded-md border border-border-strong bg-input-bg transition-colors focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)]">
         <span className="text-fg-muted flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>
         {children}
       </div>
-    </div>
+    </CampoForm>
   );
 }
 
+// 16px (--fs-input), e não os 12px de antes: abaixo disso o Safari do iPhone
+// dá zoom ao focar o campo — e o cliente do portal cai no esqueci-senha daqui.
 export const AUTH_INPUT =
-  "w-full h-full bg-transparent text-[12px] text-fg placeholder:text-fg-muted outline-none border-none";
+  "w-full min-w-0 h-full bg-transparent text-[length:var(--fs-input)] text-fg placeholder:text-fg-muted outline-none border-none";

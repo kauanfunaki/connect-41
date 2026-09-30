@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { MenuDoRegistro } from "./MenuDoRegistro";
-import { TIPO_DO_AFASTAMENTO, SITUACAO_DO_AFASTAMENTO, COR_DO_AFASTAMENTO } from "./rotulosDoDP";
+import { TIPO_DO_AFASTAMENTO, SITUACAO_DO_AFASTAMENTO, COR_DO_AFASTAMENTO, SeloDoDP } from "./rotulosDoDP";
 
 const STATUS_OPTIONS = Object.keys(SITUACAO_DO_AFASTAMENTO) as AbsenceStatus[];
 
@@ -36,7 +36,7 @@ export function AfastamentoRow({ afastamento, updateAction, removeAction, canMan
   return (
     <div className="py-3 border-b border-border last:border-0">
       <div className="flex items-center justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <p className="text-[13px] text-fg">
             {TIPO_DO_AFASTAMENTO[afastamento.type]} — {afastamento.startDateLabel}
             {afastamento.returnDateLabel && ` até ${afastamento.returnDateLabel}`}
@@ -47,18 +47,20 @@ export function AfastamentoRow({ afastamento, updateAction, removeAction, canMan
           )}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${COR_DO_AFASTAMENTO[afastamento.status]}`}>
-            {SITUACAO_DO_AFASTAMENTO[afastamento.status]}
-          </span>
+          <SeloDoDP cor={COR_DO_AFASTAMENTO[afastamento.status]}>{SITUACAO_DO_AFASTAMENTO[afastamento.status]}</SeloDoDP>
           {/* Remover saiu de ao lado do "Atualizar" para o "⋯" (30/09). */}
           {canManage && <MenuDoRegistro titulo="Remover este registro?" onRemover={removeAction} />}
         </div>
       </div>
 
+      {/* Revisão de alinhamento (30/09): a situação tem a mesma largura em
+          todas as telas da ficha (era w-40, w-44, w-52 ou w-56 conforme a
+          tela), a data a de uma data, e tudo na altura do botão. */}
       {canManage && (
-        <form action={formAction} className="flex items-end gap-2 flex-wrap mt-2">
-          <div className="w-44">
+        <form action={formAction} className="flex flex-wrap items-center gap-2 mt-3">
+          <div className="w-full sm:w-56">
             <Select
+              aria-label="Situação"
               name="status"
               value={status}
               onChange={(e) => setStatus(e.target.value as AbsenceStatus)}
@@ -68,8 +70,8 @@ export function AfastamentoRow({ afastamento, updateAction, removeAction, canMan
               ))}
             </Select>
           </div>
-          <div className="w-40">
-            <Input name="returnDate" type="date" title="Data de retorno" />
+          <div className="w-full sm:w-40">
+            <Input name="returnDate" type="date" title="Data de retorno" aria-label="Data de retorno" />
           </div>
           <Button
             variant="secondary"
@@ -82,7 +84,7 @@ export function AfastamentoRow({ afastamento, updateAction, removeAction, canMan
         </form>
       )}
 
-      {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
+      {state?.error && <p className="mt-2 text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
     </div>
   );
 }

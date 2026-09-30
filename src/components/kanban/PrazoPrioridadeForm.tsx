@@ -17,13 +17,13 @@ export function PrazoPrioridadeForm({ action, dueDate, priority }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
 
   return (
-    <form action={formAction} className="space-y-3">
+    <form action={formAction} className="space-y-4">
       {state?.error && (
-        <p className="text-[12px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">
           {state.error}
         </p>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <CampoForm label="Prazo" htmlFor="dueDate">
           <Input
             id="dueDate"

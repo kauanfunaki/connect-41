@@ -25,12 +25,12 @@ export default async function AvisosDaJuntaPage() {
   return (
     <PageContainer>
       <BackButton className="mb-3" />
-      <div className="mb-5">
-        <PageHeader title="Avisos da Junta" />
-        <p className="text-[13px] text-fg-muted mt-1">
-          E-mails do Empresa Fácil que chegaram no societario@. O sistema sugere o desfecho; quem aplica é você.
-        </p>
-      </div>
+      {/* A explicação no `subtitle` do cabeçalho: num <p> depois dele, ela
+          ficava 28px abaixo do título (a margem do cabeçalho). */}
+      <PageHeader
+        title="Avisos da Junta"
+        subtitle="E-mails do Empresa Fácil que chegaram no societario@. O sistema sugere o desfecho; quem aplica é você."
+      />
       {avisos.length === 0 ? (
         <Card>
           <EmptyState title="Nenhum aviso para conferir" description="Quando a Junta mandar um e-mail, ele aparece aqui e no processo." />

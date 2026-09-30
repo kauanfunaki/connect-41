@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { excluirCandidato } from "../actions";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -116,13 +117,7 @@ export default async function CandidatoPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/candidatos" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Candidatos
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg truncate">{person.name}</span>
-      </div>
+      <Breadcrumb items={[{ label: "Candidatos", href: "/candidatos" }, { label: person.name, truncate: true }]} />
 
       {/* Selo, CPF e ações dentro do próprio `PageHeader` (polimento de
           30/09), como na ficha da vaga. "Editar" era um link desenhado à mão
@@ -176,7 +171,7 @@ export default async function CandidatoPage({
       {/* Identificação */}
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
         <h2 className="text-[14px] font-semibold text-fg mb-4">Identificação</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
           <InfoRow label="CPF" value={maskCpf(person.cpf)} mono />
           <InfoRow
             label="Data de Nascimento"
@@ -194,7 +189,7 @@ export default async function CandidatoPage({
       {/* Contato */}
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
         <h2 className="text-[14px] font-semibold text-fg mb-4">Contato</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
           <InfoRow label="E-mail" value={person.email} />
           <InfoRow label="Telefone" value={formatPhone(person.phone)} />
         </div>
@@ -204,7 +199,7 @@ export default async function CandidatoPage({
       {fullAddress && (
         <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
           <h2 className="text-[14px] font-semibold text-fg mb-4">Endereço</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
             <InfoRow label="Logradouro" value={[person.addressStreet, person.addressNumber].filter(Boolean).join(", ")} />
             <InfoRow label="Complemento" value={person.addressComplement} />
             <InfoRow label="Bairro" value={person.neighborhood} />
@@ -225,13 +220,13 @@ export default async function CandidatoPage({
         ) : (
           <div className="divide-y divide-border">
             {candidaturas.map((c) => (
-              <div key={c.id} className="flex items-center justify-between py-2.5">
-                <Link href={`/vagas/${c.vaga.id}`} className="text-[13px] text-brand hover:underline">
+              <div key={c.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2.5">
+                <Link href={`/vagas/${c.vaga.id}`} className="min-w-0 text-[13px] text-brand hover:underline">
                   {c.vaga.title}
                 </Link>
-                <div className="flex items-center gap-2">
-                  <span className="text-[12px] text-fg-muted">{c.vaga.company.name}</span>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border bg-surface-2 text-fg-secondary border-border">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="min-w-0 truncate text-[12px] text-fg-muted">{c.vaga.company.name}</span>
+                  <span className="inline-flex flex-shrink-0 items-center px-2 py-0.5 rounded-full text-[11px] font-medium border bg-surface-2 text-fg-secondary border-border">
                     {CANDIDATURA_STATUS_LABEL[c.status]}
                   </span>
                 </div>
@@ -277,9 +272,9 @@ function InfoRow({
   mono?: boolean;
 }) {
   return (
-    <div>
-      <p className="text-[length:var(--fs-micro)] text-fg-muted mb-0.5">{label}</p>
-      <p className={`text-[13px] text-fg ${mono ? "tnum" : ""}`}>{value ?? "—"}</p>
+    <div className="min-w-0">
+      <p className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">{label}</p>
+      <p className={`text-[13px] text-fg break-words ${mono ? "tnum" : ""}`}>{value || "—"}</p>
     </div>
   );
 }

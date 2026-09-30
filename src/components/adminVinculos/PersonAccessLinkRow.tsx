@@ -60,7 +60,8 @@ export function PersonAccessLinkRow({
 
   // Uma linha da tabela de vínculos (era uma fileira de flex com cabeçalho de
   // mentira até 30/09). `LinhaFiltravel` some quando o funil das colunas não a
-  // deixa passar.
+  // deixa passar. Selects compactos, como o de setor em Módulos: é controle
+  // de linha de tabela, não campo de formulário.
   return (
     <LinhaFiltravel id={personId} className="border-b border-border">
       <td className="px-4 py-3">
@@ -76,7 +77,13 @@ export function PersonAccessLinkRow({
       <td className="px-4 py-3">
         <div className="w-56 mx-auto">
           {canEdit ? (
-            <Select value={userId} disabled={isPending} onChange={(e) => handleUserChange(e.target.value)}>
+            <Select
+              compact
+              aria-label={`Conta de acesso de ${personName}`}
+              value={userId}
+              disabled={isPending}
+              onChange={(e) => handleUserChange(e.target.value)}
+            >
               <option value="">Não vinculado</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
@@ -93,6 +100,8 @@ export function PersonAccessLinkRow({
           <div className="w-56 mx-auto">
             {canEdit ? (
               <Select
+                compact
+                aria-label={`Atendente do Chatwoot de ${personName}`}
                 value={agentLinkId}
                 disabled={isPending || !userId}
                 title={!userId ? "Vincule uma conta primeiro" : undefined}

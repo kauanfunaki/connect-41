@@ -55,7 +55,7 @@ export default async function TurnosPage({
           canManage && (
             <Button
               href={novoHref}
-              variant="primary" className="font-medium"
+              variant="primary"
             >
               + Novo Turno
             </Button>
@@ -73,7 +73,7 @@ export default async function TurnosPage({
               canManage && (
                 <Button
                   href={novoHref}
-                  variant="primary" className="font-medium"
+                  variant="primary"
                 >
                   + Cadastrar turno
                 </Button>

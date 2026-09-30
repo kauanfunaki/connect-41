@@ -112,18 +112,18 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
 
       <Card className="p-4 mb-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[13px]">
-          <div>
-            <span className="block text-[11px] uppercase tracking-wide text-fg-muted mb-1">Responsável</span>
+          <div className="min-w-0">
+            <span className="block text-[length:var(--fs-helper)] text-fg-muted mb-1">Responsável</span>
             {podeAgir ? (
               <AtribuirResponsavel entryId={l.id} atual={l.responsavelId} usuarios={usuarios} />
             ) : (
               <span>{l.responsavelNome ?? "—"}</span>
             )}
           </div>
-          <div>
-            <span className="block text-[11px] uppercase tracking-wide text-fg-muted mb-1">E-mail do sacado</span>
+          <div className="min-w-0">
+            <span className="block text-[length:var(--fs-helper)] text-fg-muted mb-1">E-mail do sacado</span>
             {l.sacadoEmail ? (
-              <span>{l.sacadoEmail}</span>
+              <span className="block break-words">{l.sacadoEmail}</span>
             ) : (
               <span className="text-warning">
                 sem e-mail —{" "}
@@ -133,13 +133,13 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
               </span>
             )}
           </div>
-          <div>
-            <span className="block text-[11px] uppercase tracking-wide text-fg-muted mb-1">Régua</span>
+          <div className="min-w-0">
+            <span className="block text-[length:var(--fs-helper)] text-fg-muted mb-1">Régua</span>
             {l.regua.enviar !== null ? <span>passo de {l.regua.enviar} dias na próxima execução</span> : <span className="text-fg-secondary">{ROTULO_DO_MOTIVO[l.regua.motivo]}</span>}
           </div>
         </div>
         {podeAgir && (
-          <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-border-soft">
+          <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border-soft">
             {candidatoAoAcordo && (
               <CriarAcordo
                 sacadoNome={l.sacadoNome}
@@ -158,6 +158,7 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
               <AcaoComMotivo
                 rotulo="Baixar por perda"
                 variante="danger"
+                tamanho="sm"
                 titulo="Baixa por perda"
                 descricao={`${l.sacadoNome} · ${moeda(l.valorCentavos)}. O título sai do em aberto e do aging; a receita da competência ${t.competencia} não muda, e a perda entra como despesa neste mês.`}
                 confirmar="Baixar por perda"
@@ -169,6 +170,7 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
             {gerencia && reverter.pode && (
               <AcaoComMotivo
                 rotulo="Reverter perda"
+                tamanho="sm"
                 titulo="Reverter baixa por perda"
                 descricao="O título volta ao em aberto e à fila, e a perda sai da DRE econômica."
                 confirmar="Reverter"
@@ -226,14 +228,18 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
       {t.envios.length > 0 && (
         <>
           <h2 className="text-[14px] font-semibold mb-2">Lembretes da régua</h2>
-          <ul className="flex flex-col gap-1 text-[12px] mb-4">
+          {/* Colunas fixas a partir de sm: com itens soltos, o e-mail e o selo
+              mudavam de lugar conforme a largura da data de cada linha. */}
+          <ul className="flex flex-col gap-1.5 text-[12px] mb-4">
             {t.envios.map((e) => (
-              <li key={e.step} className="flex flex-wrap items-center gap-2">
+              <li key={e.step} className="grid grid-cols-1 sm:grid-cols-[9.5rem_7.5rem_minmax(0,1fr)_auto] sm:items-center gap-x-3 gap-y-0.5">
                 <span className="tabular-nums">{formatInstantDateTime(e.sentAt)}</span>
                 <span>passo de {e.step} dias</span>
-                <span className="text-fg-muted">{e.to}</span>
-                {e.ok ? <Badge variant="success">Enviado</Badge> : <Badge variant="danger">Erro</Badge>}
-                {!e.ok && e.error && <span className="text-danger">{e.error}</span>}
+                <span className="text-fg-muted truncate" title={e.to}>
+                  {e.to}
+                </span>
+                <span>{e.ok ? <Badge variant="success">Enviado</Badge> : <Badge variant="danger">Erro</Badge>}</span>
+                {!e.ok && e.error && <span className="text-danger sm:col-span-4">{e.error}</span>}
               </li>
             ))}
           </ul>
@@ -246,9 +252,11 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
 function ResumoDoAcordoCard({ titulo, acordo, destaque }: { titulo: string; acordo: AcordoMontado; destaque: string }) {
   return (
     <Card className="p-4 mb-4">
-      <div className="flex flex-wrap items-center gap-2 mb-1">
-        <h2 className="text-[14px] font-semibold">{titulo}</h2>
-        <SeloDoAcordo status={acordo.status} />
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
+          <h2 className="text-[14px] font-semibold">{titulo}</h2>
+          <SeloDoAcordo status={acordo.status} />
+        </div>
         <Link href={`/cobranca?aba=acordos&empresa=${acordo.empresaId}`} className="text-brand hover:underline text-[12px]">
           ver nos acordos
         </Link>
@@ -259,12 +267,16 @@ function ResumoDoAcordoCard({ titulo, acordo, destaque }: { titulo: string; acor
       </p>
       <ul className="flex flex-col gap-1 text-[12px]">
         {acordo.parcelas.map((p, i) => (
-          <li key={p.id} className={`flex flex-wrap items-center gap-2 tabular-nums ${p.id === destaque ? "font-semibold" : ""}`}>
+          // Colunas fixas: número, vencimento e valor caem um embaixo do outro.
+          <li
+            key={p.id}
+            className={`grid grid-cols-[2.5rem_5.5rem_minmax(0,7rem)_auto] items-center justify-start gap-3 tabular-nums ${p.id === destaque ? "font-semibold" : ""}`}
+          >
             <span>
               {i + 1}/{acordo.parcelas.length}
             </span>
             <span>{formatInstantDate(p.vencimento)}</span>
-            <span>{moeda(p.valorCentavos)}</span>
+            <span className="text-right">{moeda(p.valorCentavos)}</span>
             {p.pagoEm ? (
               <Badge variant="success">Paga</Badge>
             ) : p.closeReason === "PERDA" ? (

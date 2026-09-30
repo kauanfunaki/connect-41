@@ -43,7 +43,7 @@ export function ResponderPendencia({
   return (
     <form
       key={versao}
-      className="flex flex-col gap-3"
+      className="flex flex-col gap-4"
       onSubmit={(e) => {
         e.preventDefault();
         const dados = new FormData(e.currentTarget);
@@ -64,12 +64,16 @@ export function ResponderPendencia({
       <CampoForm label="Mensagem" htmlFor={`resposta-${alvo}`} helper={dica}>
         <Textarea id={`resposta-${alvo}`} name="body" rows={4} maxLength={5000} />
       </CampoForm>
-      <CampoDeAnexos idBase={`anexo-${alvo}`} />
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="submit" size="sm" disabled={pendente}>
-          <Send size={13} /> {pendente ? "Enviando…" : rotulo}
+      {/* Com rótulo, como na abertura da pendência — sem ele, as faixas de
+          arquivo pareciam soltas embaixo da mensagem. */}
+      <CampoForm label="Anexos" htmlFor={`anexo-${alvo}-0`}>
+        <CampoDeAnexos idBase={`anexo-${alvo}`} />
+      </CampoForm>
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
+        <Button type="submit" disabled={pendente}>
+          <Send size={14} /> {pendente ? "Enviando…" : rotulo}
         </Button>
-        {erro && <span className="text-[12px] text-danger">{erro}</span>}
       </div>
       {aviso && <p className="text-[12px] text-warning">{aviso}</p>}
     </form>

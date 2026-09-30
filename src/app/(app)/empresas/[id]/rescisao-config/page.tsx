@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
@@ -42,15 +42,16 @@ export default async function EmpresaRescisaoConfigPage({ params }: { params: Pr
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-3 flex-wrap">
-        <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Empresas</Link>
-        <span className="text-fg-muted">/</span>
-        <Link href={`/empresas/${companyId}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate max-w-[200px]">
-          {company.name}
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Cálculo de rescisão</span>
-      </div>
+      {/* A trilha padrão das sub-páginas da empresa (era uma cópia à mão, com
+          outro espaçamento). */}
+      <Breadcrumb
+        items={[
+          { label: "Cadastros", href: "/empresas" },
+          { label: "Empresas", href: "/empresas" },
+          { label: company.name, href: `/empresas/${companyId}`, truncate: true },
+          { label: "Cálculo de rescisão" },
+        ]}
+      />
       <BackButton className="mb-3" />
 
       <PageHeader
@@ -58,17 +59,18 @@ export default async function EmpresaRescisaoConfigPage({ params }: { params: Pr
         subtitle={<>{company.name} — sobrescreve o padrão do escritório apenas nos campos que você alterar.</>}
       />
 
-      <Card className="p-5 mb-4">
-        <p className="text-[13px] text-fg-secondary">
+      {/* Aviso e ação na mesma linha, e os dois cartões com o mesmo padding. */}
+      <Card className="p-5 mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="min-w-0 text-[length:var(--fs-body)] text-fg-secondary">
           Cada campo mostra de onde vem o valor atual. Alterar aqui afeta só esta empresa.
         </p>
         {/* Era link de texto sublinhado (30/09): é ação, então é botão. */}
-        <Button href="/admin/rescisao" variant="secondary" size="xs" className="mt-2">
-          Ver o padrão do escritório <ArrowRight size={11} />
+        <Button href="/admin/rescisao" variant="secondary" size="sm">
+          Ver o padrão do escritório <ArrowRight size={14} />
         </Button>
       </Card>
 
-      <Card className="p-6">
+      <Card className="p-5">
         <RescisaoConfigForm
           action={salvarConfigEmpresa.bind(null, companyId)}
           valores={valores}
