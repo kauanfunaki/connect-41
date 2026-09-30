@@ -46,21 +46,22 @@ export function PortalDocumentosTable({ documentos, total, totalLimitado, temPro
       contraparte: direcao === "PAGAR" ? d.issuerName : direcao === "RECEBER" ? d.recipientName : d.issuerName,
     };
   });
+  // O cliente sabe quem ele é: o que ele procura numa nota é com quem foi. A
+  // empresa dele só aparece quando o acesso cobre mais de uma — até 30/09 toda
+  // linha abria com o nome dela, repetido, e a contraparte vinha miúda embaixo.
+  const variasEmpresas = new Set(documentos.map((d) => nomeExibicao(d.company))).size > 1;
 
   return (
     <div className="mt-4">
       <CartoesNoCelular>
         {linhas.map(({ d, contraparte }) => (
           <Cartao key={d.id}>
-            <TopoDoCartao
-              nome={nomeExibicao(d.company)}
-              valor={d.amount === null ? "—" : MOEDA.format(Number(d.amount))}
-            />
+            <TopoDoCartao nome={contraparte ?? "—"} valor={d.amount === null ? "—" : MOEDA.format(Number(d.amount))} />
             <InfoDoCartao className="tabular-nums">
               {TIPO_LABEL[d.type]} nº {d.number}
               {d.series ? `/${d.series}` : ""}
             </InfoDoCartao>
-            <InfoDoCartao>{contraparte ?? "—"}</InfoDoCartao>
+            {variasEmpresas && <InfoDoCartao>{nomeExibicao(d.company)}</InfoDoCartao>}
             <InfoDoCartao className="tabular-nums">
               emitida em {formatCalendarDate(d.issuedAt)} · {competenciaLegivel(d.competence)}
             </InfoDoCartao>
@@ -68,7 +69,7 @@ export function PortalDocumentosTable({ documentos, total, totalLimitado, temPro
         ))}
       </CartoesNoCelular>
 
-      <TabelaNoDesktop className="border border-border rounded-lg">
+      <TabelaNoDesktop padrao>
         <table className="w-full table-fixed min-w-[760px] text-[length:var(--fs-ui)]">
           <colgroup>
             <col className="w-[88px]" />
@@ -77,11 +78,11 @@ export function PortalDocumentosTable({ documentos, total, totalLimitado, temPro
             <col className="w-[124px]" />
             <col className="w-[132px]" />
           </colgroup>
-          <thead className="bg-surface-2">
-            <tr className="text-[11px] font-medium text-fg-muted uppercase tracking-wide">
+          <thead>
+            <tr className="text-[length:var(--fs-micro)] font-medium text-fg-muted uppercase tracking-wide">
               <th className="px-4 py-2.5 text-left">Tipo</th>
               <th className="px-4 py-2.5 text-left">Número</th>
-              <th className="px-4 py-2.5 text-left">Empresa / contraparte</th>
+              <th className="px-4 py-2.5 text-left">Fornecedor ou cliente</th>
               <th className="px-4 py-2.5 text-left">Emissão</th>
               <th className="px-4 py-2.5 text-right">Valor</th>
             </tr>
@@ -95,8 +96,12 @@ export function PortalDocumentosTable({ documentos, total, totalLimitado, temPro
                     {d.series ? <span className="text-fg-muted">/{d.series}</span> : null}
                   </td>
                   <td className="px-4 py-3">
-                    <p className="text-fg truncate">{nomeExibicao(d.company)}</p>
-                    <p className="text-[length:var(--fs-micro)] text-fg-muted truncate">{contraparte ?? "—"}</p>
+                    <p className="text-fg truncate" title={contraparte ?? undefined}>
+                      {contraparte ?? "—"}
+                    </p>
+                    {variasEmpresas && (
+                      <p className="text-[length:var(--fs-micro)] text-fg-muted truncate">{nomeExibicao(d.company)}</p>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-fg-secondary tnum whitespace-nowrap">
                     <p>{formatCalendarDate(d.issuedAt)}</p>

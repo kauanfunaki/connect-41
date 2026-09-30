@@ -75,7 +75,7 @@ export default async function PortalCobrancaPage() {
             ))}
           </CartoesNoCelular>
 
-          <TabelaNoDesktop>
+          <TabelaNoDesktop padrao>
           <table className="w-full min-w-[860px] text-[13px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
