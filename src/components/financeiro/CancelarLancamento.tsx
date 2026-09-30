@@ -1,34 +1,42 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Ban } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { useConfirm } from "@/components/ui/useConfirm";
 import { cancelarLancamentoManual } from "@/app/(app)/lancamentos/actions";
 
+/**
+ * Botão de verdade desde a conferência de 30/09 — era texto cinza solto, que o
+ * Kauan reprovou nas tabelas do BPO. A confirmação é o diálogo do Connect, não
+ * o `confirm()` do navegador: cancelar só se desfaz com um lançamento novo, e o
+ * erro da action aparece no próprio diálogo.
+ */
 export function CancelarLancamento({ entryId }: { entryId: string }) {
-  const [erro, setErro] = useState<string | null>(null);
-  const [pendente, startTransition] = useTransition();
+  const { dialog, requestConfirm } = useConfirm();
 
   return (
-    <div className="flex flex-col items-start gap-1">
+    <>
       <Button
-        variant="linkMuted"
+        variant="danger"
         size="xs"
-        className="text-[11px]"
-        disabled={pendente}
-        onClick={() => {
-          // Confirmação nativa: cancelar é reversível só por um novo lançamento,
-          // e um clique acidental na linha errada não deveria bastar.
-          if (!window.confirm("Cancelar este lançamento? Ele sai de todos os totais.")) return;
-          setErro(null);
-          startTransition(async () => {
-            const r = await cancelarLancamentoManual(entryId);
-            if ("error" in r) setErro(r.error);
-          });
-        }}
+        onClick={() =>
+          requestConfirm(
+            {
+              title: "Cancelar este lançamento?",
+              description: "Ele sai de todos os totais e fica no histórico de auditoria. Para desfazer, só com um lançamento novo.",
+              confirmLabel: "Cancelar lançamento",
+              destructive: true,
+            },
+            async () => {
+              const r = await cancelarLancamentoManual(entryId);
+              if ("error" in r) throw new Error(r.error);
+            }
+          )
+        }
       >
-        Cancelar
+        <Ban size={11} /> Cancelar
       </Button>
-      {erro && <span className="text-[11px] text-danger max-w-[220px]">{erro}</span>}
-    </div>
+      {dialog}
+    </>
   );
 }

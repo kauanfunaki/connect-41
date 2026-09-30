@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AvisoDeVersaoNova } from "@/components/shell/AvisoDeVersaoNova";
+import { DicaFlutuante } from "@/components/shared/DicaFlutuante";
 
 // `manifest` aqui, e não no layout raiz: é o que faz o navegador oferecer
 // **o portal** para instalar quando o cliente está no portal. O layout raiz
@@ -20,6 +21,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   return (
     <div className="min-h-screen bg-canvas">
       <AvisoDeVersaoNova quem="O portal" />
+      <DicaFlutuante />
       {children}
     </div>
   );

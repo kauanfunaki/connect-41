@@ -13,7 +13,7 @@ const CABECALHO = "text-left text-[11px] uppercase tracking-wide text-fg-muted b
 export function TabelaDoRealizado({ meses }: { meses: MesDoFluxo[] }) {
   const maior = Math.max(1, ...meses.flatMap((m) => [m.entradas, m.saidas]));
   return (
-    <div className="overflow-x-auto border border-border rounded-lg bg-surface">
+    <div className="c41-tabela overflow-x-auto border border-border rounded-lg bg-surface">
       <table className="w-full min-w-[720px] text-[13px]">
         <thead>
           <tr className={CABECALHO}>
@@ -36,7 +36,7 @@ export function TabelaDoRealizado({ meses }: { meses: MesDoFluxo[] }) {
               <td className="py-2 pr-4 hidden md:table-cell">
                 {/* Duas barras, e não uma de saldo: entrada alta com saída alta é
                     outro mês que entrada baixa com saída baixa, com o mesmo saldo. */}
-                <div className="flex flex-col gap-0.5" aria-hidden>
+                <div className="flex flex-col gap-0.5 items-start!" aria-hidden>
                   <div className="h-1.5 rounded bg-success" style={{ width: `${(m.entradas / maior) * 100}%` }} />
                   <div className="h-1.5 rounded bg-danger" style={{ width: `${(m.saidas / maior) * 100}%` }} />
                 </div>
@@ -154,7 +154,7 @@ export function TabelaDoConsolidado({
     );
 
   return (
-    <div className="overflow-x-auto border border-border rounded-lg bg-surface">
+    <div className="c41-tabela overflow-x-auto border border-border rounded-lg bg-surface">
       <table className="w-full min-w-[760px] text-[13px]">
         <thead>
           <tr className={CABECALHO}>
