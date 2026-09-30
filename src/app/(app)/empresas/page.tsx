@@ -23,6 +23,8 @@ import {
   STATUS_TODOS,
 } from "@/lib/companyStatusFilter";
 import { atualizarStatusEmMassa, excluirEmpresasEmMassa } from "./actions";
+import { Pagination } from "@/components/shared/Pagination";
+import { lerLista, opcoesDeRegime, ondeDoRegime, opcoesDeLocal, ondeDoLocal } from "@/lib/filtrosDaListaDeEmpresas";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
   PROSPECT: "Prospecto",
@@ -52,9 +54,19 @@ const PER_PAGE = 20;
 export default async function EmpresasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; status?: string; page?: string; cliente?: string }>;
+  searchParams: Promise<{
+    search?: string;
+    status?: string;
+    page?: string;
+    cliente?: string;
+    /** Funil das colunas — parâmetro repetido, um por valor escolhido. */
+    regime?: string | string[];
+    local?: string | string[];
+  }>;
 }) {
-  const { search, status, page, cliente } = await searchParams;
+  const { search, status, page, cliente, regime, local } = await searchParams;
+  const regimes = lerLista(regime);
+  const locais = lerLista(local);
   const ctx = await getAuthContext();
   const canCreate = canWrite(ctx.role);
   const isSuperAdmin = ctx.role === "SUPER_ADMIN";
@@ -66,13 +78,32 @@ export default async function EmpresasPage({
   const ocultandoInativas = estaOcultandoInativas(statusFiltro);
   const statusFilter = valorSelecionado(statusFiltro);
 
-  const where = {
+  const whereBase = {
     ...(await scopedCompanyWhere(ctx)),
     ...(search ? { OR: [{ name: { contains: search } }, { externalId: { contains: search } }] } : {}),
     ...companyStatusWhere(statusFiltro),
     // Vem do link "N empresas" em /clientes.
     ...(cliente ? { clientGroupId: cliente } : {}),
   };
+
+  // Funil de Regime e Localização (polimento de 30/09). A lista é paginada,
+  // então filtra aqui, na base inteira — ver `FiltroDaColunaNaUrl`. Primeiro
+  // os regimes brutos que existem (o funil escolhe o resumo, e o `where`
+  // precisa dos textos que resumem nele); depois as opções de cada coluna em
+  // cascata: o funil de regime conta só o que passa pelo de local, e vice-versa.
+  const brutos = await prisma.company.groupBy({ by: ["taxRegime"], where: whereBase });
+  const ondeRegime = ondeDoRegime(regimes, brutos.map((b) => b.taxRegime));
+  const ondeLocal = ondeDoLocal(locais);
+  const [gruposDeRegime, gruposDeLocal] = await Promise.all([
+    prisma.company.groupBy({ by: ["taxRegime"], where: { AND: [whereBase, ondeLocal] }, _count: { _all: true } }),
+    prisma.company.groupBy({ by: ["city", "stateCode"], where: { AND: [whereBase, ondeRegime] }, _count: { _all: true } }),
+  ]);
+  const filtrosDeColuna = {
+    regime: opcoesDeRegime(gruposDeRegime.map((g) => ({ taxRegime: g.taxRegime, n: g._count._all }))),
+    local: opcoesDeLocal(gruposDeLocal.map((g) => ({ city: g.city, stateCode: g.stateCode, n: g._count._all }))),
+  };
+  const where = { AND: [whereBase, ondeRegime, ondeLocal] };
+  const temFiltroDeColuna = regimes.length > 0 || locais.length > 0;
 
   // Quantas estão escondidas agora — a tela avisa em vez de deixar o usuário achar
   // que a base encolheu.
@@ -82,6 +113,7 @@ export default async function EmpresasPage({
           ...(await scopedCompanyWhere(ctx)),
           ...(search ? { OR: [{ name: { contains: search } }, { externalId: { contains: search } }] } : {}),
           status: { in: STATUS_OCULTOS_POR_PADRAO },
+          AND: [ondeRegime, ondeLocal],
         },
       })
     : 0;
@@ -117,12 +149,16 @@ export default async function EmpresasPage({
     include: { clientGroup: { select: { id: true, name: true } } },
   });
 
+  // Carrega o funil das colunas (parâmetro repetido) junto com o resto: sem
+  // ele, virar a página ou "Mostrar todas" apagava o filtro de regime e local.
   function buildUrl(params: Record<string, string | undefined>) {
     const q = new URLSearchParams();
     const merged = { search, status, page, cliente, ...params };
     for (const [k, v] of Object.entries(merged)) {
       if (v) q.set(k, v);
     }
+    for (const r of regimes) q.append("regime", r);
+    for (const l of locais) q.append("local", l);
     return `/empresas?${q.toString()}`;
   }
 
@@ -196,14 +232,14 @@ export default async function EmpresasPage({
         <Card>
           <EmptyState
             icon={<Building2 />}
-            title={search || statusFilter ? "Nenhuma empresa encontrada" : "Nenhuma empresa cadastrada ainda"}
+            title={search || statusFilter || temFiltroDeColuna ? "Nenhuma empresa encontrada" : "Nenhuma empresa cadastrada ainda"}
             description={
-              search || statusFilter
+              search || statusFilter || temFiltroDeColuna
                 ? "Tente ajustar a busca ou os filtros."
                 : "Comece cadastrando a primeira empresa do tenant."
             }
             action={
-              !search && !statusFilter && canCreate ? (
+              !search && !statusFilter && !temFiltroDeColuna && canCreate ? (
                 <Link href="/empresas/nova"><Button>+ Nova Empresa</Button></Link>
               ) : undefined
             }
@@ -235,35 +271,11 @@ export default async function EmpresasPage({
           statusColor={STATUS_COLOR}
           atualizarStatusEmMassa={atualizarStatusEmMassa}
           excluirEmpresasEmMassa={excluirEmpresasEmMassa}
+          filtrosDeColuna={filtrosDeColuna}
         />
       )}
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <span className="text-[12px] text-fg-muted">
-            Página {pageNum} de {totalPages}
-          </span>
-          <div className="flex gap-1">
-            {pageNum > 1 && (
-              <Link
-                href={buildUrl({ page: String(pageNum - 1) })}
-                className="h-8 px-3 rounded-md text-[12px] text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors flex items-center"
-              >
-                ← Anterior
-              </Link>
-            )}
-            {pageNum < totalPages && (
-              <Link
-                href={buildUrl({ page: String(pageNum + 1) })}
-                className="h-8 px-3 rounded-md text-[12px] text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors flex items-center"
-              >
-                Próxima →
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
+      <Pagination page={pageNum} totalPages={totalPages} buildHref={(n) => buildUrl({ page: String(n) })} />
       </div>
     </PageContainer>
   );

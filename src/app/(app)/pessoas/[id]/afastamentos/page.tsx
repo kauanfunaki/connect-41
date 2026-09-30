@@ -47,7 +47,7 @@ export default async function AfastamentosPage({
       <BackButton className="mb-3" />
       <PageHeader title="Afastamentos e Atestados" />
 
-      <div className="bg-surface border border-border rounded-lg p-5">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         {absences.length === 0 ? (
           <p className="text-[13px] text-fg-muted mb-3">Nenhum afastamento registrado ainda.</p>
         ) : (

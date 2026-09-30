@@ -29,7 +29,7 @@ export function TabelaNoDesktop({ children, className = "", padrao = false }: { 
 }
 
 export function Cartao({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`bg-surface border border-border rounded-lg px-3 py-2.5 ${className}`}>{children}</div>;
+  return <div className={`bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] px-3 py-2.5 ${className}`}>{children}</div>;
 }
 
 /** A primeira linha do cartão: o nome à esquerda, o valor à direita. É o par que se lê primeiro. */

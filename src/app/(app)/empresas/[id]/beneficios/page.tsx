@@ -99,7 +99,7 @@ export default async function BeneficiosPage({
           />
         </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
           {beneficios.map((b) => (
             <div key={b.id} className="flex items-center justify-between px-4 py-3">
               <div>

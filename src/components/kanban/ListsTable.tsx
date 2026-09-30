@@ -28,7 +28,7 @@ export function ListsTable({ lists, basePath, deleteAction }: Props) {
   if (lists.length === 0) return null;
 
   return (
-    <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
       {lists.map((l) => {
         const pct = l.total > 0 ? Math.round((l.done / l.total) * 100) : 0;
         return (

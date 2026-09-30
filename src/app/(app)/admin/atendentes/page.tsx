@@ -92,7 +92,7 @@ export default async function AdminAtendentesPage() {
           />
         </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
           <div className="flex items-center gap-4 px-4 py-2 text-[11px] font-medium text-fg-muted uppercase tracking-wide">
             <span className="flex-1">Pessoa</span>
             <span className="w-56 flex-shrink-0">Conta (User)</span>
@@ -126,7 +126,7 @@ export default async function AdminAtendentesPage() {
             ela vira &quot;quem atendeu&quot;, porque a mensagem de encerramento é sempre a última.
             Vale para as próximas avaliações — o histórico só muda quando a repontuação roda.
           </p>
-          <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
             <div className="flex items-center gap-4 px-4 py-2 text-[11px] font-medium text-fg-muted uppercase tracking-wide">
               <span className="flex-1">Atendente do Chatwoot</span>
               <span className="w-32 flex-shrink-0">Recepção</span>

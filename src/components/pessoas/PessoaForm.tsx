@@ -363,7 +363,7 @@ export function PessoaForm({
   const departmentLabel = departments.find((d) => d.id === values.departmentId)?.name;
 
   return (
-    <div className="bg-surface border border-border rounded-lg overflow-hidden">
+    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
       <Stepper steps={steps} onStepClick={(i) => i <= maxStepReached && goTo(i)} />
 
       <form ref={formRef} action={formAction} noValidate onChange={onFormChange} className="px-6 py-5">

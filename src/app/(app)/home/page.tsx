@@ -424,7 +424,7 @@ export default async function HomePage() {
     ),
 
     "meu-dia": (
-      <div className="bg-surface border border-border rounded-lg p-5">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Meu dia</h2>
         {meuDiaItems.length === 0 ? (
           <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhum item com prazo ou atribuído a você.</p>
@@ -463,7 +463,7 @@ export default async function HomePage() {
     ),
 
     transferencias: (
-      <div className="bg-surface border border-border rounded-lg p-5">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Transferências a revisar</h2>
         {incomingHandoffsRaw.length === 0 ? (
           <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhuma transferência aguardando o seu setor.</p>
@@ -492,7 +492,7 @@ export default async function HomePage() {
     ),
 
     workspace: (
-      <div className="bg-surface border border-border rounded-lg p-5">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Visão do workspace</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
@@ -516,7 +516,7 @@ export default async function HomePage() {
     ),
 
     agenda: (
-      <div className="bg-surface border border-border rounded-lg p-5">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Agenda</h2>
         {upcomingMeetings.length === 0 ? (
           <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhuma reunião agendada.</p>
@@ -544,7 +544,7 @@ export default async function HomePage() {
     ),
 
     atividade: (
-      <div className="bg-surface border border-border rounded-lg p-5">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">Atividade</h2>
         {activityGroups.length === 0 ? (
           <p className="text-[length:var(--fs-body)] text-fg-muted">Nenhuma atividade registrada ainda.</p>
@@ -575,7 +575,7 @@ export default async function HomePage() {
     ),
 
     setores: sectorWidgets.length > 0 && (
-      <div className="bg-surface border border-border rounded-lg p-5">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
         <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3.5">
           {sectorWidgets.length > 1 ? "Seus setores" : "Seu setor"}
         </h2>

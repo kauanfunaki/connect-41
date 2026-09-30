@@ -20,7 +20,7 @@ export function AiResumeExtract({ action }: Props) {
   }
 
   return (
-    <div className="bg-surface border border-border rounded-lg p-5">
+    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-[14px] font-semibold text-fg">Triagem de Currículo (IA)</h2>

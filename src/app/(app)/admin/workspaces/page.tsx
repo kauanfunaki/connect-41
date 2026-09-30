@@ -27,7 +27,7 @@ export default async function WorkspacesPage() {
           + Novo Workspace
         </Button></>}
       />
-      <div className="bg-surface border border-border rounded-lg overflow-hidden">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
         <div className="divide-y divide-border">
           {tenants.map((t) => (
             <div key={t.id} className="flex items-center justify-between px-4 py-3">

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ListFilter, Search, X } from "lucide-react";
 import { Popover } from "@/components/ui/Popover";
 import { Input } from "@/components/ui/Input";
@@ -126,6 +127,112 @@ export function LinhaFiltravel({ id, className, children }: { id: string; classN
   return <tr className={className}>{children}</tr>;
 }
 
+/** Um valor oferecido no funil: o que vai no filtro, o que aparece e quantas linhas têm. */
+type ValorDoFunil = { valor: string; rotulo: string; n?: number };
+
+/**
+ * A lista do funil — busca, "(Selecionar tudo)" e uma caixa por valor. É a
+ * mesma no funil que filtra no navegador e no que filtra no servidor; muda só
+ * o que se faz com a escolha.
+ *
+ * `aceitos === null` quer dizer "sem filtro" (tudo marcado). Marcar tudo de
+ * volta devolve `null`, e não a lista inteira: assim um valor que aparecer
+ * depois não fica de fora de um filtro que ninguém quis fazer.
+ */
+function ListaDeValores({
+  valores,
+  aceitos,
+  onMudar,
+  rotuloDoCampo,
+}: {
+  valores: ValorDoFunil[];
+  aceitos: Set<string> | null;
+  onMudar: (novos: Set<string> | null) => void;
+  rotuloDoCampo: string;
+}) {
+  const [busca, setBusca] = useState("");
+  const q = busca.trim().toLowerCase();
+  const visiveis = q ? valores.filter((v) => v.rotulo.toLowerCase().includes(q)) : valores;
+  const marcado = (v: string) => !aceitos || aceitos.has(v);
+  const todosVisiveisMarcados = visiveis.length > 0 && visiveis.every((v) => marcado(v.valor));
+
+  function mudar(novos: Set<string>) {
+    onMudar(valores.every((v) => novos.has(v.valor)) ? null : novos);
+  }
+
+  function alternar(v: string) {
+    const atual = new Set(aceitos ?? valores.map((x) => x.valor));
+    if (atual.has(v)) atual.delete(v);
+    else atual.add(v);
+    mudar(atual);
+  }
+
+  function alternarVisiveis() {
+    const atual = new Set(aceitos ?? valores.map((x) => x.valor));
+    for (const v of visiveis) {
+      if (todosVisiveisMarcados) atual.delete(v.valor);
+      else atual.add(v.valor);
+    }
+    mudar(atual);
+  }
+
+  return (
+    <>
+      <Input
+        compact
+        autoFocus
+        icon={<Search />}
+        value={busca}
+        onChange={(e) => setBusca(e.target.value)}
+        placeholder="Buscar…"
+        aria-label={`Buscar ${rotuloDoCampo.toLowerCase()}`}
+      />
+      <ul className="scroll-y max-h-[240px] overflow-y-auto flex flex-col">
+        {visiveis.length > 0 && (
+          <li>
+            <label className="flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] font-medium text-fg hover:bg-surface-hover cursor-pointer">
+              <Checkbox checked={todosVisiveisMarcados} onChange={alternarVisiveis} />
+              {q ? `Selecionar os ${visiveis.length} encontrados` : "(Selecionar tudo)"}
+            </label>
+          </li>
+        )}
+        {visiveis.map((v) => (
+          <li key={v.valor || "__vazio"}>
+            <label className="flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] text-fg-secondary hover:bg-surface-hover hover:text-fg cursor-pointer">
+              <Checkbox checked={marcado(v.valor)} onChange={() => alternar(v.valor)} className="flex-shrink-0" />
+              <span className={`flex-1 truncate ${v.valor === VAZIO ? "italic text-fg-muted" : ""}`}>{v.rotulo}</span>
+              {v.n !== undefined && <span className="text-[11px] text-fg-muted tabular-nums">{v.n}</span>}
+            </label>
+          </li>
+        ))}
+        {visiveis.length === 0 && <li className="px-2 py-2 text-[12px] text-fg-muted">Nada encontrado.</li>}
+      </ul>
+    </>
+  );
+}
+
+/** O funil do cabeçalho — o botão; aceso quando a coluna tem filtro. */
+function BotaoDoFunil({ ativo, open, onClick, rotulo }: { ativo: boolean; open: boolean; onClick: () => void; rotulo: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`Filtrar a coluna ${rotulo}`.trim()}
+      aria-expanded={open}
+      className={`inline-flex items-center justify-center w-5 h-5 rounded transition-colors ${
+        ativo ? "bg-brand text-on-brand" : open ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg hover:bg-surface-hover"
+      }`}
+    >
+      <ListFilter size={11} />
+    </button>
+  );
+}
+
+const BOTAO_SECUNDARIO =
+  "h-7 px-2.5 rounded-md text-[12px] font-medium text-fg-secondary hover:bg-surface-hover hover:text-fg disabled:opacity-40 disabled:pointer-events-none transition-colors";
+const BOTAO_PRIMARIO =
+  "h-7 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover disabled:opacity-40 disabled:pointer-events-none transition-colors";
+
 /**
  * O cabeçalho com o funil. Uma coluna pode filtrar por mais de um campo — a de
  * fornecedor em /pagar mostra a empresa embaixo do nome, e filtra pelos dois.
@@ -147,14 +254,15 @@ export function FiltroDaColuna({
   const ctx = useContext(Ctx);
   const lista: CampoDaColuna[] = campos ?? (chave ? [{ chave, rotulo: typeof rotulo === "string" ? rotulo : chave, tipo }] : []);
   const [campoAtual, setCampoAtual] = useState(lista[0]?.chave ?? "");
-  const [busca, setBusca] = useState("");
+  // Remonta a lista ao abrir e ao trocar de campo: a busca começa vazia.
+  const [versao, setVersao] = useState(0);
 
   const campo = lista.find((c) => c.chave === campoAtual) ?? lista[0];
   const ativo = !!ctx && lista.some((c) => ctx.filtros[c.chave]);
 
   // Valores do campo nas linhas que passam pelos filtros das OUTRAS colunas
   // (cascata), com a contagem de cada um.
-  const valores = useMemo(() => {
+  const valores = useMemo<ValorDoFunil[]>(() => {
     if (!ctx || !campo) return [];
     const contagem = new Map<string, number>();
     for (const l of ctx.linhas) {
@@ -162,7 +270,7 @@ export function FiltroDaColuna({
       const v = valorDe(l, campo.chave);
       contagem.set(v, (contagem.get(v) ?? 0) + 1);
     }
-    const todos = [...contagem.entries()].map(([valor, n]) => ({ valor, n }));
+    const todos = [...contagem.entries()].map(([valor, n]) => ({ valor, n, rotulo: rotuloDoValor(valor, campo.tipo) }));
     if (campo.tipo === "data") todos.sort((a, b) => b.valor.localeCompare(a.valor));
     else todos.sort((a, b) => a.valor.localeCompare(b.valor, "pt-BR", { numeric: true, sensitivity: "base" }));
     return todos;
@@ -171,35 +279,7 @@ export function FiltroDaColuna({
   if (!ctx || !campo) return <>{rotulo}</>;
 
   const aceitos = ctx.filtros[campo.chave];
-  const marcado = (v: string) => !aceitos || aceitos.includes(v);
-  const q = busca.trim().toLowerCase();
-  const visiveis = q ? valores.filter((v) => rotuloDoValor(v.valor, campo.tipo).toLowerCase().includes(q)) : valores;
-  const todosVisiveisMarcados = visiveis.length > 0 && visiveis.every((v) => marcado(v.valor));
-
-  function aplicar(novos: Set<string>) {
-    if (!ctx || !campo) return;
-    // Tudo marcado é o mesmo que não ter filtro — e não esconde linha que
-    // aparecer depois com um valor novo.
-    const universo = valores.map((v) => v.valor);
-    if (universo.every((v) => novos.has(v))) ctx.definir(campo.chave, null);
-    else ctx.definir(campo.chave, [...novos]);
-  }
-
-  function alternar(v: string) {
-    const atual = new Set(aceitos ?? valores.map((x) => x.valor));
-    if (atual.has(v)) atual.delete(v);
-    else atual.add(v);
-    aplicar(atual);
-  }
-
-  function alternarVisiveis() {
-    const atual = new Set(aceitos ?? valores.map((x) => x.valor));
-    for (const v of visiveis) {
-      if (todosVisiveisMarcados) atual.delete(v.valor);
-      else atual.add(v.valor);
-    }
-    aplicar(atual);
-  }
+  const nome = typeof rotulo === "string" ? rotulo.toLowerCase() : "";
 
   return (
     <span className="inline-flex items-center gap-1">
@@ -207,22 +287,17 @@ export function FiltroDaColuna({
       <Popover
         align={align}
         width={280}
-        aria-label={`Filtrar ${typeof rotulo === "string" ? rotulo.toLowerCase() : "coluna"}`}
+        aria-label={`Filtrar ${nome || "coluna"}`}
         trigger={({ open, toggle }) => (
-          <button
-            type="button"
+          <BotaoDoFunil
+            ativo={ativo}
+            open={open}
+            rotulo={nome}
             onClick={() => {
-              setBusca("");
+              setVersao((v) => v + 1);
               toggle();
             }}
-            aria-label={`Filtrar a coluna ${typeof rotulo === "string" ? rotulo.toLowerCase() : ""}`.trim()}
-            aria-expanded={open}
-            className={`inline-flex items-center justify-center w-5 h-5 rounded transition-colors ${
-              ativo ? "bg-brand text-on-brand" : open ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg hover:bg-surface-hover"
-            }`}
-          >
-            <ListFilter size={11} />
-          </button>
+          />
         )}
       >
         {({ close }) => (
@@ -237,7 +312,7 @@ export function FiltroDaColuna({
                     aria-selected={c.chave === campo.chave}
                     onClick={() => {
                       setCampoAtual(c.chave);
-                      setBusca("");
+                      setVersao((v) => v + 1);
                     }}
                     className={`flex-1 h-7 rounded text-[12px] font-medium transition-colors ${
                       c.chave === campo.chave ? "bg-brand-subtle text-brand" : "text-fg-secondary hover:bg-surface-hover"
@@ -249,52 +324,111 @@ export function FiltroDaColuna({
                 ))}
               </div>
             )}
-            <Input
-              compact
-              autoFocus
-              icon={<Search />}
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar…"
-              aria-label={`Buscar ${campo.rotulo.toLowerCase()}`}
+            <ListaDeValores
+              key={`${campo.chave}-${versao}`}
+              valores={valores}
+              aceitos={aceitos ? new Set(aceitos) : null}
+              onMudar={(novos) => ctx.definir(campo.chave, novos ? [...novos] : null)}
+              rotuloDoCampo={campo.rotulo}
             />
-            <ul className="scroll-y max-h-[240px] overflow-y-auto flex flex-col">
-              {visiveis.length > 0 && (
-                <li>
-                  <label className="flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] font-medium text-fg hover:bg-surface-hover cursor-pointer">
-                    <Checkbox checked={todosVisiveisMarcados} onChange={alternarVisiveis} />
-                    {q ? `Selecionar os ${visiveis.length} encontrados` : "(Selecionar tudo)"}
-                  </label>
-                </li>
-              )}
-              {visiveis.map((v) => (
-                <li key={v.valor || "__vazio"}>
-                  <label className="flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] text-fg-secondary hover:bg-surface-hover hover:text-fg cursor-pointer">
-                    <Checkbox checked={marcado(v.valor)} onChange={() => alternar(v.valor)} className="flex-shrink-0" />
-                    <span className={`flex-1 truncate ${v.valor === VAZIO ? "italic text-fg-muted" : ""}`}>
-                      {rotuloDoValor(v.valor, campo.tipo)}
-                    </span>
-                    <span className="text-[11px] text-fg-muted tabular-nums">{v.n}</span>
-                  </label>
-                </li>
-              ))}
-              {visiveis.length === 0 && <li className="px-2 py-2 text-[12px] text-fg-muted">Nada encontrado.</li>}
-            </ul>
+            <div className="flex justify-between gap-2 border-t border-border pt-2">
+              <button type="button" disabled={!aceitos} onClick={() => ctx.definir(campo.chave, null)} className={BOTAO_SECUNDARIO}>
+                Limpar esta coluna
+              </button>
+              <button type="button" onClick={close} className={BOTAO_PRIMARIO}>
+                Pronto
+              </button>
+            </div>
+          </div>
+        )}
+      </Popover>
+    </span>
+  );
+}
+
+/**
+ * O funil para tabela **paginada** (Empresas, Pessoas, Clientes): filtra no
+ * servidor, pela URL, e não nas linhas da tela.
+ *
+ * Numa lista de 20 por página, filtrar só as linhas visíveis engana — "Simples
+ * Nacional" sumiria da página 1 e continuaria nas outras 19. Aqui os valores e
+ * as contagens vêm do banco (a tela inteira, não a página), a escolha vai para
+ * a URL como parâmetro repetido (`?regime=A&regime=B`) e a página volta para 1.
+ * Por ir ao servidor, aplica no "Aplicar", e não a cada caixa marcada.
+ */
+export function FiltroDaColunaNaUrl({
+  rotulo,
+  chave,
+  opcoes,
+  align = "left",
+}: {
+  rotulo: string;
+  /** Nome do parâmetro na URL. */
+  chave: string;
+  opcoes: ValorDoFunil[];
+  align?: "left" | "right";
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const naUrl = params.getAll(chave);
+  const [rascunho, setRascunho] = useState<Set<string> | null>(naUrl.length ? new Set(naUrl) : null);
+
+  function ir(valores: string[] | null) {
+    const q = new URLSearchParams(params.toString());
+    q.delete(chave);
+    for (const v of valores ?? []) q.append(chave, v);
+    q.delete("page");
+    q.delete("pagina");
+    const s = q.toString();
+    router.push(s ? `${pathname}?${s}` : pathname);
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1">
+      {rotulo}
+      <Popover
+        align={align}
+        width={300}
+        aria-label={`Filtrar ${rotulo.toLowerCase()}`}
+        trigger={({ open, toggle }) => (
+          <BotaoDoFunil
+            ativo={naUrl.length > 0}
+            open={open}
+            rotulo={rotulo.toLowerCase()}
+            onClick={() => {
+              // Abre sempre no que está aplicado, não no rascunho abandonado.
+              setRascunho(naUrl.length ? new Set(naUrl) : null);
+              toggle();
+            }}
+          />
+        )}
+      >
+        {({ close }) => (
+          <div className="flex flex-col gap-2 normal-case tracking-normal font-normal">
+            <ListaDeValores valores={opcoes} aceitos={rascunho} onMudar={setRascunho} rotuloDoCampo={rotulo} />
             <div className="flex justify-between gap-2 border-t border-border pt-2">
               <button
                 type="button"
-                disabled={!aceitos}
-                onClick={() => ctx.definir(campo.chave, null)}
-                className="h-7 px-2.5 rounded-md text-[12px] font-medium text-fg-secondary hover:bg-surface-hover hover:text-fg disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                disabled={naUrl.length === 0}
+                onClick={() => {
+                  close();
+                  ir(null);
+                }}
+                className={BOTAO_SECUNDARIO}
               >
                 Limpar esta coluna
               </button>
               <button
                 type="button"
-                onClick={close}
-                className="h-7 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover transition-colors"
+                disabled={rascunho !== null && rascunho.size === 0}
+                onClick={() => {
+                  close();
+                  ir(rascunho ? [...rascunho] : null);
+                }}
+                className={BOTAO_PRIMARIO}
               >
-                Pronto
+                Aplicar
               </button>
             </div>
           </div>

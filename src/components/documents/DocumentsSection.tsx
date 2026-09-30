@@ -151,7 +151,7 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
   // No modo compacto quem desenha o cartão e o título é o DetailSection que
   // envolve a seção no detalhamento de tarefa.
   return (
-    <div className={compact ? "" : "bg-surface border border-border rounded-lg p-5"}>
+    <div className={compact ? "" : "bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5"}>
       {!compact && <h2 className="text-[14px] font-semibold text-fg mb-4">Documentos</h2>}
 
       {documents.length === 0 ? (

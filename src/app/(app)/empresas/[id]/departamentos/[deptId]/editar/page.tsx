@@ -43,7 +43,7 @@ export default async function EditarDepartmentPage({
       <PageHeader title="Editar Departamento" subtitle={company.name} />
 
       <div className="w-full max-w-[720px]">
-        <div className="bg-surface border border-border rounded-lg p-6">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-6">
           <DepartmentForm
             action={atualizarDepartment}
             companyId={companyId}

@@ -46,7 +46,7 @@ export default async function FeriadosPage() {
           />
         </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
           {feriados.map((f) => (
             <div key={f.id} className="flex items-center justify-between px-4 py-2.5">
               <p className="text-[13px] text-fg">{f.name}</p>

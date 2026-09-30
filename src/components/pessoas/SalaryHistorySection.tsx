@@ -29,7 +29,7 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
 
   return (
-    <div className="bg-surface border border-border rounded-lg p-5 mb-4">
+    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
       <h2 className="text-[14px] font-semibold text-fg mb-3">Histórico Salarial</h2>
 
       {history.length === 0 ? (

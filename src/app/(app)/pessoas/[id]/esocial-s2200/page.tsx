@@ -100,7 +100,7 @@ export default async function EsocialS2200Page({
 
       <div className="space-y-4">
         {preview.groups.map((g) => (
-          <div key={g.title} className="bg-surface border border-border rounded-lg p-5">
+          <div key={g.title} className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
             <h2 className="text-[14px] font-semibold text-fg mb-4">{g.title}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
               {g.fields.map((f) => (
@@ -122,7 +122,7 @@ export default async function EsocialS2200Page({
         ))}
 
         {/* Dependentes */}
-        <div className="bg-surface border border-border rounded-lg p-5">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
           <h2 className="text-[14px] font-semibold text-fg mb-4">Dependentes</h2>
           {preview.dependentes.length === 0 ? (
             <p className="text-[13px] text-fg-muted">Nenhum dependente informado.</p>

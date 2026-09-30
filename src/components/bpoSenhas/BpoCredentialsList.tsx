@@ -252,7 +252,7 @@ export function BpoCredentialsList({ credentials, companies, canManage, createAc
           <EmptyState icon={<KeyRound />} title="Nenhuma credencial encontrada" description="Tente ajustar a busca." />
         </Card>
       ) : (
-      <div className="bg-surface border border-border rounded-lg overflow-hidden">
+      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
         <div className="scroll-x overflow-x-auto">
           <table className="w-full min-w-[760px] text-[length:var(--fs-body)]">
             <thead>

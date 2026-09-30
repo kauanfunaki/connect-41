@@ -115,7 +115,7 @@ function TipoCard({
   return (
     <Link
       href={href}
-      className="group flex flex-col gap-2 bg-surface border border-border rounded-lg p-5 hover:border-brand transition-colors"
+      className="group flex flex-col gap-2 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 hover:border-brand transition-colors"
     >
       <span className="inline-flex w-10 h-10 rounded-lg bg-brand-subtle text-brand items-center justify-center">
         {icon}

@@ -138,7 +138,7 @@ export default async function VagasPage({
           />
         </Card>
       ) : (
-        <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
           {vagas.map((v) => (
             <Link
               key={v.id}

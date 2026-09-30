@@ -127,9 +127,13 @@ function seloDoTom(tom?: string): string {
 // sidebar de 240px, numa tela de 1024px cada cartão ficava com ~170px e o valor
 // em reais saía cortado ("R$ 14.0…") — visto no polimento de 30/09. Dinheiro
 // não se corta; se ainda assim não couber, `c41-cortavel` dá a dica inteira.
+// Classes por extenso: o Tailwind não enxerga nome de classe montado em tempo
+// de execução. Três cartões (Transferências) ocupam a linha inteira.
+const COLUNAS_XL: Record<number, string> = { 2: "xl:grid-cols-2", 3: "xl:grid-cols-3", 4: "xl:grid-cols-4" };
+
 export function FaixaDeTotais({ itens }: { itens: ItemDeTotal[] }) {
   return (
-    <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-5">
+    <div className={`grid grid-cols-2 ${COLUNAS_XL[itens.length] ?? "xl:grid-cols-4"} gap-3 mb-5`}>
       {itens.map((i) => {
         const conteudo = (
           <>
