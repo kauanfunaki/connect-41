@@ -1,5 +1,14 @@
 import { notFound } from "next/navigation";
-import { FileText } from "lucide-react";
+import {
+  ArrowLeftRight,
+  Columns2,
+  FileText,
+  Gauge,
+  GitMerge,
+  MessageCircleQuestion,
+  SlidersHorizontal,
+  TrendingUp,
+} from "lucide-react";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
@@ -27,14 +36,15 @@ const MODULE = "dre_analises";
 // é só o padrão.
 const SECTOR = getModuleDef(MODULE)!.sectorCode;
 
+// Com ícone, como as abas das outras telas polidas em 30/09.
 const ABAS = [
-  { chave: "economico-financeiro", rotulo: "Econômico × financeiro" },
-  { chave: "reconciliacao", rotulo: "Reconciliação lucro → caixa" },
-  { chave: "comparativos", rotulo: "Comparativos" },
-  { chave: "forecast", rotulo: "Forecast" },
-  { chave: "cenarios", rotulo: "Cenários" },
-  { chave: "indicadores", rotulo: "Indicadores" },
-  { chave: "cfo", rotulo: "CFO" },
+  { chave: "economico-financeiro", rotulo: "Econômico × financeiro", icone: <ArrowLeftRight /> },
+  { chave: "reconciliacao", rotulo: "Reconciliação lucro → caixa", icone: <GitMerge /> },
+  { chave: "comparativos", rotulo: "Comparativos", icone: <Columns2 /> },
+  { chave: "forecast", rotulo: "Forecast", icone: <TrendingUp /> },
+  { chave: "cenarios", rotulo: "Cenários", icone: <SlidersHorizontal /> },
+  { chave: "indicadores", rotulo: "Indicadores", icone: <Gauge /> },
+  { chave: "cfo", rotulo: "CFO", icone: <MessageCircleQuestion /> },
 ] as const;
 
 /**

@@ -66,15 +66,17 @@ export function FormParametros({ catalogo, parametros, podeEditar }: { catalogo:
           Custo mensal da equipe: salários, encargos e benefícios de quem atende cliente. A capacidade e o fator vêm dos
           questionários — o fator encolhe os tempos declarados até a carteira caber nas horas da equipe.
         </p>
-        <div className="overflow-x-auto">
+        {/* Casco padrão dentro do cartão (30/09). Sem funil: é uma linha por
+            setor, para preencher. */}
+        <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
           <table className="w-full min-w-[640px] text-[13px]">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-                <th className="py-2 pr-3 font-medium">Setor</th>
-                <th className="py-2 pr-3 font-medium">Custo mensal da equipe</th>
-                <th className="py-2 pr-3 font-medium">Capacidade (h/mês)</th>
-                <th className="py-2 pr-3 font-medium">Fator</th>
-                <th className="py-2 font-medium text-right">Custo por hora</th>
+              <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-wide text-fg-muted">
+                <th className="px-3">Setor</th>
+                <th className="px-3">Custo mensal da equipe</th>
+                <th className="px-3">Capacidade (h/mês)</th>
+                <th className="px-3">Fator</th>
+                <th className="px-3">Custo por hora</th>
               </tr>
             </thead>
             <tbody>
@@ -82,18 +84,18 @@ export function FormParametros({ catalogo, parametros, podeEditar }: { catalogo:
                 const porHora =
                   custoPorMinuto({ codigo: l.codigo, nome: l.nome, custoMensal: numero(l.custoMensal) || 0, capacidadeHorasMes: numero(l.capacidadeHorasMes) || 0, fatorCalibracao: 1 }) * 60;
                 return (
-                  <tr key={l.codigo} className="border-b border-border-soft">
-                    <td className="py-2 pr-3 font-medium">{l.nome}</td>
-                    <td className="py-2 pr-3">
+                  <tr key={l.codigo} className="border-b border-border">
+                    <td className="px-3 font-medium">{l.nome}</td>
+                    <td className="px-3">
                       <Input compact prefix="R$" inputMode="decimal" value={l.custoMensal} disabled={!podeEditar} onChange={(e) => muda(i, "custoMensal", e.target.value)} />
                     </td>
-                    <td className="py-2 pr-3">
+                    <td className="px-3">
                       <Input compact inputMode="decimal" value={l.capacidadeHorasMes} disabled={!podeEditar} onChange={(e) => muda(i, "capacidadeHorasMes", e.target.value)} />
                     </td>
-                    <td className="py-2 pr-3">
+                    <td className="px-3">
                       <Input compact inputMode="decimal" value={l.fatorCalibracao} disabled={!podeEditar} onChange={(e) => muda(i, "fatorCalibracao", e.target.value)} />
                     </td>
-                    <td className="py-2 text-right tabular-nums">{porHora > 0 ? brl(porHora) : "—"}</td>
+                    <td className="px-3 tabular-nums whitespace-nowrap">{porHora > 0 ? brl(porHora) : "—"}</td>
                   </tr>
                 );
               })}

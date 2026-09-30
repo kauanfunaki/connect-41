@@ -116,7 +116,8 @@ export function NovaVersao({
           <Button type="submit" size="sm" disabled={pendente}>
             {pendente ? "Criando…" : "Criar versão"}
           </Button>
-          <Button variant="linkMuted" size="xs" onClick={() => setAberto(false)}>
+          {/* Botão, e não texto cinza (30/09) — na altura do "Criar versão" ao lado. */}
+          <Button variant="secondary" size="sm" onClick={() => setAberto(false)}>
             Cancelar
           </Button>
           {erro && <span className="text-[12px] text-danger">{erro}</span>}

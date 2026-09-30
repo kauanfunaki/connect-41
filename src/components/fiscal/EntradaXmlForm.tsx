@@ -1,8 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import Link from "next/link";
-import { CheckCircle2, Copy, XCircle, Building2, HelpCircle } from "lucide-react";
+import { ArrowRight, CheckCircle2, Copy, XCircle, Building2, HelpCircle } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Select } from "@/components/ui/Select";
@@ -128,13 +127,11 @@ export function EntradaXmlForm({ empresas, action }: Props) {
                       {v.situacao === "aceito" ? `em ${v.empresa}` : v.detalhe}
                     </p>
                   </div>
+                  {/* Botão, e não link de texto (conferência de 30/09). */}
                   {v.situacao === "aceito" && (
-                    <Link
-                      href={`/documentos-fiscais/${v.documentoId}`}
-                      className="flex-shrink-0 text-[length:var(--fs-ui)] font-medium text-brand hover:underline"
-                    >
-                      Abrir
-                    </Link>
+                    <Button href={`/documentos-fiscais/${v.documentoId}`} variant="secondary" size="xs" className="flex-shrink-0">
+                      Abrir <ArrowRight size={11} />
+                    </Button>
                   )}
                 </li>
               );

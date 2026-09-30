@@ -30,11 +30,10 @@ export default async function EntradaDeXmlPage() {
   return (
     <PageContainer>
       <BackButton className="mb-3" />
-      <PageHeader title="Entrada de XML" />
-      <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1 mb-6">
-        Cada arquivo é lido, casado com a empresa pelo CNPJ e deduplicado pela chave de acesso.
-        Documento que já está no acervo não entra de novo.
-      </p>
+      <PageHeader
+        title="Entrada de XML"
+        subtitle="Cada arquivo é lido, casado com a empresa pelo CNPJ e deduplicado pela chave de acesso. Documento que já está no acervo não entra de novo."
+      />
 
       <EntradaXmlForm empresas={empresas} action={importarXmls} />
     </PageContainer>
