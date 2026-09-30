@@ -1,8 +1,10 @@
 // Dados de demonstração do BPO, numa empresa de teste dentro da produção.
 //
-//   npx tsx --env-file=.env scripts/dados-de-demonstracao.ts            # simulação
+//   npx tsx --env-file=.env scripts/dados-de-demonstracao.ts                     # simulação
 //   npx tsx --env-file=.env scripts/dados-de-demonstracao.ts --aplicar
-//   npx tsx --env-file=.env scripts/dados-de-demonstracao.ts --limpar
+//   npx tsx --env-file=.env scripts/dados-de-demonstracao.ts --limpar            # simulação da limpeza
+//   npx tsx --env-file=.env scripts/dados-de-demonstracao.ts --limpar --ensaio   # apaga e desfaz: prova que não trava
+//   npx tsx --env-file=.env scripts/dados-de-demonstracao.ts --limpar --aplicar  # limpa de verdade
 //
 // ─── Por que isto existe ────────────────────────────────────────────────────
 //
@@ -48,6 +50,8 @@ const MARCA = "[demo]";
 const SLUG_DO_TENANT = "41tech";
 const aplicar = process.argv.includes("--aplicar");
 const limpar = process.argv.includes("--limpar");
+const ensaio = process.argv.includes("--ensaio");
+const ENSAIO = "ensaio: tudo seria apagado sem erro; a transação foi desfeita";
 
 // ─── Datas ──────────────────────────────────────────────────────────────────
 
@@ -70,18 +74,43 @@ const reais = (v: number) => v.toFixed(2);
 // ─── Limpeza ────────────────────────────────────────────────────────────────
 
 /**
- * Apaga só o que tem a marca, na ordem das dependências.
+ * Pendências de teste criadas à mão em cliente real — a "teste" da BLD
+ * (24/09) aparecia no portal do cliente. Título exatamente "teste", sem
+ * diferença de caixa; a simulação lista cada uma antes de apagar.
+ */
+async function pendenciasDeTeste(p: Pick<PrismaClient, "clientRequest">, tenantId: string, idsDemo: string[]) {
+  const candidatas = await p.clientRequest.findMany({
+    where: { tenantId, companyId: { notIn: idsDemo } },
+    select: { id: true, title: true, status: true, createdAt: true, company: { select: { name: true } } },
+  });
+  return candidatas.filter((c) => c.title.trim().toLowerCase() === "teste");
+}
+
+/**
+ * Apaga só o que tem a marca, na ordem das dependências, e as pendências de
+ * teste em cliente real.
  *
  * Mesmo desenho da bancada de teste, e pelo mesmo motivo: `deleteMany` por
  * tenant, aqui, apagaria a base de 390 clientes.
+ *
+ * Numa transação só (desde 30/09): a empresa ganhou coisas que este script não
+ * criou — os processos da bateria de teste do Societário —, e uma limpeza que
+ * para no meio deixa metade apagada. Agora ou sai tudo, ou nada.
  */
-async function limparDemo(p: PrismaClient, tenantId: string): Promise<string[]> {
+async function limparDemo(p: PrismaClient, tenantId: string, soEnsaio = false): Promise<string[]> {
   const feito: string[] = [];
   const empresas = await p.company.findMany({ where: { tenantId, name: { startsWith: MARCA } }, select: { id: true } });
   const ids = empresas.map((e) => e.id);
+  const testes = await pendenciasDeTeste(p, tenantId, ids);
   const conta = (r: { count: number }, o_que: string) => {
     if (r.count > 0) feito.push(`${r.count} ${o_que}`);
   };
+
+  await p.$transaction(async (p) => {
+  // Mensagens, lembretes e respostas da pendência vão junto (onDelete: Cascade).
+  if (testes.length > 0) {
+    conta(await p.clientRequest.deleteMany({ where: { id: { in: testes.map((x) => x.id) } } }), "pendências de teste em cliente real");
+  }
 
   if (ids.length > 0) {
     const daEmpresa = { companyId: { in: ids } };
@@ -102,13 +131,49 @@ async function limparDemo(p: PrismaClient, tenantId: string): Promise<string[]> 
     conta(await p.financeCounterparty.deleteMany({ where: daEmpresa }), "contrapartes");
     conta(await p.costCenter.deleteMany({ where: daEmpresa }), "centros de custo");
     conta(await p.bankAccount.deleteMany({ where: daEmpresa }), "contas bancárias");
+    // Etapas, protocolos, exigências, conversa e horas do processo vão junto
+    // (onDelete: Cascade). São os da bateria de teste do Societário (25/09).
+    conta(await p.process.deleteMany({ where: daEmpresa }), "processos");
   }
   const comMarca = { tenantId, name: { startsWith: MARCA } };
   conta(await p.portalUser.deleteMany({ where: comMarca }), "usuários do portal");
   conta(await p.company.deleteMany({ where: comMarca }), "empresas");
   conta(await p.clientGroup.deleteMany({ where: comMarca }), "grupos de cliente");
   conta(await p.financeCategory.deleteMany({ where: comMarca }), "categorias");
+  // Ensaio: chegou até aqui sem nenhuma ligação travando a exclusão. Lança
+  // para o banco desfazer tudo.
+  if (soEnsaio) throw new Error(ENSAIO);
+  }, { timeout: 120_000 });
   return feito;
+}
+
+/** O que a limpeza apagaria, sem apagar nada. */
+async function simularLimpeza(p: PrismaClient, tenantId: string): Promise<void> {
+  const empresas = await p.company.findMany({ where: { tenantId, name: { startsWith: MARCA } }, select: { id: true, name: true } });
+  const ids = empresas.map((e) => e.id);
+  const daEmpresa = { companyId: { in: ids } };
+  const comMarca = { tenantId, name: { startsWith: MARCA } };
+  const [lancamentos, contrapartes, contas, pendencias, mensagens, processos, usuarios, grupos, categorias, testes] = await Promise.all([
+    p.financeEntry.count({ where: daEmpresa }),
+    p.financeCounterparty.count({ where: daEmpresa }),
+    p.bankAccount.count({ where: daEmpresa }),
+    p.clientRequest.count({ where: daEmpresa }),
+    p.companyMessage.count({ where: daEmpresa }),
+    p.process.count({ where: daEmpresa }),
+    p.portalUser.count({ where: comMarca }),
+    p.clientGroup.count({ where: comMarca }),
+    p.financeCategory.count({ where: comMarca }),
+    pendenciasDeTeste(p, tenantId, ids),
+  ]);
+  console.log("\n--- simulação da limpeza: nada foi apagado. O que sairia: ---\n");
+  console.log(`  empresas: ${empresas.map((e) => e.name).join(", ") || "nenhuma"}`);
+  console.log(`  ${lancamentos} lançamentos, ${contrapartes} contrapartes, ${contas} contas bancárias`);
+  console.log(`  ${pendencias} pendências e ${mensagens} mensagens da demonstração`);
+  console.log(`  ${processos} processos do Societário (com etapas, protocolos, conversa e horas)`);
+  console.log(`  ${usuarios} usuários do portal, ${grupos} grupos de cliente, ${categorias} categorias [demo]`);
+  console.log(`  ${testes.length} pendências de teste em cliente real:`);
+  for (const x of testes) console.log(`    - "${x.title}" · ${x.company.name} · ${x.status} · criada em ${x.createdAt.toISOString().slice(0, 10)}`);
+  console.log("\nPara apagar de verdade: --limpar --aplicar\n");
 }
 
 // ─── Criação ────────────────────────────────────────────────────────────────
@@ -503,6 +568,22 @@ async function main() {
   if (!tenant) throw new Error(`tenant ${SLUG_DO_TENANT} não encontrado`);
   console.log(`tenant: ${tenant.name}`);
 
+  if (limpar && ensaio) {
+    try {
+      await limparDemo(p, tenant.id, true);
+    } catch (err) {
+      console.log(err instanceof Error && err.message === ENSAIO ? `${ENSAIO}.` : `ensaio falhou — nada foi apagado: ${err}`);
+    }
+    await p.$disconnect();
+    return;
+  }
+
+  if (limpar && !aplicar) {
+    await simularLimpeza(p, tenant.id);
+    await p.$disconnect();
+    return;
+  }
+
   if (limpar) {
     const feito = await limparDemo(p, tenant.id);
     console.log(feito.length === 0 ? "nada de demonstração para apagar." : `apagado: ${feito.join(", ")}.`);
@@ -558,7 +639,7 @@ async function main() {
   console.log(`cliente do portal: ${r.clienteDoPortal.email} — senha aleatória; defina em /admin/portal para entrar`);
   console.log(`\nabra /pagar, /receber, /lancamentos, /conciliacao, /aprovacoes, /pendencias, /cobranca, /dre e /comunicacao`);
   console.log(`filtre por "${r.empresa.name}" para ver só a demonstração.`);
-  console.log(`\npara desfazer: npx tsx --env-file=.env scripts/dados-de-demonstracao.ts --limpar`);
+  console.log(`\npara desfazer: npx tsx --env-file=.env scripts/dados-de-demonstracao.ts --limpar --aplicar`);
   await p.$disconnect();
 }
 
