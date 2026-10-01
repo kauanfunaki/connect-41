@@ -18,6 +18,7 @@ import type { ContextoDaFerramenta, FerramentaRegistrada } from "@/lib/ia/ferram
 import { listarContas } from "@/lib/financeiro/data";
 import { dreDoMes, mesesComMovimento } from "@/lib/dre/data";
 import { listarPendencias } from "@/lib/financeiro/pendencias/consultas";
+import { setorPadraoDasPendencias, soDoSetorPadrao } from "@/lib/financeiro/pendencias/setor";
 import { nomeExibicao } from "@/lib/companyName";
 
 /** Os módulos do BPO que o chat pode consultar, com a tela de cada um. */
@@ -200,8 +201,9 @@ export const FERRAMENTAS_DE_BPO: Record<string, FerramentaRegistrada> = {
       const empresa = await empresaOpcional(args, ctx);
       const vencidas = args.recorte === "vencidas";
       const recorte = args.recorte === "aguardando" || args.recorte === "respondidas" ? args.recorte : "andamento";
+      // A IA do BPO fala das pendências do BPO: as dos outros setores (01/10) ficam de fora.
       const r = await listarPendencias(
-        { tenantId: ctx.tenantId, companyIds: null },
+        { tenantId: ctx.tenantId, companyIds: null, setores: soDoSetorPadrao(await setorPadraoDasPendencias(ctx.tenantId)) },
         { recorte, empresaId: empresa?.id ?? null, vencidas },
         new Date()
       );

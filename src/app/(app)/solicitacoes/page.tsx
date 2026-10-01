@@ -14,6 +14,7 @@ import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { SeloDaSolicitacao, SeloDoPrazoDeResposta } from "@/components/solicitacoes/SelosDaSolicitacao";
+import { AbasDoAtendimento } from "@/components/solicitacoes/AbasDoAtendimento";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { setoresDaFila } from "@/lib/solicitacoes/acesso";
 import { listarParaEquipe, RECORTES_DA_EQUIPE, type RecorteDaEquipe } from "@/lib/solicitacoes/consultas";
@@ -77,8 +78,10 @@ export default async function SolicitacoesPage({
         subtitle="O que os clientes pedem pelo portal. Cada setor vê as suas, com o prazo de resposta prometido ao cliente."
       />
 
+      <AbasDoAtendimento ativa="solicitacoes" />
+
       {/* Cada cartão abre o recorte que ele conta. */}
-      <div className="mt-4">
+      <div>
         <FaixaDeTotais
           itens={[
             {

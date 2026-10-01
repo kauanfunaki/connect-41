@@ -9,6 +9,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { saoPauloParts } from "@/lib/agenda";
 import { nomeExibicao } from "@/lib/companyName";
 import { situacaoDoPrazo, type SituacaoDoPrazo, type StatusDaPendencia, type TipoDaPendencia } from "./regras";
+import { whereDoRecorteDeSetor, type RecorteDeSetor } from "./setor";
 
 export type AnexoDaConversa = { id: string; fileName: string; sizeBytes: number };
 
@@ -22,7 +23,11 @@ export type MensagemDaConversa = {
   anexos: AnexoDaConversa[];
 };
 
-export type EscopoDePendencias = { tenantId: string; companyIds: string[] | null };
+/**
+ * `setores` recorta pelo setor que pediu (01/10). Sem ele, todas — é o caso do
+ * portal, onde o cliente vê o que qualquer setor pediu a ele.
+ */
+export type EscopoDePendencias = { tenantId: string; companyIds: string[] | null; setores?: RecorteDeSetor | null };
 
 export const RECORTES_DE_PENDENCIA = [
   { chave: "andamento", rotulo: "Em andamento" },
@@ -43,7 +48,9 @@ const STATUS_DO_RECORTE: Record<RecorteDePendencia, StatusDaPendencia[] | null> 
 };
 
 function whereDoEscopo(e: EscopoDePendencias): Prisma.ClientRequestWhereInput {
-  return e.companyIds === null ? { tenantId: e.tenantId } : { tenantId: e.tenantId, companyId: { in: e.companyIds } };
+  const base: Prisma.ClientRequestWhereInput =
+    e.companyIds === null ? { tenantId: e.tenantId } : { tenantId: e.tenantId, companyId: { in: e.companyIds } };
+  return e.setores ? { AND: [base, whereDoRecorteDeSetor(e.setores)] } : base;
 }
 
 /** Meia-noite de hoje em São Paulo: prazo (meio-dia UTC do dia) antes disso é de um dia que já passou. */
@@ -60,6 +67,8 @@ export type LinhaDePendencia = {
   situacaoDoPrazo: SituacaoDoPrazo;
   empresaId: string;
   empresaNome: string;
+  /** Setor que pediu; nulo nas de antes de 01/10 (do setor do módulo). */
+  setor: string | null;
   atualizadaEm: Date;
   mensagens: number;
   anexos: number;
@@ -102,6 +111,7 @@ export async function listarPendencias(
         status: true,
         dueDate: true,
         updatedAt: true,
+        sectorCode: true,
         company: { select: { id: true, name: true, displayName: true } },
         _count: { select: { messages: true, attachments: true } },
       },
@@ -125,6 +135,7 @@ export async function listarPendencias(
       situacaoDoPrazo: situacaoDoPrazo(l.dueDate, agora),
       empresaId: l.company.id,
       empresaNome: nomeExibicao(l.company),
+      setor: l.sectorCode,
       atualizadaEm: l.updatedAt,
       mensagens: l._count.messages,
       anexos: l._count.attachments,
@@ -182,6 +193,8 @@ export type PendenciaDetalhada = {
   situacaoDoPrazo: SituacaoDoPrazo;
   empresaId: string;
   empresaNome: string;
+  /** Setor que pediu; nulo nas de antes de 01/10 (do setor do módulo). */
+  setor: string | null;
   abertaPor: string;
   abertaEm: Date;
   resolvidaEm: Date | null;
@@ -219,6 +232,7 @@ export async function carregarPendencia(escopo: EscopoDePendencias, id: string, 
       dueDate: true,
       createdAt: true,
       resolvedAt: true,
+      sectorCode: true,
       company: { select: { id: true, name: true, displayName: true } },
       createdBy: { select: { name: true } },
       resolvedBy: { select: { name: true } },
@@ -255,6 +269,7 @@ export async function carregarPendencia(escopo: EscopoDePendencias, id: string, 
     situacaoDoPrazo: situacaoDoPrazo(p.dueDate, agora),
     empresaId: p.company.id,
     empresaNome: nomeExibicao(p.company),
+    setor: p.sectorCode,
     abertaPor: p.createdBy?.name ?? "Equipe",
     abertaEm: p.createdAt,
     resolvidaEm: p.resolvedAt,
