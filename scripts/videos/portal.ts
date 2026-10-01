@@ -143,10 +143,12 @@ export function videosDoPortal(opcoes: { email: string; senha: string; pastaDeAp
           "Escreva uma mensagem…"
         );
         const arquivo = pdfDeExemplo(opcoes.pastaDeApoio, "extrato-setembro.pdf");
-        const escolha = r.page.waitForEvent("filechooser");
-        await r.clicar(main(r).getByRole("button", { name: /^Anexos/ }), "…e anexe o arquivo. Vale PDF, imagem ou XML de até 10 MB.");
-        await (await escolha).setFiles(arquivo);
-        await r.pausa(1200);
+        await r.anexar(
+          main(r).getByRole("button", { name: /^Anexos/ }),
+          main(r).locator('input[type="file"]').first(),
+          arquivo,
+          "…e anexe o arquivo. Vale PDF, imagem ou XML de até 10 MB."
+        );
         await r.clicar(main(r).getByRole("button", { name: "Enviar resposta" }), "Envie. A equipe é avisada na hora.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(1200);

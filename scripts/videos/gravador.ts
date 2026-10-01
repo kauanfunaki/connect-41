@@ -300,6 +300,21 @@ export class Roteiro {
     await this.pausa(500);
   }
 
+  /**
+   * "Clica" na área de anexo e entrega o arquivo direto ao input. O seletor de
+   * arquivos do sistema não existe no navegador da gravação — esperar o evento
+   * `filechooser` pelo clique no rótulo travou o roteiro.
+   */
+  async anexar(area: Locator, input: Locator, arquivo: string, legenda?: string) {
+    await this.apontar(area, legenda);
+    const c = await this.centro(area);
+    await this.gv("clique", c.x + c.width / 2, c.y + c.height / 2);
+    await this.pausa(200);
+    await this.gv("anel", null);
+    await input.setInputFiles(arquivo);
+    await this.pausa(900);
+  }
+
   /** Digita no ritmo de uma pessoa, para dar tempo de ler o que entra. */
   async digitar(alvo: Locator, texto: string, legenda?: string) {
     await this.clicar(alvo, legenda);
