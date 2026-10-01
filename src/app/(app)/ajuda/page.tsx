@@ -50,6 +50,8 @@ export default async function AjudaPage() {
   const setorDosEspacos = ctx.activeSector ?? codigos[0] ?? null;
   const gerais: TelaDaAjuda[] = TELAS_GERAIS.flatMap((t): TelaDaAjuda[] => {
     if (t.tela === "Ajuda") return [];
+    // A fila das solicitações do portal só existe com o módulo ligado.
+    if (t.tela === "Solicitações" && !estados.some((m) => m.code === "portal_solicitacoes" && m.enabled)) return [];
     if (t.tela === "Espaços") {
       return setorDosEspacos ? [{ chave: t.tela, titulo: t.tela, caminho: `/setor/${setorDosEspacos}`, descricao: t.descricao }] : [];
     }

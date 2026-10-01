@@ -26,12 +26,15 @@ export function ResponderPendencia({
   acao,
   rotulo = "Responder",
   dica,
+  extras,
 }: {
   alvo: string;
   campo?: string;
   acao: (formData: FormData) => Promise<RespostaDaAcao>;
   rotulo?: string;
   dica?: string;
+  /** Campos a mais, que viajam no mesmo formulário (a solicitação usa para a situação depois de enviar). */
+  extras?: React.ReactNode;
 }) {
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -69,6 +72,7 @@ export function ResponderPendencia({
       <CampoForm label="Anexos" htmlFor={`anexo-${alvo}-0`}>
         <CampoDeAnexos idBase={`anexo-${alvo}`} />
       </CampoForm>
+      {extras}
       <div className="flex flex-wrap items-center justify-end gap-3">
         {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
         <Button type="submit" disabled={pendente}>

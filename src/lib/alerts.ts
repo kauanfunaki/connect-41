@@ -386,6 +386,50 @@ async function checkPendenciasVencidas(tenantId: string, today: Date): Promise<n
   return sent;
 }
 
+// Solicitação do portal sem resposta ao cliente no dia em que a resposta vence,
+// e de novo no primeiro dia de atraso — duas vezes no máximo por solicitação,
+// pela chave sem data (`reservarPorChave`). O prazo foi prometido ao cliente na
+// tela dele; quem recebe é o responsável, ou o setor quando ninguém assumiu.
+async function checkSolicitacoesNoPrazo(tenantId: string, today: Date): Promise<number> {
+  if (!(await isModuleEnabled(tenantId, "portal_solicitacoes"))) return 0;
+
+  const hojeKey = saoPauloParts(new Date()).dateKey;
+  const fimDeHoje = new Date(`${hojeKey}T23:59:59-03:00`);
+  const pendentes = await getPrisma().serviceRequest.findMany({
+    where: {
+      tenantId,
+      status: { in: ["ABERTA", "EM_ANDAMENTO", "AGUARDANDO_CLIENTE"] },
+      firstResponseAt: null,
+      responseDue: { lte: fimDeHoje },
+    },
+    select: {
+      id: true,
+      number: true,
+      sectorCode: true,
+      assigneeId: true,
+      responseDue: true,
+      company: { select: { name: true, displayName: true } },
+    },
+    take: 500,
+  });
+
+  let sent = 0;
+  for (const s of pendentes) {
+    const venceHoje = saoPauloParts(s.responseDue).dateKey === hojeKey;
+    const chave = `SOLICITACAO_PRAZO:${s.id}:${venceHoje ? "hoje" : "atrasada"}`;
+    if (!(await reservarPorChave(tenantId, chave, today))) continue;
+    const empresa = nomeExibicao(s.company);
+    const message = venceHoje
+      ? `A resposta da solicitação nº ${s.number} (${empresa}) vence hoje.`
+      : `A solicitação nº ${s.number} (${empresa}) passou do prazo de resposta ao cliente.`;
+    const aviso = { tenantId, type: "SOLICITACAO_PRAZO", message, entityId: s.id };
+    if (s.assigneeId) await notifyUser(s.assigneeId, aviso);
+    else await notifySector(s.sectorCode, aviso);
+    sent++;
+  }
+  return sent;
+}
+
 // Orçamento estourado no mês: uma vez por empresa e por competência — o estouro
 // não desfaz, e repetir todo dia seria cobrar a mesma coisa trinta vezes.
 //
@@ -645,6 +689,7 @@ async function runForTenant(tenantId: string, today: Date): Promise<TenantResult
     ["treinamentos", () => checkTreinamentosVencendo(tenantId, today)],
     ["contas a pagar", () => checkContasAPagar(tenantId, today)],
     ["pendências", () => checkPendenciasVencidas(tenantId, today)],
+    ["solicitações", () => checkSolicitacoesNoPrazo(tenantId, today)],
     ["orçamento", () => checkOrcamentoEstourado(tenantId, today)],
     ["certificados", () => checkCertificadosVencendo(tenantId, today)],
     ["gestão", () => checkItensDaGestao(tenantId, today)],

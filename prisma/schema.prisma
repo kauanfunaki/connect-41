@@ -538,6 +538,8 @@ model Tenant {
   valoraConfig              ValoraConfig?
   valoraPropostas           ValoraProposta[]
   companyMessages           CompanyMessage[]
+  serviceRequests           ServiceRequest[]
+  serviceRequestSubjects    ServiceRequestSubject[]
   companyMessageAttachments CompanyMessageAttachment[]
   processMessages           ProcessMessage[]
   processDocuments          ProcessDocument[]
@@ -778,6 +780,10 @@ model User {
   clientRequestMessages       ClientRequestMessage[]     @relation("ClientRequestMessageAuthorUser")
   clientRequestAttachments    ClientRequestAttachment[]  @relation("ClientRequestAttachmentUser")
   companyMessages             CompanyMessage[]           @relation("CompanyMessageAuthorUser")
+  serviceRequestsAssigned     ServiceRequest[]           @relation("ServiceRequestAssignee")
+  serviceRequestsClosed       ServiceRequest[]           @relation("ServiceRequestClosedBy")
+  serviceRequestMessages      ServiceRequestMessage[]    @relation("ServiceRequestMessageAuthorUser")
+  serviceRequestAttachments   ServiceRequestAttachment[] @relation("ServiceRequestAttachmentUser")
   processMessages             ProcessMessage[]           @relation("ProcessMessageAuthorUser")
   processDocuments            ProcessDocument[]          @relation("ProcessDocumentUser")
   agentConversations          AgentConversation[]
@@ -896,6 +902,9 @@ model PortalUser {
   clientRequestMessages    ClientRequestMessage[]    @relation("ClientRequestMessageAuthorPortal")
   clientRequestAttachments ClientRequestAttachment[] @relation("ClientRequestAttachmentPortal")
   companyMessages          CompanyMessage[]          @relation("CompanyMessageAuthorPortal")
+  serviceRequestsOpened     ServiceRequest[]           @relation("ServiceRequestOpenedByPortal")
+  serviceRequestMessages    ServiceRequestMessage[]    @relation("ServiceRequestMessageAuthorPortal")
+  serviceRequestAttachments ServiceRequestAttachment[] @relation("ServiceRequestAttachmentPortal")
   processMessages          ProcessMessage[]          @relation("ProcessMessageAuthorPortal")
   processDocuments         ProcessDocument[]         @relation("ProcessDocumentPortal")
   approvalLimits           PortalApprovalLimit[]
@@ -1052,6 +1061,7 @@ model Company {
   bankAccounts             BankAccount[]
   clientRequests           ClientRequest[]
   companyMessages          CompanyMessage[]
+  serviceRequests          ServiceRequest[]
   portalApprovalLimits     PortalApprovalLimit[]
   collectionAgreements     CollectionAgreement[]
   collectionReminderOptOut CollectionReminderOptOut?
@@ -2989,6 +2999,141 @@ model CompanyMessageAttachment {
   @@index([messageId])
   @@map("company_message_attachments")
 }
+
+// ─── Solicitações do cliente pelo portal (01/10) ─────────────────────────────
+//
+// O portal virou o caminho único entre a 41 e o cliente, em todos os setores
+// (decisão do Kauan em 01/10): o cliente abre a solicitação escolhendo o
+// **assunto**, e o assunto diz o setor que atende e o prazo de resposta que o
+// cliente vê.
+//
+// Tabelas próprias, e não `ClientRequest` com uma coluna de origem: a
+// pendência é a 41 pedindo ao cliente, e dez lugares (aviso da home do portal,
+// lembrete por e-mail, Gestão, Meu dia, alertas, IA) contam ABERTA como
+// "esperando o cliente". Uma solicitação aberta pelo cliente espera a 41 — o
+// mesmo status com o sentido invertido em todos eles.
+
+enum ServiceRequestStatus {
+  /// Chegou e ninguém da 41 respondeu ainda.
+  ABERTA
+  /// A 41 está tratando: respondeu ou assumiu, e a vez é dela.
+  EM_ANDAMENTO
+  /// A 41 pediu algo ao cliente; a vez é dele.
+  AGUARDANDO_CLIENTE
+  CONCLUIDA
+  CANCELADA
+}
+
+/// O assunto que o cliente escolhe ao abrir a solicitação. Editável no admin;
+/// desativa-se em vez de apagar, porque as solicitações antigas apontam para ele.
+model ServiceRequestSubject {
+  id           String   @id @default(uuid())
+  tenantId     String
+  label        String   @db.VarChar(120)
+  /// Uma linha que ajuda o cliente a escolher ("contrato social, alteração de endereço…").
+  description  String?  @db.VarChar(255)
+  /// Setor que atende as solicitações deste assunto.
+  sectorCode   String   @db.VarChar(40)
+  /// Prazo de resposta prometido ao cliente, em dias úteis.
+  responseDays Int
+  active       Boolean  @default(true)
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id])
+  requests ServiceRequest[]
+
+  @@unique([tenantId, label])
+  @@index([tenantId, active, order])
+  @@map("service_request_subjects")
+}
+
+model ServiceRequest {
+  id          String               @id @default(uuid())
+  tenantId    String
+  /// Protocolo por tenant ("Solicitação nº 12") — o que o cliente cita ao falar dela.
+  number      Int
+  companyId   String
+  subjectId   String
+  /// Setor que atende agora: começa no do assunto e muda quando a equipe encaminha.
+  sectorCode  String               @db.VarChar(40)
+  /// O que o cliente escreveu ao abrir.
+  description String               @db.Text
+  status      ServiceRequestStatus @default(ABERTA)
+  /// Prazo da primeira resposta, prometido ao cliente. Data civil ao meio-dia UTC (ver `lerDataDoCampo`).
+  responseDue DateTime
+  /// Primeira resposta da equipe visível ao cliente — é o que cumpre o prazo.
+  firstResponseAt DateTime?
+  assigneeId  String?
+  openedByPortalUserId String?
+  closedAt    DateTime?
+  closedById  String?
+  /// Última mensagem visível ao cliente, para ordenar a fila pelo que mexeu por último.
+  lastMessageAt DateTime @default(now())
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  tenant         Tenant                     @relation(fields: [tenantId], references: [id])
+  company        Company                    @relation(fields: [companyId], references: [id])
+  subject        ServiceRequestSubject      @relation(fields: [subjectId], references: [id])
+  assignee       User?                      @relation("ServiceRequestAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  openedByPortal PortalUser?                @relation("ServiceRequestOpenedByPortal", fields: [openedByPortalUserId], references: [id], onDelete: SetNull)
+  closedBy       User?                      @relation("ServiceRequestClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
+  messages       ServiceRequestMessage[]
+  attachments    ServiceRequestAttachment[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status, sectorCode])
+  @@index([tenantId, companyId, status])
+  @@index([tenantId, assigneeId, status])
+  @@map("service_requests")
+}
+
+model ServiceRequestMessage {
+  id                 String   @id @default(uuid())
+  requestId          String
+  /// Exatamente um dos dois autores — regra na aplicação.
+  authorUserId       String?
+  authorPortalUserId String?
+  body               String   @db.Text
+  /// Nota só da equipe: o cliente nunca vê. Encaminhamento e combinados internos.
+  internal           Boolean  @default(false)
+  createdAt          DateTime @default(now())
+
+  request      ServiceRequest             @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  authorUser   User?                      @relation("ServiceRequestMessageAuthorUser", fields: [authorUserId], references: [id], onDelete: SetNull)
+  authorPortal PortalUser?                @relation("ServiceRequestMessageAuthorPortal", fields: [authorPortalUserId], references: [id], onDelete: SetNull)
+  attachments  ServiceRequestAttachment[]
+
+  @@index([requestId, createdAt])
+  @@map("service_request_messages")
+}
+
+model ServiceRequestAttachment {
+  id                     String   @id @default(uuid())
+  requestId              String
+  /// Nulo nos anexos da abertura.
+  messageId              String?
+  uploadedByUserId       String?
+  uploadedByPortalUserId String?
+  fileName               String   @db.VarChar(255)
+  /// "<tenantId>/<uuid>.<ext>" sob storage/service-requests — nunca vem do usuário.
+  fileUrl                String   @db.VarChar(255)
+  mimeType               String   @db.VarChar(100)
+  sizeBytes              Int
+  createdAt              DateTime @default(now())
+
+  request          ServiceRequest         @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  message          ServiceRequestMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  uploadedByUser   User?                  @relation("ServiceRequestAttachmentUser", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  uploadedByPortal PortalUser?            @relation("ServiceRequestAttachmentPortal", fields: [uploadedByPortalUserId], references: [id], onDelete: SetNull)
+
+  @@index([requestId])
+  @@index([messageId])
+  @@map("service_request_attachments")
+}
+
 
 /// Lembrete automático de pendência vencida — um por (pendência, passo).
 /// Gravado **antes** do envio (ver `pendencias/executarLembretes.ts`): o unique
