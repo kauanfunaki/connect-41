@@ -14,6 +14,8 @@ export type TelaDoPortal = {
   descricao: string;
   /** Some quando este módulo está ligado: a tela foi substituída por outra. */
   ocultaCom?: string;
+  /** Aparece também com este módulo, mesmo sem o próprio. */
+  ouCom?: string;
 };
 
 export const SECOES_DO_PORTAL: readonly SecaoDoPortal[] = ["Financeiro", "Societário", "Com a equipe"];
@@ -61,7 +63,15 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     secao: "Com a equipe",
     descricao: "Peça documentos, alterações ou o que precisar da 41, com prazo de resposta.",
   },
-  { href: "/portal/pendencias", rotulo: "Pendências", modulo: "bpo_pendencias", secao: "Com a equipe", descricao: "O que a equipe da 41 precisa de você." },
+  {
+    href: "/portal/pendencias",
+    rotulo: "Pendências",
+    modulo: "bpo_pendencias",
+    secao: "Com a equipe",
+    descricao: "O que a equipe da 41 precisa de você.",
+    // Desde 01/10 qualquer setor pede ao cliente, com o canal do portal ligado.
+    ouCom: "portal_solicitacoes",
+  },
   {
     href: "/portal/aprovacoes",
     rotulo: "Aprovações",
@@ -84,6 +94,8 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
 
 export function telasVisiveis(modulos: ReadonlySet<string>): TelaDoPortal[] {
   return TELAS_DO_PORTAL.filter(
-    (t) => (t.modulo === null || modulos.has(t.modulo)) && !(t.ocultaCom && modulos.has(t.ocultaCom))
+    (t) =>
+      (t.modulo === null || modulos.has(t.modulo) || (!!t.ouCom && modulos.has(t.ouCom))) &&
+      !(t.ocultaCom && modulos.has(t.ocultaCom))
   );
 }

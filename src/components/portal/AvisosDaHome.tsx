@@ -4,6 +4,7 @@ import { pendenciasAguardandoCliente } from "@/lib/financeiro/pendencias/consult
 import { aprovacoesDoCliente } from "@/lib/financeiro/aprovacao/portal";
 import { contagemDeCobrancaDoCliente, MODULO_DE_COBRANCA } from "@/lib/financeiro/cobranca/consultas";
 import { solicitacoesAguardandoCliente } from "@/lib/solicitacoes/consultas";
+import { pedidosAoClienteNoConjunto } from "@/lib/financeiro/pendencias/setor";
 
 /**
  * O que espera o cliente, no topo da home do portal: pendências a responder,
@@ -24,7 +25,7 @@ export async function AvisosDaHome({
   const escopo = { tenantId, companyIds };
   const [solicitacoes, pendencias, aprovacoes, emCobranca] = await Promise.all([
     modulos.has("portal_solicitacoes") ? solicitacoesAguardandoCliente(escopo) : Promise.resolve(0),
-    modulos.has("bpo_pendencias") ? pendenciasAguardandoCliente(escopo) : Promise.resolve(0),
+    pedidosAoClienteNoConjunto(modulos) ? pendenciasAguardandoCliente(escopo) : Promise.resolve(0),
     modulos.has("bpo_aprovacoes") ? aprovacoesDoCliente(escopo, portalUserId) : Promise.resolve(null),
     modulos.has(MODULO_DE_COBRANCA) ? contagemDeCobrancaDoCliente(escopo, new Date()) : Promise.resolve(0),
   ]);

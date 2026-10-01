@@ -164,8 +164,9 @@ async function cards(tenantId: string, agora: Date, filtro: FiltroDeItens): Prom
 }
 
 async function pendencias(tenantId: string, agora: Date, filtro: FiltroDeItens): Promise<ItemDeTrabalho[]> {
-  const setor = (await setorDoModulo(tenantId, "bpo_pendencias")) ?? "bpo";
-  if (!doSetor(filtro, setor)) return [];
+  // Desde 01/10 a pendência guarda o setor que pediu; as de antes (sem setor)
+  // são do setor do módulo, como sempre foram.
+  const padrao = (await setorDoModulo(tenantId, "bpo_pendencias")) ?? "bpo";
   const lista = await getPrisma().clientRequest.findMany({
     where: {
       tenantId,
@@ -183,23 +184,27 @@ async function pendencias(tenantId: string, agora: Date, filtro: FiltroDeItens):
       updatedAt: true,
       resolvedAt: true,
       createdById: true,
+      sectorCode: true,
       company: { select: { name: true, displayName: true } },
     },
     take: TETO,
   });
-  return lista.map((r) => ({
-    origem: "PENDENCIA",
-    id: r.id,
-    titulo: `${r.title} — ${nomeExibicao(r.company)}`,
-    setor,
-    responsaveis: r.createdById ? [r.createdById] : [],
-    // Aberta é o cliente devendo resposta; respondida é a equipe devendo ação.
-    estado: r.status === "RESOLVIDA" ? "CONCLUIDO" : r.status === "ABERTA" ? "ESPERANDO_CLIENTE" : "ANDAMENTO",
-    ultimaMovimentacao: r.updatedAt,
-    prazo: r.dueDate,
-    concluidoEm: r.resolvedAt,
-    href: `/pendencias/${r.id}`,
-  }));
+  return lista
+    .map((r) => ({ r, setor: r.sectorCode ?? padrao }))
+    .filter(({ setor }) => doSetor(filtro, setor))
+    .map(({ r, setor }) => ({
+      origem: "PENDENCIA",
+      id: r.id,
+      titulo: `${r.title} — ${nomeExibicao(r.company)}`,
+      setor,
+      responsaveis: r.createdById ? [r.createdById] : [],
+      // Aberta é o cliente devendo resposta; respondida é a equipe devendo ação.
+      estado: r.status === "RESOLVIDA" ? "CONCLUIDO" : r.status === "ABERTA" ? "ESPERANDO_CLIENTE" : "ANDAMENTO",
+      ultimaMovimentacao: r.updatedAt,
+      prazo: r.dueDate,
+      concluidoEm: r.resolvedAt,
+      href: `/pendencias/${r.id}`,
+    }));
 }
 
 async function transferencias(tenantId: string, agora: Date, filtro: FiltroDeItens): Promise<ItemDeTrabalho[]> {

@@ -4,6 +4,7 @@ import { getPortalSession } from "@/lib/auth/portal";
 import { getEnabledModuleCodes } from "@/lib/modules";
 import { alcanceDoCliente } from "@/app/(portal)/alcance";
 import { lerAnexo, respostaDoAnexo } from "@/lib/financeiro/pendencias/armazenamento";
+import { pedidosAoClienteNoConjunto } from "@/lib/financeiro/pendencias/setor";
 
 // Download de anexo de pendência pelo cliente. Sob `/portal`, então o proxy já
 // exigiu o cookie do portal; aqui se valida a sessão e o **alcance**: o anexo
@@ -12,7 +13,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const sessao = await getPortalSession();
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   const modulos = await getEnabledModuleCodes(sessao.tenantId);
-  if (!modulos.has("bpo_pendencias")) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
+  if (!pedidosAoClienteNoConjunto(modulos)) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
 
   const alcance = await alcanceDoCliente(sessao);
   const companyIds = alcance.tipo === "EMPRESAS" ? alcance.companyIds : [];

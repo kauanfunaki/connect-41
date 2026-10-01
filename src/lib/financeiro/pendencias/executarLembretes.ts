@@ -19,7 +19,7 @@
 
 import { getPrisma } from "@/lib/prisma";
 import { saoPauloParts } from "@/lib/agenda";
-import { isModuleEnabled } from "@/lib/modules";
+import { pedidosAoClienteLigados } from "./setor";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { sendPendenciaAoClienteEmail, temSmtpConfigurado } from "@/lib/email/sendMail";
 import { avisarClientePorPush } from "@/lib/portal/avisos";
@@ -88,7 +88,9 @@ export async function executarLembretesDePendencia(opcoes: { limite?: number; ag
       r.maisPendentes = true;
       break;
     }
-    if (!(await isModuleEnabled(tenantId, MODULO_DE_PENDENCIAS))) continue;
+    // Desde 01/10 qualquer setor pede ao cliente: com o canal do portal ligado,
+    // os pedidos dos outros setores também recebem lembrete.
+    if (!(await pedidosAoClienteLigados(tenantId))) continue;
     r.tenants += 1;
 
     if (!(await temSmtpConfigurado(tenantId))) {

@@ -17,6 +17,7 @@ import { NovaPendencia, type LancamentoVinculado } from "@/components/pendencias
 import { SeloDoPrazo, SeloDoStatus } from "@/components/pendencias/SelosDaPendencia";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { listarPendencias, RECORTES_DE_PENDENCIA, type RecorteDePendencia } from "@/lib/financeiro/pendencias/consultas";
+import { soDoSetorPadrao } from "@/lib/financeiro/pendencias/setor";
 import { ROTULO_DO_TIPO, ROTULO_DO_STATUS, ROTULO_DO_PRAZO } from "@/lib/financeiro/pendencias/regras";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { moeda } from "@/lib/financeiro/formato";
@@ -55,7 +56,9 @@ export default async function PendenciasPage({
   const agora = new Date();
 
   const [{ linhas, contadores, limitado }, lancamento] = await Promise.all([
-    listarPendencias({ tenantId: ctx.tenantId, companyIds: null }, { recorte, empresaId, vencidas }, agora),
+    // Só as do setor do módulo (e as de antes de 01/10, sem setor): os pedidos
+    // dos outros setores ficam em Solicitações › Pedidos ao cliente.
+    listarPendencias({ tenantId: ctx.tenantId, companyIds: null, setores: soDoSetorPadrao(setor) }, { recorte, empresaId, vencidas }, agora),
     podeAgir && params.lancamento ? lancamentoParaVincular(ctx.tenantId, params.lancamento) : Promise.resolve(null),
   ]);
 

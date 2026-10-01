@@ -12,6 +12,7 @@ import { clienteAtivoDoPortal } from "@/app/(portal)/usuario";
 import { transicao, validarResposta } from "@/lib/financeiro/pendencias/regras";
 import { arquivosDoFormulario, gravarAnexos, apagarAnexosGravados } from "@/lib/financeiro/pendencias/armazenamento";
 import { avisarEquipeDaResposta } from "@/lib/financeiro/pendencias/avisos";
+import { pedidosAoClienteNoConjunto } from "@/lib/financeiro/pendencias/setor";
 
 export type ResultadoDoPortal = { error: string } | { ok: true };
 
@@ -20,7 +21,7 @@ class Recusa extends Error {}
 export async function responderPendenciaCliente(formData: FormData): Promise<ResultadoDoPortal> {
   const cliente = await clienteAtivoDoPortal();
   if (!cliente) return { error: "Sessão expirada. Entre de novo no portal." };
-  if (!cliente.modulos.has("bpo_pendencias")) return { error: "Pendências não estão habilitadas." };
+  if (!pedidosAoClienteNoConjunto(cliente.modulos)) return { error: "Pendências não estão habilitadas." };
 
   const id = String(formData.get("requestId") ?? "");
   const prisma = getPrisma();
@@ -77,6 +78,7 @@ export async function responderPendenciaCliente(formData: FormData): Promise<Res
 
   await avisarEquipeDaResposta({
     tenantId: cliente.tenantId,
+    requestId: p.id,
     createdById: p.createdById,
     titulo: p.title,
     empresaNome: nomeExibicao(p.company),

@@ -21,6 +21,7 @@ import { serieEconomica } from "@/lib/dre/dataEconomica";
 import { orcamentosAprovados, MODULO_DE_ORCAMENTO } from "@/lib/dre/orcamento/dados";
 import { porGrupoOrcado } from "@/lib/dre/orcamento/grade";
 import { itensDaGestao } from "@/lib/gestao/itens";
+import { pedidosAoClienteLigados } from "@/lib/financeiro/pendencias/setor";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -273,7 +274,6 @@ async function checkAdmissoesParadas(tenantId: string, today: Date): Promise<num
 // estouro são puras, em `src/lib/financeiro/alertas.ts`, com teste.
 
 const MODULO_CONTAS_PAGAR = "bpo_contas_pagar";
-const MODULO_PENDENCIAS = "bpo_pendencias";
 
 /** Abaixo disso, estouro de orçamento é troco de arredondamento, não notícia. */
 const ESTOURO_MINIMO_CENTAVOS = 100_00;
@@ -358,7 +358,7 @@ async function checkContasAPagar(tenantId: string, today: Date): Promise<number>
 // já recebe o lembrete por e-mail (ver `pendencias/lembrete.ts`), e quem cobra é
 // quem pediu.
 async function checkPendenciasVencidas(tenantId: string, today: Date): Promise<number> {
-  if (!(await isModuleEnabled(tenantId, MODULO_PENDENCIAS))) return 0;
+  if (!(await pedidosAoClienteLigados(tenantId))) return 0;
 
   const hojeKey = saoPauloParts(new Date()).dateKey;
   const prisma = getPrisma();

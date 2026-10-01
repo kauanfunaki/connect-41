@@ -83,7 +83,8 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     titulo: "Responder um pedido da equipe",
     resumo: "Quando a 41 precisa de um documento ou de uma informação sua.",
     icone: "pendencia",
-    modulos: ["bpo_pendencias"],
+    // Com o canal do portal ligado, qualquer setor pede (01/10).
+    modulos: ["bpo_pendencias", "portal_solicitacoes"],
     passos: [
       "Abra Pendências. Os pedidos que esperam você aparecem como \"Aguardando cliente\", com o prazo.",
       "Clique no pedido para ver o que a equipe precisa.",
