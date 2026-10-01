@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Bell, Building2, KeyRound, MessagesSquare, Smartphone, Wallet } from "lucide-react";
+import { Bell, Building2, Inbox, KeyRound, MessagesSquare, Plus, Smartphone, Wallet } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { Button } from "@/components/ui/Button";
@@ -18,6 +18,7 @@ export const dynamic = "force-dynamic";
 // e um próprio quando é sobre o portal como um todo.
 const ICONES: Record<IconeDoPasso, React.ReactNode> = {
   celular: <Smartphone />,
+  solicitacao: <Inbox />,
   sino: <Bell />,
   empresas: <Building2 />,
   pendencia: <ModuleIcon code="bpo_pendencias" />,
@@ -53,7 +54,9 @@ export default async function AjudaDoPortalPage() {
     descricao: t.descricao,
     icone: iconeDaTela(t),
   }));
-  const temConversa = modulos.has("bpo_comunicacao");
+  // Com as solicitações ligadas, o caminho para falar com a 41 é uma solicitação nova.
+  const temSolicitacoes = modulos.has("portal_solicitacoes");
+  const temConversa = !temSolicitacoes && modulos.has("bpo_comunicacao");
 
   return (
     <PageContainer>
@@ -71,11 +74,18 @@ export default async function AjudaDoPortalPage() {
             <div className="min-w-0 flex-1 basis-64">
               <p className="text-[14px] font-semibold text-fg">Não achou o que procurava?</p>
               <p className="mt-0.5 text-[length:var(--fs-helper)] text-fg-muted">
-                {temConversa
-                  ? "Escreva para a equipe da 41 pela Conversa. Ela é avisada na hora e responde por lá."
-                  : "Fale com o seu contato na 41."}
+                {temSolicitacoes
+                  ? "Abra uma solicitação. A equipe certa recebe na hora e responde por lá."
+                  : temConversa
+                    ? "Escreva para a equipe da 41 pela Conversa. Ela é avisada na hora e responde por lá."
+                    : "Fale com o seu contato na 41."}
               </p>
             </div>
+            {temSolicitacoes && (
+              <Button href="/portal/solicitacoes/nova" variant="secondary" size="sm">
+                <Plus size={14} /> Nova solicitação
+              </Button>
+            )}
             {temConversa && (
               <Button href="/portal/comunicacao" variant="secondary" size="sm">
                 <MessagesSquare size={14} /> Abrir a Conversa

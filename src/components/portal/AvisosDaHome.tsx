@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { MessageSquareWarning, ShieldCheck, Handshake } from "lucide-react";
+import { Inbox, MessageSquareWarning, ShieldCheck, Handshake } from "lucide-react";
 import { pendenciasAguardandoCliente } from "@/lib/financeiro/pendencias/consultas";
 import { aprovacoesDoCliente } from "@/lib/financeiro/aprovacao/portal";
 import { contagemDeCobrancaDoCliente, MODULO_DE_COBRANCA } from "@/lib/financeiro/cobranca/consultas";
+import { solicitacoesAguardandoCliente } from "@/lib/solicitacoes/consultas";
 
 /**
  * O que espera o cliente, no topo da home do portal: pendências a responder,
@@ -21,13 +22,14 @@ export async function AvisosDaHome({
   modulos: Set<string>;
 }) {
   const escopo = { tenantId, companyIds };
-  const [pendencias, aprovacoes, emCobranca] = await Promise.all([
+  const [solicitacoes, pendencias, aprovacoes, emCobranca] = await Promise.all([
+    modulos.has("portal_solicitacoes") ? solicitacoesAguardandoCliente(escopo) : Promise.resolve(0),
     modulos.has("bpo_pendencias") ? pendenciasAguardandoCliente(escopo) : Promise.resolve(0),
     modulos.has("bpo_aprovacoes") ? aprovacoesDoCliente(escopo, portalUserId) : Promise.resolve(null),
     modulos.has(MODULO_DE_COBRANCA) ? contagemDeCobrancaDoCliente(escopo, new Date()) : Promise.resolve(0),
   ]);
   const aprovar = aprovacoes?.contas.filter((c) => c.dentroDoTeto).length ?? 0;
-  if (pendencias === 0 && aprovar === 0 && emCobranca === 0) return null;
+  if (solicitacoes === 0 && pendencias === 0 && aprovar === 0 && emCobranca === 0) return null;
 
   // Raio, ícone de 16px e respiro de 16px até o bloco de baixo: os mesmos dos
   // cartões de total das outras telas do portal. Eram `rounded-md`, ícone de
@@ -36,6 +38,15 @@ export async function AvisosDaHome({
   const cartao = `${base} border-warning/40 bg-warning-bg hover:border-warning`;
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+      {solicitacoes > 0 && (
+        <Link href="/portal/solicitacoes" className={cartao}>
+          <Inbox size={16} className="text-warning shrink-0" />
+          <span>
+            <strong className="tabular-nums">{solicitacoes}</strong>{" "}
+            {solicitacoes === 1 ? "solicitação em que a equipe precisa de você" : "solicitações em que a equipe precisa de você"}
+          </span>
+        </Link>
+      )}
       {pendencias > 0 && (
         <Link href="/portal/pendencias" className={cartao}>
           <MessageSquareWarning size={16} className="text-warning shrink-0" />

@@ -11,7 +11,7 @@ import { codigosDeTelasFixadas } from "@/lib/telasFixadas-data";
 import { telasFixadasVisiveis } from "@/lib/telasFixadas";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorsWithEnabledModules, getTenantModuleStates } from "@/lib/modules";
-import { getModuleRoute } from "@/lib/module-catalog";
+import { getModuleRoute, MODULOS_DO_MENU_GERAL } from "@/lib/module-catalog";
 import { baseDomain, hostSuffix } from "@/lib/auth/activeSector";
 import { formatInstantDateTime } from "@/lib/format";
 import { linkDaNotificacao } from "@/lib/notificacaoLink";
@@ -63,9 +63,11 @@ export default async function AppLayout({
       href: getModuleRoute(m.code) ?? `/setor/${m.sectorCode}/${m.code}`,
       setor: sectorLabels[m.sectorCode] ?? m.sectorCode,
     }));
+  // A fila das solicitações do portal mora no menu Geral (ver MODULOS_DO_MENU_GERAL).
+  const solicitacoesLigadas = moduleStates.some((m) => m.code === "portal_solicitacoes" && m.enabled);
   const activeSectorModules = activeSector
     ? moduleStates
-        .filter((m) => m.enabled && m.sectorCode === activeSector.code)
+        .filter((m) => m.enabled && m.sectorCode === activeSector.code && !MODULOS_DO_MENU_GERAL.has(m.code))
         .map((m) => ({ code: m.code, label: m.label, href: getModuleRoute(m.code) ?? `/setor/${activeSector.code}/${m.code}` }))
     : [];
   // Fixadas: a ordem é a que a pessoa escolheu, e o filtro é o que ela pode
@@ -135,6 +137,7 @@ export default async function AppLayout({
         canOpenAdmin={canOpenAdmin}
         unreadCount={unreadCount}
         notifications={notifications}
+        solicitacoesLigadas={solicitacoesLigadas}
         profileName={me?.name ?? "Usuário"}
         profileRoleLabel={ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role}
         profilePhotoUrl={me?.photoUrl ?? null}

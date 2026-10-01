@@ -775,6 +775,55 @@ export async function sendPendenciaAoClienteEmail(input: SendPendenciaAoClienteE
   return enviarAvisoIndividual(input.tenantId, "sendPendenciaAoClienteEmail", mensagens);
 }
 
+export type SendSolicitacaoAoClienteEmailInput = {
+  tenantId: string;
+  destinatarios: { email: string; nome: string }[];
+  solicitacaoId: string;
+  numero: number;
+  assunto: string;
+  motivo: "resposta" | "aguardando" | "concluida";
+};
+
+// Novidade numa solicitação que o cliente abriu pelo portal (01/10). Mesma
+// régua da pendência: o e-mail leva o número e o **assunto escolhido na
+// lista** — nunca o que foi escrito, que pode citar valor, conta ou documento.
+export async function sendSolicitacaoAoClienteEmail(input: SendSolicitacaoAoClienteEmailInput): Promise<ResultadoDoAviso> {
+  const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
+  const url = `${baseUrl}/portal/solicitacoes/${input.solicitacaoId}`;
+  const assunto = {
+    resposta: `Resposta na sua solicitação nº ${input.numero}`,
+    aguardando: `A equipe precisa de você — solicitação nº ${input.numero}`,
+    concluida: `Solicitação nº ${input.numero} concluída`,
+  }[input.motivo];
+  const abertura = {
+    resposta: "A equipe respondeu na sua solicitação:",
+    aguardando: "A equipe respondeu e precisa de algo seu para seguir com a solicitação:",
+    concluida: "A equipe concluiu a sua solicitação. Se ainda faltar algo, é só responder por lá:",
+  }[input.motivo];
+  const mensagens = input.destinatarios.map((d) => ({
+    to: d.email,
+    subject: assunto,
+    html: emailShell(
+      `
+    <p class="email-text" style="font-size:14px; line-height:1.6; margin:0 0 16px; font-family:Arial,Helvetica,sans-serif;">
+      Olá, ${escapeHtml(d.nome)}. ${escapeHtml(abertura)}
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="doc-card" style="margin:0 0 16px; border:1px solid; border-radius:10px;">
+      <tr>
+        <td style="padding:16px 18px;">
+          <p class="email-text-muted" style="margin:0 0 4px; font-size:10.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; font-family:Arial,Helvetica,sans-serif;">Solicitação nº ${input.numero}</p>
+          <p class="email-text-strong" style="margin:0; font-size:15px; font-weight:700; font-family:Arial,Helvetica,sans-serif;">${escapeHtml(input.assunto)}</p>
+        </td>
+      </tr>
+    </table>
+    ${botaoDoEmail(url, "Abrir no portal")}
+  `,
+      "Portal do cliente"
+    ),
+  }));
+  return enviarAvisoIndividual(input.tenantId, "sendSolicitacaoAoClienteEmail", mensagens);
+}
+
 export type SendMensagemAoClienteEmailInput = {
   tenantId: string;
   destinatarios: { email: string; nome: string }[];

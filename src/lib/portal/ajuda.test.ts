@@ -24,6 +24,15 @@ describe("passosDoPortal — o cliente só lê sobre o que está no menu dele", 
     expect(c).not.toContain("processo");
   });
 
+  it("com as solicitações ligadas, o passo delas entra e o da conversa sai", () => {
+    const sem = chaves(["bpo_comunicacao"]);
+    expect(sem).toContain("conversa");
+    expect(sem).not.toContain("solicitacao");
+    const com = chaves(["bpo_comunicacao", "portal_solicitacoes"]);
+    expect(com).toContain("solicitacao");
+    expect(com).not.toContain("conversa");
+  });
+
   it("trocar de empresa só aparece para quem tem mais de uma", () => {
     expect(chaves([])).not.toContain("empresa");
     expect(chaves([], true)).toContain("empresa");
@@ -56,6 +65,12 @@ describe("telasVisiveis — a mesma régua do menu", () => {
       "/portal/processos",
       "/portal/exigencias",
     ]);
+  });
+
+  it("a Conversa sai do menu quando as solicitações estão ligadas", () => {
+    const hrefs = (m: string[]) => telasVisiveis(new Set(m)).map((t) => t.href);
+    expect(hrefs(["bpo_comunicacao"])).toContain("/portal/comunicacao");
+    expect(hrefs(["bpo_comunicacao", "portal_solicitacoes"])).toEqual(["/portal", "/portal/solicitacoes"]);
   });
 
   it("toda tela fica dentro de /portal", () => {

@@ -36,6 +36,7 @@ export type IconeDeModulo =
   | "GraduationCap"
   | "HandCoins"
   | "IdCard"
+  | "Inbox"
   | "KeyRound"
   | "Landmark"
   | "MessageCircle"
@@ -161,6 +162,20 @@ export const MODULE_CATALOG: ModuleDef[] = [
     description: "Os atendimentos do escritório no Chatwoot, ligados a empresas e pessoas, e a avaliação de cada atendente",
     defaultEnabled: true,
     icon: "MessagesSquare",
+    group: "Atendimento",
+  },
+  {
+    // O portal como caminho único entre a 41 e o cliente (01/10): o cliente
+    // abre a solicitação escolhendo o assunto, e o assunto diz o setor que
+    // atende. Fica na Controladoria (atendimento) para ser ligado e desligado
+    // por tenant, mas a tela é do menu Geral — cada setor atende as suas, e
+    // não faz sentido entrar na Controladoria para vê-las.
+    code: "portal_solicitacoes",
+    label: "Solicitações dos clientes",
+    sectorCode: "controladoria",
+    description: "O que os clientes pedem pelo portal — documento, alteração ou qualquer outra coisa —, por assunto, com setor, responsável e prazo de resposta",
+    defaultEnabled: true,
+    icon: "Inbox",
     group: "Atendimento",
   },
   {
@@ -578,6 +593,7 @@ export function agruparModulos<T extends { code: string }>(itens: T[]): { grupo:
 // de-para é como um módulo novo aparece no menu e não abre.
 export const MODULE_ROUTES: Record<string, string> = {
   controladoria_conversas: "/conversas",
+  portal_solicitacoes:     "/solicitacoes",
   tech_certificados:       "/certificados",
   recrutamento_vagas:      "/vagas",
   recrutamento_candidatos: "/candidatos",
@@ -619,6 +635,12 @@ export const MODULE_ROUTES: Record<string, string> = {
   dre_analises:            "/dre/analises",
   dre_orcamento:           "/dre/orcamento",
 };
+
+/**
+ * Módulos cuja tela fica no menu **Geral**, para todos, e não na lista de
+ * telas do setor dono: o setor só serve para ligar e desligar o módulo.
+ */
+export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes"]);
 
 export function getModuleRoute(code: string): string | undefined {
   return MODULE_ROUTES[code];

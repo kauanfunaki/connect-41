@@ -39,7 +39,8 @@ export function ConversaDaPendencia({
   ladoDeQuemVe,
 }: {
   abertura?: { descricao: string | null; anexos: AnexoDaConversa[]; por: string; em: Date } | null;
-  mensagens: MensagemDaConversa[];
+  /** `interna` só chega do lado da equipe (notas da solicitação, que o cliente nunca recebe). */
+  mensagens: (MensagemDaConversa & { interna?: boolean })[];
   baseDoDownload: string;
   ladoDeQuemVe: "EQUIPE" | "CLIENTE";
 }) {
@@ -63,10 +64,13 @@ export function ConversaDaPendencia({
         return (
           <li
             key={m.id}
-            className={`rounded-md border px-4 py-3 ${minha ? "border-brand/30 bg-brand/5 ml-6" : "border-border bg-surface mr-6"}`}
+            className={`rounded-md border px-4 py-3 ${
+              m.interna ? "border-warning/40 bg-warning-bg ml-6" : minha ? "border-brand/30 bg-brand/5 ml-6" : "border-border bg-surface mr-6"
+            }`}
           >
             <p className="text-[11px] text-fg-muted">
-              {m.autorNome} · {m.lado === "EQUIPE" ? "equipe" : "cliente"} · {formatInstantDateTime(m.criadaEm)}
+              {m.autorNome} · {m.interna ? "nota interna, o cliente não vê" : m.lado === "EQUIPE" ? "equipe" : "cliente"} ·{" "}
+              {formatInstantDateTime(m.criadaEm)}
             </p>
             {m.corpo && <p className="mt-1.5 text-[13px] whitespace-pre-wrap break-words">{m.corpo}</p>}
             <ListaDeAnexos anexos={m.anexos} baseDoDownload={baseDoDownload} />
