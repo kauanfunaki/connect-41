@@ -540,6 +540,7 @@ model Tenant {
   companyMessages           CompanyMessage[]
   serviceRequests           ServiceRequest[]
   serviceRequestSubjects    ServiceRequestSubject[]
+  clientAnnouncements       ClientAnnouncement[]
   companyMessageAttachments CompanyMessageAttachment[]
   processMessages           ProcessMessage[]
   processDocuments          ProcessDocument[]
@@ -784,6 +785,7 @@ model User {
   serviceRequestsClosed       ServiceRequest[]           @relation("ServiceRequestClosedBy")
   serviceRequestMessages      ServiceRequestMessage[]    @relation("ServiceRequestMessageAuthorUser")
   serviceRequestAttachments   ServiceRequestAttachment[] @relation("ServiceRequestAttachmentUser")
+  clientAnnouncementsCreated  ClientAnnouncement[]       @relation("ClientAnnouncementCreatedBy")
   processMessages             ProcessMessage[]           @relation("ProcessMessageAuthorUser")
   processDocuments            ProcessDocument[]          @relation("ProcessDocumentUser")
   agentConversations          AgentConversation[]
@@ -905,6 +907,7 @@ model PortalUser {
   serviceRequestsOpened     ServiceRequest[]           @relation("ServiceRequestOpenedByPortal")
   serviceRequestMessages    ServiceRequestMessage[]    @relation("ServiceRequestMessageAuthorPortal")
   serviceRequestAttachments ServiceRequestAttachment[] @relation("ServiceRequestAttachmentPortal")
+  announcementReads         ClientAnnouncementRead[]
   processMessages          ProcessMessage[]          @relation("ProcessMessageAuthorPortal")
   processDocuments         ProcessDocument[]         @relation("ProcessDocumentPortal")
   approvalLimits           PortalApprovalLimit[]
@@ -963,6 +966,7 @@ model ClientGroup {
   tenant      Tenant       @relation(fields: [tenantId], references: [id])
   companies   Company[]
   portalUsers PortalUser[]
+  announcements ClientAnnouncementGroup[]
 
   @@unique([tenantId, cnpjRoot])
   @@index([tenantId])
@@ -3003,6 +3007,81 @@ model CompanyMessageAttachment {
   @@index([messageId])
   @@map("company_message_attachments")
 }
+
+// ─── Comunicados da 41 aos clientes (01/10) ──────────────────────────────────
+//
+// O outro sentido do canal único: a 41 avisando vários clientes de uma vez
+// (mudança de prazo, orientação, recesso). Vai para o portal, com e-mail e push,
+// e registra quem leu.
+
+model ClientAnnouncement {
+  id          String   @id @default(uuid())
+  tenantId    String
+  /// Setor que comunica — o cliente vê de qual parte da 41 veio.
+  sectorCode  String   @db.VarChar(40)
+  title       String   @db.VarChar(160)
+  body        String   @db.Text
+  createdById String?
+  /// Quando os avisos por e-mail e push terminaram de sair (o envio é em segundo plano).
+  notifiedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  tenant      Tenant                         @relation(fields: [tenantId], references: [id])
+  createdBy   User?                          @relation("ClientAnnouncementCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  groups      ClientAnnouncementGroup[]
+  reads       ClientAnnouncementRead[]
+  attachments ClientAnnouncementAttachment[]
+
+  @@index([tenantId, createdAt])
+  @@map("client_announcements")
+}
+
+/// Os clientes que recebem, fixados no envio: cliente cadastrado depois não
+/// recebe comunicado antigo como se fosse novo.
+model ClientAnnouncementGroup {
+  id             String @id @default(uuid())
+  announcementId String
+  clientGroupId  String
+
+  announcement ClientAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  clientGroup  ClientGroup        @relation(fields: [clientGroupId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, clientGroupId])
+  @@index([clientGroupId])
+  @@map("client_announcement_groups")
+}
+
+/// Quem leu: a primeira vez que o usuário do portal abriu o comunicado.
+model ClientAnnouncementRead {
+  id             String   @id @default(uuid())
+  announcementId String
+  portalUserId   String
+  readAt         DateTime @default(now())
+
+  announcement ClientAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  portalUser   PortalUser         @relation(fields: [portalUserId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, portalUserId])
+  @@index([portalUserId])
+  @@map("client_announcement_reads")
+}
+
+model ClientAnnouncementAttachment {
+  id             String   @id @default(uuid())
+  announcementId String
+  fileName       String   @db.VarChar(255)
+  /// "<tenantId>/<uuid>.<ext>" sob storage/client-announcements — nunca vem do usuário.
+  fileUrl        String   @db.VarChar(255)
+  mimeType       String   @db.VarChar(100)
+  sizeBytes      Int
+  createdAt      DateTime @default(now())
+
+  announcement ClientAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@index([announcementId])
+  @@map("client_announcement_attachments")
+}
+
 
 // ─── Solicitações do cliente pelo portal (01/10) ─────────────────────────────
 //

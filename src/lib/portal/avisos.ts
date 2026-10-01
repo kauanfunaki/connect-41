@@ -16,7 +16,8 @@ export type AvisoDoPortal =
   | { tipo: "mensagem"; empresaNome: string }
   | { tipo: "processo"; motivo: "mensagem" | "documento"; processoNome: string; processId: string }
   | { tipo: "aprovacao"; quantidade: number }
-  | { tipo: "solicitacao"; motivo: "resposta" | "aguardando" | "concluida"; numero: number; assunto: string; id: string };
+  | { tipo: "solicitacao"; motivo: "resposta" | "aguardando" | "concluida"; numero: number; assunto: string; id: string }
+  | { tipo: "comunicado"; titulo: string; id: string };
 
 export type TextoEmPush = { title: string; body: string; url: string };
 
@@ -67,6 +68,9 @@ export function textoDoAviso(aviso: AvisoDoPortal): TextoEmPush {
         body: `Nº ${aviso.numero} · ${aviso.assunto}`,
         url: `/portal/solicitacoes/${aviso.id}`,
       };
+    case "comunicado":
+      // O título de um aviso geral, escrito para muitos clientes — o mesmo do e-mail.
+      return { title: "Novo comunicado da 41", body: aviso.titulo, url: `/portal/comunicados/${aviso.id}` };
   }
 }
 

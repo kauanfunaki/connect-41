@@ -60,6 +60,7 @@ describe("textoDoAviso", () => {
       textoDoAviso({ tipo: "mensagem", empresaNome: "ACME" }),
       textoDoAviso({ tipo: "aprovacao", quantidade: 1 }),
       textoDoAviso({ tipo: "solicitacao", motivo: "concluida", numero: 3, assunto: "Outro assunto", id: "s1" }),
+      textoDoAviso({ tipo: "comunicado", titulo: "Recesso de fim de ano", id: "c1" }),
     ];
     // O service worker abre a URL do payload; uma rota interna levaria o
     // cliente para o login da equipe.
