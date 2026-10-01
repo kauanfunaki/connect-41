@@ -153,15 +153,20 @@ async function main() {
     "SELECT TABLE_NAME AS t, COLUMN_NAME AS c FROM information_schema.COLUMNS " +
       "WHERE TABLE_SCHEMA = DATABASE() AND DATA_TYPE IN ('varchar', 'text', 'mediumtext', 'longtext')"
   );
+  // Saem também os sufixos que explicam a conta para quem testa ("— dentro do
+  // teto"): no vídeo, o cliente os leria como parte da descrição.
+  const sobras = [`${MARCA} `, " — dentro do teto", " — acima do teto", " — vence hoje"];
   let limpos = 0;
   for (const { t, c } of colunas) {
-    limpos += await p.$executeRawUnsafe(
-      `UPDATE \`${t}\` SET \`${c}\` = REPLACE(\`${c}\`, ?, '') WHERE \`${c}\` LIKE ?`,
-      `${MARCA} `,
-      `%${MARCA} %`
-    );
+    for (const sobra of sobras) {
+      limpos += await p.$executeRawUnsafe(
+        `UPDATE \`${t}\` SET \`${c}\` = REPLACE(\`${c}\`, ?, '') WHERE \`${c}\` LIKE ?`,
+        sobra,
+        `%${sobra}%`
+      );
+    }
   }
-  if (limpos) console.log(`marca "${MARCA}" retirada de ${limpos} campos`);
+  if (limpos) console.log(`marca "${MARCA}" e sufixos de teste retirados de ${limpos} campos`);
 
   await p.$disconnect();
   console.log("ambiente local pronto");

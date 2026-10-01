@@ -170,14 +170,15 @@ export function videosDoPortal(opcoes: { email: string; senha: string; pastaDeAp
           "Algumas contas a pagar só são pagas depois da sua aprovação. Elas ficam em Aprovações."
         );
         const linhas = main(r).getByRole("row");
-        const dentro = linhas.filter({ hasText: "Dentro do teto" });
-        const fora = linhas.filter({ hasText: "Fora do teto" });
+        // Pelo selo, não pela descrição: a descrição da conta pode repetir o texto.
+        const dentro = linhas.filter({ has: r.page.getByRole("cell", { name: "Dentro do teto", exact: true }) });
+        const fora = linhas.filter({ has: r.page.getByRole("cell", { name: "Fora do teto", exact: true }) });
         await r.apontar(
-          dentro.getByRole("cell", { name: "Dentro do teto" }),
+          dentro.getByRole("cell", { name: "Dentro do teto", exact: true }),
           "Cada pessoa tem um teto: o valor máximo que pode aprovar. Esta conta está dentro do seu."
         );
         await r.apontar(
-          fora.getByRole("cell", { name: "Outra pessoa aprova" }),
+          fora.getByRole("cell", { name: "Outra pessoa aprova", exact: true }),
           "Esta passa do seu teto. Quem aprova é outra pessoa da sua empresa, com teto maior."
         );
         await r.apontar(
@@ -189,7 +190,8 @@ export function videosDoPortal(opcoes: { email: string; senha: string; pastaDeAp
           "Com muitas contas, marque todas de uma vez e use Aprovar selecionadas."
         );
         await r.clicar(dentro.getByRole("button", { name: "Aprovar" }), "Para aprovar uma só, clique em Aprovar.");
-        const dialogo = r.page.getByRole("dialog");
+        // A confirmação do Connect é `alertdialog` (ConfirmDialog), não `dialog`.
+        const dialogo = r.page.getByRole("alertdialog");
         await dialogo.waitFor();
         await r.clicar(dialogo.getByRole("button", { name: "Aprovar" }), "Confirme. A conta é liberada para pagamento.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
@@ -223,7 +225,17 @@ export function videosDoPortal(opcoes: { email: string; senha: string; pastaDeAp
         );
         await r.clicar(menu(r).getByRole("link", { name: "Relatório" }));
         await r.esperarTela("/portal/relatorios");
-        await r.apontar(main(r).getByRole("table"), "E o Relatório resume o mês por empresa: pago, recebido e o que está vencido.");
+        // O mês corrente pode estar no começo e zerado: o vídeo mostra o anterior.
+        const hoje = new Date();
+        const anterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+        const mes = `${anterior.getFullYear()}-${String(anterior.getMonth() + 1).padStart(2, "0")}`;
+        await r.apontar(main(r).getByRole("textbox", { name: "Mês" }), "No Relatório, escolha o mês…");
+        await main(r).getByRole("textbox", { name: "Mês" }).fill(mes);
+        await r.pausa(600);
+        await r.clicar(main(r).getByRole("button", { name: "Aplicar" }));
+        await r.page.waitForLoadState("networkidle").catch(() => {});
+        await r.pausa(800);
+        await r.apontar(main(r).getByRole("table"), "…e veja o resumo por empresa: pago, recebido e o que está vencido.");
         await r.soltar();
         await r.legenda("Essas telas são para consulta. Viu algo errado? Abra uma solicitação.");
         await encerramento(r);
@@ -261,7 +273,8 @@ export function videosDoPortal(opcoes: { email: string; senha: string; pastaDeAp
         await r.cartaz(SELO, "Esqueci minha senha", "Como criar uma senha nova");
         await r.clicar(r.page.getByRole("link", { name: "Esqueci minha senha" }), "Na tela de entrada, clique em Esqueci minha senha.");
         await r.esperarTela(/esqueci-senha/);
-        await r.digitar(r.page.getByLabel(/e-mail/i).first(), opcoes.email, "Informe o e-mail que você usa para entrar.");
+        await r.digitar(r.page.getByLabel("Nome completo"), "Cliente Modelo", "Preencha o seu nome…");
+        await r.digitar(r.page.getByLabel(/e-mail/i).first(), opcoes.email, "…e o e-mail que você usa para entrar.");
         await r.apontar(
           r.page.getByRole("button", { name: "Solicitar redefinição" }),
           "Clique em Solicitar redefinição. Você recebe um link por e-mail para criar a senha nova."
