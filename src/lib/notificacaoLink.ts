@@ -19,6 +19,7 @@ export function linkDaNotificacao(n: NotificacaoParaLink): string | null {
   if (n.type.startsWith("WHATSAPP_")) return `/whatsapp/${n.entityId}`;
   if (n.type.startsWith("PROCESS_")) return `/processos/${n.entityId}`;
   if (n.type.startsWith("SOLICITACAO_")) return `/solicitacoes/${n.entityId}`;
+  if (n.type === "client_request_answered") return `/pendencias/${n.entityId}`;
   if (n.entityType === "COMPANY") return `/empresas/${n.entityId}`;
   if (n.entityType === "PERSON") return `/pessoas/${n.entityId}`;
   return null;

@@ -12,8 +12,8 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
-import { getModuleDef } from "@/lib/module-catalog";
+import { isModuleEnabled } from "@/lib/modules";
+import { getActiveSectors } from "@/lib/sectors";
 import { logAudit } from "@/lib/audit";
 import {
   transicao,
@@ -29,8 +29,12 @@ import {
   type AnexoGravado,
 } from "@/lib/financeiro/pendencias/armazenamento";
 import { avisarClienteDaPendencia, resumoDoAviso } from "@/lib/financeiro/pendencias/avisos";
-
-const MODULE = "bpo_pendencias";
+import {
+  MODULO_DO_CANAL,
+  pedidosAoClienteLigados,
+  setorDaPendencia,
+  setorPadraoDasPendencias,
+} from "@/lib/financeiro/pendencias/setor";
 
 export type ResultadoDaPendencia = { error: string } | { ok: true; id: string; aviso: string | null };
 export type Resultado = { error: string } | { ok: true; aviso: string | null };
@@ -38,17 +42,22 @@ export type Resultado = { error: string } | { ok: true; aviso: string | null };
 /** Erro de regra dentro da transação: aborta o que já foi gravado e vira mensagem. */
 class Recusa extends Error {}
 
+/**
+ * O tenant e quem pede. A permissão é conferida contra o **setor da pendência**
+ * (01/10: qualquer setor pede ao cliente), e não mais contra o do módulo — quem
+ * cria escolhe o setor; quem age numa existente precisa ser do setor dela.
+ */
 async function contexto() {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { ok: false as const, erro: "Não autenticado." };
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? getModuleDef(MODULE)!.sectorCode;
-  if (!canActOnSector(ctx, setor)) return { ok: false as const, erro: "Sem permissão nas pendências." };
-  if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { ok: false as const, erro: "Módulo não habilitado." };
-  return { ok: true as const, ctx, tenantId: ctx.tenantId, userId: ctx.userId || null, prisma: getPrisma() };
+  if (!(await pedidosAoClienteLigados(ctx.tenantId))) return { ok: false as const, erro: "Módulo não habilitado." };
+  const padrao = await setorPadraoDasPendencias(ctx.tenantId);
+  return { ok: true as const, ctx, tenantId: ctx.tenantId, userId: ctx.userId || null, prisma: getPrisma(), padrao };
 }
 
 function revalidar(id?: string) {
   revalidatePath("/pendencias");
+  revalidatePath("/solicitacoes/pedidos");
   revalidatePath("/portal/pendencias");
   revalidatePath("/portal");
   if (id) {
@@ -72,6 +81,16 @@ function texto(formData: FormData, k: string): string {
 export async function criarPendencia(formData: FormData): Promise<ResultadoDaPendencia> {
   const c = await contexto();
   if (!c.ok) return { error: c.erro };
+
+  // Sem setor no formulário é a tela do BPO: o setor do módulo, como sempre foi.
+  const setor = texto(formData, "sectorCode").trim() || c.padrao;
+  if (!canActOnSector(c.ctx, setor)) return { error: "Sem permissão para pedir em nome deste setor." };
+  if (setor !== c.padrao) {
+    if (!(await isModuleEnabled(c.tenantId, MODULO_DO_CANAL))) {
+      return { error: "Pedidos de outros setores dependem das solicitações do portal, que estão desligadas." };
+    }
+    if (!(await getActiveSectors(c.tenantId)).some((s) => s.code === setor)) return { error: "Escolha um setor ativo." };
+  }
 
   const companyId = texto(formData, "companyId").trim();
   const empresa = await c.prisma.company.findFirst({ where: { id: companyId, tenantId: c.tenantId }, select: { id: true } });
@@ -110,6 +129,7 @@ export async function criarPendencia(formData: FormData): Promise<ResultadoDaPen
           dueDate: v.dados.dueDate,
           status: "ABERTA",
           financeEntryId,
+          sectorCode: setor,
           createdById: c.userId,
         },
         select: { id: true },
@@ -144,6 +164,7 @@ export async function criarPendencia(formData: FormData): Promise<ResultadoDaPen
     entityId: id,
     metadata: {
       companyId: empresa.id,
+      setor,
       kind: v.dados.kind,
       financeEntryId,
       anexos: gravados.anexos.length,
@@ -157,12 +178,17 @@ export async function criarPendencia(formData: FormData): Promise<ResultadoDaPen
   return { ok: true, id, aviso: resumoDoAviso(aviso) };
 }
 
-/** Carrega a pendência do tenant com o que as ações precisam. */
-async function pendenciaDoTenant(prisma: ReturnType<typeof getPrisma>, id: string, tenantId: string) {
-  return prisma.clientRequest.findFirst({
-    where: { id, tenantId },
-    select: { id: true, status: true, title: true, companyId: true },
+/**
+ * A pendência do tenant com o que as ações precisam — se quem pede pode agir no
+ * setor dela. Setor alheio responde "não encontrada", igual a uma que não existe.
+ */
+async function pendenciaParaAgir(c: Extract<Awaited<ReturnType<typeof contexto>>, { ok: true }>, id: string) {
+  const p = await c.prisma.clientRequest.findFirst({
+    where: { id, tenantId: c.tenantId },
+    select: { id: true, status: true, title: true, companyId: true, sectorCode: true },
   });
+  if (!p || !canActOnSector(c.ctx, setorDaPendencia(p.sectorCode, c.padrao))) return null;
+  return p;
 }
 
 /** Responde na conversa, com texto e/ou anexos. Devolve a vez ao cliente. */
@@ -171,7 +197,7 @@ export async function responderPendenciaEquipe(formData: FormData): Promise<Resu
   if (!c.ok) return { error: c.erro };
 
   const id = texto(formData, "requestId");
-  const p = await pendenciaDoTenant(c.prisma, id, c.tenantId);
+  const p = await pendenciaParaAgir(c, id);
   if (!p) return { error: "Pendência não encontrada." };
 
   const arquivos = arquivosDoFormulario(formData, "anexos");
@@ -258,7 +284,7 @@ const ACAO_DE_AUDITORIA: Record<Exclude<AcaoNaPendencia, "RESPONDER">, string> =
 async function mudarStatus(id: string, acao: Exclude<AcaoNaPendencia, "RESPONDER">): Promise<Resultado> {
   const c = await contexto();
   if (!c.ok) return { error: c.erro };
-  const p = await pendenciaDoTenant(c.prisma, id, c.tenantId);
+  const p = await pendenciaParaAgir(c, id);
   if (!p) return { error: "Pendência não encontrada." };
   const t = transicao(p.status, "EQUIPE", acao);
   if (!t.ok) return { error: t.motivo };

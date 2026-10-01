@@ -10,6 +10,8 @@ import { SeloDoPrazo, SeloDoStatus } from "@/components/pendencias/SelosDaPenden
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { carregarPendencia } from "@/lib/financeiro/pendencias/consultas";
 import { ROTULO_DO_TIPO, emAndamento } from "@/lib/financeiro/pendencias/regras";
+import { pedidosAoClienteNoConjunto, setorDaPendencia, setorPadraoDasPendencias } from "@/lib/financeiro/pendencias/setor";
+import { getSectorMaps } from "@/lib/sectors";
 import { formatInstantDate } from "@/lib/format";
 import { responderPendenciaCliente } from "../actions";
 
@@ -23,11 +25,16 @@ export const dynamic = "force-dynamic";
  */
 export default async function PortalPendenciaPage({ params }: { params: Promise<{ id: string }> }) {
   const { escopo, modulos } = await contextoFinanceiroDoPortal();
-  if (!modulos.has("bpo_pendencias")) notFound();
+  if (!pedidosAoClienteNoConjunto(modulos)) notFound();
 
   const { id } = await params;
-  const p = await carregarPendencia(escopo, id, new Date());
+  const [p, padrao, { labels }] = await Promise.all([
+    carregarPendencia(escopo, id, new Date()),
+    setorPadraoDasPendencias(escopo.tenantId),
+    getSectorMaps(escopo.tenantId),
+  ]);
   if (!p) notFound();
+  const setor = setorDaPendencia(p.setor, padrao);
 
   return (
     <PageContainer>
@@ -42,7 +49,7 @@ export default async function PortalPendenciaPage({ params }: { params: Promise<
         title={p.titulo}
         subtitle={
           <>
-            {p.empresaNome} · {ROTULO_DO_TIPO[p.tipo]}
+            {p.empresaNome} · {ROTULO_DO_TIPO[p.tipo]} · {labels[setor] ?? setor}
             {p.prazo && <> · prazo {formatInstantDate(p.prazo)}</>}
           </>
         }

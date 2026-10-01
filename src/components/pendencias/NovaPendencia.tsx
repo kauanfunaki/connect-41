@@ -29,12 +29,19 @@ export function NovaPendencia({
   empresaPadrao,
   lancamento,
   abertoDeInicio = false,
+  setores,
 }: {
   empresas: { id: string; nome: string }[];
   empresaPadrao?: string;
   lancamento?: LancamentoVinculado | null;
   abertoDeInicio?: boolean;
+  /**
+   * Os setores em nome dos quais a pessoa pode pedir (01/10: qualquer setor pede
+   * ao cliente). Sem a lista é a tela do BPO, que pede pelo setor do módulo.
+   */
+  setores?: { code: string; label: string }[];
 }) {
+  const deOutrosSetores = !!setores && setores.length > 0;
   const router = useRouter();
   const [aberto, setAberto] = useState(abertoDeInicio);
   const [erro, setErro] = useState<string | null>(null);
@@ -50,9 +57,9 @@ export function NovaPendencia({
   return (
     <>
       <Button size="sm" onClick={() => setAberto(true)}>
-        <Plus size={13} /> Nova pendência
+        <Plus size={13} /> {deOutrosSetores ? "Novo pedido ao cliente" : "Nova pendência"}
       </Button>
-      <Modal open={aberto} onClose={fechar} title="Nova pendência ao cliente" maxWidth="max-w-xl">
+      <Modal open={aberto} onClose={fechar} title={deOutrosSetores ? "Novo pedido ao cliente" : "Nova pendência ao cliente"} maxWidth="max-w-xl">
         {criada ? (
           // Com aviso (e-mail que não saiu), a pessoa precisa ler antes de ir
           // para a pendência — navegar direto engoliria a mensagem.
@@ -83,6 +90,22 @@ export function NovaPendencia({
               });
             }}
           >
+            {setores && setores.length === 1 && <input type="hidden" name="sectorCode" value={setores[0]!.code} />}
+            {setores && setores.length > 1 && (
+              <CampoForm label="Setor que pede" htmlFor="pendencia-setor" required helper="O cliente vê de qual setor veio o pedido.">
+                <Select id="pendencia-setor" name="sectorCode" defaultValue="" required>
+                  <option value="" disabled>
+                    Escolha o setor
+                  </option>
+                  {setores.map((s) => (
+                    <option key={s.code} value={s.code}>
+                      {s.label}
+                    </option>
+                  ))}
+                </Select>
+              </CampoForm>
+            )}
+
             {lancamento ? (
               <>
                 <input type="hidden" name="companyId" value={lancamento.companyId} />

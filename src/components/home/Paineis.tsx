@@ -10,6 +10,7 @@ import { moeda } from "@/lib/financeiro/formato";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { titulosEmAberto } from "@/lib/financeiro/consultas";
 import { resumoDasPendencias } from "@/lib/financeiro/pendencias/consultas";
+import { setorPadraoDasPendencias, soDoSetorPadrao } from "@/lib/financeiro/pendencias/setor";
 import { listarFila, feriadosDoTenant } from "@/lib/societario/fila";
 import { SITUACAO_LABEL } from "@/components/societario/ProcessosFila";
 import { computeFunnelConversion } from "@/lib/recruitmentFunnel";
@@ -210,7 +211,12 @@ export async function PainelDePendencias({ ctx, acesso, setor }: Base) {
   const verPendencias = acesso.modulos.has("bpo_pendencias");
   const verAprovacoes = acesso.modulos.has("bpo_aprovacoes");
   const [resumo, aprovacoes] = await Promise.all([
-    verPendencias ? resumoDasPendencias({ tenantId: ctx.tenantId, companyIds: null }, agora) : null,
+    // O painel é do BPO: só as do setor do módulo (e as sem setor, de antes de 01/10).
+    verPendencias
+      ? setorPadraoDasPendencias(ctx.tenantId).then((padrao) =>
+          resumoDasPendencias({ tenantId: ctx.tenantId, companyIds: null, setores: soDoSetorPadrao(padrao) }, agora)
+        )
+      : null,
     // A contagem da fila de /aprovacoes (aguardando e reprovadas travam a baixa).
     verAprovacoes
       ? prisma.financeEntry.groupBy({

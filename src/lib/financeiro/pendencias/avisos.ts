@@ -66,6 +66,7 @@ export function resumoDoAviso(r: ResultadoDoAviso & { semDestinatario: boolean }
 
 export async function avisarEquipeDaResposta(input: {
   tenantId: string;
+  requestId: string;
   createdById: string | null;
   titulo: string;
   empresaNome: string;
@@ -76,6 +77,8 @@ export async function avisarEquipeDaResposta(input: {
       tenantId: input.tenantId,
       type: "client_request_answered",
       message: `${input.empresaNome} respondeu a pendência “${input.titulo}”.`,
+      // O clique leva à pendência (ver notificacaoLink), e não à lista de notificações.
+      entityId: input.requestId,
     });
   } catch (err) {
     console.error("[avisarEquipeDaResposta]", err);

@@ -11,6 +11,8 @@ import { SeloDoPrazo, SeloDoStatus } from "@/components/pendencias/SelosDaPenden
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { listarPendencias } from "@/lib/financeiro/pendencias/consultas";
 import { ROTULO_DO_TIPO } from "@/lib/financeiro/pendencias/regras";
+import { pedidosAoClienteNoConjunto, setorDaPendencia, setorPadraoDasPendencias } from "@/lib/financeiro/pendencias/setor";
+import { getSectorMaps } from "@/lib/sectors";
 import { formatInstantDate } from "@/lib/format";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 
@@ -33,11 +35,18 @@ export default async function PortalPendenciasPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const { escopo, modulos } = await contextoFinanceiroDoPortal();
-  if (!modulos.has("bpo_pendencias")) notFound();
+  if (!pedidosAoClienteNoConjunto(modulos)) notFound();
 
   const params = await searchParams;
   const recorte = RECORTES.find((r) => r.chave === params.recorte)?.chave ?? "andamento";
-  const { linhas, contadores } = await listarPendencias(escopo, { recorte }, new Date());
+  const [{ linhas, contadores }, padrao, { labels }] = await Promise.all([
+    listarPendencias(escopo, { recorte }, new Date()),
+    setorPadraoDasPendencias(escopo.tenantId),
+    getSectorMaps(escopo.tenantId),
+  ]);
+  // Quem pediu, para o cliente saber com que parte da 41 está falando (01/10:
+  // qualquer setor pede).
+  const setorDe = (s: string | null) => labels[setorDaPendencia(s, padrao)] ?? setorDaPendencia(s, padrao);
 
   return (
     <PageContainer>
@@ -97,7 +106,7 @@ export default async function PortalPendenciasPage({
                 {l.titulo}
               </Link>
               <InfoDoCartao className="mt-0.5">
-                {ROTULO_DO_TIPO[l.tipo]} · {l.empresaNome}
+                {ROTULO_DO_TIPO[l.tipo]} · {setorDe(l.setor)} · {l.empresaNome}
                 {l.anexos > 0 && (
                   <>
                     {" · "}
@@ -134,7 +143,7 @@ export default async function PortalPendenciasPage({
                       {l.titulo}
                     </Link>
                     <span className="block text-[11px] text-fg-muted">
-                      {ROTULO_DO_TIPO[l.tipo]}
+                      {ROTULO_DO_TIPO[l.tipo]} · {setorDe(l.setor)}
                       {l.anexos > 0 && (
                         <>
                           {" "}

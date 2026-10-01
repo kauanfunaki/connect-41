@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
-import { getModuleDef } from "@/lib/module-catalog";
+import { getSectorMaps } from "@/lib/sectors";
+import { pedidosAoClienteLigados, setorDaPendencia, setorPadraoDasPendencias } from "@/lib/financeiro/pendencias/setor";
 import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -21,23 +21,26 @@ import { responderPendenciaEquipe } from "../actions";
 
 export const dynamic = "force-dynamic";
 
-const MODULE = "bpo_pendencias";
-const SECTOR = getModuleDef(MODULE)!.sectorCode;
 
 export default async function PendenciaPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) notFound();
-  const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
-  if (!canViewSector(ctx, setor) || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
-  const podeAgir = canActOnSector(ctx, setor);
+  if (!(await pedidosAoClienteLigados(ctx.tenantId))) notFound();
 
   const { id } = await params;
   const agora = new Date();
-  const [p, lembretes] = await Promise.all([
+  const [p, lembretes, padrao, { labels }] = await Promise.all([
     carregarPendencia({ tenantId: ctx.tenantId, companyIds: null }, id, agora),
     lembretesDaPendencia(ctx.tenantId, id),
+    setorPadraoDasPendencias(ctx.tenantId),
+    getSectorMaps(ctx.tenantId),
   ]);
   if (!p) notFound();
+  // O setor é o da pendência (01/10: qualquer setor pede ao cliente). Setor
+  // alheio responde "não encontrada", igual a uma que não existe.
+  const setor = setorDaPendencia(p.setor, padrao);
+  if (!canViewSector(ctx, setor)) notFound();
+  const podeAgir = canActOnSector(ctx, setor);
 
   return (
     <PageContainer>
@@ -46,7 +49,7 @@ export default async function PendenciaPage({ params }: { params: Promise<{ id: 
         title={p.titulo}
         subtitle={
           <>
-            {p.empresaNome} · {ROTULO_DO_TIPO[p.tipo]}
+            {p.empresaNome} · {ROTULO_DO_TIPO[p.tipo]} · {labels[setor] ?? setor}
             {p.prazo && <> · prazo {formatInstantDate(p.prazo)}</>}
           </>
         }
