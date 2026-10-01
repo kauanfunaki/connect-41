@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Bell, Building2, Inbox, KeyRound, MessagesSquare, Plus, Smartphone, Wallet } from "lucide-react";
+import { Bell, Building2, Inbox, KeyRound, Megaphone, MessagesSquare, Plus, Smartphone, Wallet } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { Button } from "@/components/ui/Button";
@@ -19,6 +19,7 @@ export const dynamic = "force-dynamic";
 const ICONES: Record<IconeDoPasso, React.ReactNode> = {
   celular: <Smartphone />,
   solicitacao: <Inbox />,
+  comunicado: <Megaphone />,
   sino: <Bell />,
   empresas: <Building2 />,
   pendencia: <ModuleIcon code="bpo_pendencias" />,

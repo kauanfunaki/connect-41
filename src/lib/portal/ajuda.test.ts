@@ -53,7 +53,7 @@ describe("passosDoPortal — o cliente só lê sobre o que está no menu dele", 
 
   it("todo passo que aparece tem ao menos uma linha", () => {
     const todos = passosDoPortal(new Set(TELAS_DO_PORTAL.flatMap((t) => (t.modulo ? [t.modulo] : []))), { variasEmpresas: true });
-    expect(todos.length).toBe(10);
+    expect(todos.length).toBe(11);
     for (const p of todos) expect(p.passos.length).toBeGreaterThan(0);
   });
 });
@@ -75,7 +75,12 @@ describe("telasVisiveis — a mesma régua do menu", () => {
     const hrefs = (m: string[]) => telasVisiveis(new Set(m)).map((t) => t.href);
     expect(hrefs(["bpo_comunicacao"])).toContain("/portal/comunicacao");
     // As Pendências também entram: com o canal, qualquer setor pede ao cliente.
-    expect(hrefs(["bpo_comunicacao", "portal_solicitacoes"])).toEqual(["/portal", "/portal/solicitacoes", "/portal/pendencias"]);
+    expect(hrefs(["bpo_comunicacao", "portal_solicitacoes"])).toEqual([
+      "/portal",
+      "/portal/solicitacoes",
+      "/portal/comunicados",
+      "/portal/pendencias",
+    ]);
   });
 
   it("toda tela fica dentro de /portal", () => {

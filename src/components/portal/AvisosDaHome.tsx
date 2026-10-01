@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { Inbox, MessageSquareWarning, ShieldCheck, Handshake } from "lucide-react";
+import { Inbox, Megaphone, MessageSquareWarning, ShieldCheck, Handshake } from "lucide-react";
 import { pendenciasAguardandoCliente } from "@/lib/financeiro/pendencias/consultas";
 import { aprovacoesDoCliente } from "@/lib/financeiro/aprovacao/portal";
 import { contagemDeCobrancaDoCliente, MODULO_DE_COBRANCA } from "@/lib/financeiro/cobranca/consultas";
 import { solicitacoesAguardandoCliente } from "@/lib/solicitacoes/consultas";
+import { comunicadosNaoLidos } from "@/lib/comunicados/consultas";
 import { pedidosAoClienteNoConjunto } from "@/lib/financeiro/pendencias/setor";
 
 /**
@@ -15,22 +16,26 @@ export async function AvisosDaHome({
   tenantId,
   companyIds,
   portalUserId,
+  clientGroupId,
   modulos,
 }: {
   tenantId: string;
   companyIds: string[];
   portalUserId: string;
+  /** Para os comunicados, que vão para o cliente (grupo), e não para cada empresa. */
+  clientGroupId?: string;
   modulos: Set<string>;
 }) {
   const escopo = { tenantId, companyIds };
-  const [solicitacoes, pendencias, aprovacoes, emCobranca] = await Promise.all([
+  const [comunicados, solicitacoes, pendencias, aprovacoes, emCobranca] = await Promise.all([
+    modulos.has("portal_solicitacoes") && clientGroupId ? comunicadosNaoLidos(tenantId, clientGroupId, portalUserId) : Promise.resolve(0),
     modulos.has("portal_solicitacoes") ? solicitacoesAguardandoCliente(escopo) : Promise.resolve(0),
     pedidosAoClienteNoConjunto(modulos) ? pendenciasAguardandoCliente(escopo) : Promise.resolve(0),
     modulos.has("bpo_aprovacoes") ? aprovacoesDoCliente(escopo, portalUserId) : Promise.resolve(null),
     modulos.has(MODULO_DE_COBRANCA) ? contagemDeCobrancaDoCliente(escopo, new Date()) : Promise.resolve(0),
   ]);
   const aprovar = aprovacoes?.contas.filter((c) => c.dentroDoTeto).length ?? 0;
-  if (solicitacoes === 0 && pendencias === 0 && aprovar === 0 && emCobranca === 0) return null;
+  if (comunicados === 0 && solicitacoes === 0 && pendencias === 0 && aprovar === 0 && emCobranca === 0) return null;
 
   // Raio, ícone de 16px e respiro de 16px até o bloco de baixo: os mesmos dos
   // cartões de total das outras telas do portal. Eram `rounded-md`, ícone de
@@ -39,6 +44,15 @@ export async function AvisosDaHome({
   const cartao = `${base} border-warning/40 bg-warning-bg hover:border-warning`;
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+      {/* Aviso, não pedido: tom da marca, e não o amarelo do que espera o cliente. */}
+      {comunicados > 0 && (
+        <Link href="/portal/comunicados" className={`${base} border-brand/40 bg-brand-subtle hover:border-brand`}>
+          <Megaphone size={16} className="text-brand shrink-0" />
+          <span>
+            <strong className="tabular-nums">{comunicados}</strong> {comunicados === 1 ? "comunicado novo da 41" : "comunicados novos da 41"}
+          </span>
+        </Link>
+      )}
       {solicitacoes > 0 && (
         <Link href="/portal/solicitacoes" className={cartao}>
           <Inbox size={16} className="text-warning shrink-0" />
