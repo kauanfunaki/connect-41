@@ -5,8 +5,9 @@ import Link from "next/link";
 import type { PayrollEntryState } from "@/app/(app)/empresas/[id]/folha/[competencyId]/actions";
 import { PayrollStatus } from "@/generated/prisma/enums";
 import { Select } from "@/components/ui/Select";
-import { useConfirm } from "@/components/ui/useConfirm";
 import { Button } from "@/components/ui/Button";
+import { MenuDoRegistro } from "@/components/pessoas/MenuDoRegistro";
+import { SeloDoDP } from "@/components/pessoas/rotulosDoDP";
 
 const STATUS_LABEL: Record<PayrollStatus, string> = {
   PENDENTE:       "Pendente",
@@ -46,27 +47,33 @@ type Props = {
 export function PayrollEntryRow({ entry, updateAction, removeAction, canManage }: Props) {
   const [state, formAction, isPending] = useActionState(updateAction, null);
   const [status, setStatus] = useState(entry.status);
-  const { dialog, requestConfirm } = useConfirm();
 
   return (
-    <div className="py-2.5 border-b border-border last:border-0">
-      <div className="flex items-center justify-between">
-        <Link href={`/pessoas/${entry.personId}`} className="text-[13px] text-brand hover:underline">
+    <div className="py-3 border-b border-border last:border-0">
+      {/* Mesmo desenho das linhas de registro do DP (escala, férias, turma):
+          nome, valor e selo em cima, com o "⋯"; situação e "Atualizar" embaixo.
+          O "Remover" era um botão vermelho do tamanho do "Atualizar", ao lado
+          dele (até 30/09) — foi para o menu, como nas outras linhas. */}
+      <div className="flex items-center justify-between gap-3">
+        <Link
+          href={`/pessoas/${entry.personId}`}
+          className="min-w-0 truncate text-[13px] font-medium text-fg hover:text-brand transition-colors"
+        >
           {entry.personName}
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <span className="text-[12px] text-fg-muted tnum">R$ {entry.grossSalary}</span>
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${STATUS_STYLE[entry.status]}`}>
-            {STATUS_LABEL[entry.status]}
-          </span>
+          <SeloDoDP cor={STATUS_STYLE[entry.status]}>{STATUS_LABEL[entry.status]}</SeloDoDP>
+          {canManage && <MenuDoRegistro titulo="Remover este lançamento?" onRemover={removeAction} />}
         </div>
       </div>
 
       {canManage && (
-        <form action={formAction} className="flex items-end gap-2 flex-wrap mt-1.5">
+        <form action={formAction} className="flex items-center gap-2 flex-wrap mt-2">
           <div className="w-44">
             <Select
               name="status"
+              aria-label="Situação do lançamento"
               value={status}
               onChange={(e) => setStatus(e.target.value as PayrollStatus)}
             >
@@ -83,18 +90,10 @@ export function PayrollEntryRow({ entry, updateAction, removeAction, canManage }
           >
             {isPending ? "Salvando…" : "Atualizar"}
           </Button>
-          <Button
-            variant="danger"
-            size="md"
-            onClick={() => requestConfirm({ title: "Remover este lançamento?", destructive: true, confirmLabel: "Remover" }, removeAction)}
-          >
-            Remover
-          </Button>
         </form>
       )}
 
       {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
-      {dialog}
     </div>
   );
 }

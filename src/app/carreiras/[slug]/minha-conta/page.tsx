@@ -55,7 +55,7 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
         ) : (
           <>
             <header className="mt-4 mb-6 flex flex-wrap items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <h1 className="text-[22px] font-semibold text-fg tracking-[-0.01em]">Olá, {conta.nome.split(" ")[0]}</h1>
                 <p className="text-[13px] text-fg-muted mt-1">Suas candidaturas em {tenant.name}.</p>
               </div>
@@ -68,13 +68,13 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
 
             {conta.testes.length > 0 && (
               <Card className="p-5 mb-4">
-                <h2 className="text-[14px] font-semibold text-fg mb-3 flex items-center gap-2">
-                  <ClipboardList size={15} className="text-brand" /> Testes para responder
+                <h2 className="text-[15px] font-semibold text-fg mb-3 inline-flex items-center gap-1.5">
+                  <ClipboardList size={16} className="text-brand" /> Testes para responder
                 </h2>
                 <ul className="space-y-2">
                   {conta.testes.map((t) => (
-                    <li key={t.id} className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-[13px] text-fg">
+                    <li key={t.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                      <span className="min-w-0 text-[13px] text-fg">
                         {t.template?.name ?? (t.type === "DISC" ? "Perfil comportamental (DISC)" : "Teste")}
                         <span className="text-fg-muted text-[12px]"> · até {formatInstantDate(t.expiresAt)}</span>
                       </span>
@@ -124,8 +124,8 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
                       <ul className="mt-4 space-y-2">
                         {c.meetings.map((m) => (
                           <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2">
-                            <span className="text-[13px] text-fg flex items-center gap-2">
-                              <CalendarClock size={14} className="text-brand" />
+                            <span className="min-w-0 text-[13px] text-fg inline-flex items-center gap-1.5">
+                              <CalendarClock size={14} className="text-brand flex-shrink-0" />
                               Entrevista em {formatInstantDateTime(m.startAt, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                             </span>
                             <Button href={m.meetingUrl} target="_blank" rel="noopener noreferrer" variant="secondary" size="sm">
@@ -147,7 +147,7 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
             </div>
 
             <Card className="p-5 mt-6">
-              <h2 className="text-[14px] font-semibold text-fg mb-3">Meus dados</h2>
+              <h2 className="text-[15px] font-semibold text-fg mb-3">Meus dados</h2>
               <AtualizarDados slug={slug} telefone={conta.telefone} />
             </Card>
 

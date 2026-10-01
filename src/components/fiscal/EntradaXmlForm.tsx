@@ -21,11 +21,11 @@ const APARENCIA: Record<
   Veredito["situacao"],
   { icone: React.ReactNode; classe: string; rotulo: string }
 > = {
-  aceito: { icone: <CheckCircle2 size={15} />, classe: "text-success", rotulo: "Aceito" },
-  duplicata: { icone: <Copy size={15} />, classe: "text-warning", rotulo: "Duplicata" },
-  invalido: { icone: <XCircle size={15} />, classe: "text-danger", rotulo: "Inválido" },
-  empresa_nao_cadastrada: { icone: <Building2 size={15} />, classe: "text-danger", rotulo: "Empresa não cadastrada" },
-  ambigua: { icone: <HelpCircle size={15} />, classe: "text-warning", rotulo: "Ambígua" },
+  aceito: { icone: <CheckCircle2 size={16} />, classe: "text-success", rotulo: "Aceito" },
+  duplicata: { icone: <Copy size={16} />, classe: "text-warning", rotulo: "Duplicata" },
+  invalido: { icone: <XCircle size={16} />, classe: "text-danger", rotulo: "Inválido" },
+  empresa_nao_cadastrada: { icone: <Building2 size={16} />, classe: "text-danger", rotulo: "Empresa não cadastrada" },
+  ambigua: { icone: <HelpCircle size={16} />, classe: "text-warning", rotulo: "Ambígua" },
 };
 
 export function EntradaXmlForm({ empresas, action }: Props) {
@@ -100,9 +100,16 @@ export function EntradaXmlForm({ empresas, action }: Props) {
 
           {erro && <p className="text-[length:var(--fs-helper)] text-danger">{erro}</p>}
 
-          <Button type="button" onClick={enviar} disabled={pendente || arquivos.length === 0}>
-            {pendente ? "Lendo…" : `Importar${arquivos.length > 0 ? ` ${arquivos.length}` : ""}`}
-          </Button>
+          {/* Rodapé padrão da página de formulário: Cancelar volta ao acervo,
+              o primário por último, os dois à direita. */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+            <Button href="/documentos-fiscais" variant="secondary">
+              Cancelar
+            </Button>
+            <Button type="button" onClick={enviar} disabled={pendente || arquivos.length === 0}>
+              {pendente ? "Lendo…" : `Importar${arquivos.length > 0 ? ` ${arquivos.length}` : ""}`}
+            </Button>
+          </div>
         </div>
       </Card>
 

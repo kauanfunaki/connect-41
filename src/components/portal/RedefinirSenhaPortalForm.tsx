@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
@@ -18,11 +17,13 @@ export function RedefinirSenhaPortalForm({ token, action }: Props) {
 
   if (estado && "success" in estado) {
     return (
+      // O mesmo fecho da redefinição da equipe (login/RedefinirSenhaForm): a
+      // frase e um botão para o próximo passo, no lugar do link solto.
       <Card className="p-6 text-center">
         <p className="text-[length:var(--fs-body)] text-fg mb-4">Senha alterada.</p>
-        <Link href="/portal/login" className="text-brand hover:underline text-[length:var(--fs-ui)]">
+        <Button href="/portal/login" variant="secondary">
           Entrar no portal
-        </Link>
+        </Button>
       </Card>
     );
   }

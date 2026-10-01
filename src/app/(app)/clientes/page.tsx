@@ -79,7 +79,7 @@ export default async function ClientesPage({
             </>
           }
           action={
-            <>{canCreate && <Button href="/clientes/novo" variant="primary" className="font-medium">+ Novo Cliente</Button>}</>
+            <>{canCreate && <Button href="/clientes/novo" variant="primary">+ Novo Cliente</Button>}</>
           }
         />
 
@@ -110,7 +110,7 @@ export default async function ClientesPage({
               }
               action={
                 !search && canCreate ? (
-                  <Link href="/clientes/novo"><Button>+ Novo Cliente</Button></Link>
+                  <Button href="/clientes/novo">+ Novo Cliente</Button>
                 ) : undefined
               }
             />

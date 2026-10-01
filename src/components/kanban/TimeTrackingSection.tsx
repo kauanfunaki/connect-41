@@ -74,10 +74,14 @@ export function TimeTrackingSection({ canAct, estimateMinutes, entries, estimate
                 value={estimateValue}
                 onChange={(e) => setEstimateValue(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && saveEstimate()}
-                className="w-20 h-7"
+                compact
+                aria-label="Estimativa em minutos"
+                className="w-20"
                 placeholder="min"
               />
-              <Button size="xs" type="button" onClick={saveEstimate}>Salvar</Button>
+              {/* Input compacto (h-8) e botão `sm` (h-8): o `h-7` avulso no
+                  campo, com o botão `xs`, fugia das duas alturas do sistema. */}
+              <Button size="sm" type="button" onClick={saveEstimate}>Salvar</Button>
             </div>
           ) : (
             <button

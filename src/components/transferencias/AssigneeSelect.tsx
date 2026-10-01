@@ -30,7 +30,10 @@ export function AssigneeSelect({ action, options, currentAssigneeId }: Props) {
   }
 
   return (
+    // compact (h-8): divide a linha com textos de 12px no rodapé do cartão.
     <Select
+      compact
+      aria-label="Responsável"
       defaultValue={currentAssigneeId ?? ""}
       onChange={handleChange}
       disabled={pending}

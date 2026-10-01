@@ -22,15 +22,38 @@ const DIA = 24 * 60 * 60 * 1000;
 const JANELA_DE_CONCLUIDOS = 30 * DIA;
 const TETO = 5000;
 
+/**
+ * Recorte opcional da coleta, empurrado para dentro das consultas: o Meu dia
+ * (30/09) pede os itens de uma pessoa ou de alguns setores, e trazer o tenant
+ * inteiro para filtrar depois custaria o mesmo que o painel da Gestão a cada
+ * abertura da tela do dia.
+ */
+export type FiltroDeItens = {
+  /** Só os itens em que esta pessoa responde. */
+  responsavel?: string;
+  /** Só estes setores ("todos" ou ausente = sem recorte). */
+  setores?: "todos" | string[];
+};
+
+function doSetor(filtro: FiltroDeItens, setor: string): boolean {
+  return !filtro.setores || filtro.setores === "todos" || filtro.setores.includes(setor);
+}
+
+function setoresDoFiltro(filtro: FiltroDeItens): string[] | null {
+  return !filtro.setores || filtro.setores === "todos" ? null : filtro.setores;
+}
+
 function maisRecente(...datas: (Date | null | undefined)[]): Date {
   return new Date(Math.max(...datas.filter((d): d is Date => !!d).map((d) => d.getTime())));
 }
 
-async function processos(tenantId: string, agora: Date): Promise<ItemDeTrabalho[]> {
+async function processos(tenantId: string, agora: Date, filtro: FiltroDeItens): Promise<ItemDeTrabalho[]> {
   const setor = (await setorDoModulo(tenantId, "societario_processos")) ?? "societario";
+  if (!doSetor(filtro, setor)) return [];
   const lista = await getPrisma().process.findMany({
     where: {
       tenantId,
+      ...(filtro.responsavel ? { ownerUserId: filtro.responsavel } : {}),
       OR: [
         { status: { notIn: ["CONCLUIDO", "CANCELADO", "INDEFERIDO"] } },
         { status: "CONCLUIDO", concludedAt: { gte: new Date(agora.getTime() - JANELA_DE_CONCLUIDOS) } },
@@ -81,16 +104,18 @@ async function processos(tenantId: string, agora: Date): Promise<ItemDeTrabalho[
   });
 }
 
-async function cards(tenantId: string, agora: Date): Promise<ItemDeTrabalho[]> {
+async function cards(tenantId: string, agora: Date, filtro: FiltroDeItens): Promise<ItemDeTrabalho[]> {
   const prisma = getPrisma();
+  const setores = setoresDoFiltro(filtro);
   const lista = await prisma.pipelineItem.findMany({
     where: {
       tenantId,
       parentItemId: null,
+      ...(filtro.responsavel ? { assignees: { some: { userId: filtro.responsavel } } } : {}),
       // O funil de uma vaga também é quadro, mas é do Recrutamento e tem a
       // tela dele: candidato não é "tarefa do setor".
       candidatura: { is: null },
-      pipeline: { active: true },
+      pipeline: { active: true, ...(setores ? { sectorCode: { in: setores } } : {}) },
       OR: [{ stage: { type: { not: "DONE" } } }, { updatedAt: { gte: new Date(agora.getTime() - JANELA_DE_CONCLUIDOS) } }],
     },
     select: {
@@ -138,11 +163,13 @@ async function cards(tenantId: string, agora: Date): Promise<ItemDeTrabalho[]> {
   });
 }
 
-async function pendencias(tenantId: string, agora: Date): Promise<ItemDeTrabalho[]> {
+async function pendencias(tenantId: string, agora: Date, filtro: FiltroDeItens): Promise<ItemDeTrabalho[]> {
   const setor = (await setorDoModulo(tenantId, "bpo_pendencias")) ?? "bpo";
+  if (!doSetor(filtro, setor)) return [];
   const lista = await getPrisma().clientRequest.findMany({
     where: {
       tenantId,
+      ...(filtro.responsavel ? { createdById: filtro.responsavel } : {}),
       OR: [
         { status: { in: ["ABERTA", "RESPONDIDA"] } },
         { status: "RESOLVIDA", resolvedAt: { gte: new Date(agora.getTime() - JANELA_DE_CONCLUIDOS) } },
@@ -175,10 +202,13 @@ async function pendencias(tenantId: string, agora: Date): Promise<ItemDeTrabalho
   }));
 }
 
-async function transferencias(tenantId: string, agora: Date): Promise<ItemDeTrabalho[]> {
+async function transferencias(tenantId: string, agora: Date, filtro: FiltroDeItens): Promise<ItemDeTrabalho[]> {
+  const setores = setoresDoFiltro(filtro);
   const lista = await getPrisma().handoffSector.findMany({
     where: {
       tenantId,
+      ...(filtro.responsavel ? { assignees: { some: { userId: filtro.responsavel } } } : {}),
+      ...(setores ? { sectorCode: { in: setores } } : {}),
       OR: [{ status: { not: "DONE" } }, { resolvedAt: { gte: new Date(agora.getTime() - JANELA_DE_CONCLUIDOS) } }],
     },
     select: {
@@ -211,8 +241,13 @@ async function transferencias(tenantId: string, agora: Date): Promise<ItemDeTrab
 }
 
 /** Os itens de trabalho de todos os setores, sem classificar. */
-export async function coletarItens(tenantId: string, agora = new Date()): Promise<ItemDeTrabalho[]> {
-  const partes = await Promise.all([processos(tenantId, agora), cards(tenantId, agora), pendencias(tenantId, agora), transferencias(tenantId, agora)]);
+export async function coletarItens(tenantId: string, agora = new Date(), filtro: FiltroDeItens = {}): Promise<ItemDeTrabalho[]> {
+  const partes = await Promise.all([
+    processos(tenantId, agora, filtro),
+    cards(tenantId, agora, filtro),
+    pendencias(tenantId, agora, filtro),
+    transferencias(tenantId, agora, filtro),
+  ]);
   return partes.flat();
 }
 
@@ -231,8 +266,13 @@ export type ItemClassificado = { item: ItemDeTrabalho; c: Classificacao };
  * Todos os itens de trabalho que o recorte enxerga, já classificados.
  * `recorte` vem de `recorteDaGestao`: "todos" ou a lista de setores.
  */
-export async function itensDaGestao(tenantId: string, recorte: "todos" | string[], agora = new Date()): Promise<ItemClassificado[]> {
-  const [itens, limites] = await Promise.all([coletarItens(tenantId, agora), limitesPorSetor(tenantId)]);
+export async function itensDaGestao(
+  tenantId: string,
+  recorte: "todos" | string[],
+  agora = new Date(),
+  filtro: Pick<FiltroDeItens, "responsavel"> = {}
+): Promise<ItemClassificado[]> {
+  const [itens, limites] = await Promise.all([coletarItens(tenantId, agora, { ...filtro, setores: recorte }), limitesPorSetor(tenantId)]);
   return itens
     .filter((i) => podeVerSetor(recorte, i.setor))
     .map((item) => ({ item, c: classificar(item, limites.get(item.setor) ?? limitesDoSetor(undefined), agora) }));

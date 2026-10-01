@@ -36,6 +36,10 @@ const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL
 const moeda = (c: number) => MOEDA.format(c / 100);
 
 const TH = "py-2 pr-3 font-medium";
+// Cartão de seção: título de 14px, como no detalhe do processo, e o respiro
+// entre título e conteúdo pelo `gap` — era `mb-1`, com a tabela colada no título.
+const SECAO = "p-4 flex flex-col gap-3";
+const TITULO = "text-[14px] font-semibold text-fg";
 
 function LinhaDeProcesso({ p }: { p: ProcessoDoCliente }) {
   return (
@@ -121,17 +125,21 @@ export default async function VisaoSocietariaDoClientePage({
       </div>
 
       <div className="flex flex-col gap-5">
-        <Card as="section" className="p-4">
-          <h2 className="text-[15px] font-semibold mb-1">Processos abertos</h2>
+        <Card as="section" className={SECAO}>
+          <h2 className={TITULO}>Processos abertos</h2>
           {visao.abertos.length === 0 ? (
             <p className="text-[13px] text-fg-muted">Nenhum processo aberto para esta empresa.</p>
           ) : (
-            visao.abertos.map((p) => <LinhaDeProcesso key={p.id} p={p} />)
+            <div>
+              {visao.abertos.map((p) => (
+                <LinhaDeProcesso key={p.id} p={p} />
+              ))}
+            </div>
           )}
         </Card>
 
-        <Card as="section" className="p-4">
-          <h2 className="text-[15px] font-semibold mb-1">Licenças</h2>
+        <Card as="section" className={SECAO}>
+          <h2 className={TITULO}>Licenças</h2>
           {licencas.length === 0 ? (
             <p className="text-[13px] text-fg-muted">Nenhuma licença cadastrada.</p>
           ) : (
@@ -172,8 +180,8 @@ export default async function VisaoSocietariaDoClientePage({
           )}
         </Card>
 
-        <Card as="section" className="p-4">
-          <h2 className="text-[15px] font-semibold mb-1">Exigências</h2>
+        <Card as="section" className={SECAO}>
+          <h2 className={TITULO}>Exigências</h2>
           {visao.exigencias.length === 0 ? (
             <p className="text-[13px] text-fg-muted">Nenhuma exigência nos processos desta empresa.</p>
           ) : (
@@ -217,9 +225,9 @@ export default async function VisaoSocietariaDoClientePage({
           )}
         </Card>
 
-        <Card as="section" className="p-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
-            <h2 className="text-[15px] font-semibold">Taxas</h2>
+        <Card as="section" className={SECAO}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className={TITULO}>Taxas</h2>
             {visao.taxas.length > 0 && (
               <p className="text-[13px] tabular-nums">
                 <strong>{moeda(visao.custo.totalCentavos)}</strong>
@@ -229,7 +237,7 @@ export default async function VisaoSocietariaDoClientePage({
             )}
           </div>
           {visao.custo.custoDasVoltasCentavos > 0 && (
-            <p className="text-[12px] text-warning mb-2">
+            <p className="text-[12px] text-warning">
               {moeda(visao.custo.custoDasVoltasCentavos)} vieram de reapresentação.
             </p>
           )}
@@ -284,12 +292,16 @@ export default async function VisaoSocietariaDoClientePage({
           )}
         </Card>
 
-        <Card as="section" className="p-4">
-          <h2 className="text-[15px] font-semibold mb-1">Processos encerrados</h2>
+        <Card as="section" className={SECAO}>
+          <h2 className={TITULO}>Processos encerrados</h2>
           {visao.encerrados.length === 0 ? (
             <p className="text-[13px] text-fg-muted">Nenhum processo concluído ou cancelado.</p>
           ) : (
-            visao.encerrados.map((p) => <LinhaDeProcesso key={p.id} p={p} />)
+            <div>
+              {visao.encerrados.map((p) => (
+                <LinhaDeProcesso key={p.id} p={p} />
+              ))}
+            </div>
           )}
         </Card>
       </div>

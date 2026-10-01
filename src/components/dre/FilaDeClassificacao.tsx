@@ -61,7 +61,7 @@ export function FilaDeClassificacao({ companyId, itens, excecoes }: Props) {
       )}
 
       {itens.map((i) => (
-        <Card key={i.categoria} className="p-3 flex flex-wrap items-center justify-between gap-3">
+        <Card key={i.categoria} className="p-4 flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[13px] font-medium text-fg">{i.categoria}</p>
             <p className="text-[11px] text-fg-muted">
@@ -69,11 +69,15 @@ export function FilaDeClassificacao({ companyId, itens, excecoes }: Props) {
             </p>
           </div>
           {i.categoryId ? (
-            <div className="flex items-center gap-2">
+            // Select e botão na mesma altura (36px): o "Salvar" era `sm`, 4px
+            // mais baixo que a lista ao lado. Largura fixa na lista, para as
+            // linhas da fila caírem uma embaixo da outra.
+            <div className="flex w-full sm:w-auto items-center gap-2 min-w-0">
               <Select
                 aria-label={`Grupo do DRE para ${i.categoria}`}
                 value={escolha[i.categoryId] ?? ""}
                 onChange={(e) => setEscolha((s) => ({ ...s, [i.categoryId!]: e.target.value }))}
+                className="flex-1 min-w-0 sm:flex-none sm:w-72"
               >
                 <option value="">Classificar em…</option>
                 {GRUPOS.map((g) => (
@@ -86,7 +90,6 @@ export function FilaDeClassificacao({ companyId, itens, excecoes }: Props) {
                 <option value={TRANSFERENCIA}>Transferência entre contas (fora do DRE)</option>
               </Select>
               <Button
-                size="sm"
                 variant="secondary"
                 disabled={ocupado === i.categoryId || !escolha[i.categoryId]}
                 onClick={() =>
@@ -116,14 +119,14 @@ export function FilaDeClassificacao({ companyId, itens, excecoes }: Props) {
               <span className="text-[13px] text-fg">
                 {e.nome} <span className="text-fg-muted">→ {rotulo(e.grupo)}</span>
               </span>
-              <button
-                type="button"
-                className="text-[12px] text-brand hover:underline"
+              <Button
+                variant="link"
+                className="text-[12px]"
                 disabled={ocupado === e.categoryId}
                 onClick={() => correr(e.categoryId, () => voltarAoPadrao(companyId, e.categoryId))}
               >
                 voltar ao padrão
-              </button>
+              </Button>
             </div>
           ))}
         </Card>

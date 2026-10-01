@@ -63,16 +63,18 @@ export default async function LicencasPage({
 
   return (
     <PageContainer>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <PageHeader
-          title="Licenças"
-          subtitle={`Alvará, sanitária, ambiental, bombeiros — o que fica valendo, e o que precisa ser renovado. Entram na fila com ${AVISO_EM_DIAS} dias de antecedência.`}
-        />
-        <NovaLicenca
-          empresas={empresas.map((e) => ({ value: e.id, label: nomeExibicao(e) }))}
-          orgaos={orgaosDoForm}
-        />
-      </div>
+      {/* O botão vai no `action` do cabeçalho, como nas outras telas: numa div
+          ao lado, ele ficava alinhado ao traço do setor, acima do título. */}
+      <PageHeader
+        title="Licenças"
+        subtitle={`Alvará, sanitária, ambiental, bombeiros — o que fica valendo, e o que precisa ser renovado. Entram na fila com ${AVISO_EM_DIAS} dias de antecedência.`}
+        action={
+          <NovaLicenca
+            empresas={empresas.map((e) => ({ value: e.id, label: nomeExibicao(e) }))}
+            orgaos={orgaosDoForm}
+          />
+        }
+      />
 
       {/* Quatro números em cartão, cada um abrindo o seu recorte — eram uma
           frase-resumo e cinco pílulas (conferência de 30/09). */}

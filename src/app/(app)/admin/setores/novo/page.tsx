@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { SetorForm } from "@/components/admin/SetorForm";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { criarSetor } from "../actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 
@@ -13,18 +13,14 @@ export default async function NovoSetorPage() {
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/admin/setores" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Setores
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Novo Setor</span>
-      </div>
+      <Breadcrumb items={[{ label: "Setores", href: "/admin/setores" }, { label: "Novo Setor" }]} />
       <PageHeader title="Novo Setor" />
 
-      <Card className="p-6">
-        <SetorForm action={criarSetor} cancelHref="/admin/setores" />
-      </Card>
+      <div className="max-w-[720px]">
+        <Card className="p-6">
+          <SetorForm action={criarSetor} cancelHref="/admin/setores" />
+        </Card>
+      </div>
     </PageContainer>
   );
 }

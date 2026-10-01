@@ -99,7 +99,7 @@ export function PersonHeader({
                   onClick={copyCpf}
                   title="Copiar CPF" aria-label="Copiar CPF"
                 >
-                  {copied ? <Check size={13} className="text-success" /> : <Copy size={13} />}
+                  {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
                   {maskCpf(cpf)}
                 </Button>
               )}
@@ -108,7 +108,7 @@ export function PersonHeader({
                   href={`/empresas/${companyId}`}
                   className="inline-flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted hover:text-fg transition-colors"
                 >
-                  <Building2 size={13} />
+                  <Building2 size={14} />
                   {companyName}
                 </Link>
               )}
@@ -117,7 +117,7 @@ export function PersonHeader({
                   href={`mailto:${email}`}
                   className="inline-flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted hover:text-fg transition-colors"
                 >
-                  <Mail size={13} />
+                  <Mail size={14} />
                   {email}
                 </a>
               )}
@@ -126,7 +126,7 @@ export function PersonHeader({
                   href={`tel:${phone}`}
                   className="inline-flex items-center gap-1.5 text-[length:var(--fs-helper)] text-fg-muted hover:text-fg transition-colors"
                 >
-                  <Phone size={13} />
+                  <Phone size={14} />
                   {formatPhone(phone)}
                 </a>
               )}

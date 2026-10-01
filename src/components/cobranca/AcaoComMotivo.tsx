@@ -20,6 +20,7 @@ export function AcaoComMotivo({
   motivoObrigatorio = false,
   ajuda,
   variante = "secondary",
+  tamanho = "xs",
   acao,
 }: {
   rotulo: React.ReactNode;
@@ -29,6 +30,8 @@ export function AcaoComMotivo({
   motivoObrigatorio?: boolean;
   ajuda?: string;
   variante?: "secondary" | "danger";
+  /** `sm` quando divide a linha com outros botões `sm` — na ficha do título, ao lado de "Criar acordo". */
+  tamanho?: "xs" | "sm";
   acao: (motivo: string) => Promise<{ error: string } | { ok: true }>;
 }) {
   const [aberto, setAberto] = useState(false);
@@ -38,12 +41,12 @@ export function AcaoComMotivo({
 
   return (
     <>
-      <Button variant={variante} size="xs" onClick={() => setAberto(true)}>
+      <Button variant={variante} size={tamanho} onClick={() => setAberto(true)}>
         {rotulo}
       </Button>
       <Modal open={aberto} onClose={() => !pendente && setAberto(false)} title={titulo} maxWidth="max-w-md">
         <form
-          className="flex flex-col gap-3 p-5"
+          className="flex flex-col gap-4"
           onSubmit={(e) => {
             e.preventDefault();
             setErro(null);
@@ -68,14 +71,14 @@ export function AcaoComMotivo({
               required={motivoObrigatorio}
             />
           </CampoForm>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button type="submit" variant={variante === "danger" ? "danger" : "primary"} size="sm" disabled={pendente}>
-              {pendente ? "Salvando…" : confirmar}
-            </Button>
-            <Button type="button" variant="secondary" size="sm" onClick={() => setAberto(false)} disabled={pendente}>
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
+            {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
+            <Button type="button" variant="secondary" onClick={() => setAberto(false)} disabled={pendente}>
               Voltar
             </Button>
-            {erro && <span className="text-[12px] text-danger">{erro}</span>}
+            <Button type="submit" variant={variante === "danger" ? "danger" : "primary"} disabled={pendente}>
+              {pendente ? "Salvando…" : confirmar}
+            </Button>
           </div>
         </form>
       </Modal>

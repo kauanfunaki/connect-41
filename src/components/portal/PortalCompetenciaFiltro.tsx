@@ -15,10 +15,14 @@ type Props = { competencias: string[] };
  *
  * Desde 30/09 no botão "Filtros", com busca — a regra das telas internas:
  * competência nunca num `<select>` comprido nem numa fileira de botões.
+ *
+ * O respiro de baixo é dele (`mb-4`), como o "Filtros" das outras telas do
+ * portal — não da tabela nem do vazio que vêm depois.
  */
 export function PortalCompetenciaFiltro({ competencias }: Props) {
   return (
     <FiltrosDaTela
+      className="mb-4"
       campos={[
         {
           chave: "competencia",

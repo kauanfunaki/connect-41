@@ -31,17 +31,19 @@ export function LerContratoSocial({
   return (
     <form action={formAction} className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 w-full">
       <input type="hidden" name="companyId" value={companyId} />
-      <div>
+      <div className="flex flex-col gap-0.5">
         <p className="text-[14px] font-semibold text-fg">Ler contrato social com a IA</p>
         <p className="text-[12px] text-fg-muted">
           Contrato social, alteração ou consolidação, em PDF. A IA lê participação, quotas, capital e quem administra; você revisa antes
           de gravar. O arquivo não fica guardado.
         </p>
       </div>
-      <FileDropzoneField name="arquivo" accept=".pdf,application/pdf" maxSizeMb={10} required />
+      {/* Só a extensão no `accept`: o campo escreve o que recebe aqui na faixa
+          ("PDF, APPLICATION/PDF · até 10 MB"), e confere pela extensão. */}
+      <FileDropzoneField name="arquivo" accept=".pdf" maxSizeMb={10} required />
       {state?.error && <p className="text-[13px] text-danger">{state.error}</p>}
-      <div className="flex justify-end gap-2">
-        <Button variant="ghost" type="button" onClick={() => setAberto(false)} disabled={pendente}>
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+        <Button variant="secondary" type="button" onClick={() => setAberto(false)} disabled={pendente}>
           Cancelar
         </Button>
         <Button variant="primary" type="submit" disabled={pendente}>

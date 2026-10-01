@@ -152,6 +152,18 @@ export type ModuleDef = {
 
 export const MODULE_CATALOG: ModuleDef[] = [
   {
+    // Era item do menu geral até 30/09; o Kauan decidiu que é do setor novo
+    // Controladoria, que cuida do atendimento do escritório. A avaliação dos
+    // atendentes é uma visão dentro da mesma tela (?view=avaliacao).
+    code: "controladoria_conversas",
+    label: "Conversas",
+    sectorCode: "controladoria",
+    description: "Os atendimentos do escritório no Chatwoot, ligados a empresas e pessoas, e a avaliação de cada atendente",
+    defaultEnabled: true,
+    icon: "MessagesSquare",
+    group: "Atendimento",
+  },
+  {
     // Setor Tech até existir um módulo de Financeiro para onde ele vai
     // (decisão de 23/09) — o Tech segue com acesso depois da mudança.
     code: "tech_certificados",
@@ -565,6 +577,7 @@ export function agruparModulos<T extends { code: string }>(itens: T[]): { grupo:
 // sidebar setorial passou a precisar da mesma informação — duas cópias de um
 // de-para é como um módulo novo aparece no menu e não abre.
 export const MODULE_ROUTES: Record<string, string> = {
+  controladoria_conversas: "/conversas",
   tech_certificados:       "/certificados",
   recrutamento_vagas:      "/vagas",
   recrutamento_candidatos: "/candidatos",

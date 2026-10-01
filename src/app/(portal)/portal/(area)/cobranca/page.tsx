@@ -46,7 +46,7 @@ export default async function PortalCobrancaPage() {
         ]}
       />
 
-      <h2 className="text-[14px] font-semibold mb-2">Títulos em cobrança</h2>
+      <h2 className="text-[14px] font-semibold text-fg mb-2">Títulos em cobrança</h2>
       {titulos.length === 0 ? (
         <Card className="mb-6">
           <EmptyState icon={<Handshake />} title="Nenhum título vencido" description="Quando um cliente das suas empresas atrasar um pagamento, o título aparece aqui." />
@@ -115,7 +115,7 @@ export default async function PortalCobrancaPage() {
         </div>
       )}
 
-      <h2 className="text-[14px] font-semibold mb-2">Acordos</h2>
+      <h2 className="text-[14px] font-semibold text-fg mb-2">Acordos</h2>
       {acordos.length === 0 ? (
         <Card>
           <EmptyState icon={<Handshake />} title="Nenhum acordo" description="Quando uma dívida for renegociada em parcelas, o acordo aparece aqui." />
@@ -124,22 +124,39 @@ export default async function PortalCobrancaPage() {
         <div className="flex flex-col gap-3">
           {acordos.map((a) => (
             <Card key={a.id} className="p-4">
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <span className="text-[14px] font-semibold">{a.sacadoNome}</span>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <span className="min-w-0 text-[14px] font-semibold text-fg break-words">{a.sacadoNome}</span>
                 <SeloDoAcordo status={a.status} />
               </div>
-              <p className="text-[12px] text-fg-muted tabular-nums mb-2">
-                {a.empresaNome} · acordado em {formatInstantDate(a.acordadoEm)} · dívida de {moeda(a.originalCentavos)} renegociada em{" "}
-                {moeda(a.acordadoCentavos)} · {a.resumo.pagas}/{a.resumo.total} parcelas pagas · {moeda(a.resumo.pagoCentavos)} recebido
-              </p>
-              <ul className="flex flex-col gap-1 text-[12px]">
+              {/* Ficha em colunas (rótulo em cima, valor embaixo): era uma frase
+                  de seis fatos ligados por "·", que mudava de forma de um acordo
+                  para o outro e não deixava comparar os valores. */}
+              <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-3 mb-4">
+                {[
+                  { rotulo: "Empresa", valor: a.empresaNome },
+                  { rotulo: "Acordado em", valor: formatInstantDate(a.acordadoEm) },
+                  { rotulo: "Dívida original", valor: moeda(a.originalCentavos) },
+                  { rotulo: "Valor acordado", valor: moeda(a.acordadoCentavos) },
+                  { rotulo: "Parcelas pagas", valor: `${a.resumo.pagas}/${a.resumo.total}` },
+                  { rotulo: "Recebido", valor: moeda(a.resumo.pagoCentavos) },
+                ].map((f) => (
+                  <div key={f.rotulo} className="min-w-0">
+                    <dt className="text-[length:var(--fs-helper)] text-fg-muted">{f.rotulo}</dt>
+                    <dd className="text-[13px] text-fg tabular-nums break-words">{f.valor}</dd>
+                  </div>
+                ))}
+              </dl>
+              {/* Colunas de largura fixa: número, vencimento e valor caem um
+                  embaixo do outro em todas as parcelas (no flex solto, cada
+                  linha começava o valor num ponto). No celular o selo desce. */}
+              <ul className="flex flex-col gap-1.5 text-[12px] border-t border-border-soft pt-3">
                 {a.parcelas.map((p, i) => (
-                  <li key={p.id} className="flex flex-wrap items-center gap-2 tabular-nums">
-                    <span>
+                  <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 tabular-nums">
+                    <span className="w-10 shrink-0 text-fg-muted">
                       {i + 1}/{a.parcelas.length}
                     </span>
-                    <span>vence {formatInstantDate(p.vencimento)}</span>
-                    <span>{moeda(p.valorCentavos)}</span>
+                    <span className="w-28 shrink-0">vence {formatInstantDate(p.vencimento)}</span>
+                    <span className="w-24 shrink-0 text-right font-medium">{moeda(p.valorCentavos)}</span>
                     {p.pagoEm ? (
                       <Badge variant="success">Paga em {formatInstantDate(p.pagoEm)}</Badge>
                     ) : p.status === "CANCELADO" ? (

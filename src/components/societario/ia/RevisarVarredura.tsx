@@ -60,21 +60,24 @@ export function RevisarVarredura({
           const u = URGENCIA[i.urgencia];
           return (
             <li key={i.chave} className="flex gap-3 p-4">
+              {/* A caixa centralizada na altura da primeira linha (a do selo,
+                  28px), e não empurrada com `mt-1`. */}
               {podeAplicar && (
-                <Checkbox
-                  id={`p-${i.chave}`}
-                  aria-label={`Encaminhar: ${s.titulo}`}
-                  checked={marcadas.has(i.chave)}
-                  onChange={() =>
-                    setMarcadas((m) => {
-                      const n = new Set(m);
-                      if (n.has(i.chave)) n.delete(i.chave);
-                      else n.add(i.chave);
-                      return n;
-                    })
-                  }
-                  className="mt-1"
-                />
+                <span className="flex h-7 shrink-0 items-center">
+                  <Checkbox
+                    id={`p-${i.chave}`}
+                    aria-label={`Encaminhar: ${s.titulo}`}
+                    checked={marcadas.has(i.chave)}
+                    onChange={() =>
+                      setMarcadas((m) => {
+                        const n = new Set(m);
+                        if (n.has(i.chave)) n.delete(i.chave);
+                        else n.add(i.chave);
+                        return n;
+                      })
+                    }
+                  />
+                </span>
               )}
               <div className="flex flex-col gap-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
@@ -105,8 +108,9 @@ export function RevisarVarredura({
 
       {msg && <p className={`text-[13px] ${msg.tipo === "erro" ? "text-danger" : "text-success"}`}>{msg.texto}</p>}
 
+      {/* Mesmo rodapé da revisão de contrato: rejeitar à esquerda, primário à direita. */}
       {podeAplicar && (
-        <div className="flex flex-wrap items-start justify-end gap-2">
+        <div className="flex flex-wrap items-start justify-between gap-3 pt-4 border-t border-border">
           <RejeitarProposta propostaId={propostaId} rejeitar={acoes.rejeitar} />
           <Button
             variant="primary"

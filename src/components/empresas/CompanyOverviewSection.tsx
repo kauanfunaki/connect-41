@@ -44,6 +44,14 @@ type Props = {
   customFields: CustomFieldValue[];
 };
 
+// Revisão de alinhamento (30/09): todos os cartões da ficha usam a mesma
+// grade de quatro colunas (duas no tablet), então os rótulos de um cartão
+// caem na mesma vertical dos do cartão de baixo. Antes cada um tinha a sua —
+// duas colunas de meia tela aqui, três ali —, e com a ficha na largura toda
+// um CNPJ ficava a 600px do rótulo vizinho. Nome e lista ocupam duas colunas.
+const GRADE = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4";
+const TITULO = "text-[length:var(--fs-section)] font-semibold text-fg mb-4";
+
 export function CompanyOverviewSection({ company, customFields }: Props) {
   const ehPF = company.kind === "PESSOA_FISICA";
   const fullAddress = [
@@ -60,30 +68,34 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
   return (
     <div className="space-y-4">
       <Card className="p-5">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">Identificação</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-          <InfoRow label={company.kind === "PESSOA_FISICA" ? "Nome" : "Razão Social"} value={company.name} />
-          <InfoRow label="Cliente" value={company.clientGroup?.name ?? null} />
-          <InfoRow label="Nome Fantasia" value={company.tradeName} />
-          <InfoRow label="Nome no sistema" value={company.displayName} />
+        <h2 className={TITULO}>Identificação</h2>
+        <div className={GRADE}>
+          <InfoRow
+            label={company.kind === "PESSOA_FISICA" ? "Nome" : "Razão Social"}
+            value={company.name}
+            className="sm:col-span-2"
+          />
+          <InfoRow label="Nome Fantasia" value={company.tradeName} className="sm:col-span-2" />
           <InfoRow
             label={rotuloDoDocumento(company.kind)}
             value={formatDocumento(company.kind, company.cnpj, company.cpf)}
             mono
           />
-          <InfoRow label="Regime Tributário" value={company.taxRegime} />
-          <InfoRow label="ID" value={company.externalId} mono />
           <InfoRow
             label="Data de Abertura"
             value={company.foundationDate ? formatCalendarDate(company.foundationDate, { day: "2-digit", month: "long", year: "numeric" }) : null}
           />
+          <InfoRow label="Nome no sistema" value={company.displayName} />
+          <InfoRow label="ID" value={company.externalId} mono />
+          <InfoRow label="Regime Tributário" value={company.taxRegime} className="sm:col-span-2" />
+          <InfoRow label="Cliente" value={company.clientGroup?.name ?? null} className="sm:col-span-2" />
         </div>
       </Card>
 
       <Card className="p-5">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">Contato</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-          <InfoRow label="E-mail" value={company.email} />
+        <h2 className={TITULO}>Contato</h2>
+        <div className={GRADE}>
+          <InfoRow label="E-mail" value={company.email} className="sm:col-span-2" />
           <InfoRow label="Telefone" value={formatPhone(company.phone)} />
           <InfoRow label="Website" value={company.website} href={company.website ?? undefined} />
         </div>
@@ -91,16 +103,17 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
 
       {fullAddress && (
         <Card className="p-5">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">Endereço</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+          <h2 className={TITULO}>Endereço</h2>
+          <div className={GRADE}>
             <InfoRow
               label="Logradouro"
               value={[company.addressStreet, company.addressNumber].filter(Boolean).join(", ")}
+              className="sm:col-span-2"
             />
             <InfoRow label="Complemento" value={company.addressComplement} />
-            <InfoRow label="Bairro" value={company.neighborhood} />
-            <InfoRow label="Cidade / UF" value={[company.city, company.stateCode].filter(Boolean).join(" — ")} />
             <InfoRow label="CEP" value={formatCep(company.zipCode)} mono />
+            <InfoRow label="Bairro" value={company.neighborhood} className="sm:col-span-2" />
+            <InfoRow label="Cidade / UF" value={[company.city, company.stateCode].filter(Boolean).join(" — ")} />
           </div>
         </Card>
       )}
@@ -109,18 +122,18 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
         (!ehPF &&
           (company.stateRegistration || company.nire || company.cnaePrincipal || company.cnaeSecundarios))) && (
         <Card className="p-5">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">Dados Fiscais</h2>
+          <h2 className={TITULO}>Dados Fiscais</h2>
           {/* Os mesmos campos que o formulário não pede para PF não aparecem
               aqui — senão a ficha de uma pessoa física mostraria quatro linhas
               com "—" logo abaixo da única que ela pode ter. */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-3">
+          <div className={GRADE}>
             {!ehPF && <InfoRow label="Inscrição Estadual" value={company.stateRegistration} mono />}
             <InfoRow label="Inscrição Municipal" value={company.municipalRegistration} mono />
             {!ehPF && (
               <>
                 <InfoRow label="NIRE" value={company.nire} mono />
                 <InfoRow label="CNAE Principal" value={company.cnaePrincipal} mono />
-                <InfoRow label="CNAEs Secundários" value={company.cnaeSecundarios} mono />
+                <InfoRow label="CNAEs Secundários" value={company.cnaeSecundarios} mono className="sm:col-span-2 lg:col-span-4" />
               </>
             )}
           </div>
@@ -128,9 +141,9 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
       )}
 
       <Card className="p-5">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">CRM</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-          <InfoRow label="Origem" value={company.source} />
+        <h2 className={TITULO}>CRM</h2>
+        <div className={GRADE}>
+          <InfoRow label="Origem" value={company.source} className="sm:col-span-2" />
           <InfoRow
             label="Criada em"
             value={formatInstantDate(company.createdAt, { day: "2-digit", month: "long", year: "numeric" })}
@@ -144,8 +157,8 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
 
       {customFields.length > 0 && (
         <Card className="p-5">
-          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">Campos Adicionais</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+          <h2 className={TITULO}>Campos Adicionais</h2>
+          <div className={GRADE}>
             {customFields.map((f) => (
               <InfoRow
                 key={f.id}

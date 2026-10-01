@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Send, Check } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import { enviarTaxaAoCliente, type EnvioDaTaxaState } from "@/app/(app)/processos/actions";
 import { validarGuia } from "@/lib/societario/arquivamento";
 import type { EnvioDaTaxa } from "@/lib/societario/licencas-data";
@@ -61,30 +63,40 @@ export function EnviarTaxaAoCliente({ taxaId, descricao, envio }: Props) {
 
   return (
     <>
-      <Button type="button" size="xs" variant="secondary" onClick={() => setAberto(true)} className="mt-1.5">
+      <Button type="button" size="xs" variant="secondary" onClick={() => setAberto(true)}>
         <Send size={12} /> Enviar ao cliente
       </Button>
 
       <Modal open={aberto} onClose={fechar} title="Enviar guia ao cliente" maxWidth="max-w-lg">
-        <form onSubmit={enviar} className="flex flex-col gap-3 text-[13px]">
+        <form onSubmit={enviar} className="flex flex-col gap-4 text-[13px]">
           <input type="hidden" name="taxaId" value={taxaId} />
 
           <p className="text-fg-secondary">{descricao}</p>
 
-          <div>
-            <p className="text-[11px] uppercase tracking-wide text-fg-muted mb-1">Vai para</p>
-            {semDestinatario ? (
-              <p className="text-danger">Nenhum contato desta empresa tem e-mail válido. Corrija o cadastro antes.</p>
-            ) : (
-              <ul className="flex flex-col gap-0.5">
-                {envio.para.map((email) => (
-                  <li key={email} className="text-fg break-all">
-                    {email}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          {/* Ficha rótulo/valor no padrão das outras (rótulo em cima, no
+              tamanho de helper) — eram títulos de 11px em caixa alta. */}
+          <dl className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1 min-w-0">
+              <dt className="text-[length:var(--fs-helper)] text-fg-muted">Vai para</dt>
+              <dd>
+                {semDestinatario ? (
+                  <p className="text-danger">Nenhum contato desta empresa tem e-mail válido. Corrija o cadastro antes.</p>
+                ) : (
+                  <ul className="flex flex-col gap-0.5">
+                    {envio.para.map((email) => (
+                      <li key={email} className="text-fg break-all">
+                        {email}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </dd>
+            </div>
+            <div className="flex flex-col gap-1 min-w-0">
+              <dt className="text-[length:var(--fs-helper)] text-fg-muted">Arquivado como</dt>
+              <dd className="text-fg break-words">{envio.caminho}</dd>
+            </div>
+          </dl>
 
           {/* Contato sem e-mail e e-mail digitado errado dão no mesmo — a pessoa
               não recebe — e só aparecem aqui. */}
@@ -101,24 +113,18 @@ export function EnviarTaxaAoCliente({ taxaId, descricao, envio }: Props) {
             </div>
           )}
 
-          <div>
-            <p className="text-[11px] uppercase tracking-wide text-fg-muted mb-1">Arquivado como</p>
-            <p className="text-fg break-words">{envio.caminho}</p>
-          </div>
-
+          {/* O campo de arquivo do sistema, e não o input nativo estilizado à
+              mão. `accept=".pdf"` (e não o MIME): é pela extensão que ele confere
+              e escreve "PDF · até 5 MB"; o tipo real segue conferido no envio. */}
           {!enviado && (
-            <label className="flex flex-col gap-1">
-              <span className="text-[12px] text-fg-secondary">
-                {envio.temGuia ? "Substituir a guia guardada (opcional)" : "Guia em PDF, até 5 MB"}
-              </span>
-              <input
-                type="file"
-                name="guia"
-                accept="application/pdf"
-                required={!envio.temGuia}
-                className="text-[12px] text-fg-secondary file:mr-3 file:h-8 file:px-3 file:rounded-md file:border file:border-border file:bg-surface file:text-fg file:text-[12px] file:cursor-pointer"
-              />
-            </label>
+            <CampoForm
+              label={envio.temGuia ? "Substituir a guia guardada" : "Guia em PDF"}
+              htmlFor={`guia-${taxaId}`}
+              required={!envio.temGuia}
+              helper={envio.temGuia ? "Opcional." : undefined}
+            >
+              <FileDropzoneField id={`guia-${taxaId}`} name="guia" accept=".pdf" maxSizeMb={5} required={!envio.temGuia} compacto />
+            </CampoForm>
           )}
 
           {estado && "error" in estado && (
@@ -139,7 +145,7 @@ export function EnviarTaxaAoCliente({ taxaId, descricao, envio }: Props) {
             </div>
           )}
 
-          <div className="flex items-center justify-end gap-2 mt-1">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
             <Button type="button" variant="secondary" onClick={fechar} disabled={enviando}>
               {enviado ? "Fechar" : "Cancelar"}
             </Button>

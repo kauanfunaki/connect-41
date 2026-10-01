@@ -52,7 +52,7 @@ export function AcoesDaLicenca({ licenca, orgaos }: Props) {
     // linhas de Cadastros (polimento de 30/09): eram três links de texto.
     <div className="flex items-center justify-end gap-1.5">
       <Button variant="secondary" size="xs" type="button" onClick={() => setEditando(true)}>
-        <Pencil size={11} /> Editar
+        <Pencil size={12} /> Editar
       </Button>
       <Popover
         align="right"

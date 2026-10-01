@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -11,6 +10,7 @@ import { getSectorUsers } from "@/lib/sectorUsers";
 import { listDocuments } from "@/lib/documents";
 import { formatCalendarDate, formatInstantDate } from "@/lib/format";
 import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { CompanyHeader } from "@/components/empresas/CompanyHeader";
 import { CompanyDetailTabs } from "@/components/empresas/CompanyDetailTabs";
@@ -118,17 +118,15 @@ export default async function EmpresaPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-5">
-        <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Cadastros
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Empresas
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg truncate">{company.name}</span>
-      </div>
+      {/* Era uma cópia à mão da trilha (até 30/09), com outro espaçamento
+          que o das sub-páginas da empresa. */}
+      <Breadcrumb
+        items={[
+          { label: "Cadastros", href: "/empresas" },
+          { label: "Empresas", href: "/empresas" },
+          { label: company.name, truncate: true },
+        ]}
+      />
       <BackButton className="mb-3" />
 
       <CompanyHeader

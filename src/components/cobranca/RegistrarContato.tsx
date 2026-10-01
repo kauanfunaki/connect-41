@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { registrarContato } from "@/app/(app)/cobranca/actions";
 import {
   ROTULO_DO_CANAL,
@@ -30,7 +31,7 @@ export function RegistrarContato({ entryId, hojeISO }: { entryId: string; hojeIS
 
   return (
     <form
-      className="flex flex-col gap-3"
+      className="flex flex-col gap-4"
       onSubmit={(e) => {
         e.preventDefault();
         const form = e.currentTarget;
@@ -49,7 +50,7 @@ export function RegistrarContato({ entryId, hojeISO }: { entryId: string; hojeIS
       }}
     >
       <input type="hidden" name="entryId" value={entryId} />
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-4">
         <CampoForm label="Data do contato" htmlFor={`contatoEm-${entryId}`} required>
           <Input id={`contatoEm-${entryId}`} type="date" name="contatoEm" defaultValue={hojeISO} max={hojeISO} required />
         </CampoForm>
@@ -76,10 +77,13 @@ export function RegistrarContato({ entryId, hojeISO }: { entryId: string; hojeIS
             ))}
           </Select>
         </CampoForm>
+        {/* "Pagamento prometido para" quebrava em duas linhas numa coluna de
+            quatro e descia o campo; o rótulo curto cabe, e o resto vai no helper. */}
         <CampoForm
-          label={resultado === "PROMETEU_PAGAR" ? "Pagamento prometido para" : "Próxima ação"}
+          label={resultado === "PROMETEU_PAGAR" ? "Data prometida" : "Próxima ação"}
           htmlFor={`proximaAcao-${entryId}`}
           required={resultado === "PROMETEU_PAGAR"}
+          helper={resultado === "PROMETEU_PAGAR" ? "Quando o sacado prometeu pagar." : undefined}
         >
           <Input
             id={`proximaAcao-${entryId}`}
@@ -89,16 +93,16 @@ export function RegistrarContato({ entryId, hojeISO }: { entryId: string; hojeIS
             required={resultado === "PROMETEU_PAGAR"}
           />
         </CampoForm>
-      </div>
+      </FieldGrid>
       <CampoForm label="Anotação interna" htmlFor={`notas-${entryId}`} helper="Só a equipe vê. O portal mostra data, canal e resultado.">
         <Textarea id={`notas-${entryId}`} name="notas" rows={2} maxLength={TAMANHO_MAXIMO_DA_ANOTACAO} />
       </CampoForm>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="submit" size="sm" disabled={pendente}>
+      <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
+        {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
+        {salvo && <span className="mr-auto text-[12px] text-success">Contato registrado.</span>}
+        <Button type="submit" disabled={pendente}>
           {pendente ? "Registrando…" : "Registrar contato"}
         </Button>
-        {erro && <span className="text-[12px] text-danger">{erro}</span>}
-        {salvo && <span className="text-[12px] text-success">Contato registrado.</span>}
       </div>
     </form>
   );

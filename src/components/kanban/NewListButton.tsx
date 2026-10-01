@@ -26,12 +26,12 @@ export function NewListButton({ action }: Props) {
       <Button
         type="button"
         onClick={() => setOpen(true)}
-        variant="primary" className="font-medium"
+        variant="primary"
       >
         <Plus size={14} /> Nova lista
      </Button>
       <Modal open={open} onClose={() => setOpen(false)} title="Nova lista">
-        <form action={formAction} className="space-y-3">
+        <form action={formAction} className="space-y-4">
           <CampoForm label="Nome" htmlFor="list-name" required>
             <Input id="list-name" name="name" required autoFocus placeholder="ex: Empresa X" />
           </CampoForm>
@@ -42,18 +42,20 @@ export function NewListButton({ action }: Props) {
           ) : (
             // Era texto solto (30/09): abre um campo, então é botão.
             <Button variant="secondary" size="xs" type="button" onClick={() => setShowDescription(true)}>
-              <Plus size={11} /> descrição
+              <Plus size={12} /> descrição
             </Button>
           )}
-          {state?.error && <p className="text-[12px] text-danger">{state.error}</p>}
-          <Button
-            variant="primary"
-            type="submit"
-            disabled={isPending}
-            className="w-full"
-          >
-            {isPending ? "Criando…" : "Criar"}
-          </Button>
+          {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
+          {/* Rodapé de modal no padrão (30/09): Cancelar e Criar à direita,
+              com divisor — era um "Criar" de largura inteira, sem Cancelar. */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button variant="primary" type="submit" disabled={isPending}>
+              {isPending ? "Criando…" : "Criar"}
+            </Button>
+          </div>
         </form>
       </Modal>
     </>

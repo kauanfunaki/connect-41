@@ -91,9 +91,9 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
                 <InfoDoCartao>{setoresDe(pessoa)}</InfoDoCartao>
                 <PeDoCartao>
                   {pessoa.role === "SECTOR_ADMIN" && <Badge variant="info">Coordenação</Badge>}
-                  <span className={`text-[11.5px] ${c.parados ? "text-warning font-medium" : "text-fg-muted"}`}>{c.parados} parados</span>
-                  <span className={`text-[11.5px] ${c.vencidos ? "text-danger font-medium" : "text-fg-muted"}`}>{c.vencidos} vencidos</span>
-                  <span className="text-[11.5px] text-fg-muted">{c.vencendo} vencendo</span>
+                  <span className={`text-[12px] ${c.parados ? "text-warning font-medium" : "text-fg-muted"}`}>{c.parados} parados</span>
+                  <span className={`text-[12px] ${c.vencidos ? "text-danger font-medium" : "text-fg-muted"}`}>{c.vencidos} vencidos</span>
+                  <span className="text-[12px] text-fg-muted">{c.vencendo} vencendo</span>
                 </PeDoCartao>
                 {c.itens.length > 0 && (
                   <details className="mt-2">

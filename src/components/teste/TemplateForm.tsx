@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { FormFooter } from "@/components/ui/FormFooter";
 import type { TemplateState } from "@/app/(app)/testes/templates/actions";
 
 type QuestionRow = { text: string; options: string[]; correctIndex: number };
@@ -60,7 +61,7 @@ export function TemplateForm({ action, defaults, cancelHref }: Props) {
   }
 
   return (
-    <form action={formAction} className="space-y-5">
+    <form action={formAction} className="flex flex-col gap-5">
       {defaults && <input type="hidden" name="id" value={defaults.id} />}
 
       <CampoForm label="Nome do modelo" htmlFor="name" required>
@@ -71,23 +72,30 @@ export function TemplateForm({ action, defaults, cancelHref }: Props) {
         <Textarea id="description" name="description" rows={2} defaultValue={defaults?.description} maxLength={400} />
       </CampoForm>
 
+      {/* Cada pergunta é um cartão com cabeçalho (título e "Remover" na mesma
+          linha) e as alternativas num grupo com legenda. Antes o rótulo era
+          um texto cinza de 12px, o rádio cru não dizia para que servia e o
+          "x" de 28px ficava mais baixo que o campo de 36px ao lado. */}
       <div className="space-y-4">
         {questions.map((q, i) => (
-          <div key={i} className="border border-border rounded-lg p-4 space-y-3">
+          <div key={i} className="border border-border rounded-lg p-4 space-y-4">
             <input type="hidden" name={`q_text_${i}`} value={q.text} />
             <input type="hidden" name={`q_options_${i}`} value={JSON.stringify(q.options)} />
             <input type="hidden" name={`q_correct_${i}`} value={q.correctIndex} />
 
-            <div className="flex items-center justify-between">
-              <span className="text-[12px] font-medium text-fg-muted">Pergunta {i + 1}</span>
+            <div className="flex items-center justify-between gap-3">
+              <label htmlFor={`pergunta-${i}`} className="text-[length:var(--fs-label)] font-medium text-fg">
+                Pergunta {i + 1}
+              </label>
               {questions.length > 1 && (
                 <Button variant="danger" size="xs" onClick={() => removeQuestion(i)}>
-                  <Trash2 size={11} /> Remover
+                  <Trash2 size={12} /> Remover
                 </Button>
               )}
             </div>
 
             <Input
+              id={`pergunta-${i}`}
               type="text"
               value={q.text}
               onChange={(e) => updateQuestion(i, { text: e.target.value })}
@@ -95,7 +103,10 @@ export function TemplateForm({ action, defaults, cancelHref }: Props) {
               maxLength={500}
             />
 
-            <div className="space-y-2">
+            <fieldset className="space-y-2">
+              <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">
+                Alternativas <span className="font-normal text-fg-muted text-[length:var(--fs-helper)]">— marque a correta</span>
+              </legend>
               {q.options.map((opt, oi) => (
                 <div key={oi} className="flex items-center gap-2">
                   <input
@@ -103,60 +114,51 @@ export function TemplateForm({ action, defaults, cancelHref }: Props) {
                     checked={q.correctIndex === oi}
                     onChange={() => updateQuestion(i, { correctIndex: oi })}
                     aria-label={`Alternativa ${oi + 1} é a correta`}
+                    className="w-4 h-4 flex-shrink-0 accent-brand cursor-pointer"
                   />
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <Input
                       type="text"
                       value={opt}
                       onChange={(e) => updateOption(i, oi, e.target.value)}
                       placeholder={`Alternativa ${oi + 1}`}
+                      aria-label={`Alternativa ${oi + 1}`}
                       maxLength={200}
                     />
                   </div>
                   {q.options.length > 2 && (
                     <Button
                       variant="ghost"
-                      size="xs"
                       onClick={() => removeOption(i, oi)}
-                      className="flex-shrink-0 hover:text-danger!"
+                      className="w-9 px-0! flex-shrink-0 hover:text-danger!"
                       aria-label={`Remover a alternativa ${oi + 1}`}
                     >
-                      <X size={13} />
+                      <X size={15} />
                     </Button>
                   )}
                 </div>
               ))}
-            </div>
-
-            {q.options.length < 6 && (
-              <Button variant="secondary" size="xs" onClick={() => addOption(i)}>
-                <Plus size={11} /> Adicionar alternativa
-              </Button>
-            )}
+              {q.options.length < 6 && (
+                <Button variant="secondary" size="sm" onClick={() => addOption(i)}>
+                  <Plus size={14} /> Adicionar alternativa
+                </Button>
+              )}
+            </fieldset>
           </div>
         ))}
       </div>
 
       <input type="hidden" name="q_count" value={questions.length} />
 
-      <Button variant="secondary" onClick={addQuestion}>
-        <Plus size={14} /> Adicionar pergunta
-      </Button>
-
-      <div className="flex items-center gap-3 pt-2 border-t border-border">
-        <Button
-          type="submit"
-          disabled={isPending}
-          variant="primary" className="font-medium disabled:opacity-60"
-        >
-          {isPending ? "Salvando…" : defaults ? "Atualizar modelo" : "Criar modelo"}
-       </Button>
-        <Button href={cancelHref} variant="secondary">
-          Cancelar
+      <div>
+        <Button variant="secondary" onClick={addQuestion}>
+          <Plus size={14} /> Adicionar pergunta
         </Button>
       </div>
 
       {state?.error && <p className="text-[13px] text-danger">{state.error}</p>}
+
+      <FormFooter cancelHref={cancelHref} pending={isPending} submitLabel={defaults ? "Atualizar modelo" : "Criar modelo"} />
     </form>
   );
 }

@@ -89,7 +89,7 @@ export default async function HandoffsPage({
         action={<>{canCreate && (
           <Button
             href="/transferencias/novo"
-            variant="primary" className="font-medium"
+            variant="primary"
           >
             + Nova Transferência
           </Button>

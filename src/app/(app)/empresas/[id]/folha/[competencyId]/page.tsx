@@ -14,6 +14,7 @@ import { PayrollEntryRow } from "@/components/folha/PayrollEntryRow";
 import { CompetenciaStatusForm } from "@/components/folha/CompetenciaStatusForm";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { detectPayrollAnomalies } from "@/lib/payrollAnomalies";
 
 const MONTH_LABEL = [
@@ -70,15 +71,14 @@ export default async function CompetenciaPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Cadastros</Link>
-        <span className="text-fg-muted">/</span>
-        <Link href="/empresas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Empresas</Link>
-        <span className="text-fg-muted">/</span>
-        <Link href={`/empresas/${companyId}/folha`} className="text-[13px] text-fg-muted hover:text-fg transition-colors">Folha</Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">{MONTH_LABEL[competencia.month - 1]}/{competencia.year}</span>
-      </div>
+      <Breadcrumb
+        items={[
+          { label: "Cadastros", href: "/empresas" },
+          { label: "Empresas", href: "/empresas" },
+          { label: "Folha", href: `/empresas/${companyId}/folha` },
+          { label: `${MONTH_LABEL[competencia.month - 1]}/${competencia.year}` },
+        ]}
+      />
       <BackButton className="mb-3" />
 
       <PageHeader

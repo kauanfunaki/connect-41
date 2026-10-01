@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { Check, ChevronDown, Circle, Eye, Flag, Play, Square, Tag as TagIcon, Timer, Users, Calendar, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { TempoDecorrido } from "@/components/kanban/TempoDecorrido";
@@ -8,6 +8,7 @@ import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Select } from "@/components/ui/Select";
+import { CampoForm } from "@/components/ui/CampoForm";
 import { TagToggleList } from "@/components/kanban/TagToggleList";
 import { AssigneeToggleList } from "@/components/kanban/AssigneeToggleList";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
@@ -31,7 +32,9 @@ function formatDateBR(value: string): string {
 
 function FieldRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-3 py-1.5">
+    // min-h-9: a linha tem a mesma altura com texto, selo ou botão do lado
+    // direito — antes cada propriedade subia ou descia conforme o conteúdo.
+    <div className="flex items-center gap-3 py-1 min-h-9">
       <div className="flex items-center gap-2 w-40 flex-shrink-0 text-[13px] text-fg-muted">
         {icon}
         {label}
@@ -296,6 +299,7 @@ function DatesPopover({
   const [end, setEnd] = useState(dueDate ? dueDate.slice(0, 10) : "");
   const [isRecurring, setIsRecurring] = useState(recurring);
   const [frequency, setFrequency] = useState(recurrenceFrequency ?? "MONTHLY");
+  const uid = useId();
 
   function save(overrides: Partial<{ start: string; end: string; recurring: boolean; frequency: string }> = {}) {
     const s = overrides.start ?? start;
@@ -321,18 +325,22 @@ function DatesPopover({
         </button>
       )}
     >
-      <div className="space-y-2">
-        <label className="block text-[11px] font-medium text-fg-muted">Início</label>
-        <Input type="date" value={start} onChange={(e) => { setStart(e.target.value); save({ start: e.target.value }); }} />
-        <label className="block text-[11px] font-medium text-fg-muted">Fim</label>
-        <Input type="date" value={end} onChange={(e) => { setEnd(e.target.value); save({ end: e.target.value }); }} />
+      {/* Rótulos do CampoForm (30/09): eram <label> de 11px soltos, sem
+          ligação com o campo. */}
+      <div className="space-y-3">
+        <CampoForm label="Início" htmlFor={`${uid}-inicio`}>
+          <Input id={`${uid}-inicio`} type="date" value={start} onChange={(e) => { setStart(e.target.value); save({ start: e.target.value }); }} />
+        </CampoForm>
+        <CampoForm label="Fim" htmlFor={`${uid}-fim`}>
+          <Input id={`${uid}-fim`} type="date" value={end} onChange={(e) => { setEnd(e.target.value); save({ end: e.target.value }); }} />
+        </CampoForm>
         <Checkbox
           label="Recorrente"
           checked={isRecurring}
           onChange={(e) => { const checked = e.target.checked; setIsRecurring(checked); save({ recurring: checked }); }}
         />
         {isRecurring && (
-          <Select value={frequency} onChange={(e) => { setFrequency(e.target.value); save({ frequency: e.target.value }); }}>
+          <Select aria-label="Frequência" value={frequency} onChange={(e) => { setFrequency(e.target.value); save({ frequency: e.target.value }); }}>
             {Object.entries(FREQUENCY_LABEL).map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
             ))}

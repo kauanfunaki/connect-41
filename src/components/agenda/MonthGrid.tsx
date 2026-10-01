@@ -3,6 +3,8 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { MeetingItem } from "./MeetingItem";
+import { PrazoItem, type SetoresDaAgenda } from "./PrazoItem";
+import type { PrazoDaAgenda } from "@/lib/prazosDaAgenda";
 import { saoPauloParts, weekdayLabel, dayNumber, isSameMonth } from "@/lib/agenda";
 import type { CalendarDay, MeetingActions, MeetingRow } from "./types";
 
@@ -18,13 +20,22 @@ type Props = {
   actions: MeetingActions;
   /** Mês de referência — dias fora dele aparecem esmaecidos. */
   monthKey: string;
-  onDayClick: (dateKey: string) => void;
+  /** Sem permissão de agendar, o "+" da célula some. */
+  onDayClick?: (dateKey: string) => void;
+  prazos: PrazoDaAgenda[];
+  setores: SetoresDaAgenda;
 };
 
 // Visão mensal: sem eixo de horas, cada dia é uma célula com as reuniões em
 // ordem cronológica. No celular as 7 colunas não comportam texto, então as
 // reuniões viram bolinhas coloridas e o dia inteiro leva pra visão de dia.
-export function MonthGrid({ days, meetings, actions, monthKey, onDayClick }: Props) {
+export function MonthGrid({ days, meetings, actions, monthKey, onDayClick, prazos, setores }: Props) {
+  const prazosByDay = useMemo(() => {
+    const map = new Map<string, PrazoDaAgenda[]>();
+    for (const p of prazos) map.set(p.dia, [...(map.get(p.dia) ?? []), p]);
+    return map;
+  }, [prazos]);
+
   const meetingsByDay = useMemo(() => {
     const map = new Map<string, MeetingRow[]>();
     for (const m of meetings) {
@@ -56,8 +67,13 @@ export function MonthGrid({ days, meetings, actions, monthKey, onDayClick }: Pro
       <div className="grid grid-cols-7 flex-1 min-h-0 sm:grid-rows-6">
         {days.map((d) => {
           const dayMeetings = meetingsByDay.get(d.dateKey) ?? [];
+          const dayPrazos = prazosByDay.get(d.dateKey) ?? [];
           const outside = !isSameMonth(d.dateKey, monthKey);
-          const overflow = dayMeetings.length - MAX_CHIPS;
+          // Prazos primeiro (são do dia inteiro), reuniões depois; o teto de
+          // etiquetas vale para os dois juntos.
+          const prazosNaCelula = dayPrazos.slice(0, MAX_CHIPS);
+          const reunioesNaCelula = dayMeetings.slice(0, Math.max(MAX_CHIPS - prazosNaCelula.length, 0));
+          const overflow = dayPrazos.length + dayMeetings.length - prazosNaCelula.length - reunioesNaCelula.length;
 
           return (
             <div
@@ -80,19 +96,22 @@ export function MonthGrid({ days, meetings, actions, monthKey, onDayClick }: Pro
                 >
                   {dayNumber(d.dateKey)}
                 </Link>
-                <button
+                {onDayClick && <button
                   type="button"
                   onClick={() => onDayClick(d.dateKey)}
                   aria-label={`Criar reunião em ${d.dateKey}`}
                   className="hidden sm:inline-flex w-5 h-5 items-center justify-center rounded text-fg-muted opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-surface-hover transition-opacity text-[14px] leading-none"
                 >
                   +
-                </button>
+                </button>}
               </div>
 
               {/* Telas médias pra cima: reuniões como chips clicáveis. */}
               <div className="hidden sm:block space-y-0.5">
-                {dayMeetings.slice(0, MAX_CHIPS).map((m) => (
+                {prazosNaCelula.map((p) => (
+                  <PrazoItem key={p.chave} prazo={p} setores={setores} />
+                ))}
+                {reunioesNaCelula.map((m) => (
                   <MeetingItem key={m.id} meeting={m} actions={actions} variant="chip" />
                 ))}
                 {overflow > 0 && (
@@ -106,12 +125,15 @@ export function MonthGrid({ days, meetings, actions, monthKey, onDayClick }: Pro
               </div>
 
               {/* Celular: só a densidade do dia, em bolinhas — texto não cabe. */}
-              {dayMeetings.length > 0 && (
+              {dayMeetings.length + dayPrazos.length > 0 && (
                 <Link
                   href={`/agenda?view=dia&date=${d.dateKey}`}
-                  aria-label={`${dayMeetings.length} reunião(ões) em ${d.dateKey}`}
+                  aria-label={`${dayMeetings.length + dayPrazos.length} compromisso(s) em ${d.dateKey}`}
                   className="sm:hidden flex items-center gap-0.5 flex-wrap px-0.5"
                 >
+                  {dayPrazos.slice(0, 3).map((p) => (
+                    <span key={p.chave} className="w-1.5 h-1.5 rounded-[2px]" style={{ background: setores[p.setor]?.cor ?? "#586577" }} />
+                  ))}
                   {dayMeetings.slice(0, 4).map((m) => (
                     <span
                       key={m.id}

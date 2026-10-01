@@ -33,37 +33,33 @@ export function CompetenciaRow({ competencia, updateAction, deleteAction }: Prop
     return (
       <form action={formAction} className="px-4 py-2.5 space-y-2">
         <input type="hidden" name="id" value={competencia.id} />
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="w-48">
-            <Input name="name" defaultValue={competencia.name} required />
+        {/* Mesmas colunas do cadastro acima, para a linha em edição não mudar
+            de forma; Cancelar antes de Salvar, como nos demais formulários. */}
+        <div className="grid grid-cols-1 sm:grid-cols-[14rem_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2">
+          <Input name="name" defaultValue={competencia.name} required aria-label="Nome da competência" />
+          <Input
+            name="description"
+            defaultValue={competencia.description ?? ""}
+            placeholder="Descrição"
+            aria-label="Descrição"
+          />
+          <div className="flex items-center justify-end gap-3">
+            <Button variant="secondary" onClick={() => setEditing(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {isPending ? "Salvando…" : "Salvar"}
+            </Button>
           </div>
-          <div className="flex-1 min-w-[160px]">
-            <Input name="description" defaultValue={competencia.description ?? ""} placeholder="Descrição" />
-          </div>
-          <Button
-            variant="primary"
-            size="md"
-            type="submit"
-            disabled={isPending}
-          >
-            {isPending ? "Salvando…" : "Salvar"}
-          </Button>
-          <Button
-            variant="secondary"
-            size="md"
-            onClick={() => setEditing(false)}
-          >
-            Cancelar
-          </Button>
         </div>
-        {state?.error && <p className="text-[12px] text-danger">{state.error}</p>}
+        {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
       </form>
     );
   }
 
   return (
-    <div className="flex items-center justify-between px-4 py-2.5">
-      <div>
+    <div className="flex items-center justify-between gap-3 px-4 py-2.5">
+      <div className="min-w-0">
         <p className="text-[13px] text-fg">{competencia.name}</p>
         {competencia.description && <p className="text-[12px] text-fg-muted">{competencia.description}</p>}
       </div>

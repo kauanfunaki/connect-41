@@ -1,9 +1,11 @@
 "use client";
 
 import { useActionState, useEffect, useState, useTransition } from "react";
-import { Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { IconButton } from "@/components/ui/IconButton";
 import { formatarDecorrido, minutosApontados, segundosDesde } from "@/lib/datetime";
@@ -62,8 +64,10 @@ export function HorasDoProcesso({
 
   return (
     <Card className="p-4 flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
+      {/* Botões `sm` no cabeçalho do cartão, como os das etapas do roteiro:
+          eram h-9, maiores que tudo o que o cartão tem embaixo. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="text-[14px] font-semibold text-fg">Horas trabalhadas</h2>
           <p className="text-[12px] text-fg-muted">
             {total > 0 ? `${duracao(total)} neste processo` : "Nenhuma hora lançada ainda."} Entram nas horas de operação da Gestão.
@@ -73,7 +77,7 @@ export function HorasDoProcesso({
           <div className="flex flex-wrap items-center gap-2">
             {cronometro ? (
               cronometro.meu ? (
-                <Button variant="primary" disabled={pendente} onClick={() => rodar(() => acoes.parar(processId))}>
+                <Button variant="primary" size="sm" disabled={pendente} onClick={() => rodar(() => acoes.parar(processId))}>
                   Parar {formatarDecorrido(segundos)} · lança {minutosApontados(segundos)} min
                 </Button>
               ) : (
@@ -82,12 +86,12 @@ export function HorasDoProcesso({
                 </span>
               )
             ) : (
-              <Button variant="secondary" disabled={pendente} onClick={() => rodar(() => acoes.iniciar(processId))}>
+              <Button variant="secondary" size="sm" disabled={pendente} onClick={() => rodar(() => acoes.iniciar(processId))}>
                 Iniciar cronômetro
               </Button>
             )}
-            <Button variant="ghost" onClick={() => setAbrirLancamento((v) => !v)}>
-              + Lançar horas
+            <Button variant="ghost" size="sm" onClick={() => setAbrirLancamento((v) => !v)}>
+              <Plus size={14} /> Lançar horas
             </Button>
           </div>
         )}
@@ -96,27 +100,34 @@ export function HorasDoProcesso({
       {erro && <p className="text-[12px] text-danger">{erro}</p>}
 
       {abrirLancamento && podeAgir && (
-        <form action={lancar} className="flex flex-wrap items-end gap-2 rounded-md bg-surface-2 p-3">
-          <label className="flex flex-col gap-1 text-[12px] text-fg-muted">
-            Horas
-            <Input name="horas" inputMode="decimal" placeholder="0" className="w-20 tabular-nums" />
-          </label>
-          <label className="flex flex-col gap-1 text-[12px] text-fg-muted">
-            Minutos
-            <Input name="minutos" inputMode="numeric" placeholder="0" className="w-20 tabular-nums" />
-          </label>
-          <label className="flex flex-col gap-1 text-[12px] text-fg-muted">
-            Dia
-            <Input name="dia" type="date" className="w-40" />
-          </label>
-          <label className="flex flex-col gap-1 text-[12px] text-fg-muted flex-1 min-w-48">
-            O que foi feito
-            <Input name="nota" maxLength={280} placeholder="Opcional" />
-          </label>
-          <Button type="submit" variant="primary" disabled={lancando}>
-            {lancando ? "Lançando…" : "Lançar"}
-          </Button>
-          {estado && "error" in estado && <p className="w-full text-[12px] text-danger">{estado.error}</p>}
+        // Uma linha de campos em grade — horas e minutos estreitos, a data na
+        // largura dela, a nota com o resto — e os botões no rodapé. Era um
+        // flex-wrap com rótulos de 12px feitos à mão, e o "Lançar" quebrava
+        // para a linha de baixo conforme a largura.
+        <form action={lancar} className="flex flex-col gap-4 rounded-md bg-surface-2 p-4">
+          <FieldGrid columns="sm:grid-cols-[5.5rem_5.5rem_11rem_minmax(0,1fr)]">
+            <CampoForm label="Horas" htmlFor={`horas-${processId}`}>
+              <Input id={`horas-${processId}`} name="horas" inputMode="decimal" placeholder="0" className="tabular-nums" />
+            </CampoForm>
+            <CampoForm label="Minutos" htmlFor={`minutos-${processId}`}>
+              <Input id={`minutos-${processId}`} name="minutos" inputMode="numeric" placeholder="0" className="tabular-nums" />
+            </CampoForm>
+            <CampoForm label="Dia" htmlFor={`dia-${processId}`}>
+              <Input id={`dia-${processId}`} name="dia" type="date" />
+            </CampoForm>
+            <CampoForm label="O que foi feito" htmlFor={`nota-${processId}`}>
+              <Input id={`nota-${processId}`} name="nota" maxLength={280} placeholder="Opcional" />
+            </CampoForm>
+          </FieldGrid>
+          {estado && "error" in estado && <p className="text-[12px] text-danger">{estado.error}</p>}
+          <div className="flex items-center justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={() => setAbrirLancamento(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" variant="primary" disabled={lancando}>
+              {lancando ? "Lançando…" : "Lançar"}
+            </Button>
+          </div>
         </form>
       )}
 

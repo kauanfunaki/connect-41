@@ -27,10 +27,11 @@ export function CompetenciaStatusForm({ action, currentStatus }: Props) {
 
   return (
     <div>
-      <form action={formAction} className="flex items-center gap-2">
+      <form action={formAction} className="flex items-center gap-2 flex-wrap">
         <div className="w-44">
           <Select
             name="status"
+            aria-label="Situação da competência"
             value={status}
             onChange={(e) => setStatus(e.target.value as PayrollStatus)}
           >
@@ -48,7 +49,7 @@ export function CompetenciaStatusForm({ action, currentStatus }: Props) {
           {isPending ? "Salvando…" : "Atualizar Status"}
         </Button>
       </form>
-      {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
+      {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger mt-1">{state.error}</p>}
     </div>
   );
 }

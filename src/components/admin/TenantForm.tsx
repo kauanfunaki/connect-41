@@ -2,8 +2,9 @@
 
 import { useActionState } from "react";
 import type { TenantState } from "@/app/(app)/admin/tenant/actions";
-import { CampoForm } from "@/components/ui/CampoForm";
+import { AlinhadoAoCampo, CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
@@ -35,7 +36,9 @@ export function TenantForm({ action, isSuperAdmin, defaultValues }: Props) {
         </p>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* CNPJ na largura dele (18 caracteres); o slug fica embaixo, na mesma
+          coluna do nome. */}
+      <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_14rem]">
         <CampoForm label="Nome" htmlFor="name" required>
           <Input
             id="name"
@@ -54,24 +57,23 @@ export function TenantForm({ action, isSuperAdmin, defaultValues }: Props) {
             placeholder="00.000.000/0000-00"
           />
         </CampoForm>
-      </div>
-
-      <CampoForm
-        label="Slug"
-        htmlFor="slug"
-        helper="Identificador interno do tenant — não pode ser alterado por aqui."
-      >
-        <Input
-          id="slug"
-          type="text"
-          value={defaultValues.slug}
-          disabled
-          className="font-mono"
-        />
-      </CampoForm>
+        <CampoForm
+          label="Slug"
+          htmlFor="slug"
+          helper="Identificador interno do tenant — não pode ser alterado por aqui."
+        >
+          <Input
+            id="slug"
+            type="text"
+            value={defaultValues.slug}
+            disabled
+            className="font-mono"
+          />
+        </CampoForm>
+      </FieldGrid>
 
       {isSuperAdmin && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-border pt-4">
+        <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_14rem]" className="border-t border-border pt-4">
           <CampoForm label="Plano" htmlFor="plan">
             <Input
               id="plan"
@@ -80,26 +82,19 @@ export function TenantForm({ action, isSuperAdmin, defaultValues }: Props) {
               defaultValue={defaultValues.plan}
             />
           </CampoForm>
-          <CampoForm label="Status" htmlFor="active">
-            <div className="h-9 flex items-center">
-              <Checkbox
-                id="active"
-                name="active"
-                defaultChecked={defaultValues.active}
-                label="Tenant ativo"
-              />
-            </div>
-          </CampoForm>
-        </div>
+          <AlinhadoAoCampo>
+            <Checkbox
+              id="active"
+              name="active"
+              defaultChecked={defaultValues.active}
+              label="Tenant ativo"
+            />
+          </AlinhadoAoCampo>
+        </FieldGrid>
       )}
 
-      <div className="flex items-center gap-3 pt-2">
-        <Button
-          variant="primary"
-          size="md"
-          type="submit"
-          disabled={isPending}
-        >
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+        <Button type="submit" disabled={isPending}>
           {isPending ? "Salvando…" : "Salvar"}
         </Button>
       </div>

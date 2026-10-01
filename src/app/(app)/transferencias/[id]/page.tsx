@@ -7,6 +7,7 @@ import { getSectorUsers } from "@/lib/sectorUsers";
 import { getAuthContext, canManageSector, isFullAccess } from "@/lib/auth/context";
 import { scopedHandoffWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Card } from "@/components/ui/Card";
 import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
@@ -78,13 +79,12 @@ export default async function HandoffDetailPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-5">
-        <Link href="/transferencias" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Transferências
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg truncate">{entity?.name ?? "(removido)"}</span>
-      </div>
+      <Breadcrumb
+        items={[
+          { label: "Transferências", href: "/transferencias" },
+          { label: entity?.name ?? "(removido)", truncate: true },
+        ]}
+      />
 
       <Card className="p-6 mb-4">
         <div className="flex items-start gap-3 min-w-0">
@@ -94,7 +94,7 @@ export default async function HandoffDetailPage({
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-2">
               <SectorChip label={sectorLabels[handoff.fromSector] ?? handoff.fromSector} color={sectorColors[handoff.fromSector] ?? "#586577"} />
-              <ArrowRight size={13} className="text-fg-muted flex-shrink-0" />
+              <ArrowRight size={14} className="text-fg-muted flex-shrink-0" />
               {handoff.sectors.map((s) => (
                 <SectorChip
                   key={s.sectorCode}

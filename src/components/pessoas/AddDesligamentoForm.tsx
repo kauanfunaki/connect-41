@@ -4,7 +4,8 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/Button";
 import type { TerminationState } from "@/app/(app)/pessoas/[id]/desligamento/actions";
 import { TerminationType } from "@/generated/prisma/enums";
-import { CampoForm } from "@/components/ui/CampoForm";
+import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 
@@ -29,39 +30,33 @@ type Props = {
 export function AddDesligamentoForm({ action }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
 
+  // Revisão de alinhamento (30/09): mesma grade dos outros formulários da
+  // ficha — tipo e motivo numa linha, observações e botão na outra.
   return (
-    <form action={formAction} className="border-t border-border pt-4 space-y-3">
-      <div className="flex items-end gap-3 flex-wrap">
-        <div className="w-56">
-          <CampoForm label="Tipo" htmlFor="type" required>
-            <Select id="type" name="type" required>
-              {TYPE_OPTIONS.map((t) => (
-                <option key={t} value={t}>{TYPE_LABEL[t]}</option>
-              ))}
-            </Select>
-          </CampoForm>
-        </div>
-        <div className="flex-1 min-w-[200px]">
-          <CampoForm label="Motivo" htmlFor="reason">
-            <Input id="reason" name="reason" type="text" />
-          </CampoForm>
-        </div>
-      </div>
-      <div className="flex items-end gap-3">
-        <div className="flex-1">
-          <CampoForm label="Observações" htmlFor="notes">
-            <Input id="notes" name="notes" type="text" />
-          </CampoForm>
-        </div>
-        <Button
-          type="submit"
-          disabled={isPending}
-          variant="primary" className="font-medium disabled:opacity-60 flex-shrink-0"
-        >
-          {isPending ? "Registrando…" : "Registrar Desligamento"}
-       </Button>
-      </div>
-      {state?.error && <p className="text-[13px] text-danger">{state.error}</p>}
+    <form action={formAction} className="border-t border-border pt-5 mt-2 space-y-4">
+      <FieldGrid columns="sm:grid-cols-[260px_1fr]">
+        <CampoForm label="Tipo" htmlFor="type" required>
+          <Select id="type" name="type" required>
+            {TYPE_OPTIONS.map((t) => (
+              <option key={t} value={t}>{TYPE_LABEL[t]}</option>
+            ))}
+          </Select>
+        </CampoForm>
+        <CampoForm label="Motivo" htmlFor="reason">
+          <Input id="reason" name="reason" type="text" />
+        </CampoForm>
+      </FieldGrid>
+      <FieldGrid columns="sm:grid-cols-[1fr_auto]">
+        <CampoForm label="Observações" htmlFor="notes">
+          <Input id="notes" name="notes" type="text" />
+        </CampoForm>
+        <AlinhadoAoCampo>
+          <Button type="submit" disabled={isPending}>
+            {isPending ? "Registrando…" : "Registrar Desligamento"}
+          </Button>
+        </AlinhadoAoCampo>
+      </FieldGrid>
+      {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
     </form>
   );
 }

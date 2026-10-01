@@ -7,6 +7,7 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedAssessmentLinkWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { ExcluirComConfirmacao } from "@/components/vagas/ExcluirComConfirmacao";
 import { AssessmentResult } from "@/components/teste/AssessmentResult";
 import { formatInstantDate } from "@/lib/format";
@@ -35,14 +36,10 @@ export default async function TesteDetailPage({ params }: { params: Promise<{ id
 
   return (
     <PageContainer>
+      {/* Trilha antes do "Voltar", como na candidatura e no resto do app —
+          aqui era o contrário. */}
+      <Breadcrumb items={[{ label: "Testes", href: "/testes" }, { label: link.person.name, truncate: true }]} />
       <BackButton className="mb-3" />
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/testes" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Testes
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg truncate">{link.person.name}</span>
-      </div>
 
       <PageHeader
         title={<><Link href={`/candidatos/${link.person.id}`} className="hover:text-brand transition-colors">

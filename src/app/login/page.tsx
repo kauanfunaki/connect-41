@@ -6,6 +6,7 @@ import { AuthShell, AuthField, AUTH_INPUT } from "@/components/login/AuthShell";
 import { PasswordField } from "@/components/login/PasswordField";
 import { MailIcon } from "@/components/login/icons";
 import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Checkbox";
 
 const ERRORS: Record<string, string> = {
   "credenciais-invalidas": "E-mail ou senha incorretos.",
@@ -40,18 +41,13 @@ export default async function LoginPage({
 
         <PasswordField label="Senha" autoComplete="current-password" />
 
-        <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              name="remember"
-              className="w-3.5 h-3.5 rounded border-border accent-[var(--c41-brand-600)]"
-            />
-            <span className="text-[12px] text-fg-secondary">Lembrar de mim</span>
-          </label>
+        {/* A caixa de marcar do sistema (ui/Checkbox), e o link no mesmo
+            tamanho do rótulo dela — eram 12px, menores que os rótulos de cima. */}
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <Checkbox id="remember" name="remember" label="Lembrar de mim" />
           <Link
             href="/login/esqueci-senha"
-            className="text-[12px] font-medium text-brand hover:underline"
+            className="text-[length:var(--fs-label)] font-medium text-brand hover:underline"
           >
             Esqueceu a senha?
           </Link>
@@ -63,13 +59,13 @@ export default async function LoginPage({
           </p>
         )}
 
-        {/* `active:scale` e `mt-1` são acréscimos, não sobreposição: a variante
-            não define transform nem margem, então não dependem da ordem no CSS
-            gerado — que é o que torna override de cor ou padding não confiável. */}
+        {/* `mt-1` é acréscimo, não sobreposição: a variante não define margem,
+            então não depende da ordem no CSS gerado. O afundar ao clicar já vem
+            do próprio Button. */}
         <Button
           type="submit"
           size="md"
-          className="w-full mt-1 active:scale-[0.99]"
+          className="w-full mt-1"
         >
           Entrar
         </Button>

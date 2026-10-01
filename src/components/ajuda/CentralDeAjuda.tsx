@@ -1,0 +1,277 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  CalendarCheck,
+  Command,
+  Filter,
+  LayoutGrid,
+  Pin,
+  Search,
+  Send,
+  SunMoon,
+  Bell,
+  ChevronDown,
+} from "lucide-react";
+import { Input } from "@/components/ui/Input";
+import { ModuleIcon } from "@/components/shared/ModuleIcon";
+import { normalizar } from "@/lib/buscaDeTelas";
+
+export type TelaDaAjuda = { chave: string; titulo: string; caminho: string; descricao: string; codigo?: string };
+export type SetorDaAjuda = { code: string; rotulo: string; cor: string; telas: TelaDaAjuda[] };
+
+type Passo = { chave: string; titulo: string; resumo: string; icone: React.ReactNode; passos: string[] };
+
+/**
+ * Os primeiros passos: o que vale em qualquer tela. Escritos a partir do que o
+ * Connect faz hoje (30/09) — quando uma destas telas mudar, o texto muda junto.
+ */
+const PRIMEIROS_PASSOS: Passo[] = [
+  {
+    chave: "meu-dia",
+    titulo: "Começar o dia pelo Meu dia",
+    resumo: "O que é seu para hoje, de todos os setores, numa tela só.",
+    icone: <CalendarCheck />,
+    passos: [
+      "Abra Meu dia, logo abaixo de Início na barra lateral.",
+      "No topo estão os números: o que venceu, o que vence em breve, o que parou e o que está andando.",
+      "A lista \"Pede você agora\" vem na ordem do que é mais urgente; clique no item para abrir.",
+      "Quem coordena um setor troca para \"Meu time\" e vê o trabalho de todos, com a carga de cada pessoa.",
+    ],
+  },
+  {
+    chave: "busca",
+    titulo: "Achar qualquer coisa com Ctrl+K",
+    resumo: "Telas, empresas e pessoas pelo nome, de qualquer lugar.",
+    icone: <Command />,
+    passos: [
+      "Aperte Ctrl+K (ou clique na busca do topo).",
+      "Antes de digitar, aparecem as telas que você abriu por último.",
+      "Digite parte do nome — sem acento funciona — e aperte Enter para abrir o primeiro resultado.",
+    ],
+  },
+  {
+    chave: "setor",
+    titulo: "Trabalhar dentro de um setor",
+    resumo: "O menu passa a mostrar só as telas do setor escolhido.",
+    icone: <LayoutGrid />,
+    passos: [
+      "No seletor do topo da barra lateral, escolha o setor.",
+      "Em \"Todos os setores\", clique no nome do setor em \"Meus setores\" para entrar nele.",
+      "Passe o mouse em Cadastros ou num grupo do setor (como Contas) para ver as telas dele ao lado, sem abrir.",
+    ],
+  },
+  {
+    chave: "fixar",
+    titulo: "Fixar as telas que você mais usa",
+    resumo: "Elas ficam no topo da barra lateral, em qualquer setor.",
+    icone: <Pin />,
+    passos: [
+      "Abra a lista de telas do setor (o link \"Todas as telas\" desta central, ou a aba \"Tudo\" de um grupo).",
+      "Passe o mouse no cartão da tela e clique no alfinete.",
+      "Para soltar, clique no alfinete de novo.",
+    ],
+  },
+  {
+    chave: "filtros",
+    titulo: "Filtrar uma lista",
+    resumo: "O botão Filtros e o funil de cada coluna, como no Excel.",
+    icone: <Filter />,
+    passos: [
+      "O botão Filtros, acima da tabela, abre os filtros da tela com busca dentro de cada um.",
+      "O funil ao lado do título de uma coluna filtra só por ela: marque os valores que quer ver.",
+      "Os filtros ativos aparecem como etiquetas; o X de cada uma tira o filtro.",
+    ],
+  },
+  {
+    chave: "transferir",
+    titulo: "Passar um assunto para outro setor",
+    resumo: "A transferência leva a empresa, o prazo e a prioridade.",
+    icone: <Send />,
+    passos: [
+      "No Início, use o botão Criar → Transferência, ou abra Transferências na barra lateral.",
+      "Escolha a empresa ou pessoa, os setores que recebem, a prioridade e escreva o que precisa ser feito.",
+      "O setor que recebe vê a transferência no Meu dia e no Início, e você acompanha a resposta por lá.",
+    ],
+  },
+  {
+    chave: "avisos",
+    titulo: "Receber avisos",
+    resumo: "O sino do topo e as notificações no celular.",
+    icone: <Bell />,
+    passos: [
+      "O sino do topo mostra as últimas notificações; o número é o que você ainda não leu.",
+      "Em Configurações → Notificações, ative os avisos no celular e no navegador.",
+    ],
+  },
+  {
+    chave: "tema",
+    titulo: "Tema claro, escuro ou do aparelho",
+    resumo: "O interruptor do topo, e mais opções em Configurações.",
+    icone: <SunMoon />,
+    passos: [
+      "O interruptor ao lado do sino troca entre claro e escuro; a bolinha azul fica no tema que está valendo.",
+      "Em Configurações → Aparência, \"Padrão do sistema\" segue o tema do seu computador ou celular.",
+    ],
+  },
+];
+
+function casa(termo: string, ...textos: string[]): boolean {
+  return textos.some((t) => normalizar(t).includes(termo));
+}
+
+/**
+ * A central de ajuda: primeiros passos, telas gerais e as telas de cada setor
+ * que a pessoa enxerga, com uma busca que filtra tudo junto.
+ */
+export function CentralDeAjuda({ gerais, setores }: { gerais: TelaDaAjuda[]; setores: SetorDaAjuda[] }) {
+  const [busca, setBusca] = useState("");
+  const termo = normalizar(busca);
+
+  const filtrado = useMemo(() => {
+    if (!termo) return { passos: PRIMEIROS_PASSOS, gerais, setores };
+    return {
+      passos: PRIMEIROS_PASSOS.filter((p) => casa(termo, p.titulo, p.resumo, ...p.passos)),
+      gerais: gerais.filter((t) => casa(termo, t.titulo, t.descricao)),
+      setores: setores
+        .map((s) => ({ ...s, telas: s.telas.filter((t) => casa(termo, t.titulo, t.descricao, s.rotulo)) }))
+        .filter((s) => s.telas.length > 0),
+    };
+  }, [termo, gerais, setores]);
+
+  const nada = filtrado.passos.length === 0 && filtrado.gerais.length === 0 && filtrado.setores.length === 0;
+
+  return (
+    <div className="space-y-10">
+      {/* Busca: a primeira coisa da tela, larga, como a de uma central de ajuda. */}
+      <div className="relative overflow-hidden rounded-xl border border-border bg-surface px-5 py-7 sm:px-8 sm:py-9 shadow-[var(--c41-shadow-xs)]">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full opacity-60 blur-3xl"
+          style={{ background: "radial-gradient(circle, var(--c41-brand-subtle), transparent 70%)" }}
+        />
+        <p className="relative font-display text-[22px] sm:text-[26px] font-semibold text-fg leading-tight">Como podemos ajudar?</p>
+        <p className="relative mt-1.5 text-[length:var(--fs-body)] text-fg-muted max-w-[60ch]">
+          Procure uma tela, um assunto ou uma dúvida. A busca vale para os primeiros passos e para todas as telas que você enxerga.
+        </p>
+        <div className="relative mt-5 max-w-xl">
+          <Input
+            icon={<Search />}
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Ex.: conciliação, fixar tela, férias…"
+            aria-label="Buscar na ajuda"
+            autoFocus
+          />
+        </div>
+      </div>
+
+      {nada && (
+        <p className="text-[length:var(--fs-body)] text-fg-muted">
+          Nada encontrado para <span className="font-medium text-fg">&ldquo;{busca}&rdquo;</span>. Tente outra palavra, ou o nome da tela.
+        </p>
+      )}
+
+      {filtrado.passos.length > 0 && (
+        <section>
+          <h2 className="font-display text-[length:var(--fs-section)] font-semibold text-fg mb-3">Primeiros passos</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
+            {filtrado.passos.map((p) => (
+              <details
+                key={p.chave}
+                open={Boolean(termo)}
+                className="group rounded-lg border border-border bg-surface shadow-[var(--c41-shadow-xs)] open:border-border-strong transition-colors"
+              >
+                <summary className="flex cursor-pointer list-none items-start gap-3 p-4 [&::-webkit-details-marker]:hidden">
+                  <span className="inline-flex size-9 flex-shrink-0 items-center justify-center rounded-lg bg-brand-subtle text-brand [&>svg]:size-[17px]">
+                    {p.icone}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[14px] font-semibold text-fg">{p.titulo}</span>
+                    <span className="block text-[length:var(--fs-helper)] text-fg-muted mt-0.5">{p.resumo}</span>
+                  </span>
+                  <ChevronDown size={16} className="mt-1 flex-shrink-0 text-fg-muted transition-transform group-open:rotate-180" />
+                </summary>
+                <ol className="px-4 pb-4 pl-[3.75rem] space-y-1.5 list-decimal marker:text-fg-muted marker:text-[12px]">
+                  {p.passos.map((passo) => (
+                    <li key={passo} className="text-[13px] text-fg-secondary leading-relaxed pl-1">
+                      {passo}
+                    </li>
+                  ))}
+                </ol>
+              </details>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {filtrado.gerais.length > 0 && (
+        <section>
+          <h2 className="font-display text-[length:var(--fs-section)] font-semibold text-fg mb-3">Telas de todos os setores</h2>
+          <ListaDeTelas telas={filtrado.gerais} />
+        </section>
+      )}
+
+      {filtrado.setores.map((s) => (
+        <section key={s.code}>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h2 className="flex items-center gap-2 font-display text-[length:var(--fs-section)] font-semibold text-fg">
+              <span className="size-2.5 rounded-full flex-shrink-0" style={{ background: s.cor }} aria-hidden />
+              {s.rotulo}
+            </h2>
+            <Link
+              href={`/setor/${s.code}/telas`}
+              className="inline-flex items-center gap-1 text-[12.5px] font-medium text-fg-secondary hover:text-brand transition-colors"
+            >
+              Todas as telas <ArrowRight size={13} />
+            </Link>
+          </div>
+          <ListaDeTelas telas={s.telas} cor={s.cor} />
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function ListaDeTelas({ telas, cor }: { telas: TelaDaAjuda[]; cor?: string }) {
+  return (
+    <ul className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 items-stretch">
+      {telas.map((t) => {
+        const navegavel = t.caminho.startsWith("/");
+        const conteudo = (
+          <>
+            <span
+              className="inline-flex size-8 flex-shrink-0 items-center justify-center rounded-md bg-surface-hover [&>svg]:size-4"
+              style={{ color: cor ?? "var(--c41-brand)" }}
+            >
+              {t.codigo ? <ModuleIcon code={t.codigo} /> : <LayoutGrid />}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-fg">
+                {t.titulo}
+                {!navegavel && <kbd className="rounded border border-border px-1 text-[10.5px] font-medium text-fg-muted">{t.caminho}</kbd>}
+              </span>
+              <span className="block text-[12.5px] text-fg-muted mt-0.5 leading-snug">{t.descricao}</span>
+            </span>
+            {navegavel && <ArrowUpRight size={15} className="mt-0.5 flex-shrink-0 text-fg-muted group-hover:text-brand transition-colors" />}
+          </>
+        );
+        const cls = "group h-full flex items-start gap-3 rounded-lg border border-border bg-surface p-3.5 shadow-[var(--c41-shadow-xs)]";
+        return (
+          <li key={t.chave}>
+            {navegavel ? (
+              <Link href={t.caminho} className={`${cls} hover:border-border-strong transition-colors`}>
+                {conteudo}
+              </Link>
+            ) : (
+              <div className={cls}>{conteudo}</div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}

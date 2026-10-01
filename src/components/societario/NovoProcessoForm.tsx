@@ -25,7 +25,9 @@ export function NovoProcessoForm({ empresas, tipos, responsaveis, responsavelPad
 
   return (
     <>
-      <Button variant="primary" size="sm" onClick={() => setAberto(true)}>
+      {/* Tamanho padrão: divide o cabeçalho de /processos com os outros botões
+          da página, que são todos h-9. */}
+      <Button variant="primary" onClick={() => setAberto(true)}>
         <Plus size={14} /> Abrir processo
       </Button>
 
@@ -62,7 +64,7 @@ export function NovoProcessoForm({ empresas, tipos, responsaveis, responsavelPad
             </p>
           )}
 
-          <div className="flex justify-end gap-2">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
             <Button variant="secondary" type="button" onClick={() => setAberto(false)}>
               Cancelar
             </Button>

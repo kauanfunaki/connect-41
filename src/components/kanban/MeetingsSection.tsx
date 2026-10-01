@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useId, useState } from "react";
 import Link from "next/link";
 import { Video, ExternalLink, Plus, Trash2, X } from "lucide-react";
 import type { MeetingState } from "@/app/(app)/kanban/meetings-actions";
 import type { MeetingProvider } from "@/generated/prisma/enums";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { CampoForm } from "@/components/ui/CampoForm";
 import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
 import { AttendeePicker } from "@/components/shared/AttendeePicker";
 import { formatInstantDateTime } from "@/lib/format";
@@ -41,6 +42,7 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(scheduleAction, null);
   const hasAnyProvider = hasGoogle || hasMicrosoft;
+  const uid = useId();
   const { dialog, requestConfirm } = useConfirm();
 
   return (
@@ -67,7 +69,9 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
       </div>
 
       {open && (
-        <form action={formAction} className="mb-4 p-3 bg-surface-hover border border-border rounded-lg space-y-2">
+        // Campos com rótulo (30/09): início e fim eram dois campos de data e
+        // hora lado a lado sem dizer qual era qual.
+        <form action={formAction} className="mb-4 p-4 bg-surface-hover border border-border rounded-lg space-y-3">
           {!hasAnyProvider ? (
             <p className="text-[12px] text-fg-muted">
               Conecte sua conta Google ou Microsoft em{" "}
@@ -76,19 +80,28 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
             </p>
           ) : (
             <>
-              <Input
-                name="title"
-                required
-                placeholder="Título da reunião"
-              />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <Input name="startAt" type="datetime-local" required />
-                <Input name="endAt" type="datetime-local" required />
+              <CampoForm label="Título" htmlFor={`${uid}-reuniao-titulo`} required>
+                <Input
+                  id={`${uid}-reuniao-titulo`}
+                  name="title"
+                  required
+                  placeholder="Título da reunião"
+                />
+              </CampoForm>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <CampoForm label="Início" htmlFor={`${uid}-reuniao-inicio`} required>
+                  <Input id={`${uid}-reuniao-inicio`} name="startAt" type="datetime-local" required />
+                </CampoForm>
+                <CampoForm label="Fim" htmlFor={`${uid}-reuniao-fim`} required>
+                  <Input id={`${uid}-reuniao-fim`} name="endAt" type="datetime-local" required />
+                </CampoForm>
+                <CampoForm label="Plataforma" htmlFor={`${uid}-reuniao-plataforma`} required>
+                  <Select id={`${uid}-reuniao-plataforma`} name="provider" required>
+                    {hasGoogle && <option value="GOOGLE">Google Meet</option>}
+                    {hasMicrosoft && <option value="MICROSOFT">Microsoft Teams</option>}
+                  </Select>
+                </CampoForm>
               </div>
-              <Select name="provider" required>
-                {hasGoogle && <option value="GOOGLE">Google Meet</option>}
-                {hasMicrosoft && <option value="MICROSOFT">Microsoft Teams</option>}
-              </Select>
 
               <AttendeePicker users={allUsers} label="Responsáveis pela reunião" />
 
@@ -101,7 +114,7 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
               </Button>
             </>
           )}
-          {state?.error && <p className="text-[12px] text-danger">{state.error}</p>}
+          {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
         </form>
       )}
 

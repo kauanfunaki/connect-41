@@ -53,7 +53,7 @@ export default async function EditarCargoPage({
       <PageHeader title="Editar Cargo" subtitle={company.name} />
 
       <div className="w-full max-w-[720px]">
-        <Card className="px-6 py-5">
+        <Card className="p-6">
           <CargoForm
             action={atualizarCargo}
             companyId={companyId}

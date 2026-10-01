@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { CampoForm } from "@/components/admin/CampoForm";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { atualizarCampo } from "../../actions";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 
@@ -23,32 +23,28 @@ export default async function EditarCampoPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/admin/campos" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Campos Customizados
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Editar</span>
-      </div>
+      <Breadcrumb items={[{ label: "Campos Customizados", href: "/admin/campos" }, { label: "Editar" }]} />
       <PageHeader title="Editar Campo" />
 
-      <Card className="p-6">
-        <CampoForm
-          action={atualizarCampo}
-          cancelHref="/admin/campos"
-          sectorOptions={[]}
-          defaultValues={{
-            id: field.id,
-            sectorCode: field.sectorCode,
-            entityType: field.entityType,
-            label: field.label,
-            fieldType: field.fieldType,
-            options: Array.isArray(field.options) ? (field.options as string[]) : [],
-            required: field.required,
-            order: field.order,
-          }}
-        />
-      </Card>
+      <div className="max-w-[720px]">
+        <Card className="p-6">
+          <CampoForm
+            action={atualizarCampo}
+            cancelHref="/admin/campos"
+            sectorOptions={[]}
+            defaultValues={{
+              id: field.id,
+              sectorCode: field.sectorCode,
+              entityType: field.entityType,
+              label: field.label,
+              fieldType: field.fieldType,
+              options: Array.isArray(field.options) ? (field.options as string[]) : [],
+              required: field.required,
+              order: field.order,
+            }}
+          />
+        </Card>
+      </div>
     </PageContainer>
   );
 }

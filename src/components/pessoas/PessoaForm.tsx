@@ -9,7 +9,7 @@ import { CATEGORY_LABEL, CATEGORY_OPTIONS } from "@/lib/document-categories";
 import { CustomFieldsSection, type CustomFieldInput } from "@/components/shared/CustomFieldsSection";
 import { FormSection } from "@/components/ui/FormSection";
 import { FieldGrid } from "@/components/ui/FieldGrid";
-import { CampoForm } from "@/components/ui/CampoForm";
+import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -36,6 +36,10 @@ const STATUS_LABEL: Record<PersonEmploymentStatus, string> = Object.fromEntries(
 // responsável) — não tem CTPS, jornada nem folha, e pedir esses campos numa
 // mesma tela pra todo mundo era o que deixava os dois cadastros idênticos.
 export type PessoaKind = "interno" | "cliente";
+
+// Grade das etapas — a mesma do cadastro de empresa: 1 coluna no celular, 2
+// no tablet, 4 no desktop; nome e e-mail ocupam duas.
+const GRADE = "sm:grid-cols-2 lg:grid-cols-4";
 
 const STEP_LABELS: Record<PessoaKind, string[]> = {
   interno: ["Dados pessoais", "Endereço", "Vínculo profissional", "Dados complementares", "Documentos", "Revisão"],
@@ -376,26 +380,25 @@ export function PessoaForm({
         )}
 
         {/* ── 1. Dados pessoais ─────────────────────────── */}
+        {/* Revisão de alinhamento (30/09): mesma grade de quatro colunas do
+            cadastro de empresa (duas no tablet). Em duas colunas na largura
+            toda, CPF e RG ficavam do tamanho do nome. */}
         <div data-step={0} className={step === 0 ? "" : "hidden"}>
           <FormSection title="Dados pessoais">
-            <FieldGrid>
-              <CampoForm label="Nome" htmlFor="name" required>
+            <FieldGrid columns={GRADE}>
+              <CampoForm label="Nome" htmlFor="name" required className="sm:col-span-2">
                 <Input id="name" name="name" type="text" required value={values.name} placeholder="Nome completo" />
               </CampoForm>
               <CampoForm label="CPF" htmlFor="cpf">
                 <Input id="cpf" name="cpf" type="text" value={values.cpf} placeholder="000.000.000-00" maxLength={14} />
               </CampoForm>
-            </FieldGrid>
-            <FieldGrid columns="sm:grid-cols-2">
               <CampoForm label="RG" htmlFor="rg">
                 <Input id="rg" name="rg" type="text" value={values.rg} placeholder="00.000.000-0" maxLength={14} />
               </CampoForm>
               <CampoForm label="Data de Nascimento" htmlFor="birthDate">
                 <Input id="birthDate" name="birthDate" type="date" value={values.birthDate} />
               </CampoForm>
-            </FieldGrid>
-            <FieldGrid>
-              <CampoForm label="E-mail" htmlFor="email">
+              <CampoForm label="E-mail" htmlFor="email" className="lg:col-span-2">
                 <Input id="email" name="email" type="email" value={values.email} placeholder="nome@email.com" />
               </CampoForm>
               <CampoForm label="Telefone" htmlFor="phone">
@@ -429,12 +432,10 @@ export function PessoaForm({
             cadastros pedem o mesmo endereço e não havia motivo pra divergir. */}
         <div data-step={1} className={step === 1 ? "" : "hidden"}>
           <FormSection title="Endereço">
-            <FieldGrid columns="sm:grid-cols-[200px]">
+            <FieldGrid columns="sm:grid-cols-[180px_1fr_120px]">
               <CampoForm label="CEP" htmlFor="zipCode" helper="Preenche Logradouro, Bairro, Cidade e UF automaticamente.">
                 <Input id="zipCode" name="zipCode" type="text" value={values.zipCode} placeholder="00000-000" maxLength={9} />
               </CampoForm>
-            </FieldGrid>
-            <FieldGrid columns="sm:grid-cols-[1fr_120px]">
               <CampoForm label="Logradouro" htmlFor="addressStreet">
                 <Input id="addressStreet" name="addressStreet" type="text" value={values.addressStreet} placeholder="Rua / Av. / Estrada…" />
               </CampoForm>
@@ -442,15 +443,13 @@ export function PessoaForm({
                 <Input id="addressNumber" name="addressNumber" type="text" value={values.addressNumber} placeholder="123" />
               </CampoForm>
             </FieldGrid>
-            <FieldGrid>
+            <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_120px]">
               <CampoForm label="Complemento" htmlFor="addressComplement">
                 <Input id="addressComplement" name="addressComplement" type="text" value={values.addressComplement} placeholder="Apto, bloco, casa…" />
               </CampoForm>
               <CampoForm label="Bairro" htmlFor="neighborhood">
                 <Input id="neighborhood" name="neighborhood" type="text" value={values.neighborhood} placeholder="Bairro" />
               </CampoForm>
-            </FieldGrid>
-            <FieldGrid columns="sm:grid-cols-[1fr_80px]">
               <CampoForm label="Cidade" htmlFor="city">
                 <Input id="city" name="city" type="text" value={values.city} placeholder="Curitiba" />
               </CampoForm>
@@ -476,8 +475,8 @@ export function PessoaForm({
               </p>
             )}
             {!showEmployment && (
-              <FieldGrid columns="sm:grid-cols-3">
-                <CampoForm label="Empresa" htmlFor="currentCompanyId">
+              <FieldGrid columns={GRADE}>
+                <CampoForm label="Empresa" htmlFor="currentCompanyId" className="sm:col-span-2">
                   <Select id="currentCompanyId" name="currentCompanyId" value={values.currentCompanyId}>
                     <option value="">Nenhuma</option>
                     {companies.map((c) => (
@@ -504,34 +503,30 @@ export function PessoaForm({
               </FieldGrid>
             )}
             {showEmployment && (
-              <>
-                <FieldGrid columns="sm:grid-cols-3">
-                  <CampoForm label="Status" htmlFor="employmentStatus">
-                    <Select id="employmentStatus" name="employmentStatus" value={values.employmentStatus}>
-                      {STATUS_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </Select>
-                  </CampoForm>
-                  <CampoForm label="Data de Admissão" htmlFor="admissionDate">
-                    <Input id="admissionDate" name="admissionDate" type="date" value={values.admissionDate} />
-                  </CampoForm>
-                  <CampoForm label="Data de Demissão" htmlFor="dismissalDate">
-                    <Input id="dismissalDate" name="dismissalDate" type="date" value={values.dismissalDate} />
-                  </CampoForm>
-                </FieldGrid>
-                <FieldGrid columns="sm:grid-cols-3">
-                  <CampoForm label="Jornada" htmlFor="workShift">
-                    <Input id="workShift" name="workShift" type="text" placeholder="ex: 08h-18h" value={values.workShift} />
-                  </CampoForm>
-                  <CampoForm label="Carga Horária Semanal" htmlFor="weeklyWorkHours">
-                    <Input id="weeklyWorkHours" name="weeklyWorkHours" type="number" step="0.5" value={values.weeklyWorkHours} />
-                  </CampoForm>
-                  <CampoForm label="Carga Horária Mensal" htmlFor="monthlyWorkHours">
-                    <Input id="monthlyWorkHours" name="monthlyWorkHours" type="number" step="0.5" value={values.monthlyWorkHours} />
-                  </CampoForm>
-                </FieldGrid>
-              </>
+              <FieldGrid columns={GRADE}>
+                <CampoForm label="Status" htmlFor="employmentStatus">
+                  <Select id="employmentStatus" name="employmentStatus" value={values.employmentStatus}>
+                    {STATUS_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </Select>
+                </CampoForm>
+                <CampoForm label="Data de Admissão" htmlFor="admissionDate">
+                  <Input id="admissionDate" name="admissionDate" type="date" value={values.admissionDate} />
+                </CampoForm>
+                <CampoForm label="Data de Demissão" htmlFor="dismissalDate">
+                  <Input id="dismissalDate" name="dismissalDate" type="date" value={values.dismissalDate} />
+                </CampoForm>
+                <CampoForm label="Jornada" htmlFor="workShift">
+                  <Input id="workShift" name="workShift" type="text" placeholder="ex: 08h-18h" value={values.workShift} />
+                </CampoForm>
+                <CampoForm label="Carga Horária Semanal" htmlFor="weeklyWorkHours">
+                  <Input id="weeklyWorkHours" name="weeklyWorkHours" type="number" step="0.5" suffix="h" value={values.weeklyWorkHours} />
+                </CampoForm>
+                <CampoForm label="Carga Horária Mensal" htmlFor="monthlyWorkHours">
+                  <Input id="monthlyWorkHours" name="monthlyWorkHours" type="number" step="0.5" suffix="h" value={values.monthlyWorkHours} />
+                </CampoForm>
+              </FieldGrid>
             )}
           </FormSection>
         </div>
@@ -540,27 +535,26 @@ export function PessoaForm({
         <div data-step={3} className={step === 3 ? "" : "hidden"}>
           <FormSection title={stepLabels[3]}>
             {showEmployment ? (
-              <>
-                <FieldGrid columns="sm:grid-cols-3">
-                  <CampoForm label="Escolaridade" htmlFor="education">
-                    <Input id="education" name="education" type="text" value={values.education} placeholder="ex: Ensino superior completo" />
-                  </CampoForm>
-                  <CampoForm label="PIS" htmlFor="pis">
-                    <Input id="pis" name="pis" type="text" value={values.pis} placeholder="000.00000.00-0" />
-                  </CampoForm>
-                  <CampoForm label="CTPS" htmlFor="ctps">
-                    <Input id="ctps" name="ctps" type="text" value={values.ctps} placeholder="0000000" />
-                  </CampoForm>
-                </FieldGrid>
-                <FieldGrid>
-                  <CampoForm label="CTPS Série" htmlFor="ctpsSerie">
-                    <Input id="ctpsSerie" name="ctpsSerie" type="text" value={values.ctpsSerie} placeholder="000-0" />
-                  </CampoForm>
-                </FieldGrid>
-              </>
-            ) : (
-              <FieldGrid>
+              // Os três documentos de trabalho lado a lado (a série da CTPS
+              // ficava sozinha numa linha de meia tela), e a escolaridade fecha
+              // a linha.
+              <FieldGrid columns={GRADE}>
+                <CampoForm label="PIS" htmlFor="pis">
+                  <Input id="pis" name="pis" type="text" value={values.pis} placeholder="000.00000.00-0" />
+                </CampoForm>
+                <CampoForm label="CTPS" htmlFor="ctps">
+                  <Input id="ctps" name="ctps" type="text" value={values.ctps} placeholder="0000000" />
+                </CampoForm>
+                <CampoForm label="CTPS Série" htmlFor="ctpsSerie">
+                  <Input id="ctpsSerie" name="ctpsSerie" type="text" value={values.ctpsSerie} placeholder="000-0" />
+                </CampoForm>
                 <CampoForm label="Escolaridade" htmlFor="education">
+                  <Input id="education" name="education" type="text" value={values.education} placeholder="ex: Ensino superior completo" />
+                </CampoForm>
+              </FieldGrid>
+            ) : (
+              <FieldGrid columns={GRADE}>
+                <CampoForm label="Escolaridade" htmlFor="education" className="sm:col-span-2">
                   <Input id="education" name="education" type="text" value={values.education} placeholder="ex: Ensino superior completo" />
                 </CampoForm>
               </FieldGrid>
@@ -578,20 +572,27 @@ export function PessoaForm({
               <Textarea id="notes" name="notes" rows={3} value={values.notes} />
             </CampoForm>
 
-            {!showEmployment ? null : canEditSensitive ? (
-              <>
-                <h4 className="text-[12.5px] font-semibold text-fg-muted uppercase tracking-wider pt-1">
-                  Dados bancários e salário
-                </h4>
-                <FieldGrid>
+            {showEmployment && (
+              <p className="text-[length:var(--fs-helper)] text-fg-muted italic">
+                Benefícios são gerenciados na ficha do colaborador depois de criada.
+              </p>
+            )}
+
+            <CustomFieldsSection fields={customFields} />
+          </FormSection>
+
+          {/* Era um título montado à mão no meio da seção (até 30/09): virou
+              seção própria, com o mesmo divisor das outras. */}
+          {showEmployment && (
+            <FormSection title="Dados bancários e salário">
+              {canEditSensitive ? (
+                <FieldGrid columns={GRADE}>
                   <CampoForm label="Salário Atual" htmlFor="currentSalary">
-                    <Input id="currentSalary" name="currentSalary" type="number" step="0.01" value={values.currentSalary} />
+                    <Input id="currentSalary" name="currentSalary" type="number" step="0.01" prefix="R$" placeholder="0,00" value={values.currentSalary} />
                   </CampoForm>
                   <CampoForm label="Banco" htmlFor="bankName">
                     <Input id="bankName" name="bankName" type="text" value={values.bankName} />
                   </CampoForm>
-                </FieldGrid>
-                <FieldGrid columns="sm:grid-cols-3">
                   <CampoForm label="Agência" htmlFor="bankAgency">
                     <Input id="bankAgency" name="bankAgency" type="text" value={values.bankAgency} />
                   </CampoForm>
@@ -602,21 +603,13 @@ export function PessoaForm({
                     <Input id="bankAccountType" name="bankAccountType" type="text" value={values.bankAccountType} />
                   </CampoForm>
                 </FieldGrid>
-              </>
-            ) : (
-              <p className="text-[length:var(--fs-helper)] text-fg-muted italic">
-                Dados bancários e salário são sensíveis — seu papel não tem permissão para ver ou editar esses campos.
-              </p>
-            )}
-
-            {showEmployment && (
-              <p className="text-[length:var(--fs-helper)] text-fg-muted italic">
-                Benefícios são gerenciados na ficha do colaborador depois de criada.
-              </p>
-            )}
-
-            <CustomFieldsSection fields={customFields} />
-          </FormSection>
+              ) : (
+                <p className="text-[length:var(--fs-helper)] text-fg-muted italic">
+                  Dados bancários e salário são sensíveis — seu papel não tem permissão para ver ou editar esses campos.
+                </p>
+              )}
+            </FormSection>
+          )}
         </div>
 
         {/* ── 5. Documentos ──────────────────────────────── */}
@@ -627,50 +620,53 @@ export function PessoaForm({
                 A lista de documentos e o upload ficam na ficha da pessoa, na aba própria de Documentos.
               </p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <p className="text-[length:var(--fs-body)] text-fg-secondary">
                   Os arquivos ficam aguardando aqui e são enviados assim que a pessoa for criada, na
                   última etapa.
                 </p>
 
-                <div className="flex items-end gap-3 flex-wrap">
-                  <div className="flex-1 min-w-[260px]">
-                    <CampoForm label="Arquivo" htmlFor="pendingDocFile">
-                      <FileDropzoneField
-                        key={pendingFileKey}
-                        id="pendingDocFile"
-                        name="pendingDocFile"
-                        accept=".jpg,.jpeg,.png,.webp,.pdf"
-                        maxSizeMb={20}
-                        compacto
-                        onFileChange={setPendingFile}
-                      />
-                    </CampoForm>
-                  </div>
+                {/* A caixa de arquivo (50px) tem outra altura que o Select e o
+                    botão (36px): na mesma linha, um dos lados sempre ficava
+                    torto. Ela ganha a linha dela; categoria e "Adicionar"
+                    vão juntos embaixo. */}
+                <CampoForm label="Arquivo" htmlFor="pendingDocFile">
+                  <FileDropzoneField
+                    key={pendingFileKey}
+                    id="pendingDocFile"
+                    name="pendingDocFile"
+                    accept=".jpg,.jpeg,.png,.webp,.pdf"
+                    maxSizeMb={20}
+                    compacto
+                    onFileChange={setPendingFile}
+                  />
+                </CampoForm>
+                <FieldGrid columns="sm:grid-cols-[240px_auto] sm:justify-start">
                   <CampoForm label="Categoria" htmlFor="pendingDocCategory">
                     <Select
                       id="pendingDocCategory"
                       value={pendingCategory}
                       onChange={(e) => setPendingCategory(e.target.value as DocumentCategory)}
-                      className="w-44"
                     >
                       {CATEGORY_OPTIONS.map((c) => (
                         <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>
                       ))}
                     </Select>
                   </CampoForm>
-                  <Button type="button" variant="secondary" onClick={addPendingDoc}>
-                    Adicionar
-                  </Button>
-                </div>
+                  <AlinhadoAoCampo>
+                    <Button type="button" variant="secondary" onClick={addPendingDoc}>
+                      Adicionar
+                    </Button>
+                  </AlinhadoAoCampo>
+                </FieldGrid>
 
                 {pendingDocs.length === 0 ? (
-                  <p className="text-[13px] text-fg-muted">Nenhum documento adicionado ainda.</p>
+                  <p className="text-[length:var(--fs-helper)] text-fg-muted">Nenhum documento adicionado ainda.</p>
                 ) : (
                   <ul className="border border-border rounded-md divide-y divide-border">
                     {pendingDocs.map((d, i) => (
                       <li key={i} className="flex items-center justify-between gap-3 px-3 py-2">
-                        <span className="text-[13px] text-fg truncate">
+                        <span className="min-w-0 text-[length:var(--fs-ui)] text-fg truncate">
                           {d.file.name}
                           <span className="text-fg-muted"> · {CATEGORY_LABEL[d.category]}</span>
                         </span>
@@ -688,7 +684,7 @@ export function PessoaForm({
                   </ul>
                 )}
 
-                {uploadError && <p className="text-[12px] text-danger">{uploadError}</p>}
+                {uploadError && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{uploadError}</p>}
               </div>
             )}
           </FormSection>
@@ -759,7 +755,9 @@ export function PessoaForm({
         </div>
 
         {/* ── Navegação ──────────────────────────────────── */}
-        <div className="flex items-center justify-between pt-6 mt-6 border-t border-border">
+        {/* flex-wrap: ver o rodapé do EmpresaForm — no celular os quatro
+            botões da edição não cabem numa linha. */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-5 mt-6 border-t border-border">
           <div>
             {step > 0 && (
               <Button type="button" variant="secondary" onClick={back}>
@@ -767,7 +765,7 @@ export function PessoaForm({
               </Button>
             )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-3">
             {/* Era um link com cara de botão (até 30/09). */}
             <Button href={cancelHref} variant="secondary">
               Cancelar

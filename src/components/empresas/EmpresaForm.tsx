@@ -47,6 +47,11 @@ const TAX_REGIME_OPTIONS = [
 
 const STEP_LABELS = ["Identificação", "Endereço", "Contato", "Dados fiscais", "Responsáveis", "Revisão"];
 
+// Grade das etapas: 1 coluna no celular, 2 no tablet, 4 no desktop. Campo
+// curto (documento, status, inscrição, data) ocupa uma coluna; nome e lista
+// ocupam duas (`sm:col-span-2`).
+const GRADE = "sm:grid-cols-2 lg:grid-cols-4";
+
 export type EmpresaDefaultValues = {
   id?: string;
   name?: string;
@@ -327,22 +332,25 @@ export function EmpresaForm({
         )}
 
         {/* ── 1. Identificação ─────────────────────────── */}
+        {/* Revisão de alinhamento (30/09): a ficha ocupa a largura toda da
+            tela, e em duas colunas cada campo ficava com meia tela — o CNPJ
+            do tamanho da Razão Social, e três linhas com um buraco à direita.
+            Agora é uma grade de quatro colunas (duas no tablet): campo curto
+            ocupa uma, nome ocupa duas, e as colunas batem de uma linha para
+            a outra. */}
         <div data-step={0} className={step === 0 ? "" : "hidden"}>
           <FormSection title="Identificação">
             {/* O tipo governa tudo abaixo — qual documento se pede, como se
-                chama o nome —, então vem antes e sozinho, e não como mais um
-                campo par de outro. Cliente pessoa física é cliente igual:
-                muda o documento, não o que ele contrata nem o que recebe. */}
-            <FieldGrid>
+                chama o nome —, então vem primeiro. Cliente pessoa física é
+                cliente igual: muda o documento, não o que ele contrata nem o
+                que recebe. */}
+            <FieldGrid columns={GRADE}>
               <CampoForm label="Tipo de cadastro" htmlFor="kind">
                 <Select id="kind" name="kind" value={values.kind}>
                   <option value="PESSOA_JURIDICA">Pessoa Jurídica</option>
                   <option value="PESSOA_FISICA">Pessoa Física</option>
                 </Select>
               </CampoForm>
-              <div aria-hidden="true" />
-            </FieldGrid>
-            <FieldGrid>
               {ehPF ? (
                 <CampoForm label="CPF" htmlFor="cpf" helper="Sem CPF, o cadastro não recebe documento fiscal.">
                   <Input
@@ -354,22 +362,22 @@ export function EmpresaForm({
                   />
                 </CampoForm>
               ) : (
-              <CampoForm label="CNPJ" htmlFor="cnpj" helper="Preenche os dados sozinho ao completar os dígitos. Sem CNPJ, o cadastro não recebe documento fiscal.">
-                <div className="relative">
-                  <Input
-                    id="cnpj"
-                    name="cnpj"
-                    type="text"
-                    value={values.cnpj}
-                    placeholder="00.000.000/0000-00"
-                  />
-                  {fetching && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-fg-muted animate-pulse">
-                      buscando…
-                    </span>
-                  )}
-                </div>
-              </CampoForm>
+                <CampoForm label="CNPJ" htmlFor="cnpj" helper="Preenche os dados sozinho ao completar os dígitos. Sem CNPJ, o cadastro não recebe documento fiscal.">
+                  <div className="relative">
+                    <Input
+                      id="cnpj"
+                      name="cnpj"
+                      type="text"
+                      value={values.cnpj}
+                      placeholder="00.000.000/0000-00"
+                    />
+                    {fetching && (
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[length:var(--fs-micro)] text-fg-muted animate-pulse">
+                        buscando…
+                      </span>
+                    )}
+                  </div>
+                </CampoForm>
               )}
               <CampoForm label="Status" htmlFor="status">
                 <Select id="status" name="status" value={values.status}>
@@ -378,9 +386,11 @@ export function EmpresaForm({
                   ))}
                 </Select>
               </CampoForm>
-            </FieldGrid>
-            <FieldGrid>
-              <CampoForm label={ehPF ? "Nome" : "Razão Social"} htmlFor="name" required>
+              <CampoForm label="ID" htmlFor="externalId" helper="Referência manual (ex: ID do Acessorias) — sem sincronização automática.">
+                <Input id="externalId" name="externalId" type="text" value={values.externalId} placeholder="Ex: 12345" />
+              </CampoForm>
+
+              <CampoForm label={ehPF ? "Nome" : "Razão Social"} htmlFor="name" required className="sm:col-span-2">
                 <Input
                   id="name"
                   name="name"
@@ -390,18 +400,15 @@ export function EmpresaForm({
                   placeholder={ehPF ? "Nome completo" : "Nome jurídico da empresa"}
                 />
               </CampoForm>
-              {ehPF ? (
-                <div aria-hidden="true" />
-              ) : (
-              <CampoForm label="Nome Fantasia" htmlFor="tradeName">
-                <Input id="tradeName" name="tradeName" type="text" value={values.tradeName} placeholder="Como é conhecida" />
-              </CampoForm>
+              {!ehPF && (
+                <CampoForm label="Nome Fantasia" htmlFor="tradeName" className="sm:col-span-2">
+                  <Input id="tradeName" name="tradeName" type="text" value={values.tradeName} placeholder="Como é conhecida" />
+                </CampoForm>
               )}
-            </FieldGrid>
-            <FieldGrid>
               <CampoForm
                 label="Nome no sistema"
                 htmlFor="displayName"
+                className="sm:col-span-2"
                 helper="Como esta empresa aparece nas listas. Útil quando matriz e filiais dividem a mesma razão social — ex: “BLD MOGI - SP”. Em branco, usa a Razão Social."
               >
                 <Input
@@ -413,12 +420,30 @@ export function EmpresaForm({
                   placeholder={values.name || "BLD MOGI - SP"}
                 />
               </CampoForm>
-              <div aria-hidden="true" />
+              <CampoForm label="Regime Tributário" htmlFor="taxRegime" className="sm:col-span-2">
+                <Select id="taxRegime" name="taxRegime" value={values.taxRegime}>
+                  <option value="">Selecionar…</option>
+                  {/* Valor legado fora da lista atual (ex: "Simples Nacional" genérico) —
+                      mantido como opção pra edição não perder/trocar o dado silenciosamente. */}
+                  {defaultValues?.taxRegime && !TAX_REGIME_OPTIONS.includes(defaultValues.taxRegime) && (
+                    <option value={defaultValues.taxRegime}>{defaultValues.taxRegime} (antigo)</option>
+                  )}
+                  {TAX_REGIME_OPTIONS.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </Select>
+              </CampoForm>
             </FieldGrid>
-            <FieldGrid>
+          </FormSection>
+
+          {/* Cliente e matriz são vínculo com outros cadastros, não dado da
+              empresa: seção própria, para não se misturarem aos nomes. */}
+          <FormSection title="Cliente e matriz">
+            <FieldGrid columns={GRADE}>
               <CampoForm
                 label="Cliente"
                 htmlFor="clientGroupId"
+                className="sm:col-span-2"
                 helper="Só quando este cliente tem mais de uma empresa. Empresa sozinha não precisa."
               >
                 {/* Mesmo motivo da matriz: são 340 clientes. O "+ Novo
@@ -436,6 +461,7 @@ export function EmpresaForm({
               <CampoForm
                 label="Empresa matriz"
                 htmlFor="parentCompanyId"
+                className="sm:col-span-2"
                 helper="Preencha só se esta empresa for filial de outra já cadastrada."
               >
                 {/* Busca em vez de <select>: depois da importação do Acessórias
@@ -451,12 +477,10 @@ export function EmpresaForm({
                   onChange={(v) => setValues((prev) => ({ ...prev, parentCompanyId: v }))}
                 />
               </CampoForm>
-            </FieldGrid>
-            {/* Linha própria: aparecer e sumir dentro da grade acima empurraria
-                a "Empresa matriz" de lugar a cada troca do select. */}
-            {values.clientGroupId === NOVO_CLIENTE && (
-              <FieldGrid>
-                <CampoForm label="Nome do novo cliente" htmlFor="clientGroupNewName" required>
+              {/* Depois dos dois, e não entre eles: aparecer e sumir no meio
+                  empurraria a "Empresa matriz" de lugar a cada troca. */}
+              {values.clientGroupId === NOVO_CLIENTE && (
+                <CampoForm label="Nome do novo cliente" htmlFor="clientGroupNewName" required className="sm:col-span-2">
                   <Input
                     id="clientGroupNewName"
                     name="clientGroupNewName"
@@ -467,38 +491,21 @@ export function EmpresaForm({
                     placeholder="Ex: Grupo Aurora"
                   />
                 </CampoForm>
-              </FieldGrid>
-            )}
-            <FieldGrid>
-              <CampoForm label="Regime Tributário" htmlFor="taxRegime">
-                <Select id="taxRegime" name="taxRegime" value={values.taxRegime}>
-                  <option value="">Selecionar…</option>
-                  {/* Valor legado fora da lista atual (ex: "Simples Nacional" genérico) —
-                      mantido como opção pra edição não perder/trocar o dado silenciosamente. */}
-                  {defaultValues?.taxRegime && !TAX_REGIME_OPTIONS.includes(defaultValues.taxRegime) && (
-                    <option value={defaultValues.taxRegime}>{defaultValues.taxRegime} (antigo)</option>
-                  )}
-                  {TAX_REGIME_OPTIONS.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </Select>
-              </CampoForm>
-              <CampoForm label="ID" htmlFor="externalId" helper="Referência manual (ex: ID do Acessorias) — sem sincronização automática.">
-                <Input id="externalId" name="externalId" type="text" value={values.externalId} placeholder="Ex: 12345" />
-              </CampoForm>
+              )}
             </FieldGrid>
           </FormSection>
         </div>
 
         {/* ── 2. Endereço ───────────────────────────────── */}
+        {/* CEP, número e UF na largura do que cabem neles; a coluna da direita
+            (Número e UF) tem a mesma largura nas duas linhas, e as bordas
+            batem. */}
         <div data-step={1} className={step === 1 ? "" : "hidden"}>
           <FormSection title="Endereço">
-            <FieldGrid columns="sm:grid-cols-[200px]">
+            <FieldGrid columns="sm:grid-cols-[180px_1fr_120px]">
               <CampoForm label="CEP" htmlFor="zipCode" helper="Preenche Logradouro, Bairro, Cidade e UF automaticamente.">
                 <Input id="zipCode" name="zipCode" type="text" value={values.zipCode} placeholder="00000-000" maxLength={9} />
               </CampoForm>
-            </FieldGrid>
-            <FieldGrid columns="sm:grid-cols-[1fr_120px]">
               <CampoForm label="Logradouro" htmlFor="addressStreet">
                 <Input id="addressStreet" name="addressStreet" type="text" value={values.addressStreet} placeholder="Rua / Av. / Estrada…" />
               </CampoForm>
@@ -506,15 +513,13 @@ export function EmpresaForm({
                 <Input id="addressNumber" name="addressNumber" type="text" value={values.addressNumber} placeholder="123" />
               </CampoForm>
             </FieldGrid>
-            <FieldGrid>
+            <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_120px]">
               <CampoForm label="Complemento" htmlFor="addressComplement">
                 <Input id="addressComplement" name="addressComplement" type="text" value={values.addressComplement} placeholder="Sala, andar, bloco…" />
               </CampoForm>
               <CampoForm label="Bairro" htmlFor="neighborhood">
                 <Input id="neighborhood" name="neighborhood" type="text" value={values.neighborhood} placeholder="Bairro" />
               </CampoForm>
-            </FieldGrid>
-            <FieldGrid columns="sm:grid-cols-[1fr_80px]">
               <CampoForm label="Cidade" htmlFor="city">
                 <Input id="city" name="city" type="text" value={values.city} placeholder="Curitiba" />
               </CampoForm>
@@ -528,7 +533,7 @@ export function EmpresaForm({
         {/* ── 3. Contato ────────────────────────────────── */}
         <div data-step={2} className={step === 2 ? "" : "hidden"}>
           <FormSection title="Contato">
-            <FieldGrid>
+            <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-3">
               <CampoForm label="E-mail" htmlFor="email">
                 <Input id="email" name="email" type="email" value={values.email} placeholder="contato@empresa.com.br" />
               </CampoForm>
@@ -539,8 +544,6 @@ export function EmpresaForm({
                   title="Informe um número de telefone válido (ex: (41) 99999-9999)"
                 />
               </CampoForm>
-            </FieldGrid>
-            <FieldGrid>
               <CampoForm label="Website" htmlFor="website">
                 <Input id="website" name="website" type="url" value={values.website} placeholder="https://empresa.com.br" />
               </CampoForm>
@@ -562,7 +565,10 @@ export function EmpresaForm({
               então trocar um cadastro de PJ para PF zera esses três, que é o
               certo: eles não valem para o que ele virou. */}
           <FormSection title="Dados fiscais">
-            <FieldGrid columns="sm:grid-cols-3">
+            {/* Uma grade só: as inscrições e a data na primeira linha, o CNAE
+                principal (código curto) numa coluna e a lista de secundários
+                no resto da linha de baixo. */}
+            <FieldGrid columns={GRADE}>
               {!ehPF && (
                 <CampoForm label="Inscrição Estadual" htmlFor="stateRegistration">
                   <Input id="stateRegistration" name="stateRegistration" type="text" value={values.stateRegistration} placeholder="000.000.000-0" />
@@ -576,30 +582,28 @@ export function EmpresaForm({
                   <Input id="nire" name="nire" type="text" value={values.nire} placeholder="41300012345" />
                 </CampoForm>
               )}
-            </FieldGrid>
-            <FieldGrid columns="sm:grid-cols-3">
               <CampoForm label="Data de Abertura" htmlFor="foundationDate">
                 <Input id="foundationDate" name="foundationDate" type="date" value={values.foundationDate} />
               </CampoForm>
+              {!ehPF && (
+                <>
+                  <CampoForm label="CNAE Principal" htmlFor="cnaePrincipal" helper="Código da atividade principal, ex: 6920-6/01">
+                    <Input id="cnaePrincipal" name="cnaePrincipal" type="text" value={values.cnaePrincipal} placeholder="0000-0/00" />
+                  </CampoForm>
+                  <CampoForm label="CNAEs Secundários" htmlFor="cnaeSecundarios" helper="Separe por vírgula, se houver mais de um" className="lg:col-span-3">
+                    <Input id="cnaeSecundarios" name="cnaeSecundarios" type="text" value={values.cnaeSecundarios} placeholder="0000-0/00, 0000-0/00" />
+                  </CampoForm>
+                </>
+              )}
             </FieldGrid>
-            {!ehPF && (
-              <FieldGrid>
-                <CampoForm label="CNAE Principal" htmlFor="cnaePrincipal" helper="Código da atividade principal, ex: 6920-6/01">
-                  <Input id="cnaePrincipal" name="cnaePrincipal" type="text" value={values.cnaePrincipal} placeholder="0000-0/00" />
-                </CampoForm>
-                <CampoForm label="CNAEs Secundários" htmlFor="cnaeSecundarios" helper="Separe por vírgula, se houver mais de um">
-                  <Input id="cnaeSecundarios" name="cnaeSecundarios" type="text" value={values.cnaeSecundarios} placeholder="0000-0/00, 0000-0/00" />
-                </CampoForm>
-              </FieldGrid>
-            )}
           </FormSection>
         </div>
 
         {/* ── 5. Responsáveis e vínculos ────────────────── */}
         <div data-step={4} className={step === 4 ? "" : "hidden"}>
           <FormSection title="Responsáveis e vínculos">
-            <FieldGrid>
-              <CampoForm label="Origem / Fonte" htmlFor="source">
+            <FieldGrid columns={GRADE}>
+              <CampoForm label="Origem / Fonte" htmlFor="source" className="sm:col-span-2">
                 <Input id="source" name="source" type="text" value={values.source} placeholder="Indicação, evento, site…" />
               </CampoForm>
             </FieldGrid>
@@ -685,7 +689,9 @@ export function EmpresaForm({
         </div>
 
         {/* ── Navegação ──────────────────────────────────── */}
-        <div className="flex items-center justify-between pt-6 mt-6 border-t border-border">
+        {/* flex-wrap: no celular os quatro botões da edição não cabem numa
+            linha, e sem quebra o rodapé estourava a largura do cartão. */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-5 mt-6 border-t border-border">
           <div>
             {step > 0 && (
               <Button type="button" variant="secondary" onClick={back}>
@@ -693,7 +699,7 @@ export function EmpresaForm({
               </Button>
             )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-3">
             {/* Era um Link estilizado à mão (30/09): o Cancelar é o botão secundário. */}
             <Button href={cancelHref} variant="secondary">
               Cancelar

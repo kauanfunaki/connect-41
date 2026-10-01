@@ -36,7 +36,7 @@ export function ReprovarComMotivo({
       </Button>
       <Modal open={aberto} onClose={() => !pendente && setAberto(false)} title="Reprovar conta" maxWidth="max-w-md">
         <form
-          className="flex flex-col gap-3"
+          className="flex flex-col gap-4"
           onSubmit={(e) => {
             e.preventDefault();
             setErro(null);
@@ -61,14 +61,14 @@ export function ReprovarComMotivo({
               required
             />
           </CampoForm>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button type="submit" variant="danger" size="sm" disabled={pendente}>
-              {pendente ? "Reprovando…" : "Reprovar"}
-            </Button>
-            <Button type="button" variant="secondary" size="sm" onClick={() => setAberto(false)} disabled={pendente}>
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
+            {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
+            <Button type="button" variant="secondary" onClick={() => setAberto(false)} disabled={pendente}>
               Voltar
             </Button>
-            {erro && <span className="text-[12px] text-danger">{erro}</span>}
+            <Button type="submit" variant="danger" disabled={pendente}>
+              {pendente ? "Reprovando…" : "Reprovar"}
+            </Button>
           </div>
         </form>
       </Modal>

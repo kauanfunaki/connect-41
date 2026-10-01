@@ -42,12 +42,14 @@ export function PipelineForm({ action, sectorOptions }: Props) {
   return (
     <form action={formAction} className="space-y-6">
       {state?.error && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">
           {state.error}
         </p>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Os três dados numa linha (30/09): o tipo de entidade ficava sozinho
+          numa linha de largura inteira embaixo do par nome/setor. */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Field label="Nome do Kanban" htmlFor="name" required>
           <Input
             id="name"
@@ -65,20 +67,18 @@ export function PipelineForm({ action, sectorOptions }: Props) {
             ))}
           </Select>
         </Field>
+        <Field label="Tipo de Entidade" htmlFor="entityType" required>
+          <Select id="entityType" name="entityType" required defaultValue="COMPANY">
+            <option value="COMPANY">Empresas</option>
+            <option value="PERSON">Pessoas</option>
+          </Select>
+        </Field>
       </div>
 
-      <Field label="Tipo de Entidade" htmlFor="entityType" required>
-        <Select id="entityType" name="entityType" required defaultValue="COMPANY">
-          <option value="COMPANY">Empresas</option>
-          <option value="PERSON">Pessoas</option>
-        </Select>
-      </Field>
-
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-[11px] font-semibold text-fg-muted uppercase tracking-wider">
-            Estágios
-          </h3>
+        <div className="flex items-center justify-between gap-3">
+          {/* Título do grupo no estilo do rótulo de campo (era 11px caixa-alta). */}
+          <h3 className="text-[length:var(--fs-label)] font-medium text-fg">Estágios</h3>
           {/* Era link azul (30/09): ação é botão. */}
           <Button variant="secondary" size="xs" type="button" onClick={addStage}>
             + Adicionar estágio
@@ -93,11 +93,13 @@ export function PipelineForm({ action, sectorOptions }: Props) {
                 name="stageColor"
                 value={stage.color}
                 onChange={(e) => updateStage(i, "color", normalizeAccentColor(e.target.value))}
-                className="w-9 h-9 rounded-md border border-border bg-canvas cursor-pointer flex-shrink-0"
+                aria-label={`Cor do estágio ${i + 1}`}
+                className="w-9 h-9 rounded-md border border-border-strong bg-canvas cursor-pointer flex-shrink-0"
               />
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <Input
                   type="text"
+                  aria-label={`Nome do estágio ${i + 1}`}
                   name="stageName"
                   value={stage.name}
                   onChange={(e) => updateStage(i, "name", e.target.value)}
@@ -122,17 +124,15 @@ export function PipelineForm({ action, sectorOptions }: Props) {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 pt-2">
-        <Button
-          variant="primary"
-          type="submit"
-          disabled={isPending}
-        >
-          {isPending ? "Criando…" : "Criar Kanban"}
-        </Button>
-        {/* Era um Link estilizado à mão (30/09): o Cancelar é o botão secundário. */}
+      {/* Rodapé no padrão dos formulários (30/09): Cancelar à esquerda do
+          primário, os dois à direita, com o divisor em cima. Estava ao
+          contrário e alinhado à esquerda. */}
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
         <Button href="/kanban" variant="secondary">
           Cancelar
+        </Button>
+        <Button variant="primary" type="submit" disabled={isPending}>
+          {isPending ? "Criando…" : "Criar Kanban"}
         </Button>
       </div>
     </form>

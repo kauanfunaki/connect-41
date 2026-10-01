@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { MenuDoRegistro } from "./MenuDoRegistro";
+import { SeloDoDP } from "./rotulosDoDP";
 
 const STATUS_LABEL: Record<BenefitStatus, string> = {
   ATIVO:     "Ativo",
@@ -50,7 +51,7 @@ export function BeneficioRow({ beneficio, updateAction, removeAction, canManage 
   return (
     <div className="py-3 border-b border-border last:border-0">
       <div className="flex items-center justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <p className="text-[13px] text-fg">{beneficio.benefitName}</p>
           <p className="text-[12px] text-fg-muted">
             Desde {beneficio.startDateLabel}
@@ -60,18 +61,20 @@ export function BeneficioRow({ beneficio, updateAction, removeAction, canManage 
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${STATUS_STYLE[beneficio.status]}`}>
-            {STATUS_LABEL[beneficio.status]}
-          </span>
+          <SeloDoDP cor={STATUS_STYLE[beneficio.status]}>{STATUS_LABEL[beneficio.status]}</SeloDoDP>
           {/* Remover saiu de ao lado do "Atualizar" para o "⋯" (30/09). */}
           {canManage && <MenuDoRegistro titulo="Remover este benefício do colaborador?" onRemover={removeAction} />}
         </div>
       </div>
 
+      {/* Revisão de alinhamento (30/09): a situação tem a mesma largura em
+          todas as telas da ficha (era w-40, w-44, w-52 ou w-56 conforme a
+          tela), a data a de uma data, e tudo na altura do botão. */}
       {canManage && (
-        <form action={formAction} className="flex items-end gap-2 flex-wrap mt-2">
-          <div className="w-40">
+        <form action={formAction} className="flex flex-wrap items-center gap-2 mt-3">
+          <div className="w-full sm:w-56">
             <Select
+              aria-label="Situação"
               name="status"
               value={status}
               onChange={(e) => setStatus(e.target.value as BenefitStatus)}
@@ -81,8 +84,8 @@ export function BeneficioRow({ beneficio, updateAction, removeAction, canManage 
               ))}
             </Select>
           </div>
-          <div className="w-40">
-            <Input name="endDate" type="date" title="Fim da vigência" />
+          <div className="w-full sm:w-40">
+            <Input name="endDate" type="date" title="Fim da vigência" aria-label="Fim da vigência" />
           </div>
           <Button
             variant="secondary"
@@ -95,7 +98,7 @@ export function BeneficioRow({ beneficio, updateAction, removeAction, canManage 
         </form>
       )}
 
-      {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
+      {state?.error && <p className="mt-2 text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
     </div>
   );
 }

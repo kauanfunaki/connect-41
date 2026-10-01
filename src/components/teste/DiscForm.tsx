@@ -185,7 +185,7 @@ export function DiscForm({ token }: Props) {
               <div className="divide-y divide-border">
                 {block.map((w, wi) => (
                   <div key={wi} className="flex items-center justify-between gap-3 py-2 first:pt-1">
-                    <span className="text-[14px] text-fg">{w.word}</span>
+                    <span className="min-w-0 text-[14px] text-fg">{w.word}</span>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       <ChoicePill
                         name={`mais-${i}`}
@@ -213,11 +213,13 @@ export function DiscForm({ token }: Props) {
         })}
       </div>
 
-      <Checkbox
-        name="consent"
-        value="true"
-        label="Confirmo que as respostas são minhas e autorizo o uso dos meus dados pessoais para este processo seletivo (LGPD)."
-      />
+      {/* Caixa no topo do texto, e não centrada nele: no celular a frase
+          quebra em três linhas, e o `Checkbox` com rótulo centraliza a caixa
+          no meio do parágrafo. */}
+      <label htmlFor="consent" className="flex items-start gap-2.5 text-[length:var(--fs-label)] text-fg-secondary cursor-pointer">
+        <Checkbox id="consent" name="consent" value="true" className="mt-0.5" />
+        <span>Confirmo que as respostas são minhas e autorizo o uso dos meus dados pessoais para este processo seletivo (LGPD).</span>
+      </label>
 
       <Button
         variant="primary"

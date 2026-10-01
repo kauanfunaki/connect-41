@@ -78,17 +78,19 @@ export function ServicesSection({
 
   return (
     <Card className="p-5">
-      <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-3">Serviços contratados</h2>
+      <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">Serviços contratados</h2>
 
       {services.length === 0 ? (
-        <p className="text-[length:var(--fs-body)] text-fg-muted mb-3">Nenhum serviço cadastrado.</p>
+        <p className="text-[length:var(--fs-body)] text-fg-muted mb-4">Nenhum serviço cadastrado.</p>
       ) : (
-        <div className="space-y-2 mb-3">
+        // Linhas com a altura do Select (min-h-9): quem só lê o responsável
+        // (texto) e quem pode trocar (Select) ficam com o mesmo ritmo.
+        <div className="divide-y divide-border mb-4">
           {services.map((s) => {
             const canManageThis = manageableSectors.some((m) => m.code === s.sectorCode);
             const options = usersBySector[s.sectorCode] ?? [];
             return (
-              <div key={s.id} className="flex items-center justify-between gap-3 flex-wrap">
+              <div key={s.id} className="flex items-center justify-between gap-3 flex-wrap min-h-9 py-2 first:pt-0 last:pb-0">
                 <span className="inline-flex items-center gap-1.5 bg-surface-hover border border-border text-fg-secondary text-[12.5px] font-medium px-2.5 py-1 rounded-full">
                   <span
                     className="w-[7px] h-[7px] rounded-full flex-shrink-0"
@@ -99,8 +101,9 @@ export function ServicesSection({
                 </span>
 
                 {canManageThis ? (
-                  <div className="w-52">
+                  <div className="w-full sm:w-56">
                     <Select
+                      aria-label={`Responsável — ${sectorLabels[s.sectorCode] ?? s.sectorCode}`}
                       defaultValue={s.responsibleUserId ?? ""}
                       disabled={pending}
                       onChange={(e) => handleAssign(s.id, e.target.value || null)}
@@ -112,7 +115,7 @@ export function ServicesSection({
                     </Select>
                   </div>
                 ) : (
-                  <span className="text-[11.5px] text-fg-muted">
+                  <span className="text-[length:var(--fs-helper)] text-fg-muted">
                     {options.find((u) => u.id === s.responsibleUserId)?.name ?? "Sem responsável"}
                   </span>
                 )}
@@ -123,9 +126,12 @@ export function ServicesSection({
       )}
 
       {availableToAdd.length > 0 && (
-        <div className="flex items-center gap-2 pt-3 border-t border-border">
-          <div className="flex-1 max-w-[220px]">
+        // Select e botão no mesmo tamanho (h-9): o botão era `sm` (h-8) ao
+        // lado de um Select de formulário, 4px mais baixo.
+        <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-border">
+          <div className="w-full sm:w-56">
             <Select
+              aria-label="Setor a adicionar"
               value={addingSector}
               onChange={(e) => setAddingSector(e.target.value)}
               disabled={pending}
@@ -138,11 +144,10 @@ export function ServicesSection({
           </div>
           <Button
             variant="secondary"
-            size="sm"
             onClick={handleAdd}
             disabled={pending || !addingSector}
           >
-            <Plus size={13} />
+            <Plus size={14} />
             Adicionar
           </Button>
         </div>

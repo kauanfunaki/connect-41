@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Modal } from "@/components/ui/Modal";
 import { criarPendencia } from "@/app/(app)/pendencias/actions";
 import { ROTULO_DO_TIPO, TIPOS_DA_PENDENCIA, LIMITE_DO_TITULO } from "@/lib/financeiro/pendencias/regras";
@@ -55,16 +56,16 @@ export function NovaPendencia({
         {criada ? (
           // Com aviso (e-mail que não saiu), a pessoa precisa ler antes de ir
           // para a pendência — navegar direto engoliria a mensagem.
-          <div className="flex flex-col gap-3">
-            <p className="text-[13px]">Pendência aberta.</p>
-            <p className="text-[12px] text-warning">{criada.aviso}</p>
-            <div className="flex gap-2">
-              <Button size="sm" href={`/pendencias/${criada.id}`}>
-                Abrir pendência
-              </Button>
-              <Button size="sm" variant="secondary" onClick={fechar}>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <p className="text-[13px]">Pendência aberta.</p>
+              <p className="text-[12px] text-warning">{criada.aviso}</p>
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
+              <Button variant="secondary" onClick={fechar}>
                 Fechar
               </Button>
+              <Button href={`/pendencias/${criada.id}`}>Abrir pendência</Button>
             </div>
           </div>
         ) : (
@@ -110,7 +111,7 @@ export function NovaPendencia({
               </CampoForm>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_180px]">
               <CampoForm label="Tipo" htmlFor="pendencia-tipo" required>
                 <Select id="pendencia-tipo" name="kind" defaultValue="DOCUMENTO">
                   {TIPOS_DA_PENDENCIA.map((t) => (
@@ -123,7 +124,7 @@ export function NovaPendencia({
               <CampoForm label="Prazo" htmlFor="pendencia-prazo" helper="Opcional.">
                 <Input id="pendencia-prazo" type="date" name="dueDate" />
               </CampoForm>
-            </div>
+            </FieldGrid>
 
             <CampoForm
               label="Título"
@@ -142,14 +143,14 @@ export function NovaPendencia({
               <CampoDeAnexos idBase="pendencia-anexo" />
             </CampoForm>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <Button type="submit" size="sm" disabled={pendente}>
-                {pendente ? "Abrindo…" : "Abrir pendência"}
-              </Button>
-              <Button type="button" variant="secondary" size="sm" onClick={fechar}>
+            <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
+              {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
+              <Button type="button" variant="secondary" onClick={fechar}>
                 Cancelar
               </Button>
-              {erro && <span className="text-[12px] text-danger">{erro}</span>}
+              <Button type="submit" disabled={pendente}>
+                {pendente ? "Abrindo…" : "Abrir pendência"}
+              </Button>
             </div>
           </form>
         )}

@@ -44,7 +44,7 @@ export function TopoDoCartao({ nome, valor }: { nome: ReactNode; valor?: ReactNo
 
 /** Linha secundária do cartão — o que na tabela seria uma coluna estreita. */
 export function InfoDoCartao({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <span className={`block text-[11.5px] text-fg-muted break-words ${className}`}>{children}</span>;
+  return <span className={`block text-[length:var(--fs-micro)] text-fg-muted break-words ${className}`}>{children}</span>;
 }
 
 /** A faixa de selos e ações no pé do cartão. */

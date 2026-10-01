@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import { Check, ClipboardList, Copy, RefreshCw } from "lucide-react";
+import { AlinhadoAoCampo } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { gerarLinkTeste } from "@/app/(app)/testes/actions";
 import { AssessmentResult } from "./AssessmentResult";
@@ -99,20 +101,17 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
       {!link && (
         <>
           <p className="text-[13px] text-fg-muted mb-3">Envie um link para o candidato responder um teste sozinho.</p>
+          {/* O tipo e o "Enviar" na mesma linha: eram um em cima do outro,
+              com o select numa coluna de 320px e o botão solto embaixo. */}
           {canManage && (
-            <div className="space-y-3">
-              <div className="max-w-xs">
-                <TestTypeSelect templates={templates} value={testType} onChange={setTestType} id={`teste-type-${personId}`} />
-              </div>
-              <Button
-                type="button"
-                onClick={handleGerar}
-                disabled={pending}
-                variant="primary" className="font-medium disabled:opacity-60"
-              >
-                {pending ? "Gerando…" : "Enviar teste"}
-             </Button>
-            </div>
+            <FieldGrid columns="sm:grid-cols-[minmax(0,320px)_auto]">
+              <TestTypeSelect templates={templates} value={testType} onChange={setTestType} id={`teste-type-${personId}`} />
+              <AlinhadoAoCampo>
+                <Button type="button" onClick={handleGerar} disabled={pending} className="w-full sm:w-auto">
+                  {pending ? "Gerando…" : "Enviar teste"}
+                </Button>
+              </AlinhadoAoCampo>
+            </FieldGrid>
           )}
         </>
       )}
@@ -123,8 +122,8 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
             Aguardando resposta do candidato. Link expira em {link.expiresAtLabel}.
           </p>
           <div className="flex items-center gap-2 mb-3">
-            <div className="flex-1">
-              <Input readOnly value={linkUrl} onFocus={(e) => e.target.select()} />
+            <div className="flex-1 min-w-0">
+              <Input readOnly value={linkUrl} onFocus={(e) => e.target.select()} aria-label="Link do teste" />
             </div>
             <Button variant="secondary" className="flex-shrink-0" onClick={handleCopy}>
               {copied ? <Check size={14} /> : <Copy size={14} />}

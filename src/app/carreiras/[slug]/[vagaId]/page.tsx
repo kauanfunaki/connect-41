@@ -162,12 +162,16 @@ export default async function VagaPublicaPage({
 
         {beneficios.length > 0 && (
           <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-6">
-            <h2 className="text-[14px] font-semibold text-fg mb-2">Benefícios</h2>
+            <h2 className="text-[15px] font-semibold text-fg mb-3">Benefícios</h2>
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
               {beneficios.map((b) => (
-                <li key={b} className="text-[13px] text-fg flex items-start gap-2">
-                  <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0" aria-hidden="true" />
-                  {b}
+                // O ponto mora numa caixa da altura da linha (h-5 = leading-5)
+                // e centraliza nela — era `mt-[7px]`, acertado no olho.
+                <li key={b} className="text-[13px] leading-5 text-fg flex items-start gap-2">
+                  <span className="flex h-5 items-center flex-shrink-0" aria-hidden="true">
+                    <span className="w-1.5 h-1.5 rounded-full bg-brand" />
+                  </span>
+                  <span className="min-w-0">{b}</span>
                 </li>
               ))}
             </ul>

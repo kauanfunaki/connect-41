@@ -55,7 +55,7 @@ export default async function CargosPage({
           canManage && (
             <Button
               href={novoHref}
-              variant="primary" className="font-medium"
+              variant="primary"
             >
               + Novo Cargo
             </Button>
@@ -73,7 +73,7 @@ export default async function CargosPage({
               canManage && (
                 <Button
                   href={novoHref}
-                  variant="primary" className="font-medium"
+                  variant="primary"
                 >
                   + Cadastrar cargo
                 </Button>

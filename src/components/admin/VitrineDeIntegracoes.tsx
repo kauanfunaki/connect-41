@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { salvarConexao, type ConexaoState } from "@/app/(app)/admin/integracoes/conexao-actions";
 import type { IntegracaoNaTela } from "@/lib/integracoes/data";
@@ -70,7 +71,7 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <Icone size={15} className="text-fg-muted shrink-0" />
+            <Icone size={16} className="text-fg-muted shrink-0" />
             <h3 className="text-[15px] font-semibold text-fg">{i.label}</h3>
             {i.conectada ? (
               <Badge variant={SAUDE_VARIANTE[i.saude]}>{SAUDE_LABEL[i.saude]}</Badge>
@@ -149,7 +150,7 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
             </p>
           )}
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <FieldGrid>
             {i.campos.map((c) => {
               const guardado = i.segredosGuardados.includes(c.name);
               return (
@@ -176,21 +177,23 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
                 </CampoForm>
               );
             })}
+          </FieldGrid>
+
+          <div className="space-y-1">
+            <Checkbox
+              id={`${i.code}-enabled`}
+              name="enabled"
+              defaultChecked={i.enabled}
+              label="Conexão ligada"
+            />
+            <p className="text-[length:var(--fs-helper)] text-fg-muted">
+              {/* Integração nunca nasce ligada: ligar significa começar a falar
+                  com sistema de terceiro usando credencial de alguém. */}
+              Desligada, nada é enviado nem buscado. Ligar é ato deliberado.
+            </p>
           </div>
 
-          <Checkbox
-            id={`${i.code}-enabled`}
-            name="enabled"
-            defaultChecked={i.enabled}
-            label="Conexão ligada"
-          />
-          <p className="text-[11px] text-fg-muted -mt-1">
-            {/* Integração nunca nasce ligada: ligar significa começar a falar
-                com sistema de terceiro usando credencial de alguém. */}
-            Desligada, nada é enviado nem buscado. Ligar é ato deliberado.
-          </p>
-
-          <div>
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-border-soft">
             <Button type="submit" disabled={isPending}>
               {isPending ? "Salvando…" : i.conectada ? "Salvar" : "Conectar"}
             </Button>

@@ -44,7 +44,7 @@ export function DeleteButton({ action, nome, label = "Excluir", description }: P
           setError(null);
           setOpen(true);
         }}
-        className="h-8 px-3 rounded-md border border-danger/30 text-[12px] font-medium text-danger hover:bg-danger/8 transition-colors"
+        className="inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-md border border-danger/30 text-[length:var(--fs-button-sm)] font-semibold text-danger hover:bg-danger/8 transition-colors"
       >
         {label}
       </button>

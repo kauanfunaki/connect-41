@@ -3,9 +3,10 @@
 import { useActionState } from "react";
 import type { TrainingState } from "@/app/(app)/treinamentos/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
-import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 export type TrainingDefaultValues = {
   id?: string;
@@ -42,29 +43,18 @@ export function TrainingForm({ action, cancelHref, defaultValues }: Props) {
         <Textarea id="description" name="description" rows={3} defaultValue={defaultValues?.description ?? ""} />
       </CampoForm>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Horas e meses são números curtos: colunas estreitas, e não meia tela
+          cada (até 30/09). A unidade saiu do rótulo para o sufixo do campo. */}
+      <FieldGrid columns="sm:grid-cols-[180px_180px]">
         <CampoForm label="Carga Horária" htmlFor="workloadHours">
           <Input id="workloadHours" name="workloadHours" type="number" step="0.5" defaultValue={defaultValues?.workloadHours ?? ""} suffix="h" />
         </CampoForm>
-        <CampoForm label="Validade (meses)" htmlFor="validityMonths">
-          <Input id="validityMonths" name="validityMonths" type="number" min={0} defaultValue={defaultValues?.validityMonths ?? ""} />
+        <CampoForm label="Validade" htmlFor="validityMonths">
+          <Input id="validityMonths" name="validityMonths" type="number" min={0} defaultValue={defaultValues?.validityMonths ?? ""} suffix="meses" />
         </CampoForm>
-      </div>
+      </FieldGrid>
 
-      <div className="flex items-center gap-3 pt-2">
-        <Button
-          variant="primary"
-          size="md"
-          type="submit"
-          disabled={isPending}
-        >
-          {isPending ? "Salvando…" : "Salvar"}
-        </Button>
-        {/* Era um link com cara de botão (até 30/09). */}
-        <Button href={cancelHref} variant="secondary" size="md">
-          Cancelar
-        </Button>
-      </div>
+      <FormFooter cancelHref={cancelHref} pending={isPending} />
     </form>
   );
 }

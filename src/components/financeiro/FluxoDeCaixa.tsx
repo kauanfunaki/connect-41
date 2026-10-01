@@ -88,7 +88,7 @@ export function QuadroDoSaldoBancario({ saldo }: { saldo: SaldoConsolidado }) {
   const dataCurta = (key: string) => `${key.slice(8, 10)}/${key.slice(5, 7)}/${key.slice(0, 4)}`;
   if (saldo.contas.length === 0) {
     return (
-      <Card className="p-3.5 mb-6 text-[12px] text-fg-muted">
+      <Card className="p-4 mb-6 text-[12px] text-fg-muted">
         Nenhuma conta bancária ativa. Cadastre a conta e importe o extrato em{" "}
         <Link href="/conciliacao" className="text-brand hover:underline">
           Conciliação bancária
@@ -98,7 +98,7 @@ export function QuadroDoSaldoBancario({ saldo }: { saldo: SaldoConsolidado }) {
     );
   }
   return (
-    <Card className="p-3.5 mb-6">
+    <Card className="p-4 mb-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-[12px] text-fg-muted">Saldo das contas</p>
         {saldo.atualizadoAteKey && <p className="text-[11px] text-fg-muted">extrato até {dataCurta(saldo.atualizadoAteKey)}</p>}

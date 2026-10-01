@@ -1,14 +1,18 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { MessageSquareReply } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { Modal } from "@/components/ui/Modal";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { atualizarProposta } from "@/app/(app)/valora/actions";
 
 type Proposta = {
   id: string;
+  cliente?: string;
   status: string;
   motivo: string | null;
   precoOferecido: number | null;
@@ -17,59 +21,107 @@ type Proposta = {
 
 const texto = (n: number | null) => (n === null ? "" : n.toFixed(2).replace(".", ","));
 
-/** Fechou ou perdeu, por quê e por quanto — é o registro que vira comparação com o mercado. */
+/**
+ * Fechou ou perdeu, por quê e por quanto — é o registro que vira comparação com o mercado.
+ *
+ * Numa janela, e não mais aberto dentro da célula da tabela (revisão de
+ * alinhamento, 30/09): eram quatro campos empilhados sem rótulo — só o
+ * placeholder dizia qual preço era qual, e sumia ao digitar — e a linha da
+ * proposta esticava até caber o formulário. A janela tem rótulo em cada campo
+ * e o rodapé padrão; os nomes enviados são os mesmos.
+ */
 export function EditarProposta({ proposta }: { proposta: Proposta }) {
   const [aberto, setAberto] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
-
-  // Botão de verdade, e não texto cinza (conferência de 30/09: botão não é
-  // link) — é a ação da linha da proposta.
-  if (!aberto) {
-    return (
-      <Button variant="secondary" size="xs" onClick={() => setAberto(true)}>
-        <MessageSquareReply size={11} /> Registrar retorno
-      </Button>
-    );
-  }
+  // A mesma proposta aparece duas vezes na página (cartão no celular e linha
+  // na tabela), então os ids dos campos não podem ser fixos.
+  const id = useId();
 
   return (
-    <form
-      className="flex flex-col gap-2 min-w-[240px]"
-      onSubmit={(e) => {
-        e.preventDefault();
-        const f = new FormData(e.currentTarget);
-        setErro(null);
-        startTransition(async () => {
-          const r = await atualizarProposta({
-            id: proposta.id,
-            status: f.get("status"),
-            motivo: f.get("motivo"),
-            precoOferecido: f.get("precoOferecido"),
-            precoConcorrente: f.get("precoConcorrente"),
-          });
-          if ("error" in r) setErro(r.error);
-          else setAberto(false);
-        });
-      }}
-    >
-      <Select compact name="status" defaultValue={proposta.status}>
-        <option value="ABERTA">Em aberto</option>
-        <option value="GANHA">Ganha</option>
-        <option value="PERDIDA">Perdida</option>
-      </Select>
-      <Input compact name="precoOferecido" prefix="R$" inputMode="decimal" defaultValue={texto(proposta.precoOferecido)} placeholder="Oferecido" />
-      <Input compact name="precoConcorrente" prefix="R$" inputMode="decimal" defaultValue={texto(proposta.precoConcorrente)} placeholder="Preço do concorrente" />
-      <Input compact name="motivo" maxLength={500} defaultValue={proposta.motivo ?? ""} placeholder="Motivo (fechou por…, perdeu para…)" />
-      <div className="flex items-center gap-2">
-        <Button type="submit" size="xs" disabled={pendente}>
-          Salvar
-        </Button>
-        <Button variant="secondary" size="xs" onClick={() => setAberto(false)}>
-          Cancelar
-        </Button>
-      </div>
-      {erro && <span className="text-[12px] text-danger">{erro}</span>}
-    </form>
+    <>
+      {/* Botão de verdade, e não texto cinza (conferência de 30/09: botão não
+          é link) — é a ação da linha da proposta. */}
+      <Button variant="secondary" size="xs" onClick={() => setAberto(true)}>
+        <MessageSquareReply size={12} /> Registrar retorno
+      </Button>
+
+      <Modal
+        open={aberto}
+        onClose={() => !pendente && setAberto(false)}
+        title={proposta.cliente ? `Retorno — ${proposta.cliente}` : "Registrar retorno"}
+        maxWidth="max-w-lg"
+      >
+        {/* `text-left`: a janela nasce dentro da célula da tabela, que o casco
+            `.c41-tabela` centraliza — e o alinhamento herdaria. */}
+        <form
+          className="flex flex-col gap-4 text-left"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const f = new FormData(e.currentTarget);
+            setErro(null);
+            startTransition(async () => {
+              const r = await atualizarProposta({
+                id: proposta.id,
+                status: f.get("status"),
+                motivo: f.get("motivo"),
+                precoOferecido: f.get("precoOferecido"),
+                precoConcorrente: f.get("precoConcorrente"),
+              });
+              if ("error" in r) setErro(r.error);
+              else setAberto(false);
+            });
+          }}
+        >
+          <CampoForm label="Situação" htmlFor={`${id}-status`}>
+            <Select id={`${id}-status`} name="status" defaultValue={proposta.status}>
+              <option value="ABERTA">Em aberto</option>
+              <option value="GANHA">Ganha</option>
+              <option value="PERDIDA">Perdida</option>
+            </Select>
+          </CampoForm>
+          <FieldGrid>
+            <CampoForm label="Preço oferecido" htmlFor={`${id}-oferecido`}>
+              <Input
+                id={`${id}-oferecido`}
+                name="precoOferecido"
+                prefix="R$"
+                inputMode="decimal"
+                defaultValue={texto(proposta.precoOferecido)}
+                placeholder="0,00"
+              />
+            </CampoForm>
+            <CampoForm label="Preço do concorrente" htmlFor={`${id}-concorrente`}>
+              <Input
+                id={`${id}-concorrente`}
+                name="precoConcorrente"
+                prefix="R$"
+                inputMode="decimal"
+                defaultValue={texto(proposta.precoConcorrente)}
+                placeholder="0,00"
+              />
+            </CampoForm>
+          </FieldGrid>
+          <CampoForm label="Motivo" htmlFor={`${id}-motivo`}>
+            <Input
+              id={`${id}-motivo`}
+              name="motivo"
+              maxLength={500}
+              defaultValue={proposta.motivo ?? ""}
+              placeholder="Fechou por…, perdeu para…"
+            />
+          </CampoForm>
+          {erro && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{erro}</p>}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+            <Button variant="secondary" onClick={() => setAberto(false)} disabled={pendente}>
+              Cancelar
+            </Button>
+            <Button type="submit" loading={pendente}>
+              Salvar
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </>
   );
 }

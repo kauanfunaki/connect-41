@@ -140,8 +140,10 @@ export function PushNotificationToggle({
   if (status === "unconfigured" && semChaves === "esconder") return null;
 
   return (
-    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 mb-4 flex items-center justify-between gap-4">
-      <div>
+    // flex-wrap + min-w-0: o texto longo das chaves VAPID empurrava o botão
+    // para fora do cartão no celular.
+    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 mb-4 flex flex-wrap items-center justify-between gap-4">
+      <div className="min-w-0 flex-1 basis-64">
         <p className="text-[13px] font-medium text-fg">Notificações no navegador</p>
         <p className="text-[12px] text-fg-muted mt-0.5">
           {status === "unconfigured"
@@ -152,13 +154,13 @@ export function PushNotificationToggle({
                 ? "Ativadas neste navegador."
                 : descricao}
         </p>
-        {error && <p className="text-[12px] text-danger mt-1">{error}</p>}
+        {error && <p className="text-[length:var(--fs-helper)] font-medium text-danger mt-1">{error}</p>}
       </div>
       {status !== "denied" && status !== "loading" && status !== "unconfigured" && (
         <Button
           variant="secondary"
           size="sm"
-          className="bg-surface-hover hover:border-brand flex-shrink-0"
+          className="flex-shrink-0"
           onClick={status === "subscribed" ? handleUnsubscribe : handleSubscribe}
         >
           {status === "subscribed" ? "Desativar" : "Ativar"}

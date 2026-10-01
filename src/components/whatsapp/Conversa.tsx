@@ -5,6 +5,8 @@ import { Bot, User, AlertTriangle, Link2, Unlink, FileText } from "lucide-react"
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { AlinhadoAoCampo, CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { formatInstantDateTime } from "@/lib/format";
@@ -75,8 +77,8 @@ export function Conversa({ conversa, agora, candidaturas, userId }: Props) {
   return (
     <div className="flex flex-col gap-4">
       <Card className="p-4 flex flex-col gap-3">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-[15px] font-semibold text-fg">
                 {conversa.nome ?? telefoneLegivel(conversa.waPhone)}
@@ -135,41 +137,44 @@ export function Conversa({ conversa, agora, candidaturas, userId }: Props) {
           </p>
         )}
 
+        {/* O select (h-9) e os botões na mesma altura: os botões eram `sm`
+            (h-8) presos no fundo da linha, e o rótulo era um texto de 11px à
+            mão. O aviso virou o texto de ajuda do campo. */}
         {encerrando && (
-          <div className="flex flex-wrap items-end gap-2 bg-surface-hover border border-border rounded-md p-3">
-            <div className="flex-1 min-w-[14rem]">
-              <label htmlFor="desfecho" className="block text-[11px] text-fg-muted mb-1">
-                Como terminou este atendimento?
-              </label>
-              <Select id="desfecho" value={desfecho} onChange={(e) => setDesfecho(e.target.value)}>
-                <option value="">Selecione…</option>
-                {DESFECHOS_DA_TELA.map((d) => (
-                  <option key={d} value={d}>
-                    {DESFECHOS[d]}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <Button
-              size="sm"
-              disabled={ocupado || !desfecho}
-              onClick={() =>
-                correr(async () => {
-                  const r = await encerrarAtendimento(conversa.id, desfecho);
-                  if (r && "success" in r) fecharPainel();
-                  return r;
-                })
-              }
-            >
-              Encerrar
-            </Button>
-            <Button variant="secondary" size="sm" disabled={ocupado} onClick={fecharPainel}>
-              Cancelar
-            </Button>
-            <p className="basis-full text-[11px] text-fg-muted">
-              Nada é enviado ao candidato. A conversa volta ao assistente, sem responsável, e a próxima mensagem dele
-              abre um novo atendimento.
-            </p>
+          <div className="bg-surface-hover border border-border rounded-md p-3">
+            <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_auto]">
+              <CampoForm
+                label="Como terminou este atendimento?"
+                htmlFor="desfecho"
+                helper="Nada é enviado ao candidato. A conversa volta ao assistente, sem responsável, e a próxima mensagem dele abre um novo atendimento."
+              >
+                <Select id="desfecho" value={desfecho} onChange={(e) => setDesfecho(e.target.value)}>
+                  <option value="">Selecione…</option>
+                  {DESFECHOS_DA_TELA.map((d) => (
+                    <option key={d} value={d}>
+                      {DESFECHOS[d]}
+                    </option>
+                  ))}
+                </Select>
+              </CampoForm>
+              <AlinhadoAoCampo>
+                <Button variant="secondary" disabled={ocupado} onClick={fecharPainel}>
+                  Cancelar
+                </Button>
+                <Button
+                  disabled={ocupado || !desfecho}
+                  onClick={() =>
+                    correr(async () => {
+                      const r = await encerrarAtendimento(conversa.id, desfecho);
+                      if (r && "success" in r) fecharPainel();
+                      return r;
+                    })
+                  }
+                >
+                  Encerrar
+                </Button>
+              </AlinhadoAoCampo>
+            </FieldGrid>
           </div>
         )}
 
@@ -212,11 +217,10 @@ export function Conversa({ conversa, agora, candidaturas, userId }: Props) {
               O vínculo automático não confirmou quem é (ou foi desfeito). Só se liga à mão.
             </p>
           )}
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="flex-1 min-w-[16rem]">
-              <label htmlFor="vinculo" className="block text-[11px] text-fg-muted mb-1">
-                Quem é esta pessoa? O assistente só consulta o processo depois disto.
-              </label>
+          {/* Rótulo curto e a explicação no texto de ajuda: a frase inteira
+              como rótulo quebrava em duas linhas no celular. */}
+          <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_auto]">
+            <CampoForm label="Quem é esta pessoa?" htmlFor="vinculo" helper="O assistente só consulta o processo depois disto.">
               <Select
                 id="vinculo"
                 value={escolhida}
@@ -229,15 +233,17 @@ export function Conversa({ conversa, agora, candidaturas, userId }: Props) {
                   </option>
                 ))}
               </Select>
-            </div>
-            <Button
-              variant="secondary"
-              disabled={ocupado || !escolhida}
-              onClick={() => correr(() => vincularCandidatura(conversa.id, escolhida))}
-            >
-              Ligar
-            </Button>
-          </div>
+            </CampoForm>
+            <AlinhadoAoCampo>
+              <Button
+                variant="secondary"
+                disabled={ocupado || !escolhida}
+                onClick={() => correr(() => vincularCandidatura(conversa.id, escolhida))}
+              >
+                Ligar
+              </Button>
+            </AlinhadoAoCampo>
+          </FieldGrid>
           </>
         )}
       </Card>
@@ -314,8 +320,8 @@ export function Conversa({ conversa, agora, candidaturas, userId }: Props) {
               rows={3}
               aria-label="Resposta ao candidato"
             />
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[11px] text-fg-muted">
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <p className="mr-auto min-w-0 text-[11px] text-fg-muted">
                 {situacao === "encerrada"
                   ? "Responder abre um novo atendimento e assume a conversa."
                   : "Responder assume a conversa — o assistente para de responder aqui."}

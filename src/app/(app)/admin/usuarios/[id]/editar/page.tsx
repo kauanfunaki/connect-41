@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { UsuarioForm } from "@/components/admin/UsuarioForm";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { atualizarUsuario } from "../../actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { assignableRoles, ROLE_OPTIONS } from "@/lib/roles";
@@ -35,32 +35,28 @@ export default async function EditarUsuarioPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/admin/usuarios" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Usuários
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Editar</span>
-      </div>
+      <Breadcrumb items={[{ label: "Usuários", href: "/admin/usuarios" }, { label: "Editar" }]} />
       <PageHeader title="Editar Usuário" />
 
-      <Card className="p-6">
-        <UsuarioForm
-          action={atualizarUsuario}
-          cancelHref="/admin/usuarios"
-          roleOptions={roleOptions}
-          sectorOptions={sectorOptions}
-          isSelf={isSelf}
-          defaultValues={{
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            active: user.active,
-            sectors: user.sectors.map((s) => s.sectorCode),
-          }}
-        />
-      </Card>
+      <div className="max-w-[720px]">
+        <Card className="p-6">
+          <UsuarioForm
+            action={atualizarUsuario}
+            cancelHref="/admin/usuarios"
+            roleOptions={roleOptions}
+            sectorOptions={sectorOptions}
+            isSelf={isSelf}
+            defaultValues={{
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              role: user.role,
+              active: user.active,
+              sectors: user.sectors.map((s) => s.sectorCode),
+            }}
+          />
+        </Card>
+      </div>
     </PageContainer>
   );
 }

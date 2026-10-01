@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { KeyRound, AlertTriangle, CalendarClock, CalendarRange, Unlink } from "lucide-react";
+import { KeyRound, AlertTriangle, CalendarClock, CalendarRange, Search, Unlink } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Badge } from "@/components/ui/Badge";
@@ -96,7 +96,18 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <form method="get" action="/certificados">
           {aba !== "renovar" && <input type="hidden" name="aba" value={aba} />}
-          <Input compact name="q" defaultValue={params.q ?? ""} placeholder="Buscar por titular, documento ou entrada do cofre…" className="w-80 max-w-full" />
+          {/* A busca no mesmo desenho da do acervo fiscal: lupa, `search` e nome
+              para o leitor de tela — era a única caixa de busca sem os três. */}
+          <Input
+            compact
+            type="search"
+            name="q"
+            icon={<Search />}
+            defaultValue={params.q ?? ""}
+            placeholder="Buscar por titular, documento ou entrada do cofre…"
+            aria-label="Buscar certificado"
+            className="w-80 max-w-full"
+          />
         </form>
         <FiltrosDaTela
           campos={[

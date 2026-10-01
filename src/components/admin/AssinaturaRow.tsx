@@ -1,10 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { Pencil, Settings2 } from "lucide-react";
 import { salvarAssinatura, type AssinaturaState } from "@/app/(app)/admin/assinaturas/actions";
 import { MANAGEMENT_MODE_LABEL, SUBSCRIPTION_STATUS_LABEL } from "@/lib/subscription-labels";
+import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
@@ -32,6 +34,7 @@ export function AssinaturaRow({ tenant, subscription, plans, activeUsers }: Prop
   const [editing, setEditing] = useState(false);
   const [state, formAction, isPending] = useActionState<AssinaturaState, FormData>(salvarAssinatura, null);
   const wasPending = useRef(false);
+  const id = useId();
 
   useEffect(() => {
     if (wasPending.current && !isPending && !state?.error) setEditing(false);
@@ -49,82 +52,100 @@ export function AssinaturaRow({ tenant, subscription, plans, activeUsers }: Prop
   const readOnlyInert = statusLocks && tenant.managementMode === "MANAGED";
 
   if (editing) {
+    // Os campos só tinham placeholder — a data e os selects nem isso, e
+    // preenchidos ninguém sabia o que era cada um. Agora têm rótulo, em três
+    // colunas: gestão e plano, depois cobrança e limites. A confirmação do
+    // limite abaixo do número de usuários sobe para antes do rodapé, perto do
+    // botão que ela destrava.
     return (
-      <form action={formAction} className="px-4 py-3 bg-surface-hover space-y-2">
+      <form action={formAction} className="px-4 py-4 bg-surface-hover space-y-4">
         <input type="hidden" name="tenantId" value={tenant.id} />
         <p className="text-[13px] text-fg font-medium">{tenant.name}</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <Select name="managementMode" defaultValue={tenant.managementMode}>
-            <option value="MANAGED">Frente 1 — Gerenciado</option>
-            <option value="SELF_SERVICE">Frente 2 — Autoatendimento</option>
-          </Select>
-          <Select name="planId" defaultValue={subscription?.planId ?? ""} required>
-            <option value="" disabled>Selecione um plano</option>
-            {plans.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </Select>
-          <Select name="status" defaultValue={subscription?.status ?? "TRIAL"}>
-            {Object.entries(SUBSCRIPTION_STATUS_LABEL).map(([v, l]) => (
-              <option key={v} value={v}>{l}</option>
-            ))}
-          </Select>
-          <Input
-            name="seatLimit"
-            type="number"
-            min={1}
-            defaultValue={subscription?.seatLimit ?? ""}
-            placeholder="Limite de usuários (self-service)"
-          />
-          <Input
-            name="currentPeriodEnd"
-            type="date"
-            defaultValue={subscription?.currentPeriodEnd?.slice(0, 10) ?? ""}
-          />
-          <Input
-            name="setupFeeAmount"
-            placeholder="Valor de implantação"
-            inputMode="decimal"
-            defaultValue={subscription?.setupFeeAmount ?? ""}
-            prefix="R$"
-          />
-        </div>
-        <Checkbox name="setupFeePaid" defaultChecked={!!subscription?.setupFeePaidAt} label="Implantação já paga" />
-        <Input
-          name="notes"
-          defaultValue={subscription?.notes ?? ""}
-          placeholder="Observações (contrato, negociação…)"
+        <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-3">
+          <CampoForm label="Modo de gestão" htmlFor={`${id}-modo`}>
+            <Select id={`${id}-modo`} name="managementMode" defaultValue={tenant.managementMode}>
+              <option value="MANAGED">Frente 1 — Gerenciado</option>
+              <option value="SELF_SERVICE">Frente 2 — Autoatendimento</option>
+            </Select>
+          </CampoForm>
+          <CampoForm label="Plano" htmlFor={`${id}-plano`} required>
+            <Select id={`${id}-plano`} name="planId" defaultValue={subscription?.planId ?? ""} required>
+              <option value="" disabled>Selecione um plano</option>
+              {plans.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </Select>
+          </CampoForm>
+          <CampoForm label="Status" htmlFor={`${id}-status`}>
+            <Select id={`${id}-status`} name="status" defaultValue={subscription?.status ?? "TRIAL"}>
+              {Object.entries(SUBSCRIPTION_STATUS_LABEL).map(([v, l]) => (
+                <option key={v} value={v}>{l}</option>
+              ))}
+            </Select>
+          </CampoForm>
+          <CampoForm label="Limite de usuários" htmlFor={`${id}-limite`} helper="Só vale no autoatendimento (self-service).">
+            <Input
+              id={`${id}-limite`}
+              name="seatLimit"
+              type="number"
+              min={1}
+              defaultValue={subscription?.seatLimit ?? ""}
+            />
+          </CampoForm>
+          <CampoForm label="Próxima renovação" htmlFor={`${id}-renovacao`}>
+            <Input
+              id={`${id}-renovacao`}
+              name="currentPeriodEnd"
+              type="date"
+              defaultValue={subscription?.currentPeriodEnd?.slice(0, 10) ?? ""}
+            />
+          </CampoForm>
+          <CampoForm label="Valor de implantação" htmlFor={`${id}-implantacao`}>
+            <Input
+              id={`${id}-implantacao`}
+              name="setupFeeAmount"
+              inputMode="decimal"
+              defaultValue={subscription?.setupFeeAmount ?? ""}
+              prefix="R$"
+            />
+          </CampoForm>
+        </FieldGrid>
+        <Checkbox
+          id={`${id}-implantacao-paga`}
+          name="setupFeePaid"
+          defaultChecked={!!subscription?.setupFeePaidAt}
+          label="Implantação já paga"
         />
-        <div className="flex items-center gap-2">
-          <Button
-            variant="primary"
-            size="md"
-            type="submit"
-            disabled={isPending}
-          >
-            {isPending ? "Salvando…" : "Salvar"}
-          </Button>
-          <Button
-            variant="secondary"
-            size="md"
-            onClick={() => setEditing(false)}
-          >
-            Cancelar
-          </Button>
-        </div>
-        {state?.error && <p className="text-[12px] text-danger">{state.error}</p>}
+        <CampoForm label="Observações" htmlFor={`${id}-observacoes`}>
+          <Input
+            id={`${id}-observacoes`}
+            name="notes"
+            defaultValue={subscription?.notes ?? ""}
+            placeholder="Contrato, negociação…"
+          />
+        </CampoForm>
+        {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
         {state?.needsSeatConfirm && (
           <Checkbox
+            id={`${id}-confirma-limite`}
             name="confirmSeatBelowHeadcount"
             label="Confirmo o limite abaixo do número de usuários ativos"
           />
         )}
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+          <Button variant="secondary" onClick={() => setEditing(false)}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={isPending}>
+            {isPending ? "Salvando…" : "Salvar"}
+          </Button>
+        </div>
       </form>
     );
   }
 
   return (
-    <div className="flex items-center justify-between px-4 py-3">
+    <div className="flex items-center justify-between gap-3 px-4 py-3">
       <div className="min-w-0">
         <p className="text-[13px] text-fg font-medium">{tenant.name}</p>
         <p className="text-[11px] text-fg-muted mt-0.5">

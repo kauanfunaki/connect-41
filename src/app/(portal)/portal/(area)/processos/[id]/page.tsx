@@ -61,7 +61,9 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
         }
       />
 
-      <div className="flex flex-col gap-5 mt-4">
+      {/* Sem `mt-4`: o PageHeader já deixa 28px, e os dois somados abriam um
+          vão maior que o de qualquer outra tela do portal. */}
+      <div className="flex flex-col gap-5">
         <Card className="p-4 flex flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={VARIANTE_PARA_CLIENTE[p.situacao]}>{situacao.rotulo}</Badge>
@@ -130,10 +132,17 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
             </h2>
             <Card className="p-2">
               <ul className="flex flex-col">
+                {/* Grade de colunas fixas: o valor ficava logo depois da
+                    descrição, e cada linha o punha num ponto conforme o
+                    tamanho do "paga em…/a pagar" ao lado. Agora valor e
+                    situação são colunas; no celular a situação desce. */}
                 {p.taxas.map((t) => (
-                  <li key={t.id} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-2 py-2 border-b border-border-soft last:border-0">
-                    <span className="flex-1 min-w-[12rem] text-[13px] text-fg break-words">{t.descricao}</span>
-                    <span className="text-[13px] font-medium tabular-nums">{moeda(t.centavos)}</span>
+                  <li
+                    key={t.id}
+                    className="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_7rem_8.5rem] items-center gap-x-3 gap-y-0.5 px-2 py-2 border-b border-border-soft last:border-0"
+                  >
+                    <span className="text-[13px] text-fg break-words">{t.descricao}</span>
+                    <span className="text-[13px] font-medium tabular-nums text-right whitespace-nowrap">{moeda(t.centavos)}</span>
                     <span className="text-[12px] text-fg-muted whitespace-nowrap">
                       {t.pagaEm
                         ? `paga em ${formatInstantDate(t.pagaEm)}`

@@ -6,7 +6,7 @@ import type { ScheduleStatus } from "@/generated/prisma/enums";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { MenuDoRegistro } from "./MenuDoRegistro";
-import { SITUACAO_DA_ESCALA, COR_DA_ESCALA } from "./rotulosDoDP";
+import { SITUACAO_DA_ESCALA, COR_DA_ESCALA, SeloDoDP } from "./rotulosDoDP";
 
 const STATUS_OPTIONS = Object.keys(SITUACAO_DA_ESCALA) as ScheduleStatus[];
 
@@ -40,18 +40,20 @@ export function EscalaRow({ escala, updateAction, removeAction, canManage }: Pro
           {escala.isHoliday && " · Feriado"}
         </p>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${COR_DA_ESCALA[escala.status]}`}>
-            {SITUACAO_DA_ESCALA[escala.status]}
-          </span>
+          <SeloDoDP cor={COR_DA_ESCALA[escala.status]}>{SITUACAO_DA_ESCALA[escala.status]}</SeloDoDP>
           {/* Remover saiu de ao lado do "Atualizar" para o "⋯" (30/09). */}
           {canManage && <MenuDoRegistro titulo="Remover este dia da escala?" onRemover={removeAction} />}
         </div>
       </div>
 
+      {/* Revisão de alinhamento (30/09): a situação tem a mesma largura em
+          todas as telas da ficha (era w-40, w-44, w-52 ou w-56 conforme a
+          tela), a data a de uma data, e tudo na altura do botão. */}
       {canManage && (
-        <form action={formAction} className="flex items-end gap-2 flex-wrap mt-2">
-          <div className="w-44">
+        <form action={formAction} className="flex flex-wrap items-center gap-2 mt-3">
+          <div className="w-full sm:w-56">
             <Select
+              aria-label="Situação"
               name="status"
               value={status}
               onChange={(e) => setStatus(e.target.value as ScheduleStatus)}
@@ -72,7 +74,7 @@ export function EscalaRow({ escala, updateAction, removeAction, canManage }: Pro
         </form>
       )}
 
-      {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
+      {state?.error && <p className="mt-2 text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
     </div>
   );
 }

@@ -41,7 +41,7 @@ export function DuplicatePipelineButton({ action, entities, entityLabel, default
       )}
     >
       <form action={formAction} className="space-y-3">
-        <p className="text-[12px] text-fg-muted">
+        <p className="text-[length:var(--fs-helper)] text-fg-muted">
           Cria um kanban novo com os mesmos estágios, tarefas, subtarefas e checklist — prazos e responsáveis ficam em branco.
         </p>
         <CampoForm label="Nome do novo kanban" htmlFor="dup-name" required>
@@ -55,7 +55,7 @@ export function DuplicatePipelineButton({ action, entities, entityLabel, default
             ))}
           </Select>
         </CampoForm>
-        {state?.error && <p className="text-[12px] text-danger">{state.error}</p>}
+        {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
         <Button
           variant="primary"
           type="submit"

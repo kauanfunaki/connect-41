@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Pagination } from "@/components/shared/Pagination";
-import { Users } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -107,9 +107,12 @@ export default async function ColaboradoresClientesPage({
           </>
         }
         action={
-          <>{canCreate && (
-            <Button href="/pessoas/nova?tipo=cliente" variant="primary" className="font-medium">+ Novo Colaborador</Button>
-          )}</>
+          canCreate ? (
+            <Button href="/pessoas/nova?tipo=cliente" variant="primary">
+              <Plus size={14} />
+              Novo Colaborador
+            </Button>
+          ) : undefined
         }
       />
 
@@ -146,8 +149,12 @@ export default async function ColaboradoresClientesPage({
                 : "São as pessoas que trabalham nas empresas clientes, não a equipe da 41."
             }
             action={
+              // Era um <Button> dentro de um <Link> — botão dentro de link.
               !search && !companyId && canCreate ? (
-                <Link href="/pessoas/nova?tipo=cliente"><Button>+ Novo Colaborador</Button></Link>
+                <Button href="/pessoas/nova?tipo=cliente">
+                  <Plus size={14} />
+                  Novo Colaborador
+                </Button>
               ) : undefined
             }
           />

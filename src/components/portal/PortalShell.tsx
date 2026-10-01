@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { ChartColumn, LogOut, Menu, TriangleAlert, X } from "lucide-react";
 import { NavItem, classeDoItem } from "@/components/shell/NavLink";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
-import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
 import { sairDoPortal } from "@/app/(portal)/portal/login/actions";
 
 type Item = {
@@ -74,14 +74,15 @@ export function PortalShell({
           <img src="/brand/logo-horizontal-light.svg" alt="Connect" className="block dark:hidden h-8 w-auto object-contain" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/logo-horizontal-dark.svg" alt="Connect" className="hidden dark:block h-8 w-auto object-contain" />
-          <Button
-            variant="linkMuted"
-            className="lg:hidden absolute right-3 top-1/2 -translate-y-1/2"
-            onClick={() => setMenuAberto(false)}
-            aria-label="Fechar menu"
-          >
-            <X size={18} />
-          </Button>
+          {/* Botão de ícone com caixa de 32px: o X sozinho era um alvo de 18px,
+              e é no celular que este botão existe. O posicionamento fica num
+              span: o IconButton já é `relative`, e `absolute` nele dependeria da
+              ordem do CSS para vencer. */}
+          <span className="flex lg:hidden absolute right-2 top-1/2 -translate-y-1/2">
+            <IconButton onClick={() => setMenuAberto(false)} aria-label="Fechar menu">
+              <X size={18} />
+            </IconButton>
+          </span>
         </div>
 
         <div className="px-5 py-3 border-b border-border flex-shrink-0">
@@ -105,13 +106,16 @@ export function PortalShell({
           {SECOES.map((secao) => {
             const itens = visiveis.filter((i) => i.secao === secao);
             if (itens.length === 0) return null;
+            // Fragmento, e não <div>: os itens ficam filhos diretos do <nav> e
+            // ganham o mesmo `space-y-0.5` do resto — dentro da div eles
+            // encostavam um no outro, como na sidebar do Connect não acontece.
             return (
-              <div key={secao}>
+              <Fragment key={secao}>
                 <p className="px-2.5 pt-4 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">{secao}</p>
                 {itens.map((i) => (
                   <NavItem key={i.href} href={i.href} icon={i.icone} label={i.rotulo} />
                 ))}
-              </div>
+              </Fragment>
             );
           })}
         </nav>
@@ -132,15 +136,12 @@ export function PortalShell({
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Só no celular: é onde mora o botão do menu. No desktop a sidebar já
             está à vista, e uma barra vazia no topo só roubaria altura. */}
-        <header className="lg:hidden h-14 flex-shrink-0 flex items-center gap-3 border-b border-border bg-topbar-bg px-4">
-          <button
-            type="button"
-            onClick={() => setMenuAberto(true)}
-            aria-label="Abrir menu"
-            className="flex-shrink-0 text-fg-secondary hover:text-fg transition-colors"
-          >
+        <header className="lg:hidden h-14 flex-shrink-0 flex items-center gap-2 border-b border-border bg-topbar-bg px-4">
+          {/* 38px de alvo (o controle de topbar do IconButton), puxado para a
+              borda para o ícone seguir alinhado ao conteúdo. */}
+          <IconButton size="lg" className="-ml-2.5" onClick={() => setMenuAberto(true)} aria-label="Abrir menu">
             <Menu size={20} />
-          </button>
+          </IconButton>
           <span className="text-[14px] font-medium text-fg truncate">{grupoNome ?? "Portal do cliente"}</span>
         </header>
         <main className="c41-atmosfera scroll-y scroll-gutter-stable flex-1 overflow-y-auto">{children}</main>

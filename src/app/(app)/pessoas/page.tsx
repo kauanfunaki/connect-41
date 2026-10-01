@@ -92,7 +92,7 @@ export default async function PessoasPage({
         action={<>{canCreate && (
           <Button
             href="/pessoas/nova?internal=1"
-            variant="primary" className="font-medium"
+            variant="primary"
           >
             + Nova Pessoa
           </Button>
@@ -135,7 +135,7 @@ export default async function PessoasPage({
             }
             action={
               !search && canCreate ? (
-                <Link href="/pessoas/nova?internal=1"><Button>+ Nova Pessoa</Button></Link>
+                <Button href="/pessoas/nova?internal=1">+ Nova Pessoa</Button>
               ) : undefined
             }
           />

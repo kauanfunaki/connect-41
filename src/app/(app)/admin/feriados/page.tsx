@@ -29,13 +29,19 @@ export default async function FeriadosPage() {
         subtitle={<>{feriados.length} feriado{feriados.length !== 1 ? "s" : ""} cadastrado{feriados.length !== 1 ? "s" : ""}</>}
       />
 
-      <ImportFeriadosButton action={importarFeriadosNacionais} />
-      <p className="text-[11px] text-fg-muted mb-5">
-        Importa só feriados nacionais (via BrasilAPI). Feriados estaduais e municipais continuam
-        sendo cadastrados manualmente abaixo.
-      </p>
-
-      <AddFeriadoForm action={criarFeriado} />
+      {/* Importar e cadastrar num cartão só, separados por uma divisória: eram
+          duas linhas soltas com alturas e margens próprias, e o texto de ajuda
+          da importação ficava colado no formulário de baixo. */}
+      <Card className="p-4 mb-6">
+        <ImportFeriadosButton action={importarFeriadosNacionais} />
+        <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1.5">
+          Importa só feriados nacionais (via BrasilAPI). Feriados estaduais e municipais continuam
+          sendo cadastrados manualmente abaixo.
+        </p>
+        <div className="border-t border-border mt-4 pt-4">
+          <AddFeriadoForm action={criarFeriado} />
+        </div>
+      </Card>
 
       {feriados.length === 0 ? (
         <Card>
@@ -48,9 +54,9 @@ export default async function FeriadosPage() {
       ) : (
         <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
           {feriados.map((f) => (
-            <div key={f.id} className="flex items-center justify-between px-4 py-2.5">
-              <p className="text-[13px] text-fg">{f.name}</p>
-              <div className="flex items-center gap-3">
+            <div key={f.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+              <p className="min-w-0 text-[13px] text-fg">{f.name}</p>
+              <div className="flex items-center gap-3 flex-shrink-0">
                 <span className="text-[12px] text-fg-muted tnum">{formatCalendarDate(f.date)}</span>
                 {/* Excluir no "⋯" (polimento de 30/09): era texto vermelho colado na data. */}
                 <AcoesDoItem

@@ -73,7 +73,9 @@ function TaskMentionPicker({ candidates, onPick }: { candidates: TaskMentionCand
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar tarefa…"
+            aria-label="Buscar tarefa"
             autoFocus
+            compact
             className="mb-1"
           />
           <div className="max-h-40 overflow-y-auto">

@@ -57,6 +57,7 @@ export default async function AvaliarColaboradorPage({
           <EvaluationForm
             action={action}
             competencies={competencies}
+            cancelHref={`/avaliacoes/${cycleId}`}
             defaultValues={{
               notes: existing?.notes ?? undefined,
               developmentPlan: existing?.developmentPlan ?? undefined,

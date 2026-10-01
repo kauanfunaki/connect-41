@@ -38,7 +38,10 @@ export function Reatribuir({
             else router.refresh();
           });
         }}
-        className="h-8 text-[12px] min-w-40"
+        // `compact`, e não `h-8` no className: a classe vai para o invólucro da
+        // lista, e o `<select>` de dentro continuava com 36px, vazando dele.
+        compact
+        className="min-w-40"
       >
         <option value="">{atual ? "—" : "Sem responsável"}</option>
         {pessoas.map((p) => (

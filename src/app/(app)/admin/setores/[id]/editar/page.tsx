@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { SetorForm } from "@/components/admin/SetorForm";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { atualizarSetor } from "../../actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 
@@ -23,29 +23,25 @@ export default async function EditarSetorPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/admin/setores" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Setores
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Editar</span>
-      </div>
+      <Breadcrumb items={[{ label: "Setores", href: "/admin/setores" }, { label: "Editar" }]} />
       <PageHeader title="Editar Setor" />
 
-      <Card className="p-6">
-        <SetorForm
-          action={atualizarSetor}
-          cancelHref="/admin/setores"
-          defaultValues={{
-            id: sector.id,
-            code: sector.code,
-            label: sector.label,
-            color: sector.color,
-            active: sector.active,
-            order: sector.order,
-          }}
-        />
-      </Card>
+      <div className="max-w-[720px]">
+        <Card className="p-6">
+          <SetorForm
+            action={atualizarSetor}
+            cancelHref="/admin/setores"
+            defaultValues={{
+              id: sector.id,
+              code: sector.code,
+              label: sector.label,
+              color: sector.color,
+              active: sector.active,
+              order: sector.order,
+            }}
+          />
+        </Card>
+      </div>
     </PageContainer>
   );
 }

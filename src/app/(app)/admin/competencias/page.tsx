@@ -27,7 +27,9 @@ export default async function CompetenciasPage() {
         subtitle={<>{competencias.length} competência{competencias.length !== 1 ? "s" : ""} cadastrada{competencias.length !== 1 ? "s" : ""} — usadas nas avaliações de desempenho</>}
       />
 
-      <AddCompetenciaForm action={criarCompetencia} />
+      <Card className="p-4 mb-6">
+        <AddCompetenciaForm action={criarCompetencia} />
+      </Card>
 
       {competencias.length === 0 ? (
         <Card>

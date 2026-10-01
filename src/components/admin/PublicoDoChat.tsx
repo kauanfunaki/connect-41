@@ -16,9 +16,9 @@ export function PublicoDoChat({ todos, disponivel }: { todos: boolean; disponive
   const [pendente, startTransition] = useTransition();
 
   return (
-    <Card className="p-4 mb-5 flex flex-col gap-2">
+    <Card className="p-4 flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <p className="text-[14px] font-semibold text-fg">Chat de IA no canto da tela</p>
           <p className="text-[12px] text-fg-secondary max-w-[62ch]">
             Aparece para quem tem acesso a alguma IA ligada abaixo — a do setor (hoje, Societário, Recrutamento, Fiscal, BPO e DP) ou a Ajuda do

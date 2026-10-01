@@ -25,6 +25,8 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { PersonHeader } from "@/components/pessoas/PersonHeader";
 import { PersonDetailTabs } from "@/components/pessoas/PersonDetailTabs";
 import { AdmissaoCard } from "@/components/pessoas/AdmissaoCard";
+import { SeloDoDP } from "@/components/pessoas/rotulosDoDP";
+import { InfoRow } from "@/components/empresas/InfoRow";
 import { CompanyHistorySection } from "@/components/empresas/CompanyHistorySection";
 import { OperationsLinkList, type OperationLink } from "@/components/shared/OperationsLinkList";
 import { getAuthContext, canWrite, isFullWrite } from "@/lib/auth/context";
@@ -58,6 +60,10 @@ const DEP_REL_LABEL: Record<string, string> = {
   PAIS:        "Pai / Mãe",
   OUTRO:       "Outro",
 };
+
+// Mesma grade e mesmo título da ficha de empresa (CompanyOverviewSection).
+const GRADE = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4";
+const TITULO = "text-[length:var(--fs-section)] font-semibold text-fg mb-4";
 
 const VINCULO_LINKS: OperationLink[] = [
   { href: "escala", label: "Escala de Trabalho", description: "Turnos e dias de folga", icon: <CalendarClock size={16} /> },
@@ -166,117 +172,106 @@ export default async function PessoaPage({
     .filter(Boolean)
     .join(", ");
 
+  // Revisão de alinhamento (30/09): os cartões da ficha seguem a ficha da
+  // empresa — Card, título de seção e a mesma grade de rótulo/valor
+  // (InfoRow), com as colunas batendo de um cartão para o outro. Antes eram
+  // blocos montados à mão com título de 14px e rótulo de 11px, e o cartão de
+  // Observações (largura dupla) caía no meio da grade de duas colunas,
+  // deixando um buraco ao lado da Identificação.
+  const dataLonga = (d: Date) => formatCalendarDate(d, { day: "2-digit", month: "long", year: "numeric" });
+
   const overviewContent = (
     <div className="space-y-4">
       {person.employmentStatus === "ADMISSAO_EM_ANDAMENTO" && (
         <AdmissaoCard personId={id} initialLink={initialAdmissaoLink} canManage={canEdit} />
       )}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      {/* Identificação */}
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-        <h2 className="text-[14px] font-semibold text-fg mb-4">Identificação</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-          <InfoRow label="Nome"               value={person.name} />
-          <InfoRow label="Tipo"               value={TYPE_LABEL[person.type]} />
-          <InfoRow label="CPF"                value={maskCpf(person.cpf)} mono />
-          <InfoRow
-            label="Data de Nascimento"
-            value={
-              person.birthDate
-                ? formatCalendarDate(person.birthDate, {
-                    day: "2-digit", month: "long", year: "numeric",
-                  })
-                : null
-            }
-          />
+
+      <Card className="p-5">
+        <h2 className={TITULO}>Identificação</h2>
+        <div className={GRADE}>
+          <InfoRow label="Nome" value={person.name} className="sm:col-span-2" />
+          <InfoRow label="Tipo" value={TYPE_LABEL[person.type]} />
+          <InfoRow label="CPF" value={maskCpf(person.cpf)} mono />
+          <InfoRow label="Data de Nascimento" value={person.birthDate ? dataLonga(person.birthDate) : null} />
           <InfoRow label="RG" value={person.rg} mono />
           <InfoRow label="PIS" value={person.pis} mono />
           <InfoRow label="CTPS" value={[person.ctps, person.ctpsSerie].filter(Boolean).join(" / ") || null} mono />
-          <InfoRow label="Escolaridade" value={person.education} />
+          <InfoRow label="Escolaridade" value={person.education} className="sm:col-span-2" />
         </div>
+      </Card>
+
+      {/* Cartões lado a lado com a mesma altura (items-stretch + h-full). */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+        <Card className="p-5 h-full">
+          <h2 className={TITULO}>Contato</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+            <InfoRow label="E-mail" value={person.email} />
+            <InfoRow label="Telefone" value={formatPhone(person.phone)} />
+          </div>
+        </Card>
+
+        {/* Endereço */}
+        {fullAddress && (
+          <Card className="p-5 h-full">
+            <h2 className={TITULO}>Endereço</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+              <InfoRow label="Logradouro" value={[person.addressStreet, person.addressNumber].filter(Boolean).join(", ")} />
+              <InfoRow label="Complemento" value={person.addressComplement} />
+              <InfoRow label="Bairro" value={person.neighborhood} />
+              <InfoRow label="Cidade / UF" value={[person.city, person.stateCode].filter(Boolean).join(" — ")} />
+              <InfoRow label="CEP" value={formatCep(person.zipCode)} mono />
+            </div>
+          </Card>
+        )}
+
+        {/* Conta de acesso — só funcionários internos. Somente leitura aqui: o
+            vínculo (e o de atendente Chatwoot, se houver) é editado numa tela só
+            em Admin → Vínculos de Acesso. */}
+        {person.isInternal && (
+          <Card className="p-5 h-full">
+            <h2 className={TITULO}>Conta de acesso</h2>
+            <p className="text-[length:var(--fs-body)] text-fg break-words">
+              {linkedUser ? `${linkedUser.name} (${linkedUser.email})` : "Não vinculada"}
+            </p>
+            {/* Era um link de texto (até 30/09): é uma ação, virou botão. */}
+            {canEdit && (
+              <Button href="/admin/atendentes" variant="secondary" size="sm" className="mt-4">
+                <KeyRound size={14} />
+                Gerenciar vínculo em Admin → Vínculos de Acesso
+              </Button>
+            )}
+          </Card>
+        )}
       </div>
 
       {person.notes && (
-        <Card className="p-5 lg:col-span-2">
-          <h2 className="text-[14px] font-semibold text-fg mb-2">Observações</h2>
-          <p className="text-[13px] text-fg-secondary whitespace-pre-wrap">{person.notes}</p>
-        </Card>
-      )}
-
-      {/* Contato */}
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-        <h2 className="text-[14px] font-semibold text-fg mb-4">Contato</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-          <InfoRow label="E-mail"   value={person.email} />
-          <InfoRow label="Telefone" value={formatPhone(person.phone)} />
-        </div>
-      </div>
-
-      {/* Conta de acesso — só funcionários internos. Somente leitura aqui: o
-          vínculo (e o de atendente Chatwoot, se houver) é editado numa tela só
-          em Admin → Vínculos de Acesso. */}
-      {person.isInternal && (
         <Card className="p-5">
-          <h2 className="text-[14px] font-semibold text-fg mb-4">Conta de acesso</h2>
-          <p className="text-[13px] text-fg">
-            {linkedUser ? `${linkedUser.name} (${linkedUser.email})` : "Não vinculada"}
-          </p>
-          {/* Era um link de texto (até 30/09): é uma ação, virou botão. */}
-          {canEdit && (
-            <Button href="/admin/atendentes" variant="secondary" size="xs" className="mt-3">
-              <KeyRound size={11} />
-              Gerenciar vínculo em Admin → Vínculos de Acesso
-            </Button>
-          )}
+          <h2 className={TITULO}>Observações</h2>
+          <p className="text-[length:var(--fs-body)] text-fg-secondary whitespace-pre-wrap">{person.notes}</p>
         </Card>
       )}
-
-      {/* Endereço */}
-      {fullAddress && (
-        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-          <h2 className="text-[14px] font-semibold text-fg mb-4">Endereço</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-            <InfoRow label="Logradouro"  value={[person.addressStreet, person.addressNumber].filter(Boolean).join(", ")} />
-            <InfoRow label="Complemento" value={person.addressComplement} />
-            <InfoRow label="Bairro"      value={person.neighborhood} />
-            <InfoRow label="Cidade / UF" value={[person.city, person.stateCode].filter(Boolean).join(" — ")} />
-            <InfoRow label="CEP"         value={formatCep(person.zipCode)} mono />
-          </div>
-        </div>
-      )}
-      </div>
     </div>
   );
 
   const vinculoContent = (
     <div className="space-y-4">
-      {/* Vínculo */}
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-        <h2 className="text-[14px] font-semibold text-fg mb-4">Vínculo</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-          {person.currentCompany ? (
-            <div>
-              <p className="text-[length:var(--fs-micro)] text-fg-muted mb-0.5">Empresa atual</p>
-              <Link
-                href={`/empresas/${person.currentCompany.id}`}
-                className="text-[13px] text-brand hover:underline"
-              >
+      <Card className="p-5">
+        <h2 className={TITULO}>Vínculo</h2>
+        <div className={GRADE}>
+          <InfoRow label="Empresa atual" className="sm:col-span-2">
+            {person.currentCompany ? (
+              <Link href={`/empresas/${person.currentCompany.id}`} className="text-brand hover:underline">
                 {person.currentCompany.name}
               </Link>
-            </div>
-          ) : (
-            <InfoRow label="Empresa atual" value={null} />
-          )}
+            ) : (
+              "—"
+            )}
+          </InfoRow>
           <InfoRow label="Cargo" value={person.cargo?.name} />
           <InfoRow label="Departamento" value={person.department?.name} />
-          <InfoRow
-            label="Cadastrada em"
-            value={formatInstantDate(person.createdAt, {
-              day: "2-digit", month: "long", year: "numeric",
-            })}
-          />
+          <InfoRow label="Cadastrada em" value={formatInstantDate(person.createdAt, { day: "2-digit", month: "long", year: "numeric" })} />
         </div>
-      </div>
+      </Card>
 
       {person.type === "COLABORADOR" && <OperationsLinkList basePath={`/pessoas/${id}`} links={VINCULO_LINKS} />}
     </div>
@@ -286,61 +281,57 @@ export default async function PessoaPage({
     <div className="space-y-4">
       {/* Dados Trabalhistas */}
       {person.type === "COLABORADOR" && (
-        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-          <h2 className="text-[14px] font-semibold text-fg mb-4">Dados Trabalhistas</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+        <Card className="p-5">
+          <h2 className={TITULO}>Dados Trabalhistas</h2>
+          <div className={GRADE}>
             <InfoRow label="Status" value={STATUS_LABEL[person.employmentStatus]} />
-            <InfoRow
-              label="Data de Admissão"
-              value={person.admissionDate ? formatCalendarDate(person.admissionDate, { day: "2-digit", month: "long", year: "numeric" }) : null}
-            />
-            <InfoRow
-              label="Data de Demissão"
-              value={person.dismissalDate ? formatCalendarDate(person.dismissalDate, { day: "2-digit", month: "long", year: "numeric" }) : null}
-            />
+            <InfoRow label="Data de Admissão" value={person.admissionDate ? dataLonga(person.admissionDate) : null} />
+            <InfoRow label="Data de Demissão" value={person.dismissalDate ? dataLonga(person.dismissalDate) : null} />
             <InfoRow label="Jornada" value={person.workShift} />
-            <InfoRow label="Carga Horária Semanal" value={person.weeklyWorkHours?.toString()} />
-            <InfoRow label="Carga Horária Mensal" value={person.monthlyWorkHours?.toString()} />
+            <InfoRow
+              label="Carga Horária Semanal"
+              value={person.weeklyWorkHours != null ? `${person.weeklyWorkHours.toString()} h` : null}
+            />
+            <InfoRow
+              label="Carga Horária Mensal"
+              value={person.monthlyWorkHours != null ? `${person.monthlyWorkHours.toString()} h` : null}
+            />
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Dependentes */}
       {person.type === "COLABORADOR" && dependentes.length > 0 && (
-        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-          <h2 className="text-[14px] font-semibold text-fg mb-4">Dependentes</h2>
+        <Card className="p-5">
+          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-2">Dependentes</h2>
           <div className="divide-y divide-border">
             {dependentes.map((d) => (
-              <div key={d.id} className="flex items-center justify-between py-2.5">
-                <div>
-                  <p className="text-[13px] text-fg">{d.name}</p>
-                  <p className="text-[11px] text-fg-muted mt-0.5">
+              <div key={d.id} className="flex items-center justify-between gap-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="text-[length:var(--fs-body)] text-fg">{d.name}</p>
+                  <p className="text-[length:var(--fs-helper)] text-fg-muted mt-0.5">
                     {DEP_REL_LABEL[d.relationship] ?? d.relationship}
                     {d.birthDate && ` · ${formatCalendarDate(d.birthDate)}`}
                     {d.cpf && ` · CPF ${maskCpf(d.cpf)}`}
                   </p>
                 </div>
                 <div className="flex gap-1.5 flex-shrink-0">
-                  {d.isIRDependent && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-brand/10 text-brand border border-brand/25">IR</span>
-                  )}
-                  {d.isSalarioFamilia && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-surface-2 text-fg-muted border border-border">Salário-família</span>
-                  )}
+                  {d.isIRDependent && <SeloDoDP cor="bg-brand/10 text-brand border-brand/25">IR</SeloDoDP>}
+                  {d.isSalarioFamilia && <SeloDoDP cor="bg-surface-2 text-fg-muted border-border">Salário-família</SeloDoDP>}
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       {person.type === "COLABORADOR" && <OperationsLinkList basePath={`/pessoas/${id}`} links={TRABALHISTA_LINKS} />}
 
       {/* Campos Adicionais (setoriais) */}
       {customFields.length > 0 && (
-        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-          <h2 className="text-[14px] font-semibold text-fg mb-4">Campos Adicionais</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+        <Card className="p-5">
+          <h2 className={TITULO}>Campos Adicionais</h2>
+          <div className={GRADE}>
             {customFields.map((f) => (
               <InfoRow
                 key={f.id}
@@ -349,7 +340,7 @@ export default async function PessoaPage({
               />
             ))}
           </div>
-        </div>
+        </Card>
       )}
     </div>
   );
@@ -441,22 +432,5 @@ export default async function PessoaPage({
         history={historyContent}
       />
     </PageContainer>
-  );
-}
-
-function InfoRow({
-  label,
-  value,
-  mono,
-}: {
-  label: string;
-  value: string | null | undefined;
-  mono?: boolean;
-}) {
-  return (
-    <div>
-      <p className="text-[length:var(--fs-micro)] text-fg-muted mb-0.5">{label}</p>
-      <p className={`text-[13px] text-fg ${mono ? "tnum" : ""}`}>{value ?? "—"}</p>
-    </div>
   );
 }

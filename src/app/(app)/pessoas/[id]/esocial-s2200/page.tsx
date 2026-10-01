@@ -3,6 +3,7 @@ import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Card } from "@/components/ui/Card";
 import { BackButton } from "@/components/shared/BackButton";
 import { getAuthContext } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
@@ -81,7 +82,7 @@ export default async function EsocialS2200Page({
 
       {/* Aviso honesto: não é transmissão oficial */}
       <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 mb-4">
-        <p className="text-[12px] text-fg">
+        <p className="text-[length:var(--fs-helper)] text-fg">
           <strong>Rascunho para conferência.</strong> Esta tela não gera XML, não assina e não transmite ao eSocial —
           a transmissão oficial continua no software de folha da empresa. Serve para verificar, a partir dos dados da
           admissão, o que já está preenchido e o que ainda falta para o S-2200.
@@ -109,38 +110,41 @@ export default async function EsocialS2200Page({
 
       <div className="space-y-4">
         {preview.groups.map((g) => (
-          <div key={g.title} className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-            <h2 className="text-[14px] font-semibold text-fg mb-4">{g.title}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+          // Mesma grade de rótulo/valor da ficha de pessoa (30/09): rótulo de
+          // 11px e valor de 13px aqui, 13/15 lá — a mesma informação parecia
+          // de outro tamanho. Três colunas no desktop.
+          <Card key={g.title} className="p-5">
+            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">{g.title}</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
               {g.fields.map((f) => (
-                <div key={f.label}>
-                  <p className="text-[length:var(--fs-micro)] text-fg-muted mb-0.5">
+                <div key={f.label} className="min-w-0">
+                  <p className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">
                     {f.label} <span className="text-fg-muted/60">· {f.ref}</span>
                   </p>
                   {f.restricted ? (
-                    <p className="text-[13px] text-fg-muted italic">Sem permissão para ver</p>
+                    <p className="text-[length:var(--fs-body)] text-fg-muted italic">Sem permissão para ver</p>
                   ) : f.value ? (
-                    <p className="text-[13px] text-fg">{f.value}</p>
+                    <p className="text-[length:var(--fs-body)] text-fg break-words">{f.value}</p>
                   ) : (
-                    <p className="text-[13px] text-warning">Pendente</p>
+                    <p className="text-[length:var(--fs-body)] text-warning">Pendente</p>
                   )}
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
         ))}
 
         {/* Dependentes */}
-        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-          <h2 className="text-[14px] font-semibold text-fg mb-4">Dependentes</h2>
+        <Card className="p-5">
+          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">Dependentes</h2>
           {preview.dependentes.length === 0 ? (
-            <p className="text-[13px] text-fg-muted">Nenhum dependente informado.</p>
+            <p className="text-[length:var(--fs-helper)] text-fg-muted">Nenhum dependente informado.</p>
           ) : (
             <div className="divide-y divide-border">
               {preview.dependentes.map((d, i) => (
                 <div key={i} className="py-2.5">
-                  <p className="text-[13px] text-fg">{d.nome}</p>
-                  <p className="text-[11px] text-fg-muted mt-0.5">
+                  <p className="text-[length:var(--fs-body)] text-fg">{d.nome}</p>
+                  <p className="text-[length:var(--fs-helper)] text-fg-muted mt-0.5">
                     {d.tpDep}
                     {d.nascimento && ` · nasc. ${d.nascimento}`}
                     {d.cpf && ` · CPF ${d.cpf}`}
@@ -151,10 +155,10 @@ export default async function EsocialS2200Page({
               ))}
             </div>
           )}
-        </div>
+        </Card>
       </div>
 
-      <p className="text-[11px] text-fg-muted mt-4">
+      <p className="text-[length:var(--fs-helper)] text-fg-muted mt-4">
         Admissão {person.admissionDate ? `em ${formatCalendarDate(person.admissionDate)}` : "sem data registrada"}.
         Campos pendentes precisam ser preenchidos na ficha antes da geração oficial do evento.
       </p>

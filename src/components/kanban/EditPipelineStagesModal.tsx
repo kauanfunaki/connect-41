@@ -97,13 +97,16 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
           {/* Cabeçalho — sem isso "Título do estágio" (nome livre) e "Status
               da bolinha" (tipo que rege a cor/estado do StageDot) pareciam o
               mesmo tipo de campo, confundindo o usuário. */}
+          {/* Os espaçadores têm a largura exata de cada peça da linha (o botão
+              de arrastar e o de excluir são IconButton `sm`, 28px): com 13px e
+              27px, "Título do estágio" ficava 15px à esquerda do campo. */}
           <div className="flex items-center gap-2 px-0.5">
-            <span className="w-[13px] flex-shrink-0" />
+            <span className="w-7 flex-shrink-0" />
             <span className="w-9 flex-shrink-0" />
             <span className="flex-1 min-w-0 text-[11px] font-medium text-fg-muted">Título do estágio</span>
             <span className="w-[150px] flex-shrink-0 text-[11px] font-medium text-fg-muted">Status da bolinha</span>
             <span className="w-3.5 flex-shrink-0" />
-            <span className="w-[27px] flex-shrink-0" />
+            {rows.length > 1 && <span className="w-7 flex-shrink-0" />}
           </div>
           <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
             {rows.map((row, i) => (
@@ -117,15 +120,18 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
                   type="color"
                   value={row.color}
                   onChange={(e) => updateColor(i, e.target.value)}
-                  className="w-9 h-9 rounded-md border border-border bg-canvas cursor-pointer flex-shrink-0"
+                  aria-label={`Cor do estágio ${i + 1}`}
+                  className="w-9 h-9 rounded-md border border-border-strong bg-canvas cursor-pointer flex-shrink-0"
                 />
                 <Input
+                  aria-label={`Título do estágio ${i + 1}`}
                   value={row.name}
                   onChange={(e) => update(i, { name: e.target.value })}
                   placeholder={`Estágio ${i + 1}`}
                   className="flex-1 min-w-0"
                 />
                 <Select
+                  aria-label={`Status da bolinha do estágio ${i + 1}`}
                   value={row.type}
                   onChange={(e) => update(i, { type: e.target.value as StageDotType })}
                   className="w-[150px] flex-shrink-0"
@@ -152,7 +158,7 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
 
           {/* Era link azul (30/09): ação é botão. */}
           <Button variant="secondary" size="xs" type="button" onClick={addRow} className="self-start">
-            <Plus size={11} /> Adicionar estágio
+            <Plus size={12} /> Adicionar estágio
           </Button>
 
           {colorAdjusted && (
@@ -162,19 +168,16 @@ export function EditPipelineStagesModal({ initialStages, action }: Props) {
             </p>
           )}
 
-          {error && <p className="text-[12px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{error}</p>}
+          {error && <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">{error}</p>}
 
-          <div className="flex items-center gap-2 pt-2">
-            <Button
-              type="button"
-              onClick={save}
-              disabled={isPending}
-              variant="primary" className="font-medium disabled:opacity-60"
-            >
-              {isPending ? "Salvando…" : "Salvar"}
-           </Button>
+          {/* Rodapé de modal no padrão (30/09): Cancelar à esquerda do
+              primário, os dois à direita, com divisor. */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               Cancelar
+            </Button>
+            <Button type="button" onClick={save} disabled={isPending} variant="primary">
+              {isPending ? "Salvando…" : "Salvar"}
             </Button>
           </div>
         </div>

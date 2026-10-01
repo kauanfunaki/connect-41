@@ -5,6 +5,7 @@ import { Briefcase, Building2, ChevronRight } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PessoaForm } from "@/components/pessoas/PessoaForm";
 import { criarPessoa } from "../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -36,7 +37,7 @@ export default async function NovaPessoaPage({
           subtitle="Que tipo de cadastro é este? O formulário muda conforme a escolha."
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
           <TipoCard
             href="/pessoas/nova?tipo=interno"
             icon={<Briefcase size={20} />}
@@ -76,17 +77,8 @@ export default async function NovaPessoaPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Cadastros
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <Link href="/pessoas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Pessoas
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Nova Pessoa</span>
-      </div>
+      {/* Era a trilha copiada à mão (até 30/09). */}
+      <Breadcrumb items={[{ label: "Cadastros", href: "/pessoas" }, { label: "Pessoas", href: "/pessoas" }, { label: "Nova Pessoa" }]} />
 
       <BackButton className="mb-3" />
       <PageHeader title={kind === "interno" ? "Novo Funcionário Interno" : "Novo Colaborador de Cliente"} />
@@ -115,7 +107,7 @@ function TipoCard({
   return (
     <Link
       href={href}
-      className="group flex flex-col gap-2 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 hover:border-brand transition-colors"
+      className="group flex flex-col gap-2 h-full bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 hover:border-brand transition-colors"
     >
       <span className="inline-flex w-10 h-10 rounded-lg bg-brand-subtle text-brand items-center justify-center">
         {icon}

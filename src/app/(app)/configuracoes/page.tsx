@@ -79,15 +79,15 @@ export default async function ConfiguracoesPage() {
 
       <Secao titulo="Notificações" descricao="Avisos no celular e no navegador, e o histórico do que chegou." icone={<Bell />}>
         <PushNotificationToggle
-        publicKey={getVapidPublicKey()}
-        acoes={{ salvar: salvarPushSubscription, remover: removerPushSubscription }}
-      />
+          publicKey={getVapidPublicKey()}
+          acoes={{ salvar: salvarPushSubscription, remover: removerPushSubscription }}
+        />
         <Link
           href="/notificacoes"
           className="group flex items-center justify-between gap-2 bg-surface-hover border border-border rounded-lg px-3.5 py-2.5 hover:border-border-strong transition-colors"
         >
           <span className="text-[13px] text-fg">Ver todas as notificações</span>
-          <ChevronRight size={15} className="text-fg-muted group-hover:text-fg transition-colors" />
+          <ChevronRight size={16} className="text-fg-muted group-hover:text-fg transition-colors" />
         </Link>
       </Secao>
 

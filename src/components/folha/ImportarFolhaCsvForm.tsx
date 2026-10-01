@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import { Button } from "@/components/ui/Button";
+import { CampoForm } from "@/components/ui/CampoForm";
 import type { ImportPayrollCsvState } from "@/app/(app)/empresas/[id]/folha/[competencyId]/actions";
 
 type Props = {
@@ -34,7 +35,7 @@ export function ImportarFolhaCsvForm({ action }: Props) {
 
   return (
     <div className="border-t border-border pt-4">
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between gap-3 mb-2">
         <h3 className="text-[13px] font-medium text-fg">Importar via CSV</h3>
         <a
           href={TEMPLATE_URL}
@@ -48,20 +49,18 @@ export function ImportarFolhaCsvForm({ action }: Props) {
         Colunas obrigatórias: <strong>CPF</strong> e <strong>Salário Bruto</strong>. As demais são opcionais.
         O CPF é usado para casar cada linha com um colaborador já cadastrado nesta empresa.
       </p>
-      <form action={formAction} className="flex items-end gap-3 flex-wrap">
-        <div className="space-y-1.5">
-          <label htmlFor="folha-csv-file" className="block text-[length:var(--fs-label)] font-medium text-fg">
-            Arquivo CSV
-          </label>
-          <FileDropzoneField id="folha-csv-file" name="file" accept=".csv" maxSizeMb={10} required />
+      {/* A área alta de arquivo ia lado a lado com o botão, que caía no pé
+          dela (até 30/09). Agora o campo ocupa a linha, na faixa de uma
+          linha, e o botão vai para o rodapé, como no "Lançar Evento". */}
+      <form action={formAction} className="space-y-4">
+        <CampoForm label="Arquivo CSV" htmlFor="folha-csv-file" required>
+          <FileDropzoneField id="folha-csv-file" name="file" accept=".csv" maxSizeMb={10} required compacto />
+        </CampoForm>
+        <div className="flex justify-end">
+          <Button type="submit" disabled={isPending}>
+            {isPending ? "Importando…" : "Importar"}
+          </Button>
         </div>
-        <Button
-          type="submit"
-          disabled={isPending}
-          variant="primary" className="font-medium disabled:opacity-60"
-        >
-          {isPending ? "Importando…" : "Importar"}
-       </Button>
       </form>
 
       {state && "error" in state && (

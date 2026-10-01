@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { CampoForm } from "@/components/ui/CampoForm";
+import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { salvarAlcada, alternarAlcada } from "@/app/(app)/aprovacoes/actions";
 
 /**
@@ -26,7 +27,7 @@ export function FormAlcada({ companyId, usuarios }: { companyId: string; usuario
 
   return (
     <form
-      className="flex flex-wrap items-end gap-3"
+      className="flex flex-col gap-2"
       onSubmit={(e) => {
         e.preventDefault();
         const dados = new FormData(e.currentTarget);
@@ -40,7 +41,9 @@ export function FormAlcada({ companyId, usuarios }: { companyId: string; usuario
       }}
     >
       <input type="hidden" name="companyId" value={companyId} />
-      <div className="w-72 max-w-full">
+      {/* Grade com o botão em AlinhadoAoCampo: era flex com items-end, e o
+          botão de 32px ficava 4px mais baixo que os campos de 36px. */}
+      <FieldGrid columns="md:grid-cols-[minmax(0,22rem)_12rem_auto]">
         <CampoForm label="Usuário do portal" htmlFor="alcada-usuario" required>
           <Select id="alcada-usuario" name="portalUserId" required defaultValue="">
             <option value="" disabled>
@@ -53,15 +56,15 @@ export function FormAlcada({ companyId, usuarios }: { companyId: string; usuario
             ))}
           </Select>
         </CampoForm>
-      </div>
-      <div className="w-44">
-        <CampoForm label="Teto (R$)" htmlFor="alcada-teto" required>
-          <Input id="alcada-teto" name="maxAmount" inputMode="decimal" placeholder="5.000,00" required />
+        <CampoForm label="Teto" htmlFor="alcada-teto" required>
+          <Input id="alcada-teto" name="maxAmount" prefix="R$" inputMode="decimal" placeholder="5.000,00" required />
         </CampoForm>
-      </div>
-      <Button type="submit" size="sm" disabled={pendente}>
-        {pendente ? "Salvando…" : "Salvar alçada"}
-      </Button>
+        <AlinhadoAoCampo>
+          <Button type="submit" disabled={pendente}>
+            {pendente ? "Salvando…" : "Salvar alçada"}
+          </Button>
+        </AlinhadoAoCampo>
+      </FieldGrid>
       {salvo && <span className="text-[12px] text-success">Salvo.</span>}
       {erro && <span className="text-[12px] text-danger">{erro}</span>}
     </form>

@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { pontuarPassoDoLote, salvarRequisitosDaVaga } from "@/app/(app)/vagas/[id]/triagem-actions";
@@ -102,72 +104,109 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
         )}
       </div>
 
+      {/* Edição no tamanho de formulário (h-9), com cada requisito numa grade
+          de colunas fixas: eram controles de barra (h-8) com lixeira de 28px
+          numa linha que quebrava onde calhasse, e as notas de corte tinham
+          rótulo montado à mão. No celular o texto do requisito desce para a
+          linha de baixo, inteiro. */}
       {editando ? (
-        <div className="space-y-2">
-          {linhas.map((l, i) => (
-            <div key={i} className="flex flex-wrap items-center gap-2">
-              <Select compact value={l.tipo} onChange={(e) => muda(i, { tipo: e.target.value as Linha["tipo"] })} className="w-36">
-                <option value="OBRIGATORIO">Obrigatório</option>
-                <option value="DESEJAVEL">Desejável</option>
-              </Select>
-              <Input
-                compact
-                value={l.texto}
-                maxLength={300}
-                onChange={(e) => muda(i, { texto: e.target.value })}
-                placeholder="Ex.: Experiência com contas a pagar · Excel intermediário · CNH B"
-                className="flex-1 min-w-[240px]"
-              />
-              <Select compact value={String(l.peso)} onChange={(e) => muda(i, { peso: Number(e.target.value) as Linha["peso"] })} className="w-28">
-                <option value="1">Peso 1</option>
-                <option value="2">Peso 2</option>
-                <option value="3">Peso 3</option>
-              </Select>
-              <Button variant="ghost" size="xs" onClick={() => setLinhas((ls) => ls.filter((_, j) => j !== i))} aria-label="Remover requisito">
-                <Trash2 size={13} />
-              </Button>
-            </div>
-          ))}
-          {/* Botão, e não texto cinza (30/09): é ação do formulário. */}
-          <Button variant="secondary" size="xs" onClick={() => setLinhas((ls) => [...ls, { tipo: "DESEJAVEL", texto: "", peso: 2 }])}>
-            <Plus size={11} /> Adicionar requisito
-          </Button>
-          <div className="flex flex-wrap items-end gap-3 pt-2">
-            <label className="flex flex-col gap-1 text-[12px] text-fg-secondary">
-              <span className="font-medium">Compatível a partir de</span>
-              <Input compact inputMode="numeric" value={cortes.corteCompativel} onChange={(e) => setCortes({ ...cortes, corteCompativel: e.target.value })} className="w-24" />
-            </label>
-            <label className="flex flex-col gap-1 text-[12px] text-fg-secondary">
-              <span className="font-medium">Parcial a partir de</span>
-              <Input compact inputMode="numeric" value={cortes.corteParcial} onChange={(e) => setCortes({ ...cortes, corteParcial: e.target.value })} className="w-24" />
-            </label>
-            <p className="text-[11px] text-fg-muted max-w-[420px] pb-1.5">
+        <div className="space-y-5">
+          <fieldset className="space-y-2">
+            <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">Requisitos</legend>
+            {linhas.map((l, i) => (
+              <div key={i} className="grid grid-cols-[minmax(0,1fr)_104px_auto] sm:grid-cols-[144px_minmax(0,1fr)_104px_auto] items-center gap-2">
+                <Select
+                  value={l.tipo}
+                  onChange={(e) => muda(i, { tipo: e.target.value as Linha["tipo"] })}
+                  aria-label={`Tipo do requisito ${i + 1}`}
+                >
+                  <option value="OBRIGATORIO">Obrigatório</option>
+                  <option value="DESEJAVEL">Desejável</option>
+                </Select>
+                <Input
+                  value={l.texto}
+                  maxLength={300}
+                  onChange={(e) => muda(i, { texto: e.target.value })}
+                  placeholder="Ex.: Experiência com contas a pagar · Excel intermediário · CNH B"
+                  aria-label={`Requisito ${i + 1}`}
+                  className="col-span-3 order-last sm:col-span-1 sm:order-none"
+                />
+                <Select
+                  value={String(l.peso)}
+                  onChange={(e) => muda(i, { peso: Number(e.target.value) as Linha["peso"] })}
+                  aria-label={`Peso do requisito ${i + 1}`}
+                >
+                  <option value="1">Peso 1</option>
+                  <option value="2">Peso 2</option>
+                  <option value="3">Peso 3</option>
+                </Select>
+                <Button
+                  variant="ghost"
+                  className="w-9 px-0!"
+                  onClick={() => setLinhas((ls) => ls.filter((_, j) => j !== i))}
+                  aria-label={`Remover o requisito ${i + 1}`}
+                >
+                  <Trash2 size={15} />
+                </Button>
+              </div>
+            ))}
+            {/* Botão, e não texto cinza (30/09): é ação do formulário. */}
+            <Button variant="secondary" size="sm" onClick={() => setLinhas((ls) => [...ls, { tipo: "DESEJAVEL", texto: "", peso: 2 }])}>
+              <Plus size={14} /> Adicionar requisito
+            </Button>
+          </fieldset>
+
+          <div className="space-y-2">
+            <FieldGrid columns="sm:grid-cols-[200px_200px]">
+              <CampoForm label="Compatível a partir de" htmlFor="corteCompativel">
+                <Input
+                  id="corteCompativel"
+                  inputMode="numeric"
+                  value={cortes.corteCompativel}
+                  onChange={(e) => setCortes({ ...cortes, corteCompativel: e.target.value })}
+                />
+              </CampoForm>
+              <CampoForm label="Parcial a partir de" htmlFor="corteParcial">
+                <Input
+                  id="corteParcial"
+                  inputMode="numeric"
+                  value={cortes.corteParcial}
+                  onChange={(e) => setCortes({ ...cortes, corteParcial: e.target.value })}
+                />
+              </CampoForm>
+            </FieldGrid>
+            <p className="text-[length:var(--fs-helper)] text-fg-muted">
               Obrigatório pesa o dobro. Localidade não entra aqui: cidade não é avaliada pela IA, o recrutador confere.
             </p>
           </div>
-          <div className="flex items-center gap-2 pt-1">
-            <Button size="sm" onClick={salvar} loading={salvando} disabled={salvando}>
-              Salvar requisitos
-            </Button>
+
+          {erro && <p className="text-[13px] text-danger">{erro}</p>}
+
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
             {requisitos && (
-              <Button variant="secondary" size="sm" onClick={() => setEditando(false)}>
+              <p className="mr-auto text-[12px] text-fg-muted">
+                Salvar cria a versão {requisitos.versao + 1}. As notas já dadas continuam no histórico, marcadas como de versão anterior.
+              </p>
+            )}
+            {requisitos && (
+              <Button variant="secondary" onClick={() => setEditando(false)}>
                 Cancelar
               </Button>
             )}
-            {erro && <span className="text-[12px] text-danger">{erro}</span>}
+            <Button onClick={salvar} loading={salvando} disabled={salvando}>
+              Salvar requisitos
+            </Button>
           </div>
-          {requisitos && (
-            <p className="text-[11px] text-fg-muted">
-              Salvar cria a versão {requisitos.versao + 1}. As notas já dadas continuam no histórico, marcadas como de versão anterior.
-            </p>
-          )}
         </div>
       ) : requisitos ? (
         <>
-          <ul className="space-y-1 text-[13px] mb-3">
+          {/* Coluna fixa para o tipo: com `flex`, "Obrigatório" e "Desejável"
+              têm larguras diferentes e o texto de cada requisito começava num
+              ponto. */}
+          <ul className="space-y-1.5 text-[13px] mb-3">
             {requisitos.itens.map((r) => (
-              <li key={r.id} className="flex gap-2">
-                <span className={`shrink-0 text-[11px] font-medium px-1.5 py-0.5 rounded ${r.tipo === "OBRIGATORIO" ? "bg-warning-bg text-warning" : "bg-surface-2 text-fg-muted"}`}>
+              <li key={r.id} className="grid grid-cols-[84px_minmax(0,1fr)_auto] items-baseline gap-x-2">
+                <span className={`justify-self-start text-[11px] font-medium px-1.5 py-0.5 rounded ${r.tipo === "OBRIGATORIO" ? "bg-warning-bg text-warning" : "bg-surface-2 text-fg-muted"}`}>
                   {r.tipo === "OBRIGATORIO" ? "Obrigatório" : "Desejável"}
                 </span>
                 <span className="text-fg">{r.texto}</span>

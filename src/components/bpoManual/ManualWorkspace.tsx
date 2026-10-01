@@ -215,7 +215,7 @@ function CoverControls({
           {/* Era texto solto (30/09): botão fantasma, discreto em cima da folha,
               com o texto alinhado ao título da página. */}
           <Button variant="ghost" size="xs" className="-ml-2.5" onClick={() => fileInputRef.current?.click()} disabled={pending}>
-            <ImagePlus size={11} /> {pending ? "Enviando…" : "Adicionar capa"}
+            <ImagePlus size={12} /> {pending ? "Enviando…" : "Adicionar capa"}
           </Button>
         </div>
       )}
@@ -480,8 +480,10 @@ export function ManualWorkspace({
     // sobra da viewport, então o card nunca empurra a página e a única rolagem
     // é a interna — árvore de documentos à esquerda, canvas à direita.
     // overflow-hidden pro canto arredondado recortar essas áreas de rolagem.
-    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden flex h-full min-h-0">
-      <div className="w-72 flex-shrink-0 flex flex-col border-r border-border p-3">
+    // No celular a árvore vai em cima, com teto de altura, e a folha embaixo:
+    // lado a lado, os 288px da árvore deixavam uns 50px para o texto.
+    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden flex flex-col md:flex-row h-full min-h-0">
+      <div className="w-full md:w-72 max-h-[45%] md:max-h-none flex-shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-border p-3">
         <div className="flex-1 min-h-0 overflow-y-auto space-y-0.5">
           {documents.map((doc) => {
             const isExpanded = expanded.has(doc.id);
@@ -579,7 +581,7 @@ export function ManualWorkspace({
                             className="flex-shrink-0 text-fg-muted hover:text-danger p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                             aria-label="Excluir página"
                           >
-                            <Trash2 size={11} />
+                            <Trash2 size={12} />
                           </button>
                         )}
                       </div>
@@ -606,7 +608,7 @@ export function ManualWorkspace({
                           className="h-6! px-2!"
                           onClick={() => { setCreatingPageFor(doc.id); setNewPageTitle(""); }}
                         >
-                          <Plus size={11} /> Página
+                          <Plus size={12} /> Página
                         </Button>
                       )
                     )}

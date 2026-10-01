@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState, useActionState } from "react";
+import { useId, useRef, useState, useActionState } from "react";
 import { Button } from "@/components/ui/Button";
 import { salvarConfigIA, removerConfigIA, testarChaveIA, type AiConfigState } from "@/app/(app)/admin/integracoes/ai-actions";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import type { AiProvider } from "@/generated/prisma/enums";
@@ -28,6 +29,7 @@ export function AiConfigForm({ hasConfig, defaultValues }: Props) {
     null
   );
   const formRef = useRef<HTMLFormElement>(null);
+  const idDoRemover = useId();
   const [provider, setProvider] = useState<AiProvider>(defaultValues?.provider ?? "ANTHROPIC");
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
@@ -46,7 +48,7 @@ export function AiConfigForm({ hasConfig, defaultValues }: Props) {
   }
 
   return (
-    <div className="space-y-4">
+    <div>
       <form ref={formRef} action={formAction} className="space-y-4">
         {state && "error" in state && state.error && (
           <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{state.error}</p>
@@ -65,7 +67,7 @@ export function AiConfigForm({ hasConfig, defaultValues }: Props) {
           </p>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FieldGrid>
           <CampoForm label="Provedor" htmlFor="provider" required>
             <Select
               id="provider"
@@ -94,7 +96,7 @@ export function AiConfigForm({ hasConfig, defaultValues }: Props) {
               placeholder={provider === "ANTHROPIC" ? "claude-sonnet-5" : "gpt-6-sol"}
             />
           </CampoForm>
-        </div>
+        </FieldGrid>
 
         <CampoForm
           label="Chave de API"
@@ -105,39 +107,27 @@ export function AiConfigForm({ hasConfig, defaultValues }: Props) {
           <Input id="apiKey" name="apiKey" type="password" required={!hasConfig} placeholder={hasConfig ? "••••••••" : "sk-..."} />
         </CampoForm>
 
-        <div className="flex items-center gap-3 pt-1">
-          <Button
-            variant="primary"
-            size="md"
-            type="submit"
-            disabled={isPending}
-          >
+        {/* Rodapé único: remover à esquerda, separado; testar e salvar à
+            direita, o primário por último. O "Remover" era um segundo bloco
+            com divisória própria embaixo do formulário. Ele continua
+            enviando o formulário de remoção (atributo `form`), que fica vazio
+            logo abaixo — formulário não pode ficar dentro de outro. */}
+        <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
+          {hasConfig && (
+            <Button variant="danger" type="submit" form={idDoRemover} disabled={isRemoving} className="mr-auto">
+              {isRemoving ? "Removendo…" : "Remover configuração"}
+            </Button>
+          )}
+          <Button type="button" variant="secondary" onClick={handleTest} disabled={isTesting}>
+            {isTesting ? "Testando…" : "Testar chave"}
+          </Button>
+          <Button type="submit" disabled={isPending}>
             {isPending ? "Salvando…" : "Salvar"}
           </Button>
-          <Button
-            type="button"
-            onClick={handleTest}
-            disabled={isTesting}
-            variant="secondary" className="font-medium disabled:opacity-60"
-          >
-            {isTesting ? "Testando…" : "Testar chave"}
-         </Button>
         </div>
       </form>
 
-      {hasConfig && (
-        <form action={removeAction} className="pt-1 border-t border-border">
-          <Button
-            variant="danger"
-            size="sm"
-            className="mt-3"
-            type="submit"
-            disabled={isRemoving}
-          >
-            {isRemoving ? "Removendo…" : "Remover configuração"}
-          </Button>
-        </form>
-      )}
+      {hasConfig && <form id={idDoRemover} action={removeAction} />}
     </div>
   );
 }
