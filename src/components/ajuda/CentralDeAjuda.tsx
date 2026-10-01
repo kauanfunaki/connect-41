@@ -20,10 +20,19 @@ import { Input } from "@/components/ui/Input";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { normalizar } from "@/lib/buscaDeTelas";
 
-export type TelaDaAjuda = { chave: string; titulo: string; caminho: string; descricao: string; codigo?: string };
+export type TelaDaAjuda = {
+  chave: string;
+  titulo: string;
+  caminho: string;
+  descricao: string;
+  codigo?: string;
+  /** Ícone próprio, quando a tela não usa o do módulo (no portal: Relatório e Exigências). */
+  icone?: React.ReactNode;
+};
 export type SetorDaAjuda = { code: string; rotulo: string; cor: string; telas: TelaDaAjuda[] };
 
-type Passo = { chave: string; titulo: string; resumo: string; icone: React.ReactNode; passos: string[] };
+export type PassoDaAjuda = { chave: string; titulo: string; resumo: string; icone: React.ReactNode; passos: string[] };
+type Passo = PassoDaAjuda;
 
 /**
  * Os primeiros passos: o que vale em qualquer tela. Escritos a partir do que o
@@ -126,21 +135,44 @@ function casa(termo: string, ...textos: string[]): boolean {
 /**
  * A central de ajuda: primeiros passos, telas gerais e as telas de cada setor
  * que a pessoa enxerga, com uma busca que filtra tudo junto.
+ *
+ * O portal do cliente usa a mesma central (01/10), com os passos e os textos
+ * dele e sem setores — por isso passos, títulos e rodapé vêm de fora, com os do
+ * Connect como padrão.
  */
-export function CentralDeAjuda({ gerais, setores }: { gerais: TelaDaAjuda[]; setores: SetorDaAjuda[] }) {
+export function CentralDeAjuda({
+  gerais,
+  setores,
+  passos: primeirosPassos = PRIMEIROS_PASSOS,
+  tituloDasTelas = "Telas de todos os setores",
+  introducao = "Procure uma tela, um assunto ou uma dúvida. A busca vale para os primeiros passos e para todas as telas que você enxerga.",
+  exemploDeBusca = "Ex.: conciliação, fixar tela, férias…",
+  focarBusca = true,
+  rodape,
+}: {
+  gerais: TelaDaAjuda[];
+  setores: SetorDaAjuda[];
+  passos?: PassoDaAjuda[];
+  tituloDasTelas?: string;
+  introducao?: string;
+  exemploDeBusca?: string;
+  /** No celular, focar a busca abre o teclado por cima da página — o portal desliga. */
+  focarBusca?: boolean;
+  rodape?: React.ReactNode;
+}) {
   const [busca, setBusca] = useState("");
   const termo = normalizar(busca);
 
   const filtrado = useMemo(() => {
-    if (!termo) return { passos: PRIMEIROS_PASSOS, gerais, setores };
+    if (!termo) return { passos: primeirosPassos, gerais, setores };
     return {
-      passos: PRIMEIROS_PASSOS.filter((p) => casa(termo, p.titulo, p.resumo, ...p.passos)),
+      passos: primeirosPassos.filter((p) => casa(termo, p.titulo, p.resumo, ...p.passos)),
       gerais: gerais.filter((t) => casa(termo, t.titulo, t.descricao)),
       setores: setores
         .map((s) => ({ ...s, telas: s.telas.filter((t) => casa(termo, t.titulo, t.descricao, s.rotulo)) }))
         .filter((s) => s.telas.length > 0),
     };
-  }, [termo, gerais, setores]);
+  }, [termo, primeirosPassos, gerais, setores]);
 
   const nada = filtrado.passos.length === 0 && filtrado.gerais.length === 0 && filtrado.setores.length === 0;
 
@@ -154,17 +186,15 @@ export function CentralDeAjuda({ gerais, setores }: { gerais: TelaDaAjuda[]; set
           style={{ background: "radial-gradient(circle, var(--c41-brand-subtle), transparent 70%)" }}
         />
         <p className="relative font-display text-[22px] sm:text-[26px] font-semibold text-fg leading-tight">Como podemos ajudar?</p>
-        <p className="relative mt-1.5 text-[length:var(--fs-body)] text-fg-muted max-w-[60ch]">
-          Procure uma tela, um assunto ou uma dúvida. A busca vale para os primeiros passos e para todas as telas que você enxerga.
-        </p>
+        <p className="relative mt-1.5 text-[length:var(--fs-body)] text-fg-muted max-w-[60ch]">{introducao}</p>
         <div className="relative mt-5 max-w-xl">
           <Input
             icon={<Search />}
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Ex.: conciliação, fixar tela, férias…"
+            placeholder={exemploDeBusca}
             aria-label="Buscar na ajuda"
-            autoFocus
+            autoFocus={focarBusca}
           />
         </div>
       </div>
@@ -210,7 +240,7 @@ export function CentralDeAjuda({ gerais, setores }: { gerais: TelaDaAjuda[]; set
 
       {filtrado.gerais.length > 0 && (
         <section>
-          <h2 className="font-display text-[length:var(--fs-section)] font-semibold text-fg mb-3">Telas de todos os setores</h2>
+          <h2 className="font-display text-[length:var(--fs-section)] font-semibold text-fg mb-3">{tituloDasTelas}</h2>
           <ListaDeTelas telas={filtrado.gerais} />
         </section>
       )}
@@ -232,6 +262,8 @@ export function CentralDeAjuda({ gerais, setores }: { gerais: TelaDaAjuda[]; set
           <ListaDeTelas telas={s.telas} cor={s.cor} />
         </section>
       ))}
+
+      {rodape}
     </div>
   );
 }
@@ -247,7 +279,7 @@ function ListaDeTelas({ telas, cor }: { telas: TelaDaAjuda[]; cor?: string }) {
               className="inline-flex size-8 flex-shrink-0 items-center justify-center rounded-md bg-surface-hover [&>svg]:size-4"
               style={{ color: cor ?? "var(--c41-brand)" }}
             >
-              {t.codigo ? <ModuleIcon code={t.codigo} /> : <LayoutGrid />}
+              {t.icone ?? (t.codigo ? <ModuleIcon code={t.codigo} /> : <LayoutGrid />)}
             </span>
             <span className="min-w-0 flex-1">
               <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-fg">

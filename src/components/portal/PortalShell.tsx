@@ -1,40 +1,12 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import { ChartColumn, LogOut, Menu, TriangleAlert, X } from "lucide-react";
+import { CircleHelp, LogOut, Menu, X } from "lucide-react";
 import { NavItem, classeDoItem } from "@/components/shell/NavLink";
-import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { IconButton } from "@/components/ui/IconButton";
+import { iconeDaTela } from "@/components/portal/iconeDaTela";
+import { SECOES_DO_PORTAL, telasVisiveis } from "@/lib/portal/telas";
 import { sairDoPortal } from "@/app/(portal)/portal/login/actions";
-
-type Item = {
-  href: string;
-  rotulo: string;
-  /** O módulo que sustenta a tela; `null` = sempre visível. */
-  modulo: string | null;
-  icone: React.ReactNode;
-  secao: "Financeiro" | "Societário" | "Com a equipe" | null;
-};
-
-// Cada tela aparece só se o módulo que a sustenta está ligado no tenant. O
-// acervo fiscal não tem gate de módulo no portal desde que nasceu, e segue sem.
-// Os ícones são os mesmos das telas equivalentes na sidebar do Connect.
-const ITENS: Item[] = [
-  { href: "/portal", rotulo: "Documentos fiscais", modulo: null, icone: <ModuleIcon code="fiscal_documentos" />, secao: null },
-  { href: "/portal/dre", rotulo: "DRE", modulo: "bpo_dre", icone: <ModuleIcon code="bpo_dre" />, secao: "Financeiro" },
-  { href: "/portal/fluxo-de-caixa", rotulo: "Fluxo de caixa", modulo: "bpo_fluxo_caixa", icone: <ModuleIcon code="bpo_fluxo_caixa" />, secao: "Financeiro" },
-  { href: "/portal/relatorios", rotulo: "Relatório", modulo: "bpo_fluxo_caixa", icone: <ChartColumn size={16} />, secao: "Financeiro" },
-  { href: "/portal/pagar", rotulo: "Contas a pagar", modulo: "bpo_contas_pagar", icone: <ModuleIcon code="bpo_contas_pagar" />, secao: "Financeiro" },
-  { href: "/portal/receber", rotulo: "Contas a receber", modulo: "bpo_contas_receber", icone: <ModuleIcon code="bpo_contas_receber" />, secao: "Financeiro" },
-  { href: "/portal/cobranca", rotulo: "Cobrança", modulo: "bpo_cobranca", icone: <ModuleIcon code="bpo_cobranca" />, secao: "Financeiro" },
-  { href: "/portal/processos", rotulo: "Processos", modulo: "societario_processos", icone: <ModuleIcon code="societario_processos" />, secao: "Societário" },
-  { href: "/portal/exigencias", rotulo: "Exigências", modulo: "societario_processos", icone: <TriangleAlert size={16} />, secao: "Societário" },
-  { href: "/portal/pendencias", rotulo: "Pendências", modulo: "bpo_pendencias", icone: <ModuleIcon code="bpo_pendencias" />, secao: "Com a equipe" },
-  { href: "/portal/aprovacoes", rotulo: "Aprovações", modulo: "bpo_aprovacoes", icone: <ModuleIcon code="bpo_aprovacoes" />, secao: "Com a equipe" },
-  { href: "/portal/comunicacao", rotulo: "Conversa", modulo: "bpo_comunicacao", icone: <ModuleIcon code="bpo_comunicacao" />, secao: "Com a equipe" },
-];
-
-const SECOES = ["Financeiro", "Societário", "Com a equipe"] as const;
 
 /**
  * A moldura do portal: sidebar com as telas, no lugar das abas no topo.
@@ -55,8 +27,7 @@ export function PortalShell({
   children: React.ReactNode;
 }) {
   const [menuAberto, setMenuAberto] = useState(false);
-  const ligados = new Set(modulos);
-  const visiveis = ITENS.filter((i) => i.modulo === null || ligados.has(i.modulo));
+  const visiveis = telasVisiveis(new Set(modulos));
 
   return (
     <div className="flex h-screen overflow-hidden bg-canvas">
@@ -101,9 +72,9 @@ export function PortalShell({
             .filter((i) => i.secao === null)
             .map((i) => (
               // Exato: "/portal" é o começo de todas as outras, e acenderia junto.
-              <NavItem key={i.href} href={i.href} icon={i.icone} label={i.rotulo} exact />
+              <NavItem key={i.href} href={i.href} icon={iconeDaTela(i)} label={i.rotulo} exact />
             ))}
-          {SECOES.map((secao) => {
+          {SECOES_DO_PORTAL.map((secao) => {
             const itens = visiveis.filter((i) => i.secao === secao);
             if (itens.length === 0) return null;
             // Fragmento, e não <div>: os itens ficam filhos diretos do <nav> e
@@ -113,14 +84,17 @@ export function PortalShell({
               <Fragment key={secao}>
                 <p className="px-2.5 pt-4 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">{secao}</p>
                 {itens.map((i) => (
-                  <NavItem key={i.href} href={i.href} icon={i.icone} label={i.rotulo} />
+                  <NavItem key={i.href} href={i.href} icon={iconeDaTela(i)} label={i.rotulo} />
                 ))}
               </Fragment>
             );
           })}
         </nav>
 
-        <div className="border-t border-border px-3 py-3 flex-shrink-0">
+        {/* Ajuda no rodapé, junto do sair: vale para qualquer tela, e no menu
+            de telas ela se misturaria com o trabalho. */}
+        <div className="border-t border-border px-3 py-3 flex-shrink-0 space-y-0.5" onClick={() => setMenuAberto(false)}>
+          <NavItem href="/portal/ajuda" icon={<CircleHelp />} label="Ajuda" />
           <form action={sairDoPortal}>
             <button
               type="submit"
