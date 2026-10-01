@@ -9,6 +9,7 @@ export const ORIGEM: Record<Origem, string> = {
   CARD: "Card",
   PENDENCIA: "Pendência",
   TRANSFERENCIA: "Transferência",
+  SOLICITACAO: "Solicitação",
 };
 
 /** Os selos do que pede atenção num item. */

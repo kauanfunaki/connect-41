@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRightLeft, FileSignature, MessageSquareWarning, SquareKanban } from "lucide-react";
+import { ArrowRightLeft, FileSignature, Inbox, MessageSquareWarning, SquareKanban } from "lucide-react";
 import { SelosDoItem, ORIGEM } from "@/components/gestao/ItemDaGestao";
 import type { Classificacao, ItemDeTrabalho, Origem } from "@/lib/gestao/regras";
 
@@ -8,6 +8,7 @@ const ICONE: Record<Origem, React.ReactNode> = {
   CARD: <SquareKanban />,
   PENDENCIA: <MessageSquareWarning />,
   TRANSFERENCIA: <ArrowRightLeft />,
+  SOLICITACAO: <Inbox />,
 };
 
 /**
