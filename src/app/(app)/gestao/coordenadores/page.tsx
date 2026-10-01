@@ -38,7 +38,7 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
   const vazia = (userId: string): CargaDaPessoa => ({
     userId,
     abertos: 0,
-    porOrigem: { PROCESSO: 0, CARD: 0, PENDENCIA: 0, TRANSFERENCIA: 0 },
+    porOrigem: { PROCESSO: 0, CARD: 0, PENDENCIA: 0, TRANSFERENCIA: 0, SOLICITACAO: 0 },
     parados: 0,
     vencidos: 0,
     vencendo: 0,
@@ -117,6 +117,7 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
                   <th className="px-3">Cards</th>
                   <th className="px-3">Pendências</th>
                   <th className="px-3">Transferências</th>
+                  <th className="px-3">Solicitações</th>
                   <th className="px-3">Parados</th>
                   <th className="px-3">Prazo vencido</th>
                   <th className="px-3">Vencendo</th>
@@ -144,6 +145,7 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
                     <td className={TD}>{c.porOrigem.CARD}</td>
                     <td className={TD}>{c.porOrigem.PENDENCIA}</td>
                     <td className={TD}>{c.porOrigem.TRANSFERENCIA}</td>
+                    <td className={TD}>{c.porOrigem.SOLICITACAO}</td>
                     <td className={`${TD} ${c.parados ? "text-warning font-medium" : ""}`}>{c.parados}</td>
                     <td className={`${TD} ${c.vencidos ? "text-danger font-medium" : ""}`}>{c.vencidos}</td>
                     <td className={TD}>{c.vencendo}</td>
