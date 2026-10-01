@@ -48,6 +48,7 @@ export default async function PortalPage({
         tenantId={sessao.tenantId}
         companyIds={alcance.tipo === "EMPRESAS" ? alcance.companyIds : []}
         portalUserId={sessao.sub}
+        clientGroupId={sessao.clientGroupId}
         modulos={modulos}
       />
       {/* Só na home: o cliente entra por aqui, e um botão de ativar aviso

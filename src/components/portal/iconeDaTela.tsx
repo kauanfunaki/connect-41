@@ -1,4 +1,4 @@
-import { ChartColumn, TriangleAlert } from "lucide-react";
+import { ChartColumn, Megaphone, TriangleAlert } from "lucide-react";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import type { TelaDoPortal } from "@/lib/portal/telas";
 
@@ -8,5 +8,6 @@ import type { TelaDoPortal } from "@/lib/portal/telas";
 export function iconeDaTela(t: TelaDoPortal): React.ReactNode {
   if (t.href === "/portal/relatorios") return <ChartColumn size={16} />;
   if (t.href === "/portal/exigencias") return <TriangleAlert size={16} />;
+  if (t.href === "/portal/comunicados") return <Megaphone size={16} />;
   return <ModuleIcon code={t.modulo ?? "fiscal_documentos"} />;
 }

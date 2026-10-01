@@ -824,6 +824,44 @@ export async function sendSolicitacaoAoClienteEmail(input: SendSolicitacaoAoClie
   return enviarAvisoIndividual(input.tenantId, "sendSolicitacaoAoClienteEmail", mensagens);
 }
 
+export type SendComunicadoAoClienteEmailInput = {
+  tenantId: string;
+  destinatarios: { email: string; nome: string }[];
+  comunicadoId: string;
+  titulo: string;
+  setor: string;
+};
+
+// Comunicado da 41 a vários clientes (01/10). O título vai no e-mail — é um
+// aviso geral, escrito para muitos —, e o texto completo fica no portal, onde
+// a leitura é registrada.
+export async function sendComunicadoAoClienteEmail(input: SendComunicadoAoClienteEmailInput): Promise<ResultadoDoAviso> {
+  const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
+  const url = `${baseUrl}/portal/comunicados/${input.comunicadoId}`;
+  const mensagens = input.destinatarios.map((d) => ({
+    to: d.email,
+    subject: `Comunicado da 41: ${input.titulo}`,
+    html: emailShell(
+      `
+    <p class="email-text" style="font-size:14px; line-height:1.6; margin:0 0 16px; font-family:Arial,Helvetica,sans-serif;">
+      Olá, ${escapeHtml(d.nome)}. A equipe de ${escapeHtml(input.setor)} publicou um comunicado no portal:
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="doc-card" style="margin:0 0 16px; border:1px solid; border-radius:10px;">
+      <tr>
+        <td style="padding:16px 18px;">
+          <p class="email-text-muted" style="margin:0 0 4px; font-size:10.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; font-family:Arial,Helvetica,sans-serif;">Comunicado</p>
+          <p class="email-text-strong" style="margin:0; font-size:15px; font-weight:700; font-family:Arial,Helvetica,sans-serif;">${escapeHtml(input.titulo)}</p>
+        </td>
+      </tr>
+    </table>
+    ${botaoDoEmail(url, "Ler no portal")}
+  `,
+      "Portal do cliente"
+    ),
+  }));
+  return enviarAvisoIndividual(input.tenantId, "sendComunicadoAoClienteEmail", mensagens);
+}
+
 export type SendMensagemAoClienteEmailInput = {
   tenantId: string;
   destinatarios: { email: string; nome: string }[];
