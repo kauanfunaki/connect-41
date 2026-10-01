@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { salvarAgente, restaurarPadraoDoAgente, type AgenteState } from "@/app/(app)/admin/ia/actions";
 import {
@@ -118,9 +119,12 @@ export function AgenteCard({ linha, podeEditar }: Props) {
                 label="Agente ligado"
               />
 
-              <div className="grid gap-3 sm:grid-cols-3">
+              {/* "(centavos)" saiu do rótulo para o sufixo do campo: na coluna
+                  de um terço, o rótulo quebrava em duas linhas e descia o campo
+                  dele abaixo dos vizinhos. */}
+              <FieldGrid columns="sm:grid-cols-3">
                 <CampoForm
-                  label="Teto de gasto (centavos)"
+                  label="Teto de gasto"
                   htmlFor={`cap-cents-${linha.def.code}`}
                   helper={`Em branco usa o padrão: ${moeda(linha.def.tetoMensalCentavos)}. Zero bloqueia.`}
                 >
@@ -132,6 +136,7 @@ export function AgenteCard({ linha, podeEditar }: Props) {
                     step={1}
                     defaultValue={linha.override?.monthlyCapCents ?? ""}
                     placeholder={String(linha.def.tetoMensalCentavos)}
+                    suffix="centavos"
                   />
                 </CampoForm>
 
@@ -163,16 +168,16 @@ export function AgenteCard({ linha, podeEditar }: Props) {
                     placeholder={linha.model}
                   />
                 </CampoForm>
-              </div>
+              </FieldGrid>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <Button type="submit" disabled={isPending}>
-                  {isPending ? "Salvando…" : "Salvar"}
-                </Button>
+              {/* Salvar à direita, o primário por último; "Voltar ao padrão"
+                  descarta a configuração e fica separado, à esquerda. */}
+              <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-border-soft">
                 {linha.temOverride && (
                   <Button
                     type="button"
                     variant="ghost"
+                    className="mr-auto"
                     disabled={restaurando}
                     onClick={async () => {
                       setRestaurando(true);
@@ -183,6 +188,9 @@ export function AgenteCard({ linha, podeEditar }: Props) {
                     {restaurando ? "Restaurando…" : "Voltar ao padrão"}
                   </Button>
                 )}
+                <Button type="submit" disabled={isPending}>
+                  {isPending ? "Salvando…" : "Salvar"}
+                </Button>
               </div>
             </form>
           )}

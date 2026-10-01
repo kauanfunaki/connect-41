@@ -34,8 +34,8 @@ export function RejeitarProposta({ propostaId, rejeitar }: { propostaId: string;
         placeholder="Por que a proposta não serve? (opcional)"
       />
       {erro && <p className="text-[12px] text-danger">{erro}</p>}
-      <div className="flex gap-2 justify-end">
-        <Button variant="ghost" onClick={() => setAberto(false)} disabled={pendente}>
+      <div className="flex items-center justify-end gap-3">
+        <Button variant="secondary" onClick={() => setAberto(false)} disabled={pendente}>
           Cancelar
         </Button>
         <Button

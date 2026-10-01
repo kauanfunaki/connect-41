@@ -26,7 +26,9 @@ export function FilterButton({ activeCount = 0, align = "right", width = 260, ch
         <button
           type="button"
           onClick={toggle}
-          className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-md border text-[13px] font-medium transition-colors flex-shrink-0 ${
+          // h-8 desde 30/09: a busca compacta e os botões sm da mesma barra têm 32px,
+          // e o Filtros com 36px era o único degrau da linha.
+          className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-md border text-[length:var(--fs-button-sm)] font-semibold transition-colors flex-shrink-0 ${
             activeCount > 0 || open
               ? "border-brand/40 bg-brand-subtle text-fg"
               : "border-border-strong text-fg-secondary hover:bg-surface-hover"

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
@@ -9,6 +8,7 @@ import { getSectorMaps } from "@/lib/sectors";
 import { VagaForm } from "@/components/vagas/VagaForm";
 import { atualizarVaga } from "../../actions";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 
 export default async function EditarVagaPage({
   params,
@@ -45,13 +45,9 @@ export default async function EditarVagaPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/vagas" className="text-[13px] text-fg-muted hover:text-fg transition-colors">Vagas</Link>
-        <span className="text-fg-muted">/</span>
-        <Link href={`/vagas/${id}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate max-w-[200px]">{vaga.title}</Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Editar</span>
-      </div>
+      <Breadcrumb
+        items={[{ label: "Vagas", href: "/vagas" }, { label: vaga.title, href: `/vagas/${id}`, truncate: true }, { label: "Editar" }]}
+      />
       <PageHeader title="Editar Vaga" />
 
       <Card className="p-6">

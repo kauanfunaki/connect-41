@@ -46,8 +46,8 @@ export function DocumentosDoProcesso({
         <ul className="flex flex-col">
           {documentos.map((d) => (
             <li key={d.id} className="flex flex-wrap items-start gap-x-3 gap-y-0.5 py-2 border-b border-border-soft last:border-0">
-              <FileText size={15} className="mt-0.5 shrink-0 text-fg-muted" aria-hidden />
-              <div className="flex-1 min-w-[12rem] flex flex-col gap-0.5">
+              <FileText size={16} className="mt-0.5 shrink-0 text-fg-muted" aria-hidden />
+              <div className="flex-1 min-w-48 flex flex-col gap-0.5">
                 <a href={`${baseDoDownload}/${d.id}`} className="text-[13px] text-brand hover:underline break-all">
                   {d.fileName}
                 </a>
@@ -68,7 +68,7 @@ export function DocumentosDoProcesso({
       {aberto ? (
         <form
           key={versao}
-          className="flex flex-col gap-3 rounded-md border border-border p-3"
+          className="flex flex-col gap-4 rounded-md border border-border p-4"
           onSubmit={(e) => {
             e.preventDefault();
             const dados = new FormData(e.currentTarget);
@@ -91,19 +91,21 @@ export function DocumentosDoProcesso({
             <Input id={`doc-desc-${processId}`} name="descricao" maxLength={200} placeholder="Ex.: Contrato social registrado" />
           </CampoForm>
           <CampoDeAnexos idBase={`doc-${processId}`} />
-          <div className="flex flex-wrap items-center gap-2">
-            <Button type="submit" size="sm" disabled={pendente}>
-              <Upload size={13} /> {pendente ? "Enviando…" : "Guardar documentos"}
-            </Button>
-            <Button type="button" size="sm" variant="ghost" disabled={pendente} onClick={() => setAberto(false)}>
+          {erro && <p className="text-[12px] text-danger">{erro}</p>}
+          {/* Rodapé no padrão: Cancelar à esquerda do primário, os dois à
+              direita — o erro, que ficava espremido na mesma linha, sobe. */}
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <Button type="button" size="sm" variant="secondary" disabled={pendente} onClick={() => setAberto(false)}>
               Cancelar
             </Button>
-            {erro && <span className="text-[12px] text-danger">{erro}</span>}
+            <Button type="submit" size="sm" disabled={pendente}>
+              <Upload size={14} /> {pendente ? "Enviando…" : "Guardar documentos"}
+            </Button>
           </div>
         </form>
       ) : (
         <Button type="button" size="sm" variant="secondary" className="self-start" onClick={() => setAberto(true)}>
-          <Upload size={13} /> Adicionar documentos
+          <Upload size={14} /> Adicionar documentos
         </Button>
       )}
     </div>

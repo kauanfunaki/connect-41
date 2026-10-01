@@ -73,9 +73,10 @@ export function AdmissaoCard({ personId, initialLink, canManage }: Props) {
 
   return (
     <div className="bg-surface border border-brand/30 rounded-lg p-5">
-      <div className="flex items-center gap-2 mb-1">
+      {/* Título no tamanho dos outros cartões da ficha (era 14px). */}
+      <div className="flex items-center gap-2 mb-2">
         <UserPlus size={16} className="text-brand" />
-        <h2 className="text-[14px] font-semibold text-fg">Admissão digital</h2>
+        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">Admissão digital</h2>
       </div>
 
       {!link && (
@@ -88,10 +89,9 @@ export function AdmissaoCard({ personId, initialLink, canManage }: Props) {
               type="button"
               onClick={handleGerar}
               disabled={pending}
-              variant="primary" className="font-medium disabled:opacity-60"
             >
               {pending ? "Gerando…" : "Gerar link de admissão"}
-           </Button>
+            </Button>
           )}
         </>
       )}
@@ -102,15 +102,10 @@ export function AdmissaoCard({ personId, initialLink, canManage }: Props) {
             Aguardando o preenchimento pelo colaborador. Link expira em {link.expiresAtLabel}.
           </p>
           <div className="flex items-center gap-2 mb-3">
-            <div className="flex-1">
-              <Input readOnly value={linkUrl} onFocus={(e) => e.target.select()} />
+            <div className="flex-1 min-w-0">
+              <Input readOnly aria-label="Link de admissão" value={linkUrl} onFocus={(e) => e.target.select()} />
             </div>
-            <Button
-              variant="secondary"
-              size="md"
-              className="bg-surface-hover hover:border-brand flex-shrink-0"
-              onClick={handleCopy}
-            >
+            <Button variant="secondary" className="flex-shrink-0" onClick={handleCopy}>
               {copied ? "Copiado!" : "Copiar"}
             </Button>
           </div>
@@ -119,7 +114,7 @@ export function AdmissaoCard({ personId, initialLink, canManage }: Props) {
             // Era texto sublinhado (até 30/09) — é uma ação, e das que desfazem
             // algo (invalida o link enviado): botão, para não passar por prosa.
             <Button variant="secondary" size="xs" onClick={handleGerar} disabled={pending}>
-              <RefreshCw size={11} />
+              <RefreshCw size={12} />
               {pending ? "Gerando…" : "Gerar novo link (invalida o atual)"}
             </Button>
           )}
@@ -144,7 +139,7 @@ export function AdmissaoCard({ personId, initialLink, canManage }: Props) {
         </>
       )}
 
-      {error && <p className="text-[13px] text-danger mt-3">{error}</p>}
+      {error && <p className="text-[length:var(--fs-helper)] font-medium text-danger mt-3">{error}</p>}
     </div>
   );
 }

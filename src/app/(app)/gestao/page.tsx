@@ -90,13 +90,13 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
       </div>
 
       <section aria-labelledby="atencao" className="flex flex-col gap-2">
-        <div className="flex items-baseline justify-between gap-2">
+        <div className="flex items-center justify-between gap-3">
           <h2 id="atencao" className="text-[14px] font-semibold text-fg">
             Precisam de atenção ({atencao.length})
           </h2>
           {atencao.length > 12 && (
             <Button href={setor ? `/gestao/alertas?setor=${setor}` : "/gestao/alertas"} variant="secondary" size="xs">
-              Ver todos <ArrowRight size={11} />
+              Ver todos <ArrowRight size={12} />
             </Button>
           )}
         </div>
@@ -129,7 +129,7 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
           {COLUNAS.map((col) => {
             const lista = porColuna.get(col.key)!.sort(ordenarColuna);
             return (
-              <Card key={col.key} className="p-3 flex flex-col gap-2 min-w-0">
+              <Card key={col.key} className="p-4 flex flex-col gap-2 min-w-0">
                 <p className="text-[13px] font-semibold text-fg">
                   {col.titulo} <span className="text-fg-muted font-normal tabular-nums">({lista.length})</span>
                 </p>

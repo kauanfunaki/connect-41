@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -6,6 +5,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { UsuarioForm } from "@/components/admin/UsuarioForm";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { criarUsuario } from "../actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { assignableRoles, ROLE_OPTIONS } from "@/lib/roles";
@@ -26,13 +26,7 @@ export default async function NovoUsuarioPage() {
   if (!seatCheck.allowed) {
     return (
       <PageContainer>
-        <div className="flex items-center gap-2 mb-6">
-          <Link href="/admin/usuarios" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-            Usuários
-          </Link>
-          <span className="text-fg-muted">/</span>
-          <span className="text-[13px] text-fg">Novo Usuário</span>
-        </div>
+        <Breadcrumb items={[{ label: "Usuários", href: "/admin/usuarios" }, { label: "Novo Usuário" }]} />
 
         <div className="rounded-lg border border-warning/30 bg-warning-bg px-4 py-3">
           <p className="text-[13px] text-fg">{seatCheck.reason}</p>
@@ -47,23 +41,19 @@ export default async function NovoUsuarioPage() {
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/admin/usuarios" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Usuários
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Novo Usuário</span>
-      </div>
+      <Breadcrumb items={[{ label: "Usuários", href: "/admin/usuarios" }, { label: "Novo Usuário" }]} />
       <PageHeader title="Novo Usuário" />
 
-      <Card className="p-6">
-        <UsuarioForm
-          action={criarUsuario}
-          cancelHref="/admin/usuarios"
-          roleOptions={roleOptions}
-          sectorOptions={sectorOptions}
-        />
-      </Card>
+      <div className="max-w-[720px]">
+        <Card className="p-6">
+          <UsuarioForm
+            action={criarUsuario}
+            cancelHref="/admin/usuarios"
+            roleOptions={roleOptions}
+            sectorOptions={sectorOptions}
+          />
+        </Card>
+      </div>
     </PageContainer>
   );
 }

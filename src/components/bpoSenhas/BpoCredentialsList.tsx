@@ -10,6 +10,7 @@ import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, 
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { Modal } from "@/components/ui/Modal";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -44,7 +45,7 @@ type Props = {
 
 function CredentialFormFields({ companies, defaults }: { companies: CompanyOption[]; defaults?: Partial<CredentialRow> }) {
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-4">
       <CampoForm label="Título" htmlFor="title" required>
         <Input id="title" name="title" required defaultValue={defaults?.title} placeholder="Ex: e-CAC, Simples Nacional, Banco Inter" />
       </CampoForm>
@@ -58,17 +59,20 @@ function CredentialFormFields({ companies, defaults }: { companies: CompanyOptio
           placeholder="Buscar empresa…"
         />
       </CampoForm>
-      <CampoForm label="Usuário" htmlFor="username">
-        <Input id="username" name="username" defaultValue={defaults?.username ?? ""} />
-      </CampoForm>
-      <CampoForm
-        label="Senha"
-        htmlFor="password"
-        required={!defaults}
-        helper={defaults ? "Deixe em branco para manter a senha atual." : undefined}
-      >
-        <Input id="password" name="password" type="password" required={!defaults} autoComplete="new-password" />
-      </CampoForm>
+      {/* Usuário e senha são o par que se consulta junto: lado a lado. */}
+      <FieldGrid>
+        <CampoForm label="Usuário" htmlFor="username">
+          <Input id="username" name="username" defaultValue={defaults?.username ?? ""} />
+        </CampoForm>
+        <CampoForm
+          label="Senha"
+          htmlFor="password"
+          required={!defaults}
+          helper={defaults ? "Deixe em branco para manter a senha atual." : undefined}
+        >
+          <Input id="password" name="password" type="password" required={!defaults} autoComplete="new-password" />
+        </CampoForm>
+      </FieldGrid>
       <CampoForm label="URL" htmlFor="url">
         <Input id="url" name="url" type="url" defaultValue={defaults?.url ?? ""} placeholder="https://…" />
       </CampoForm>
@@ -98,27 +102,19 @@ function NewCredentialModal({ companies, createAction }: { companies: CompanyOpt
 
   return (
     <>
-      <Button
-        type="button"
-        onClick={() => setOpen(true)}
-        variant="primary" className="font-medium"
-      >
-        <Plus size={15} /> Nova credencial
-     </Button>
+      <Button type="button" size="sm" onClick={() => setOpen(true)}>
+        <Plus size={13} /> Nova credencial
+      </Button>
       <Modal open={open} onClose={() => setOpen(false)} title="Nova credencial" maxWidth="max-w-md">
-        <form action={formAction} className="space-y-4">
+        <form action={formAction} className="flex flex-col gap-4">
           <CredentialFormFields companies={companies} />
           {state?.error && <p className="text-[12px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{state.error}</p>}
-          <div className="flex items-center gap-2 pt-1">
-            <Button
-              type="submit"
-              disabled={isPending}
-              variant="primary" className="font-medium disabled:opacity-60"
-            >
-              {isPending ? "Salvando…" : "Criar"}
-           </Button>
-            <Button variant="secondary" size="md" onClick={() => setOpen(false)}>
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
+            <Button variant="secondary" onClick={() => setOpen(false)}>
               Cancelar
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {isPending ? "Salvando…" : "Criar"}
             </Button>
           </div>
         </form>
@@ -141,19 +137,15 @@ function EditCredentialModal({
 
   return (
     <Modal open onClose={onClose} title={`Editar — ${row.title}`} maxWidth="max-w-md">
-      <form action={formAction} className="space-y-4">
+      <form action={formAction} className="flex flex-col gap-4">
         <CredentialFormFields companies={companies} defaults={row} />
         {state?.error && <p className="text-[12px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{state.error}</p>}
-        <div className="flex items-center gap-2 pt-1">
-          <Button
-            type="submit"
-            disabled={isPending}
-            variant="primary" className="font-medium disabled:opacity-60"
-          >
-            {isPending ? "Salvando…" : "Salvar"}
-         </Button>
-          <Button variant="secondary" size="md" onClick={onClose}>
+        <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
+          <Button variant="secondary" onClick={onClose}>
             Cancelar
+          </Button>
+          <Button type="submit" disabled={isPending}>
+            {isPending ? "Salvando…" : "Salvar"}
           </Button>
         </div>
       </form>
@@ -170,7 +162,7 @@ function AcoesDaCredencial({ onEditar, onExcluir }: { onEditar: () => void; onEx
   return (
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
       <Button variant="secondary" size="xs" onClick={onEditar}>
-        <Pencil size={11} /> Editar
+        <Pencil size={12} /> Editar
       </Button>
       <Popover
         align="right"
@@ -274,19 +266,26 @@ export function BpoCredentialsList({ credentials, companies, canManage, createAc
 
   return (
     <div className="space-y-4">
+      {/* Barra de ferramentas: busca `compact` e botão `sm`, os dois em 32px —
+          eram o Input e o Button de formulário, de 36px. */}
       <div className="flex items-center justify-between gap-3">
-        {credentials.length > 0 ? (
-          <Input
-            icon={<Search />}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por título, empresa ou usuário…"
-            className="w-full max-w-xs"
-          />
-        ) : (
-          <span />
+        {credentials.length > 0 && (
+          <div className="min-w-0 flex-1 max-w-xs">
+            <Input
+              compact
+              icon={<Search />}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por título, empresa ou usuário…"
+              aria-label="Buscar credenciais"
+            />
+          </div>
         )}
-        {canManage && <NewCredentialModal companies={companies} createAction={createAction} />}
+        {canManage && (
+          <div className="ml-auto flex-shrink-0">
+            <NewCredentialModal companies={companies} createAction={createAction} />
+          </div>
+        )}
       </div>
 
       {credentials.length === 0 ? (

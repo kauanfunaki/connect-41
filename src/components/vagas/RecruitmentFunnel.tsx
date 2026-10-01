@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { ClipboardCheck, FileText, LogOut, MoreHorizontal, UserX } from "lucide-react";
 import { ACTIVE_STAGES, STAGE_LABEL, type Stage } from "@/lib/recruitmentFunnel";
+import { CampoForm } from "@/components/ui/CampoForm";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -170,7 +171,7 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
                       </span>
                       <Link
                         href={`/candidatos/${c.personId}`}
-                        className="text-[13px] text-fg hover:text-brand transition-colors truncate"
+                        className="min-w-0 text-[13px] text-fg hover:text-brand transition-colors truncate"
                       >
                         {c.personName}
                       </Link>
@@ -187,7 +188,7 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
                         </span>
                       </p>
                     )}
-                    {c.respostas && <p className="text-[11px] text-fg-secondary mt-1 pl-8 tnum">{c.respostas}</p>}
+                    {c.respostas && <p className="text-[11px] text-fg-secondary mt-1.5 pl-8 tnum">{c.respostas}</p>}
                     {c.origin && <p className="text-[11px] text-fg-muted mt-1.5 pl-8">via {c.origin}</p>}
 
                     {/* Alternativa acessível ao arraste: o board era só
@@ -305,17 +306,16 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
           setDialogError(null);
         }}
       >
-        <label htmlFor="encerrar-motivo" className="block text-[length:var(--fs-label)] font-medium text-fg mb-1.5">
-          Motivo <span className="text-fg-muted font-normal">(opcional)</span>
-        </label>
-        <Textarea
-          id="encerrar-motivo"
-          rows={3}
-          value={motivo}
-          onChange={(e) => setMotivo(e.target.value)}
-          maxLength={500}
-          placeholder="Ex: perfil técnico abaixo do exigido; aceitou outra proposta…"
-        />
+        <CampoForm label="Motivo" htmlFor="encerrar-motivo" helper="Opcional.">
+          <Textarea
+            id="encerrar-motivo"
+            rows={3}
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            maxLength={500}
+            placeholder="Ex: perfil técnico abaixo do exigido; aceitou outra proposta…"
+          />
+        </CampoForm>
       </ConfirmDialog>
     </>
   );

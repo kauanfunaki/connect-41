@@ -105,7 +105,7 @@ export default async function AgentesDeIAPage() {
       <section className="flex flex-col gap-3 mb-8" aria-labelledby="agentes-do-chat">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-2">
           <div>
-            <h2 id="agentes-do-chat" className="text-[17px] font-semibold text-fg">
+            <h2 id="agentes-do-chat" className="text-[length:var(--fs-section)] font-semibold text-fg">
               Agentes — chat de IA
             </h2>
             <p className="text-[13px] text-fg-secondary max-w-[70ch]">
@@ -126,7 +126,7 @@ export default async function AgentesDeIAPage() {
       <section className="flex flex-col gap-3 mb-8" aria-labelledby="outras-funcoes">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-2">
           <div>
-            <h2 id="outras-funcoes" className="text-[17px] font-semibold text-fg">
+            <h2 id="outras-funcoes" className="text-[length:var(--fs-section)] font-semibold text-fg">
               Outras utilizações de IA
             </h2>
             <p className="text-[13px] text-fg-secondary max-w-[70ch]">
@@ -146,9 +146,10 @@ export default async function AgentesDeIAPage() {
         ))}
       </section>
 
+      {/* Mesmo cabeçalho das duas seções de cima (era 15px contra 17px). */}
       <section className="flex flex-col gap-3">
-        <div>
-          <h2 className="text-[15px] font-semibold text-fg">Últimas chamadas</h2>
+        <div className="border-b border-border pb-2">
+          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">Últimas chamadas</h2>
           <p className="text-[13px] text-fg-secondary">
             Quem pediu, sobre o quê e como terminou. É a resposta para “por que esse texto apareceu
             nesta ficha”.

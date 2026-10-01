@@ -137,9 +137,9 @@ export default async function ValoraPage() {
                 <PeDoCartao>
                   <Badge variant={SITUACAO[p.status]?.variante ?? "info"}>{SITUACAO[p.status]?.rotulo ?? p.status}</Badge>
                   {acesso.podeSimular && (
-                    <span className="ml-auto">
+                    <div className="ml-auto">
                       <EditarProposta proposta={p} />
-                    </span>
+                    </div>
                   )}
                 </PeDoCartao>
               </Cartao>

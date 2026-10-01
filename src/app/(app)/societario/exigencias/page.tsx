@@ -121,7 +121,9 @@ export default async function ExigenciasPage({
                 <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Prazo do órgão" chave="prazo" tipo="data" /></th>
                 <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Situação" chave="situacao" /></th>
                 <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Responsável" chave="responsavel" align="right" /></th>
-                <th className="py-2 font-medium" />
+                <th className="py-2 font-medium">
+                  <span className="sr-only">Ações</span>
+                </th>
               </tr>
             </thead>
             <tbody>

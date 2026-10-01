@@ -8,6 +8,7 @@ import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { SeloDoDP } from "@/components/pessoas/rotulosDoDP";
 import {
   agruparPorFamilia,
   detectarDivergenciasNome,
@@ -76,10 +77,10 @@ export default async function CargosSalariosPage() {
       {/* Achados estruturais primeiro: é o que a implantação precisa corrigir. */}
       {(totalDegraus > 0 || divergencias.length > 0 || semClassificacao > 0) && (
         <Card className="p-5 mb-4 border-warning/30">
-          <div className="flex items-center gap-2 mb-3">
+          <h2 className="flex items-center gap-1.5 text-[14px] font-semibold text-fg mb-3">
             <AlertTriangle size={16} className="text-warning" />
-            <h2 className="text-[14px] font-semibold text-fg">Pontos de atenção da estrutura</h2>
-          </div>
+            Pontos de atenção da estrutura
+          </h2>
           <ul className="space-y-2">
             {totalDegraus > 0 && canViewSalary && (
               <li className="text-[13px] text-fg-secondary">
@@ -127,7 +128,7 @@ export default async function CargosSalariosPage() {
             return (
               <section key={g.family}>
                 <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
-                  <h2 className="text-[13px] font-semibold text-fg">{g.label}</h2>
+                  <h2 className="text-[14px] font-semibold text-fg">{g.label}</h2>
                   <span className="text-[12px] text-fg-muted">
                     {g.cargos.length} cargo{g.cargos.length !== 1 ? "s" : ""} · {g.totalPessoas} colaborador
                     {g.totalPessoas !== 1 ? "es" : ""}
@@ -145,36 +146,34 @@ export default async function CargosSalariosPage() {
                   }))}
                 >
                   <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-                    <table className="w-full min-w-[760px] text-[13px]">
+                    <table className="w-full min-w-[760px] text-[length:var(--fs-ui)]">
                       <thead>
-                        <tr className="border-b border-border text-[11px] uppercase tracking-wide text-fg-muted">
-                          <th scope="col" className="px-4 py-2.5 font-medium">
+                        <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                          <th scope="col" className="px-4 py-3">
                             <FiltroDaColuna rotulo="Nível" chave="nivel" />
                           </th>
-                          <th scope="col" className="px-4 py-2.5 font-medium">Cargo</th>
-                          <th scope="col" className="px-4 py-2.5 font-medium">
+                          <th scope="col" className="px-4 py-3">Cargo</th>
+                          <th scope="col" className="px-4 py-3">
                             <FiltroDaColuna rotulo="Empresa" chave="empresa" />
                           </th>
-                          <th scope="col" className="px-4 py-2.5 font-medium">
+                          <th scope="col" className="px-4 py-3">
                             <FiltroDaColuna rotulo="Área" chave="area" align={canViewSalary ? "left" : "right"} />
                           </th>
-                          <th scope="col" className="px-4 py-2.5 font-medium">Pessoas</th>
-                          {canViewSalary && <th scope="col" className="px-4 py-2.5 font-medium">Faixa salarial</th>}
+                          <th scope="col" className="px-4 py-3">Pessoas</th>
+                          {canViewSalary && <th scope="col" className="px-4 py-3">Faixa salarial</th>}
                         </tr>
                       </thead>
                       <tbody>
                         {g.cargos.map((c) => (
                           <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border">
-                            <td className="px-4 py-2.5">
+                            <td className="px-4 py-3">
                               {c.seniority ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border bg-brand/10 text-brand border-brand/25 whitespace-nowrap">
-                                  {SENIORITY_LABEL[c.seniority]}
-                                </span>
+                                <SeloDoDP cor="bg-brand/10 text-brand border-brand/25">{SENIORITY_LABEL[c.seniority]}</SeloDoDP>
                               ) : (
                                 <span className="text-[12px] text-fg-muted">—</span>
                               )}
                             </td>
-                            <td className="px-4 py-2.5 text-fg font-medium">
+                            <td className="px-4 py-3 text-fg font-medium">
                               <Link
                                 href={`/empresas/${companyIdByCargo.get(c.id)}/cargos/${c.id}/editar`}
                                 className="hover:text-brand transition-colors"
@@ -182,16 +181,16 @@ export default async function CargosSalariosPage() {
                                 {c.name}
                               </Link>
                               {invertidoIds.has(c.id) && canViewSalary && (
-                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border bg-warning/10 text-warning border-warning/25">
-                                  degrau invertido
+                                <span className="ml-2 inline-flex">
+                                  <SeloDoDP cor="bg-warning/10 text-warning border-warning/25">degrau invertido</SeloDoDP>
                                 </span>
                               )}
                             </td>
-                            <td className="px-4 py-2.5 text-fg-muted">{c.companyName}</td>
-                            <td className="px-4 py-2.5 text-fg-muted">{c.area ?? "—"}</td>
-                            <td className="px-4 py-2.5 text-fg-muted tnum">{c.peopleCount}</td>
+                            <td className="px-4 py-3 text-fg-muted">{c.companyName}</td>
+                            <td className="px-4 py-3 text-fg-muted">{c.area ?? "—"}</td>
+                            <td className="px-4 py-3 text-fg-muted tnum">{c.peopleCount}</td>
                             {canViewSalary && (
-                              <td className="px-4 py-2.5 text-fg-muted tnum whitespace-nowrap">
+                              <td className="px-4 py-3 text-fg-muted tnum whitespace-nowrap">
                                 {fmt(c.salaryRangeMin)} – {fmt(c.salaryRangeMax)}
                               </td>
                             )}

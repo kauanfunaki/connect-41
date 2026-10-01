@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { MenuDoRegistro } from "./MenuDoRegistro";
-import { SITUACAO_DAS_FERIAS, COR_DAS_FERIAS } from "./rotulosDoDP";
+import { SITUACAO_DAS_FERIAS, COR_DAS_FERIAS, SeloDoDP } from "./rotulosDoDP";
 
 const STATUS_OPTIONS = Object.keys(SITUACAO_DAS_FERIAS) as VacationStatus[];
 
@@ -34,7 +34,7 @@ export function FeriasRow({ ferias, updateAction, removeAction, canManage }: Pro
   return (
     <div className="py-3 border-b border-border last:border-0">
       <div className="flex items-center justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <p className="text-[13px] text-fg">
             Aquisitivo: {ferias.acquisitivePeriodLabel} · {ferias.days} dias
           </p>
@@ -44,22 +44,22 @@ export function FeriasRow({ ferias, updateAction, removeAction, canManage }: Pro
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {ferias.isVencida && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border bg-danger/10 text-danger border-danger/25">
-              Vencida
-            </span>
+            <SeloDoDP cor="bg-danger/10 text-danger border-danger/25">Vencida</SeloDoDP>
           )}
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${COR_DAS_FERIAS[ferias.status]}`}>
-            {SITUACAO_DAS_FERIAS[ferias.status]}
-          </span>
+          <SeloDoDP cor={COR_DAS_FERIAS[ferias.status]}>{SITUACAO_DAS_FERIAS[ferias.status]}</SeloDoDP>
           {/* Remover saiu de ao lado do "Atualizar" para o "⋯" (30/09). */}
           {canManage && <MenuDoRegistro titulo="Remover este registro de férias?" onRemover={removeAction} />}
         </div>
       </div>
 
+      {/* Revisão de alinhamento (30/09): a situação tem a mesma largura em
+          todas as telas da ficha (era w-40, w-44, w-52 ou w-56 conforme a
+          tela), a data a de uma data, e tudo na altura do botão. */}
       {canManage && (
-        <form action={formAction} className="flex items-end gap-2 flex-wrap mt-2">
-          <div className="w-44">
+        <form action={formAction} className="flex flex-wrap items-center gap-2 mt-3">
+          <div className="w-full sm:w-56">
             <Select
+              aria-label="Situação"
               name="status"
               value={status}
               onChange={(e) => setStatus(e.target.value as VacationStatus)}
@@ -69,11 +69,11 @@ export function FeriasRow({ ferias, updateAction, removeAction, canManage }: Pro
               ))}
             </Select>
           </div>
-          <div className="w-40">
-            <Input name="startDate" type="date" title="Data de início" />
+          <div className="w-full sm:w-40">
+            <Input name="startDate" type="date" title="Data de início" aria-label="Data de início" />
           </div>
-          <div className="w-40">
-            <Input name="returnDate" type="date" title="Data de retorno" />
+          <div className="w-full sm:w-40">
+            <Input name="returnDate" type="date" title="Data de retorno" aria-label="Data de retorno" />
           </div>
           <Button
             variant="secondary"
@@ -86,7 +86,7 @@ export function FeriasRow({ ferias, updateAction, removeAction, canManage }: Pro
         </form>
       )}
 
-      {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
+      {state?.error && <p className="mt-2 text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
     </div>
   );
 }

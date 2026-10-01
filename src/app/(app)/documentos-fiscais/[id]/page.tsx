@@ -255,14 +255,17 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
         }}
       />
 
-      <Card className="p-5 mt-4">
-        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-2">Registro</h2>
-        {doc.uploadedBy && (
-          <p className="text-[length:var(--fs-micro)] text-fg-muted mt-4">
+      {/* Só com o que dizer: sem quem subiu, o cartão ficava só com o título.
+          O texto vinha 24px abaixo dele (mb-2 + mt-4) e em 11px; agora segue
+          o espaçamento e o tamanho dos outros cartões da ficha. */}
+      {doc.uploadedBy && (
+        <Card className="p-5 mt-4">
+          <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-1">Registro</h2>
+          <p className="text-[length:var(--fs-helper)] text-fg-muted">
             Subido por {doc.uploadedBy.name} em {formatInstantDate(doc.createdAt)}.
           </p>
-        )}
-      </Card>
+        </Card>
+      )}
     </PageContainer>
   );
 }

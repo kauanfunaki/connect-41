@@ -88,29 +88,8 @@ export default async function IntegracoesPage({
           dos itens do Kanban. Só coordenadores e administradores veem esta tela."
       />
 
-      {/* ─── A vitrine ──────────────────────────────────────────────────────
-          O catálogo inteiro, conectado ou não. É onde um plugin novo aparece
-          sem ninguém escrever tela: declarar em `INTEGRATION_CATALOG` já o põe
-          aqui, com os campos que ele pede. */}
-      {podeConfigurar && integracoesDoCatalogo.length > 0 && (
-        <section className="mb-8 flex flex-col gap-3">
-          <div>
-            <h2 className="text-[15px] font-semibold text-fg">Plugins e conexões</h2>
-            <p className="text-[13px] text-fg-secondary max-w-[62ch]">
-              Os sistemas que o Connect sabe operar. Cada um guarda a própria credencial, cifrada,
-              e registra as execuções.
-            </p>
-          </div>
-          <VitrineDeIntegracoes
-            integracoes={integracoesDoCatalogo}
-            urlPublica={process.env.APP_PUBLIC_URL ?? null}
-          />
-          <div className="mt-3">
-            <ContasOmie contas={contasOmie} empresas={empresasParaOmie} />
-          </div>
-        </section>
-      )}
-
+      {/* O retorno do Google/Microsoft cai aqui: o aviso vem logo abaixo do
+          título, e não depois da vitrine, onde ficava fora da tela. */}
       {error && (
         <p className="mb-4 text-[13px] text-danger bg-danger-bg border border-danger/30 rounded-lg px-3 py-2">
           {ERROR_LABEL[error] ?? "Erro ao conectar integração."}
@@ -122,7 +101,33 @@ export default async function IntegracoesPage({
         </p>
       )}
 
-      <div className="space-y-4">
+      {/* ─── A vitrine ──────────────────────────────────────────────────────
+          O catálogo inteiro, conectado ou não. É onde um plugin novo aparece
+          sem ninguém escrever tela: declarar em `INTEGRATION_CATALOG` já o põe
+          aqui, com os campos que ele pede. */}
+      {podeConfigurar && integracoesDoCatalogo.length > 0 && (
+        <section className="mb-8 flex flex-col gap-3">
+          <div>
+            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg">Plugins e conexões</h2>
+            <p className="text-[length:var(--fs-helper)] text-fg-muted mt-0.5 max-w-[62ch]">
+              Os sistemas que o Connect sabe operar. Cada um guarda a própria credencial, cifrada,
+              e registra as execuções.
+            </p>
+          </div>
+          <VitrineDeIntegracoes
+            integracoes={integracoesDoCatalogo}
+            urlPublica={process.env.APP_PUBLIC_URL ?? null}
+          />
+          <ContasOmie contas={contasOmie} empresas={empresasParaOmie} />
+        </section>
+      )}
+
+      {/* As contas de reunião não tinham título, e pareciam parte da vitrine
+          de cima. Mesmo cabeçalho das outras seções da tela. */}
+      <section className="flex flex-col gap-3">
+        <h2 className="text-[length:var(--fs-section)] font-semibold text-fg flex items-center gap-1.5">
+          <Video size={16} className="text-brand" /> Reuniões
+        </h2>
         <Card className={`p-5 flex items-center justify-between gap-4 ${!isGoogleConfigured() ? "opacity-60" : ""}`}>
           <div className="flex items-center gap-3 min-w-0">
             <span className="w-10 h-10 rounded-lg bg-brand-subtle text-brand flex items-center justify-center flex-shrink-0">
@@ -152,9 +157,13 @@ export default async function IntegracoesPage({
             (google ? (
               <DisconnectButton action={desconectarIntegracao.bind(null, "GOOGLE")} />
             ) : (
+              // <a>, e não o Button com href: a rota de API redireciona para o
+              // Google, e o <Link> do Button tentaria navegar pelo roteador.
+              // As classes são as do Button primário md, para os dois lado a
+              // lado (Conectar e Desconectar) terem o mesmo corpo.
               <a
                 href="/api/integrations/google/connect"
-                className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors inline-flex items-center flex-shrink-0"
+                className="h-9 px-4 rounded-md bg-brand text-on-brand text-[length:var(--fs-ui)] font-semibold hover:bg-brand-hover shadow-[var(--c41-shadow-xs),inset_0_1px_0_rgba(255,255,255,.14)] transition-colors inline-flex items-center justify-center flex-shrink-0"
               >
                 Conectar
               </a>
@@ -192,21 +201,21 @@ export default async function IntegracoesPage({
             ) : (
               <a
                 href="/api/integrations/microsoft/connect"
-                className="h-9 px-4 rounded-md bg-brand text-on-brand text-[13px] font-medium hover:bg-brand-hover transition-colors inline-flex items-center flex-shrink-0"
+                className="h-9 px-4 rounded-md bg-brand text-on-brand text-[length:var(--fs-ui)] font-semibold hover:bg-brand-hover shadow-[var(--c41-shadow-xs),inset_0_1px_0_rgba(255,255,255,.14)] transition-colors inline-flex items-center justify-center flex-shrink-0"
               >
                 Conectar
               </a>
             ))}
         </Card>
-      </div>
+      </section>
 
       {canManageAi && (
         <div className="mt-8">
           <div className="mb-3">
-            <h2 className="text-[14px] font-semibold text-fg flex items-center gap-1.5">
-              <Sparkles size={14} className="text-brand" /> Inteligência Artificial
+            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg flex items-center gap-1.5">
+              <Sparkles size={16} className="text-brand" /> Inteligência Artificial
             </h2>
-            <p className="text-[12.5px] text-fg-muted mt-0.5">
+            <p className="text-[length:var(--fs-helper)] text-fg-muted mt-0.5 max-w-[70ch]">
               Chave usada por todos os agentes de IA do Connect (triagem de currículo, atendimento
               do WhatsApp, resumos). Cada escritório usa a própria conta — sem configurar aqui, a IA
               fica desligada.
@@ -224,10 +233,10 @@ export default async function IntegracoesPage({
       {canManageChatwoot && (
         <div className="mt-8">
           <div className="mb-3">
-            <h2 className="text-[14px] font-semibold text-fg flex items-center gap-1.5">
-              <MessageCircle size={14} className="text-brand" /> Chatwoot
+            <h2 className="text-[length:var(--fs-section)] font-semibold text-fg flex items-center gap-1.5">
+              <MessageCircle size={16} className="text-brand" /> Chatwoot
             </h2>
-            <p className="text-[12.5px] text-fg-muted mt-0.5">
+            <p className="text-[length:var(--fs-helper)] text-fg-muted mt-0.5 max-w-[70ch]">
               Histórico de conversas vinculado às empresas e pessoas cadastradas, somente leitura por enquanto. Ver
               conversas em <span className="font-medium text-fg">Conversas</span> no menu lateral.
             </p>

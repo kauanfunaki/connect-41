@@ -20,6 +20,10 @@ export const DEFAULT_SECTORS = [
   { code: "comercial", label: "Comercial", color: "#E15A2B" },
   { code: "corretora", label: "Corretora", color: "#0891B2" },
   { code: "gestao", label: "Gestão", color: "#586577" },
+  // 30/09: o atendimento do escritório (Conversas) e, depois, o que for de
+  // controle interno. Tenants antigos ganham o setor pela migration
+  // 20260930200000_setor_controladoria.
+  { code: "controladoria", label: "Controladoria", color: "#B8327A" },
 ];
 
 // Label canônico por código de setor. Serve para telas GLOBAIS (não escopadas a

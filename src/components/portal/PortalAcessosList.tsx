@@ -54,7 +54,7 @@ export function PortalAcessosList({ acessos, clientes, criarAction, enviarLinkAc
     return (
       <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
         <Button variant="secondary" size="xs" disabled={pendente || !a.ativo} onClick={() => enviarLink(a.id)}>
-          <Send size={11} /> Enviar link
+          <Send size={14} /> Enviar link
         </Button>
         <MenuDeMaisAcoes rotulo={`Mais ações de ${a.nome}`}>
           {(fechar) => (
@@ -83,7 +83,11 @@ export function PortalAcessosList({ acessos, clientes, criarAction, enviarLinkAc
           A conta nasce <span className="font-medium text-fg">sem senha</span> — nem quem cria sabe
           qual é. O cliente recebe por e-mail um link para definir a dele.
         </p>
-        <form action={formAction} className="space-y-4">
+        {/* Os três campos numa grade só (o Cliente ocupa a linha de baixo
+            inteira), e o "Criar acesso" no rodapé à direita, com o retorno da
+            ação ao lado dele — o botão ficava solto à esquerda, embaixo das
+            mensagens. */}
+        <form action={formAction}>
           <FieldGrid>
             <CampoForm label="Nome" htmlFor="nome" required>
               <Input id="nome" name="nome" required placeholder="Quem vai acessar" />
@@ -91,38 +95,39 @@ export function PortalAcessosList({ acessos, clientes, criarAction, enviarLinkAc
             <CampoForm label="E-mail" htmlFor="email" required>
               <Input id="email" name="email" type="email" required />
             </CampoForm>
+            <CampoForm
+              label="Cliente"
+              htmlFor="clientGroupId"
+              helper="Define quais empresas esta conta enxerga. Cliente sem empresa não mostra documento nenhum."
+              required
+              className="sm:col-span-2"
+            >
+              <Select id="clientGroupId" name="clientGroupId" required defaultValue="">
+                <option value="" disabled>
+                  Escolha…
+                </option>
+                {clientes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome} ({c.empresas} {c.empresas === 1 ? "empresa" : "empresas"})
+                  </option>
+                ))}
+              </Select>
+            </CampoForm>
           </FieldGrid>
 
-          <CampoForm
-            label="Cliente"
-            htmlFor="clientGroupId"
-            helper="Define quais empresas esta conta enxerga. Cliente sem empresa não mostra documento nenhum."
-            required
-          >
-            <Select id="clientGroupId" name="clientGroupId" required defaultValue="">
-              <option value="" disabled>
-                Escolha…
-              </option>
-              {clientes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome} ({c.empresas} {c.empresas === 1 ? "empresa" : "empresas"})
-                </option>
-              ))}
-            </Select>
-          </CampoForm>
-
-          {estado && "erro" in estado && (
-            <p className="text-[length:var(--fs-helper)] text-danger">{estado.erro}</p>
-          )}
-          {estado && "ok" in estado && (
-            <p className="text-[length:var(--fs-helper)] text-success">
-              {estado.aviso ?? "Acesso criado e link enviado."}
-            </p>
-          )}
-
-          <Button type="submit" disabled={criando}>
-            {criando ? "Criando…" : "Criar acesso"}
-          </Button>
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-4 mt-5 border-t border-border">
+            {estado && "erro" in estado && (
+              <p className="mr-auto min-w-0 text-[length:var(--fs-helper)] text-danger">{estado.erro}</p>
+            )}
+            {estado && "ok" in estado && (
+              <p className="mr-auto min-w-0 text-[length:var(--fs-helper)] text-success">
+                {estado.aviso ?? "Acesso criado e link enviado."}
+              </p>
+            )}
+            <Button type="submit" disabled={criando}>
+              {criando ? "Criando…" : "Criar acesso"}
+            </Button>
+          </div>
         </form>
       </Card>
 

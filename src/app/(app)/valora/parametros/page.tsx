@@ -35,7 +35,7 @@ export default async function ParametrosDoValoraPage() {
       <FormParametros catalogo={catalogo} parametros={parametros} podeEditar={acesso.podeGerir} />
 
       <Card className="p-4 mt-6">
-        <h2 className="text-[13px] font-semibold mb-1">Catálogo de atividades</h2>
+        <h2 className="text-[14px] font-semibold text-fg mb-1">Catálogo de atividades</h2>
         <p className="text-[12px] text-fg-muted mb-3">
           Tempo por execução declarado por cada setor, antes do fator. Muda quando os questionários são refeitos — não por
           aqui.

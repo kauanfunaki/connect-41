@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { FileText } from "lucide-react";
 import type { DocumentEntityType, DocumentCategory } from "@/generated/prisma/enums";
 import { AvatarImage } from "@/components/shared/AvatarImage";
-import { CampoForm } from "@/components/ui/CampoForm";
+import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -152,7 +152,9 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
   // envolve a seção no detalhamento de tarefa.
   return (
     <div className={compact ? "" : "bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5"}>
-      {!compact && <h2 className="text-[14px] font-semibold text-fg mb-4">Documentos</h2>}
+      {/* Título no tamanho dos outros cartões das fichas de empresa e de
+          pessoa, onde esta seção é uma aba (era 14px, os vizinhos 18px). */}
+      {!compact && <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-4">Documentos</h2>}
 
       {documents.length === 0 ? (
         <p className="text-[13px] text-fg-muted mb-4">Nenhum documento anexado ainda.</p>
@@ -234,11 +236,11 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
           {!compact && otherDocs.length > 0 && (
             <div className="divide-y divide-border mb-4">
               {otherDocs.map((d) => (
-                <div key={d.id} className="flex items-center justify-between py-2.5">
-                  <div>
+                <div key={d.id} className="flex items-center justify-between gap-3 py-2.5">
+                  <div className="min-w-0">
                     <a
                       href={`/api/documents/${d.id}`}
-                      className="text-[13px] text-brand hover:underline"
+                      className="text-[13px] text-brand hover:underline break-words"
                     >
                       {d.fileName}
                     </a>
@@ -281,8 +283,13 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
             desabilitado={isUploading}
           />
 
-          <div className="flex items-end gap-3 flex-wrap">
-            <div className="w-44">
+          {/* Revisão de alinhamento (30/09): a caixa "Documento sensível" era
+              acertada com `pb-2` e o botão com `items-end`. Agora os dois vão
+              em `AlinhadoAoCampo`, na altura dos campos, e a fileira quebra
+              igual em qualquer largura (a seção também aparece em painéis
+              estreitos). */}
+          <div className="flex flex-wrap items-start gap-4">
+            <div className="w-full sm:w-48">
               <CampoForm label="Categoria" htmlFor="category">
                 <Select id="category" name="category" defaultValue="OUTRO" disabled={isUploading}>
                   {CATEGORY_OPTIONS.map((c) => (
@@ -291,28 +298,25 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
                 </Select>
               </CampoForm>
             </div>
-            <div className="w-40">
-              <CampoForm label="Vencimento (opcional)" htmlFor="expiresAt">
+            <div className="w-full sm:w-44">
+              <CampoForm label="Vencimento" htmlFor="expiresAt" helper="Opcional.">
                 <Input id="expiresAt" name="expiresAt" type="date" disabled={isUploading} />
               </CampoForm>
             </div>
-            <div className="pb-2">
+            <AlinhadoAoCampo>
               <Checkbox name="sensitive" value="true" label="Documento sensível" disabled={isUploading} />
-            </div>
-            <Button
-              type="submit"
-              disabled={isUploading || fila.length === 0}
-              variant="primary"
-              className="font-medium disabled:opacity-60"
-            >
-              {isUploading ? "Enviando…" : fila.length > 1 ? `Anexar ${fila.length} arquivos` : "Anexar"}
-            </Button>
+            </AlinhadoAoCampo>
+            <AlinhadoAoCampo>
+              <Button type="submit" disabled={isUploading || fila.length === 0} variant="primary">
+                {isUploading ? "Enviando…" : fila.length > 1 ? `Anexar ${fila.length} arquivos` : "Anexar"}
+              </Button>
+            </AlinhadoAoCampo>
           </div>
         </form>
       )}
 
       {error && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2 mt-3">
+        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2 mt-3">
           {error}
         </p>
       )}

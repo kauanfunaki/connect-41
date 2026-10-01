@@ -108,7 +108,7 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
           podeEditar && (
             <div className="flex flex-wrap items-center gap-2">
               <BuscarSociosNaReceita companyId={companyId} previa={previaDaReceita} importar={importarDaReceita} />
-              <Button href={novoHref} variant="primary" className="font-medium">
+              <Button href={novoHref} variant="primary">
                 + Novo Sócio
               </Button>
             </div>
@@ -130,7 +130,7 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
             description="O quadro societário alimenta a viabilidade no Empresa Fácil: é do endereço do sócio que sai a resposta de “Reside no local?”. “Buscar na Receita” traz quem é sócio e desde quando."
             action={
               podeEditar && (
-                <Button href={novoHref} variant="primary" className="font-medium">
+                <Button href={novoHref} variant="primary">
                   + Cadastrar sócio
                 </Button>
               )

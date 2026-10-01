@@ -61,7 +61,7 @@ export function SignatureForm({ token, documentTitle }: { token: string; documen
         {isSubmitting ? "Assinando…" : "Assinar documento"}
       </Button>
       {error && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{error}</p>
+        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">{error}</p>
       )}
     </form>
   );

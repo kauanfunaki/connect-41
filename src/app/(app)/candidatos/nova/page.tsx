@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { CandidatoForm } from "@/components/candidatos/CandidatoForm";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { criarCandidato } from "../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 
@@ -13,13 +13,7 @@ export default async function NovoCandidatoPage() {
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/candidatos" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Candidatos
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Novo Candidato</span>
-      </div>
+      <Breadcrumb items={[{ label: "Candidatos", href: "/candidatos" }, { label: "Novo Candidato" }]} />
       <PageHeader title="Novo Candidato" />
 
       <Card className="p-6">

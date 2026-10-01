@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { CampoForm } from "@/components/admin/CampoForm";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { criarCampo } from "../actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getSectorMaps } from "@/lib/sectors";
@@ -20,18 +20,14 @@ export default async function NovoCampoPage() {
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/admin/campos" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Campos Customizados
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Novo Campo</span>
-      </div>
+      <Breadcrumb items={[{ label: "Campos Customizados", href: "/admin/campos" }, { label: "Novo Campo" }]} />
       <PageHeader title="Novo Campo" />
 
-      <Card className="p-6">
-        <CampoForm action={criarCampo} cancelHref="/admin/campos" sectorOptions={sectorOptions} />
-      </Card>
+      <div className="max-w-[720px]">
+        <Card className="p-6">
+          <CampoForm action={criarCampo} cancelHref="/admin/campos" sectorOptions={sectorOptions} />
+        </Card>
+      </div>
     </PageContainer>
   );
 }

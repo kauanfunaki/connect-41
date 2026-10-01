@@ -71,8 +71,11 @@ function ChecklistRow({
       />
 
       {editing ? (
+        // compact (h-8): na altura dos dois IconButton `sm` do lado.
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
           <Input
+            compact
+            aria-label="Texto do item"
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => {
@@ -164,8 +167,12 @@ export function ChecklistSection({ canAct, items, createAction, toggleAction, ed
       </div>
 
       {canAct && (
+        // compact (h-8) ao lado do botão `sm`, como em Subtarefas — era o
+        // campo de formulário (h-9) com um botão 4px mais baixo.
         <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
           <Input
+            compact
+            aria-label="Novo item do checklist"
             value={newText}
             onChange={(e) => setNewText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addItem()}

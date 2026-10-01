@@ -22,19 +22,28 @@ export function PortalLoginForm({ action }: Props) {
       <Card className="p-6">
         <form action={formAction} className="space-y-4">
           <input type="hidden" name="escolha" value={estado.escolher.token} />
+          {/* Título do grupo no estilo do rótulo do CampoForm. Cada opção é um
+              alvo de ao menos 44px (é tela de celular), com o rádio centrado
+              nas duas linhas e a escolhida marcada na borda. */}
           <fieldset className="space-y-2">
-            <legend className="text-[length:var(--fs-body)] font-medium text-fg mb-2">
+            <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">
               Este e-mail tem acesso a mais de um cliente. Em qual você quer entrar?
             </legend>
             {estado.escolher.opcoes.map((o, i) => (
               <label
                 key={o.id}
-                className="flex items-start gap-2 rounded-md border border-border px-3 py-2 cursor-pointer hover:bg-surface-hover"
+                className="flex items-center gap-3 min-h-11 rounded-md border border-border-strong px-3 py-2 cursor-pointer transition-colors hover:bg-surface-hover has-[:checked]:border-brand has-[:checked]:bg-brand/8"
               >
-                <input type="radio" name="conta" value={o.id} defaultChecked={i === 0} className="mt-1" />
-                <span>
-                  <span className="block text-[length:var(--fs-body)] text-fg">{o.cliente}</span>
-                  <span className="block text-[length:var(--fs-helper)] text-fg-muted">{o.escritorio}</span>
+                <input
+                  type="radio"
+                  name="conta"
+                  value={o.id}
+                  defaultChecked={i === 0}
+                  className="size-4 flex-shrink-0 accent-[var(--c41-brand)]"
+                />
+                <span className="min-w-0">
+                  <span className="block text-[length:var(--fs-body)] text-fg break-words">{o.cliente}</span>
+                  <span className="block text-[length:var(--fs-helper)] text-fg-muted break-words">{o.escritorio}</span>
                 </span>
               </label>
             ))}

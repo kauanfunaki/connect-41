@@ -58,21 +58,27 @@ export default async function PortalDrePage({
 
   const base = `/portal/dre?empresa=${companyId}${mes ? `&mes=${mes}` : ""}`;
 
+  // Os vazios vão num Card, como o "Nenhuma empresa vinculada" acima e os das
+  // outras telas do portal — soltos, flutuavam no fundo da página.
   let conteudo: React.ReactNode;
   if (!mes) {
     conteudo = (
-      <EmptyState
-        icon={<FileText />}
-        title="Ainda não há DRE para esta empresa"
-        description="A DRE aparece aqui quando a equipe lançar os pagamentos e recebimentos do mês."
-      />
+      <Card>
+        <EmptyState
+          icon={<FileText />}
+          title="Ainda não há DRE para esta empresa"
+          description="A DRE aparece aqui quando a equipe lançar os pagamentos e recebimentos do mês."
+        />
+      </Card>
     );
   } else if (regime === "caixa") {
     const { ano, mes: m } = partesDaCompetencia(mes);
     const { resultado, lancamentos } = await dreDoMes(escopo.tenantId, companyId, { ano, mes: m });
     conteudo =
       lancamentos === 0 ? (
-        <EmptyState icon={<FileText />} title={`Nenhum pagamento ou recebimento em ${rotuloDaCompetencia(mes)}`} />
+        <Card>
+          <EmptyState icon={<FileText />} title={`Nenhum pagamento ou recebimento em ${rotuloDaCompetencia(mes)}`} />
+        </Card>
       ) : (
         <RelatorioDoDre resultado={resultado} />
       );
@@ -81,7 +87,9 @@ export default async function PortalDrePage({
     conteudo =
       // Mês só com perda ou diferença de acordo ainda tem resultado a mostrar.
       dre.lancamentos === 0 && dre.cobranca.perdas === 0 && dre.cobranca.acrescimosDeAcordo === 0 && dre.cobranca.descontosDeAcordo === 0 ? (
-        <EmptyState icon={<FileText />} title={`Nenhum lançamento com competência em ${rotuloDaCompetencia(mes)}`} />
+        <Card>
+          <EmptyState icon={<FileText />} title={`Nenhum lançamento com competência em ${rotuloDaCompetencia(mes)}`} />
+        </Card>
       ) : (
         <RelatorioDoDre resultado={comRotulosEconomicos(dre.resultado)} />
       );

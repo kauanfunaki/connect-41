@@ -3,6 +3,8 @@ import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Card } from "@/components/ui/Card";
+import { InfoRow } from "@/components/empresas/InfoRow";
 import { BackButton } from "@/components/shared/BackButton";
 import { getAuthContext } from "@/lib/auth/context";
 import { scopedPersonWhere } from "@/lib/auth/scope";
@@ -62,8 +64,10 @@ export default async function SalarioPage({
       <BackButton className="mb-3" />
       <PageHeader title="Dados Bancários e Salário" />
 
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+      {/* Mesma grade de rótulo/valor da ficha (30/09): os cinco dados numa
+          linha no desktop, em vez de duas colunas de meia tela. */}
+      <Card className="p-5 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-x-8 gap-y-4">
           {canViewSalary && (
             <InfoRow
               label="Salário Atual"
@@ -79,7 +83,7 @@ export default async function SalarioPage({
             </>
           )}
         </div>
-      </div>
+      </Card>
 
       {canViewSalary && (
         <SalaryHistorySection
@@ -97,14 +101,5 @@ export default async function SalarioPage({
         />
       )}
     </PageContainer>
-  );
-}
-
-function InfoRow({ label, value, mono }: { label: string; value: string | null | undefined; mono?: boolean }) {
-  return (
-    <div>
-      <p className="text-[length:var(--fs-micro)] text-fg-muted mb-0.5">{label}</p>
-      <p className={`text-[13px] text-fg ${mono ? "tnum" : ""}`}>{value ?? "—"}</p>
-    </div>
   );
 }

@@ -17,7 +17,7 @@ const VARIANT_CLASS: Record<Variant, string> = {
 export function Badge({ variant, children, className = "" }: Props) {
   return (
     <span
-      className={`inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-full text-[length:var(--fs-badge)] font-semibold border ${VARIANT_CLASS[variant]} ${className}`.trim()}
+      className={`inline-flex items-center whitespace-nowrap px-2.5 py-[3px] leading-4 rounded-full text-[length:var(--fs-badge)] font-semibold border ${VARIANT_CLASS[variant]} ${className}`.trim()}
     >
       {children}
     </span>

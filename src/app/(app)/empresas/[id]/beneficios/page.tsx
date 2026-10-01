@@ -71,7 +71,7 @@ export default async function BeneficiosPage({
           canManage && (
             <Button
               href={novoHref}
-              variant="primary" className="font-medium"
+              variant="primary"
             >
               + Novo Benefício
             </Button>
@@ -89,7 +89,7 @@ export default async function BeneficiosPage({
               canManage && (
                 <Button
                   href={novoHref}
-                  variant="primary" className="font-medium"
+                  variant="primary"
                 >
                   + Cadastrar benefício
                 </Button>

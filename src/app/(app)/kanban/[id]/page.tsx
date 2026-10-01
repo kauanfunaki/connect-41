@@ -152,7 +152,9 @@ export default async function KanbanBoardPage({
 
   return (
     <PageContainer className="h-full flex flex-col">
-      <div className="flex items-center gap-2 mb-1">
+      {/* flex-wrap: com setor, espaço, pasta e lista, a trilha estourava a
+          largura no celular. */}
+      <div className="flex flex-wrap items-center gap-2 mb-1 min-w-0">
         <Link href={`/setor/${pipeline.sectorCode}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
           {sectorLabels[pipeline.sectorCode] ?? pipeline.sectorCode}
         </Link>

@@ -38,14 +38,16 @@ function FormDaSaida({
           Data de saída de {nome}
         </label>
         <Input id={`saida-${socioId}`} name="exitDate" type="date" compact required className="w-40" />
-        <Button type="submit" size="xs" disabled={pendente}>
+        {/* `sm` (h-8) para casar com o Input compacto do lado; eram `xs`
+            (h-7), um degrau abaixo do campo. */}
+        <Button type="submit" size="sm" disabled={pendente}>
           {pendente ? "Salvando…" : "Salvar"}
         </Button>
-        <Button type="button" size="xs" variant="ghost" disabled={pendente} onClick={onVoltar}>
+        <Button type="button" size="sm" variant="ghost" disabled={pendente} onClick={onVoltar}>
           Voltar
         </Button>
       </div>
-      {state?.error && <span className="text-[11px] text-danger">{state.error}</span>}
+      {state?.error && <span className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</span>}
     </form>
   );
 }

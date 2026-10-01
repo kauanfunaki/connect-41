@@ -23,9 +23,10 @@ export function AddNoteForm({ action }: Props) {
       className="space-y-2"
     >
       {state?.error && (
-        <p className="text-[12px] text-danger">{state.error}</p>
+        <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>
       )}
       <Textarea
+        aria-label="Nota"
         name="content"
         required
         rows={2}

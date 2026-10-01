@@ -3,6 +3,12 @@
 import { ConfirmActionButton } from "@/components/ui/ConfirmActionButton";
 import { aprovarVersao, reabrirVersao } from "@/app/(app)/dre/orcamento/actions";
 
+// O gatilho do `ConfirmActionButton` vem com borda clara e texto cinza; aqui
+// ele divide a linha com o "Ver orçado × realizado" (`Button` secundário sm) e
+// ganha o mesmo desenho, para os dois lerem como o mesmo tipo de ação.
+const COMO_BOTAO_SECUNDARIO =
+  "inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-md border border-border-strong text-[length:var(--fs-button-sm)] font-semibold text-fg hover:bg-surface-hover transition-colors";
+
 /** Aprovar e reabrir — só aparece para a coordenação; a action confere de novo. */
 export function AcoesDaVersao({
   budgetId,
@@ -22,6 +28,7 @@ export function AcoesDaVersao({
     return (
       <ConfirmActionButton
         label="Aprovar versão"
+        className={COMO_BOTAO_SECUNDARIO}
         title={`Aprovar "${nome}" como orçamento de ${ano}?`}
         description={
           outraAprovada
@@ -40,6 +47,7 @@ export function AcoesDaVersao({
   return (
     <ConfirmActionButton
       label="Reabrir"
+      className={COMO_BOTAO_SECUNDARIO}
       title={`Reabrir "${nome}"?`}
       description={`A versão volta a rascunho e ${ano} fica sem orçamento aprovado até alguém aprovar de novo — o orçado × realizado some das telas de DRE nesse meio-tempo.`}
       confirmLabel="Reabrir"

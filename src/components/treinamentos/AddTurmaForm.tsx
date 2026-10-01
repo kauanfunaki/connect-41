@@ -3,7 +3,8 @@
 import { useActionState } from "react";
 import { Button } from "@/components/ui/Button";
 import type { TrainingClassState } from "@/app/(app)/treinamentos/[id]/actions";
-import { CampoForm } from "@/components/ui/CampoForm";
+import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 
 type Props = {
@@ -14,30 +15,26 @@ export function AddTurmaForm({ action }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
 
   return (
-    <form action={formAction} className="border-t border-border pt-4 flex items-end gap-3 flex-wrap">
-      <div className="w-40">
+    <form action={formAction} className="border-t border-border pt-4 space-y-2">
+      {/* Era uma fila de larguras soltas (w-40/w-40/w-48) com o botão no
+          items-end; agora é grade, com o botão alinhado ao controle. */}
+      <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-[180px_minmax(0,1fr)_minmax(0,1fr)_auto]">
         <CampoForm label="Data" htmlFor="date" required>
           <Input id="date" name="date" type="date" required />
         </CampoForm>
-      </div>
-      <div className="w-40">
         <CampoForm label="Turno" htmlFor="shift">
           <Input id="shift" name="shift" type="text" />
         </CampoForm>
-      </div>
-      <div className="w-48">
         <CampoForm label="Instrutor" htmlFor="instructor">
           <Input id="instructor" name="instructor" type="text" />
         </CampoForm>
-      </div>
-      <Button
-        type="submit"
-        disabled={isPending}
-        variant="primary" className="font-medium disabled:opacity-60"
-      >
-        {isPending ? "Criando…" : "Nova Turma"}
-     </Button>
-      {state?.error && <p className="text-[13px] text-danger w-full">{state.error}</p>}
+        <AlinhadoAoCampo>
+          <Button type="submit" disabled={isPending}>
+            {isPending ? "Criando…" : "Nova Turma"}
+          </Button>
+        </AlinhadoAoCampo>
+      </FieldGrid>
+      {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
     </form>
   );
 }

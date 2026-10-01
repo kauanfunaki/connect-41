@@ -7,7 +7,7 @@ import type { TerminationType, TerminationStatus } from "@/generated/prisma/enum
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { MenuDoRegistro } from "./MenuDoRegistro";
-import { TIPO_DO_DESLIGAMENTO, SITUACAO_DO_DESLIGAMENTO, COR_DO_DESLIGAMENTO } from "./rotulosDoDP";
+import { TIPO_DO_DESLIGAMENTO, SITUACAO_DO_DESLIGAMENTO, COR_DO_DESLIGAMENTO, SeloDoDP } from "./rotulosDoDP";
 
 const STATUS_OPTIONS = Object.keys(SITUACAO_DO_DESLIGAMENTO) as TerminationStatus[];
 
@@ -37,7 +37,7 @@ export function DesligamentoRow({ desligamento, conferenciaHref, updateAction, r
   return (
     <div className="py-3 border-b border-border last:border-0">
       <div className="flex items-center justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <p className="text-[13px] text-fg">
             {TIPO_DO_DESLIGAMENTO[desligamento.type]} — solicitado em {desligamento.requestedAtLabel}
             {desligamento.finalizedAtLabel && ` · finalizado em ${desligamento.finalizedAtLabel}`}
@@ -45,9 +45,7 @@ export function DesligamentoRow({ desligamento, conferenciaHref, updateAction, r
           {desligamento.reason && <p className="text-[12px] text-fg-muted mt-0.5">{desligamento.reason}</p>}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${COR_DO_DESLIGAMENTO[desligamento.status]}`}>
-            {SITUACAO_DO_DESLIGAMENTO[desligamento.status]}
-          </span>
+          <SeloDoDP cor={COR_DO_DESLIGAMENTO[desligamento.status]}>{SITUACAO_DO_DESLIGAMENTO[desligamento.status]}</SeloDoDP>
           {/* Remover saiu de ao lado do "Atualizar" para o "⋯" (30/09). */}
           {canManage && <MenuDoRegistro titulo="Remover este registro de desligamento?" onRemover={removeAction} />}
         </div>
@@ -65,23 +63,23 @@ export function DesligamentoRow({ desligamento, conferenciaHref, updateAction, r
           <>
             <span className="text-[12px] text-fg-muted tnum">{desligamento.conferencia.progressoPct}% tratado</span>
             {desligamento.conferencia.divergentes > 0 && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-danger/10 text-danger border border-danger/25">
-                {desligamento.conferencia.divergentes} divergência(s)
-              </span>
+              <SeloDoDP cor="bg-danger/10 text-danger border-danger/25">{desligamento.conferencia.divergentes} divergência(s)</SeloDoDP>
             )}
             {desligamento.conferencia.pendentes > 0 && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-surface-2 text-fg-muted border border-border">
-                {desligamento.conferencia.pendentes} pendente(s)
-              </span>
+              <SeloDoDP cor="bg-surface-2 text-fg-muted border-border">{desligamento.conferencia.pendentes} pendente(s)</SeloDoDP>
             )}
           </>
         )}
       </div>
 
+      {/* Revisão de alinhamento (30/09): a situação tem a mesma largura em
+          todas as telas da ficha (era w-40, w-44, w-52 ou w-56 conforme a
+          tela), a data a de uma data, e tudo na altura do botão. */}
       {canManage && (
-        <form action={formAction} className="flex items-end gap-2 flex-wrap mt-2">
-          <div className="w-56">
+        <form action={formAction} className="flex flex-wrap items-center gap-2 mt-3">
+          <div className="w-full sm:w-56">
             <Select
+              aria-label="Situação"
               name="status"
               value={status}
               onChange={(e) => setStatus(e.target.value as TerminationStatus)}
@@ -102,7 +100,7 @@ export function DesligamentoRow({ desligamento, conferenciaHref, updateAction, r
         </form>
       )}
 
-      {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
+      {state?.error && <p className="mt-2 text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
     </div>
   );
 }

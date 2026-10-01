@@ -777,6 +777,55 @@ da avaliação" não pedem confirmação; o `<Select>` de empresa da entrada de 
 tem ~394 opções sem busca; excluir um documento para cliente não redireciona
 (a pessoa fica na página do documento apagado).
 
+## Revisão de alinhamento, dimensionamento e padronização (30/09, noite)
+
+Pedido do Kauan: "tem muitas telas que tem campos na mesma linha ou na mesma
+seção que os campos estão desalinhados e feios esteticamente". Oito frentes,
+uma por área (BPO; DRE/Fiscal/Valora/Gestão; Societário; DP; Recrutamento e
+IA; Admin; telas gerais; portal e login), sobre as regras abaixo — valem para
+tela nova também.
+
+1. **Rótulo de campo é o `CampoForm`.** Havia quatro rótulos montados à mão
+   (o mais comum, `text-[12px] text-fg-secondary`, em 22 lugares). Ele agora
+   aceita `className` (colunas na grade) e `acao` (algo à direita do rótulo).
+2. **Mesma linha, mesma altura.** Formulário: `Input`/`Select` padrão e
+   `Button` md (36px). Barra de ferramenta: `compact` e `Button` sm (32px) —
+   o `FilterButton` passou a 32px pelo mesmo motivo.
+3. **Item sem rótulo na linha de campos** (caixa de marcar, "Adicionar") vai
+   em `AlinhadoAoCampo`: reserva a altura do rótulo (só a partir de `sm`) e
+   centraliza na altura do controle.
+4. **Rótulo de uma linha**; a explicação vai para o `helper`.
+5. **Largura pelo conteúdo**: UF, CEP, número, %, dia em coluna estreita fixa;
+   dinheiro com `prefix="R$"`.
+6. **Rodapé**: Cancelar (secondary) e primário à direita, destrutivo à
+   esquerda (`mr-auto`). O `FormFooter` passou a usar o `Button` no Cancelar
+   (era um Link de 15px ao lado de um Salvar de 13px).
+7. **Ficha de detalhe**: rótulo em cima, valor embaixo, em grade.
+
+Peças base mexidas junto: `FormSection` (título na escala, `descricao`),
+`Checkbox` (caixa na primeira linha do rótulo), `Modal` (`text-left` — aberto
+dentro de célula de `.c41-tabela` herdava o centro), `Badge` (24px, era 28),
+`DeleteButton` e `ConfirmActionButton` (desenho do `Button` sm),
+`InfoDoCartao` (11px, era 11.5).
+
+**Sugestões das frentes que ficaram para depois** (peças compartilhadas):
+
+- `PageHeader` com uma linha de meta (selos, prazo) embaixo do título — as
+  telas de detalhe montam isso à mão.
+- Um token de título de cartão: convivem 13, 14 (a maioria), 15 e 18px, e o
+  `--fs-card-title` (16px) não é usado por ninguém.
+- `FormFooter` com `onCancel` e lugar para erro (hoje só serve a página com
+  link; o padrão do rodapé foi repetido à mão em ~15 modais).
+- `DeleteButton`/`ConfirmActionButton` aceitarem `size`/`variant` do `Button`.
+- `Input` com um elemento à direita (o olho da senha), `Checkbox` com
+  `helper`, `Modal` em portal, `MenuDoRegistro` em h-8.
+- `FileDropzoneField` mostra o `accept` cru ("APPLICATION/PDF") e recusa quando
+  o `accept` é só MIME.
+- `IconButton` só `relative` quando tem o ponto de aviso.
+- `SeloDoDP` (11px) como selo pequeno em `ui` — há pílulas de 10, 11 e 12px.
+- `PushNotificationToggle` empilhado no celular.
+- Cabeçalho de tabela: 75 em caixa alta, 82 não — falta decidir o padrão.
+
 ---
 
 ## Sequenciamento

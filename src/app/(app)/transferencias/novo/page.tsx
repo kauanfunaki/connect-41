@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -141,13 +141,7 @@ function FormShell({
 }) {
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href={backHref} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          {backLabel}
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Solicitar Transferência</span>
-      </div>
+      <Breadcrumb items={[{ label: backLabel, href: backHref, truncate: true }, { label: "Solicitar Transferência" }]} />
       <PageHeader title="Solicitar Transferência" />
 
       <Card className="p-6">{children}</Card>

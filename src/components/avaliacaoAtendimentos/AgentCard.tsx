@@ -101,7 +101,7 @@ export function AgentCard({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group text-left bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
+        className="group h-full w-full min-w-0 text-left bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 hover:border-border-strong hover:bg-surface-hover hover:shadow-[var(--c41-shadow-sm)] transition-all"
       >
         <AvatarImage src={avatarUrl} name={label} size={44} bordered={false} className="mb-3" />
         <p className="text-[14px] font-semibold text-fg truncate">{label}</p>
@@ -125,12 +125,12 @@ export function AgentCard({
               <p className="text-[13px] text-fg-muted">{selected.evaluatedAtLabel}</p>
               <div className="flex items-center gap-4 mt-2">
                 <span className="text-[26px] font-semibold text-fg tabular-nums">{selected.score}<span className="text-[14px] text-fg-muted">/100</span></span>
-                <span className="text-[12.5px] text-fg-muted">Escrita {selected.writingScore}/50 · SLA {selected.slaScore}/50</span>
+                <span className="text-[13px] text-fg-muted">Escrita {selected.writingScore}/50 · SLA {selected.slaScore}/50</span>
               </div>
             </div>
             <div>
               <h3 className="text-[12px] font-semibold text-fg-muted uppercase tracking-wide mb-1.5">Justificativa da IA</h3>
-              <p className="text-[13.5px] text-fg leading-relaxed whitespace-pre-wrap">{selected.reasoning}</p>
+              <p className="text-[13px] text-fg leading-relaxed whitespace-pre-wrap">{selected.reasoning}</p>
             </div>
             {/* Eram dois links sublinhados (30/09): as duas são ações, e tirar
                 da avaliação muda a nota de alguém — botão de perigo. */}
@@ -149,7 +149,7 @@ export function AgentCard({
                 </Button>
               )}
             </div>
-            {erroExclusao && <p className="text-[12.5px] text-danger">{erroExclusao}</p>}
+            {erroExclusao && <p className="text-[13px] text-danger">{erroExclusao}</p>}
           </div>
         ) : (
           <div className="space-y-5">
@@ -171,12 +171,12 @@ export function AgentCard({
 
             <div className="bg-surface-hover rounded-lg p-3.5">
               <div className="flex items-center justify-between gap-2 mb-2">
-                <h3 className="text-[12px] font-semibold text-fg-muted uppercase tracking-wide flex items-center gap-1.5">
-                  <Sparkles size={12} className="text-brand" /> Resumo geral
+                <h3 className="text-[12px] font-semibold text-fg-muted uppercase tracking-wide inline-flex items-center gap-1.5">
+                  <Sparkles size={14} className="text-brand" /> Resumo geral
                 </h3>
                 {canGenerateSummary && (
                   <Button variant="secondary" size="xs" className="flex-shrink-0" onClick={handleGenerateSummary} disabled={isPending}>
-                    <Sparkles size={11} /> {isPending ? "Gerando…" : summary ? "Atualizar" : "Gerar resumo"}
+                    <Sparkles size={12} /> {isPending ? "Gerando…" : summary ? "Atualizar" : "Gerar resumo"}
                   </Button>
                 )}
               </div>
@@ -203,7 +203,7 @@ export function AgentCard({
                   )}
                 </>
               ) : (
-                <p className="text-[12.5px] text-fg-muted">
+                <p className="text-[13px] text-fg-muted">
                   {canGenerateSummary
                     ? "Ainda não gerado — clique em \"Gerar resumo\" pra consolidar os padrões recorrentes deste atendente."
                     : "Nenhum resumo gerado ainda."}
@@ -223,7 +223,7 @@ export function AgentCard({
                   >
                     <div className="min-w-0">
                       <p className="text-[13px] text-fg truncate">{ev.evaluatedAtLabel}</p>
-                      <p className="text-[12px] text-fg-muted truncate max-w-[260px]">{ev.reasoning}</p>
+                      <p className="text-[12px] text-fg-muted truncate">{ev.reasoning}</p>
                     </div>
                     <span className="flex-shrink-0 text-[13px] font-medium text-fg tabular-nums">{ev.score}</span>
                   </button>

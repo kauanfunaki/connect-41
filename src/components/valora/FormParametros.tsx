@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { useToast } from "@/components/ui/Toast";
 import { salvarParametros } from "@/app/(app)/valora/actions";
 import { custoPorMinuto, type AjusteSetor, type Catalogo, type ParametrosPreco } from "@/lib/valora/motor";
@@ -33,16 +35,22 @@ export function FormParametros({ catalogo, parametros, podeEditar }: { catalogo:
   const muda = (i: number, campo: keyof Linha, v: string) => setLinhas((ls) => ls.map((l, j) => (j === i ? { ...l, [campo]: v } : l)));
 
   const campoPreco = (chave: keyof ParametrosPreco, rotulo: string, ajuda: string, sufixo?: string, prefixo?: string) => (
-    <label className="flex flex-col gap-1 text-[12px] text-fg-secondary">
-      <span className="font-medium">{rotulo}</span>
-      <Input inputMode="decimal" prefix={prefixo} suffix={sufixo} value={p[chave]} disabled={!podeEditar} onChange={(e) => setP({ ...p, [chave]: e.target.value })} />
-      <span className="text-[11px] text-fg-muted">{ajuda}</span>
-    </label>
+    <CampoForm label={rotulo} htmlFor={`parametro-${chave}`} helper={ajuda}>
+      <Input
+        id={`parametro-${chave}`}
+        inputMode="decimal"
+        prefix={prefixo}
+        suffix={sufixo}
+        value={p[chave]}
+        disabled={!podeEditar}
+        onChange={(e) => setP({ ...p, [chave]: e.target.value })}
+      />
+    </CampoForm>
   );
 
   return (
     <form
-      className="space-y-4"
+      className="space-y-5"
       onSubmit={(e) => {
         e.preventDefault();
         setErro(null);
@@ -61,7 +69,7 @@ export function FormParametros({ catalogo, parametros, podeEditar }: { catalogo:
       }}
     >
       <Card className="p-4">
-        <h2 className="text-[13px] font-semibold mb-1">Custo de cada setor</h2>
+        <h2 className="text-[14px] font-semibold text-fg mb-1">Custo de cada setor</h2>
         <p className="text-[12px] text-fg-muted mb-3">
           Custo mensal da equipe: salários, encargos e benefícios de quem atende cliente. A capacidade e o fator vêm dos
           questionários — o fator encolhe os tempos declarados até a carteira caber nas horas da equipe.
@@ -86,14 +94,42 @@ export function FormParametros({ catalogo, parametros, podeEditar }: { catalogo:
                 return (
                   <tr key={l.codigo} className="border-b border-border">
                     <td className="px-3 font-medium">{l.nome}</td>
+                    {/* Largura pelo conteúdo: dinheiro mais largo, horas e fator
+                        estreitos — eram as três do tamanho da coluna. O rótulo
+                        de cada um é o cabeçalho, repetido para o leitor de tela. */}
                     <td className="px-3">
-                      <Input compact prefix="R$" inputMode="decimal" value={l.custoMensal} disabled={!podeEditar} onChange={(e) => muda(i, "custoMensal", e.target.value)} />
+                      <Input
+                        compact
+                        prefix="R$"
+                        inputMode="decimal"
+                        aria-label={`Custo mensal da equipe — ${l.nome}`}
+                        value={l.custoMensal}
+                        disabled={!podeEditar}
+                        onChange={(e) => muda(i, "custoMensal", e.target.value)}
+                        className="w-44 mx-auto"
+                      />
                     </td>
                     <td className="px-3">
-                      <Input compact inputMode="decimal" value={l.capacidadeHorasMes} disabled={!podeEditar} onChange={(e) => muda(i, "capacidadeHorasMes", e.target.value)} />
+                      <Input
+                        compact
+                        inputMode="decimal"
+                        aria-label={`Capacidade em horas por mês — ${l.nome}`}
+                        value={l.capacidadeHorasMes}
+                        disabled={!podeEditar}
+                        onChange={(e) => muda(i, "capacidadeHorasMes", e.target.value)}
+                        className="w-24 mx-auto text-right"
+                      />
                     </td>
                     <td className="px-3">
-                      <Input compact inputMode="decimal" value={l.fatorCalibracao} disabled={!podeEditar} onChange={(e) => muda(i, "fatorCalibracao", e.target.value)} />
+                      <Input
+                        compact
+                        inputMode="decimal"
+                        aria-label={`Fator — ${l.nome}`}
+                        value={l.fatorCalibracao}
+                        disabled={!podeEditar}
+                        onChange={(e) => muda(i, "fatorCalibracao", e.target.value)}
+                        className="w-20 mx-auto text-right"
+                      />
                     </td>
                     <td className="px-3 tabular-nums whitespace-nowrap">{porHora > 0 ? brl(porHora) : "—"}</td>
                   </tr>
@@ -105,22 +141,22 @@ export function FormParametros({ catalogo, parametros, podeEditar }: { catalogo:
       </Card>
 
       <Card className="p-4">
-        <h2 className="text-[13px] font-semibold mb-3">Preço</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <h2 className="text-[14px] font-semibold text-fg mb-4">Preço</h2>
+        <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-3">
           {campoPreco("despesasFixasMes", "Despesas fixas do escritório", "Aluguel, sistemas, gestão e áreas de apoio. Rateadas por hora produtiva.", undefined, "R$")}
           {campoPreco("variaveisPct", "Custos variáveis", "Impostos, inadimplência e taxas — % sobre o preço.", "%")}
           {campoPreco("margemAlvoPct", "Margem alvo", "Lucro que o preço alvo entrega depois dos variáveis.", "%")}
           {campoPreco("margemPisoPct", "Margem mínima", "Define o piso. 0 = o piso só empata.", "%")}
           {campoPreco("descontoMaximoPct", "Desconto máximo", "A tabela é o alvo com essa gordura por cima.", "%")}
-        </div>
+        </FieldGrid>
       </Card>
 
+      {/* Rodapé padrão da página de formulário: Cancelar volta às propostas,
+          "Salvar parâmetros" (36px) por último. O erro fica acima dele. */}
       {podeEditar && (
-        <div className="flex items-center gap-3">
-          <Button type="submit" size="sm" loading={pendente} disabled={pendente}>
-            Salvar parâmetros
-          </Button>
-          {erro && <span className="text-[12px] text-danger">{erro}</span>}
+        <div>
+          {erro && <p className="mb-3 text-right text-[length:var(--fs-helper)] font-medium text-danger">{erro}</p>}
+          <FormFooter cancelHref="/valora" pending={pendente} submitLabel="Salvar parâmetros" />
         </div>
       )}
     </form>

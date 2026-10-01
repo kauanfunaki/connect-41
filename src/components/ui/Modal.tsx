@@ -35,7 +35,7 @@ export function Modal({ open, onClose, title, maxWidth = "max-w-md", children }:
         aria-modal="true"
         tabIndex={-1}
         {...(title ? { "aria-labelledby": titleId } : { "aria-label": "Diálogo" })}
-        className={`c41-surgir relative w-full ${maxWidth} bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] max-h-[calc(100vh-2rem)] overflow-y-auto`}
+        className={`c41-surgir relative w-full ${maxWidth} text-left bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] max-h-[calc(100vh-2rem)] overflow-y-auto`}
       >
         <div className="flex items-center justify-between px-5 pt-5 pb-2">
           {title && <h2 id={titleId} className="text-[15px] font-semibold text-fg">{title}</h2>}

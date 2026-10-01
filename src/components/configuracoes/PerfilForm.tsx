@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
@@ -71,10 +72,11 @@ export function PerfilForm({ action, defaultName, email, photoUrl: initialPhotoU
       <div className="flex items-center gap-4">
         <AvatarImage src={photoUrl} name={name || defaultName} size={64} />
         <div>
+          {/* Secundário padrão, igual ao "Trocar foto" do workspace: o fundo
+              cinza e a borda azul no hover eram só desta tela. */}
           <Button
             variant="secondary"
             size="sm"
-            className="bg-surface-hover hover:border-brand disabled:opacity-[var(--c41-disabled-op)]"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
           >
@@ -94,18 +96,20 @@ export function PerfilForm({ action, defaultName, email, photoUrl: initialPhotoU
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <FieldGrid>
         <CampoForm label="Nome" htmlFor="name" required>
           <Input id="name" name="name" type="text" required maxLength={120} value={name} onChange={(e) => setName(e.target.value)} />
         </CampoForm>
         <CampoForm label="E-mail" htmlFor="email" helper="Só um administrador pode alterar seu e-mail de acesso.">
           <Input id="email" type="email" value={email} readOnly disabled />
         </CampoForm>
-      </div>
+      </FieldGrid>
 
-      <Button type="submit" loading={isPending}>
-        Salvar
-      </Button>
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+        <Button type="submit" loading={isPending}>
+          Salvar
+        </Button>
+      </div>
 
       <ImageCropModal
         file={pendingFile}

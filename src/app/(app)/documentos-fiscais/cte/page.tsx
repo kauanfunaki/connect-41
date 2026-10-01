@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { CampoForm } from "@/components/ui/CampoForm";
+import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { BackButton } from "@/components/shared/BackButton";
@@ -138,7 +138,13 @@ export default async function CtePage({
               contexto da consulta — uma por vez, sem "todas" — e o intervalo de
               datas mora fora do botão pela própria regra. E enviar pelo
               formulário descarta o cursor, que é de uma janela só. */}
-          <form className="flex flex-wrap items-end gap-3 mb-5" action="/documentos-fiscais/cte">
+          {/* Grade de largura fixa, e não fileira `items-end`: as datas numa
+              coluna de 170px (eram do tamanho que o navegador quisesse) e o
+              "Consultar" no `AlinhadoAoCampo`, na altura dos campos. */}
+          <form
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[240px_170px_170px_auto] gap-4 mb-5"
+            action="/documentos-fiscais/cte"
+          >
             <CampoForm label="Cliente (raiz do CNPJ)" htmlFor="raiz">
               <Select id="raiz" name="raiz" defaultValue={raiz}>
                 {raizes.map((r) => (
@@ -154,13 +160,9 @@ export default async function CtePage({
             <CampoForm label="Rota até" htmlFor="ate">
               <Input id="ate" name="ate" type="date" defaultValue={ate} />
             </CampoForm>
-            <Button
-              variant="primary"
-              size="md"
-              type="submit"
-            >
-              Consultar
-            </Button>
+            <AlinhadoAoCampo>
+              <Button type="submit">Consultar</Button>
+            </AlinhadoAoCampo>
           </form>
 
           {erro ? (
@@ -233,7 +235,7 @@ export default async function CtePage({
                 </table>
               </div>
 
-              <div className="flex items-center justify-between gap-3 mt-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
                 <p className="text-[12px] text-fg-muted">
                   {documentos.length} CT-e nesta página. O valor não vem na listagem — só dentro do
                   XML, por documento.

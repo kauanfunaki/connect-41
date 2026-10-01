@@ -21,12 +21,12 @@ import {
   ClipboardList,
   ShieldCheck,
   LayoutGrid,
-  ListTodo,
+  CalendarCheck,
+  CircleHelp,
+  ClipboardCheck,
   Menu,
   Pin,
   X,
-  MessageCircle,
-  Gauge,
   Building2,
   Users,
 } from "lucide-react";
@@ -61,6 +61,7 @@ const SECTOR_ICONS: Record<string, React.ReactNode> = {
   comercial: <BriefcaseBusiness size={16} />,
   corretora: <ShieldCheck size={16} />,
   gestao: <LayoutGrid size={16} />,
+  controladoria: <ClipboardCheck size={16} />,
 };
 
 // O que o painel ao lado da sidebar mostra para os itens que têm telas dentro
@@ -119,9 +120,6 @@ type Props = {
   appDomain: string | null;
   sectorHostSuffix: string;
   canOpenAdmin: boolean;
-  /** Diretoria, administradores e coordenadores — ver `recorteDaGestao`. */
-  canOpenGestao?: boolean;
-  canManageMeetings: boolean;
   unreadCount: number;
   notifications: NotificationEntry[];
   profileName: string;
@@ -146,8 +144,6 @@ export function AppShell({
   appDomain,
   sectorHostSuffix,
   canOpenAdmin,
-  canOpenGestao = false,
-  canManageMeetings,
   unreadCount,
   notifications,
   profileName,
@@ -240,11 +236,17 @@ export function AppShell({
                   está no seletor acima (com a cor) e volta como título das telas
                   do setor, que é onde diz de quem são aqueles grupos. */}
               <NavItem href="/home" icon={<Home size={16} />} label="Início" />
+              <NavItem href="/tarefas" icon={<CalendarCheck size={16} />} label="Meu dia" />
 
               {/* Transversais. NUNCA somem por causa do setor ativo: transferência
                   é setor↔setor por natureza, e cadastro é do tenant. Isolar os
                   dois mataria a razão de existir do Connect. Espaços entra aqui:
-                  é a mesma tela em todo setor, e solto no topo parecia um módulo. */}
+                  é a mesma tela em todo setor, e solto no topo parecia um módulo.
+
+                  30/09: Conversas foi para o setor Controladoria e Gestão para o
+                  setor Gestão (pedido do Kauan: o Geral é só o que serve a
+                  todos). "Meu dia" subiu para logo abaixo do Início — é a
+                  primeira tela do expediente. */}
               <p className="px-2.5 pt-4 pb-1.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wider">
                 Geral
               </p>
@@ -252,17 +254,8 @@ export function AppShell({
               <PainelDoItem titulo="Cadastros" telas={TELAS_DE_CADASTROS} cor={corDoSetor}>
                 <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
               </PainelDoItem>
-              <NavItem href="/tarefas" icon={<ListTodo size={16} />} label="Tarefas" />
-              <NavItem href="/conversas" icon={<MessageCircle size={16} />} label="Conversas" />
               <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />
-              {canOpenGestao && (
-                <PainelDoItem titulo="Gestão" telas={TELAS_DA_GESTAO} cor={corDoSetor}>
-                  <NavItem href="/gestao" icon={<Gauge size={16} />} label="Gestão" />
-                </PainelDoItem>
-              )}
-              {canManageMeetings && (
-                <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />
-              )}
+              <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />
 
               {/* Até 8 módulos, a sidebar lista as telas direto, cada uma com seu
                   ícone: o setor pequeno não ganha nada em esconder cinco itens
@@ -284,9 +277,17 @@ export function AppShell({
               {(() => {
                 const grupos = agruparModulos(activeSectorModules);
                 if (grupos.length <= 1 || activeSectorModules.length <= 8) {
-                  return activeSectorModules.map((m) => (
-                    <NavItem key={m.code} href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} />
-                  ));
+                  return activeSectorModules.map((m) =>
+                    // O painel da Gestão mostra as abas dele ao lado, como fazia
+                    // quando era item do menu geral.
+                    m.code === "gestao_painel" ? (
+                      <PainelDoItem key={m.code} titulo={m.label} telas={TELAS_DA_GESTAO} cor={activeSector.color}>
+                        <NavItem href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} />
+                      </PainelDoItem>
+                    ) : (
+                      <NavItem key={m.code} href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} />
+                    )
+                  );
                 }
                 // A tela do grupo continua (é o clique); o painel ao lado mostra
                 // as telas dele sem precisar abri-la.
@@ -313,20 +314,12 @@ export function AppShell({
                 Geral
               </p>
               <NavItem href="/home" icon={<Home size={16} />} label="Início" />
+              <NavItem href="/tarefas" icon={<CalendarCheck size={16} />} label="Meu dia" />
               <PainelDoItem titulo="Cadastros" telas={TELAS_DE_CADASTROS} cor={corDoSetor}>
                 <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
               </PainelDoItem>
-              <NavItem href="/tarefas" icon={<ListTodo size={16} />} label="Tarefas" />
-              <NavItem href="/conversas" icon={<MessageCircle size={16} />} label="Conversas" />
               <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />
-              {canOpenGestao && (
-                <PainelDoItem titulo="Gestão" telas={TELAS_DA_GESTAO} cor={corDoSetor}>
-                  <NavItem href="/gestao" icon={<Gauge size={16} />} label="Gestão" />
-                </PainelDoItem>
-              )}
-              {canManageMeetings && (
-                <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />
-              )}
+              <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />
 
               <TelasFixadas telas={telasFixadas} />
 
@@ -373,6 +366,21 @@ export function AppShell({
 
           <div className="flex items-center gap-2.5 flex-shrink-0">
             <ThemeToggle />
+            {/* Ajuda (30/09): o caminho curto para a central /ajuda, ao lado de
+                notificação, configurações e perfil. */}
+            <Link
+              href="/ajuda"
+              aria-label="Ajuda"
+              data-dica="Ajuda"
+              aria-current={pathname.startsWith("/ajuda") ? "page" : undefined}
+              className={`w-[38px] h-[38px] inline-flex items-center justify-center rounded-md border transition-colors ${
+                pathname.startsWith("/ajuda")
+                  ? "bg-surface border-border-strong text-fg shadow-sm"
+                  : "bg-surface-hover border-border text-fg-secondary hover:text-fg hover:border-border-strong"
+              }`}
+            >
+              <CircleHelp size={16} />
+            </Link>
             <NotificationBell unreadCount={unreadCount} notifications={notifications} />
             {/* Configurações saiu do rodapé da sidebar para o topo, só o ícone,
                 ao lado de notificação e perfil (pedido de 30/09). Admin cai na

@@ -1,3 +1,4 @@
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -51,7 +52,7 @@ export default async function TurmaPage({
         subtitle={[trainingClass.shift, trainingClass.instructor].filter(Boolean).join(" · ") || "Sem turno/instrutor definidos"}
       />
 
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
+      <Card className="p-5">
         <h2 className="text-[14px] font-semibold text-fg mb-3">
           Participantes {trainingClass.participants.length > 0 && `(${trainingClass.participants.length})`}
         </h2>
@@ -73,7 +74,7 @@ export default async function TurmaPage({
         )}
 
         {canManage && <AddParticipanteForm action={addParticipanteAction} candidatos={candidatos} />}
-      </div>
+      </Card>
     </PageContainer>
   );
 }

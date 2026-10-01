@@ -66,9 +66,9 @@ export default async function PendenciaPage({ params }: { params: Promise<{ id: 
       {/* O que o cliente recebeu sozinho precisa estar à vista de quem cobra: sem isso,
           a equipe liga para lembrar de algo que o e-mail já lembrou ontem. */}
       {lembretes.length > 0 ? (
-        <Card className="mb-4 px-4 py-3 text-[12px]">
-          <p className="text-fg-muted mb-1">Lembretes automáticos ao cliente</p>
-          <ul className="flex flex-col gap-0.5">
+        <Card className="mb-4 p-4 text-[12px]">
+          <h2 className="text-[14px] font-semibold text-fg mb-2">Lembretes automáticos ao cliente</h2>
+          <ul className="flex flex-col gap-1">
             {lembretes.map((l) => {
               const s = situacaoDoLembrete(l, agora);
               return (
@@ -89,8 +89,10 @@ export default async function PendenciaPage({ params }: { params: Promise<{ id: 
       )}
 
       {p.lancamento && (
-        <Card className="mb-4 px-4 py-3 text-[13px]">
-          <span className="text-fg-muted">Lançamento vinculado: </span>
+        // Rótulo em cima e valor embaixo, como as outras fichas — era
+        // "Lançamento vinculado:" corrido na mesma linha do link.
+        <Card className="mb-4 p-4 text-[13px]">
+          <p className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">Lançamento vinculado</p>
           <Link href={p.lancamento.kind === "PAGAR" ? "/pagar?recorte=todas" : "/receber?recorte=todas"} className="text-brand hover:underline">
             {p.lancamento.kind === "PAGAR" ? "a pagar" : "a receber"} · {p.lancamento.contraparteNome} ·{" "}
             {moeda(centavosDeDecimal(p.lancamento.valor))} · vence {formatInstantDate(p.lancamento.vencimento)}

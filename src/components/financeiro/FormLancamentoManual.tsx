@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { CampoForm } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { criarLancamentoManual } from "@/app/(app)/lancamentos/actions";
 
 type Contraparte = {
@@ -19,16 +21,6 @@ type Centro = { id: string; nome: string; codigo: string | null };
 type Categoria = { id: string; nome: string; kind: "PAGAR" | "RECEBER" };
 
 const NOVA = "__nova__";
-
-function Campo({ rotulo, children, dica }: { rotulo: string; children: React.ReactNode; dica?: string }) {
-  return (
-    <label className="flex flex-col gap-1 text-[12px] text-fg-secondary">
-      <span className="font-medium">{rotulo}</span>
-      {children}
-      {dica && <span className="text-[11px] text-fg-muted">{dica}</span>}
-    </label>
-  );
-}
 
 export function FormLancamentoManual({
   companyId,
@@ -90,14 +82,19 @@ export function FormLancamentoManual({
     });
   }
 
+  // Uma grade só, de quatro colunas, para os campos caírem alinhados de uma
+  // linha para a outra. Antes eram quatro grades (3, 3, 3 e 4 colunas), e o
+  // centro de custo ficava sozinho numa linha de três.
+  const semCentro = centros.length === 0;
   return (
     <Card className="p-4">
       <form ref={formRef} onSubmit={enviar} className="flex flex-col gap-4">
         <input type="hidden" name="companyId" value={companyId} />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <Campo rotulo="Tipo">
+        <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-4">
+          <CampoForm label="Tipo" htmlFor="lancamento-tipo" required>
             <Select
+              id="lancamento-tipo"
               name="kind"
               value={kind}
               onChange={(e) => {
@@ -108,10 +105,15 @@ export function FormLancamentoManual({
               <option value="PAGAR">Conta a pagar</option>
               <option value="RECEBER">Conta a receber</option>
             </Select>
-          </Campo>
+          </CampoForm>
 
-          <Campo rotulo={kind === "PAGAR" ? "Fornecedor" : "Cliente (sacado)"}>
-            <Select name="counterpartyId" value={contraparte} onChange={(e) => escolherContraparte(e.target.value)} required>
+          <CampoForm
+            label={kind === "PAGAR" ? "Fornecedor" : "Cliente (sacado)"}
+            htmlFor="lancamento-contraparte"
+            required
+            className={semCentro ? "lg:col-span-2" : ""}
+          >
+            <Select id="lancamento-contraparte" name="counterpartyId" value={contraparte} onChange={(e) => escolherContraparte(e.target.value)} required>
               <option value="" disabled>
                 Escolha…
               </option>
@@ -123,13 +125,15 @@ export function FormLancamentoManual({
                 </option>
               ))}
             </Select>
-          </Campo>
+          </CampoForm>
 
-          <Campo
-            rotulo="Categoria"
-            dica={kind === "PAGAR" ? "Obrigatória em conta a pagar — despesa sem classificação não fecha o DRE." : undefined}
+          <CampoForm
+            label="Categoria"
+            htmlFor="lancamento-categoria"
+            required={kind === "PAGAR"}
+            helper={kind === "PAGAR" ? "Obrigatória em conta a pagar — despesa sem classificação não fecha o DRE." : undefined}
           >
-            <Select name="categoryId" value={categoria} onChange={(e) => setCategoria(e.target.value)} required={kind === "PAGAR"}>
+            <Select id="lancamento-categoria" name="categoryId" value={categoria} onChange={(e) => setCategoria(e.target.value)} required={kind === "PAGAR"}>
               <option value="">{kind === "PAGAR" ? "Escolha…" : "Sem categoria"}</option>
               {doTipo.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -137,27 +141,15 @@ export function FormLancamentoManual({
                 </option>
               ))}
             </Select>
-          </Campo>
-        </div>
+          </CampoForm>
 
-        {contraparte === NOVA && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Campo rotulo="Nome da nova contraparte">
-              <Input name="contraparteNome" maxLength={180} required />
-            </Campo>
-            <Campo rotulo="CPF ou CNPJ" dica="Opcional. Com documento, a ficha é reaproveitada se já existir.">
-              <Input name="contraparteDocumento" inputMode="numeric" />
-            </Campo>
-          </div>
-        )}
-
-        {centros.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Campo
-              rotulo="Centro de custo"
-              dica={centroPadrao ? `Em branco, herda o padrão da contraparte: ${centroPadrao.nome}.` : "Opcional. Um centro por lançamento."}
+          {!semCentro && (
+            <CampoForm
+              label="Centro de custo"
+              htmlFor="lancamento-centro"
+              helper={centroPadrao ? `Em branco, herda o padrão da contraparte: ${centroPadrao.nome}.` : "Opcional. Um centro por lançamento."}
             >
-              <Select name="costCenterId" defaultValue="">
+              <Select id="lancamento-centro" name="costCenterId" defaultValue="">
                 <option value="">{centroPadrao ? `Padrão da contraparte (${centroPadrao.nome})` : "Sem centro de custo"}</option>
                 {centros.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -166,41 +158,60 @@ export function FormLancamentoManual({
                   </option>
                 ))}
               </Select>
-            </Campo>
-          </div>
-        )}
+            </CampoForm>
+          )}
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <Campo rotulo="Competência" dica="O mês a que a conta pertence — é o que a DRE econômica soma.">
-            <Input type="month" name="competencia" defaultValue={competenciaPadrao} required />
-          </Campo>
-          <Campo rotulo="Vencimento">
-            <Input type="date" name="vencimento" required />
-          </Campo>
-          <Campo rotulo="Valor (R$)">
-            <Input name="valor" inputMode="decimal" placeholder="1.234,56" required />
-          </Campo>
-          <Campo rotulo={kind === "PAGAR" ? "Já pago em" : "Já recebido em"} dica="Deixe vazio se ainda está em aberto.">
-            <Input type="date" name="pagoEm" max={hojeISO} />
-          </Campo>
-        </div>
+          {contraparte === NOVA && (
+            <>
+              <CampoForm label="Nome da nova contraparte" htmlFor="lancamento-nova-nome" required className="sm:col-span-2">
+                <Input id="lancamento-nova-nome" name="contraparteNome" maxLength={180} required />
+              </CampoForm>
+              <CampoForm
+                label="CPF ou CNPJ"
+                htmlFor="lancamento-nova-documento"
+                helper="Opcional. Com documento, a ficha é reaproveitada se já existir."
+                className="lg:col-span-2"
+              >
+                <Input id="lancamento-nova-documento" name="contraparteDocumento" inputMode="numeric" />
+              </CampoForm>
+            </>
+          )}
 
-        <Campo rotulo="Descrição">
-          <Input name="descricao" maxLength={255} placeholder="Ex.: aluguel de setembro" />
-        </Campo>
+          <CampoForm
+            label="Competência"
+            htmlFor="lancamento-competencia"
+            required
+            helper="O mês a que a conta pertence — é o que a DRE econômica soma."
+          >
+            <Input id="lancamento-competencia" type="month" name="competencia" defaultValue={competenciaPadrao} required />
+          </CampoForm>
+          <CampoForm label="Vencimento" htmlFor="lancamento-vencimento" required>
+            <Input id="lancamento-vencimento" type="date" name="vencimento" required />
+          </CampoForm>
+          <CampoForm label="Valor" htmlFor="lancamento-valor" required>
+            <Input id="lancamento-valor" name="valor" prefix="R$" inputMode="decimal" placeholder="1.234,56" required />
+          </CampoForm>
+          <CampoForm label={kind === "PAGAR" ? "Já pago em" : "Já recebido em"} htmlFor="lancamento-pago-em" helper="Deixe vazio se ainda está em aberto.">
+            <Input id="lancamento-pago-em" type="date" name="pagoEm" max={hojeISO} />
+          </CampoForm>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" size="sm" disabled={pendente}>
-            {pendente ? "Lançando…" : "Lançar"}
-          </Button>
+          <CampoForm label="Descrição" htmlFor="lancamento-descricao" className="sm:col-span-2 lg:col-span-4">
+            <Input id="lancamento-descricao" name="descricao" maxLength={255} placeholder="Ex.: aluguel de setembro" />
+          </CampoForm>
+        </FieldGrid>
+
+        <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
           {salvo && (
-            <span className="inline-flex items-center gap-1 text-[12px] text-success">
-              <Check size={13} /> Lançado. Ele já aparece nas contas e na DRE.
+            <span className="mr-auto inline-flex items-center gap-1.5 text-[12px] text-success">
+              <Check size={14} className="flex-shrink-0" /> Lançado. Ele já aparece nas contas e na DRE.
               {/* Empresa com alçada: a conta nasce aguardando, e a baixa fica travada até alguém aprovar. */}
               {aguardando && " Aguardando aprovação antes da baixa."}
             </span>
           )}
-          {erro && <span className="text-[12px] text-danger">{erro}</span>}
+          {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
+          <Button type="submit" disabled={pendente} className="w-full sm:w-auto">
+            {pendente ? "Lançando…" : "Lançar"}
+          </Button>
         </div>
       </form>
     </Card>

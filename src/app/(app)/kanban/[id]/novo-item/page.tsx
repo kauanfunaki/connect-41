@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
@@ -47,23 +47,18 @@ export default async function NovoItemPage({
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/kanban" className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          Kanban
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <Link
-          href={`/kanban/${id}`}
-          className="text-[13px] text-fg-muted hover:text-fg transition-colors truncate max-w-[200px]"
-        >
-          {pipeline.name}
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">Novo Item</span>
-      </div>
+      <Breadcrumb
+        items={[
+          { label: "Kanban", href: "/kanban" },
+          { label: pipeline.name, href: `/kanban/${id}`, truncate: true },
+          { label: "Novo Item" },
+        ]}
+      />
       <PageHeader title={<>Adicionar {pipeline.entityType === "COMPANY" ? "Empresa" : "Pessoa"} ao Kanban</>} />
 
-      <Card className="p-6">
+      {/* No cartão de 720px dos formulários curtos (30/09): na largura da
+          tela, o select da empresa ia de uma borda à outra. */}
+      <Card className="p-6 w-full max-w-[720px]">
         <ItemForm
           action={criarItem}
           pipelineId={id}

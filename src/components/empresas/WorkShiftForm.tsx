@@ -29,12 +29,14 @@ export function WorkShiftForm({ action, companyId, cancelHref, defaultValues }: 
       {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
 
       {state?.error && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">
           {state.error}
         </p>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Horário na largura de um horário: em três terços iguais, o "08:00"
+          ficava do tamanho do nome do turno. */}
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px_140px] gap-4">
         <CampoForm label="Nome do Turno" htmlFor="name" required>
           <Input id="name" name="name" type="text" required defaultValue={defaultValues?.name ?? ""} />
         </CampoForm>

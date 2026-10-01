@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
-import { CampoForm } from "@/components/ui/CampoForm";
+import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
+import { FieldGrid } from "@/components/ui/FieldGrid";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 
 type PersonOption = { id: string; name: string };
@@ -18,8 +19,9 @@ export function SelecionarColaboradorForm({ cycleId, colaboradores }: Props) {
   const [personId, setPersonId] = useState("");
 
   return (
-    <div className="border-t border-border pt-4 flex items-end gap-3">
-      <div className="flex-1">
+    <div className="border-t border-border pt-4">
+      {/* Era um flex sem quebra: no celular o botão espremia a busca. */}
+      <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_auto]" className="max-w-xl">
         <CampoForm label="Colaborador" htmlFor="personId">
           <SearchableSelect
             id="personId"
@@ -30,15 +32,16 @@ export function SelecionarColaboradorForm({ cycleId, colaboradores }: Props) {
             placeholder="Buscar colaborador…"
           />
         </CampoForm>
-      </div>
-      <Button
-        type="button"
-        disabled={!personId}
-        onClick={() => router.push(`/avaliacoes/${cycleId}/avaliar/${personId}`)}
-        variant="primary" className="font-medium disabled:opacity-60"
-      >
-        Avaliar Colaborador
-     </Button>
+        <AlinhadoAoCampo>
+          <Button
+            type="button"
+            disabled={!personId}
+            onClick={() => router.push(`/avaliacoes/${cycleId}/avaliar/${personId}`)}
+          >
+            Avaliar Colaborador
+          </Button>
+        </AlinhadoAoCampo>
+      </FieldGrid>
     </div>
   );
 }
