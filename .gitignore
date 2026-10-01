@@ -86,3 +86,6 @@ android/store_icon.png
 # repositório.
 android/hs_err_pid*.log
 android/replay_pid*.log
+
+# vídeos da ajuda gravados localmente (scripts/videos) — sobem no YouTube, não no git
+/videos/
