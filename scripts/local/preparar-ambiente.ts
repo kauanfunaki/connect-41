@@ -5,8 +5,8 @@
 //
 // Idempotente: rodar de novo não duplica nada.
 //
-// - o setor Controladoria (a migration que o cria não roda no banco local, que
-//   nasce do schema — ver README);
+// - os setores padrão e a Controladoria (a migration que cria a Controladoria
+//   não roda no banco local, que nasce do schema — ver README);
 // - a senha de teste do cliente do portal da empresa [demo], lida de
 //   LOCAL_PORTAL_PASSWORD no `.env.localdev` — nunca escrita aqui nem no chat;
 // - uma segunda empresa no grupo [demo], para o vídeo de trocar de empresa;
@@ -20,6 +20,7 @@
 
 import { getPrisma } from "../../src/lib/prisma";
 import { hashPassword } from "../../src/lib/auth/password";
+import { DEFAULT_SECTORS } from "../../src/lib/sector-constants";
 
 const MARCA = "[demo]";
 
@@ -36,14 +37,19 @@ async function main() {
   if (!tenant) throw new Error("Rode o seed antes (prisma/seed.ts).");
   const tenantId = tenant.id;
 
-  // ── Controladoria ──────────────────────────────────────────────────────────
-  if (!(await p.sector.findFirst({ where: { tenantId, code: "controladoria" } }))) {
-    const ultimo = await p.sector.aggregate({ where: { tenantId }, _max: { order: true } });
-    await p.sector.create({
-      data: { tenantId, code: "controladoria", label: "Controladoria", color: "#B8327A", active: true, order: (ultimo._max.order ?? -1) + 1 },
-    });
-    console.log("setor Controladoria criado");
+  // ── Setores ────────────────────────────────────────────────────────────────
+  // O seed não cria setor nenhum: o app cria os padrões no primeiro acesso,
+  // mas só se o escritório não tiver setor algum (`ensureDefaultSectors`). Como
+  // a Controladoria entra aqui, os padrões nunca nasceriam, e as telas
+  // mostrariam o código ("bpo") no lugar do nome. Então entram todos aqui.
+  const existentes = new Set((await p.sector.findMany({ where: { tenantId }, select: { code: true } })).map((s) => s.code));
+  const setores = [...DEFAULT_SECTORS, { code: "controladoria", label: "Controladoria", color: "#B8327A" }];
+  const faltando = setores.filter((s, i) => !existentes.has(s.code) && setores.findIndex((x) => x.code === s.code) === i);
+  for (const [i, s] of setores.entries()) {
+    if (!faltando.includes(s)) continue;
+    await p.sector.create({ data: { tenantId, code: s.code, label: s.label, color: s.color, active: true, order: i } });
   }
+  if (faltando.length) console.log(`setores criados: ${faltando.map((s) => s.code).join(", ")}`);
 
   // ── Cliente do portal: senha de teste ─────────────────────────────────────
   const cliente = await p.portalUser.findFirst({
