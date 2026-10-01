@@ -7,6 +7,8 @@ describe("linkDaNotificacao", () => {
     expect(linkDaNotificacao({ type: "NEW_APPLICATION", entityType: "PERSON", entityId: "p1" })).toBe("/pessoas/p1");
     expect(linkDaNotificacao({ type: "COMPANY_MESSAGE", entityType: "COMPANY", entityId: "c1" })).toBe("/empresas/c1");
     expect(linkDaNotificacao({ type: "PROCESS_MESSAGE", entityId: "pr1" })).toBe("/processos/pr1");
+    expect(linkDaNotificacao({ type: "SOLICITACAO_NOVA", entityId: "s1" })).toBe("/solicitacoes/s1");
+    expect(linkDaNotificacao({ type: "SOLICITACAO_PRAZO", entityId: "s1" })).toBe("/solicitacoes/s1");
     expect(linkDaNotificacao({ type: "MENTION", entityType: null, entityId: null })).toBeNull();
   });
 

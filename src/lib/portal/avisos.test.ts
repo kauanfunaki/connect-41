@@ -35,11 +35,19 @@ describe("textoDoAviso", () => {
     expect(textoDoAviso({ tipo: "aprovacao", quantidade: 4 }).title).toBe("4 contas a pagar aguardando aprovação");
   });
 
+  it("na solicitação, leva o número e o assunto da lista — nunca o que foi escrito", () => {
+    const t = textoDoAviso({ tipo: "solicitacao", motivo: "aguardando", numero: 12, assunto: "Folha de pagamento e funcionários", id: "s1" });
+    expect(t.title).toBe("A equipe precisa de você");
+    expect(t.body).toBe("Nº 12 · Folha de pagamento e funcionários");
+    expect(t.url).toBe("/portal/solicitacoes/s1");
+  });
+
   it("nenhum aviso cita valor", () => {
     const todos = [
       textoDoAviso({ tipo: "pendencia", motivo: "nova", titulo: "Extrato", requestId: "1" }),
       textoDoAviso({ tipo: "mensagem", empresaNome: "ACME" }),
       textoDoAviso({ tipo: "aprovacao", quantidade: 2 }),
+      textoDoAviso({ tipo: "solicitacao", motivo: "resposta", numero: 12, assunto: "Pedir um documento", id: "s1" }),
     ];
     for (const t of todos) {
       expect(`${t.title} ${t.body}`).not.toMatch(/R\$/);
@@ -51,6 +59,7 @@ describe("textoDoAviso", () => {
       textoDoAviso({ tipo: "pendencia", motivo: "lembrete", titulo: "t", requestId: "1" }),
       textoDoAviso({ tipo: "mensagem", empresaNome: "ACME" }),
       textoDoAviso({ tipo: "aprovacao", quantidade: 1 }),
+      textoDoAviso({ tipo: "solicitacao", motivo: "concluida", numero: 3, assunto: "Outro assunto", id: "s1" }),
     ];
     // O service worker abre a URL do payload; uma rota interna levaria o
     // cliente para o login da equipe.

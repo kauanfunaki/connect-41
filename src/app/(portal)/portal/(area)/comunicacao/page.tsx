@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { MessagesSquare } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
@@ -23,6 +23,9 @@ export default async function PortalComunicacaoPage({
 }) {
   const { escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("bpo_comunicacao")) notFound();
+  // As solicitações substituíram a conversa livre (01/10): o link antigo e o
+  // aviso por e-mail de mensagem levam para o caminho novo.
+  if (modulos.has("portal_solicitacoes")) redirect("/portal/solicitacoes");
 
   // As empresas do alcance do cliente, e não as ativas do tenant: o portal é dele.
   const empresas = await empresasDoSeletor(escopo.tenantId, escopo.companyIds ?? []);
