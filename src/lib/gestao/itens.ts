@@ -6,7 +6,7 @@
 // do painel é o que acabou de sair, não o histórico inteiro.
 
 import { getPrisma } from "@/lib/prisma";
-import { setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { nomeExibicao } from "@/lib/companyName";
 import {
   classificar,
@@ -207,6 +207,63 @@ async function pendencias(tenantId: string, agora: Date, filtro: FiltroDeItens):
     }));
 }
 
+/**
+ * As solicitações que os clientes abrem pelo portal (01/10), no setor que
+ * atende e com o responsável delas — a fila única do lado da 41.
+ *
+ * O prazo é o da primeira resposta prometida ao cliente: depois de respondida
+ * ela segue na fila, mas sem prazo, porque a promessa foi cumprida. Cancelada
+ * não entra (some do trabalho, como a pendência cancelada).
+ */
+async function solicitacoes(tenantId: string, agora: Date, filtro: FiltroDeItens): Promise<ItemDeTrabalho[]> {
+  if (!(await isModuleEnabled(tenantId, "portal_solicitacoes"))) return [];
+  const setores = setoresDoFiltro(filtro);
+  const lista = await getPrisma().serviceRequest.findMany({
+    where: {
+      tenantId,
+      ...(setores ? { sectorCode: { in: setores } } : {}),
+      ...(filtro.responsavel ? { assigneeId: filtro.responsavel } : {}),
+      OR: [
+        { status: { in: ["ABERTA", "EM_ANDAMENTO", "AGUARDANDO_CLIENTE"] } },
+        { status: "CONCLUIDA", closedAt: { gte: new Date(agora.getTime() - JANELA_DE_CONCLUIDOS) } },
+      ],
+    },
+    select: {
+      id: true,
+      number: true,
+      status: true,
+      sectorCode: true,
+      assigneeId: true,
+      responseDue: true,
+      firstResponseAt: true,
+      updatedAt: true,
+      closedAt: true,
+      subject: { select: { label: true } },
+      company: { select: { name: true, displayName: true } },
+    },
+    take: TETO,
+  });
+  const ESTADO: Record<(typeof lista)[number]["status"], Estado> = {
+    ABERTA: "NAO_INICIADO",
+    EM_ANDAMENTO: "ANDAMENTO",
+    AGUARDANDO_CLIENTE: "ESPERANDO_CLIENTE",
+    CONCLUIDA: "CONCLUIDO",
+    CANCELADA: "CONCLUIDO",
+  };
+  return lista.map((s) => ({
+    origem: "SOLICITACAO",
+    id: s.id,
+    titulo: `Nº ${s.number} · ${s.subject.label} — ${nomeExibicao(s.company)}`,
+    setor: s.sectorCode,
+    responsaveis: s.assigneeId ? [s.assigneeId] : [],
+    estado: ESTADO[s.status],
+    ultimaMovimentacao: s.updatedAt,
+    prazo: s.firstResponseAt ? null : s.responseDue,
+    concluidoEm: s.closedAt,
+    href: `/solicitacoes/${s.id}`,
+  }));
+}
+
 async function transferencias(tenantId: string, agora: Date, filtro: FiltroDeItens): Promise<ItemDeTrabalho[]> {
   const setores = setoresDoFiltro(filtro);
   const lista = await getPrisma().handoffSector.findMany({
@@ -252,6 +309,7 @@ export async function coletarItens(tenantId: string, agora = new Date(), filtro:
     cards(tenantId, agora, filtro),
     pendencias(tenantId, agora, filtro),
     transferencias(tenantId, agora, filtro),
+    solicitacoes(tenantId, agora, filtro),
   ]);
   return partes.flat();
 }

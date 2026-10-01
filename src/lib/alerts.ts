@@ -650,7 +650,9 @@ async function checkItensDaGestao(tenantId: string, today: Date): Promise<number
         mensagem: `Parado há ${c.parado} dias, sem nenhuma movimentação: ${item.titulo}`,
       });
     }
-    if (c.prazo && item.origem !== "PENDENCIA" && item.prazo) {
+    // Pendência espera o cliente; a solicitação tem o aviso de prazo próprio
+    // (`checkSolicitacoesNoPrazo`) — aqui o prazo dela sairia em dobro.
+    if (c.prazo && item.origem !== "PENDENCIA" && item.origem !== "SOLICITACAO" && item.prazo) {
       avisos.push({
         chave: `GESTAO_PRAZO:${item.origem}:${item.id}:${item.prazo.toISOString().slice(0, 10)}:${c.prazo.situacao}`,
         mensagem:
