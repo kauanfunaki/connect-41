@@ -9,6 +9,7 @@
 
 export type IconeDoPasso =
   | "celular"
+  | "solicitacao"
   | "sino"
   | "empresas"
   | "pendencia"
@@ -28,6 +29,8 @@ type PassoDoCatalogo = {
   icone: IconeDoPasso;
   /** Aparece se ao menos um destes módulos estiver ligado; sem a lista, sempre. */
   modulos?: readonly string[];
+  /** Some se algum destes estiver ligado — a tela do passo foi substituída. */
+  semModulos?: readonly string[];
   /** Só para quem tem mais de uma empresa no acesso. */
   soComVariasEmpresas?: boolean;
   passos: readonly Linha[];
@@ -59,6 +62,20 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
       "Quando o navegador perguntar, permita as notificações.",
       "No iPhone, os avisos só chegam com o portal instalado na tela de início.",
       "O aviso diz só que há algo novo, nunca o valor ou o conteúdo. O detalhe fica aqui dentro do portal.",
+    ],
+  },
+  {
+    chave: "solicitacao",
+    titulo: "Pedir algo à 41",
+    resumo: "Documento, alteração ou qualquer outra coisa, com número e prazo de resposta.",
+    icone: "solicitacao",
+    modulos: ["portal_solicitacoes"],
+    passos: [
+      "Abra Solicitações e clique em Nova solicitação.",
+      "Escolha a empresa, se tiver mais de uma, e o assunto. Cada assunto mostra em quantos dias úteis a equipe responde.",
+      "Conte o que você precisa, anexe os arquivos e clique em Enviar solicitação.",
+      "A solicitação ganha um número, e você é avisado por e-mail quando a equipe responder. A conversa continua ali mesmo.",
+      "Quando a equipe precisar de algo seu, a solicitação fica como \"Aguardando você\". Se não precisar mais, use Cancelar solicitação.",
     ],
   },
   {
@@ -95,6 +112,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     resumo: "Sem esperar um pedido: o extrato do mês, uma dúvida, um aviso.",
     icone: "conversa",
     modulos: ["bpo_comunicacao"],
+    semModulos: ["portal_solicitacoes"],
     passos: [
       "Abra Conversa e escolha a empresa, se tiver mais de uma.",
       "Escreva em Mensagem e, se quiser, anexe arquivos em Anexos.",
@@ -171,7 +189,12 @@ function algumLigado(modulos: ReadonlySet<string>, exigidos: readonly string[] |
 
 /** Os passos que valem para este cliente: só o que está no menu dele. */
 export function passosDoPortal(modulos: ReadonlySet<string>, opcoes: { variasEmpresas: boolean }): PassoDoPortal[] {
-  return CATALOGO.filter((p) => algumLigado(modulos, p.modulos) && (!p.soComVariasEmpresas || opcoes.variasEmpresas)).map((p) => ({
+  return CATALOGO.filter(
+    (p) =>
+      algumLigado(modulos, p.modulos) &&
+      !(p.semModulos ?? []).some((m) => modulos.has(m)) &&
+      (!p.soComVariasEmpresas || opcoes.variasEmpresas)
+  ).map((p) => ({
     chave: p.chave,
     titulo: p.titulo,
     resumo: p.resumo,

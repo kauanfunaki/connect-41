@@ -37,7 +37,10 @@ export default async function ComunicacaoPage({
   if (!ctx.tenantId) notFound();
   const setor = (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
   if (!canViewSector(ctx, setor) || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
-  const podeAgir = canActOnSector(ctx, setor);
+  // Com as solicitações ligadas (01/10), a conversa livre saiu do portal: o
+  // cliente não vê mais mensagem nova daqui. A tela fica só como histórico.
+  const substituida = await isModuleEnabled(ctx.tenantId, "portal_solicitacoes");
+  const podeAgir = canActOnSector(ctx, setor) && !substituida;
 
   const { empresa: companyId } = await searchParams;
   const escopo = { tenantId: ctx.tenantId, companyIds: null };
@@ -51,6 +54,16 @@ export default async function ComunicacaoPage({
         title="Conversa com o cliente"
         subtitle="Recado livre por empresa, com anexos. Pedido com prazo é pendência."
       />
+
+      {substituida && (
+        <p className="mb-4 rounded-lg border border-info/40 bg-info-bg px-4 py-3 text-[13px] text-fg">
+          A conversa saiu do portal: agora o cliente fala com a 41 pelas{" "}
+          <Link href="/solicitacoes" className="font-medium text-brand hover:underline">
+            Solicitações
+          </Link>
+          . Esta tela fica como histórico.
+        </p>
+      )}
 
       <FiltroDePeriodo acao="/comunicacao" empresas={empresas} empresaId={selecionada?.id ?? null} permitirTodas />
 

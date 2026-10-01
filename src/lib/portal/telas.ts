@@ -12,6 +12,8 @@ export type TelaDoPortal = {
   secao: SecaoDoPortal | null;
   /** O que a tela faz, nas palavras do cabeçalho dela. */
   descricao: string;
+  /** Some quando este módulo está ligado: a tela foi substituída por outra. */
+  ocultaCom?: string;
 };
 
 export const SECOES_DO_PORTAL: readonly SecaoDoPortal[] = ["Financeiro", "Societário", "Com a equipe"];
@@ -52,6 +54,13 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     secao: "Societário",
     descricao: "O que os órgãos pediram nos processos das suas empresas.",
   },
+  {
+    href: "/portal/solicitacoes",
+    rotulo: "Solicitações",
+    modulo: "portal_solicitacoes",
+    secao: "Com a equipe",
+    descricao: "Peça documentos, alterações ou o que precisar da 41, com prazo de resposta.",
+  },
   { href: "/portal/pendencias", rotulo: "Pendências", modulo: "bpo_pendencias", secao: "Com a equipe", descricao: "O que a equipe da 41 precisa de você." },
   {
     href: "/portal/aprovacoes",
@@ -66,9 +75,15 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     modulo: "bpo_comunicacao",
     secao: "Com a equipe",
     descricao: "Fale com a equipe e mande arquivos, por empresa.",
+    // Decisão de 01/10: com as solicitações, tudo o que o cliente manda tem
+    // dono, prazo e situação — a conversa livre sai do menu (o histórico fica
+    // na tela interna /comunicacao).
+    ocultaCom: "portal_solicitacoes",
   },
 ];
 
 export function telasVisiveis(modulos: ReadonlySet<string>): TelaDoPortal[] {
-  return TELAS_DO_PORTAL.filter((t) => t.modulo === null || modulos.has(t.modulo));
+  return TELAS_DO_PORTAL.filter(
+    (t) => (t.modulo === null || modulos.has(t.modulo)) && !(t.ocultaCom && modulos.has(t.ocultaCom))
+  );
 }

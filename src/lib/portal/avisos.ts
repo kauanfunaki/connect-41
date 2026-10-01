@@ -15,7 +15,8 @@ export type AvisoDoPortal =
   | { tipo: "pendencia"; motivo: "nova" | "resposta" | "lembrete"; titulo: string; requestId: string }
   | { tipo: "mensagem"; empresaNome: string }
   | { tipo: "processo"; motivo: "mensagem" | "documento"; processoNome: string; processId: string }
-  | { tipo: "aprovacao"; quantidade: number };
+  | { tipo: "aprovacao"; quantidade: number }
+  | { tipo: "solicitacao"; motivo: "resposta" | "aguardando" | "concluida"; numero: number; assunto: string; id: string };
 
 export type TextoEmPush = { title: string; body: string; url: string };
 
@@ -54,6 +55,17 @@ export function textoDoAviso(aviso: AvisoDoPortal): TextoEmPush {
             : `${aviso.quantidade} contas a pagar aguardando aprovação`,
         body: "A baixa só é feita depois da sua aprovação.",
         url: "/portal/aprovacoes",
+      };
+    case "solicitacao":
+      // O assunto é o da lista que o próprio cliente escolheu — nada do que foi escrito.
+      return {
+        title: {
+          resposta: "Resposta na sua solicitação",
+          aguardando: "A equipe precisa de você",
+          concluida: "Solicitação concluída",
+        }[aviso.motivo],
+        body: `Nº ${aviso.numero} · ${aviso.assunto}`,
+        url: `/portal/solicitacoes/${aviso.id}`,
       };
   }
 }

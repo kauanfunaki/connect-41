@@ -9,6 +9,7 @@ import {
   Columns3,
   ArrowRightLeft,
   CalendarDays,
+  Inbox,
   Settings,
   Calculator,
   ReceiptText,
@@ -122,6 +123,8 @@ type Props = {
   canOpenAdmin: boolean;
   unreadCount: number;
   notifications: NotificationEntry[];
+  /** O módulo das solicitações do portal está ligado — mostra "Solicitações" no Geral. */
+  solicitacoesLigadas?: boolean;
   profileName: string;
   profileRoleLabel: string;
   profilePhotoUrl: string | null;
@@ -146,6 +149,7 @@ export function AppShell({
   canOpenAdmin,
   unreadCount,
   notifications,
+  solicitacoesLigadas = false,
   profileName,
   profileRoleLabel,
   profilePhotoUrl,
@@ -255,6 +259,7 @@ export function AppShell({
                 <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
               </PainelDoItem>
               <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />
+              {solicitacoesLigadas && <NavItem href="/solicitacoes" icon={<Inbox size={16} />} label="Solicitações" />}
               <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />
 
               {/* Até 8 módulos, a sidebar lista as telas direto, cada uma com seu
@@ -319,6 +324,7 @@ export function AppShell({
                 <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
               </PainelDoItem>
               <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />
+              {solicitacoesLigadas && <NavItem href="/solicitacoes" icon={<Inbox size={16} />} label="Solicitações" />}
               <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />
 
               <TelasFixadas telas={telasFixadas} />
