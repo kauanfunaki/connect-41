@@ -273,13 +273,13 @@ export function videosDoPortal(opcoes: { email: string; senha: string; pastaDeAp
         await r.cartaz(SELO, "Esqueci minha senha", "Como criar uma senha nova");
         await r.clicar(r.page.getByRole("link", { name: "Esqueci minha senha" }), "Na tela de entrada, clique em Esqueci minha senha.");
         await r.esperarTela(/esqueci-senha/);
-        await r.digitar(r.page.getByLabel("Nome completo"), "Cliente Modelo", "Preencha o seu nome…");
-        await r.digitar(r.page.getByLabel(/e-mail/i).first(), opcoes.email, "…e o e-mail que você usa para entrar.");
-        await r.apontar(
-          r.page.getByRole("button", { name: "Solicitar redefinição" }),
-          "Clique em Solicitar redefinição. Você recebe um link por e-mail para criar a senha nova."
-        );
-        await r.soltar();
+        await r.digitar(r.page.getByLabel("E-mail"), opcoes.email, "Informe o e-mail que você usa para entrar.");
+        // No ambiente local não há SMTP: o envio não sai, mas a tela de
+        // confirmação é a mesma, de propósito (não revela quem tem conta).
+        await r.clicar(r.page.getByRole("button", { name: "Enviar link" }), "Clique em Enviar link.");
+        await r.page.getByText("Confira o seu e-mail").waitFor();
+        await r.pausa(500);
+        await r.legenda("O link para criar a senha nova chega no seu e-mail em alguns minutos.");
         await r.legenda("Não chegou? Olhe a caixa de spam. Se mesmo assim não vier, fale com o seu contato na 41.");
         await encerramento(r, "Com a senha nova, é só entrar normalmente.");
       },
