@@ -64,6 +64,13 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     descricao: "Peça documentos, alterações ou o que precisar da 41, com prazo de resposta.",
   },
   {
+    href: "/portal/comunicados",
+    rotulo: "Comunicados",
+    modulo: "portal_solicitacoes",
+    secao: "Com a equipe",
+    descricao: "Avisos da 41 para você: recesso, prazos, orientações.",
+  },
+  {
     href: "/portal/pendencias",
     rotulo: "Pendências",
     modulo: "bpo_pendencias",

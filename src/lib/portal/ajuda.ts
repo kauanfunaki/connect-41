@@ -10,6 +10,7 @@
 export type IconeDoPasso =
   | "celular"
   | "solicitacao"
+  | "comunicado"
   | "sino"
   | "empresas"
   | "pendencia"
@@ -76,6 +77,19 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
       "Conte o que você precisa, anexe os arquivos e clique em Enviar solicitação.",
       "A solicitação ganha um número, e você é avisado por e-mail quando a equipe responder. A conversa continua ali mesmo.",
       "Quando a equipe precisar de algo seu, a solicitação fica como \"Aguardando você\". Se não precisar mais, use Cancelar solicitação.",
+    ],
+  },
+  {
+    chave: "comunicado",
+    titulo: "Ler os comunicados da 41",
+    resumo: "Recesso, mudança de prazo, orientação: os avisos que a 41 manda para todos.",
+    icone: "comunicado",
+    modulos: ["portal_solicitacoes"],
+    passos: [
+      "Quando a 41 manda um comunicado, você recebe um e-mail e o aviso aparece no topo do portal.",
+      "Abra Comunicados. Os que você ainda não leu aparecem destacados, com a etiqueta Novo.",
+      "Clique para ler o texto inteiro e baixar os anexos.",
+      "Dúvida sobre um comunicado? Abra uma solicitação.",
     ],
   },
   {
