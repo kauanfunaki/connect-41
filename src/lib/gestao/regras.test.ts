@@ -98,6 +98,17 @@ describe("carga por pessoa", () => {
     expect(m.size).toBe(2);
   });
 
+  it("a solicitação do cliente conta na carga de quem a assumiu (01/10)", () => {
+    const x = item({ id: "s", origem: "SOLICITACAO", responsaveis: ["u1"] });
+    const m = cargaPorPessoa([{ item: x, c: classificar(x, LIMITES_PADRAO, AGORA) }]);
+    expect(m.get("u1")).toMatchObject({ abertos: 1, porOrigem: { SOLICITACAO: 1, PENDENCIA: 0 } });
+  });
+
+  it("solicitação aguardando o cliente fica parada de propósito, sem alerta", () => {
+    const x = item({ origem: "SOLICITACAO", estado: "ESPERANDO_CLIENTE", ultimaMovimentacao: dias(-40) });
+    expect(classificar(x, LIMITES_PADRAO, AGORA)).toMatchObject({ paradoDeProposito: true });
+  });
+
   it("atenção: vencido antes de parado, e o mais atrasado primeiro", () => {
     const xs = [item({ id: "parado", ultimaMovimentacao: dias(-12) }), item({ id: "venc1", prazo: dias(-1) }), item({ id: "venc5", prazo: dias(-5) })]
       .map((i) => ({ item: i, c: classificar(i, LIMITES_PADRAO, AGORA) }))

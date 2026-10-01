@@ -13,7 +13,7 @@
 // para o painel, para a carga de cada coordenador e para os alertas: três
 // telas, uma conta.
 
-export type Origem = "PROCESSO" | "CARD" | "PENDENCIA" | "TRANSFERENCIA";
+export type Origem = "PROCESSO" | "CARD" | "PENDENCIA" | "TRANSFERENCIA" | "SOLICITACAO";
 
 /**
  * O estado do item, já traduzido da origem:
@@ -135,7 +135,7 @@ export function cargaPorPessoa(itens: { item: ItemDeTrabalho; c: Classificacao }
         carga = {
           userId,
           abertos: 0,
-          porOrigem: { PROCESSO: 0, CARD: 0, PENDENCIA: 0, TRANSFERENCIA: 0 },
+          porOrigem: { PROCESSO: 0, CARD: 0, PENDENCIA: 0, TRANSFERENCIA: 0, SOLICITACAO: 0 },
           parados: 0,
           vencidos: 0,
           vencendo: 0,
