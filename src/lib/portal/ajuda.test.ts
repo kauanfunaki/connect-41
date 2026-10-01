@@ -33,6 +33,10 @@ describe("passosDoPortal — o cliente só lê sobre o que está no menu dele", 
     expect(com).not.toContain("conversa");
   });
 
+  it("só com o canal do portal, o passo de responder um pedido da 41 aparece", () => {
+    expect(chaves(["portal_solicitacoes"])).toContain("pendencia");
+  });
+
   it("trocar de empresa só aparece para quem tem mais de uma", () => {
     expect(chaves([])).not.toContain("empresa");
     expect(chaves([], true)).toContain("empresa");
@@ -70,7 +74,8 @@ describe("telasVisiveis — a mesma régua do menu", () => {
   it("a Conversa sai do menu quando as solicitações estão ligadas", () => {
     const hrefs = (m: string[]) => telasVisiveis(new Set(m)).map((t) => t.href);
     expect(hrefs(["bpo_comunicacao"])).toContain("/portal/comunicacao");
-    expect(hrefs(["bpo_comunicacao", "portal_solicitacoes"])).toEqual(["/portal", "/portal/solicitacoes"]);
+    // As Pendências também entram: com o canal, qualquer setor pede ao cliente.
+    expect(hrefs(["bpo_comunicacao", "portal_solicitacoes"])).toEqual(["/portal", "/portal/solicitacoes", "/portal/pendencias"]);
   });
 
   it("toda tela fica dentro de /portal", () => {

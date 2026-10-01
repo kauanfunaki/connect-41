@@ -2888,6 +2888,9 @@ model ClientRequest {
   status         ClientRequestStatus @default(ABERTA)
   /// Vínculo opcional com um lançamento da mesma empresa.
   financeEntryId String?
+  /// Setor que pediu (01/10: a 41 pede ao cliente de qualquer setor). Nulo nas
+  /// pendências de antes, que são do setor do módulo `bpo_pendencias`.
+  sectorCode     String?             @db.VarChar(40)
 
   createdById  String?
   resolvedAt   DateTime?
@@ -2908,6 +2911,7 @@ model ClientRequest {
   @@index([tenantId, status, dueDate])
   @@index([tenantId, companyId, status])
   @@index([financeEntryId])
+  @@index([tenantId, sectorCode, status])
   @@map("client_requests")
 }
 

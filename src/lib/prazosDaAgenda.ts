@@ -16,6 +16,7 @@ import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { nomeExibicao } from "@/lib/companyName";
 import { listarCertificados } from "@/lib/certificados/servidor";
 import { atuaisPorDocumento, situacaoDoCertificado } from "@/lib/certificados/certificados";
+import { soDoSetorPadrao, whereDoRecorteDeSetor } from "@/lib/financeiro/pendencias/setor";
 
 export type TipoDePrazo =
   | "tarefa"
@@ -160,7 +161,14 @@ export async function prazosDoPeriodo(ctx: AuthContext, de: string, ate: string)
       : Promise.resolve([]),
     pendencias?.modulos.has("bpo_pendencias")
       ? prisma.clientRequest.findMany({
-          where: { tenantId, status: { in: ["ABERTA", "RESPONDIDA"] }, dueDate: noPeriodo },
+          // Só as do setor do painel (e as sem setor, de antes de 01/10): as dos
+          // outros setores ainda não entram na agenda.
+          where: {
+            tenantId,
+            status: { in: ["ABERTA", "RESPONDIDA"] },
+            dueDate: noPeriodo,
+            ...whereDoRecorteDeSetor(soDoSetorPadrao(pendencias.setor)),
+          },
           select: { id: true, title: true, dueDate: true, company: { select: { name: true, displayName: true } } },
           take: 1000,
         })
