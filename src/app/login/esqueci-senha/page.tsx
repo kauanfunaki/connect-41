@@ -1,18 +1,14 @@
 import { AuthShell } from "@/components/login/AuthShell";
-import { AccessRequestForm } from "@/components/login/AccessRequestForm";
+import { EsqueciSenhaForm } from "@/components/login/EsqueciSenhaForm";
 import { solicitarRedefinicaoSenha } from "./actions";
 
-export default function EsqueciSenhaPage() {
+// O cliente do portal chega aqui por /portal/esqueci-senha, com `?de=portal`,
+// para o "Voltar para o login" devolvê-lo ao login dele, e não ao da equipe.
+export default async function EsqueciSenhaPage({ searchParams }: { searchParams: Promise<{ de?: string }> }) {
+  const { de } = await searchParams;
   return (
-    <AuthShell subtitle="Vamos abrir um chamado para redefinir sua senha">
-      <AccessRequestForm
-        action={solicitarRedefinicaoSenha}
-        mensagemPlaceholder="Ex: não recebo mais o e-mail de recuperação"
-        submitLabel="Solicitar redefinição"
-        submitLabelPending="Enviando…"
-        successTitle="Chamado aberto"
-        successMessage="Sua solicitação foi registrada no Hub da 41 Tech. O time responsável vai te retornar em breve."
-      />
+    <AuthShell subtitle="Informe o seu e-mail e enviamos um link para criar uma senha nova">
+      <EsqueciSenhaForm action={solicitarRedefinicaoSenha} voltarPara={de === "portal" ? "/portal/login" : "/login"} />
     </AuthShell>
   );
 }

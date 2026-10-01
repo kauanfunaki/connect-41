@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { AlertTriangle } from "lucide-react";
 
-// Cobre login, criar-conta, esqueci-senha e redefinir-senha (todas aninhadas
+// Cobre login, esqueci-senha e redefinir-senha (todas aninhadas
 // sob login/) — sem sidebar/shell, tela pública.
 export default function LoginError({
   error,
