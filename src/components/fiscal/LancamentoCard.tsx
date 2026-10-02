@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { ConfirmActionButton } from "@/components/ui/ConfirmActionButton";
 import { Select } from "@/components/ui/Select";
 import { CampoData } from "@/components/ui/CampoData";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -81,14 +82,6 @@ export function LancamentoCard({
     });
   }
 
-  function estornar() {
-    setErro(null);
-    startTransition(async () => {
-      const r = await estornarAction(documentoId);
-      if ("error" in r) setErro(r.error);
-    });
-  }
-
   return (
     <Card className="p-5 mt-4">
       <h2 className="text-[length:var(--fs-section)] font-semibold text-fg mb-1">Lançamento</h2>
@@ -124,9 +117,21 @@ export function LancamentoCard({
 
           {podeDecidir && (
             <div className="flex items-center justify-end gap-3 pt-4 mt-5 border-t border-border">
-              <Button type="button" variant="secondary" onClick={estornar} disabled={pendente}>
-                {pendente ? "Estornando…" : "Estornar lançamento"}
-              </Button>
+              {/* Com confirmação (achado do polimento de 30/09): o estorno apaga o
+                  título do financeiro num clique, e o botão fica onde a mão vai. */}
+              <ConfirmActionButton
+                action={async () => {
+                  const r = await estornarAction(documentoId);
+                  return "error" in r ? r : null;
+                }}
+                label="Estornar lançamento"
+                title="Estornar o lançamento?"
+                description="O título sai do financeiro e o documento volta para Pendente. Dá para lançar de novo depois."
+                confirmLabel="Estornar"
+                successMessage="Lançamento estornado."
+                destructive
+                size="md"
+              />
             </div>
           )}
         </>

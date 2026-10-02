@@ -154,6 +154,9 @@ export async function excluirDocumento(id: string, companyId: string): Promise<v
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "clientDocument.delete", entityType: "ClientDocument", entityId: id });
 
   revalidatePath(`/empresas/${companyId}/documentos-cliente`);
+  // De volta à lista (achado do polimento de 30/09): a exclusão é chamada da
+  // página do próprio documento, que deixa de existir.
+  redirect(`/empresas/${companyId}/documentos-cliente`);
 }
 
 export async function publicarDocumento(id: string, companyId: string): Promise<void> {
