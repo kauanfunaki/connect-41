@@ -21,6 +21,9 @@ import { MODULOS_DO_BPO } from "@/lib/ia/ferramentas-bpo";
 import { MODULOS_DO_DP } from "@/lib/ia/ferramentas-dp";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { acessoDoRecrutador } from "@/lib/recrutamento/acessoVagas";
+import { recorteDaGestao } from "@/lib/gestao/regras";
+import { MODULO_GESTAO } from "@/lib/gestao/acesso";
+import { setoresDaEquipe } from "./citacoes";
 
 export type AgenteDoChat = {
   code: string;
@@ -62,7 +65,12 @@ const GUARDA_DO_CHAT =
   // Respostas rápidas (02/10/2026): botões embaixo da resposta.
   "Quando a próxima resposta da pessoa for uma escolha curta — confirmar, escolher entre poucas opções ou o " +
   "próximo passo óbvio —, chame sugerir_respostas com 2 a 4 opções curtas, escritas como a pessoa diria. Não " +
-  "repita as opções no texto: elas aparecem como botões.";
+  "repita as opções no texto: elas aparecem como botões.\n" +
+  // Pessoas com foto (02/10/2026). A única exceção à regra de não mostrar id:
+  // a tela troca a marcação por um cartão e o id some.
+  "Ao citar uma pessoa da equipe, um colaborador ou uma empresa que veio de uma ferramenta, escreva " +
+  "@[Nome](usuario:ID), @[Nome](pessoa:ID) ou @[Nome](empresa:ID), com o id exato que a ferramenta devolveu — a " +
+  "tela troca por um cartão com a foto e esconde o id. Nunca invente nem complete um id; sem ele, escreva só o nome.";
 
 /** Para a IA que tentou encaminhar para o próprio setor: a pergunta é dela. */
 export const GUARDA_DO_PROPRIO_SETOR =
@@ -258,8 +266,25 @@ export function setoresVisiveis(ctx: AuthContext, todos: string[]): string[] {
  * setores em que ela **atua** — é a mesma regra das actions de vaga
  * (`canActOnSector(vaga.sectorCode)`), então a IA não lê vaga que a pessoa não
  * poderia mexer.
+ *
+ * Toda IA de setor leva também `equipe`: os setores da equipe que a pessoa pode
+ * ver na ferramenta `atividade_da_equipe` (o do agente ∩ o recorte da Gestão,
+ * com o painel da Gestão ligado). Vazio para funcionário comum.
  */
 export async function escopoDoAgente(
+  ctx: AuthContext,
+  agentCode: string,
+  todosOsSetores: string[]
+): Promise<Record<string, string>> {
+  const base = await escopoBaseDoAgente(ctx, agentCode, todosOsSetores);
+  const modulo = configDoChat(agentCode)?.modulo ?? null;
+  if (!modulo || !ctx.tenantId) return base;
+  const setorDoAgente = (await setorDoModulo(ctx.tenantId, modulo)) ?? getModuleDef(modulo)?.sectorCode ?? null;
+  const gestaoLigada = await isModuleEnabled(ctx.tenantId, MODULO_GESTAO);
+  return { ...base, equipe: setoresDaEquipe(recorteDaGestao(ctx), setorDoAgente, gestaoLigada).join(",") };
+}
+
+async function escopoBaseDoAgente(
   ctx: AuthContext,
   agentCode: string,
   todosOsSetores: string[]
