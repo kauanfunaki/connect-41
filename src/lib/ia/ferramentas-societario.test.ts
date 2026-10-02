@@ -28,9 +28,10 @@ describe("o conjunto", () => {
 
   it("o assistente do Societário libera exatamente estas", () => {
     // Cópia antes de ordenar: `.sort()` na lista do catálogo a reordenaria para
-    // os outros testes. `encaminhar_pergunta` é do orquestrador do chat.
+    // os outros testes. `encaminhar_pergunta` e `sugerir_respostas` são do chat
+    // (orquestrador e respostas rápidas), não do Societário.
     const liberadas = [...agenteDoCatalogo("assistente_do_societario")!.ferramentas];
-    expect(liberadas.sort()).toEqual([...Object.keys(FERRAMENTAS_DE_SOCIETARIO), "encaminhar_pergunta"].sort());
+    expect(liberadas.sort()).toEqual([...Object.keys(FERRAMENTAS_DE_SOCIETARIO), "encaminhar_pergunta", "sugerir_respostas"].sort());
   });
 
   it("as de escrita avisam, na descrição, que não executam", () => {

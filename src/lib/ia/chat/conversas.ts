@@ -7,7 +7,7 @@
 import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import type { TurnoAnterior } from "@/lib/ia/laco";
-import { corteDaRetencao, inicioDoDiaEmSaoPaulo, lerPropostas, tituloDaConversa, type PropostaGravada } from "./regras";
+import { corteDaRetencao, inicioDoDiaEmSaoPaulo, lerPropostas, MARCA_DE_SUBSTITUIDA, tituloDaConversa, type PropostaGravada } from "./regras";
 
 export type Dono = { tenantId: string; userId: string };
 
@@ -147,7 +147,12 @@ export async function mensagensDaConversa(
     where: { id: conversaId, tenantId: dono.tenantId, userId: dono.userId },
     select: {
       agentCode: true,
-      messages: { orderBy: { createdAt: "desc" }, take: LIMITE_NA_TELA },
+      // As substituídas (editar/refazer) não voltam para a tela.
+      messages: {
+        where: { OR: [{ contextLabel: null }, { contextLabel: { not: MARCA_DE_SUBSTITUIDA } }] },
+        orderBy: { createdAt: "desc" },
+        take: LIMITE_NA_TELA,
+      },
     },
   });
   if (!c) return null;
@@ -175,4 +180,33 @@ export async function marcarPropostaAplicada(mensagemId: string, propostas: Prop
     where: { id: mensagemId },
     data: { proposals: novas as unknown as Prisma.InputJsonValue },
   });
+}
+
+/** O "Não" do cartão de decisão — fica gravado no Json, sem migration. */
+export async function marcarPropostaRecusada(mensagemId: string, propostas: PropostaGravada[], indice: number): Promise<void> {
+  const novas = propostas.map((p, i) => (i === indice ? { ...p, recusada: true } : p));
+  await getPrisma().agentMessage.update({
+    where: { id: mensagemId },
+    data: { proposals: novas as unknown as Prisma.InputJsonValue },
+  });
+}
+
+/**
+ * Editar a pergunta ou refazer a resposta (02/10/2026): a mensagem e tudo o que
+ * veio depois dela, na mesma conversa, ficam substituídos — saem da tela e do
+ * histórico mandado à IA, mas não são apagados, e as perguntas continuam
+ * contando no limite do dia. Só na conversa da própria pessoa.
+ */
+export async function substituirAPartirDe(dono: Dono, mensagemId: string): Promise<boolean> {
+  const prisma = getPrisma();
+  const m = await prisma.agentMessage.findFirst({
+    where: { id: mensagemId, conversation: { tenantId: dono.tenantId, userId: dono.userId } },
+    select: { conversationId: true, createdAt: true },
+  });
+  if (!m) return false;
+  await prisma.agentMessage.updateMany({
+    where: { conversationId: m.conversationId, createdAt: { gte: m.createdAt } },
+    data: { failed: true, contextLabel: MARCA_DE_SUBSTITUIDA },
+  });
+  return true;
 }
