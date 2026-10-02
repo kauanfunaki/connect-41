@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   LayoutGrid,
   CalendarCheck,
+  ChevronDown,
   CircleHelp,
   ClipboardCheck,
   Menu,
@@ -45,6 +46,7 @@ import { AvatarImage } from "@/components/shared/AvatarImage";
 import { PainelDoItem, type TelaDoPainel } from "@/components/shell/PainelDoItem";
 import { ABAS_DA_GESTAO } from "@/components/gestao/AbasDaGestao";
 import { Button } from "@/components/ui/Button";
+import { TrocaDeContexto } from "@/components/shell/TrocaDeContexto";
 import { chaveDoCaminho, type ParDeCaminho } from "@/lib/ajuda/caminho";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
@@ -160,6 +162,7 @@ export function AppShell({
   children,
 }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [trocaAberta, setTrocaAberta] = useState(false);
   const pathname = usePathname();
   // O "?" de cada tela (02/10/2026): com artigo, abre o passo a passo dela e
   // guarda de onde veio para o "Voltar"; sem artigo, a central.
@@ -170,6 +173,7 @@ export function AppShell({
   const emConfiguracoes = pathname.startsWith("/admin") || pathname.startsWith("/configuracoes");
   const corDoSetor = activeSector?.color;
   const tenantAtual = accessibleTenants.find((t) => t.id === tenantId);
+  const podeTrocar = sectors.length > 1 || accessibleTenants.length > 1;
 
   return (
     // `--c41-setor` leva a cor do setor ativo a tudo que está dentro: a barra
@@ -376,7 +380,14 @@ export function AppShell({
           <div className="flex-1 min-w-0 flex items-center">
             {/* Onde estou: o escritório e o setor ativo, que o cartão embaixo
                 da logo mostrava até a busca ficar com o lugar dele (02/10). */}
-            <div className="hidden lg:flex items-center gap-2 min-w-0 text-[13px]">
+            {/* Clicar nele abre a troca de setor e escritório (02/10/2026). */}
+            <button
+              type="button"
+              onClick={() => setTrocaAberta(true)}
+              disabled={!podeTrocar}
+              data-dica={podeTrocar ? "Trocar setor ou escritório" : undefined}
+              className="hidden lg:flex items-center gap-2 min-w-0 text-[13px] rounded-md -ml-1.5 px-1.5 py-1 transition-colors enabled:hover:bg-surface-hover disabled:cursor-default"
+            >
               <AvatarImage src={tenantAtual?.logoUrl ?? null} name={tenantAtual?.name ?? "—"} size={22} shape="lg" fontSize={10} />
               <span className="font-medium text-fg truncate">{tenantAtual?.name ?? "—"}</span>
               {activeSector ? (
@@ -393,7 +404,8 @@ export function AppShell({
                   <span className="text-fg-muted whitespace-nowrap">Todos os setores</span>
                 </>
               ) : null}
-            </div>
+              {podeTrocar && <ChevronDown size={13} aria-hidden className="flex-shrink-0 text-fg-muted" />}
+            </button>
             <div className="lg:hidden flex-1 min-w-0">
               <GlobalSearch telas={telasNavegaveis} />
             </div>
@@ -437,6 +449,15 @@ export function AppShell({
               name={profileName}
               roleLabel={profileRoleLabel}
               photoUrl={profilePhotoUrl}
+              tenants={accessibleTenants}
+              currentTenantId={tenantId}
+              sectors={sectors}
+              activeSector={activeSector?.code ?? null}
+              onTrocar={() => setTrocaAberta(true)}
+            />
+            <TrocaDeContexto
+              open={trocaAberta}
+              onClose={() => setTrocaAberta(false)}
               tenants={accessibleTenants}
               currentTenantId={tenantId}
               sectors={sectors}
