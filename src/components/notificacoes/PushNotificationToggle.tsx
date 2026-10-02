@@ -140,10 +140,12 @@ export function PushNotificationToggle({
   if (status === "unconfigured" && semChaves === "esconder") return null;
 
   return (
-    // flex-wrap + min-w-0: o texto longo das chaves VAPID empurrava o botão
-    // para fora do cartão no celular.
-    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 mb-4 flex flex-wrap items-center justify-between gap-4">
-      <div className="min-w-0 flex-1 basis-64">
+    // min-w-0 no texto: ele quebra dentro do próprio espaço e o botão fica à
+    // direita. Com flex-wrap e basis-64, no celular o botão descia sozinho para
+    // a linha de baixo, encostado à esquerda (02/10/2026). O texto longo das
+    // chaves VAPID não tem botão ao lado.
+    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 mb-4 flex items-center justify-between gap-4">
+      <div className="min-w-0 flex-1">
         <p className="text-[13px] font-medium text-fg">Notificações no navegador</p>
         <p className="text-[12px] text-fg-muted mt-0.5">
           {status === "unconfigured"
