@@ -506,6 +506,19 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 .c41-tabela > table > :is(thead, tbody, tfoot) > tr > :is(th, td) > .flex-col {
   align-items: center;
 }
+/* Célula à esquerda dentro da tabela padrão (02/10/2026): árvore na primeira
+   coluna (tarefa → subtarefa, matriz → filial) se lê pelo recuo, e centralizar
+   o desmancha. Antes, essas tabelas saíam do casco e copiavam o visual à mão.
+   Use no <th> e nos <td> da coluna. */
+.c41-tabela > table > :is(thead, tbody, tfoot) > tr > :is(th, td).c41-a-esquerda {
+  text-align: left;
+}
+.c41-tabela > table > :is(thead, tbody, tfoot) > tr > :is(th, td).c41-a-esquerda > :is(.flex, .inline-flex) {
+  justify-content: flex-start;
+}
+.c41-tabela > table > :is(thead, tbody, tfoot) > tr > :is(th, td).c41-a-esquerda > .flex-col {
+  align-items: flex-start;
+}
 /* Sublinha com largura máxima (descrição cortada) centraliza como bloco. */
 .c41-tabela > table > tbody > tr > td > .block {
   margin-inline: auto;
