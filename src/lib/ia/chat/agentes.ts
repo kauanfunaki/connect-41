@@ -58,7 +58,11 @@ const GUARDA_DO_CHAT =
   "Se a pergunta é de OUTRO setor, não responda — nem em parte, nem com os dados que você tem, que são de outro " +
   "assunto e dariam uma resposta errada: chame encaminhar_pergunta com o setor certo e escreva só uma frase dizendo " +
   "para qual setor a pergunta foi passada. Nunca encaminhe para o seu próprio setor. Se nenhuma das suas " +
-  "ferramentas cobre a pergunta, diga isso em vez de responder com outra coisa.";
+  "ferramentas cobre a pergunta, diga isso em vez de responder com outra coisa.\n" +
+  // Respostas rápidas (02/10/2026): botões embaixo da resposta.
+  "Quando a próxima resposta da pessoa for uma escolha curta — confirmar, escolher entre poucas opções ou o " +
+  "próximo passo óbvio —, chame sugerir_respostas com 2 a 4 opções curtas, escritas como a pessoa diria. Não " +
+  "repita as opções no texto: elas aparecem como botões.";
 
 /** Para a IA que tentou encaminhar para o próprio setor: a pergunta é dela. */
 export const GUARDA_DO_PROPRIO_SETOR =

@@ -86,6 +86,7 @@ const PASSOS: Record<string, string> = {
   ver_processo: "Lendo o processo…",
   propor_concluir_etapa: "Preparando uma sugestão…",
   propor_dispensar_etapa: "Preparando uma sugestão…",
+  sugerir_respostas: "Montando a resposta…",
   listar_minhas_telas: "Vendo as telas que você acessa…",
   listar_vagas: "Consultando as vagas…",
   ver_vaga_do_setor: "Lendo a vaga…",
@@ -125,6 +126,8 @@ export type PropostaGravada = {
   /** De quem é a proposta, resolvido no servidor ("Maria Souza", "Registro na Junta"). */
   alvo?: string;
   aplicada?: boolean;
+  /** A pessoa disse "Não" no cartão (02/10/2026). Fica gravado, como o "aplicada". */
+  recusada?: boolean;
 };
 
 /** Lê as propostas do JSON gravado, descartando o que não tiver a forma certa. */
@@ -141,10 +144,46 @@ export function lerPropostas(bruto: unknown): PropostaGravada[] {
         argumentos: o.argumentos && typeof o.argumentos === "object" ? (o.argumentos as Record<string, unknown>) : {},
         ...(typeof o.alvo === "string" ? { alvo: o.alvo } : {}),
         aplicada: o.aplicada === true,
+        ...(o.recusada === true ? { recusada: true } : {}),
       },
     ];
   });
 }
+
+// ─── Respostas rápidas e cartões de decisão (02/10/2026) ─────────────────────
+
+/** A pseudo-ferramenta com que a IA oferece botões de resposta ("Sim", "Não, só a de março"). */
+export const SUGERIR_RESPOSTAS = "sugerir_respostas";
+
+/** As opções de resposta rápida de uma proposta — 2 a 4, curtas, sem repetir. Vazio se não for uma. */
+export function opcoesDeRespostaRapida(p: { ferramenta: string; argumentos?: Record<string, unknown> }): string[] {
+  if (p.ferramenta !== SUGERIR_RESPOSTAS) return [];
+  const brutas = Array.isArray(p.argumentos?.opcoes) ? p.argumentos.opcoes : [];
+  const vistas = new Set<string>();
+  const opcoes: string[] = [];
+  for (const o of brutas) {
+    if (typeof o !== "string") continue;
+    const t = o.trim().replace(/\s+/g, " ").slice(0, 60);
+    if (!t || vistas.has(t.toLowerCase())) continue;
+    vistas.add(t.toLowerCase());
+    opcoes.push(t);
+  }
+  return opcoes.length >= 2 ? opcoes.slice(0, 4) : [];
+}
+
+/** Os botões do cartão de decisão: candidatura é Aprovar/Recusar; o resto, Sim/Não. */
+export function rotulosDaDecisao(ferramenta: string): { sim: string; nao: string } {
+  if (ferramenta === "propor_mover_etapa" || ferramenta === "propor_encerrar_candidatura") return { sim: "Aprovar", nao: "Recusar" };
+  return { sim: "Sim, aplicar", nao: "Não, cancelar" };
+}
+
+/**
+ * Editar uma pergunta ou refazer uma resposta não apaga a conversa: as trocas
+ * a partir dali ficam marcadas assim — somem da tela e do histórico que vai à
+ * IA, e as perguntas continuam contando no limite do dia (o desenho pede que
+ * refazer conte como pergunta nova).
+ */
+export const MARCA_DE_SUBSTITUIDA = "__substituida__";
 
 /** O que o cartão da proposta diz, em uma linha. */
 const ETAPA_DO_FUNIL: Record<string, string> = {
