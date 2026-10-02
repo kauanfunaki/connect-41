@@ -10,6 +10,7 @@ import { getPrisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import {
   apagarConversa,
+  avaliarMensagem,
   listarConversas,
   marcarPropostaAplicada,
   marcarPropostaRecusada,
@@ -19,7 +20,7 @@ import {
   type ConversaNaLista,
   type MensagemNaTela,
 } from "@/lib/ia/chat/conversas";
-import { lerPropostas, SUGERIR_RESPOSTAS } from "@/lib/ia/chat/regras";
+import { avaliacaoParaGravar, lerPropostas, SUGERIR_RESPOSTAS } from "@/lib/ia/chat/regras";
 import { aplicarPropostaDoSocietario } from "@/app/(app)/processos/ia-actions";
 import { aplicarProposta as aplicarPropostaDaVaga } from "@/app/(app)/vagas/[id]/ia-actions";
 
@@ -112,6 +113,22 @@ export async function substituirDesdeAMensagem(mensagemId: string): Promise<{ er
   const d = await dono();
   if (!d) return { error: "Não autenticado." };
   return (await substituirAPartirDe(d, mensagemId)) ? { ok: true } : { error: "Mensagem não encontrada." };
+}
+
+/**
+ * 👍/👎 numa resposta (02/10/2026). `null` tira a avaliação; o motivo só vale
+ * no 👎 e tem de ser um dos da lista (`MOTIVOS_DO_NAO`).
+ */
+export async function avaliarRespostaDoChat(
+  mensagemId: string,
+  avaliacao: "boa" | "ruim" | null,
+  motivo: string | null = null
+): Promise<{ error: string } | { ok: true }> {
+  const d = await dono();
+  if (!d) return { error: "Não autenticado." };
+  const dados = avaliacaoParaGravar(avaliacao, motivo);
+  if (!dados) return { error: "Avaliação inválida." };
+  return (await avaliarMensagem(d, mensagemId, dados, new Date())) ? { ok: true } : { error: "Mensagem não encontrada." };
 }
 
 /** Quem vê o chat: só coordenadores (piloto) ou todos. Administração do escritório. */

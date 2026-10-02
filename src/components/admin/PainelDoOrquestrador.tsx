@@ -29,7 +29,8 @@ export function PainelDoOrquestrador({ dados }: { dados: Dados }) {
         <p className="text-[14px] font-semibold text-fg">Orquestrador do chat — últimos {DIAS_DO_PAINEL} dias</p>
         <p className="text-[12px] text-fg-secondary max-w-[70ch]">
           Cada IA reconhece pergunta de outro setor e a passa adiante: para a IA daquele setor, se a pessoa tiver acesso,
-          ou como sugestão de transferência. Aqui só aparecem contagens — o que foi perguntado fica com quem perguntou.
+          ou como sugestão de transferência. Aqui só aparecem contagens — o que foi perguntado fica com quem perguntou
+          (a exceção são as respostas marcadas como “não ajudou”, no quadro de avaliação).
         </p>
       </div>
 

@@ -17,6 +17,8 @@ import {
   Pencil,
   Plus,
   RotateCcw,
+  ThumbsDown,
+  ThumbsUp,
   Trash2,
   X,
 } from "lucide-react";
@@ -30,11 +32,20 @@ import { ACEITA_NO_CAMPO, conferirEscolha, separarAnexos } from "@/lib/ia/chat/a
 import { formatInstantDateTime } from "@/lib/format";
 import type { AgenteDoChat } from "@/lib/ia/chat/agentes";
 import type { ConversaNaLista, MensagemNaTela } from "@/lib/ia/chat/conversas";
-import { descreverProposta, opcoesDeRespostaRapida, rotulosDaDecisao, SUGERIR_RESPOSTAS } from "@/lib/ia/chat/regras";
+import {
+  descreverProposta,
+  MOTIVOS_DO_NAO,
+  opcoesDeRespostaRapida,
+  rotulosDaDecisao,
+  SUGERIR_RESPOSTAS,
+  type Avaliacao,
+  type MotivoDoNao,
+} from "@/lib/ia/chat/regras";
 import {
   abrirConversaDoChat,
   apagarConversaDoChat,
   aplicarPropostaDoChat,
+  avaliarRespostaDoChat,
   conversasDoChat,
   recusarPropostaDoChat,
   substituirDesdeAMensagem,
@@ -215,6 +226,8 @@ export function ChatDeIA({
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [aplicando, setAplicando] = useState<string | null>(null);
+  /** A resposta com os motivos do 👎 abertos. */
+  const [motivosDe, setMotivosDe] = useState<string | null>(null);
   const [copiada, setCopiada] = useState<string | null>(null);
   const [dicaFechada, setDicaFechada] = useState(false);
   // A pergunta sendo editada: o campo leva o texto dela, e ao enviar ela e o
@@ -448,6 +461,29 @@ export function ChatDeIA({
     await enviar(anterior.texto);
   }
 
+  /** 👍/👎: muda na tela na hora e volta atrás se o servidor recusar. */
+  async function avaliar(m: MensagemNaTela, avaliacao: Avaliacao | null, motivo: MotivoDoNao | null = null) {
+    const trocar = (a: Avaliacao | null, mo: MotivoDoNao | null) =>
+      setMensagens((ms) => ms.map((x) => (x.id === m.id ? { ...x, avaliacao: a, motivo: mo } : x)));
+    trocar(avaliacao, motivo);
+    const r = await avaliarRespostaDoChat(m.id, avaliacao, motivo);
+    if ("error" in r) {
+      setErro(r.error);
+      trocar(m.avaliacao, m.motivo);
+    }
+  }
+
+  function cliqueNoPolegar(m: MensagemNaTela, qual: Avaliacao) {
+    // O mesmo polegar de novo tira a avaliação.
+    if (m.avaliacao === qual) {
+      setMotivosDe(null);
+      void avaliar(m, null);
+      return;
+    }
+    setMotivosDe(qual === "ruim" ? m.id : null);
+    void avaliar(m, qual);
+  }
+
   async function recusar(m: MensagemNaTela, indice: number) {
     setAplicando(`${m.id}:${indice}`);
     const r = await recusarPropostaDoChat(m.id, indice);
@@ -667,7 +703,7 @@ export function ChatDeIA({
                     {m.id === ultimaResposta?.id && !enviando && (
                       <RespostasRapidas opcoes={m.propostas.flatMap((p) => opcoesDeRespostaRapida(p))} onEscolher={(t) => void enviar(t)} />
                     )}
-                    <AcoesDaMensagem>
+                    <AcoesDaMensagem fixo={m.avaliacao !== null}>
                       <BotaoDeAcao rotulo={copiada === m.id ? "Copiado" : "Copiar"} onClick={() => void copiar(m)}>
                         {copiada === m.id ? <Check size={13} /> : <Copy size={13} />}
                       </BotaoDeAcao>
@@ -676,7 +712,27 @@ export function ChatDeIA({
                           <RotateCcw size={13} />
                         </BotaoDeAcao>
                       )}
+                      {!m.falhou && (
+                        <>
+                          <BotaoDeAcao rotulo="Resposta útil" ativo={m.avaliacao === "boa"} onClick={() => cliqueNoPolegar(m, "boa")}>
+                            <ThumbsUp size={13} />
+                          </BotaoDeAcao>
+                          <BotaoDeAcao rotulo="Resposta não ajudou" ativo={m.avaliacao === "ruim"} onClick={() => cliqueNoPolegar(m, "ruim")}>
+                            <ThumbsDown size={13} />
+                          </BotaoDeAcao>
+                        </>
+                      )}
                     </AcoesDaMensagem>
+                    {motivosDe === m.id && m.avaliacao === "ruim" && (
+                      <MotivosDoNao
+                        escolhido={m.motivo}
+                        onEscolher={(motivo) => {
+                          setMotivosDe(null);
+                          void avaliar(m, "ruim", motivo === m.motivo ? null : motivo);
+                        }}
+                        onFechar={() => setMotivosDe(null)}
+                      />
+                    )}
                   </div>
                 </div>
               )
@@ -932,6 +988,51 @@ function CartoesDeDecisao({
 }
 
 /** Os botões que a IA ofereceu para a próxima resposta — o clique manda o texto. */
+/**
+ * Depois do 👎: o motivo, opcional, e o aviso de para onde a resposta vai —
+ * o painel de `/admin/ia` mostra as respostas com 👎, sem o nome de quem marcou.
+ */
+function MotivosDoNao({
+  escolhido,
+  onEscolher,
+  onFechar,
+}: {
+  escolhido: MotivoDoNao | null;
+  onEscolher: (motivo: MotivoDoNao) => void;
+  onFechar: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface-2 px-3 py-2.5" role="group" aria-label="Por que não ajudou">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[12px] font-medium text-fg">
+          O que não foi bom? <span className="font-normal text-fg-muted">Opcional</span>
+        </p>
+        <button type="button" onClick={onFechar} aria-label="Fechar" className="p-0.5 rounded text-fg-muted hover:text-fg hover:bg-surface-hover">
+          <X size={13} />
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {(Object.entries(MOTIVOS_DO_NAO) as [MotivoDoNao, string][]).map(([codigo, rotulo]) => (
+          <button
+            key={codigo}
+            type="button"
+            onClick={() => onEscolher(codigo)}
+            aria-pressed={escolhido === codigo}
+            className={`rounded-full border px-3 py-1 text-[12px] font-medium transition-colors ${
+              escolhido === codigo ? "border-brand bg-brand text-on-brand" : "border-border bg-surface text-fg-secondary hover:text-fg hover:border-border-strong"
+            }`}
+          >
+            {rotulo}
+          </button>
+        ))}
+      </div>
+      <p className="text-[11px] text-fg-muted">
+        Esta pergunta e a resposta vão para a revisão dos administradores da IA, sem o seu nome e sem o resto da conversa.
+      </p>
+    </div>
+  );
+}
+
 function RespostasRapidas({ opcoes, onEscolher }: { opcoes: string[]; onEscolher: (texto: string) => void }) {
   if (opcoes.length === 0) return null;
   return (
@@ -950,23 +1051,40 @@ function RespostasRapidas({ opcoes, onEscolher }: { opcoes: string[]; onEscolher
   );
 }
 
-/** A barrinha de ações da mensagem: aparece no hover; no toque, sempre visível. */
-function AcoesDaMensagem({ children }: { children: React.ReactNode }) {
+/**
+ * A barrinha de ações da mensagem: aparece no hover; no toque, sempre visível.
+ * `fixo` a deixa à vista no computador também (resposta já avaliada).
+ */
+function AcoesDaMensagem({ children, fixo = false }: { children: React.ReactNode; fixo?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity">
+    <span
+      className={`inline-flex items-center gap-0.5 transition-opacity ${fixo ? "opacity-100" : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"}`}
+    >
       {children}
     </span>
   );
 }
 
-function BotaoDeAcao({ rotulo, onClick, children }: { rotulo: string; onClick: () => void; children: React.ReactNode }) {
+function BotaoDeAcao({
+  rotulo,
+  onClick,
+  ativo,
+  children,
+}: {
+  rotulo: string;
+  onClick: () => void;
+  /** Botão de liga/desliga (👍/👎): marca o estado. */
+  ativo?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={rotulo}
+      aria-pressed={ativo}
       title={rotulo}
-      className="size-6 inline-flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-surface-hover"
+      className={`size-6 inline-flex items-center justify-center rounded-md hover:bg-surface-hover ${ativo ? "text-brand bg-brand/10" : "text-fg-muted hover:text-fg"}`}
     >
       {children}
     </button>
