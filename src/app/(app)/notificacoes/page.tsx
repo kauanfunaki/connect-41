@@ -1,67 +1,52 @@
-import { Bell } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
-import { NotificationItem } from "@/components/shell/NotificationItem";
-import { MarkAllReadButton } from "@/components/shell/MarkAllReadButton";
 import { PushNotificationToggle } from "@/components/notificacoes/PushNotificationToggle";
+import { CentralDeNotificacoes } from "@/components/notificacoes/CentralDeNotificacoes";
 import { salvarPushSubscription, removerPushSubscription } from "@/app/(app)/notificacoes/actions";
 import { getVapidPublicKey } from "@/lib/vapid";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { marcarTodasLidas } from "./actions";
-import { formatInstantDateTime } from "@/lib/format";
-import { linkDaNotificacao } from "@/lib/notificacaoLink";
+import { ehAba } from "@/lib/notificacoes/catalogo";
+import { consultarNotificacoes, naoLidasPorAba } from "@/lib/notificacoes/consultas";
 
-export default async function NotificacoesPage() {
+// A central de notificações (redesenho de 02/10/2026). Desenho e decisões em
+// Projects/Connect-41/Central-de-Notificacoes-2026-10-01, no vault.
+export default async function NotificacoesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ aba?: string; status?: string; q?: string }>;
+}) {
   const ctx = await getAuthContext();
+  const sp = await searchParams;
+  const filtros = {
+    aba: ehAba(sp.aba) ? sp.aba : "todas",
+    status: sp.status === "nao_lidas" ? "nao_lidas" : "todas",
+    q: (sp.q ?? "").slice(0, 100),
+  } as const;
 
-  const prisma = getPrisma();
-  const notifications = ctx.userId
-    ? await prisma.notification.findMany({
-        where: { tenantId: ctx.tenantId, userId: ctx.userId },
-        orderBy: { createdAt: "desc" },
-        take: 100,
-      })
-    : [];
-
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const dono = { tenantId: ctx.tenantId, userId: ctx.userId };
+  const [pagina, contagens] = ctx.userId
+    ? await Promise.all([consultarNotificacoes(dono, filtros), naoLidasPorAba(dono)])
+    : [{ itens: [], proximoCursor: null }, { todas: 0, para_mim: 0, clientes: 0, alertas: 0 }];
 
   return (
     <PageContainer>
       <PageHeader
         title="Notificações"
-        subtitle={<>{unreadCount > 0 ? `${unreadCount} não lida${unreadCount !== 1 ? "s" : ""}` : "Tudo em dia"}</>}
-        action={<>{unreadCount > 0 && <MarkAllReadButton action={marcarTodasLidas} />}</>}
+        subtitle={contagens.todas > 0 ? `${contagens.todas} não lida${contagens.todas !== 1 ? "s" : ""}` : "Tudo em dia"}
       />
-      <PushNotificationToggle
-        publicKey={getVapidPublicKey()}
-        acoes={{ salvar: salvarPushSubscription, remover: removerPushSubscription }}
+      <CentralDeNotificacoes
+        // Filtro novo, lista nova: a seleção e o "carregar mais" não atravessam abas.
+        key={`${filtros.aba}|${filtros.status}|${filtros.q}`}
+        filtros={filtros}
+        inicial={pagina}
+        contagens={contagens}
+        preferencias={
+          <PushNotificationToggle
+            publicKey={getVapidPublicKey()}
+            acoes={{ salvar: salvarPushSubscription, remover: removerPushSubscription }}
+          />
+        }
       />
-
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
-        {notifications.length === 0 ? (
-          <EmptyState icon={<Bell />} title="Nenhuma notificação por aqui ainda" />
-        ) : (
-          <div className="divide-y divide-border">
-            {notifications.map((n) => (
-              <NotificationItem
-                key={n.id}
-                id={n.id}
-                message={n.message}
-                read={n.read}
-                href={linkDaNotificacao(n)}
-                createdAt={formatInstantDateTime(n.createdAt, {
-                  day: "2-digit",
-                  month: "short",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              />
-            ))}
-          </div>
-        )}
-      </div>
     </PageContainer>
   );
 }
