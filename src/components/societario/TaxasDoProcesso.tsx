@@ -1,7 +1,9 @@
 import { Card } from "@/components/ui/Card";
 import { formatInstantDate } from "@/lib/format";
+import { saoPauloParts } from "@/lib/agenda";
 import type { TaxaNaTela } from "@/lib/societario/licencas-data";
 import type { CustoDoProcesso } from "@/lib/societario/licencas";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { EnviarTaxaAoCliente } from "./EnviarTaxaAoCliente";
 
 const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -33,20 +35,32 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
         </p>
       )}
 
-      <div className="overflow-x-auto">
+      {/* Casco padrão, com funil (02/10/2026) — era uma tabela solta, à esquerda. */}
+      <TabelaFiltravel
+        linhas={taxas.map((t) => ({
+          id: t.id,
+          valores: {
+            taxa: t.description,
+            orgao: t.orgaoNome ?? "",
+            vencimento: t.dueDate ? saoPauloParts(t.dueDate).dateKey : "",
+            situacao: t.paidAt ? "Pago" : "Em aberto",
+          },
+        }))}
+      >
+      <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
         <table className="w-full min-w-[560px] text-[13px]">
           <thead>
-            <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-              <th className="py-2 pr-3 font-medium">Taxa</th>
-              <th className="py-2 pr-3 font-medium">Órgão</th>
-              <th className="py-2 pr-3 font-medium">Vencimento</th>
-              <th className="py-2 pr-3 font-medium text-right">Valor</th>
-              <th className="py-2 font-medium">Situação</th>
+            <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+              <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Taxa" chave="taxa" /></th>
+              <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Órgão" chave="orgao" /></th>
+              <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" /></th>
+              <th className="py-2 pr-3 font-medium">Valor</th>
+              <th className="py-2 font-medium"><FiltroDaColuna rotulo="Situação" chave="situacao" align="right" /></th>
             </tr>
           </thead>
           <tbody>
             {taxas.map((t) => (
-              <tr key={t.id} className="border-b border-border-soft">
+              <LinhaFiltravel key={t.id} id={t.id} className="border-b border-border-soft">
                 <td className="py-2.5 pr-3">
                   <span className="text-fg">{t.description}</span>
                   {/* Primeira via é o caminho normal; da segunda em diante é
@@ -64,7 +78,7 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
                 <td className="py-2.5 pr-3 tabular-nums text-fg-secondary whitespace-nowrap">
                   {t.dueDate ? formatInstantDate(t.dueDate) : "—"}
                 </td>
-                <td className="py-2.5 pr-3 text-right tabular-nums">{moeda(t.amountCents)}</td>
+                <td className="py-2.5 pr-3 tabular-nums">{moeda(t.amountCents)}</td>
                 <td className="py-2.5 text-[12px]">
                   {t.paidAt ? (
                     <span className="text-success">pago em {formatInstantDate(t.paidAt)}</span>
@@ -72,11 +86,12 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
                     <span className="text-warning">em aberto</span>
                   )}
                 </td>
-              </tr>
+              </LinhaFiltravel>
             ))}
           </tbody>
         </table>
       </div>
+      </TabelaFiltravel>
     </Card>
   );
 }

@@ -70,6 +70,8 @@ export function PortalDocumentosTable({ documentos, total, totalLimitado, temPro
         ))}
       </CartoesNoCelular>
 
+      {/* Centralizada, como o casco (02/10). Sem funil por coluna: a lista é
+          paginada (50 por página), e filtrar só a página na tela enganaria. */}
       <TabelaNoDesktop padrao>
         <table className="w-full table-fixed min-w-[760px] text-[length:var(--fs-ui)]">
           <colgroup>
@@ -81,11 +83,11 @@ export function PortalDocumentosTable({ documentos, total, totalLimitado, temPro
           </colgroup>
           <thead>
             <tr className="text-[length:var(--fs-micro)] font-medium text-fg-muted uppercase tracking-wide">
-              <th className="px-4 py-2.5 text-left">Tipo</th>
-              <th className="px-4 py-2.5 text-left">Número</th>
-              <th className="px-4 py-2.5 text-left">Fornecedor ou cliente</th>
-              <th className="px-4 py-2.5 text-left">Emissão</th>
-              <th className="px-4 py-2.5 text-right">Valor</th>
+              <th className="px-4 py-2.5">Tipo</th>
+              <th className="px-4 py-2.5">Número</th>
+              <th className="px-4 py-2.5">Fornecedor ou cliente</th>
+              <th className="px-4 py-2.5">Emissão</th>
+              <th className="px-4 py-2.5">Valor</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border bg-surface">
@@ -108,7 +110,7 @@ export function PortalDocumentosTable({ documentos, total, totalLimitado, temPro
                     <p>{formatCalendarDate(d.issuedAt)}</p>
                     <p className="text-[length:var(--fs-micro)] text-fg-muted">{competenciaLegivel(d.competence)}</p>
                   </td>
-                  <td className="px-4 py-3 text-right tnum whitespace-nowrap">
+                  <td className="px-4 py-3 tnum whitespace-nowrap">
                     {d.amount === null ? (
                       <span className="text-fg-muted">—</span>
                     ) : (

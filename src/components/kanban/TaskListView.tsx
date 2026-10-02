@@ -11,6 +11,7 @@ import { StageDot, type StageDotType } from "@/components/kanban/StageDot";
 import { darkenUntilReadableOnWhiteText } from "@/lib/color";
 import { RowActionsMenu } from "@/components/kanban/RowActionsMenu";
 import { Button } from "@/components/ui/Button";
+import { TabelaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 
 export type AssigneeRow = { id: string; name: string; priority: number };
 export type SubtaskRow = {
@@ -730,9 +731,32 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
   const scrollSpeedRef = useRef(0);
   const rafRef = useRef<number | null>(null);
 
+  // As tarefas que o funil das colunas deixa à vista, avisadas pela
+  // TabelaFiltravel; `null` até o primeiro aviso (tudo à vista).
+  const [naTela, setNaTela] = useState<Set<string> | null>(null);
+
   const byStage = stages.map((stage) => ({
     stage,
     items: items.filter((i) => i.stageId === stage.id),
+  }));
+
+  // Funil por coluna (02/10/2026). A linha aqui não é a `LinhaFiltravel` — ela
+  // arrasta, tem subtarefas e vive em <tbody> por status —, então o filtro
+  // entra dentro de cada grupo, que continua com o cabeçalho mesmo vazio (dá
+  // para soltar nele). Filtra só a tarefa; a subtarefa vem com a mãe. Os
+  // cartões do celular, sem funil, seguem com a lista inteira.
+  const byStageNaTabela = naTela
+    ? byStage.map((g) => ({ ...g, items: g.items.filter((i) => naTela.has(i.id)) }))
+    : byStage;
+  const porNome = (a: string, b: string) => a.localeCompare(b, "pt-BR");
+  const linhasDoFunil = items.map((i) => ({
+    id: i.id,
+    valores: {
+      tarefa: i.entityName,
+      tags: (i.tags ?? []).map((t) => t.name).sort(porNome).join(", "),
+      responsaveis: (i.assignees ?? []).map((a) => a.name).sort(porNome).join(", "),
+      prazo: i.dueDate ? i.dueDate.slice(0, 10) : "",
+    },
   }));
 
   function handleDropStage(stageId: string) {
@@ -817,79 +841,93 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
   }, [dragId]);
 
   return (
-    <div
-      ref={scrollRef}
-      // Sem padding no topo: o padding do container ficava ACIMA do <thead>
-      // sticky, então as linhas rolavam por dentro dessa faixa de 8px e
-      // apareciam recortadas por cima do cabeçalho. Agora o respiro superior
-      // vive no próprio <th> (pt-2), que gruda junto. Sem padding dos lados
-      // também (30/09): o cabeçalho com fundo encosta na borda, como na tabela
-      // padrão, e o respiro de 8px passou para a primeira e a última célula.
-      className="scroll-y bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] pb-2 h-full overflow-y-auto"
-    >
-      <div className="md:hidden px-2 pt-2">
-        {byStage.map(({ stage, items: stageItems }) => (
-          <StageGroupCards
-            key={stage.id}
-            stage={stage}
-            items={stageItems}
-            basePath={basePath}
-            canAct={canAct}
-            renameStageAction={renameStageAction}
-            createTaskAction={createTaskAction}
-            priorityAction={priorityAction}
-            pipelineId={pipelineId}
-            concluirAction={concluirAction}
-            reabrirAction={reabrirAction}
-            stages={stages}
-            moveAction={moveAction}
-            deleteAction={deleteAction}
-          />
-        ))}
-      </div>
+    // A raiz virou coluna (02/10/2026) para a faixa "Filtro nas colunas" da
+    // TabelaFiltravel caber acima do casco; a rolagem continua no casco.
+    <div className="h-full flex flex-col min-h-0">
+      <TabelaFiltravel linhas={linhasDoFunil} onLinhasVisiveis={setNaTela}>
+        <div
+          ref={scrollRef}
+          // Sem padding no topo: o padding do container ficava ACIMA do <thead>
+          // sticky, então as linhas rolavam por dentro dessa faixa de 8px e
+          // apareciam recortadas por cima do cabeçalho. Agora o respiro superior
+          // vive no próprio <th> (pt-2), que gruda junto. Sem padding dos lados
+          // também (30/09): o cabeçalho com fundo encosta na borda, como na tabela
+          // padrão, e o respiro de 8px passou para a primeira e a última célula.
+          className="scroll-y bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] pb-2 flex-1 min-h-0 overflow-y-auto"
+        >
+          <div className="md:hidden px-2 pt-2">
+            {byStage.map(({ stage, items: stageItems }) => (
+              <StageGroupCards
+                key={stage.id}
+                stage={stage}
+                items={stageItems}
+                basePath={basePath}
+                canAct={canAct}
+                renameStageAction={renameStageAction}
+                createTaskAction={createTaskAction}
+                priorityAction={priorityAction}
+                pipelineId={pipelineId}
+                concluirAction={concluirAction}
+                reabrirAction={reabrirAction}
+                stages={stages}
+                moveAction={moveAction}
+                deleteAction={deleteAction}
+              />
+            ))}
+          </div>
 
-      <table className="hidden md:table w-full border-collapse">
-        {/* O fundo precisa estar em cada <th>, não no <thead>: background em
-            thead/tr não pinta de forma confiável com position:sticky, e as
-            linhas apareciam por trás do cabeçalho ao rolar. A borda inferior
-            fecha visualmente a faixa fixa. */}
-        {/* Casco padrão sem a `.c41-tabela` (30/09): ela centraliza tudo, e
-            aqui a primeira coluna é uma árvore — tarefa e subtarefas se leem
-            pelo recuo à esquerda — com cabeçalhos de grupo em colSpan. Fica o
-            resto do padrão: cabeçalho com fundo, borda e fio azul no hover
-            (`c41-linha`). */}
-        <thead className="sticky top-0 z-10">
-          <tr className="text-left">
-            <th className={`${DOT_COL} bg-table-header-bg pt-2.5 pb-2 border-b border-border`} />
-            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 border-b border-border">Tarefa</th>
-            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 w-44 border-b border-border">Tags</th>
-            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 w-24 border-b border-border">Responsáveis</th>
-            <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 pl-2 pr-4 w-[120px] text-right border-b border-border">Prazo</th>
-          </tr>
-        </thead>
-        {byStage.map(({ stage, items: stageItems }) => (
-          <StageGroup
-            key={stage.id}
-            stage={stage}
-            items={stageItems}
-            basePath={basePath}
-            canAct={canAct}
-            renameStageAction={renameStageAction}
-            createTaskAction={createTaskAction}
-            priorityAction={priorityAction}
-            pipelineId={pipelineId}
-            concluirAction={concluirAction}
-            reabrirAction={reabrirAction}
-            stages={stages}
-            deleteAction={deleteAction}
-            dragId={dragId}
-            onDragStartRow={setDragId}
-            onDragEndRow={() => setDragId(null)}
-            onDropStage={handleDropStage}
-            onDropOnRow={handleDropOnRow}
-          />
-        ))}
-      </table>
+          <table className="hidden md:table w-full border-collapse">
+            {/* O fundo precisa estar em cada <th>, não no <thead>: background em
+                thead/tr não pinta de forma confiável com position:sticky, e as
+                linhas apareciam por trás do cabeçalho ao rolar. A borda inferior
+                fecha visualmente a faixa fixa. */}
+            {/* Casco padrão sem a `.c41-tabela` (30/09): ela centraliza tudo, e
+                aqui a primeira coluna é uma árvore — tarefa e subtarefas se leem
+                pelo recuo à esquerda — com cabeçalhos de grupo em colSpan. Fica o
+                resto do padrão: cabeçalho com fundo, borda e fio azul no hover
+                (`c41-linha`). */}
+            <thead className="sticky top-0 z-10">
+              <tr className="text-left">
+                <th className={`${DOT_COL} bg-table-header-bg pt-2.5 pb-2 border-b border-border`} />
+                <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 border-b border-border">
+                  <FiltroDaColuna rotulo="Tarefa" chave="tarefa" />
+                </th>
+                <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 w-44 border-b border-border">
+                  <FiltroDaColuna rotulo="Tags" chave="tags" />
+                </th>
+                <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 w-24 border-b border-border">
+                  <FiltroDaColuna rotulo="Responsáveis" chave="responsaveis" align="right" />
+                </th>
+                <th className="text-[11px] font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 pl-2 pr-4 w-[120px] text-right border-b border-border">
+                  <FiltroDaColuna rotulo="Prazo" chave="prazo" tipo="data" align="right" />
+                </th>
+              </tr>
+            </thead>
+            {byStageNaTabela.map(({ stage, items: stageItems }) => (
+              <StageGroup
+                key={stage.id}
+                stage={stage}
+                items={stageItems}
+                basePath={basePath}
+                canAct={canAct}
+                renameStageAction={renameStageAction}
+                createTaskAction={createTaskAction}
+                priorityAction={priorityAction}
+                pipelineId={pipelineId}
+                concluirAction={concluirAction}
+                reabrirAction={reabrirAction}
+                stages={stages}
+                deleteAction={deleteAction}
+                dragId={dragId}
+                onDragStartRow={setDragId}
+                onDragEndRow={() => setDragId(null)}
+                onDropStage={handleDropStage}
+                onDropOnRow={handleDropOnRow}
+              />
+            ))}
+          </table>
+        </div>
+      </TabelaFiltravel>
     </div>
   );
 }
