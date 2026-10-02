@@ -3,28 +3,32 @@ import { Button } from "@/components/ui/Button";
 
 type Props = {
   page: number;
-  totalPages: number;
   buildHref: (page: number) => string;
-  /** Total de itens, quando a tela quer dizer "de 397". */
+  /** A última página. Sem ela — contagem no teto, como no acervo fiscal —
+   *  vale `temProxima`, e o texto não diz "de N". */
+  totalPages?: number;
+  temProxima?: boolean;
+  /** Total de itens, quando a tela quer dizer "397 empresas". */
   total?: number;
+  /** O total é um piso ("mais de 1.000"), não a conta exata. */
+  totalAproximado?: boolean;
   /** Nome do item no plural ("empresas"), para acompanhar o total. */
   rotulo?: string;
 };
 
-// Paginação simples (anterior/próxima + "Página X de Y"), numa fonte só.
-//
-// Desde o polimento de 30/09, anterior e próxima são botões — eram texto
-// cinza sem caixa, que a regra "botão não é link" da conferência do BPO
-// reprovou. Empresas, Pessoas e Clientes tinham cada uma a sua cópia; agora
-// usam esta.
-export function Pagination({ page, totalPages, buildHref, total, rotulo }: Props) {
-  if (totalPages <= 1) return null;
+const INTEIRO = new Intl.NumberFormat("pt-BR");
+
+export function Pagination({ page, totalPages, temProxima = false, buildHref, total, totalAproximado = false, rotulo }: Props) {
+  const conhecida = totalPages !== undefined;
+  const haProxima = conhecida ? page < totalPages : temProxima;
+  if (conhecida ? totalPages <= 1 : page <= 1 && !haProxima) return null;
 
   return (
     <nav className="flex flex-wrap items-center justify-between gap-3 mt-4" aria-label="Paginação">
       <span className="text-[length:var(--fs-ui)] text-fg-muted tabular-nums">
-        Página <strong className="font-semibold text-fg">{page}</strong> de {totalPages}
-        {total !== undefined && ` · ${total} ${rotulo ?? "itens"}`}
+        Página <strong className="font-semibold text-fg">{page}</strong>
+        {conhecida && ` de ${totalPages}`}
+        {total !== undefined && ` · ${totalAproximado ? "mais de " : ""}${INTEIRO.format(total)} ${rotulo ?? "itens"}`}
       </span>
       <div className="flex gap-1.5">
         {page > 1 ? (
@@ -36,7 +40,7 @@ export function Pagination({ page, totalPages, buildHref, total, rotulo }: Props
             <ChevronLeft size={14} /> Anterior
           </Button>
         )}
-        {page < totalPages ? (
+        {haProxima ? (
           <Button href={buildHref(page + 1)} variant="secondary" size="sm">
             Próxima <ChevronRight size={14} />
           </Button>
