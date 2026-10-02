@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/Modal";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { atualizarProposta } from "@/app/(app)/valora/actions";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 type Proposta = {
   id: string;
@@ -112,14 +113,10 @@ export function EditarProposta({ proposta }: { proposta: Proposta }) {
             />
           </CampoForm>
           {erro && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{erro}</p>}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-            <Button variant="secondary" onClick={() => setAberto(false)} disabled={pendente}>
-              Cancelar
-            </Button>
-            <Button type="submit" loading={pendente}>
-              Salvar
-            </Button>
-          </div>
+          <FormFooter
+            pending={pendente}
+            onCancel={() => setAberto(false)}
+          />
         </form>
       </Modal>
     </>

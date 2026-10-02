@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/Select";
 import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSelect";
 import type { ProcessoState } from "@/app/(app)/processos/actions";
 import { CamposDoProcesso } from "./CamposDoProcesso";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 type Props = {
   empresas: Opcao[];
@@ -64,14 +65,12 @@ export function NovoProcessoForm({ empresas, tipos, responsaveis, responsavelPad
             </p>
           )}
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-            <Button variant="secondary" type="button" onClick={() => setAberto(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Abrindo…" : "Abrir"}
-            </Button>
-          </div>
+          <FormFooter
+            pending={isPending}
+            pendingLabel="Abrindo…"
+            submitLabel="Abrir"
+            onCancel={() => setAberto(false)}
+          />
         </form>
       </Modal>
     </>

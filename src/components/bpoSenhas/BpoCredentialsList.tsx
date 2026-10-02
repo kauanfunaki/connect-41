@@ -18,6 +18,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/useConfirm";
 import type { BpoCredencialState } from "@/app/(app)/bpo-senhas/actions";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 export type CredentialRow = {
   id: string;
@@ -109,14 +110,11 @@ function NewCredentialModal({ companies, createAction }: { companies: CompanyOpt
         <form action={formAction} className="flex flex-col gap-4">
           <CredentialFormFields companies={companies} />
           {state?.error && <p className="text-[12px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{state.error}</p>}
-          <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-            <Button variant="secondary" onClick={() => setOpen(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Salvando…" : "Criar"}
-            </Button>
-          </div>
+          <FormFooter
+            pending={isPending}
+            submitLabel="Criar"
+            onCancel={() => setOpen(false)}
+          />
         </form>
       </Modal>
     </>
@@ -140,14 +138,10 @@ function EditCredentialModal({
       <form action={formAction} className="flex flex-col gap-4">
         <CredentialFormFields companies={companies} defaults={row} />
         {state?.error && <p className="text-[12px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{state.error}</p>}
-        <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-          <Button variant="secondary" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={isPending}>
-            {isPending ? "Salvando…" : "Salvar"}
-          </Button>
-        </div>
+        <FormFooter
+          pending={isPending}
+          onCancel={onClose}
+        />
       </form>
     </Modal>
   );

@@ -8,6 +8,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { Popover, ItemDoMenu } from "@/components/ui/Popover";
 import type { AcaoDeContaState } from "@/lib/financeiro/acoes";
 import type { SituacaoDaConta } from "@/lib/financeiro/contas";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 type Acoes = {
   conferir: (entryId: string) => Promise<AcaoDeContaState>;
@@ -200,14 +201,14 @@ export function AcoesDaConta({
                 <CampoForm label={aPagar ? "Data do pagamento" : "Data do recebimento"} htmlFor={idDaData} error={erroDaBaixa ?? undefined}>
                   <Input id={idDaData} compact type="date" value={data} max={hojeISO} onChange={(e) => setData(e.target.value)} autoFocus />
                 </CampoForm>
-                <div className="flex justify-end gap-2">
-                  <Button variant="secondary" size="sm" onClick={close}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" variant="primary" size="sm" disabled={pendente || !data}>
-                    {pendente ? "Salvando…" : "Confirmar"}
-                  </Button>
-                </div>
+                <FormFooter
+                  pending={pendente}
+                  submitLabel="Confirmar"
+                  onCancel={close}
+                  submitDisabled={!data}
+                  size="sm"
+                  semDivisoria
+                />
               </form>
             )}
           </Popover>

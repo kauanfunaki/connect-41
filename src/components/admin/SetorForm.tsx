@@ -7,7 +7,7 @@ import { AlinhadoAoCampo, CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 export type SetorDefaultValues = {
   id?: string;
@@ -112,14 +112,10 @@ export function SetorForm({ action, cancelHref, defaultValues }: Props) {
         </FieldGrid>
       )}
 
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-        <Button href={cancelHref} variant="secondary">
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "Salvando…" : "Salvar"}
-        </Button>
-      </div>
+      <FormFooter
+        pending={isPending}
+        cancelHref={cancelHref}
+      />
     </form>
   );
 }

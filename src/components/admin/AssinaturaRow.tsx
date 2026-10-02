@@ -10,6 +10,7 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 type Plan = { id: string; name: string; managementMode: "MANAGED" | "SELF_SERVICE" };
 
@@ -132,14 +133,10 @@ export function AssinaturaRow({ tenant, subscription, plans, activeUsers }: Prop
             label="Confirmo o limite abaixo do número de usuários ativos"
           />
         )}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-          <Button variant="secondary" onClick={() => setEditing(false)}>
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={isPending}>
-            {isPending ? "Salvando…" : "Salvar"}
-          </Button>
-        </div>
+        <FormFooter
+          pending={isPending}
+          onCancel={() => setEditing(false)}
+        />
       </form>
     );
   }

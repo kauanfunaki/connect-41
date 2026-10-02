@@ -7,7 +7,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 export type TagDefaultValues = {
   id?: string;
@@ -97,14 +97,10 @@ export function TagForm({ action, cancelHref, sectorOptions, defaultValues }: Pr
         </div>
       </fieldset>
 
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-        <Button href={cancelHref} variant="secondary">
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "Salvando…" : "Salvar"}
-        </Button>
-      </div>
+      <FormFooter
+        pending={isPending}
+        cancelHref={cancelHref}
+      />
     </form>
   );
 }
