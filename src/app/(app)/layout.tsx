@@ -6,13 +6,13 @@ import { DicaFlutuante } from "@/components/shared/DicaFlutuante";
 import { ToastProvider } from "@/components/ui/Toast";
 import { getSectorMaps } from "@/lib/sectors";
 import { ROLE_LABELS } from "@/lib/roles";
-import { getAuthContext, isFullWrite, canViewSector } from "@/lib/auth/context";
+import { getAuthContext, isFullAccess, isFullWrite, canViewSector } from "@/lib/auth/context";
 import { codigosDeTelasFixadas } from "@/lib/telasFixadas-data";
 import { telasFixadasVisiveis } from "@/lib/telasFixadas";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorsWithEnabledModules, getTenantModuleStates } from "@/lib/modules";
 import { getModuleRoute, MODULOS_DO_MENU_GERAL } from "@/lib/module-catalog";
-import { baseDomain, hostSuffix } from "@/lib/auth/activeSector";
+import { baseDomain, hostSuffix, setoresDoSeletor } from "@/lib/auth/activeSector";
 import { ChatDeIA } from "@/components/shell/ChatDeIA";
 import { agentesDoChat } from "@/lib/ia/chat/agentes";
 import { PARES_DE_CAMINHO } from "@/lib/ajuda/artigos";
@@ -27,9 +27,14 @@ export default async function AppLayout({
   const isAdmin = isFullWrite(role);
   const canManageFields = isAdmin || (role === "SECTOR_ADMIN" && sectors.length > 0);
   const canOpenAdmin = isAdmin || canManageFields;
-  const { labels: sectorLabels, colors: sectorColors } = await getSectorMaps(tenantId);
+  const { labels: sectorLabels, colors: sectorColors, options: sectorOptions } = await getSectorMaps(tenantId);
   const sectorsWithModules = await getSectorsWithEnabledModules(tenantId);
-  const visibleSectors = sectors
+  const visibleSectors = setoresDoSeletor({
+    userSectors: sectors,
+    isFullAccess: isFullAccess(role),
+    visitante: tenantId !== ctx.homeTenantId,
+    setoresDoEscritorio: sectorOptions.map((o) => o.value),
+  })
     .filter((s) => sectorsWithModules.has(s))
     .map((s) => ({ code: s, label: sectorLabels[s] ?? s, color: sectorColors[s] ?? "#586577" }));
 
