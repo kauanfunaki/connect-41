@@ -109,9 +109,10 @@ describe("decidir", () => {
     expect(d.tipo).toBe("silenciar");
   });
 
-  it("integração desligada transfere, não silencia", () => {
+  it("integração desligada transfere, não silencia — e não avisa, não há como mandar", () => {
     const d = decidir(estado({ integracaoLigada: false }), "oi", AGORA);
     expect(d.tipo).toBe("transferir");
+    if (d.tipo === "transferir") expect(d.avisar).toBe(false);
   });
 
   // Voltar sozinha seria o candidato receber robô no meio de uma conversa que
@@ -125,6 +126,8 @@ describe("decidir", () => {
     const d = decidir(estado({ respostasNaUltimaHora: MAX_RESPOSTAS_POR_HORA }), "oi", AGORA);
     expect(d.tipo).toBe("transferir");
     if (d.tipo === "transferir") expect(d.motivo).toContain("última hora");
+    // O candidato fica sabendo que alguém vai continuar (achado de 29/09).
+    if (d.tipo === "transferir") expect(d.avisar).toBe(true);
   });
 
   it("uma resposta abaixo do teto ainda responde", () => {
@@ -137,6 +140,7 @@ describe("decidir", () => {
     const d = decidir(estado({ lastInboundAt: HA_DOIS_DIAS }), "oi", AGORA);
     expect(d.tipo).toBe("transferir");
     if (d.tipo === "transferir") expect(d.motivo).toContain("24h");
+    if (d.tipo === "transferir") expect(d.avisar).toBe(false);
   });
 
   // Provedor sem janela (a Evolution) não pode transferir por uma regra que é

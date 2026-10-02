@@ -13,6 +13,7 @@
 // faz.
 
 import { getPrisma } from "@/lib/prisma";
+import { Prisma } from "@/generated/prisma/client";
 import { conversarComAgente } from "@/lib/ai";
 import { lerConfig } from "@/lib/integracoes/data";
 import {
@@ -32,6 +33,8 @@ import { esperar, naFila } from "@/lib/whatsapp/fila";
 import { enviarERegistrar, registrarBloqueio } from "@/lib/whatsapp/envio";
 import { avisarMensagemNova } from "@/lib/whatsapp/conversas";
 import { avisarSobreConversa } from "@/lib/whatsapp/avisos";
+import { respondeAMidia, rotuloDaMidia, textoDaMidia } from "@/lib/whatsapp/midia";
+import { avisarSobreAVaga } from "@/lib/recrutamento/avisos";
 import { montarPerguntaComHistorico, MAX_MENSAGENS_NO_HISTORICO } from "@/lib/whatsapp/historico";
 import {
   nomeConfere,
@@ -404,6 +407,12 @@ async function atenderNaVez(
 
   if (decisao.tipo === "transferir") {
     await transferir(thread.id, decisao.motivo);
+    // Transferir em silêncio deixava o candidato sem saber se alguém leu (achado
+    // de 29/09). Só não avisa quando não dá para mandar: conexão desligada ou
+    // fora da janela do WhatsApp.
+    if (decisao.avisar) {
+      await avisarCandidato({ tenantId: conexao.tenantId, threadId: thread.id, provedor, config: lerConfig(conexao.configEnc), paraE164: m.de });
+    }
     return `transferido: ${decisao.motivo}`;
   }
 
@@ -593,7 +602,9 @@ async function atenderNaVez(
 
 /**
  * Uma mensagem que não é texto. Currículo em PDF é guardado (ver
- * `src/lib/whatsapp/documento.ts`); o resto vai para uma pessoa, sem resposta.
+ * `src/lib/whatsapp/documento.ts`); o resto entra na conversa ("[imagem]
+ * legenda") e vai para uma pessoa, com o aviso ao candidato de que alguém vai
+ * continuar.
  */
 export async function tratarNaoTexto(
   conexao: Conexao,
@@ -623,9 +634,39 @@ async function tratarNaoTextoNaVez(
     return tratarDocumento(conexao, provedor, thread, i, i.documento, atendimento.abertoEm);
   }
 
-  if (thread.handoffAt) return "ignorado: já está com uma pessoa";
-  // Responder a um áudio com um robô que não o ouviu é pior que não responder.
-  await transferir(thread.id, `candidato mandou ${i.tipo}, que o robô não lê`);
+  // Entra na conversa, com a legenda: até 02/10/2026 sumia — quem abria a
+  // conversa não via o que o candidato mandou. O `waMessageId` único barra a
+  // reentrega, como no texto.
+  const prisma = getPrisma();
+  const agora = new Date();
+  try {
+    await prisma.whatsappMessage.create({
+      data: {
+        tenantId: conexao.tenantId,
+        threadId: thread.id,
+        direction: "ENTRADA",
+        waMessageId: i.waMessageId,
+        body: i.documento
+          ? `[arquivo: ${nomeDoArquivoParaTela(i.documento.nomeDoArquivo)}]${i.legenda?.trim() ? ` ${i.legenda.trim()}` : ""}`
+          : textoDaMidia(i.tipo, i.legenda),
+      },
+    });
+  } catch {
+    return "reentrega ignorada";
+  }
+  await prisma.whatsappThread.update({ where: { id: thread.id }, data: { lastInboundAt: agora } });
+
+  // Com gente, o robô cala — e quem está com a conversa é avisado, como no texto.
+  if (thread.handoffAt) {
+    if (avisarMensagemNova(thread.lastInboundAt, agora)) await avisarSobreConversa(thread.id, { tipo: "mensagem_nova" });
+    return "registrado: já está com uma pessoa";
+  }
+  // O robô não responde ao conteúdo (não ouviu o áudio, não viu a imagem), mas
+  // diz que alguém vai continuar — calar era o candidato achar que ninguém leu.
+  await transferir(thread.id, `candidato mandou ${rotuloDaMidia(i.tipo)}, que o robô não lê`);
+  if (conexao.enabled && respondeAMidia(i.tipo)) {
+    await avisarCandidato({ tenantId: conexao.tenantId, threadId: thread.id, provedor, config: lerConfig(conexao.configEnc), paraE164: i.de });
+  }
   return `transferido: ${i.tipo}`;
 }
 
@@ -671,8 +712,13 @@ async function tratarDocumento(
   if (!podeFalar && avisarMensagemNova(thread.lastInboundAt, agora)) {
     await avisarSobreConversa(thread.id, { tipo: "mensagem_nova" });
   }
+  const config = lerConfig(conexao.configEnc);
   const passarParaPessoa = async (motivo: string) => {
-    if (podeFalar) await transferir(thread.id, motivo);
+    if (podeFalar) {
+      await transferir(thread.id, motivo);
+      // O candidato fica sabendo que alguém vai continuar (achado de 29/09).
+      await avisarCandidato({ tenantId: conexao.tenantId, threadId: thread.id, provedor, config, paraE164: i.de });
+    }
     return `transferido: ${motivo}`;
   };
 
@@ -680,7 +726,6 @@ async function tratarDocumento(
   if (classe === "nao_pdf") return passarParaPessoa(`candidato mandou ${nome}, que o robô não lê`);
   if (classe === "grande_demais") return passarParaPessoa(`candidato mandou um PDF maior que 5 MB (${nome})`);
 
-  const config = lerConfig(conexao.configEnc);
   const baixado = await provedor.baixarMidia!(config, doc.referencia);
   if (!baixado.ok) {
     await prisma.whatsappMessage.update({ where: { id: mensagemId }, data: { error: baixado.erro.slice(0, 500) } });
@@ -717,14 +762,27 @@ async function tratarDocumento(
   const candidatura = thread.candidaturaId
     ? await prisma.candidatura.findFirst({
         where: { id: thread.candidaturaId, tenantId: conexao.tenantId },
-        select: { id: true, vaga: { select: { title: true } } },
+        select: { id: true, person: { select: { name: true } }, vaga: { select: { title: true, responsibleUserId: true } } },
       })
     : null;
 
   if (candidatura) {
     // Substitui o do portal, se houver: quem manda de novo manda o atualizado.
-    // O arquivo antigo continua no disco.
-    await prisma.candidatura.update({ where: { id: candidatura.id }, data: { resumeUrl } });
+    // O arquivo antigo continua no disco. Zera o perfil extraído e a falha da
+    // triagem, como a conta do candidato no portal faz: sem isso, a inscrição
+    // marcada "Sem currículo em PDF" nunca voltava à fila da pontuação (achado
+    // de 29/09). Já pontuada não é repontuada sozinha — o recrutador é avisado.
+    await prisma.candidatura.update({
+      where: { id: candidatura.id },
+      data: { resumeUrl, perfilProfissional: Prisma.DbNull, perfilProfissionalEm: null, triagemFalha: null, triagemFalhaEm: null },
+    });
+    await avisarSobreAVaga(candidatura.vaga, {
+      tenantId: conexao.tenantId,
+      type: "CANDIDATE_UPDATE",
+      message: `${candidatura.person.name} enviou um currículo novo pelo WhatsApp (vaga "${candidatura.vaga.title}").`.slice(0, 255),
+      entityType: "PERSON",
+      entityId: thread.personId ?? undefined,
+    }).catch((err) => console.error("[whatsapp] aviso de currículo novo", thread.id, err));
     if (podeFalar) await responder(mensagemDeCurriculoRecebido(candidatura.vaga.title));
     return "currículo juntado à candidatura";
   }

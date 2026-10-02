@@ -3,7 +3,7 @@ import type { EntityType } from "@/generated/prisma/enums";
 import { sendWebPushToUser } from "@/lib/webPush";
 import { linkDaNotificacao } from "@/lib/notificacaoLink";
 
-type NotifyInput = {
+export type NotifyInput = {
   tenantId: string;
   type: string;
   message: string;

@@ -3,14 +3,15 @@
 // Dois momentos: quando o assistente passa a conversa para uma pessoa, e quando
 // o candidato volta a escrever numa conversa que já está com gente. Quem recebe
 // segue `destinoDoAviso`: quem assumiu, senão o responsável pela vaga, senão o
-// setor que opera o módulo.
+// setor que opera o recrutamento — e não o setor que contrata, que era o
+// defeito até 02/10/2026 (ver src/lib/recrutamento/avisos.ts).
 //
 // **Nunca derruba o atendimento.** Roda dentro do webhook: um aviso que falha
 // vira linha de log, e a mensagem do candidato segue registrada e tratada.
 
 import { getPrisma } from "@/lib/prisma";
-import { notifySector, notifyUser } from "@/lib/notifications";
-import { setorDoModulo } from "@/lib/modules";
+import { notifyUser } from "@/lib/notifications";
+import { avisarORecrutamento } from "@/lib/recrutamento/avisos";
 import { destinoDoAviso, telefoneLegivel } from "./conversas";
 
 const MODULE = "recrutamento_whatsapp";
@@ -38,7 +39,7 @@ export async function avisarSobreConversa(threadId: string, momento: Momento): P
     const candidatura = thread.candidaturaId
       ? await prisma.candidatura.findFirst({
           where: { id: thread.candidaturaId, tenantId: thread.tenantId },
-          select: { person: { select: { name: true } }, vaga: { select: { responsibleUserId: true, sectorCode: true } } },
+          select: { person: { select: { name: true } }, vaga: { select: { responsibleUserId: true } } },
         })
       : null;
 
@@ -57,8 +58,8 @@ export async function avisarSobreConversa(threadId: string, momento: Momento): P
       await notifyUser(destino.usuario, input);
       return;
     }
-    const setor = candidatura?.vaga.sectorCode ?? (await setorDoModulo(thread.tenantId, MODULE)) ?? "recrutamento";
-    await notifySector(setor, input);
+    // Conversa ligada a uma vaga: quem opera as vagas. Sem vínculo: quem opera o WhatsApp.
+    await avisarORecrutamento(input, candidatura ? undefined : MODULE);
   } catch (err) {
     console.error("[whatsapp/avisos]", threadId, err);
   }
