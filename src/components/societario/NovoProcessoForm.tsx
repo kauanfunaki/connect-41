@@ -37,7 +37,7 @@ export function NovoProcessoForm({ empresas, tipos, responsaveis, responsavelPad
           <CampoForm label="Empresa" htmlFor="companyId" required>
             {/* Busca e não select nativo: são centenas de empresas desde a
                 importação do Acessórias. */}
-            <SearchableSelect id="companyId" name="companyId" options={empresas} placeholder="Buscar empresa…" />
+            <SearchableSelect id="companyId" name="companyId" options={empresas} placeholder="Buscar empresa…" avatar lembrarRecentes="empresas" />
           </CampoForm>
 
           <CampoForm label="Tipo de processo" htmlFor="typeId" required>

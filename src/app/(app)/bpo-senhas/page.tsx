@@ -29,7 +29,7 @@ export default async function BpoSenhasPage() {
     prisma.company.findMany({
       where: { tenantId: ctx.tenantId, status: "ACTIVE" },
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: { id: true, name: true, logoUrl: true, cnpj: true, parentCompanyId: true },
     }),
   ]);
 

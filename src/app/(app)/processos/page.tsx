@@ -16,6 +16,7 @@ import { AssistenteDoSocietario } from "@/components/societario/AssistenteDoSoci
 import { getPrisma } from "@/lib/prisma";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { nomeExibicao } from "@/lib/companyName";
+import { CAMPOS_DA_EMPRESA_NO_SELETOR, opcoesDeEmpresa } from "@/lib/empresas/opcoesDoSeletor";
 import { abrirProcesso } from "./actions";
 import { contarAvisosPendentes } from "@/lib/societario/avisos";
 import { contarPendentesDoSetor } from "@/lib/ia/propostas";
@@ -68,7 +69,7 @@ export default async function ProcessosPage({
     prisma.company.findMany({
       where: { tenantId: ctx.tenantId, status: { in: ["ACTIVE", "PROSPECT"] } },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, displayName: true },
+      select: CAMPOS_DA_EMPRESA_NO_SELETOR,
     }),
     prisma.processType.findMany({
       where: { tenantId: ctx.tenantId, active: true },
@@ -141,7 +142,7 @@ export default async function ProcessosPage({
           Ver no kanban
         </Button>
         <NovoProcessoForm
-          empresas={empresas.map((e) => ({ value: e.id, label: nomeExibicao(e) }))}
+          empresas={opcoesDeEmpresa(empresas.map((e) => ({ ...e, nome: nomeExibicao(e) })))}
           tipos={tipos.map((t) => ({
             id: t.id,
             name: t.name,

@@ -82,7 +82,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
   const empresas = await getPrisma().company.findMany({
     where: { tenantId: ctx.tenantId, status: { in: ["ACTIVE", "PROSPECT"] } },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, displayName: true },
+    select: { id: true, name: true, displayName: true, logoUrl: true, cnpj: true, parentCompanyId: true },
   });
 
   const categorias =
@@ -240,7 +240,13 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
         documentoId={doc.id}
         acao={editarDocumento}
         excluir={excluirDocumento.bind(null, doc.id)}
-        empresas={empresas.map((e) => ({ id: e.id, nome: nomeExibicao(e) }))}
+        empresas={empresas.map((e) => ({
+          id: e.id,
+          nome: nomeExibicao(e),
+          logoUrl: e.logoUrl,
+          cnpj: e.cnpj,
+          matrizId: e.parentCompanyId,
+        }))}
         bloqueado={doc.financeEntry !== null}
         editadoEm={doc.editedAt ? formatInstantDate(doc.editedAt) : null}
         valores={{
