@@ -169,6 +169,32 @@ export function sectorScope(
 }
 
 /**
+ * Os setores que o seletor oferece: os da própria pessoa — com uma exceção.
+ *
+ * Quem está de visita em outro escritório (o suporte, SUPER_ADMIN, pela troca
+ * de escritório) chega lá sem setor nenhum: o proxy zera, porque os setores
+ * dele são os do escritório de origem. Como ele é full access e enxerga o
+ * escritório visitado inteiro, o seletor oferece os setores de lá — sem isto
+ * ficava vazio, e não havia como entrar num setor do escritório visitado.
+ */
+export function setoresDoSeletor({
+  userSectors,
+  isFullAccess,
+  visitante,
+  setoresDoEscritorio,
+}: {
+  userSectors: string[];
+  isFullAccess: boolean;
+  /** O escritório aberto não é o de origem da pessoa. */
+  visitante: boolean;
+  /** Setores ativos do escritório aberto, na ordem do cadastro. */
+  setoresDoEscritorio: string[];
+}): string[] {
+  if (visitante && isFullAccess) return setoresDoEscritorio;
+  return userSectors;
+}
+
+/**
  * Se o seletor de setor deve aparecer. Com uma opção só não há o que escolher —
  * o controle vira rótulo, que é o caso da maioria dos usuários e o que torna a
  * mudança indolor para quem compra o Connect com um setor só.
