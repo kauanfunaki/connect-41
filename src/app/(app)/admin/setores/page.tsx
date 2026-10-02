@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getAllSectors } from "@/lib/sectors";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Selo } from "@/components/ui/Selo";
 
 export default async function SetoresPage() {
   const ctx = await getAuthContext();
@@ -38,9 +39,9 @@ export default async function SetoresPage() {
                   <p className="text-[11px] text-fg-muted font-mono truncate">{s.code}</p>
                 </div>
                 {!s.active && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-surface-2 text-fg-muted border border-border flex-shrink-0">
+                  <Selo tom="neutro" className="flex-shrink-0">
                     Inativo
-                  </span>
+                  </Selo>
                 )}
               </div>
               {/* Botão, e não texto cinza (polimento de 30/09). Sem "⋯":

@@ -19,6 +19,7 @@ import { formatInstantDate } from "@/lib/format";
 import { lerLista } from "@/lib/filtrosDaListaDeEmpresas";
 import type { AssessmentLinkStatus } from "@/generated/prisma/enums";
 import { setorDoModulo, isModuleEnabled } from "@/lib/modules";
+import { Selo } from "@/components/ui/Selo";
 
 const PER_PAGE = 30;
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
@@ -151,26 +152,26 @@ export default async function TestesPage({
     if (l.status !== "RESPONDIDO") return null;
     if (l.type === "DISC" && l.primaryProfile) {
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border bg-brand/10 text-brand border-brand/25 whitespace-nowrap">
+        <Selo tom="marca">
           Perfil {l.primaryProfile}
           {l.secondaryProfile ?? ""}
-        </span>
+        </Selo>
       );
     }
     if (l.type === "MULTIPLA_ESCOLHA") {
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border bg-brand/10 text-brand border-brand/25 whitespace-nowrap">
+        <Selo tom="marca">
           {(l.scores as { pct: number } | null)?.pct ?? 0}% de acertos
-        </span>
+        </Selo>
       );
     }
     return null;
   };
 
   const seloDoStatus = (s: AssessmentLinkStatus) => (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap ${STATUS_STYLE[s]}`}>
+    <Selo cor={STATUS_STYLE[s]}>
       {STATUS_LABEL[s]}
-    </span>
+    </Selo>
   );
 
   return (

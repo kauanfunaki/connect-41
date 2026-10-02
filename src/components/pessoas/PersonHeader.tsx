@@ -9,6 +9,7 @@ import { AvatarImage } from "@/components/shared/AvatarImage";
 import type { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
 import { maskCpf, formatPhone } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
+import { Selo } from "@/components/ui/Selo";
 
 const TYPE_LABEL: Record<PersonType, string> = {
   CANDIDATO: "Candidato",
@@ -81,11 +82,9 @@ export function PersonHeader({
               <h1 className="text-[length:var(--fs-section)] font-display font-semibold text-fg tracking-[-0.01em] truncate">
                 {name}
               </h1>
-              <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${TYPE_STYLE[type]}`}
-              >
+              <Selo cor={TYPE_STYLE[type]}>
                 {TYPE_LABEL[type]}
-              </span>
+              </Selo>
               {type === "COLABORADOR" && (
                 <StatusDot color="var(--c41-fg-muted)" label={STATUS_LABEL[employmentStatus]} />
               )}
