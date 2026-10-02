@@ -4,7 +4,8 @@ import { describe, it, expect, vi } from "vitest";
 // é a ordem, que é pura — o mock existe só para o import não subir o driver.
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({}) }));
 
-const { ordenarFila, contarPorSituacao } = await import("./fila");
+const { ordenarFila, contarPorSituacao, chaveDoFeriado } = await import("./fila");
+const { diasUteisEntre } = await import("./processo");
 type LinhaDaFila = Awaited<ReturnType<typeof import("./fila").listarFila>>[number];
 
 function linha(over: Partial<LinhaDaFila> & { id: string }): LinhaDaFila {
@@ -104,5 +105,25 @@ describe("contarPorSituacao", () => {
     expect(c.AGUARDANDO_ORGAO).toBe(1);
     // Zerada precisa existir: o contador do filtro mostra "0", não some.
     expect(c.EM_ANDAMENTO).toBe(0);
+  });
+});
+
+describe("chaveDoFeriado", () => {
+  // O feriado é gravado como em admin/feriados/actions.ts: `new Date("AAAA-MM-DD")`,
+  // meia-noite UTC — que em São Paulo ainda é 21h do dia anterior.
+  const gravado = (dia: string) => new Date(dia);
+
+  it("é o dia cadastrado, e não o anterior", () => {
+    expect(chaveDoFeriado(gravado("2026-10-12"))).toBe("2026-10-12");
+    expect(chaveDoFeriado(gravado("2026-01-01"))).toBe("2026-01-01");
+    expect(chaveDoFeriado(gravado("2026-12-25"))).toBe("2026-12-25");
+  });
+
+  it("o feriado numa segunda tira a segunda da contagem de dias úteis", () => {
+    // Sexta 09/10 até terça 13/10, com 12/10 (segunda) feriado: só a terça conta.
+    // Lido em São Paulo, o feriado virava 11/10 — domingo, que já não contava —
+    // e a segunda entrava como dia útil.
+    const feriados = new Set([chaveDoFeriado(gravado("2026-10-12"))]);
+    expect(diasUteisEntre("2026-10-09", "2026-10-13", feriados)).toBe(1);
   });
 });
