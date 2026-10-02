@@ -11,7 +11,7 @@ import { Pagination } from "@/components/shared/Pagination";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { formatInstantDate } from "@/lib/format";
-import { lerLista } from "@/lib/filtrosDaListaDeEmpresas";
+import { lerLista } from "@/lib/filtroNaUrl";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { inativarCandidatosEmMassa } from "./actions";
 import { FiltrosDasColunasNaUrl } from "@/components/shared/FiltroDeColunas";

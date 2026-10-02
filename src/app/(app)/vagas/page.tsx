@@ -18,7 +18,7 @@ import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, 
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatInstantDate } from "@/lib/format";
-import { lerLista } from "@/lib/filtrosDaListaDeEmpresas";
+import { lerLista } from "@/lib/filtroNaUrl";
 import { VAGA_STATUS_LABEL, VAGA_STATUS_STYLE, VAGA_STATUS_ORDER } from "@/lib/vagaStatus";
 import { Selo } from "@/components/ui/Selo";
 
