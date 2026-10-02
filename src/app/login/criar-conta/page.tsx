@@ -1,19 +1,9 @@
-import { AuthShell } from "@/components/login/AuthShell";
-import { AccessRequestForm } from "@/components/login/AccessRequestForm";
-import { solicitarAcesso } from "./actions";
+import { redirect } from "next/navigation";
 
+// Até 01/10/2026 esta tela abria um chamado no Hub da 41 Tech pedindo acesso.
+// Saiu: o formulário público virou canal de propaganda, e no Connect
+// comercializado quem libera acesso é o administrador de cada escritório. O
+// endereço fica, levando ao login, para um link antigo não cair num 404.
 export default function CriarContaPage() {
-  return (
-    <AuthShell subtitle="Vamos abrir um chamado para liberar seu acesso">
-      <AccessRequestForm
-        action={solicitarAcesso}
-        showTelefone
-        mensagemPlaceholder="Ex: setor, cargo ou motivo do acesso"
-        submitLabel="Solicitar acesso"
-        submitLabelPending="Enviando…"
-        successTitle="Chamado aberto"
-        successMessage="Sua solicitação foi registrada no Hub da 41 Tech. Assim que seu acesso for liberado, você recebe um e-mail."
-      />
-    </AuthShell>
-  );
+  redirect("/login");
 }
