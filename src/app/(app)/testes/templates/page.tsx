@@ -13,16 +13,17 @@ import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, 
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { AcoesDoModelo } from "@/components/teste/AcoesDoModelo";
 import { setorDoModulo, isModuleEnabled } from "@/lib/modules";
+import { Selo } from "@/components/ui/Selo";
 
 function seloDoModelo(ativo: boolean) {
   return ativo ? (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-success/10 text-success border border-success/25">
+    <Selo tom="sucesso">
       Ativo
-    </span>
+    </Selo>
   ) : (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-surface-2 text-fg-muted border border-border">
+    <Selo tom="neutro">
       Arquivado
-    </span>
+    </Selo>
   );
 }
 

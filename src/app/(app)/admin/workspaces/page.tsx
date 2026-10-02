@@ -7,6 +7,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { formatCnpj } from "@/lib/format";
+import { Selo } from "@/components/ui/Selo";
 
 export default async function WorkspacesPage() {
   const ctx = await getAuthContext();
@@ -40,9 +41,9 @@ export default async function WorkspacesPage() {
               </div>
               <div className="flex items-center gap-3 flex-shrink-0">
                 {!t.active && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-surface-2 text-fg-muted border border-border">
+                  <Selo tom="neutro">
                     Inativo
-                  </span>
+                  </Selo>
                 )}
                 {/* Botão, e não texto cinza (polimento de 30/09). */}
                 <Button href={`/admin/workspaces/${t.id}`} variant="secondary" size="xs">

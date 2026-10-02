@@ -20,6 +20,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { formatInstantDate } from "@/lib/format";
 import { lerLista } from "@/lib/filtrosDaListaDeEmpresas";
 import { VAGA_STATUS_LABEL, VAGA_STATUS_STYLE, VAGA_STATUS_ORDER } from "@/lib/vagaStatus";
+import { Selo } from "@/components/ui/Selo";
 
 const PER_PAGE = 30;
 
@@ -119,9 +120,9 @@ export default async function VagasPage({
     : vagas.some((v) => canManageSector(ctx, v.sectorCode));
 
   const seloDoStatus = (s: VagaStatus) => (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap ${VAGA_STATUS_STYLE[s]}`}>
+    <Selo cor={VAGA_STATUS_STYLE[s]}>
       {VAGA_STATUS_LABEL[s]}
-    </span>
+    </Selo>
   );
   const candidatos = (n: number) => `${n} candidato${n !== 1 ? "s" : ""}`;
 

@@ -22,6 +22,7 @@ import { TesteCard } from "@/components/teste/TesteCard";
 import type { ProcessoSeletivoStatus } from "@/generated/prisma/enums";
 import type { DiscScores, DiscDimension } from "@/lib/disc";
 import type { QuizScores } from "@/lib/quiz";
+import { Selo } from "@/components/ui/Selo";
 
 const CANDIDATURA_STATUS_LABEL: Record<ProcessoSeletivoStatus, string> = {
   EM_ANDAMENTO: "Em andamento",
@@ -127,15 +128,11 @@ export default async function CandidatoPage({
         title={
           <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
             {person.name}
-            <span
-              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium tracking-normal border ${
-                person.active
+            <Selo cor={person.active
                   ? "bg-success/10 text-success border-success/25"
-                  : "bg-surface-2 text-fg-muted border-border"
-              }`}
-            >
+                  : "bg-surface-2 text-fg-muted border-border"}>
               {person.active ? "Ativo" : "Inativo"}
-            </span>
+            </Selo>
           </span>
         }
         subtitle={person.cpf ? <span className="tnum">CPF: {maskCpf(person.cpf)}</span> : undefined}
@@ -227,9 +224,9 @@ export default async function CandidatoPage({
                 </Link>
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="min-w-0 truncate text-[12px] text-fg-muted">{c.vaga.company.name}</span>
-                  <span className="inline-flex flex-shrink-0 items-center px-2 py-0.5 rounded-full text-[11px] font-medium border bg-surface-2 text-fg-secondary border-border">
+                  <Selo cor="bg-surface-2 text-fg-secondary border-border" className="flex-shrink-0">
                     {CANDIDATURA_STATUS_LABEL[c.status]}
-                  </span>
+                  </Selo>
                 </div>
               </div>
             ))}

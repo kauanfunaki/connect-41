@@ -28,6 +28,7 @@ import { excluirVaga, encerrarVaga, reabrirVaga } from "../actions";
 import { adicionarCandidato, moverEtapaCandidatura, encerrarCandidatura } from "./actions";
 import { podeAgirNaVaga, ehCoordenadorDoRecrutamento, SETOR_RECRUTAMENTO } from "@/lib/recrutamento/acessoVagas";
 import { AcessoDosRecrutadores } from "@/components/vagas/AcessoDosRecrutadores";
+import { Selo } from "@/components/ui/Selo";
 
 const PRIORITY_LABEL: Record<VagaPrioridade, string> = {
   BAIXA: "Baixa",
@@ -158,9 +159,9 @@ export default async function VagaPage({
         title={
           <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
             {vaga.title}
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium tracking-normal border ${VAGA_STATUS_STYLE[vaga.status]}`}>
+            <Selo cor={VAGA_STATUS_STYLE[vaga.status]}>
               {VAGA_STATUS_LABEL[vaga.status]}
-            </span>
+            </Selo>
           </span>
         }
         subtitle={<>{vaga.company.name} · {sectorLabels[vaga.sectorCode] ?? vaga.sectorCode}</>}

@@ -26,6 +26,7 @@ import { formatCalendarDate, formatInstantDate } from "@/lib/format";
 import { calcularReferencia, avaliarDivergencia } from "@/lib/rescisao/referencia";
 import type { ReferenciaProps } from "@/components/rescisao/ItemConferenciaRow";
 import { salvarItemConferencia, salvarDadosRescisao } from "./actions";
+import { Selo } from "@/components/ui/Selo";
 
 function brl(v: number | null): string | null {
   if (v == null) return null;
@@ -221,13 +222,13 @@ export default async function ConferenciaRescisaoPage({
           </p>
 
           <div className="flex flex-wrap items-center gap-2 mb-3">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-success/10 text-success border border-success/25 tnum">
+            <Selo tom="sucesso" className="tnum">
               Proventos: {brl(referencia.calculo.totalProventos)}
-            </span>
+            </Selo>
             {referencia.calculo.totalDescontos > 0 && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-danger/10 text-danger border border-danger/25 tnum">
+              <Selo tom="perigo" className="tnum">
                 Descontos: {brl(referencia.calculo.totalDescontos)}
-              </span>
+              </Selo>
             )}
             <span className="text-[11px] text-fg-muted">
               INSS/IRRF não entram no cálculo — sem eles não há líquido a apresentar.
@@ -327,13 +328,9 @@ export default async function ConferenciaRescisaoPage({
                     <span className="text-[12px] text-fg-muted">
                       {v.concessivePeriodEnd ? `Gozo até ${formatCalendarDate(v.concessivePeriodEnd)}` : "Sem limite definido"}
                     </span>
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${
-                        vencida ? "bg-danger/10 text-danger border-danger/25" : "bg-surface-2 text-fg-secondary border-border"
-                      }`}
-                    >
+                    <Selo cor={vencida ? "bg-danger/10 text-danger border-danger/25" : "bg-surface-2 text-fg-secondary border-border"}>
                       {vencida ? "Vencida" : "No prazo"}
-                    </span>
+                    </Selo>
                   </div>
                 </div>
               );
