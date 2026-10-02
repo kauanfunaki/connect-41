@@ -6,6 +6,7 @@ import { useDialog } from "@/components/ui/useDialog";
 import { X } from "lucide-react";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
+import { CampoDataHora } from "@/components/ui/CampoDataHora";
 import { AttendeePicker } from "@/components/shared/AttendeePicker";
 import type { MeetingState } from "@/app/(app)/agenda/actions";
 import type { MeetingProvider } from "@/generated/prisma/enums";
@@ -93,12 +94,12 @@ export function EditMeetingDialog({ action, meeting, allUsers, companies, onClos
             <Input id="title" name="title" required defaultValue={meeting.title} placeholder="Ex: Alinhamento semanal" />
           </CampoForm>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3">
             <CampoForm label="Início" htmlFor="startAt" required>
-              <Input id="startAt" name="startAt" type="datetime-local" required defaultValue={meeting.startAtLocal} />
+              <CampoDataHora id="startAt" name="startAt" required defaultValue={meeting.startAtLocal} />
             </CampoForm>
             <CampoForm label="Fim" htmlFor="endAt" required>
-              <Input id="endAt" name="endAt" type="datetime-local" required defaultValue={meeting.endAtLocal} />
+              <CampoDataHora id="endAt" name="endAt" required defaultValue={meeting.endAtLocal} />
             </CampoForm>
           </div>
 

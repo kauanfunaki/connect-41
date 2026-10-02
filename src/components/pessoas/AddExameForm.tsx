@@ -6,6 +6,7 @@ import type { ExameState } from "@/app/(app)/pessoas/[id]/exames/actions";
 import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 
 type Props = {
   action: (prev: ExameState, form: FormData) => Promise<ExameState>;
@@ -24,10 +25,10 @@ export function AddExameForm({ action }: Props) {
           <Input id="clinicName" name="clinicName" type="text" />
         </CampoForm>
         <CampoForm label="Data Agendada" htmlFor="scheduledAt">
-          <Input id="scheduledAt" name="scheduledAt" type="date" />
+          <CampoData id="scheduledAt" name="scheduledAt" />
         </CampoForm>
         <CampoForm label="Prazo do ASO" htmlFor="asoDueDate">
-          <Input id="asoDueDate" name="asoDueDate" type="date" />
+          <CampoData id="asoDueDate" name="asoDueDate" />
         </CampoForm>
       </FieldGrid>
       <FieldGrid columns="sm:grid-cols-[1fr_auto]">

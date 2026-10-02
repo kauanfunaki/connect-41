@@ -11,6 +11,7 @@ import { FormSection } from "@/components/ui/FormSection";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Textarea } from "@/components/ui/Textarea";
@@ -396,7 +397,13 @@ export function PessoaForm({
                 <Input id="rg" name="rg" type="text" value={values.rg} placeholder="00.000.000-0" maxLength={14} />
               </CampoForm>
               <CampoForm label="Data de Nascimento" htmlFor="birthDate">
-                <Input id="birthDate" name="birthDate" type="date" value={values.birthDate} />
+                <CampoData
+                  id="birthDate"
+                  name="birthDate"
+                  value={values.birthDate}
+                  // O form lê os campos pelo `change` que sobe; este não dispara um.
+                  onChange={(v) => setValues((prev) => ({ ...prev, birthDate: v }))}
+                />
               </CampoForm>
               <CampoForm label="E-mail" htmlFor="email" className="lg:col-span-2">
                 <Input id="email" name="email" type="email" value={values.email} placeholder="nome@email.com" />
@@ -512,10 +519,20 @@ export function PessoaForm({
                   </Select>
                 </CampoForm>
                 <CampoForm label="Data de Admissão" htmlFor="admissionDate">
-                  <Input id="admissionDate" name="admissionDate" type="date" value={values.admissionDate} />
+                  <CampoData
+                    id="admissionDate"
+                    name="admissionDate"
+                    value={values.admissionDate}
+                    onChange={(v) => setValues((prev) => ({ ...prev, admissionDate: v }))}
+                  />
                 </CampoForm>
                 <CampoForm label="Data de Demissão" htmlFor="dismissalDate">
-                  <Input id="dismissalDate" name="dismissalDate" type="date" value={values.dismissalDate} />
+                  <CampoData
+                    id="dismissalDate"
+                    name="dismissalDate"
+                    value={values.dismissalDate}
+                    onChange={(v) => setValues((prev) => ({ ...prev, dismissalDate: v }))}
+                  />
                 </CampoForm>
                 <CampoForm label="Jornada" htmlFor="workShift">
                   <Input id="workShift" name="workShift" type="text" placeholder="ex: 08h-18h" value={values.workShift} />

@@ -8,6 +8,7 @@ import { FormSection } from "@/components/ui/FormSection";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { Stepper, type StepStatus } from "@/components/ui/Stepper";
@@ -583,7 +584,13 @@ export function EmpresaForm({
                 </CampoForm>
               )}
               <CampoForm label="Data de Abertura" htmlFor="foundationDate">
-                <Input id="foundationDate" name="foundationDate" type="date" value={values.foundationDate} />
+                <CampoData
+                  id="foundationDate"
+                  name="foundationDate"
+                  value={values.foundationDate}
+                  // O form lê os campos pelo `change` que sobe; este não dispara um.
+                  onChange={(v) => setValues((prev) => ({ ...prev, foundationDate: v }))}
+                />
               </CampoForm>
               {!ehPF && (
                 <>

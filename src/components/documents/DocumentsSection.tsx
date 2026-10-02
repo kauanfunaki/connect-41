@@ -10,7 +10,7 @@ import type { DocumentEntityType, DocumentCategory } from "@/generated/prisma/en
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
-import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 
 import { CATEGORY_LABEL, CATEGORY_OPTIONS } from "@/lib/document-categories";
@@ -297,7 +297,7 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
             </div>
             <div className="w-full sm:w-44">
               <CampoForm label="Vencimento" htmlFor="expiresAt" helper="Opcional.">
-                <Input id="expiresAt" name="expiresAt" type="date" disabled={isUploading} />
+                <CampoData id="expiresAt" name="expiresAt" disabled={isUploading} />
               </CampoForm>
             </div>
             <AlinhadoAoCampo>

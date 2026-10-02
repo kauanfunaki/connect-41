@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
-import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 
@@ -166,11 +166,11 @@ export function LancamentoCard({
               htmlFor="vencimento"
               helper="Presumido em 30 dias — a nota não traz vencimento, ele vive na duplicata."
             >
-              <Input
+              <CampoData
                 id="vencimento"
-                type="date"
+               
                 value={vencimento}
-                onChange={(e) => setVencimento(e.target.value)}
+                onChange={(v) => setVencimento(v)}
               />
             </CampoForm>
             {centros.length > 0 && (

@@ -5,6 +5,7 @@ import { Check, CircleSlash, FileStack, AlertTriangle, Bot, Plug, User } from "l
 import { Button } from "@/components/ui/Button";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Textarea } from "@/components/ui/Textarea";
 import { Badge } from "@/components/ui/Badge";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -399,11 +400,11 @@ function Protocolo({
                 />
               </CampoForm>
               <CampoForm label="Prazo do órgão" htmlFor={`prazo-exigencia-${protocolo.id}`} helper="Opcional.">
-                <Input
+                <CampoData
                   id={`prazo-exigencia-${protocolo.id}`}
-                  type="date"
+                 
                   value={prazo}
-                  onChange={(e) => setPrazo(e.target.value)}
+                  onChange={(v) => setPrazo(v)}
                   className="sm:w-44"
                 />
               </CampoForm>

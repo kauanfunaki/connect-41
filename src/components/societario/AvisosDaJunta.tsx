@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Card } from "@/components/ui/Card";
-import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Textarea } from "@/components/ui/Textarea";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { formatInstantDate } from "@/lib/format";
@@ -130,11 +130,11 @@ function CartaoDoAviso({ aviso, acoes, mostrarProcesso }: { aviso: AvisoNaTela; 
                 />
               </CampoForm>
               <CampoForm label="Prazo do órgão" htmlFor={`prazo-${aviso.id}`} helper="Opcional.">
-                <Input
+                <CampoData
                   id={`prazo-${aviso.id}`}
-                  type="date"
+                 
                   value={prazo}
-                  onChange={(e) => setPrazo(e.target.value)}
+                  onChange={(v) => setPrazo(v)}
                   className="sm:w-44"
                 />
               </CampoForm>

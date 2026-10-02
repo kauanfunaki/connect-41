@@ -8,7 +8,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { Pagination } from "@/components/shared/Pagination";
 import { Badge } from "@/components/ui/Badge";
-import { Input } from "@/components/ui/Input";
+import { CampoPeriodo } from "@/components/ui/CampoPeriodo";
 import { formatInstantDateTime } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
@@ -181,9 +181,7 @@ export default async function AuditoriaPage({
           {userId && <input type="hidden" name="userId" value={userId} />}
           {action && <input type="hidden" name="action" value={action} />}
           {entityType && <input type="hidden" name="entityType" value={entityType} />}
-          <Input compact type="date" name="from" defaultValue={from ?? ""} className="w-40" aria-label="De" />
-          <span className="text-[12px] text-fg-muted">a</span>
-          <Input compact type="date" name="to" defaultValue={to ?? ""} className="w-40" aria-label="Até" />
+          <CampoPeriodo compact nomeDe="from" nomeAte="to" defaultDe={from ?? ""} defaultAte={to ?? ""} className="w-72 max-w-full" />
           <Button type="submit" variant="secondary" size="sm">
             Filtrar período
           </Button>

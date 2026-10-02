@@ -7,6 +7,7 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { FormSection } from "@/components/ui/FormSection";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Textarea } from "@/components/ui/Textarea";
 
 type CompetencyOption = { id: string; name: string };
@@ -79,7 +80,7 @@ export function EvaluationForm({ action, competencies, cancelHref, defaultValues
           </CampoForm>
           <FieldGrid columns="sm:grid-cols-[180px]">
             <CampoForm label="Prazo de Melhoria" htmlFor="improvementDeadline">
-              <Input id="improvementDeadline" name="improvementDeadline" type="date" defaultValue={defaultValues?.improvementDeadline ?? ""} />
+              <CampoData id="improvementDeadline" name="improvementDeadline" defaultValue={defaultValues?.improvementDeadline ?? ""} />
             </CampoForm>
           </FieldGrid>
         </FormSection>

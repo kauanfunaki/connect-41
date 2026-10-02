@@ -5,6 +5,8 @@ import { Check } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { CampoMes } from "@/components/ui/CampoMes";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
@@ -183,16 +185,16 @@ export function FormLancamentoManual({
             required
             helper="O mês a que a conta pertence — é o que a DRE econômica soma."
           >
-            <Input id="lancamento-competencia" type="month" name="competencia" defaultValue={competenciaPadrao} required />
+            <CampoMes id="lancamento-competencia" name="competencia" defaultValue={competenciaPadrao} required />
           </CampoForm>
           <CampoForm label="Vencimento" htmlFor="lancamento-vencimento" required>
-            <Input id="lancamento-vencimento" type="date" name="vencimento" required />
+            <CampoData id="lancamento-vencimento" name="vencimento" required />
           </CampoForm>
           <CampoForm label="Valor" htmlFor="lancamento-valor" required>
             <Input id="lancamento-valor" name="valor" prefix="R$" inputMode="decimal" placeholder="1.234,56" required />
           </CampoForm>
           <CampoForm label={kind === "PAGAR" ? "Já pago em" : "Já recebido em"} htmlFor="lancamento-pago-em" helper="Deixe vazio se ainda está em aberto.">
-            <Input id="lancamento-pago-em" type="date" name="pagoEm" max={hojeISO} />
+            <CampoData id="lancamento-pago-em" name="pagoEm" max={hojeISO} />
           </CampoForm>
 
           <CampoForm label="Descrição" htmlFor="lancamento-descricao" className="sm:col-span-2 lg:col-span-4">

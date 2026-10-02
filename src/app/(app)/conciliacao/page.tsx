@@ -12,7 +12,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Input } from "@/components/ui/Input";
+import { CampoPeriodo } from "@/components/ui/CampoPeriodo";
 import { Button } from "@/components/ui/Button";
 import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
@@ -492,9 +492,7 @@ async function ExtratoDaConta({
           <input type="hidden" name="empresa" value={companyId} />
           <input type="hidden" name="conta" value={conta.id} />
           {situacao.chave !== "pendentes" && <input type="hidden" name="situacao" value={situacao.chave} />}
-          <Input compact type="date" name="de" defaultValue={de ?? ""} className="w-40" aria-label="De" />
-          <span className="text-[12px] text-fg-muted">a</span>
-          <Input compact type="date" name="ate" defaultValue={ate ?? ""} className="w-40" aria-label="Até" />
+          <CampoPeriodo compact nomeDe="de" nomeAte="ate" defaultDe={de ?? ""} defaultAte={ate ?? ""} className="w-72 max-w-full" />
           <Button type="submit" variant="secondary" size="sm">
             Filtrar período
           </Button>

@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
-import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { BackButton } from "@/components/shared/BackButton";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
@@ -155,10 +155,10 @@ export default async function CtePage({
               </Select>
             </CampoForm>
             <CampoForm label="Rota de" htmlFor="de">
-              <Input id="de" name="de" type="date" defaultValue={de} />
+              <CampoData id="de" name="de" defaultValue={de} />
             </CampoForm>
             <CampoForm label="Rota até" htmlFor="ate">
-              <Input id="ate" name="ate" type="date" defaultValue={ate} />
+              <CampoData id="ate" name="ate" defaultValue={ate} />
             </CampoForm>
             <AlinhadoAoCampo>
               <Button type="submit">Consultar</Button>
