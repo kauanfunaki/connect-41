@@ -138,10 +138,14 @@ function lerEvento(payload: unknown): EventoRecebido {
       // Documento com legenda chega embrulhado em `documentWithCaptionMessage`.
       const doc =
         obj(mensagem?.documentMessage) ?? obj(obj(obj(mensagem?.documentWithCaptionMessage)?.message)?.documentMessage);
+      // A legenda entra na conversa: "[imagem] meu certificado".
+      const legenda =
+        str(obj(mensagem?.imageMessage)?.caption) ?? str(obj(mensagem?.videoMessage)?.caption) ?? (doc ? str(doc.caption) : null);
       ignoradas.push({
         waMessageId,
         tipo: tipo ?? "desconhecido",
         de,
+        ...(legenda ? { legenda } : {}),
         ...(doc
           ? {
               documento: {

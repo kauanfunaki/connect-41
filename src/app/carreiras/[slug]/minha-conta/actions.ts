@@ -14,7 +14,7 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { hit, clientIp } from "@/lib/rateLimit";
-import { notifySector, notifyUser } from "@/lib/notifications";
+import { avisarORecrutamento, avisarSobreAVaga } from "@/lib/recrutamento/avisos";
 import { sendLinkDoCandidatoEmail } from "@/lib/email/sendMail";
 import { publicUrl } from "@/lib/jobPostingSchema";
 import { MAX_BYTES_DO_CURRICULO, MAX_MB_DO_CURRICULO, ehPdf } from "@/lib/curriculo";
@@ -111,10 +111,9 @@ export async function sair(slug: string): Promise<void> {
 }
 
 /** Avisa quem cuida da vaga: o responsável, senão o setor. */
-async function avisarRecrutador(tenantId: string, vaga: { responsibleUserId: string | null; sectorCode: string }, personId: string, message: string) {
-  const input = { tenantId, type: "CANDIDATE_UPDATE", message: message.slice(0, 255), entityType: "PERSON" as const, entityId: personId };
-  if (vaga.responsibleUserId) await notifyUser(vaga.responsibleUserId, input);
-  else await notifySector(vaga.sectorCode, input);
+// Sem responsável na vaga, o Recrutamento — não o setor que contrata.
+async function avisarRecrutador(tenantId: string, vaga: { responsibleUserId: string | null }, personId: string, message: string) {
+  await avisarSobreAVaga(vaga, { tenantId, type: "CANDIDATE_UPDATE", message: message.slice(0, 255), entityType: "PERSON", entityId: personId });
 }
 
 export async function desistir(slug: string, candidaturaId: string): Promise<RespostaDaConta> {
@@ -202,14 +201,14 @@ export async function pedirExclusao(slug: string): Promise<RespostaDaConta> {
   const ultima = await prisma.candidatura.findFirst({
     where: { tenantId: s.tenant.id, personId: { in: s.personIds } },
     orderBy: { createdAt: "desc" },
-    select: { personId: true, vaga: { select: { responsibleUserId: true, sectorCode: true } } },
+    select: { personId: true },
   });
   const personId = ultima?.personId ?? s.personIds[0]!;
   const nome = s.pessoas.find((p) => p.id === personId)?.name ?? "Um candidato";
-  const setor = ultima?.vaga.sectorCode ?? "recrutamento";
   // Setor inteiro, e não só o responsável da vaga: é pedido legal, com prazo, e
-  // não pode depender de uma pessoa estar olhando.
-  await notifySector(setor, {
+  // não pode depender de uma pessoa estar olhando. O setor é o que opera o
+  // recrutamento, não o que contrata (ver src/lib/recrutamento/avisos.ts).
+  await avisarORecrutamento({
     tenantId: s.tenant.id,
     type: "CANDIDATE_DATA_DELETION",
     message: `${nome} pediu a exclusão dos dados pessoais (LGPD) pelo portal de vagas.`.slice(0, 255),
