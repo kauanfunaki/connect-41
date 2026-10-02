@@ -1,8 +1,9 @@
 "use client";
 
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Popover, ItemDoMenu } from "@/components/ui/Popover";
+import { ItemDoMenu } from "@/components/ui/Popover";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { useConfirm } from "@/components/ui/useConfirm";
 
 type Props = {
@@ -37,24 +38,7 @@ export function AcoesDoCadastro({ editarHref, nome, excluir, itensExtras }: Prop
         <Pencil size={11} /> Editar
       </Button>
       {temMenu && (
-        <Popover
-          align="right"
-          width={190}
-          aria-label="Mais ações"
-          trigger={({ open, toggle }) => (
-            <button
-              type="button"
-              onClick={toggle}
-              aria-label="Mais ações"
-              aria-expanded={open}
-              className={`h-7 w-7 rounded-md border inline-flex items-center justify-center transition-colors ${
-                open ? "border-brand/40 bg-brand-subtle text-fg" : "border-border-strong text-fg-muted hover:text-fg hover:bg-surface-hover"
-              }`}
-            >
-              <MoreHorizontal size={14} />
-            </button>
-          )}
-        >
+        <MenuDeMaisAcoes align="right" width={190}>
           {({ close }) => (
             <>
               {itensExtras?.(close)}
@@ -75,7 +59,7 @@ export function AcoesDoCadastro({ editarHref, nome, excluir, itensExtras }: Prop
               )}
             </>
           )}
-        </Popover>
+        </MenuDeMaisAcoes>
       )}
       {dialog}
     </span>
