@@ -38,7 +38,9 @@ export function FiltroDePeriodo({ acao, empresas, empresaId, permitirTodas, mes,
           key={empresaId ?? ""}
           name="empresa"
           compact
-          className="w-72 max-w-full"
+          // No celular, a empresa e o "Aplicar" na mesma linha (02/10/2026):
+          // com largura fixa, o botão caía sozinho na linha de baixo.
+          className="min-w-0 flex-1 sm:flex-none sm:w-72 max-w-full"
           aria-label="Empresa"
           options={opcoesDeEmpresa(empresas)}
           avatar
@@ -159,17 +161,21 @@ export function FaixaDeTotais({ itens, className = "mb-5" }: { itens: ItemDeTota
         const conteudo = (
           <>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[length:var(--fs-helper)] font-medium text-fg-muted truncate c41-cortavel">{i.rotulo}</span>
+              {/* No celular (02/10/2026), dois cartões por linha deixam ~130px
+                  de texto: o rótulo quebra em duas linhas em vez de cortar, o
+                  ícone sai e o valor diminui um pouco — era "Aguardan…" e
+                  "R$ 33.82…" no portal. */}
+              <span className="text-[length:var(--fs-helper)] leading-snug font-medium text-fg-muted line-clamp-2 sm:line-clamp-1 c41-cortavel">{i.rotulo}</span>
               {i.icone && (
                 <span
-                  className={`inline-flex w-8 h-8 rounded-lg items-center justify-center flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${seloDoTom(i.tom)}`}
+                  className={`hidden sm:inline-flex w-8 h-8 rounded-lg items-center justify-center flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${seloDoTom(i.tom)}`}
                 >
                   {i.icone}
                 </span>
               )}
             </div>
             <span
-              className={`block font-display text-[length:var(--fs-title)] 2xl:text-[length:var(--fs-metric)] font-semibold tabular-nums leading-tight tracking-[-0.01em] truncate c41-cortavel ${i.tom ?? "text-fg"}`}
+              className={`block font-display text-[clamp(1.0625rem,4.6vw,1.25rem)] sm:text-[length:var(--fs-title)] 2xl:text-[length:var(--fs-metric)] font-semibold tabular-nums leading-tight tracking-[-0.01em] truncate c41-cortavel ${i.tom ?? "text-fg"}`}
             >
               {i.valor}
             </span>
