@@ -15,7 +15,7 @@ import { Stepper, type StepStatus } from "@/components/ui/Stepper";
 import { ReviewBlock } from "@/components/ui/ReviewBlock";
 import { formatCnpj, formatCpf, formatPhone, formatCep } from "@/lib/format";
 import { NOVO_CLIENTE } from "@/lib/clientGroups";
-import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSelect";
 
 const STATUS_OPTIONS: { value: CompanyStatus; label: string }[] = [
   { value: "ACTIVE",   label: "Ativo" },
@@ -91,7 +91,7 @@ type Props = {
   defaultValues?: EmpresaDefaultValues;
   customFields?: CustomFieldInput[];
   clientGroupOptions?: { value: string; label: string }[];
-  matrizOptions?: { value: string; label: string }[];
+  matrizOptions?: Opcao[];
 };
 
 export function EmpresaForm({
@@ -220,7 +220,8 @@ export function EmpresaForm({
 
   // Na revisão o cliente aparece pelo nome, não pelo uuid — inclusive quando é
   // um que ainda vai ser criado no submit.
-  const matrizLabel = matrizOptions.find((m) => m.value === values.parentCompanyId)?.label;
+  const matriz = matrizOptions.find((m) => m.value === values.parentCompanyId);
+  const matrizLabel = matriz && (matriz.descricao ? `${matriz.label} — ${matriz.descricao}` : matriz.label);
   const clientLabel =
     values.clientGroupId === NOVO_CLIENTE
       ? values.clientGroupNewName
@@ -472,6 +473,7 @@ export function EmpresaForm({
                   id="parentCompanyId"
                   name="parentCompanyId"
                   options={matrizOptions}
+                  avatar
                   defaultValue={values.parentCompanyId}
                   vazioLabel="Nenhuma — é matriz"
                   placeholder="Buscar por nome ou CNPJ…"

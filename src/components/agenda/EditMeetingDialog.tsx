@@ -11,9 +11,10 @@ import { AttendeePicker } from "@/components/shared/AttendeePicker";
 import type { MeetingState } from "@/app/(app)/agenda/actions";
 import type { MeetingProvider } from "@/generated/prisma/enums";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 
 type UserOption = { id: string; name: string };
-type CompanyOption = { id: string; name: string };
+type CompanyOption = EmpresaParaEscolher & { name: string };
 
 type MeetingToEdit = {
   id: string;
@@ -113,7 +114,9 @@ export function EditMeetingDialog({ action, meeting, allUsers, companies, onClos
                 id="companyId"
                 name="companyId"
                 defaultValue={meeting.companyId ?? ""}
-                options={companies.map((c) => ({ value: c.id, label: c.name }))}
+                options={opcoesDeEmpresa(companies)}
+                avatar
+                lembrarRecentes="empresas"
                 vazioLabel="Nenhuma"
                 placeholder="Buscar empresa…"
               />

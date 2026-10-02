@@ -2,9 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { SearchableSelect } from "./SearchableSelect";
+import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 
 type Props = {
-  empresas: { id: string; nome: string }[];
+  empresas: (EmpresaParaEscolher & { nome: string })[];
   empresaId: string | null;
   /** Rota da tela; a escolha vira `?empresa=<id>` nela. */
   acao: string;
@@ -33,7 +34,9 @@ export function SeletorDeEmpresaQueNavega({ empresas, empresaId, acao }: Props) 
       compact
       className="w-80 max-w-full"
       aria-label="Empresa"
-      options={empresas.map((e) => ({ value: e.id, label: e.nome }))}
+      options={opcoesDeEmpresa(empresas)}
+      avatar
+      lembrarRecentes="empresas"
       defaultValue={empresaId ?? ""}
       placeholder="Buscar empresa…"
       onChange={(v) => {

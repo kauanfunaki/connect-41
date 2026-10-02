@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 import { CampoDeAnexos } from "@/components/pendencias/CampoDeAnexos";
 import type { ResultadoDaAbertura } from "@/app/(portal)/portal/(area)/solicitacoes/actions";
 
@@ -24,7 +25,7 @@ export function NovaSolicitacaoForm({
   assuntos,
   acao,
 }: {
-  empresas: { id: string; nome: string }[];
+  empresas: (EmpresaParaEscolher & { nome: string })[];
   assuntos: Assunto[];
   acao: (formData: FormData) => Promise<ResultadoDaAbertura>;
 }) {
@@ -58,7 +59,9 @@ export function NovaSolicitacaoForm({
           <SearchableSelect
             id="solicitacao-empresa"
             name="companyId"
-            options={empresas.map((e) => ({ value: e.id, label: e.nome }))}
+            options={opcoesDeEmpresa(empresas)}
+            avatar
+            lembrarRecentes="empresas"
             placeholder="Buscar empresa…"
             aria-label="Empresa"
           />

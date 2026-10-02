@@ -12,9 +12,10 @@ import { Select } from "@/components/ui/Select";
 import { AttendeePicker } from "@/components/shared/AttendeePicker";
 import type { MeetingState } from "@/app/(app)/agenda/actions";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 
 type UserOption = { id: string; name: string };
-type CompanyOption = { id: string; name: string };
+type CompanyOption = EmpresaParaEscolher & { name: string };
 
 type Props = {
   action: (prev: MeetingState, form: FormData) => Promise<MeetingState>;
@@ -112,7 +113,9 @@ export function CreateMeetingDialog({ action, initialStart, initialEnd, hasGoogl
                 <SearchableSelect
                   id="companyId"
                   name="companyId"
-                  options={companies.map((c) => ({ value: c.id, label: c.name }))}
+                  options={opcoesDeEmpresa(companies)}
+                  avatar
+                  lembrarRecentes="empresas"
                   vazioLabel="Nenhuma"
                   placeholder="Buscar empresa…"
                 />

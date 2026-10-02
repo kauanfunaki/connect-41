@@ -85,7 +85,7 @@ export default async function AgendaPage({
       ? prisma.company.findMany({
           where: { tenantId: ctx.tenantId, status: "ACTIVE" },
           orderBy: { name: "asc" },
-          select: { id: true, name: true },
+          select: { id: true, name: true, logoUrl: true, cnpj: true, parentCompanyId: true },
         })
       : Promise.resolve([]),
     prazosDoPeriodo(ctx, days[0], days[days.length - 1]),
