@@ -115,7 +115,7 @@ export function RevisarContrato({
       }
     });
 
-  const TH = "py-2 pr-2 text-left font-medium text-[12px] text-fg-muted whitespace-nowrap";
+  const TH = "py-2 pr-2 text-left font-semibold text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted whitespace-nowrap";
   // Tudo centralizado na altura da linha: as caixas de marcar tinham `pt-3`
   // chutado para acompanhar o Input, e ficavam 4px acima do centro dele.
   const TD = "py-2 pr-2 align-middle";
