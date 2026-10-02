@@ -301,7 +301,7 @@ export default async function DreEconomicaPage({
       {quadro && (
         <Card className="p-0 overflow-hidden mt-5">
           <div className="px-4 pt-3 pb-2">
-            <h2 className="text-[14px] font-semibold text-fg">Resultado por centro de custo — {periodo}</h2>
+            <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Resultado por centro de custo — {periodo}</h2>
             <p className="text-[11px] text-fg-muted mt-0.5">
               Um centro por lançamento, sem rateio: as linhas somam a DRE da empresa sem filtro. Despesas somam todos os grupos de
               pagamento; o resultado segue a estrutura da DRE (impostos sobre a receita ficam fora dele).

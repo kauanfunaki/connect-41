@@ -84,7 +84,7 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
 
         {abertas.length > 0 && (
           <section className="flex flex-col gap-2" aria-labelledby="exigencias-abertas">
-            <h2 id="exigencias-abertas" className="text-[14px] font-semibold text-fg">
+            <h2 id="exigencias-abertas" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
               O que o órgão pediu
             </h2>
             {abertas.map((e) => (
@@ -102,7 +102,7 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
 
         {p.etapas.length > 0 && (
           <section className="flex flex-col gap-2" aria-labelledby="etapas">
-            <h2 id="etapas" className="text-[14px] font-semibold text-fg">
+            <h2 id="etapas" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
               Etapas
             </h2>
             <Card className="p-2">
@@ -127,7 +127,7 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
 
         {p.taxas.length > 0 && (
           <section className="flex flex-col gap-2" aria-labelledby="taxas">
-            <h2 id="taxas" className="text-[14px] font-semibold text-fg">
+            <h2 id="taxas" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
               Taxas
             </h2>
             <Card className="p-2">
@@ -159,7 +159,7 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
 
         {resolvidas.length > 0 && (
           <section className="flex flex-col gap-2" aria-labelledby="exigencias-resolvidas">
-            <h2 id="exigencias-resolvidas" className="text-[14px] font-semibold text-fg">
+            <h2 id="exigencias-resolvidas" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
               Exigências resolvidas
             </h2>
             <Card className="p-2">
@@ -180,7 +180,7 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
         {conversa && (
           <>
             <section className="flex flex-col gap-2" aria-labelledby="documentos">
-              <h2 id="documentos" className="text-[14px] font-semibold text-fg">
+              <h2 id="documentos" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
                 Documentos
               </h2>
               <Card className="p-4">
@@ -196,7 +196,7 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
             </section>
 
             <section className="flex flex-col gap-2" aria-labelledby="conversa">
-              <h2 id="conversa" className="text-[14px] font-semibold text-fg">
+              <h2 id="conversa" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
                 Conversa com a equipe
               </h2>
               <Card className="p-4 flex flex-col gap-4">

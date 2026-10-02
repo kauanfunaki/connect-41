@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ListFilter, Search, X } from "lucide-react";
 import { Popover } from "@/components/ui/Popover";
@@ -65,7 +65,17 @@ function rotuloDoValor(v: string, tipo: CampoDaColuna["tipo"]): string {
  * lugar do `<tr>`. As células continuam componente de servidor — só a linha é
  * de cliente, e só para sumir quando não passa.
  */
-export function TabelaFiltravel({ linhas, children }: { linhas: LinhaDoFiltro[]; children: React.ReactNode }) {
+export function TabelaFiltravel({
+  linhas,
+  children,
+  onLinhasVisiveis,
+}: {
+  linhas: LinhaDoFiltro[];
+  children: React.ReactNode;
+  /** Os ids que o funil deixa à vista, a cada mudança — para a seleção em
+   *  massa, que mora acima da tabela, não levar linha escondida (02/10/2026). */
+  onLinhasVisiveis?: (ids: Set<string>) => void;
+}) {
   const [filtros, setFiltros] = useState<Filtros>({});
 
   const ocultas = useMemo(() => {
@@ -74,6 +84,17 @@ export function TabelaFiltravel({ linhas, children }: { linhas: LinhaDoFiltro[];
     for (const l of linhas) if (!passa(l, filtros)) s.add(l.id);
     return s;
   }, [linhas, filtros]);
+
+  // Por uma chave de texto, e não pelo array: quem passa `linhas` costuma
+  // recriá-lo a cada renderização, e avisar a cada uma faria um laço com o
+  // estado do pai. Só avisa quando o conjunto visível muda de fato.
+  const chaveDosVisiveis = linhas
+    .filter((l) => !ocultas.has(l.id))
+    .map((l) => l.id)
+    .join("|");
+  useEffect(() => {
+    onLinhasVisiveis?.(new Set(chaveDosVisiveis ? chaveDosVisiveis.split("|") : []));
+  }, [chaveDosVisiveis, onLinhasVisiveis]);
 
   const contexto = useMemo<Contexto>(
     () => ({
@@ -435,5 +456,58 @@ export function FiltroDaColunaNaUrl({
         )}
       </Popover>
     </span>
+  );
+}
+
+/**
+ * A faixa "Filtro nas colunas" do funil que filtra pela URL — o par da que a
+ * `TabelaFiltravel` mostra. Vai acima da tabela **e** do estado vazio: quando o
+ * funil esvazia a lista, a tabela some e o funil some com ela, e era só daqui
+ * (antes, de um "Limpar" posto à mão no estado vazio de cada tela) que dava
+ * para desfazer o filtro (02/10/2026).
+ */
+export function FiltrosDasColunasNaUrl({ colunas }: { colunas: { chave: string; rotulo: string }[] }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const ativas = colunas
+    .map((c) => ({ ...c, n: params.getAll(c.chave).length }))
+    .filter((c) => c.n > 0);
+  if (ativas.length === 0) return null;
+
+  function tirar(chaves: string[]) {
+    const q = new URLSearchParams(params.toString());
+    for (const k of chaves) q.delete(k);
+    q.delete("page");
+    q.delete("pagina");
+    const s = q.toString();
+    router.push(s ? `${pathname}?${s}` : pathname);
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-2 text-[12px] text-fg-secondary">
+      <ListFilter size={13} className="text-brand" />
+      <span>Filtro nas colunas:</span>
+      {ativas.map((c) => (
+        <button
+          key={c.chave}
+          type="button"
+          onClick={() => tirar([c.chave])}
+          aria-label={`Tirar o filtro de ${c.rotulo.toLowerCase()}`}
+          className="inline-flex items-center gap-1 h-6 pl-2 pr-1.5 rounded-full border border-brand/30 bg-brand-subtle text-[11.5px] font-medium text-fg hover:border-brand/60 transition-colors"
+        >
+          {c.rotulo}
+          {c.n > 1 && <span className="tabular-nums text-fg-muted">({c.n})</span>}
+          <X size={11} className="text-fg-muted" />
+        </button>
+      ))}
+      <button
+        type="button"
+        onClick={() => tirar(ativas.map((c) => c.chave))}
+        className="inline-flex items-center gap-1 h-6 px-2 rounded-md border border-border-strong text-[11.5px] font-medium text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors"
+      >
+        <X size={11} /> Limpar filtros das colunas
+      </button>
+    </div>
   );
 }

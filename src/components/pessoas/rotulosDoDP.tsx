@@ -1,3 +1,4 @@
+import { Selo } from "@/components/ui/Selo";
 import type {
   AbsenceStatus,
   AbsenceType,
@@ -162,9 +163,5 @@ export const COR_DO_PARTICIPANTE: Record<TrainingParticipantStatus, string> = {
 
 /** O selo de situação nas tabelas de DP — a pílula com a cor de um dos mapas acima. */
 export function SeloDoDP({ cor, children }: { cor: string; children: React.ReactNode }) {
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap ${cor}`}>
-      {children}
-    </span>
-  );
+  return <Selo cor={cor}>{children}</Selo>;
 }

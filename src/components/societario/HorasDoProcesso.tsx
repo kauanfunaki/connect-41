@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { IconButton } from "@/components/ui/IconButton";
 import { formatarDecorrido, minutosApontados, segundosDesde } from "@/lib/datetime";
 import type { HorasState } from "@/app/(app)/processos/horas-actions";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 export type LancamentoDeHoras = { id: string; quem: string; minutos: number; dia: string; nota: string | null; meu: boolean };
 
@@ -68,7 +69,7 @@ export function HorasDoProcesso({
           eram h-9, maiores que tudo o que o cartão tem embaixo. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-[14px] font-semibold text-fg">Horas trabalhadas</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Horas trabalhadas</h2>
           <p className="text-[12px] text-fg-muted">
             {total > 0 ? `${duracao(total)} neste processo` : "Nenhuma hora lançada ainda."} Entram nas horas de operação da Gestão.
           </p>
@@ -120,14 +121,13 @@ export function HorasDoProcesso({
             </CampoForm>
           </FieldGrid>
           {estado && "error" in estado && <p className="text-[12px] text-danger">{estado.error}</p>}
-          <div className="flex items-center justify-end gap-3">
-            <Button type="button" variant="secondary" onClick={() => setAbrirLancamento(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" variant="primary" disabled={lancando}>
-              {lancando ? "Lançando…" : "Lançar"}
-            </Button>
-          </div>
+          <FormFooter
+            pending={lancando}
+            pendingLabel="Lançando…"
+            submitLabel="Lançar"
+            onCancel={() => setAbrirLancamento(false)}
+            semDivisoria
+          />
         </form>
       )}
 

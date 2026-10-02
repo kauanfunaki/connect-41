@@ -376,7 +376,7 @@ async function Alcadas({
       <FiltroDePeriodo acao="/aprovacoes" empresas={empresas} empresaId={empresaId} permitirTodas extras={{ aba: "alcadas" }} />
 
       <Card className="p-4 mb-4">
-        <h2 className="text-[14px] font-semibold mb-1">Nova alçada</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold mb-1">Nova alçada</h2>
         <p className="text-[12px] text-fg-muted mb-3">
           O usuário do portal aprova contas a pagar desta empresa até o teto. A coordenação aprova sem teto. Com ao menos uma
           alçada ativa, toda conta a pagar lançada em aberto na empresa nasce aguardando aprovação.

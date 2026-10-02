@@ -72,7 +72,7 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <Icone size={16} className="text-fg-muted shrink-0" />
-            <h3 className="text-[15px] font-semibold text-fg">{i.label}</h3>
+            <h3 className="text-[length:var(--fs-card-title)] font-semibold text-fg">{i.label}</h3>
             {i.conectada ? (
               <Badge variant={SAUDE_VARIANTE[i.saude]}>{SAUDE_LABEL[i.saude]}</Badge>
             ) : (
@@ -179,19 +179,15 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
             })}
           </FieldGrid>
 
-          <div className="space-y-1">
-            <Checkbox
-              id={`${i.code}-enabled`}
-              name="enabled"
-              defaultChecked={i.enabled}
-              label="Conexão ligada"
-            />
-            <p className="text-[length:var(--fs-helper)] text-fg-muted">
-              {/* Integração nunca nasce ligada: ligar significa começar a falar
-                  com sistema de terceiro usando credencial de alguém. */}
-              Desligada, nada é enviado nem buscado. Ligar é ato deliberado.
-            </p>
-          </div>
+          <Checkbox id={`${i.code}-enabled`} name="enabled" defaultChecked={i.enabled} label="Conexão ligada"
+            helper={
+              <>
+                {/* Integração nunca nasce ligada: ligar significa começar a falar
+                com sistema de terceiro usando credencial de alguém. */}
+                Desligada, nada é enviado nem buscado. Ligar é ato deliberado.
+              </>
+            }
+          />
 
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-border-soft">
             <Button type="submit" disabled={isPending}>

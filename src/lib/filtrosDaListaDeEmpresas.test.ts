@@ -1,17 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { lerLista, opcoesDeRegime, ondeDoRegime, opcoesDeLocal, ondeDoLocal, valorDoLocal } from "./filtrosDaListaDeEmpresas";
+import { opcoesDeRegime, ondeDoRegime, opcoesDeLocal, ondeDoLocal, valorDoLocal } from "./filtrosDaListaDeEmpresas";
 
 const SIMPLES_A = "Simples Nacional - Comércio ou Serviço - Com Pró-labore - Com Funcionários";
 const SIMPLES_B = "Simples Nacional - Serviço - Sem Pró-labore";
 const PRESUMIDO_SM = "Lucro Presumido - Sem Movimento";
-
-describe("lerLista", () => {
-  it("aceita ausente, um valor e valor repetido", () => {
-    expect(lerLista(undefined)).toEqual([]);
-    expect(lerLista("a")).toEqual(["a"]);
-    expect(lerLista(["a", "b"])).toEqual(["a", "b"]);
-  });
-});
 
 describe("regime", () => {
   it("agrupa as variações brutas pelo resumo e soma as contagens", () => {

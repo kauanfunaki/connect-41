@@ -104,7 +104,7 @@ function CropperDialog({
         aria-labelledby={titleId}
         className="w-full max-w-sm rounded-lg border border-border bg-surface p-5 shadow-lg"
       >
-        <h2 id={titleId} className="text-[15px] font-semibold text-fg mb-1.5">Ajustar imagem</h2>
+        <h2 id={titleId} className="text-[length:var(--fs-dialog-title)] font-semibold text-fg mb-1.5">Ajustar imagem</h2>
         <p className="text-[13px] text-fg-secondary mb-3">Arraste para posicionar e use o zoom para enquadrar.</p>
 
         <div className="relative w-full h-[280px] bg-canvas rounded-md overflow-hidden">

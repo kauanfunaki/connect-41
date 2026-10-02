@@ -59,7 +59,7 @@ export function Simulador({
             `FieldGrid` e as caixas de marcar em grade, com título — eram uma
             fileira corrida, com "Empresa sem movimento" no meio dos setores. */}
         <Card className="p-4">
-          <h2 className="text-[14px] font-semibold text-fg mb-4">Cliente</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Cliente</h2>
           <FieldGrid>
             <CampoForm label="Nome" htmlFor="simulacao-cliente">
               <Input
@@ -102,7 +102,7 @@ export function Simulador({
             letras ("Alvarás e licenças que a empresa mantém"); em três colunas
             quebravam em duas linhas e desciam o campo em relação ao vizinho. */}
         <Card className="p-4">
-          <h2 className="text-[14px] font-semibold text-fg mb-4">Volumes</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Volumes</h2>
           <FieldGrid>
             {volumes.map((c) => (
               <CampoForm key={c.chave} label={c.rotulo} htmlFor={`simulacao-volume-${c.chave}`} helper={c.ajuda}>
@@ -121,7 +121,7 @@ export function Simulador({
         </Card>
 
         <Card className="p-4">
-          <h2 className="text-[14px] font-semibold text-fg mb-4">Operação</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Operação</h2>
           <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
             {marcadores.map((c) => (
               <div key={c.chave} className="min-w-0">
@@ -137,7 +137,7 @@ export function Simulador({
         </Card>
 
         <Card className="p-4">
-          <h2 className="text-[14px] font-semibold text-fg mb-1">Situações que dão mais trabalho</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">Situações que dão mais trabalho</h2>
           <p className="text-[12px] text-fg-muted mb-4">O percentual é o que cada setor disse que a situação acrescenta ao tempo dele.</p>
           <div className="grid gap-5 md:grid-cols-2">
             {catalogo.setores.map((s) => {

@@ -9,6 +9,7 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { salvarRespostasDoCandidato } from "@/app/(app)/vagas/[id]/candidaturas/[candidaturaId]/respostas-actions";
 import { CAMPOS_DE_RESPOSTA, ROTULO_DA_RESPOSTA, type CampoDeResposta, type FonteDasRespostas, type Respostas } from "@/lib/recrutamento/respostas";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 const REAIS = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -50,7 +51,7 @@ export function RespostasDoCandidato({
     <Card className="p-5 mb-4">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
         <div>
-          <h2 className="text-[14px] font-semibold text-fg">Respostas do candidato</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Respostas do candidato</h2>
           <p className="text-[12px] text-fg-muted mt-0.5">
             Respondidas na inscrição pelo portal, coletadas pelo atendente do WhatsApp ou preenchidas aqui. Não entram na nota da triagem.
           </p>
@@ -91,15 +92,11 @@ export function RespostasDoCandidato({
             </CampoForm>
           </FieldGrid>
           {erro && <p className="text-[13px] text-danger">{erro}</p>}
-          <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-            <p className="mr-auto text-[12px] text-fg-muted">O que você salvar aqui o atendente não sobrescreve.</p>
-            <Button variant="secondary" onClick={() => setEditando(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" loading={pendente} disabled={pendente}>
-              Salvar
-            </Button>
-          </div>
+          <FormFooter
+            pending={pendente}
+            onCancel={() => setEditando(false)}
+            nota="O que você salvar aqui o atendente não sobrescreve."
+          />
         </form>
       ) : (
         <dl className="grid gap-4 sm:grid-cols-3">

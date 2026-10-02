@@ -18,7 +18,7 @@ export function EmptyState({ title, description, action, icon }: Props) {
           <span className="relative text-brand [&>svg]:w-6 [&>svg]:h-6">{icon}</span>
         </span>
       )}
-      <p className="font-display text-[length:var(--fs-card-title)] font-semibold text-fg tracking-[-0.01em]">{title}</p>
+      <p className="font-display text-[length:var(--fs-6)] font-semibold text-fg tracking-[-0.01em]">{title}</p>
       {description && (
         <p className="text-[length:var(--fs-helper)] text-fg-muted max-w-[400px] mt-1.5 leading-relaxed">{description}</p>
       )}

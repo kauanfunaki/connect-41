@@ -48,7 +48,7 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
   return (
     <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mt-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-[14px] font-semibold text-fg flex items-center gap-1.5">
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg flex items-center gap-1.5">
           <Video size={14} className="text-fg-muted" />
           Reuniões
         </h2>
@@ -133,7 +133,7 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
                   </p>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
-                  <CopyLinkButton url={m.meetingUrl} />
+                  <CopyLinkButton url={m.meetingUrl} variant="botao" />
                   {/* Entrar é a ação da linha: botão, e não link azul (30/09). */}
                   <Button href={m.meetingUrl} target="_blank" rel="noopener noreferrer" variant="secondary" size="xs">
                     Entrar <ExternalLink size={11} />

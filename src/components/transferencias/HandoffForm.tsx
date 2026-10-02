@@ -13,7 +13,7 @@ import { HANDOFF_TEMPLATES, renderHandoffTemplate, matchSectorsForTemplate, spli
 import { formatCnpj } from "@/lib/format";
 import { MentionTextarea, type MentionUser } from "@/components/transferencias/MentionTextarea";
 import { SectorAssigneePicker } from "@/components/transferencias/SectorAssigneePicker";
-import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 type EntityOption = { id: string; name: string; cnpj?: string | null };
 
@@ -308,14 +308,12 @@ export function HandoffForm({
 
       {/* Rodapé no padrão (30/09): Cancelar à esquerda do primário, os dois
           à direita, com divisor. Estava ao contrário e alinhado à esquerda. */}
-      <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-        <Button href={cancelHref} variant="secondary">
-          Cancelar
-        </Button>
-        <Button variant="primary" type="submit" disabled={isPending}>
-          {isPending ? "Enviando…" : "Solicitar Transferência"}
-        </Button>
-      </div>
+      <FormFooter
+        pending={isPending}
+        pendingLabel="Enviando…"
+        submitLabel="Solicitar Transferência"
+        cancelHref={cancelHref}
+      />
       {templateConfirmDialog}
     </form>
   );

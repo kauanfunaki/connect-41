@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/Button";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { CornerDownLeft } from "lucide-react";
+import { Selo } from "@/components/ui/Selo";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 export type CheckState = {
   status: "PENDENTE" | "CONFERIDO" | "DIVERGENTE" | "NAO_APLICAVEL";
@@ -100,11 +102,9 @@ export function ItemConferenciaRow({ item, current, referencia, action, canEdit 
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-[13px] font-medium text-fg">{item.label}</p>
-            <span
-              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${STATUS_STYLE[efetivo]}`}
-            >
+            <Selo cor={STATUS_STYLE[efetivo]}>
               {STATUS_LABEL[efetivo]}
-            </span>
+            </Selo>
             {current?.informedValue && (
               <span className="text-[12px] text-fg-secondary tnum">R$ {current.informedValue}</span>
             )}
@@ -252,15 +252,13 @@ export function ItemConferenciaRow({ item, current, referencia, action, canEdit 
             </CampoForm>
           </FieldGrid>
 
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            {state?.error && <p className="mr-auto text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
-            <Button variant="secondary" onClick={() => setOpen(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Salvando…" : "Salvar item"}
-            </Button>
-          </div>
+          <FormFooter
+            pending={isPending}
+            submitLabel="Salvar item"
+            onCancel={() => setOpen(false)}
+            erro={state?.error}
+            semDivisoria
+          />
         </form>
       )}
     </div>

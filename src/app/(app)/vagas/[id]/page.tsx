@@ -28,6 +28,7 @@ import { excluirVaga, encerrarVaga, reabrirVaga } from "../actions";
 import { adicionarCandidato, moverEtapaCandidatura, encerrarCandidatura } from "./actions";
 import { podeAgirNaVaga, ehCoordenadorDoRecrutamento, SETOR_RECRUTAMENTO } from "@/lib/recrutamento/acessoVagas";
 import { AcessoDosRecrutadores } from "@/components/vagas/AcessoDosRecrutadores";
+import { Selo } from "@/components/ui/Selo";
 
 const PRIORITY_LABEL: Record<VagaPrioridade, string> = {
   BAIXA: "Baixa",
@@ -158,9 +159,9 @@ export default async function VagaPage({
         title={
           <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
             {vaga.title}
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium tracking-normal border ${VAGA_STATUS_STYLE[vaga.status]}`}>
+            <Selo cor={VAGA_STATUS_STYLE[vaga.status]}>
               {VAGA_STATUS_LABEL[vaga.status]}
-            </span>
+            </Selo>
           </span>
         }
         subtitle={<>{vaga.company.name} · {sectorLabels[vaga.sectorCode] ?? vaga.sectorCode}</>}
@@ -197,7 +198,7 @@ export default async function VagaPage({
 
       {/* Detalhes */}
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
-        <h2 className="text-[14px] font-semibold text-fg mb-4">Detalhes</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Detalhes</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-8 gap-y-4">
           <InfoRow label="Cargo" value={vaga.cargo?.name} />
           <InfoRow label="Quantidade" value={String(vaga.quantity)} />
@@ -257,7 +258,7 @@ export default async function VagaPage({
       {/* Funil de recrutamento */}
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
         <div className="flex items-center justify-between gap-3 mb-4">
-          <h2 className="min-w-0 text-[14px] font-semibold text-fg">
+          <h2 className="min-w-0 text-[length:var(--fs-card-title)] font-semibold text-fg">
             Funil de recrutamento ({vaga.candidaturas.length} candidato{vaga.candidaturas.length !== 1 ? "s" : ""})
           </h2>
           {/* Era link de texto azul (30/09): botão não é link. */}

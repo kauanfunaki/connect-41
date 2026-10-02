@@ -8,12 +8,6 @@ import { resumirRegime } from "@/lib/taxRegime";
 
 export type OpcaoDoFunil = { valor: string; rotulo: string; n: number };
 
-/** `?x=a&x=b` chega como array; `?x=a` como string; ausente como undefined. */
-export function lerLista(v: string | string[] | undefined): string[] {
-  if (v === undefined) return [];
-  return Array.isArray(v) ? v : [v];
-}
-
 const ORDEM = (a: OpcaoDoFunil, b: OpcaoDoFunil) =>
   a.valor === "" ? 1 : b.valor === "" ? -1 : a.rotulo.localeCompare(b.rotulo, "pt-BR", { sensitivity: "base" });
 

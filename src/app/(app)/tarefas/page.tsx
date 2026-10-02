@@ -74,7 +74,7 @@ function Bloco({
   return (
     <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
       <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border">
-        <h2 className="flex items-center gap-2 text-[14px] font-semibold text-fg [&>svg]:size-4 [&>svg]:text-fg-muted">
+        <h2 className="flex items-center gap-2 text-[length:var(--fs-card-title)] font-semibold text-fg [&>svg]:size-4 [&>svg]:text-fg-muted">
           {icone}
           {titulo}
         </h2>
@@ -289,7 +289,7 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
           {visaoTime && (
             <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
               <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border">
-                <h2 className="text-[14px] font-semibold text-fg">Carga do time</h2>
+                <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Carga do time</h2>
                 {semResponsavel > 0 && (
                   <span className="inline-flex items-center gap-1 text-[12px] font-medium text-warning">
                     <UserX size={13} /> {semResponsavel} sem responsável
@@ -327,7 +327,7 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
             <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
               <header className="flex items-center gap-2 px-4 py-3 border-b border-border">
                 <Video size={16} className="text-fg-muted" />
-                <h2 className="text-[14px] font-semibold text-fg">Próximas reuniões</h2>
+                <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Próximas reuniões</h2>
               </header>
               {reunioes.length === 0 ? (
                 <p className="px-4 py-5 text-[length:var(--fs-body)] text-fg-muted">Nenhuma reunião marcada.</p>
@@ -357,7 +357,7 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
 
           <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
             <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border">
-              <h2 className="flex items-center gap-2 text-[14px] font-semibold text-fg">
+              <h2 className="flex items-center gap-2 text-[length:var(--fs-card-title)] font-semibold text-fg">
                 <CalendarDays size={16} className="text-fg-muted" /> Prazos da semana
               </h2>
               <Link href="/agenda?view=semana" className="text-[12px] font-medium text-fg-secondary hover:text-brand">

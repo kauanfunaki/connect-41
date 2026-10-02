@@ -2,7 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 import { UploadCloud, X, AlertCircle } from "lucide-react";
-import { aceitaArquivo, extensaoDe, formatarBytes } from "@/lib/fileSize";
+import { aceitaArquivo, extensaoDe, formatarBytes, formatosDoAccept } from "@/lib/fileSize";
 
 type Props = {
   name: string;
@@ -88,11 +88,7 @@ export function FileDropzoneField({
     onFileChange?.(null);
   }
 
-  const formatosLegiveis = accept
-    .split(",")
-    .map((a) => a.trim().replace(/^\./, "").toUpperCase())
-    .filter(Boolean)
-    .join(", ");
+  const formatosLegiveis = formatosDoAccept(accept);
 
   return (
     <div className="flex flex-col gap-2">

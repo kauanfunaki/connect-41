@@ -14,6 +14,7 @@ import {
   esconderDoPadraoNaEmpresa,
   linhaDaDreNaEmpresa,
 } from "@/app/(app)/cadastros-financeiros/actions";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 export type OpcaoDeLinha = { code: string; label: string };
 
@@ -34,15 +35,12 @@ function OpcoesDeLinha({ linhas, vazio }: { linhas: OpcaoDeLinha[]; vazio: strin
 // FormContraparte): a edição dentro da célula empilhava campos sem rótulo.
 function Rodape({ erro, pendente, rotulo, onCancelar }: { erro: string | null; pendente: boolean; rotulo: string; onCancelar: () => void }) {
   return (
-    <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-      {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
-      <Button type="button" variant="secondary" onClick={onCancelar}>
-        Cancelar
-      </Button>
-      <Button type="submit" disabled={pendente}>
-        {pendente ? "Salvando…" : rotulo}
-      </Button>
-    </div>
+    <FormFooter
+      pending={pendente}
+      submitLabel={rotulo}
+      onCancel={onCancelar}
+      erro={erro}
+    />
   );
 }
 

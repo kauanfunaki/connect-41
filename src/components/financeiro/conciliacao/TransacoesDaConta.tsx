@@ -24,6 +24,7 @@ import {
 } from "@/app/(app)/conciliacao/actions";
 import { moeda, tomDoValor } from "@/lib/financeiro/formato";
 import { dataCurta } from "./data";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 export type LancamentoResumido = {
   id: string;
@@ -575,15 +576,13 @@ function CriarLancamento({
           <Input id="criar-descricao" name="descricao" maxLength={255} defaultValue={(transacao.memo ?? transacao.nome ?? "").slice(0, 255)} />
         </CampoForm>
 
-        <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-          {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={pendente}>
-            {pendente ? "Criando…" : "Criar e conciliar"}
-          </Button>
-        </div>
+        <FormFooter
+          pending={pendente}
+          pendingLabel="Criando…"
+          submitLabel="Criar e conciliar"
+          onCancel={onClose}
+          erro={erro}
+        />
       </form>
     </Modal>
   );
@@ -617,15 +616,14 @@ function IgnorarTransacao({ transacao, onClose }: { transacao: LinhaDaTransacao;
         <CampoForm label="Motivo" htmlFor="ignorar-motivo" required helper="Ex.: resgate automático da aplicação, estorno no mesmo dia.">
           <Textarea id="ignorar-motivo" value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={255} required />
         </CampoForm>
-        <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-          {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={pendente || motivo.trim().length < 3}>
-            {pendente ? "Ignorando…" : "Ignorar"}
-          </Button>
-        </div>
+        <FormFooter
+          pending={pendente}
+          pendingLabel="Ignorando…"
+          submitLabel="Ignorar"
+          onCancel={onClose}
+          erro={erro}
+          submitDisabled={motivo.trim().length < 3}
+        />
       </form>
     </Modal>
   );

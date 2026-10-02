@@ -71,7 +71,7 @@ export function LinkedItemsSection({ canAct, basePath, links, candidates, create
           <div className="relative">
             <div className="flex items-center gap-2">
               <Input compact value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar tarefa…" autoFocus />
-              <IconButton type="button" size="sm" onClick={() => { setPicking(false); setQuery(""); }} aria-label="Cancelar busca" className="flex-shrink-0">
+              <IconButton type="button" size="md" onClick={() => { setPicking(false); setQuery(""); }} aria-label="Cancelar busca" className="flex-shrink-0">
                 <X size={14} />
               </IconButton>
             </div>

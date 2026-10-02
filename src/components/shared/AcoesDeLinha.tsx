@@ -1,8 +1,9 @@
 "use client";
 
-import { MoreHorizontal, Pencil, Power, PowerOff } from "lucide-react";
+import { Pencil, Power, PowerOff } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Popover, ItemDoMenu } from "@/components/ui/Popover";
+import { ItemDoMenu } from "@/components/ui/Popover";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 
 type Props = {
   /** Quem está fora de operação (inativo, cancelado) volta com "Reativar". */
@@ -28,24 +29,7 @@ export function AcoesDeLinha({ foraDeOperacao, onToggle, editarHref, className =
       <Button variant="secondary" size="xs" href={editarHref}>
         <Pencil size={11} /> Editar
       </Button>
-      <Popover
-        align="right"
-        width={180}
-        aria-label="Mais ações"
-        trigger={({ open, toggle }) => (
-          <button
-            type="button"
-            onClick={toggle}
-            aria-label="Mais ações"
-            aria-expanded={open}
-            className={`h-7 w-7 rounded-md border inline-flex items-center justify-center transition-colors ${
-              open ? "border-brand/40 bg-brand-subtle text-fg" : "border-border-strong text-fg-muted hover:text-fg hover:bg-surface-hover"
-            }`}
-          >
-            <MoreHorizontal size={14} />
-          </button>
-        )}
-      >
+      <MenuDeMaisAcoes align="right" width={180}>
         {({ close }) => (
           <ItemDoMenu
             icone={foraDeOperacao ? <Power /> : <PowerOff />}
@@ -58,7 +42,7 @@ export function AcoesDeLinha({ foraDeOperacao, onToggle, editarHref, className =
             {foraDeOperacao ? "Reativar" : "Inativar"}
           </ItemDoMenu>
         )}
-      </Popover>
+      </MenuDeMaisAcoes>
     </span>
   );
 }

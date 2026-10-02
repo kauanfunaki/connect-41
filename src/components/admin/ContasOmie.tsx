@@ -16,6 +16,7 @@ import { contasDoOmieAction, importarNotasOmieAction, previaDasNotasOmieAction, 
 import type { ContaOmieNaTela } from "@/lib/integracoes/omie/contas";
 import type { Saude } from "@/lib/integracoes/execucao";
 import type { PreviaDeChamada } from "@/lib/integracoes/omie/contas";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 type Previa = { nfe: PreviaDeChamada; nfse: PreviaDeChamada } | { erro: string };
 
@@ -104,15 +105,12 @@ function FormConta({ empresas, inicial, onFim }: { empresas: { id: string; nome:
           />
         </CampoForm>
       </FieldGrid>
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        {erro && <span className="mr-auto text-[length:var(--fs-helper)] font-medium text-danger">{erro}</span>}
-        <Button variant="secondary" onClick={onFim}>
-          Cancelar
-        </Button>
-        <Button type="submit" loading={pendente} disabled={pendente}>
-          Salvar
-        </Button>
-      </div>
+      <FormFooter
+        pending={pendente}
+        onCancel={onFim}
+        erro={erro}
+        semDivisoria
+      />
     </form>
   );
 }
@@ -192,7 +190,7 @@ export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; em
     <Card className="p-4">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
         <div>
-          <h3 className="text-[14px] font-semibold text-fg">Omie por empresa</h3>
+          <h3 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Omie por empresa</h3>
           <p className="text-[12px] text-fg-muted mt-0.5 max-w-[680px]">
             Uma conta do Omie para cada empresa cliente do BPO. A App Key e o App Secret ficam no Omie da empresa, em
             Configurações › Aplicativos — login e senha não servem para a API. &ldquo;Testar&rdquo; lê os dados da empresa

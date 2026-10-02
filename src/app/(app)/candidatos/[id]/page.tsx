@@ -22,6 +22,7 @@ import { TesteCard } from "@/components/teste/TesteCard";
 import type { ProcessoSeletivoStatus } from "@/generated/prisma/enums";
 import type { DiscScores, DiscDimension } from "@/lib/disc";
 import type { QuizScores } from "@/lib/quiz";
+import { Selo } from "@/components/ui/Selo";
 
 const CANDIDATURA_STATUS_LABEL: Record<ProcessoSeletivoStatus, string> = {
   EM_ANDAMENTO: "Em andamento",
@@ -127,15 +128,11 @@ export default async function CandidatoPage({
         title={
           <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
             {person.name}
-            <span
-              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium tracking-normal border ${
-                person.active
+            <Selo cor={person.active
                   ? "bg-success/10 text-success border-success/25"
-                  : "bg-surface-2 text-fg-muted border-border"
-              }`}
-            >
+                  : "bg-surface-2 text-fg-muted border-border"}>
               {person.active ? "Ativo" : "Inativo"}
-            </span>
+            </Selo>
           </span>
         }
         subtitle={person.cpf ? <span className="tnum">CPF: {maskCpf(person.cpf)}</span> : undefined}
@@ -153,7 +150,7 @@ export default async function CandidatoPage({
 
       {/* Tags / Skills — banco de talentos */}
       <Card className="p-5 mb-4">
-        <h2 className="text-[14px] font-semibold text-fg mb-1">Tags / Habilidades</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">Tags / Habilidades</h2>
         <p className="text-[12px] text-fg-muted mb-3">
           Torna o candidato pesquisável no banco de talentos, mesmo que não avance nesta vaga.
         </p>
@@ -171,7 +168,7 @@ export default async function CandidatoPage({
 
       {/* Identificação */}
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
-        <h2 className="text-[14px] font-semibold text-fg mb-4">Identificação</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Identificação</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
           <InfoRow label="CPF" value={maskCpf(person.cpf)} mono />
           <InfoRow
@@ -189,7 +186,7 @@ export default async function CandidatoPage({
 
       {/* Contato */}
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
-        <h2 className="text-[14px] font-semibold text-fg mb-4">Contato</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Contato</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
           <InfoRow label="E-mail" value={person.email} />
           <InfoRow label="Telefone" value={formatPhone(person.phone)} />
@@ -199,7 +196,7 @@ export default async function CandidatoPage({
       {/* Endereço */}
       {fullAddress && (
         <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
-          <h2 className="text-[14px] font-semibold text-fg mb-4">Endereço</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Endereço</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
             <InfoRow label="Logradouro" value={[person.addressStreet, person.addressNumber].filter(Boolean).join(", ")} />
             <InfoRow label="Complemento" value={person.addressComplement} />
@@ -212,7 +209,7 @@ export default async function CandidatoPage({
 
       {/* Candidaturas */}
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
-        <h2 className="text-[14px] font-semibold text-fg mb-3">
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">
           Candidaturas {candidaturas.length > 0 && `(${candidaturas.length})`}
         </h2>
 
@@ -227,9 +224,9 @@ export default async function CandidatoPage({
                 </Link>
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="min-w-0 truncate text-[12px] text-fg-muted">{c.vaga.company.name}</span>
-                  <span className="inline-flex flex-shrink-0 items-center px-2 py-0.5 rounded-full text-[11px] font-medium border bg-surface-2 text-fg-secondary border-border">
+                  <Selo cor="bg-surface-2 text-fg-secondary border-border" className="flex-shrink-0">
                     {CANDIDATURA_STATUS_LABEL[c.status]}
-                  </span>
+                  </Selo>
                 </div>
               </div>
             ))}

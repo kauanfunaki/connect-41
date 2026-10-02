@@ -26,6 +26,7 @@ import { agendarEntrevista, excluirEntrevista } from "./meeting-actions";
 import type { DiscScores, DiscDimension } from "@/lib/disc";
 import type { QuizScores } from "@/lib/quiz";
 import { podeAgirNaVaga } from "@/lib/recrutamento/acessoVagas";
+import { Selo } from "@/components/ui/Selo";
 
 export default async function CandidaturaScorecardPage({
   params,
@@ -210,27 +211,27 @@ export default async function CandidaturaScorecardPage({
       {/* Consolidado */}
       {consolidation.count > 0 && (
         <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
-          <h2 className="text-[14px] font-semibold text-fg mb-3">Consolidado ({consolidation.count} parecer{consolidation.count !== 1 ? "es" : ""})</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">Consolidado ({consolidation.count} parecer{consolidation.count !== 1 ? "es" : ""})</h2>
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-[13px] text-fg">
               Média: <strong className="tnum">{consolidation.averageScore != null ? consolidation.averageScore.toFixed(1) : "—"}</strong>/5
             </span>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-success/10 text-success border border-success/25">
+            <Selo tom="sucesso">
               {consolidation.tally.AVANCAR} avançar
-            </span>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-warning/10 text-warning border border-warning/25">
+            </Selo>
+            <Selo tom="atencao">
               {consolidation.tally.TALVEZ} talvez
-            </span>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-danger/10 text-danger border border-danger/25">
+            </Selo>
+            <Selo tom="perigo">
               {consolidation.tally.REPROVAR} reprovar
-            </span>
+            </Selo>
           </div>
         </div>
       )}
 
       {/* Pareceres */}
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
-        <h2 className="text-[14px] font-semibold text-fg mb-3">Pareceres</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">Pareceres</h2>
         {candidatura.scorecards.length === 0 ? (
           <p className="text-[13px] text-fg-muted">Nenhum parecer ainda.</p>
         ) : (
@@ -246,13 +247,11 @@ export default async function CandidaturaScorecardPage({
                     </p>
                     <div className="flex flex-shrink-0 items-center gap-2">
                       <span className="text-[12px] text-fg-muted tnum">{avg != null ? `${avg.toFixed(1)}/5` : "sem nota"}</span>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${
-                        s.recommendation === "AVANCAR" ? "bg-success/10 text-success border-success/25"
+                      <Selo cor={s.recommendation === "AVANCAR" ? "bg-success/10 text-success border-success/25"
                           : s.recommendation === "REPROVAR" ? "bg-danger/10 text-danger border-danger/25"
-                          : "bg-warning/10 text-warning border-warning/25"
-                      }`}>
+                          : "bg-warning/10 text-warning border-warning/25"}>
                         {RECOMMENDATION_LABEL[s.recommendation]}
-                      </span>
+                      </Selo>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5">
@@ -282,7 +281,7 @@ export default async function CandidaturaScorecardPage({
       {/* Meu parecer */}
       {canAct && (
         <Card className="p-5">
-          <h2 className="text-[14px] font-semibold text-fg mb-3">{myScorecard ? "Editar meu parecer" : "Adicionar meu parecer"}</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">{myScorecard ? "Editar meu parecer" : "Adicionar meu parecer"}</h2>
           <ScorecardForm
             action={salvarScorecard.bind(null, vagaId, candidaturaId)}
             defaults={

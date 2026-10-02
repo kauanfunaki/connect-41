@@ -93,7 +93,7 @@ export default async function DocumentoClienteDetailPage({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-5">
           <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-            <h2 className="text-[14px] font-semibold text-fg mb-4">Conteúdo</h2>
+            <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Conteúdo</h2>
             <div
               className="text-[14px] text-fg leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h2]:text-[16px] [&_h2]:font-semibold"
               dangerouslySetInnerHTML={{ __html: document.bodyHtml }}
@@ -107,7 +107,7 @@ export default async function DocumentoClienteDetailPage({
 
           {canManage && document.status === "PUBLISHED" && (
             <Card className="p-5">
-              <h2 className="text-[14px] font-semibold text-fg mb-4">Enviar por e-mail</h2>
+              <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Enviar por e-mail</h2>
               <SendDocumentForm action={enviarDocumento} documentId={document.id} companyId={companyId} companyEmail={company.email} />
             </Card>
           )}
@@ -115,7 +115,7 @@ export default async function DocumentoClienteDetailPage({
 
         <div className="space-y-5">
           <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-            <h2 className="text-[14px] font-semibold text-fg mb-1">Prova de recebimento</h2>
+            <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">Prova de recebimento</h2>
             <p className="text-[12px] text-fg-muted mb-4">
               Cada abertura do link e download do anexo fica registrado com data/hora e IP.
             </p>

@@ -83,18 +83,19 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
             {l.empresaNome} · {moeda(l.valorCentavos)} · venceu em {formatInstantDate(l.vencimento)} · competência {t.competencia}
           </>
         }
-      />
-
-      <div className="flex flex-wrap items-center gap-2 mt-3 mb-4">
-        <SeloDaCobranca situacao={l.situacao} />
+        meta={
+          <>
+            <SeloDaCobranca situacao={l.situacao} />
         {l.situacao === null && <Badge variant={t.status === "PAGO" ? "success" : "info"}>{t.status === "PAGO" ? "Pago" : "Cancelado"}</Badge>}
-        {emAberto && l.diasDeAtraso > 0 && (
-          <span className="text-[12px] text-fg-muted">
-            {l.diasDeAtraso === 1 ? "1 dia" : `${l.diasDeAtraso} dias`} de atraso · {FAIXAS_DE_ATRASO.find((f) => f.chave === l.faixa)?.rotulo}
-          </span>
-        )}
-        {l.descricao && <span className="text-[12px] text-fg-muted">· {l.descricao}</span>}
-      </div>
+            {emAberto && l.diasDeAtraso > 0 && (
+              <span>
+                {l.diasDeAtraso === 1 ? "1 dia" : `${l.diasDeAtraso} dias`} de atraso · {FAIXAS_DE_ATRASO.find((f) => f.chave === l.faixa)?.rotulo}
+              </span>
+            )}
+            {l.descricao && <span>{l.descricao}</span>}
+          </>
+        }
+      />
 
       {t.perda && (
         <Card className="p-4 mb-4 border-danger/40">
@@ -188,12 +189,12 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
 
       {podeAgir && (l.situacao !== null || t.closeReason === "PERDA") && t.closeReason !== "RENEGOCIADO" && (
         <Card className="p-4 mb-4">
-          <h2 className="text-[14px] font-semibold mb-3">Registrar contato</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold mb-3">Registrar contato</h2>
           <RegistrarContato entryId={l.id} hojeISO={hojeKey} />
         </Card>
       )}
 
-      <h2 className="text-[14px] font-semibold mb-2">Histórico</h2>
+      <h2 className="text-[length:var(--fs-card-title)] font-semibold mb-2">Histórico</h2>
       {historico.length === 0 ? (
         <p className="text-[12px] text-fg-muted mb-4">Nenhum contato registrado.</p>
       ) : (
@@ -227,7 +228,7 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
 
       {t.envios.length > 0 && (
         <>
-          <h2 className="text-[14px] font-semibold mb-2">Lembretes da régua</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold mb-2">Lembretes da régua</h2>
           {/* Colunas fixas a partir de sm: com itens soltos, o e-mail e o selo
               mudavam de lugar conforme a largura da data de cada linha. */}
           <ul className="flex flex-col gap-1.5 text-[12px] mb-4">
@@ -254,7 +255,7 @@ function ResumoDoAcordoCard({ titulo, acordo, destaque }: { titulo: string; acor
     <Card className="p-4 mb-4">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
         <div className="flex flex-wrap items-center gap-2 min-w-0">
-          <h2 className="text-[14px] font-semibold">{titulo}</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold">{titulo}</h2>
           <SeloDoAcordo status={acordo.status} />
         </div>
         <Link href={`/cobranca?aba=acordos&empresa=${acordo.empresaId}`} className="text-brand hover:underline text-[12px]">

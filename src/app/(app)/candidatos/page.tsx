@@ -11,9 +11,10 @@ import { Pagination } from "@/components/shared/Pagination";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { formatInstantDate } from "@/lib/format";
-import { lerLista } from "@/lib/filtrosDaListaDeEmpresas";
+import { lerLista } from "@/lib/filtroNaUrl";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { inativarCandidatosEmMassa } from "./actions";
+import { FiltrosDasColunasNaUrl } from "@/components/shared/FiltroDeColunas";
 
 const PER_PAGE = 20;
 
@@ -119,13 +120,6 @@ export default async function CandidatosPage({
     for (const t of tagsEscolhidas) q.append("tag", t);
     return `/candidatos?${q.toString()}`;
   }
-  const semFiltroDeTag = (() => {
-    const q = new URLSearchParams();
-    if (search) q.set("search", search);
-    if (status) q.set("status", status);
-    const s = q.toString();
-    return s ? `/candidatos?${s}` : "/candidatos";
-  })();
 
   return (
     <PageContainer>
@@ -160,6 +154,8 @@ export default async function CandidatosPage({
         />
       </div>
 
+      <FiltrosDasColunasNaUrl colunas={[{ chave: "tag", rotulo: "Tags" }]} />
+
       {candidatos.length === 0 ? (
         <Card>
           <EmptyState
@@ -168,15 +164,6 @@ export default async function CandidatosPage({
               searchTerm || tagsEscolhidas.length > 0 || statusFilter !== "ativos"
                 ? "Nenhum candidato encontrado com esses filtros."
                 : "Nenhum candidato cadastrado ainda."
-            }
-            // Sem linhas, a tabela some e o funil some com ela: a saída do
-            // filtro de tag tem de estar aqui, senão ele fica preso na URL.
-            action={
-              tagsEscolhidas.length > 0 ? (
-                <Button href={semFiltroDeTag} variant="secondary" size="sm">
-                  Limpar o filtro de tag
-                </Button>
-              ) : undefined
             }
           />
         </Card>

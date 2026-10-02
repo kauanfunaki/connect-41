@@ -259,7 +259,9 @@
   --fs-search:      var(--fs-4);  /* busca da topbar — era 15px */
   --fs-body:        var(--fs-5);  /* conteúdo de leitura + base do <body> */
   --fs-button:      var(--fs-5);
-  --fs-card-title:  var(--fs-6);
+  --fs-card-title:  var(--fs-4);  /* título de cartão — 14px, o que a maioria já usava (02/10);
+                                    conviviam 13, 14, 15 e 18px; o EmptyState, que usava este token em 16px, passou a --fs-6 */
+  --fs-dialog-title: var(--fs-5); /* título de janela (Modal, confirmação, painel lateral) */
   --fs-input:       var(--fs-6);  /* 16px — não baixar: abaixo disso o iOS dá
                                      zoom ao focar o campo */
   --fs-section:     var(--fs-7);  /* título de seção/card */
@@ -470,6 +472,13 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   padding-top: 0.75rem;
   padding-bottom: 0.75rem;
   font-weight: 600;
+  /* Caixa alta, 11px, cinza — decidido em 02/10: era o cabeçalho de 71 das 80
+     tabelas padrão, escrito à mão em cada <tr>. Aqui, para a tabela nova não
+     nascer diferente. */
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  color: var(--c41-fg-muted);
 }
 .c41-tabela > table > :is(thead, tbody) > tr > :is(th, td):first-child {
   padding-left: 1rem;
@@ -496,6 +505,19 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 }
 .c41-tabela > table > :is(thead, tbody, tfoot) > tr > :is(th, td) > .flex-col {
   align-items: center;
+}
+/* Célula à esquerda dentro da tabela padrão (02/10/2026): árvore na primeira
+   coluna (tarefa → subtarefa, matriz → filial) se lê pelo recuo, e centralizar
+   o desmancha. Antes, essas tabelas saíam do casco e copiavam o visual à mão.
+   Use no <th> e nos <td> da coluna. */
+.c41-tabela > table > :is(thead, tbody, tfoot) > tr > :is(th, td).c41-a-esquerda {
+  text-align: left;
+}
+.c41-tabela > table > :is(thead, tbody, tfoot) > tr > :is(th, td).c41-a-esquerda > :is(.flex, .inline-flex) {
+  justify-content: flex-start;
+}
+.c41-tabela > table > :is(thead, tbody, tfoot) > tr > :is(th, td).c41-a-esquerda > .flex-col {
+  align-items: flex-start;
 }
 /* Sublinha com largura máxima (descrição cortada) centraliza como bloco. */
 .c41-tabela > table > tbody > tr > td > .block {

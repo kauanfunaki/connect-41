@@ -23,8 +23,10 @@ function omitCommon<T extends CommonProps>(props: T): Omit<T, (typeof COMMON_KEY
 type ButtonProps = CommonProps &
   Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, keyof CommonProps> & {
     href?: undefined;
-    /** Troca o rótulo por "Salvando…" e desabilita. Só faz sentido em botão. */
+    /** Troca o rótulo por `loadingLabel` e desabilita. Só faz sentido em botão. */
     loading?: boolean;
+    /** O que aparece enquanto carrega — "Enviando…", "Criando…". Padrão: "Salvando…". */
+    loadingLabel?: string;
   };
 
 type LinkProps = CommonProps &
@@ -33,6 +35,13 @@ type LinkProps = CommonProps &
      *  app estilizavam um <Link> à mão pra parecer botão. */
     href: string;
     loading?: undefined;
+    loadingLabel?: undefined;
+    /** `false` para não pré-carregar o destino ao aparecer na tela. */
+    prefetch?: boolean;
+    /** Rota que devolve arquivo (CSV, PDF, exportação): vira um <a download>
+     *  simples. O <Link> pré-carregaria a rota — gerando o arquivo só de a tela
+     *  abrir — e tentaria navegar dentro do app ao clicar. */
+    download?: boolean | string;
   };
 
 type Props = ButtonProps | LinkProps;
@@ -116,7 +125,14 @@ export function Button(props: Props) {
     : `${BASE} ${VARIANT_CLASS[variant]} ${SIZE_CLASS[size]} ${className}`.trim();
 
   if (props.href !== undefined) {
-    const { href, ...rest } = omitCommon(props);
+    const { href, download, ...rest } = omitCommon(props);
+    if (download) {
+      return (
+        <a href={href} download={download === true ? "" : download} className={cls} {...rest}>
+          {children}
+        </a>
+      );
+    }
     return (
       <Link href={href} className={cls} {...rest}>
         {children}
@@ -124,10 +140,10 @@ export function Button(props: Props) {
     );
   }
 
-  const { loading = false, disabled, ...rest } = omitCommon(props);
+  const { loading = false, loadingLabel = "Salvando…", disabled, ...rest } = omitCommon(props);
   return (
     <button type={rest.type ?? "button"} disabled={disabled || loading} className={cls} {...rest}>
-      {loading ? "Salvando…" : children}
+      {loading ? loadingLabel : children}
     </button>
   );
 }

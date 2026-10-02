@@ -56,7 +56,7 @@ export function NotaDaTriagem({
     <Card className="p-5 mb-4">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
         <div>
-          <h2 className="text-[14px] font-semibold text-fg">Triagem do currículo</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Triagem do currículo</h2>
           <p className="text-[12px] text-fg-muted mt-0.5">A nota só ordena os candidatos da vaga — quem avança ou reprova é o recrutador.</p>
         </div>
         {podePontuar && versaoAtual !== null && (
