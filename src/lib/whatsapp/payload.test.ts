@@ -77,6 +77,13 @@ describe("lerMensagens", () => {
     expect(ignoradas.map((i) => i.tipo)).toEqual(["audio", "image"]);
   });
 
+  it("a legenda da imagem vem junto", () => {
+    const { ignoradas } = lerMensagens(
+      envelope([{ id: "w3", from: "5541988887777", timestamp: "1789000000", type: "image", image: { id: "i", caption: "comprovante" } }])
+    );
+    expect(ignoradas[0]?.legenda).toBe("comprovante");
+  });
+
   it("texto sem corpo é ignorado, não vira string vazia", () => {
     const { mensagens, ignoradas } = lerMensagens(
       envelope([{ id: "w1", from: "5541988887777", timestamp: "1789000000", type: "text", text: {} }])

@@ -90,6 +90,13 @@ describe("Evolution · lerEvento", () => {
     expect(r.ignoradas.map((i) => i.tipo)).toEqual(["imageMessage", "audioMessage"]);
   });
 
+  it("a legenda da imagem vem junto, para entrar na conversa", () => {
+    const r = provedorEvolucao.lerEvento(
+      upsert(texto({ messageType: "imageMessage", message: { imageMessage: { caption: "meu certificado" } } }))
+    );
+    expect(r.ignoradas[0]?.legenda).toBe("meu certificado");
+  });
+
   it("reação não é pergunta de ninguém: nem mensagem, nem ignorada", () => {
     const r = provedorEvolucao.lerEvento(upsert(texto({ messageType: "reactionMessage", message: {} })));
     expect(r.mensagens).toEqual([]);

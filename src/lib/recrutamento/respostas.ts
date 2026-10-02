@@ -66,6 +66,11 @@ export function validarRespostas(v: unknown): { valores: Partial<Respostas>; des
  * O que o bot pode gravar agora. **O que o recrutador corrigiu à mão não é
  * sobrescrito pelo bot** — senão a correção sumiria na próxima mensagem do
  * candidato. O recrutador, ao contrário, sobrescreve qualquer coisa.
+ *
+ * Desde 02/10/2026 o que o candidato respondeu **no portal** também não é
+ * sobrescrito pelo WhatsApp (o C2 do roteiro de testes): o formulário é a
+ * resposta pensada, a conversa é de passagem. O WhatsApp só preenche o que
+ * está vazio; quando diz outro valor, quem chama avisa o recrutador.
  */
 export function aplicarRespostas(
   fonte: FonteDasRespostas,
@@ -79,7 +84,7 @@ export function aplicarRespostas(
   const preservados: CampoDeResposta[] = [];
   for (const campo of CAMPOS_DE_RESPOSTA) {
     if (!(campo in novos)) continue;
-    if (origem === "WHATSAPP" && fonte[campo]?.origem === "RECRUTADOR") {
+    if (origem === "WHATSAPP" && (fonte[campo]?.origem === "RECRUTADOR" || fonte[campo]?.origem === "PORTAL")) {
       preservados.push(campo);
       continue;
     }
@@ -88,6 +93,29 @@ export function aplicarRespostas(
     gravados.push(campo);
   }
   return { dados, fonte: nova, gravados, preservados };
+}
+
+/**
+ * Campos que o candidato respondeu no portal e, no WhatsApp, disse diferente.
+ * Não são gravados (ver `aplicarRespostas`), mas o recrutador precisa saber:
+ * pretensão que subiu na conversa é informação, não ruído.
+ */
+export function divergenciasDoPortal(
+  fonte: FonteDasRespostas,
+  atuais: Respostas,
+  novos: Partial<Respostas>
+): CampoDeResposta[] {
+  return CAMPOS_DE_RESPOSTA.filter(
+    (c) => fonte[c]?.origem === "PORTAL" && c in novos && novos[c] !== undefined && novos[c] !== atuais[c]
+  );
+}
+
+/** Um valor de resposta como texto curto: "R$ 2.500", "30 min", "imediata". */
+export function respostaComoTexto(campo: CampoDeResposta, valor: Respostas[CampoDeResposta] | undefined): string {
+  if (valor === null || valor === undefined) return "—";
+  if (campo === "pretensaoSalarial") return REAIS.format(Number(valor));
+  if (campo === "deslocamentoMinutos") return `${valor} min`;
+  return String(valor);
 }
 
 /** O que ainda falta perguntar — o bot consulta antes de perguntar de novo o que já sabe. */
