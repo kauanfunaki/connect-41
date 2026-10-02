@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Button } from "@/components/ui/Button";
 import { DeleteButton } from "@/components/ui/DeleteButton";
@@ -142,7 +143,7 @@ export function EditarDocumentoCard({
                 />
               </CampoForm>
               <CampoForm label="Emissão" htmlFor="issuedAt">
-                <Input id="issuedAt" name="issuedAt" type="date" defaultValue={valores.issuedAt} />
+                <CampoData id="issuedAt" name="issuedAt" defaultValue={valores.issuedAt} />
               </CampoForm>
               <CampoForm label="Competência" htmlFor="competence" helper="Em branco, volta a seguir a data de emissão.">
                 <Input

@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import type { ExameState } from "@/app/(app)/pessoas/[id]/exames/actions";
 import { ExameAdmissionalStatus } from "@/generated/prisma/enums";
-import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { MenuDoRegistro } from "./MenuDoRegistro";
@@ -89,7 +89,7 @@ export function ExameRow({ exame, updateAction, removeAction, canManage }: Props
             </Select>
           </div>
           <div className="w-full sm:w-40">
-            <Input name="performedAt" type="date" title="Data de realização" aria-label="Data de realização" />
+            <CampoData name="performedAt" title="Data de realização" aria-label="Data de realização" />
           </div>
           <Button
             variant="secondary"

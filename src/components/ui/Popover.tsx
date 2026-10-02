@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { PainelFlutuante } from "@/components/ui/PainelFlutuante";
 
 type Props = {
   trigger: (props: { open: boolean; toggle: () => void }) => React.ReactNode;
@@ -13,8 +13,6 @@ type Props = {
   "aria-label"?: string;
 };
 
-const MARGEM = 8;
-
 /**
  * Painel ancorado que abre **por cima de tudo**, fora da árvore da página.
  *
@@ -23,79 +21,40 @@ const MARGEM = 8;
  * borda do casco. Foi o que aconteceu com a baixa de /pagar em 30/09: a data e
  * o "Confirmar" abriam na célula e empurravam o resto para fora da tela. Aqui o
  * painel vai para o `body` (portal) com posição fixa calculada a partir do
- * botão, e vira para cima quando não cabe embaixo.
+ * botão, e vira para cima quando não cabe embaixo — desde 02/10/2026 pelo
+ * `PainelFlutuante`, que o calendário do campo de data também usa.
  */
 export function Popover({ trigger, children, align = "left", width = 240, "aria-label": ariaLabel }: Props) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const ancoraRef = useRef<HTMLSpanElement>(null);
-  const painelRef = useRef<HTMLDivElement>(null);
 
   const close = useCallback(() => setOpen(false), []);
 
-  const posicionar = useCallback(() => {
-    const ancora = ancoraRef.current?.getBoundingClientRect();
-    if (!ancora) return;
-    const altura = painelRef.current?.offsetHeight ?? 0;
-    const largura = Math.min(width, window.innerWidth - MARGEM * 2);
-    let left = align === "right" ? ancora.right - largura : ancora.left;
-    left = Math.max(MARGEM, Math.min(left, window.innerWidth - largura - MARGEM));
-    const cabeEmbaixo = ancora.bottom + 6 + altura <= window.innerHeight - MARGEM;
-    const top = cabeEmbaixo || ancora.top - 6 - altura < MARGEM ? ancora.bottom + 6 : ancora.top - 6 - altura;
-    setPos({ top, left });
-  }, [align, width]);
-
-  // Duas passadas: a primeira põe o painel na tela para medir a altura, a
-  // segunda decide se ele vira para cima. Antes da pintura, então a posição
-  // da abertura anterior nunca chega a aparecer.
-  useLayoutEffect(() => {
-    if (!open) return;
-    posicionar();
-    const id = requestAnimationFrame(posicionar);
-    return () => cancelAnimationFrame(id);
-  }, [open, posicionar]);
-
   useEffect(() => {
     if (!open) return;
-    function fora(e: MouseEvent) {
-      const alvo = e.target as Node;
-      if (ancoraRef.current?.contains(alvo) || painelRef.current?.contains(alvo)) return;
-      setOpen(false);
-    }
     function tecla(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
     }
-    // Rolar a página com o painel aberto o deixaria solto no ar: acompanha.
-    window.addEventListener("scroll", posicionar, true);
-    window.addEventListener("resize", posicionar);
-    document.addEventListener("mousedown", fora);
     document.addEventListener("keydown", tecla);
-    return () => {
-      window.removeEventListener("scroll", posicionar, true);
-      window.removeEventListener("resize", posicionar);
-      document.removeEventListener("mousedown", fora);
-      document.removeEventListener("keydown", tecla);
-    };
-  }, [open, posicionar]);
+    return () => document.removeEventListener("keydown", tecla);
+  }, [open]);
 
   return (
     <>
       <span ref={ancoraRef} className="inline-flex">
         {trigger({ open, toggle: () => setOpen((v) => !v) })}
       </span>
-      {open &&
-        createPortal(
-          <div
-            ref={painelRef}
-            role="dialog"
-            aria-label={ariaLabel}
-            style={{ width, top: pos?.top ?? -9999, left: pos?.left ?? -9999 }}
-            className="c41-surgir fixed z-50 bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] p-3 text-left text-[length:var(--fs-dropdown)]"
-          >
-            {typeof children === "function" ? children({ close }) : children}
-          </div>,
-          document.body
-        )}
+      <PainelFlutuante
+        ancora={ancoraRef}
+        aberto={open}
+        onFechar={close}
+        largura={width}
+        align={align}
+        aria-label={ariaLabel}
+        className="p-3 text-[length:var(--fs-dropdown)]"
+      >
+        {typeof children === "function" ? children({ close }) : children}
+      </PainelFlutuante>
     </>
   );
 }

@@ -8,6 +8,7 @@ import { UFS } from "@/lib/ufs";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { FieldGrid } from "@/components/ui/FieldGrid";
@@ -38,7 +39,7 @@ export type VagaDefaultValues = {
   workMode?: VagaModalidade | null;
   contractType?: VagaContrato | null;
   benefits?: string | null;
-  /** "AAAA-MM-DD", como o <input type="date"> espera. */
+  /** "AAAA-MM-DD", o formato do CampoData. */
   applicationDeadline?: string | null;
   workCity?: string | null;
   workStateCode?: string | null;
@@ -202,7 +203,7 @@ export function VagaForm({ action, cancelHref, companies, cargos, users, sectorO
           </CampoForm>
           <FieldGrid columns="sm:grid-cols-[180px_1fr_200px]">
             <CampoForm label="Inscrições até" htmlFor="applicationDeadline" helper="Depois desse dia a vaga sai do portal sozinha.">
-              <Input id="applicationDeadline" name="applicationDeadline" type="date" defaultValue={defaultValues?.applicationDeadline ?? ""} />
+              <CampoData id="applicationDeadline" name="applicationDeadline" defaultValue={defaultValues?.applicationDeadline ?? ""} />
             </CampoForm>
             <CampoForm label="Cidade de trabalho" htmlFor="workCity" helper="Em branco, vale a cidade da empresa.">
               <Input id="workCity" name="workCity" type="text" maxLength={80} defaultValue={defaultValues?.workCity ?? ""} />

@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
-import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 
@@ -25,10 +25,10 @@ export function PrazoPrioridadeForm({ action, dueDate, priority }: Props) {
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <CampoForm label="Prazo" htmlFor="dueDate">
-          <Input
+          <CampoData
             id="dueDate"
             name="dueDate"
-            type="date"
+           
             defaultValue={dueDate ? dueDate.slice(0, 10) : ""}
           />
         </CampoForm>

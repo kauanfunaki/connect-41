@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { TempoDecorrido } from "@/components/kanban/TempoDecorrido";
 import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Select } from "@/components/ui/Select";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -329,10 +330,10 @@ function DatesPopover({
           ligação com o campo. */}
       <div className="space-y-3">
         <CampoForm label="Início" htmlFor={`${uid}-inicio`}>
-          <Input id={`${uid}-inicio`} type="date" value={start} onChange={(e) => { setStart(e.target.value); save({ start: e.target.value }); }} />
+          <CampoData id={`${uid}-inicio`} value={start} onChange={(v) => { setStart(v); save({ start: v }); }} />
         </CampoForm>
         <CampoForm label="Fim" htmlFor={`${uid}-fim`}>
-          <Input id={`${uid}-fim`} type="date" value={end} onChange={(e) => { setEnd(e.target.value); save({ end: e.target.value }); }} />
+          <CampoData id={`${uid}-fim`} value={end} onChange={(v) => { setEnd(v); save({ end: v }); }} />
         </CampoForm>
         <Checkbox
           label="Recorrente"

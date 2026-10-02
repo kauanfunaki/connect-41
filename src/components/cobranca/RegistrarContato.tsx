@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -52,7 +52,7 @@ export function RegistrarContato({ entryId, hojeISO }: { entryId: string; hojeIS
       <input type="hidden" name="entryId" value={entryId} />
       <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-4">
         <CampoForm label="Data do contato" htmlFor={`contatoEm-${entryId}`} required>
-          <Input id={`contatoEm-${entryId}`} type="date" name="contatoEm" defaultValue={hojeISO} max={hojeISO} required />
+          <CampoData id={`contatoEm-${entryId}`} name="contatoEm" defaultValue={hojeISO} max={hojeISO} required />
         </CampoForm>
         <CampoForm label="Canal" htmlFor={`canal-${entryId}`} required>
           <Select id={`canal-${entryId}`} name="canal" defaultValue="TELEFONE">
@@ -85,9 +85,9 @@ export function RegistrarContato({ entryId, hojeISO }: { entryId: string; hojeIS
           required={resultado === "PROMETEU_PAGAR"}
           helper={resultado === "PROMETEU_PAGAR" ? "Quando o sacado prometeu pagar." : undefined}
         >
-          <Input
+          <CampoData
             id={`proximaAcao-${entryId}`}
-            type="date"
+           
             name="proximaAcao"
             min={hojeISO}
             required={resultado === "PROMETEU_PAGAR"}

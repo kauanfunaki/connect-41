@@ -6,6 +6,7 @@ import { Handshake } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -129,7 +130,7 @@ export function CriarAcordo({
               <Input id="acordo-parcelas" type="number" min={1} max={MAXIMO_DE_PARCELAS} value={parcelas} onChange={(e) => setParcelas(e.target.value)} disabled={confirmando} />
             </CampoForm>
             <CampoForm label="1ª parcela vence em" htmlFor="acordo-primeiro" required helper="As seguintes, todo mês no mesmo dia.">
-              <Input id="acordo-primeiro" type="date" min={hojeISO} value={primeiro} onChange={(e) => setPrimeiro(e.target.value)} disabled={confirmando} />
+              <CampoData id="acordo-primeiro" min={hojeISO} value={primeiro} onChange={(v) => setPrimeiro(v)} disabled={confirmando} />
             </CampoForm>
           </FieldGrid>
           <CampoForm label="Observação interna" htmlFor="acordo-notas">

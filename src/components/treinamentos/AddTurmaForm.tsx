@@ -6,6 +6,7 @@ import type { TrainingClassState } from "@/app/(app)/treinamentos/[id]/actions";
 import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 
 type Props = {
   action: (prev: TrainingClassState, form: FormData) => Promise<TrainingClassState>;
@@ -20,7 +21,7 @@ export function AddTurmaForm({ action }: Props) {
           items-end; agora é grade, com o botão alinhado ao controle. */}
       <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-[180px_minmax(0,1fr)_minmax(0,1fr)_auto]">
         <CampoForm label="Data" htmlFor="date" required>
-          <Input id="date" name="date" type="date" required />
+          <CampoData id="date" name="date" required />
         </CampoForm>
         <CampoForm label="Turno" htmlFor="shift">
           <Input id="shift" name="shift" type="text" />

@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { AcoesDoCadastro } from "@/components/empresas/AcoesDoCadastro";
 import type { SocioState } from "@/app/(app)/empresas/[id]/socios/actions";
@@ -37,7 +37,7 @@ function FormDaSaida({
         <label htmlFor={`saida-${socioId}`} className="sr-only">
           Data de saída de {nome}
         </label>
-        <Input id={`saida-${socioId}`} name="exitDate" type="date" compact required className="w-40" />
+        <CampoData id={`saida-${socioId}`} name="exitDate" compact required className="w-40" />
         {/* `sm` (h-8) para casar com o Input compacto do lado; eram `xs`
             (h-7), um degrau abaixo do campo. */}
         <Button type="submit" size="sm" disabled={pendente}>

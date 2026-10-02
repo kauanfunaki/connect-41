@@ -3,7 +3,7 @@
 import { useId, useState, useTransition } from "react";
 import { Check, Undo2, CircleDollarSign, Send, MoreHorizontal, FileText, MessageSquareWarning } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Popover, ItemDoMenu } from "@/components/ui/Popover";
 import type { AcaoDeContaState } from "@/lib/financeiro/acoes";
@@ -199,7 +199,7 @@ export function AcoesDaConta({
                 }}
               >
                 <CampoForm label={aPagar ? "Data do pagamento" : "Data do recebimento"} htmlFor={idDaData} error={erroDaBaixa ?? undefined}>
-                  <Input id={idDaData} compact type="date" value={data} max={hojeISO} onChange={(e) => setData(e.target.value)} autoFocus />
+                  <CampoData id={idDaData} compact value={data} max={hojeISO} onChange={(v) => setData(v)} autoFocus />
                 </CampoForm>
                 <FormFooter
                   pending={pendente}

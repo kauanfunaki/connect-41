@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import type { AbsenceState } from "@/app/(app)/pessoas/[id]/afastamentos/actions";
 import type { AbsenceType, AbsenceStatus } from "@/generated/prisma/enums";
-import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { MenuDoRegistro } from "./MenuDoRegistro";
@@ -71,7 +71,7 @@ export function AfastamentoRow({ afastamento, updateAction, removeAction, canMan
             </Select>
           </div>
           <div className="w-full sm:w-40">
-            <Input name="returnDate" type="date" title="Data de retorno" aria-label="Data de retorno" />
+            <CampoData name="returnDate" title="Data de retorno" aria-label="Data de retorno" />
           </div>
           <Button
             variant="secondary"

@@ -7,6 +7,7 @@ import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 
 type Props = {
   action: (prev: VacationState, form: FormData) => Promise<VacationState>;
@@ -24,16 +25,16 @@ export function AddFeriasForm({ action }: Props) {
     <form action={formAction} className="border-t border-border pt-5 mt-2 space-y-4">
       <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_120px]">
         <CampoForm label="Início do aquisitivo" htmlFor="acquisitivePeriodStart" required>
-          <Input id="acquisitivePeriodStart" name="acquisitivePeriodStart" type="date" required />
+          <CampoData id="acquisitivePeriodStart" name="acquisitivePeriodStart" required />
         </CampoForm>
         <CampoForm label="Fim do aquisitivo" htmlFor="acquisitivePeriodEnd" required>
-          <Input id="acquisitivePeriodEnd" name="acquisitivePeriodEnd" type="date" required />
+          <CampoData id="acquisitivePeriodEnd" name="acquisitivePeriodEnd" required />
         </CampoForm>
         <CampoForm label="Início do concessivo" htmlFor="concessivePeriodStart">
-          <Input id="concessivePeriodStart" name="concessivePeriodStart" type="date" />
+          <CampoData id="concessivePeriodStart" name="concessivePeriodStart" />
         </CampoForm>
         <CampoForm label="Fim do concessivo" htmlFor="concessivePeriodEnd">
-          <Input id="concessivePeriodEnd" name="concessivePeriodEnd" type="date" />
+          <CampoData id="concessivePeriodEnd" name="concessivePeriodEnd" />
         </CampoForm>
         <CampoForm label="Dias" htmlFor="days">
           <Input id="days" name="days" type="number" min={1} max={30} defaultValue={30} />

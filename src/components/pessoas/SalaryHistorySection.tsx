@@ -7,6 +7,7 @@ import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 
 export type SalaryChangeItem = {
@@ -90,7 +91,7 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
             <Input id="newSalary" name="newSalary" type="number" step="0.01" required prefix="R$" placeholder="0,00" />
           </CampoForm>
           <CampoForm label="Data do Reajuste" htmlFor="effectiveDate" required>
-            <Input id="effectiveDate" name="effectiveDate" type="date" required />
+            <CampoData id="effectiveDate" name="effectiveDate" required />
           </CampoForm>
           <CampoForm label="Novo cargo" htmlFor="cargoId" helper="Só em promoção.">
             <Select id="cargoId" name="cargoId" defaultValue="">

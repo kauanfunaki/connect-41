@@ -5,6 +5,7 @@ import { Check, ListChecks, Plus, EyeOff, Undo2, RotateCcw, Sparkles, Lock } fro
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
+import { CampoMes } from "@/components/ui/CampoMes";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -551,7 +552,7 @@ function CriarLancamento({
             </Select>
           </CampoForm>
           <CampoForm label="Competência" htmlFor="criar-competencia" required helper="Padrão: o mês do extrato.">
-            <Input id="criar-competencia" type="month" name="competencia" defaultValue={transacao.dataKey.slice(0, 7)} required />
+            <CampoMes id="criar-competencia" name="competencia" defaultValue={transacao.dataKey.slice(0, 7)} required />
           </CampoForm>
         </FieldGrid>
 

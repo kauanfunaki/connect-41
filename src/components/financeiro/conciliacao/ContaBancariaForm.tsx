@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
@@ -107,7 +108,7 @@ export function ContaBancariaForm({ companyId, conta }: { companyId: string; con
               <Input id={`${prefixo}-saldo`} name="openingBalance" prefix="R$" inputMode="decimal" placeholder="-1.234,56" defaultValue={conta?.saldoInicial ?? ""} />
             </CampoForm>
             <CampoForm label="Saldo no início do dia" htmlFor={`${prefixo}-saldo-data`} helper="O extrato é somado a partir desta data, inclusive.">
-              <Input id={`${prefixo}-saldo-data`} type="date" name="openingBalanceDate" defaultValue={conta?.saldoInicialKey ?? ""} />
+              <CampoData id={`${prefixo}-saldo-data`} name="openingBalanceDate" defaultValue={conta?.saldoInicialKey ?? ""} />
             </CampoForm>
           </FieldGrid>
 
