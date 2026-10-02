@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { ArrowRight, Clock } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { formatCalendarDate } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -13,7 +13,7 @@ import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/sh
 import { TIPO_DO_DIA } from "@/components/pessoas/rotulosDoDP";
 
 export default async function HorasExtrasPage() {
-  const ctx = await getAuthContext();
+  const { ctx } = await abrirTelaDoModulo("dp_horas_extras");
   const prisma = getPrisma();
 
   const entries = await prisma.overtimeEntry.findMany({

@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { IdCard, AlertTriangle } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -26,7 +26,7 @@ import {
 // hierarquia" e "matriz simples de cargos e salários". Sem paginação de
 // propósito: a matriz só faz sentido inteira (é o retrato da estrutura).
 export default async function CargosSalariosPage() {
-  const ctx = await getAuthContext();
+  const { ctx } = await abrirTelaDoModulo("gestao_cargos_salarios");
   const prisma = getPrisma();
   const canViewSalary = await canViewSensitiveField(ctx, "SALARIO");
 

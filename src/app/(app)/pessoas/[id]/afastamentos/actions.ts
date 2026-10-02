@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { AbsenceType, AbsenceStatus } from "@/generated/prisma/enums";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
+import { podeNoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 
@@ -34,7 +35,7 @@ export async function criarAfastamento(
 ): Promise<AbsenceState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para registrar afastamentos." };
+  if (!(await podeNoModulo(ctx, "dp_afastamentos", "gerir"))) return { error: "Sem permissão para registrar afastamentos." };
   if (!(await assertPersonInScope(personId, ctx))) {
     return { error: "Pessoa não encontrada ou fora do seu escopo." };
   }
@@ -90,7 +91,7 @@ export async function atualizarAfastamento(
 ): Promise<AbsenceState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para atualizar afastamentos." };
+  if (!(await podeNoModulo(ctx, "dp_afastamentos", "gerir"))) return { error: "Sem permissão para atualizar afastamentos." };
   if (!(await assertPersonInScope(personId, ctx))) {
     return { error: "Pessoa não encontrada ou fora do seu escopo." };
   }
@@ -125,7 +126,7 @@ export async function atualizarAfastamento(
 
 export async function excluirAfastamento(personId: string, absenceId: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWrite(ctx.role)) return;
+  if (!ctx.tenantId || !(await podeNoModulo(ctx, "dp_afastamentos", "gerir"))) return;
   if (!(await assertPersonInScope(personId, ctx))) return;
 
   const prisma = getPrisma();

@@ -2,7 +2,8 @@ import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { canManageSector } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { TrainingForm } from "@/components/treinamentos/TrainingForm";
 import { atualizarTreinamento } from "../../actions";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -14,8 +15,8 @@ export default async function EditarTreinamentoPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const ctx = await getAuthContext();
-  if (!canWrite(ctx.role)) notFound();
+  const { ctx, setor } = await abrirTelaDoModulo("dp_treinamentos");
+  if (!canManageSector(ctx, setor)) notFound();
 
   const prisma = getPrisma();
   const training = await prisma.training.findFirst({ where: { id, tenantId: ctx.tenantId } });

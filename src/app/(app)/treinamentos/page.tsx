@@ -4,15 +4,16 @@ import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ArrowRight, GraduationCap, Plus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { canManageSector } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 
 export default async function TreinamentosPage() {
-  const ctx = await getAuthContext();
-  const canManage = canWrite(ctx.role);
+  const { ctx, setor } = await abrirTelaDoModulo("dp_treinamentos");
+  const canManage = canManageSector(ctx, setor);
 
   const prisma = getPrisma();
   const treinamentos = await prisma.training.findMany({

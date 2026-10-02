@@ -9,7 +9,8 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { excluirCandidato } from "../actions";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { canManageSector } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { listDocuments } from "@/lib/documents";
 import { DocumentsSection } from "@/components/documents/DocumentsSection";
 import { AiResumeExtract } from "@/components/candidatos/AiResumeExtract";
@@ -37,8 +38,8 @@ export default async function CandidatoPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const ctx = await getAuthContext();
-  const canEdit = canWrite(ctx.role);
+  const { ctx, setor } = await abrirTelaDoModulo("recrutamento_candidatos");
+  const canEdit = canManageSector(ctx, setor);
 
   const prisma = getPrisma();
   const [person, documents, allTags] = await Promise.all([

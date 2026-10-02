@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { ArrowRight, UserMinus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { saoPauloParts } from "@/lib/agenda";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { formatInstantDate } from "@/lib/format";
@@ -19,7 +19,7 @@ import {
 } from "@/components/pessoas/rotulosDoDP";
 
 export default async function DesligamentosPage() {
-  const ctx = await getAuthContext();
+  const { ctx } = await abrirTelaDoModulo("dp_colaboradores");
   const prisma = getPrisma();
 
   const terminations = await prisma.termination.findMany({

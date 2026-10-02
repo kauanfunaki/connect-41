@@ -1,5 +1,5 @@
 import { PageContainer } from "@/components/shared/PageContainer";
-import { getAuthContext } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { getRelatorioTreinamentos, type TreinamentoRow, type TreinamentoSituacao } from "@/lib/relatoriosRH";
 import { formatCalendarDate } from "@/lib/format";
 import { RelatorioHeader } from "@/components/relatorios/RelatorioHeader";
@@ -18,7 +18,7 @@ const SITUACAO: Record<TreinamentoSituacao, { label: string; tone: BadgeTone }> 
 };
 
 export default async function RelatorioTreinamentosPage() {
-  const ctx = await getAuthContext();
+  const { ctx } = await abrirTelaDoModulo("gestao_indicadores_rh");
   const rows = await getRelatorioTreinamentos(ctx);
 
   const count = (s: TreinamentoSituacao) => rows.filter((r) => r.situacao === s).length;

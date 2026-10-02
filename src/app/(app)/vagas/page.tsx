@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -6,6 +7,7 @@ import { ArrowRight, Briefcase, CheckCircle2, DoorOpen, Loader, XCircle } from "
 import { getPrisma } from "@/lib/prisma";
 import { VagaStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
+import { isModuleEnabled } from "@/lib/modules";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -45,6 +47,9 @@ export default async function VagasPage({
   // Funil da coluna Setor (30/09): parâmetro repetido, um por setor escolhido.
   const setores = lerLista(sectorCode);
   const ctx = await getAuthContext();
+  // Vaga e teste são do setor que contrata (o escopo já filtra); aqui só o
+  // módulo ligado, que antes não era checado e deixava a tela abrir desligada.
+  if (!(await isModuleEnabled(ctx.tenantId, "recrutamento_vagas"))) notFound();
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
 
   const statusFilter =
