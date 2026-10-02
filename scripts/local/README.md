@@ -79,6 +79,19 @@ node scripts/local/com-banco-local.mjs npx next start -p 3100
 
 Depois de recriar o banco, reinicie o servidor.
 
+## Perfis de um setor só
+
+A conta do administrador vê tudo, então não serve para conferir se uma tela fecha
+para quem não é do setor. Para isso:
+
+```
+node scripts/local/com-banco-local.mjs npx tsx scripts/local/perfis-de-teste.ts
+```
+
+Cria `bpo.teste@`, `dp.teste@` e `dpcoord.teste@exemplo.invalido` (coordenador do
+BPO, usuário do DP e coordenador do DP), com a `LOCAL_PORTAL_PASSWORD`, e uma
+colaboradora fictícia para a ficha da pessoa. Rode depois de recriar o banco.
+
 ## Vídeos
 
 Ver o cabeçalho de `scripts/videos/gravar.ts`.

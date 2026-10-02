@@ -5,7 +5,7 @@ import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
 import { BackButton } from "@/components/shared/BackButton";
-import { getAuthContext } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { buildS2200Preview } from "@/lib/esocialS2200";
@@ -19,7 +19,7 @@ export default async function EsocialS2200Page({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const ctx = await getAuthContext();
+  const { ctx } = await abrirTelaDoModulo("dp_colaboradores");
   const canViewSalary = await canViewSensitiveField(ctx, "SALARIO");
 
   const prisma = getPrisma();

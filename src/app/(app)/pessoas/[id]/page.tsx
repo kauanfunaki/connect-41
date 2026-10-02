@@ -30,6 +30,7 @@ import { InfoRow } from "@/components/empresas/InfoRow";
 import { CompanyHistorySection } from "@/components/empresas/CompanyHistorySection";
 import { OperationsLinkList, type OperationLink } from "@/components/shared/OperationsLinkList";
 import { getAuthContext, canWrite, isFullWrite } from "@/lib/auth/context";
+import { podeNoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { getPersonSectors, getApplicableCustomFields } from "@/lib/customFields";
 import { listDocuments } from "@/lib/documents";
@@ -82,6 +83,22 @@ const TRABALHISTA_LINKS: OperationLink[] = [
   { href: "esocial-s2200", label: "eSocial S-2200 (rascunho)", description: "Conferência dos dados de admissão", icon: <FileSpreadsheet size={16} /> },
 ];
 
+// Cada atalho abre uma tela de um módulo do DP, que responde 404 a quem não é
+// do setor que opera o módulo (02/10/2026). Quem não alcança não vê o atalho.
+const MODULO_DO_ATALHO: Record<string, string> = {
+  escala: "dp_escalas",
+  beneficios: "dp_colaboradores",
+  salario: "dp_colaboradores",
+  ferias: "dp_colaboradores",
+  afastamentos: "dp_afastamentos",
+  desligamento: "dp_colaboradores",
+  "horas-extras": "dp_horas_extras",
+  exames: "dp_colaboradores",
+  avaliacoes: "dp_avaliacoes",
+  treinamentos: "dp_treinamentos",
+  "esocial-s2200": "dp_colaboradores",
+};
+
 export default async function PessoaPage({
   params,
 }: {
@@ -91,6 +108,12 @@ export default async function PessoaPage({
   const ctx = await getAuthContext();
   const canEdit = canWrite(ctx.role);
   const canRequestHandoff = isFullWrite(ctx.role) || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.length > 0);
+  const modulosDosAtalhos = [...new Set(Object.values(MODULO_DO_ATALHO))];
+  const alcancados = new Set(
+    (await Promise.all(modulosDosAtalhos.map(async (m) => ((await podeNoModulo(ctx, m, "ver")) ? m : null)))).filter(Boolean)
+  );
+  const atalhosDoVinculo = VINCULO_LINKS.filter((l) => alcancados.has(MODULO_DO_ATALHO[l.href]));
+  const atalhosTrabalhistas = TRABALHISTA_LINKS.filter((l) => alcancados.has(MODULO_DO_ATALHO[l.href]));
 
   const prisma = getPrisma();
   const [person, documents, pipelineItems, historyActivities] = await Promise.all([
@@ -273,7 +296,9 @@ export default async function PessoaPage({
         </div>
       </Card>
 
-      {person.type === "COLABORADOR" && <OperationsLinkList basePath={`/pessoas/${id}`} links={VINCULO_LINKS} />}
+      {person.type === "COLABORADOR" && atalhosDoVinculo.length > 0 && (
+        <OperationsLinkList basePath={`/pessoas/${id}`} links={atalhosDoVinculo} />
+      )}
     </div>
   );
 
@@ -325,7 +350,9 @@ export default async function PessoaPage({
         </Card>
       )}
 
-      {person.type === "COLABORADOR" && <OperationsLinkList basePath={`/pessoas/${id}`} links={TRABALHISTA_LINKS} />}
+      {person.type === "COLABORADOR" && atalhosTrabalhistas.length > 0 && (
+        <OperationsLinkList basePath={`/pessoas/${id}`} links={atalhosTrabalhistas} />
+      )}
 
       {/* Campos Adicionais (setoriais) */}
       {customFields.length > 0 && (

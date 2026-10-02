@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { ArrowRight, Stethoscope } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { formatCalendarDate } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -22,7 +22,7 @@ import {
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
 export default async function AfastamentosPage() {
-  const ctx = await getAuthContext();
+  const { ctx } = await abrirTelaDoModulo("dp_afastamentos");
   const prisma = getPrisma();
   const canViewMedical = await canViewSensitiveField(ctx, "DADOS_MEDICOS");
 

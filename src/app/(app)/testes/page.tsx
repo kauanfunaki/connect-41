@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -17,7 +18,7 @@ import { NovoTesteForm } from "@/components/teste/NovoTesteForm";
 import { formatInstantDate } from "@/lib/format";
 import { lerLista } from "@/lib/filtrosDaListaDeEmpresas";
 import type { AssessmentLinkStatus } from "@/generated/prisma/enums";
-import { setorDoModulo } from "@/lib/modules";
+import { setorDoModulo, isModuleEnabled } from "@/lib/modules";
 
 const PER_PAGE = 30;
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
@@ -50,6 +51,9 @@ export default async function TestesPage({
   const { status, page, teste } = await searchParams;
   const testesEscolhidos = lerLista(teste);
   const ctx = await getAuthContext();
+  // Vaga e teste são do setor que contrata (o escopo já filtra); aqui só o
+  // módulo ligado, que antes não era checado e deixava a tela abrir desligada.
+  if (!(await isModuleEnabled(ctx.tenantId, "recrutamento_testes"))) notFound();
 
   const statusFilter =
     status && (["PENDENTE", "RESPONDIDO"] as string[]).includes(status) ? (status as AssessmentLinkStatus) : undefined;

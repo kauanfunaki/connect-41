@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
+import { podeNoModulo } from "@/lib/auth/modulo";
 
 export type TrainingState = { error: string } | null;
 
@@ -14,7 +15,7 @@ function pick(form: FormData, key: string): string | null {
 export async function criarTreinamento(_prev: TrainingState, form: FormData): Promise<TrainingState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para criar treinamentos." };
+  if (!(await podeNoModulo(ctx, "dp_treinamentos", "gerir"))) return { error: "Sem permissão para criar treinamentos." };
 
   const name = (form.get("name") as string)?.trim();
   if (!name) return { error: "Nome do treinamento é obrigatório" };
@@ -43,7 +44,7 @@ export async function criarTreinamento(_prev: TrainingState, form: FormData): Pr
 export async function atualizarTreinamento(_prev: TrainingState, form: FormData): Promise<TrainingState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para editar treinamentos." };
+  if (!(await podeNoModulo(ctx, "dp_treinamentos", "gerir"))) return { error: "Sem permissão para editar treinamentos." };
 
   const id = form.get("id") as string;
   const name = (form.get("name") as string)?.trim();
@@ -74,7 +75,7 @@ export async function atualizarTreinamento(_prev: TrainingState, form: FormData)
 
 export async function excluirTreinamento(id: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWrite(ctx.role)) return;
+  if (!ctx.tenantId || !(await podeNoModulo(ctx, "dp_treinamentos", "gerir"))) return;
 
   const prisma = getPrisma();
   const existing = await prisma.training.findFirst({ where: { id, tenantId: ctx.tenantId } });

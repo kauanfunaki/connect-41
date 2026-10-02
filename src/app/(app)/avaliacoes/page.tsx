@@ -4,7 +4,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { ArrowRight, Star } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { canManageSector } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { AddCicloForm } from "@/components/avaliacoes/AddCicloForm";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -15,8 +16,8 @@ import { formatCalendarDate } from "@/lib/format";
 import { criarCiclo } from "./actions";
 
 export default async function AvaliacoesPage() {
-  const ctx = await getAuthContext();
-  const canManage = canWrite(ctx.role);
+  const { ctx, setor } = await abrirTelaDoModulo("dp_avaliacoes");
+  const canManage = canManageSector(ctx, setor);
 
   const prisma = getPrisma();
   const ciclos = await prisma.evaluationCycle.findMany({

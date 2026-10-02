@@ -4,7 +4,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { ArrowRight, Lock } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { canManageSector } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
 import { excluirCiclo, encerrarCiclo } from "../actions";
 import { SelecionarColaboradorForm } from "@/components/avaliacoes/SelecionarColaboradorForm";
@@ -21,8 +22,8 @@ export default async function CicloPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const ctx = await getAuthContext();
-  const canManage = canWrite(ctx.role);
+  const { ctx, setor } = await abrirTelaDoModulo("dp_avaliacoes");
+  const canManage = canManageSector(ctx, setor);
 
   const prisma = getPrisma();
   const ciclo = await prisma.evaluationCycle.findFirst({

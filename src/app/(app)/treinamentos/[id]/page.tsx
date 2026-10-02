@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/Button";
 import { ArrowRight, Pencil } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { canManageSector } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
 import { MenuDoRegistro } from "@/components/pessoas/MenuDoRegistro";
 import { excluirTreinamento } from "../actions";
@@ -22,8 +23,8 @@ export default async function TreinamentoPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const ctx = await getAuthContext();
-  const canManage = canWrite(ctx.role);
+  const { ctx, setor } = await abrirTelaDoModulo("dp_treinamentos");
+  const canManage = canManageSector(ctx, setor);
 
   const prisma = getPrisma();
   const training = await prisma.training.findFirst({

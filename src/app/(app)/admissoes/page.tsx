@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { ArrowRight, UserPlus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
@@ -13,7 +13,7 @@ import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/sh
 const PENDING_EXAM_STATUSES = new Set(["SOLICITADO", "AGENDADO", "REALIZADO", "ASO_PENDENTE"]);
 
 export default async function AdmissoesPage() {
-  const ctx = await getAuthContext();
+  const { ctx } = await abrirTelaDoModulo("dp_colaboradores");
   const prisma = getPrisma();
 
   const people = await prisma.person.findMany({

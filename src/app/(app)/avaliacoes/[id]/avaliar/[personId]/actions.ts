@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
+import { podeNoModulo } from "@/lib/auth/modulo";
 
 export type EvaluationState = { error: string } | null;
 
@@ -15,7 +16,7 @@ export async function registrarAvaliacao(
 ): Promise<EvaluationState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para avaliar colaboradores." };
+  if (!(await podeNoModulo(ctx, "dp_avaliacoes", "gerir"))) return { error: "Sem permissão para avaliar colaboradores." };
 
   const prisma = getPrisma();
   const cycle = await prisma.evaluationCycle.findFirst({ where: { id: cycleId, tenantId: ctx.tenantId } });

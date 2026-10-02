@@ -3,14 +3,15 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
+import { podeNoModulo } from "@/lib/auth/modulo";
 
 export type EvaluationCycleState = { error: string } | null;
 
 export async function criarCiclo(_prev: EvaluationCycleState, form: FormData): Promise<EvaluationCycleState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para criar ciclos de avaliação." };
+  if (!(await podeNoModulo(ctx, "dp_avaliacoes", "gerir"))) return { error: "Sem permissão para criar ciclos de avaliação." };
 
   const name = (form.get("name") as string)?.trim();
   const startDateRaw = (form.get("startDate") as string)?.trim();
@@ -40,7 +41,7 @@ export async function criarCiclo(_prev: EvaluationCycleState, form: FormData): P
 
 export async function encerrarCiclo(id: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWrite(ctx.role)) return;
+  if (!ctx.tenantId || !(await podeNoModulo(ctx, "dp_avaliacoes", "gerir"))) return;
 
   const prisma = getPrisma();
   const existing = await prisma.evaluationCycle.findFirst({ where: { id, tenantId: ctx.tenantId } });
@@ -52,7 +53,7 @@ export async function encerrarCiclo(id: string): Promise<void> {
 
 export async function excluirCiclo(id: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWrite(ctx.role)) return;
+  if (!ctx.tenantId || !(await podeNoModulo(ctx, "dp_avaliacoes", "gerir"))) return;
 
   const prisma = getPrisma();
   const existing = await prisma.evaluationCycle.findFirst({ where: { id, tenantId: ctx.tenantId } });
