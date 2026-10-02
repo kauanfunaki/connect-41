@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
-import { Input } from "@/components/ui/Input";
+import { CampoMes } from "@/components/ui/CampoMes";
 import { Button } from "@/components/ui/Button";
 
 type Props = {
@@ -46,7 +46,7 @@ export function FiltroDePeriodo({ acao, empresas, empresaId, permitirTodas, mes,
         />
       )}
       {mes !== undefined && (
-        <Input compact type="month" name="mes" defaultValue={mes} className="w-40" aria-label="Mês" />
+        <CampoMes compact name="mes" defaultValue={mes} className="w-40" aria-label="Mês" />
       )}
       {children}
       <Button type="submit" variant="secondary" size="sm">

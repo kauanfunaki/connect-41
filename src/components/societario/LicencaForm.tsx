@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSelect";
@@ -114,14 +115,14 @@ function Formulario({ onClose, orgaos, empresas, licenca }: Omit<ModalProps, "op
 
       <FieldGrid>
         <CampoForm label="Emissão" htmlFor={`${prefixo}-emissao`}>
-          <Input id={`${prefixo}-emissao`} name="issuedAt" type="date" defaultValue={licenca?.issuedAt ?? ""} />
+          <CampoData id={`${prefixo}-emissao`} name="issuedAt" defaultValue={licenca?.issuedAt ?? ""} />
         </CampoForm>
         <CampoForm
           label="Validade"
           htmlFor={`${prefixo}-validade`}
           helper="Em branco quando não vence — inscrição municipal, por exemplo."
         >
-          <Input id={`${prefixo}-validade`} name="expiresAt" type="date" defaultValue={licenca?.expiresAt ?? ""} />
+          <CampoData id={`${prefixo}-validade`} name="expiresAt" defaultValue={licenca?.expiresAt ?? ""} />
         </CampoForm>
       </FieldGrid>
 

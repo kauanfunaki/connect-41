@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Button } from "@/components/ui/Button";
@@ -148,7 +149,7 @@ export function AdmissaoForm({ token, defaults }: Props) {
             <Input id="rg" name="rg" type="text" defaultValue={defaults.rg} maxLength={20} />
           </CampoForm>
           <CampoForm label="Data de nascimento" htmlFor="birthDate" className="sm:col-span-2">
-            <Input id="birthDate" name="birthDate" type="date" defaultValue={defaults.birthDate} />
+            <CampoData id="birthDate" name="birthDate" defaultValue={defaults.birthDate} />
           </CampoForm>
           <CampoForm label="PIS / PASEP" htmlFor="pis" className="sm:col-span-2">
             <Input id="pis" name="pis" type="text" defaultValue={defaults.pis} maxLength={20} />
@@ -245,7 +246,7 @@ export function AdmissaoForm({ token, defaults }: Props) {
                     <Input id={`dep-cpf-${i}`} type="text" value={d.cpf} onChange={(e) => updateDep(i, { cpf: e.target.value })} placeholder="000.000.000-00" maxLength={14} />
                   </CampoForm>
                   <CampoForm label="Data de nascimento" htmlFor={`dep-birth-${i}`} className="sm:col-span-3">
-                    <Input id={`dep-birth-${i}`} type="date" value={d.birthDate} onChange={(e) => updateDep(i, { birthDate: e.target.value })} />
+                    <CampoData id={`dep-birth-${i}`} value={d.birthDate} onChange={(v) => updateDep(i, { birthDate: v })} />
                   </CampoForm>
                 </FieldGrid>
                 <div className="flex flex-wrap gap-x-6 gap-y-2">

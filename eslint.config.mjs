@@ -49,6 +49,14 @@ const eslintConfig = defineConfig([
           message: "Use o componente Select de @/components/ui/Select em vez de <select> cru.",
         },
         {
+          // Date picker do Connect (02/10/2026): os 77 campos nativos viraram
+          // CampoData & cia. — digitação com máscara, calendário com feriados.
+          selector:
+            'JSXOpeningElement[name.name=/^(Input|input)$/]:has(JSXAttribute[name.name="type"] Literal[value=/^(date|month|datetime-local|time)$/])',
+          message:
+            "Use CampoData, CampoMes, CampoDataHora, CampoHora ou CampoPeriodo (@/components/ui) em vez do campo de data/hora nativo.",
+        },
+        {
           selector: 'JSXOpeningElement[name.name="textarea"]',
           message: "Use o componente Textarea de @/components/ui/Textarea em vez de <textarea> cru.",
         },

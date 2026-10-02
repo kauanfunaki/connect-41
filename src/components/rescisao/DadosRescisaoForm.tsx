@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Checkbox } from "@/components/ui/Checkbox";
 import type { ConferenciaState } from "@/app/(app)/pessoas/[id]/desligamento/[terminationId]/conferencia/actions";
@@ -42,10 +43,10 @@ export function DadosRescisaoForm({ action, defaults, canEdit }: Props) {
           embaixo — e o "Salvar" foi para o rodapé. */}
       <FieldGrid columns="sm:grid-cols-3">
         <CampoForm label="Término do contrato" htmlFor="terminationDate" helper="Base do prazo legal de pagamento.">
-          <Input
+          <CampoData
             id="terminationDate"
             name="terminationDate"
-            type="date"
+           
             defaultValue={defaults.terminationDate}
             disabled={!canEdit}
           />

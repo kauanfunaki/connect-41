@@ -6,6 +6,7 @@ import type { BenefitAssignmentState } from "@/app/(app)/pessoas/[id]/beneficios
 import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 
 type BenefitOption = { id: string; name: string };
@@ -32,7 +33,7 @@ export function AddBeneficioForm({ action, beneficios }: Props) {
           </Select>
         </CampoForm>
         <CampoForm label="Início da Vigência" htmlFor="startDate" required>
-          <Input id="startDate" name="startDate" type="date" required />
+          <CampoData id="startDate" name="startDate" required />
         </CampoForm>
         <CampoForm label="Valor Empresa" htmlFor="companyValue">
           <Input id="companyValue" name="companyValue" type="number" step="0.01" prefix="R$" placeholder="0,00" />

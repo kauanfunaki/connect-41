@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import type { BenefitAssignmentState } from "@/app/(app)/pessoas/[id]/beneficios/actions";
 import { BenefitStatus } from "@/generated/prisma/enums";
-import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { MenuDoRegistro } from "./MenuDoRegistro";
@@ -85,7 +85,7 @@ export function BeneficioRow({ beneficio, updateAction, removeAction, canManage 
             </Select>
           </div>
           <div className="w-full sm:w-40">
-            <Input name="endDate" type="date" title="Fim da vigência" aria-label="Fim da vigência" />
+            <CampoData name="endDate" title="Fim da vigência" aria-label="Fim da vigência" />
           </div>
           <Button
             variant="secondary"

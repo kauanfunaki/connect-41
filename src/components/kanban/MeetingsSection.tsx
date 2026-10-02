@@ -6,6 +6,7 @@ import { Video, ExternalLink, Plus, Trash2, X } from "lucide-react";
 import type { MeetingState } from "@/app/(app)/kanban/meetings-actions";
 import type { MeetingProvider } from "@/generated/prisma/enums";
 import { Input } from "@/components/ui/Input";
+import { CampoDataHora } from "@/components/ui/CampoDataHora";
 import { Select } from "@/components/ui/Select";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
@@ -88,12 +89,12 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
                   placeholder="Título da reunião"
                 />
               </CampoForm>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <CampoForm label="Início" htmlFor={`${uid}-reuniao-inicio`} required>
-                  <Input id={`${uid}-reuniao-inicio`} name="startAt" type="datetime-local" required />
+                  <CampoDataHora id={`${uid}-reuniao-inicio`} name="startAt" required />
                 </CampoForm>
                 <CampoForm label="Fim" htmlFor={`${uid}-reuniao-fim`} required>
-                  <Input id={`${uid}-reuniao-fim`} name="endAt" type="datetime-local" required />
+                  <CampoDataHora id={`${uid}-reuniao-fim`} name="endAt" required />
                 </CampoForm>
                 <CampoForm label="Plataforma" htmlFor={`${uid}-reuniao-plataforma`} required>
                   <Select id={`${uid}-reuniao-plataforma`} name="provider" required>

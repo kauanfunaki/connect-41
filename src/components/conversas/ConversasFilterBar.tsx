@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/Input";
+import { CampoPeriodo } from "@/components/ui/CampoPeriodo";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { FilterButton, FilterButtonSection } from "@/components/ui/FilterButton";
@@ -105,22 +106,15 @@ export function ConversasFilterBar({ search: initialSearch, status, atendente, d
         {({ close }) => (
           <div className="space-y-3">
             <FilterButtonSection label="Período">
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  compact
-                  type="date"
-                  aria-label="De"
-                  value={draftDe}
-                  onChange={(e) => setDraftDe(e.target.value)}
-                />
-                <Input
-                  compact
-                  type="date"
-                  aria-label="Até"
-                  value={draftAte}
-                  onChange={(e) => setDraftAte(e.target.value)}
-                />
-              </div>
+              <CampoPeriodo
+                compact
+                de={draftDe}
+                ate={draftAte}
+                onChange={(p) => {
+                  setDraftDe(p.de);
+                  setDraftAte(p.ate);
+                }}
+              />
             </FilterButtonSection>
 
             <FilterButtonSection label="Atendente">
