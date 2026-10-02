@@ -83,18 +83,19 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
             {l.empresaNome} · {moeda(l.valorCentavos)} · venceu em {formatInstantDate(l.vencimento)} · competência {t.competencia}
           </>
         }
-      />
-
-      <div className="flex flex-wrap items-center gap-2 mt-3 mb-4">
-        <SeloDaCobranca situacao={l.situacao} />
+        meta={
+          <>
+            <SeloDaCobranca situacao={l.situacao} />
         {l.situacao === null && <Badge variant={t.status === "PAGO" ? "success" : "info"}>{t.status === "PAGO" ? "Pago" : "Cancelado"}</Badge>}
-        {emAberto && l.diasDeAtraso > 0 && (
-          <span className="text-[12px] text-fg-muted">
-            {l.diasDeAtraso === 1 ? "1 dia" : `${l.diasDeAtraso} dias`} de atraso · {FAIXAS_DE_ATRASO.find((f) => f.chave === l.faixa)?.rotulo}
-          </span>
-        )}
-        {l.descricao && <span className="text-[12px] text-fg-muted">· {l.descricao}</span>}
-      </div>
+            {emAberto && l.diasDeAtraso > 0 && (
+              <span>
+                {l.diasDeAtraso === 1 ? "1 dia" : `${l.diasDeAtraso} dias`} de atraso · {FAIXAS_DE_ATRASO.find((f) => f.chave === l.faixa)?.rotulo}
+              </span>
+            )}
+            {l.descricao && <span>{l.descricao}</span>}
+          </>
+        }
+      />
 
       {t.perda && (
         <Card className="p-4 mb-4 border-danger/40">
