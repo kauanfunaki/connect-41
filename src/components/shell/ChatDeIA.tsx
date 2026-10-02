@@ -258,6 +258,22 @@ export function ChatDeIA({
     return () => window.removeEventListener("keydown", fechar);
   }, [aberto]);
 
+  // Clicar fora fecha o chat (pedido de 02/10/2026). O clique dentro — também
+  // nos menus e janelas que o chat abre por portal (o ⋯, o agente, uma
+  // confirmação) — passa pelo onMouseDown da seção, porque o evento do React
+  // sobe pela árvore do React, e não pela do DOM; o do documento vem depois e
+  // só fecha se ninguém marcou. A marca vale para aquele clique só.
+  const cliqueDentroRef = useRef(false);
+  useEffect(() => {
+    if (!aberto) return;
+    const aoClicar = () => {
+      if (!cliqueDentroRef.current) setAberto(false);
+      cliqueDentroRef.current = false;
+    };
+    document.addEventListener("mousedown", aoClicar);
+    return () => document.removeEventListener("mousedown", aoClicar);
+  }, [aberto]);
+
   // O campo cresce com o texto, de uma a seis linhas — e volta ao enviar.
   useLayoutEffect(() => {
     const el = campoRef.current;
@@ -559,6 +575,9 @@ export function ChatDeIA({
   return (
     <section
       style={corDoOrbe}
+      onMouseDown={() => {
+        cliqueDentroRef.current = true;
+      }}
       className="fixed z-40 inset-0 sm:inset-auto sm:bottom-4 sm:right-4 sm:w-[420px] sm:h-[min(840px,calc(100vh-2rem))] flex flex-col bg-surface-elevated sm:border sm:border-border sm:rounded-2xl shadow-[0_24px_64px_-16px_rgb(0_0_0/0.35)] overflow-hidden"
       aria-label="Chat de IA"
     >
