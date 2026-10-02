@@ -7,6 +7,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Conversa } from "@/components/whatsapp/Conversa";
 import { lerConversa } from "@/lib/whatsapp/data";
 import { setorDoModulo, isModuleEnabled } from "@/lib/modules";
+import { pessoasDoAtendimento } from "@/lib/whatsapp/equipe";
 
 const MODULE = "recrutamento_whatsapp";
 
@@ -15,7 +16,8 @@ export default async function ConversaPage({ params }: { params: Promise<{ id: s
   const ctx = await getAuthContext();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
   // Setor que opera o módulo neste tenant, não o de origem — ver `setorDoModulo`.
-  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? "recrutamento")) notFound();
+  const setor = ctx.tenantId ? ((await setorDoModulo(ctx.tenantId, MODULE)) ?? "recrutamento") : "recrutamento";
+  if (!ctx.tenantId || !canActOnSector(ctx, setor)) notFound();
 
   const agora = new Date();
   const conversa = await lerConversa(ctx.tenantId, id);
@@ -25,6 +27,7 @@ export default async function ConversaPage({ params }: { params: Promise<{ id: s
   // processo já encerrado é quase sempre engano, e o seletor com tudo dentro
   // fica longo demais para escolher direito.
   const prisma = getPrisma();
+  const pessoas = await pessoasDoAtendimento(ctx.tenantId, setor);
   const emAndamento = await prisma.candidatura.findMany({
     where: { tenantId: ctx.tenantId, status: "EM_ANDAMENTO" },
     orderBy: { createdAt: "desc" },
@@ -48,6 +51,7 @@ export default async function ConversaPage({ params }: { params: Promise<{ id: s
         conversa={conversa}
         agora={agora}
         userId={ctx.userId}
+        pessoas={pessoas}
         candidaturas={emAndamento.map((c) => ({
           id: c.id,
           rotulo: `${c.person.name} — ${c.vaga.title}`,

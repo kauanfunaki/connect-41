@@ -15,6 +15,9 @@ export function linkDaNotificacao(n: NotificacaoParaLink): string | null {
   if (n.type === "AVISO_ORGAO_SEM_PROCESSO") return "/processos/avisos";
   // Alertas da Gestão (processo ou card parado, prazo): a lista mostra o item e o link dele.
   if (n.type === "GESTAO_ALERTA") return "/gestao/alertas";
+  // Várias conversas do WhatsApp passadas de uma vez (02/10/2026): o aviso é um
+  // só, sem conversa própria, e abre a lista das que estão com a pessoa.
+  if (n.type === "WHATSAPP_HANDOFF" && !n.entityId) return "/whatsapp?ver=minhas";
   if (!n.entityId) return null;
   if (n.type.startsWith("WHATSAPP_")) return `/whatsapp/${n.entityId}`;
   if (n.type.startsWith("PROCESS_")) return `/processos/${n.entityId}`;
