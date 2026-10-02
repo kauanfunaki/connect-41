@@ -6,6 +6,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { EntradaXmlForm } from "@/components/fiscal/EntradaXmlForm";
+import { CAMPOS_DA_EMPRESA_NO_SELETOR } from "@/lib/empresas/opcoesDoSeletor";
 import { importarXmls } from "./actions";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
@@ -24,7 +25,7 @@ export default async function EntradaDeXmlPage() {
   const empresas = await prisma.company.findMany({
     where: { tenantId: ctx.tenantId, status: { in: ["ACTIVE", "PROSPECT"] } },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, displayName: true },
+    select: CAMPOS_DA_EMPRESA_NO_SELETOR,
   });
 
   return (
