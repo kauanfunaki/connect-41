@@ -10,6 +10,7 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { MenuDeMaisAcoes } from "@/components/admin/AcoesDoItem";
 import { contasDoOmieAction, importarNotasOmieAction, previaDasNotasOmieAction, salvarContaOmieAction, testarContaOmieAction } from "@/app/(app)/admin/integracoes/omie-actions";
@@ -53,7 +54,7 @@ const SAUDE: Record<Saude, { rotulo: string; variante: "success" | "warning" | "
   parada: { rotulo: "Parada", variante: "warning" },
 };
 
-function FormConta({ empresas, inicial, onFim }: { empresas: { id: string; nome: string }[]; inicial?: { companyId: string; appKey: string }; onFim: () => void }) {
+function FormConta({ empresas, inicial, onFim }: { empresas: (EmpresaParaEscolher & { nome: string })[]; inicial?: { companyId: string; appKey: string }; onFim: () => void }) {
   const [companyId, setCompanyId] = useState(inicial?.companyId ?? "");
   const [appKey, setAppKey] = useState(inicial?.appKey ?? "");
   const [appSecret, setAppSecret] = useState("");
@@ -85,7 +86,9 @@ function FormConta({ empresas, inicial, onFim }: { empresas: { id: string; nome:
             <SearchableSelect
               id={`${id}-empresa`}
               name="companyId"
-              options={empresas.map((e) => ({ value: e.id, label: e.nome }))}
+              options={opcoesDeEmpresa(empresas)}
+              avatar
+              lembrarRecentes="empresas"
               placeholder="Buscar empresa…"
               onChange={setCompanyId}
             />
@@ -120,7 +123,7 @@ function FormConta({ empresas, inicial, onFim }: { empresas: { id: string; nome:
  * cada empresa tem App Key e App Secret próprios (no Omie, em Configurações ›
  * Aplicativos). Login e senha do Omie não servem para a API.
  */
-export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; empresas: { id: string; nome: string }[] }) {
+export function ContasOmie({ contas, empresas }: { contas: ContaOmieNaTela[]; empresas: (EmpresaParaEscolher & { nome: string })[] }) {
   const [novo, setNovo] = useState(false);
   const [editando, setEditando] = useState<string | null>(null);
   const [teste, setTeste] = useState<Record<string, { ok: boolean; texto: string }>>({});

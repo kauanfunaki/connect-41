@@ -70,7 +70,7 @@ function Formulario({ onClose, orgaos, empresas, licenca }: Omit<ModalProps, "op
         </CampoForm>
       ) : (
         <CampoForm label="Empresa" htmlFor={`${prefixo}-empresa`} required>
-          <SearchableSelect id={`${prefixo}-empresa`} name="companyId" options={empresas ?? []} placeholder="Buscar empresa…" />
+          <SearchableSelect id={`${prefixo}-empresa`} name="companyId" options={empresas ?? []} placeholder="Buscar empresa…" avatar lembrarRecentes="empresas" />
         </CampoForm>
       )}
 
