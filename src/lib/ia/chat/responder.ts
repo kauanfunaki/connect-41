@@ -31,11 +31,13 @@ import {
 } from "@/lib/ia/chat/agentes";
 import {
   apagarConversasVencidas,
+  comCitados,
   conversaParaPerguntar,
   gravarMensagem,
   historicoDaConversa,
   perguntasDeHoje,
 } from "@/lib/ia/chat/conversas";
+import { filtrarCitacoes, idsNoTexto } from "@/lib/ia/chat/citacoes";
 import {
   contextoDaTela,
   descricaoDaTransferencia,
@@ -116,6 +118,11 @@ export async function prepararPerguntaDoChat(
       const minha = await gravarMensagem({ conversaId: conversa.id, papel: "usuario", texto: pergunta, contexto: contexto?.rotulo });
       enviar({ tipo: "mensagem", mensagem: minha });
 
+      // Os ids que esta execução viu de verdade — o resultado das ferramentas e o
+      // contexto da tela, que o servidor conferiu. Só eles viram cartão com foto
+      // na resposta (ver `citacoes.ts`).
+      const idsVistos = new Set<string>(idsNoTexto(contexto?.texto ?? ""));
+
       /** Uma ida a um agente do chat, com o recorte e o contexto dele. */
       const perguntarA = async (alvo: AgenteDoChat, comHistorico: boolean, aviso: "encaminhada" | "proprio_setor" | null = null) => {
         const ctxDoAlvo = alvo.code === agente.code ? contexto : await contextoParaOAgente(ctx, alvo.code, tela);
@@ -131,6 +138,9 @@ export async function prepararPerguntaDoChat(
           escopo: alvo.code === agente.code ? escopo : await escopoDoAgente(ctx, alvo.code, Object.keys(labels)),
           contexto: { userId: dono.userId, entityType: "chat", entityId: conversa.id },
           aoUsarFerramenta: (nome) => enviar({ tipo: "passo", texto: textoDoPasso(nome) }),
+          aoReceberResultado: (_nome, conteudo, erro) => {
+            if (!erro) for (const id of idsNoTexto(conteudo)) idsVistos.add(id);
+          },
         });
       };
       const propostasDe = (r: Awaited<ReturnType<typeof perguntarA>>): PropostaGravada[] =>
@@ -182,12 +192,12 @@ export async function prepararPerguntaDoChat(
         const resposta = await gravarMensagem({
           conversaId: conversa.id,
           papel: "assistente",
-          texto: r.valor || (pedido ? "Essa pergunta é de outro setor." : "Não consegui montar uma resposta."),
+          texto: filtrarCitacoes(r.valor || (pedido ? "Essa pergunta é de outro setor." : "Não consegui montar uma resposta."), idsVistos),
           propostas: [...(await rotularPropostas(dono.tenantId, propostasDe(r))), ...extras],
           runId: (r as { runId?: string }).runId ?? null,
           truncada: r.truncado,
         });
-        enviar({ tipo: "mensagem", mensagem: resposta });
+        enviar({ tipo: "mensagem", mensagem: await comCitados(dono.tenantId, resposta) });
 
         if (pedido) {
           await logAudit({
@@ -212,13 +222,13 @@ export async function prepararPerguntaDoChat(
           const resposta2 = await gravarMensagem({
             conversaId: conversa.id,
             papel: "assistente",
-            texto: r2.valor || "Não consegui montar uma resposta.",
+            texto: filtrarCitacoes(r2.valor || "Não consegui montar uma resposta.", idsVistos),
             propostas: await rotularPropostas(dono.tenantId, propostasDe(r2)),
             runId: (r2 as { runId?: string }).runId ?? null,
             truncada: r2.truncado,
             contexto: `Respondido pela ${destino.titulo}`,
           });
-          enviar({ tipo: "mensagem", mensagem: resposta2 });
+          enviar({ tipo: "mensagem", mensagem: await comCitados(dono.tenantId, resposta2) });
         }
       } catch (err) {
         console.error("[chat-ia]", agente.code, err);

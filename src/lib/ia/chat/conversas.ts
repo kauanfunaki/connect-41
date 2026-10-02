@@ -7,6 +7,8 @@
 import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import type { TurnoAnterior } from "@/lib/ia/laco";
+import { nomeExibicao } from "@/lib/companyName";
+import { citacoesDoTexto, type Citado } from "./citacoes";
 import { corteDaRetencao, inicioDoDiaEmSaoPaulo, lerPropostas, MARCA_DE_SUBSTITUIDA, tituloDaConversa, type PropostaGravada } from "./regras";
 
 export type Dono = { tenantId: string; userId: string };
@@ -20,6 +22,8 @@ export type MensagemNaTela = {
   falhou: boolean;
   contexto: string | null;
   criadaEm: string;
+  /** Quem a resposta cita, com foto — chave "tipo:id" (ver `citacoes.ts`). */
+  citados: Record<string, Citado>;
 };
 
 export type ConversaNaLista = { id: string; titulo: string; agentCode: string; atualizadaEm: string };
@@ -126,6 +130,7 @@ function paraTela(m: {
     falhou: m.failed,
     contexto: m.contextLabel,
     criadaEm: m.createdAt.toISOString(),
+    citados: {},
   };
 }
 
@@ -156,7 +161,7 @@ export async function mensagensDaConversa(
     },
   });
   if (!c) return null;
-  return { agentCode: c.agentCode, mensagens: c.messages.reverse().map(paraTela) };
+  return { agentCode: c.agentCode, mensagens: await comCitadosEmLote(dono.tenantId, c.messages.reverse().map(paraTela)) };
 }
 
 export async function apagarConversa(dono: Dono, conversaId: string): Promise<boolean> {
@@ -209,4 +214,45 @@ export async function substituirAPartirDe(dono: Dono, mensagemId: string): Promi
     data: { failed: true, contextLabel: MARCA_DE_SUBSTITUIDA },
   });
   return true;
+}
+
+// ─── Pessoas e empresas citadas, com foto (02/10/2026) ───────────────────────
+//
+// A resposta gravada só tem citação que a execução viu (`filtrarCitacoes` no
+// responder). Aqui elas ganham nome e foto, buscados em lote e sempre no
+// escritório: id de fora do tenant (ou apagado) não acha nada e a tela mostra
+// só o nome.
+
+export async function citadosDosTextos(tenantId: string, textos: string[]): Promise<Record<string, Citado>> {
+  const todas = textos.flatMap(citacoesDoTexto);
+  if (todas.length === 0) return {};
+  const ids = (tipo: Citado["tipo"]) => [...new Set(todas.filter((c) => c.tipo === tipo).map((c) => c.id))];
+  const prisma = getPrisma();
+  const [usuarios, pessoas, empresas] = await Promise.all([
+    ids("usuario").length ? prisma.user.findMany({ where: { tenantId, id: { in: ids("usuario") } }, select: { id: true, name: true, photoUrl: true } }) : [],
+    ids("pessoa").length ? prisma.person.findMany({ where: { tenantId, id: { in: ids("pessoa") } }, select: { id: true, name: true, photoUrl: true } }) : [],
+    ids("empresa").length
+      ? prisma.company.findMany({ where: { tenantId, id: { in: ids("empresa") } }, select: { id: true, name: true, displayName: true, logoUrl: true } })
+      : [],
+  ]);
+  const r: Record<string, Citado> = {};
+  for (const u of usuarios) r[`usuario:${u.id}`] = { tipo: "usuario", nome: u.name, foto: u.photoUrl, href: null };
+  for (const p of pessoas) r[`pessoa:${p.id}`] = { tipo: "pessoa", nome: p.name, foto: p.photoUrl, href: `/pessoas/${p.id}` };
+  for (const e of empresas) r[`empresa:${e.id}`] = { tipo: "empresa", nome: nomeExibicao(e), foto: e.logoUrl, href: `/empresas/${e.id}` };
+  return r;
+}
+
+export async function comCitados(tenantId: string, m: MensagemNaTela): Promise<MensagemNaTela> {
+  if (m.papel !== "assistente") return m;
+  return { ...m, citados: await citadosDosTextos(tenantId, [m.texto]) };
+}
+
+/** Várias de uma vez: uma consulta por tipo para a conversa inteira. */
+export async function comCitadosEmLote(tenantId: string, ms: MensagemNaTela[]): Promise<MensagemNaTela[]> {
+  const citados = await citadosDosTextos(
+    tenantId,
+    ms.filter((m) => m.papel === "assistente").map((m) => m.texto)
+  );
+  if (Object.keys(citados).length === 0) return ms;
+  return ms.map((m) => (m.papel === "assistente" ? { ...m, citados } : m));
 }

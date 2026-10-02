@@ -287,5 +287,5 @@ export async function conversarComFerramentasOpenAi(
     },
   };
 
-  return rodarLaco(adaptador, p.def, p.ctx, p.aoUsarFerramenta);
+  return rodarLaco(adaptador, p.def, p.ctx, p.aoUsarFerramenta, p.aoReceberResultado);
 }

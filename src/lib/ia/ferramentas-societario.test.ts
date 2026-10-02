@@ -31,7 +31,7 @@ describe("o conjunto", () => {
     // os outros testes. `encaminhar_pergunta` e `sugerir_respostas` são do chat
     // (orquestrador e respostas rápidas), não do Societário.
     const liberadas = [...agenteDoCatalogo("assistente_do_societario")!.ferramentas];
-    expect(liberadas.sort()).toEqual([...Object.keys(FERRAMENTAS_DE_SOCIETARIO), "encaminhar_pergunta", "sugerir_respostas"].sort());
+    expect(liberadas.sort()).toEqual([...Object.keys(FERRAMENTAS_DE_SOCIETARIO), "encaminhar_pergunta", "sugerir_respostas", "atividade_da_equipe"].sort());
   });
 
   it("as de escrita avisam, na descrição, que não executam", () => {
