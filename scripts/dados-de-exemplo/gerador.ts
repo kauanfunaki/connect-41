@@ -87,12 +87,23 @@ export async function carregarDadosDeExemplo(
 ): Promise<void> {
   const log = opcoes.log ?? console.log;
   // Quem aparece como autor (transferências, propostas): o administrador do
-  // escritório, ou a primeira pessoa ativa dele.
+  // escritório, ou a primeira pessoa ativa dele. Escritório sem ninguém — o
+  // Teste da produção, em que quem entra é o suporte, vindo de outro
+  // escritório — ganha uma administradora fictícia, sem senha como o resto.
   const admin =
     (await p.user.findFirst({ where: { tenantId, role: "ADMIN", active: true }, orderBy: { createdAt: "asc" }, select: { id: true } })) ??
     (await p.user.findFirst({ where: { tenantId, active: true }, orderBy: { createdAt: "asc" }, select: { id: true } }));
-  if (!admin) throw new Error("O escritório não tem nenhum usuário ativo.");
-  const adminId = admin.id;
+  if (!admin) log("Escritório sem usuários: entra a administradora fictícia Helena Prado, sem senha.");
+  const adminId =
+    admin?.id ??
+    (
+      await p.user.upsert({
+        where: { tenantId_email: { tenantId, email: "helena.prado@exemplo.invalido" } },
+        update: {},
+        create: { tenantId, name: "Helena Prado", email: "helena.prado@exemplo.invalido", passwordHash: SEM_SENHA, role: "ADMIN", active: true },
+        select: { id: true },
+      })
+    ).id;
 
   // ── Equipe ──────────────────────────────────────────────────────────────
   const equipe = {} as Record<(typeof EQUIPE)[number]["setor"], string>;

@@ -6,8 +6,9 @@
 //
 // Quem roda é o Kauan, na máquina dele (o `.env` aponta para a produção):
 //
-//   npx tsx scripts/dados-de-exemplo-no-teste.ts --escritorio <slug>            (só mostra)
-//   npx tsx scripts/dados-de-exemplo-no-teste.ts --escritorio <slug> --aplicar  (grava)
+//   npx tsx --env-file=.env scripts/dados-de-exemplo-no-teste.ts                                 (lista os Testes)
+//   npx tsx --env-file=.env scripts/dados-de-exemplo-no-teste.ts --escritorio <slug>            (só mostra)
+//   npx tsx --env-file=.env scripts/dados-de-exemplo-no-teste.ts --escritorio <slug> --aplicar  (grava)
 //
 // Travas: o escritório precisa se chamar "Teste" — qualquer outro é recusado,
 // mesmo com o slug certo de outro —, nada é gravado sem `--aplicar`, e se as
@@ -15,8 +16,10 @@
 //
 // Cuidados no Teste: as rotinas automáticas (alertas da Gestão, lembretes)
 // rodam para ele como para qualquer escritório; os e-mails são todos
-// @exemplo.invalido, então nada chega a ninguém. Para o Marcos entrar, ele
-// precisa de um usuário no Teste (Administração › Usuários).
+// @exemplo.invalido, então nada chega a ninguém. Para o Marcos entrar (ele é
+// SUPER_ADMIN), basta liberar o Teste para ele em Administração › Escritórios;
+// o Teste não precisa de usuário próprio — sem ninguém, entra uma
+// administradora fictícia como autora das propostas.
 
 import { getPrisma } from "../src/lib/prisma";
 import { carregarDadosDeExemplo, FONTE } from "./dados-de-exemplo/gerador";
