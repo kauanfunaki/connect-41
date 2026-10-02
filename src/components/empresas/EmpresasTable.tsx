@@ -2,7 +2,7 @@
 
 import { Fragment, useState, useTransition } from "react";
 import Link from "next/link";
-import { Building2, ChevronRight } from "lucide-react";
+import { Building2, ChevronRight, CornerDownRight } from "lucide-react";
 import { AcoesDeLinha } from "@/components/shared/AcoesDeLinha";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { StatusDot } from "@/components/shared/StatusDot";
@@ -109,7 +109,7 @@ export function EmpresasTable({
   }
 
   // Uma linha só, usada pela matriz e pela filial. Extraída porque são as
-  // mesmas 8 colunas — o que muda é o recuo, a setinha e a marca de filial.
+  // mesmas 8 colunas — o que muda é a setinha e a marca de filial.
   function linhaEmpresa(c: Row, qtdFiliais: number, ehFilial: boolean) {
     return (
       <tr
@@ -123,11 +123,11 @@ export function EmpresasTable({
             <Checkbox checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} />
           </td>
         )}
-        <td className="px-4 py-3">
-          <div
-            className="flex items-center gap-1.5 min-w-0"
-            style={ehFilial ? { paddingLeft: 22 } : undefined}
-          >
+        {/* Centralizado como as outras colunas (02/10/2026). Era à esquerda, com
+            a filial recuada 22px — recuo que, centralizado, não se lê. A filial
+            passou a se marcar pela seta "↳" antes do nome, além do "filial". */}
+        <td className="px-4 py-3 text-center">
+          <div className="flex items-center justify-center gap-1.5 min-w-0">
             {qtdFiliais > 0 ? (
               <Button
                 variant="linkMuted"
@@ -141,17 +141,15 @@ export function EmpresasTable({
                   className={`transition-transform ${expandidas.has(c.id) ? "rotate-90" : ""}`}
                 />
               </Button>
-            ) : (
-              // Espaço reservado mesmo sem filial: sem ele, os nomes das
-              // empresas com e sem filial ficam desalinhados na coluna.
-              <span className="w-[22px] shrink-0" aria-hidden="true" />
-            )}
+            ) : ehFilial ? (
+              <CornerDownRight size={14} className="shrink-0 text-fg-muted" aria-hidden="true" />
+            ) : null}
             <Link
               href={`/empresas/${c.id}`}
               className="flex items-center gap-2.5 min-w-0 font-medium text-fg hover:text-brand transition-colors"
             >
               <AvatarImage src={c.logoUrl} name={nomeExibicao(c)} size={28} shape="lg" fontSize={11} />
-              <span className="flex flex-col min-w-0">
+              <span className="flex flex-col min-w-0 text-center">
                 <span className="truncate">{nomeExibicao(c)}</span>
                 {/* Razão social só quando acrescenta: com apelido em branco ela
                     JÁ é o nome de cima, e repetir é ruído. O ID do Acessórias
@@ -469,7 +467,7 @@ export function EmpresasTable({
                     ver um campo é pior que não ter o campo. "Criada em" saiu (a
                     data de cadastro não decide nada numa lista operacional) e o
                     ID do Acessórias desceu para a segunda linha do nome. */}
-                <th className="text-left px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
+                <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
                 <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">CNPJ</th>
                 <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
                 <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">

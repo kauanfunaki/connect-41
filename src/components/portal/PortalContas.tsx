@@ -15,6 +15,7 @@ import { saoPauloParts } from "@/lib/agenda";
 import { formatInstantDate } from "@/lib/format";
 import { moeda } from "@/lib/financeiro/formato";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 
 const SITUACAO: Record<SituacaoDaConta, { rotulo: string; variante: "danger" | "warning" | "info" | "success" }> = {
   VENCIDA: { rotulo: "Vencida", variante: "danger" },
@@ -109,20 +110,49 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
           ))}
         </CartoesNoCelular>
 
+        {/* Funil nas colunas (02/10), como na tela da equipe: a lista vem
+            inteira (até 500), então filtra no navegador. A empresa entra no
+            funil da contraparte só quando aparece na célula. */}
+        <TabelaFiltravel
+          linhas={contas.map((c) => ({
+            id: c.id,
+            valores: {
+              vencimento: c.vencimentoKey,
+              contraparte: c.contraparteNome,
+              empresa: c.empresaNome,
+              categoria: c.categoriaNome ?? "",
+              situacao: SITUACAO[c.situacao].rotulo,
+            },
+          }))}
+        >
         <TabelaNoDesktop padrao>
           <table className="w-full min-w-[720px] text-[13px]">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-                <th className="py-2 pr-3 font-medium">Vencimento</th>
-                <th className="py-2 pr-3 font-medium">{aPagar ? "Fornecedor" : "Cliente"}</th>
-                <th className="py-2 pr-3 font-medium">Categoria</th>
-                <th className="py-2 pr-3 font-medium text-right">Valor</th>
-                <th className="py-2 font-medium">Situação</th>
+              <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" />
+                </th>
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna
+                    rotulo={aPagar ? "Fornecedor" : "Cliente"}
+                    campos={[
+                      { chave: "contraparte", rotulo: aPagar ? "Fornecedor" : "Cliente" },
+                      ...(variasEmpresas ? [{ chave: "empresa", rotulo: "Empresa" }] : []),
+                    ]}
+                  />
+                </th>
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna rotulo="Categoria" chave="categoria" />
+                </th>
+                <th className="py-2 pr-3 font-medium">Valor</th>
+                <th className="py-2 font-medium">
+                  <FiltroDaColuna rotulo="Situação" chave="situacao" align="right" />
+                </th>
               </tr>
             </thead>
             <tbody>
               {contas.map((c) => (
-                <tr key={c.id} className="border-b border-border-soft">
+                <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border-soft">
                   <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">
                     {formatInstantDate(c.vencimento)}
                     {c.pagoEm && <span className="block text-[11px] text-fg-muted">liquidada em {formatInstantDate(c.pagoEm)}</span>}
@@ -133,7 +163,7 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
                     {variasEmpresas && <span className="block text-[11px] text-fg-muted truncate max-w-[240px]">{c.empresaNome}</span>}
                   </td>
                   <td className="py-2.5 pr-3 text-fg-secondary">{c.categoriaNome ?? "—"}</td>
-                  <td className="py-2.5 pr-3 text-right tabular-nums font-medium">{moeda(c.valorCentavos)}</td>
+                  <td className="py-2.5 pr-3 tabular-nums font-medium">{moeda(c.valorCentavos)}</td>
                   <td className="py-2.5">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <Badge variant={SITUACAO[c.situacao].variante}>{SITUACAO[c.situacao].rotulo}</Badge>
@@ -149,11 +179,12 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
                         ))}
                     </div>
                   </td>
-                </tr>
+                </LinhaFiltravel>
               ))}
             </tbody>
           </table>
         </TabelaNoDesktop>
+        </TabelaFiltravel>
 
         {contas.length >= 500 && (
           <p className="text-[11px] text-fg-muted mt-3">Mostrando as 500 contas de vencimento mais recente.</p>

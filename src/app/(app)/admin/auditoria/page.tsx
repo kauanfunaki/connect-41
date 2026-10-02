@@ -6,6 +6,8 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
+import { FiltroDaColunaNaUrl, FiltrosDasColunasNaUrl } from "@/components/shared/FiltroDeColunas";
+import { lerLista } from "@/lib/filtroNaUrl";
 import { Pagination } from "@/components/shared/Pagination";
 import { Badge } from "@/components/ui/Badge";
 import { CampoPeriodo } from "@/components/ui/CampoPeriodo";
@@ -72,8 +74,9 @@ export default async function AuditoriaPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    userId?: string;
-    action?: string;
+    /** Funil das colunas Usuário e Ação — parâmetro repetido, um por valor escolhido. */
+    userId?: string | string[];
+    action?: string | string[];
     entityType?: string;
     from?: string;
     to?: string;
@@ -81,16 +84,16 @@ export default async function AuditoriaPage({
   }>;
 }) {
   const { userId, action, entityType, from, to, page } = await searchParams;
+  const usuarios = lerLista(userId);
+  const acoes = lerLista(action);
   const ctx = await getAuthContext();
   if (ctx.role !== "SUPER_ADMIN") notFound();
 
   const prisma = getPrisma();
   const pageNum = Math.max(1, parseInt(page ?? "1"));
 
-  const where = {
+  const base = {
     tenantId: ctx.tenantId,
-    ...(userId ? { userId } : {}),
-    ...(action ? { action } : {}),
     ...(entityType ? { entityType } : {}),
     ...(from || to
       ? {
@@ -101,8 +104,14 @@ export default async function AuditoriaPage({
         }
       : {}),
   };
+  // Funil de Usuário e Ação (02/10). A trilha é paginada, então filtra aqui,
+  // na base inteira — ver `FiltroDaColunaNaUrl`. Cada funil conta sem o
+  // próprio filtro, em cascata com o outro.
+  const ondeUsuario = usuarios.length > 0 ? { userId: { in: usuarios } } : {};
+  const ondeAcao = acoes.length > 0 ? { action: { in: acoes } } : {};
+  const where = { AND: [base, ondeUsuario, ondeAcao] };
 
-  const [logs, total, users, actionRows, entityTypeRows] = await Promise.all([
+  const [logs, total, users, porUsuario, porAcao, entityTypeRows] = await Promise.all([
     prisma.auditLog.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -113,15 +122,10 @@ export default async function AuditoriaPage({
     prisma.auditLog.count({ where }),
     prisma.user.findMany({
       where: { tenantId: ctx.tenantId },
-      orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
-    prisma.auditLog.findMany({
-      where: { tenantId: ctx.tenantId },
-      distinct: ["action"],
-      select: { action: true },
-      orderBy: { action: "asc" },
-    }),
+    prisma.auditLog.groupBy({ by: ["userId"], where: { AND: [base, ondeAcao] }, _count: { _all: true } }),
+    prisma.auditLog.groupBy({ by: ["action"], where: { AND: [base, ondeUsuario] }, _count: { _all: true } }),
     prisma.auditLog.findMany({
       where: { tenantId: ctx.tenantId, entityType: { not: null } },
       distinct: ["entityType"],
@@ -131,14 +135,28 @@ export default async function AuditoriaPage({
   ]);
 
   const totalPages = Math.ceil(total / PER_PAGE);
-  const hasFilters = !!(userId || action || entityType || from || to);
+  const hasFilters = !!(usuarios.length > 0 || acoes.length > 0 || entityType || from || to);
 
+  const porNome = (a: { rotulo: string }, b: { rotulo: string }) =>
+    a.rotulo.localeCompare(b.rotulo, "pt-BR", { sensitivity: "base" });
+  const nomeDoUsuario = new Map(users.map((u) => [u.id, u.name]));
+  const opcoesDeUsuario = porUsuario
+    .map((g) => ({ valor: g.userId, rotulo: nomeDoUsuario.get(g.userId) ?? g.userId, n: g._count._all }))
+    .sort(porNome);
+  const opcoesDeAcao = porAcao
+    .map((g) => ({ valor: g.action, rotulo: ACTION_LABEL[g.action] ?? g.action, n: g._count._all }))
+    .sort(porNome);
+
+  // Carrega o funil (parâmetro repetido) junto: sem ele, virar a página ou
+  // limpar o período apagava o filtro de usuário e de ação.
   function buildUrl(params: Record<string, string | undefined>) {
     const q = new URLSearchParams();
-    const merged = { userId, action, entityType, from, to, page, ...params };
+    const merged = { entityType, from, to, page, ...params };
     for (const [k, v] of Object.entries(merged)) {
       if (v) q.set(k, v);
     }
+    for (const u of usuarios) q.append("userId", u);
+    for (const a of acoes) q.append("action", a);
     return `/admin/auditoria?${q.toString()}`;
   }
 
@@ -150,25 +168,12 @@ export default async function AuditoriaPage({
           exclusão em Empresas, Pessoas, Transferências e Configurações.</>}
       />
 
-      {/* Usuário, ação e entidade no botão "Filtros" — eram três selects que
-          navegavam sozinhos, com um "Limpar filtros" em texto cinza. O período
-          fica ao lado, porque data se digita, não se escolhe numa lista
-          (conferência de 30/09). */}
+      {/* Entidade no botão "Filtros"; usuário e ação viraram o funil das
+          colunas (02/10). O período fica ao lado, porque data se digita, não
+          se escolhe numa lista (conferência de 30/09). */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <FiltrosDaTela
           campos={[
-            {
-              chave: "userId",
-              rotulo: "Usuário",
-              vazioLabel: "Todos os usuários",
-              opcoes: users.map((u) => ({ value: u.id, label: u.name })),
-            },
-            {
-              chave: "action",
-              rotulo: "Ação",
-              vazioLabel: "Todas as ações",
-              opcoes: actionRows.map((r) => ({ value: r.action, label: ACTION_LABEL[r.action] ?? r.action })),
-            },
             {
               chave: "entityType",
               rotulo: "Entidade",
@@ -178,8 +183,12 @@ export default async function AuditoriaPage({
           ]}
         />
         <form method="GET" action="/admin/auditoria" className="flex flex-wrap items-center gap-2">
-          {userId && <input type="hidden" name="userId" value={userId} />}
-          {action && <input type="hidden" name="action" value={action} />}
+          {usuarios.map((u) => (
+            <input key={`u-${u}`} type="hidden" name="userId" value={u} />
+          ))}
+          {acoes.map((a) => (
+            <input key={`a-${a}`} type="hidden" name="action" value={a} />
+          ))}
           {entityType && <input type="hidden" name="entityType" value={entityType} />}
           <CampoPeriodo compact nomeDe="from" nomeAte="to" defaultDe={from ?? ""} defaultAte={to ?? ""} className="w-72 max-w-full" />
           <Button type="submit" variant="secondary" size="sm">
@@ -193,6 +202,15 @@ export default async function AuditoriaPage({
         </form>
       </div>
 
+      {/* Acima da tabela e do estado vazio: é por aqui que se desfaz o funil
+          quando ele esvazia a lista. */}
+      <FiltrosDasColunasNaUrl
+        colunas={[
+          { chave: "userId", rotulo: "Usuário" },
+          { chave: "action", rotulo: "Ação" },
+        ]}
+      />
+
       {logs.length === 0 ? (
         <Card>
           <EmptyState
@@ -201,16 +219,20 @@ export default async function AuditoriaPage({
           />
         </Card>
       ) : (
-        // Tabela no casco padrão (era uma lista de linhas soltas). Sem funil
-        // nas colunas: a trilha é paginada no servidor, e usuário, ação e
-        // entidade já estão no botão "Filtros" logo acima.
+        // Tabela no casco padrão (era uma lista de linhas soltas). A trilha é
+        // paginada, então o funil de usuário e de ação filtra no servidor
+        // (`FiltroDaColunaNaUrl`), com as contagens da base inteira.
         <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
           <table className="w-full min-w-[760px] text-[13px]">
             <thead>
               <tr className="border-b border-border text-[11px] uppercase tracking-wide text-fg-muted">
                 <th className="px-4 py-3">Quando</th>
-                <th className="px-4 py-3">Usuário</th>
-                <th className="px-4 py-3">Ação</th>
+                <th className="px-4 py-3">
+                  <FiltroDaColunaNaUrl rotulo="Usuário" chave="userId" opcoes={opcoesDeUsuario} />
+                </th>
+                <th className="px-4 py-3">
+                  <FiltroDaColunaNaUrl rotulo="Ação" chave="action" opcoes={opcoesDeAcao} />
+                </th>
                 <th className="px-4 py-3">Entidade</th>
                 <th className="px-4 py-3">Detalhe</th>
               </tr>

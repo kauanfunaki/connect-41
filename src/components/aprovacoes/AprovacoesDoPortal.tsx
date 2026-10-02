@@ -11,6 +11,8 @@ import { moeda } from "@/lib/financeiro/formato";
 import { aprovarContas, reprovarConta } from "@/app/(portal)/portal/(area)/aprovacoes/actions";
 import { ReprovarComMotivo } from "./ReprovarComMotivo";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { saoPauloParts } from "@/lib/agenda";
 
 export type ContaParaAprovar = {
   id: string;
@@ -35,9 +37,14 @@ export function AprovacoesDoPortal({ contas }: { contas: ContaParaAprovar[] }) {
   const { dialog, requestConfirm } = useConfirm();
   const [marcadas, setMarcadas] = useState<Set<string>>(new Set());
   const [resultado, setResultado] = useState<string | null>(null);
+  // As linhas que o funil das colunas deixou à vista (avisadas pela
+  // TabelaFiltravel): "Marcar todas" e "Aprovar selecionadas" não levam conta
+  // escondida pelo filtro.
+  const [naTela, setNaTela] = useState<Set<string>>(() => new Set(contas.map((c) => c.id)));
 
-  const aprovaveis = useMemo(() => contas.filter((c) => c.dentroDoTeto), [contas]);
-  const totalMarcado = contas.filter((c) => marcadas.has(c.id)).reduce((s, c) => s + c.valorCentavos, 0);
+  const aprovaveis = useMemo(() => contas.filter((c) => c.dentroDoTeto && naTela.has(c.id)), [contas, naTela]);
+  const marcadasNaTela = new Set([...marcadas].filter((id) => naTela.has(id)));
+  const totalMarcado = contas.filter((c) => marcadasNaTela.has(c.id)).reduce((s, c) => s + c.valorCentavos, 0);
 
   function alternar(id: string) {
     setMarcadas((atual) => {
@@ -67,15 +74,18 @@ export function AprovacoesDoPortal({ contas }: { contas: ContaParaAprovar[] }) {
         <div className="flex flex-wrap items-center gap-3 mb-3">
           <Checkbox
             label="Marcar todas dentro do meu teto"
-            checked={marcadas.size > 0 && marcadas.size === aprovaveis.length}
+            checked={aprovaveis.every((c) => marcadas.has(c.id))}
             onChange={(e) => setMarcadas(e.target.checked ? new Set(aprovaveis.map((c) => c.id)) : new Set())}
           />
           <Button
             size="sm"
             variant="success"
-            disabled={marcadas.size === 0}
+            disabled={marcadasNaTela.size === 0}
             onClick={() =>
-              aprovar([...marcadas], `Aprovar ${marcadas.size} ${marcadas.size === 1 ? "conta" : "contas"} (${moeda(totalMarcado)})?`)
+              aprovar(
+                [...marcadasNaTela],
+                `Aprovar ${marcadasNaTela.size} ${marcadasNaTela.size === 1 ? "conta" : "contas"} (${moeda(totalMarcado)})?`
+              )
             }
           >
             <CheckCircle2 size={13} /> Aprovar selecionadas
@@ -138,22 +148,44 @@ export function AprovacoesDoPortal({ contas }: { contas: ContaParaAprovar[] }) {
         ))}
       </CartoesNoCelular>
 
-      <TabelaNoDesktop>
+      {/* No casco padrão, com funil nas colunas (02/10). A lista vem inteira,
+          então filtra no navegador. */}
+      <TabelaFiltravel
+        onLinhasVisiveis={setNaTela}
+        linhas={contas.map((c) => ({
+          id: c.id,
+          valores: {
+            vencimento: saoPauloParts(c.vencimento).dateKey,
+            fornecedor: c.fornecedor,
+            empresa: c.empresa,
+            teto: c.dentroDoTeto ? "Dentro do teto" : "Fora do teto",
+          },
+        }))}
+      >
+      <TabelaNoDesktop padrao>
         <table className="w-full min-w-[820px] text-[13px]">
           <thead>
-            <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+            <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
               <th className="py-2 pr-2 w-8"></th>
-              <th className="py-2 pr-3 font-medium">Vencimento</th>
-              <th className="py-2 pr-3 font-medium">Fornecedor</th>
-              <th className="py-2 pr-3 font-medium">Empresa</th>
-              <th className="py-2 pr-3 font-medium text-right">Valor</th>
-              <th className="py-2 pr-3 font-medium">Teto</th>
+              <th className="py-2 pr-3 font-medium">
+                <FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" />
+              </th>
+              <th className="py-2 pr-3 font-medium">
+                <FiltroDaColuna rotulo="Fornecedor" chave="fornecedor" />
+              </th>
+              <th className="py-2 pr-3 font-medium">
+                <FiltroDaColuna rotulo="Empresa" chave="empresa" />
+              </th>
+              <th className="py-2 pr-3 font-medium">Valor</th>
+              <th className="py-2 pr-3 font-medium">
+                <FiltroDaColuna rotulo="Teto" chave="teto" align="right" />
+              </th>
               <th className="py-2 font-medium"></th>
             </tr>
           </thead>
           <tbody>
             {contas.map((c) => (
-              <tr key={c.id} className="border-b border-border-soft">
+              <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border-soft">
                 <td className="py-2.5 pr-2">
                   {c.dentroDoTeto && (
                     <Checkbox checked={marcadas.has(c.id)} onChange={() => alternar(c.id)} aria-label={`Marcar ${c.fornecedor}`} />
@@ -165,7 +197,7 @@ export function AprovacoesDoPortal({ contas }: { contas: ContaParaAprovar[] }) {
                   {c.descricao && <span className="block text-[11px] text-fg-muted truncate max-w-[240px]">{c.descricao}</span>}
                 </td>
                 <td className="py-2.5 pr-3 text-fg-secondary">{c.empresa}</td>
-                <td className="py-2.5 pr-3 text-right tabular-nums font-medium">{moeda(c.valorCentavos)}</td>
+                <td className="py-2.5 pr-3 tabular-nums font-medium">{moeda(c.valorCentavos)}</td>
                 <td className="py-2.5 pr-3">
                   {c.dentroDoTeto ? <Badge variant="success">Dentro do teto</Badge> : <Badge variant="warning">Fora do teto</Badge>}
                 </td>
@@ -193,11 +225,12 @@ export function AprovacoesDoPortal({ contas }: { contas: ContaParaAprovar[] }) {
                     <span className="text-[11px] text-fg-muted">Outra pessoa aprova</span>
                   )}
                 </td>
-              </tr>
+              </LinhaFiltravel>
             ))}
           </tbody>
         </table>
       </TabelaNoDesktop>
+      </TabelaFiltravel>
       {dialog}
     </div>
   );

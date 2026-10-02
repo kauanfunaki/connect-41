@@ -509,7 +509,9 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 /* Célula à esquerda dentro da tabela padrão (02/10/2026): árvore na primeira
    coluna (tarefa → subtarefa, matriz → filial) se lê pelo recuo, e centralizar
    o desmancha. Antes, essas tabelas saíam do casco e copiavam o visual à mão.
-   Use no <th> e nos <td> da coluna. */
+   Use no <th> e nos <td> da coluna. Exceção decidida pelo Kauan na tarde de
+   02/10: a lista de Empresas é centralizada também no Nome, e a filial se
+   marca pelo ↳ em vez do recuo. */
 .c41-tabela > table > :is(thead, tbody, tfoot) > tr > :is(th, td).c41-a-esquerda {
   text-align: left;
 }
