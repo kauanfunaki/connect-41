@@ -5,7 +5,8 @@
 // A conta do administrador vê tudo, então não serve para conferir se uma tela
 // fecha para quem não é do setor. Estes perfis servem. A senha é a mesma do
 // cliente do portal local (LOCAL_PORTAL_PASSWORD, no `.env.localdev`).
-// Idempotente. Cria também um colaborador fictício, para a ficha da pessoa.
+// Idempotente. Cria também um colaborador fictício, para a ficha da pessoa, e
+// um suporte (SUPER_ADMIN) com acesso a um segundo escritório fictício.
 
 import { getPrisma } from "../../src/lib/prisma";
 import { hashPassword } from "../../src/lib/auth/password";
@@ -45,6 +46,32 @@ async function main() {
     }
     console.log(`perfil ${perfil.email}: ${perfil.role} em ${perfil.setores.join(", ")}`);
   }
+
+  // Suporte com dois escritórios: é o único perfil que vê a troca de
+  // escritório no menu do usuário (02/10/2026).
+  const outro = await p.tenant.upsert({
+    where: { slug: "escritorio-exemplo" },
+    update: {},
+    create: { name: "Escritório Exemplo", slug: "escritorio-exemplo" },
+  });
+  const suporte = await p.user.upsert({
+    where: { tenantId_email: { tenantId: tenant.id, email: "suporte.teste@exemplo.invalido" } },
+    update: { role: "SUPER_ADMIN", active: true, passwordHash },
+    create: {
+      tenantId: tenant.id,
+      name: "Teste Suporte",
+      email: "suporte.teste@exemplo.invalido",
+      passwordHash,
+      role: "SUPER_ADMIN",
+      active: true,
+    },
+  });
+  await p.userTenantAccess.upsert({
+    where: { userId_tenantId: { userId: suporte.id, tenantId: outro.id } },
+    update: {},
+    create: { userId: suporte.id, tenantId: outro.id },
+  });
+  console.log("perfil suporte.teste@exemplo.invalido: SUPER_ADMIN com 2 escritórios");
 
   if (!(await p.person.findFirst({ where: { tenantId: tenant.id, name: "Joana Exemplo", type: "COLABORADOR" } }))) {
     await p.person.create({ data: { tenantId: tenant.id, name: "Joana Exemplo", type: "COLABORADOR" } });

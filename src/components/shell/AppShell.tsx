@@ -40,7 +40,8 @@ import { ModuleIcon, Icone } from "@/components/shared/ModuleIcon";
 import { RegistroDeTelasRecentes } from "@/components/shell/TelasRecentes";
 import { agruparModulos, slugDoGrupo, ICONE_DO_GRUPO } from "@/lib/module-catalog";
 import type { TelaNavegavel } from "@/lib/buscaDeTelas";
-import { ContextSwitcher, trocarSetor } from "@/components/shell/ContextSwitcher";
+import { trocarSetor } from "@/components/shell/contexto";
+import { AvatarImage } from "@/components/shared/AvatarImage";
 import { PainelDoItem, type TelaDoPainel } from "@/components/shell/PainelDoItem";
 import { ABAS_DA_GESTAO } from "@/components/gestao/AbasDaGestao";
 import { Button } from "@/components/ui/Button";
@@ -117,7 +118,7 @@ type Props = {
   /** As telas que ela fixou, na ordem dela, já filtradas pelo que pode abrir. */
   telasFixadas: TelaNavegavel[];
   // Config de runtime do endereço por setor — vem do layout, não de env no
-  // cliente (ver ContextSwitcher).
+  // cliente (ver contexto.ts).
   appDomain: string | null;
   sectorHostSuffix: string;
   canOpenAdmin: boolean;
@@ -161,6 +162,7 @@ export function AppShell({
   const pathname = usePathname();
   const emConfiguracoes = pathname.startsWith("/admin") || pathname.startsWith("/configuracoes");
   const corDoSetor = activeSector?.color;
+  const tenantAtual = accessibleTenants.find((t) => t.id === tenantId);
 
   return (
     // `--c41-setor` leva a cor do setor ativo a tudo que está dentro: a barra
@@ -210,14 +212,12 @@ export function AppShell({
           </Button>
         </div>
 
-        <ContextSwitcher
-          tenants={accessibleTenants}
-          currentTenantId={tenantId}
-          sectors={sectors}
-          activeSector={activeSector?.code ?? null}
-          appDomain={appDomain}
-          sectorHostSuffix={sectorHostSuffix}
-        />
+        {/* A busca no lugar do cartão de setor e escritório (02/10): trocar de
+            setor ou de escritório foi para o menu do usuário. Abaixo de lg a
+            lateral é gaveta, e a busca fica no topo. */}
+        <div className="hidden lg:block px-3 pt-3 pb-1">
+          <GlobalSearch telas={telasNavegaveis} variante="lateral" />
+        </div>
 
         {/* Nav */}
         {/* `scroll-gutter-stable`: quando a lista passa da altura da tela, a barra
@@ -366,8 +366,30 @@ export function AppShell({
           >
             <Menu size={20} />
           </button>
-          <div className="flex-1 min-w-0">
-            <GlobalSearch telas={telasNavegaveis} />
+          <div className="flex-1 min-w-0 flex items-center">
+            {/* Onde estou: o escritório e o setor ativo, que o cartão embaixo
+                da logo mostrava até a busca ficar com o lugar dele (02/10). */}
+            <div className="hidden lg:flex items-center gap-2 min-w-0 text-[13px]">
+              <AvatarImage src={tenantAtual?.logoUrl ?? null} name={tenantAtual?.name ?? "—"} size={22} shape="lg" fontSize={10} />
+              <span className="font-medium text-fg truncate">{tenantAtual?.name ?? "—"}</span>
+              {activeSector ? (
+                <>
+                  <span aria-hidden className="text-fg-muted">·</span>
+                  <span className="inline-flex items-center gap-1.5 text-fg-secondary whitespace-nowrap">
+                    <span aria-hidden className="inline-block size-2 rounded-full" style={{ backgroundColor: activeSector.color }} />
+                    {activeSector.label}
+                  </span>
+                </>
+              ) : sectors.length > 1 ? (
+                <>
+                  <span aria-hidden className="text-fg-muted">·</span>
+                  <span className="text-fg-muted whitespace-nowrap">Todos os setores</span>
+                </>
+              ) : null}
+            </div>
+            <div className="lg:hidden flex-1 min-w-0">
+              <GlobalSearch telas={telasNavegaveis} />
+            </div>
           </div>
 
           <div className="flex items-center gap-2.5 flex-shrink-0">
@@ -404,7 +426,17 @@ export function AppShell({
             >
               <Settings size={16} />
             </Link>
-            <ProfileMenu name={profileName} roleLabel={profileRoleLabel} photoUrl={profilePhotoUrl} />
+            <ProfileMenu
+              name={profileName}
+              roleLabel={profileRoleLabel}
+              photoUrl={profilePhotoUrl}
+              tenants={accessibleTenants}
+              currentTenantId={tenantId}
+              sectors={sectors}
+              activeSector={activeSector?.code ?? null}
+              appDomain={appDomain}
+              sectorHostSuffix={sectorHostSuffix}
+            />
           </div>
         </header>
 

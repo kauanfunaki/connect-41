@@ -7,10 +7,13 @@ type Props = {
   children: React.ReactNode | ((props: { close: () => void }) => React.ReactNode);
   align?: "left" | "right";
   width?: number;
+  /** Teto de altura do painel (padrão `max-h-[360px]`). O menu do usuário usa a
+   *  altura da tela: com muitos setores, o Sair ficava escondido na rolagem. */
+  alturaMaxima?: string;
 };
 
 // Dropdown genérico: trigger + painel em surface-elevated, fecha ao clicar fora.
-export function Dropdown({ trigger, children, align = "left", width = 240 }: Props) {
+export function Dropdown({ trigger, children, align = "left", width = 240, alturaMaxima = "max-h-[360px]" }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -31,7 +34,7 @@ export function Dropdown({ trigger, children, align = "left", width = 240 }: Pro
           style={{ width }}
           className={`c41-surgir scroll-y absolute top-[calc(100%+10px)] max-w-[calc(100vw-2rem)] ${
             align === "right" ? "right-0" : "left-0"
-          } bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] p-3 z-20 max-h-[360px] overflow-y-auto text-[length:var(--fs-dropdown)]`}
+          } bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] p-3 z-20 ${alturaMaxima} overflow-y-auto text-[length:var(--fs-dropdown)]`}
         >
           {typeof children === "function" ? children({ close: () => setOpen(false) }) : children}
         </div>
