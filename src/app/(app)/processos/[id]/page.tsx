@@ -261,10 +261,8 @@ export default async function ProcessoDetalhePage({
             }}
           />
         }
-      />
-
-      <div className="mb-6 flex flex-col gap-3">
-        <div className="flex items-center gap-x-3 gap-y-2 flex-wrap text-[12px] text-fg-muted">
+        meta={
+          <>
           {encerradoSemConclusao ? (
             <Badge variant="danger">{processo.status === "CANCELADO" ? "Cancelado" : "Indeferido"}</Badge>
           ) : (
@@ -324,7 +322,11 @@ export default async function ProcessoDetalhePage({
           <Link href={`/empresas/${processo.company.id}`} className="text-brand hover:underline">
             Ver empresa
           </Link>
-        </div>
+          </>
+        }
+      />
+
+      <div className="mb-6 flex flex-col gap-3">
         {processo.statusReason && (
           <p className="text-[13px] text-fg rounded-md border border-border bg-surface-2 px-3 py-2 break-words">
             <span className="font-medium">Motivo:</span> {processo.statusReason}
