@@ -9,9 +9,11 @@ import {
   Check,
   ChevronDown,
   Copy,
+  FileText,
   History,
   MessageSquareText,
   MoreHorizontal,
+  Paperclip,
   Pencil,
   Plus,
   RotateCcw,
@@ -24,6 +26,7 @@ import { Popover, ItemDoMenu } from "@/components/ui/Popover";
 import { OrbeDaIA } from "@/components/shell/OrbeDaIA";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { partesComCitacoes, type Citado } from "@/lib/ia/chat/citacoes";
+import { ACEITA_NO_CAMPO, conferirEscolha, separarAnexos } from "@/lib/ia/chat/anexos-regras";
 import { formatInstantDateTime } from "@/lib/format";
 import type { AgenteDoChat } from "@/lib/ia/chat/agentes";
 import type { ConversaNaLista, MensagemNaTela } from "@/lib/ia/chat/conversas";
@@ -51,6 +54,26 @@ function comNegrito(texto: string, chave: string) {
 }
 
 /** A pessoa ou empresa citada: foto (ou iniciais) e nome; com ficha, leva a ela. */
+/** A pergunta da pessoa; os arquivos anexados aparecem como etiquetas embaixo. */
+function BalaoDaPergunta({ texto }: { texto: string }) {
+  const p = separarAnexos(texto);
+  return (
+    <div className="rounded-2xl rounded-br-md bg-brand text-on-brand px-3.5 py-2.5 text-[13px] flex flex-col gap-2">
+      <p className="whitespace-pre-wrap break-words">{p.texto}</p>
+      {p.anexos.length > 0 && (
+        <span className="flex flex-wrap justify-end gap-1">
+          {p.anexos.map((nome, i) => (
+            <span key={`${nome}-${i}`} className="inline-flex max-w-[200px] items-center gap-1 rounded-md bg-black/15 px-1.5 py-0.5 text-[11px]">
+              <FileText size={11} className="flex-shrink-0" />
+              <span className="truncate">{nome}</span>
+            </span>
+          ))}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function CartaoDoCitado({ citado }: { citado: Citado }) {
   const conteudo = (
     <>
@@ -199,6 +222,9 @@ export function ChatDeIA({
   const [editando, setEditando] = useState<MensagemNaTela | null>(null);
   const fimRef = useRef<HTMLDivElement>(null);
   const campoRef = useRef<HTMLTextAreaElement>(null);
+  // Anexos desta pergunta (02/10/2026): vão só com ela e não ficam guardados.
+  const [arquivos, setArquivos] = useState<File[]>([]);
+  const seletorDeArquivoRef = useRef<HTMLInputElement>(null);
   const jaAbriu = useSyncExternalStore(assinarJaAbriu, lerJaAbriu, () => true);
 
   const agentePadrao = agentes[0]?.code ?? "";
@@ -232,6 +258,13 @@ export function ChatDeIA({
   const corDoOrbe = { "--orbe-b": (agente.setor && coresDosSetores[agente.setor]) || undefined } as React.CSSProperties;
   const primeiroNome = nome.trim().split(/\s+/)[0] ?? "";
   const ultimaResposta = [...mensagens].reverse().find((x) => x.papel === "assistente");
+  // Resposta a uma pergunta com arquivo não tem Refazer: o arquivo não ficou guardado.
+  const semRefazer = new Set<string>();
+  let comArquivo = false;
+  for (const x of mensagens) {
+    if (x.papel === "usuario") comArquivo = separarAnexos(x.texto).anexos.length > 0;
+    else if (comArquivo) semRefazer.add(x.id);
+  }
 
   function abrirChat(prefixo?: string) {
     marcarJaAbriu();
@@ -272,19 +305,38 @@ export function ChatDeIA({
     if (id === conversaId) novaConversa();
   }
 
-  async function enviar(texto: string) {
+  async function enviar(texto: string, comArquivos: File[] = []) {
     const t = texto.trim();
     if (!t || enviando) return;
     setEnviando(true);
     setErro(null);
-    setPasso("Pensando…");
+    setPasso(comArquivos.length ? "Lendo os arquivos…" : "Pensando…");
     setPergunta("");
+    setArquivos([]);
+    // Recusada pelo servidor (arquivo grande, limite do dia): a pergunta e os
+    // arquivos voltam para o campo, para tentar de novo.
+    const devolver = () => {
+      setPergunta(t);
+      if (comArquivos.length) setArquivos(comArquivos);
+    };
     try {
-      const res = await fetch("/api/ia/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversaId, agentCode, pergunta: t, caminho: pathname }),
-      });
+      let pedido: RequestInit;
+      if (comArquivos.length) {
+        const form = new FormData();
+        if (conversaId) form.set("conversaId", conversaId);
+        form.set("agentCode", agentCode);
+        form.set("pergunta", t);
+        form.set("caminho", pathname);
+        for (const f of comArquivos) form.append("anexos", f);
+        pedido = { method: "POST", body: form };
+      } else {
+        pedido = {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ conversaId, agentCode, pergunta: t, caminho: pathname }),
+        };
+      }
+      const res = await fetch("/api/ia/chat", pedido);
       if (!res.body) throw new Error("Sem resposta do servidor.");
       const leitor = res.body.getReader();
       const decodificador = new TextDecoder();
@@ -305,13 +357,13 @@ export function ChatDeIA({
             if (e.mensagem.papel === "usuario") setPasso("Pensando…");
           } else if (e.tipo === "erro") {
             setErro(e.texto);
-            if (!res.ok) setPergunta(t);
+            if (!res.ok) devolver();
           }
         }
       }
     } catch (err) {
       setErro(err instanceof Error ? err.message : "Falha ao falar com a IA.");
-      setPergunta(t);
+      devolver();
     } finally {
       setPasso(null);
       setEnviando(false);
@@ -343,7 +395,7 @@ export function ChatDeIA({
 
   function comecarEdicao(m: MensagemNaTela) {
     setEditando(m);
-    setPergunta(m.texto);
+    setPergunta(separarAnexos(m.texto).texto);
     requestAnimationFrame(() => campoRef.current?.focus());
   }
 
@@ -365,7 +417,20 @@ export function ChatDeIA({
       cortarDesde(alvo.id);
       setEditando(null);
     }
-    await enviar(texto);
+    await enviar(texto, arquivos);
+  }
+
+  /** Os arquivos escolhidos no 📎 — conferidos aqui, e de novo no servidor. */
+  function escolherArquivos(lista: FileList | null) {
+    if (!lista?.length) return;
+    const juntos = [...arquivos, ...Array.from(lista)];
+    const problema = conferirEscolha(juntos);
+    if (problema) {
+      setErro(problema);
+      return;
+    }
+    setErro(null);
+    setArquivos(juntos);
   }
 
   /** Refazer: a mesma pergunta de novo, no lugar da resposta (conta no limite do dia). */
@@ -562,7 +627,7 @@ export function ChatDeIA({
             {mensagens.map((m) =>
               m.papel === "usuario" ? (
                 <div key={m.id} className="group self-end max-w-[85%] flex flex-col items-end gap-1">
-                  <p className="rounded-2xl rounded-br-md bg-brand text-on-brand px-3.5 py-2.5 text-[13px] whitespace-pre-wrap break-words">{m.texto}</p>
+                  <BalaoDaPergunta texto={m.texto} />
                   <span className="flex items-center gap-1.5">
                     {m.contexto && <span className="text-[10px] text-fg-muted truncate max-w-[200px]">{m.contexto}</span>}
                     <AcoesDaMensagem>
@@ -606,7 +671,7 @@ export function ChatDeIA({
                       <BotaoDeAcao rotulo={copiada === m.id ? "Copiado" : "Copiar"} onClick={() => void copiar(m)}>
                         {copiada === m.id ? <Check size={13} /> : <Copy size={13} />}
                       </BotaoDeAcao>
-                      {!enviando && (
+                      {!enviando && !semRefazer.has(m.id) && (
                         <BotaoDeAcao rotulo="Refazer a resposta" onClick={() => void refazer(m)}>
                           <RotateCcw size={13} />
                         </BotaoDeAcao>
@@ -645,6 +710,26 @@ export function ChatDeIA({
               </div>
             )}
             <div className="rounded-2xl border border-border-strong bg-surface focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)] transition-colors">
+              {arquivos.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2.5">
+                  {arquivos.map((f, i) => (
+                    <span key={`${f.name}-${i}`} className="inline-flex max-w-[220px] items-center gap-1.5 rounded-lg border border-border bg-surface-2 py-1 pl-2 pr-1 text-[12px] text-fg">
+                      <FileText size={13} className="flex-shrink-0 text-brand" />
+                      <span className="truncate">{f.name}</span>
+                      <span className="flex-shrink-0 text-fg-muted tabular-nums">{Math.max(1, Math.round(f.size / 1024))} KB</span>
+                      <button
+                        type="button"
+                        onClick={() => setArquivos((a) => a.filter((_, j) => j !== i))}
+                        aria-label={`Tirar ${f.name}`}
+                        className="p-0.5 rounded text-fg-muted hover:text-fg hover:bg-surface-hover"
+                      >
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))}
+                  <span className="text-[11px] text-fg-muted">Vale só para esta pergunta — não fica guardado.</span>
+                </div>
+              )}
               <div className="flex items-end gap-2 pl-3.5 pr-2 pt-2.5">
                 <Textarea
                   ref={campoRef}
@@ -682,7 +767,29 @@ export function ChatDeIA({
                   travado={Boolean(conversaId)}
                   onEscolher={(code) => setEscolhido(code)}
                 />
-                <span className="text-[11px] text-fg-muted pr-1.5">Enter envia · Shift+Enter quebra linha</span>
+                <span className="flex items-center gap-2">
+                  <span className="hidden sm:inline text-[11px] text-fg-muted">Enter envia</span>
+                  <input
+                    ref={seletorDeArquivoRef}
+                    type="file"
+                    multiple
+                    accept={ACEITA_NO_CAMPO}
+                    className="hidden"
+                    onChange={(e) => {
+                      escolherArquivos(e.target.files);
+                      e.target.value = "";
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => seletorDeArquivoRef.current?.click()}
+                    disabled={enviando}
+                    title="PDF, imagem ou planilha — até 3 arquivos e 10 MB"
+                    className="inline-flex items-center gap-1 h-7 px-1.5 rounded-md text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover disabled:opacity-50"
+                  >
+                    <Paperclip size={13} /> Anexar
+                  </button>
+                </span>
               </div>
             </div>
           </form>

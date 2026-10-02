@@ -38,6 +38,7 @@ import {
   perguntasDeHoje,
 } from "@/lib/ia/chat/conversas";
 import { filtrarCitacoes, idsNoTexto } from "@/lib/ia/chat/citacoes";
+import { linhaDosAnexos, type AnexoDaPergunta } from "@/lib/ia/chat/anexos";
 import {
   contextoDaTela,
   descricaoDaTransferencia,
@@ -57,7 +58,14 @@ export type EventoDoChat =
   | { tipo: "mensagem"; mensagem: Awaited<ReturnType<typeof gravarMensagem>> }
   | { tipo: "erro"; texto: string };
 
-export type PedidoDoChat = { conversaId?: unknown; agentCode?: unknown; pergunta?: unknown; caminho?: unknown };
+export type PedidoDoChat = {
+  conversaId?: unknown;
+  agentCode?: unknown;
+  pergunta?: unknown;
+  caminho?: unknown;
+  /** Já lidos e conferidos pela rota (`lerAnexos`). Vão só com esta pergunta. */
+  anexos?: AnexoDaPergunta[];
+};
 
 export type PreparoDaPergunta =
   | { erro: string; status: number }
@@ -115,7 +123,10 @@ export async function prepararPerguntaDoChat(
   return {
     executar: async (enviar) => {
       enviar({ tipo: "conversa", id: conversa.id });
-      const minha = await gravarMensagem({ conversaId: conversa.id, papel: "usuario", texto: pergunta, contexto: contexto?.rotulo });
+      // O arquivo não fica: a conversa guarda só "📎 nome" (ver `anexos.ts`).
+      const anexos = corpo.anexos ?? [];
+      const textoGravado = anexos.length ? `${pergunta}\n\n${linhaDosAnexos(anexos)}` : pergunta;
+      const minha = await gravarMensagem({ conversaId: conversa.id, papel: "usuario", texto: textoGravado, contexto: contexto?.rotulo });
       enviar({ tipo: "mensagem", mensagem: minha });
 
       // Os ids que esta execução viu de verdade — o resultado das ferramentas e o
@@ -138,6 +149,7 @@ export async function prepararPerguntaDoChat(
           escopo: alvo.code === agente.code ? escopo : await escopoDoAgente(ctx, alvo.code, Object.keys(labels)),
           contexto: { userId: dono.userId, entityType: "chat", entityId: conversa.id },
           aoUsarFerramenta: (nome) => enviar({ tipo: "passo", texto: textoDoPasso(nome) }),
+          anexos,
           aoReceberResultado: (_nome, conteudo, erro) => {
             if (!erro) for (const id of idsNoTexto(conteudo)) idsVistos.add(id);
           },
