@@ -68,7 +68,8 @@ export function AbasDeLink({
   abas,
   ativa,
 }: {
-  abas: { chave: string; rotulo: string; href: string; icone?: React.ReactNode }[];
+  /** `contagem` vira um selo ao lado do rótulo — em vez de "Contas · 6" no texto. */
+  abas: { chave: string; rotulo: string; href: string; icone?: React.ReactNode; contagem?: number }[];
   ativa: string;
 }) {
   return (
@@ -86,6 +87,15 @@ export function AbasDeLink({
           >
             {a.icone && <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{a.icone}</span>}
             {a.rotulo}
+            {a.contagem !== undefined && (
+              <span
+                className={`inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[length:var(--fs-micro)] font-semibold tabular-nums ${
+                  ativo ? "bg-brand/10 text-brand" : "bg-surface-2 text-fg-muted"
+                }`}
+              >
+                {a.contagem}
+              </span>
+            )}
             {ativo && <span className="absolute left-2.5 right-2.5 -bottom-px h-[2px] rounded-full bg-brand" />}
           </Link>
         );
@@ -138,9 +148,10 @@ const COLUNAS_XL: Record<number, string> = {
   5: "md:grid-cols-3 xl:grid-cols-5",
 };
 
-export function FaixaDeTotais({ itens }: { itens: ItemDeTotal[] }) {
+/** `className` troca o respiro de baixo (padrão `mb-5`): em coluna com `gap`, passe "". */
+export function FaixaDeTotais({ itens, className = "mb-5" }: { itens: ItemDeTotal[]; className?: string }) {
   return (
-    <div className={`grid grid-cols-2 ${COLUNAS_XL[itens.length] ?? "xl:grid-cols-4"} gap-3 mb-5`}>
+    <div className={`grid grid-cols-2 ${COLUNAS_XL[itens.length] ?? "xl:grid-cols-4"} gap-3 ${className}`.trim()}>
       {itens.map((i) => {
         const conteudo = (
           <>

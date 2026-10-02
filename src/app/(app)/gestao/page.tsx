@@ -64,10 +64,9 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
       <FiltroDeSetor setores={g.setores} />
 
       {/* As contagens por situação no cartão padrão das telas (30/09), com
-          ícone. O `-mb-5` desconta o respiro da faixa: aqui quem espaça é o
-          `gap` da coluna. */}
-      <div className="-mb-5">
+          ícone. Sem o respiro da faixa: aqui quem espaça é o `gap` da coluna. */}
         <FaixaDeTotais
+          className=""
           itens={[
             ...COLUNAS.map((c) => {
               const n = porColuna.get(c.key)!.length;
@@ -87,7 +86,6 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
             },
           ]}
         />
-      </div>
 
       <section aria-labelledby="atencao" className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">

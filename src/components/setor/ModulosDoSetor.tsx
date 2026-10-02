@@ -46,7 +46,8 @@ export function ModulosDoSetor({
             { chave: "tudo", rotulo: "Tudo", href: `/setor/${code}/telas` },
             ...grupos.map((g) => ({
               chave: g.grupo,
-              rotulo: `${g.grupo} · ${g.itens.length}`,
+              rotulo: g.grupo,
+              contagem: g.itens.length,
               href: `/setor/${code}/grupo/${slugDoGrupo(g.grupo)}`,
             })),
           ]}
