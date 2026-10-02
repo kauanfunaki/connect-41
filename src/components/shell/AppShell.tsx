@@ -45,6 +45,7 @@ import { AvatarImage } from "@/components/shared/AvatarImage";
 import { PainelDoItem, type TelaDoPainel } from "@/components/shell/PainelDoItem";
 import { ABAS_DA_GESTAO } from "@/components/gestao/AbasDaGestao";
 import { Button } from "@/components/ui/Button";
+import { chaveDoCaminho, type ParDeCaminho } from "@/lib/ajuda/caminho";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
 type Sector = { code: string; label: string; color: string };
@@ -129,6 +130,8 @@ type Props = {
   profilePhotoUrl: string | null;
   subscriptionReadOnly?: boolean;
   canSelfRegularizeSubscription?: boolean;
+  /** Que artigo da ajuda explica cada tela — o "?" do topo abre o da tela aberta. */
+  paresDeAjuda?: readonly ParDeCaminho[];
   children: React.ReactNode;
 };
 
@@ -153,10 +156,17 @@ export function AppShell({
   profilePhotoUrl,
   subscriptionReadOnly = false,
   canSelfRegularizeSubscription = false,
+  paresDeAjuda = [],
   children,
 }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  // O "?" de cada tela (02/10/2026): com artigo, abre o passo a passo dela e
+  // guarda de onde veio para o "Voltar"; sem artigo, a central.
+  const naAjuda = pathname.startsWith("/ajuda");
+  const artigoDaTela = naAjuda ? null : chaveDoCaminho(pathname, paresDeAjuda);
+  const linkDaAjuda = artigoDaTela ? `/ajuda/${encodeURIComponent(artigoDaTela)}?de=${encodeURIComponent(pathname)}` : "/ajuda";
+  const rotuloDaAjuda = artigoDaTela ? "Ajuda desta tela" : "Ajuda";
   const emConfiguracoes = pathname.startsWith("/admin") || pathname.startsWith("/configuracoes");
   const corDoSetor = activeSector?.color;
   const tenantAtual = accessibleTenants.find((t) => t.id === tenantId);
@@ -394,12 +404,12 @@ export function AppShell({
             {/* Ajuda (30/09): o caminho curto para a central /ajuda, ao lado de
                 notificação, configurações e perfil. */}
             <Link
-              href="/ajuda"
-              aria-label="Ajuda"
-              data-dica="Ajuda"
-              aria-current={pathname.startsWith("/ajuda") ? "page" : undefined}
+              href={linkDaAjuda}
+              aria-label={rotuloDaAjuda}
+              data-dica={rotuloDaAjuda}
+              aria-current={naAjuda ? "page" : undefined}
               className={`w-[38px] h-[38px] inline-flex items-center justify-center rounded-md border transition-colors ${
-                pathname.startsWith("/ajuda")
+                naAjuda
                   ? "bg-surface border-border-strong text-fg shadow-sm"
                   : "bg-surface-hover border-border text-fg-secondary hover:text-fg hover:border-border-strong"
               }`}
