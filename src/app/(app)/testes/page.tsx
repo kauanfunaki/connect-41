@@ -16,7 +16,7 @@ import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { NovoTesteForm } from "@/components/teste/NovoTesteForm";
 import { formatInstantDate } from "@/lib/format";
-import { lerLista } from "@/lib/filtrosDaListaDeEmpresas";
+import { lerLista } from "@/lib/filtroNaUrl";
 import type { AssessmentLinkStatus } from "@/generated/prisma/enums";
 import { setorDoModulo, isModuleEnabled } from "@/lib/modules";
 import { Selo } from "@/components/ui/Selo";

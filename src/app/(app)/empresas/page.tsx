@@ -24,7 +24,8 @@ import {
 } from "@/lib/companyStatusFilter";
 import { atualizarStatusEmMassa, excluirEmpresasEmMassa } from "./actions";
 import { Pagination } from "@/components/shared/Pagination";
-import { lerLista, opcoesDeRegime, ondeDoRegime, opcoesDeLocal, ondeDoLocal } from "@/lib/filtrosDaListaDeEmpresas";
+import { opcoesDeRegime, ondeDoRegime, opcoesDeLocal, ondeDoLocal } from "@/lib/filtrosDaListaDeEmpresas";
+import { lerLista } from "@/lib/filtroNaUrl";
 import { FiltrosDasColunasNaUrl } from "@/components/shared/FiltroDeColunas";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
