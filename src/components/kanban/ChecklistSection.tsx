@@ -71,7 +71,7 @@ function ChecklistRow({
       />
 
       {editing ? (
-        // compact (h-8): na altura dos dois IconButton `sm` do lado.
+        // compact (h-8): na altura dos dois IconButton `md` (32px) do lado — eram `sm` (28px) até 02/10.
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
           <Input
             compact
@@ -84,8 +84,8 @@ function ChecklistRow({
             }}
             autoFocus
           />
-          <IconButton type="button" size="sm" onClick={saveEdit} aria-label="Salvar" className="flex-shrink-0"><Check size={14} /></IconButton>
-          <IconButton type="button" size="sm" onClick={() => setEditing(false)} aria-label="Cancelar" className="flex-shrink-0"><X size={14} /></IconButton>
+          <IconButton type="button" size="md" onClick={saveEdit} aria-label="Salvar" className="flex-shrink-0"><Check size={14} /></IconButton>
+          <IconButton type="button" size="md" onClick={() => setEditing(false)} aria-label="Cancelar" className="flex-shrink-0"><X size={14} /></IconButton>
         </div>
       ) : (
         <span className={`text-[13px] flex-1 min-w-0 truncate ${item.done ? "text-fg-muted line-through" : "text-fg"}`}>

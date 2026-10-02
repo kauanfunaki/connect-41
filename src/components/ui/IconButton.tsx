@@ -11,7 +11,8 @@ type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: Variant;
 };
 
-// 28px: ação inline em linha de tabela/lista · 32px: padrão, casa com
+// 28px: ação miúda de uma linha de lista, sem controle ao lado · 32px: padrão,
+// casa com campo `compact` e
 // <Button size="sm"> (h-8) · 38px: controle de topbar.
 const SIZE_CLASS: Record<Size, string> = {
   sm: "w-7 h-7",
@@ -45,7 +46,7 @@ export function IconButton({
   return (
     <button
       type={rest.type ?? "button"}
-      className={`relative inline-flex items-center justify-center flex-shrink-0 rounded-md transition-colors disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed ${SIZE_CLASS[size]} ${VARIANT_CLASS[variant](active)} ${className}`.trim()}
+      className={`${hasDot ? "relative " : ""}inline-flex items-center justify-center flex-shrink-0 rounded-md transition-colors disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed ${SIZE_CLASS[size]} ${VARIANT_CLASS[variant](active)} ${className}`.trim()}
       {...rest}
     >
       {children}
