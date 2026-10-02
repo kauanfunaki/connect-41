@@ -10,7 +10,7 @@ import { scopedAssessmentLinkWhere, scopedPersonWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Pagination } from "@/components/shared/Pagination";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
-import { FiltroDaColunaNaUrl } from "@/components/shared/FiltroDeColunas";
+import { FiltroDaColunaNaUrl, FiltrosDasColunasNaUrl } from "@/components/shared/FiltroDeColunas";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -224,20 +224,14 @@ export default async function TestesPage({
         ]}
       />
 
+      <FiltrosDasColunasNaUrl colunas={[{ chave: "teste", rotulo: "Teste" }]} />
+
       {links.length === 0 ? (
         <Card>
           <EmptyState
             icon={<ClipboardList />}
             title="Nenhum teste encontrado"
             description="Ajuste os filtros ou envie o primeiro teste pra um candidato acima."
-            action={
-              // Sem linhas, a tabela some e o funil some com ela.
-              testesEscolhidos.length > 0 ? (
-                <Button href={statusFilter ? `/testes?status=${statusFilter}` : "/testes"} variant="secondary" size="sm">
-                  Limpar o filtro de teste
-                </Button>
-              ) : undefined
-            }
           />
         </Card>
       ) : (

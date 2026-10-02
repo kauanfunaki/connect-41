@@ -13,7 +13,7 @@ import { getSectorMaps } from "@/lib/sectors";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Pagination } from "@/components/shared/Pagination";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
-import { FiltroDaColunaNaUrl } from "@/components/shared/FiltroDeColunas";
+import { FiltroDaColunaNaUrl, FiltrosDasColunasNaUrl } from "@/components/shared/FiltroDeColunas";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -174,6 +174,8 @@ export default async function VagasPage({
           },
         ]}
       />
+
+      <FiltrosDasColunasNaUrl colunas={[{ chave: "sectorCode", rotulo: "Setor" }]} />
 
       {vagas.length === 0 ? (
         <Card>
