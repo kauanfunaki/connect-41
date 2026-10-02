@@ -131,7 +131,7 @@ export default async function AppLayout({
         <AvisoDeVersaoNova />
         <DicaFlutuante />
         {children}
-        <ChatDeIA agentes={agentesDoChatDeIA} />
+        <ChatDeIA agentes={agentesDoChatDeIA} nome={me?.name ?? ""} coresDosSetores={sectorColors} />
       </AppShell>
     </ToastProvider>
   );
