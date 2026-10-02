@@ -1,9 +1,10 @@
 "use client";
 
 import { useTransition } from "react";
-import { Archive, ArchiveRestore, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Popover, ItemDoMenu } from "@/components/ui/Popover";
+import { ItemDoMenu } from "@/components/ui/Popover";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { alternarAtivoTemplate, excluirTemplate } from "@/app/(app)/testes/templates/actions";
 
@@ -33,24 +34,7 @@ export function AcoesDoModelo({ id, nome, ativo, podeExcluir }: Props) {
       <Button variant="secondary" size="xs" href={`/testes/templates/${id}/editar`}>
         <Pencil size={11} /> Editar
       </Button>
-      <Popover
-        align="right"
-        width={180}
-        aria-label={`Mais ações do modelo ${nome}`}
-        trigger={({ open, toggle }) => (
-          <button
-            type="button"
-            onClick={toggle}
-            aria-label="Mais ações"
-            aria-expanded={open}
-            className={`h-7 w-7 rounded-md border inline-flex items-center justify-center transition-colors ${
-              open ? "border-brand/40 bg-brand-subtle text-fg" : "border-border-strong text-fg-muted hover:text-fg hover:bg-surface-hover"
-            }`}
-          >
-            <MoreHorizontal size={14} />
-          </button>
-        )}
-      >
+      <MenuDeMaisAcoes align="right" width={180} aria-label={`Mais ações do modelo ${nome}`}>
         {({ close }) => (
           <>
             <ItemDoMenu
@@ -85,7 +69,7 @@ export function AcoesDoModelo({ id, nome, ativo, podeExcluir }: Props) {
             )}
           </>
         )}
-      </Popover>
+      </MenuDeMaisAcoes>
       {dialog}
     </span>
   );
