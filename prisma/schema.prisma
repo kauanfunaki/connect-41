@@ -5673,6 +5673,11 @@ enum AgentMessageRole {
   ASSISTENTE
 }
 
+enum AgentMessageRating {
+  BOA
+  RUIM
+}
+
 model AgentMessage {
   id             String           @id @default(uuid())
   conversationId String
@@ -5688,11 +5693,18 @@ model AgentMessage {
   failed         Boolean          @default(false)
   /// O que estava aberto na tela quando a pergunta foi feita ("Processo: …").
   contextLabel   String?          @db.VarChar(200)
+  /// 👍/👎 de quem perguntou (02/10/2026). Só no assistente; nulo = não avaliou.
+  rating         AgentMessageRating?
+  /// O motivo do 👎, de uma lista fixa (`MOTIVOS_DO_NAO` em `regras.ts`). Opcional.
+  ratingReason   String?          @db.VarChar(40)
+  ratedAt        DateTime?
   createdAt      DateTime         @default(now())
 
   conversation AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt])
+  /// O painel de `/admin/ia` lê as avaliações dos últimos 30 dias.
+  @@index([ratedAt])
   @@map("agent_messages")
 }
 

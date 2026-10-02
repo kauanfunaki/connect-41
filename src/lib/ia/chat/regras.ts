@@ -185,6 +185,38 @@ export function rotulosDaDecisao(ferramenta: string): { sim: string; nao: string
  */
 export const MARCA_DE_SUBSTITUIDA = "__substituida__";
 
+// ─── Avaliar a resposta (02/10/2026) ────────────────────────────────────────
+
+export type Avaliacao = "boa" | "ruim";
+
+/** Os motivos do 👎 — lista fixa, para o painel somar. Escolher um é opcional. */
+export const MOTIVOS_DO_NAO = {
+  errou_dado: "Errou o dado",
+  nao_entendeu: "Não entendeu",
+  incompleta: "Incompleta",
+} as const;
+
+export type MotivoDoNao = keyof typeof MOTIVOS_DO_NAO;
+
+export function ehMotivoDoNao(x: unknown): x is MotivoDoNao {
+  return typeof x === "string" && Object.hasOwn(MOTIVOS_DO_NAO, x);
+}
+
+/**
+ * O que gravar a partir do clique. Motivo só acompanha o 👎; um motivo fora da
+ * lista é recusado (vem do navegador). `null` tira a avaliação.
+ */
+export function avaliacaoParaGravar(
+  avaliacao: unknown,
+  motivo: unknown
+): { rating: "BOA" | "RUIM" | null; ratingReason: MotivoDoNao | null } | null {
+  if (avaliacao === null) return { rating: null, ratingReason: null };
+  if (avaliacao === "boa") return { rating: "BOA", ratingReason: null };
+  if (avaliacao !== "ruim") return null;
+  if (motivo === null || motivo === undefined) return { rating: "RUIM", ratingReason: null };
+  return ehMotivoDoNao(motivo) ? { rating: "RUIM", ratingReason: motivo } : null;
+}
+
 /** O que o cartão da proposta diz, em uma linha. */
 const ETAPA_DO_FUNIL: Record<string, string> = {
   TRIAGEM: "Triagem",

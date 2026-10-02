@@ -9,7 +9,17 @@ import type { Prisma } from "@/generated/prisma/client";
 import type { TurnoAnterior } from "@/lib/ia/laco";
 import { nomeExibicao } from "@/lib/companyName";
 import { citacoesDoTexto, type Citado } from "./citacoes";
-import { corteDaRetencao, inicioDoDiaEmSaoPaulo, lerPropostas, MARCA_DE_SUBSTITUIDA, tituloDaConversa, type PropostaGravada } from "./regras";
+import {
+  corteDaRetencao,
+  ehMotivoDoNao,
+  inicioDoDiaEmSaoPaulo,
+  lerPropostas,
+  MARCA_DE_SUBSTITUIDA,
+  tituloDaConversa,
+  type Avaliacao,
+  type MotivoDoNao,
+  type PropostaGravada,
+} from "./regras";
 
 export type Dono = { tenantId: string; userId: string };
 
@@ -24,6 +34,9 @@ export type MensagemNaTela = {
   criadaEm: string;
   /** Quem a resposta cita, com foto — chave "tipo:id" (ver `citacoes.ts`). */
   citados: Record<string, Citado>;
+  /** O 👍/👎 de quem perguntou, e o motivo do 👎 — só na resposta. */
+  avaliacao: Avaliacao | null;
+  motivo: MotivoDoNao | null;
 };
 
 export type ConversaNaLista = { id: string; titulo: string; agentCode: string; atualizadaEm: string };
@@ -119,6 +132,8 @@ function paraTela(m: {
   truncated: boolean;
   failed: boolean;
   contextLabel: string | null;
+  rating: "BOA" | "RUIM" | null;
+  ratingReason: string | null;
   createdAt: Date;
 }): MensagemNaTela {
   return {
@@ -131,6 +146,8 @@ function paraTela(m: {
     contexto: m.contextLabel,
     criadaEm: m.createdAt.toISOString(),
     citados: {},
+    avaliacao: m.rating === "BOA" ? "boa" : m.rating === "RUIM" ? "ruim" : null,
+    motivo: ehMotivoDoNao(m.ratingReason) ? m.ratingReason : null,
   };
 }
 
@@ -194,6 +211,24 @@ export async function marcarPropostaRecusada(mensagemId: string, propostas: Prop
     where: { id: mensagemId },
     data: { proposals: novas as unknown as Prisma.InputJsonValue },
   });
+}
+
+/**
+ * O 👍/👎 (02/10/2026): só em resposta da própria pessoa que não falhou —
+ * substituída também conta como falha e fica de fora. `rating` nulo tira a
+ * avaliação.
+ */
+export async function avaliarMensagem(
+  dono: Dono,
+  mensagemId: string,
+  dados: { rating: "BOA" | "RUIM" | null; ratingReason: MotivoDoNao | null },
+  agora: Date
+): Promise<boolean> {
+  const r = await getPrisma().agentMessage.updateMany({
+    where: { id: mensagemId, role: "ASSISTENTE", failed: false, conversation: { tenantId: dono.tenantId, userId: dono.userId } },
+    data: { rating: dados.rating, ratingReason: dados.ratingReason, ratedAt: dados.rating ? agora : null },
+  });
+  return r.count > 0;
 }
 
 /**
