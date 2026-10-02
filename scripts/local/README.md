@@ -52,6 +52,12 @@ banco, cria as tabelas pelo schema e carrega:
 - o preparo dos vídeos (`preparar-ambiente.ts`): setor Controladoria, senha do
   cliente do portal, a filial, um comunicado, notas fiscais, e tira a marca
   `[demo]` dos textos.
+- os modelos de processo do Societário (`scripts/seed-societario.ts`): órgãos, tipos e etapas;
+- os dados fictícios das outras telas (`dados-ficticios.ts`): uma equipe de cinco
+  pessoas sem senha (Renata, Bruno, Larissa, Paulo e Marina, uma por setor), seis
+  empresas, colaboradores com férias, afastamentos, desligamentos e horas extras,
+  processos e licenças do Societário, vagas e candidatos, quadros do Kanban,
+  transferências, solicitações do portal e reuniões na agenda. Tudo inventado.
 
 Rode antes de cada rodada de gravação: alguns vídeos mudam os dados (aprovam uma
 conta, respondem uma pendência), e só o banco recriado garante o mesmo vídeo.

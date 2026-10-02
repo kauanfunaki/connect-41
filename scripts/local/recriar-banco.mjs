@@ -97,5 +97,7 @@ rodar("criando as tabelas", "npx", ["prisma", "db", "execute", "--file", arquivo
 rodar("seed (escritório e administrador)", "npx", ["tsx", "prisma/seed.ts"]);
 rodar("demonstração do BPO", "npx", ["tsx", "scripts/dados-de-demonstracao.ts", "--aplicar"]);
 rodar("preparo dos vídeos", "npx", ["tsx", "scripts/local/preparar-ambiente.ts"]);
+rodar("modelos do Societário", "npx", ["tsx", "scripts/seed-societario.ts", "--aplicar"]);
+rodar("dados fictícios das outras telas", "npx", ["tsx", "scripts/local/dados-ficticios.ts"]);
 
 console.log("\nPronto. Suba o Connect com:\n  node scripts/local/com-banco-local.mjs npx next start -p 3100\n(reinicie o servidor se ele já estava no ar: o banco antigo foi apagado)");
