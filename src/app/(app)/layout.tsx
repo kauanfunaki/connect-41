@@ -13,8 +13,6 @@ import { getPrisma } from "@/lib/prisma";
 import { getSectorsWithEnabledModules, getTenantModuleStates } from "@/lib/modules";
 import { getModuleRoute, MODULOS_DO_MENU_GERAL } from "@/lib/module-catalog";
 import { baseDomain, hostSuffix } from "@/lib/auth/activeSector";
-import { formatInstantDateTime } from "@/lib/format";
-import { linkDaNotificacao } from "@/lib/notificacaoLink";
 import { ChatDeIA } from "@/components/shell/ChatDeIA";
 import { agentesDoChat } from "@/lib/ia/chat/agentes";
 
@@ -84,7 +82,9 @@ export default async function AppLayout({
   });
 
   const prisma = getPrisma();
-  const [unreadCount, me, accessibleTenants, recentNotifications] = await Promise.all([
+  // Só o contador do sino: a lista é buscada quando o sino abre (02/10/2026) —
+  // vinda daqui, ela envelhecia, porque o layout não re-renderiza ao navegar.
+  const [unreadCount, me, accessibleTenants] = await Promise.all([
     ctx.userId
       ? prisma.notification.count({ where: { tenantId, userId: ctx.userId, read: false } })
       : Promise.resolve(0),
@@ -103,24 +103,7 @@ export default async function AppLayout({
           where: { id: tenantId },
           select: { id: true, name: true, logoUrl: true },
         }),
-    ctx.userId
-      ? prisma.notification.findMany({
-          where: { tenantId, userId: ctx.userId },
-          orderBy: { createdAt: "desc" },
-          take: 6,
-        })
-      : Promise.resolve([]),
   ]);
-
-  const notifications = recentNotifications.map((n) => ({
-    id: n.id,
-    message: n.message,
-    read: n.read,
-    href: linkDaNotificacao(n),
-    createdAt: formatInstantDateTime(n.createdAt, {
-      day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
-    }),
-  }));
 
   return (
     <ToastProvider>
@@ -136,7 +119,6 @@ export default async function AppLayout({
         sectorHostSuffix={hostSuffix()}
         canOpenAdmin={canOpenAdmin}
         unreadCount={unreadCount}
-        notifications={notifications}
         solicitacoesLigadas={solicitacoesLigadas}
         profileName={me?.name ?? "Usuário"}
         profileRoleLabel={ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role}

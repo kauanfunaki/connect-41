@@ -13,6 +13,12 @@ describe("linkDaNotificacao", () => {
     expect(linkDaNotificacao({ type: "MENTION", entityType: null, entityId: null })).toBeNull();
   });
 
+  it("menção e comentário levam ao card; as antigas, com empresa, continuam na empresa", () => {
+    expect(linkDaNotificacao({ type: "MENTION", entityType: null, entityId: "i1" })).toBe("/kanban/itens/i1");
+    expect(linkDaNotificacao({ type: "COMMENT", entityId: "i1" })).toBe("/kanban/itens/i1");
+    expect(linkDaNotificacao({ type: "COMMENT", entityType: "COMPANY", entityId: "c1" })).toBe("/empresas/c1");
+  });
+
   it("aviso da Junta sem processo leva à lista de avisos", () => {
     expect(linkDaNotificacao({ type: "AVISO_ORGAO_SEM_PROCESSO" })).toBe("/processos/avisos");
     expect(linkDaNotificacao({ type: "PROCESS_AVISO_JUNTA", entityId: "pr1" })).toBe("/processos/pr1");
