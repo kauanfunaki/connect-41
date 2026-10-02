@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { getAuthContext } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { getRelatorioDistorcoes, type DistorcaoRow } from "@/lib/relatoriosRH";
 import { RelatorioHeader } from "@/components/relatorios/RelatorioHeader";
 import { RelatorioTable, RelatorioBadge } from "@/components/relatorios/RelatorioTable";
@@ -16,7 +16,7 @@ function brl(v: number | null): string {
 }
 
 export default async function RelatorioDistorcoesPage() {
-  const ctx = await getAuthContext();
+  const { ctx } = await abrirTelaDoModulo("gestao_indicadores_rh");
   const { permitido, rows } = await getRelatorioDistorcoes(ctx);
 
   // O relatório inteiro É sobre salário — sem a permissão sensível não há o que

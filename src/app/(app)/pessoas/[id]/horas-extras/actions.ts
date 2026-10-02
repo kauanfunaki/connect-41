@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { DayType, OvertimeStatus } from "@/generated/prisma/enums";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
+import { podeNoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 
 export type OvertimeState = { error: string } | null;
@@ -28,7 +29,7 @@ export async function criarHoraExtra(
 ): Promise<OvertimeState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para lançar horas extras." };
+  if (!(await podeNoModulo(ctx, "dp_horas_extras", "gerir"))) return { error: "Sem permissão para lançar horas extras." };
   if (!(await assertPersonInScope(personId, ctx))) {
     return { error: "Pessoa não encontrada ou fora do seu escopo." };
   }
@@ -72,7 +73,7 @@ export async function atualizarHoraExtra(
 ): Promise<OvertimeState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para atualizar lançamentos." };
+  if (!(await podeNoModulo(ctx, "dp_horas_extras", "gerir"))) return { error: "Sem permissão para atualizar lançamentos." };
   if (!(await assertPersonInScope(personId, ctx))) {
     return { error: "Pessoa não encontrada ou fora do seu escopo." };
   }
@@ -97,7 +98,7 @@ export async function atualizarHoraExtra(
 
 export async function excluirHoraExtra(personId: string, entryId: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWrite(ctx.role)) return;
+  if (!ctx.tenantId || !(await podeNoModulo(ctx, "dp_horas_extras", "gerir"))) return;
   if (!(await assertPersonInScope(personId, ctx))) return;
 
   const prisma = getPrisma();

@@ -3,7 +3,8 @@ import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { UserSearch } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { canManageSector } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { CandidatosTable } from "@/components/candidatos/CandidatosTable";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Pagination } from "@/components/shared/Pagination";
@@ -32,8 +33,8 @@ export default async function CandidatosPage({
 }) {
   const { search, page, tag, status } = await searchParams;
   const tagsEscolhidas = lerLista(tag);
-  const ctx = await getAuthContext();
-  const canCreate = canWrite(ctx.role);
+  const { ctx, setor } = await abrirTelaDoModulo("recrutamento_candidatos");
+  const canCreate = canManageSector(ctx, setor);
 
   const prisma = getPrisma();
   const pageNum = Math.max(1, parseInt(page ?? "1"));

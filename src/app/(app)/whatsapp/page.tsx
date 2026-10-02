@@ -8,7 +8,7 @@ import { ConversasLista } from "@/components/whatsapp/ConversasLista";
 import { EstadoDasConexoes } from "@/components/whatsapp/EstadoDasConexoes";
 import { listarConversas, saudeDasConexoes } from "@/lib/whatsapp/data";
 import { filtrarConversas, recorteDaUrl, type RecorteDaLista } from "@/lib/whatsapp/conversas";
-import { setorDoModulo } from "@/lib/modules";
+import { setorDoModulo, isModuleEnabled } from "@/lib/modules";
 
 const MODULE = "recrutamento_whatsapp";
 
@@ -33,6 +33,7 @@ export default async function ConversasDeWhatsappPage({
 }) {
   const recorte = recorteDaUrl((await searchParams).ver);
   const ctx = await getAuthContext();
+  if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
   // Setor que opera o módulo neste tenant, não o de origem — ver `setorDoModulo`.
   if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? "recrutamento")) notFound();
 

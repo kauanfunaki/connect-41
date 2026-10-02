@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
+import { podeNoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 
@@ -15,7 +16,7 @@ export async function registrarReajuste(
 ): Promise<SalaryChangeState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para registrar reajustes." };
+  if (!(await podeNoModulo(ctx, "dp_colaboradores", "gerir"))) return { error: "Sem permissão para registrar reajustes." };
   if (!(await canViewSensitiveField(ctx, "SALARIO"))) {
     return { error: "Sem permissão para editar dados salariais." };
   }

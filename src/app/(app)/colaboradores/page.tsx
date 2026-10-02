@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/ui/PageHeader";
 import { UserPlus, UserMinus, Palmtree } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 
@@ -10,7 +10,7 @@ import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 // usuário (2026-07-10). Cada seção continua na sua própria rota/tela
 // dedicada; esta página só concentra o resumo e o ponto de entrada único.
 export default async function ColaboradoresPage() {
-  const ctx = await getAuthContext();
+  const { ctx } = await abrirTelaDoModulo("dp_colaboradores");
   const prisma = getPrisma();
 
   const [admissoes, desligamentos, ferias] = await Promise.all([

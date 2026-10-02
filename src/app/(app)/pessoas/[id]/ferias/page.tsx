@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { canManageSector } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { AddFeriasForm } from "@/components/pessoas/AddFeriasForm";
 import { FeriasRow } from "@/components/pessoas/FeriasRow";
@@ -17,8 +18,8 @@ export default async function FeriasPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const ctx = await getAuthContext();
-  const canEdit = canWrite(ctx.role);
+  const { ctx, setor } = await abrirTelaDoModulo("dp_colaboradores");
+  const canEdit = canManageSector(ctx, setor);
 
   const prisma = getPrisma();
   const person = await prisma.person.findFirst({

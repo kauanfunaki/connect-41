@@ -3,7 +3,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { Star } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { canManageSector } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { EvaluationForm } from "@/components/avaliacoes/EvaluationForm";
 import { registrarAvaliacao } from "./actions";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -16,8 +17,8 @@ export default async function AvaliarColaboradorPage({
   params: Promise<{ id: string; personId: string }>;
 }) {
   const { id: cycleId, personId } = await params;
-  const ctx = await getAuthContext();
-  if (!canWrite(ctx.role)) notFound();
+  const { ctx, setor } = await abrirTelaDoModulo("dp_avaliacoes");
+  if (!canManageSector(ctx, setor)) notFound();
 
   const prisma = getPrisma();
   const [cycle, person, competencies, existing] = await Promise.all([

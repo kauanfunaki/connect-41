@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { isModuleEnabled } from "@/lib/modules";
 import { scopedAssessmentLinkWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
@@ -18,6 +19,9 @@ import type { QuizScores } from "@/lib/quiz";
 export default async function TesteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const ctx = await getAuthContext();
+  // Vaga e teste são do setor que contrata (o escopo já filtra); aqui só o
+  // módulo ligado, que antes não era checado e deixava a tela abrir desligada.
+  if (!(await isModuleEnabled(ctx.tenantId, "recrutamento_testes"))) notFound();
 
   const prisma = getPrisma();
   const link = await prisma.assessmentLink.findFirst({

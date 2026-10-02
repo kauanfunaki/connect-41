@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
+import { podeNoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { logAudit } from "@/lib/audit";
 import { getRescisaoItem } from "@/lib/rescisaoChecklist";
@@ -39,7 +40,7 @@ export async function salvarItemConferencia(
 ): Promise<ConferenciaState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para conferir rescisões." };
+  if (!(await podeNoModulo(ctx, "dp_colaboradores", "gerir"))) return { error: "Sem permissão para conferir rescisões." };
 
   const item = getRescisaoItem(itemKey);
   if (!item) return { error: "Item de conferência desconhecido." };
@@ -126,7 +127,7 @@ export async function salvarDadosRescisao(
 ): Promise<ConferenciaState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para editar rescisões." };
+  if (!(await podeNoModulo(ctx, "dp_colaboradores", "gerir"))) return { error: "Sem permissão para editar rescisões." };
 
   const termination = await findTerminationInScope(personId, terminationId, ctx);
   if (!termination) return { error: "Rescisão não encontrada ou fora do seu escopo." };

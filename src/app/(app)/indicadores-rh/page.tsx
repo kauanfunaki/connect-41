@@ -22,7 +22,7 @@ import {
   Gift,
   BarChart3,
 } from "lucide-react";
-import { getAuthContext } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { getIndicadoresRH } from "@/lib/indicadoresRH";
@@ -88,7 +88,7 @@ const ICONE_DO_INDICADOR: Record<string, React.ReactNode> = {
 };
 
 export default async function IndicadoresRhPage() {
-  const ctx = await getAuthContext();
+  const { ctx } = await abrirTelaDoModulo("gestao_indicadores_rh");
   const [cards, canViewSalary] = await Promise.all([
     getIndicadoresRH(ctx),
     canViewSensitiveField(ctx, "SALARIO"),

@@ -6,7 +6,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
 import { InfoRow } from "@/components/empresas/InfoRow";
 import { BackButton } from "@/components/shared/BackButton";
-import { getAuthContext } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { SalaryHistorySection } from "@/components/pessoas/SalaryHistorySection";
@@ -19,7 +19,7 @@ export default async function SalarioPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const ctx = await getAuthContext();
+  const { ctx } = await abrirTelaDoModulo("dp_colaboradores");
   const canViewBank = await canViewSensitiveField(ctx, "DADOS_BANCARIOS");
   const canViewSalary = await canViewSensitiveField(ctx, "SALARIO");
   if (!canViewBank && !canViewSalary) notFound();

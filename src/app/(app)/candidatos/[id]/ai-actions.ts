@@ -4,7 +4,8 @@ import { readFile } from "fs/promises";
 import path from "path";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
+import { podeNoModulo } from "@/lib/auth/modulo";
 import { extractResumeData, isAiConfigured } from "@/lib/ai";
 import { logAudit } from "@/lib/audit";
 
@@ -38,7 +39,7 @@ async function findResumePath(tenantId: string, personId: string): Promise<strin
 export async function extrairDadosCurriculo(personId: string): Promise<AiExtractState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão." };
+  if (!(await podeNoModulo(ctx, "recrutamento_candidatos", "gerir"))) return { error: "Sem permissão." };
   if (!(await isAiConfigured(ctx.tenantId))) {
     return { error: "IA não configurada. Cadastre uma chave em Integrações → Inteligência Artificial." };
   }

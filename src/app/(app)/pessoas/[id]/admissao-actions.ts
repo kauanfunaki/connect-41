@@ -3,7 +3,8 @@
 import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
+import { podeNoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { sendAdmissaoEmail } from "@/lib/email/sendMail";
 import { formatInstantDate } from "@/lib/format";
@@ -25,7 +26,7 @@ async function assertColaboradorEmAdmissao(personId: string, ctx: Awaited<Return
 export async function gerarLinkAdmissao(personId: string): Promise<GerarLinkResult> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para gerar link de admissão." };
+  if (!(await podeNoModulo(ctx, "dp_colaboradores", "gerir"))) return { error: "Sem permissão para gerar link de admissão." };
 
   const person = await assertColaboradorEmAdmissao(personId, ctx);
   if (!person) return { error: "Colaborador não encontrado ou fora do seu escopo." };
@@ -65,7 +66,7 @@ export async function gerarLinkAdmissao(personId: string): Promise<GerarLinkResu
 export async function concluirAdmissao(personId: string): Promise<{ error: string } | null> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para concluir a admissão." };
+  if (!(await podeNoModulo(ctx, "dp_colaboradores", "gerir"))) return { error: "Sem permissão para concluir a admissão." };
 
   const person = await assertColaboradorEmAdmissao(personId, ctx);
   if (!person) return { error: "Colaborador não encontrado ou fora do seu escopo." };
