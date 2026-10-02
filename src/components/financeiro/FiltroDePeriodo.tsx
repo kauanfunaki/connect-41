@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
 type Props = {
   /** Rota do próprio formulário. */
   acao: string;
-  empresas?: { id: string; nome: string }[];
+  empresas?: (EmpresaParaEscolher & { nome: string })[];
   empresaId?: string | null;
   /** Oferece "Todas as empresas" — telas de consolidado. */
   permitirTodas?: boolean;
@@ -39,7 +40,9 @@ export function FiltroDePeriodo({ acao, empresas, empresaId, permitirTodas, mes,
           compact
           className="w-72 max-w-full"
           aria-label="Empresa"
-          options={empresas.map((e) => ({ value: e.id, label: e.nome }))}
+          options={opcoesDeEmpresa(empresas)}
+          avatar
+          lembrarRecentes="empresas"
           defaultValue={empresaId ?? ""}
           vazioLabel={permitirTodas ? "Todas as empresas" : undefined}
           placeholder="Buscar empresa…"

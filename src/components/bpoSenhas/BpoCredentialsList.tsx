@@ -19,6 +19,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/useConfirm";
 import type { BpoCredencialState } from "@/app/(app)/bpo-senhas/actions";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 import { FormFooter } from "@/components/ui/FormFooter";
 
 export type CredentialRow = {
@@ -33,7 +34,7 @@ export type CredentialRow = {
   createdAtLabel: string;
 };
 
-type CompanyOption = { id: string; name: string };
+type CompanyOption = EmpresaParaEscolher & { name: string };
 
 type Props = {
   credentials: CredentialRow[];
@@ -56,7 +57,9 @@ function CredentialFormFields({ companies, defaults }: { companies: CompanyOptio
           id="companyId"
           name="companyId"
           defaultValue={defaults?.companyId ?? ""}
-          options={companies.map((c) => ({ value: c.id, label: c.name }))}
+          options={opcoesDeEmpresa(companies)}
+          avatar
+          lembrarRecentes="empresas"
           vazioLabel="Geral (sem empresa)"
           placeholder="Buscar empresa…"
         />
