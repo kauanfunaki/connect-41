@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
+import { Button } from "@/components/ui/Button";
 
 type ActionResult = { error: string } | null | void;
 
@@ -11,13 +12,16 @@ type Props = {
   nome: string;
   label?: string;
   description?: string;
+  /** Desenho do botão — o mesmo do `Button` (padrão: danger sm). */
+  variant?: "danger" | "secondary" | "ghost";
+  size?: "xs" | "sm" | "md";
 };
 
 // Botão de exclusão com confirmação temática e feedback de erro. Se a action
 // retornar { error } (ex: FK — registro com histórico vinculado), mostra no
 // diálogo em vez de falhar silenciosamente. Em sucesso, a própria action faz
 // redirect. Fonte única — os DeleteButton por-módulo apenas reexportam este.
-export function DeleteButton({ action, nome, label = "Excluir", description }: Props) {
+export function DeleteButton({ action, nome, label = "Excluir", description, variant = "danger", size = "sm" }: Props) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -38,16 +42,16 @@ export function DeleteButton({ action, nome, label = "Excluir", description }: P
 
   return (
     <>
-      <button
-        type="button"
+      <Button
+        variant={variant}
+        size={size}
         onClick={() => {
           setError(null);
           setOpen(true);
         }}
-        className="inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-md border border-danger/30 text-[length:var(--fs-button-sm)] font-semibold text-danger hover:bg-danger/8 transition-colors"
       >
         {label}
-      </button>
+      </Button>
 
       <ConfirmDialog
         open={open}

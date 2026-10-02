@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
-import { Input } from "@/components/ui/Input";
+import { CampoDeSenha } from "@/components/ui/CampoDeSenha";
 import { Button } from "@/components/ui/Button";
 import type { EstadoDaRedefinicao } from "@/app/(portal)/portal/redefinir-senha/actions";
 
@@ -34,11 +34,11 @@ export function RedefinirSenhaPortalForm({ token, action }: Props) {
         <input type="hidden" name="token" value={token} />
 
         <CampoForm label="Nova senha" htmlFor="senha" helper="Ao menos 8 caracteres." required>
-          <Input id="senha" name="senha" type="password" autoComplete="new-password" required autoFocus />
+          <CampoDeSenha id="senha" name="senha" autoComplete="new-password" required autoFocus />
         </CampoForm>
 
         <CampoForm label="Confirme a senha" htmlFor="confirmacao" required>
-          <Input id="confirmacao" name="confirmacao" type="password" autoComplete="new-password" required />
+          <CampoDeSenha id="confirmacao" name="confirmacao" autoComplete="new-password" required />
         </CampoForm>
 
         {estado && "error" in estado && (

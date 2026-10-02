@@ -17,7 +17,7 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
   return (
     <Card as="section" className="p-4 flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-[14px] font-semibold text-fg">Taxas</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Taxas</h2>
         <p className="text-[13px] tabular-nums text-fg">
           <strong>{moeda(custo.totalCentavos)}</strong>
           {aPagar > 0 && <span className="text-warning"> · {moeda(aPagar)} a pagar</span>}

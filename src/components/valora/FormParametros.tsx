@@ -69,7 +69,7 @@ export function FormParametros({ catalogo, parametros, podeEditar }: { catalogo:
       }}
     >
       <Card className="p-4">
-        <h2 className="text-[14px] font-semibold text-fg mb-1">Custo de cada setor</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">Custo de cada setor</h2>
         <p className="text-[12px] text-fg-muted mb-3">
           Custo mensal da equipe: salários, encargos e benefícios de quem atende cliente. A capacidade e o fator vêm dos
           questionários — o fator encolhe os tempos declarados até a carteira caber nas horas da equipe.
@@ -141,7 +141,7 @@ export function FormParametros({ catalogo, parametros, podeEditar }: { catalogo:
       </Card>
 
       <Card className="p-4">
-        <h2 className="text-[14px] font-semibold text-fg mb-4">Preço</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Preço</h2>
         <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-3">
           {campoPreco("despesasFixasMes", "Despesas fixas do escritório", "Aluguel, sistemas, gestão e áreas de apoio. Rateadas por hora produtiva.", undefined, "R$")}
           {campoPreco("variaveisPct", "Custos variáveis", "Impostos, inadimplência e taxas — % sobre o preço.", "%")}

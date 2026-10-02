@@ -192,10 +192,7 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
             <Button href={meeting.meetingUrl} target="_blank" rel="noopener noreferrer" variant="secondary" size="xs">
               <Video size={11} style={{ color: accent }} /> Entrar <ExternalLink size={10} />
             </Button>
-            <CopyLinkButton
-              url={meeting.meetingUrl}
-              className="h-7 px-2.5 rounded-md border border-border-strong font-semibold hover:bg-surface-hover"
-            />
+            <CopyLinkButton url={meeting.meetingUrl} variant="botao" />
             {canEdit && (
               <Button
                 variant="secondary"

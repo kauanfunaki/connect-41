@@ -8,7 +8,7 @@ import { AttendeePicker } from "@/components/shared/AttendeePicker";
 import { Select } from "@/components/ui/Select";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 import type { PipelineEntityType } from "@/generated/prisma/enums";
-import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 type EntityOption = { id: string; name: string };
 type TagOption = { id: string; name: string; color: string };
@@ -107,14 +107,12 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
       {/* Rodapé no padrão dos formulários (30/09): Cancelar à esquerda do
           primário, os dois à direita, com o divisor em cima. Estava ao
           contrário e alinhado à esquerda. */}
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-        <Button href={cancelHref} variant="secondary">
-          Cancelar
-        </Button>
-        <Button variant="primary" type="submit" disabled={isPending}>
-          {isPending ? "Adicionando…" : "Adicionar"}
-        </Button>
-      </div>
+      <FormFooter
+        pending={isPending}
+        pendingLabel="Adicionando…"
+        submitLabel="Adicionar"
+        cancelHref={cancelHref}
+      />
     </form>
   );
 }

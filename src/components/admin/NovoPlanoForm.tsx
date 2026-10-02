@@ -7,6 +7,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 export function NovoPlanoForm() {
   const [open, setOpen] = useState(false);
@@ -66,17 +67,13 @@ export function NovoPlanoForm() {
         </CampoForm>
       </FieldGrid>
 
-      <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-        {state?.error && (
-          <p className="mr-auto text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>
-        )}
-        <Button variant="secondary" onClick={() => setOpen(false)}>
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "Criando…" : "Criar plano"}
-        </Button>
-      </div>
+      <FormFooter
+        pending={isPending}
+        pendingLabel="Criando…"
+        submitLabel="Criar plano"
+        onCancel={() => setOpen(false)}
+        erro={state?.error}
+      />
     </form>
   );
 }

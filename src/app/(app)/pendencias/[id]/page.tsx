@@ -54,23 +54,24 @@ export default async function PendenciaPage({ params }: { params: Promise<{ id: 
           </>
         }
         action={podeAgir ? <AcoesDaPendencia id={p.id} status={p.status} /> : undefined}
+        meta={
+          <>
+            <SeloDoStatus status={p.status} lado="EQUIPE" />
+            <SeloDoPrazo situacao={p.situacaoDoPrazo} status={p.status} />
+            {p.status === "RESOLVIDA" && p.resolvidaEm && (
+              <span>
+                resolvida {p.resolvidaPor ? `por ${p.resolvidaPor} ` : ""}em {formatInstantDateTime(p.resolvidaEm)}
+              </span>
+            )}
+          </>
+        }
       />
-
-      <div className="flex flex-wrap items-center gap-2 mt-3 mb-4">
-        <SeloDoStatus status={p.status} lado="EQUIPE" />
-        <SeloDoPrazo situacao={p.situacaoDoPrazo} status={p.status} />
-        {p.status === "RESOLVIDA" && p.resolvidaEm && (
-          <span className="text-[12px] text-fg-muted">
-            resolvida {p.resolvidaPor ? `por ${p.resolvidaPor} ` : ""}em {formatInstantDateTime(p.resolvidaEm)}
-          </span>
-        )}
-      </div>
 
       {/* O que o cliente recebeu sozinho precisa estar à vista de quem cobra: sem isso,
           a equipe liga para lembrar de algo que o e-mail já lembrou ontem. */}
       {lembretes.length > 0 ? (
         <Card className="mb-4 p-4 text-[12px]">
-          <h2 className="text-[14px] font-semibold text-fg mb-2">Lembretes automáticos ao cliente</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">Lembretes automáticos ao cliente</h2>
           <ul className="flex flex-col gap-1">
             {lembretes.map((l) => {
               const s = situacaoDoLembrete(l, agora);

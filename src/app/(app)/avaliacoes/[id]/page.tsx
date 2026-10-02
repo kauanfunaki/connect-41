@@ -82,7 +82,7 @@ export default async function CicloPage({
       />
 
       <Card className="p-5">
-        <h2 className="text-[14px] font-semibold text-fg mb-3">
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">
           Avaliações {ciclo.evaluations.length > 0 && `(${ciclo.evaluations.length})`}
         </h2>
 

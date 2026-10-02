@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
+import { Button } from "@/components/ui/Button";
 
 type ActionResult = { error: string } | null | void;
 
@@ -16,6 +17,9 @@ type Props = {
   /** Mensagem de sucesso no toast. Omitir não mostra toast. */
   successMessage?: string;
   destructive?: boolean;
+  /** Desenho do botão que abre o diálogo — o mesmo do `Button` (padrão: secondary sm). */
+  variant?: "primary" | "secondary" | "danger" | "ghost";
+  size?: "xs" | "sm" | "md";
   className?: string;
 };
 
@@ -30,6 +34,8 @@ export function ConfirmActionButton({
   confirmLabel,
   successMessage,
   destructive = false,
+  variant = "secondary",
+  size = "sm",
   className,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -52,19 +58,17 @@ export function ConfirmActionButton({
 
   return (
     <>
-      <button
-        type="button"
+      <Button
+        variant={variant}
+        size={size}
+        className={className}
         onClick={() => {
           setError(null);
           setOpen(true);
         }}
-        className={
-          className ??
-          "inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-md border border-border-strong text-[length:var(--fs-button-sm)] font-semibold text-fg hover:bg-surface-hover transition-colors"
-        }
       >
         {label}
-      </button>
+      </Button>
 
       <ConfirmDialog
         open={open}

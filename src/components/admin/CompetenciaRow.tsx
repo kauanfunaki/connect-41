@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { AcoesDoItem } from "@/components/admin/AcoesDoItem";
 import { Input } from "@/components/ui/Input";
 import type { CompetencyState } from "@/app/(app)/admin/competencias/actions";
-import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 type Props = {
   competencia: { id: string; name: string; description: string | null };
@@ -43,14 +43,11 @@ export function CompetenciaRow({ competencia, updateAction, deleteAction }: Prop
             placeholder="Descrição"
             aria-label="Descrição"
           />
-          <div className="flex items-center justify-end gap-3">
-            <Button variant="secondary" onClick={() => setEditing(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Salvando…" : "Salvar"}
-            </Button>
-          </div>
+          <FormFooter
+            pending={isPending}
+            onCancel={() => setEditing(false)}
+            semDivisoria
+          />
         </div>
         {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
       </form>

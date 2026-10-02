@@ -1,7 +1,8 @@
 "use client";
 
-import { MoreHorizontal, Trash2 } from "lucide-react";
-import { Popover, ItemDoMenu } from "@/components/ui/Popover";
+import { Trash2 } from "lucide-react";
+import { ItemDoMenu } from "@/components/ui/Popover";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { useConfirm } from "@/components/ui/useConfirm";
 
 type Props = {
@@ -27,24 +28,7 @@ export function MenuDoRegistro({ titulo, descricao, rotulo = "Remover", onRemove
 
   return (
     <>
-      <Popover
-        align="right"
-        width={180}
-        aria-label="Mais ações"
-        trigger={({ open, toggle }) => (
-          <button
-            type="button"
-            onClick={toggle}
-            aria-label="Mais ações"
-            aria-expanded={open}
-            className={`h-7 w-7 rounded-md border inline-flex items-center justify-center transition-colors ${
-              open ? "border-brand/40 bg-brand-subtle text-fg" : "border-border-strong text-fg-muted hover:text-fg hover:bg-surface-hover"
-            }`}
-          >
-            <MoreHorizontal size={14} />
-          </button>
-        )}
-      >
+      <MenuDeMaisAcoes align="right" width={180} size="md">
         {({ close }) => (
           <ItemDoMenu
             icone={<Trash2 />}
@@ -57,7 +41,7 @@ export function MenuDoRegistro({ titulo, descricao, rotulo = "Remover", onRemove
             {rotulo}
           </ItemDoMenu>
         )}
-      </Popover>
+      </MenuDeMaisAcoes>
       {dialog}
     </>
   );

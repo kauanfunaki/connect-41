@@ -46,7 +46,7 @@ export default async function PortalCobrancaPage() {
         ]}
       />
 
-      <h2 className="text-[14px] font-semibold text-fg mb-2">Títulos em cobrança</h2>
+      <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">Títulos em cobrança</h2>
       {titulos.length === 0 ? (
         <Card className="mb-6">
           <EmptyState icon={<Handshake />} title="Nenhum título vencido" description="Quando um cliente das suas empresas atrasar um pagamento, o título aparece aqui." />
@@ -115,7 +115,7 @@ export default async function PortalCobrancaPage() {
         </div>
       )}
 
-      <h2 className="text-[14px] font-semibold text-fg mb-2">Acordos</h2>
+      <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">Acordos</h2>
       {acordos.length === 0 ? (
         <Card>
           <EmptyState icon={<Handshake />} title="Nenhum acordo" description="Quando uma dívida for renegociada em parcelas, o acordo aparece aqui." />

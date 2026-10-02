@@ -39,7 +39,7 @@ export function AgenteCard({ linha, podeEditar }: Props) {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-[15px] font-semibold text-fg">{linha.def.label}</h3>
+            <h3 className="text-[length:var(--fs-card-title)] font-semibold text-fg">{linha.def.label}</h3>
             <Badge variant={SAUDE_VARIANTE[linha.saude]}>{SAUDE_LABEL[linha.saude]}</Badge>
             {linha.temOverride && (
               <span className="text-[11px] text-fg-muted border border-border rounded px-1.5 py-0.5">

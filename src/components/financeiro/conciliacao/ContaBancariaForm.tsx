@@ -10,6 +10,7 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Modal } from "@/components/ui/Modal";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { salvarContaBancaria, alterarContaAtiva } from "@/app/(app)/conciliacao/actions";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 export type ContaParaEditar = {
   id: string;
@@ -110,15 +111,11 @@ export function ContaBancariaForm({ companyId, conta }: { companyId: string; con
             </CampoForm>
           </FieldGrid>
 
-          <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-            {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
-            <Button type="button" variant="secondary" onClick={() => setAberto(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={pendente}>
-              {pendente ? "Salvando…" : "Salvar"}
-            </Button>
-          </div>
+          <FormFooter
+            pending={pendente}
+            onCancel={() => setAberto(false)}
+            erro={erro}
+          />
         </form>
       </Modal>
     </>

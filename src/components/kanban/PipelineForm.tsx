@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { normalizeAccentColor } from "@/lib/color";
 import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 const DEFAULT_COLORS = ["#586577", "#2E6FB8", "#C8860D", "#1E8E5A", "#C5374B"];
 
@@ -127,14 +128,12 @@ export function PipelineForm({ action, sectorOptions }: Props) {
       {/* Rodapé no padrão dos formulários (30/09): Cancelar à esquerda do
           primário, os dois à direita, com o divisor em cima. Estava ao
           contrário e alinhado à esquerda. */}
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-        <Button href="/kanban" variant="secondary">
-          Cancelar
-        </Button>
-        <Button variant="primary" type="submit" disabled={isPending}>
-          {isPending ? "Criando…" : "Criar Kanban"}
-        </Button>
-      </div>
+      <FormFooter
+        pending={isPending}
+        pendingLabel="Criando…"
+        submitLabel="Criar Kanban"
+        cancelHref="/kanban"
+      />
     </form>
   );
 }

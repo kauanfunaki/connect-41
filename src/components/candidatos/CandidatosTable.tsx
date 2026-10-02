@@ -11,6 +11,7 @@ import { maskCpf } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useConfirm } from "@/components/ui/useConfirm";
 import type { OpcaoDoFunil } from "@/lib/filtrosDaListaDeEmpresas";
+import { Selo } from "@/components/ui/Selo";
 
 const TH = "px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted";
 
@@ -69,15 +70,11 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
   // deixar duas cópias dela aqui só espalharia a divergência.
   function pilulaStatus(c: Row) {
     return (
-      <span
-        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${
-          c.active
+      <Selo cor={c.active
             ? "bg-success/10 text-success border-success/25"
-            : "bg-surface-2 text-fg-muted border-border"
-        }`}
-      >
+            : "bg-surface-2 text-fg-muted border-border"}>
         {c.active ? "Ativo" : "Inativo"}
-      </span>
+      </Selo>
     );
   }
 

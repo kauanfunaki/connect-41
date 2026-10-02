@@ -76,7 +76,7 @@ export default async function IaDoSocietarioPage() {
       )}
 
       <section aria-labelledby="fila" className="mb-6 flex flex-col gap-2">
-        <h2 id="fila" className="text-[14px] font-semibold text-fg">
+        <h2 id="fila" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
           Esperando revisão ({pendentes.length})
         </h2>
         {pendentes.length === 0 ? (
@@ -108,7 +108,7 @@ export default async function IaDoSocietarioPage() {
 
       <section aria-labelledby="qualidade" className="mb-6 flex flex-col gap-2">
         <div>
-          <h2 id="qualidade" className="text-[14px] font-semibold text-fg">
+          <h2 id="qualidade" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
             Qualidade da IA, últimos 6 meses
           </h2>
           <p className="text-[12px] text-fg-muted">
@@ -162,7 +162,7 @@ export default async function IaDoSocietarioPage() {
 
       {revisadas.length > 0 && (
         <section aria-labelledby="revisadas" className="flex flex-col gap-2">
-          <h2 id="revisadas" className="text-[14px] font-semibold text-fg">
+          <h2 id="revisadas" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
             Revisadas recentemente
           </h2>
           <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">

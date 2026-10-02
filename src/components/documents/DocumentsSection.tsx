@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 
 import { CATEGORY_LABEL, CATEGORY_OPTIONS } from "@/lib/document-categories";
+import { Selo } from "@/components/ui/Selo";
 
 export type DocumentItem = {
   id: string;
@@ -250,15 +251,11 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
                     </p>
                   </div>
                   {d.expiresAtLabel && (
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border flex-shrink-0 ${
-                        d.expired
+                    <Selo cor={d.expired
                           ? "bg-danger/10 text-danger border-danger/25"
-                          : "bg-warning/10 text-warning border-warning/25"
-                      }`}
-                    >
+                          : "bg-warning/10 text-warning border-warning/25"} className="flex-shrink-0">
                       {d.expired ? `Vencido em ${d.expiresAtLabel}` : `Vence em ${d.expiresAtLabel}`}
-                    </span>
+                    </Selo>
                   )}
                 </div>
               ))}

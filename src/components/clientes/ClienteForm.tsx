@@ -67,13 +67,14 @@ export function ClienteForm({ action, cancelHref, defaultValues }: Props) {
           </CampoForm>
         </FieldGrid>
 
-        <div className="space-y-1">
-          <Checkbox id="active" name="active" defaultChecked={defaultValues?.active ?? true} label="Ativo" />
-          <p className="text-[length:var(--fs-helper)] text-fg-muted">
-            Cliente inativo não aparece no cadastro de empresas novas, mas continua
-            respondendo pelas empresas que já tem.
-          </p>
-        </div>
+        <Checkbox id="active" name="active" defaultChecked={defaultValues?.active ?? true} label="Ativo"
+          helper={
+            <>
+              Cliente inativo não aparece no cadastro de empresas novas, mas continua
+              respondendo pelas empresas que já tem.
+            </>
+          }
+        />
       </FormSection>
 
       <FormFooter cancelHref={cancelHref} pending={isPending} />

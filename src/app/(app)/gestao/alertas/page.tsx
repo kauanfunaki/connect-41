@@ -40,7 +40,7 @@ export default async function AlertasDaGestaoPage({ searchParams }: { searchPara
       <FiltroDeSetor setores={g.setores} />
 
       <section aria-labelledby="lista" className="flex flex-col gap-2">
-        <h2 id="lista" className="text-[14px] font-semibold text-fg">
+        <h2 id="lista" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
           Parados e com prazo ({atencao.length})
         </h2>
         {atencao.length === 0 ? (
@@ -66,7 +66,7 @@ export default async function AlertasDaGestaoPage({ searchParams }: { searchPara
 
       <section aria-labelledby="limites" className="flex flex-col gap-2">
         <div>
-          <h2 id="limites" className="text-[14px] font-semibold text-fg">
+          <h2 id="limites" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
             Limites por setor
           </h2>
           <p className="text-[12px] text-fg-muted">

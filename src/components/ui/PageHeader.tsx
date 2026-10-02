@@ -6,9 +6,13 @@ type Props = {
    *  contagem e pluralização ("{n} ações registradas neste workspace"). */
   subtitle?: React.ReactNode;
   action?: React.ReactNode;
+  /** Linha de selos e datas embaixo do título (situação, prazo, "aberto em")
+   *  — as telas de detalhe montavam isso à mão depois do cabeçalho, a 40px do
+   *  título (02/10/2026). */
+  meta?: React.ReactNode;
 };
 
-export function PageHeader({ title, subtitle, action }: Props) {
+export function PageHeader({ title, subtitle, action, meta }: Props) {
   // Quando título e ações não cabem lado a lado, as ações descem para a linha
   // de baixo. Sem o `flex-wrap`, ações largas espremiam o título numa coluna
   // estreita e a página ganhava rolagem lateral (visto em /processos, 30/09).
@@ -21,6 +25,9 @@ export function PageHeader({ title, subtitle, action }: Props) {
         <span aria-hidden className="block h-[3px] w-7 rounded-full bg-[var(--c41-setor)] mb-3" />
         <h1 className="text-[length:var(--fs-display)] font-semibold text-fg tracking-[-0.02em] leading-tight">{title}</h1>
         {subtitle && <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1.5 max-w-[78ch] leading-relaxed">{subtitle}</p>}
+        {meta && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-3 text-[length:var(--fs-helper)] text-fg-muted">{meta}</div>
+        )}
       </div>
       {action && <div className="flex-shrink-0">{action}</div>}
     </div>

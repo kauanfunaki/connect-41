@@ -148,7 +148,7 @@ export default async function AdminPage() {
         {GROUP_ORDER.filter((g) => cards.some((c) => c.group === g)).map((groupKey) => (
           <section key={groupKey}>
             <div className="mb-3">
-              <h2 className="text-[13px] font-semibold text-fg">{GROUP_LABEL[groupKey]}</h2>
+              <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">{GROUP_LABEL[groupKey]}</h2>
               <p className="text-[12px] text-fg-muted mt-0.5">{GROUP_HELPER[groupKey]}</p>
             </div>
 

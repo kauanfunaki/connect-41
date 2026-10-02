@@ -66,7 +66,7 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
       )}
 
       <section>
-        <h2 className="text-[14px] font-semibold text-fg mb-1">Adicionais</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">Adicionais</h2>
         <p className="text-[12px] text-fg-muted mb-3">
           Os percentuais são fixos em lei — o que varia por empresa é o grau apurado no laudo e a incidência.
         </p>
@@ -111,7 +111,7 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
       </section>
 
       <section className="pt-4 border-t border-border">
-        <h2 className="text-[14px] font-semibold text-fg mb-3">Médias de variáveis</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">Médias de variáveis</h2>
         <FieldGrid columns="sm:grid-cols-3">
           <CampoForm label="Janela" htmlFor="mediaMeses" helper={heranca("mediaMeses") ?? "Entre 3 e 12."}>
             <Input
@@ -150,7 +150,7 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
       </section>
 
       <section className="pt-4 border-t border-border">
-        <h2 className="text-[14px] font-semibold text-fg mb-3">Conferência</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">Conferência</h2>
         {/* Um campo só, de percentual: na coluna de um terço, a mesma das
             médias acima — era meia tela para um número de até 5. */}
         <FieldGrid columns="sm:grid-cols-3">
@@ -188,7 +188,7 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
       </section>
 
       <section className="pt-4 border-t border-border">
-        <h2 className="text-[14px] font-semibold text-fg mb-1">Verbas não praticadas</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">Verbas não praticadas</h2>
         <p className="text-[12px] text-fg-muted mb-3">
           Marcadas aqui deixam de entrar no total — mas continuam aparecendo na conferência com o valor que teriam,
           pra ninguém esconder verba devida sem querer.
@@ -208,7 +208,7 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
       </section>
 
       <section className="pt-4 border-t border-border">
-        <h2 className="text-[14px] font-semibold text-fg mb-1">Convenção coletiva</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">Convenção coletiva</h2>
         <p className="text-[12px] text-fg-muted mb-3">
           Texto de orientação exibido ao conferente — <strong>não é regra executável</strong>. O motor não interpreta
           cláusula de CCT.

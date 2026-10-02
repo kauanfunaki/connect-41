@@ -10,15 +10,16 @@ import { scopedAssessmentLinkWhere, scopedPersonWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Pagination } from "@/components/shared/Pagination";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
-import { FiltroDaColunaNaUrl } from "@/components/shared/FiltroDeColunas";
+import { FiltroDaColunaNaUrl, FiltrosDasColunasNaUrl } from "@/components/shared/FiltroDeColunas";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { NovoTesteForm } from "@/components/teste/NovoTesteForm";
 import { formatInstantDate } from "@/lib/format";
-import { lerLista } from "@/lib/filtrosDaListaDeEmpresas";
+import { lerLista } from "@/lib/filtroNaUrl";
 import type { AssessmentLinkStatus } from "@/generated/prisma/enums";
 import { setorDoModulo, isModuleEnabled } from "@/lib/modules";
+import { Selo } from "@/components/ui/Selo";
 
 const PER_PAGE = 30;
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
@@ -151,26 +152,26 @@ export default async function TestesPage({
     if (l.status !== "RESPONDIDO") return null;
     if (l.type === "DISC" && l.primaryProfile) {
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border bg-brand/10 text-brand border-brand/25 whitespace-nowrap">
+        <Selo tom="marca">
           Perfil {l.primaryProfile}
           {l.secondaryProfile ?? ""}
-        </span>
+        </Selo>
       );
     }
     if (l.type === "MULTIPLA_ESCOLHA") {
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border bg-brand/10 text-brand border-brand/25 whitespace-nowrap">
+        <Selo tom="marca">
           {(l.scores as { pct: number } | null)?.pct ?? 0}% de acertos
-        </span>
+        </Selo>
       );
     }
     return null;
   };
 
   const seloDoStatus = (s: AssessmentLinkStatus) => (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap ${STATUS_STYLE[s]}`}>
+    <Selo cor={STATUS_STYLE[s]}>
       {STATUS_LABEL[s]}
-    </span>
+    </Selo>
   );
 
   return (
@@ -223,20 +224,14 @@ export default async function TestesPage({
         ]}
       />
 
+      <FiltrosDasColunasNaUrl colunas={[{ chave: "teste", rotulo: "Teste" }]} />
+
       {links.length === 0 ? (
         <Card>
           <EmptyState
             icon={<ClipboardList />}
             title="Nenhum teste encontrado"
             description="Ajuste os filtros ou envie o primeiro teste pra um candidato acima."
-            action={
-              // Sem linhas, a tabela some e o funil some com ela.
-              testesEscolhidos.length > 0 ? (
-                <Button href={statusFilter ? `/testes?status=${statusFilter}` : "/testes"} variant="secondary" size="sm">
-                  Limpar o filtro de teste
-                </Button>
-              ) : undefined
-            }
           />
         </Card>
       ) : (

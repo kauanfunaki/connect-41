@@ -470,7 +470,7 @@ async function AbaDoPlano({ tenantId, companyId, podeEditar }: { tenantId: strin
           if (doLado.length === 0) return null;
           return (
             <div key={kind} className="mb-6">
-              <h3 className="text-[14px] font-semibold text-fg mb-2">{kind === "PAGAR" ? "Despesas (a pagar)" : "Receitas (a receber)"}</h3>
+              <h3 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">{kind === "PAGAR" ? "Despesas (a pagar)" : "Receitas (a receber)"}</h3>
               <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
                 <table className="w-full min-w-[760px] text-[13px]">
                   <thead>

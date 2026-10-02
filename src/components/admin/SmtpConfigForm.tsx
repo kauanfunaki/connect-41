@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { FormSection } from "@/components/ui/FormSection";
 import { Input } from "@/components/ui/Input";
+import { CampoDeSenha } from "@/components/ui/CampoDeSenha";
 
 type Props = {
   hasConfig: boolean;
@@ -83,7 +84,7 @@ export function SmtpConfigForm({ hasConfig, defaultValues }: Props) {
               required={!hasConfig}
               helper={hasConfig ? "Deixe em branco para manter a senha já salva." : undefined}
             >
-              <Input id="password" name="password" type="password" required={!hasConfig} placeholder={hasConfig ? "••••••••" : ""} />
+              <CampoDeSenha id="password" name="password" required={!hasConfig} placeholder={hasConfig ? "••••••••" : ""} />
             </CampoForm>
           </FieldGrid>
         </FormSection>

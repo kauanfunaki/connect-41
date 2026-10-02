@@ -48,7 +48,7 @@ export function SimuladorDeCenarios({ bases }: { bases: BaseDoCenario[] }) {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Card className="p-4 flex flex-col gap-5">
-        <h3 className="text-[14px] font-semibold text-fg">Premissas</h3>
+        <h3 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Premissas</h3>
         {/* As duas escolhas por botão ganharam rótulo em cima, como os campos
             abaixo — o "Partir de:" era texto solto no começo da fileira. */}
         {bases.length > 1 && (

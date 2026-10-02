@@ -54,6 +54,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
     const s = u.toString();
     return s ? `?${s}` : "";
   };
+  const hrefDaExportacao = `/gestao/horas/exportar${q({})}`;
 
   // Setor, período e pessoa no botão "Filtros" (30/09): eram duas fileiras de
   // chips e um "Só as horas de Fulano. Ver todos" solto — a ficha do filtro
@@ -85,17 +86,11 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <FiltrosDaTela campos={campos} />
-        {/* Botão, e não link de texto — mas num formulário GET, e não no
-            `Button href`: o `href` vira `<Link>`, que pré-carrega a rota ao
-            aparecer na tela, e aqui isso geraria o CSV a cada visita. */}
-        <form action="/gestao/horas/exportar" method="get">
-          {setor && <input type="hidden" name="setor" value={setor} />}
-          {periodo.chave !== "mes" && <input type="hidden" name="periodo" value={periodo.chave} />}
-          {pessoa && <input type="hidden" name="pessoa" value={pessoa} />}
-          <Button type="submit" variant="secondary" size="sm">
-            <Download size={14} /> Exportar CSV
-          </Button>
-        </form>
+        {/* `download`: o <Link> pré-carregaria a rota ao aparecer na tela, e
+            geraria o CSV a cada visita. */}
+        <Button href={hrefDaExportacao} download variant="secondary" size="sm">
+          <Download size={14} /> Exportar CSV
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -132,7 +127,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
               cabeçalho, que a tabela sem ele deixava a coluna do custo sem nome. */}
           <div className="grid gap-3 lg:grid-cols-2">
             <Card className="p-4 flex flex-col gap-2">
-              <h2 className="text-[14px] font-semibold text-fg">Por setor</h2>
+              <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Por setor</h2>
               <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
                 <table className="w-full text-[length:var(--fs-ui)]">
                   <thead>
@@ -155,7 +150,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
               </div>
             </Card>
             <Card className="p-4 flex flex-col gap-2">
-              <h2 className="text-[14px] font-semibold text-fg">Por pessoa</h2>
+              <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Por pessoa</h2>
               <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
                 <table className="w-full text-[length:var(--fs-ui)]">
                   <thead>
@@ -184,7 +179,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
           </div>
 
           <section aria-labelledby="apontamentos" className="flex flex-col gap-2">
-            <h2 id="apontamentos" className="text-[14px] font-semibold text-fg">
+            <h2 id="apontamentos" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
               Apontamentos
             </h2>
             {/* Funil por coluna só quando a tabela traz todas as linhas: acima de

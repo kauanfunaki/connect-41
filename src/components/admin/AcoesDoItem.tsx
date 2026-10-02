@@ -1,14 +1,15 @@
 "use client";
 
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Popover, ItemDoMenu } from "@/components/ui/Popover";
+import { ItemDoMenu } from "@/components/ui/Popover";
+import { MenuDeMaisAcoes as MenuDaUi } from "@/components/ui/MenuDeMaisAcoes";
 import { useConfirm } from "@/components/ui/useConfirm";
 
 /**
- * O "⋯" das linhas da Administração — o mesmo botão de `AcoesDeLinha` e
- * `AcoesDaLicenca`, aberto para qualquer lista de itens do menu. Mora aqui (e
- * não em `shared`) porque só as telas de admin o usam por enquanto.
+ * O "⋯" das linhas da Administração: o `MenuDeMaisAcoes` de `ui`, com os itens
+ * empilhados e a assinatura que as telas do admin já usam (`largura`, e
+ * `children` recebendo só o `fechar`).
  */
 export function MenuDeMaisAcoes({
   rotulo = "Mais ações",
@@ -20,26 +21,9 @@ export function MenuDeMaisAcoes({
   children: (fechar: () => void) => React.ReactNode;
 }) {
   return (
-    <Popover
-      align="right"
-      width={largura}
-      aria-label={rotulo}
-      trigger={({ open, toggle }) => (
-        <button
-          type="button"
-          onClick={toggle}
-          aria-label={rotulo}
-          aria-expanded={open}
-          className={`h-7 w-7 rounded-md border inline-flex items-center justify-center transition-colors ${
-            open ? "border-brand/40 bg-brand-subtle text-fg" : "border-border-strong text-fg-muted hover:text-fg hover:bg-surface-hover"
-          }`}
-        >
-          <MoreHorizontal size={14} />
-        </button>
-      )}
-    >
+    <MenuDaUi align="right" width={largura} rotulo={rotulo}>
       {({ close }) => <div className="flex flex-col">{children(close)}</div>}
-    </Popover>
+    </MenuDaUi>
   );
 }
 

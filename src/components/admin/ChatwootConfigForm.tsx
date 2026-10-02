@@ -12,6 +12,7 @@ import {
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoDeSenha } from "@/components/ui/CampoDeSenha";
 
 type Props = {
   hasConfig: boolean;
@@ -96,7 +97,7 @@ export function ChatwootConfigForm({ hasConfig, defaultValues, webhookUrl, lastS
             required={!hasConfig}
             helper={hasConfig ? "Deixe em branco para manter o token já salvo." : "Perfil → Configurações de acesso, no Chatwoot."}
           >
-            <Input id="apiToken" name="apiToken" type="password" required={!hasConfig} placeholder={hasConfig ? "••••••••" : "cw_..."} />
+            <CampoDeSenha id="apiToken" name="apiToken" required={!hasConfig} placeholder={hasConfig ? "••••••••" : "cw_..."} />
           </CampoForm>
 
           <CampoForm
@@ -109,7 +110,7 @@ export function ChatwootConfigForm({ hasConfig, defaultValues, webhookUrl, lastS
                 : "Gerado pelo próprio Chatwoot ao criar o webhook (tela Configurações → Integrações → Webhooks) — cole aqui o valor exibido lá."
             }
           >
-            <Input id="webhookSecret" name="webhookSecret" type="password" required={!hasConfig} placeholder={hasConfig ? "••••••••" : ""} />
+            <CampoDeSenha id="webhookSecret" name="webhookSecret" required={!hasConfig} placeholder={hasConfig ? "••••••••" : ""} />
           </CampoForm>
         </FieldGrid>
 

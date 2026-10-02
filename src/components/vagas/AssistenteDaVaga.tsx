@@ -59,7 +59,7 @@ export function AssistenteDaVaga({ vagaId }: { vagaId: string }) {
     <Card as="section" className="p-4 flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <Sparkles size={16} className="text-brand" />
-        <h2 className="text-[14px] font-semibold text-fg">Assistente da vaga</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Assistente da vaga</h2>
       </div>
       <p className="text-[13px] text-fg-secondary max-w-[60ch]">
         Pergunte sobre os candidatos desta vaga. O assistente lê as fichas e as entrevistas e pode

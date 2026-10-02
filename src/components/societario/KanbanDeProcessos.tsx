@@ -36,7 +36,7 @@ export function KanbanDeProcessos({ colunas, agora }: Props) {
         {colunas.map((coluna) => (
           <section key={coluna.situacao} className="flex flex-col gap-2 rounded-lg bg-surface-hover/40 p-2">
             <header className="flex items-baseline justify-between px-1 pt-1">
-              <h2 className="text-[13px] font-semibold text-fg">{SITUACAO_LABEL[coluna.situacao]}</h2>
+              <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">{SITUACAO_LABEL[coluna.situacao]}</h2>
               <span className="text-[12px] tabular-nums text-fg-muted">{coluna.linhas.length}</span>
             </header>
             {coluna.situacao === "CONCLUIDO" && (

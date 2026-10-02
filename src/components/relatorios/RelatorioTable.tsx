@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FileSpreadsheet } from "lucide-react";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { Selo } from "@/components/ui/Selo";
 
 export type BadgeTone = "danger" | "warning" | "success" | "neutral" | "brand";
 
@@ -16,11 +17,9 @@ const TONE_CLASS: Record<BadgeTone, string> = {
 
 export function RelatorioBadge({ tone, children }: { tone: BadgeTone; children: React.ReactNode }) {
   return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap ${TONE_CLASS[tone]}`}
-    >
+    <Selo cor={TONE_CLASS[tone]}>
       {children}
-    </span>
+    </Selo>
   );
 }
 

@@ -50,7 +50,7 @@ export function SlideOver({ open, onClose, title, onBack, width = "max-w-md", ch
               <ArrowLeft size={15} /> Voltar
             </button>
           ) : (
-            title && <h2 id={titleId} className="text-[15px] font-semibold text-fg">{title}</h2>
+            title && <h2 id={titleId} className="text-[length:var(--fs-dialog-title)] font-semibold text-fg">{title}</h2>
           )}
           <IconButton onClick={onClose} aria-label="Fechar" className="ml-auto">
             <X size={16} />
