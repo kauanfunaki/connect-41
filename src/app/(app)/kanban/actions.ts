@@ -456,7 +456,9 @@ export async function adicionarNota(
   // sem duplicar e sem notificar o próprio autor. Menção é o sinal mais forte,
   // então tem prioridade quando o usuário é mencionado E interessado.
   if (item) {
-    const notifyEntity = item.entityType && item.entityId ? { entityType: item.entityType, entityId: item.entityId } : {};
+    // A notificação leva ao card, e não à empresa ou pessoa ligada a ele: o
+    // comentário está no card, e card solto não levava a lugar nenhum.
+    const notifyEntity = { entityId: itemId };
     const taskLabel = item.title ?? "tarefa";
     const mentioned = await findMentionedUserIds(tenantId, [content]);
     const mentionedSet = new Set(mentioned);
