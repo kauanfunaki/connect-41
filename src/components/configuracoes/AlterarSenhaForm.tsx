@@ -4,7 +4,7 @@ import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
-import { Input } from "@/components/ui/Input";
+import { CampoDeSenha } from "@/components/ui/CampoDeSenha";
 import { Button } from "@/components/ui/Button";
 import type { TrocaSenhaState } from "@/app/(app)/configuracoes/actions";
 
@@ -61,16 +61,16 @@ export function AlterarSenhaForm({ action }: Props) {
           esticada na linha toda, era o dobro das outras. */}
       <FieldGrid>
         <CampoForm label="Senha atual" htmlFor="currentPassword" required>
-          <Input id="currentPassword" name="currentPassword" type="password" autoComplete="current-password" required />
+          <CampoDeSenha id="currentPassword" name="currentPassword" autoComplete="current-password" required />
         </CampoForm>
       </FieldGrid>
 
       <FieldGrid>
         <CampoForm label="Nova senha" htmlFor="newPassword" required helper="Mínimo de 8 caracteres.">
-          <Input id="newPassword" name="newPassword" type="password" autoComplete="new-password" minLength={8} required />
+          <CampoDeSenha id="newPassword" name="newPassword" autoComplete="new-password" minLength={8} required />
         </CampoForm>
         <CampoForm label="Confirmar nova senha" htmlFor="confirmPassword" required>
-          <Input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" minLength={8} required />
+          <CampoDeSenha id="confirmPassword" name="confirmPassword" autoComplete="new-password" minLength={8} required />
         </CampoForm>
       </FieldGrid>
 
