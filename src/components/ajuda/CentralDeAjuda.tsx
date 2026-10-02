@@ -28,6 +28,8 @@ export type TelaDaAjuda = {
   codigo?: string;
   /** Ícone próprio, quando a tela não usa o do módulo (no portal: Relatório e Exigências). */
   icone?: React.ReactNode;
+  /** O passo a passo da tela (`/ajuda/<chave>`), quando existe: o cartão abre ele, e não a tela. */
+  artigo?: string;
 };
 export type SetorDaAjuda = { code: string; rotulo: string; cor: string; telas: TelaDaAjuda[] };
 
@@ -272,7 +274,8 @@ function ListaDeTelas({ telas, cor }: { telas: TelaDaAjuda[]; cor?: string }) {
   return (
     <ul className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 items-stretch">
       {telas.map((t) => {
-        const navegavel = t.caminho.startsWith("/");
+        const destino = t.artigo ?? t.caminho;
+        const navegavel = destino.startsWith("/");
         const conteudo = (
           <>
             <span
@@ -285,6 +288,7 @@ function ListaDeTelas({ telas, cor }: { telas: TelaDaAjuda[]; cor?: string }) {
               <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-fg">
                 {t.titulo}
                 {!navegavel && <kbd className="rounded border border-border px-1 text-[10.5px] font-medium text-fg-muted">{t.caminho}</kbd>}
+                {t.artigo && <span className="rounded-full bg-brand/10 px-1.5 py-px text-[10.5px] font-semibold text-brand">Passo a passo</span>}
               </span>
               <span className="block text-[12.5px] text-fg-muted mt-0.5 leading-snug">{t.descricao}</span>
             </span>
@@ -295,7 +299,7 @@ function ListaDeTelas({ telas, cor }: { telas: TelaDaAjuda[]; cor?: string }) {
         return (
           <li key={t.chave}>
             {navegavel ? (
-              <Link href={t.caminho} className={`${cls} hover:border-border-strong transition-colors`}>
+              <Link href={destino} className={`${cls} hover:border-border-strong transition-colors`}>
                 {conteudo}
               </Link>
             ) : (
