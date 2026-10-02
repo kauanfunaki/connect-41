@@ -1,6 +1,7 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { useDialog } from "@/components/ui/useDialog";
@@ -16,13 +17,21 @@ type Props = {
 // Modal genérico controlado (não depende de rota) — fecha com ESC, clique
 // fora, ou botão "X". Usado por fluxos de criação rápida (Nova lista, Novo
 // espaço/pasta) e reaproveitável por outros modais futuros do app.
+//
+// Vai para o <body> por portal (02/10/2026): aberto dentro de uma célula de
+// tabela ou de um bloco com `overflow`/`transform`, herdava alinhamento e
+// podia ser cortado ou preso no contexto de empilhamento do pai. No servidor e
+// na hidratação fica no lugar — `document` não existe lá — e muda no navegador.
+const semAssinatura = () => () => {};
+
 export function Modal({ open, onClose, title, maxWidth = "max-w-md", children }: Props) {
   const panelRef = useDialog(open, onClose);
   const titleId = useId();
+  const noNavegador = useSyncExternalStore(semAssinatura, () => true, () => false);
 
   if (!open) return null;
 
-  return (
+  const modal = (
     <div
       className="c41-esmaecer fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-4"
       onClick={(e) => {
@@ -47,4 +56,5 @@ export function Modal({ open, onClose, title, maxWidth = "max-w-md", children }:
       </div>
     </div>
   );
+  return noNavegador ? createPortal(modal, document.body) : modal;
 }
