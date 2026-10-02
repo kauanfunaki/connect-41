@@ -6,6 +6,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { FormSection } from "@/components/ui/FormSection";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Button } from "@/components/ui/Button";
@@ -138,10 +139,10 @@ export function SocioForm({ action, companyId, cancelHref, enderecoDaEmpresa, de
               />
             </CampoForm>
             <CampoForm label="Entrada na sociedade" htmlFor="entryDate">
-              <Input id="entryDate" name="entryDate" type="date" defaultValue={defaultValues?.entryDate ?? ""} />
+              <CampoData id="entryDate" name="entryDate" defaultValue={defaultValues?.entryDate ?? ""} />
             </CampoForm>
             <CampoForm label="Saída da sociedade" htmlFor="exitDate" helper="Preencha quando o sócio sair: ele fica como ex-sócio.">
-              <Input id="exitDate" name="exitDate" type="date" defaultValue={defaultValues?.exitDate ?? ""} />
+              <CampoData id="exitDate" name="exitDate" defaultValue={defaultValues?.exitDate ?? ""} />
             </CampoForm>
           </FieldGrid>
           <Checkbox

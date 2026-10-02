@@ -6,6 +6,7 @@ import type { EvaluationCycleState } from "@/app/(app)/avaliacoes/actions";
 import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 
 type Props = {
   action: (prev: EvaluationCycleState, form: FormData) => Promise<EvaluationCycleState>;
@@ -23,10 +24,10 @@ export function AddCicloForm({ action }: Props) {
           <Input id="name" name="name" type="text" required placeholder="ex: Avaliação 2026.1" />
         </CampoForm>
         <CampoForm label="Início" htmlFor="startDate" required>
-          <Input id="startDate" name="startDate" type="date" required />
+          <CampoData id="startDate" name="startDate" required />
         </CampoForm>
         <CampoForm label="Fim" htmlFor="endDate">
-          <Input id="endDate" name="endDate" type="date" />
+          <CampoData id="endDate" name="endDate" />
         </CampoForm>
         <AlinhadoAoCampo>
           <Button type="submit" disabled={isPending}>

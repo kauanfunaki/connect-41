@@ -7,6 +7,7 @@ import Link from "next/link";
 import { X } from "lucide-react";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
+import { CampoDataHora } from "@/components/ui/CampoDataHora";
 import { Select } from "@/components/ui/Select";
 import { AttendeePicker } from "@/components/shared/AttendeePicker";
 import type { MeetingState } from "@/app/(app)/agenda/actions";
@@ -91,12 +92,12 @@ export function CreateMeetingDialog({ action, initialStart, initialEnd, hasGoogl
               <Input id="title" name="title" required placeholder="Ex: Alinhamento semanal" />
             </CampoForm>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               <CampoForm label="Início" htmlFor="startAt" required>
-                <Input id="startAt" name="startAt" type="datetime-local" required defaultValue={initialStart} />
+                <CampoDataHora id="startAt" name="startAt" required defaultValue={initialStart} />
               </CampoForm>
               <CampoForm label="Fim" htmlFor="endAt" required>
-                <Input id="endAt" name="endAt" type="datetime-local" required defaultValue={initialEnd} />
+                <CampoDataHora id="endAt" name="endAt" required defaultValue={initialEnd} />
               </CampoForm>
             </div>
 

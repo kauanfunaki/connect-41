@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { IconButton } from "@/components/ui/IconButton";
 import { formatarDecorrido, minutosApontados, segundosDesde } from "@/lib/datetime";
 import type { HorasState } from "@/app/(app)/processos/horas-actions";
@@ -114,7 +115,7 @@ export function HorasDoProcesso({
               <Input id={`minutos-${processId}`} name="minutos" inputMode="numeric" placeholder="0" className="tabular-nums" />
             </CampoForm>
             <CampoForm label="Dia" htmlFor={`dia-${processId}`}>
-              <Input id={`dia-${processId}`} name="dia" type="date" />
+              <CampoData id={`dia-${processId}`} name="dia" />
             </CampoForm>
             <CampoForm label="O que foi feito" htmlFor={`nota-${processId}`}>
               <Input id={`nota-${processId}`} name="nota" maxLength={280} placeholder="Opcional" />

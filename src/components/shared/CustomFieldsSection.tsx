@@ -2,6 +2,7 @@
 
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 
@@ -59,10 +60,10 @@ function CustomFieldInputControl({ field }: { field: CustomFieldInput }) {
       );
     case "DATE":
       return (
-        <Input
+        <CampoData
           id={name}
           name={name}
-          type="date"
+         
           required={field.required}
           defaultValue={field.value ?? ""}
         />

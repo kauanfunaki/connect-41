@@ -7,6 +7,7 @@ import { DayType } from "@/generated/prisma/enums";
 import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 
 const DAY_TYPE_LABEL: Record<DayType, string> = {
@@ -31,7 +32,7 @@ export function AddHoraExtraForm({ action }: Props) {
     <form action={formAction} className="border-t border-border pt-5 mt-2 space-y-4">
       <FieldGrid columns="sm:grid-cols-3 lg:grid-cols-6">
         <CampoForm label="Data" htmlFor="date" required>
-          <Input id="date" name="date" type="date" required />
+          <CampoData id="date" name="date" required />
         </CampoForm>
         <CampoForm label="Tipo de Dia" htmlFor="dayType">
           <Select id="dayType" name="dayType" defaultValue="UTIL">

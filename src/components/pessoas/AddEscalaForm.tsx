@@ -7,6 +7,7 @@ import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 
 type ShiftOption = { id: string; name: string };
@@ -26,7 +27,7 @@ export function AddEscalaForm({ action, shifts }: Props) {
     <form action={formAction} className="border-t border-border pt-5 mt-2 space-y-4">
       <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-[180px_minmax(0,260px)_auto] lg:justify-start">
         <CampoForm label="Data" htmlFor="date" required>
-          <Input id="date" name="date" type="date" required />
+          <CampoData id="date" name="date" required />
         </CampoForm>
         <CampoForm label="Turno" htmlFor="shiftId">
           <Select id="shiftId" name="shiftId">

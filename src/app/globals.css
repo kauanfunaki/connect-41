@@ -589,9 +589,12 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 .c41-surgir { animation: c41-surgir .14s ease-out backwards; transform-origin: top center; }
 @keyframes c41-esmaecer { from { opacity: 0; } to { opacity: 1; } }
 .c41-esmaecer { animation: c41-esmaecer .16s ease-out backwards; }
+/* Folha do celular (calendário do campo de data): sobe da borda de baixo. */
+@keyframes c41-folha { from { transform: translateY(100%); } to { transform: none; } }
+.c41-folha { animation: c41-folha .2s cubic-bezier(.2,.7,.2,1) backwards; }
 
 @media (prefers-reduced-motion: reduce) {
-  .c41-pagina > *, .c41-surgir, .c41-esmaecer { animation: none; }
+  .c41-pagina > *, .c41-surgir, .c41-esmaecer, .c41-folha { animation: none; }
 }
 
 /* Tabela padrão: o casco descola do fundo, a linha acende inteira no hover e

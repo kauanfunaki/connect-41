@@ -1,6 +1,7 @@
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { MAX_TITULO } from "@/lib/societario/dados-do-processo";
 import { PRIORIDADES, PRIORIDADE_LABEL, type Prioridade } from "@/lib/societario/prioridade";
@@ -70,10 +71,10 @@ export function CamposDoProcesso({ responsaveis, valores, prefixo }: Props) {
       >
         {/* Largura de data, não a do modal: esticada, o dia ficava num canto e o
             calendário no outro. A explicação continua na largura toda embaixo. */}
-        <Input
+        <CampoData
           id={`${prefixo}-prazo`}
           name="dueAt"
-          type="date"
+         
           defaultValue={valores.prazoCombinado}
           className="sm:w-44"
         />

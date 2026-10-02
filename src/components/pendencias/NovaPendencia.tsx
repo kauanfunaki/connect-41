@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -146,7 +147,7 @@ export function NovaPendencia({
                 </Select>
               </CampoForm>
               <CampoForm label="Prazo" htmlFor="pendencia-prazo" helper="Opcional.">
-                <Input id="pendencia-prazo" type="date" name="dueDate" />
+                <CampoData id="pendencia-prazo" name="dueDate" />
               </CampoForm>
             </FieldGrid>
 

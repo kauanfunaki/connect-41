@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { RejeitarProposta } from "./RejeitarProposta";
 import type { AcaoDaIa } from "@/app/(app)/societario/ia/actions";
 import type { PlanoDoContrato, SocioLido } from "@/lib/societario/contratoSocial";
@@ -173,7 +174,7 @@ export function RevisarContrato({
                   <Input aria-label="Qualificação" value={l.qualificacao} disabled={!podeAplicar} onChange={(e) => mudar(i, "qualificacao", e.target.value)} className="w-40" />
                 </td>
                 <td className={TD}>
-                  <Input aria-label="Data de entrada" type="date" value={l.entrada} disabled={!podeAplicar} onChange={(e) => mudar(i, "entrada", e.target.value)} className="w-40" />
+                  <CampoData aria-label="Data de entrada" value={l.entrada} disabled={!podeAplicar} onChange={(v) => mudar(i, "entrada", v)} className="w-40" />
                 </td>
               </tr>
             ))}

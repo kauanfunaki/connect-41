@@ -16,10 +16,19 @@ type Props = {
 export function Dropdown({ trigger, children, align = "left", width = 240, alturaMaxima = "max-h-[360px]" }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  // Clique num painel flutuante aberto daqui de dentro (o calendário do campo
+  // de data, que vai para o `body` por portal) não é clique fora: o evento do
+  // React atravessa o portal e marca isto antes de chegar no `document`.
+  const dentro = useRef(false);
 
   useEffect(() => {
     if (!open) return;
+    // O mousedown que abriu o painel também marcou; não vale para o próximo.
+    dentro.current = false;
     function onClickOutside(e: MouseEvent) {
+      const foiDentro = dentro.current;
+      dentro.current = false;
+      if (foiDentro) return;
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
     }
     document.addEventListener("mousedown", onClickOutside);
@@ -27,7 +36,13 @@ export function Dropdown({ trigger, children, align = "left", width = 240, altur
   }, [open]);
 
   return (
-    <div ref={rootRef} className="relative block">
+    <div
+      ref={rootRef}
+      className="relative block"
+      onMouseDown={() => {
+        dentro.current = true;
+      }}
+    >
       {trigger({ open, toggle: () => setOpen((v) => !v) })}
       {open && (
         <div

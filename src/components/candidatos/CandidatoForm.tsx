@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import type { CandidatoState } from "@/app/(app)/candidatos/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { FormSection } from "@/components/ui/FormSection";
 import { FormFooter } from "@/components/ui/FormFooter";
@@ -62,10 +63,10 @@ export function CandidatoForm({ action, cancelHref, defaultValues }: Props) {
               />
             </CampoForm>
             <CampoForm label="Data de Nascimento" htmlFor="birthDate">
-              <Input
+              <CampoData
                 id="birthDate"
                 name="birthDate"
-                type="date"
+               
                 defaultValue={defaultValues?.birthDate ?? ""}
               />
             </CampoForm>

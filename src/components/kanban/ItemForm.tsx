@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { Textarea } from "@/components/ui/Textarea";
 import { CampoForm as Field } from "@/components/ui/CampoForm";
-import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { AttendeePicker } from "@/components/shared/AttendeePicker";
 import { Select } from "@/components/ui/Select";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
@@ -49,7 +49,7 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="Prazo" htmlFor="dueDate">
-          <Input id="dueDate" name="dueDate" type="date" />
+          <CampoData id="dueDate" name="dueDate" />
         </Field>
         <Field label="Prioridade" htmlFor="priority">
           <Select id="priority" name="priority" defaultValue="0">

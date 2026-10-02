@@ -8,6 +8,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { FormFooter } from "@/components/ui/FormFooter";
@@ -94,10 +95,10 @@ export function AssinaturaRow({ tenant, subscription, plans, activeUsers }: Prop
             />
           </CampoForm>
           <CampoForm label="Próxima renovação" htmlFor={`${id}-renovacao`}>
-            <Input
+            <CampoData
               id={`${id}-renovacao`}
               name="currentPeriodEnd"
-              type="date"
+             
               defaultValue={subscription?.currentPeriodEnd?.slice(0, 10) ?? ""}
             />
           </CampoForm>

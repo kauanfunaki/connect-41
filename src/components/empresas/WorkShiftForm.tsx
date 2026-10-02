@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import type { WorkShiftState } from "@/app/(app)/empresas/[id]/turnos/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
+import { CampoHora } from "@/components/ui/CampoHora";
 import { FormFooter } from "@/components/ui/FormFooter";
 
 export type WorkShiftDefaultValues = {
@@ -41,10 +42,10 @@ export function WorkShiftForm({ action, companyId, cancelHref, defaultValues }: 
           <Input id="name" name="name" type="text" required defaultValue={defaultValues?.name ?? ""} />
         </CampoForm>
         <CampoForm label="Início" htmlFor="startTime" required>
-          <Input id="startTime" name="startTime" type="time" required defaultValue={defaultValues?.startTime ?? ""} />
+          <CampoHora id="startTime" name="startTime" required defaultValue={defaultValues?.startTime ?? ""} />
         </CampoForm>
         <CampoForm label="Fim" htmlFor="endTime" required>
-          <Input id="endTime" name="endTime" type="time" required defaultValue={defaultValues?.endTime ?? ""} />
+          <CampoHora id="endTime" name="endTime" required defaultValue={defaultValues?.endTime ?? ""} />
         </CampoForm>
       </div>
 
