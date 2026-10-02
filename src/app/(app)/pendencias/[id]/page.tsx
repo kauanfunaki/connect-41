@@ -70,7 +70,7 @@ export default async function PendenciaPage({ params }: { params: Promise<{ id: 
           a equipe liga para lembrar de algo que o e-mail já lembrou ontem. */}
       {lembretes.length > 0 ? (
         <Card className="mb-4 p-4 text-[12px]">
-          <h2 className="text-[14px] font-semibold text-fg mb-2">Lembretes automáticos ao cliente</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">Lembretes automáticos ao cliente</h2>
           <ul className="flex flex-col gap-1">
             {lembretes.map((l) => {
               const s = situacaoDoLembrete(l, agora);

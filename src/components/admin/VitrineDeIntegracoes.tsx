@@ -72,7 +72,7 @@ function CartaoDaIntegracao({ integracao: i, urlPublica }: { integracao: Integra
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <Icone size={16} className="text-fg-muted shrink-0" />
-            <h3 className="text-[15px] font-semibold text-fg">{i.label}</h3>
+            <h3 className="text-[length:var(--fs-card-title)] font-semibold text-fg">{i.label}</h3>
             {i.conectada ? (
               <Badge variant={SAUDE_VARIANTE[i.saude]}>{SAUDE_LABEL[i.saude]}</Badge>
             ) : (

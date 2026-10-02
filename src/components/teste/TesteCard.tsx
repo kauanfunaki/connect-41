@@ -95,7 +95,7 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
     <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
       <div className="flex items-center gap-2 mb-1">
         <ClipboardList size={16} className="text-brand" />
-        <h2 className="text-[14px] font-semibold text-fg">Teste</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Teste</h2>
       </div>
 
       {!link && (

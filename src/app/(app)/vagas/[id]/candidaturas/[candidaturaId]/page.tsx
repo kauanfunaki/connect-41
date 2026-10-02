@@ -210,7 +210,7 @@ export default async function CandidaturaScorecardPage({
       {/* Consolidado */}
       {consolidation.count > 0 && (
         <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
-          <h2 className="text-[14px] font-semibold text-fg mb-3">Consolidado ({consolidation.count} parecer{consolidation.count !== 1 ? "es" : ""})</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">Consolidado ({consolidation.count} parecer{consolidation.count !== 1 ? "es" : ""})</h2>
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-[13px] text-fg">
               Média: <strong className="tnum">{consolidation.averageScore != null ? consolidation.averageScore.toFixed(1) : "—"}</strong>/5
@@ -230,7 +230,7 @@ export default async function CandidaturaScorecardPage({
 
       {/* Pareceres */}
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
-        <h2 className="text-[14px] font-semibold text-fg mb-3">Pareceres</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">Pareceres</h2>
         {candidatura.scorecards.length === 0 ? (
           <p className="text-[13px] text-fg-muted">Nenhum parecer ainda.</p>
         ) : (
@@ -282,7 +282,7 @@ export default async function CandidaturaScorecardPage({
       {/* Meu parecer */}
       {canAct && (
         <Card className="p-5">
-          <h2 className="text-[14px] font-semibold text-fg mb-3">{myScorecard ? "Editar meu parecer" : "Adicionar meu parecer"}</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">{myScorecard ? "Editar meu parecer" : "Adicionar meu parecer"}</h2>
           <ScorecardForm
             action={salvarScorecard.bind(null, vagaId, candidaturaId)}
             defaults={

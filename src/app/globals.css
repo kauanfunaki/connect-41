@@ -259,7 +259,9 @@
   --fs-search:      var(--fs-4);  /* busca da topbar — era 15px */
   --fs-body:        var(--fs-5);  /* conteúdo de leitura + base do <body> */
   --fs-button:      var(--fs-5);
-  --fs-card-title:  var(--fs-6);
+  --fs-card-title:  var(--fs-4);  /* título de cartão — 14px, o que a maioria já usava (02/10);
+                                    conviviam 13, 14, 15 e 18px; o EmptyState, que usava este token em 16px, passou a --fs-6 */
+  --fs-dialog-title: var(--fs-5); /* título de janela (Modal, confirmação, painel lateral) */
   --fs-input:       var(--fs-6);  /* 16px — não baixar: abaixo disso o iOS dá
                                      zoom ao focar o campo */
   --fs-section:     var(--fs-7);  /* título de seção/card */

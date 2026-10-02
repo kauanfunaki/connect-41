@@ -67,7 +67,7 @@ export function ConfirmDialog({
         aria-labelledby={titleId}
         className="c41-surgir w-full max-w-sm rounded-lg border border-border-strong bg-surface-elevated p-5 shadow-[var(--c41-shadow-lg)]"
       >
-        <h2 id={titleId} className="text-[15px] font-semibold text-fg mb-1.5">
+        <h2 id={titleId} className="text-[length:var(--fs-dialog-title)] font-semibold text-fg mb-1.5">
           {title}
         </h2>
         {description && <p className="text-[13px] text-fg-secondary mb-3">{description}</p>}

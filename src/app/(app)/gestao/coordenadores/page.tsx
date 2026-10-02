@@ -159,7 +159,7 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
 
       {semDono.length > 0 && (
         <section aria-labelledby="sem-dono" className="flex flex-col gap-2">
-          <h2 id="sem-dono" className="text-[14px] font-semibold text-fg">
+          <h2 id="sem-dono" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
             Sem responsável ({semDono.length})
           </h2>
           <p className="text-[12px] text-fg-muted">

@@ -68,7 +68,7 @@ export function HorasDoProcesso({
           eram h-9, maiores que tudo o que o cartão tem embaixo. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-[14px] font-semibold text-fg">Horas trabalhadas</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Horas trabalhadas</h2>
           <p className="text-[12px] text-fg-muted">
             {total > 0 ? `${duracao(total)} neste processo` : "Nenhuma hora lançada ainda."} Entram nas horas de operação da Gestão.
           </p>

@@ -132,7 +132,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
               cabeçalho, que a tabela sem ele deixava a coluna do custo sem nome. */}
           <div className="grid gap-3 lg:grid-cols-2">
             <Card className="p-4 flex flex-col gap-2">
-              <h2 className="text-[14px] font-semibold text-fg">Por setor</h2>
+              <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Por setor</h2>
               <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
                 <table className="w-full text-[length:var(--fs-ui)]">
                   <thead>
@@ -155,7 +155,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
               </div>
             </Card>
             <Card className="p-4 flex flex-col gap-2">
-              <h2 className="text-[14px] font-semibold text-fg">Por pessoa</h2>
+              <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Por pessoa</h2>
               <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
                 <table className="w-full text-[length:var(--fs-ui)]">
                   <thead>
@@ -184,7 +184,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
           </div>
 
           <section aria-labelledby="apontamentos" className="flex flex-col gap-2">
-            <h2 id="apontamentos" className="text-[14px] font-semibold text-fg">
+            <h2 id="apontamentos" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
               Apontamentos
             </h2>
             {/* Funil por coluna só quando a tabela traz todas as linhas: acima de

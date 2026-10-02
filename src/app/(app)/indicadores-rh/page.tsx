@@ -122,7 +122,7 @@ export default async function IndicadoresRhPage() {
       </div>
 
       <div className="mt-8">
-        <h2 className="text-[13px] font-semibold text-fg mb-3">Relatórios</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">Relatórios</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {relatorios.map((r) => (
             <Link

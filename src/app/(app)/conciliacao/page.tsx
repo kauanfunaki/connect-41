@@ -132,7 +132,7 @@ export default async function ConciliacaoPage({
       <FiltroDePeriodo acao="/conciliacao" empresas={empresas} empresaId={companyId} />
 
       <div className="flex items-center justify-between gap-3 mb-3">
-        <h2 className="text-[14px] font-semibold text-fg">Contas bancárias</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Contas bancárias</h2>
         {podeAgir && <ContaBancariaForm companyId={companyId} />}
       </div>
 
@@ -436,7 +436,7 @@ async function ExtratoDaConta({
 
   return (
     <>
-      <h2 className="text-[14px] font-semibold text-fg mb-3">Extrato — {conta.nickname}</h2>
+      <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">Extrato — {conta.nickname}</h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-5">
         {podeAgir && conta.active ? (
@@ -449,7 +449,7 @@ async function ExtratoDaConta({
         <Card className="p-4 flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <History size={16} className="text-brand" />
-            <h3 className="text-[14px] font-semibold text-fg">Importações recentes</h3>
+            <h3 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Importações recentes</h3>
           </div>
           {importacoes.length === 0 ? (
             <p className="text-[12px] text-fg-muted">Nenhum extrato importado nesta conta.</p>

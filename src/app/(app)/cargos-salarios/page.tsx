@@ -77,7 +77,7 @@ export default async function CargosSalariosPage() {
       {/* Achados estruturais primeiro: é o que a implantação precisa corrigir. */}
       {(totalDegraus > 0 || divergencias.length > 0 || semClassificacao > 0) && (
         <Card className="p-5 mb-4 border-warning/30">
-          <h2 className="flex items-center gap-1.5 text-[14px] font-semibold text-fg mb-3">
+          <h2 className="flex items-center gap-1.5 text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">
             <AlertTriangle size={16} className="text-warning" />
             Pontos de atenção da estrutura
           </h2>
@@ -128,7 +128,7 @@ export default async function CargosSalariosPage() {
             return (
               <section key={g.family}>
                 <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
-                  <h2 className="text-[14px] font-semibold text-fg">{g.label}</h2>
+                  <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">{g.label}</h2>
                   <span className="text-[12px] text-fg-muted">
                     {g.cargos.length} cargo{g.cargos.length !== 1 ? "s" : ""} · {g.totalPessoas} colaborador
                     {g.totalPessoas !== 1 ? "es" : ""}

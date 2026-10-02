@@ -183,7 +183,7 @@ export function RevisarContrato({
 
       <section aria-labelledby="previa" className="rounded-lg border border-border bg-surface p-4 flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 id="previa" className="text-[14px] font-semibold text-fg">
+          <h3 id="previa" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
             O que vai mudar no cadastro de sócios
           </h3>
           {podeAplicar && previaVelha && (

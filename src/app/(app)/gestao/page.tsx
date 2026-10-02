@@ -91,7 +91,7 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
 
       <section aria-labelledby="atencao" className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
-          <h2 id="atencao" className="text-[14px] font-semibold text-fg">
+          <h2 id="atencao" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
             Precisam de atenção ({atencao.length})
           </h2>
           {atencao.length > 12 && (
@@ -122,7 +122,7 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
       </section>
 
       <section aria-labelledby="ciclo" className="flex flex-col gap-2">
-        <h2 id="ciclo" className="text-[14px] font-semibold text-fg">
+        <h2 id="ciclo" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
           O ciclo do trabalho
         </h2>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -162,7 +162,7 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
 
       {verTaxas && lancadas && pagas && (
         <section aria-labelledby="custos" className="flex flex-col gap-2">
-          <h2 id="custos" className="text-[14px] font-semibold text-fg">
+          <h2 id="custos" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
             Custos do mês
           </h2>
           <Card className="p-4 text-[13px] text-fg-secondary flex flex-wrap gap-x-6 gap-y-1">
