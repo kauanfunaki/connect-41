@@ -6,6 +6,13 @@ import { getTenantModuleStates } from "@/lib/modules";
 import { getModuleRoute } from "@/lib/module-catalog";
 import { getSectorMaps } from "@/lib/sectors";
 import { TELAS_GERAIS } from "@/lib/ia/ferramentas-ajuda";
+import { artigoDaChave, artigoDoCaminho } from "@/lib/ajuda/artigos";
+
+/** O endereço do passo a passo da tela, se ela tem artigo. */
+function enderecoDoArtigo(codigo: string | undefined, caminho: string): string | undefined {
+  const artigo = (codigo ? artigoDaChave(codigo) : null) ?? (caminho.startsWith("/") ? artigoDoCaminho(caminho) : null);
+  return artigo ? `/ajuda/${encodeURIComponent(artigo.chave)}` : undefined;
+}
 
 /**
  * Central de ajuda (30/09) — o destino do "?" da topbar.
@@ -24,12 +31,14 @@ export default async function AjudaPage() {
   const porSetor = new Map<string, TelaDaAjuda[]>();
   for (const m of visiveis) {
     const lista = porSetor.get(m.sectorCode) ?? [];
+    const caminho = getModuleRoute(m.code) ?? `/setor/${m.sectorCode}/${m.code}`;
     lista.push({
       chave: m.code,
       titulo: m.label,
-      caminho: getModuleRoute(m.code) ?? `/setor/${m.sectorCode}/${m.code}`,
+      caminho,
       descricao: m.description,
       codigo: m.code,
+      artigo: enderecoDoArtigo(m.code, caminho),
     });
     porSetor.set(m.sectorCode, lista);
   }
@@ -53,9 +62,10 @@ export default async function AjudaPage() {
     // A fila das solicitações do portal só existe com o módulo ligado.
     if (t.tela === "Solicitações" && !estados.some((m) => m.code === "portal_solicitacoes" && m.enabled)) return [];
     if (t.tela === "Espaços") {
-      return setorDosEspacos ? [{ chave: t.tela, titulo: t.tela, caminho: `/setor/${setorDosEspacos}`, descricao: t.descricao }] : [];
+      const caminho = `/setor/${setorDosEspacos}`;
+      return setorDosEspacos ? [{ chave: t.tela, titulo: t.tela, caminho, descricao: t.descricao, artigo: enderecoDoArtigo(undefined, caminho) }] : [];
     }
-    return [{ chave: t.tela, titulo: t.tela, caminho: t.caminho, descricao: t.descricao }];
+    return [{ chave: t.tela, titulo: t.tela, caminho: t.caminho, descricao: t.descricao, artigo: enderecoDoArtigo(undefined, t.caminho) }];
   });
 
   return (

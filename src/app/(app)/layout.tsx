@@ -17,6 +17,7 @@ import { formatInstantDateTime } from "@/lib/format";
 import { linkDaNotificacao } from "@/lib/notificacaoLink";
 import { ChatDeIA } from "@/components/shell/ChatDeIA";
 import { agentesDoChat } from "@/lib/ia/chat/agentes";
+import { PARES_DE_CAMINHO } from "@/lib/ajuda/artigos";
 
 export default async function AppLayout({
   children,
@@ -143,6 +144,7 @@ export default async function AppLayout({
         profilePhotoUrl={me?.photoUrl ?? null}
         subscriptionReadOnly={ctx.subscriptionReadOnly}
         canSelfRegularizeSubscription={ctx.canSelfRegularizeSubscription}
+        paresDeAjuda={PARES_DE_CAMINHO}
       >
         <SessionKeeper />
         <MeetingAlertOverlay />
