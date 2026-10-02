@@ -4,13 +4,21 @@ import { useActionState, useState } from "react";
 import { ArrowRight, CheckCircle2, Copy, XCircle, Building2, HelpCircle } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
-import { Select } from "@/components/ui/Select";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { Button } from "@/components/ui/Button";
 import { FileDropzone, type ArquivoNaFila } from "@/components/ui/FileDropzone";
 import { nomeExibicao } from "@/lib/companyName";
+import { opcoesDeEmpresa } from "@/lib/empresas/opcoesDoSeletor";
 import type { EstadoDaEntrada, Veredito } from "@/app/(app)/documentos-fiscais/entrada/actions";
 
-type Empresa = { id: string; name: string; displayName: string | null };
+type Empresa = {
+  id: string;
+  name: string;
+  displayName: string | null;
+  logoUrl: string | null;
+  cnpj: string | null;
+  parentCompanyId: string | null;
+};
 
 type Props = {
   empresas: Empresa[];
@@ -83,19 +91,18 @@ export function EntradaXmlForm({ empresas, action }: Props) {
             htmlFor="companyId"
             helper="Em branco, a empresa é deduzida do CNPJ do XML. Escolha só quando as duas pontas do documento forem empresas do escritório."
           >
-            <Select
+            {/* Com busca (achado do polimento de 30/09): eram ~394 empresas num
+                `<select>` nativo, a mesma regra das outras escolhas de empresa. */}
+            <SearchableSelect
               id="companyId"
-              value={empresaId}
-              onChange={(e) => setEmpresaId(e.target.value)}
-              disabled={pendente}
-            >
-              <option value="">Deduzir do XML</option>
-              {empresas.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {nomeExibicao(e)}
-                </option>
-              ))}
-            </Select>
+              name="companyId"
+              options={opcoesDeEmpresa(empresas.map((e) => ({ ...e, nome: nomeExibicao(e) })))}
+              avatar
+              lembrarRecentes="empresas"
+              vazioLabel="Deduzir do XML"
+              placeholder="Buscar por nome ou CNPJ…"
+              onChange={setEmpresaId}
+            />
           </CampoForm>
 
           {erro && <p className="text-[length:var(--fs-helper)] text-danger">{erro}</p>}
