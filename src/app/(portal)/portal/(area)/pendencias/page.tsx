@@ -10,11 +10,13 @@ import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { SeloDoPrazo, SeloDoStatus } from "@/components/pendencias/SelosDaPendencia";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { listarPendencias } from "@/lib/financeiro/pendencias/consultas";
-import { ROTULO_DO_TIPO } from "@/lib/financeiro/pendencias/regras";
+import { ROTULO_DO_STATUS, ROTULO_DO_TIPO, type StatusDaPendencia } from "@/lib/financeiro/pendencias/regras";
 import { pedidosAoClienteNoConjunto, setorDaPendencia, setorPadraoDasPendencias } from "@/lib/financeiro/pendencias/setor";
 import { getSectorMaps } from "@/lib/sectors";
 import { formatInstantDate } from "@/lib/format";
+import { saoPauloParts } from "@/lib/agenda";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,13 @@ const RECORTES = [
   { chave: "andamento", rotulo: "Em andamento" },
   { chave: "encerradas", rotulo: "Encerradas" },
 ] as const;
+
+/** O rótulo que o `SeloDoStatus` mostra ao cliente — o funil oferece o mesmo texto. */
+function rotuloDoStatus(status: StatusDaPendencia): string {
+  if (status === "ABERTA") return "Aguardando você";
+  if (status === "RESPONDIDA") return "Com a equipe";
+  return ROTULO_DO_STATUS[status];
+}
 
 /**
  * As pendências das empresas do cliente.
@@ -125,19 +134,48 @@ export default async function PortalPendenciasPage({
           ))}
         </CartoesNoCelular>
 
+        {/* Funil nas colunas (02/10): a lista vem inteira (até 500), então
+            filtra no navegador. Pendência filtra pelo tipo e pelo setor, que
+            é o que a segunda linha da célula mostra. */}
+        <TabelaFiltravel
+          linhas={linhas.map((l) => ({
+            id: l.id,
+            valores: {
+              tipo: ROTULO_DO_TIPO[l.tipo],
+              setor: setorDe(l.setor),
+              empresa: l.empresaNome,
+              prazo: l.prazo ? saoPauloParts(l.prazo).dateKey : "",
+              situacao: rotuloDoStatus(l.status),
+            },
+          }))}
+        >
         <TabelaNoDesktop padrao>
           <table className="w-full min-w-[720px] text-[13px]">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-                <th className="py-2 pr-3 font-medium">Pendência</th>
-                <th className="py-2 pr-3 font-medium">Empresa</th>
-                <th className="py-2 pr-3 font-medium">Prazo</th>
-                <th className="py-2 font-medium">Situação</th>
+              <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna
+                    rotulo="Pendência"
+                    campos={[
+                      { chave: "tipo", rotulo: "Tipo" },
+                      { chave: "setor", rotulo: "Setor" },
+                    ]}
+                  />
+                </th>
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna rotulo="Empresa" chave="empresa" />
+                </th>
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna rotulo="Prazo" chave="prazo" tipo="data" />
+                </th>
+                <th className="py-2 font-medium">
+                  <FiltroDaColuna rotulo="Situação" chave="situacao" align="right" />
+                </th>
               </tr>
             </thead>
             <tbody>
               {linhas.map((l) => (
-                <tr key={l.id} className="border-b border-border-soft">
+                <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft">
                   <td className="py-2.5 pr-3">
                     <Link href={`/portal/pendencias/${l.id}`} className="font-medium text-brand hover:underline">
                       {l.titulo}
@@ -160,11 +198,12 @@ export default async function PortalPendenciasPage({
                       <SeloDoPrazo situacao={l.situacaoDoPrazo} status={l.status} />
                     </div>
                   </td>
-                </tr>
+                </LinhaFiltravel>
               ))}
             </tbody>
           </table>
         </TabelaNoDesktop>
+        </TabelaFiltravel>
         </>
       )}
     </PageContainer>

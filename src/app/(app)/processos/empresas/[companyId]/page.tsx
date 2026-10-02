@@ -24,6 +24,8 @@ import {
 import { textoDoPrazo } from "@/lib/societario/prazos";
 import { PRIORIDADE_LABEL, PRIORIDADE_VARIANTE } from "@/lib/societario/prioridade";
 import { PrazoCelula, SITUACAO_LABEL, SITUACAO_VARIANTE } from "@/components/societario/ProcessosFila";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { saoPauloParts } from "@/lib/agenda";
 
 const MODULE = "societario_processos";
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
@@ -34,6 +36,8 @@ export const dynamic = "force-dynamic";
 
 const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const moeda = (c: number) => MOEDA.format(c / 100);
+/** Dia em ISO (AAAA-MM-DD) para o funil — no fuso de São Paulo, como o `formatInstantDate` mostra. */
+const dia = (d: Date | null) => (d ? saoPauloParts(d).dateKey : "");
 
 const TH = "py-2 pr-3 font-medium";
 // Cartão de seção: título de 14px, como no detalhe do processo, e o respiro
@@ -143,19 +147,30 @@ export default async function VisaoSocietariaDoClientePage({
           {licencas.length === 0 ? (
             <p className="text-[13px] text-fg-muted">Nenhuma licença cadastrada.</p>
           ) : (
+            <TabelaFiltravel
+              linhas={licencas.map((l, i) => ({
+                id: l.id,
+                valores: {
+                  licenca: l.kind,
+                  orgao: l.orgaoNome ?? "",
+                  validade: dia(l.expiresAt),
+                  situacao: SITUACAO_DA_LICENCA_LABEL[situacoes[i]],
+                },
+              }))}
+            >
             <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[560px] text-[13px]">
                 <thead>
                   <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-                    <th className={TH}>Licença</th>
-                    <th className={TH}>Órgão</th>
-                    <th className={TH}>Validade</th>
-                    <th className={TH}>Situação</th>
+                    <th className={TH}><FiltroDaColuna rotulo="Licença" chave="licenca" /></th>
+                    <th className={TH}><FiltroDaColuna rotulo="Órgão" chave="orgao" /></th>
+                    <th className={TH}><FiltroDaColuna rotulo="Validade" chave="validade" tipo="data" align="right" /></th>
+                    <th className={TH}><FiltroDaColuna rotulo="Situação" chave="situacao" align="right" /></th>
                   </tr>
                 </thead>
                 <tbody>
                   {licencas.map((l, i) => (
-                    <tr key={l.id} className="border-b border-border-soft">
+                    <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft">
                       <td className="py-2 pr-3">
                         {l.kind}
                         {l.number && <span className="text-fg-muted"> nº {l.number}</span>}
@@ -172,11 +187,12 @@ export default async function VisaoSocietariaDoClientePage({
                           {SITUACAO_DA_LICENCA_LABEL[situacoes[i]]}
                         </Badge>
                       </td>
-                    </tr>
+                    </LinhaFiltravel>
                   ))}
                 </tbody>
               </table>
             </div>
+            </TabelaFiltravel>
           )}
         </Card>
 
@@ -185,19 +201,39 @@ export default async function VisaoSocietariaDoClientePage({
           {visao.exigencias.length === 0 ? (
             <p className="text-[13px] text-fg-muted">Nenhuma exigência nos processos desta empresa.</p>
           ) : (
+            <TabelaFiltravel
+              linhas={visao.exigencias.map((e) => ({
+                id: e.id,
+                valores: {
+                  processo: e.tipoNome,
+                  orgao: e.orgaoNome,
+                  prazo: dia(e.dueAt),
+                  situacao: e.resolvedAt ? "Cumprida" : "Aberta",
+                },
+              }))}
+            >
             <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[640px] text-[13px]">
                 <thead>
                   <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                     <th className={TH}>Exigência</th>
-                    <th className={TH}>Processo</th>
-                    <th className={TH}>Prazo do órgão</th>
-                    <th className={TH}>Situação</th>
+                    <th className={TH}>
+                      {/* O órgão vem embaixo do processo, e filtra junto. */}
+                      <FiltroDaColuna
+                        rotulo="Processo"
+                        campos={[
+                          { chave: "processo", rotulo: "Tipo" },
+                          { chave: "orgao", rotulo: "Órgão" },
+                        ]}
+                      />
+                    </th>
+                    <th className={TH}><FiltroDaColuna rotulo="Prazo do órgão" chave="prazo" tipo="data" align="right" /></th>
+                    <th className={TH}><FiltroDaColuna rotulo="Situação" chave="situacao" align="right" /></th>
                   </tr>
                 </thead>
                 <tbody>
                   {visao.exigencias.map((e) => (
-                    <tr key={e.id} className="border-b border-border-soft align-top">
+                    <LinhaFiltravel key={e.id} id={e.id} className="border-b border-border-soft align-top">
                       <td className={`py-2 pr-3 max-w-[340px] ${e.resolvedAt ? "text-fg-muted" : ""}`}>{e.descricao}</td>
                       <td className="py-2 pr-3 whitespace-nowrap">
                         <Link href={`/processos/${e.processoId}`} className="text-brand hover:underline">
@@ -217,11 +253,12 @@ export default async function VisaoSocietariaDoClientePage({
                           <Badge variant="warning">Aberta</Badge>
                         )}
                       </td>
-                    </tr>
+                    </LinhaFiltravel>
                   ))}
                 </tbody>
               </table>
             </div>
+            </TabelaFiltravel>
           )}
         </Card>
 
@@ -244,20 +281,31 @@ export default async function VisaoSocietariaDoClientePage({
           {visao.taxas.length === 0 ? (
             <p className="text-[13px] text-fg-muted">Nenhuma taxa registrada.</p>
           ) : (
+            <TabelaFiltravel
+              linhas={visao.taxas.map((t) => ({
+                id: t.id,
+                valores: {
+                  taxa: t.descricao,
+                  processo: t.processoId ? (t.tipoNome ?? "") : "avulsa",
+                  vencimento: dia(t.dueDate),
+                  situacao: t.paidAt ? "Paga" : "Em aberto",
+                },
+              }))}
+            >
             <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[600px] text-[13px]">
                 <thead>
                   <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-                    <th className={TH}>Taxa</th>
-                    <th className={TH}>Processo</th>
+                    <th className={TH}><FiltroDaColuna rotulo="Taxa" chave="taxa" /></th>
+                    <th className={TH}><FiltroDaColuna rotulo="Processo" chave="processo" /></th>
                     <th className={TH}>Valor</th>
-                    <th className={TH}>Vencimento</th>
-                    <th className={TH}>Situação</th>
+                    <th className={TH}><FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" align="right" /></th>
+                    <th className={TH}><FiltroDaColuna rotulo="Situação" chave="situacao" align="right" /></th>
                   </tr>
                 </thead>
                 <tbody>
                   {visao.taxas.map((t) => (
-                    <tr key={t.id} className="border-b border-border-soft">
+                    <LinhaFiltravel key={t.id} id={t.id} className="border-b border-border-soft">
                       <td className="py-2 pr-3">
                         {t.descricao}
                         {t.attempt !== null && t.attempt >= 2 && (
@@ -284,11 +332,12 @@ export default async function VisaoSocietariaDoClientePage({
                           <Badge variant="warning">Em aberto</Badge>
                         )}
                       </td>
-                    </tr>
+                    </LinhaFiltravel>
                   ))}
                 </tbody>
               </table>
             </div>
+            </TabelaFiltravel>
           )}
         </Card>
 

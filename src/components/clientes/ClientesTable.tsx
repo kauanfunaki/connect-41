@@ -151,6 +151,9 @@ export function ClientesTable({ clientes, canCreate, alternarAtivo, inativarEmMa
             {clientes.map((c) => cartaoCliente(c))}
           </div>
 
+          {/* Sem funil nas colunas: a lista é paginada (20 por página), e o funil
+              do navegador filtraria só a página aberta. O de tabela paginada é o
+              `FiltroDaColunaNaUrl`, que depende da página filtrar no servidor. */}
           <div className="c41-tabela scroll-x overflow-x-auto hidden md:block">
           <table className="w-full min-w-[640px] text-[length:var(--fs-body)]">
             <thead>
@@ -207,7 +210,7 @@ export function ClientesTable({ clientes, canCreate, alternarAtivo, inativarEmMa
                       label={c.active ? "Ativo" : "Inativo"}
                     />
                   </td>
-                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     {canCreate && acoesCliente(c)}
                   </td>
                 </tr>
