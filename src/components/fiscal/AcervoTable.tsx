@@ -1,7 +1,5 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/shared/Pagination";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { formatCalendarDate } from "@/lib/format";
@@ -31,7 +29,6 @@ type Props = {
 };
 
 const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const INTEIRO = new Intl.NumberFormat("pt-BR");
 
 /**
  * O acervo: tabela no computador, cartões no celular.
@@ -185,37 +182,17 @@ export function AcervoTable({ documentos, total, totalLimitado, temProxima, pagi
         </table>
       </TabelaNoDesktop>
 
-      {ultimaPagina !== null ? (
-        <Pagination page={pagina} totalPages={ultimaPagina} buildHref={hrefDaPagina} total={total} rotulo="documentos" />
-      ) : (
-        // Contagem no teto: o `Pagination` precisa da última página, que aqui
-        // não se sabe — só se existe a próxima. Mesmo desenho, sem o "de N".
-        <nav className="flex flex-wrap items-center justify-between gap-3 mt-4" aria-label="Paginação">
-          <span className="text-[length:var(--fs-ui)] text-fg-muted tabular-nums">
-            Página <strong className="font-semibold text-fg">{pagina}</strong> · mais de {INTEIRO.format(total)} documentos
-          </span>
-          <div className="flex gap-1.5">
-            {pagina > 1 ? (
-              <Button href={hrefDaPagina(pagina - 1)} variant="secondary" size="sm">
-                <ChevronLeft size={14} /> Anterior
-              </Button>
-            ) : (
-              <Button variant="secondary" size="sm" disabled>
-                <ChevronLeft size={14} /> Anterior
-              </Button>
-            )}
-            {temProxima ? (
-              <Button href={hrefDaPagina(pagina + 1)} variant="secondary" size="sm">
-                Próxima <ChevronRight size={14} />
-              </Button>
-            ) : (
-              <Button variant="secondary" size="sm" disabled>
-                Próxima <ChevronRight size={14} />
-              </Button>
-            )}
-          </div>
-        </nav>
-      )}
+      {/* Contagem no teto: sem a última página, vale o "tem próxima" e o
+          total sai como "mais de N". */}
+      <Pagination
+        page={pagina}
+        totalPages={ultimaPagina ?? undefined}
+        temProxima={temProxima}
+        buildHref={hrefDaPagina}
+        total={total}
+        totalAproximado={totalLimitado}
+        rotulo="documentos"
+      />
     </div>
   );
 }
