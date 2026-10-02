@@ -8,12 +8,13 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 
 export type PipelineOption = { id: string; name: string; sectorCode: string; sectorLabel: string };
 
 type Props = {
   action: (prev: ObligationState, form: FormData) => Promise<ObligationState>;
-  companies: { id: string; name: string }[];
+  companies: (EmpresaParaEscolher & { name: string })[];
   pipelines: PipelineOption[];
   users: { id: string; name: string }[];
 };
@@ -61,7 +62,9 @@ export function AddObrigacaoForm({ action, companies, pipelines, users }: Props)
           <SearchableSelect
             id="companyId"
             name="companyId"
-            options={companies.map((c) => ({ value: c.id, label: c.name }))}
+            options={opcoesDeEmpresa(companies)}
+            avatar
+            lembrarRecentes="empresas"
             placeholder="Buscar empresa…"
           />
         </CampoForm>

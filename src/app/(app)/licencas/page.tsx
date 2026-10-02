@@ -4,6 +4,7 @@ import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
+import { CAMPOS_DA_EMPRESA_NO_SELETOR, opcoesDeEmpresa } from "@/lib/empresas/opcoesDoSeletor";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { LicencasFila } from "@/components/societario/LicencasFila";
@@ -41,7 +42,7 @@ export default async function LicencasPage({
     prisma.company.findMany({
       where: { tenantId: ctx.tenantId, status: { in: ["ACTIVE", "PROSPECT"] } },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, displayName: true },
+      select: CAMPOS_DA_EMPRESA_NO_SELETOR,
     }),
     prisma.processOrgan.findMany({
       where: { tenantId: ctx.tenantId, active: true },
@@ -70,7 +71,7 @@ export default async function LicencasPage({
         subtitle={`Alvará, sanitária, ambiental, bombeiros — o que fica valendo, e o que precisa ser renovado. Entram na fila com ${AVISO_EM_DIAS} dias de antecedência.`}
         action={
           <NovaLicenca
-            empresas={empresas.map((e) => ({ value: e.id, label: nomeExibicao(e) }))}
+            empresas={opcoesDeEmpresa(empresas.map((e) => ({ ...e, nome: nomeExibicao(e) })))}
             orgaos={orgaosDoForm}
           />
         }

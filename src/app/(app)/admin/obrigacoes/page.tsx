@@ -68,7 +68,7 @@ export default async function ObrigacoesPage() {
     }),
     prisma.company.findMany({
       where: { tenantId: ctx.tenantId, status: { not: "CHURNED" } },
-      select: { id: true, name: true },
+      select: { id: true, name: true, logoUrl: true, cnpj: true, parentCompanyId: true },
       orderBy: { name: "asc" },
     }),
     prisma.pipeline.findMany({
