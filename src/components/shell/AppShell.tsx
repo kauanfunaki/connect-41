@@ -199,8 +199,9 @@ export function AppShell({
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Logo */}
-        <div className="flex items-center justify-center gap-2.5 h-14 px-5 border-b border-border flex-shrink-0 relative">
+        {/* Logo — a mesma altura do cabeçalho (60px), para as duas linhas de baixo
+            se encontrarem; eram 56px, e a logo ficava 4px acima do "41 Tech" (02/10/2026). */}
+        <div className="flex items-center justify-center gap-2.5 h-[60px] px-5 border-b border-border flex-shrink-0 relative">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/brand/logo-horizontal-light.svg"
