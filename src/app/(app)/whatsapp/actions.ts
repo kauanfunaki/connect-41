@@ -6,8 +6,21 @@ import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { lerConfig } from "@/lib/integracoes/data";
 import { enviarERegistrar } from "@/lib/whatsapp/envio";
-import { podeResponder, podeDevolverAoRobo, podeAssumir, podeSoltar, podeEncerrar } from "@/lib/whatsapp/conversas";
-import { desfechoDaTela, LIMPEZA_AO_ENCERRAR } from "@/lib/whatsapp/atendimentos";
+import {
+  podeResponder,
+  podeDevolverAoRobo,
+  podeAssumir,
+  podeSoltar,
+  podeEncerrar,
+  podeTransferir,
+  telefoneLegivel,
+  MAX_NO_LOTE,
+  type AcaoEmLote,
+  type ResultadoDoLote,
+} from "@/lib/whatsapp/conversas";
+import { pessoasDoAtendimento } from "@/lib/whatsapp/equipe";
+import { notifyUser } from "@/lib/notifications";
+import { desfechoDaTela, LIMPEZA_AO_ENCERRAR, type Desfecho } from "@/lib/whatsapp/atendimentos";
 import { atendimentoAberto, fecharAtendimentos, garantirAtendimentoAberto } from "@/lib/whatsapp/atendimentos-dados";
 import { provedorDaIntegracao } from "@/lib/whatsapp/provedores";
 import { setorDoModulo } from "@/lib/modules";
@@ -221,6 +234,133 @@ export async function encerrarAtendimento(threadId: string, desfecho: string): P
 
   revalidatePath(`/whatsapp/${thread.id}`);
   revalidatePath("/whatsapp");
+  return { success: true };
+}
+
+/**
+ * Encerrar, devolver ao assistente ou transferir várias conversas de uma vez
+ * (02/10/2026, pedido do Kauan nos testes de 29/09).
+ *
+ * Cada conversa passa pela mesma regra da ação de uma só; a que não passa fica
+ * de fora com o motivo, sem derrubar as outras. Nada é enviado ao candidato —
+ * as três ações são do lado de cá.
+ */
+export async function agirEmLote(threadIds: string[], acao: AcaoEmLote): Promise<{ error: string } | ResultadoDoLote> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { error: "Não autenticado" };
+  const tenantId = ctx.tenantId;
+  const setor = (await setorDoModulo(tenantId, MODULE)) ?? SETOR;
+  if (!canActOnSector(ctx, setor)) return { error: "Sem permissão no Recrutamento." };
+
+  const ids = [...new Set(threadIds.filter((x) => typeof x === "string" && x.length > 0))];
+  if (ids.length === 0) return { error: "Selecione ao menos uma conversa." };
+  if (ids.length > MAX_NO_LOTE) return { error: `Até ${MAX_NO_LOTE} conversas por vez.` };
+  if (acao.tipo === "encerrar" && !desfechoDaTela(acao.desfecho)) return { error: "Escolha como os atendimentos terminaram." };
+  // Só recebe conversa quem atende o WhatsApp do setor — o id vem do navegador.
+  const destino =
+    acao.tipo === "transferir" ? (await pessoasDoAtendimento(tenantId, setor)).find((p) => p.id === acao.paraId) : undefined;
+  if (acao.tipo === "transferir" && !destino) return { error: "Essa pessoa não atende o WhatsApp do Recrutamento." };
+
+  const prisma = getPrisma();
+  const threads = await prisma.whatsappThread.findMany({
+    where: { tenantId, id: { in: ids } },
+    select: {
+      id: true,
+      waPhone: true,
+      optedOutAt: true,
+      handoffAt: true,
+      assignedToId: true,
+      candidaturaId: true,
+      atendimentos: { where: { encerradoEm: null }, take: 1, select: { id: true } },
+    },
+  });
+  const candidaturas = await prisma.candidatura.findMany({
+    where: { tenantId, id: { in: threads.map((t) => t.candidaturaId).filter((v): v is string => !!v) } },
+    select: { id: true, person: { select: { name: true } } },
+  });
+  const nomeDaCandidatura = new Map(candidaturas.map((c) => [c.id, c.person.name]));
+
+  const agora = new Date();
+  const resultado: ResultadoDoLote = { feitas: 0, puladas: [] };
+  const transferidas: { id: string; nome: string }[] = [];
+  for (const t of threads) {
+    const nome = (t.candidaturaId && nomeDaCandidatura.get(t.candidaturaId)) || telefoneLegivel(t.waPhone);
+    // Igual à ação de uma só: sem atendimento aberto, conta como encerrado.
+    const encerradoEm = t.atendimentos.length > 0 ? null : agora;
+    const veredito =
+      acao.tipo === "encerrar"
+        ? podeEncerrar({ optedOutAt: t.optedOutAt, atendimentoEncerradoEm: encerradoEm })
+        : acao.tipo === "devolver"
+          ? podeDevolverAoRobo(t)
+          : podeTransferir({ optedOutAt: t.optedOutAt, atendimentoEncerradoEm: encerradoEm, assignedToId: t.assignedToId }, acao.paraId);
+    if (!veredito.pode) {
+      resultado.puladas.push({ nome, motivo: veredito.motivo });
+      continue;
+    }
+
+    if (acao.tipo === "encerrar") {
+      await prisma.whatsappThread.update({ where: { id: t.id }, data: LIMPEZA_AO_ENCERRAR });
+      await fecharAtendimentos(t.id, { agora, porId: ctx.userId, desfecho: acao.desfecho as Desfecho });
+    } else if (acao.tipo === "devolver") {
+      await prisma.whatsappThread.update({
+        where: { id: t.id },
+        data: { handoffAt: null, handoffReason: null, assignedToId: null, assignedAt: null },
+      });
+    } else {
+      await prisma.whatsappThread.update({
+        where: { id: t.id },
+        data: {
+          assignedToId: acao.paraId,
+          assignedAt: agora,
+          // Com o assistente, transferir é tirar dele: uma pessoa conduz daqui.
+          ...(t.handoffAt ? {} : { handoffAt: agora, handoffReason: "transferida por alguém do time" }),
+        },
+      });
+      transferidas.push({ id: t.id, nome });
+    }
+    resultado.feitas++;
+
+    await logAudit({
+      tenantId,
+      userId: ctx.userId,
+      action: acao.tipo === "encerrar" ? "whatsapp.close" : acao.tipo === "devolver" ? "whatsapp.returnToBot" : "whatsapp.transfer",
+      entityType: "WhatsappThread",
+      entityId: t.id,
+      metadata: {
+        emLote: ids.length > 1,
+        responsavelAnterior: t.assignedToId,
+        ...(acao.tipo === "encerrar" ? { desfecho: acao.desfecho } : {}),
+        ...(acao.tipo === "transferir" ? { para: acao.paraId } : {}),
+      },
+    });
+    revalidatePath(`/whatsapp/${t.id}`);
+  }
+  for (let i = threads.length; i < ids.length; i++) resultado.puladas.push({ nome: "—", motivo: "Conversa não encontrada." });
+
+  // Quem recebe é avisado — uma vez só, mesmo num lote grande.
+  if (destino && destino.id !== ctx.userId && transferidas.length > 0) {
+    try {
+      const quem = (await prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true } }))?.name ?? "Alguém do time";
+      await notifyUser(
+        destino.id,
+        transferidas.length === 1
+          ? { tenantId, type: "WHATSAPP_HANDOFF", message: `WhatsApp: ${quem} passou para você a conversa com ${transferidas[0].nome}`.slice(0, 255), entityId: transferidas[0].id }
+          : { tenantId, type: "WHATSAPP_HANDOFF", message: `WhatsApp: ${quem} passou ${transferidas.length} conversas para você` }
+      );
+    } catch (err) {
+      console.error("[whatsapp] aviso de transferência", err);
+    }
+  }
+
+  revalidatePath("/whatsapp");
+  return resultado;
+}
+
+/** Passa a conversa para outra pessoa do time — ver `agirEmLote`. */
+export async function transferirConversa(threadId: string, paraId: string): Promise<AcaoNaConversa> {
+  const r = await agirEmLote([threadId], { tipo: "transferir", paraId });
+  if ("error" in r) return r;
+  if (r.puladas.length > 0) return { error: r.puladas[0].motivo };
   return { success: true };
 }
 

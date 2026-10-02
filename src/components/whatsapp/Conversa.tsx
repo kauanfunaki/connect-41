@@ -17,6 +17,7 @@ import {
   podeAssumir,
   podeSoltar,
   podeEncerrar,
+  podeTransferir,
   telefoneLegivel,
   SITUACAO_LABEL,
   SITUACAO_VARIANTE,
@@ -27,11 +28,13 @@ import {
   assumirConversa,
   soltarConversa,
   encerrarAtendimento,
+  transferirConversa,
   vincularCandidatura,
   desvincularCandidatura,
   type AcaoNaConversa,
 } from "@/app/(app)/whatsapp/actions";
 import type { ConversaDetalhada } from "@/lib/whatsapp/data";
+import type { PessoaDoAtendimento } from "@/lib/whatsapp/equipe";
 import { DESFECHOS, DESFECHOS_DA_TELA, rotuloDoDesfecho } from "@/lib/whatsapp/atendimentos";
 import { FichaNaConversa } from "./FichaNaConversa";
 
@@ -42,15 +45,19 @@ type Props = {
   candidaturas: { id: string; rotulo: string }[];
   /** Quem está olhando — decide entre "Assumir" e "Soltar". */
   userId: string;
+  /** Para quem dá para transferir — quem atende o WhatsApp do setor. */
+  pessoas: PessoaDoAtendimento[];
 };
 
-export function Conversa({ conversa, agora, candidaturas, userId }: Props) {
+export function Conversa({ conversa, agora, candidaturas, userId, pessoas }: Props) {
   const [texto, setTexto] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [escolhida, setEscolhida] = useState("");
   const [encerrando, setEncerrando] = useState(false);
   const [desfecho, setDesfecho] = useState("");
+  const [transferindo, setTransferindo] = useState(false);
+  const [paraQuem, setParaQuem] = useState("");
 
   const situacao = situacaoDaConversa(conversa, agora);
   const resposta = podeResponder(conversa, agora);
@@ -58,6 +65,8 @@ export function Conversa({ conversa, agora, candidaturas, userId }: Props) {
   const assumir = podeAssumir({ optedOutAt: conversa.optedOutAt, assignedToId: conversa.responsavel?.id ?? null }, userId);
   const soltar = podeSoltar({ assignedToId: conversa.responsavel?.id ?? null }, userId);
   const encerrar = podeEncerrar(conversa);
+  // Para quem dá: todo mundo do atendimento menos quem já está com ela.
+  const destinos = pessoas.filter((p) => podeTransferir({ ...conversa, assignedToId: conversa.responsavel?.id ?? null }, p.id).pode);
   const ultimoEncerramento = conversa.encerramentos.at(-1) ?? null;
 
   function fecharPainel() {
@@ -122,6 +131,11 @@ export function Conversa({ conversa, agora, candidaturas, userId }: Props) {
                 Devolver ao assistente
               </Button>
             )}
+            {destinos.length > 0 && !transferindo && (
+              <Button variant="secondary" size="sm" disabled={ocupado} onClick={() => setTransferindo(true)}>
+                Transferir
+              </Button>
+            )}
             {encerrar.pode && !encerrando && (
               <Button variant="secondary" size="sm" disabled={ocupado} onClick={() => setEncerrando(true)}>
                 Encerrar atendimento
@@ -135,6 +149,54 @@ export function Conversa({ conversa, agora, candidaturas, userId }: Props) {
             <AlertTriangle size={14} className="mt-0.5 shrink-0" />
             O assistente passou para você: {conversa.handoffReason}
           </p>
+        )}
+
+        {transferindo && (
+          <div className="bg-surface-hover border border-border rounded-md p-3">
+            <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_auto]">
+              <CampoForm
+                label="Passar esta conversa para"
+                htmlFor="transferir-para"
+                helper="Nada é enviado ao candidato. A conversa passa a ser de quem recebe, e essa pessoa é avisada no sino."
+              >
+                <Select id="transferir-para" value={paraQuem} onChange={(e) => setParaQuem(e.target.value)}>
+                  <option value="">Selecione…</option>
+                  {destinos.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.id === userId ? `${p.nome} (você)` : p.nome}
+                    </option>
+                  ))}
+                </Select>
+              </CampoForm>
+              <AlinhadoAoCampo>
+                <Button
+                  variant="secondary"
+                  disabled={ocupado}
+                  onClick={() => {
+                    setTransferindo(false);
+                    setParaQuem("");
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  disabled={ocupado || !paraQuem}
+                  onClick={() =>
+                    correr(async () => {
+                      const r = await transferirConversa(conversa.id, paraQuem);
+                      if (r && "success" in r) {
+                        setTransferindo(false);
+                        setParaQuem("");
+                      }
+                      return r;
+                    })
+                  }
+                >
+                  Transferir
+                </Button>
+              </AlinhadoAoCampo>
+            </FieldGrid>
+          </div>
         )}
 
         {/* O select (h-9) e os botões na mesma altura: os botões eram `sm`
