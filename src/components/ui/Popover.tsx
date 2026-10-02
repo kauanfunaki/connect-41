@@ -33,7 +33,12 @@ export function Popover({ trigger, children, align = "left", width = 240, "aria-
   useEffect(() => {
     if (!open) return;
     function tecla(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key !== "Escape") return;
+      // Marca o Esc como usado: quem está embaixo (o chat de IA, que escuta na
+      // janela) não fecha junto. Conferir o painel na tela não serve — o React
+      // já o tirou quando o evento chega lá.
+      e.preventDefault();
+      setOpen(false);
     }
     document.addEventListener("keydown", tecla);
     return () => document.removeEventListener("keydown", tecla);
