@@ -36,9 +36,12 @@ type LinkProps = CommonProps &
     href: string;
     loading?: undefined;
     loadingLabel?: undefined;
-    /** `false` para rota de arquivo (CSV, PDF, exportação): sem isso o <Link>
-     *  pré-carrega a rota ao aparecer na tela, e gera o arquivo à toa. */
+    /** `false` para não pré-carregar o destino ao aparecer na tela. */
     prefetch?: boolean;
+    /** Rota que devolve arquivo (CSV, PDF, exportação): vira um <a download>
+     *  simples. O <Link> pré-carregaria a rota — gerando o arquivo só de a tela
+     *  abrir — e tentaria navegar dentro do app ao clicar. */
+    download?: boolean | string;
   };
 
 type Props = ButtonProps | LinkProps;
@@ -122,7 +125,14 @@ export function Button(props: Props) {
     : `${BASE} ${VARIANT_CLASS[variant]} ${SIZE_CLASS[size]} ${className}`.trim();
 
   if (props.href !== undefined) {
-    const { href, ...rest } = omitCommon(props);
+    const { href, download, ...rest } = omitCommon(props);
+    if (download) {
+      return (
+        <a href={href} download={download === true ? "" : download} className={cls} {...rest}>
+          {children}
+        </a>
+      );
+    }
     return (
       <Link href={href} className={cls} {...rest}>
         {children}
