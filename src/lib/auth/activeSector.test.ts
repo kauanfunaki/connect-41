@@ -4,6 +4,7 @@ import {
   resolveSectorHint,
   sectorHost,
   sectorScope,
+  setoresDoSeletor,
   shouldShowSectorSwitcher,
 } from "./activeSector";
 
@@ -152,6 +153,24 @@ describe("shouldShowSectorSwitcher", () => {
 
   it("some quando não há setor nenhum", () => {
     expect(shouldShowSectorSwitcher([], false)).toBe(false);
+  });
+});
+
+describe("setoresDoSeletor", () => {
+  const DO_ESCRITORIO = ["bpo", "dp", "fiscal", "societario"];
+
+  it("no próprio escritório, oferece os setores da pessoa — admin inclusive", () => {
+    expect(setoresDoSeletor({ userSectors: ["bpo"], isFullAccess: true, visitante: false, setoresDoEscritorio: DO_ESCRITORIO })).toEqual(["bpo"]);
+    expect(setoresDoSeletor({ userSectors: ["dp", "fiscal"], isFullAccess: false, visitante: false, setoresDoEscritorio: DO_ESCRITORIO })).toEqual(["dp", "fiscal"]);
+  });
+
+  it("de visita em outro escritório, quem é full access ganha os setores de lá", () => {
+    // O proxy zera os setores fora do escritório de origem: chegam vazios.
+    expect(setoresDoSeletor({ userSectors: [], isFullAccess: true, visitante: true, setoresDoEscritorio: DO_ESCRITORIO })).toEqual(DO_ESCRITORIO);
+  });
+
+  it("de visita sem ser full access, não ganha setor nenhum", () => {
+    expect(setoresDoSeletor({ userSectors: [], isFullAccess: false, visitante: true, setoresDoEscritorio: DO_ESCRITORIO })).toEqual([]);
   });
 });
 

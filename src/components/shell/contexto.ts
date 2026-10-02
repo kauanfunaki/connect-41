@@ -36,7 +36,13 @@ function destino(code: string | null, dominio: string | null, sufixo: string): s
  * builda sem essas variáveis.
  */
 export function trocarTenant(tenantId: string, dominio: string | null, sufixo: string): void {
-  document.cookie = `active_tenant_id=${tenantId}; path=/; max-age=${UM_MES}; samesite=lax`;
+  // Com domínio-base, o escritório escolhido precisa atravessar os
+  // subdomínios, como o setor: gravado só neste endereço, ele se perdia no
+  // primeiro clique num setor (que troca de host) e a pessoa voltava ao
+  // escritório de origem. A versão antiga, presa a este endereço, sai antes.
+  if (dominio) document.cookie = `active_tenant_id=; path=/; max-age=0; samesite=lax`;
+  const escopo = dominio ? `; domain=.${dominio}` : "";
+  document.cookie = `active_tenant_id=${tenantId}; path=/${escopo}; max-age=${UM_MES}; samesite=lax`;
   // Trocar de escritório zera o setor: os códigos de setor são por tenant, e
   // manter o anterior levaria a um setor que pode não existir no destino.
   gravarSetor(null, dominio);
