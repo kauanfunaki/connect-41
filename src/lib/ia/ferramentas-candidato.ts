@@ -23,12 +23,15 @@ import { getPrisma } from "@/lib/prisma";
 import type { ContextoDaFerramenta, FerramentaRegistrada } from "@/lib/ia/ferramentas";
 import {
   aplicarRespostas,
+  divergenciasDoPortal,
   faltaPerguntar,
   lerFonte,
+  respostaComoTexto,
   ROTULO_DA_RESPOSTA,
   validarRespostas,
   type Respostas,
 } from "@/lib/recrutamento/respostas";
+import { avisarSobreAVaga } from "@/lib/recrutamento/avisos";
 
 /** A candidatura ligada à conversa — a única em que o registro pode gravar. */
 async function candidaturaDaConversa(ctx: ContextoDaFerramenta): Promise<string | null> {
@@ -237,22 +240,63 @@ export const FERRAMENTAS_DE_CANDIDATO: Record<string, FerramentaRegistrada> = {
       const prisma = getPrisma();
       const atual = await prisma.candidatura.findFirst({
         where: { id: candidaturaId, tenantId: ctx.tenantId },
-        select: { respostasFonte: true },
+        select: {
+          personId: true,
+          respostasFonte: true,
+          pretensaoSalarial: true,
+          disponibilidade: true,
+          deslocamentoMinutos: true,
+          person: { select: { name: true } },
+          vaga: { select: { title: true, responsibleUserId: true } },
+        },
       });
       if (!atual) return { gravado: false, recado: "Candidatura não encontrada." };
 
-      const r = aplicarRespostas(lerFonte(atual.respostasFonte), valores, "WHATSAPP", new Date());
+      const fonte = lerFonte(atual.respostasFonte);
+      const r = aplicarRespostas(fonte, valores, "WHATSAPP", new Date());
       if (r.gravados.length > 0) {
         await prisma.candidatura.update({
           where: { id: candidaturaId },
           data: { ...r.dados, respostasFonte: r.fonte },
         });
       }
+
+      // O que veio do portal não é trocado pelo WhatsApp; se o candidato disse
+      // outro valor, o recrutador fica sabendo (C2 do roteiro, 02/10/2026).
+      const atuais: Respostas = {
+        pretensaoSalarial: atual.pretensaoSalarial === null ? null : Number(atual.pretensaoSalarial),
+        disponibilidade: atual.disponibilidade,
+        deslocamentoMinutos: atual.deslocamentoMinutos,
+      };
+      const divergentes = divergenciasDoPortal(fonte, atuais, valores);
+      if (divergentes.length > 0) {
+        const detalhes = divergentes
+          .map((c) => `${ROTULO_DA_RESPOSTA[c]} ${respostaComoTexto(c, valores[c])} (no portal: ${respostaComoTexto(c, atuais[c])})`)
+          .join("; ");
+        await avisarSobreAVaga(atual.vaga, {
+          tenantId: ctx.tenantId,
+          type: "CANDIDATE_UPDATE",
+          message: `${atual.person.name} disse no WhatsApp — ${detalhes}. Vaga "${atual.vaga.title}".`.slice(0, 255),
+          entityType: "PERSON",
+          entityId: atual.personId,
+        }).catch((err) => console.error("[ferramentas-candidato] aviso de divergência", candidaturaId, err));
+      }
+
+      const peloRecrutador = r.preservados.filter((c) => fonte[c]?.origem === "RECRUTADOR");
+      const peloPortal = r.preservados.filter((c) => fonte[c]?.origem === "PORTAL");
       return {
         gravado: r.gravados.length > 0,
         registrado: r.gravados.map((c) => ROTULO_DA_RESPOSTA[c]),
         // O recrutador já definiu esses — não pergunte de novo.
-        ...(r.preservados.length ? { jaDefinidoPeloRecrutador: r.preservados.map((c) => ROTULO_DA_RESPOSTA[c]) } : {}),
+        ...(peloRecrutador.length ? { jaDefinidoPeloRecrutador: peloRecrutador.map((c) => ROTULO_DA_RESPOSTA[c]) } : {}),
+        // Respondidos no formulário de inscrição — não pergunte de novo; valor
+        // diferente dito aqui já foi repassado ao recrutador.
+        ...(peloPortal.length
+          ? {
+              jaRespondidoNoPortal: peloPortal.map((c) => ROTULO_DA_RESPOSTA[c]),
+              ...(divergentes.length ? { recadoDoPortal: "Valor diferente do que a pessoa informou na inscrição: diga que vai repassar ao recrutador." } : {}),
+            }
+          : {}),
         ...(descartados.length ? { naoEntendido: descartados.map((c) => ROTULO_DA_RESPOSTA[c]), recado: "Valor fora do esperado: confirme com a pessoa." } : {}),
       };
     },

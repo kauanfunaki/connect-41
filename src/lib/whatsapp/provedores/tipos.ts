@@ -51,7 +51,14 @@ export type DocumentoRecebido = {
  * pessoa, a não ser que seja um documento que o atendimento sabe tratar (hoje,
  * currículo em PDF).
  */
-export type MensagemIgnorada = { waMessageId: string; tipo: string; de: string; documento?: DocumentoRecebido };
+export type MensagemIgnorada = {
+  waMessageId: string;
+  tipo: string;
+  de: string;
+  documento?: DocumentoRecebido;
+  /** Legenda da imagem, do vídeo ou do arquivo — entra na conversa junto. */
+  legenda?: string;
+};
 
 export type MidiaBaixada =
   | { ok: true; bytes: Buffer; mimetype: string | null; nomeDoArquivo: string | null }

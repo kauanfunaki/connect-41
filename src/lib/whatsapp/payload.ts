@@ -47,11 +47,11 @@ function str(v: unknown): string | null {
  */
 export function lerMensagens(payload: unknown): {
   mensagens: MensagemRecebida[];
-  /** Mensagens que chegaram mas não são texto: id e tipo. */
-  ignoradas: { waMessageId: string; tipo: string; de: string }[];
+  /** Mensagens que chegaram mas não são texto: id, tipo e a legenda, quando há. */
+  ignoradas: { waMessageId: string; tipo: string; de: string; legenda?: string }[];
 } {
   const mensagens: MensagemRecebida[] = [];
-  const ignoradas: { waMessageId: string; tipo: string; de: string }[] = [];
+  const ignoradas: { waMessageId: string; tipo: string; de: string; legenda?: string }[] = [];
 
   const raiz = obj(payload);
   if (!raiz) return { mensagens, ignoradas };
@@ -84,7 +84,9 @@ export function lerMensagens(payload: unknown): {
 
         const tipo = str(m.type) ?? "desconhecido";
         if (tipo !== "text") {
-          ignoradas.push({ waMessageId: id, tipo, de });
+          // Imagem, vídeo e documento trazem a legenda dentro do próprio tipo.
+          const legenda = str(obj(m[tipo])?.caption);
+          ignoradas.push({ waMessageId: id, tipo, de, ...(legenda ? { legenda } : {}) });
           continue;
         }
 

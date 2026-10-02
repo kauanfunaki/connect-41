@@ -4,7 +4,7 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { getPrisma } from "@/lib/prisma";
 import { hit, clientIp } from "@/lib/rateLimit";
-import { notifyUser, notifySector } from "@/lib/notifications";
+import { avisarSobreAVaga } from "@/lib/recrutamento/avisos";
 import { PersonType } from "@/generated/prisma/enums";
 import { MAX_BYTES_DO_CURRICULO, MAX_MB_DO_CURRICULO, ehPdf } from "@/lib/curriculo";
 import { avaliarEnvio } from "@/lib/carreiras/antiRobo";
@@ -174,11 +174,8 @@ export async function POST(req: NextRequest) {
   });
 
   const message = `Nova candidatura de ${name} para a vaga "${vaga.title}" (via portal).`;
-  if (vaga.responsibleUserId) {
-    await notifyUser(vaga.responsibleUserId, { tenantId: tenant.id, type: "NEW_APPLICATION", message, entityType: "PERSON", entityId: person.id });
-  } else {
-    await notifySector(vaga.sectorCode, { tenantId: tenant.id, type: "NEW_APPLICATION", message, entityType: "PERSON", entityId: person.id });
-  }
+  // Sem responsável na vaga, o Recrutamento — não o setor que contrata.
+  await avisarSobreAVaga(vaga, { tenantId: tenant.id, type: "NEW_APPLICATION", message, entityType: "PERSON", entityId: person.id });
 
   return NextResponse.json({ ok: true });
 }

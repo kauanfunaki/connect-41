@@ -129,8 +129,12 @@ export type Decisao =
   | { tipo: "responder"; apresentar: boolean }
   /** Marcar saída e mandar a confirmação — a última mensagem desta conversa. */
   | { tipo: "confirmar_saida" }
-  /** Não responder, e passar para uma pessoa. */
-  | { tipo: "transferir"; motivo: string }
+  /**
+   * Não responder, e passar para uma pessoa. `avisar`: dá para mandar ao
+   * candidato o aviso de que alguém vai continuar — não dá com a conexão
+   * desligada nem fora da janela do WhatsApp.
+   */
+  | { tipo: "transferir"; motivo: string; avisar: boolean }
   /** Não responder, e não é caso de ninguém. */
   | { tipo: "silenciar"; motivo: string };
 
@@ -149,7 +153,7 @@ export function decidir(estado: EstadoDaConversa, texto: string, agora: Date): D
   if (pediuParaSair(texto)) return { tipo: "confirmar_saida" };
 
   if (!estado.integracaoLigada) {
-    return { tipo: "transferir", motivo: "conexão de WhatsApp desligada" };
+    return { tipo: "transferir", motivo: "conexão de WhatsApp desligada", avisar: false };
   }
   // Transferida não volta sozinha. Voltar seria o candidato receber robô no
   // meio de uma conversa que uma pessoa estava conduzindo.
@@ -158,7 +162,7 @@ export function decidir(estado: EstadoDaConversa, texto: string, agora: Date): D
   }
 
   if (estado.respostasNaUltimaHora >= MAX_RESPOSTAS_POR_HORA) {
-    return { tipo: "transferir", motivo: "muitas respostas automáticas na última hora" };
+    return { tipo: "transferir", motivo: "muitas respostas automáticas na última hora", avisar: true };
   }
 
   // A janela conta a partir da última mensagem recebida — e esta acabou de
@@ -170,7 +174,7 @@ export function decidir(estado: EstadoDaConversa, texto: string, agora: Date): D
     estado.lastInboundAt &&
     horasEntre(estado.lastInboundAt, agora) > estado.janelaLivreHoras
   ) {
-    return { tipo: "transferir", motivo: `fora da janela de ${estado.janelaLivreHoras}h do WhatsApp` };
+    return { tipo: "transferir", motivo: `fora da janela de ${estado.janelaLivreHoras}h do WhatsApp`, avisar: false };
   }
 
   return { tipo: "responder", apresentar: !estado.jaSeApresentou };
