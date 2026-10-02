@@ -472,6 +472,13 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   padding-top: 0.75rem;
   padding-bottom: 0.75rem;
   font-weight: 600;
+  /* Caixa alta, 11px, cinza — decidido em 02/10: era o cabeçalho de 71 das 80
+     tabelas padrão, escrito à mão em cada <tr>. Aqui, para a tabela nova não
+     nascer diferente. */
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  color: var(--c41-fg-muted);
 }
 .c41-tabela > table > :is(thead, tbody) > tr > :is(th, td):first-child {
   padding-left: 1rem;
