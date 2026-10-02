@@ -25,6 +25,7 @@ import {
 import { atualizarStatusEmMassa, excluirEmpresasEmMassa } from "./actions";
 import { Pagination } from "@/components/shared/Pagination";
 import { lerLista, opcoesDeRegime, ondeDoRegime, opcoesDeLocal, ondeDoLocal } from "@/lib/filtrosDaListaDeEmpresas";
+import { FiltrosDasColunasNaUrl } from "@/components/shared/FiltroDeColunas";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
   PROSPECT: "Prospecto",
@@ -104,12 +105,6 @@ export default async function EmpresasPage({
   };
   const where = { AND: [whereBase, ondeRegime, ondeLocal] };
   const temFiltroDeColuna = regimes.length > 0 || locais.length > 0;
-  const semFiltroDeColuna = (() => {
-    const q = new URLSearchParams();
-    for (const [k, v] of Object.entries({ search, status, cliente })) if (v) q.set(k, v);
-    const texto = q.toString();
-    return texto ? `/empresas?${texto}` : "/empresas";
-  })();
 
   // Quantas estão escondidas agora — a tela avisa em vez de deixar o usuário achar
   // que a base encolheu.
@@ -233,6 +228,15 @@ export default async function EmpresasPage({
         </p>
       )}
 
+      {/* Fica acima da tabela e do estado vazio: é por aqui que se desfaz o
+          funil quando ele esvazia a lista. */}
+      <FiltrosDasColunasNaUrl
+        colunas={[
+          { chave: "regime", rotulo: "Regime" },
+          { chave: "local", rotulo: "Localização" },
+        ]}
+      />
+
       {/* Table */}
       {companies.length === 0 ? (
         <Card>
@@ -245,13 +249,7 @@ export default async function EmpresasPage({
                 : "Comece cadastrando a primeira empresa do tenant."
             }
             action={
-              // O funil some junto com a tabela quando esvazia a lista: sem este
-              // botão, a pessoa ficava sem como desfazer o filtro das colunas.
-              temFiltroDeColuna ? (
-                <Button href={semFiltroDeColuna} variant="secondary" size="sm">
-                  Limpar filtros das colunas
-                </Button>
-              ) : !search && !statusFilter && canCreate ? (
+              !search && !statusFilter && !temFiltroDeColuna && canCreate ? (
                 <Button href="/empresas/nova">+ Nova Empresa</Button>
               ) : undefined
             }
