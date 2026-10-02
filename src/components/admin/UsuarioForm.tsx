@@ -10,6 +10,7 @@ import { FormSection } from "@/components/ui/FormSection";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 export type UsuarioDefaultValues = {
   id?: string;
@@ -198,14 +199,10 @@ export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, de
         </FormSection>
       </div>
 
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-        <Button href={cancelHref} variant="secondary">
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "Salvando…" : "Salvar"}
-        </Button>
-      </div>
+      <FormFooter
+        pending={isPending}
+        cancelHref={cancelHref}
+      />
     </form>
   );
 }

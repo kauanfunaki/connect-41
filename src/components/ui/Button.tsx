@@ -23,8 +23,10 @@ function omitCommon<T extends CommonProps>(props: T): Omit<T, (typeof COMMON_KEY
 type ButtonProps = CommonProps &
   Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, keyof CommonProps> & {
     href?: undefined;
-    /** Troca o rótulo por "Salvando…" e desabilita. Só faz sentido em botão. */
+    /** Troca o rótulo por `loadingLabel` e desabilita. Só faz sentido em botão. */
     loading?: boolean;
+    /** O que aparece enquanto carrega — "Enviando…", "Criando…". Padrão: "Salvando…". */
+    loadingLabel?: string;
   };
 
 type LinkProps = CommonProps &
@@ -33,6 +35,10 @@ type LinkProps = CommonProps &
      *  app estilizavam um <Link> à mão pra parecer botão. */
     href: string;
     loading?: undefined;
+    loadingLabel?: undefined;
+    /** `false` para rota de arquivo (CSV, PDF, exportação): sem isso o <Link>
+     *  pré-carrega a rota ao aparecer na tela, e gera o arquivo à toa. */
+    prefetch?: boolean;
   };
 
 type Props = ButtonProps | LinkProps;
@@ -124,10 +130,10 @@ export function Button(props: Props) {
     );
   }
 
-  const { loading = false, disabled, ...rest } = omitCommon(props);
+  const { loading = false, loadingLabel = "Salvando…", disabled, ...rest } = omitCommon(props);
   return (
     <button type={rest.type ?? "button"} disabled={disabled || loading} className={cls} {...rest}>
-      {loading ? "Salvando…" : children}
+      {loading ? loadingLabel : children}
     </button>
   );
 }

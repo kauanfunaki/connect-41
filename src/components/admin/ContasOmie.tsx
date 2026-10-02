@@ -16,6 +16,7 @@ import { contasDoOmieAction, importarNotasOmieAction, previaDasNotasOmieAction, 
 import type { ContaOmieNaTela } from "@/lib/integracoes/omie/contas";
 import type { Saude } from "@/lib/integracoes/execucao";
 import type { PreviaDeChamada } from "@/lib/integracoes/omie/contas";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 type Previa = { nfe: PreviaDeChamada; nfse: PreviaDeChamada } | { erro: string };
 
@@ -104,15 +105,12 @@ function FormConta({ empresas, inicial, onFim }: { empresas: { id: string; nome:
           />
         </CampoForm>
       </FieldGrid>
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        {erro && <span className="mr-auto text-[length:var(--fs-helper)] font-medium text-danger">{erro}</span>}
-        <Button variant="secondary" onClick={onFim}>
-          Cancelar
-        </Button>
-        <Button type="submit" loading={pendente} disabled={pendente}>
-          Salvar
-        </Button>
-      </div>
+      <FormFooter
+        pending={pendente}
+        onCancel={onFim}
+        erro={erro}
+        semDivisoria
+      />
     </form>
   );
 }

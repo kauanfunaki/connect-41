@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { DeleteButton } from "@/components/ui/DeleteButton";
 import type { EdicaoState } from "@/app/(app)/documentos-fiscais/[id]/editar";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 type Empresa = { id: string; nome: string };
 
@@ -153,14 +154,11 @@ export function EditarDocumentoCard({
             {/* `loading` já troca o rótulo por "Salvando…" e desabilita — era o
                 que o ternário fazia à mão. Rodapé padrão, com o Cancelar que
                 faltava (fecha, como o "Fechar" do cabeçalho). */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-              <Button variant="secondary" onClick={() => setAberto(false)} disabled={isPending}>
-                Cancelar
-              </Button>
-              <Button type="submit" variant="primary" loading={isPending}>
-                Salvar correção
-              </Button>
-            </div>
+            <FormFooter
+              pending={isPending}
+              submitLabel="Salvar correção"
+              onCancel={() => setAberto(false)}
+            />
           </form>
 
           <div className="mt-6 pt-4 border-t border-border">

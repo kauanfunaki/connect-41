@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import type { LeituraState } from "@/app/(app)/societario/ia/actions";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 /**
  * "Ler contrato social": a coordenação do Societário manda o PDF, a IA lê os
@@ -42,14 +43,12 @@ export function LerContratoSocial({
           ("PDF, APPLICATION/PDF · até 10 MB"), e confere pela extensão. */}
       <FileDropzoneField name="arquivo" accept=".pdf" maxSizeMb={10} required />
       {state?.error && <p className="text-[13px] text-danger">{state.error}</p>}
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-        <Button variant="secondary" type="button" onClick={() => setAberto(false)} disabled={pendente}>
-          Cancelar
-        </Button>
-        <Button variant="primary" type="submit" disabled={pendente}>
-          {pendente ? "Lendo o contrato…" : "Ler contrato"}
-        </Button>
-      </div>
+      <FormFooter
+        pending={pendente}
+        pendingLabel="Lendo o contrato…"
+        submitLabel="Ler contrato"
+        onCancel={() => setAberto(false)}
+      />
     </form>
   );
 }

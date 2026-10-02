@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { IconButton } from "@/components/ui/IconButton";
 import { formatarDecorrido, minutosApontados, segundosDesde } from "@/lib/datetime";
 import type { HorasState } from "@/app/(app)/processos/horas-actions";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 export type LancamentoDeHoras = { id: string; quem: string; minutos: number; dia: string; nota: string | null; meu: boolean };
 
@@ -120,14 +121,13 @@ export function HorasDoProcesso({
             </CampoForm>
           </FieldGrid>
           {estado && "error" in estado && <p className="text-[12px] text-danger">{estado.error}</p>}
-          <div className="flex items-center justify-end gap-3">
-            <Button type="button" variant="secondary" onClick={() => setAbrirLancamento(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" variant="primary" disabled={lancando}>
-              {lancando ? "Lançando…" : "Lançar"}
-            </Button>
-          </div>
+          <FormFooter
+            pending={lancando}
+            pendingLabel="Lançando…"
+            submitLabel="Lançar"
+            onCancel={() => setAbrirLancamento(false)}
+            semDivisoria
+          />
         </form>
       )}
 

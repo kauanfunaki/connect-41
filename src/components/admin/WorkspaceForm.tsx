@@ -5,7 +5,7 @@ import type { WorkspaceState } from "@/app/(app)/admin/workspaces/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 type Props = {
   action: (prev: WorkspaceState, form: FormData) => Promise<WorkspaceState>;
@@ -33,14 +33,12 @@ export function WorkspaceForm({ action, cancelHref }: Props) {
         </CampoForm>
       </FieldGrid>
 
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-        <Button href={cancelHref} variant="secondary">
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "Criando…" : "Criar Workspace"}
-        </Button>
-      </div>
+      <FormFooter
+        pending={isPending}
+        pendingLabel="Criando…"
+        submitLabel="Criar Workspace"
+        cancelHref={cancelHref}
+      />
     </form>
   );
 }

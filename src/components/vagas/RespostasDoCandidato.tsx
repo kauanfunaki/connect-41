@@ -9,6 +9,7 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { salvarRespostasDoCandidato } from "@/app/(app)/vagas/[id]/candidaturas/[candidaturaId]/respostas-actions";
 import { CAMPOS_DE_RESPOSTA, ROTULO_DA_RESPOSTA, type CampoDeResposta, type FonteDasRespostas, type Respostas } from "@/lib/recrutamento/respostas";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 const REAIS = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -91,15 +92,11 @@ export function RespostasDoCandidato({
             </CampoForm>
           </FieldGrid>
           {erro && <p className="text-[13px] text-danger">{erro}</p>}
-          <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-            <p className="mr-auto text-[12px] text-fg-muted">O que você salvar aqui o atendente não sobrescreve.</p>
-            <Button variant="secondary" onClick={() => setEditando(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" loading={pendente} disabled={pendente}>
-              Salvar
-            </Button>
-          </div>
+          <FormFooter
+            pending={pendente}
+            onCancel={() => setEditando(false)}
+            nota="O que você salvar aqui o atendente não sobrescreve."
+          />
         </form>
       ) : (
         <dl className="grid gap-4 sm:grid-cols-3">

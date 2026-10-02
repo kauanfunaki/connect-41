@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/Select";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { criarVersao } from "@/app/(app)/dre/orcamento/actions";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 type VersaoDeOrigem = { id: string; nome: string; ano: number; aprovada: boolean };
 
@@ -107,15 +108,13 @@ export function NovaVersao({
         </FieldGrid>
         {/* Rodapé padrão: Cancelar antes do primário, os dois em 36px e à
             direita; o erro fica à esquerda, na mesma linha. */}
-        <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-          {erro && <span className="mr-auto text-[length:var(--fs-helper)] text-danger">{erro}</span>}
-          <Button variant="secondary" onClick={() => setAberto(false)}>
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={pendente}>
-            {pendente ? "Criando…" : "Criar versão"}
-          </Button>
-        </div>
+        <FormFooter
+          pending={pendente}
+          pendingLabel="Criando…"
+          submitLabel="Criar versão"
+          onCancel={() => setAberto(false)}
+          erro={erro}
+        />
       </form>
     </Card>
   );

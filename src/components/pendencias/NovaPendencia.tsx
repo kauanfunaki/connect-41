@@ -14,6 +14,7 @@ import { Modal } from "@/components/ui/Modal";
 import { criarPendencia } from "@/app/(app)/pendencias/actions";
 import { ROTULO_DO_TIPO, TIPOS_DA_PENDENCIA, LIMITE_DO_TITULO } from "@/lib/financeiro/pendencias/regras";
 import { CampoDeAnexos } from "./CampoDeAnexos";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 export type LancamentoVinculado = { id: string; companyId: string; rotulo: string };
 
@@ -166,15 +167,13 @@ export function NovaPendencia({
               <CampoDeAnexos idBase="pendencia-anexo" />
             </CampoForm>
 
-            <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-              {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
-              <Button type="button" variant="secondary" onClick={fechar}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={pendente}>
-                {pendente ? "Abrindo…" : "Abrir pendência"}
-              </Button>
-            </div>
+            <FormFooter
+              pending={pendente}
+              pendingLabel="Abrindo…"
+              submitLabel="Abrir pendência"
+              onCancel={fechar}
+              erro={erro}
+            />
           </form>
         )}
       </Modal>

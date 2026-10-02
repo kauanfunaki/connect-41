@@ -9,6 +9,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Modal } from "@/components/ui/Modal";
 import { criarContraparte, atualizarContraparte } from "@/app/(app)/cadastros-financeiros/actions";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 type Categoria = { id: string; nome: string };
 /** Centros ativos da empresa — o que se pode escolher como padrão. */
@@ -22,15 +23,12 @@ type Centro = { id: string; nome: string };
 /** Rodapé dos dois modais: erro à esquerda, Cancelar e o primário à direita. */
 function Rodape({ erro, pendente, rotulo, onCancelar }: { erro: string | null; pendente: boolean; rotulo: string; onCancelar: () => void }) {
   return (
-    <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-      {erro && <span className="mr-auto text-[12px] text-danger">{erro}</span>}
-      <Button type="button" variant="secondary" onClick={onCancelar}>
-        Cancelar
-      </Button>
-      <Button type="submit" disabled={pendente}>
-        {pendente ? "Salvando…" : rotulo}
-      </Button>
-    </div>
+    <FormFooter
+      pending={pendente}
+      submitLabel={rotulo}
+      onCancel={onCancelar}
+      erro={erro}
+    />
   );
 }
 

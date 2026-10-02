@@ -11,6 +11,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { CornerDownLeft } from "lucide-react";
 import { Selo } from "@/components/ui/Selo";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 export type CheckState = {
   status: "PENDENTE" | "CONFERIDO" | "DIVERGENTE" | "NAO_APLICAVEL";
@@ -251,15 +252,13 @@ export function ItemConferenciaRow({ item, current, referencia, action, canEdit 
             </CampoForm>
           </FieldGrid>
 
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            {state?.error && <p className="mr-auto text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
-            <Button variant="secondary" onClick={() => setOpen(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Salvando…" : "Salvar item"}
-            </Button>
-          </div>
+          <FormFooter
+            pending={isPending}
+            submitLabel="Salvar item"
+            onCancel={() => setOpen(false)}
+            erro={state?.error}
+            semDivisoria
+          />
         </form>
       )}
     </div>

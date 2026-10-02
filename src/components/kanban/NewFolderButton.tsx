@@ -7,6 +7,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 import { Button } from "@/components/ui/Button";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 type Props = {
   action: (prev: PipelineState, form: FormData) => Promise<PipelineState>;
@@ -41,14 +42,12 @@ export function NewFolderButton({ action }: Props) {
           {state?.error && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{state.error}</p>}
           {/* Rodapé de modal no padrão (30/09): Cancelar e Criar à direita,
               com divisor — era um "Criar" de largura inteira, sem Cancelar. */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-              Cancelar
-            </Button>
-            <Button variant="primary" type="submit" disabled={isPending}>
-              {isPending ? "Criando…" : "Criar"}
-            </Button>
-          </div>
+          <FormFooter
+            pending={isPending}
+            pendingLabel="Criando…"
+            submitLabel="Criar"
+            onCancel={() => setOpen(false)}
+          />
         </form>
       </Modal>
     </>

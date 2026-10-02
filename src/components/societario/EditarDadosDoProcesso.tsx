@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { atualizarDadosDoProcesso, type ProcessoState } from "@/app/(app)/processos/actions";
 import { CamposDoProcesso, type ValoresDoProcesso } from "./CamposDoProcesso";
+import { FormFooter } from "@/components/ui/FormFooter";
 
 type Props = {
   processoId: string;
@@ -51,14 +52,10 @@ function Formulario({ processoId, responsaveis, valores, onFechar }: Props & { o
         <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{estado.error}</p>
       )}
 
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-        <Button variant="secondary" type="button" onClick={onFechar}>
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "Salvando…" : "Salvar"}
-        </Button>
-      </div>
+      <FormFooter
+        pending={isPending}
+        onCancel={onFechar}
+      />
     </form>
   );
 }
