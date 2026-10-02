@@ -13,7 +13,28 @@ const CABECALHO = "text-left text-[11px] uppercase tracking-wide text-fg-muted b
 export function TabelaDoRealizado({ meses }: { meses: MesDoFluxo[] }) {
   const maior = Math.max(1, ...meses.flatMap((m) => [m.entradas, m.saidas]));
   return (
-    <div className="c41-tabela overflow-x-auto border border-border rounded-lg bg-surface">
+    <>
+      {/* No celular, um cartão por mês (02/10/2026): a tabela de cinco colunas
+          rolava de lado no portal e cortava os títulos. */}
+      <ul className="sm:hidden flex flex-col gap-2">
+        {meses.map((m) => (
+          <li key={m.competencia} className="rounded-lg border border-border bg-surface px-4 py-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="font-medium text-fg">{m.rotulo}</span>
+              <span className="text-right">
+                <span className="block text-[11px] text-fg-muted">Acumulado</span>
+                <span className={`tabular-nums font-semibold ${tomDoValor(m.saldoAcumulado)}`}>{moeda(m.saldoAcumulado)}</span>
+              </span>
+            </div>
+            <dl className="mt-2 grid grid-cols-3 gap-2">
+              <ParNoCartao rotulo="Entradas" valor={moeda(m.entradas)} tom="text-success" />
+              <ParNoCartao rotulo="Saídas" valor={moeda(m.saidas)} tom="text-danger" />
+              <ParNoCartao rotulo="Saldo do mês" valor={moeda(m.saldoDoMes)} tom={tomDoValor(m.saldoDoMes)} />
+            </dl>
+          </li>
+        ))}
+      </ul>
+    <div className="hidden sm:block c41-tabela overflow-x-auto border border-border rounded-lg bg-surface">
       <table className="w-full min-w-[720px] text-[13px]">
         <thead>
           <tr className={CABECALHO}>
@@ -45,6 +66,17 @@ export function TabelaDoRealizado({ meses }: { meses: MesDoFluxo[] }) {
           ))}
         </tbody>
       </table>
+    </div>
+    </>
+  );
+}
+
+/** Rótulo em cima e valor embaixo — os cartões que fazem as vezes da tabela no celular. */
+function ParNoCartao({ rotulo, valor, tom = "text-fg" }: { rotulo: string; valor: React.ReactNode; tom?: string }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[11px] text-fg-muted">{rotulo}</dt>
+      <dd className={`text-[12.5px] tabular-nums ${tom}`}>{valor}</dd>
     </div>
   );
 }
@@ -154,7 +186,23 @@ export function TabelaDoConsolidado({
     );
 
   return (
-    <div className="c41-tabela overflow-x-auto border border-border rounded-lg bg-surface">
+    <>
+      {/* No celular, um cartão por empresa — ver `TabelaDoRealizado`. */}
+      <ul className="sm:hidden flex flex-col gap-2">
+        {linhas.map((l) => (
+          <li key={l.companyId} className="rounded-lg border border-border bg-surface px-4 py-3">
+            <p className="font-medium text-fg">{nomes.get(l.companyId) ?? "—"}</p>
+            <dl className="mt-2 grid grid-cols-3 gap-2">
+              <ParNoCartao rotulo="Pago no mês" valor={moeda(l.pago)} />
+              <ParNoCartao rotulo="Recebido" valor={moeda(l.recebido)} />
+              <ParNoCartao rotulo="Saldo" valor={moeda(l.saldo)} tom={tomDoValor(l.saldo)} />
+              <ParNoCartao rotulo="Vencidas a pagar" valor={vencidas(l.companyId, l.vencidasPagar, "/pagar")} />
+              <ParNoCartao rotulo="Vencidas a receber" valor={vencidas(l.companyId, l.vencidasReceber, "/receber")} />
+            </dl>
+          </li>
+        ))}
+      </ul>
+    <div className="hidden sm:block c41-tabela overflow-x-auto border border-border rounded-lg bg-surface">
       <table className="w-full min-w-[760px] text-[13px]">
         <thead>
           <tr className={CABECALHO}>
@@ -180,5 +228,6 @@ export function TabelaDoConsolidado({
         </tbody>
       </table>
     </div>
+    </>
   );
 }
