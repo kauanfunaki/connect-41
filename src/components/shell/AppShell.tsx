@@ -98,7 +98,6 @@ function TelasFixadas({ telas }: { telas: TelaNavegavel[] }) {
   );
 }
 
-type NotificationEntry = { id: string; message: string; read: boolean; href: string | null; createdAt: string };
 
 type Props = {
   tenantId: string;
@@ -123,7 +122,6 @@ type Props = {
   sectorHostSuffix: string;
   canOpenAdmin: boolean;
   unreadCount: number;
-  notifications: NotificationEntry[];
   /** O módulo das solicitações do portal está ligado — mostra "Solicitações" no Geral. */
   solicitacoesLigadas?: boolean;
   profileName: string;
@@ -149,7 +147,6 @@ export function AppShell({
   sectorHostSuffix,
   canOpenAdmin,
   unreadCount,
-  notifications,
   solicitacoesLigadas = false,
   profileName,
   profileRoleLabel,
@@ -409,7 +406,7 @@ export function AppShell({
             >
               <CircleHelp size={16} />
             </Link>
-            <NotificationBell unreadCount={unreadCount} notifications={notifications} />
+            <NotificationBell unreadCount={unreadCount} />
             {/* Configurações saiu do rodapé da sidebar para o topo, só o ícone,
                 ao lado de notificação e perfil (pedido de 30/09). Admin cai na
                 administração do workspace; os outros, na própria conta. */}
