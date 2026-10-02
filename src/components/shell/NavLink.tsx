@@ -141,7 +141,7 @@ type SectorNavItemProps = {
   label: string;
   color: string;
   icon?: React.ReactNode;
-  /** Troca o ambiente para o setor (ver `trocarSetor` no ContextSwitcher). */
+  /** Troca o ambiente para o setor (ver `trocarSetor` em shell/contexto.ts). */
   onEntrar: () => void;
 };
 
