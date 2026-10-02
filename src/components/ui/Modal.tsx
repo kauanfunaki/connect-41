@@ -11,6 +11,8 @@ type Props = {
   onClose: () => void;
   title?: string;
   maxWidth?: string; // ex: "max-w-lg" — default abaixo
+  /** Fundo desfocado em vez de só escurecido — para janelas de navegação, como a troca de setor. */
+  desfocar?: boolean;
   children: React.ReactNode;
 };
 
@@ -24,7 +26,7 @@ type Props = {
 // na hidratação fica no lugar — `document` não existe lá — e muda no navegador.
 const semAssinatura = () => () => {};
 
-export function Modal({ open, onClose, title, maxWidth = "max-w-md", children }: Props) {
+export function Modal({ open, onClose, title, maxWidth = "max-w-md", desfocar = false, children }: Props) {
   const panelRef = useDialog(open, onClose);
   const titleId = useId();
   const noNavegador = useSyncExternalStore(semAssinatura, () => true, () => false);
@@ -33,7 +35,7 @@ export function Modal({ open, onClose, title, maxWidth = "max-w-md", children }:
 
   const modal = (
     <div
-      className="c41-esmaecer fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-4"
+      className={`c41-esmaecer fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4 ${desfocar ? "bg-black/40 backdrop-blur-sm" : "bg-black/60"}`}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

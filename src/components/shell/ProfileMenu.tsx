@@ -1,10 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Check, ChevronDown } from "lucide-react";
+import { ArrowLeftRight, ChevronDown } from "lucide-react";
 import { Dropdown, DropdownItem, DropdownSeparator } from "@/components/ui/Dropdown";
 import { AvatarImage } from "@/components/shared/AvatarImage";
-import { TODOS_OS_SETORES, trocarSetor, trocarTenant } from "@/components/shell/contexto";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
 type Sector = { code: string; label: string; color: string };
@@ -19,31 +18,25 @@ type Props = {
   sectors: Sector[];
   /** `null` = "Todos os setores". */
   activeSector: string | null;
-  /** Domínio-base e sufixo do host de setor, do layout — ver `contexto.ts`. */
-  appDomain: string | null;
-  sectorHostSuffix: string;
+  /** Abre a janela de troca de setor e escritório (`TrocaDeContexto`). */
+  onTrocar: () => void;
 };
 
 // O menu do usuário (redesenho de 02/10/2026, pedido de 01/10):
 // • botão e menu da mesma largura (220px); no celular o botão é só a foto;
 // • a troca de setor e de escritório veio para cá — era o cartão embaixo da
-//   logo, cujo lugar ficou com a busca;
+//   logo, cujo lugar ficou com a busca (e na tarde de 02/10 virou janela
+//   própria — ver abaixo);
 // • saiu "Alterar foto", que já está em Configurações › Perfil;
 // • cada seção só aparece para quem tem mais de uma opção.
-export function ProfileMenu({
-  name,
-  roleLabel,
-  photoUrl,
-  tenants,
-  currentTenantId,
-  sectors,
-  activeSector,
-  appDomain,
-  sectorHostSuffix,
-}: Props) {
+// Desde 02/10/2026 (pedido do Kauan: o menu ficava poluído com as duas listas),
+// setor e escritório saem do menu: um item só, com o lugar atual embaixo, abre
+// a janela de troca no centro da tela.
+export function ProfileMenu({ name, roleLabel, photoUrl, tenants, currentTenantId, sectors, activeSector, onTrocar }: Props) {
   const router = useRouter();
   const podeTrocarSetor = sectors.length > 1;
   const podeTrocarTenant = tenants.length > 1;
+  const setorAtual = sectors.find((s) => s.code === activeSector) ?? null;
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -54,9 +47,6 @@ export function ProfileMenu({
     <Dropdown
       align="right"
       width={220}
-      // O menu inteiro na tela, com o Sair à vista; quem rola é a lista de
-      // setores, quando passa de seis.
-      alturaMaxima="max-h-[calc(100vh-80px)]"
       trigger={({ open, toggle }) => (
         <button
           type="button"
@@ -73,88 +63,49 @@ export function ProfileMenu({
         </button>
       )}
     >
-      <div className="flex items-center gap-3 p-1.5 pb-3 mb-1 border-b border-border">
-        <AvatarImage src={photoUrl} name={name} size={38} bordered={false} />
-        <div className="min-w-0">
-          <p className="text-[14px] font-semibold text-fg truncate">{name}</p>
-          <p className="text-[12px] text-fg-muted truncate">{roleLabel}</p>
-        </div>
-      </div>
+      {({ close }) => (
+        <>
+          <div className="flex items-center gap-3 p-1.5 pb-3 mb-1 border-b border-border">
+            <AvatarImage src={photoUrl} name={name} size={38} bordered={false} />
+            <div className="min-w-0">
+              <p className="text-[14px] font-semibold text-fg truncate">{name}</p>
+              <p className="text-[12px] text-fg-muted truncate">{roleLabel}</p>
+            </div>
+          </div>
 
-      {podeTrocarSetor && (
-        <Secao rotulo="Setor">
-          <ItemComMarca ativo={!activeSector} onClick={() => trocarSetor(TODOS_OS_SETORES, appDomain, sectorHostSuffix)}>
-            Todos os setores
-          </ItemComMarca>
-          {sectors.map((s) => (
-            <ItemComMarca
-              key={s.code}
-              ativo={s.code === activeSector}
-              onClick={() => trocarSetor(s.code, appDomain, sectorHostSuffix)}
+          {(podeTrocarSetor || podeTrocarTenant) && (
+            <DropdownItem
+              onClick={() => {
+                // Fecha o menu antes: a janela abre por cima, sem o menu atrás.
+                close();
+                onTrocar();
+              }}
             >
-              <span aria-hidden className="inline-block size-2 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
-              <span className="truncate">{s.label}</span>
-            </ItemComMarca>
-          ))}
-        </Secao>
-      )}
+              <span className="flex items-center gap-2.5 min-w-0">
+                <ArrowLeftRight size={15} className="flex-shrink-0 text-fg-muted" />
+                <span className="min-w-0">
+                  <span className="block">{podeTrocarTenant ? "Trocar setor ou escritório" : "Trocar de setor"}</span>
+                  <span className="flex items-center gap-1.5 text-[11.5px] font-normal text-fg-muted truncate">
+                    {podeTrocarTenant && <span className="truncate">{tenants.find((t) => t.id === currentTenantId)?.name}</span>}
+                    {podeTrocarTenant && <span aria-hidden>·</span>}
+                    {setorAtual && (
+                      <span aria-hidden className="inline-block size-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: setorAtual.color }} />
+                    )}
+                    <span className="truncate">{setorAtual?.label ?? "Todos os setores"}</span>
+                  </span>
+                </span>
+              </span>
+            </DropdownItem>
+          )}
 
-      {podeTrocarTenant && (
-        <Secao rotulo="Escritório">
-          {tenants.map((t) => (
-            <ItemComMarca
-              key={t.id}
-              ativo={t.id === currentTenantId}
-              onClick={() => t.id !== currentTenantId && trocarTenant(t.id, appDomain, sectorHostSuffix)}
-            >
-              <AvatarImage src={t.logoUrl} name={t.name} size={20} shape="lg" fontSize={10} />
-              <span className="truncate">{t.name}</span>
-            </ItemComMarca>
-          ))}
-        </Secao>
+          {(podeTrocarSetor || podeTrocarTenant) && <DropdownSeparator />}
+          <DropdownItem onClick={() => router.push("/configuracoes")}>Configurações do Perfil</DropdownItem>
+          <DropdownSeparator />
+          <DropdownItem danger onClick={handleLogout}>
+            Sair
+          </DropdownItem>
+        </>
       )}
-
-      {(podeTrocarSetor || podeTrocarTenant) && <DropdownSeparator />}
-      <DropdownItem onClick={() => router.push("/configuracoes")}>Configurações do Perfil</DropdownItem>
-      <DropdownSeparator />
-      <DropdownItem danger onClick={handleLogout}>
-        Sair
-      </DropdownItem>
     </Dropdown>
-  );
-}
-
-/** Rótulo em caixa alta e a lista embaixo — o desenho do painel do `FilterButton`. */
-function Secao({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
-  return (
-    <div className="py-1">
-      <p className="px-2 pt-1 pb-1 text-[11px] font-semibold text-fg-muted uppercase tracking-[0.04em]">{rotulo}</p>
-      {/* Com muitos setores, a lista rola em vez de esticar o menu. */}
-      <div className="scroll-y max-h-[224px] overflow-y-auto">{children}</div>
-    </div>
-  );
-}
-
-function ItemComMarca({
-  ativo,
-  onClick,
-  children,
-}: {
-  ativo: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-current={ativo ? "true" : undefined}
-      className={`w-full flex items-center gap-2 text-left px-2 py-2 rounded-lg text-[length:var(--fs-dropdown)] font-medium transition-colors ${
-        ativo ? "text-fg" : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
-      }`}
-    >
-      <span className="min-w-0 flex-1 flex items-center gap-2">{children}</span>
-      {ativo && <Check size={14} className="flex-shrink-0 text-brand" />}
-    </button>
   );
 }
