@@ -17,6 +17,7 @@ import { PublicoDoChat } from "@/components/admin/PublicoDoChat";
 import { audienciaDoChat } from "@/lib/ia/chat/agentes";
 import { painelDoOrquestrador } from "@/lib/ia/chat/painel";
 import { PainelDoOrquestrador } from "@/components/admin/PainelDoOrquestrador";
+import { AvaliacoesDoChat } from "@/components/admin/AvaliacoesDoChat";
 import { AGENTES_DO_CHAT } from "@/lib/ia/chat/regras";
 import { getSectorMaps } from "@/lib/sectors";
 import type { LinhaDeAgente } from "@/lib/ia/data";
@@ -118,6 +119,7 @@ export default async function AgentesDeIAPage() {
         </div>
         <PublicoDoChat todos={audiencia === "TODOS"} disponivel={audiencia !== null} />
         {painel && <PainelDoOrquestrador dados={painel} />}
+        {painel && <AvaliacoesDoChat dados={painel} />}
         {doChat.map((linha) => (
           <AgenteCard key={linha.def.code} linha={linha} podeEditar />
         ))}
