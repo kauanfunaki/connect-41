@@ -9,6 +9,7 @@ import { EstadoDasConexoes } from "@/components/whatsapp/EstadoDasConexoes";
 import { listarConversas, saudeDasConexoes } from "@/lib/whatsapp/data";
 import { filtrarConversas, recorteDaUrl, type RecorteDaLista } from "@/lib/whatsapp/conversas";
 import { setorDoModulo, isModuleEnabled } from "@/lib/modules";
+import { pessoasDoAtendimento } from "@/lib/whatsapp/equipe";
 
 const MODULE = "recrutamento_whatsapp";
 
@@ -35,13 +36,15 @@ export default async function ConversasDeWhatsappPage({
   const ctx = await getAuthContext();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
   // Setor que opera o módulo neste tenant, não o de origem — ver `setorDoModulo`.
-  if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? "recrutamento")) notFound();
+  const setor = ctx.tenantId ? ((await setorDoModulo(ctx.tenantId, MODULE)) ?? "recrutamento") : "recrutamento";
+  if (!ctx.tenantId || !canActOnSector(ctx, setor)) notFound();
 
   const agora = new Date();
   // Juntas: a consulta ao provedor tem timeout próprio, e a lista não espera por ela.
-  const [conversas, conexoes] = await Promise.all([
+  const [conversas, conexoes, pessoas] = await Promise.all([
     listarConversas(ctx.tenantId, agora),
     saudeDasConexoes(ctx.tenantId, agora),
+    pessoasDoAtendimento(ctx.tenantId, setor),
   ]);
 
   return (
@@ -68,7 +71,13 @@ export default async function ConversasDeWhatsappPage({
           };
         })}
       />
-      <ConversasLista conversas={filtrarConversas(conversas, recorte, ctx.userId)} agora={agora} userId={ctx.userId} filtrada={recorte !== "todas"} />
+      <ConversasLista
+        conversas={filtrarConversas(conversas, recorte, ctx.userId)}
+        agora={agora}
+        userId={ctx.userId}
+        filtrada={recorte !== "todas"}
+        pessoas={pessoas}
+      />
     </PageContainer>
   );
 }

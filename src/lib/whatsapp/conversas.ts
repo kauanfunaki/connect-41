@@ -135,6 +135,45 @@ export function podeAssumir(
   return { pode: true };
 }
 
+/**
+ * Dá para passar a conversa para esta pessoa? (02/10/2026)
+ *
+ * Como o assumir, mas por outra pessoa: tira do assistente se estava com ele, e
+ * a conversa passa a ser de quem recebeu. Atendimento encerrado não se
+ * transfere — não há o que atender até o candidato escrever de novo, e a
+ * próxima mensagem já abre outro.
+ */
+export function podeTransferir(
+  c: { optedOutAt: Date | null; atendimentoEncerradoEm: Date | null; assignedToId: string | null },
+  paraId: string
+): VereditoDeResposta {
+  if (c.optedOutAt) return { pode: false, motivo: "O candidato pediu para não receber mais mensagens." };
+  if (c.atendimentoEncerradoEm) return { pode: false, motivo: "O atendimento está encerrado." };
+  if (c.assignedToId === paraId) return { pode: false, motivo: "Já está com essa pessoa." };
+  return { pode: true };
+}
+
+// ─── Em lote (02/10/2026) ───────────────────────────────────────────────────
+
+/** Conversas por ação em lote — a lista da tela mostra até 200. */
+export const MAX_NO_LOTE = 100;
+
+export type AcaoEmLote =
+  | { tipo: "encerrar"; desfecho: string }
+  | { tipo: "devolver" }
+  | { tipo: "transferir"; paraId: string };
+
+/** O que voltou de uma ação em lote: quantas foram, e as que ficaram de fora com o motivo. */
+export type ResultadoDoLote = { feitas: number; puladas: { nome: string; motivo: string }[] };
+
+/** O resultado em uma frase, para a tela. */
+export function resumoDoLote(r: ResultadoDoLote, acao: AcaoEmLote["tipo"]): string {
+  const verbo = { encerrar: ["encerrada", "encerradas"], devolver: ["devolvida ao assistente", "devolvidas ao assistente"], transferir: ["transferida", "transferidas"] }[acao];
+  const feitas = r.feitas === 0 ? "Nenhuma conversa mudou" : `${r.feitas} ${r.feitas === 1 ? `conversa ${verbo[0]}` : `conversas ${verbo[1]}`}`;
+  if (r.puladas.length === 0) return `${feitas}.`;
+  return `${feitas}; ${r.puladas.length} ${r.puladas.length === 1 ? "ficou" : "ficaram"} de fora.`;
+}
+
 /** Soltar devolve a conversa à fila, sem responsável. Só quem está com ela solta. */
 export function podeSoltar(c: { assignedToId: string | null }, userId: string): VereditoDeResposta {
   if (!c.assignedToId) return { pode: false, motivo: "Ninguém assumiu esta conversa." };
