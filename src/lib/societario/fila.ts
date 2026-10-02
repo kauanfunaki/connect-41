@@ -4,7 +4,6 @@
 // banco — e a única decisão de peso é a ordem, explicada em `ordenarFila`.
 
 import { getPrisma } from "@/lib/prisma";
-import { saoPauloParts } from "@/lib/agenda";
 import { nomeExibicao } from "@/lib/companyName";
 import {
   etapasLiberadas,
@@ -37,6 +36,19 @@ export type LinhaDaFila = {
 };
 
 /**
+ * O dia do feriado como chave "AAAA-MM-DD", lido em **UTC**.
+ *
+ * O feriado é dia de calendário gravado como meia-noite UTC
+ * (`new Date("2026-10-12")`, em admin/feriados/actions.ts). Lido em São Paulo,
+ * meia-noite UTC ainda é 21h do dia anterior: até 02/10/2026 o feriado de 12/10
+ * entrava na contagem de dias úteis como 11/10 — um domingo, que já não
+ * contava —, e o 12/10 contava como dia útil.
+ */
+export function chaveDoFeriado(data: Date): string {
+  return data.toISOString().slice(0, 10);
+}
+
+/**
  * Feriados do tenant, como chaves "AAAA-MM-DD".
  *
  * Carregados uma vez por página e passados adiante: a contagem de dias úteis é
@@ -48,7 +60,7 @@ export async function feriadosDoTenant(tenantId: string): Promise<Set<string>> {
     where: { tenantId },
     select: { date: true },
   });
-  return new Set(feriados.map((f) => saoPauloParts(f.date).dateKey));
+  return new Set(feriados.map((f) => chaveDoFeriado(f.date)));
 }
 
 const PESO_DA_SITUACAO: Record<SituacaoDoProcesso, number> = {
