@@ -44,7 +44,19 @@ function documentHref(entityType: DocumentEntityType, entityId: string): string 
 // aparece enquanto se digita, antes de a busca de dados voltar do servidor. E
 // aberta sem termo, oferece as últimas telas abertas — é o que faz o Ctrl+K
 // valer para "voltar rápido para onde eu estava".
-export function GlobalSearch({ telas = [] }: { telas?: TelaNavegavel[] }) {
+//
+// Duas variantes (02/10/2026): "lateral", compacta embaixo da logo, no lugar
+// do antigo cartão de setor e escritório, com os resultados num painel largo
+// por cima da tela; e "topo", a de sempre, para quando a lateral vira gaveta
+// (abaixo de 1024px). O AppShell mostra uma ou outra pelo tamanho da tela, e
+// o Ctrl+K vai para a que está visível.
+export function GlobalSearch({
+  telas = [],
+  variante = "topo",
+}: {
+  telas?: TelaNavegavel[];
+  variante?: "topo" | "lateral";
+}) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults>(EMPTY);
   const [open, setOpen] = useState(false);
@@ -79,6 +91,8 @@ export function GlobalSearch({ telas = [] }: { telas?: TelaNavegavel[] }) {
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        const telaGrande = window.matchMedia("(min-width: 1024px)").matches;
+        if ((variante === "lateral") !== telaGrande) return;
         e.preventDefault();
         setMobileExpanded(true);
         setOpen(true);
@@ -87,7 +101,7 @@ export function GlobalSearch({ telas = [] }: { telas?: TelaNavegavel[] }) {
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [variante]);
 
   useEffect(() => {
     if (query.trim().length < 2) return;
@@ -132,6 +146,94 @@ export function GlobalSearch({ telas = [] }: { telas?: TelaNavegavel[] }) {
     setMobileExpanded(false);
     setOpen(false);
     setQuery("");
+  }
+
+  const classeDoPainel =
+    variante === "lateral"
+      ? "scroll-y absolute left-0 top-[calc(100%+8px)] w-[480px] max-w-[calc(100vw-2rem)] bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] py-2 z-50 max-h-[420px] overflow-y-auto"
+      : "scroll-y absolute left-0 top-[calc(100%+10px)] w-full bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] py-2 z-20 max-h-[360px] overflow-y-auto";
+
+  const paineis = (
+    <>
+      {/* Aberta sem termo: as últimas telas abertas. Só aparece quando há
+          alguma — painel vazio embaixo do campo é ruído. */}
+      {open && query.trim().length < 2 && telasRecentes.length > 0 && (
+        <div className={classeDoPainel}>
+          <GrupoDeTelas label="Recentes" telas={telasRecentes} icone="relogio" onSelect={go} />
+        </div>
+      )}
+
+      {open && query.trim().length >= 2 && (
+        <div className={classeDoPainel}>
+          {/* Telas primeiro: quem digita "conc" quase sempre quer abrir a
+              conciliação, não achar um lançamento com "conc" no nome. */}
+          <GrupoDeTelas label="Telas" telas={telasEncontradas} onSelect={go} />
+          {!hasResults && telasEncontradas.length === 0 ? (
+            <p className="px-3.5 py-3 text-[13px] text-fg-muted">Nenhum resultado para &quot;{query}&quot;.</p>
+          ) : (
+            <>
+              <ResultGroup label="Empresas" items={results.companies} onSelect={(id) => go(`/empresas/${id}`)} />
+              <ResultGroup label="Pessoas" items={results.people} onSelect={(id) => go(`/pessoas/${id}`)} />
+              <ResultGroup label="Candidatos" items={results.candidatos} onSelect={(id) => go(`/candidatos/${id}`)} />
+              <ResultGroup
+                label="Kanban"
+                items={results.pipelines}
+                onSelect={(id) => {
+                  const p = results.pipelines.find((x) => x.id === id);
+                  if (p) go(boardPath(p));
+                }}
+              />
+              <ResultGroup
+                label="Tarefas"
+                items={results.tarefas}
+                onSelect={(id) => {
+                  const t = results.tarefas.find((x) => x.id === id);
+                  if (t) go(t.href);
+                }}
+              />
+              <ResultGroup label="Vagas" items={results.vagas} onSelect={(id) => go(`/vagas/${id}`)} />
+              <ResultGroup
+                label="Documentos"
+                items={results.documentos}
+                onSelect={(id) => {
+                  const doc = results.documentos.find((d) => d.id === id);
+                  if (doc) go(documentHref(doc.entityType, doc.entityId));
+                }}
+              />
+            </>
+          )}
+        </div>
+      )}
+    </>
+  );
+
+  if (variante === "lateral") {
+    return (
+      <div ref={rootRef} className="relative">
+        <div className="flex items-center gap-2 h-8 px-2.5 rounded-md border border-border bg-input-bg focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)] transition-colors">
+          <Search size={14} className="text-fg-muted flex-shrink-0" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            placeholder="Buscar…"
+            aria-label="Buscar empresas, pessoas, telas…"
+            className="w-full min-w-0 h-full bg-transparent text-[13px] text-fg placeholder:text-fg-muted outline-none border-none"
+          />
+          {!open && !query && (
+            <kbd className="inline-flex items-center flex-shrink-0 px-1.5 py-px rounded border border-border text-[10.5px] text-fg-muted font-sans">
+              Ctrl K
+            </kbd>
+          )}
+        </div>
+        {paineis}
+      </div>
+    );
   }
 
   return (
@@ -185,59 +287,7 @@ export function GlobalSearch({ telas = [] }: { telas?: TelaNavegavel[] }) {
             )}
           </div>
 
-          {/* Aberta sem termo: as últimas telas abertas. Só aparece quando há
-              alguma — painel vazio embaixo do campo é ruído. */}
-          {open && query.trim().length < 2 && telasRecentes.length > 0 && (
-            <div className="scroll-y absolute left-0 top-[calc(100%+10px)] w-full bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] py-2 z-20 max-h-[360px] overflow-y-auto">
-              <GrupoDeTelas label="Recentes" telas={telasRecentes} icone="relogio" onSelect={go} />
-            </div>
-          )}
-
-          {open && query.trim().length >= 2 && (
-            <div className="scroll-y absolute left-0 top-[calc(100%+10px)] w-full bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] py-2 z-20 max-h-[360px] overflow-y-auto">
-              {/* Telas primeiro: quem digita "conc" quase sempre quer abrir a
-                  conciliação, não achar um lançamento com "conc" no nome. */}
-              <GrupoDeTelas label="Telas" telas={telasEncontradas} onSelect={go} />
-              {!hasResults && telasEncontradas.length === 0 ? (
-                <p className="px-3.5 py-3 text-[13px] text-fg-muted">Nenhum resultado para &quot;{query}&quot;.</p>
-              ) : (
-                <>
-                  <ResultGroup
-                    label="Empresas"
-                    items={results.companies}
-                    onSelect={(id) => go(`/empresas/${id}`)}
-                  />
-                  <ResultGroup label="Pessoas" items={results.people} onSelect={(id) => go(`/pessoas/${id}`)} />
-                  <ResultGroup label="Candidatos" items={results.candidatos} onSelect={(id) => go(`/candidatos/${id}`)} />
-                  <ResultGroup
-                    label="Kanban"
-                    items={results.pipelines}
-                    onSelect={(id) => {
-                      const p = results.pipelines.find((x) => x.id === id);
-                      if (p) go(boardPath(p));
-                    }}
-                  />
-                  <ResultGroup
-                    label="Tarefas"
-                    items={results.tarefas}
-                    onSelect={(id) => {
-                      const t = results.tarefas.find((x) => x.id === id);
-                      if (t) go(t.href);
-                    }}
-                  />
-                  <ResultGroup label="Vagas" items={results.vagas} onSelect={(id) => go(`/vagas/${id}`)} />
-                  <ResultGroup
-                    label="Documentos"
-                    items={results.documentos}
-                    onSelect={(id) => {
-                      const doc = results.documentos.find((d) => d.id === id);
-                      if (doc) go(documentHref(doc.entityType, doc.entityId));
-                    }}
-                  />
-                </>
-              )}
-            </div>
-          )}
+          {paineis}
         </div>
       </div>
     </>
