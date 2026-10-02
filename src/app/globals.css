@@ -593,8 +593,37 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 @keyframes c41-folha { from { transform: translateY(100%); } to { transform: none; } }
 .c41-folha { animation: c41-folha .2s cubic-bezier(.2,.7,.2,1) backwards; }
 
+/* Chat de IA (02/10/2026): o orbe em gradiente — azul 41 + a cor do setor do
+   agente (--orbe-b) — e a borda que gira devagar no botão do canto. Decorativo:
+   as cores vêm dos tokens, e o brilho branco funciona nos dois temas. */
+@keyframes c41-gira { to { transform: rotate(360deg); } }
+.c41-orbe {
+  position: relative; overflow: hidden; border-radius: 9999px; isolation: isolate;
+  background: var(--color-brand);
+}
+.c41-orbe::before {
+  content: ""; position: absolute; inset: -45%; z-index: -1;
+  background: conic-gradient(from 0deg, var(--color-brand), var(--orbe-b, var(--color-info)), var(--color-info), var(--color-brand));
+  animation: c41-gira 7s linear infinite;
+}
+.c41-orbe::after {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(circle at 32% 28%, rgb(255 255 255 / .7), rgb(255 255 255 / 0) 45%);
+}
+/* A borda que gira: o gradiente roda num quadrado maior, recortado pela pílula. */
+.c41-borda-girando { position: relative; overflow: hidden; isolation: isolate; }
+.c41-borda-girando::before {
+  content: ""; position: absolute; inset: -150% -20%; z-index: -1;
+  background: conic-gradient(from 0deg, var(--color-brand), var(--orbe-b, var(--color-info)), var(--color-info), var(--color-brand));
+  animation: c41-gira 5s linear infinite;
+}
+/* Até a primeira abertura: um anel que pulsa de leve. */
+@keyframes c41-chamar { 0% { transform: scale(1); opacity: .55; } 80%, 100% { transform: scale(1.35); opacity: 0; } }
+.c41-chamar { animation: c41-chamar 2.4s ease-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   .c41-pagina > *, .c41-surgir, .c41-esmaecer, .c41-folha { animation: none; }
+  .c41-orbe::before, .c41-borda-girando::before, .c41-chamar { animation: none; }
 }
 
 /* Tabela padrão: o casco descola do fundo, a linha acende inteira no hover e
