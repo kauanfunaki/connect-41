@@ -69,7 +69,7 @@ export default async function ComunicacaoPage({
 
       {selecionada && conversa ? (
         <>
-          <h2 className="text-[14px] font-semibold text-fg mb-3">{selecionada.nome}</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">{selecionada.nome}</h2>
           {conversa.mensagens.length === 0 ? (
             <Card className="mb-4">
               <EmptyState

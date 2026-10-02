@@ -40,7 +40,7 @@ export function AssistenteDoSocietario() {
 
   return (
     <Card as="section" className="p-4 flex flex-col gap-3">
-      <h2 className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-fg">
+      <h2 className="inline-flex items-center gap-1.5 text-[length:var(--fs-card-title)] font-semibold text-fg">
         <Sparkles size={16} className="text-brand" aria-hidden />
         Assistente do Societário
       </h2>

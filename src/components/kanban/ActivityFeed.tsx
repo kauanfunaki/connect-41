@@ -515,7 +515,7 @@ export function ActivityFeed({ items, canAct, mentionUsers, pipelineItemId, task
   return (
     <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 flex flex-col h-full min-h-[400px]">
       <div className="flex items-center justify-between gap-2 mb-3 flex-shrink-0">
-        <h2 className="text-[13px] font-semibold text-fg">Comentários e atividade</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Comentários e atividade</h2>
         <div className="flex items-center gap-2">
           {items.length > 0 && (
             <Button

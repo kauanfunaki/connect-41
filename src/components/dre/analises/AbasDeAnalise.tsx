@@ -577,7 +577,7 @@ export async function AbaIndicadores({ tenantId, companyId, mes }: Base) {
     <>
       {CATEGORIAS.map((cat) => (
         <section key={cat} className="mb-5">
-          <h3 className="text-[13px] font-semibold text-fg mb-2">{cat}</h3>
+          <h3 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">{cat}</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {indicadores
               .filter((i) => i.categoria === cat)
@@ -694,7 +694,7 @@ export async function AbaCfo({ tenantId, companyId, mes, pergunta }: Base & { pe
           {resposta && (
             <Card className="p-5 flex flex-col gap-4">
               <div className="flex items-start justify-between gap-3">
-                <h3 className="text-[15px] font-semibold text-fg">{resposta.titulo}</h3>
+                <h3 className="text-[length:var(--fs-card-title)] font-semibold text-fg">{resposta.titulo}</h3>
                 <Badge variant={COR_DA_PRIORIDADE[resposta.prioridade]}>Prioridade {resposta.prioridade.toLowerCase()}</Badge>
               </div>
               <Secao titulo="Diagnóstico" texto={resposta.diagnostico} />

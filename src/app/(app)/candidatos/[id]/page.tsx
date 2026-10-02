@@ -153,7 +153,7 @@ export default async function CandidatoPage({
 
       {/* Tags / Skills — banco de talentos */}
       <Card className="p-5 mb-4">
-        <h2 className="text-[14px] font-semibold text-fg mb-1">Tags / Habilidades</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">Tags / Habilidades</h2>
         <p className="text-[12px] text-fg-muted mb-3">
           Torna o candidato pesquisável no banco de talentos, mesmo que não avance nesta vaga.
         </p>
@@ -171,7 +171,7 @@ export default async function CandidatoPage({
 
       {/* Identificação */}
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
-        <h2 className="text-[14px] font-semibold text-fg mb-4">Identificação</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Identificação</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
           <InfoRow label="CPF" value={maskCpf(person.cpf)} mono />
           <InfoRow
@@ -189,7 +189,7 @@ export default async function CandidatoPage({
 
       {/* Contato */}
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
-        <h2 className="text-[14px] font-semibold text-fg mb-4">Contato</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Contato</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
           <InfoRow label="E-mail" value={person.email} />
           <InfoRow label="Telefone" value={formatPhone(person.phone)} />
@@ -199,7 +199,7 @@ export default async function CandidatoPage({
       {/* Endereço */}
       {fullAddress && (
         <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
-          <h2 className="text-[14px] font-semibold text-fg mb-4">Endereço</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Endereço</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
             <InfoRow label="Logradouro" value={[person.addressStreet, person.addressNumber].filter(Boolean).join(", ")} />
             <InfoRow label="Complemento" value={person.addressComplement} />
@@ -212,7 +212,7 @@ export default async function CandidatoPage({
 
       {/* Candidaturas */}
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
-        <h2 className="text-[14px] font-semibold text-fg mb-3">
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">
           Candidaturas {candidaturas.length > 0 && `(${candidaturas.length})`}
         </h2>
 

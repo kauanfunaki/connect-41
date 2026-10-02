@@ -185,7 +185,7 @@ async function Fila({
 
       {fila.paraHoje.length > 0 && (
         <Card className="p-4 mb-4 border-warning/40">
-          <h2 className="text-[14px] font-semibold mb-2 flex items-center gap-2">
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold mb-2 flex items-center gap-2">
             <AlarmClock size={16} className="text-warning" /> Próximas ações de hoje
           </h2>
           <ul className="flex flex-col gap-1.5 text-[13px]">
@@ -539,7 +539,7 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
     <>
       <Card className="p-4 mb-4">
         <div className="flex flex-wrap items-center gap-2 mb-1">
-          <h2 className="text-[14px] font-semibold">Régua de lembretes por e-mail</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold">Régua de lembretes por e-mail</h2>
           {d.config.ligada ? <Badge variant="success">Ligada</Badge> : <Badge variant="info">Desligada</Badge>}
         </div>
         <p className="text-[12px] text-fg-muted mb-3 max-w-[860px]">
@@ -552,7 +552,7 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
       </Card>
 
       <Card className="p-4 mb-4">
-        <h2 className="text-[14px] font-semibold mb-1">Empresas fora da régua</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold mb-1">Empresas fora da régua</h2>
         <p className="text-[12px] text-fg-muted mb-3">Para o cliente que cobra os próprios sacados. A fila continua mostrando os títulos.</p>
         {gerencia && <EmpresaNaRegua empresas={empresas.filter((e) => !fora.has(e.id))} fora />}
         {d.foraDaRegua.length === 0 ? (
@@ -574,7 +574,7 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
       </Card>
 
       <div className="flex flex-wrap items-center gap-2 mb-2">
-        <h2 className="text-[14px] font-semibold">Últimos envios</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold">Últimos envios</h2>
         {d.errosNaSemana > 0 && <Badge variant="danger">{d.errosNaSemana} com erro nos últimos 7 dias</Badge>}
       </div>
       {d.envios.length === 0 ? (

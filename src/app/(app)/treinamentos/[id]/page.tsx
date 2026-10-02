@@ -70,7 +70,7 @@ export default async function TreinamentoPage({
       )}
 
       <Card className="p-5">
-        <h2 className="text-[14px] font-semibold text-fg mb-3">
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">
           Turmas {training.classes.length > 0 && `(${training.classes.length})`}
         </h2>
 

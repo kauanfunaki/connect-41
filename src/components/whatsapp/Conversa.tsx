@@ -80,7 +80,7 @@ export function Conversa({ conversa, agora, candidaturas, userId }: Props) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-[15px] font-semibold text-fg">
+              <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">
                 {conversa.nome ?? telefoneLegivel(conversa.waPhone)}
               </h2>
               <Badge variant={SITUACAO_VARIANTE[situacao]}>{SITUACAO_LABEL[situacao]}</Badge>

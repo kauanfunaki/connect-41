@@ -24,7 +24,7 @@ export function AnaliseDeContas({ linhas, hojeKey, aPagar }: { linhas: ContaPara
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <section>
-        <h2 className="text-[14px] font-semibold text-fg mb-2">Faixas de atraso</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">Faixas de atraso</h2>
         <div className="c41-tabela border border-border rounded-lg bg-surface overflow-x-auto">
           <table className="w-full min-w-[420px] text-[13px]">
             <thead>
@@ -57,7 +57,7 @@ export function AnaliseDeContas({ linhas, hojeKey, aPagar }: { linhas: ContaPara
       </section>
 
       <section>
-        <h2 className="text-[14px] font-semibold text-fg mb-2">{aPagar ? "Maiores fornecedores em aberto" : "Maiores clientes em aberto"}</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">{aPagar ? "Maiores fornecedores em aberto" : "Maiores clientes em aberto"}</h2>
         <div className="c41-tabela border border-border rounded-lg bg-surface overflow-x-auto">
           <table className="w-full min-w-[460px] text-[13px]">
             <thead>

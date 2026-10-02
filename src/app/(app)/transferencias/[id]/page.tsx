@@ -126,7 +126,7 @@ export default async function HandoffDetailPage({
       </Card>
 
       <Card className="p-5 mb-4">
-        <h2 className="text-[14px] font-semibold text-fg mb-2">Informações adicionais</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">Informações adicionais</h2>
         {handoff.message ? (
           <p className="text-[length:var(--fs-body)] text-fg-secondary whitespace-pre-wrap">{handoff.message}</p>
         ) : (
@@ -134,7 +134,7 @@ export default async function HandoffDetailPage({
         )}
         {handoff.description && (
           <>
-            <h2 className="text-[14px] font-semibold text-fg mb-2 mt-4">Descrição</h2>
+            <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2 mt-4">Descrição</h2>
             <p className="text-[length:var(--fs-body)] text-fg-secondary whitespace-pre-wrap">{handoff.description}</p>
           </>
         )}
@@ -233,7 +233,7 @@ export default async function HandoffDetailPage({
 
       {views.length > 0 && (
         <Card className="p-5">
-          <h2 className="text-[14px] font-semibold text-fg mb-2 flex items-center gap-1.5">
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2 flex items-center gap-1.5">
             <Eye size={14} className="text-fg-muted" />
             Visualizado por
           </h2>

@@ -182,7 +182,7 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
 
           {exSocios.length > 0 && (
             <section className="mb-4" aria-labelledby="ex-socios">
-              <h2 id="ex-socios" className="text-[13px] font-semibold text-fg mb-2">
+              <h2 id="ex-socios" className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">
                 Ex-sócios
               </h2>
               <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] divide-y divide-border">
@@ -210,7 +210,7 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
           {/* O que o cadastro responde, dito na tela — senão ele vira uma lista
               que ninguém sabe para que serve. */}
           <Card className="p-4">
-            <h2 className="text-[13px] font-semibold text-fg mb-2">O que isto responde na viabilidade</h2>
+            <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">O que isto responde na viabilidade</h2>
             <p className="text-[12.5px] text-fg-secondary">
               <strong>Reside no local?</strong>{" "}
               {resideNoLocal === true ? (

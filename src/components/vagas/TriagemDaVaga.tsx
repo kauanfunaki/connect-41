@@ -90,7 +90,7 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
     <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
         <div>
-          <h2 className="text-[14px] font-semibold text-fg">Triagem de currículos</h2>
+          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Triagem de currículos</h2>
           <p className="text-[12px] text-fg-muted mt-0.5 max-w-[640px]">
             A IA confere o currículo contra cada requisito e aponta a evidência; a nota sai da tabela abaixo. Ela
             <strong className="font-medium text-fg-secondary"> só ordena os candidatos — nunca reprova ninguém</strong>. Nome, idade, cidade e

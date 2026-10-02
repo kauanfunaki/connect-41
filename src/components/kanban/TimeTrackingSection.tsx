@@ -64,7 +64,7 @@ export function TimeTrackingSection({ canAct, estimateMinutes, entries, estimate
   return (
     <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-[13px] font-semibold text-fg">Tempo</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Tempo</h2>
         <div className="flex items-center gap-3 text-[11px] text-fg-muted">
           {editingEstimate ? (
             <div className="flex items-center gap-1.5">

@@ -64,7 +64,7 @@ export function ImportarLancamentosCsv({ companyId }: { companyId: string }) {
     <Card className="p-4 flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <Upload size={16} className="text-brand" />
-        <h2 className="text-[14px] font-semibold text-fg">Importar lançamentos por CSV</h2>
+        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Importar lançamentos por CSV</h2>
       </div>
       <p className="text-[12px] text-fg-secondary max-w-[70ch]">
         Uma linha por conta. Vírgula ou ponto e vírgula, datas em <code>dd/mm/aaaa</code> ou <code>aaaa-mm-dd</code>.
