@@ -8,14 +8,21 @@ import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { SeloDaCobranca, SeloDoAcordo } from "@/components/cobranca/SeloDaCobranca";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
+import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { formatInstantDate } from "@/lib/format";
+import { saoPauloParts } from "@/lib/agenda";
 import { moeda } from "@/lib/financeiro/formato";
-import { FAIXAS_DE_ATRASO } from "@/lib/financeiro/analise";
-import { ROTULO_DO_CANAL, ROTULO_DO_RESULTADO } from "@/lib/financeiro/cobranca/regras";
+import { FAIXAS_DE_ATRASO, type ChaveDaFaixa } from "@/lib/financeiro/analise";
+import { ROTULO_DA_SITUACAO, ROTULO_DO_CANAL, ROTULO_DO_RESULTADO } from "@/lib/financeiro/cobranca/regras";
 import { cobrancaDoCliente, MODULO_DE_COBRANCA } from "@/lib/financeiro/cobranca/consultas";
 
 export const dynamic = "force-dynamic";
+
+/** O dia em São Paulo, em ISO — o valor de data que o funil espera. */
+const diaEmSaoPaulo = (d: Date) => saoPauloParts(d).dateKey;
+
+const rotuloDoAtraso = (faixa: ChaveDaFaixa) => FAIXAS_DE_ATRASO.find((f) => f.chave === faixa)?.rotulo ?? "";
 
 /**
  * A cobrança vista pelo cliente: o que os sacados dele devem, em que pé está a
@@ -75,30 +82,68 @@ export default async function PortalCobrancaPage() {
             ))}
           </CartoesNoCelular>
 
+          {/* Funil nas colunas (02/10): a lista vem inteira (até 500), então
+              filtra no navegador. Último contato filtra pela data, pelo canal
+              e pelo resultado — os três que a célula mostra. */}
+          <TabelaFiltravel
+            linhas={titulos.map((t) => ({
+              id: t.id,
+              valores: {
+                vencimento: diaEmSaoPaulo(t.vencimento),
+                cliente: t.sacadoNome,
+                empresa: t.empresaNome,
+                atraso: rotuloDoAtraso(t.faixa),
+                situacao: t.situacao ? ROTULO_DA_SITUACAO[t.situacao] : "",
+                contato: t.ultimoContato ? diaEmSaoPaulo(t.ultimoContato.em) : "",
+                canal: t.ultimoContato ? ROTULO_DO_CANAL[t.ultimoContato.canal] : "",
+                resultado: t.ultimoContato ? ROTULO_DO_RESULTADO[t.ultimoContato.resultado] : "",
+              },
+            }))}
+          >
           <TabelaNoDesktop padrao>
           <table className="w-full min-w-[860px] text-[13px]">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-                <th className="py-2 pr-3 font-medium">Vencimento</th>
-                <th className="py-2 pr-3 font-medium">Cliente</th>
-                <th className="py-2 pr-3 font-medium">Empresa</th>
-                <th className="py-2 pr-3 font-medium text-right">Valor</th>
-                <th className="py-2 pr-3 font-medium">Atraso</th>
-                <th className="py-2 pr-3 font-medium">Situação</th>
-                <th className="py-2 font-medium">Último contato</th>
+              <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" />
+                </th>
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna rotulo="Cliente" chave="cliente" />
+                </th>
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna rotulo="Empresa" chave="empresa" />
+                </th>
+                <th className="py-2 pr-3 font-medium">Valor</th>
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna rotulo="Atraso" chave="atraso" />
+                </th>
+                <th className="py-2 pr-3 font-medium">
+                  <FiltroDaColuna rotulo="Situação" chave="situacao" />
+                </th>
+                <th className="py-2 font-medium">
+                  <FiltroDaColuna
+                    rotulo="Último contato"
+                    campos={[
+                      { chave: "contato", rotulo: "Data", tipo: "data" },
+                      { chave: "canal", rotulo: "Canal" },
+                      { chave: "resultado", rotulo: "Resultado" },
+                    ]}
+                    align="right"
+                  />
+                </th>
               </tr>
             </thead>
             <tbody>
               {titulos.map((t) => (
-                <tr key={t.id} className="border-b border-border-soft align-top">
+                <LinhaFiltravel key={t.id} id={t.id} className="border-b border-border-soft align-top">
                   <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">{formatInstantDate(t.vencimento)}</td>
                   <td className="py-2.5 pr-3">
                     <span className="font-medium">{t.sacadoNome}</span>
                     {t.descricao && <span className="block text-[11px] text-fg-muted truncate max-w-[240px]">{t.descricao}</span>}
                   </td>
                   <td className="py-2.5 pr-3 text-fg-secondary">{t.empresaNome}</td>
-                  <td className="py-2.5 pr-3 text-right tabular-nums font-medium">{moeda(t.valorCentavos)}</td>
-                  <td className="py-2.5 pr-3 whitespace-nowrap">{FAIXAS_DE_ATRASO.find((f) => f.chave === t.faixa)?.rotulo}</td>
+                  <td className="py-2.5 pr-3 tabular-nums font-medium">{moeda(t.valorCentavos)}</td>
+                  <td className="py-2.5 pr-3 whitespace-nowrap">{rotuloDoAtraso(t.faixa)}</td>
                   <td className="py-2.5 pr-3">
                     <SeloDaCobranca situacao={t.situacao} />
                   </td>
@@ -107,11 +152,12 @@ export default async function PortalCobrancaPage() {
                       ? `${formatInstantDate(t.ultimoContato.em)} · ${ROTULO_DO_CANAL[t.ultimoContato.canal]} · ${ROTULO_DO_RESULTADO[t.ultimoContato.resultado]}`
                       : "—"}
                   </td>
-                </tr>
+                </LinhaFiltravel>
               ))}
             </tbody>
           </table>
           </TabelaNoDesktop>
+          </TabelaFiltravel>
         </div>
       )}
 

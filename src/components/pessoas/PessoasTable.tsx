@@ -189,6 +189,9 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, defini
             {people.map((p) => cartaoPessoa(p))}
           </div>
 
+          {/* Sem funil nas colunas: a lista é paginada (20 por página), e o funil
+              do navegador filtraria só a página aberta. O de tabela paginada é o
+              `FiltroDaColunaNaUrl`, que depende da página filtrar no servidor. */}
           <div className="c41-tabela scroll-x overflow-x-auto hidden md:block">
           <table className="w-full min-w-[860px] text-[length:var(--fs-body)]">
             <thead>
@@ -248,7 +251,7 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, defini
                     )}
                   </td>
                   <td className="px-4 py-3 text-fg-secondary tnum">{p.createdAtLabel}</td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3">
                     {canCreate && (
                       <AcoesDeLinha
                         foraDeOperacao={!p.active}
