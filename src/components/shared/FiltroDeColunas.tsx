@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ListFilter, Search, X } from "lucide-react";
 import { Popover } from "@/components/ui/Popover";
@@ -65,7 +65,17 @@ function rotuloDoValor(v: string, tipo: CampoDaColuna["tipo"]): string {
  * lugar do `<tr>`. As células continuam componente de servidor — só a linha é
  * de cliente, e só para sumir quando não passa.
  */
-export function TabelaFiltravel({ linhas, children }: { linhas: LinhaDoFiltro[]; children: React.ReactNode }) {
+export function TabelaFiltravel({
+  linhas,
+  children,
+  onLinhasVisiveis,
+}: {
+  linhas: LinhaDoFiltro[];
+  children: React.ReactNode;
+  /** Os ids que o funil deixa à vista, a cada mudança — para a seleção em
+   *  massa, que mora acima da tabela, não levar linha escondida (02/10/2026). */
+  onLinhasVisiveis?: (ids: Set<string>) => void;
+}) {
   const [filtros, setFiltros] = useState<Filtros>({});
 
   const ocultas = useMemo(() => {
@@ -74,6 +84,17 @@ export function TabelaFiltravel({ linhas, children }: { linhas: LinhaDoFiltro[];
     for (const l of linhas) if (!passa(l, filtros)) s.add(l.id);
     return s;
   }, [linhas, filtros]);
+
+  // Por uma chave de texto, e não pelo array: quem passa `linhas` costuma
+  // recriá-lo a cada renderização, e avisar a cada uma faria um laço com o
+  // estado do pai. Só avisa quando o conjunto visível muda de fato.
+  const chaveDosVisiveis = linhas
+    .filter((l) => !ocultas.has(l.id))
+    .map((l) => l.id)
+    .join("|");
+  useEffect(() => {
+    onLinhasVisiveis?.(new Set(chaveDosVisiveis ? chaveDosVisiveis.split("|") : []));
+  }, [chaveDosVisiveis, onLinhasVisiveis]);
 
   const contexto = useMemo<Contexto>(
     () => ({

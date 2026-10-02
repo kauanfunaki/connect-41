@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Pencil, Power, PowerOff, UserRoundCog } from "lucide-react";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
@@ -33,31 +33,6 @@ type Props = {
   atribuirSetorEmMassa: (ids: string[], sectorCode: string) => Promise<void>;
 };
 
-/**
- * A caixa de seleção de uma linha da tabela, que avisa quando está na tela.
- *
- * O funil das colunas esconde a linha desmontando-a (`LinhaFiltravel`), e a
- * seleção mora aqui em cima: sem este aviso, "Selecionar todos" com o funil em
- * "Operador" marcaria também os administradores escondidos — e o "Desativar" em
- * massa os levaria junto. Ao sair da tela, a linha também sai da seleção.
- */
-function CaixaDaLinha({
-  id,
-  nome,
-  marcada,
-  onAlternar,
-  registrar,
-}: {
-  id: string;
-  nome: string;
-  marcada: boolean;
-  onAlternar: () => void;
-  registrar: (id: string) => () => void;
-}) {
-  useEffect(() => registrar(id), [id, registrar]);
-  return <Checkbox checked={marcada} onChange={onAlternar} aria-label={`Selecionar ${nome}`} />;
-}
-
 export function UsuariosTable({
   users,
   currentUserId,
@@ -67,31 +42,20 @@ export function UsuariosTable({
   atribuirSetorEmMassa,
 }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  // As linhas selecionáveis que o funil das colunas deixou na tela.
-  const [naTela, setNaTela] = useState<Set<string>>(new Set());
+  // As linhas que o funil das colunas deixou na tela (avisadas pela
+  // TabelaFiltravel). Sem isso, "Selecionar todos" com o funil em "Operador"
+  // marcaria também os administradores escondidos — e o "Desativar" em massa
+  // os levaria junto.
+  const [naTela, setNaTela] = useState<Set<string>>(() => new Set(users.map((u) => u.id)));
   const [bulkSector, setBulkSector] = useState(sectorOptions[0]?.value ?? "");
   const [, startTransition] = useTransition();
   const { dialog, requestConfirm } = useConfirm();
 
-  const registrarNaTela = useCallback((id: string) => {
-    setNaTela((atual) => new Set(atual).add(id));
-    return () => {
-      setNaTela((atual) => {
-        const novo = new Set(atual);
-        novo.delete(id);
-        return novo;
-      });
-      setSelected((atual) => {
-        if (!atual.has(id)) return atual;
-        const novo = new Set(atual);
-        novo.delete(id);
-        return novo;
-      });
-    };
-  }, []);
 
   const selecionaveis = users.filter((u) => u.id !== currentUserId && naTela.has(u.id));
   const allSelected = selecionaveis.length > 0 && selecionaveis.every((u) => selected.has(u.id));
+  // A ação em massa leva só o que está à vista.
+  const selecionadosNaTela = new Set([...selected].filter((id) => naTela.has(id)));
 
   function toggleAll() {
     setSelected(allSelected ? new Set() : new Set(selecionaveis.map((u) => u.id)));
@@ -234,7 +198,7 @@ export function UsuariosTable({
   }
 
   function applyToggle(novoStatus: boolean) {
-    const ids = Array.from(selected);
+    const ids = Array.from(selecionadosNaTela);
     setSelected(new Set());
     startTransition(() => {
       alternarAtivoEmMassa(ids, novoStatus);
@@ -243,7 +207,7 @@ export function UsuariosTable({
 
   function applySector() {
     if (!bulkSector) return;
-    const ids = Array.from(selected);
+    const ids = Array.from(selecionadosNaTela);
     setSelected(new Set());
     startTransition(() => {
       atribuirSetorEmMassa(ids, bulkSector);
@@ -276,6 +240,7 @@ export function UsuariosTable({
           status (polimento de 30/09). A lista vem inteira, então o funil filtra
           no navegador. Setores filtra pela combinação que a pessoa tem. */}
       <TabelaFiltravel
+        onLinhasVisiveis={setNaTela}
         linhas={users.map((u) => ({
           id: u.id,
           valores: {
@@ -322,12 +287,10 @@ export function UsuariosTable({
                   >
                     <td className="px-4 py-3">
                       {!isSelf && (
-                        <CaixaDaLinha
-                          id={u.id}
-                          nome={u.name}
-                          marcada={selected.has(u.id)}
-                          onAlternar={() => toggleOne(u.id)}
-                          registrar={registrarNaTela}
+                        <Checkbox
+                          checked={selected.has(u.id)}
+                          onChange={() => toggleOne(u.id)}
+                          aria-label={`Selecionar ${u.name}`}
                         />
                       )}
                     </td>
@@ -357,7 +320,7 @@ export function UsuariosTable({
 
       {dialog}
 
-      <BulkActionBar count={selected.size} onClear={() => setSelected(new Set())}>
+      <BulkActionBar count={selecionadosNaTela.size} onClear={() => setSelected(new Set())}>
         <Button
           variant="success"
           size="sm"
