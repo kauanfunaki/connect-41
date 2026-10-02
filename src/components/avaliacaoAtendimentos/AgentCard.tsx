@@ -7,6 +7,7 @@ import { SlideOver } from "@/components/ui/SlideOver";
 import { ScoreRing } from "@/components/avaliacaoAtendimentos/ScoreRing";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 export type EvaluationEntry = {
   id: string;
@@ -61,6 +62,9 @@ export function AgentCard({
   const [isPending, startTransition] = useTransition();
   const [excluindo, setExcluindo] = useState(false);
   const [erroExclusao, setErroExclusao] = useState<string | null>(null);
+  // Pede confirmação antes (achado do polimento de 30/09): tirar da avaliação
+  // muda a nota de alguém, e era um clique só.
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
   const toast = useToast();
 
   async function excluirAtendimento(conversationId: string) {
@@ -69,6 +73,7 @@ export function AgentCard({
     setErroExclusao(null);
     const res = await excludeConversationAction(conversationId, true);
     setExcluindo(false);
+    setConfirmandoExclusao(false);
     if ("error" in res) {
       setErroExclusao(res.error);
       return;
@@ -143,13 +148,23 @@ export function AgentCard({
                   variant="danger"
                   size="sm"
                   disabled={excluindo}
-                  onClick={() => void excluirAtendimento(selected.conversationLocalId)}
+                  onClick={() => setConfirmandoExclusao(true)}
                 >
                   <EyeOff size={14} /> {excluindo ? "Tirando…" : "Tirar da avaliação"}
                 </Button>
               )}
             </div>
             {erroExclusao && <p className="text-[13px] text-danger">{erroExclusao}</p>}
+            <ConfirmDialog
+              open={confirmandoExclusao}
+              title="Tirar da avaliação?"
+              description={`A nota deste atendimento é apagada e sai da média de ${label}.`}
+              confirmLabel="Tirar da avaliação"
+              destructive
+              pending={excluindo}
+              onConfirm={() => void excluirAtendimento(selected.conversationLocalId)}
+              onCancel={() => setConfirmandoExclusao(false)}
+            />
           </div>
         ) : (
           <div className="space-y-5">
