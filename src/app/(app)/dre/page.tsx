@@ -24,7 +24,14 @@ const MESES = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 
-type EmpresaNaAba = { id: string; name: string; tradeName: string | null };
+type EmpresaNaAba = {
+  id: string;
+  name: string;
+  tradeName: string | null;
+  logoUrl: string | null;
+  cnpj: string | null;
+  parentCompanyId: string | null;
+};
 
 // O DRE nasce como entrega do BPO, mas o gate é o setor que opera o módulo
 // neste tenant — num cliente ele pode ser do Financeiro (ver `setorDoModulo`).
@@ -44,7 +51,7 @@ export default async function DrePage({
     // relatório, é ruído no seletor.
     where: { tenantId: ctx.tenantId, status: "ACTIVE" },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, tradeName: true },
+    select: { id: true, name: true, tradeName: true, logoUrl: true, cnpj: true, parentCompanyId: true },
   });
 
   const companyId = empresa && empresas.some((e) => e.id === empresa) ? empresa : empresas[0]?.id;
@@ -276,7 +283,7 @@ function SeletorDeEmpresa({
 }) {
   return (
     <SeletorDeEmpresaQueNavega
-      empresas={empresas.map((e) => ({ id: e.id, nome: e.tradeName || e.name }))}
+      empresas={empresas.map((e) => ({ ...e, nome: e.tradeName || e.name }))}
       empresaId={companyId}
       acao="/dre"
     />

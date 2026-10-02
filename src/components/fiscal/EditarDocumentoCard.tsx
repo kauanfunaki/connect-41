@@ -9,9 +9,10 @@ import { Button } from "@/components/ui/Button";
 import { DeleteButton } from "@/components/ui/DeleteButton";
 import type { EdicaoState } from "@/app/(app)/documentos-fiscais/[id]/editar";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 import { FormFooter } from "@/components/ui/FormFooter";
 
-type Empresa = { id: string; nome: string };
+type Empresa = EmpresaParaEscolher & { nome: string };
 
 type Props = {
   documentoId: string;
@@ -95,7 +96,9 @@ export function EditarDocumentoCard({
                 id="companyId"
                 name="companyId"
                 defaultValue={valores.companyId}
-                options={empresas.map((e) => ({ value: e.id, label: e.nome }))}
+                options={opcoesDeEmpresa(empresas)}
+                avatar
+                lembrarRecentes="empresas"
                 placeholder="Buscar empresa…"
               />
             </CampoForm>

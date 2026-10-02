@@ -11,6 +11,7 @@ import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { saoPauloParts } from "@/lib/agenda";
 import { nomeExibicao } from "@/lib/companyName";
+import { CAMPOS_DA_EMPRESA_NO_SELETOR } from "@/lib/empresas/opcoesDoSeletor";
 import { centavosDeDecimal, situacaoDaConta, type SituacaoDaConta } from "./contas";
 import { seloDeAprovacaoVisivel, type StatusDeAprovacao } from "./aprovacao/regras";
 import { competenciaDoInstante, inicioDaCompetencia, somarMeses } from "./periodo";
@@ -126,7 +127,14 @@ export async function nomesDasEmpresas(tenantId: string, ids: string[]): Promise
   return new Map(empresas.map((c) => [c.id, nomeExibicao(c)]));
 }
 
-export type EmpresaDoSeletor = { id: string; nome: string };
+/** Com logo, CNPJ e matriz para a escolha de empresa (02/10/2026) — ver `opcoesDeEmpresa`. */
+export type EmpresaDoSeletor = {
+  id: string;
+  nome: string;
+  logoUrl?: string | null;
+  cnpj?: string | null;
+  matrizId?: string | null;
+};
 
 /**
  * Empresas para o seletor das telas internas: ativas, por nome de exibição.
@@ -138,10 +146,10 @@ export async function empresasDoSeletor(tenantId: string, ids?: string[]): Promi
   const prisma = getPrisma();
   const empresas = await prisma.company.findMany({
     where: { tenantId, ...(ids ? { id: { in: ids } } : { status: "ACTIVE" }) },
-    select: { id: true, name: true, displayName: true },
+    select: CAMPOS_DA_EMPRESA_NO_SELETOR,
   });
   return empresas
-    .map((c) => ({ id: c.id, nome: nomeExibicao(c) }))
+    .map((c) => ({ id: c.id, nome: nomeExibicao(c), logoUrl: c.logoUrl, cnpj: c.cnpj, matrizId: c.parentCompanyId }))
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 }
 

@@ -4,6 +4,8 @@
 import { getPrisma } from "@/lib/prisma";
 import { criaCiclo } from "@/lib/companyHierarchy";
 import { nomeExibicao } from "@/lib/companyName";
+import { CAMPOS_DA_EMPRESA_NO_SELETOR, opcoesDeEmpresa } from "@/lib/empresas/opcoesDoSeletor";
+import type { Opcao } from "@/components/shared/SearchableSelect";
 
 /**
  * Empresas que podem ser matriz de `excludeId`, para o `<select>` do cadastro.
@@ -16,19 +18,17 @@ import { nomeExibicao } from "@/lib/companyName";
 export async function getMatrizOptions(
   tenantId: string,
   excludeId?: string
-): Promise<{ value: string; label: string }[]> {
+): Promise<Opcao[]> {
   const prisma = getPrisma();
   const empresas = await prisma.company.findMany({
     where: { tenantId, ...(excludeId ? { id: { not: excludeId } } : {}) },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, displayName: true, cnpj: true },
+    select: CAMPOS_DA_EMPRESA_NO_SELETOR,
   });
-  return empresas.map((e) => ({
-    value: e.id,
-    // O CNPJ no rótulo não é enfeite: matriz e filial costumam ter razão social
-    // idêntica, e sem ele o select fica com duas linhas iguais.
-    label: e.cnpj ? `${nomeExibicao(e)} — ${e.cnpj}` : nomeExibicao(e),
-  }));
+  // O CNPJ não é enfeite: matriz e filial costumam ter razão social idêntica,
+  // e sem ele a lista fica com duas linhas iguais. Desde 02/10/2026 ele vai
+  // embaixo do nome (e entra na busca), em vez de colado no rótulo.
+  return opcoesDeEmpresa(empresas.map((e) => ({ ...e, nome: nomeExibicao(e) })));
 }
 
 /**
