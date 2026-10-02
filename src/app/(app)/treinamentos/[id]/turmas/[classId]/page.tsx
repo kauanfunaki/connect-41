@@ -2,7 +2,8 @@ import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { canManageSector } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { adicionarParticipante, atualizarParticipante, removerParticipante } from "./actions";
 import { AddParticipanteForm } from "@/components/treinamentos/AddParticipanteForm";
 import { ParticipanteRow } from "@/components/treinamentos/ParticipanteRow";
@@ -16,8 +17,8 @@ export default async function TurmaPage({
   params: Promise<{ id: string; classId: string }>;
 }) {
   const { id: trainingId, classId } = await params;
-  const ctx = await getAuthContext();
-  const canManage = canWrite(ctx.role);
+  const { ctx, setor } = await abrirTelaDoModulo("dp_treinamentos");
+  const canManage = canManageSector(ctx, setor);
 
   const prisma = getPrisma();
   const trainingClass = await prisma.trainingClass.findFirst({

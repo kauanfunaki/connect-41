@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/Button";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { AlertTriangle, CheckCircle2, CircleDashed, MinusCircle, Palmtree, Settings2 } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { canManageSector } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
@@ -37,8 +38,8 @@ export default async function ConferenciaRescisaoPage({
   params: Promise<{ id: string; terminationId: string }>;
 }) {
   const { id, terminationId } = await params;
-  const ctx = await getAuthContext();
-  const canEdit = canWrite(ctx.role);
+  const { ctx, setor } = await abrirTelaDoModulo("dp_colaboradores");
+  const canEdit = canManageSector(ctx, setor);
 
   const prisma = getPrisma();
   const person = await prisma.person.findFirst({

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext } from "@/lib/auth/context";
 import { scopedCompanyWhere, scopedPersonWhere, scopedPipelineWhere, scopedVagaWhere } from "@/lib/auth/scope";
+import { podeNoModulo } from "@/lib/auth/modulo";
 import { boardPath } from "@/lib/kanbanPaths";
 import { digitsOnly } from "@/lib/validation/common";
 
@@ -18,6 +19,9 @@ export async function GET(req: NextRequest) {
 
   const prisma = getPrisma();
   const cnpjDigits = digitsOnly(q);
+  // A ficha do candidato só abre para quem alcança o módulo de Candidatos
+  // (02/10/2026); listar para os outros levaria a um 404.
+  const veCandidatos = await podeNoModulo(ctx, "recrutamento_candidatos", "ver");
   const [companies, people, candidatos, pipelines, vagas, documentos, tarefaItems] = await Promise.all([
     prisma.company.findMany({
       where: {
@@ -42,12 +46,14 @@ export async function GET(req: NextRequest) {
       take: LIMIT,
       select: { id: true, name: true },
     }),
-    prisma.person.findMany({
-      where: { ...(await scopedPersonWhere(ctx)), type: "CANDIDATO", name: { contains: q } },
-      orderBy: { name: "asc" },
-      take: LIMIT,
-      select: { id: true, name: true },
-    }),
+    veCandidatos
+      ? prisma.person.findMany({
+          where: { ...(await scopedPersonWhere(ctx)), type: "CANDIDATO", name: { contains: q } },
+          orderBy: { name: "asc" },
+          take: LIMIT,
+          select: { id: true, name: true },
+        })
+      : Promise.resolve([] as { id: string; name: string }[]),
     prisma.pipeline.findMany({
       where: { ...scopedPipelineWhere(ctx), name: { contains: q } },
       orderBy: { name: "asc" },

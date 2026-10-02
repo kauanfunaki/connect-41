@@ -1,5 +1,5 @@
 import { PageContainer } from "@/components/shared/PageContainer";
-import { getAuthContext } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { getRelatorioPendencias, type PendenciaRow } from "@/lib/relatoriosRH";
 import { formatCalendarDate } from "@/lib/format";
 import { RelatorioHeader } from "@/components/relatorios/RelatorioHeader";
@@ -17,7 +17,7 @@ const TIPO: Record<PendenciaRow["tipo"], { label: string; tone: BadgeTone }> = {
 };
 
 export default async function RelatorioPendenciasPage() {
-  const ctx = await getAuthContext();
+  const { ctx } = await abrirTelaDoModulo("gestao_indicadores_rh");
   const rows = await getRelatorioPendencias(ctx);
 
   const count = (t: PendenciaRow["tipo"]) => rows.filter((r) => r.tipo === t).length;

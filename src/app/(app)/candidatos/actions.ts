@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { PersonType } from "@/generated/prisma/enums";
 import { getAuthContext } from "@/lib/auth/context";
-import { canWriteEntity } from "@/lib/auth/policy";
+import { podeNoModulo } from "@/lib/auth/modulo";
 import { pick, pickDate } from "@/lib/forms";
 import { isPrismaUniqueError, isPrismaForeignKeyError } from "@/lib/prismaErrors";
 import { validatePersonForm } from "@/lib/validation/person";
@@ -41,7 +41,7 @@ export async function criarCandidato(
 ): Promise<CandidatoState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWriteEntity(ctx)) return { error: "Sem permissão para criar candidatos." };
+  if (!(await podeNoModulo(ctx, "recrutamento_candidatos", "gerir"))) return { error: "Sem permissão para criar candidatos." };
 
   const validationError = validatePersonForm(form);
   if (validationError) return { error: validationError };
@@ -73,7 +73,7 @@ export async function atualizarCandidato(
 ): Promise<CandidatoState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWriteEntity(ctx)) return { error: "Sem permissão para editar candidatos." };
+  if (!(await podeNoModulo(ctx, "recrutamento_candidatos", "gerir"))) return { error: "Sem permissão para editar candidatos." };
 
   const validationError = validatePersonForm(form);
   if (validationError) return { error: validationError };
@@ -105,7 +105,7 @@ export async function atualizarCandidato(
 
 export async function excluirCandidato(id: string): Promise<CandidatoState> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWriteEntity(ctx)) return { error: "Sem permissão." };
+  if (!ctx.tenantId || !(await podeNoModulo(ctx, "recrutamento_candidatos", "gerir"))) return { error: "Sem permissão." };
 
   const prisma = getPrisma();
 
@@ -138,7 +138,7 @@ export async function excluirCandidato(id: string): Promise<CandidatoState> {
 // usado no Kanban (gerenciado em /admin/tags), só um join novo.
 export async function alternarTagPessoa(personId: string, tagId: string, marcado: boolean): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWriteEntity(ctx)) return;
+  if (!ctx.tenantId || !(await podeNoModulo(ctx, "recrutamento_candidatos", "gerir"))) return;
 
   const prisma = getPrisma();
   const person = await prisma.person.findFirst({
@@ -171,7 +171,7 @@ export async function alternarTagPessoa(personId: string, tagId: string, marcado
 
 export async function inativarCandidatosEmMassa(ids: string[]): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWriteEntity(ctx) || ids.length === 0) return;
+  if (!ctx.tenantId || !(await podeNoModulo(ctx, "recrutamento_candidatos", "gerir")) || ids.length === 0) return;
 
   const prisma = getPrisma();
   await prisma.person.updateMany({

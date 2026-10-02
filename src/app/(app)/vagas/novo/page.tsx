@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
+import { isModuleEnabled } from "@/lib/modules";
 import { getSectorMaps } from "@/lib/sectors";
 import { VagaForm } from "@/components/vagas/VagaForm";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -11,6 +12,9 @@ import { criarVaga } from "../actions";
 
 export default async function NovaVagaPage() {
   const ctx = await getAuthContext();
+  // Vaga e teste são do setor que contrata (o escopo já filtra); aqui só o
+  // módulo ligado, que antes não era checado e deixava a tela abrir desligada.
+  if (!(await isModuleEnabled(ctx.tenantId, "recrutamento_vagas"))) notFound();
   const canCreateAny = isFullWrite(ctx.role) || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.length > 0);
   if (!canCreateAny) notFound();
 

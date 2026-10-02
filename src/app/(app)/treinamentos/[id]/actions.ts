@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
+import { podeNoModulo } from "@/lib/auth/modulo";
 
 export type TrainingClassState = { error: string } | null;
 
@@ -14,7 +15,7 @@ export async function criarTurma(
 ): Promise<TrainingClassState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para criar turmas." };
+  if (!(await podeNoModulo(ctx, "dp_treinamentos", "gerir"))) return { error: "Sem permissão para criar turmas." };
 
   const prisma = getPrisma();
   const training = await prisma.training.findFirst({ where: { id: trainingId, tenantId: ctx.tenantId } });
@@ -46,7 +47,7 @@ export async function criarTurma(
 
 export async function excluirTurma(trainingId: string, classId: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWrite(ctx.role)) return;
+  if (!ctx.tenantId || !(await podeNoModulo(ctx, "dp_treinamentos", "gerir"))) return;
 
   const prisma = getPrisma();
   const existing = await prisma.trainingClass.findFirst({ where: { id: classId, tenantId: ctx.tenantId, trainingId } });

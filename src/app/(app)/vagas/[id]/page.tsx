@@ -7,6 +7,7 @@ import { getPrisma } from "@/lib/prisma";
 import { VagaPrioridade } from "@/generated/prisma/enums";
 import { VAGA_STATUS_LABEL, VAGA_STATUS_STYLE } from "@/lib/vagaStatus";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
+import { isModuleEnabled } from "@/lib/modules";
 import { scopedVagaWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
@@ -41,6 +42,9 @@ export default async function VagaPage({
 }) {
   const { id } = await params;
   const ctx = await getAuthContext();
+  // Vaga e teste são do setor que contrata (o escopo já filtra); aqui só o
+  // módulo ligado, que antes não era checado e deixava a tela abrir desligada.
+  if (!(await isModuleEnabled(ctx.tenantId, "recrutamento_vagas"))) notFound();
 
   const prisma = getPrisma();
   const vaga = await prisma.vaga.findFirst({

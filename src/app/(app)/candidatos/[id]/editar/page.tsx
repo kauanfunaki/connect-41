@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { CandidatoForm } from "@/components/candidatos/CandidatoForm";
 import { atualizarCandidato } from "../../actions";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { canManageSector } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 
@@ -18,8 +19,8 @@ export default async function EditarCandidatoPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const ctx = await getAuthContext();
-  if (!canWrite(ctx.role)) notFound();
+  const { ctx, setor } = await abrirTelaDoModulo("recrutamento_candidatos");
+  if (!canManageSector(ctx, setor)) notFound();
 
   const prisma = getPrisma();
   const person = await prisma.person.findFirst({

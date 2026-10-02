@@ -1,5 +1,5 @@
 import { PageContainer } from "@/components/shared/PageContainer";
-import { getAuthContext } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { getRelatorioFerias, type FeriasRow, type FeriasSituacao } from "@/lib/relatoriosRH";
 import { formatCalendarDate } from "@/lib/format";
 import { RelatorioHeader } from "@/components/relatorios/RelatorioHeader";
@@ -17,7 +17,7 @@ const SITUACAO: Record<FeriasSituacao, { label: string; tone: BadgeTone }> = {
 };
 
 export default async function RelatorioFeriasPage() {
-  const ctx = await getAuthContext();
+  const { ctx } = await abrirTelaDoModulo("gestao_indicadores_rh");
   const rows = await getRelatorioFerias(ctx);
 
   const count = (s: FeriasSituacao) => rows.filter((r) => r.situacao === s).length;

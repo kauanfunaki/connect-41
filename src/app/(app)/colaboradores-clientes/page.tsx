@@ -11,7 +11,8 @@ import { PessoasTable } from "@/components/pessoas/PessoasTable";
 import { PessoasFilterButton } from "@/components/pessoas/PessoasFilterButton";
 import { getPrisma } from "@/lib/prisma";
 import { PersonType } from "@/generated/prisma/enums";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { canManageSector } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { formatInstantDate } from "@/lib/format";
 import { nomeExibicao } from "@/lib/companyName";
@@ -46,8 +47,8 @@ export default async function ColaboradoresClientesPage({
   searchParams: Promise<{ search?: string; companyId?: string; page?: string; situacao?: string }>;
 }) {
   const { search, companyId, page, situacao } = await searchParams;
-  const ctx = await getAuthContext();
-  const canCreate = canWrite(ctx.role);
+  const { ctx, setor } = await abrirTelaDoModulo("recrutamento_colaboradores_clientes");
+  const canCreate = canManageSector(ctx, setor);
 
   const prisma = getPrisma();
   const pageNum = Math.max(1, parseInt(page ?? "1"));

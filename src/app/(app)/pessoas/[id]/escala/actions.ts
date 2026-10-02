@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { ScheduleStatus } from "@/generated/prisma/enums";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
+import { podeNoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { findVacationConflictForDate } from "@/lib/scheduleVacationConflict";
 import { formatCalendarDate } from "@/lib/format";
@@ -30,7 +31,7 @@ export async function criarEscala(
 ): Promise<ScheduleState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para montar escala." };
+  if (!(await podeNoModulo(ctx, "dp_escalas", "gerir"))) return { error: "Sem permissão para montar escala." };
   if (!(await assertPersonInScope(personId, ctx))) {
     return { error: "Pessoa não encontrada ou fora do seu escopo." };
   }
@@ -82,7 +83,7 @@ export async function atualizarEscala(
 ): Promise<ScheduleState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para atualizar escala." };
+  if (!(await podeNoModulo(ctx, "dp_escalas", "gerir"))) return { error: "Sem permissão para atualizar escala." };
   if (!(await assertPersonInScope(personId, ctx))) {
     return { error: "Pessoa não encontrada ou fora do seu escopo." };
   }
@@ -107,7 +108,7 @@ export async function atualizarEscala(
 
 export async function excluirEscala(personId: string, entryId: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWrite(ctx.role)) return;
+  if (!ctx.tenantId || !(await podeNoModulo(ctx, "dp_escalas", "gerir"))) return;
   if (!(await assertPersonInScope(personId, ctx))) return;
 
   const prisma = getPrisma();

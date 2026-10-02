@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { canManageSector } from "@/lib/auth/context";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { AddAfastamentoForm } from "@/components/pessoas/AddAfastamentoForm";
@@ -18,8 +19,8 @@ export default async function AfastamentosPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const ctx = await getAuthContext();
-  const canEdit = canWrite(ctx.role);
+  const { ctx, setor } = await abrirTelaDoModulo("dp_afastamentos");
+  const canEdit = canManageSector(ctx, setor);
   const canViewMedical = await canViewSensitiveField(ctx, "DADOS_MEDICOS");
 
   const prisma = getPrisma();

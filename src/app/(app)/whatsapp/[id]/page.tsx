@@ -6,13 +6,14 @@ import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Conversa } from "@/components/whatsapp/Conversa";
 import { lerConversa } from "@/lib/whatsapp/data";
-import { setorDoModulo } from "@/lib/modules";
+import { setorDoModulo, isModuleEnabled } from "@/lib/modules";
 
 const MODULE = "recrutamento_whatsapp";
 
 export default async function ConversaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const ctx = await getAuthContext();
+  if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
   // Setor que opera o módulo neste tenant, não o de origem — ver `setorDoModulo`.
   if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? "recrutamento")) notFound();
 

@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { TerminationType, TerminationStatus } from "@/generated/prisma/enums";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
+import { podeNoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 
 export type TerminationState = { error: string } | null;
@@ -24,7 +25,7 @@ export async function criarDesligamento(
 ): Promise<TerminationState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para registrar desligamentos." };
+  if (!(await podeNoModulo(ctx, "dp_colaboradores", "gerir"))) return { error: "Sem permissão para registrar desligamentos." };
   if (!(await assertPersonInScope(personId, ctx))) {
     return { error: "Pessoa não encontrada ou fora do seu escopo." };
   }
@@ -56,7 +57,7 @@ export async function atualizarDesligamento(
 ): Promise<TerminationState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para atualizar desligamentos." };
+  if (!(await podeNoModulo(ctx, "dp_colaboradores", "gerir"))) return { error: "Sem permissão para atualizar desligamentos." };
   if (!(await assertPersonInScope(personId, ctx))) {
     return { error: "Pessoa não encontrada ou fora do seu escopo." };
   }
@@ -92,7 +93,7 @@ export async function atualizarDesligamento(
 
 export async function excluirDesligamento(personId: string, terminationId: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWrite(ctx.role)) return;
+  if (!ctx.tenantId || !(await podeNoModulo(ctx, "dp_colaboradores", "gerir"))) return;
   if (!(await assertPersonInScope(personId, ctx))) return;
 
   const prisma = getPrisma();

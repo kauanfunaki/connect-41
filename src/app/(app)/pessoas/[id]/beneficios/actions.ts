@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { BenefitStatus } from "@/generated/prisma/enums";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
+import { podeNoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 
 export type BenefitAssignmentState = { error: string } | null;
@@ -28,7 +29,7 @@ export async function vincularBeneficio(
 ): Promise<BenefitAssignmentState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para vincular benefícios." };
+  if (!(await podeNoModulo(ctx, "dp_colaboradores", "gerir"))) return { error: "Sem permissão para vincular benefícios." };
   if (!(await assertPersonInScope(personId, ctx))) {
     return { error: "Pessoa não encontrada ou fora do seu escopo." };
   }
@@ -68,7 +69,7 @@ export async function atualizarBeneficioAssignment(
 ): Promise<BenefitAssignmentState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para atualizar benefícios." };
+  if (!(await podeNoModulo(ctx, "dp_colaboradores", "gerir"))) return { error: "Sem permissão para atualizar benefícios." };
   if (!(await assertPersonInScope(personId, ctx))) {
     return { error: "Pessoa não encontrada ou fora do seu escopo." };
   }
@@ -97,7 +98,7 @@ export async function atualizarBeneficioAssignment(
 
 export async function removerBeneficioAssignment(personId: string, assignmentId: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWrite(ctx.role)) return;
+  if (!ctx.tenantId || !(await podeNoModulo(ctx, "dp_colaboradores", "gerir"))) return;
   if (!(await assertPersonInScope(personId, ctx))) return;
 
   const prisma = getPrisma();

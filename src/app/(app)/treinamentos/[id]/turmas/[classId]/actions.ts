@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { TrainingParticipantStatus } from "@/generated/prisma/enums";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
+import { podeNoModulo } from "@/lib/auth/modulo";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 
 export type TrainingParticipantState = { error: string } | null;
@@ -16,7 +17,7 @@ export async function adicionarParticipante(
 ): Promise<TrainingParticipantState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para adicionar participantes." };
+  if (!(await podeNoModulo(ctx, "dp_treinamentos", "gerir"))) return { error: "Sem permissão para adicionar participantes." };
 
   const prisma = getPrisma();
   const trainingClass = await prisma.trainingClass.findFirst({ where: { id: classId, tenantId: ctx.tenantId, trainingId } });
@@ -48,7 +49,7 @@ export async function atualizarParticipante(
 ): Promise<TrainingParticipantState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) return { error: "Não autenticado" };
-  if (!canWrite(ctx.role)) return { error: "Sem permissão para atualizar participantes." };
+  if (!(await podeNoModulo(ctx, "dp_treinamentos", "gerir"))) return { error: "Sem permissão para atualizar participantes." };
 
   const status = form.get("status") as TrainingParticipantStatus;
   if (!Object.values(TrainingParticipantStatus).includes(status)) return { error: "Status inválido." };
@@ -70,7 +71,7 @@ export async function atualizarParticipante(
 
 export async function removerParticipante(trainingId: string, classId: string, participantId: string): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWrite(ctx.role)) return;
+  if (!ctx.tenantId || !(await podeNoModulo(ctx, "dp_treinamentos", "gerir"))) return;
 
   const prisma = getPrisma();
   const existing = await prisma.trainingParticipant.findFirst({ where: { id: participantId, tenantId: ctx.tenantId, classId } });
