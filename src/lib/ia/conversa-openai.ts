@@ -30,6 +30,7 @@
 
 import { usoOpenAi } from "@/lib/ia/uso";
 import type { UsoDeTokens } from "@/lib/ia/custo";
+import type { AnexoDaPergunta } from "@/lib/ia/chat/anexos";
 import type { FerramentaDef } from "@/lib/ia/ferramentas";
 import { normalizarHistorico, type ResultadoDoLaco } from "@/lib/ia/laco";
 import {
@@ -39,6 +40,14 @@ import {
   type ParametrosDaConversa,
   type PedidoDeFerramenta,
 } from "@/lib/ia/conversa";
+
+/** O anexo do chat como item da Responses API: arquivo, imagem ou texto. */
+export function blocoOpenAi(a: AnexoDaPergunta): Record<string, unknown> {
+  if (a.tipo === "pdf") return { type: "input_file", filename: a.nome, file_data: `data:application/pdf;base64,${a.base64}` };
+  if (a.tipo === "imagem") return { type: "input_image", image_url: `data:${a.mime};base64,${a.base64}` };
+  return { type: "input_text", text: `Conteúdo do arquivo "${a.nome}" anexado pela pessoa:
+${a.texto}` };
+}
 
 export const URL_DA_RESPONSES_API = "https://api.openai.com/v1/responses";
 
@@ -206,7 +215,7 @@ export async function conversarComFerramentasOpenAi(
       role: t.papel === "usuario" ? "user" : "assistant",
       content: t.texto,
     })),
-    { role: "user", content: p.pergunta },
+    { role: "user", content: p.anexos?.length ? [...p.anexos.map(blocoOpenAi), { type: "input_text", text: p.pergunta }] : p.pergunta },
   ];
   let ultimaSaida: ItemDaResponses[] = [];
 

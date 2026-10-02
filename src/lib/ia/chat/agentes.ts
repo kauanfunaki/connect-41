@@ -70,7 +70,10 @@ const GUARDA_DO_CHAT =
   // a tela troca a marcação por um cartão e o id some.
   "Ao citar uma pessoa da equipe, um colaborador ou uma empresa que veio de uma ferramenta, escreva " +
   "@[Nome](usuario:ID), @[Nome](pessoa:ID) ou @[Nome](empresa:ID), com o id exato que a ferramenta devolveu — a " +
-  "tela troca por um cartão com a foto e esconde o id. Nunca invente nem complete um id; sem ele, escreva só o nome.";
+  "tela troca por um cartão com a foto e esconde o id. Nunca invente nem complete um id; sem ele, escreva só o nome.\n" +
+  // Anexo só para a pergunta (02/10/2026): o arquivo não fica guardado.
+  "Arquivo anexado vale só para a pergunta em que veio: nas seguintes, o histórico mostra só o nome (📎 arquivo). " +
+  "Não afirme o que ele dizia além do que já respondeu; se precisar dele de novo, peça para a pessoa anexar outra vez.";
 
 /** Para a IA que tentou encaminhar para o próprio setor: a pergunta é dela. */
 export const GUARDA_DO_PROPRIO_SETOR =

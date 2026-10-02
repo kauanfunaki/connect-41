@@ -46,6 +46,15 @@ import {
   type TurnoAnterior,
 } from "@/lib/ia/laco";
 import type { UsoDeTokens } from "@/lib/ia/custo";
+import type { AnexoDaPergunta } from "@/lib/ia/chat/anexos";
+
+/** O anexo do chat como bloco do Anthropic: documento, imagem ou texto. */
+export function blocoAnthropic(a: AnexoDaPergunta): Anthropic.ContentBlockParam {
+  if (a.tipo === "pdf") return { type: "document", source: { type: "base64", media_type: "application/pdf", data: a.base64 }, title: a.nome };
+  if (a.tipo === "imagem") return { type: "image", source: { type: "base64", media_type: a.mime, data: a.base64 } };
+  return { type: "text", text: `Conteúdo do arquivo "${a.nome}" anexado pela pessoa:
+${a.texto}` };
+}
 
 // ─── A parte agnóstica ─────────────────────────────────────────────────────
 
@@ -242,6 +251,8 @@ export type ParametrosDaConversa = {
   aoUsarFerramenta?: (nome: string) => void;
   /** Recebe o que cada ferramenta devolveu (texto, como foi ao modelo). */
   aoReceberResultado?: (nome: string, conteudo: string, erro: boolean) => void;
+  /** Arquivos que vão junto desta pergunta, e só dela (anexo do chat). */
+  anexos?: AnexoDaPergunta[];
   /** Só teste passa. Em produção o laço fala com o Anthropic. */
   chamarModelo?: ChamadaAoModelo;
 };
@@ -273,7 +284,7 @@ export async function conversarComFerramentas(
     ...normalizarHistorico(p.historico ?? []).map(
       (t): Anthropic.MessageParam => ({ role: t.papel === "usuario" ? "user" : "assistant", content: t.texto })
     ),
-    { role: "user", content: p.pergunta },
+    { role: "user", content: p.anexos?.length ? [...p.anexos.map(blocoAnthropic), { type: "text", text: p.pergunta }] : p.pergunta },
   ];
   let ultima: Anthropic.Message | null = null;
 

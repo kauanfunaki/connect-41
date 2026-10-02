@@ -31,6 +31,7 @@ import {
 import { conversarComFerramentas } from "@/lib/ia/conversa";
 import { conversarComFerramentasOpenAi } from "@/lib/ia/conversa-openai";
 import type { ResultadoDoLaco, TurnoAnterior } from "@/lib/ia/laco";
+import type { AnexoDaPergunta } from "@/lib/ia/chat/anexos";
 import {
   humanizarTexto,
   normalizarAvaliacoes,
@@ -583,6 +584,8 @@ export async function conversarComAgente(params: {
   aoUsarFerramenta?: (nome: string) => void;
   /** Recebe o que cada ferramenta devolveu — o chat colhe os ids vistos. */
   aoReceberResultado?: (nome: string, conteudo: string, erro: boolean) => void;
+  /** Anexo do chat: vai só com esta pergunta. */
+  anexos?: AnexoDaPergunta[];
 }): Promise<ResultadoDoLaco<string>> {
   return executarAgente({
     tenantId: params.tenantId,
@@ -599,6 +602,7 @@ export async function conversarComAgente(params: {
         historico: params.historico,
         aoUsarFerramenta: params.aoUsarFerramenta,
         aoReceberResultado: params.aoReceberResultado,
+        anexos: params.anexos,
         ctx: {
           tenantId: params.tenantId,
           userId: params.contexto?.userId ?? null,
