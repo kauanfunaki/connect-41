@@ -581,6 +581,8 @@ export async function conversarComAgente(params: {
   historico?: TurnoAnterior[];
   /** Avisado a cada ferramenta pedida — o passo que o chat mostra. */
   aoUsarFerramenta?: (nome: string) => void;
+  /** Recebe o que cada ferramenta devolveu — o chat colhe os ids vistos. */
+  aoReceberResultado?: (nome: string, conteudo: string, erro: boolean) => void;
 }): Promise<ResultadoDoLaco<string>> {
   return executarAgente({
     tenantId: params.tenantId,
@@ -596,6 +598,7 @@ export async function conversarComAgente(params: {
         maxTokens: params.maxTokens,
         historico: params.historico,
         aoUsarFerramenta: params.aoUsarFerramenta,
+        aoReceberResultado: params.aoReceberResultado,
         ctx: {
           tenantId: params.tenantId,
           userId: params.contexto?.userId ?? null,

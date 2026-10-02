@@ -100,7 +100,8 @@ export async function rodarLaco(
   adaptador: AdaptadorDeProvedor,
   def: AgenteDef,
   ctx: ContextoDaFerramenta,
-  aoUsarFerramenta?: (nome: string) => void
+  aoUsarFerramenta?: (nome: string) => void,
+  aoReceberResultado?: (nome: string, conteudo: string, erro: boolean) => void
 ): Promise<ResultadoDoLaco<string>> {
   const usos: (UsoDeTokens | null)[] = [];
   const propostas: PropostaDeEscrita[] = [];
@@ -141,7 +142,15 @@ export async function rodarLaco(
       } catch {
         // ignorado de propósito
       }
-      respostas.push(await atenderPedido(pedido, def, ctx, propostas));
+      const resposta = await atenderPedido(pedido, def, ctx, propostas);
+      // O que a ferramenta devolveu — o chat guarda os ids que apareceram,
+      // para só aceitar citação de pessoa que veio de dado real (02/10/2026).
+      try {
+        aoReceberResultado?.(pedido.nome, resposta.conteudo, resposta.erro);
+      } catch {
+        // ignorado de propósito, como o aoUsarFerramenta
+      }
+      respostas.push(resposta);
     }
     adaptador.devolver(respostas);
   }
@@ -231,6 +240,8 @@ export type ParametrosDaConversa = {
   historico?: TurnoAnterior[];
   /** Avisado a cada ferramenta pedida — é o que o chat mostra como passo. */
   aoUsarFerramenta?: (nome: string) => void;
+  /** Recebe o que cada ferramenta devolveu (texto, como foi ao modelo). */
+  aoReceberResultado?: (nome: string, conteudo: string, erro: boolean) => void;
   /** Só teste passa. Em produção o laço fala com o Anthropic. */
   chamarModelo?: ChamadaAoModelo;
 };
@@ -307,5 +318,5 @@ export async function conversarComFerramentas(
     },
   };
 
-  return rodarLaco(adaptador, p.def, p.ctx, p.aoUsarFerramenta);
+  return rodarLaco(adaptador, p.def, p.ctx, p.aoUsarFerramenta, p.aoReceberResultado);
 }

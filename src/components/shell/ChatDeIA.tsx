@@ -22,6 +22,8 @@ import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Popover, ItemDoMenu } from "@/components/ui/Popover";
 import { OrbeDaIA } from "@/components/shell/OrbeDaIA";
+import { AvatarImage } from "@/components/shared/AvatarImage";
+import { partesComCitacoes, type Citado } from "@/lib/ia/chat/citacoes";
 import { formatInstantDateTime } from "@/lib/format";
 import type { AgenteDoChat } from "@/lib/ia/chat/agentes";
 import type { ConversaNaLista, MensagemNaTela } from "@/lib/ia/chat/conversas";
@@ -41,18 +43,48 @@ type Evento =
   | { tipo: "mensagem"; mensagem: MensagemNaTela }
   | { tipo: "erro"; texto: string };
 
-/** Negrito com **, lista com "-" ou "1.", e uma linha por parágrafo. O resto vai como texto — nada de HTML vindo do modelo. */
-function TextoDaResposta({ texto }: { texto: string }) {
+/** Negrito com **, para um pedaço de texto puro. */
+function comNegrito(texto: string, chave: string) {
+  return texto.split(/(\*\*[^*]+\*\*)/g).map((p, j) =>
+    p.startsWith("**") && p.endsWith("**") ? <strong key={`${chave}-${j}`}>{p.slice(2, -2)}</strong> : <Fragment key={`${chave}-${j}`}>{p.replace(/^#+\s*/, "")}</Fragment>
+  );
+}
+
+/** A pessoa ou empresa citada: foto (ou iniciais) e nome; com ficha, leva a ela. */
+function CartaoDoCitado({ citado }: { citado: Citado }) {
+  const conteudo = (
+    <>
+      <AvatarImage src={citado.foto} name={citado.nome} size={18} shape={citado.tipo === "empresa" ? "lg" : "circle"} fontSize={8} bordered={false} />
+      <span className="truncate">{citado.nome}</span>
+    </>
+  );
+  const classe = "inline-flex max-w-full items-center gap-1 align-middle rounded-full border border-border bg-surface pl-0.5 pr-2 py-0.5 text-[12px] font-medium text-fg";
+  return citado.href ? (
+    <a href={citado.href} className={`${classe} hover:border-brand hover:text-brand`}>
+      {conteudo}
+    </a>
+  ) : (
+    <span className={classe}>{conteudo}</span>
+  );
+}
+
+/**
+ * Negrito com **, lista com "-" ou "1.", pessoas citadas com foto, e uma linha
+ * por parágrafo. O resto vai como texto — nada de HTML vindo do modelo.
+ */
+function TextoDaResposta({ texto, citados = {} }: { texto: string; citados?: Record<string, Citado> }) {
   return (
     <div className="flex flex-col gap-1.5">
       {texto.split("\n").map((linha, i) => {
         if (!linha.trim()) return null;
         const item = /^\s*[-•]\s+/.test(linha);
         const numero = /^\s*(\d+)[.)]\s+/.exec(linha)?.[1];
-        const partes = linha.replace(/^\s*([-•]|\d+[.)])\s+/, "").split(/(\*\*[^*]+\*\*)/g);
-        const conteudo = partes.map((p, j) =>
-          p.startsWith("**") && p.endsWith("**") ? <strong key={j}>{p.slice(2, -2)}</strong> : <Fragment key={j}>{p.replace(/^#+\s*/, "")}</Fragment>
-        );
+        const conteudo = partesComCitacoes(linha.replace(/^\s*([-•]|\d+[.)])\s+/, "")).map((p, j) => {
+          if ("texto" in p) return <Fragment key={j}>{comNegrito(p.texto, `${i}-${j}`)}</Fragment>;
+          const citado = citados[`${p.tipo}:${p.id}`];
+          // Sem cadastro achado (outro escritório, apagado): só o nome.
+          return citado ? <CartaoDoCitado key={j} citado={citado} /> : <Fragment key={j}>{p.nome}</Fragment>;
+        });
         if (numero) {
           return (
             <p key={i} className="pl-5 relative">
@@ -551,7 +583,7 @@ export function ChatDeIA({
                   <div className="min-w-0 flex-1 flex flex-col gap-2">
                     {m.contexto && <span className="text-[10px] uppercase tracking-wide text-brand">{m.contexto}</span>}
                     <div className={`text-[13px] leading-relaxed break-words ${m.falhou ? "rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-danger" : "text-fg"}`}>
-                      <TextoDaResposta texto={m.texto} />
+                      <TextoDaResposta texto={m.texto} citados={m.citados} />
                     </div>
                     {m.truncada && (
                       <p className="flex items-start gap-1.5 text-[11px] text-warning">
