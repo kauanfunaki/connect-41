@@ -70,11 +70,11 @@ export default async function LoginPage({
           Entrar
         </Button>
 
+        {/* Até 01/10/2026 havia aqui "Solicitar acesso", que abria chamado no
+            Hub da 41 Tech — virou canal de propaganda. Acesso quem libera é o
+            administrador de cada escritório. */}
         <p className="text-center text-[13px] text-fg-muted">
-          Não tem uma conta?{" "}
-          <Link href="/login/criar-conta" className="font-medium text-brand hover:underline">
-            Solicitar acesso
-          </Link>
+          Não tem acesso? Fale com quem administra o Connect na sua empresa.
         </p>
       </form>
     </AuthShell>
