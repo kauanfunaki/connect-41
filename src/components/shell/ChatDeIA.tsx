@@ -1,9 +1,23 @@
 "use client";
 
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AlertTriangle, ArrowLeft, ArrowUp, Check, ChevronDown, Copy, History, MessageSquareText, MoreHorizontal, Plus, Trash2, X } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowUp,
+  Check,
+  ChevronDown,
+  Copy,
+  History,
+  MessageSquareText,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Trash2,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Popover, ItemDoMenu } from "@/components/ui/Popover";
@@ -11,12 +25,14 @@ import { OrbeDaIA } from "@/components/shell/OrbeDaIA";
 import { formatInstantDateTime } from "@/lib/format";
 import type { AgenteDoChat } from "@/lib/ia/chat/agentes";
 import type { ConversaNaLista, MensagemNaTela } from "@/lib/ia/chat/conversas";
-import { descreverProposta } from "@/lib/ia/chat/regras";
+import { descreverProposta, opcoesDeRespostaRapida, rotulosDaDecisao, SUGERIR_RESPOSTAS } from "@/lib/ia/chat/regras";
 import {
   abrirConversaDoChat,
   apagarConversaDoChat,
   aplicarPropostaDoChat,
   conversasDoChat,
+  recusarPropostaDoChat,
+  substituirDesdeAMensagem,
 } from "@/app/(app)/ia/chat-actions";
 
 type Evento =
@@ -146,6 +162,9 @@ export function ChatDeIA({
   const [aplicando, setAplicando] = useState<string | null>(null);
   const [copiada, setCopiada] = useState<string | null>(null);
   const [dicaFechada, setDicaFechada] = useState(false);
+  // A pergunta sendo editada: o campo leva o texto dela, e ao enviar ela e o
+  // que veio depois ficam substituídos.
+  const [editando, setEditando] = useState<MensagemNaTela | null>(null);
   const fimRef = useRef<HTMLDivElement>(null);
   const campoRef = useRef<HTMLTextAreaElement>(null);
   const jaAbriu = useSyncExternalStore(assinarJaAbriu, lerJaAbriu, () => true);
@@ -180,6 +199,7 @@ export function ChatDeIA({
   const agente = agentes.find((a) => a.code === agentCode) ?? agentes[0]!;
   const corDoOrbe = { "--orbe-b": (agente.setor && coresDosSetores[agente.setor]) || undefined } as React.CSSProperties;
   const primeiroNome = nome.trim().split(/\s+/)[0] ?? "";
+  const ultimaResposta = [...mensagens].reverse().find((x) => x.papel === "assistente");
 
   function abrirChat(prefixo?: string) {
     marcarJaAbriu();
@@ -279,6 +299,76 @@ export function ChatDeIA({
     );
     // A tela de trás mudou (a etapa foi concluída): recarrega o que ela mostra.
     router.refresh();
+  }
+
+  /** Tira da tela a mensagem e o que veio depois — o servidor já as marcou como substituídas. */
+  function cortarDesde(id: string) {
+    setMensagens((ms) => {
+      const i = ms.findIndex((x) => x.id === id);
+      return i >= 0 ? ms.slice(0, i) : ms;
+    });
+  }
+
+  function comecarEdicao(m: MensagemNaTela) {
+    setEditando(m);
+    setPergunta(m.texto);
+    requestAnimationFrame(() => campoRef.current?.focus());
+  }
+
+  function cancelarEdicao() {
+    setEditando(null);
+    setPergunta("");
+  }
+
+  /** O enviar do campo: com uma pergunta em edição, substitui antes de mandar. */
+  async function enviarDoCampo(texto: string) {
+    if (!texto.trim() || enviando) return;
+    if (editando) {
+      const alvo = editando;
+      const r = await substituirDesdeAMensagem(alvo.id);
+      if ("error" in r) {
+        setErro(r.error);
+        return;
+      }
+      cortarDesde(alvo.id);
+      setEditando(null);
+    }
+    await enviar(texto);
+  }
+
+  /** Refazer: a mesma pergunta de novo, no lugar da resposta (conta no limite do dia). */
+  async function refazer(m: MensagemNaTela) {
+    if (enviando) return;
+    const i = mensagens.findIndex((x) => x.id === m.id);
+    const anterior = mensagens.slice(0, i).reverse().find((x) => x.papel === "usuario");
+    if (!anterior) return;
+    const r = await substituirDesdeAMensagem(anterior.id);
+    if ("error" in r) {
+      setErro(r.error);
+      return;
+    }
+    cortarDesde(anterior.id);
+    await enviar(anterior.texto);
+  }
+
+  async function recusar(m: MensagemNaTela, indice: number) {
+    setAplicando(`${m.id}:${indice}`);
+    const r = await recusarPropostaDoChat(m.id, indice);
+    setAplicando(null);
+    if ("error" in r) {
+      setErro(r.error);
+      return;
+    }
+    setMensagens((ms) =>
+      ms.map((x) => (x.id === m.id ? { ...x, propostas: x.propostas.map((p, i) => (i === indice ? { ...p, recusada: true } : p)) } : x))
+    );
+  }
+
+  async function aplicarTodas(m: MensagemNaTela) {
+    for (const [i, p] of m.propostas.entries()) {
+      if (p.aplicada || p.recusada || p.ferramenta === SUGERIR_RESPOSTAS || p.ferramenta === "abrir_transferencia") continue;
+      await aplicar(m, i);
+    }
   }
 
   async function copiar(m: MensagemNaTela) {
@@ -444,6 +534,11 @@ export function ChatDeIA({
                   <span className="flex items-center gap-1.5">
                     {m.contexto && <span className="text-[10px] text-fg-muted truncate max-w-[200px]">{m.contexto}</span>}
                     <AcoesDaMensagem>
+                      {!enviando && (
+                        <BotaoDeAcao rotulo="Editar" onClick={() => comecarEdicao(m)}>
+                          <Pencil size={13} />
+                        </BotaoDeAcao>
+                      )}
                       <BotaoDeAcao rotulo={copiada === m.id ? "Copiado" : "Copiar"} onClick={() => void copiar(m)}>
                         {copiada === m.id ? <Check size={13} /> : <Copy size={13} />}
                       </BotaoDeAcao>
@@ -463,40 +558,28 @@ export function ChatDeIA({
                         <AlertTriangle size={12} className="mt-0.5 shrink-0" /> A IA parou antes de terminar — a resposta pode estar incompleta.
                       </p>
                     )}
-                    {m.propostas.length > 0 && (
-                      <div className="flex flex-col gap-1.5">
-                        <p className="text-[10px] uppercase tracking-wide text-fg-muted">Sugestões — nada foi feito ainda</p>
-                        {m.propostas.map((p, i) => (
-                          <div key={i} className="flex items-center justify-between gap-2 border border-border rounded-lg px-3 py-2">
-                            <span className="text-[12px] text-fg">{descreverProposta(p)}</span>
-                            {p.ferramenta === "abrir_transferencia" ? (
-                              // Não aplica daqui: abre o formulário preenchido, e a
-                              // pessoa revisa empresa, setores e texto antes de mandar.
-                              <Link
-                                href={`/transferencias/novo?daIa=${m.id}&indice=${i}`}
-                                className="text-[12px] text-brand hover:underline shrink-0"
-                                onClick={() => setAberto(false)}
-                              >
-                                Abrir
-                              </Link>
-                            ) : p.aplicada ? (
-                              <span className="text-[11px] text-success shrink-0">aplicado</span>
-                            ) : (
-                              <Button size="xs" variant="secondary" disabled={aplicando === `${m.id}:${i}`} onClick={() => aplicar(m, i)}>
-                                {aplicando === `${m.id}:${i}` ? "Aplicando…" : "Aplicar"}
-                              </Button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
+                    <CartoesDeDecisao
+                      m={m}
+                      aplicando={aplicando}
+                      onAplicar={(i) => void aplicar(m, i)}
+                      onRecusar={(i) => void recusar(m, i)}
+                      onAplicarTodas={() => void aplicarTodas(m)}
+                      onAbrirTransferencia={() => setAberto(false)}
+                    />
+                    {/* Respostas rápidas: só na última resposta, e não enquanto a próxima está saindo. */}
+                    {m.id === ultimaResposta?.id && !enviando && (
+                      <RespostasRapidas opcoes={m.propostas.flatMap((p) => opcoesDeRespostaRapida(p))} onEscolher={(t) => void enviar(t)} />
                     )}
-                    {!m.falhou && (
-                      <AcoesDaMensagem>
-                        <BotaoDeAcao rotulo={copiada === m.id ? "Copiado" : "Copiar"} onClick={() => void copiar(m)}>
-                          {copiada === m.id ? <Check size={13} /> : <Copy size={13} />}
+                    <AcoesDaMensagem>
+                      <BotaoDeAcao rotulo={copiada === m.id ? "Copiado" : "Copiar"} onClick={() => void copiar(m)}>
+                        {copiada === m.id ? <Check size={13} /> : <Copy size={13} />}
+                      </BotaoDeAcao>
+                      {!enviando && (
+                        <BotaoDeAcao rotulo="Refazer a resposta" onClick={() => void refazer(m)}>
+                          <RotateCcw size={13} />
                         </BotaoDeAcao>
-                      </AcoesDaMensagem>
-                    )}
+                      )}
+                    </AcoesDaMensagem>
                   </div>
                 </div>
               )
@@ -517,9 +600,18 @@ export function ChatDeIA({
             className="px-3 pb-3"
             onSubmit={(e) => {
               e.preventDefault();
-              enviar(pergunta);
+              void enviarDoCampo(pergunta);
             }}
           >
+            {editando && (
+              <div className="mb-2 flex items-start gap-2 rounded-lg bg-warning-bg px-3 py-2 text-[12px] text-fg-secondary">
+                <Pencil size={13} className="mt-0.5 flex-shrink-0 text-warning" />
+                <span className="flex-1">Editando a pergunta — o que veio depois dela será substituído ao enviar.</span>
+                <button type="button" onClick={cancelarEdicao} className="font-medium text-fg hover:underline">
+                  Cancelar
+                </button>
+              </div>
+            )}
             <div className="rounded-2xl border border-border-strong bg-surface focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)] transition-colors">
               <div className="flex items-end gap-2 pl-3.5 pr-2 pt-2.5">
                 <Textarea
@@ -529,7 +621,10 @@ export function ChatDeIA({
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
-                      enviar(pergunta);
+                      void enviarDoCampo(pergunta);
+                    } else if (e.key === "Escape" && editando) {
+                      e.preventDefault();
+                      cancelarEdicao();
                     }
                   }}
                   rows={1}
@@ -622,6 +717,97 @@ function SeletorDoAgente({
         </div>
       )}
     </Popover>
+  );
+}
+
+/**
+ * As propostas da resposta como cartões de decisão (02/10/2026): a descrição e
+ * os botões dentro da resposta — Sim/Não, ou Aprovar/Recusar na candidatura.
+ * A transferência continua indo ao formulário preenchido, para revisar antes.
+ * Nada foi feito enquanto ninguém clica.
+ */
+function CartoesDeDecisao({
+  m,
+  aplicando,
+  onAplicar,
+  onRecusar,
+  onAplicarTodas,
+  onAbrirTransferencia,
+}: {
+  m: MensagemNaTela;
+  aplicando: string | null;
+  onAplicar: (indice: number) => void;
+  onRecusar: (indice: number) => void;
+  onAplicarTodas: () => void;
+  onAbrirTransferencia: () => void;
+}) {
+  const cartoes = m.propostas.map((p, i) => ({ p, i })).filter(({ p }) => p.ferramenta !== SUGERIR_RESPOSTAS);
+  if (cartoes.length === 0) return null;
+  const pendentes = cartoes.filter(({ p }) => !p.aplicada && !p.recusada && p.ferramenta !== "abrir_transferencia");
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] uppercase tracking-wide text-fg-muted">Sugestões — nada foi feito ainda</p>
+        {pendentes.length > 1 && (
+          <button type="button" onClick={onAplicarTodas} disabled={aplicando !== null} className="text-[12px] font-medium text-brand hover:underline disabled:opacity-50">
+            Aplicar todas
+          </button>
+        )}
+      </div>
+      {cartoes.map(({ p, i }) => {
+        const rotulos = rotulosDaDecisao(p.ferramenta);
+        const ocupado = aplicando === `${m.id}:${i}`;
+        return (
+          <div key={i} className={`rounded-xl border px-3 py-2.5 ${p.aplicada ? "border-success/40 bg-success-bg/40" : p.recusada ? "border-border bg-surface-2/40" : "border-border bg-surface"}`}>
+            <p className={`text-[13px] ${p.recusada ? "text-fg-muted line-through" : "text-fg"}`}>{descreverProposta(p)}</p>
+            <div className="mt-2 flex items-center justify-end gap-2">
+              {p.ferramenta === "abrir_transferencia" ? (
+                // Não aplica daqui: abre o formulário preenchido, e a pessoa
+                // revisa empresa, setores e texto antes de mandar.
+                <Button size="xs" variant="secondary" href={`/transferencias/novo?daIa=${m.id}&indice=${i}`} onClick={onAbrirTransferencia}>
+                  Revisar e abrir
+                </Button>
+              ) : p.aplicada ? (
+                <span className="inline-flex items-center gap-1 text-[12px] font-medium text-success">
+                  <Check size={13} /> Aplicado
+                </span>
+              ) : p.recusada ? (
+                <span className="text-[12px] text-fg-muted">Recusado</span>
+              ) : (
+                <>
+                  <Button size="xs" variant="secondary" disabled={ocupado} onClick={() => onRecusar(i)}>
+                    <X size={12} /> {rotulos.nao}
+                  </Button>
+                  <Button size="xs" disabled={ocupado} onClick={() => onAplicar(i)}>
+                    <Check size={12} /> {ocupado ? "Aplicando…" : rotulos.sim}
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })}
+      <p className="text-[11px] text-fg-muted">Precisa de outra opção? É só dizer.</p>
+    </div>
+  );
+}
+
+/** Os botões que a IA ofereceu para a próxima resposta — o clique manda o texto. */
+function RespostasRapidas({ opcoes, onEscolher }: { opcoes: string[]; onEscolher: (texto: string) => void }) {
+  if (opcoes.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {opcoes.map((o) => (
+        <button
+          key={o}
+          type="button"
+          onClick={() => onEscolher(o)}
+          className="max-w-full truncate rounded-full border border-brand/40 bg-brand-subtle/50 px-3 py-1 text-[12px] font-medium text-brand hover:bg-brand-subtle transition-colors"
+        >
+          {o}
+        </button>
+      ))}
+    </div>
   );
 }
 

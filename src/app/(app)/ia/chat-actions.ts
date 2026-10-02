@@ -12,12 +12,14 @@ import {
   apagarConversa,
   listarConversas,
   marcarPropostaAplicada,
+  marcarPropostaRecusada,
   mensagemComPropostas,
   mensagensDaConversa,
+  substituirAPartirDe,
   type ConversaNaLista,
   type MensagemNaTela,
 } from "@/lib/ia/chat/conversas";
-import { lerPropostas } from "@/lib/ia/chat/regras";
+import { lerPropostas, SUGERIR_RESPOSTAS } from "@/lib/ia/chat/regras";
 import { aplicarPropostaDoSocietario } from "@/app/(app)/processos/ia-actions";
 import { aplicarProposta as aplicarPropostaDaVaga } from "@/app/(app)/vagas/[id]/ia-actions";
 
@@ -61,6 +63,8 @@ export async function aplicarPropostaDoChat(mensagemId: string, indice: number):
   const p = propostas[indice];
   if (!p) return { error: "Proposta não encontrada." };
   if (p.aplicada) return { ok: true };
+  if (p.recusada) return { error: "Esta sugestão foi recusada. Peça de novo à IA, se mudou de ideia." };
+  if (p.ferramenta === SUGERIR_RESPOSTAS) return { error: "Resposta rápida não se aplica." };
 
   let r: { error: string } | null;
   if (m.conversation.agentCode === "assistente_do_societario") {
@@ -83,6 +87,31 @@ export async function aplicarPropostaDoChat(mensagemId: string, indice: number):
 
   await marcarPropostaAplicada(m.id, propostas, indice);
   return { ok: true };
+}
+
+/** O "Não" do cartão de decisão (02/10/2026): grava `recusada` na proposta. */
+export async function recusarPropostaDoChat(mensagemId: string, indice: number): Promise<{ error: string } | { ok: true }> {
+  const d = await dono();
+  if (!d) return { error: "Não autenticado." };
+  const m = await mensagemComPropostas(d, mensagemId);
+  if (!m) return { error: "Mensagem não encontrada." };
+  const propostas = lerPropostas(m.proposals);
+  const p = propostas[indice];
+  if (!p) return { error: "Proposta não encontrada." };
+  if (p.aplicada) return { error: "Esta sugestão já foi aplicada." };
+  if (!p.recusada) await marcarPropostaRecusada(m.id, propostas, indice);
+  return { ok: true };
+}
+
+/**
+ * Editar uma pergunta ou refazer uma resposta: a mensagem e o que veio depois
+ * ficam substituídos (ver `substituirAPartirDe`); a tela reenvia a pergunta em
+ * seguida, e ela conta no limite do dia como qualquer outra.
+ */
+export async function substituirDesdeAMensagem(mensagemId: string): Promise<{ error: string } | { ok: true }> {
+  const d = await dono();
+  if (!d) return { error: "Não autenticado." };
+  return (await substituirAPartirDe(d, mensagemId)) ? { ok: true } : { error: "Mensagem não encontrada." };
 }
 
 /** Quem vê o chat: só coordenadores (piloto) ou todos. Administração do escritório. */

@@ -17,7 +17,7 @@
 // rota, com a permissão de quem perguntou.
 
 import type { FerramentaRegistrada } from "@/lib/ia/ferramentas";
-import { SETORES_DO_ENCAMINHAMENTO } from "@/lib/ia/chat/regras";
+import { SETORES_DO_ENCAMINHAMENTO, SUGERIR_RESPOSTAS } from "@/lib/ia/chat/regras";
 
 export const ENCAMINHAR = "encaminhar_pergunta";
 
@@ -34,6 +34,32 @@ export const FERRAMENTAS_DO_ORQUESTRADOR: Record<string, FerramentaRegistrada> =
           motivo: { type: "string", description: "Em uma frase, do que trata a pergunta" },
         },
         required: ["setor", "motivo"],
+        additionalProperties: false,
+      },
+      natureza: "escrita",
+    },
+  },
+
+  // Respostas rápidas (02/10/2026): a IA oferece botões quando a próxima
+  // resposta da pessoa é uma escolha curta. Mesma mecânica do encaminhamento —
+  // escrita sem executor, vira "proposta" gravada no Json da mensagem, e a tela
+  // a desenha como botões. O clique só manda o texto como pergunta nova.
+  [SUGERIR_RESPOSTAS]: {
+    def: {
+      nome: SUGERIR_RESPOSTAS,
+      descricao:
+        "Use quando a próxima resposta da pessoa for uma escolha curta — confirmar (sim/não), escolher entre poucas opções, ou o próximo passo óbvio. Ofereça de 2 a 4 opções curtas, escritas como a pessoa diria. Sua resposta em texto continua normal; as opções aparecem como botões embaixo dela.",
+      parametros: {
+        type: "object",
+        properties: {
+          opcoes: {
+            type: "array",
+            items: { type: "string", description: "Até 60 caracteres, como a pessoa diria" },
+            minItems: 2,
+            maxItems: 4,
+          },
+        },
+        required: ["opcoes"],
         additionalProperties: false,
       },
       natureza: "escrita",

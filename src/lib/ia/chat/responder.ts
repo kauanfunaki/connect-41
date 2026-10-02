@@ -43,6 +43,8 @@ import {
   IA_DO_SETOR,
   LIMITE_DE_PERGUNTAS_POR_DIA,
   MAX_CARACTERES_DA_PERGUNTA,
+  opcoesDeRespostaRapida,
+  SUGERIR_RESPOSTAS,
   textoDoPasso,
   type PropostaGravada,
 } from "@/lib/ia/chat/regras";
@@ -134,7 +136,15 @@ export async function prepararPerguntaDoChat(
       const propostasDe = (r: Awaited<ReturnType<typeof perguntarA>>): PropostaGravada[] =>
         r.propostas
           .filter((p) => p.ferramenta !== "encaminhar_pergunta")
-          .map((p) => ({ ferramenta: p.ferramenta, descricao: p.descricao, argumentos: p.argumentos ?? {} }));
+          .flatMap((p) => {
+            // Resposta rápida: grava só as opções limpas (2 a 4, curtas); sem
+            // opção que preste, não vira nada.
+            if (p.ferramenta === SUGERIR_RESPOSTAS) {
+              const opcoes = opcoesDeRespostaRapida({ ferramenta: p.ferramenta, argumentos: p.argumentos ?? {} });
+              return opcoes.length ? [{ ferramenta: p.ferramenta, descricao: "Respostas rápidas", argumentos: { opcoes } }] : [];
+            }
+            return [{ ferramenta: p.ferramenta, descricao: p.descricao, argumentos: p.argumentos ?? {} }];
+          });
 
       try {
         let r = await perguntarA(agente, true);
