@@ -2,7 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 import { UploadCloud, X, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
-import { aceitaArquivo, extensaoDe, formatarBytes } from "@/lib/fileSize";
+import { aceitaArquivo, extensaoDe, formatarBytes, formatosDoAccept } from "@/lib/fileSize";
 
 /** Estado de um arquivo na fila, do momento em que é escolhido até o fim. */
 export type ArquivoNaFila = {
@@ -87,11 +87,7 @@ export function FileDropzone({
     if (aceitos.length > 0) onAdicionar(multiple ? aceitos : aceitos.slice(0, 1));
   }
 
-  const formatosLegiveis = accept
-    .split(",")
-    .map((a) => a.trim().replace(/^\./, "").toUpperCase())
-    .filter(Boolean)
-    .join(", ");
+  const formatosLegiveis = formatosDoAccept(accept);
 
   return (
     <div className="flex flex-col gap-3">
