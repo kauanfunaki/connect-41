@@ -133,7 +133,7 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
                   </p>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
-                  <CopyLinkButton url={m.meetingUrl} />
+                  <CopyLinkButton url={m.meetingUrl} variant="botao" />
                   {/* Entrar é a ação da linha: botão, e não link azul (30/09). */}
                   <Button href={m.meetingUrl} target="_blank" rel="noopener noreferrer" variant="secondary" size="xs">
                     Entrar <ExternalLink size={11} />
