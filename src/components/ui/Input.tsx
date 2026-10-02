@@ -15,18 +15,21 @@ type Props = Omit<React.InputHTMLAttributes<HTMLInputElement>, "prefix"> & {
    * focar um campo, e vale pagar esse preço onde se digita de verdade.
    */
   compact?: boolean;
+  /** Controle dentro do campo, à direita — o olho da senha, um "limpar".
+   *  Diferente do `suffix`, é clicável e não leva a divisória. */
+  direita?: React.ReactNode;
 };
 
-export function Input({ error = false, icon, prefix, suffix, compact = false, className = "", disabled, readOnly, ...rest }: Props) {
+export function Input({ error = false, icon, prefix, suffix, direita, compact = false, className = "", disabled, readOnly, ...rest }: Props) {
   const sizeClass = compact ? "h-8 text-[13px]" : "h-9 text-[length:var(--fs-input)]";
   // `w-full` é o padrão de formulário; quem passa largura própria (o mês do
   // filtro, as horas do processo) quer a dele. Com os dois, o `w-40` perdia
   // para o `w-full` no CSS, e o filtro de mês esticava pela tela inteira,
   // empurrando o "Aplicar" para outra linha (visto no redesign de 30/09).
   const largura = /(^|\s)w-(?!full(\s|$))\S+/.test(className) ? "" : "w-full";
-  // Variante com prefixo/sufixo: a borda e o focus ring vivem no wrapper
-  // (focus-within), e o input interno fica transparente e sem borda.
-  if (prefix || suffix) {
+  // Variante com prefixo/sufixo/controle: a borda e o focus ring vivem no
+  // wrapper (focus-within), e o input interno fica transparente e sem borda.
+  if (prefix || suffix || direita) {
     return (
       <div
         className={`flex items-stretch ${largura} ${compact ? "h-8" : "h-9"} rounded-md border bg-input-bg overflow-hidden transition-colors ${
@@ -51,6 +54,7 @@ export function Input({ error = false, icon, prefix, suffix, compact = false, cl
             {suffix}
           </span>
         )}
+        {direita && <span className="flex items-center pr-1">{direita}</span>}
       </div>
     );
   }

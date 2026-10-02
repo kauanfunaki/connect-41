@@ -6,6 +6,7 @@ import { salvarConfigIA, removerConfigIA, testarChaveIA, type AiConfigState } fr
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoDeSenha } from "@/components/ui/CampoDeSenha";
 import { Select } from "@/components/ui/Select";
 import type { AiProvider } from "@/generated/prisma/enums";
 
@@ -104,7 +105,7 @@ export function AiConfigForm({ hasConfig, defaultValues }: Props) {
           required={!hasConfig}
           helper={hasConfig ? "Deixe em branco para manter a chave já salva." : "Gere em console.anthropic.com ou platform.openai.com."}
         >
-          <Input id="apiKey" name="apiKey" type="password" required={!hasConfig} placeholder={hasConfig ? "••••••••" : "sk-..."} />
+          <CampoDeSenha id="apiKey" name="apiKey" required={!hasConfig} placeholder={hasConfig ? "••••••••" : "sk-..."} />
         </CampoForm>
 
         {/* Rodapé único: remover à esquerda, separado; testar e salvar à

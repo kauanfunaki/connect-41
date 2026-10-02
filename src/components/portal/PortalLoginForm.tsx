@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
+import { CampoDeSenha } from "@/components/ui/CampoDeSenha";
 import { Button } from "@/components/ui/Button";
 import type { EstadoDoLogin } from "@/app/(portal)/portal/login/actions";
 
@@ -71,7 +72,7 @@ export function PortalLoginForm({ action }: Props) {
         </CampoForm>
 
         <CampoForm label="Senha" htmlFor="senha" required>
-          <Input id="senha" name="senha" type="password" autoComplete="current-password" required />
+          <CampoDeSenha id="senha" name="senha" autoComplete="current-password" required />
         </CampoForm>
 
         {estado && "erro" in estado && <p className="text-[length:var(--fs-helper)] text-danger">{estado.erro}</p>}

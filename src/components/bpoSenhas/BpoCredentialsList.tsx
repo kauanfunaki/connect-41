@@ -12,6 +12,7 @@ import { Modal } from "@/components/ui/Modal";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoDeSenha } from "@/components/ui/CampoDeSenha";
 import { Textarea } from "@/components/ui/Textarea";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast";
@@ -71,7 +72,7 @@ function CredentialFormFields({ companies, defaults }: { companies: CompanyOptio
           required={!defaults}
           helper={defaults ? "Deixe em branco para manter a senha atual." : undefined}
         >
-          <Input id="password" name="password" type="password" required={!defaults} autoComplete="new-password" />
+          <CampoDeSenha id="password" name="password" required={!defaults} autoComplete="new-password" />
         </CampoForm>
       </FieldGrid>
       <CampoForm label="URL" htmlFor="url">
