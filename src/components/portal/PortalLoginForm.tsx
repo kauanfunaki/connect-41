@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -67,6 +67,16 @@ function Entrada({
   // Uma caixa só para os dois jeitos de entrar: o formulário da senha a envia,
   // e o botão do Google leva o valor num campo escondido.
   const [lembrar, setLembrar] = useState(false);
+  const [indoAoGoogle, setIndoAoGoogle] = useState(false);
+  // Voltar do Google pelo "voltar" do navegador restaura a página da memória,
+  // com o botão ainda em "Abrindo o Google…" — destrava.
+  useEffect(() => {
+    const destravar = (e: PageTransitionEvent) => {
+      if (e.persisted) setIndoAoGoogle(false);
+    };
+    window.addEventListener("pageshow", destravar);
+    return () => window.removeEventListener("pageshow", destravar);
+  }, []);
 
   // Segundo passo: a senha (ou o Google) conferiu em mais de um cliente. A
   // senha não volta para a tela — o token da escolha já carrega as contas
@@ -154,8 +164,11 @@ function Entrada({
         </Button>
       </form>
 
-      {/* 05/10/2026: só no portal — o login da equipe não muda. GET comum, para
-          o navegador seguir os redirects até o Google; o "lembrar" vai junto. */}
+      {/* 05/10/2026: só no portal — o login da equipe não muda. Navegação de
+          página inteira, e não <form>: a CSP do Connect tem `form-action 'self'`,
+          e o navegador barra o formulário cujo redirect termina no Google. Nem
+          <Link>, que buscaria a rota por fetch (e a pré-carregaria). O
+          "lembrar" vai na URL da ida. */}
       {googleDisponivel && (
         <>
           <div className="my-4 flex items-center gap-3 text-[length:var(--fs-helper)] text-fg-muted" aria-hidden="true">
@@ -163,13 +176,19 @@ function Entrada({
             ou
             <span className="h-px flex-1 bg-border" />
           </div>
-          <form method="get" action="/portal/login/google">
-            <input type="hidden" name="lembrar" value={lembrar ? "1" : "0"} />
-            <Button type="submit" variant="secondary" className="w-full justify-center">
-              <LogoDoGoogle />
-              Entrar com o Google
-            </Button>
-          </form>
+          <Button
+            type="button"
+            variant="secondary"
+            className="w-full justify-center"
+            disabled={indoAoGoogle}
+            onClick={() => {
+              setIndoAoGoogle(true);
+              window.location.assign(`/portal/login/google?lembrar=${lembrar ? "1" : "0"}`);
+            }}
+          >
+            <LogoDoGoogle />
+            {indoAoGoogle ? "Abrindo o Google…" : "Entrar com o Google"}
+          </Button>
         </>
       )}
 
