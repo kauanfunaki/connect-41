@@ -20,6 +20,15 @@ const ROWS_TEMPLATE = `repeat(${HOURS.length}, minmax(0, 1fr))`;
 // Abaixo disso a reunião não comporta título + segunda linha.
 const COMPACT_UNDER_MIN = 45;
 
+/** O "7:00", centrado na linha de baixo de quem o contém — onde as horas começam. */
+function RotuloDaPrimeiraHora() {
+  return (
+    <span className="absolute right-2 bottom-0 translate-y-1/2 text-[length:var(--fs-micro)] text-fg-muted tnum leading-none">
+      {START_HOUR}:00
+    </span>
+  );
+}
+
 function pad(n: number): string {
   return String(n).padStart(2, "0");
 }
@@ -94,11 +103,12 @@ export function TimeGrid({ days, meetings, actions, onSlotClick, prazos, setores
               O `border-b` fica em cada célula de dia, e não neste grid: no
               container ele atravessava também a coluna de horas e cortava o
               "7:00" ao meio. Nenhum outro rótulo tem linha atrás — as
-              separadoras de hora só existem dentro das colunas de dia. */}
+              separadoras de hora só existem dentro das colunas de dia.
+
+              Com a faixa de prazos (05/10), a primeira hora começa embaixo
+              dela, e o rótulo vai para lá: aqui ele colava no "Prazos". */}
           <div className="relative">
-            <span className="absolute right-2 bottom-0 translate-y-1/2 text-[length:var(--fs-micro)] text-fg-muted tnum leading-none">
-              {START_HOUR}:00
-            </span>
+            {!temPrazo && <RotuloDaPrimeiraHora />}
           </div>
           {days.map((d) => (
             <div
@@ -112,11 +122,16 @@ export function TimeGrid({ days, meetings, actions, onSlotClick, prazos, setores
         </div>
 
         {/* Prazos do dia (30/09): vencimentos, prazos combinados, férias,
-            exames — tudo que é do dia inteiro, e não de uma hora. */}
+            exames — tudo que é do dia inteiro, e não de uma hora.
+            "Prazos" no alto da faixa e o "7:00" no pé dela, na linha onde as
+            horas começam (revisão de 05/10: os dois saíam colados). A borda de
+            baixo fica em cada dia, e não no grid, pelo mesmo motivo do
+            cabeçalho: atravessaria a coluna de horas e cortaria o "7:00". */}
         {temPrazo && (
-          <div className="grid flex-shrink-0 border-b border-border" style={{ gridTemplateColumns: gridTemplate }}>
-            <div className="flex items-start justify-end pr-2 pt-1.5">
-              <span className="text-[length:var(--fs-micro)] text-fg-muted leading-none">Prazos</span>
+          <div className="grid flex-shrink-0" style={{ gridTemplateColumns: gridTemplate }}>
+            <div className="relative flex items-start justify-end pr-2 pt-1.5 min-h-9">
+              <span className="text-[length:var(--fs-micro)] font-medium text-fg-secondary leading-none">Prazos</span>
+              <RotuloDaPrimeiraHora />
             </div>
             {days.map((d) => {
               const lista = prazosByDay.get(d.dateKey) ?? [];
@@ -125,7 +140,7 @@ export function TimeGrid({ days, meetings, actions, onSlotClick, prazos, setores
               return (
                 <div
                   key={d.dateKey}
-                  className={`border-l border-border p-1 min-w-0 max-h-[104px] overflow-y-auto scroll-y ${umDia ? "flex flex-wrap gap-1 [&>*]:w-auto [&>*]:max-w-full" : "space-y-0.5"}`}
+                  className={`border-l border-b border-border p-1 min-w-0 max-h-[104px] overflow-y-auto scroll-y ${umDia ? "flex flex-wrap gap-1 [&>*]:w-auto [&>*]:max-w-full" : "space-y-0.5"}`}
                 >
                   {visiveis.map((p) => (
                     <PrazoItem key={p.chave} prazo={p} setores={setores} />
