@@ -131,9 +131,12 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
         {visiveis.length === 0 ? (
           <EmptyState
             title={certs.length === 0 ? "Nenhum certificado importado" : busca ? "Nada encontrado" : "Nada nesta aba"}
+            // Texto para quem usa a tela (05/10/2026) — mostrava o caminho do script no repositório.
             description={
               certs.length === 0
-                ? "Rode o script de conferência (scripts/certificados/conferir-certificados.ps1) e importe o certificados.csv que ele gera."
+                ? acesso.podeImportar
+                  ? "Clique em “Importar relatório” e escolha o arquivo .csv da conferência dos certificados."
+                  : "Os certificados aparecem aqui quando o setor importar o relatório da conferência."
                 : undefined
             }
             icon={<KeyRound />}
