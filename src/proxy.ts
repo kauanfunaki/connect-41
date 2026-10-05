@@ -2,7 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { ehCaminhoDoPortal, ehRotaPublicaDoPortal, PORTAL_COOKIE } from "@/lib/auth/portal";
 import { jwtVerify } from "jose";
 import type { AccessTokenPayload } from "@/lib/auth/types";
-import { COOKIE_SETOR_ATIVO, HEADER_SETOR_ATIVO, resolveSectorHint } from "@/lib/auth/activeSector";
+import {
+  baseDomain,
+  COOKIE_SETOR_ATIVO,
+  HEADER_SETOR_ATIVO,
+  hostNovoDoAntigo,
+  hostSuffix,
+  hostSuffixAntigo,
+  resolveSectorHint,
+} from "@/lib/auth/activeSector";
+import { accessCookieOptions } from "@/lib/auth/cookies";
 
 // jose usa Web Crypto API — funciona tanto no runtime Node quanto no Edge
 // (ao contrário de jsonwebtoken). Mantido mesmo após a migração pra Proxy
@@ -164,6 +173,20 @@ async function tryRefresh(req: NextRequest): Promise<{ accessToken: string; setC
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Endereço antigo (com o sufixo de antes, ex. `bpoteste.`) vai para o novo,
+  // com o mesmo caminho (05/10/2026, troca para app.useconnect.com.br). 308
+  // mantém o método. `/api` e `/.well-known` ficam de fora: webhook e cron são
+  // POST com cabeçalho de autorização, que o cliente HTTP descarta ao mudar de
+  // host — enquanto não forem recadastrados, seguem funcionando no endereço
+  // antigo. E o app Android antigo ainda confere o assetlinks nele.
+  const hostNovo = hostNovoDoAntigo(req.headers.get("host"), baseDomain(), hostSuffixAntigo(), hostSuffix());
+  if (hostNovo && !pathname.startsWith("/api/") && !pathname.startsWith("/.well-known/")) {
+    const destino = new URL(req.url);
+    destino.hostname = hostNovo;
+    destino.port = "";
+    return NextResponse.redirect(destino, 308);
+  }
+
   // Sempre parte de headers sem identidade forjável.
   const headers = new Headers(req.headers);
   stripIdentityHeaders(headers);
@@ -236,7 +259,9 @@ export async function proxy(req: NextRequest) {
     }
 
     const res = loginRedirect(req);
-    res.cookies.delete("access_token");
+    // Apaga com o mesmo domínio com que foi gravado: `delete` sem `domain`
+    // não alcança o cookie de `.useconnect.com.br` (05/10/2026).
+    res.cookies.set("access_token", "", accessCookieOptions(0));
     return res;
   }
 }

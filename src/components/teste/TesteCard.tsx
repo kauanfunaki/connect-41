@@ -40,9 +40,11 @@ type Props = {
   initialLink: LinkState;
   canManage: boolean;
   templates: TemplateOption[];
+  /** APP_PUBLIC_URL, do servidor — a origem do link que vai para o candidato. */
+  urlPublica?: string;
 };
 
-export function TesteCard({ personId, candidaturaId, initialLink, canManage, templates }: Props) {
+export function TesteCard({ personId, candidaturaId, initialLink, canManage, templates, urlPublica }: Props) {
   const router = useRouter();
   const [link, setLink] = useState<LinkState>(initialLink);
   const [testType, setTestType] = useState<TestTypeValue>({ type: "DISC" });
@@ -52,7 +54,9 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
   const [emailNote, setEmailNote] = useState<string | null>(null);
 
   const linkUrl =
-    link?.status === "PENDENTE" ? `${typeof window !== "undefined" ? window.location.origin : ""}/teste/${link.token}` : "";
+    // O endereço público, como no e-mail (05/10/2026): `window.location` levava o
+    // host do setor em que a pessoa estava, e o candidato recebia `bpo.…/teste`.
+    link?.status === "PENDENTE" ? `${urlPublica || (typeof window !== "undefined" ? window.location.origin : "")}/teste/${link.token}` : "";
 
   async function handleGerar() {
     setError(null);

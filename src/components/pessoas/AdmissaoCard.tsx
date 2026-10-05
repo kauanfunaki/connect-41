@@ -16,9 +16,11 @@ type Props = {
   personId: string;
   initialLink: LinkState;
   canManage: boolean;
+  /** APP_PUBLIC_URL, do servidor — a origem do link que vai para o admitido. */
+  urlPublica?: string;
 };
 
-export function AdmissaoCard({ personId, initialLink, canManage }: Props) {
+export function AdmissaoCard({ personId, initialLink, canManage, urlPublica }: Props) {
   const router = useRouter();
   const [link, setLink] = useState<LinkState>(initialLink);
   const [pending, setPending] = useState(false);
@@ -26,7 +28,10 @@ export function AdmissaoCard({ personId, initialLink, canManage }: Props) {
   const [copied, setCopied] = useState(false);
   const [emailNote, setEmailNote] = useState<string | null>(null);
 
-  const linkUrl = link?.status === "PENDENTE" ? `${typeof window !== "undefined" ? window.location.origin : ""}/admissao/${link.token}` : "";
+  // O endereço público, como no e-mail (05/10/2026): `window.location` levava o
+  // host do setor em que a pessoa estava.
+  const linkUrl =
+    link?.status === "PENDENTE" ? `${urlPublica || (typeof window !== "undefined" ? window.location.origin : "")}/admissao/${link.token}` : "";
 
   async function handleGerar() {
     setError(null);
