@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import Link from "next/link";
 import { CircleHelp, LogOut, Menu, X } from "lucide-react";
 import { NavItem, classeDoItem } from "@/components/shell/NavLink";
 import { IconButton } from "@/components/ui/IconButton";
@@ -41,10 +42,19 @@ export function PortalShell({
         }`}
       >
         <div className="flex items-center justify-center h-14 px-5 border-b border-border flex-shrink-0 relative">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo-horizontal-light.svg" alt="Connect" className="block dark:hidden h-8 w-auto object-contain" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo-horizontal-dark.svg" alt="Connect" className="hidden dark:block h-8 w-auto object-contain" />
+          {/* O logo leva ao Início, como no Connect desde 05/10 — e o Início
+              segue no menu: para o cliente, o item escrito é o caminho óbvio. */}
+          <Link
+            href="/portal"
+            onClick={() => setMenuAberto(false)}
+            aria-label="Ir para o Início"
+            className="inline-flex items-center rounded-md px-2 py-1 transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logo-horizontal-light.svg" alt="" className="block dark:hidden h-8 w-auto object-contain" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logo-horizontal-dark.svg" alt="" className="hidden dark:block h-8 w-auto object-contain" />
+          </Link>
           {/* Botão de ícone com caixa de 32px: o X sozinho era um alvo de 18px,
               e é no celular que este botão existe. O posicionamento fica num
               span: o IconButton já é `relative`, e `absolute` nele dependeria da
@@ -71,8 +81,9 @@ export function PortalShell({
           {visiveis
             .filter((i) => i.secao === null)
             .map((i) => (
-              // Exato: "/portal" é o começo de todas as outras, e acenderia junto.
-              <NavItem key={i.href} href={i.href} icon={iconeDaTela(i)} label={i.rotulo} exact />
+              // Exato só o Início: "/portal" é o começo de todas as outras, e
+              // acenderia junto.
+              <NavItem key={i.href} href={i.href} icon={iconeDaTela(i)} label={i.rotulo} exact={i.href === "/portal"} />
             ))}
           {SECOES_DO_PORTAL.map((secao) => {
             const itens = visiveis.filter((i) => i.secao === secao);
