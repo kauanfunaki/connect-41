@@ -33,6 +33,12 @@ describe("ehRotaPublicaDoPortal", () => {
     expect(ehRotaPublicaDoPortal("/portal/manifest.webmanifest")).toBe(true);
   });
 
+  // A ida e a volta do Google (05/10/2026) acontecem antes de existir sessão.
+  it("o entrar com o Google é público, pela regra do login", () => {
+    expect(ehRotaPublicaDoPortal("/portal/login/google")).toBe(true);
+    expect(ehRotaPublicaDoPortal("/portal/login/google/callback")).toBe(true);
+  });
+
   // 05/10/2026: quem ainda não é cliente não tem conta, e a ficha é para ele.
   it("a ficha de quem quer ser cliente é pública", () => {
     expect(ehRotaPublicaDoPortal("/portal/quero-ser-cliente")).toBe(true);

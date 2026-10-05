@@ -4,21 +4,24 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/auth/password";
-import { signPortalAccess, signPortalEscolha, verifyPortalEscolha } from "@/lib/auth/jwt";
+import { signPortalEscolha, verifyPortalEscolha } from "@/lib/auth/jwt";
 import { PORTAL_COOKIE } from "@/lib/auth/portal";
+import { cookieDaSessaoDoPortal, querLembrar } from "@/lib/auth/sessaoDoPortal";
+import { CAMINHO_DO_COOKIE_DA_ESCOLHA, COOKIE_DA_ESCOLHA } from "@/lib/auth/googleDoPortal";
+import { MAX_CONTAS_POR_EMAIL } from "@/app/(portal)/usuario";
 
 export type OpcaoDeCliente = { id: string; escritorio: string; cliente: string };
 
 export type EstadoDoLogin =
   | { erro: string }
-  /** A senha conferiu em mais de um cliente: a pessoa escolhe em qual entra. */
-  | { escolher: { token: string; opcoes: OpcaoDeCliente[] } }
+  /**
+   * A senha (ou o Google) conferiu em mais de um cliente: a pessoa escolhe em
+   * qual entra. `lembrar` atravessa a escolha num campo escondido.
+   */
+  | { escolher: { token: string; opcoes: OpcaoDeCliente[]; lembrar: boolean } }
   | null;
 
 const ERRO = "E-mail ou senha inválidos.";
-
-/** Teto de contas com o mesmo e-mail: cada uma custa um bcrypt no login. */
-const MAX_CONTAS_POR_EMAIL = 10;
 
 /**
  * Entrada do cliente no portal.
@@ -39,8 +42,16 @@ const MAX_CONTAS_POR_EMAIL = 10;
  * inválida" com a senha certa da outra conta. Agora a senha é conferida em
  * todas; uma só que confira entra direto, mais de uma vira escolha. A lista só
  * aparece **depois** da senha certa, então não revela quais clientes existem.
+ *
+ * ─── Lembrar de mim (05/10/2026) ────────────────────────────────────────────
+ *
+ * A caixa decide a duração da sessão: 12 h sem ela, 30 dias com ela (ver
+ * `sessaoDoPortal.ts`). A escolha de cliente que vem do Google também termina
+ * aqui, no segundo passo.
  */
 export async function entrarNoPortal(_anterior: EstadoDoLogin, form: FormData): Promise<EstadoDoLogin> {
+  const lembrar = querLembrar(form.get("lembrar"));
+
   // Segundo passo: a pessoa escolheu o cliente.
   const tokenDaEscolha = String(form.get("escolha") ?? "");
   if (tokenDaEscolha) {
@@ -55,7 +66,7 @@ export async function entrarNoPortal(_anterior: EstadoDoLogin, form: FormData): 
     });
     // Desativada entre os dois passos: não entra.
     if (!conta) return { erro: ERRO };
-    return iniciarSessao(conta);
+    return iniciarSessao(conta, lembrar);
   }
 
   const email = String(form.get("email") ?? "").trim().toLowerCase();
@@ -89,32 +100,26 @@ export async function entrarNoPortal(_anterior: EstadoDoLogin, form: FormData): 
   }
 
   if (conferem.length === 0) return { erro: ERRO };
-  if (conferem.length === 1) return iniciarSessao(conferem[0]!);
+  if (conferem.length === 1) return iniciarSessao(conferem[0]!, lembrar);
 
   return {
     escolher: {
       token: signPortalEscolha(conferem.map((c) => c.id)),
       opcoes: conferem.map((c) => ({ id: c.id, escritorio: c.tenant.name, cliente: c.clientGroup.name })),
+      lembrar,
     },
   };
 }
 
-async function iniciarSessao(conta: { id: string; tenantId: string; clientGroupId: string }): Promise<never> {
-  const token = signPortalAccess({
-    kind: "portal",
-    sub: conta.id,
-    tenantId: conta.tenantId,
-    clientGroupId: conta.clientGroupId,
-  });
-
+async function iniciarSessao(
+  conta: { id: string; tenantId: string; clientGroupId: string },
+  lembrar: boolean
+): Promise<never> {
+  const sessao = cookieDaSessaoDoPortal(conta, lembrar);
   const store = await cookies();
-  store.set(PORTAL_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 12 * 60 * 60,
-  });
+  store.set(sessao.name, sessao.value, sessao.options);
+  // A escolha que veio do Google, se havia, já foi usada.
+  if (store.get(COOKIE_DA_ESCOLHA)) store.set(COOKIE_DA_ESCOLHA, "", { path: CAMINHO_DO_COOKIE_DA_ESCOLHA, maxAge: 0 });
 
   await getPrisma().portalUser.update({ where: { id: conta.id }, data: { lastLoginAt: new Date() } });
 
