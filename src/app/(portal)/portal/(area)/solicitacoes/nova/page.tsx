@@ -37,7 +37,7 @@ export default async function NovaSolicitacaoPage() {
           <EmptyState
             icon={<Inbox />}
             title={empresas.length === 0 ? "Nenhuma empresa no seu acesso" : "Nenhum assunto disponível"}
-            description="Fale com o seu contato na 41."
+            description="Fale com o seu contato no escritório."
           />
         </Card>
       ) : (

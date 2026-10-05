@@ -66,7 +66,7 @@ export default async function PortalPage({
           <EmptyState
             icon={<FileText />}
             title="Nenhum documento ainda"
-            description="Assim que houver notas das suas empresas, elas aparecem aqui. Se você espera ver algo, fale com o seu contato na 41."
+            description="Assim que houver notas das suas empresas, elas aparecem aqui. Se você espera ver algo, fale com o seu contato no escritório."
           />
         </Card>
       ) : (
