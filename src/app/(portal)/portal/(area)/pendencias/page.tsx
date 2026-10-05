@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Hourglass, MessagesSquare, AlertTriangle, CheckCircle2, MessageSquareWarning, Paperclip } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
@@ -17,6 +16,7 @@ import { formatInstantDate } from "@/lib/format";
 import { saoPauloParts } from "@/lib/agenda";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 
 export const dynamic = "force-dynamic";
 
@@ -95,117 +95,120 @@ export default async function PortalPendenciasPage({
           },
         ]}
       />
-      <FiltrosDaTela
-        className="mb-4"
-        campos={[{ chave: "recorte", rotulo: "Situação", vazioLabel: "Em andamento", opcoes: [{ value: "encerradas", label: "Encerradas" }] }]}
-      />
-
-      {linhas.length === 0 ? (
-        <Card>
+      <CascoDaTabela
+        contagem={contarItens(linhas.length, "pendência", "pendências")}
+        filtros={
+          <FiltrosDaTela
+            naBarra
+            campos={[{ chave: "recorte", rotulo: "Situação", vazioLabel: "Em andamento", opcoes: [{ value: "encerradas", label: "Encerradas" }] }]}
+          />
+        }
+      >
+        {linhas.length === 0 ? (
           <EmptyState icon={<MessageSquareWarning />} title="Nenhuma pendência aqui" description="Quando a equipe precisar de algo, o pedido aparece nesta tela e você recebe um e-mail." />
-        </Card>
-      ) : (
-        <>
-        {/* Abaixo de md, cartões: o cliente lê isto no celular, e o que importa
-            é o título e o prazo — não a quarta coluna de uma tabela de 720px. */}
-        <CartoesNoCelular>
-          {linhas.map((l) => (
-            <Cartao key={l.id}>
-              <Link href={`/portal/pendencias/${l.id}`} className="font-medium text-brand hover:underline break-words">
-                {l.titulo}
-              </Link>
-              <InfoDoCartao className="mt-0.5">
-                {ROTULO_DO_TIPO[l.tipo]} · {setorDe(l.setor)} · {l.empresaNome}
-                {l.anexos > 0 && (
-                  <>
-                    {" · "}
-                    <Paperclip size={10} className="inline" /> {l.anexos}
-                  </>
-                )}
-              </InfoDoCartao>
-              <InfoDoCartao className="tabular-nums">
-                {l.prazo ? `prazo ${formatInstantDate(l.prazo)}` : "sem prazo"}
-              </InfoDoCartao>
-              <PeDoCartao>
-                <SeloDoStatus status={l.status} lado="CLIENTE" />
-                <SeloDoPrazo situacao={l.situacaoDoPrazo} status={l.status} />
-              </PeDoCartao>
-            </Cartao>
-          ))}
-        </CartoesNoCelular>
+        ) : (
+          <>
+          {/* Abaixo de md, cartões: o cliente lê isto no celular, e o que importa
+              é o título e o prazo — não a quarta coluna de uma tabela de 720px. */}
+          <CartoesNoCelular>
+            {linhas.map((l) => (
+              <Cartao key={l.id}>
+                <Link href={`/portal/pendencias/${l.id}`} className="font-medium text-brand hover:underline break-words">
+                  {l.titulo}
+                </Link>
+                <InfoDoCartao className="mt-0.5">
+                  {ROTULO_DO_TIPO[l.tipo]} · {setorDe(l.setor)} · {l.empresaNome}
+                  {l.anexos > 0 && (
+                    <>
+                      {" · "}
+                      <Paperclip size={10} className="inline" /> {l.anexos}
+                    </>
+                  )}
+                </InfoDoCartao>
+                <InfoDoCartao className="tabular-nums">
+                  {l.prazo ? `prazo ${formatInstantDate(l.prazo)}` : "sem prazo"}
+                </InfoDoCartao>
+                <PeDoCartao>
+                  <SeloDoStatus status={l.status} lado="CLIENTE" />
+                  <SeloDoPrazo situacao={l.situacaoDoPrazo} status={l.status} />
+                </PeDoCartao>
+              </Cartao>
+            ))}
+          </CartoesNoCelular>
 
-        {/* Funil nas colunas (02/10): a lista vem inteira (até 500), então
-            filtra no navegador. Pendência filtra pelo tipo e pelo setor, que
-            é o que a segunda linha da célula mostra. */}
-        <TabelaFiltravel
-          linhas={linhas.map((l) => ({
-            id: l.id,
-            valores: {
-              tipo: ROTULO_DO_TIPO[l.tipo],
-              setor: setorDe(l.setor),
-              empresa: l.empresaNome,
-              prazo: l.prazo ? saoPauloParts(l.prazo).dateKey : "",
-              situacao: rotuloDoStatus(l.status),
-            },
-          }))}
-        >
-        <TabelaNoDesktop padrao>
-          <table className="w-full min-w-[720px] text-[13px]">
-            <thead>
-              <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-                <th className="py-2 pr-3 font-medium">
-                  <FiltroDaColuna
-                    rotulo="Pendência"
-                    campos={[
-                      { chave: "tipo", rotulo: "Tipo" },
-                      { chave: "setor", rotulo: "Setor" },
-                    ]}
-                  />
-                </th>
-                <th className="py-2 pr-3 font-medium">
-                  <FiltroDaColuna rotulo="Empresa" chave="empresa" />
-                </th>
-                <th className="py-2 pr-3 font-medium">
-                  <FiltroDaColuna rotulo="Prazo" chave="prazo" tipo="data" />
-                </th>
-                <th className="py-2 font-medium">
-                  <FiltroDaColuna rotulo="Situação" chave="situacao" align="right" />
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {linhas.map((l) => (
-                <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft">
-                  <td className="py-2.5 pr-3">
-                    <Link href={`/portal/pendencias/${l.id}`} className="font-medium text-brand hover:underline">
-                      {l.titulo}
-                    </Link>
-                    <span className="block text-[11px] text-fg-muted">
-                      {ROTULO_DO_TIPO[l.tipo]} · {setorDe(l.setor)}
-                      {l.anexos > 0 && (
-                        <>
-                          {" "}
-                          · <Paperclip size={10} className="inline" /> {l.anexos}
-                        </>
-                      )}
-                    </span>
-                  </td>
-                  <td className="py-2.5 pr-3 text-fg-secondary">{l.empresaNome}</td>
-                  <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">{l.prazo ? formatInstantDate(l.prazo) : "—"}</td>
-                  <td className="py-2.5">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <SeloDoStatus status={l.status} lado="CLIENTE" />
-                      <SeloDoPrazo situacao={l.situacaoDoPrazo} status={l.status} />
-                    </div>
-                  </td>
-                </LinhaFiltravel>
-              ))}
-            </tbody>
-          </table>
-        </TabelaNoDesktop>
-        </TabelaFiltravel>
-        </>
-      )}
+          {/* Funil nas colunas (02/10): a lista vem inteira (até 500), então
+              filtra no navegador. Pendência filtra pelo tipo e pelo setor, que
+              é o que a segunda linha da célula mostra. */}
+          <TabelaFiltravel
+            linhas={linhas.map((l) => ({
+              id: l.id,
+              valores: {
+                tipo: ROTULO_DO_TIPO[l.tipo],
+                setor: setorDe(l.setor),
+                empresa: l.empresaNome,
+                prazo: l.prazo ? saoPauloParts(l.prazo).dateKey : "",
+                situacao: rotuloDoStatus(l.status),
+              },
+            }))}
+          >
+          <TabelaNoDesktop padrao>
+            <table className="w-full min-w-[720px] text-[13px]">
+              <thead>
+                <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                  <th className="py-2 pr-3 font-medium">
+                    <FiltroDaColuna
+                      rotulo="Pendência"
+                      campos={[
+                        { chave: "tipo", rotulo: "Tipo" },
+                        { chave: "setor", rotulo: "Setor" },
+                      ]}
+                    />
+                  </th>
+                  <th className="py-2 pr-3 font-medium">
+                    <FiltroDaColuna rotulo="Empresa" chave="empresa" />
+                  </th>
+                  <th className="py-2 pr-3 font-medium">
+                    <FiltroDaColuna rotulo="Prazo" chave="prazo" tipo="data" />
+                  </th>
+                  <th className="py-2 font-medium">
+                    <FiltroDaColuna rotulo="Situação" chave="situacao" align="right" />
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {linhas.map((l) => (
+                  <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft">
+                    <td className="py-2.5 pr-3">
+                      <Link href={`/portal/pendencias/${l.id}`} className="font-medium text-brand hover:underline">
+                        {l.titulo}
+                      </Link>
+                      <span className="block text-[11px] text-fg-muted">
+                        {ROTULO_DO_TIPO[l.tipo]} · {setorDe(l.setor)}
+                        {l.anexos > 0 && (
+                          <>
+                            {" "}
+                            · <Paperclip size={10} className="inline" /> {l.anexos}
+                          </>
+                        )}
+                      </span>
+                    </td>
+                    <td className="py-2.5 pr-3 text-fg-secondary">{l.empresaNome}</td>
+                    <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">{l.prazo ? formatInstantDate(l.prazo) : "—"}</td>
+                    <td className="py-2.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <SeloDoStatus status={l.status} lado="CLIENTE" />
+                        <SeloDoPrazo situacao={l.situacaoDoPrazo} status={l.status} />
+                      </div>
+                    </td>
+                  </LinhaFiltravel>
+                ))}
+              </tbody>
+            </table>
+          </TabelaNoDesktop>
+          </TabelaFiltravel>
+          </>
+        )}
+      </CascoDaTabela>
     </PageContainer>
   );
 }
