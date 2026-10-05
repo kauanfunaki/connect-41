@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Bell, Building2, Inbox, KeyRound, Megaphone, MessagesSquare, Plus, Smartphone, Wallet } from "lucide-react";
+import { Bell, Building2, House, Inbox, KeyRound, Megaphone, MessagesSquare, Plus, Smartphone, Wallet } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { Button } from "@/components/ui/Button";
@@ -17,6 +17,7 @@ export const dynamic = "force-dynamic";
 // Os ícones dos passos: os das telas do menu quando o passo é sobre uma tela,
 // e um próprio quando é sobre o portal como um todo.
 const ICONES: Record<IconeDoPasso, React.ReactNode> = {
+  inicio: <House />,
   celular: <Smartphone />,
   solicitacao: <Inbox />,
   comunicado: <Megaphone />,
