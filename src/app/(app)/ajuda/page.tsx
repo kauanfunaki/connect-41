@@ -7,11 +7,16 @@ import { getModuleRoute } from "@/lib/module-catalog";
 import { getSectorMaps } from "@/lib/sectors";
 import { TELAS_GERAIS } from "@/lib/ia/ferramentas-ajuda";
 import { artigoDaChave, artigoDoCaminho } from "@/lib/ajuda/artigos";
+import { videoDoArtigo } from "@/lib/ajuda/videos";
 
-/** O endereço do passo a passo da tela, se ela tem artigo. */
-function enderecoDoArtigo(codigo: string | undefined, caminho: string): string | undefined {
+/**
+ * O endereço do passo a passo da tela, se ela tem artigo, e o vídeo do artigo,
+ * se já tem (05/10/2026 — o vídeo vai junto para a seção "Vídeos" da central).
+ */
+function ajudaDaTela(codigo: string | undefined, caminho: string): Pick<TelaDaAjuda, "artigo" | "video"> {
   const artigo = (codigo ? artigoDaChave(codigo) : null) ?? (caminho.startsWith("/") ? artigoDoCaminho(caminho) : null);
-  return artigo ? `/ajuda/${encodeURIComponent(artigo.chave)}` : undefined;
+  if (!artigo) return {};
+  return { artigo: `/ajuda/${encodeURIComponent(artigo.chave)}`, video: videoDoArtigo(artigo.chave) ?? undefined };
 }
 
 /**
@@ -21,7 +26,8 @@ function enderecoDoArtigo(codigo: string | undefined, caminho: string): string |
  * Connect, por setor, com busca. As telas vêm do mesmo catálogo que a barra
  * lateral e o agente "Ajuda do Connect" usam (módulo ligado + setor que a
  * pessoa enxerga), então a central nunca mostra tela que a pessoa não abre.
- * Os artigos passo a passo com vídeo de cada tela entram depois, aqui.
+ * Os artigos passo a passo de cada tela entraram em 02/10, e os vídeos deles
+ * (`lib/ajuda/videos.ts`) em 05/10, numa seção própria no topo.
  */
 export default async function AjudaPage() {
   const ctx = await getAuthContext();
@@ -38,7 +44,7 @@ export default async function AjudaPage() {
       caminho,
       descricao: m.description,
       codigo: m.code,
-      artigo: enderecoDoArtigo(m.code, caminho),
+      ...ajudaDaTela(m.code, caminho),
     });
     porSetor.set(m.sectorCode, lista);
   }
@@ -63,9 +69,9 @@ export default async function AjudaPage() {
     if (t.tela === "Solicitações" && !estados.some((m) => m.code === "portal_solicitacoes" && m.enabled)) return [];
     if (t.tela === "Espaços") {
       const caminho = `/setor/${setorDosEspacos}`;
-      return setorDosEspacos ? [{ chave: t.tela, titulo: t.tela, caminho, descricao: t.descricao, artigo: enderecoDoArtigo(undefined, caminho) }] : [];
+      return setorDosEspacos ? [{ chave: t.tela, titulo: t.tela, caminho, descricao: t.descricao, ...ajudaDaTela(undefined, caminho) }] : [];
     }
-    return [{ chave: t.tela, titulo: t.tela, caminho: t.caminho, descricao: t.descricao, artigo: enderecoDoArtigo(undefined, t.caminho) }];
+    return [{ chave: t.tela, titulo: t.tela, caminho: t.caminho, descricao: t.descricao, ...ajudaDaTela(undefined, t.caminho) }];
   });
 
   return (

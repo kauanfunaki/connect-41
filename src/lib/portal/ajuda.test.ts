@@ -7,7 +7,7 @@ const chaves = (modulos: string[], variasEmpresas = false) =>
 
 describe("passosDoPortal — o cliente só lê sobre o que está no menu dele", () => {
   it("sem módulo nenhum: só o que vale para qualquer portal", () => {
-    expect(chaves([])).toEqual(["instalar", "avisos", "documentos", "senha"]);
+    expect(chaves([])).toEqual(["entrar", "instalar", "avisos", "documentos", "senha"]);
   });
 
   it("só o Societário: processos entram, nada do financeiro", () => {
@@ -53,7 +53,7 @@ describe("passosDoPortal — o cliente só lê sobre o que está no menu dele", 
 
   it("todo passo que aparece tem ao menos uma linha", () => {
     const todos = passosDoPortal(new Set(TELAS_DO_PORTAL.flatMap((t) => (t.modulo ? [t.modulo] : []))), { variasEmpresas: true });
-    expect(todos.length).toBe(11);
+    expect(todos.length).toBe(12);
     for (const p of todos) expect(p.passos.length).toBeGreaterThan(0);
   });
 });

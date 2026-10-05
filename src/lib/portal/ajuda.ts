@@ -7,7 +7,10 @@
 // sobre o que existe no menu dele. O portal é de todos os setores, então o
 // texto fala de "a equipe da 41", nunca de um setor.
 
+import { videoDoPassoDoPortal } from "@/lib/ajuda/videos";
+
 export type IconeDoPasso =
+  | "entrar"
   | "celular"
   | "solicitacao"
   | "comunicado"
@@ -37,11 +40,27 @@ type PassoDoCatalogo = {
   passos: readonly Linha[];
 };
 
-export type PassoDoPortal = { chave: string; titulo: string; resumo: string; icone: IconeDoPasso; passos: string[] };
+export type PassoDoPortal = { chave: string; titulo: string; resumo: string; icone: IconeDoPasso; passos: string[]; video?: string };
 
 const FINANCEIRO = ["bpo_contas_pagar", "bpo_contas_receber", "bpo_fluxo_caixa", "bpo_dre", "bpo_cobranca"] as const;
 
 const CATALOGO: readonly PassoDoCatalogo[] = [
+  // Passo de 05/10/2026: o primeiro vídeo da série é o primeiro acesso, e a
+  // ajuda não tinha o texto dele. O acesso nasce sem senha (`criarAcessoDoPortal`):
+  // o cliente escolhe a dele pelo link do e-mail.
+  {
+    chave: "entrar",
+    titulo: "Entrar no portal",
+    resumo: "O primeiro acesso, com uma senha que só você sabe.",
+    icone: "entrar",
+    passos: [
+      "Quando a 41 libera o seu acesso, chega um e-mail com o botão Redefinir senha. Clique nele.",
+      "Escolha a sua senha, com ao menos 8 caracteres, repita em Confirme a senha e clique em Salvar senha.",
+      "Clique em Entrar no portal, digite o seu e-mail e a senha e clique em Entrar.",
+      "Se o seu e-mail tem acesso a mais de um cliente, escolha em qual você quer entrar.",
+      "O link do e-mail vale por uma hora. Se ele vencer, use Esqueci minha senha na tela de entrada.",
+    ],
+  },
   {
     chave: "instalar",
     titulo: "Instalar o portal no celular",
@@ -198,6 +217,9 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
   },
 ];
 
+/** Todas as chaves de passo, ligadas ou não — para conferir os vídeos (`ajuda/videos.ts`). */
+export const CHAVES_DOS_PASSOS: readonly string[] = CATALOGO.map((p) => p.chave);
+
 function algumLigado(modulos: ReadonlySet<string>, exigidos: readonly string[] | undefined): boolean {
   return !exigidos || exigidos.some((m) => modulos.has(m));
 }
@@ -215,5 +237,7 @@ export function passosDoPortal(modulos: ReadonlySet<string>, opcoes: { variasEmp
     resumo: p.resumo,
     icone: p.icone,
     passos: p.passos.flatMap((l) => (typeof l === "string" ? [l] : algumLigado(modulos, l.modulos) ? [l.texto] : [])),
+    // O vídeo vem do arquivo dos links (05/10), e só quando já foi colado.
+    video: videoDoPassoDoPortal(p.chave) ?? undefined,
   }));
 }

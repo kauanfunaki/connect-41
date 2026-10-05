@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Bell, Building2, Inbox, KeyRound, Megaphone, MessagesSquare, Plus, Smartphone, Wallet } from "lucide-react";
+import { Bell, Building2, Inbox, KeyRound, LogIn, Megaphone, MessagesSquare, Plus, Smartphone, Wallet } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { Button } from "@/components/ui/Button";
@@ -17,6 +17,7 @@ export const dynamic = "force-dynamic";
 // Os ícones dos passos: os das telas do menu quando o passo é sobre uma tela,
 // e um próprio quando é sobre o portal como um todo.
 const ICONES: Record<IconeDoPasso, React.ReactNode> = {
+  entrar: <LogIn />,
   celular: <Smartphone />,
   solicitacao: <Inbox />,
   comunicado: <Megaphone />,
@@ -38,6 +39,9 @@ const ICONES: Record<IconeDoPasso, React.ReactNode> = {
  * Mesma central do Connect (`CentralDeAjuda`), com os passos do cliente e sem
  * setores. Passos e telas seguem os módulos ligados, pela mesma régua do menu:
  * o cliente nunca lê sobre uma tela que não tem.
+ *
+ * Os vídeos (05/10/2026) chegam junto com os passos (`passosDoPortal`, links em
+ * `lib/ajuda/videos.ts`): tocam dentro do passo e na seção "Vídeos" do topo.
  */
 export default async function AjudaDoPortalPage() {
   const sessao = await getPortalSession();
