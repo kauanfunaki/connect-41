@@ -36,8 +36,8 @@ export function ehCaminhoDoPortal(pathname: string): boolean {
 }
 
 /**
- * Rotas do portal que dispensam sessão: entrar, recuperar senha — e o manifesto
- * do PWA.
+ * Rotas do portal que dispensam sessão: entrar, recuperar senha, a ficha de
+ * quem quer ser cliente — e o manifesto do PWA.
  *
  * O manifesto entra aqui pelo mesmo motivo que o interno está em `PUBLIC_PATHS`
  * (ver proxy.ts): o navegador o busca no `<head>` de **toda** página do portal,
@@ -53,6 +53,8 @@ const PUBLICAS_DO_PORTAL = [
   // A Google Play exige a política numa URL pública: revisor e quem ainda não
   // é cliente leem sem login.
   "/portal/privacidade",
+  // A ficha de quem ainda não é cliente (05/10/2026) — por definição, sem conta.
+  "/portal/quero-ser-cliente",
 ];
 
 export function ehRotaPublicaDoPortal(pathname: string): boolean {
