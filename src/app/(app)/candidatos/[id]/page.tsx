@@ -163,7 +163,7 @@ export default async function CandidatoPage({
 
       {/* Teste */}
       <div className="mb-4">
-        <TesteCard personId={id} candidaturaId={null} initialLink={initialTesteLink} canManage={canEdit} templates={templates} />
+        <TesteCard personId={id} candidaturaId={null} initialLink={initialTesteLink} canManage={canEdit} templates={templates} urlPublica={(process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "")} />
       </div>
 
       {/* Identificação */}
