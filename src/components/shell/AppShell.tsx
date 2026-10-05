@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Home,
   ContactRound,
   Columns3,
   ArrowRightLeft,
@@ -204,20 +203,31 @@ export function AppShell({
         }`}
       >
         {/* Logo — a mesma altura do cabeçalho (60px), para as duas linhas de baixo
-            se encontrarem; eram 56px, e a logo ficava 4px acima do "41 Tech" (02/10/2026). */}
+            se encontrarem; eram 56px, e a logo ficava 4px acima do "41 Tech" (02/10/2026).
+            Desde 05/10 o logo é o caminho para o Início, e o item "Início" saiu
+            do menu (revisão do Kauan). */}
         <div className="flex items-center justify-center gap-2.5 h-[60px] px-5 border-b border-border flex-shrink-0 relative">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/brand/logo-horizontal-light.svg"
-            alt="Connect"
-            className="block dark:hidden h-8 w-auto object-contain flex-shrink-0"
-          />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/brand/logo-horizontal-dark.svg"
-            alt="Connect"
-            className="hidden dark:block h-8 w-auto object-contain flex-shrink-0"
-          />
+          <Link
+            href="/home"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Ir para o Início"
+            aria-current={pathname === "/home" ? "page" : undefined}
+            data-dica="Início"
+            className="inline-flex items-center rounded-md px-2 py-1 transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/logo-horizontal-light.svg"
+              alt=""
+              className="block dark:hidden h-8 w-auto object-contain flex-shrink-0"
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/logo-horizontal-dark.svg"
+              alt=""
+              className="hidden dark:block h-8 w-auto object-contain flex-shrink-0"
+            />
+          </Link>
           <Button
             variant="linkMuted"
             className="lg:hidden absolute right-3 top-1/2 -translate-y-1/2"
@@ -247,15 +257,15 @@ export function AppShell({
         >
           {activeSector ? (
             <>
-              {/* A ordem é a do uso: Início, o que serve a todos os setores, e por
+              {/* A ordem é a do uso: Meu dia, o que serve a todos os setores, e por
                   último as telas deste setor. Geral no meio, e não no fim, porque
                   tarefa e transferência são o dia a dia de qualquer setor — no fim
                   da lista, num setor com quinze telas, ficavam abaixo da dobra.
+                  O Início é o logo, no topo da barra (05/10).
 
                   A identidade do setor não é mais um rótulo solto no topo: ela
                   está no seletor acima (com a cor) e volta como título das telas
                   do setor, que é onde diz de quem são aqueles grupos. */}
-              <NavItem href="/home" icon={<Home size={16} />} label="Início" />
               <NavItem href="/tarefas" icon={<CalendarCheck size={16} />} label="Meu dia" />
 
               {/* Transversais. NUNCA somem por causa do setor ativo: transferência
@@ -334,7 +344,6 @@ export function AppShell({
               <p className="px-2.5 pb-1.5 text-[11px] font-semibold text-fg-muted uppercase tracking-wider">
                 Geral
               </p>
-              <NavItem href="/home" icon={<Home size={16} />} label="Início" />
               <NavItem href="/tarefas" icon={<CalendarCheck size={16} />} label="Meu dia" />
               <PainelDoItem titulo="Cadastros" telas={TELAS_DE_CADASTROS} cor={corDoSetor}>
                 <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
