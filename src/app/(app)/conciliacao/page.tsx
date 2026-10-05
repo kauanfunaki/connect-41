@@ -36,6 +36,7 @@ import {
 } from "@/lib/financeiro/conciliacao/casamento";
 import { motivoDoBloqueioDeBaixa } from "@/lib/financeiro/aprovacao/regras";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 
 export const dynamic = "force-dynamic";
 
@@ -477,69 +478,76 @@ async function ExtratoDaConta({
 
       {/* Situação no botão "Filtros"; o período fica ao lado, porque data se
           digita — não se escolhe numa lista (conferência de 30/09). */}
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <FiltrosDaTela
-          campos={[
-            {
-              chave: "situacao",
-              rotulo: "Situação",
-              vazioLabel: "Pendentes",
-              opcoes: SITUACOES.filter((s) => s.chave !== "pendentes").map((s) => ({ value: s.chave, label: s.rotulo })),
-            },
-          ]}
-        />
-        <form method="get" action="/conciliacao" className="flex flex-wrap items-center gap-2">
-          <input type="hidden" name="empresa" value={companyId} />
-          <input type="hidden" name="conta" value={conta.id} />
-          {situacao.chave !== "pendentes" && <input type="hidden" name="situacao" value={situacao.chave} />}
-          <CampoPeriodo compact nomeDe="de" nomeAte="ate" defaultDe={de ?? ""} defaultAte={ate ?? ""} className="w-72 max-w-full" />
-          <Button type="submit" variant="secondary" size="sm">
-            Filtrar período
-          </Button>
-          {(de || ate) && (
-            <Button
-              href={`/conciliacao?empresa=${companyId}&conta=${conta.id}${situacao.chave !== "pendentes" ? `&situacao=${situacao.chave}` : ""}`}
-              variant="ghost"
-              size="sm"
-            >
-              Limpar período
-            </Button>
-          )}
-        </form>
-      </div>
-
-      {linhas.length === 0 ? (
-        <EmptyState
-          title={situacao.chave === "pendentes" ? "Nada pendente" : "Nenhuma transação"}
-          description={
-            situacao.chave === "pendentes"
-              ? "Toda transação importada neste período está conciliada ou ignorada."
-              : "Nenhuma transação nesta situação e período."
-          }
-          icon={<Landmark />}
-        />
-      ) : (
-        <>
-          <TransacoesDaConta
-            linhas={linhas}
-            podeAgir={podeAgir}
-            contrapartes={contrapartes.map((c) => ({
-              id: c.id,
-              nome: c.name,
-              documento: c.document,
-              defaultCategoryId: c.defaultCategoryId,
-              defaultCostCenterId: c.defaultCostCenterId,
-            }))}
-            categorias={categorias.map((c) => ({ id: c.id, nome: c.name, kind: c.kind }))}
-            centros={centros.map((c) => ({ id: c.id, nome: c.name }))}
+      <CascoDaTabela
+        contagem={contarItens(linhas.length, "transação", "transações", limitado)}
+        filtros={
+          <FiltrosDaTela
+            naBarra
+            campos={[
+              {
+                chave: "situacao",
+                rotulo: "Situação",
+                vazioLabel: "Pendentes",
+                opcoes: SITUACOES.filter((s) => s.chave !== "pendentes").map((s) => ({ value: s.chave, label: s.rotulo })),
+              },
+            ]}
           />
-          {limitado && (
-            <p className="text-[11px] text-fg-muted mt-2">
-              Mostrando as {LIMITE_DE_TRANSACOES} primeiras. Use o período para ver as demais.
-            </p>
-          )}
-        </>
-      )}
+        }
+        acoes={
+          <form method="get" action="/conciliacao" className="flex flex-wrap items-center gap-2">
+            <input type="hidden" name="empresa" value={companyId} />
+            <input type="hidden" name="conta" value={conta.id} />
+            {situacao.chave !== "pendentes" && <input type="hidden" name="situacao" value={situacao.chave} />}
+            <CampoPeriodo compact nomeDe="de" nomeAte="ate" defaultDe={de ?? ""} defaultAte={ate ?? ""} className="w-72 max-w-full" />
+            <Button type="submit" variant="secondary" size="sm">
+              Filtrar período
+            </Button>
+            {(de || ate) && (
+              <Button
+                href={`/conciliacao?empresa=${companyId}&conta=${conta.id}${situacao.chave !== "pendentes" ? `&situacao=${situacao.chave}` : ""}`}
+                variant="ghost"
+                size="sm"
+              >
+                Limpar período
+              </Button>
+            )}
+          </form>
+        }
+      >
+
+        {linhas.length === 0 ? (
+          <EmptyState
+            title={situacao.chave === "pendentes" ? "Nada pendente" : "Nenhuma transação"}
+            description={
+              situacao.chave === "pendentes"
+                ? "Toda transação importada neste período está conciliada ou ignorada."
+                : "Nenhuma transação nesta situação e período."
+            }
+            icon={<Landmark />}
+          />
+        ) : (
+          <>
+            <TransacoesDaConta
+              linhas={linhas}
+              podeAgir={podeAgir}
+              contrapartes={contrapartes.map((c) => ({
+                id: c.id,
+                nome: c.name,
+                documento: c.document,
+                defaultCategoryId: c.defaultCategoryId,
+                defaultCostCenterId: c.defaultCostCenterId,
+              }))}
+              categorias={categorias.map((c) => ({ id: c.id, nome: c.name, kind: c.kind }))}
+              centros={centros.map((c) => ({ id: c.id, nome: c.name }))}
+            />
+            {limitado && (
+              <p className="text-[11px] text-fg-muted mt-2">
+                Mostrando as {LIMITE_DE_TRANSACOES} primeiras. Use o período para ver as demais.
+              </p>
+            )}
+          </>
+        )}
+      </CascoDaTabela>
       <p className="text-[11px] text-fg-muted mt-3">
         A sugestão aparece só quando um lançamento de mesmo valor se destaca pela data e pelo nome — nada é conciliado
         sem confirmação. Conciliar marca os lançamentos como pagos na data do extrato; desfazer devolve o estado anterior.

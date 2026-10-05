@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ArrowRight, CheckCircle2, ClipboardList, FileQuestion, Hourglass } from "lucide-react";
@@ -20,6 +19,7 @@ import { lerLista } from "@/lib/filtroNaUrl";
 import type { AssessmentLinkStatus } from "@/generated/prisma/enums";
 import { setorDoModulo, isModuleEnabled } from "@/lib/modules";
 import { Selo } from "@/components/ui/Selo";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 
 const PER_PAGE = 30;
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
@@ -212,110 +212,113 @@ export default async function TestesPage({
         ]}
       />
 
-      <FiltrosDaTela
-        className="mb-4"
-        campos={[
-          {
-            chave: "status",
-            rotulo: "Situação",
-            vazioLabel: `Todos (${contagem.PENDENTE + contagem.RESPONDIDO})`,
-            opcoes: STATUS_ORDEM.map((s) => ({ value: s, label: `${STATUS_LABEL[s]} (${contagem[s]})` })),
-          },
-        ]}
-      />
+      <CascoDaTabela
+        contagem={contarItens(total, "teste", "testes")}
+        filtros={
+          <FiltrosDaTela
+            naBarra
+            campos={[
+              {
+                chave: "status",
+                rotulo: "Situação",
+                vazioLabel: `Todos (${contagem.PENDENTE + contagem.RESPONDIDO})`,
+                opcoes: STATUS_ORDEM.map((s) => ({ value: s, label: `${STATUS_LABEL[s]} (${contagem[s]})` })),
+              },
+            ]}
+          />
+        }
+      >
+        <FiltrosDasColunasNaUrl colunas={[{ chave: "teste", rotulo: "Teste" }]} />
 
-      <FiltrosDasColunasNaUrl colunas={[{ chave: "teste", rotulo: "Teste" }]} />
-
-      {links.length === 0 ? (
-        <Card>
+        {links.length === 0 ? (
           <EmptyState
             icon={<ClipboardList />}
             title="Nenhum teste encontrado"
             description="Ajuste os filtros ou envie o primeiro teste pra um candidato acima."
           />
-        </Card>
-      ) : (
-        <>
-          <CartoesNoCelular>
-            {links.map((l) => (
-              <Link key={l.id} href={`/testes/${l.id}`} className="block">
-                <Cartao className="hover:border-brand/40 transition-colors">
-                  <TopoDoCartao nome={l.person.name} />
-                  <InfoDoCartao>
-                    {nomeDoTeste(l)}
-                    {l.candidatura ? ` · ${l.candidatura.vaga.title}` : ""}
-                  </InfoDoCartao>
-                  <PeDoCartao>
-                    {seloDoStatus(l.status)}
-                    {resultado(l)}
-                    <span className="ml-auto text-[11.5px] text-fg-muted">enviado em {formatInstantDate(l.createdAt)}</span>
-                  </PeDoCartao>
-                </Cartao>
-              </Link>
-            ))}
-          </CartoesNoCelular>
-
-          {/* Era uma lista de linhas-link com tudo numa frase (até 30/09).
-              Virou tabela no padrão do Connect, com o funil de teste. */}
-          <TabelaNoDesktop padrao>
-            <table className="w-full table-fixed min-w-[880px] text-[length:var(--fs-ui)]">
-              <colgroup>
-                <col />
-                <col className="w-[180px]" />
-                <col className="w-[200px]" />
-                <col className="w-[116px]" />
-                <col className="w-[124px]" />
-                <col className="w-[112px]" />
-                <col className="w-[96px]" />
-              </colgroup>
-              <thead>
-                <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
-                  <th className="px-4 py-3">Candidato</th>
-                  <th className="px-4 py-3">
-                    <FiltroDaColunaNaUrl rotulo="Teste" chave="teste" opcoes={opcoesDeTeste} />
-                  </th>
-                  <th className="px-4 py-3">Vaga</th>
-                  <th className="px-4 py-3">Situação</th>
-                  <th className="px-4 py-3">Resultado</th>
-                  <th className="px-4 py-3">Enviado em</th>
-                  <th className="px-4 py-3">
-                    <span className="sr-only">Abrir</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {links.map((l) => (
-                  <tr key={l.id} className="border-b border-border">
-                    <td className="px-4 py-3 min-w-0">
-                      <Link
-                        href={`/testes/${l.id}`}
-                        className="block font-semibold text-fg hover:text-brand transition-colors truncate"
-                        title={l.person.name}
-                      >
-                        {l.person.name}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-fg-secondary truncate" title={nomeDoTeste(l)}>
+        ) : (
+          <>
+            <CartoesNoCelular>
+              {links.map((l) => (
+                <Link key={l.id} href={`/testes/${l.id}`} className="block">
+                  <Cartao className="hover:border-brand/40 transition-colors">
+                    <TopoDoCartao nome={l.person.name} />
+                    <InfoDoCartao>
                       {nomeDoTeste(l)}
-                    </td>
-                    <td className="px-4 py-3 text-fg-secondary truncate" title={l.candidatura?.vaga.title}>
-                      {l.candidatura ? l.candidatura.vaga.title : <span className="text-fg-muted">—</span>}
-                    </td>
-                    <td className="px-4 py-3">{seloDoStatus(l.status)}</td>
-                    <td className="px-4 py-3">{resultado(l) ?? <span className="text-fg-muted">—</span>}</td>
-                    <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{formatInstantDate(l.createdAt)}</td>
-                    <td className="px-4 py-3">
-                      <Button href={`/testes/${l.id}`} variant="secondary" size="xs">
-                        Abrir <ArrowRight size={11} />
-                      </Button>
-                    </td>
+                      {l.candidatura ? ` · ${l.candidatura.vaga.title}` : ""}
+                    </InfoDoCartao>
+                    <PeDoCartao>
+                      {seloDoStatus(l.status)}
+                      {resultado(l)}
+                      <span className="ml-auto text-[11.5px] text-fg-muted">enviado em {formatInstantDate(l.createdAt)}</span>
+                    </PeDoCartao>
+                  </Cartao>
+                </Link>
+              ))}
+            </CartoesNoCelular>
+
+            {/* Era uma lista de linhas-link com tudo numa frase (até 30/09).
+                Virou tabela no padrão do Connect, com o funil de teste. */}
+            <TabelaNoDesktop padrao>
+              <table className="w-full table-fixed min-w-[880px] text-[length:var(--fs-ui)]">
+                <colgroup>
+                  <col />
+                  <col className="w-[180px]" />
+                  <col className="w-[200px]" />
+                  <col className="w-[116px]" />
+                  <col className="w-[124px]" />
+                  <col className="w-[112px]" />
+                  <col className="w-[96px]" />
+                </colgroup>
+                <thead>
+                  <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                    <th className="px-4 py-3">Candidato</th>
+                    <th className="px-4 py-3">
+                      <FiltroDaColunaNaUrl rotulo="Teste" chave="teste" opcoes={opcoesDeTeste} />
+                    </th>
+                    <th className="px-4 py-3">Vaga</th>
+                    <th className="px-4 py-3">Situação</th>
+                    <th className="px-4 py-3">Resultado</th>
+                    <th className="px-4 py-3">Enviado em</th>
+                    <th className="px-4 py-3">
+                      <span className="sr-only">Abrir</span>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </TabelaNoDesktop>
-        </>
-      )}
+                </thead>
+                <tbody>
+                  {links.map((l) => (
+                    <tr key={l.id} className="border-b border-border">
+                      <td className="px-4 py-3 min-w-0">
+                        <Link
+                          href={`/testes/${l.id}`}
+                          className="block font-semibold text-fg hover:text-brand transition-colors truncate"
+                          title={l.person.name}
+                        >
+                          {l.person.name}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 text-fg-secondary truncate" title={nomeDoTeste(l)}>
+                        {nomeDoTeste(l)}
+                      </td>
+                      <td className="px-4 py-3 text-fg-secondary truncate" title={l.candidatura?.vaga.title}>
+                        {l.candidatura ? l.candidatura.vaga.title : <span className="text-fg-muted">—</span>}
+                      </td>
+                      <td className="px-4 py-3">{seloDoStatus(l.status)}</td>
+                      <td className="px-4 py-3">{resultado(l) ?? <span className="text-fg-muted">—</span>}</td>
+                      <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{formatInstantDate(l.createdAt)}</td>
+                      <td className="px-4 py-3">
+                        <Button href={`/testes/${l.id}`} variant="secondary" size="xs">
+                          Abrir <ArrowRight size={11} />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TabelaNoDesktop>
+          </>
+        )}
+      </CascoDaTabela>
 
       <Pagination page={pageNum} totalPages={totalPages} buildHref={(p) => buildUrl({ page: String(p) })} total={total} rotulo="testes" />
     </PageContainer>
