@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
-import { CATALOGO, doTipo, ehAba, filtroDaAba } from "./catalogo";
+import { CATALOGO, doTipo, ehAba, filtroDaAba, ocultosValidos, tiposConfiguraveis } from "./catalogo";
 
 // Os tipos que o código grava hoje e que não aparecem como literal num
 // `notifyUser({ type: "…" })` (vêm de variável, ternário ou mapa).
@@ -25,7 +25,8 @@ const TIPOS_INDIRETOS = [
   "EXAM_DUE",
   "ADMISSAO_STALE",
   "FINANCE_CONTAS_DIA",
-  "GESTAO_ALERTA",
+  "GESTAO_PARADO",
+  "GESTAO_PRAZO",
 ];
 
 function arquivos(dir: string, out: string[] = []): string[] {
@@ -69,6 +70,31 @@ describe("catálogo das notificações", () => {
     const paraMim = filtroDaAba("para_mim");
     expect(paraMim && "in" in paraMim && paraMim.in).toContain("HANDOFF_RECEIVED");
     expect(filtroDaAba("todas")).toBeUndefined();
+  });
+
+  it("tipo oculto sai da aba dele e de Todas; tipo novo nunca some", () => {
+    expect(filtroDaAba("todas", ["GESTAO_PARADO"])).toEqual({ notIn: ["GESTAO_PARADO"] });
+    const alertas = filtroDaAba("alertas", ["GESTAO_PARADO"]);
+    expect(alertas && "notIn" in alertas && alertas.notIn).toContain("GESTAO_PARADO");
+    expect(alertas && "notIn" in alertas && alertas.notIn).not.toContain("GESTAO_PRAZO");
+    const paraMim = filtroDaAba("para_mim", ["COMMENT"]);
+    expect(paraMim && "in" in paraMim && paraMim.in).not.toContain("COMMENT");
+    expect(paraMim && "in" in paraMim && paraMim.in).toContain("MENTION");
+    // Ocultar tudo de uma aba deixa a lista vazia, e não "sem filtro".
+    const todosDeClientes = tiposConfiguraveis().find((g) => g.aba === "clientes")!.tipos.map((t) => t.tipo);
+    expect(filtroDaAba("clientes", todosDeClientes)).toEqual({ in: [] });
+  });
+
+  it("preferências: só tipo do catálogo, sem legado, sem repetição", () => {
+    expect(ocultosValidos(["GESTAO_PARADO", "GESTAO_PARADO", "GESTAO_ALERTA", "TIPO_NOVO", 42, null])).toEqual(["GESTAO_PARADO"]);
+    expect(ocultosValidos("GESTAO_PARADO")).toEqual([]);
+    const grupos = tiposConfiguraveis();
+    expect(grupos.map((g) => g.aba)).toEqual(["para_mim", "clientes", "alertas"]);
+    const todos = grupos.flatMap((g) => g.tipos.map((t) => t.tipo));
+    expect(todos).toContain("GESTAO_PARADO");
+    expect(todos).not.toContain("GESTAO_ALERTA");
+    // Cada tipo configurável está na aba do catálogo.
+    for (const g of grupos) for (const t of g.tipos) expect(CATALOGO[t.tipo].aba).toBe(g.aba);
   });
 
   it("aba válida só as quatro", () => {

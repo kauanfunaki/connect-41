@@ -456,6 +456,7 @@ model Tenant {
   handoffs                  Handoff[]
   handoffSectors            HandoffSector[]
   notifications             Notification[]
+  notificationHiddenTypes   NotificationHiddenType[]
   pushSubscriptions         PushSubscription[]
   portalPushSubscriptions   PortalPushSubscription[]
   admissaoLinks             AdmissaoLink[]
@@ -763,6 +764,7 @@ model User {
   handoffSectorAssignees      HandoffSectorAssignee[]
   handoffViews                HandoffView[]
   notifications               Notification[]
+  notificationHiddenTypes     NotificationHiddenType[]
   pushSubscriptions           PushSubscription[]
   tenantAccess                UserTenantAccess[]
   uploadedDocuments           Document[]
@@ -4418,12 +4420,43 @@ model Notification {
   message    String      @db.VarChar(255)
   read       Boolean     @default(false)
   createdAt  DateTime    @default(now())
+  /// Quem causou (05/10/2026) — a foto no sino. Nulo nos alertas automáticos.
+  /// Sem FK de propósito: a tabela é grande, e a FK obrigaria o MySQL a
+  /// copiá-la inteira na migration. A foto é buscada em lote, e um id que não
+  /// acha ninguém cai no ícone do tipo.
+  actorUserId String?
+  /// Arquivada (05/10/2026): sai do sino e das abas; a central mostra à parte.
+  archivedAt  DateTime?
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, userId, read])
+  // A lista da central e do sino: as não arquivadas da pessoa, mais novas primeiro.
+  @@index([tenantId, userId, archivedAt, createdAt])
   @@map("notifications")
+}
+
+/// Tipo de notificação que a pessoa escondeu das abas (05/10/2026). Padrão =
+/// tudo ligado, então só existe linha para o que foi desligado. A notificação
+/// continua sendo gravada — religar mostra o histórico —, só não aparece no
+/// sino nem nas abas, e não manda push.
+///
+/// Tabela própria, como `UserPinnedModule`: coluna nova numa tabela que todo
+/// mundo lê derrubaria a leitura se o deploy viesse antes da migration.
+model NotificationHiddenType {
+  id        String   @id @default(uuid())
+  tenantId  String
+  userId    String
+  type      String   @db.VarChar(60)
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId, type])
+  @@index([tenantId])
+  @@map("notification_hidden_types")
 }
 
 // Assinatura de push do navegador (Web Push API) — um usuário pode ter mais

@@ -125,6 +125,8 @@ export async function agendarEntrevista(
       message: `Entrevista com ${candidatura.person.name} agendada para ${dataLabel}.`,
       entityType: "PERSON",
       entityId: candidatura.person.id,
+      // Quem agendou — a foto no sino (05/10/2026).
+      actorUserId: ctx.userId,
     });
   }
 
