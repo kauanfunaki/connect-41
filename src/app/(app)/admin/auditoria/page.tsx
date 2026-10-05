@@ -61,6 +61,7 @@ const ACTION_LABEL: Record<string, string> = {
   "lead.situacao": "mudou a situação do lead",
   "lead.responsavel": "trocou o responsável do lead",
   "lead.observacoes": "editou as observações do lead",
+  "lead.excluido": "excluiu um lead",
 };
 
 const PER_PAGE = 50;

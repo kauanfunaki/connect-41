@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { canActOnSector } from "@/lib/auth/context";
+import { canActOnSector, canManageSector } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { formatCnpj, formatInstantDateTime, formatPhone } from "@/lib/format";
@@ -11,6 +11,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { AcompanhamentoDoLead } from "@/components/leads/AcompanhamentoDoLead";
+import { ExcluirLead } from "@/components/leads/ExcluirLead";
 import { MODULO_LEADS, ROTULO_DO_STATUS, VARIANTE_DO_STATUS, rotuloDaOrigem } from "@/lib/leads/regras";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +58,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
   if (!lead) notFound();
 
   const podeAgir = canActOnSector(ctx, setor);
+  const podeExcluir = canManageSector(ctx, setor);
   const doSetor = podeAgir ? await getSectorUsers(ctx.tenantId, setor) : [];
   // Quem já é o responsável continua na lista mesmo se saiu do setor — senão o
   // seletor mostraria "Sem responsável" e salvar tiraria a pessoa sem querer.
@@ -74,7 +76,12 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
       <PageHeader
         title={lead.name}
         subtitle={`${lead.companyName ?? "Empresa não informada"} · ${rotuloDaOrigem(lead.source)} · recebido em ${formatInstantDateTime(lead.createdAt, QUANDO)}`}
-        action={<Badge variant={VARIANTE_DO_STATUS[lead.status]}>{ROTULO_DO_STATUS[lead.status]}</Badge>}
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={VARIANTE_DO_STATUS[lead.status]}>{ROTULO_DO_STATUS[lead.status]}</Badge>
+            {podeExcluir && <ExcluirLead id={lead.id} />}
+          </div>
+        }
       />
 
       <Card className="mb-5 p-4">

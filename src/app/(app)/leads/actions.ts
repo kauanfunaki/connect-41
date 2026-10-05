@@ -74,3 +74,41 @@ export async function salvarAcompanhamentoDoLead(id: string, form: FormData): Pr
   revalidatePath(`/leads/${lead.id}`);
   return { ok: true };
 }
+
+/**
+ * Apaga o lead — o pedido de exclusão da LGPD, que a política de privacidade
+ * do portal promete a quem preencheu a ficha (05/10/2026). "Descartado" não
+ * basta: descartado continua guardado.
+ *
+ * Só quem gere o setor (coordenador ou administrador). Vão junto os avisos do
+ * sino sobre o lead, que levam o nome da pessoa no texto; a auditoria registra
+ * a exclusão sem nenhum dado dela.
+ */
+export async function excluirLead(id: string): Promise<Resultado> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { error: "Sessão expirada. Entre de novo." };
+  if (!(await podeNoModulo(ctx, MODULO_LEADS, "gerir"))) {
+    return { error: "Só quem coordena o setor ou administra o escritório exclui um lead." };
+  }
+
+  const prisma = getPrisma();
+  const lead = await prisma.lead.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { id: true, source: true } });
+  if (!lead) return { error: "Lead não encontrado." };
+
+  await prisma.$transaction([
+    prisma.notification.deleteMany({ where: { tenantId: ctx.tenantId, entityId: lead.id, type: { startsWith: "LEAD_" } } }),
+    prisma.lead.delete({ where: { id: lead.id } }),
+  ]);
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "lead.excluido",
+    entityType: "Lead",
+    entityId: lead.id,
+    metadata: { origem: lead.source },
+  });
+
+  revalidatePath("/leads");
+  return { ok: true };
+}
