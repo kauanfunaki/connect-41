@@ -15,7 +15,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como ler o Início",
         passos: [
-          "Clique em “Início”, no topo da barra lateral.",
+          "Clique no logo do Connect, no topo da barra lateral.",
           "No alto ficam os indicadores “Empresas ativas”, “Vencidos / hoje”, “Transferências” e “Pessoas cadastradas”. Clique em um deles para abrir a lista correspondente.",
           "Logo abaixo ficam os painéis com gráficos, como “Tarefas por prazo”, e os painéis dos setores que você enxerga.",
           "No bloco “Meu dia”, clique em um item para abrir a tarefa.",
@@ -58,7 +58,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como começar o dia pelo Meu dia",
         passos: [
-          "Clique em “Meu dia”, logo abaixo de “Início” na barra lateral.",
+          "Clique em “Meu dia”, o primeiro item da barra lateral.",
           "Confira os números do topo: “Atrasados”, “Vencem em breve”, “Parados”, “Em andamento” e “Feitos na semana”.",
           "Comece pela lista “Pede você agora”: ela traz o que está atrasado, vencendo ou parado, do mais urgente para o menos urgente.",
           "Clique no título de um item para abri-lo. O ícone e o rótulo dizem de onde ele vem (processo, card, pendência, transferência ou solicitação) e a bolinha colorida mostra o setor.",
