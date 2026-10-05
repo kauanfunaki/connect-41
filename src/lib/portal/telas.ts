@@ -77,7 +77,7 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     rotulo: "Solicitações",
     modulo: "portal_solicitacoes",
     secao: "Com a equipe",
-    descricao: "Peça documentos, alterações ou o que precisar da 41, com prazo de resposta.",
+    descricao: "Peça documentos, alterações ou o que precisar do escritório, com prazo de resposta.",
   },
   {
     href: "/portal/comunicados",
