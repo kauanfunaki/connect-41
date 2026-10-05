@@ -13,6 +13,7 @@ import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { resumoDasLicencas } from "@/lib/societario/licencas-data";
 import { situacaoDaLicenca, AVISO_EM_DIAS, type SituacaoDaLicenca } from "@/lib/societario/licencas";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 
 const RECORTES: { chave: string; rotulo: string; situacao: SituacaoDaLicenca | null }[] = [
   { chave: "atencao", rotulo: "Precisa de ação", situacao: null },
@@ -115,24 +116,29 @@ export default async function LicencasPage({
           },
         ]}
       />
-      <FiltrosDaTela
-        className="mb-4"
-        campos={[
-          {
-            chave: "recorte",
-            rotulo: "Situação",
-            vazioLabel: "Precisa de ação",
-            opcoes: RECORTES.filter((r) => r.chave !== "atencao").map((r) => ({ value: r.chave, label: r.rotulo })),
-          },
-        ]}
-      />
-
-      <LicencasFila
-        linhas={filtradas}
-        hoje={hoje}
-        filtrado={linhas.length > 0 && filtradas.length === 0}
-        orgaos={orgaosDoForm}
-      />
+      <CascoDaTabela
+        contagem={contarItens(filtradas.length, "licença", "licenças")}
+        filtros={
+          <FiltrosDaTela
+            naBarra
+            campos={[
+              {
+                chave: "recorte",
+                rotulo: "Situação",
+                vazioLabel: "Precisa de ação",
+                opcoes: RECORTES.filter((r) => r.chave !== "atencao").map((r) => ({ value: r.chave, label: r.rotulo })),
+              },
+            ]}
+          />
+        }
+      >
+        <LicencasFila
+          linhas={filtradas}
+          hoje={hoje}
+          filtrado={linhas.length > 0 && filtradas.length === 0}
+          orgaos={orgaosDoForm}
+        />
+      </CascoDaTabela>
     </PageContainer>
   );
 }

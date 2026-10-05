@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ArrowRight, Briefcase, CheckCircle2, DoorOpen, Loader, XCircle } from "lucide-react";
@@ -21,6 +20,7 @@ import { formatInstantDate } from "@/lib/format";
 import { lerLista } from "@/lib/filtroNaUrl";
 import { VAGA_STATUS_LABEL, VAGA_STATUS_STYLE, VAGA_STATUS_ORDER } from "@/lib/vagaStatus";
 import { Selo } from "@/components/ui/Selo";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 
 const PER_PAGE = 30;
 
@@ -157,28 +157,31 @@ export default async function VagasPage({
 
       {/* Situação e empresa no botão "Filtros" — eram pílulas e um select que
           navegava sozinho. Setor é o funil da coluna. */}
-      <FiltrosDaTela
-        className="mb-4"
-        campos={[
-          {
-            chave: "status",
-            rotulo: "Situação",
-            vazioLabel: `Todas (${semFiltroDeStatus})`,
-            opcoes: VAGA_STATUS_ORDER.map((s) => ({ value: s, label: `${VAGA_STATUS_LABEL[s]} (${contagem[s]})` })),
-          },
-          {
-            chave: "companyId",
-            rotulo: "Empresa",
-            vazioLabel: "Todas as empresas",
-            opcoes: companies.map((c) => ({ value: c.id, label: c.name })),
-          },
-        ]}
-      />
+      <CascoDaTabela
+        contagem={contarItens(total, "vaga", "vagas")}
+        filtros={
+          <FiltrosDaTela
+            naBarra
+            campos={[
+              {
+                chave: "status",
+                rotulo: "Situação",
+                vazioLabel: `Todas (${semFiltroDeStatus})`,
+                opcoes: VAGA_STATUS_ORDER.map((s) => ({ value: s, label: `${VAGA_STATUS_LABEL[s]} (${contagem[s]})` })),
+              },
+              {
+                chave: "companyId",
+                rotulo: "Empresa",
+                vazioLabel: "Todas as empresas",
+                opcoes: companies.map((c) => ({ value: c.id, label: c.name })),
+              },
+            ]}
+          />
+        }
+      >
+        <FiltrosDasColunasNaUrl colunas={[{ chave: "sectorCode", rotulo: "Setor" }]} />
 
-      <FiltrosDasColunasNaUrl colunas={[{ chave: "sectorCode", rotulo: "Setor" }]} />
-
-      {vagas.length === 0 ? (
-        <Card>
+        {vagas.length === 0 ? (
           <EmptyState
             icon={<Briefcase />}
             title="Nenhuma vaga encontrada"
@@ -194,93 +197,93 @@ export default async function VagasPage({
               )
             }
           />
-        </Card>
-      ) : (
-        <>
-          <CartoesNoCelular>
-            {vagas.map((v) => (
-              <Link key={v.id} href={`/vagas/${v.id}`} className="block">
-                <Cartao className="hover:border-brand/40 transition-colors">
-                  <TopoDoCartao nome={v.title} />
-                  <InfoDoCartao>
-                    {v.company.name} · {rotuloDoSetor(v.sectorCode)}
-                  </InfoDoCartao>
-                  <PeDoCartao>
-                    {seloDoStatus(v.status)}
-                    <span className="text-[11.5px] text-fg-muted tabular-nums">{candidatos(v._count.candidaturas)}</span>
-                    <span className="ml-auto text-[11.5px] text-fg-muted tabular-nums">
-                      {v.quantity} vaga{v.quantity !== 1 ? "s" : ""}
-                    </span>
-                  </PeDoCartao>
-                </Cartao>
-              </Link>
-            ))}
-          </CartoesNoCelular>
-
-          {/* Era uma lista de linhas-link, com setor, candidatos e quantidade
-              numa frase só (até 30/09). Virou tabela no padrão do Connect —
-              centralizada, com o funil de setor. A lista é paginada, então o
-              funil filtra no servidor (`FiltroDaColunaNaUrl`). */}
-          <TabelaNoDesktop padrao>
-            <table className="w-full table-fixed min-w-[900px] text-[length:var(--fs-ui)]">
-              <colgroup>
-                <col />
-                <col className="w-[160px]" />
-                <col className="w-[132px]" />
-                <col className="w-[112px]" />
-                <col className="w-[104px]" />
-                <col className="w-[112px]" />
-                <col className="w-[96px]" />
-              </colgroup>
-              <thead>
-                <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
-                  <th className="px-4 py-3">Vaga</th>
-                  <th className="px-4 py-3">
-                    <FiltroDaColunaNaUrl rotulo="Setor" chave="sectorCode" opcoes={opcoesDeSetor} />
-                  </th>
-                  <th className="px-4 py-3">Situação</th>
-                  <th className="px-4 py-3">Candidatos</th>
-                  <th className="px-4 py-3">Quantidade</th>
-                  <th className="px-4 py-3">Aberta em</th>
-                  <th className="px-4 py-3">
-                    <span className="sr-only">Abrir</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {vagas.map((v) => (
-                  <tr key={v.id} className="border-b border-border">
-                    <td className="px-4 py-3 min-w-0">
-                      <Link
-                        href={`/vagas/${v.id}`}
-                        className="block font-semibold text-fg hover:text-brand transition-colors truncate"
-                        title={v.title}
-                      >
-                        {v.title}
-                      </Link>
-                      <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate" title={v.company.name}>
-                        {v.company.name}
+        ) : (
+          <>
+            <CartoesNoCelular>
+              {vagas.map((v) => (
+                <Link key={v.id} href={`/vagas/${v.id}`} className="block">
+                  <Cartao className="hover:border-brand/40 transition-colors">
+                    <TopoDoCartao nome={v.title} />
+                    <InfoDoCartao>
+                      {v.company.name} · {rotuloDoSetor(v.sectorCode)}
+                    </InfoDoCartao>
+                    <PeDoCartao>
+                      {seloDoStatus(v.status)}
+                      <span className="text-[11.5px] text-fg-muted tabular-nums">{candidatos(v._count.candidaturas)}</span>
+                      <span className="ml-auto text-[11.5px] text-fg-muted tabular-nums">
+                        {v.quantity} vaga{v.quantity !== 1 ? "s" : ""}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 text-fg-secondary truncate" title={rotuloDoSetor(v.sectorCode)}>
-                      {rotuloDoSetor(v.sectorCode)}
-                    </td>
-                    <td className="px-4 py-3">{seloDoStatus(v.status)}</td>
-                    <td className="px-4 py-3 text-fg-secondary">{v._count.candidaturas}</td>
-                    <td className="px-4 py-3 text-fg-secondary">{v.quantity}</td>
-                    <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{formatInstantDate(v.openedAt)}</td>
-                    <td className="px-4 py-3">
-                      <Button href={`/vagas/${v.id}`} variant="secondary" size="xs">
-                        Abrir <ArrowRight size={11} />
-                      </Button>
-                    </td>
+                    </PeDoCartao>
+                  </Cartao>
+                </Link>
+              ))}
+            </CartoesNoCelular>
+
+            {/* Era uma lista de linhas-link, com setor, candidatos e quantidade
+                numa frase só (até 30/09). Virou tabela no padrão do Connect —
+                centralizada, com o funil de setor. A lista é paginada, então o
+                funil filtra no servidor (`FiltroDaColunaNaUrl`). */}
+            <TabelaNoDesktop padrao>
+              <table className="w-full table-fixed min-w-[900px] text-[length:var(--fs-ui)]">
+                <colgroup>
+                  <col />
+                  <col className="w-[160px]" />
+                  <col className="w-[132px]" />
+                  <col className="w-[112px]" />
+                  <col className="w-[104px]" />
+                  <col className="w-[112px]" />
+                  <col className="w-[96px]" />
+                </colgroup>
+                <thead>
+                  <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                    <th className="px-4 py-3">Vaga</th>
+                    <th className="px-4 py-3">
+                      <FiltroDaColunaNaUrl rotulo="Setor" chave="sectorCode" opcoes={opcoesDeSetor} />
+                    </th>
+                    <th className="px-4 py-3">Situação</th>
+                    <th className="px-4 py-3">Candidatos</th>
+                    <th className="px-4 py-3">Quantidade</th>
+                    <th className="px-4 py-3">Aberta em</th>
+                    <th className="px-4 py-3">
+                      <span className="sr-only">Abrir</span>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </TabelaNoDesktop>
-        </>
-      )}
+                </thead>
+                <tbody>
+                  {vagas.map((v) => (
+                    <tr key={v.id} className="border-b border-border">
+                      <td className="px-4 py-3 min-w-0">
+                        <Link
+                          href={`/vagas/${v.id}`}
+                          className="block font-semibold text-fg hover:text-brand transition-colors truncate"
+                          title={v.title}
+                        >
+                          {v.title}
+                        </Link>
+                        <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate" title={v.company.name}>
+                          {v.company.name}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-fg-secondary truncate" title={rotuloDoSetor(v.sectorCode)}>
+                        {rotuloDoSetor(v.sectorCode)}
+                      </td>
+                      <td className="px-4 py-3">{seloDoStatus(v.status)}</td>
+                      <td className="px-4 py-3 text-fg-secondary">{v._count.candidaturas}</td>
+                      <td className="px-4 py-3 text-fg-secondary">{v.quantity}</td>
+                      <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{formatInstantDate(v.openedAt)}</td>
+                      <td className="px-4 py-3">
+                        <Button href={`/vagas/${v.id}`} variant="secondary" size="xs">
+                          Abrir <ArrowRight size={11} />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TabelaNoDesktop>
+          </>
+        )}
+      </CascoDaTabela>
 
       <Pagination page={pageNum} totalPages={totalPages} buildHref={(p) => buildUrl({ page: String(p) })} total={total} rotulo="vagas" />
     </PageContainer>

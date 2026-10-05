@@ -1,4 +1,3 @@
-import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { ScrollText } from "lucide-react";
@@ -14,6 +13,7 @@ import { CampoPeriodo } from "@/components/ui/CampoPeriodo";
 import { formatInstantDateTime } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 
 const ACTION_LABEL: Record<string, string> = {
   "company.create": "criou a empresa",
@@ -171,106 +171,111 @@ export default async function AuditoriaPage({
       {/* Entidade no botão "Filtros"; usuário e ação viraram o funil das
           colunas (02/10). O período fica ao lado, porque data se digita, não
           se escolhe numa lista (conferência de 30/09). */}
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <FiltrosDaTela
-          campos={[
-            {
-              chave: "entityType",
-              rotulo: "Entidade",
-              vazioLabel: "Todas as entidades",
-              opcoes: entityTypeRows.map((r) => ({ value: r.entityType as string, label: r.entityType as string })),
-            },
+      <CascoDaTabela
+        contagem={contarItens(total, "ação", "ações")}
+        filtros={
+          <FiltrosDaTela
+            naBarra
+            campos={[
+              {
+                chave: "entityType",
+                rotulo: "Entidade",
+                vazioLabel: "Todas as entidades",
+                opcoes: entityTypeRows.map((r) => ({ value: r.entityType as string, label: r.entityType as string })),
+              },
+            ]}
+          />
+        }
+        acoes={
+          <form method="GET" action="/admin/auditoria" className="flex flex-wrap items-center gap-2">
+            {usuarios.map((u) => (
+              <input key={`u-${u}`} type="hidden" name="userId" value={u} />
+            ))}
+            {acoes.map((a) => (
+              <input key={`a-${a}`} type="hidden" name="action" value={a} />
+            ))}
+            {entityType && <input type="hidden" name="entityType" value={entityType} />}
+            <CampoPeriodo compact nomeDe="from" nomeAte="to" defaultDe={from ?? ""} defaultAte={to ?? ""} className="w-72 max-w-full" />
+            <Button type="submit" variant="secondary" size="sm">
+              Filtrar período
+            </Button>
+            {(from || to) && (
+              <Button href={buildUrl({ from: undefined, to: undefined, page: undefined })} variant="ghost" size="sm">
+                Limpar período
+              </Button>
+            )}
+          </form>
+        }
+      >
+
+        {/* Acima da tabela e do estado vazio: é por aqui que se desfaz o funil
+            quando ele esvazia a lista. */}
+        <FiltrosDasColunasNaUrl
+          colunas={[
+            { chave: "userId", rotulo: "Usuário" },
+            { chave: "action", rotulo: "Ação" },
           ]}
         />
-        <form method="GET" action="/admin/auditoria" className="flex flex-wrap items-center gap-2">
-          {usuarios.map((u) => (
-            <input key={`u-${u}`} type="hidden" name="userId" value={u} />
-          ))}
-          {acoes.map((a) => (
-            <input key={`a-${a}`} type="hidden" name="action" value={a} />
-          ))}
-          {entityType && <input type="hidden" name="entityType" value={entityType} />}
-          <CampoPeriodo compact nomeDe="from" nomeAte="to" defaultDe={from ?? ""} defaultAte={to ?? ""} className="w-72 max-w-full" />
-          <Button type="submit" variant="secondary" size="sm">
-            Filtrar período
-          </Button>
-          {(from || to) && (
-            <Button href={buildUrl({ from: undefined, to: undefined, page: undefined })} variant="ghost" size="sm">
-              Limpar período
-            </Button>
-          )}
-        </form>
-      </div>
 
-      {/* Acima da tabela e do estado vazio: é por aqui que se desfaz o funil
-          quando ele esvazia a lista. */}
-      <FiltrosDasColunasNaUrl
-        colunas={[
-          { chave: "userId", rotulo: "Usuário" },
-          { chave: "action", rotulo: "Ação" },
-        ]}
-      />
-
-      {logs.length === 0 ? (
-        <Card>
+        {logs.length === 0 ? (
           <EmptyState
             icon={<ScrollText />}
             title={hasFilters ? "Nenhuma ação encontrada com esses filtros." : "Nenhuma ação registrada ainda."}
           />
-        </Card>
-      ) : (
-        // Tabela no casco padrão (era uma lista de linhas soltas). A trilha é
-        // paginada, então o funil de usuário e de ação filtra no servidor
-        // (`FiltroDaColunaNaUrl`), com as contagens da base inteira.
-        <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-          <table className="w-full min-w-[760px] text-[13px]">
-            <thead>
-              <tr className="border-b border-border text-[11px] uppercase tracking-wide text-fg-muted">
-                <th className="px-4 py-3">Quando</th>
-                <th className="px-4 py-3">
-                  <FiltroDaColunaNaUrl rotulo="Usuário" chave="userId" opcoes={opcoesDeUsuario} />
-                </th>
-                <th className="px-4 py-3">
-                  <FiltroDaColunaNaUrl rotulo="Ação" chave="action" opcoes={opcoesDeAcao} />
-                </th>
-                <th className="px-4 py-3">Entidade</th>
-                <th className="px-4 py-3">Detalhe</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map((log) => {
-                const detail = describeMetadata(log.metadata);
-                return (
-                  <tr key={log.id} className="border-b border-border">
-                    <td className="px-4 py-3 text-fg-muted whitespace-nowrap">
-                      {formatInstantDateTime(log.createdAt, {
-                        day: "2-digit",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </td>
-                    <td className="px-4 py-3 font-medium text-fg">{log.user.name}</td>
-                    <td className="px-4 py-3 text-fg-secondary">{ACTION_LABEL[log.action] ?? log.action}</td>
-                    <td className="px-4 py-3">
-                      {log.entityType ? <Badge variant="info">{log.entityType}</Badge> : <span className="text-fg-muted">—</span>}
-                    </td>
-                    <td className="px-4 py-3">
-                      {detail ? (
-                        <span className="block max-w-[320px] text-[11px] text-fg-muted font-mono truncate" title={detail}>
-                          {detail}
-                        </span>
-                      ) : (
-                        <span className="text-fg-muted">—</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+        ) : (
+          // Tabela no casco padrão (era uma lista de linhas soltas). A trilha é
+          // paginada, então o funil de usuário e de ação filtra no servidor
+          // (`FiltroDaColunaNaUrl`), com as contagens da base inteira.
+          <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
+            <table className="w-full min-w-[760px] text-[13px]">
+              <thead>
+                <tr className="border-b border-border text-[11px] uppercase tracking-wide text-fg-muted">
+                  <th className="px-4 py-3">Quando</th>
+                  <th className="px-4 py-3">
+                    <FiltroDaColunaNaUrl rotulo="Usuário" chave="userId" opcoes={opcoesDeUsuario} />
+                  </th>
+                  <th className="px-4 py-3">
+                    <FiltroDaColunaNaUrl rotulo="Ação" chave="action" opcoes={opcoesDeAcao} />
+                  </th>
+                  <th className="px-4 py-3">Entidade</th>
+                  <th className="px-4 py-3">Detalhe</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map((log) => {
+                  const detail = describeMetadata(log.metadata);
+                  return (
+                    <tr key={log.id} className="border-b border-border">
+                      <td className="px-4 py-3 text-fg-muted whitespace-nowrap">
+                        {formatInstantDateTime(log.createdAt, {
+                          day: "2-digit",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-fg">{log.user.name}</td>
+                      <td className="px-4 py-3 text-fg-secondary">{ACTION_LABEL[log.action] ?? log.action}</td>
+                      <td className="px-4 py-3">
+                        {log.entityType ? <Badge variant="info">{log.entityType}</Badge> : <span className="text-fg-muted">—</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        {detail ? (
+                          <span className="block max-w-[320px] text-[11px] text-fg-muted font-mono truncate" title={detail}>
+                            {detail}
+                          </span>
+                        ) : (
+                          <span className="text-fg-muted">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CascoDaTabela>
 
       <Pagination
         page={pageNum}

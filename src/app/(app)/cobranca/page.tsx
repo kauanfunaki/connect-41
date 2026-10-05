@@ -41,6 +41,7 @@ import {
   type LinhaDeCobranca,
 } from "@/lib/financeiro/cobranca/consultas";
 import { quebrarAcordo, desfazerAcordo } from "./actions";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 
 export const dynamic = "force-dynamic";
 
@@ -157,32 +158,6 @@ async function Fila({
         ]}
       />
 
-      {/* Quatro filtros no botão "Filtros" — eram quatro selects e um
-          "Aplicar" numa fileira (conferência de 30/09). */}
-      <FiltrosDaTela
-        className="mb-4"
-        campos={[
-          { chave: "empresa", rotulo: "Empresa", vazioLabel: "Todas", opcoes: empresas.map((e) => ({ value: e.id, label: e.nome })) },
-          { chave: "faixa", rotulo: "Atraso", vazioLabel: "Qualquer atraso", opcoes: FAIXAS.map((f) => ({ value: f.chave, label: f.rotulo })) },
-          {
-            chave: "situacao",
-            rotulo: "Situação",
-            vazioLabel: "Todas as situações",
-            opcoes: SITUACOES.map((s) => ({ value: s, label: ROTULO_DA_SITUACAO[s] })),
-          },
-          {
-            chave: "responsavel",
-            rotulo: "Responsável",
-            vazioLabel: "Qualquer responsável",
-            opcoes: [
-              { value: "eu", label: "Meus" },
-              { value: "sem", label: "Sem responsável" },
-              ...usuarios.map((u) => ({ value: u.id, label: u.name })),
-            ],
-          },
-        ]}
-      />
-
       {fila.paraHoje.length > 0 && (
         <Card className="p-4 mb-4 border-warning/40">
           <h2 className="text-[length:var(--fs-card-title)] font-semibold mb-2 flex items-center gap-2">
@@ -209,16 +184,48 @@ async function Fila({
         </Card>
       )}
 
-      {fila.linhas.length === 0 ? (
-        <EmptyState
-          icon={<Handshake />}
-          title={situacao || faixa || responsavel || empresaId ? "Nada neste filtro" : "Nenhum título vencido"}
-          description="Títulos a receber aparecem aqui no dia seguinte ao vencimento, até serem pagos, renegociados ou baixados por perda."
-        />
-      ) : (
-        <TabelaDaFila linhas={fila.linhas} hojeKey={hojeKey} />
-      )}
-      {fila.limitado && <p className="text-[11px] text-fg-muted mt-3">A fila passou de 2.000 títulos — mostrando os mais antigos. Filtre por empresa.</p>}
+      {/* Quatro filtros no botão "Filtros" — eram quatro selects e um
+          "Aplicar" numa fileira (conferência de 30/09). */}
+      <CascoDaTabela
+        contagem={contarItens(fila.linhas.length, "título", "títulos", fila.limitado)}
+        total={moeda(fila.totais.centavos)}
+        filtros={
+          <FiltrosDaTela
+            naBarra
+            campos={[
+              { chave: "empresa", rotulo: "Empresa", vazioLabel: "Todas", opcoes: empresas.map((e) => ({ value: e.id, label: e.nome })) },
+              { chave: "faixa", rotulo: "Atraso", vazioLabel: "Qualquer atraso", opcoes: FAIXAS.map((f) => ({ value: f.chave, label: f.rotulo })) },
+              {
+                chave: "situacao",
+                rotulo: "Situação",
+                vazioLabel: "Todas as situações",
+                opcoes: SITUACOES.map((s) => ({ value: s, label: ROTULO_DA_SITUACAO[s] })),
+              },
+              {
+                chave: "responsavel",
+                rotulo: "Responsável",
+                vazioLabel: "Qualquer responsável",
+                opcoes: [
+                  { value: "eu", label: "Meus" },
+                  { value: "sem", label: "Sem responsável" },
+                  ...usuarios.map((u) => ({ value: u.id, label: u.name })),
+                ],
+              },
+            ]}
+          />
+        }
+      >
+        {fila.linhas.length === 0 ? (
+          <EmptyState
+            icon={<Handshake />}
+            title={situacao || faixa || responsavel || empresaId ? "Nada neste filtro" : "Nenhum título vencido"}
+            description="Títulos a receber aparecem aqui no dia seguinte ao vencimento, até serem pagos, renegociados ou baixados por perda."
+          />
+        ) : (
+          <TabelaDaFila linhas={fila.linhas} hojeKey={hojeKey} />
+        )}
+        {fila.limitado && <p className="text-[11px] text-fg-muted mt-3">A fila passou de 2.000 títulos — mostrando os mais antigos. Filtre por empresa.</p>}
+      </CascoDaTabela>
     </>
   );
 }

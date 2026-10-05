@@ -20,6 +20,7 @@ import { CAMPOS_DA_EMPRESA_NO_SELETOR, opcoesDeEmpresa } from "@/lib/empresas/op
 import { abrirProcesso } from "./actions";
 import { contarAvisosPendentes } from "@/lib/societario/avisos";
 import { contarPendentesDoSetor } from "@/lib/ia/propostas";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
 // setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -182,38 +183,43 @@ export default async function ProcessosPage({
       {/* Situação, responsável e prioridade no botão "Filtros" — eram pílulas e
           um formulário com "Filtrar". Continua por GET: a URL guarda o recorte,
           e quem manda o link manda a mesma fila. */}
-      <FiltrosDaTela
-        className="mb-4"
-        campos={[
-          {
-            chave: "situacao",
-            rotulo: "Situação",
-            vazioLabel: `Todos (${todas.length})`,
-            opcoes: RECORTES.filter((r) => r.situacao).map((r) => ({
-              value: r.chave,
-              label: `${SITUACAO_LABEL[r.situacao!]} (${contagem[r.situacao!]})`,
-            })),
-          },
-          {
-            chave: "responsavel",
-            rotulo: "Responsável",
-            vazioLabel: "Todos",
-            opcoes: [{ value: "nenhum", label: "Sem responsável" }, ...responsaveis.map((r) => ({ value: r.id, label: r.name }))],
-          },
-          {
-            chave: "prioridade",
-            rotulo: "Prioridade",
-            vazioLabel: "Todas",
-            opcoes: PRIORIDADES.map((p) => ({ value: p, label: PRIORIDADE_LABEL[p] })),
-          },
-        ]}
-      />
-
-      <ProcessosFila
-        linhas={linhas}
-        filtrado={linhas.length === 0 && (todas.length > 0 || filtroAtivo)}
-        agora={agora}
-      />
+      <CascoDaTabela
+        contagem={contarItens(linhas.length, "processo", "processos")}
+        filtros={
+          <FiltrosDaTela
+            naBarra
+            campos={[
+              {
+                chave: "situacao",
+                rotulo: "Situação",
+                vazioLabel: `Todos (${todas.length})`,
+                opcoes: RECORTES.filter((r) => r.situacao).map((r) => ({
+                  value: r.chave,
+                  label: `${SITUACAO_LABEL[r.situacao!]} (${contagem[r.situacao!]})`,
+                })),
+              },
+              {
+                chave: "responsavel",
+                rotulo: "Responsável",
+                vazioLabel: "Todos",
+                opcoes: [{ value: "nenhum", label: "Sem responsável" }, ...responsaveis.map((r) => ({ value: r.id, label: r.name }))],
+              },
+              {
+                chave: "prioridade",
+                rotulo: "Prioridade",
+                vazioLabel: "Todas",
+                opcoes: PRIORIDADES.map((p) => ({ value: p, label: PRIORIDADE_LABEL[p] })),
+              },
+            ]}
+          />
+        }
+      >
+        <ProcessosFila
+          linhas={linhas}
+          filtrado={linhas.length === 0 && (todas.length > 0 || filtroAtivo)}
+          agora={agora}
+        />
+      </CascoDaTabela>
 
       <div className="mt-6">
         <AssistenteDoSocietario />

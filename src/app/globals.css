@@ -654,6 +654,50 @@ tr.c41-linha:hover > :first-child {
   white-space: nowrap;
 }
 
+/* Casco com barra — <CascoDaTabela> (05/10/2026, opção B da revisão de
+   filtros). No computador, barra + tabela num cartão só: o casco desenha
+   borda, fundo e sombra, e a tabela de dentro perde os dela. Sem
+   `overflow: hidden` no casco — o painel do Filtros é absoluto e seria
+   cortado; quem arredonda o pé é a própria tabela, que já rola de lado.
+   No celular o casco não desenha nada: a barra é um cartão próprio (as
+   classes dela no componente) e a lista segue em cartões soltos. */
+@media (width >= 48rem) {
+  .c41-casco {
+    background: var(--c41-surface);
+    border: 1px solid var(--c41-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--c41-shadow-xs);
+  }
+  .c41-casco > .c41-casco-barra {
+    margin-bottom: 0;
+    border-width: 0 0 1px;
+    border-radius: calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px) 0 0;
+    box-shadow: none;
+  }
+  .c41-casco .c41-tabela {
+    border: 0;
+    border-radius: 0 0 calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px);
+    box-shadow: none;
+    background: transparent;
+  }
+  /* A faixa do filtro nas colunas (TabelaFiltravel) entre a barra e a tabela. */
+  .c41-casco .c41-faixa-colunas {
+    margin: 0;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--c41-border);
+  }
+  /* Aviso de limite ("Mostrando as 500 primeiras") no pé do cartão. */
+  .c41-casco > p {
+    margin: 0;
+    padding: 0.625rem 1rem 0.75rem;
+    border-top: 1px solid var(--c41-border);
+  }
+  .c41-casco .c41-sem-linhas {
+    margin: 0;
+    padding: 0.75rem 1rem 1rem;
+  }
+}
+
 /* ----- Dica do texto cortado (DicaFlutuante): só opacidade — o transform
    posiciona o balão e não pode ser animado junto ----- */
 @keyframes c41-dica-in { from { opacity: 0; } to { opacity: 1; } }

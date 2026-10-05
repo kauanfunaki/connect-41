@@ -24,6 +24,7 @@ import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { moeda } from "@/lib/financeiro/formato";
 import { podeDecidir, podeEnviarParaAprovacao } from "@/lib/financeiro/aprovacao/regras";
 import { MODULO_DE_APROVACOES } from "@/lib/financeiro/aprovacao/servidor";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 
 export const dynamic = "force-dynamic";
 
@@ -219,128 +220,133 @@ async function Fila({
         ]}
       />
       {/* Situação e empresa no botão "Filtros" (conferência de 30/09). */}
-      <FiltrosDaTela
-        className="mb-4"
-        campos={[
-          {
-            chave: "situacao",
-            rotulo: "Situação",
-            vazioLabel: "Aguardando e reprovadas",
-            opcoes: SITUACOES.filter((s) => s.chave !== "todas").map((s) => ({ value: s.chave, label: s.rotulo })),
-          },
-          { chave: "empresa", rotulo: "Empresa", vazioLabel: "Todas", opcoes: empresas.map((e) => ({ value: e.id, label: e.nome })) },
-        ]}
-      />
-
-      {linhas.length === 0 ? (
-        <EmptyState
-          icon={<ShieldCheck />}
-          title="Nada esperando decisão"
-          description="Contas a pagar lançadas em empresas com alçada entram aqui sozinhas. Uma conta antiga pode ser enviada pela tela de contas a pagar."
-        />
-      ) : (
-        <>
-          <CartoesNoCelular>
-            {decididas.map(({ l, valorCentavos, descricao, decidir, eventos, ultimoMotivo }) => (
-              <Cartao key={l.id}>
-                <TopoDoCartao nome={l.counterparty.name} valor={moeda(valorCentavos)} />
-                {l.description && <InfoDoCartao>{l.description}</InfoDoCartao>}
-                <InfoDoCartao className="mt-1 tabular-nums">vence {formatInstantDate(l.dueDate)}</InfoDoCartao>
-                <InfoDoCartao>
-                  {nomeExibicao(l.company)} · lançada por {l.createdBy?.name ?? "—"}
-                </InfoDoCartao>
-                {l.approvalStatus === "REPROVADO" && ultimoMotivo && (
-                  <span className="block text-[11px] text-danger mt-1 break-words">“{ultimoMotivo}”</span>
-                )}
-                <PeDoCartao>
-                  <SeloDaAprovacao status={l.approvalStatus} />
-                  <HistoricoDaAprovacao eventos={eventos} />
-                </PeDoCartao>
-                <div className="mt-2">
-                  <DecisaoDaEquipe
-                    entryId={l.id}
-                    descricao={descricao}
-                    decidir={decidir}
-                    reenviar={podeAgir && l.approvalStatus === "REPROVADO" && podeEnviarParaAprovacao(l).pode}
-                  />
-                </div>
-              </Cartao>
-            ))}
-          </CartoesNoCelular>
-
-          <TabelaFiltravel
-            linhas={decididas.map(({ l }) => ({
-              id: l.id,
-              valores: {
-                vencimento: saoPauloParts(l.dueDate).dateKey,
-                fornecedor: l.counterparty.name,
-                lancadaPor: l.createdBy?.name ?? "",
-                empresa: nomeExibicao(l.company),
-                aprovacao: l.approvalStatus === "AGUARDANDO" ? "Aguardando" : l.approvalStatus === "REPROVADO" ? "Reprovada" : l.approvalStatus,
+      <CascoDaTabela
+        contagem={contarItens(decididas.length, "conta", "contas", linhas.length > LIMITE)}
+        filtros={
+          <FiltrosDaTela
+            naBarra
+            campos={[
+              {
+                chave: "situacao",
+                rotulo: "Situação",
+                vazioLabel: "Aguardando e reprovadas",
+                opcoes: SITUACOES.filter((s) => s.chave !== "todas").map((s) => ({ value: s.chave, label: s.rotulo })),
               },
-            }))}
-          >
-          <TabelaNoDesktop padrao>
-          <table className="w-full min-w-[960px] text-[13px]">
-            <thead>
-              <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-                <th className="py-2 pr-3 font-medium">
-                  <FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" />
-                </th>
-                <th className="py-2 pr-3 font-medium">
-                  <FiltroDaColuna
-                    rotulo="Fornecedor"
-                    campos={[
-                      { chave: "fornecedor", rotulo: "Fornecedor" },
-                      { chave: "lancadaPor", rotulo: "Lançada por" },
-                    ]}
-                  />
-                </th>
-                <th className="py-2 pr-3 font-medium">
-                  <FiltroDaColuna rotulo="Empresa" chave="empresa" />
-                </th>
-                <th className="py-2 pr-3 font-medium">Valor</th>
-                <th className="py-2 pr-3 font-medium">
-                  <FiltroDaColuna rotulo="Aprovação" chave="aprovacao" align="right" />
-                </th>
-                <th className="py-2 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
+              { chave: "empresa", rotulo: "Empresa", vazioLabel: "Todas", opcoes: empresas.map((e) => ({ value: e.id, label: e.nome })) },
+            ]}
+          />
+        }
+      >
+        {linhas.length === 0 ? (
+          <EmptyState
+            icon={<ShieldCheck />}
+            title="Nada esperando decisão"
+            description="Contas a pagar lançadas em empresas com alçada entram aqui sozinhas. Uma conta antiga pode ser enviada pela tela de contas a pagar."
+          />
+        ) : (
+          <>
+            <CartoesNoCelular>
               {decididas.map(({ l, valorCentavos, descricao, decidir, eventos, ultimoMotivo }) => (
-                  <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft align-top">
-                    <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">{formatInstantDate(l.dueDate)}</td>
-                    <td className="py-2.5 pr-3">
-                      <span className="font-medium">{l.counterparty.name}</span>
-                      {l.description && <span className="block text-[11px] text-fg-muted truncate max-w-[240px]">{l.description}</span>}
-                      <span className="block text-[11px] text-fg-muted">lançada por {l.createdBy?.name ?? "—"}</span>
-                    </td>
-                    <td className="py-2.5 pr-3 text-fg-secondary">{nomeExibicao(l.company)}</td>
-                    <td className="py-2.5 pr-3 text-right tabular-nums font-medium">{moeda(valorCentavos)}</td>
-                    <td className="py-2.5 pr-3">
-                      <SeloDaAprovacao status={l.approvalStatus} />
-                      {l.approvalStatus === "REPROVADO" && ultimoMotivo && (
-                        <span className="block text-[11px] text-danger mt-1 max-w-[260px]">“{ultimoMotivo}”</span>
-                      )}
-                      <HistoricoDaAprovacao eventos={eventos} />
-                    </td>
-                    <td className="py-2.5">
-                      <DecisaoDaEquipe
-                        entryId={l.id}
-                        descricao={descricao}
-                        decidir={decidir}
-                        reenviar={podeAgir && l.approvalStatus === "REPROVADO" && podeEnviarParaAprovacao(l).pode}
-                      />
-                    </td>
-                  </LinhaFiltravel>
+                <Cartao key={l.id}>
+                  <TopoDoCartao nome={l.counterparty.name} valor={moeda(valorCentavos)} />
+                  {l.description && <InfoDoCartao>{l.description}</InfoDoCartao>}
+                  <InfoDoCartao className="mt-1 tabular-nums">vence {formatInstantDate(l.dueDate)}</InfoDoCartao>
+                  <InfoDoCartao>
+                    {nomeExibicao(l.company)} · lançada por {l.createdBy?.name ?? "—"}
+                  </InfoDoCartao>
+                  {l.approvalStatus === "REPROVADO" && ultimoMotivo && (
+                    <span className="block text-[11px] text-danger mt-1 break-words">“{ultimoMotivo}”</span>
+                  )}
+                  <PeDoCartao>
+                    <SeloDaAprovacao status={l.approvalStatus} />
+                    <HistoricoDaAprovacao eventos={eventos} />
+                  </PeDoCartao>
+                  <div className="mt-2">
+                    <DecisaoDaEquipe
+                      entryId={l.id}
+                      descricao={descricao}
+                      decidir={decidir}
+                      reenviar={podeAgir && l.approvalStatus === "REPROVADO" && podeEnviarParaAprovacao(l).pode}
+                    />
+                  </div>
+                </Cartao>
               ))}
-            </tbody>
-          </table>
-          </TabelaNoDesktop>
-          </TabelaFiltravel>
-          {linhas.length > LIMITE && <p className="text-[11px] text-fg-muted mt-3">Mostrando as {LIMITE} primeiras. Filtre por empresa.</p>}
-        </>
-      )}
+            </CartoesNoCelular>
+
+            <TabelaFiltravel
+              linhas={decididas.map(({ l }) => ({
+                id: l.id,
+                valores: {
+                  vencimento: saoPauloParts(l.dueDate).dateKey,
+                  fornecedor: l.counterparty.name,
+                  lancadaPor: l.createdBy?.name ?? "",
+                  empresa: nomeExibicao(l.company),
+                  aprovacao: l.approvalStatus === "AGUARDANDO" ? "Aguardando" : l.approvalStatus === "REPROVADO" ? "Reprovada" : l.approvalStatus,
+                },
+              }))}
+            >
+            <TabelaNoDesktop padrao>
+            <table className="w-full min-w-[960px] text-[13px]">
+              <thead>
+                <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                  <th className="py-2 pr-3 font-medium">
+                    <FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" />
+                  </th>
+                  <th className="py-2 pr-3 font-medium">
+                    <FiltroDaColuna
+                      rotulo="Fornecedor"
+                      campos={[
+                        { chave: "fornecedor", rotulo: "Fornecedor" },
+                        { chave: "lancadaPor", rotulo: "Lançada por" },
+                      ]}
+                    />
+                  </th>
+                  <th className="py-2 pr-3 font-medium">
+                    <FiltroDaColuna rotulo="Empresa" chave="empresa" />
+                  </th>
+                  <th className="py-2 pr-3 font-medium">Valor</th>
+                  <th className="py-2 pr-3 font-medium">
+                    <FiltroDaColuna rotulo="Aprovação" chave="aprovacao" align="right" />
+                  </th>
+                  <th className="py-2 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {decididas.map(({ l, valorCentavos, descricao, decidir, eventos, ultimoMotivo }) => (
+                    <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft align-top">
+                      <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">{formatInstantDate(l.dueDate)}</td>
+                      <td className="py-2.5 pr-3">
+                        <span className="font-medium">{l.counterparty.name}</span>
+                        {l.description && <span className="block text-[11px] text-fg-muted truncate max-w-[240px]">{l.description}</span>}
+                        <span className="block text-[11px] text-fg-muted">lançada por {l.createdBy?.name ?? "—"}</span>
+                      </td>
+                      <td className="py-2.5 pr-3 text-fg-secondary">{nomeExibicao(l.company)}</td>
+                      <td className="py-2.5 pr-3 text-right tabular-nums font-medium">{moeda(valorCentavos)}</td>
+                      <td className="py-2.5 pr-3">
+                        <SeloDaAprovacao status={l.approvalStatus} />
+                        {l.approvalStatus === "REPROVADO" && ultimoMotivo && (
+                          <span className="block text-[11px] text-danger mt-1 max-w-[260px]">“{ultimoMotivo}”</span>
+                        )}
+                        <HistoricoDaAprovacao eventos={eventos} />
+                      </td>
+                      <td className="py-2.5">
+                        <DecisaoDaEquipe
+                          entryId={l.id}
+                          descricao={descricao}
+                          decidir={decidir}
+                          reenviar={podeAgir && l.approvalStatus === "REPROVADO" && podeEnviarParaAprovacao(l).pode}
+                        />
+                      </td>
+                    </LinhaFiltravel>
+                ))}
+              </tbody>
+            </table>
+            </TabelaNoDesktop>
+            </TabelaFiltravel>
+            {linhas.length > LIMITE && <p className="text-[11px] text-fg-muted mt-3">Mostrando as {LIMITE} primeiras. Filtre por empresa.</p>}
+          </>
+        )}
+      </CascoDaTabela>
     </>
   );
 }
