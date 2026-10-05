@@ -163,6 +163,10 @@ export function AppShell({
 }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [trocaAberta, setTrocaAberta] = useState(false);
+  // Cabeçalho aberto (05/10): sem fundo nem borda, o brilho passa por trás dele.
+  // A borda volta quando o conteúdo rola, para a tabela não sumir numa linha
+  // invisível.
+  const [rolou, setRolou] = useState(false);
   const pathname = usePathname();
   // O "?" de cada tela (02/10/2026): com artigo, abre o passo a passo dela e
   // guarda de onde veio para o "Voltar"; sem artigo, a central.
@@ -367,9 +371,16 @@ export function AppShell({
       </aside>
 
       {/* ── Main area ── */}
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+      {/* O brilho mora aqui, e não no <main> (05/10, opção A da revisão de
+          fundo): começa no topo da janela, atrás do cabeçalho aberto, e fica
+          parado quando a página rola. */}
+      <div className="c41-atmosfera flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Topbar */}
-        <header className="h-[60px] flex-shrink-0 flex items-center gap-3 border-b border-border bg-topbar-bg px-4 lg:px-6">
+        <header
+          className={`h-[60px] flex-shrink-0 flex items-center gap-3 border-b px-4 lg:px-6 transition-colors ${
+            rolou ? "border-border" : "border-transparent"
+          }`}
+        >
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
@@ -483,7 +494,10 @@ export function AppShell({
         )}
 
         {/* Page content */}
-        <main className="c41-atmosfera scroll-y scroll-gutter-stable flex-1 overflow-y-auto">
+        <main
+          className="scroll-y scroll-gutter-stable flex-1 overflow-y-auto"
+          onScroll={(e) => setRolou(e.currentTarget.scrollTop > 0)}
+        >
           {/* Anota a tela aberta como recente (no navegador) — é o que o Ctrl+K
               oferece antes de a pessoa digitar. */}
           <RegistroDeTelasRecentes />
