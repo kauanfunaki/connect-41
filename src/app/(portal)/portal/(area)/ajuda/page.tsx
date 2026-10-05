@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Bell, Building2, Inbox, KeyRound, LogIn, Megaphone, MessagesSquare, Plus, Smartphone, Wallet } from "lucide-react";
+import { Bell, Building2, House, Inbox, KeyRound, LogIn, Megaphone, MessagesSquare, Plus, Smartphone, Wallet } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { Button } from "@/components/ui/Button";
@@ -18,6 +18,7 @@ export const dynamic = "force-dynamic";
 // e um próprio quando é sobre o portal como um todo.
 const ICONES: Record<IconeDoPasso, React.ReactNode> = {
   entrar: <LogIn />,
+  inicio: <House />,
   celular: <Smartphone />,
   solicitacao: <Inbox />,
   comunicado: <Megaphone />,
