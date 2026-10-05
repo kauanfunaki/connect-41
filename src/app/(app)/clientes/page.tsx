@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Pagination } from "@/components/shared/Pagination";
 import { Building2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
@@ -89,13 +88,16 @@ export default async function ClientesPage({
           </div>
         </div>
 
+        {/* Revisão de 05/10: botão não é link — o "Mostrar todos" era texto azul. */}
         {ocultos > 0 && (
-          <p className="text-[12px] text-fg-muted mb-4">
-            {ocultos} cliente{ocultos !== 1 ? "s" : ""} inativo{ocultos !== 1 ? "s" : ""} fora desta lista.{" "}
-            <Link href={buildUrl({ inativos: "1", page: "1" })} className="text-brand hover:underline font-medium">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[12px] text-fg-muted mb-4">
+            <p>
+              {ocultos} cliente{ocultos !== 1 ? "s" : ""} inativo{ocultos !== 1 ? "s" : ""} fora desta lista.
+            </p>
+            <Button href={buildUrl({ inativos: "1", page: "1" })} variant="ghost" size="xs">
               Mostrar todos
-            </Link>
-          </p>
+            </Button>
+          </div>
         )}
 
         {clientes.length === 0 ? (

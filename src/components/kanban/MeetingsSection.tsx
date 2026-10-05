@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useId, useState } from "react";
-import Link from "next/link";
 import { Video, ExternalLink, Plus, Trash2, X } from "lucide-react";
 import type { MeetingState } from "@/app/(app)/kanban/meetings-actions";
 import type { MeetingProvider } from "@/generated/prisma/enums";
@@ -74,11 +73,13 @@ export function MeetingsSection({ meetings, canSchedule, hasGoogle, hasMicrosoft
         // hora lado a lado sem dizer qual era qual.
         <form action={formAction} className="mb-4 p-4 bg-surface-hover border border-border rounded-lg space-y-3">
           {!hasAnyProvider ? (
-            <p className="text-[12px] text-fg-muted">
-              Conecte sua conta Google ou Microsoft em{" "}
-              <Link href="/admin/integracoes" className="text-brand hover:underline">Configurações → Integrações</Link>{" "}
-              antes de agendar.
-            </p>
+            // Revisão de 05/10: botão não é link — o destino era texto azul no meio da frase.
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+              <p className="text-[12px] text-fg-muted">Conecte sua conta Google ou Microsoft antes de agendar.</p>
+              <Button href="/admin/integracoes" variant="secondary" size="xs">
+                Abrir Integrações
+              </Button>
+            </div>
           ) : (
             <>
               <CampoForm label="Título" htmlFor={`${uid}-reuniao-titulo`} required>

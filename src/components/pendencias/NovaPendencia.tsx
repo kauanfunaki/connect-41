@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { CampoData } from "@/components/ui/CampoData";
@@ -112,13 +111,16 @@ export function NovaPendencia({
               <>
                 <input type="hidden" name="companyId" value={lancamento.companyId} />
                 <input type="hidden" name="financeEntryId" value={lancamento.id} />
-                <div className="rounded-md border border-border bg-surface-2 px-3 py-2 text-[12px]">
-                  <span className="text-fg-muted">Vinculada ao lançamento </span>
-                  <span className="font-medium">{lancamento.rotulo}</span>
-                  <span className="text-fg-muted"> · </span>
-                  <Link href="/pendencias?nova=1" className="text-brand hover:underline">
-                    sem vínculo
-                  </Link>
+                {/* Revisão de 05/10: botão não é link — o "sem vínculo" era texto azul. */}
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-md border border-border bg-surface-2 px-3 py-2 text-[12px]">
+                  <span>
+                    <span className="text-fg-muted">Vinculada ao lançamento </span>
+                    <span className="font-medium">{lancamento.rotulo}</span>
+                  </span>
+                  <Button href="/pendencias?nova=1" variant="ghost" size="xs">
+                    <X size={13} />
+                    Remover vínculo
+                  </Button>
                 </div>
               </>
             ) : (

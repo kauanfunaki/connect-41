@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Pagination } from "@/components/shared/Pagination";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -113,13 +112,16 @@ export default async function PessoasPage({
         />
       </div>
 
+      {/* Revisão de 05/10: botão não é link — o "Mostrar todas" era texto azul. */}
       {ocultos > 0 && (
-        <p className="text-[12px] text-fg-muted mb-4">
-          {ocultos} pessoa{ocultos !== 1 ? "s" : ""} inativa{ocultos !== 1 ? "s" : ""} fora desta lista.{" "}
-          <Link href={buildUrl({ situacao: SITUACAO_TODOS, page: "1" })} className="text-brand hover:underline font-medium">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[12px] text-fg-muted mb-4">
+          <p>
+            {ocultos} pessoa{ocultos !== 1 ? "s" : ""} inativa{ocultos !== 1 ? "s" : ""} fora desta lista.
+          </p>
+          <Button href={buildUrl({ situacao: SITUACAO_TODOS, page: "1" })} variant="ghost" size="xs">
             Mostrar todas
-          </Link>
-        </p>
+          </Button>
+        </div>
       )}
 
       {/* Table */}

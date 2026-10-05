@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Activity, CircleHelp, Wallet } from "lucide-react";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
@@ -7,6 +6,7 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { AgenteCard } from "@/components/admin/AgenteCard";
 import { ChamadasDeIA } from "@/components/admin/ChamadasDeIA";
 import { listarAgentes, ultimasChamadas } from "@/lib/ia/data";
@@ -70,14 +70,12 @@ export default async function AgentesDeIAPage() {
       />
 
       {!config && (
-        <Card className="p-4 mb-5 border-warning/40 bg-warning-bg">
-          <p className="text-[13px] text-fg">
-            Nenhuma chave de IA cadastrada para esta empresa — nenhum agente roda sem ela.{" "}
-            <Link href="/admin/integracoes" className="text-brand hover:underline">
-              Cadastrar em Integrações
-            </Link>
-            .
-          </p>
+        // Revisão de 05/10: botão não é link — o "Cadastrar em Integrações" era texto azul.
+        <Card className="p-4 mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 border-warning/40 bg-warning-bg">
+          <p className="text-[13px] text-fg">Nenhuma chave de IA cadastrada para esta empresa — nenhum agente roda sem ela.</p>
+          <Button href="/admin/integracoes" variant="secondary" size="sm">
+            Cadastrar em Integrações
+          </Button>
         </Card>
       )}
 

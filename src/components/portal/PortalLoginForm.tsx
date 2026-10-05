@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -54,11 +55,13 @@ export function PortalLoginForm({ action }: Props) {
             {pendente ? "Entrando…" : "Entrar"}
           </Button>
 
-          <p className="text-[length:var(--fs-helper)] text-fg-muted text-center">
-            <Link href="/portal/login" className="text-brand hover:underline">
+          {/* Revisão de 05/10: botão não é link — voltar ao passo do e-mail é ação. */}
+          <div className="text-center">
+            <Button href="/portal/login" variant="ghost" size="sm">
+              <ArrowLeft size={14} />
               Usar outro e-mail
-            </Link>
-          </p>
+            </Button>
+          </div>
         </form>
       </Card>
     );

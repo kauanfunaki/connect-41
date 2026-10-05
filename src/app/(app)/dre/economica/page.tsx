@@ -8,6 +8,7 @@ import { getPrisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Select";
 import { RelatorioDoDre } from "@/components/dre/RelatorioDoDre";
@@ -186,14 +187,17 @@ export default async function DreEconomicaPage({
       </FiltroDePeriodo>
       <AbasDeLink abas={VISOES.map((v) => ({ ...v, href: hrefDaVisao(v.chave) }))} ativa={visao} />
 
+      {/* Revisão de 05/10: botão não é link — os atalhos desta tela eram texto azul. */}
       {nomeDoFiltro && (
-        <p className="text-[12px] text-fg-secondary mb-3">
-          Filtrado pelo centro de custo <strong>{nomeDoFiltro}</strong> — lançamentos, acordos e perdas dele.{" "}
-          <Link href={`${base}${visao === "mes" ? "" : `&visao=${visao}`}`} className="text-brand hover:underline">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[12px] text-fg-secondary mb-3">
+          <p>
+            Filtrado pelo centro de custo <strong>{nomeDoFiltro}</strong> — lançamentos, acordos e perdas dele.
+            {comOrcamento && " Orçado × realizado só aparece sem filtro de centro, porque o orçamento é da empresa inteira."}
+          </p>
+          <Button href={`${base}${visao === "mes" ? "" : `&visao=${visao}`}`} variant="secondary" size="xs">
             Ver a empresa inteira
-          </Link>
-          {comOrcamento && " · orçado × realizado só aparece sem filtro de centro, porque o orçamento é da empresa inteira."}
-        </p>
+          </Button>
+        </div>
       )}
 
       {lancamentos === 0 && !temCobranca && !comparacao ? (
@@ -233,10 +237,15 @@ export default async function DreEconomicaPage({
                 {naoClassificado !== 0 && (
                   <li className="flex items-start gap-2">
                     <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warning" />
-                    <span>
-                      <strong>{moeda(Math.abs(naoClassificado))}</strong> sem grupo no DRE e fora do resultado. O de-para é o
-                      mesmo da DRE de caixa — classifique em <Link href={`/dre?empresa=${companyId}`} className="text-brand hover:underline">DRE</Link>.
-                    </span>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                      <span>
+                        <strong>{moeda(Math.abs(naoClassificado))}</strong> sem grupo no DRE e fora do resultado. O de-para é o
+                        mesmo da DRE de caixa.
+                      </span>
+                      <Button href={`/dre?empresa=${companyId}`} variant="secondary" size="xs">
+                        Classificar na DRE
+                      </Button>
+                    </div>
                   </li>
                 )}
                 {imposto !== 0 && (
@@ -271,13 +280,13 @@ export default async function DreEconomicaPage({
             <>
               <RelatorioOrcadoRealizado mes={comparacao.mes} acumulado={comparacao.acumulado} />
               <p className="text-[11px] text-fg-muted mt-2">
-                Orçado da versão aprovada <strong>{orcamento.nome}</strong> de {ano} (
-                <Link href={`/dre/orcamento?empresa=${companyId}&ano=${ano}`} className="text-brand hover:underline">
-                  ver orçamento
-                </Link>
-                ). Var. R$ é realizado − orçado na convenção da DRE (despesa negativa); verde é melhor que o orçado — receita
-                acima ou despesa abaixo —, vermelho é pior. Sem orçado na linha, a variação % fica em branco.
+                Orçado da versão aprovada <strong>{orcamento.nome}</strong> de {ano}. Var. R$ é realizado − orçado na convenção
+                da DRE (despesa negativa); verde é melhor que o orçado — receita acima ou despesa abaixo —, vermelho é pior. Sem
+                orçado na linha, a variação % fica em branco.
               </p>
+              <Button href={`/dre/orcamento?empresa=${companyId}&ano=${ano}`} variant="secondary" size="xs" className="mt-2">
+                Abrir orçamento
+              </Button>
             </>
           ) : (
             <RelatorioDoDre resultado={resultado} />
@@ -287,12 +296,12 @@ export default async function DreEconomicaPage({
 
       {/* Sem versão aprovada, um aviso discreto em vez de a comparação sumir sem explicação. */}
       {querOrcado && !orcamento && (
-        <p className="text-[12px] text-fg-muted mt-3">
-          Sem orçamento aprovado para {ano} — o orçado × realizado aparece aqui quando houver.{" "}
-          <Link href={`/dre/orcamento?empresa=${companyId}&ano=${ano}`} className="text-brand hover:underline">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[12px] text-fg-muted mt-3">
+          <p>Sem orçamento aprovado para {ano} — o orçado × realizado aparece aqui quando houver.</p>
+          <Button href={`/dre/orcamento?empresa=${companyId}&ano=${ano}`} variant="secondary" size="xs">
             Abrir orçamento
-          </Link>
-        </p>
+          </Button>
+        </div>
       )}
       {comOrcamento && filtro.tipo === "todos" && visao === "12meses" && (
         <p className="text-[12px] text-fg-muted mt-3">Orçado × realizado nas visões Mês e Acumulado no ano.</p>
@@ -354,14 +363,17 @@ export default async function DreEconomicaPage({
       <p className="text-[11px] text-fg-muted mt-3">
         {lancamentos} {lancamentos === 1 ? "lançamento" : "lançamentos"} com competência em {periodo}
         {nomeDoFiltro ? ` (${nomeDoFiltro})` : ""}, cancelados e parcelas de acordo fora.
-        {" "}Regime de <strong>competência</strong>: o que foi pago ou recebido está em{" "}
-        <Link href={`/dre?empresa=${companyId}`} className="text-brand hover:underline">DRE (caixa)</Link>. O import do Omie
-        não entra aqui — é export de pagamentos, sem competência. A diferença entre os dois regimes está em{" "}
-        <Link href={`/dre/analises?empresa=${companyId}&mes=${mes}&aba=reconciliacao`} className="text-brand hover:underline">
-          reconciliação
-        </Link>
-        .
+        {" "}Regime de <strong>competência</strong>: o que foi pago ou recebido está na DRE de caixa. O import do Omie
+        não entra aqui — é export de pagamentos, sem competência. A diferença entre os dois regimes está na reconciliação.
       </p>
+      <div className="flex flex-wrap items-center gap-2 mt-1.5">
+        <Button href={`/dre?empresa=${companyId}`} variant="ghost" size="xs">
+          Abrir DRE de caixa
+        </Button>
+        <Button href={`/dre/analises?empresa=${companyId}&mes=${mes}&aba=reconciliacao`} variant="ghost" size="xs">
+          Ver reconciliação
+        </Button>
+      </div>
     </PageContainer>
   );
 }

@@ -277,13 +277,13 @@ function EtapaCard({
               <Check size={14} /> Concluir
             </Button>
           )}
+          {/* Revisão de 05/10: botão não é link — era texto cinza ao lado do Concluir. */}
           {etapa.opcional && (
             <Button
-              variant="linkMuted"
-              size="xs"
+              variant="ghost"
+              size="sm"
               disabled={pendente}
               onClick={() => executar(() => acoes.dispensar(etapa.id))}
-              className="text-[12px]"
             >
               Não se aplica
             </Button>

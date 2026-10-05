@@ -207,10 +207,11 @@ export function CentralDeNotificacoes({
                 </Button>
               </div>
             ) : (
+              // Revisão de 05/10: botão não é link — era texto azul sublinhado.
               contagens[filtros.aba] > 0 && (
-                <button type="button" onClick={marcarTodas} disabled={pendente} className="text-[13px] font-medium text-brand hover:underline">
+                <Button size="sm" variant="secondary" onClick={marcarTodas} disabled={pendente}>
                   Marcar todas como lidas
-                </button>
+                </Button>
               )
             )}
           </div>
