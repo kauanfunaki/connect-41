@@ -15,6 +15,7 @@ import { AbasDeLink, FaixaDeTotais } from "./FiltroDePeriodo";
 import { situacoesDeCobranca, MODULO_DE_COBRANCA } from "@/lib/financeiro/cobranca/consultas";
 import { DefinirCentroDasContas } from "./DefinirCentroDasContas";
 import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDaTela";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 
 const RECORTES = [
   { chave: "abertas", rotulo: "Em aberto" },
@@ -207,24 +208,32 @@ export async function ContasPage({
         ativa={aba}
       />
 
-      <FiltrosDaTela campos={filtros} className="mb-4" />
-
+      {/* A Análise é relatório da tela inteira: o Filtros fica fora de casco.
+          Na lista, vai na barra da tabela (05/10/2026). */}
       {aba === "analise" ? (
-        <AnaliseDeContas linhas={resultado.linhas} hojeKey={saoPauloParts(agora).dateKey} aPagar={aPagar} />
+        <>
+          <FiltrosDaTela campos={filtros} className="mb-4" />
+          <AnaliseDeContas linhas={resultado.linhas} hojeKey={saoPauloParts(agora).dateKey} aPagar={aPagar} />
+        </>
       ) : (
         <>
           {podeDefinirCentro && resultado.linhas.length > 0 && <DefinirCentroDasContas empresas={empresasComCentros} />}
-          <ContasTable
-            linhas={resultado.linhas}
-            kind={kind}
-            filtrado={resultado.totalGeral > 0 && resultado.linhas.length === 0}
-            hojeISO={saoPauloParts(agora).dateKey}
-            podeAbrirPendencia={podeAbrirPendencia}
-            podeEnviarParaAprovacao={podeEnviarParaAprovacao}
-            cobranca={cobranca}
-            selecionarCentro={podeDefinirCentro}
-            mostrarCentro={podeDefinirCentro}
-          />
+          <CascoDaTabela
+            contagem={contarItens(resultado.linhas.length, "conta", "contas")}
+            filtros={<FiltrosDaTela campos={filtros} naBarra />}
+          >
+            <ContasTable
+              linhas={resultado.linhas}
+              kind={kind}
+              filtrado={resultado.totalGeral > 0 && resultado.linhas.length === 0}
+              hojeISO={saoPauloParts(agora).dateKey}
+              podeAbrirPendencia={podeAbrirPendencia}
+              podeEnviarParaAprovacao={podeEnviarParaAprovacao}
+              cobranca={cobranca}
+              selecionarCentro={podeDefinirCentro}
+              mostrarCentro={podeDefinirCentro}
+            />
+          </CascoDaTabela>
         </>
       )}
     </PageContainer>

@@ -16,6 +16,7 @@ import { atuaisPorDocumento, ROTULO_DA_SITUACAO, situacaoDoCertificado, type Sit
 import { diasAte } from "@/lib/societario/licencas";
 import { formatCalendarDate, formatCnpj, formatCpf, formatInstantDate } from "@/lib/format";
 import { nomeExibicao } from "@/lib/companyName";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 
 export const dynamic = "force-dynamic";
 
@@ -93,125 +94,132 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
       {/* O recorte (a renovar, em uso, sem empresa, substituídos) é filtro da
           mesma lista, não outra tela: foi das abas para o "Filtros" no
           polimento de 30/09. A busca fica ao lado, porque se digita. */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <form method="get" action="/certificados">
-          {aba !== "renovar" && <input type="hidden" name="aba" value={aba} />}
-          {/* A busca no mesmo desenho da do acervo fiscal: lupa, `search` e nome
-              para o leitor de tela — era a única caixa de busca sem os três. */}
-          <Input
-            compact
-            type="search"
-            name="q"
-            icon={<Search />}
-            defaultValue={params.q ?? ""}
-            placeholder="Buscar por titular, documento ou entrada do cofre…"
-            aria-label="Buscar certificado"
-            className="w-80 max-w-full"
-          />
-        </form>
-        <FiltrosDaTela
-          campos={[
-            {
-              chave: "aba",
-              rotulo: "Situação",
-              vazioLabel: "A renovar",
-              opcoes: ABAS.filter((a) => a.chave !== "renovar").map((a) => ({ value: a.chave, label: a.rotulo })),
-            },
-          ]}
-        />
-      </div>
-
-      {visiveis.length === 0 ? (
-        <EmptyState
-          title={certs.length === 0 ? "Nenhum certificado importado" : busca ? "Nada encontrado" : "Nada nesta aba"}
-          description={
-            certs.length === 0
-              ? "Rode o script de conferência (scripts/certificados/conferir-certificados.ps1) e importe o certificados.csv que ele gera."
-              : undefined
-          }
-          icon={<KeyRound />}
-        />
-      ) : (
-        <>
-          <CartoesNoCelular>
-            {visiveis.map((c) => (
-              <Cartao key={c.id}>
-                <TopoDoCartao nome={c.company ? nomeExibicao(c.company) : c.titular} valor={formatCalendarDate(c.expiresAt)} />
-                <InfoDoCartao className="tabular-nums">
-                  {c.tipo === "CPF" ? "e-CPF" : "e-CNPJ"} · {documento(c)}
-                </InfoDoCartao>
-                <InfoDoCartao>cofre: {c.cofreEntrada ?? "—"}</InfoDoCartao>
-                {c.conferir && <InfoDoCartao className="text-warning">{c.conferir}</InfoDoCartao>}
-                <PeDoCartao>
-                  <Badge variant={VARIANTE[c.situacao]}>{ROTULO_DA_SITUACAO[c.situacao]}</Badge>
-                </PeDoCartao>
-              </Cartao>
-            ))}
-          </CartoesNoCelular>
-
-          <TabelaFiltravel
-            linhas={visiveis.map((c) => ({
-              id: c.id,
-              valores: {
-                titular: c.company ? nomeExibicao(c.company) : c.titular,
-                tipo: c.tipo === "CPF" ? "e-CPF" : "e-CNPJ",
-                vencimento: c.expiresAt.toISOString().slice(0, 10),
-                situacao: ROTULO_DA_SITUACAO[c.situacao],
-                cofre: c.cofreEntrada ?? "",
+      <CascoDaTabela
+        contagem={contarItens(visiveis.length, "certificado", "certificados")}
+        busca={
+          <form method="get" action="/certificados" className="max-w-full">
+            {aba !== "renovar" && <input type="hidden" name="aba" value={aba} />}
+            {/* A busca no mesmo desenho da do acervo fiscal: lupa, `search` e nome
+                para o leitor de tela — era a única caixa de busca sem os três. */}
+            <Input
+              compact
+              type="search"
+              name="q"
+              icon={<Search />}
+              defaultValue={params.q ?? ""}
+              placeholder="Buscar por titular, documento ou entrada do cofre…"
+              aria-label="Buscar certificado"
+              className="w-80 max-w-full"
+            />
+          </form>
+        }
+        filtros={
+          <FiltrosDaTela
+            naBarra
+            campos={[
+              {
+                chave: "aba",
+                rotulo: "Situação",
+                vazioLabel: "A renovar",
+                opcoes: ABAS.filter((a) => a.chave !== "renovar").map((a) => ({ value: a.chave, label: a.rotulo })),
               },
-            }))}
-          >
-          <TabelaNoDesktop padrao>
-            <table className="w-full min-w-[980px] text-[13px]">
-              <thead>
-                <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-                  <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Titular" chave="titular" /></th>
-                  <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Documento" campos={[{ chave: "tipo", rotulo: "Tipo" }]} /></th>
-                  <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" /></th>
-                  <th className="py-2 pr-3 font-medium">Dias</th>
-                  <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Situação" chave="situacao" /></th>
-                  <th className="py-2 font-medium"><FiltroDaColuna rotulo="Entrada do cofre" chave="cofre" align="right" /></th>
-                </tr>
-              </thead>
-              <tbody>
-                {visiveis.map((c) => (
-                  <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
-                    <td className="py-2.5 pr-3">
-                      {c.company ? (
-                        <Link href={`/empresas/${c.company.id}`} className="font-medium hover:underline">
-                          {nomeExibicao(c.company)}
-                        </Link>
-                      ) : (
-                        <span className="font-medium">{c.titular}</span>
-                      )}
-                      {!c.company && <span className="block text-[11px] text-fg-muted">sem empresa no Connect</span>}
-                    </td>
-                    <td className="py-2.5 pr-3 tabular-nums text-fg-secondary">
-                      {documento(c)}
-                      <span className="block text-[11px] text-fg-muted">{c.tipo === "CPF" ? "e-CPF" : "e-CNPJ"}</span>
-                    </td>
-                    <td className="py-2.5 pr-3 tabular-nums">{formatCalendarDate(c.expiresAt)}</td>
-                    <td className="py-2.5 pr-3 text-right tabular-nums">{c.situacao === "substituido" ? "—" : c.dias}</td>
-                    <td className="py-2.5 pr-3">
-                      <Badge variant={VARIANTE[c.situacao]}>{ROTULO_DA_SITUACAO[c.situacao]}</Badge>
-                    </td>
-                    <td className="py-2.5 text-fg-secondary">
-                      {c.cofreEntrada ?? "—"}
-                      {c.conferir && <span className="block text-[11px] text-warning">{c.conferir}</span>}
-                    </td>
-                  </LinhaFiltravel>
-                ))}
-              </tbody>
-            </table>
-          </TabelaNoDesktop>
-          </TabelaFiltravel>
-          <p className="text-[11px] text-fg-muted mt-3">
-            Vencimento lido de dentro do certificado. Quando o mesmo CNPJ/CPF tem um certificado mais novo, o antigo vira
-            &ldquo;substituído&rdquo; e para de avisar. Avisos saem para o setor a 60, 30, 15 e 7 dias e no vencimento.
-            {ultimaImportacao && <> Última importação: {formatInstantDate(ultimaImportacao)}.</>}
-          </p>
-        </>
-      )}
+            ]}
+          />
+        }
+      >
+
+        {visiveis.length === 0 ? (
+          <EmptyState
+            title={certs.length === 0 ? "Nenhum certificado importado" : busca ? "Nada encontrado" : "Nada nesta aba"}
+            description={
+              certs.length === 0
+                ? "Rode o script de conferência (scripts/certificados/conferir-certificados.ps1) e importe o certificados.csv que ele gera."
+                : undefined
+            }
+            icon={<KeyRound />}
+          />
+        ) : (
+          <>
+            <CartoesNoCelular>
+              {visiveis.map((c) => (
+                <Cartao key={c.id}>
+                  <TopoDoCartao nome={c.company ? nomeExibicao(c.company) : c.titular} valor={formatCalendarDate(c.expiresAt)} />
+                  <InfoDoCartao className="tabular-nums">
+                    {c.tipo === "CPF" ? "e-CPF" : "e-CNPJ"} · {documento(c)}
+                  </InfoDoCartao>
+                  <InfoDoCartao>cofre: {c.cofreEntrada ?? "—"}</InfoDoCartao>
+                  {c.conferir && <InfoDoCartao className="text-warning">{c.conferir}</InfoDoCartao>}
+                  <PeDoCartao>
+                    <Badge variant={VARIANTE[c.situacao]}>{ROTULO_DA_SITUACAO[c.situacao]}</Badge>
+                  </PeDoCartao>
+                </Cartao>
+              ))}
+            </CartoesNoCelular>
+
+            <TabelaFiltravel
+              linhas={visiveis.map((c) => ({
+                id: c.id,
+                valores: {
+                  titular: c.company ? nomeExibicao(c.company) : c.titular,
+                  tipo: c.tipo === "CPF" ? "e-CPF" : "e-CNPJ",
+                  vencimento: c.expiresAt.toISOString().slice(0, 10),
+                  situacao: ROTULO_DA_SITUACAO[c.situacao],
+                  cofre: c.cofreEntrada ?? "",
+                },
+              }))}
+            >
+            <TabelaNoDesktop padrao>
+              <table className="w-full min-w-[980px] text-[13px]">
+                <thead>
+                  <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                    <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Titular" chave="titular" /></th>
+                    <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Documento" campos={[{ chave: "tipo", rotulo: "Tipo" }]} /></th>
+                    <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" /></th>
+                    <th className="py-2 pr-3 font-medium">Dias</th>
+                    <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Situação" chave="situacao" /></th>
+                    <th className="py-2 font-medium"><FiltroDaColuna rotulo="Entrada do cofre" chave="cofre" align="right" /></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visiveis.map((c) => (
+                    <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
+                      <td className="py-2.5 pr-3">
+                        {c.company ? (
+                          <Link href={`/empresas/${c.company.id}`} className="font-medium hover:underline">
+                            {nomeExibicao(c.company)}
+                          </Link>
+                        ) : (
+                          <span className="font-medium">{c.titular}</span>
+                        )}
+                        {!c.company && <span className="block text-[11px] text-fg-muted">sem empresa no Connect</span>}
+                      </td>
+                      <td className="py-2.5 pr-3 tabular-nums text-fg-secondary">
+                        {documento(c)}
+                        <span className="block text-[11px] text-fg-muted">{c.tipo === "CPF" ? "e-CPF" : "e-CNPJ"}</span>
+                      </td>
+                      <td className="py-2.5 pr-3 tabular-nums">{formatCalendarDate(c.expiresAt)}</td>
+                      <td className="py-2.5 pr-3 text-right tabular-nums">{c.situacao === "substituido" ? "—" : c.dias}</td>
+                      <td className="py-2.5 pr-3">
+                        <Badge variant={VARIANTE[c.situacao]}>{ROTULO_DA_SITUACAO[c.situacao]}</Badge>
+                      </td>
+                      <td className="py-2.5 text-fg-secondary">
+                        {c.cofreEntrada ?? "—"}
+                        {c.conferir && <span className="block text-[11px] text-warning">{c.conferir}</span>}
+                      </td>
+                    </LinhaFiltravel>
+                  ))}
+                </tbody>
+              </table>
+            </TabelaNoDesktop>
+            </TabelaFiltravel>
+            <p className="text-[11px] text-fg-muted mt-3">
+              Vencimento lido de dentro do certificado. Quando o mesmo CNPJ/CPF tem um certificado mais novo, o antigo vira
+              &ldquo;substituído&rdquo; e para de avisar. Avisos saem para o setor a 60, 30, 15 e 7 dias e no vencimento.
+              {ultimaImportacao && <> Última importação: {formatInstantDate(ultimaImportacao)}.</>}
+            </p>
+          </>
+        )}
+      </CascoDaTabela>
     </PageContainer>
   );
 }

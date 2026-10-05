@@ -118,7 +118,7 @@ export function TabelaFiltravel({
   return (
     <Ctx.Provider value={contexto}>
       {ativos > 0 && (
-        <div className="hidden md:flex items-center gap-2 mb-2 text-[12px] text-fg-secondary">
+        <div className="c41-faixa-colunas hidden md:flex items-center gap-2 mb-2 text-[12px] text-fg-secondary">
           <ListFilter size={13} className="text-brand" />
           <span>
             Filtro nas colunas: <strong className="font-semibold text-fg tabular-nums">{visiveis}</strong> de{" "}
@@ -135,7 +135,7 @@ export function TabelaFiltravel({
       )}
       {children}
       {ativos > 0 && visiveis === 0 && (
-        <p className="hidden md:block mt-3 text-center text-[13px] text-fg-muted">Nenhuma linha com os filtros das colunas.</p>
+        <p className="c41-sem-linhas hidden md:block mt-3 text-center text-[13px] text-fg-muted">Nenhuma linha com os filtros das colunas.</p>
       )}
     </Ctx.Provider>
   );
@@ -485,7 +485,7 @@ export function FiltrosDasColunasNaUrl({ colunas }: { colunas: { chave: string; 
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 mb-2 text-[12px] text-fg-secondary">
+    <div className="c41-faixa-colunas flex flex-wrap items-center gap-2 mb-2 text-[12px] text-fg-secondary">
       <ListFilter size={13} className="text-brand" />
       <span>Filtro nas colunas:</span>
       {ativas.map((c) => (
