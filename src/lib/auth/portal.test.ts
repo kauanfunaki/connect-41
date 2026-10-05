@@ -33,6 +33,12 @@ describe("ehRotaPublicaDoPortal", () => {
     expect(ehRotaPublicaDoPortal("/portal/manifest.webmanifest")).toBe(true);
   });
 
+  // 05/10/2026: quem ainda não é cliente não tem conta, e a ficha é para ele.
+  it("a ficha de quem quer ser cliente é pública", () => {
+    expect(ehRotaPublicaDoPortal("/portal/quero-ser-cliente")).toBe(true);
+    expect(ehRotaPublicaDoPortal("/portal/quero-ser-clientes")).toBe(false);
+  });
+
   it("o resto do portal exige sessão", () => {
     expect(ehRotaPublicaDoPortal("/portal")).toBe(false);
     expect(ehRotaPublicaDoPortal("/portal/documentos")).toBe(false);

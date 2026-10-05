@@ -12,9 +12,11 @@ import type { EstadoDoLogin } from "@/app/(portal)/portal/login/actions";
 
 type Props = {
   action: (anterior: EstadoDoLogin, form: FormData) => Promise<EstadoDoLogin>;
+  /** A ficha "Quero ser cliente" está recebendo (ver `escritorioDaFicha`). */
+  fichaDisponivel?: boolean;
 };
 
-export function PortalLoginForm({ action }: Props) {
+export function PortalLoginForm({ action, fichaDisponivel = false }: Props) {
   const [estado, formAction, pendente] = useActionState<EstadoDoLogin, FormData>(action, null);
 
   // Segundo passo: a senha conferiu em mais de um cliente. A senha não volta
@@ -94,6 +96,21 @@ export function PortalLoginForm({ action }: Props) {
           </Link>
         </p>
       </form>
+
+      {/* 05/10/2026: quem ainda não é cliente chega ao login e não tinha para
+          onde ir. Botão, e não link (regra de 05/10): é a outra saída da tela. */}
+      {fichaDisponivel && <NaoPossuiConta />}
     </Card>
+  );
+}
+
+function NaoPossuiConta() {
+  return (
+    <div className="mt-5 pt-5 border-t border-border flex flex-col items-center gap-2 text-center">
+      <p className="text-[length:var(--fs-helper)] text-fg-muted">Não possui conta?</p>
+      <Button href="/portal/quero-ser-cliente" variant="secondary" className="w-full justify-center">
+        Quero ser cliente
+      </Button>
+    </div>
   );
 }

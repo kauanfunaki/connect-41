@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   description: "Como o Portal do Cliente da 41 trata os seus dados.",
 };
 
-const ATUALIZADA_EM = "25 de setembro de 2026";
+const ATUALIZADA_EM = "5 de outubro de 2026";
 const CONTATO = "marcos@41contabil.com.br";
 
 function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
@@ -75,6 +75,11 @@ export default function PoliticaDePrivacidadePage() {
               <strong>Registros técnicos:</strong> dados de acesso e de uso gerados automaticamente pelo servidor, como
               endereço IP e horário, usados para segurança e prevenção de abuso.
             </li>
+            <li>
+              <strong>Ficha “Quero ser cliente”:</strong> se você ainda não é cliente e preenche a ficha, recebemos o seu
+              nome, e-mail, telefone ou WhatsApp, o nome da empresa, o CNPJ (se você informar), o que você escreveu e a
+              data em que aceitou esta política.
+            </li>
           </ul>
         </Secao>
 
@@ -84,6 +89,10 @@ export default function PoliticaDePrivacidadePage() {
             <li>Prestar os serviços contratados com o escritório e cumprir obrigações legais, contábeis e fiscais.</li>
             <li>Avisar você, por e-mail e por notificação, de mensagens, pendências e aprovações.</li>
             <li>Proteger a plataforma contra acessos indevidos e fraudes.</li>
+            <li>
+              Responder a quem pediu contato pela ficha “Quero ser cliente”: a equipe comercial do escritório usa esses
+              dados só para falar com você sobre os serviços que você procurou.
+            </li>
           </ul>
           <p>
             Não vendemos dados, não usamos os seus dados para publicidade e o portal não usa ferramentas de rastreamento
@@ -147,6 +156,10 @@ export default function PoliticaDePrivacidadePage() {
             sua empresa ou escreva para <a href={`mailto:${CONTATO}`} className="text-brand hover:underline">{CONTATO}</a>.
             O acesso é desativado e os dados pessoais de acesso são excluídos; documentos e registros da empresa que a lei
             obriga a guardar permanecem com o escritório pelo prazo legal.
+          </p>
+          <p>
+            Se você preencheu a ficha “Quero ser cliente” e não quer mais ser contatado, peça a exclusão pelo mesmo
+            contato: os dados da ficha são apagados.
           </p>
         </Secao>
 
