@@ -8,6 +8,7 @@
 // texto fala de "a equipe da 41", nunca de um setor.
 
 export type IconeDoPasso =
+  | "inicio"
   | "celular"
   | "solicitacao"
   | "comunicado"
@@ -43,6 +44,24 @@ const FINANCEIRO = ["bpo_contas_pagar", "bpo_contas_receber", "bpo_fluxo_caixa",
 
 const CATALOGO: readonly PassoDoCatalogo[] = [
   {
+    // O Início é a primeira tela desde 05/10 (antes era Documentos fiscais).
+    chave: "inicio",
+    titulo: "Ver o que espera por você",
+    resumo: "O Início mostra o que a equipe precisa de você e o resumo das suas empresas.",
+    icone: "inicio",
+    passos: [
+      "Ao entrar no portal, você chega ao Início. Para voltar a ele, clique em Início no menu ou no logo.",
+      "Em \"O que precisa de você\" aparece o que espera a sua resposta ou aprovação, com o número e um botão que leva direto à tela.",
+      "Quando não há nada esperando, aparece \"Nada esperando por você\".",
+      {
+        texto: "Em Financeiro, veja as contas a pagar vencidas, as que vencem nesta semana e o que está em atraso para receber.",
+        modulos: ["bpo_contas_pagar", "bpo_contas_receber", "bpo_cobranca"],
+      },
+      { texto: "Em Processos em andamento, veja em que pé estão os processos mais recentes das suas empresas.", modulos: ["societario_processos"] },
+      "Nos Atalhos ficam os caminhos mais usados, como os documentos fiscais e esta ajuda.",
+    ],
+  },
+  {
     chave: "instalar",
     titulo: "Instalar o portal no celular",
     resumo: "Um ícone na tela inicial, que abre o portal em tela cheia.",
@@ -59,7 +78,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     resumo: "Para saber na hora quando a 41 precisar de você.",
     icone: "sino",
     passos: [
-      "Na tela Documentos fiscais, no quadro \"Notificações no navegador\", clique em Ativar.",
+      "No Início, no quadro \"Notificações no navegador\", no fim da tela, clique em Ativar.",
       "Quando o navegador perguntar, permita as notificações.",
       "No iPhone, os avisos só chegam com o portal instalado na tela de início.",
       "O aviso diz só que há algo novo, nunca o valor ou o conteúdo. O detalhe fica aqui dentro do portal.",
@@ -86,7 +105,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     icone: "comunicado",
     modulos: ["portal_solicitacoes"],
     passos: [
-      "Quando a 41 manda um comunicado, você recebe um e-mail e o aviso aparece no topo do portal.",
+      "Quando a 41 manda um comunicado, você recebe um e-mail e o aviso aparece no Início, em \"O que precisa de você\".",
       "Abra Comunicados. Os que você ainda não leu aparecem destacados, com a etiqueta Novo.",
       "Clique para ler o texto inteiro e baixar os anexos.",
       "Dúvida sobre um comunicado? Abra uma solicitação.",
@@ -100,7 +119,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     // Com o canal do portal ligado, qualquer setor pede (01/10).
     modulos: ["bpo_pendencias", "portal_solicitacoes"],
     passos: [
-      "Abra Pendências. Os pedidos que esperam você aparecem como \"Aguardando cliente\", com o prazo.",
+      "Abra Pendências, ou clique em Responder no Início. Os pedidos que esperam você aparecem como \"Aguardando você\", com o prazo.",
       "Clique no pedido para ver o que a equipe precisa.",
       "Escreva em Mensagem, anexe os arquivos em Anexos e clique em Enviar resposta.",
       "A equipe é avisada na hora. O pedido fica como Respondida até a equipe dar como resolvido.",
@@ -169,8 +188,8 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     resumo: "As notas emitidas e recebidas pelas suas empresas.",
     icone: "documentos",
     passos: [
-      "Abra Documentos fiscais, a primeira tela do portal.",
-      "Escolha o mês em Competência para ver só as notas dele.",
+      "Abra Documentos fiscais no menu, ou clique em \"Ver documentos fiscais\" nos Atalhos do Início.",
+      "Em Filtros, escolha o mês em Competência para ver só as notas dele. Quem tem mais de uma empresa também escolhe a Empresa.",
       "Se faltar alguma nota que você esperava ver, fale com a equipe.",
     ],
   },

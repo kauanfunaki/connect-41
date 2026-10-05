@@ -16,8 +16,11 @@ import { formatInstantDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
+// "Aguardando você" desde 05/10: o Início leva direto aos processos parados
+// esperando o cliente.
 const RECORTES = [
   { chave: "abertos", rotulo: "Em andamento" },
+  { chave: "aguardando", rotulo: "Aguardando você" },
   { chave: "encerrados", rotulo: "Encerrados" },
 ] as const;
 
@@ -42,7 +45,12 @@ export default async function PortalProcessosPage({
   const todos = await processosDoPortal(sessao.tenantId, escopo.companyIds ?? [], new Date(), feriados);
 
   const abertos = todos.filter((p) => !encerrado(p));
-  const linhas = recorte === "abertos" ? abertos : todos.filter(encerrado);
+  const linhas =
+    recorte === "abertos"
+      ? abertos
+      : recorte === "aguardando"
+        ? abertos.filter((p) => p.situacao === "AGUARDANDO_CLIENTE")
+        : todos.filter(encerrado);
   const variasEmpresas = new Set(todos.map((p) => p.empresaNome)).size > 1;
   const emExigencia = abertos.filter((p) => p.situacao === "EM_EXIGENCIA").length;
   const aguardandoVoce = abertos.filter((p) => p.situacao === "AGUARDANDO_CLIENTE").length;
@@ -74,7 +82,8 @@ export default async function PortalProcessosPage({
             valor: String(aguardandoVoce),
             tom: aguardandoVoce > 0 ? "text-warning" : "",
             icone: <Hourglass />,
-            href: "/portal/processos",
+            detalhe: recorte === "aguardando" ? "mostrando agora" : undefined,
+            href: "/portal/processos?recorte=aguardando",
           },
           {
             rotulo: "Encerrados",
@@ -88,14 +97,30 @@ export default async function PortalProcessosPage({
       />
       <FiltrosDaTela
         className="mb-4"
-        campos={[{ chave: "recorte", rotulo: "Situação", vazioLabel: "Em andamento", opcoes: [{ value: "encerrados", label: "Encerrados" }] }]}
+        campos={[
+          {
+            chave: "recorte",
+            rotulo: "Situação",
+            vazioLabel: "Em andamento",
+            opcoes: [
+              { value: "aguardando", label: "Aguardando você" },
+              { value: "encerrados", label: "Encerrados" },
+            ],
+          },
+        ]}
       />
 
       {linhas.length === 0 ? (
         <Card>
           <EmptyState
             icon={<FileStack />}
-            title={recorte === "abertos" ? "Nenhum processo em andamento" : "Nenhum processo encerrado"}
+            title={
+              recorte === "abertos"
+                ? "Nenhum processo em andamento"
+                : recorte === "aguardando"
+                  ? "Nenhum processo esperando você"
+                  : "Nenhum processo encerrado"
+            }
             description="Quando a equipe abrir um processo para a sua empresa, ele aparece aqui com cada etapa."
           />
         </Card>

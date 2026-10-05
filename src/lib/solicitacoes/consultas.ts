@@ -147,13 +147,22 @@ export type LinhaDoCliente = {
   atualizadaEm: Date;
 };
 
+export type RecorteDoCliente = "abertas" | "aguardando" | "encerradas";
+
+// "Aguardando você" (05/10): o botão do Início leva a lista já filtrada.
+const STATUS_DO_RECORTE_DO_CLIENTE: Record<RecorteDoCliente, StatusDaSolicitacao[]> = {
+  abertas: EM_ABERTO,
+  aguardando: ["AGUARDANDO_CLIENTE"],
+  encerradas: ENCERRADAS,
+};
+
 /** A lista do cliente: as das empresas dele, a que mexeu por último primeiro. */
-export async function listarDoCliente(escopo: EscopoDoCliente, recorte: "abertas" | "encerradas"): Promise<LinhaDoCliente[]> {
+export async function listarDoCliente(escopo: EscopoDoCliente, recorte: RecorteDoCliente): Promise<LinhaDoCliente[]> {
   const linhas = await getPrisma().serviceRequest.findMany({
     where: {
       tenantId: escopo.tenantId,
       companyId: { in: escopo.companyIds },
-      status: { in: recorte === "abertas" ? EM_ABERTO : ENCERRADAS },
+      status: { in: STATUS_DO_RECORTE_DO_CLIENTE[recorte] },
     },
     orderBy: [{ lastMessageAt: "desc" }],
     take: LIMITE_DA_LISTA,
@@ -186,6 +195,38 @@ export async function solicitacoesAguardandoCliente(escopo: EscopoDoCliente): Pr
   return getPrisma().serviceRequest.count({
     where: { tenantId: escopo.tenantId, companyId: { in: escopo.companyIds }, status: "AGUARDANDO_CLIENTE" },
   });
+}
+
+/** Até onde uma resposta da equipe ainda é "nova" no Início do portal. */
+const DIAS_DA_RESPOSTA_NOVA = 7;
+
+/**
+ * Em andamento, com a última mensagem visível escrita pela equipe nos últimos
+ * dias — a "resposta nova" do Início do portal (05/10).
+ *
+ * Não há marca de leitura do cliente na solicitação, e não se cria uma para
+ * isto: "nova" é recente e ainda sem resposta do cliente depois dela. As que
+ * esperam o cliente (`AGUARDANDO_CLIENTE`) ficam de fora — já são o outro aviso.
+ * Só a última mensagem de cada uma, e no máximo cem: o cliente tem poucas
+ * abertas, e o índice `[tenantId, companyId, status]` chega nelas direto.
+ */
+export async function solicitacoesComRespostaDaEquipe(escopo: EscopoDoCliente, agora: Date): Promise<number> {
+  if (escopo.companyIds.length === 0) return 0;
+  const desde = new Date(agora.getTime() - DIAS_DA_RESPOSTA_NOVA * 24 * 60 * 60 * 1000);
+  const linhas = await getPrisma().serviceRequest.findMany({
+    where: {
+      tenantId: escopo.tenantId,
+      companyId: { in: escopo.companyIds },
+      status: "EM_ANDAMENTO",
+      lastMessageAt: { gte: desde },
+    },
+    select: {
+      messages: { where: { internal: false }, orderBy: { createdAt: "desc" }, take: 1, select: { authorPortalUserId: true } },
+    },
+    take: 100,
+  });
+  // Autor da equipe = sem autor do portal (o usuário interno pode ter sido apagado).
+  return linhas.filter((s) => s.messages[0] && s.messages[0].authorPortalUserId === null).length;
 }
 
 export type SolicitacaoDetalhada = {
