@@ -557,8 +557,11 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 }
 
 /* O brilho do topo da área de conteúdo: azul à esquerda, a cor do setor à
-   direita, os dois sumindo antes da primeira dobra. `local` faz o brilho rolar
-   junto com a página — fica no cabeçalho, não atrás da tabela. */
+   direita, os dois sumindo antes da primeira dobra.
+   - No Connect (05/10) fica no contêiner de cabeçalho + conteúdo, que não rola:
+     começa atrás do cabeçalho aberto e fica parado no topo.
+   - No portal fica no próprio <main>, e `local` faz o brilho rolar junto com a
+     página — fica no cabeçalho, não atrás da tabela. */
 .c41-atmosfera {
   background:
     radial-gradient(ellipse 1000px 360px at 12% -100px, var(--c41-glow), transparent 70%),
