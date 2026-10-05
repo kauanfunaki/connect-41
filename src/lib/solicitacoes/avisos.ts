@@ -30,9 +30,11 @@ const TIPO_DO_AVISO = {
 
 export async function avisarEquipeDaSolicitacao(
   s: DaSolicitacao & { setor: string; assigneeId: string | null },
-  motivo: keyof typeof TEXTO_PARA_EQUIPE
+  motivo: keyof typeof TEXTO_PARA_EQUIPE,
+  /** Quem da equipe causou (o encaminhamento) — a foto no sino (05/10/2026). Do cliente, nenhum. */
+  autorId?: string | null
 ): Promise<void> {
-  const aviso = { tenantId: s.tenantId, type: TIPO_DO_AVISO[motivo], message: TEXTO_PARA_EQUIPE[motivo](s), entityId: s.id };
+  const aviso = { tenantId: s.tenantId, type: TIPO_DO_AVISO[motivo], message: TEXTO_PARA_EQUIPE[motivo](s), entityId: s.id, actorUserId: autorId ?? null };
   try {
     if (s.assigneeId) await notifyUser(s.assigneeId, aviso);
     else await notifySector(s.setor, aviso);

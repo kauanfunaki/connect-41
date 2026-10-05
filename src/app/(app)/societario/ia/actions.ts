@@ -112,11 +112,13 @@ export async function aplicarVarredura(propostaId: string, chavesMarcadas: strin
         await prisma.process.update({ where: { id: processo.id }, data: { priority: nova } });
         processosSubiram++;
       }
+      // Leva quem aprovou a proposta da varredura — a foto no sino (05/10/2026).
       const aviso = {
         tenantId: ctx.tenantId,
         type: "PROCESS_VARREDURA",
         message: `Varredura do Societário: ${sinal.detalhe}${proximoPasso}`.slice(0, 480),
         entityId: processo.id,
+        actorUserId: ctx.userId,
       };
       if (processo.ownerUserId) await notifyUser(processo.ownerUserId, aviso);
       else await notifySector(setor, aviso);
@@ -125,6 +127,7 @@ export async function aplicarVarredura(propostaId: string, chavesMarcadas: strin
         tenantId: ctx.tenantId,
         type: "LICENCA_VARREDURA",
         message: `Varredura do Societário: ${sinal.titulo} — ${sinal.detalhe}${proximoPasso}`.slice(0, 480),
+        actorUserId: ctx.userId,
       });
     }
   }
