@@ -34,7 +34,7 @@ export function MetricCard({ label, value, href, icon, sub, highlight = false, d
             {icon}
           </span>
         )}
-        <p className="text-[length:var(--fs-helper)] text-fg-muted truncate c41-cortavel">{label}</p>
+        <p className="text-[length:var(--fs-helper)] text-fg-secondary truncate c41-cortavel">{label}</p>
       </div>
       {/* `min-w-0` + `truncate`: um valor em reais passava da borda do cartão
           numa grade de quatro colunas (visto em Indicadores de RH, 30/09). O
