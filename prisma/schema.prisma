@@ -583,6 +583,7 @@ model Tenant {
   hiddenFinanceCategories   FinanceCategoryHidden[]
   dreImports                DreImport[]
   candidatoAcessos          CandidatoAcesso[]
+  leads                     Lead[]
 
   @@map("tenants")
 }
@@ -825,6 +826,7 @@ model User {
   propostasRevisadas          AgentProposal[]            @relation("AgentProposalRevisadaPor")
   vagasPermitidas             VagaRecrutador[]           @relation("VagaRecrutadorUsuario")
   vagasRecrutadoresDefinidos  VagaRecrutador[]           @relation("VagaRecrutadorDefinidoPor")
+  leadsAtribuidos             Lead[]                     @relation("LeadResponsavel")
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -6345,4 +6347,50 @@ model CandidatoAcesso {
 
   @@index([tenantId, email])
   @@map("candidato_acessos")
+}
+
+// ── Leads do Comercial (05/10/2026) ────────────────────────────────────────
+// Quem quer ser cliente do escritório. Hoje a única entrada é a ficha pública
+// "Quero ser cliente" do portal, mas o modelo não é da ficha: `source` é texto
+// livre (e não enum) e só o nome é obrigatório no banco, para uma entrada nova
+// — WhatsApp, indicação, cadastro à mão — não precisar de migration. Quem exige
+// e-mail, telefone e empresa é a validação de cada entrada.
+
+enum LeadStatus {
+  NOVO
+  EM_CONTATO
+  CONVERTIDO
+  DESCARTADO
+}
+
+model Lead {
+  id          String     @id @default(uuid())
+  tenantId    String
+  name        String     @db.VarChar(120)
+  email       String?    @db.VarChar(160)
+  /// Telefone ou WhatsApp, só dígitos (DDD + número).
+  phone       String?    @db.VarChar(20)
+  /// Nome da empresa como a pessoa escreveu — o lead ainda não é `Company`.
+  companyName String?    @db.VarChar(160)
+  /// CNPJ só dígitos; opcional, validado pelo dígito verificador quando vem.
+  cnpj        String?    @db.VarChar(14)
+  /// O que a pessoa escreveu ("o que você procura").
+  message     String?    @db.Text
+  /// De onde veio: "PORTAL_FICHA" hoje. Texto livre de propósito (ver acima).
+  source      String     @db.VarChar(40)
+  status      LeadStatus @default(NOVO)
+  assigneeId  String?
+  /// Anotações da equipe — o lead nunca vê.
+  notes       String?    @db.Text
+  /// Quando a pessoa aceitou a política de privacidade. Nulo numa entrada que não pede aceite.
+  privacyAcceptedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+  assignee User?  @relation("LeadResponsavel", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, assigneeId, status])
+  @@map("leads")
 }
