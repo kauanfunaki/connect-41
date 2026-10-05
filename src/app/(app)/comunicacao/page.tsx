@@ -8,6 +8,7 @@ import { formatInstantDateTime } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
@@ -56,13 +57,13 @@ export default async function ComunicacaoPage({
       />
 
       {substituida && (
-        <p className="mb-4 rounded-lg border border-info/40 bg-info-bg px-4 py-3 text-[13px] text-fg">
-          A conversa saiu do portal: agora o cliente fala com a 41 pelas{" "}
-          <Link href="/solicitacoes" className="font-medium text-brand hover:underline">
-            Solicitações
-          </Link>
-          . Esta tela fica como histórico.
-        </p>
+        // Revisão de 05/10: botão não é link — "Solicitações" era texto azul no meio da frase.
+        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-info/40 bg-info-bg px-4 py-3 text-[13px] text-fg">
+          <p>A conversa saiu do portal: agora o cliente fala com a 41 pelas Solicitações. Esta tela fica como histórico.</p>
+          <Button href="/solicitacoes" variant="secondary" size="xs">
+            Abrir Solicitações
+          </Button>
+        </div>
       )}
 
       <FiltroDePeriodo acao="/comunicacao" empresas={empresas} empresaId={selecionada?.id ?? null} permitirTodas />

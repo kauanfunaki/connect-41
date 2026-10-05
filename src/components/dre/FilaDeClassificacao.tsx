@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { RotateCcw } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
@@ -119,13 +120,15 @@ export function FilaDeClassificacao({ companyId, itens, excecoes }: Props) {
               <span className="text-[13px] text-fg">
                 {e.nome} <span className="text-fg-muted">→ {rotulo(e.grupo)}</span>
               </span>
+              {/* Revisão de 05/10: botão não é link — era texto azul. */}
               <Button
-                variant="link"
-                className="text-[12px]"
+                variant="ghost"
+                size="xs"
                 disabled={ocupado === e.categoryId}
                 onClick={() => correr(e.categoryId, () => voltarAoPadrao(companyId, e.categoryId))}
               >
-                voltar ao padrão
+                <RotateCcw size={13} />
+                Voltar ao padrão
               </Button>
             </div>
           ))}

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 
 // Política de privacidade do Portal do Cliente — pública, sem sessão.
 //
@@ -162,10 +162,11 @@ export default function PoliticaDePrivacidadePage() {
           <p>Se esta política mudar, a data de atualização no topo desta página muda junto.</p>
         </Secao>
 
+        {/* Revisão de 05/10: botão não é link — a saída da página era texto azul. */}
         <footer className="pt-2 border-t border-border">
-          <Link href="/portal/login" className="text-[13px] text-brand hover:underline">
+          <Button href="/portal/login" variant="secondary" size="sm">
             Ir para o Portal do Cliente
-          </Link>
+          </Button>
         </footer>
       </article>
     </main>

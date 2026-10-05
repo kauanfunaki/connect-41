@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { AuthField, AUTH_INPUT } from "./AuthShell";
 import { MailIcon } from "./icons";
 import { Button } from "@/components/ui/Button";
@@ -56,11 +56,13 @@ export function EsqueciSenhaForm({ action, voltarPara }: Props) {
         {isPending ? "Enviando…" : "Enviar link"}
       </Button>
 
-      <p className="text-center text-[13px] text-fg-muted">
-        <Link href={voltarPara} className="font-medium text-brand hover:underline">
+      {/* Revisão de 05/10: botão não é link — era texto azul. */}
+      <div className="text-center">
+        <Button href={voltarPara} variant="ghost" size="sm">
+          <ArrowLeft size={14} />
           Voltar para o login
-        </Link>
-      </p>
+        </Button>
+      </div>
     </form>
   );
 }

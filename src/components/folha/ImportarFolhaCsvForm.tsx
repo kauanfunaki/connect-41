@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { Download } from "lucide-react";
 import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import { Button } from "@/components/ui/Button";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -37,13 +38,11 @@ export function ImportarFolhaCsvForm({ action }: Props) {
     <div className="border-t border-border pt-4">
       <div className="flex items-center justify-between gap-3 mb-2">
         <h3 className="text-[13px] font-medium text-fg">Importar via CSV</h3>
-        <a
-          href={TEMPLATE_URL}
-          download="modelo-folha.csv"
-          className="text-[12px] text-brand hover:underline"
-        >
+        {/* Revisão de 05/10: botão não é link — baixar o modelo é ação, não navegação. */}
+        <Button variant="secondary" size="xs" href={TEMPLATE_URL} download="modelo-folha.csv">
+          <Download size={13} />
           Baixar modelo
-        </a>
+        </Button>
       </div>
       <p className="text-[12px] text-fg-muted mb-3">
         Colunas obrigatórias: <strong>CPF</strong> e <strong>Salário Bruto</strong>. As demais são opcionais.

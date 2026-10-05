@@ -51,7 +51,8 @@ export function AvisoDeVersaoNova({ quem = "O Connect" }: Props) {
         <Button type="button" variant="primary" size="sm" onClick={() => window.location.reload()}>
           Recarregar
         </Button>
-        <Button type="button" variant="linkMuted" className="text-[13px] font-medium" onClick={() => setVisivel(false)}>
+        {/* Revisão de 05/10: botão não é link — era texto cinza ao lado do Recarregar. */}
+        <Button type="button" variant="ghost" size="sm" onClick={() => setVisivel(false)}>
           Agora não
         </Button>
       </div>

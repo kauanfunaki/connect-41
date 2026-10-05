@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
@@ -94,7 +95,9 @@ function CartaoDoAviso({ aviso, acoes, mostrarProcesso }: { aviso: AvisoNaTela; 
       {aviso.assunto && <p className="text-[13px] font-medium text-fg">{aviso.assunto}</p>}
 
       <div>
-        <Button variant="link" onClick={() => setAbrirTexto((v) => !v)} className="text-[12px]">
+        {/* Revisão de 05/10: botão não é link — o abre-e-fecha era texto azul. */}
+        <Button variant="ghost" size="xs" onClick={() => setAbrirTexto((v) => !v)} aria-expanded={abrirTexto}>
+          {abrirTexto ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
           {abrirTexto ? "Esconder o e-mail" : "Ler o e-mail do órgão"}
         </Button>
         {abrirTexto && (

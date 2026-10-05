@@ -197,14 +197,10 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
         </div>
 
         <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-2.5">
-          <button
-            type="button"
-            onClick={() => void marcarTodas()}
-            disabled={naoLidasDaAba === 0}
-            className="text-[13px] font-medium text-brand hover:underline disabled:text-fg-muted disabled:no-underline disabled:cursor-default"
-          >
+          {/* Revisão de 05/10: botão não é link — era texto azul sublinhado. */}
+          <Button size="sm" variant="ghost" onClick={() => void marcarTodas()} disabled={naoLidasDaAba === 0}>
             Marcar todas como lidas
-          </button>
+          </Button>
           <Button href={aba === "todas" ? "/notificacoes" : `/notificacoes?aba=${aba}`} size="sm" variant="secondary" onClick={() => setAberto(false)}>
             Ir para a central
           </Button>

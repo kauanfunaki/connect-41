@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -221,14 +220,16 @@ export function RevisarContrato({
           <p className="text-[13px] text-fg-muted">Sem mudança: {plano.iguais.map((i) => i.nomeNoCadastro).join(", ")}.</p>
         )}
         {plano.foraDoContrato.length > 0 && (
-          <p className="text-[13px] text-warning">
-            No cadastro e fora deste contrato: {plano.foraDoContrato.map((f) => f.nome).join(", ")}. Ninguém sai sozinho — se saiu,
-            registre a saída com a data em{" "}
-            <Link href={`/empresas/${companyId}/socios`} className="underline">
-              Sócios
-            </Link>
-            .
-          </p>
+          // Revisão de 05/10: botão não é link — "Sócios" era texto sublinhado no meio da frase.
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+            <p className="text-[13px] text-warning">
+              No cadastro e fora deste contrato: {plano.foraDoContrato.map((f) => f.nome).join(", ")}. Ninguém sai sozinho — se saiu,
+              registre a saída com a data na tela de sócios.
+            </p>
+            <Button href={`/empresas/${companyId}/socios`} variant="secondary" size="xs">
+              Abrir sócios
+            </Button>
+          </div>
         )}
       </section>
 

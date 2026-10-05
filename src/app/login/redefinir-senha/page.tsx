@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { AuthShell } from "@/components/login/AuthShell";
 import { RedefinirSenhaForm } from "@/components/login/RedefinirSenhaForm";
 import { redefinirSenha } from "./actions";
@@ -14,12 +14,14 @@ export default async function RedefinirSenhaPage({
     return (
       <AuthShell subtitle="Link inválido">
         <p className="text-[13px] text-fg-muted text-center leading-relaxed">
-          Este link de redefinição de senha é inválido ou incompleto. Solicite um novo em{" "}
-          <Link href="/login/esqueci-senha" className="font-medium text-brand hover:underline">
-            Esqueci minha senha
-          </Link>
-          .
+          Este link de redefinição de senha é inválido ou incompleto.
         </p>
+        {/* Revisão de 05/10: botão não é link — pedir outro link é ação. */}
+        <div className="mt-3 text-center">
+          <Button href="/login/esqueci-senha" variant="secondary" size="sm">
+            Pedir novo link
+          </Button>
+        </div>
       </AuthShell>
     );
   }

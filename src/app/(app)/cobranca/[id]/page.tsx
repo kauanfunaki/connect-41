@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAuthContext, canViewSector, canActOnSector, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -11,6 +10,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { SeloDaCobranca, SeloDoAcordo } from "@/components/cobranca/SeloDaCobranca";
 import { RegistrarContato } from "@/components/cobranca/RegistrarContato";
 import { AtribuirResponsavel } from "@/components/cobranca/AtribuirResponsavel";
@@ -126,12 +126,13 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
             {l.sacadoEmail ? (
               <span className="block break-words">{l.sacadoEmail}</span>
             ) : (
-              <span className="text-warning">
-                sem e-mail —{" "}
-                <Link href={`/cadastros-financeiros?empresa=${l.empresaId}&aba=sacados`} className="text-brand hover:underline">
-                  cadastrar
-                </Link>
-              </span>
+              // Revisão de 05/10: botão não é link — era "cadastrar" em texto azul.
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                <span className="text-warning">sem e-mail</span>
+                <Button href={`/cadastros-financeiros?empresa=${l.empresaId}&aba=sacados`} variant="secondary" size="xs">
+                  Cadastrar e-mail
+                </Button>
+              </div>
             )}
           </div>
           <div className="min-w-0">
@@ -258,9 +259,9 @@ function ResumoDoAcordoCard({ titulo, acordo, destaque }: { titulo: string; acor
           <h2 className="text-[length:var(--fs-card-title)] font-semibold">{titulo}</h2>
           <SeloDoAcordo status={acordo.status} />
         </div>
-        <Link href={`/cobranca?aba=acordos&empresa=${acordo.empresaId}`} className="text-brand hover:underline text-[12px]">
-          ver nos acordos
-        </Link>
+        <Button href={`/cobranca?aba=acordos&empresa=${acordo.empresaId}`} variant="secondary" size="xs">
+          Ver nos acordos
+        </Button>
       </div>
       <p className="text-[12px] text-fg-muted tabular-nums mb-2">
         {formatInstantDate(acordo.acordadoEm)} · originais {moeda(acordo.originalCentavos)} → acordado {moeda(acordo.acordadoCentavos)} ·{" "}
@@ -287,9 +288,9 @@ function ResumoDoAcordoCard({ titulo, acordo, destaque }: { titulo: string; acor
             ) : p.status === "CANCELADO" ? (
               <Badge variant="info">Cancelada</Badge>
             ) : p.id === destaque ? null : (
-              <Link href={`/cobranca/${p.id}`} className="text-brand hover:underline font-normal">
-                abrir
-              </Link>
+              <Button href={`/cobranca/${p.id}`} variant="ghost" size="xs">
+                Abrir
+              </Button>
             )}
           </li>
         ))}
