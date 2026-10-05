@@ -28,7 +28,8 @@ export default async function PortalSolicitacoesPage({
   if (!modulos.has("portal_solicitacoes")) notFound();
 
   const { recorte: pedido } = await searchParams;
-  const recorte = pedido === "encerradas" ? "encerradas" : "abertas";
+  // "Aguardando você" (05/10) é onde o Início leva quando a equipe espera o cliente.
+  const recorte = pedido === "encerradas" || pedido === "aguardando" ? pedido : "abertas";
   const linhas = await listarDoCliente({ tenantId: escopo.tenantId, companyIds: escopo.companyIds ?? [] }, recorte);
 
   return (
@@ -49,6 +50,7 @@ export default async function PortalSolicitacoesPage({
         className="mb-4"
         items={[
           { key: "abertas", label: "Em aberto", href: "/portal/solicitacoes" },
+          { key: "aguardando", label: "Aguardando você", href: "/portal/solicitacoes?recorte=aguardando" },
           { key: "encerradas", label: "Encerradas", href: "/portal/solicitacoes?recorte=encerradas" },
         ]}
       />
@@ -57,7 +59,13 @@ export default async function PortalSolicitacoesPage({
         <Card>
           <EmptyState
             icon={<Inbox />}
-            title={recorte === "abertas" ? "Nenhuma solicitação em aberto" : "Nenhuma solicitação encerrada"}
+            title={
+              recorte === "abertas"
+                ? "Nenhuma solicitação em aberto"
+                : recorte === "aguardando"
+                  ? "Nenhuma solicitação esperando você"
+                  : "Nenhuma solicitação encerrada"
+            }
             description={recorte === "abertas" ? "Precisa de algo da 41? Abra uma solicitação: a equipe certa recebe na hora." : undefined}
             action={
               recorte === "abertas" ? (
