@@ -276,8 +276,19 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Para cancelar, clique em “Excluir” e confirme.",
         ],
       },
+      {
+        titulo: "Como mudar o horário da grade",
+        passos: [
+          "Clique na sua foto, no alto da tela, e em “Configurações do Perfil”.",
+          "Em “Agenda”, escolha “Usar o do escritório” ou “Definir o meu”.",
+          "Para definir o seu, escolha o “Início” e o “Fim” e clique em “Salvar”. Um fim antes do início termina no dia seguinte — 22:00 às 6:00, por exemplo.",
+        ],
+      },
     ],
     dicas: [
+      "O horário padrão do escritório é definido por um administrador, em Administração → Empresa (Tenant).",
+      "Quando o horário passa da meia-noite, a madrugada aparece na coluna do dia anterior: uma reunião à 1:00 de terça fica na coluna de segunda. Os prazos continuam no dia do calendário.",
+      "Reunião fora do horário exibido não some: a grade avisa quantas ficaram de fora, e elas aparecem na visão de mês.",
       "Para agendar, conecte antes a sua conta Google ou Microsoft: a janela de nova reunião traz o link “Configurações → Integrações”.",
       "Se aparecer o aviso de conta expirada, clique em “Reconectar agora”. Sem isso, as reuniões novas ficam sem link.",
       "Só gestores de setor e administradores criam reuniões. Cada pessoa vê as reuniões que criou ou para as quais foi chamada.",
