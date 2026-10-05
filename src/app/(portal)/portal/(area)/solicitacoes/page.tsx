@@ -35,7 +35,7 @@ export default async function PortalSolicitacoesPage({
     <PageContainer>
       <PageHeader
         title="Solicitações"
-        subtitle="Peça documentos, alterações ou o que precisar da 41. Cada pedido tem número, prazo de resposta e a conversa com a equipe."
+        subtitle="Peça documentos, alterações ou o que precisar do escritório. Cada pedido tem número, prazo de resposta e a conversa com a equipe."
         action={
           <Button href="/portal/solicitacoes/nova">
             <Plus size={14} /> Nova solicitação
@@ -58,7 +58,7 @@ export default async function PortalSolicitacoesPage({
           <EmptyState
             icon={<Inbox />}
             title={recorte === "abertas" ? "Nenhuma solicitação em aberto" : "Nenhuma solicitação encerrada"}
-            description={recorte === "abertas" ? "Precisa de algo da 41? Abra uma solicitação: a equipe certa recebe na hora." : undefined}
+            description={recorte === "abertas" ? "Precisa de algo do escritório? Abra uma solicitação: a equipe certa recebe na hora." : undefined}
             action={
               recorte === "abertas" ? (
                 <Button href="/portal/solicitacoes/nova" variant="secondary">

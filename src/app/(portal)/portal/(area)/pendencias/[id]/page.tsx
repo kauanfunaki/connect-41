@@ -79,7 +79,7 @@ export default async function PortalPendenciaPage({ params }: { params: Promise<
         </Card>
       ) : (
         <p className="mt-5 text-[12px] text-fg-muted">
-          Esta pendência foi encerrada pela equipe. Se ainda houver algo a tratar, fale com o seu contato na 41.
+          Esta pendência foi encerrada pela equipe. Se ainda houver algo a tratar, fale com o seu contato no escritório.
         </p>
       )}
     </PageContainer>

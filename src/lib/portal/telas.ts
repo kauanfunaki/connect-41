@@ -68,14 +68,14 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     rotulo: "Comunicados",
     modulo: "portal_solicitacoes",
     secao: "Com a equipe",
-    descricao: "Avisos da 41 para você: recesso, prazos, orientações.",
+    descricao: "Avisos do escritório para você: recesso, prazos, orientações.",
   },
   {
     href: "/portal/pendencias",
     rotulo: "Pendências",
     modulo: "bpo_pendencias",
     secao: "Com a equipe",
-    descricao: "O que a equipe da 41 precisa de você.",
+    descricao: "O que a equipe precisa de você.",
     // Desde 01/10 qualquer setor pede ao cliente, com o canal do portal ligado.
     ouCom: "portal_solicitacoes",
   },

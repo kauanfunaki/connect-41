@@ -56,7 +56,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
   {
     chave: "avisos",
     titulo: "Receber avisos no celular",
-    resumo: "Para saber na hora quando a 41 precisar de você.",
+    resumo: "Para saber na hora quando a equipe precisar de você.",
     icone: "sino",
     passos: [
       "Na tela Documentos fiscais, no quadro \"Notificações no navegador\", clique em Ativar.",
@@ -67,7 +67,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
   },
   {
     chave: "solicitacao",
-    titulo: "Pedir algo à 41",
+    titulo: "Pedir algo ao escritório",
     resumo: "Documento, alteração ou qualquer outra coisa, com número e prazo de resposta.",
     icone: "solicitacao",
     modulos: ["portal_solicitacoes"],
@@ -81,12 +81,12 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
   },
   {
     chave: "comunicado",
-    titulo: "Ler os comunicados da 41",
-    resumo: "Recesso, mudança de prazo, orientação: os avisos que a 41 manda para todos.",
+    titulo: "Ler os comunicados do escritório",
+    resumo: "Recesso, mudança de prazo, orientação: os avisos que o escritório manda para todos.",
     icone: "comunicado",
     modulos: ["portal_solicitacoes"],
     passos: [
-      "Quando a 41 manda um comunicado, você recebe um e-mail e o aviso aparece no topo do portal.",
+      "Quando o escritório manda um comunicado, você recebe um e-mail e o aviso aparece no topo do portal.",
       "Abra Comunicados. Os que você ainda não leu aparecem destacados, com a etiqueta Novo.",
       "Clique para ler o texto inteiro e baixar os anexos.",
       "Dúvida sobre um comunicado? Abra uma solicitação.",
@@ -95,7 +95,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
   {
     chave: "pendencia",
     titulo: "Responder um pedido da equipe",
-    resumo: "Quando a 41 precisa de um documento ou de uma informação sua.",
+    resumo: "Quando a equipe precisa de um documento ou de uma informação sua.",
     icone: "pendencia",
     // Com o canal do portal ligado, qualquer setor pede (01/10).
     modulos: ["bpo_pendencias", "portal_solicitacoes"],
@@ -151,7 +151,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
   {
     chave: "financeiro",
     titulo: "Acompanhar o financeiro das suas empresas",
-    resumo: "Contas, fluxo de caixa e DRE, lançados pela equipe da 41.",
+    resumo: "Contas, fluxo de caixa e DRE, lançados pela equipe do escritório.",
     icone: "financeiro",
     modulos: FINANCEIRO,
     passos: [

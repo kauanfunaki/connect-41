@@ -49,7 +49,7 @@ export async function AvisosDaHome({
         <Link href="/portal/comunicados" className={`${base} border-brand/40 bg-brand-subtle hover:border-brand`}>
           <Megaphone size={16} className="text-brand shrink-0" />
           <span>
-            <strong className="tabular-nums">{comunicados}</strong> {comunicados === 1 ? "comunicado novo da 41" : "comunicados novos da 41"}
+            <strong className="tabular-nums">{comunicados}</strong> {comunicados === 1 ? "comunicado novo do escritório" : "comunicados novos do escritório"}
           </span>
         </Link>
       )}
