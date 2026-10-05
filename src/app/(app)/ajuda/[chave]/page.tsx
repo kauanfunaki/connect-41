@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowUpRight, Lightbulb, PlayCircle } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ChevronRight, LifeBuoy, Lightbulb, PlayCircle } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
@@ -40,12 +40,23 @@ export default async function ArtigoDeAjudaPage({
 
   return (
     <PageContainer>
-      <Link
-        href={voltarPara ?? "/ajuda"}
-        className="inline-flex items-center gap-1.5 text-[13px] text-fg-muted hover:text-fg transition-colors mb-3"
-      >
-        <ArrowLeft size={14} /> {voltarPara ? "Voltar para a tela" : "Ajuda"}
-      </Link>
+      {/* Onde a pessoa está: a central de ajuda e, dentro dela, este artigo
+          (revisão de 05/10 — o "Ver toda a ajuda" no fim do cartão passava
+          batido). "Voltar para a tela" só quando ela veio pelo "?". */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-3 text-[13px]">
+        <nav aria-label="Caminho" className="flex items-center gap-1.5 min-w-0">
+          <Link href="/ajuda" className="inline-flex items-center gap-1.5 font-medium text-brand hover:underline flex-shrink-0">
+            <LifeBuoy size={14} /> Central de ajuda
+          </Link>
+          <ChevronRight size={13} aria-hidden className="text-fg-muted flex-shrink-0" />
+          <span className="text-fg-secondary truncate">{artigo.titulo}</span>
+        </nav>
+        {voltarPara && (
+          <Link href={voltarPara} className="inline-flex items-center gap-1.5 text-fg-muted hover:text-fg transition-colors">
+            <ArrowLeft size={14} /> Voltar para a tela
+          </Link>
+        )}
+      </div>
       <PageHeader
         title={artigo.titulo}
         subtitle={artigo.resumo}
@@ -112,9 +123,19 @@ export default async function ArtigoDeAjudaPage({
                 </li>
               ))}
             </ul>
-            <Link href="/ajuda" className="mt-1 text-[12.5px] text-fg-muted hover:text-fg">
-              Ver toda a ajuda →
-            </Link>
+          </Card>
+          {/* A saída para a central, em cartão próprio e com botão — era um
+              "Ver toda a ajuda →" cinza no pé do cartão acima (05/10). */}
+          <Card className="p-4 flex flex-col gap-2.5 bg-brand-subtle border-brand/25">
+            <p className="flex items-center gap-2 text-[14px] font-semibold text-fg">
+              <LifeBuoy size={16} className="text-brand" /> Não achou o que procurava?
+            </p>
+            <p className="text-[13px] leading-relaxed text-fg-secondary">
+              A central de ajuda reúne o passo a passo de todas as telas que você usa, com busca.
+            </p>
+            <Button variant="secondary" size="sm" href="/ajuda" className="self-start">
+              Abrir a central de ajuda
+            </Button>
           </Card>
         </aside>
       </div>
