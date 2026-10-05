@@ -3,7 +3,11 @@
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { competenciaLegivel } from "@/lib/fiscal/rotulos";
 
-type Props = { competencias: string[] };
+type Props = {
+  competencias: string[];
+  /** As empresas do cliente; com mais de uma, o filtro ganha o campo Empresa (05/10). */
+  empresas?: { id: string; nome: string }[];
+};
 
 /**
  * Filtro único do portal: a competência.
@@ -18,8 +22,11 @@ type Props = { competencias: string[] };
  *
  * O respiro de baixo é dele (`mb-4`), como o "Filtros" das outras telas do
  * portal — não da tabela nem do vazio que vêm depois.
+ *
+ * A empresa entrou em 05/10, só para quem tem mais de uma: é a escolha que o
+ * Início leva adiante no atalho dos documentos.
  */
-export function PortalCompetenciaFiltro({ competencias }: Props) {
+export function PortalCompetenciaFiltro({ competencias, empresas = [] }: Props) {
   return (
     <FiltrosDaTela
       className="mb-4"
@@ -30,6 +37,9 @@ export function PortalCompetenciaFiltro({ competencias }: Props) {
           vazioLabel: "Todas",
           opcoes: competencias.map((c) => ({ value: c, label: competenciaLegivel(c) })),
         },
+        ...(empresas.length > 1
+          ? [{ chave: "empresa", rotulo: "Empresa", vazioLabel: "Todas", opcoes: empresas.map((e) => ({ value: e.id, label: e.nome })) }]
+          : []),
       ]}
     />
   );
