@@ -20,7 +20,7 @@ export function EmptyState({ title, description, action, icon }: Props) {
       )}
       <p className="font-display text-[length:var(--fs-6)] font-semibold text-fg tracking-[-0.01em]">{title}</p>
       {description && (
-        <p className="text-[length:var(--fs-helper)] text-fg-muted max-w-[400px] mt-1.5 leading-relaxed">{description}</p>
+        <p className="text-[length:var(--fs-label)] text-fg-secondary max-w-[420px] mt-1.5 leading-relaxed">{description}</p>
       )}
       {action && <div className="mt-5">{action}</div>}
     </div>

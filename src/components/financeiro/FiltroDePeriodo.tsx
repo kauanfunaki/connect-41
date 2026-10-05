@@ -165,7 +165,7 @@ export function FaixaDeTotais({ itens, className = "mb-5" }: { itens: ItemDeTota
                   de texto: o rótulo quebra em duas linhas em vez de cortar, o
                   ícone sai e o valor diminui um pouco — era "Aguardan…" e
                   "R$ 33.82…" no portal. */}
-              <span className="text-[length:var(--fs-helper)] leading-snug font-medium text-fg-muted line-clamp-2 sm:line-clamp-1 c41-cortavel">{i.rotulo}</span>
+              <span className="text-[length:var(--fs-helper)] leading-snug font-medium text-fg-secondary line-clamp-2 sm:line-clamp-1 c41-cortavel">{i.rotulo}</span>
               {i.icone && (
                 <span
                   className={`hidden sm:inline-flex w-8 h-8 rounded-lg items-center justify-center flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${seloDoTom(i.tom)}`}
