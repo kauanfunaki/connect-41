@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { verifyPassword } from "@/lib/auth/password";
+import { HASH_DESCARTAVEL, verifyPassword } from "@/lib/auth/password";
 import { signPortalEscolha, verifyPortalEscolha } from "@/lib/auth/jwt";
 import { PORTAL_COOKIE } from "@/lib/auth/portal";
 import { cookieDaSessaoDoPortal, querLembrar } from "@/lib/auth/sessaoDoPortal";
@@ -89,8 +89,10 @@ export async function entrarNoPortal(_anterior: EstadoDoLogin, form: FormData): 
 
   if (contas.length === 0) {
     // A verificação roda mesmo sem conta, contra um hash descartável, para o
-    // tempo de resposta não denunciar quais e-mails existem.
-    await verifyPassword(senha, "$2b$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvalidin");
+    // tempo de resposta não denunciar quais e-mails existem. Até 06/10/2026 o
+    // hash daqui tinha 65 caracteres — fora do formato, o bcryptjs devolvia
+    // `false` sem calcular nada, e o e-mail sem conta respondia ~0,2 s antes.
+    await verifyPassword(senha, HASH_DESCARTAVEL);
     return { erro: ERRO };
   }
 

@@ -291,6 +291,13 @@ export type SendPasswordResetEmailInput = {
   resetToken: string;
   /** Cliente do portal redefine em `/portal/redefinir-senha`, não em `/login/...`. */
   destino?: "interno" | "portal";
+  /**
+   * O escritório da conta, quando o mesmo e-mail tem conta em mais de um
+   * (06/10/2026): vai um e-mail por conta, e cada um diz de qual escritório é
+   * o link — senão a pessoa redefiniria a senha do escritório errado. Sem ele,
+   * o texto é o de sempre.
+   */
+  escritorio?: string;
 };
 
 export async function sendPasswordResetEmail(input: SendPasswordResetEmailInput): Promise<SmtpResult> {
@@ -303,12 +310,15 @@ export async function sendPasswordResetEmail(input: SendPasswordResetEmailInput)
   const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
   const caminho = input.destino === "portal" ? "/portal/redefinir-senha" : "/login/redefinir-senha";
   const resetUrl = `${baseUrl}${caminho}?token=${input.resetToken}`;
+  // Sem quebra de linha: o nome também vai no assunto, que é cabeçalho.
+  const escritorio = input.escritorio?.replace(/[\r\n]+/g, " ").trim() || null;
+  const daConta = escritorio ? ` do escritório <strong>${escapeHtml(escritorio)}</strong>` : "";
 
   const html = `
     <div style="font-family: Arial, Helvetica, sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
       <p style="font-size: 14px; line-height: 1.5;">Olá,</p>
       <p style="font-size: 14px; line-height: 1.5;">
-        Recebemos uma solicitação para redefinir a senha da sua conta no Connect. Se foi você, clique no botão abaixo:
+        Recebemos uma solicitação para redefinir a senha da sua conta no Connect${daConta}. Se foi você, clique no botão abaixo:
       </p>
       <p style="margin: 24px 0;">
         <a href="${resetUrl}" style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500;">
@@ -327,7 +337,9 @@ export async function sendPasswordResetEmail(input: SendPasswordResetEmailInput)
     await enviarComRegistro(transporter, "sendPasswordResetEmail", {
       from: `"${config.fromName}" <${config.fromEmail}>`,
       to: input.to,
-      subject: "Redefinição de senha — Connect",
+      // Com o escritório no assunto, os e-mails de duas contas não se agrupam
+      // numa conversa só na caixa de entrada.
+      subject: escritorio ? `Redefinição de senha — Connect (${escritorio})` : "Redefinição de senha — Connect",
       html,
     });
     return { ok: true };

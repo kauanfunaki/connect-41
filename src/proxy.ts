@@ -12,6 +12,7 @@ import {
   resolveSectorHint,
 } from "@/lib/auth/activeSector";
 import { accessCookieOptions } from "@/lib/auth/cookies";
+import { identidadeNoEscritorio } from "@/lib/auth/trocaDeEscritorio";
 
 // jose usa Web Crypto API — funciona tanto no runtime Node quanto no Edge
 // (ao contrário de jsonwebtoken). Mantido mesmo após a migração pra Proxy
@@ -122,17 +123,14 @@ function loginRedirect(req: NextRequest): NextResponse {
 function applyIdentityHeaders(headers: Headers, payload: AccessTokenPayload, req: NextRequest): void {
   // Troca de workspace: só tem efeito se o tenant do cookie estiver entre os
   // que o próprio token autoriza (accessibleTenants, só populado p/ SUPER_ADMIN).
-  // Isso evita depender de acesso a banco aqui no proxy.
-  const activeTenantCookie = req.cookies.get("active_tenant_id")?.value;
-  const effectiveTenantId =
-    activeTenantCookie && payload.accessibleTenants?.includes(activeTenantCookie)
-      ? activeTenantCookie
-      : payload.tenantId;
+  // Isso evita depender de acesso a banco aqui no proxy. A regra, com os
+  // setores (vazios fora do escritório de origem), mora em trocaDeEscritorio.ts.
+  const efetiva = identidadeNoEscritorio(payload, req.cookies.get("active_tenant_id")?.value);
 
   headers.set("x-user-id", payload.sub);
-  headers.set("x-tenant-id", effectiveTenantId);
+  headers.set("x-tenant-id", efetiva.tenantId);
   headers.set("x-user-role", payload.role);
-  headers.set("x-user-sectors", effectiveTenantId === payload.tenantId ? payload.sectors.join(",") : "");
+  headers.set("x-user-sectors", efetiva.sectors.join(","));
   headers.set("x-home-tenant-id", payload.tenantId);
 
   // Candidato a setor ativo — o subdomínio ganha do cookie, para link
