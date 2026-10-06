@@ -16,9 +16,125 @@ import { idDoVideo } from "./youtube";
  * Vídeos do Connect, pela chave do artigo (a do endereço `/ajuda/<chave>`,
  * ver `artigos/`). O vídeo toca no topo do artigo e entra na central.
  *
- * Ex.: `"bpo_contas_pagar": "https://youtu.be/xxxxxxxxxxx",`
+ * Os números são os dos arquivos gravados em 06/10/2026 (`videos/equipe/`,
+ * lista em `videos/LISTA.md`); os que faltam (19 a 21) são primeiros passos,
+ * logo abaixo. Ex.: `bpo_contas_pagar: "https://youtu.be/xxxxxxxxxxx",`
  */
-export const VIDEOS_DO_CONNECT: Readonly<Record<string, string>> = {};
+export const VIDEOS_DO_CONNECT: Readonly<Record<string, string>> = {
+  // 01 — Contas a pagar
+  bpo_contas_pagar: "",
+  // 02 — Contas a receber
+  bpo_contas_receber: "",
+  // 03 — Lançamentos
+  bpo_lancamentos: "",
+  // 04 — Fluxo de caixa
+  bpo_fluxo_caixa: "",
+  // 05 — Conciliação bancária
+  bpo_conciliacao: "",
+  // 06 — Fornecedores e sacados
+  bpo_cadastros: "",
+  // 07 — Pendências ao cliente
+  bpo_pendencias: "",
+  // 08 — Aprovações
+  bpo_aprovacoes: "",
+  // 09 — Cobrança
+  bpo_cobranca: "",
+  // 10 — Conversa com o cliente
+  bpo_comunicacao: "",
+  // 11 — Repositório de Senhas
+  bpo_senhas: "",
+  // 12 — Repositório de Manuais
+  bpo_manual: "",
+  // 13 — DRE
+  bpo_dre: "",
+  // 14 — DRE econômica
+  dre_economica: "",
+  // 15 — Análises gerenciais
+  dre_analises: "",
+  // 16 — Orçamento
+  dre_orcamento: "",
+  // 17 — Início
+  "geral:inicio": "",
+  // 18 — Meu dia
+  "geral:meu-dia": "",
+  // 22 — Empresas
+  "geral:empresas": "",
+  // 23 — Pessoas
+  "geral:pessoas": "",
+  // 24 — Transferências
+  "geral:transferencias": "",
+  // 25 — Solicitações dos clientes
+  portal_solicitacoes: "",
+  // 26 — Agenda
+  "geral:agenda": "",
+  // 27 — Espaços
+  "geral:espacos": "",
+  // 28 — Certificados digitais
+  tech_certificados: "",
+  // 29 — Leads
+  comercial_leads: "",
+  // 30 — Processos
+  societario_processos: "",
+  // 31 — Licenças
+  societario_licencas: "",
+  // 32 — Minha área
+  societario_minha_area: "",
+  // 33 — Exigências e prazos
+  societario_prazos: "",
+  // 34 — Relatórios do Societário
+  societario_relatorios: "",
+  // 35 — Colaboradores
+  dp_colaboradores: "",
+  // 36 — Afastamentos
+  dp_afastamentos: "",
+  // 37 — Horas extras
+  dp_horas_extras: "",
+  // 38 — Escalas
+  dp_escalas: "",
+  // 39 — Treinamentos
+  dp_treinamentos: "",
+  // 40 — Avaliações de desempenho
+  dp_avaliacoes: "",
+  // 41 — Vagas
+  recrutamento_vagas: "",
+  // 42 — Candidatos
+  recrutamento_candidatos: "",
+  // 43 — Colaboradores de clientes
+  recrutamento_colaboradores_clientes: "",
+  // 44 — Testes
+  recrutamento_testes: "",
+  // 45 — Documentos fiscais
+  fiscal_documentos: "",
+  // 46 — Painel de Gestão
+  gestao_painel: "",
+  // 47 — Cargos e Salários
+  gestao_cargos_salarios: "",
+  // 48 — Indicadores de RH
+  gestao_indicadores_rh: "",
+  // 49 — Valora
+  gestao_valora: "",
+};
+
+/**
+ * Vídeos dos primeiros passos da central de ajuda do Connect (06/10/2026), pela
+ * chave do passo (`PRIMEIROS_PASSOS`, em `components/ajuda/CentralDeAjuda.tsx`).
+ * O vídeo toca dentro do passo aberto e entra na seção "Vídeos" da central.
+ *
+ * "meu-dia" e "transferir" não têm vídeo próprio: o do artigo (18 e 24) serve
+ * — cole o mesmo link, e a seção "Vídeos" mostra uma vez só.
+ */
+export const VIDEOS_DOS_PRIMEIROS_PASSOS: Readonly<Record<string, string>> = {
+  // 19 — Achar qualquer coisa com Ctrl+K
+  busca: "",
+  // 20 — Trabalhar dentro de um setor
+  setor: "",
+  // 21 — Filtrar uma lista
+  filtros: "",
+  // 18 — o mesmo vídeo do artigo Meu dia
+  "meu-dia": "",
+  // 24 — o mesmo vídeo do artigo Transferências
+  transferir: "",
+};
 
 /**
  * Vídeos do portal do cliente, pela chave do passo (`lib/portal/ajuda.ts`).
@@ -28,17 +144,19 @@ export const VIDEOS_DO_CONNECT: Readonly<Record<string, string>> = {};
 export const VIDEOS_DO_PORTAL: Readonly<Record<string, string>> = {
   // 01 — Entrar no portal
   entrar: "",
-  // 02 — Pedir algo à 41
+  // 02 — O Início do portal (06/10/2026)
+  inicio: "",
+  // 03 — Pedir algo ao escritório
   solicitacao: "",
-  // 03 — Responder uma pendência
+  // 04 — Responder uma pendência
   pendencia: "",
-  // 04 — Aprovar pagamentos
+  // 05 — Aprovar pagamentos
   aprovar: "",
-  // 05 — Acompanhar o financeiro
+  // 06 — Acompanhar o financeiro
   financeiro: "",
-  // 06 — Ler os comunicados
+  // 07 — Ler os comunicados
   comunicado: "",
-  // 07 — Esqueci minha senha
+  // 08 — Esqueci minha senha
   senha: "",
 };
 
@@ -56,4 +174,9 @@ export function videoDoArtigo(chave: string): string | null {
 /** O vídeo do passo da ajuda do portal, se o link já foi colado e é do YouTube. */
 export function videoDoPassoDoPortal(chave: string): string | null {
   return linkValido(VIDEOS_DO_PORTAL, chave);
+}
+
+/** O vídeo de um primeiro passo da central do Connect, se o link já foi colado e é do YouTube. */
+export function videoDoPrimeiroPasso(chave: string): string | null {
+  return linkValido(VIDEOS_DOS_PRIMEIROS_PASSOS, chave);
 }
