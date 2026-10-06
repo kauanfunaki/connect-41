@@ -72,8 +72,16 @@ export function redirectUriDoPortal(env: Ambiente = process.env): string | null 
   }
 }
 
-/** A configuração do Google no portal, ou `null` — e aí o botão nem aparece. */
+/**
+ * A configuração do Google no portal, ou `null` — e aí o botão nem aparece.
+ *
+ * Só com `PORTAL_GOOGLE_LIGADO=1` (06/10/2026): o cliente OAuth é o da Agenda,
+ * que já está no servidor, e sem a trava o botão aparecia assim que o código
+ * subia — antes de o redirect URI do portal e a tela de consentimento estarem
+ * prontos no Google Cloud, e quem clicasse caía numa página de erro do Google.
+ */
 export function configuracaoDoGoogleNoPortal(env: Ambiente = process.env): ConfiguracaoDoGoogle | null {
+  if (env.PORTAL_GOOGLE_LIGADO?.trim() !== "1") return null;
   const clientId = env.GOOGLE_CLIENT_ID?.trim();
   const clientSecret = env.GOOGLE_CLIENT_SECRET?.trim();
   const redirectUri = redirectUriDoPortal(env);
