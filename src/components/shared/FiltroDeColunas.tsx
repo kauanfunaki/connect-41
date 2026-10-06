@@ -142,10 +142,41 @@ export function TabelaFiltravel({
 }
 
 /** A `<tr>` que some quando não passa nos filtros das colunas. */
-export function LinhaFiltravel({ id, className, children }: { id: string; className?: string; children: React.ReactNode }) {
+export function LinhaFiltravel({
+  id,
+  className,
+  children,
+  href,
+}: {
+  id: string;
+  className?: string;
+  children: React.ReactNode;
+  /** Clicar na linha abre este endereço (05/10/2026, linha do Valora). O
+   *  teclado segue pelo link que a linha já tem na primeira coluna. */
+  href?: string;
+}) {
   const ctx = useContext(Ctx);
+  const router = useRouter();
   if (ctx?.ocultas.has(id)) return null;
-  return <tr className={className}>{children}</tr>;
+  if (!href) return <tr className={className}>{children}</tr>;
+  return (
+    <tr
+      className={`${className ?? ""} cursor-pointer`.trim()}
+      onClick={(e) => {
+        const alvo = e.target as HTMLElement;
+        // Só o clique na própria linha: botão, link e campo seguem com o deles,
+        // e o que vem de uma janela aberta a partir da linha (portal) não está
+        // dentro do <tr>. Texto selecionado também não navega.
+        if (!e.currentTarget.contains(alvo)) return;
+        if (alvo.closest("a, button, input, select, textarea, label, [role='dialog']")) return;
+        if (window.getSelection()?.toString()) return;
+        if (e.metaKey || e.ctrlKey) window.open(href, "_blank");
+        else router.push(href);
+      }}
+    >
+      {children}
+    </tr>
+  );
 }
 
 /** Um valor oferecido no funil: o que vai no filtro, o que aparece e quantas linhas têm. */

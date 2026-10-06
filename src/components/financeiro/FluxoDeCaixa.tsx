@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { MesDoFluxo, Projecao, LinhaDoConsolidado } from "@/lib/financeiro/fluxo";
 import type { SaldoConsolidado } from "@/lib/financeiro/conciliacao/saldoConsolidado";
@@ -120,12 +121,12 @@ export function QuadroDoSaldoBancario({ saldo }: { saldo: SaldoConsolidado }) {
   const dataCurta = (key: string) => `${key.slice(8, 10)}/${key.slice(5, 7)}/${key.slice(0, 4)}`;
   if (saldo.contas.length === 0) {
     return (
-      <Card className="p-4 mb-6 text-[12px] text-fg-muted">
-        Nenhuma conta bancária ativa. Cadastre a conta e importe o extrato em{" "}
-        <Link href="/conciliacao" className="text-brand hover:underline">
-          Conciliação bancária
-        </Link>{" "}
-        para o fluxo mostrar o saldo real.
+      // Revisão de 05/10: botão não é link — o destino era texto azul no meio da frase.
+      <Card className="p-4 mb-6 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[12px] text-fg-muted">
+        <p>Nenhuma conta bancária ativa. Cadastre a conta e importe o extrato na Conciliação bancária para o fluxo mostrar o saldo real.</p>
+        <Button href="/conciliacao" variant="secondary" size="xs">
+          Abrir Conciliação bancária
+        </Button>
       </Card>
     );
   }

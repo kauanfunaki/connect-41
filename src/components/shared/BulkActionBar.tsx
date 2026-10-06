@@ -21,9 +21,11 @@ export function BulkActionBar({ count, onClear, children }: Props) {
       </span>
       <div className="hidden sm:block w-px h-5 bg-border flex-shrink-0" />
       <div className="flex flex-wrap items-center justify-center gap-2">{children}</div>
+      {/* Revisão de 05/10: botão não é link — era texto cinza. */}
       <Button
-        variant="linkMuted"
-        className="text-[13px] font-medium sm:ml-1 flex-shrink-0"
+        variant="ghost"
+        size="sm"
+        className="sm:ml-1 flex-shrink-0"
         onClick={onClear}
       >
         Limpar

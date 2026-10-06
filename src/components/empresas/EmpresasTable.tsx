@@ -77,7 +77,7 @@ export function EmpresasTable({
   // (quem esconde uma delas é o CSS). Sem isto, `montarArvore` rodaria duas
   // vezes a cada render.
   const blocosComArvore = blocos.map((b) => ({ ...b, nos: montarArvore(b.empresas) }));
-  const colunas = canCreate ? 7 : 6;
+  const colunas = canCreate ? 8 : 7;
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   // Filiais começam recolhidas: a listagem existe para varrer clientes, e abrir
@@ -153,13 +153,9 @@ export function EmpresasTable({
                 <span className="truncate">{nomeExibicao(c)}</span>
                 {/* Razão social só quando acrescenta: com apelido em branco ela
                     JÁ é o nome de cima, e repetir é ruído. O ID do Acessórias
-                    vem junto, que é como se cruza com o sistema de origem. */}
-                {(razaoSocialSecundaria(c) || c.externalId) && (
-                  <span className="truncate text-[11.5px] font-normal text-fg-muted">
-                    {razaoSocialSecundaria(c)}
-                    {razaoSocialSecundaria(c) && c.externalId ? " · " : ""}
-                    {c.externalId ? <span className="tnum">#{c.externalId}</span> : null}
-                  </span>
+                    tem coluna própria desde 05/10. */}
+                {razaoSocialSecundaria(c) && (
+                  <span className="truncate text-[11.5px] font-normal text-fg-muted">{razaoSocialSecundaria(c)}</span>
                 )}
               </span>
             </Link>
@@ -170,6 +166,11 @@ export function EmpresasTable({
             )}
             {ehFilial && <span className="ml-1 shrink-0 text-[11.5px] text-fg-muted">filial</span>}
           </div>
+        </td>
+        {/* O ID do Acessórias em coluna própria (revisão de 05/10): embaixo do
+            nome ele virava segunda linha e desalinhava o nome do logo redondo. */}
+        <td className="px-4 py-3 text-center text-[length:var(--fs-ui)] text-fg-secondary tnum truncate" title={c.externalId ?? undefined}>
+          {c.externalId ?? "—"}
         </td>
         <td className="px-4 py-3 text-center text-[length:var(--fs-ui)] text-fg-secondary tnum whitespace-nowrap">
           {formatDocumento(c.kind, c.cnpj, c.cpf)}
@@ -189,7 +190,7 @@ export function EmpresasTable({
         >
           {c.city && c.stateCode ? `${c.city}/${c.stateCode}` : c.city ?? c.stateCode ?? "—"}
         </td>
-        {/* Sticky de seguro: com 6 colunas a tabela cabe, mas em tela estreita
+        {/* Sticky de seguro: com 7 colunas a tabela cabe, mas em tela estreita
             as ações eram a primeira coisa a sair. Sem borda, porque agora ela
             apareceria o tempo todo sem haver rolagem. */}
         <td
@@ -250,13 +251,7 @@ export function EmpresasTable({
               {/* `break-words` em vez de `truncate`: no cartão há altura de
                   sobra, e cortar o nome era um custo só da tabela. */}
               <span className="font-medium break-words">{nomeExibicao(c)}</span>
-              {(secundaria || c.externalId) && (
-                <span className="text-[11.5px] text-fg-muted break-words">
-                  {secundaria}
-                  {secundaria && c.externalId ? " · " : ""}
-                  {c.externalId ? <span className="tnum">#{c.externalId}</span> : null}
-                </span>
-              )}
+              {secundaria && <span className="text-[11.5px] text-fg-muted break-words">{secundaria}</span>}
             </span>
           </Link>
         </div>
@@ -267,6 +262,7 @@ export function EmpresasTable({
             e aqui não há coluna para segurar. */}
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-fg-secondary">
           <StatusDot color={statusColor[c.status]} label={statusLabel[c.status]} />
+          {c.externalId && <span className="tnum">ID {c.externalId}</span>}
           {doc !== "—" && <span className="tnum">{doc}</span>}
           {regime && <span title={c.taxRegime ?? undefined}>{regime}</span>}
           {local && <span>{local}</span>}
@@ -448,12 +444,16 @@ export function EmpresasTable({
                   fixos. Os três desceram para 13px (a informação de apoio) e
                   para as larguras abaixo; o nome ganhou ~180px. */}
               <col />
+              {/* 76px: o ID do Acessórias tem até 5 dígitos `tnum`, mais o
+                  `px-4`. Saiu da segunda linha do nome em 05/10; Localização
+                  cedeu 12px para o nome não perder tudo. */}
+              <col className="w-[76px]" />
               {/* 168px: CNPJ formatado são 18 caracteres `tnum`, que a 13px
                   dão ~135px, mais o `px-4` de cada lado. */}
               <col className="w-[168px]" />
               <col className="w-[112px]" />
               <col className="w-[150px]" />
-              <col className="w-[160px]" />
+              <col className="w-[148px]" />
               <col className="w-[124px]" />
             </colgroup>
             <thead>
@@ -465,9 +465,11 @@ export function EmpresasTable({
                 )}
                 {/* Oito colunas não cabiam sem rolagem horizontal, e rolar para
                     ver um campo é pior que não ter o campo. "Criada em" saiu (a
-                    data de cadastro não decide nada numa lista operacional) e o
-                    ID do Acessórias desceu para a segunda linha do nome. */}
+                    data de cadastro não decide nada numa lista operacional). O
+                    ID do Acessórias, que tinha descido para a segunda linha do
+                    nome, voltou a ter coluna estreita em 05/10. */}
                 <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
+                <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">ID</th>
                 <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">CNPJ</th>
                 <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
                 <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">

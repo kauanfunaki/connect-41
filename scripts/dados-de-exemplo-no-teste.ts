@@ -10,6 +10,12 @@
 //   npx tsx --env-file=.env scripts/dados-de-exemplo-no-teste.ts --escritorio <slug>            (só mostra)
 //   npx tsx --env-file=.env scripts/dados-de-exemplo-no-teste.ts --escritorio <slug> --aplicar  (grava)
 //
+// Para o Teste carregado antes de 05/10 (diagnóstico da carteira vazio — as
+// propostas ganhas não tinham empresa), só a correção do Valora:
+//
+//   npx tsx --env-file=.env scripts/dados-de-exemplo-no-teste.ts --escritorio <slug> --ligar-valora            (só mostra)
+//   npx tsx --env-file=.env scripts/dados-de-exemplo-no-teste.ts --escritorio <slug> --ligar-valora --aplicar  (grava)
+//
 // Travas: o escritório precisa se chamar "Teste" — qualquer outro é recusado,
 // mesmo com o slug certo de outro —, nada é gravado sem `--aplicar`, e se as
 // empresas de exemplo já estão lá, não faz nada (não duplica).
@@ -22,7 +28,7 @@
 // administradora fictícia como autora das propostas.
 
 import { getPrisma } from "../src/lib/prisma";
-import { carregarDadosDeExemplo, FONTE } from "./dados-de-exemplo/gerador";
+import { carregarDadosDeExemplo, FONTE, ligarGanhasAsEmpresas } from "./dados-de-exemplo/gerador";
 
 const NOME_EXIGIDO = "teste";
 
@@ -46,6 +52,12 @@ async function main() {
   if (!tenant) throw new Error(`Escritório "${slug}" não encontrado.`);
   if (tenant.name.trim().toLowerCase() !== NOME_EXIGIDO) {
     throw new Error(`Recusado: "${tenant.name}" não é o escritório Teste. Este script só grava no Teste.`);
+  }
+  if (process.argv.includes("--ligar-valora")) {
+    console.log(`Escritório: ${tenant.name} (${slug}) — propostas ganhas do Valora:`);
+    for (const linha of await ligarGanhasAsEmpresas(p, tenant.id, aplicar)) console.log(`  ${linha}`);
+    if (!aplicar) console.log("\nNada foi gravado. Para gravar: acrescente --aplicar.");
+    return;
   }
   if (await p.company.findFirst({ where: { tenantId: tenant.id, source: FONTE }, select: { id: true } })) {
     console.log(`Os dados de exemplo já estão no escritório "${tenant.name}". Nada a fazer.`);

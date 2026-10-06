@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
@@ -65,14 +66,17 @@ export default async function IaDoSocietarioPage() {
       />
 
       {(!varreduraLigada || !ligado(AGENTE_CONTRATO)) && (
-        <p className="mb-4 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[13px] text-fg-secondary">
-          {[!varreduraLigada && nome(AGENTE_VARREDURA), !ligado(AGENTE_CONTRATO) && nome(AGENTE_CONTRATO)].filter(Boolean).join(" e ")}{" "}
-          {!varreduraLigada && !ligado(AGENTE_CONTRATO) ? "estão desligadas" : "está desligada"}. Um administrador liga em{" "}
-          <Link href="/admin/ia" className="text-brand hover:underline">
-            Administração › Inteligência Artificial
-          </Link>
-          . A leitura de contrato social fica na tela de sócios de cada empresa.
-        </p>
+        // Revisão de 05/10: botão não é link — o caminho era texto azul no meio da frase.
+        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[13px] text-fg-secondary">
+          <p>
+            {[!varreduraLigada && nome(AGENTE_VARREDURA), !ligado(AGENTE_CONTRATO) && nome(AGENTE_CONTRATO)].filter(Boolean).join(" e ")}{" "}
+            {!varreduraLigada && !ligado(AGENTE_CONTRATO) ? "estão desligadas" : "está desligada"}. Um administrador liga em
+            Administração › Inteligência Artificial. A leitura de contrato social fica na tela de sócios de cada empresa.
+          </p>
+          <Button href="/admin/ia" variant="secondary" size="xs">
+            Abrir Inteligência Artificial
+          </Button>
+        </div>
       )}
 
       <section aria-labelledby="fila" className="mb-6 flex flex-col gap-2">

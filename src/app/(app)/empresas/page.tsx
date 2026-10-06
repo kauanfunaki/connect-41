@@ -219,14 +219,17 @@ export default async function EmpresasPage({
       )}
 
       {/* Esconder sem avisar faria a base parecer menor do que é. */}
+      {/* Revisão de 05/10: botão não é link — o "Mostrar todas" era texto azul. */}
       {ocultas > 0 && (
-        <p className="text-[12px] text-fg-muted mb-4">
-          {ocultas} empresa{ocultas !== 1 ? "s" : ""} inativa{ocultas !== 1 ? "s" : ""} ou cancelada
-          {ocultas !== 1 ? "s" : ""} fora desta lista.{" "}
-          <Link href={buildUrl({ status: STATUS_TODOS, page: "1" })} className="text-brand hover:underline font-medium">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[12px] text-fg-muted mb-4">
+          <p>
+            {ocultas} empresa{ocultas !== 1 ? "s" : ""} inativa{ocultas !== 1 ? "s" : ""} ou cancelada
+            {ocultas !== 1 ? "s" : ""} fora desta lista.
+          </p>
+          <Button href={buildUrl({ status: STATUS_TODOS, page: "1" })} variant="ghost" size="xs">
             Mostrar todas
-          </Link>
-        </p>
+          </Button>
+        </div>
       )}
 
       {/* Fica acima da tabela e do estado vazio: é por aqui que se desfaz o

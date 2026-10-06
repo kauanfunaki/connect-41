@@ -3,7 +3,6 @@
 import { useActionState, useCallback, useEffect, useId, useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import { useDialog } from "@/components/ui/useDialog";
-import Link from "next/link";
 import { X } from "lucide-react";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
@@ -81,11 +80,13 @@ export function CreateMeetingDialog({ action, initialStart, initialEnd, hasGoogl
         </div>
 
         {!hasAnyProvider ? (
-          <p className="text-[length:var(--fs-body)] text-fg-muted">
-            Conecte sua conta Google ou Microsoft em{" "}
-            <Link href="/admin/integracoes" className="text-brand hover:underline">Configurações → Integrações</Link>{" "}
-            antes de agendar.
-          </p>
+          // Revisão de 05/10: botão não é link — o destino era texto azul no meio da frase.
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+            <p className="text-[length:var(--fs-body)] text-fg-muted">Conecte sua conta Google ou Microsoft antes de agendar.</p>
+            <Button href="/admin/integracoes" variant="secondary" size="sm">
+              Abrir Integrações
+            </Button>
+          </div>
         ) : (
           <form action={formAction} className="space-y-3">
             <CampoForm label="Título" htmlFor="title" required>

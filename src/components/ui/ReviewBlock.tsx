@@ -1,3 +1,6 @@
+import { Pencil } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+
 type Props = {
   title: string;
   onEdit: () => void;
@@ -10,9 +13,11 @@ export function ReviewBlock({ title, onEdit, items }: Props) {
     <div className="bg-canvas border border-border rounded-lg px-4 py-3.5 mb-2.5 last:mb-0">
       <div className="flex items-center justify-between mb-2">
         <b className="text-[13px] font-semibold text-fg">{title}</b>
-        <button type="button" onClick={onEdit} className="text-[12px] font-semibold text-brand-hover hover:underline">
+        {/* Revisão de 05/10: botão não é link — o "Editar" era texto azul sublinhado. */}
+        <Button variant="ghost" size="xs" onClick={onEdit}>
+          <Pencil size={13} />
           Editar
-        </button>
+        </Button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-[13px]">
         {items.map((it) => (

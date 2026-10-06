@@ -4,6 +4,7 @@ import { ArrowLeft, Paperclip } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { clienteAtivoDoPortal } from "@/app/(portal)/usuario";
 import { getSectorMaps } from "@/lib/sectors";
 import { abrirComunicadoDoCliente } from "@/lib/comunicados/consultas";
@@ -48,13 +49,13 @@ export default async function PortalComunicadoPage({ params }: { params: Promise
           </ul>
         )}
       </Card>
-      <p className="mt-4 text-[12.5px] text-fg-muted">
-        Dúvida sobre este comunicado? Abra uma{" "}
-        <Link href="/portal/solicitacoes/nova" className="text-brand hover:underline">
-          solicitação
-        </Link>
-        .
-      </p>
+      {/* Revisão de 05/10: botão não é link — "solicitação" era texto azul no meio da frase. */}
+      <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+        <p className="text-[12.5px] text-fg-muted">Dúvida sobre este comunicado?</p>
+        <Button href="/portal/solicitacoes/nova" variant="secondary" size="sm">
+          Abrir solicitação
+        </Button>
+      </div>
     </PageContainer>
   );
 }

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { Entrar } from "@/components/carreiras/ContaDoCandidato";
 
 export const dynamic = "force-dynamic";
@@ -38,13 +38,13 @@ export default async function EntrarPage({
           {t ? (
             <Entrar slug={slug} token={t} />
           ) : (
-            <p className="text-[13px] text-fg">
-              Link incompleto.{" "}
-              <Link href={`/carreiras/${slug}/minha-conta`} className="text-brand hover:underline">
-                Peça um novo
-              </Link>
-              .
-            </p>
+            // Revisão de 05/10: botão não é link — pedir outro link é ação.
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+              <p className="text-[13px] text-fg">Link incompleto.</p>
+              <Button href={`/carreiras/${slug}/minha-conta`} variant="secondary" size="sm">
+                Pedir novo link
+              </Button>
+            </div>
           )}
         </Card>
       </div>

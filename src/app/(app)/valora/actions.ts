@@ -100,6 +100,7 @@ export async function atualizarProposta(dados: {
     data: { status, motivo, precoOferecido: valor(dados.precoOferecido), precoConcorrente: valor(dados.precoConcorrente) },
   });
   await logAudit({ tenantId: c.tenantId, userId: c.ctx.userId, action: "valora.proposta.atualizar", entityType: "ValoraProposta", entityId: id, metadata: { status } });
-  revalidatePath("/valora");
+  // A lista e a página da proposta (05/10), que também registra o retorno.
+  revalidatePath("/valora", "layout");
   return { ok: true };
 }
