@@ -43,9 +43,15 @@ async function interestedUserIds(pipelineItemId: string, excludeUserId: string):
  *
  * Não é exportada de propósito: num arquivo "use server" só valem exports
  * assíncronos, e esta é síncrona.
+ *
+ * A primeira linha era `revalidatePath` da rota cheia; a troca em massa de
+ * 09/09 que criou esta função trocou também essa linha, e a função passou a
+ * chamar a si mesma — toda ação do cartão (comentar, mover, anexar, apontar
+ * tempo…) caía em "Maximum call stack size exceeded". Achado em 06/10, na
+ * gravação dos vídeos da ajuda.
  */
 function revalidarItem(pipeline: { id: string }, itemId: string) {
-  revalidarItem(pipeline, itemId);
+  revalidatePath(`${boardPath(pipeline)}/itens/${itemId}`);
   revalidatePath(boardPath(pipeline));
 }
 
