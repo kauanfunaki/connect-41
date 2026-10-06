@@ -350,8 +350,9 @@ function videosDoBpo(apoio: string): DefinicaoDeVideo[] {
         );
         const projecao = main(r).getByRole("heading", { name: /^Projeção/ });
         await r.rolarAte(projecao);
-        await r.apontar(
-          projecao,
+        await r.apontarGrupo(
+          main(r).getByText("Até 7 dias", { exact: true }),
+          main(r).getByText("Até 180 dias", { exact: true }),
           "Os cartões da projeção somam o que vence de hoje até 7, 15, 30, 60, 90 e 180 dias: a receber menos a pagar."
         );
         await r.apontar(main(r).getByText(/^Fora das janelas/), "O que já venceu e não foi baixado fica de fora das janelas, neste aviso.");
@@ -816,7 +817,10 @@ function videosDoBpo(apoio: string): DefinicaoDeVideo[] {
           main(r).getByText(/^Receita bruta/).first(),
           "Os cartões do topo: receita bruta, margem de contribuição, resultado operacional e do período."
         );
-        await r.apontar(main(r).getByText(/ainda a conferir/).first(), "Confira os avisos, como lançamentos ainda a conferir que entram no resultado.");
+        // O aviso de "a conferir" some depois que os vídeos de contas conferem
+        // as duas contas provisórias da demonstração; o de descontos fica.
+        const aviso = main(r).getByText(/ainda a conferir|Da cobrança neste período/).first();
+        if (await aviso.count()) await r.apontar(aviso, "Confira os avisos logo abaixo, como lançamentos ainda a conferir que entram no resultado.");
         await r.apontar(
           main(r).getByRole("combobox", { name: "Centro de custo" }),
           "Para ver um centro de custo, escolha-o aqui e clique em Aplicar."
@@ -1052,13 +1056,22 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
       chave: "primeiros-passos:busca",
       logado: true,
       async executar(r) {
+        // As "telas que você abriu por último" moram no localStorage do
+        // navegador (`connect41:telas-recentes`), e o da gravação nasce vazio:
+        // o vídeo semeia três, como se a pessoa tivesse passado por elas.
+        await r.ir("/home");
+        await r.page.evaluate(() =>
+          localStorage.setItem("connect41:telas-recentes", JSON.stringify(["bpo_contas_pagar", "bpo_conciliacao", "portal_solicitacoes"]))
+        );
         await r.ir("/home");
         await r.cartaz(SELO, "Achar qualquer coisa com Ctrl+K", "Telas, empresas e pessoas pelo nome, de qualquer lugar");
         const busca = barraLateral(r).getByRole("textbox", { name: /Buscar/ });
         await r.apontar(busca, "A busca fica no alto da barra lateral. De qualquer tela, aperte Ctrl+K para chegar nela.");
         await r.page.keyboard.press("Control+k");
         await r.pausa(900);
-        await r.legenda("Antes de digitar, aparecem as telas que você abriu por último.");
+        const recentes = r.page.getByText("Recentes", { exact: true }).first();
+        if (await recentes.count()) await r.apontar(recentes, "Antes de digitar, aparecem as telas que você abriu por último.");
+        await r.soltar();
         await r.page.keyboard.type("pao dour", { delay: 90 });
         await r.pausa(1200);
         const resultado = r.page.getByText("PANIFICADORA PÃO DOURADO LTDA", { exact: true }).first();
@@ -1404,7 +1417,12 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
         await r.clicar(reuniao.getByRole("button", { name: "Fechar" }));
         await r.clicar(r.page.getByRole("banner").getByRole("button", { name: "Menu do usuário" }), "O horário da grade é ajustável: clique na sua foto, no alto…");
         await r.clicar(r.page.getByRole("button", { name: "Configurações do Perfil" }), "…e em Configurações do Perfil.");
+        await r.page.waitForURL(/\/configuracoes/, { timeout: 20000 });
         await r.page.waitForLoadState("networkidle").catch(() => {});
+        // O menu do usuário continua aberto depois de trocar de tela, e o Esc
+        // não o fecha (06/10): um clique no vazio da barra lateral fecha.
+        await r.page.mouse.click(60, 860);
+        await r.pausa(400);
         const grade = r.page.getByRole("radiogroup", { name: "Horário da Agenda" });
         await r.rolarAte(grade);
         await r.apontar(grade, "Em Agenda, escolha Usar o do escritório ou Definir o meu.");
