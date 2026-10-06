@@ -14,6 +14,8 @@ import { contarNaoLidasVisiveis, tiposOcultos } from "@/lib/notificacoes/consult
 import { getSectorsWithEnabledModules, getTenantModuleStates } from "@/lib/modules";
 import { getModuleRoute, MODULOS_DO_MENU_GERAL } from "@/lib/module-catalog";
 import { baseDomain, hostSuffix, setoresDoSeletor } from "@/lib/auth/activeSector";
+import { getAccessibleTenantIds } from "@/lib/auth/tenantAccess";
+import { escritoriosDaTroca } from "@/lib/auth/trocaDeEscritorio";
 import { ChatDeIA } from "@/components/shell/ChatDeIA";
 import { agentesDoChat } from "@/lib/ia/chat/agentes";
 import { PARES_DE_CAMINHO } from "@/lib/ajuda/artigos";
@@ -106,18 +108,17 @@ export default async function AppLayout({
     ctx.userId
       ? prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true, photoUrl: true } })
       : Promise.resolve(null),
-    role === "SUPER_ADMIN"
-      ? prisma.tenant.findMany({
-          where: { OR: [{ id: ctx.homeTenantId }, { accessGrants: { some: { userId: ctx.userId } } }] },
-          select: { id: true, name: true, logoUrl: true },
-          orderBy: { name: "asc" },
-        })
-      // Sem múltiplos tenants: busca só o nome do tenant atual, pro seletor de
-      // workspace da sidebar mostrar o nome real mesmo sem troca disponível.
-      : prisma.tenant.findMany({
-          where: { id: tenantId },
-          select: { id: true, name: true, logoUrl: true },
-        }),
+    // A janela de troca lista os escritórios pela MESMA regra que o token usa
+    // para autorizar a troca (`escritoriosAcessiveis`, via
+    // getAccessibleTenantIds): SUPER_ADMIN vê o de origem e os concedidos; os
+    // demais papéis, só o atual — o nome real no cabeçalho, sem troca.
+    getAccessibleTenantIds(ctx.userId, role, ctx.homeTenantId).then((acessiveis) =>
+      prisma.tenant.findMany({
+        where: { id: { in: escritoriosDaTroca(acessiveis, tenantId) } },
+        select: { id: true, name: true, logoUrl: true },
+        orderBy: { name: "asc" },
+      })
+    ),
   ]);
 
   return (
