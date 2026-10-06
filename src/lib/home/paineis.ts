@@ -1,5 +1,5 @@
 // As contas dos painéis da Home (30/09). Funções puras: a consulta fica em
-// `paineis-dados.ts`, e o julgamento — em que faixa cai cada coisa — mora aqui,
+// `dadosDosPaineis.ts`, e o julgamento — em que faixa cai cada coisa — mora aqui,
 // testado, com as mesmas regras das telas de onde os números saem.
 
 import { addDaysToKey, mondayOfWeek } from "@/lib/agenda";
@@ -41,6 +41,14 @@ export function carteiraPorFaixa(
     f.centavos += t.centavos;
   }
   return faixas;
+}
+
+/** Tudo o que está em aberto na carteira, vencido incluído. */
+export function totalDaCarteira(f: Record<FaixaDeVencimento, Soma>): Soma {
+  return {
+    n: f.vencida.n + f.hoje.n + f.semana.n + f.depois.n,
+    centavos: f.vencida.centavos + f.hoje.centavos + f.semana.centavos + f.depois.centavos,
+  };
 }
 
 export type Semana = Soma & { inicioKey: string };
