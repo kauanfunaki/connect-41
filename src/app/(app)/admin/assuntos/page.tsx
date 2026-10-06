@@ -33,7 +33,7 @@ export default async function AssuntosPage() {
     <PageContainer>
       <PageHeader
         title="Assuntos das solicitações"
-        subtitle="O que o cliente escolhe ao pedir algo pelo portal. Cada assunto diz o setor que atende e em quantos dias úteis a 41 responde."
+        subtitle="O que o cliente escolhe ao pedir algo pelo portal. Cada assunto diz o setor que atende e em quantos dias úteis a equipe responde."
         action={
           <Button href="/admin/assuntos/novo">
             <Plus size={14} /> Novo assunto

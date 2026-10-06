@@ -19,8 +19,16 @@
 // certo, e não no último que o destinatário usou.
 
 // Hosts que NÃO são setor, mesmo aparecendo como subdomínio do domínio-base.
-// `app` é o endereço neutro (seletor de setor); `www` é óbvio.
-const HOSTS_RESERVADOS = new Set(["app", "www"]);
+// `app` é o endereço neutro (seletor de setor); `www` é óbvio. `api`, `mail` e
+// `portal` entraram em 05/10/2026, na troca para app.useconnect.com.br: são
+// nomes que o domínio pode precisar para outra coisa, e criar um setor com eles
+// passou a ser recusado (`ehHostReservado`, em /admin/setores).
+const HOSTS_RESERVADOS = new Set(["app", "www", "api", "mail", "portal"]);
+
+/** Nome que não pode virar código de setor, porque é endereço do sistema. */
+export function ehHostReservado(codigo: string): boolean {
+  return HOSTS_RESERVADOS.has(codigo.trim().toLowerCase());
+}
 
 // O domínio-base precisa ser CONFIGURAÇÃO, não palpite. Contar rótulos não
 // funciona: `useconnect.com.br` tem três e nenhum subdomínio, enquanto
@@ -49,6 +57,37 @@ export function baseDomain(): string | null {
 // variável e `bpo.` volta a valer, sem tocar em código.
 export function hostSuffix(): string {
   return process.env.SECTOR_HOST_SUFFIX?.trim().toLowerCase() ?? "";
+}
+
+// O sufixo de ANTES, depois que ele sai (05/10/2026: "teste", na troca para
+// `setor.useconnect.com.br`). Um host antigo que ainda chegar — favorito,
+// e-mail velho, app instalado — é redirecionado pelo proxy. Servido direto,
+// `bpoteste` viraria a dica de um setor "bpoteste" que não existe: quem tem
+// acesso total ficaria nele, e a Home e o Meu dia sairiam vazios.
+export function hostSuffixAntigo(): string {
+  return process.env.SECTOR_HOST_SUFFIX_ANTIGO?.trim().toLowerCase() ?? "";
+}
+
+/**
+ * O host novo de um endereço antigo (com o sufixo de antes), ou null quando o
+ * host não é um deles: `appteste.useconnect.com.br` → `app.useconnect.com.br`,
+ * `bpoteste.…` → `bpo.…`. Não faz nada enquanto o sufixo antigo for o atual.
+ */
+export function hostNovoDoAntigo(
+  host: string | null,
+  dominioBase: string | null,
+  sufixoAntigo: string,
+  sufixoAtual: string,
+): string | null {
+  if (!host || !dominioBase || !sufixoAntigo || sufixoAntigo === sufixoAtual) return null;
+  const semPorta = host.split(":")[0]!.toLowerCase();
+  const sufixoDominio = `.${dominioBase}`;
+  if (!semPorta.endsWith(sufixoDominio)) return null;
+  const prefixo = semPorta.slice(0, -sufixoDominio.length);
+  if (!prefixo || prefixo.includes(".") || !prefixo.endsWith(sufixoAntigo)) return null;
+  const nome = prefixo.slice(0, -sufixoAntigo.length);
+  if (!nome) return null;
+  return `${nome}${sufixoAtual}.${dominioBase}`;
 }
 
 // Código de setor tem o mesmo formato em `sectors.code` (VarChar(40)).

@@ -832,7 +832,7 @@ export type SendComunicadoAoClienteEmailInput = {
   setor: string;
 };
 
-// Comunicado da 41 a vários clientes (01/10). O título vai no e-mail — é um
+// Comunicado do escritório a vários clientes (01/10). O título vai no e-mail — é um
 // aviso geral, escrito para muitos —, e o texto completo fica no portal, onde
 // a leitura é registrada.
 export async function sendComunicadoAoClienteEmail(input: SendComunicadoAoClienteEmailInput): Promise<ResultadoDoAviso> {
@@ -840,7 +840,8 @@ export async function sendComunicadoAoClienteEmail(input: SendComunicadoAoClient
   const url = `${baseUrl}/portal/comunicados/${input.comunicadoId}`;
   const mensagens = input.destinatarios.map((d) => ({
     to: d.email,
-    subject: `Comunicado da 41: ${input.titulo}`,
+    // Sem "da 41" (05/10/2026): o Connect atende outros escritórios, e o remetente já diz quem é.
+    subject: `Comunicado: ${input.titulo}`,
     html: emailShell(
       `
     <p class="email-text" style="font-size:14px; line-height:1.6; margin:0 0 16px; font-family:Arial,Helvetica,sans-serif;">

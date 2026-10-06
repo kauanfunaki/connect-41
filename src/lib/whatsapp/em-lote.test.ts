@@ -112,7 +112,8 @@ describe("agirEmLote", () => {
     });
     expect(segunda.data).toEqual({ assignedToId: "bia", assignedAt: expect.any(Date) });
     expect(notifyUser).toHaveBeenCalledTimes(1);
-    expect(notifyUser).toHaveBeenCalledWith("bia", { tenantId: "t1", type: "WHATSAPP_HANDOFF", message: "WhatsApp: Kauan passou 2 conversas para você" });
+    // Com quem passou, para a foto no sino (05/10/2026).
+    expect(notifyUser).toHaveBeenCalledWith("bia", { tenantId: "t1", type: "WHATSAPP_HANDOFF", message: "WhatsApp: Kauan passou 2 conversas para você", actorUserId: "eu" });
   });
 
   it("uma conversa só: o aviso leva a ela", async () => {
@@ -123,6 +124,7 @@ describe("agirEmLote", () => {
       type: "WHATSAPP_HANDOFF",
       message: "WhatsApp: Kauan passou para você a conversa com (41) 99999-0000",
       entityId: "c1",
+      actorUserId: "eu",
     });
   });
 

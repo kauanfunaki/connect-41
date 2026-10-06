@@ -82,7 +82,7 @@ export default async function PedidosAoClientePage({
     <PageContainer>
       <PageHeader
         title="Pedidos ao cliente"
-        subtitle="O que a 41 pede aos clientes — documento, informação ou confirmação —, de todos os seus setores. O cliente responde pelo portal e é lembrado se o prazo passar."
+        subtitle="O que o escritório pede aos clientes — documento, informação ou confirmação —, de todos os seus setores. O cliente responde pelo portal e é lembrado se o prazo passar."
         action={podePedirEm.length > 0 ? <NovaPendencia empresas={empresas} setores={podePedirEm} /> : undefined}
       />
 

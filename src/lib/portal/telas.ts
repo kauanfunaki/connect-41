@@ -22,8 +22,24 @@ export const SECOES_DO_PORTAL: readonly SecaoDoPortal[] = ["Financeiro", "Societ
 
 // Cada tela aparece só se o módulo que a sustenta está ligado no tenant. O
 // acervo fiscal não tem gate de módulo no portal desde que nasceu, e segue sem.
+//
+// O Início vem primeiro desde 05/10, em `/portal`; os documentos fiscais, que
+// moravam lá, ganharam `/portal/documentos`.
 export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
-  { href: "/portal", rotulo: "Documentos fiscais", modulo: null, secao: null, descricao: "Notas emitidas e recebidas pelas suas empresas." },
+  {
+    href: "/portal",
+    rotulo: "Início",
+    modulo: null,
+    secao: null,
+    descricao: "O que precisa de você e o resumo das suas empresas.",
+  },
+  {
+    href: "/portal/documentos",
+    rotulo: "Documentos fiscais",
+    modulo: null,
+    secao: null,
+    descricao: "Notas emitidas e recebidas pelas suas empresas.",
+  },
   { href: "/portal/dre", rotulo: "DRE", modulo: "bpo_dre", secao: "Financeiro", descricao: "Demonstrativo de resultado por empresa e mês." },
   {
     href: "/portal/fluxo-de-caixa",
@@ -61,21 +77,21 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     rotulo: "Solicitações",
     modulo: "portal_solicitacoes",
     secao: "Com a equipe",
-    descricao: "Peça documentos, alterações ou o que precisar da 41, com prazo de resposta.",
+    descricao: "Peça documentos, alterações ou o que precisar do escritório, com prazo de resposta.",
   },
   {
     href: "/portal/comunicados",
     rotulo: "Comunicados",
     modulo: "portal_solicitacoes",
     secao: "Com a equipe",
-    descricao: "Avisos da 41 para você: recesso, prazos, orientações.",
+    descricao: "Avisos do escritório para você: recesso, prazos, orientações.",
   },
   {
     href: "/portal/pendencias",
     rotulo: "Pendências",
     modulo: "bpo_pendencias",
     secao: "Com a equipe",
-    descricao: "O que a equipe da 41 precisa de você.",
+    descricao: "O que a equipe precisa de você.",
     // Desde 01/10 qualquer setor pede ao cliente, com o canal do portal ligado.
     ouCom: "portal_solicitacoes",
   },

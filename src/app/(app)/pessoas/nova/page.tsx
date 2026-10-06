@@ -42,7 +42,7 @@ export default async function NovaPessoaPage({
             href="/pessoas/nova?tipo=interno"
             icon={<Briefcase size={20} />}
             title="Funcionário interno"
-            description="Colaborador da 41, com vínculo empregatício: admissão, jornada, CTPS, folha e conta de acesso ao Connect."
+            description="Colaborador do escritório, com vínculo empregatício: admissão, jornada, CTPS, folha e conta de acesso ao Connect."
           />
           <TipoCard
             href="/pessoas/nova?tipo=cliente"

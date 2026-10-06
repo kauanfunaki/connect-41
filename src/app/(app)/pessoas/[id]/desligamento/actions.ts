@@ -6,6 +6,7 @@ import { TerminationType, TerminationStatus } from "@/generated/prisma/enums";
 import { getAuthContext } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
+import { DESLIGAMENTO_ENCERRADO } from "@/lib/situacoesDoDP";
 
 export type TerminationState = { error: string } | null;
 
@@ -36,6 +37,12 @@ export async function criarDesligamento(
   const notes = (form.get("notes") as string)?.trim() || null;
 
   const prisma = getPrisma();
+  // A mesma regra da tela (05/10/2026): um desligamento em andamento por vez;
+  // o finalizado e o cancelado não impedem o próximo.
+  const emAndamento = await prisma.termination.count({
+    where: { tenantId: ctx.tenantId, personId, status: { notIn: [...DESLIGAMENTO_ENCERRADO] } },
+  });
+  if (emAndamento > 0) return { error: "Já há um desligamento em andamento para esta pessoa." };
   try {
     await prisma.termination.create({
       data: { tenantId: ctx.tenantId, personId, type, reason, notes },

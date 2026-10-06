@@ -29,11 +29,20 @@ export type IconeDaNotificacao =
   | "dinheiro"
   | "processo"
   | "alerta"
-  | "sino";
+  | "sino"
+  // Só da tela (05/10/2026): a caixa das arquivadas na central.
+  | "arquivo";
 
 export type Tom = "brand" | "info" | "success" | "warning" | "danger" | "neutral";
 
-export type TipoNoCatalogo = { aba: Aba; icone: IconeDaNotificacao; tom: Tom; titulo: string };
+export type TipoNoCatalogo = {
+  aba: Aba;
+  icone: IconeDaNotificacao;
+  tom: Tom;
+  titulo: string;
+  /** Tipo que o código não grava mais: segue na lista, mas não entra nas preferências. */
+  legado?: true;
+};
 
 export const ABAS: { chave: AbaOuTodas; rotulo: string; descricao: string }[] = [
   { chave: "todas", rotulo: "Todas", descricao: "Tudo o que chegou para você." },
@@ -87,7 +96,11 @@ export const CATALOGO: Record<string, TipoNoCatalogo> = {
   FINANCE_CONTAS_DIA: a("dinheiro", "info", "Contas do dia"),
   PENDENCIAS_VENCIDAS: a("prazo", "danger", "Pendências vencidas"),
   ORCAMENTO_ESTOURADO: a("dinheiro", "danger", "Orçamento estourado"),
-  GESTAO_ALERTA: a("alerta", "warning", "Alerta da Gestão"),
+  // Até 05/10/2026 os dois saíam como GESTAO_ALERTA; separados para dar para
+  // desligar o "parado" sem perder o prazo. O antigo fica para as já gravadas.
+  GESTAO_PARADO: a("alerta", "warning", "Parado sem movimentação"),
+  GESTAO_PRAZO: a("prazo", "warning", "Prazo de card ou processo"),
+  GESTAO_ALERTA: { ...a("alerta", "warning", "Alerta da Gestão"), legado: true },
   OBLIGATION_GENERATED: a("documento", "info", "Obrigação gerada"),
   PROCESS_AVISO_JUNTA: a("processo", "info", "Aviso da Junta"),
   AVISO_ORGAO_SEM_PROCESSO: a("processo", "warning", "Aviso sem processo"),
@@ -102,12 +115,46 @@ export function doTipo(type: string): TipoNoCatalogo {
   return CATALOGO[type] ?? DESCONHECIDO;
 }
 
-/** Os tipos de uma aba. Alertas é o resto: o que não é das outras duas, inclusive tipo novo. */
-export function filtroDaAba(aba: AbaOuTodas): { in: string[] } | { notIn: string[] } | undefined {
-  if (aba === "todas") return undefined;
+/**
+ * Os tipos de uma aba. Alertas é o resto: o que não é das outras duas, inclusive tipo novo.
+ *
+ * `ocultos` (05/10/2026): os tipos que a pessoa desligou nas preferências —
+ * saem da aba deles e de "Todas". Só tipo do catálogo é ocultável (ver
+ * `ocultosValidos`), então tipo novo e desconhecido nunca some.
+ */
+export function filtroDaAba(aba: AbaOuTodas, ocultos: string[] = []): { in: string[] } | { notIn: string[] } | undefined {
   const tipos = (de: Aba) => Object.entries(CATALOGO).filter(([, v]) => v.aba === de).map(([k]) => k);
-  if (aba === "alertas") return { notIn: [...tipos("para_mim"), ...tipos("clientes")] };
-  return { in: tipos(aba) };
+  if (aba === "todas") return ocultos.length > 0 ? { notIn: ocultos } : undefined;
+  if (aba === "alertas") return { notIn: [...tipos("para_mim"), ...tipos("clientes"), ...ocultos] };
+  const escondidos = new Set(ocultos);
+  return { in: tipos(aba).filter((t) => !escondidos.has(t)) };
+}
+
+// ─── Preferências: o que cada aba mostra (05/10/2026) ──────────────────────
+//
+// Padrão = tudo ligado; a pessoa desliga tipo a tipo. O tipo desligado não
+// aparece no sino nem nas abas e não manda push, mas continua gravado — religar
+// mostra o histórico — e a tela sempre avisa quantos estão ocultos.
+
+/** Os tipos que a pessoa pode desligar, por aba, na ordem do catálogo. O legado fica fora. */
+export function tiposConfiguraveis(): { aba: Aba; rotulo: string; tipos: (TipoNoCatalogo & { tipo: string })[] }[] {
+  return ABAS.filter((x): x is (typeof ABAS)[number] & { chave: Aba } => x.chave !== "todas").map((x) => ({
+    aba: x.chave,
+    rotulo: x.rotulo,
+    tipos: Object.entries(CATALOGO)
+      .filter(([, v]) => v.aba === x.chave && !v.legado)
+      .map(([tipo, v]) => ({ ...v, tipo })),
+  }));
+}
+
+/** Só tipo do catálogo, sem legado e sem repetição — o que vier de fora disso é ignorado. */
+export function ocultosValidos(tipos: unknown): string[] {
+  if (!Array.isArray(tipos)) return [];
+  const validos = new Set<string>();
+  for (const t of tipos) {
+    if (typeof t === "string" && CATALOGO[t] && !CATALOGO[t].legado) validos.add(t);
+  }
+  return [...validos];
 }
 
 export function ehAba(v: string | undefined | null): v is AbaOuTodas {

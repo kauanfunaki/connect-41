@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
-import { ChevronRight, UserRound, ShieldCheck, KeyRound, Palette, Bell, Settings2 } from "lucide-react";
+import { ChevronRight, UserRound, ShieldCheck, KeyRound, Palette, Bell, Settings2, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -14,7 +14,10 @@ import { TemaSelector } from "@/components/configuracoes/TemaSelector";
 import { PushNotificationToggle } from "@/components/notificacoes/PushNotificationToggle";
 import { salvarPushSubscription, removerPushSubscription } from "@/app/(app)/notificacoes/actions";
 import { getVapidPublicKey } from "@/lib/vapid";
-import { atualizarMeuPerfil, alterarMinhaSenha } from "./actions";
+import { ExpedienteForm } from "@/components/agenda/ExpedienteForm";
+import { EXPEDIENTE_PADRAO } from "@/lib/agendaExpediente";
+import { carregarExpedientes } from "@/lib/agendaExpedienteDb";
+import { atualizarMeuPerfil, alterarMinhaSenha, salvarMeuExpediente } from "./actions";
 
 // Configurações da conta do próprio usuário — o que antes era só um botão
 // desabilitado ("Em breve") no rodapé da sidebar pra quem não é admin. Nada
@@ -25,14 +28,16 @@ export default async function ConfiguracoesPage() {
   if (!ctx.userId) notFound();
 
   const prisma = getPrisma();
-  const [me, { labels: sectorLabels }] = await Promise.all([
+  const [me, { labels: sectorLabels }, expedientes] = await Promise.all([
     prisma.user.findFirst({
       where: { id: ctx.userId, tenantId: ctx.tenantId },
       select: { name: true, email: true, photoUrl: true },
     }),
     getSectorMaps(ctx.tenantId),
+    carregarExpedientes(ctx.tenantId, ctx.userId),
   ]);
   if (!me) notFound();
+  const doEscritorio = expedientes.escritorio ?? EXPEDIENTE_PADRAO;
 
   const roleLabel = ROLE_LABELS[ctx.role as keyof typeof ROLE_LABELS] ?? ctx.role;
 
@@ -77,6 +82,16 @@ export default async function ConfiguracoesPage() {
         <TemaSelector />
       </Secao>
 
+      {/* 05/10/2026: quem trabalha à noite ou de madrugada não via as
+          próprias reuniões na grade fixa das 7h às 21h. */}
+      <Secao titulo="Agenda" descricao="As horas que a grade de dia e de semana da Agenda mostra para você." icone={<CalendarClock />}>
+        <ExpedienteForm
+          action={salvarMeuExpediente}
+          valor={expedientes.pessoa ?? doEscritorio}
+          doEscritorio={{ expediente: doEscritorio, seguindo: expedientes.pessoa === null }}
+        />
+      </Secao>
+
       <Secao titulo="Notificações" descricao="Avisos no celular e no navegador, e o histórico do que chegou." icone={<Bell />}>
         <PushNotificationToggle
           publicKey={getVapidPublicKey()}
@@ -87,6 +102,14 @@ export default async function ConfiguracoesPage() {
           className="group flex items-center justify-between gap-2 bg-surface-hover border border-border rounded-lg px-3.5 py-2.5 hover:border-border-strong transition-colors"
         >
           <span className="text-[13px] text-fg">Ver todas as notificações</span>
+          <ChevronRight size={16} className="text-fg-muted group-hover:text-fg transition-colors" />
+        </Link>
+        {/* 05/10/2026: os tipos que aparecem em cada aba do sino e da central. */}
+        <Link
+          href="/notificacoes?preferencias=abrir"
+          className="group flex items-center justify-between gap-2 bg-surface-hover border border-border rounded-lg px-3.5 py-2.5 hover:border-border-strong transition-colors"
+        >
+          <span className="text-[13px] text-fg">Escolher o que cada aba mostra</span>
           <ChevronRight size={16} className="text-fg-muted group-hover:text-fg transition-colors" />
         </Link>
       </Secao>

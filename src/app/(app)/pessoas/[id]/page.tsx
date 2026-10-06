@@ -206,7 +206,7 @@ export default async function PessoaPage({
   const overviewContent = (
     <div className="space-y-4">
       {person.employmentStatus === "ADMISSAO_EM_ANDAMENTO" && (
-        <AdmissaoCard personId={id} initialLink={initialAdmissaoLink} canManage={canEdit} />
+        <AdmissaoCard personId={id} initialLink={initialAdmissaoLink} canManage={canEdit} urlPublica={(process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "")} />
       )}
 
       <Card className="p-5">
