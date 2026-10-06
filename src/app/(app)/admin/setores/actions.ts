@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
+import { ehHostReservado } from "@/lib/auth/activeSector";
 
 export type SetorState = { error: string } | null;
 
@@ -34,6 +35,9 @@ export async function criarSetor(
 
   const code = slugify(label);
   if (!code) return { error: "Não foi possível gerar um código a partir desse nome." };
+  // O código vira endereço (`<código>.useconnect.com.br`): nomes do sistema,
+  // como app e portal, não podem ser setor (05/10/2026).
+  if (ehHostReservado(code)) return { error: `"${label}" é um nome reservado para endereços do sistema. Escolha outro nome.` };
 
   const prisma = getPrisma();
 
