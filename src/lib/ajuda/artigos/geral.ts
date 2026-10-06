@@ -479,6 +479,47 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     ],
   },
 
+  // ─── Leads (Comercial, 05/10/2026) ─────────────────────────────────────────
+  {
+    chave: "comercial_leads",
+    titulo: "Leads",
+    caminhos: ["/leads"],
+    resumo:
+      "Quem quer ser cliente do escritório. Hoje os leads chegam pela ficha “Quero ser cliente” do login do portal, e o setor é avisado no sino.",
+    secoes: [
+      {
+        titulo: "Como ver os leads que chegaram",
+        passos: [
+          "Entre no setor e abra “Leads” na barra lateral — ou clique no aviso “Novo lead” do sino, que abre o lead direto.",
+          "A lista abre nos leads em aberto: os novos e os que estão em contato.",
+          "Para ver os outros, clique em “Filtros” e escolha em “Situação”: “Viraram cliente”, “Descartados” ou “Todos”. Em “Responsável”, “Comigo” mostra só os seus.",
+          "Clique na linha para abrir o lead.",
+        ],
+      },
+      {
+        titulo: "Como acompanhar um lead",
+        passos: [
+          "No lead, confira o contato: o e-mail abre o programa de e-mail, e “abrir no WhatsApp” abre a conversa com o número informado.",
+          "Em “Acompanhamento”, escolha o responsável e mude a situação para “Em contato” quando falar com a pessoa.",
+          "Escreva em “Observações” o que foi conversado e o que ficou combinado. Só a equipe vê.",
+          "Clique em “Salvar”. Quando a pessoa fechar, mude para “Virou cliente”; quando não houver negócio, para “Descartado”.",
+        ],
+      },
+      {
+        titulo: "Como apagar os dados de um lead",
+        passos: [
+          "Use só quando a pessoa pedir para apagar os dados dela. Para tirar da fila, basta mudar a situação para “Descartado”.",
+          "No lead, clique em “Excluir” e confirme em “Excluir de vez”. O lead e os avisos do sino sobre ele somem e não voltam.",
+        ],
+      },
+    ],
+    dicas: [
+      "Quando chega um lead, todo mundo do setor é avisado no sino. Se o setor não tem ninguém, os administradores do escritório é que são avisados.",
+      "Mudar a situação, o responsável e as observações fica na auditoria do escritório.",
+      "“Excluir” aparece para o coordenador do setor e para os administradores.",
+    ],
+  },
+
   // ─── Painel de Gestão ──────────────────────────────────────────────────────
   {
     chave: "gestao_painel",

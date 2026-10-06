@@ -28,8 +28,11 @@ export function verifyAccess(token: string): AccessTokenPayload {
   return payload;
 }
 
-/** Sessão do portal — vida mais longa que a interna: o cliente entra pouco e não tem refresh. */
-export function signPortalAccess(payload: PortalAccessTokenPayload, ttl?: string): string {
+/**
+ * Sessão do portal — vida mais longa que a interna: o cliente entra pouco e não tem refresh.
+ * `ttl` em segundos ou no formato do jsonwebtoken ("12h"); com "lembrar de mim", 30 dias (ver sessaoDoPortal.ts).
+ */
+export function signPortalAccess(payload: PortalAccessTokenPayload, ttl?: string | number): string {
   return jwt.sign(payload, env("JWT_ACCESS_SECRET"), {
     expiresIn: (ttl ?? process.env["PORTAL_ACCESS_TTL"] ?? "12h") as jwt.SignOptions["expiresIn"],
   });
