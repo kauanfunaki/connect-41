@@ -10,7 +10,7 @@
 // real não pode aparecer nele. Os dados vêm de scripts/local/recriar-banco.mjs.
 
 import { chromium, type Browser, type BrowserContext, type Locator, type Page } from "playwright";
-import { mkdirSync, rmSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 export const BASE = (process.env.APP_PUBLIC_URL ?? "http://localhost:3100").replace(/\/$/, "");
@@ -64,6 +64,7 @@ function camadaVisual() {
         box-shadow: 0 12px 40px rgba(13, 27, 62, .35); opacity: 0; transition: opacity .35s ease, transform .35s ease;
         text-wrap: balance; }
       #gv-legenda.gv-visivel { opacity: 1; transform: translate(-50%, 0); }
+      #gv-legenda.gv-alto { bottom: auto; top: 40px; }
       #gv-cursor { position: absolute; left: 0; top: 0; width: 30px; height: 30px; margin: -3px 0 0 -5px;
         transition: left .7s cubic-bezier(.4, 0, .2, 1), top .7s cubic-bezier(.4, 0, .2, 1);
         filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .35)); }
@@ -107,12 +108,29 @@ function camadaVisual() {
     el("gv-cursor").style.left = `${x}px`;
     el("gv-cursor").style.top = `${y}px`;
   }
+  // A faixa vertical do anel da vez. A legenda fica embaixo, a não ser que
+  // cubra o que o anel aponta (um botão no pé da página, a última linha da
+  // tabela): aí ela sobe para o alto da tela — o lado que cobre menos.
+  let faixaDoAnel: { topo: number; base: number } | null = null;
+  function posicionarLegenda() {
+    const l = el("gv-legenda");
+    const h = window.innerHeight;
+    const faixa = 190;
+    let alto = false;
+    if (faixaDoAnel) {
+      const sobreBaixo = Math.max(0, Math.min(faixaDoAnel.base, h) - Math.max(faixaDoAnel.topo, h - faixa));
+      const sobreAlto = Math.max(0, Math.min(faixaDoAnel.base, faixa) - Math.max(faixaDoAnel.topo, 0));
+      alto = sobreBaixo > sobreAlto;
+    }
+    l.classList.toggle("gv-alto", alto);
+  }
   function mostrarLegenda(texto: string | null, animar = true) {
     const l = el("gv-legenda");
     if (!texto) {
       l.classList.remove("gv-visivel");
       return;
     }
+    posicionarLegenda();
     l.textContent = texto;
     if (!animar) l.style.transition = "none";
     l.classList.add("gv-visivel");
@@ -144,8 +162,11 @@ function camadaVisual() {
       const a = el("gv-anel");
       if (!r) {
         a.classList.remove("gv-visivel");
+        faixaDoAnel = null;
         return;
       }
+      faixaDoAnel = { topo: r.y, base: r.y + r.height };
+      if (el("gv-legenda").classList.contains("gv-visivel")) posicionarLegenda();
       // Rente à borda da tela (o menu lateral), o anel sairia cortado: encosta
       // nele por dentro.
       const folga = 6;
@@ -182,6 +203,13 @@ const SHIM_DO_TSX = "globalThis.__name = globalThis.__name || ((f) => f);";
 
 // ─── O roteiro ──────────────────────────────────────────────────────────────
 
+/**
+ * `RASCUNHO=1` corre o roteiro a um décimo das pausas: serve para acertar os
+ * passos de um roteiro novo sem esperar o vídeo inteiro. O vídeo que sai assim
+ * não vale para publicar.
+ */
+const RITMO = process.env.RASCUNHO ? 0.1 : 1;
+
 /** Tempo de leitura de uma legenda: ~14 caracteres por segundo, com piso. */
 function tempoDeLeitura(texto: string) {
   return Math.max(2600, texto.length * 72) + 500;
@@ -207,7 +235,7 @@ export class Roteiro {
   }
 
   async pausa(ms: number) {
-    await this.page.waitForTimeout(ms);
+    await this.page.waitForTimeout(ms * RITMO);
   }
 
   /** Abre a tela e espera ela assentar antes de seguir. */
@@ -327,6 +355,26 @@ export class Roteiro {
     await this.pausa(900);
   }
 
+  /** Volta ao alto da página, devagar — e espera chegar lá. */
+  async topo() {
+    await this.page.evaluate(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+    await this.page.waitForFunction(() => window.scrollY === 0, null, { timeout: 4000 }).catch(() => {});
+    await this.pausa(400);
+  }
+
+  /**
+   * Os seletores com busca (empresa, colaborador, candidato…): clica no campo,
+   * digita parte do nome e escolhe a opção.
+   */
+  async escolher(campo: Locator, busca: string, opcao: Locator, legenda?: string) {
+    await this.clicar(campo, legenda);
+    if (busca) {
+      await this.page.keyboard.type(busca, { delay: 60 });
+      await this.pausa(700);
+    }
+    await this.clicar(opcao);
+  }
+
   async foto() {
     this.fotos += 1;
     await this.page.screenshot({ path: path.join(this.pastaDeFotos, `${String(this.fotos).padStart(2, "0")}.png`) });
@@ -341,6 +389,12 @@ export type DefinicaoDeVideo = {
   titulo: string;
   /** Uma frase sobre o que o vídeo ensina — vai no cartaz de abertura. */
   resumo: string;
+  /**
+   * A chave da ajuda que o vídeo explica, a de `src/lib/ajuda/videos.ts`: o
+   * passo do portal, o artigo do Connect ou o primeiro passo da central. Vai na
+   * lista de publicação (`videos/LISTA.md`).
+   */
+  chave: string;
   /** Precisa começar logado? (o de "entrar no portal" não.) */
   logado: boolean;
   executar: (r: Roteiro) => Promise<void>;
@@ -354,15 +408,22 @@ export async function abrirNavegador(): Promise<Browser> {
 /** Faz o login uma vez, fora da gravação, e devolve o estado da sessão. */
 export async function sessaoLogada(
   browser: Browser,
-  login: { url: string; email: string; senha: string; destino: RegExp },
+  login: {
+    url: string;
+    email: string;
+    senha: string;
+    destino: RegExp;
+    /** O campo da senha: `#senha` no portal, `#password` na entrada da equipe. */
+    campoSenha?: string;
+  },
   arquivo: string
 ) {
   const ctx = await browser.newContext({ viewport: TAMANHO, locale: "pt-BR", timezoneId: "America/Sao_Paulo" });
   const page = await ctx.newPage();
   await page.goto(BASE + login.url, { waitUntil: "domcontentloaded", timeout: 60000 });
   await page.locator("#email").fill(login.email);
-  await page.locator("#senha").fill(login.senha);
-  await page.getByRole("button", { name: "Entrar" }).click();
+  await page.locator(login.campoSenha ?? "#senha").fill(login.senha);
+  await page.getByRole("button", { name: "Entrar", exact: true }).click();
   await page.waitForURL(login.destino, { timeout: 30000 });
   await ctx.storageState({ path: arquivo });
   await ctx.close();
@@ -390,6 +451,17 @@ export async function gravar(
   await ctx.addInitScript({ content: SHIM_DO_TSX });
   await ctx.addInitScript(camadaVisual);
   const page = await ctx.newPage();
+  // Erro de tela não pode passar para o YouTube calado: o que o navegador ou o
+  // servidor acusarem durante a gravação vai para `_conferencia/<vídeo>/avisos.txt`.
+  const avisos: string[] = [];
+  page.on("pageerror", (e) => avisos.push(`erro na página: ${String(e).split("\n")[0]}`));
+  page.on("console", (m) => {
+    if (m.type() === "error") avisos.push(`console: ${m.text().split("\n")[0]}`);
+  });
+  page.on("response", (resp) => {
+    if (resp.status() >= 500) avisos.push(`HTTP ${resp.status()}: ${new URL(resp.url()).pathname}`);
+  });
+  const inicio = Date.now();
   const roteiro = new Roteiro(page, fotos);
   let erro: unknown = null;
   try {
@@ -399,9 +471,21 @@ export async function gravar(
     await page.screenshot({ path: path.join(fotos, "ERRO.png") }).catch(() => {});
   }
   await ctx.close();
+  // O vídeo começa com a página e termina com o contexto: é a duração dele.
+  const segundos = Math.round((Date.now() - inicio) / 1000);
+  if (avisos.length) writeFileSync(path.join(fotos, "avisos.txt"), avisos.join("\n") + "\n");
   const destino = path.join(opcoes.pastaDeSaida, `${video.arquivo}.webm`);
   if (!erro) await page.video()?.saveAs(destino);
   rmSync(temporaria, { recursive: true, force: true });
   if (erro) throw erro;
-  return destino;
+  return { destino, segundos, avisos };
+}
+
+/**
+ * A faixa de anexo (`FileDropzoneField`) dentro de um trecho da tela. O
+ * `getByRole("button", { name: /^Anexos/ })` acha o input escondido (1 px), e
+ * o anel sairia um ponto no canto: o que a pessoa vê e clica é o rótulo.
+ */
+export function zonaDeAnexo(escopo: Locator) {
+  return escopo.locator("label").filter({ hasText: /Escolher arquivo|clique para escolher/ }).first();
 }

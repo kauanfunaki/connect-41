@@ -12,15 +12,25 @@
 // - uma segunda empresa no grupo [demo], para o vídeo de trocar de empresa;
 // - um comunicado de exemplo para o cliente [demo];
 // - notas fiscais fictícias, para a home do portal não abrir vazia;
-// - nomes de vitrine: o administrador local vira "Camila Duarte" (fictícia — o
-//   seed usa o nome do Kauan, que apareceria nos vídeos como autor das
-//   pendências), as pendências ganham descrição de verdade e a marca "[demo]"
-//   sai de todo texto do banco. A marca existe para a faxina da demonstração em
-//   produção; no banco local, que é recriado inteiro, ela só sujaria o vídeo.
+// - os módulos que nascem desligados e têm vídeo (DRE, Documentos Fiscais,
+//   Certificados…), ligados para as telas da equipe (06/10/2026);
+// - o SMTP do escritório apontado para a caixa de e-mail local
+//   (`caixa-de-email.ts`), para as telas não acusarem "SMTP não configurado";
+// - uma conta a pagar e uma a receber a conferir (o botão "Conferir" só
+//   aparece nelas), a primeira ligada à NF-e 58712;
+// - nomes de vitrine: o administrador local vira "Camila Duarte" e o cliente do
+//   portal, "Rafael Nogueira" (fictícios — o seed usa o nome do Kauan, que
+//   apareceria nos vídeos como autor das pendências, e o Início do portal
+//   cumprimenta pelo primeiro nome), as pendências ganham descrição de verdade
+//   e a marca "[demo]" sai de todo texto do banco. A marca existe para a faxina
+//   da demonstração em produção; no banco local, que é recriado inteiro, ela só
+//   sujaria o vídeo.
 
 import { getPrisma } from "../../src/lib/prisma";
 import { hashPassword } from "../../src/lib/auth/password";
 import { DEFAULT_SECTORS } from "../../src/lib/sector-constants";
+import { encryptSecret } from "../../src/lib/crypto";
+import { PORTA_DO_EMAIL_LOCAL } from "./caixa-de-email";
 
 const MARCA = "[demo]";
 
@@ -135,8 +145,67 @@ async function main() {
     console.log("notas fiscais fictícias criadas");
   }
 
+  // ── Contas a conferir (06/10/2026) ────────────────────────────────────────
+  // O botão "Conferir" só aparece em conta provisória, e a demonstração nasce
+  // toda conferida. O abastecimento quinzenal é a NF-e 58712 (mesmo posto,
+  // mesmo valor): ligado à nota, ele ganha também o "Ver nota fiscal".
+  const nota58712 = await p.fiscalDocument.findFirst({ where: { tenantId, dedupKey: "LOCAL:NFE:58712" }, select: { id: true } });
+  if (nota58712 && !(await p.financeEntry.findFirst({ where: { tenantId, fiscalDocumentId: nota58712.id } }))) {
+    await p.financeEntry.updateMany({
+      where: { tenantId, description: "Abastecimento quinzenal", status: "CONFERIDO" },
+      data: { status: "PROVISORIO", fiscalDocumentId: nota58712.id },
+    });
+  }
+  await p.financeEntry.updateMany({
+    where: { tenantId, description: "Frete Curitiba — setembro", status: "CONFERIDO" },
+    data: { status: "PROVISORIO" },
+  });
+
+  // ── Módulos dos vídeos da equipe (06/10/2026) ─────────────────────────────
+  // Estes nascem desligados no catálogo (`defaultEnabled: false`), e cada um
+  // tem artigo de ajuda — e vídeo. Ligados só no banco local.
+  const modulosDosVideos = [
+    "bpo_dre",
+    "dre_economica",
+    "dre_analises",
+    "dre_orcamento",
+    "fiscal_documentos",
+    "tech_certificados",
+  ];
+  for (const moduleCode of modulosDosVideos) {
+    await p.tenantModule.upsert({
+      where: { tenantId_moduleCode: { tenantId, moduleCode } },
+      update: { enabled: true },
+      create: { tenantId, moduleCode, enabled: true },
+    });
+  }
+
+  // ── SMTP de mentira (06/10/2026) ──────────────────────────────────────────
+  // Sem SMTP, as telas que avisam o cliente dizem "E-mail não enviado: o SMTP
+  // deste workspace não está configurado" — aviso que não existe na produção e
+  // não pode aparecer nos vídeos. Aponta para a caixa local
+  // (`caixa-de-email.ts`), que o gravador abre enquanto grava. Nada sai da
+  // máquina; com a caixa fechada, o envio só falha.
+  await p.tenantSmtpConfig.upsert({
+    where: { tenantId },
+    update: {},
+    create: {
+      tenantId,
+      host: "127.0.0.1",
+      port: PORTA_DO_EMAIL_LOCAL,
+      secure: false,
+      username: "local",
+      passwordEnc: encryptSecret("local"),
+      fromName: "Escritório (local)",
+      fromEmail: "nao-responda@exemplo.invalido",
+    },
+  });
+
   // ── Nomes de vitrine ──────────────────────────────────────────────────────
   await p.user.updateMany({ where: { tenantId, email: "adm6@41bpo.com.br" }, data: { name: "Camila Duarte" } });
+  // O Início do portal cumprimenta pelo primeiro nome: "Bom dia, Cliente" não
+  // serve de vitrine. Pessoa fictícia, como a Camila.
+  await p.portalUser.update({ where: { id: cliente.id }, data: { name: "Rafael Nogueira" } });
   const descricoes: Record<string, string> = {
     "Enviar o extrato bancário de setembro":
       "Precisamos do extrato da conta movimento do Itaú, de 01/09 a 30/09, em PDF ou OFX, para conciliar o mês.",
