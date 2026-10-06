@@ -66,6 +66,13 @@
      com o validador do método de dataviz. */
   --c41-grafico-proximo: var(--c41-brand-500);
   --c41-grafico-neutro:  #958FA3;
+  /* Colunas (06/10, opção B "cor e volume"): degradê do 500 para o 700. A
+     coluna destacada ("esta semana") segue dois degraus mais clara — é o
+     "próximo" de antes, agora em degradê também. */
+  --c41-grafico-coluna-topo:          var(--c41-brand-500);
+  --c41-grafico-coluna-base:          var(--c41-brand-700);
+  --c41-grafico-coluna-destaque-topo: var(--c41-brand-300);
+  --c41-grafico-coluna-destaque-base: var(--c41-brand-500);
   --c41-focus-ring:      rgba(31,94,234,.35);
   --c41-selected-bg:     rgba(31,94,234,.08);
   --c41-disabled-op:     .45;
@@ -108,6 +115,11 @@
   --c41-info-bg:         rgba(91,159,227,.14);
   --c41-grafico-proximo: var(--c41-brand-400);
   --c41-grafico-neutro:  #6E6879;
+  /* No escuro um degrau acima: o 700 some no fundo (2,3:1). */
+  --c41-grafico-coluna-topo:          var(--c41-brand-400);
+  --c41-grafico-coluna-base:          var(--c41-brand-600);
+  --c41-grafico-coluna-destaque-topo: var(--c41-brand-200);
+  --c41-grafico-coluna-destaque-base: var(--c41-brand-400);
   --c41-focus-ring:      rgba(92,139,240,.45);
   --c41-selected-bg:     rgba(31,94,234,.22);
   --c41-disabled-op:     .42;
@@ -148,6 +160,10 @@
     --c41-info-bg:         rgba(91,159,227,.14);
     --c41-grafico-proximo: var(--c41-brand-400);
     --c41-grafico-neutro:  #6E6879;
+    --c41-grafico-coluna-topo:          var(--c41-brand-400);
+    --c41-grafico-coluna-base:          var(--c41-brand-600);
+    --c41-grafico-coluna-destaque-topo: var(--c41-brand-200);
+    --c41-grafico-coluna-destaque-base: var(--c41-brand-400);
     --c41-focus-ring:      rgba(92,139,240,.45);
     --c41-selected-bg:     rgba(31,94,234,.22);
     --c41-disabled-op:     .42;
