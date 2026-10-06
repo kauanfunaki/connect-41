@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowUpRight, ChevronRight, LifeBuoy, Lightbulb, PlayCircle } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ChevronRight, LifeBuoy, Lightbulb } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { VideoDoYouTube } from "@/components/ajuda/VideoDoYouTube";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { getTenantModuleStates } from "@/lib/modules";
 import { artigoDaChave, moduloDoArtigo } from "@/lib/ajuda/artigos";
+import { videoDoArtigo } from "@/lib/ajuda/videos";
+import { enderecoNoYouTube, idDoVideo } from "@/lib/ajuda/youtube";
 
 /**
  * O passo a passo de uma tela (02/10/2026) — o destino do "?" do topo quando
@@ -37,6 +40,8 @@ export default async function ArtigoDeAjudaPage({
   // "Voltar" leva à tela de onde a pessoa veio pelo "?" — só caminho interno.
   const voltarPara = de && de.startsWith("/") && !de.startsWith("//") ? de : null;
   const abrir = artigo.caminhos[0];
+  const video = videoDoArtigo(artigo.chave);
+  const idDoVideoDoArtigo = idDoVideo(video);
 
   return (
     <PageContainer>
@@ -61,23 +66,34 @@ export default async function ArtigoDeAjudaPage({
         title={artigo.titulo}
         subtitle={artigo.resumo}
         action={
-          <div className="flex flex-wrap items-center gap-2">
-            {artigo.video && (
-              <Button variant="secondary" href={artigo.video} target="_blank" rel="noreferrer">
-                <PlayCircle size={15} /> Assistir ao vídeo
-              </Button>
-            )}
-            {abrir && abrir !== voltarPara && (
-              <Button href={abrir}>
-                Abrir a tela <ArrowUpRight size={15} />
-              </Button>
-            )}
-          </div>
+          abrir && abrir !== voltarPara ? (
+            <Button href={abrir}>
+              Abrir a tela <ArrowUpRight size={15} />
+            </Button>
+          ) : undefined
         }
       />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px] items-start">
         <div className="flex flex-col gap-6 min-w-0">
+          {/* O vídeo toca aqui, no topo do passo a passo (05/10/2026) — antes
+              era um botão "Assistir ao vídeo" que levava para o YouTube. O
+              "Abrir no YouTube" fica para quem quer a tela cheia de lá. */}
+          {video && idDoVideoDoArtigo && (
+            <div className="flex flex-col gap-2 max-w-3xl">
+              <VideoDoYouTube link={video} titulo={artigo.titulo} />
+              <Button
+                variant="secondary"
+                size="xs"
+                href={enderecoNoYouTube(idDoVideoDoArtigo)}
+                target="_blank"
+                rel="noreferrer"
+                className="self-end"
+              >
+                Abrir no YouTube <ArrowUpRight size={13} />
+              </Button>
+            </div>
+          )}
           {artigo.secoes.map((s, i) => (
             <section key={s.titulo} aria-labelledby={`secao-${i}`} className="flex flex-col gap-3">
               <h2 id={`secao-${i}`} className="text-[length:var(--fs-section)] font-semibold text-fg">

@@ -205,6 +205,7 @@ export default async function CandidaturaScorecardPage({
           initialLink={initialTesteLink}
           canManage={canAct}
           templates={templates}
+          urlPublica={(process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "")}
         />
       </div>
 

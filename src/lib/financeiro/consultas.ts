@@ -79,6 +79,45 @@ export async function titulosEmAberto(e: EscopoFinanceiro): Promise<TituloComCon
   }));
 }
 
+export type SomaDeContas = { n: number; centavos: number };
+export type ContasPorJanela = Record<"PAGAR" | "RECEBER", { vencidas: SomaDeContas; proximas: SomaDeContas }>;
+
+/**
+ * Em aberto vencidas (antes de hoje) e as que vencem de hoje até `ateKey`,
+ * por tipo — os números do financeiro no Início do portal (05/10).
+ *
+ * Só somas, e não as linhas: `titulosEmAberto` traz até 5.000 títulos com a
+ * contraparte, e o Início não precisa de nenhum deles. Dois `groupBy` de até
+ * duas linhas cada, pelo índice `[tenantId, companyId, kind, status]`.
+ * "Em aberto" é o de `situacaoDaConta`: nem paga nem cancelada.
+ */
+export async function contasPorJanela(e: EscopoFinanceiro, hojeKey: string, depoisKey: string): Promise<ContasPorJanela> {
+  const prisma = getPrisma();
+  const emAberto: Prisma.FinanceEntryWhereInput = { ...whereDoEscopo(e), paidAt: null, status: { notIn: ["CANCELADO", "PAGO"] } };
+  const [vencidas, proximas] = await Promise.all([
+    prisma.financeEntry.groupBy({
+      by: ["kind"],
+      where: { ...emAberto, dueDate: { lt: inicioDeHoje(hojeKey) } },
+      _count: { _all: true },
+      _sum: { amount: true },
+    }),
+    prisma.financeEntry.groupBy({
+      by: ["kind"],
+      where: { ...emAberto, dueDate: { gte: inicioDeHoje(hojeKey), lt: inicioDeHoje(depoisKey) } },
+      _count: { _all: true },
+      _sum: { amount: true },
+    }),
+  ]);
+  const soma = (linhas: typeof vencidas, kind: "PAGAR" | "RECEBER"): SomaDeContas => {
+    const l = linhas.find((x) => x.kind === kind);
+    return { n: l?._count._all ?? 0, centavos: l?._sum.amount ? centavosDeDecimal(l._sum.amount) : 0 };
+  };
+  return {
+    PAGAR: { vencidas: soma(vencidas, "PAGAR"), proximas: soma(proximas, "PAGAR") },
+    RECEBER: { vencidas: soma(vencidas, "RECEBER"), proximas: soma(proximas, "RECEBER") },
+  };
+}
+
 /** As somas do mês e as vencidas por empresa, para `consolidarPorEmpresa`. */
 export async function dadosDoConsolidado(
   e: EscopoFinanceiro,

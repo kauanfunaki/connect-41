@@ -28,14 +28,15 @@ export default async function PortalSolicitacoesPage({
   if (!modulos.has("portal_solicitacoes")) notFound();
 
   const { recorte: pedido } = await searchParams;
-  const recorte = pedido === "encerradas" ? "encerradas" : "abertas";
+  // "Aguardando você" (05/10) é onde o Início leva quando a equipe espera o cliente.
+  const recorte = pedido === "encerradas" || pedido === "aguardando" ? pedido : "abertas";
   const linhas = await listarDoCliente({ tenantId: escopo.tenantId, companyIds: escopo.companyIds ?? [] }, recorte);
 
   return (
     <PageContainer>
       <PageHeader
         title="Solicitações"
-        subtitle="Peça documentos, alterações ou o que precisar da 41. Cada pedido tem número, prazo de resposta e a conversa com a equipe."
+        subtitle="Peça documentos, alterações ou o que precisar do escritório. Cada pedido tem número, prazo de resposta e a conversa com a equipe."
         action={
           <Button href="/portal/solicitacoes/nova">
             <Plus size={14} /> Nova solicitação
@@ -49,6 +50,7 @@ export default async function PortalSolicitacoesPage({
         className="mb-4"
         items={[
           { key: "abertas", label: "Em aberto", href: "/portal/solicitacoes" },
+          { key: "aguardando", label: "Aguardando você", href: "/portal/solicitacoes?recorte=aguardando" },
           { key: "encerradas", label: "Encerradas", href: "/portal/solicitacoes?recorte=encerradas" },
         ]}
       />
@@ -57,8 +59,14 @@ export default async function PortalSolicitacoesPage({
         <Card>
           <EmptyState
             icon={<Inbox />}
-            title={recorte === "abertas" ? "Nenhuma solicitação em aberto" : "Nenhuma solicitação encerrada"}
-            description={recorte === "abertas" ? "Precisa de algo da 41? Abra uma solicitação: a equipe certa recebe na hora." : undefined}
+            title={
+              recorte === "abertas"
+                ? "Nenhuma solicitação em aberto"
+                : recorte === "aguardando"
+                  ? "Nenhuma solicitação esperando você"
+                  : "Nenhuma solicitação encerrada"
+            }
+            description={recorte === "abertas" ? "Precisa de algo do escritório? Abra uma solicitação: a equipe certa recebe na hora." : undefined}
             action={
               recorte === "abertas" ? (
                 <Button href="/portal/solicitacoes/nova" variant="secondary">

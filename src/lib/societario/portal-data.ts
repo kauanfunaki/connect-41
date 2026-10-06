@@ -126,6 +126,42 @@ export async function processosDoPortal(
   return linhas.map((p) => resumo(p, agora, feriados));
 }
 
+/**
+ * Em andamento para o cliente: o "abertos" de /portal/processos (nem concluído
+ * nem encerrado pelo órgão ou cancelado), escrito como `where`.
+ */
+const EM_ANDAMENTO_NO_PORTAL = { concludedAt: null, status: { notIn: ["CANCELADO" as const, "INDEFERIDO" as const] } };
+
+/**
+ * Para o Início do portal (05/10): quantos estão em andamento e os mais
+ * recentes deles, na ordem da lista de /portal/processos. Um `count` e um
+ * `take` pequeno, em vez da lista inteira com etapas e protocolos.
+ */
+export async function processosEmAndamentoDoPortal(
+  tenantId: string,
+  companyIds: string[],
+  agora: Date,
+  feriados: Set<string>,
+  quantos = 3
+): Promise<{ total: number; recentes: ProcessoNoPortal[] }> {
+  if (companyIds.length === 0) return { total: 0, recentes: [] };
+  const prisma = getPrisma();
+  const where = { tenantId, companyId: { in: companyIds }, ...EM_ANDAMENTO_NO_PORTAL };
+  const [total, linhas] = await Promise.all([
+    prisma.process.count({ where }),
+    prisma.process.findMany({ where, select: selecaoBase, orderBy: { startedAt: "desc" }, take: quantos }) as Promise<Linha[]>,
+  ]);
+  return { total, recentes: linhas.map((p) => resumo(p, agora, feriados)) };
+}
+
+/** Parados esperando o cliente — o "Aguardando você" de /portal/processos. */
+export async function processosAguardandoCliente(tenantId: string, companyIds: string[]): Promise<number> {
+  if (companyIds.length === 0) return 0;
+  return getPrisma().process.count({
+    where: { tenantId, companyId: { in: companyIds }, concludedAt: null, status: "AGUARDANDO_CLIENTE" },
+  });
+}
+
 export type ExigenciaNoPortal = {
   id: string;
   descricao: string;

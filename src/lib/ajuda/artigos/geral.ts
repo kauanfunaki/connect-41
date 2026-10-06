@@ -15,7 +15,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como ler o Início",
         passos: [
-          "Clique no logo do Connect, no topo da barra lateral.",
+          "Clique em “Início”, no topo da barra lateral. O logo do Connect, acima do menu, também leva ao Início.",
           "No alto ficam os indicadores “Empresas ativas”, “Vencidos / hoje”, “Transferências” e “Pessoas cadastradas”. Clique em um deles para abrir a lista correspondente.",
           "Logo abaixo ficam os painéis com gráficos, como “Tarefas por prazo”, e os painéis dos setores que você enxerga.",
           "No bloco “Meu dia”, clique em um item para abrir a tarefa.",
@@ -58,7 +58,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como começar o dia pelo Meu dia",
         passos: [
-          "Clique em “Meu dia”, o primeiro item da barra lateral.",
+          "Clique em “Meu dia”, logo abaixo de “Início” na barra lateral.",
           "Confira os números do topo: “Atrasados”, “Vencem em breve”, “Parados”, “Em andamento” e “Feitos na semana”.",
           "Comece pela lista “Pede você agora”: ela traz o que está atrasado, vencendo ou parado, do mais urgente para o menos urgente.",
           "Clique no título de um item para abri-lo. O ícone e o rótulo dizem de onde ele vem (processo, card, pendência, transferência ou solicitação) e a bolinha colorida mostra o setor.",
@@ -276,8 +276,19 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Para cancelar, clique em “Excluir” e confirme.",
         ],
       },
+      {
+        titulo: "Como mudar o horário da grade",
+        passos: [
+          "Clique na sua foto, no alto da tela, e em “Configurações do Perfil”.",
+          "Em “Agenda”, escolha “Usar o do escritório” ou “Definir o meu”.",
+          "Para definir o seu, escolha o “Início” e o “Fim” e clique em “Salvar”. Um fim antes do início termina no dia seguinte — 22:00 às 6:00, por exemplo.",
+        ],
+      },
     ],
     dicas: [
+      "O horário padrão do escritório é definido por um administrador, em Administração → Empresa (Tenant).",
+      "Quando o horário passa da meia-noite, a madrugada aparece na coluna do dia anterior: uma reunião à 1:00 de terça fica na coluna de segunda. Os prazos continuam no dia do calendário.",
+      "Reunião fora do horário exibido não some: a grade avisa quantas ficaram de fora, e elas aparecem na visão de mês.",
       "Para agendar, conecte antes a sua conta Google ou Microsoft: a janela de nova reunião traz o link “Configurações → Integrações”.",
       "Se aparecer o aviso de conta expirada, clique em “Reconectar agora”. Sem isso, as reuniões novas ficam sem link.",
       "Só gestores de setor e administradores criam reuniões. Cada pessoa vê as reuniões que criou ou para as quais foi chamada.",
@@ -465,6 +476,47 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       "O vencimento é lido de dentro do certificado. Quando o mesmo CNPJ ou CPF ganha um certificado mais novo, o antigo vira “Substituído” e para de avisar.",
       "O setor recebe avisos 60, 30, 15 e 7 dias antes do vencimento e no próprio dia.",
       "O botão “Importar relatório” aparece para quem é do setor e para os administradores.",
+    ],
+  },
+
+  // ─── Leads (Comercial, 05/10/2026) ─────────────────────────────────────────
+  {
+    chave: "comercial_leads",
+    titulo: "Leads",
+    caminhos: ["/leads"],
+    resumo:
+      "Quem quer ser cliente do escritório. Hoje os leads chegam pela ficha “Quero ser cliente” do login do portal, e o setor é avisado no sino.",
+    secoes: [
+      {
+        titulo: "Como ver os leads que chegaram",
+        passos: [
+          "Entre no setor e abra “Leads” na barra lateral — ou clique no aviso “Novo lead” do sino, que abre o lead direto.",
+          "A lista abre nos leads em aberto: os novos e os que estão em contato.",
+          "Para ver os outros, clique em “Filtros” e escolha em “Situação”: “Viraram cliente”, “Descartados” ou “Todos”. Em “Responsável”, “Comigo” mostra só os seus.",
+          "Clique na linha para abrir o lead.",
+        ],
+      },
+      {
+        titulo: "Como acompanhar um lead",
+        passos: [
+          "No lead, confira o contato: o e-mail abre o programa de e-mail, e “abrir no WhatsApp” abre a conversa com o número informado.",
+          "Em “Acompanhamento”, escolha o responsável e mude a situação para “Em contato” quando falar com a pessoa.",
+          "Escreva em “Observações” o que foi conversado e o que ficou combinado. Só a equipe vê.",
+          "Clique em “Salvar”. Quando a pessoa fechar, mude para “Virou cliente”; quando não houver negócio, para “Descartado”.",
+        ],
+      },
+      {
+        titulo: "Como apagar os dados de um lead",
+        passos: [
+          "Use só quando a pessoa pedir para apagar os dados dela. Para tirar da fila, basta mudar a situação para “Descartado”.",
+          "No lead, clique em “Excluir” e confirme em “Excluir de vez”. O lead e os avisos do sino sobre ele somem e não voltam.",
+        ],
+      },
+    ],
+    dicas: [
+      "Quando chega um lead, todo mundo do setor é avisado no sino. Se o setor não tem ninguém, os administradores do escritório é que são avisados.",
+      "Mudar a situação, o responsável e as observações fica na auditoria do escritório.",
+      "“Excluir” aparece para o coordenador do setor e para os administradores.",
     ],
   },
 

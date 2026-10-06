@@ -7,6 +7,7 @@ import { getPrisma } from "@/lib/prisma";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { formatCalendarDate } from "@/lib/format";
+import { AFASTAMENTO_ENCERRADO } from "@/lib/situacoesDoDP";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
@@ -26,8 +27,10 @@ export default async function AfastamentosPage() {
   const prisma = getPrisma();
   const canViewMedical = await canViewSensitiveField(ctx, "DADOS_MEDICOS");
 
+  // Tudo o que não fechou (05/10/2026): a lista de "ativos" esquecia o
+  // Lançado, e o afastamento recém-lançado sumia daqui.
   const absences = await prisma.absence.findMany({
-    where: { tenantId: ctx.tenantId, status: { in: ["AFASTADO", "RETORNO_PREVISTO", "EM_ANALISE"] } },
+    where: { tenantId: ctx.tenantId, status: { notIn: [...AFASTAMENTO_ENCERRADO] } },
     orderBy: { returnDate: "asc" },
     include: { person: { select: { id: true, name: true } } },
   });

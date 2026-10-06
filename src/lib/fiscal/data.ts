@@ -151,6 +151,15 @@ export async function listarDocumentos(
   };
 }
 
+/**
+ * Só o número, sem a lista — o atalho de documentos do Início do portal
+ * (05/10). Com o mesmo teto da lista: o Início é a primeira tela depois do
+ * login, e foi a contagem sem teto que levou o portal a 2 minutos em 18/09.
+ */
+export async function contarDocumentos(alcance: AlcanceFiscal, filtro: FiltroDoAcervo = {}): Promise<Contagem> {
+  return contar(whereDoFiltro(alcance, filtro));
+}
+
 /** Conta até o teto — ver `TETO_DA_CONTAGEM`. */
 async function contar(where: Prisma.FiscalDocumentWhereInput): Promise<Contagem> {
   const prisma = getPrisma();

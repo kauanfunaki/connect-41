@@ -24,6 +24,8 @@ export type ManualDocumentData = { id: string; title: string; icon: string | nul
 type Props = {
   canAct: boolean;
   canDelete: boolean;
+  /** O setor que opera o módulo neste escritório — nem sempre o BPO (05/10/2026). */
+  setorRotulo: string;
   documents: ManualDocumentData[];
   createDocumentAction: (title: string) => Promise<{ error: string } | { id: string }>;
   renameDocumentAction: (documentId: string, title: string) => Promise<void>;
@@ -368,7 +370,7 @@ function PageCanvas({
 // diferente do modelo anterior de uma lista única de páginas onde só dava
 // pra adicionar mais conteúdo, nunca começar um segundo documento.
 export function ManualWorkspace({
-  canAct, canDelete, documents, createDocumentAction, renameDocumentAction, deleteDocumentAction, updateDocumentIconAction,
+  canAct, canDelete, setorRotulo, documents, createDocumentAction, renameDocumentAction, deleteDocumentAction, updateDocumentIconAction,
   createPageAction, updatePageAction, deletePageAction,
 }: Props) {
   const firstDoc = documents[0];
@@ -470,7 +472,7 @@ export function ManualWorkspace({
   if (documents.length === 0 && !canAct) {
     return (
       <Card>
-        <EmptyState icon={<FileText />} title="Nenhum documento ainda" description="Peça ao coordenador do BPO pra criar o primeiro documento do manual." />
+        <EmptyState icon={<FileText />} title="Nenhum documento ainda" description={`Peça à coordenação do setor ${setorRotulo} pra criar o primeiro documento do manual.`} />
       </Card>
     );
   }

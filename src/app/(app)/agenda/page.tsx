@@ -10,11 +10,12 @@ import { AgendaCalendar } from "@/components/agenda/AgendaCalendar";
 import { criarReuniaoAvulsa, editarReuniaoAvulsa, excluirReuniaoAvulsa } from "./actions";
 import {
   saoPauloParts,
-  saoPauloDateTimeToUtc,
   agendaDayKeys,
   parseAgendaView,
   parseAgendaDate,
 } from "@/lib/agenda";
+import { intervaloDaBusca } from "@/lib/agendaExpediente";
+import { carregarExpedientes } from "@/lib/agendaExpedienteDb";
 import { prazosDoPeriodo } from "@/lib/prazosDaAgenda";
 import { getSectorMaps } from "@/lib/sectors";
 
@@ -53,15 +54,17 @@ export default async function AgendaPage({
   const dateKey = parseAgendaDate(dateRaw);
   const days = agendaDayKeys(view, dateKey);
   const todayKey = saoPauloParts(new Date()).dateKey;
-  const rangeStart = saoPauloDateTimeToUtc(days[0], 0, 0);
-  const rangeEnd = saoPauloDateTimeToUtc(days[days.length - 1], 23, 59);
+  // Expediente (05/10): o horário da grade de dia/semana. Vem antes da busca
+  // porque, passando da meia-noite, a coluna do último dia entra no seguinte.
+  const { efetivo: expediente } = await carregarExpedientes(ctx.tenantId, ctx.userId);
+  const busca = intervaloDaBusca(expediente, days[0], days[days.length - 1]);
 
   const prisma = getPrisma();
   const [meetingsRaw, oauthAccounts, allUsers, companies, prazos, { labels, colors }] = await Promise.all([
     prisma.meeting.findMany({
       where: {
         tenantId: ctx.tenantId,
-        startAt: { gte: rangeStart, lte: rangeEnd },
+        startAt: { gte: busca.inicio, lt: busca.fim },
         OR: [{ createdByUserId: ctx.userId }, { attendees: { some: { userId: ctx.userId } } }],
       },
       orderBy: { startAt: "asc" },
@@ -176,6 +179,7 @@ export default async function AgendaPage({
           prazos={prazos}
           setores={setores}
           podeAgendar={podeAgendar}
+          expediente={expediente}
         />
       </div>
     </PageContainer>

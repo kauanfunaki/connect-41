@@ -643,11 +643,14 @@ async function checkItensDaGestao(tenantId: string, today: Date): Promise<number
 
   for (const { item, c } of itens) {
     if (item.origem === "TRANSFERENCIA") continue;
-    const avisos: { chave: string; mensagem: string }[] = [];
+    // Um tipo para cada (05/10/2026): a pessoa pode desligar o "parado" e
+    // manter o prazo. Até aqui os dois saíam como GESTAO_ALERTA.
+    const avisos: { chave: string; mensagem: string; tipo: "GESTAO_PARADO" | "GESTAO_PRAZO" }[] = [];
     if (c.parado !== null) {
       avisos.push({
         chave: `GESTAO_PARADO:${item.origem}:${item.id}:${item.ultimaMovimentacao.toISOString().slice(0, 10)}`,
         mensagem: `Parado há ${c.parado} dias, sem nenhuma movimentação: ${item.titulo}`,
+        tipo: "GESTAO_PARADO",
       });
     }
     // Pendência espera o cliente; a solicitação tem o aviso de prazo próprio
@@ -661,11 +664,12 @@ async function checkItensDaGestao(tenantId: string, today: Date): Promise<number
             : c.prazo.dias === 0
               ? `Prazo vence hoje: ${item.titulo}`
               : `Prazo vence em ${c.prazo.dias} ${c.prazo.dias === 1 ? "dia" : "dias"}: ${item.titulo}`,
+        tipo: "GESTAO_PRAZO",
       });
     }
     for (const aviso of avisos) {
       if (!(await reservarPorChave(tenantId, aviso.chave, today))) continue;
-      const input = { tenantId, type: "GESTAO_ALERTA", message: aviso.mensagem.slice(0, 480) };
+      const input = { tenantId, type: aviso.tipo, message: aviso.mensagem.slice(0, 480) };
       let destino = item.responsaveis;
       if (destino.length === 0) {
         if (!coordenadores.has(item.setor)) coordenadores.set(item.setor, await coordenadoresDoSetor(tenantId, item.setor));
