@@ -7,16 +7,17 @@ import { Button } from "@/components/ui/Button";
 // app Android (TWA) que embrulha o portal, e ela precisa abrir sem login: o
 // revisor da loja e quem ainda não é cliente leem antes de entrar.
 //
-// O texto descreve o que o código faz de verdade — cookie de sessão de 12 h,
-// sem rastreador de terceiros, push sem conteúdo, arquivos só por rota
-// autenticada. Mudou o comportamento, muda aqui e a data de atualização.
+// O texto descreve o que o código faz de verdade — cookie de sessão de 12 h (30
+// dias com "lembrar de mim", desde 05/10/2026), entrar com o Google sem guardar
+// nada do Google, sem rastreador de terceiros, push sem conteúdo, arquivos só
+// por rota autenticada. Mudou o comportamento, muda aqui e a data de atualização.
 
 export const metadata: Metadata = {
   title: "Política de Privacidade · Portal 41",
   description: "Como o Portal do Cliente da 41 trata os seus dados.",
 };
 
-const ATUALIZADA_EM = "25 de setembro de 2026";
+const ATUALIZADA_EM = "5 de outubro de 2026";
 const CONTATO = "marcos@41contabil.com.br";
 
 function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
@@ -55,7 +56,10 @@ export default function PoliticaDePrivacidadePage() {
           <ul className="list-disc pl-5 flex flex-col gap-1">
             <li>
               <strong>Dados de acesso:</strong> nome, e-mail e senha do usuário do portal. A senha é guardada apenas de
-              forma cifrada (hash) e nunca pode ser lida por ninguém.
+              forma cifrada (hash) e nunca pode ser lida por ninguém. Se você entrar com o Google, o Google nos confirma o
+              seu e-mail (e informa o seu nome), e usamos o e-mail só para encontrar o acesso que o escritório criou para
+              você. Não recebemos a sua senha do Google, não guardamos nada da sua conta Google e não temos acesso a mais
+              nada dela.
             </li>
             <li>
               <strong>Dados da sua empresa:</strong> informações contábeis, fiscais, financeiras e societárias que o
@@ -75,6 +79,11 @@ export default function PoliticaDePrivacidadePage() {
               <strong>Registros técnicos:</strong> dados de acesso e de uso gerados automaticamente pelo servidor, como
               endereço IP e horário, usados para segurança e prevenção de abuso.
             </li>
+            <li>
+              <strong>Ficha “Quero ser cliente”:</strong> se você ainda não é cliente e preenche a ficha, recebemos o seu
+              nome, e-mail, telefone ou WhatsApp, o nome da empresa, o CNPJ (se você informar), o que você escreveu e a
+              data em que aceitou esta política.
+            </li>
           </ul>
         </Secao>
 
@@ -84,6 +93,10 @@ export default function PoliticaDePrivacidadePage() {
             <li>Prestar os serviços contratados com o escritório e cumprir obrigações legais, contábeis e fiscais.</li>
             <li>Avisar você, por e-mail e por notificação, de mensagens, pendências e aprovações.</li>
             <li>Proteger a plataforma contra acessos indevidos e fraudes.</li>
+            <li>
+              Responder a quem pediu contato pela ficha “Quero ser cliente”: a equipe comercial do escritório usa esses
+              dados só para falar com você sobre os serviços que você procurou.
+            </li>
           </ul>
           <p>
             Não vendemos dados, não usamos os seus dados para publicidade e o portal não usa ferramentas de rastreamento
@@ -103,7 +116,9 @@ export default function PoliticaDePrivacidadePage() {
         <Secao titulo="Cookies">
           <p>
             O portal usa apenas cookies <strong>essenciais</strong> para manter você conectado. A sessão expira em até
-            12 horas. Não usamos cookies de publicidade nem de rastreamento.
+            12 horas — ou em até 30 dias, se você marcar “Lembrar de mim” ao entrar; nesse caso, use a opção só em
+            aparelho seu e saia do portal ao terminar num aparelho compartilhado. Ao entrar com o Google, cookies técnicos
+            que duram poucos minutos guardam a etapa do login. Não usamos cookies de publicidade nem de rastreamento.
           </p>
         </Secao>
 
@@ -147,6 +162,10 @@ export default function PoliticaDePrivacidadePage() {
             sua empresa ou escreva para <a href={`mailto:${CONTATO}`} className="text-brand hover:underline">{CONTATO}</a>.
             O acesso é desativado e os dados pessoais de acesso são excluídos; documentos e registros da empresa que a lei
             obriga a guardar permanecem com o escritório pelo prazo legal.
+          </p>
+          <p>
+            Se você preencheu a ficha “Quero ser cliente” e não quer mais ser contatado, peça a exclusão pelo mesmo
+            contato: os dados da ficha são apagados.
           </p>
         </Secao>
 

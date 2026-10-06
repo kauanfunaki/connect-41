@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { getPortalSession } from "@/lib/auth/portal";
 import { getEnabledModuleCodes } from "@/lib/modules";
+import { sessaoAtivaDoPortal } from "@/app/(portal)/usuario";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { ToastProvider } from "@/components/ui/Toast";
 
@@ -18,7 +18,10 @@ import { ToastProvider } from "@/components/ui/Toast";
 // solicitação", por exemplo) chama `useToast`, que lança sem o provedor. Sem
 // ele aqui, a tela da solicitação dava 500 para o cliente (achado em 01/10).
 export default async function AreaDoClienteLayout({ children }: { children: React.ReactNode }) {
-  const sessao = await getPortalSession();
+  // Conta desativada volta ao login mesmo com token válido — com o "lembrar de
+  // mim" (05/10/2026) o token vive 30 dias. O login também confere, então não
+  // há laço entre os dois.
+  const sessao = await sessaoAtivaDoPortal();
   if (!sessao) redirect("/portal/login");
 
   const prisma = getPrisma();
