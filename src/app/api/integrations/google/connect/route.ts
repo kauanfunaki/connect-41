@@ -3,6 +3,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { canManageMeetings, getPublicOrigin } from "@/lib/integrations/oauth";
 import { isGoogleConfigured, getGoogleAuthUrl } from "@/lib/integrations/google";
 import crypto from "crypto";
+import { sessionCookieDomain } from "@/lib/auth/cookies";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,10 @@ export async function GET(req: NextRequest) {
     sameSite: "lax",
     path: "/api/integrations/google/callback",
     maxAge: 300,
+    // Com o domínio (05/10/2026): quem conecta a partir de `bpo.` volta pelo
+    // endereço do retorno cadastrado (`app.`), e sem isto o cookie ficava no
+    // host de origem e o retorno dava "estado inválido".
+    domain: sessionCookieDomain(),
   });
   return res;
 }
