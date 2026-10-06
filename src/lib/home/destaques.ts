@@ -17,7 +17,7 @@
 import { moeda } from "@/lib/financeiro/formato";
 import type { HomeWidgetKey } from "@/lib/homeWidgets";
 import type { MetricaDaHome } from "./metricas";
-import type { FaixaDeVencimento, Soma } from "./paineis";
+import { totalDaCarteira, type FaixaDeVencimento, type Soma } from "./paineis";
 
 export const MAXIMO_DE_DESTAQUES = 3;
 
@@ -78,13 +78,6 @@ function plural(n: number, um: string, varios: string): string {
   return `${NUMERO.format(n)} ${n === 1 ? um : varios}`;
 }
 
-function somaDaCarteira(f: Record<FaixaDeVencimento, Soma>): Soma {
-  return {
-    n: f.vencida.n + f.hoje.n + f.semana.n + f.depois.n,
-    centavos: f.vencida.centavos + f.hoje.centavos + f.semana.centavos + f.depois.centavos,
-  };
-}
-
 type Candidato = Omit<Destaque, "painel">;
 
 /** O melhor candidato de cada painel: o alerta, se houver; senão o volume (se não for zero). */
@@ -101,11 +94,11 @@ function candidatoDoPainel(painel: HomeWidgetKey, n: NumerosDaHome): Candidato |
         const v = c.receber.vencida;
         return { metrica: "receber_vencido", alerta: true, titulo: "A receber vencido", valor: v.centavos, apoio: plural(v.n, "conta vencida", "contas vencidas"), href: "/receber?recorte=vencidas" };
       }
-      const pagar = somaDaCarteira(c.pagar);
+      const pagar = totalDaCarteira(c.pagar);
       if (c.verPagar && pagar.n > 0) {
         return { metrica: "pagar_aberto", alerta: false, titulo: "Em aberto", valor: pagar.centavos, apoio: plural(pagar.n, "conta a pagar", "contas a pagar"), href: "/pagar" };
       }
-      const receber = somaDaCarteira(c.receber);
+      const receber = totalDaCarteira(c.receber);
       if (c.verReceber && receber.n > 0) {
         return { metrica: "receber_aberto", alerta: false, titulo: "Em aberto", valor: receber.centavos, apoio: plural(receber.n, "conta a receber", "contas a receber"), href: "/receber" };
       }

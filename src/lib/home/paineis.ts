@@ -43,6 +43,14 @@ export function carteiraPorFaixa(
   return faixas;
 }
 
+/** Tudo o que está em aberto na carteira, vencido incluído. */
+export function totalDaCarteira(f: Record<FaixaDeVencimento, Soma>): Soma {
+  return {
+    n: f.vencida.n + f.hoje.n + f.semana.n + f.depois.n,
+    centavos: f.vencida.centavos + f.hoje.centavos + f.semana.centavos + f.depois.centavos,
+  };
+}
+
 export type Semana = Soma & { inicioKey: string };
 
 /**

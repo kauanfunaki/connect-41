@@ -7,7 +7,9 @@ import type { AcessoDoPainel } from "@/lib/home/acessoDosPaineis";
 import { numerosDaHome } from "@/lib/home/dadosDosPaineis";
 import { escolherDestaques, MAXIMO_DE_DESTAQUES, type Destaque, type NumerosDaHome } from "@/lib/home/destaques";
 import { METRICAS } from "@/lib/home/metricas";
-import { numero } from "@/components/shared/Graficos";
+import { tendenciasDaHome } from "@/lib/home/historico";
+import type { PontoDaLinha } from "@/lib/home/tendencia";
+import { Sparkline, numero } from "@/components/shared/Graficos";
 
 // A faixa de destaques da Home (06/10, opção C): acima dos painéis, os três
 // números que mais pedem a pessoa, em cartões cheios — azul para o volume,
@@ -29,7 +31,18 @@ function valorDoDestaque(d: Destaque): string {
   return METRICAS[d.metrica].formato === "moeda" ? moeda(d.valor) : numero(d.valor);
 }
 
-function CartaoDeDestaque({ destaque: d, setor, ordem }: { destaque: Destaque; setor: SetorDoDestaque; ordem: number }) {
+function CartaoDeDestaque({
+  destaque: d,
+  setor,
+  ordem,
+  linha,
+}: {
+  destaque: Destaque;
+  setor: SetorDoDestaque;
+  ordem: number;
+  /** A linha das últimas semanas, quando já há histórico (opção A). */
+  linha: PontoDaLinha[] | null;
+}) {
   const valor = valorDoDestaque(d);
   return (
     <Link
@@ -43,6 +56,13 @@ function CartaoDeDestaque({ destaque: d, setor, ordem }: { destaque: Destaque; s
       }}
       aria-label={`${d.alerta ? "Alerta: " : ""}${setor.rotulo}, ${d.titulo}: ${valor}. ${d.apoio}.`}
     >
+      {/* A linha branca translúcida no canto, atrás do texto (`-z-10` dentro
+          do `isolate` do cartão): decoração, o número continua na frente. */}
+      {linha && (
+        <div className="absolute right-4 bottom-3 w-[42%] h-12 -z-10" aria-hidden>
+          <Sparkline pontos={linha} variante="faixa" className="size-full" />
+        </div>
+      )}
       <p className="flex items-center gap-1.5 pr-6 text-[11px] font-semibold uppercase tracking-wider text-white/90 min-w-0">
         {/* No alerta o ícone diz "alerta" sem depender do vermelho. */}
         {d.alerta ? (
@@ -85,6 +105,11 @@ export async function FaixaDeDestaques({
   if (tarefas) visiveis.add("painel-tarefas");
   const destaques = escolherDestaques(numeros, visiveis);
   if (destaques.length === 0) return null;
+  // Só lê: a foto de hoje de cada número quem tira é o painel dele, que está
+  // na Home (é condição para o número estar aqui).
+  const tendencias = await tendenciasDaHome(ctx, Object.fromEntries(destaques.map((d) => [d.metrica, d.valor])), {
+    gravar: false,
+  });
 
   return (
     <section aria-label="Destaques" className={GRADE}>
@@ -94,6 +119,7 @@ export async function FaixaDeDestaques({
           destaque={d}
           ordem={i}
           setor={setores[d.painel] ?? { rotulo: "Connect", cor: "var(--c41-brand)" }}
+          linha={tendencias[d.metrica]?.linha ?? null}
         />
       ))}
     </section>

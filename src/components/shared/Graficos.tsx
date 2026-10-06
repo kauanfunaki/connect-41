@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, CircleCheck, OctagonAlert, TriangleAlert } from "lucide-react";
+import type { Selo, Tendencia, TomDaTendencia } from "@/lib/home/tendencia";
 
 // Gráficos dos painéis da Home (30/09) — a leitura "Power BI" que o Kauan
 // trouxe do HubStrom, no vocabulário do Perímetro. Server components puros:
@@ -62,9 +63,84 @@ function dicaDe(s: Segmento, total: number): string {
 
 // Gráfico mais baixo (06/10): com a faixa de destaques em cima, a grade dos
 // painéis leva `data-compacto` (grupo `grade`, na Home) e a rosca e as
-// colunas encolhem — o número que manda já está na faixa.
-const COMPACTO_ROSCA = "group-data-[compacto=true]/grade:size-[112px]";
-const COMPACTO_COLUNAS = "group-data-[compacto=true]/grade:h-28";
+// colunas encolhem — o número que manda já está na faixa. O mesmo quando o
+// painel ganha a linha da tendência (grupo `painel`): o gráfico de situação
+// fica menor, embaixo dela.
+const COMPACTO_ROSCA = "group-data-[compacto=true]/grade:size-[112px] group-data-[compacto=true]/painel:size-[112px]";
+const COMPACTO_COLUNAS = "group-data-[compacto=true]/grade:h-28 group-data-[compacto=true]/painel:h-28";
+
+// ─── Tendência ─────────────────────────────────────────────────────────────
+
+const COR_DO_SELO: Record<TomDaTendencia, string> = {
+  ruim: "bg-danger-bg text-danger",
+  bom: "bg-success-bg text-success",
+  neutro: "bg-surface-hover text-fg-secondary",
+};
+
+/**
+ * O selo da tendência (06/10, opção A): "▲ 12% em 7 dias", vermelho quando
+ * piorou e verde quando melhorou — o sentido vem da métrica (subir em
+ * "vencidas" é ruim). A seta e o texto dizem o mesmo que a cor.
+ */
+export function SeloDaTendencia({ selo }: { selo: Selo }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 h-6 px-2 rounded-full text-[12px] font-semibold tnum whitespace-nowrap ${COR_DO_SELO[selo.tom]}`}
+      data-dica={selo.descricao}
+    >
+      <span aria-hidden className="text-[10px]">
+        {selo.seta}
+      </span>
+      <span aria-hidden>{selo.texto}</span>
+      <span className="sr-only">{selo.descricao}</span>
+    </span>
+  );
+}
+
+/**
+ * A linha das últimas semanas: área em degradê suave, traço e um ponto no
+ * valor de hoje. Os pontos chegam normalizados (x e y de 0 a 1). O SVG estica
+ * na largura (`preserveAspectRatio="none"`), então a área é um recorte em CSS
+ * e o ponto é um elemento à parte — num SVG esticado o círculo viraria elipse.
+ * Decorativa: o que ela diz está no selo e no número.
+ */
+export function Sparkline({
+  pontos,
+  cor = "var(--c41-brand)",
+  variante = "painel",
+  className = "",
+}: {
+  pontos: readonly { x: number; y: number }[];
+  cor?: string;
+  /** "faixa": branca translúcida, para o cartão cheio da faixa de destaques. */
+  variante?: "painel" | "faixa";
+  className?: string;
+}) {
+  if (pontos.length < 2) return null;
+  // Margem para o traço e o ponto não encostarem na borda.
+  const y = (v: number) => 0.14 + (1 - v) * 0.72;
+  const traco = variante === "faixa" ? "rgb(255 255 255 / .75)" : cor;
+  const area =
+    variante === "faixa"
+      ? "linear-gradient(to bottom, rgb(255 255 255 / .22), rgb(255 255 255 / 0))"
+      : `linear-gradient(to bottom, color-mix(in srgb, ${cor} 24%, transparent), transparent)`;
+  const caminho = pontos.map((p, i) => `${i === 0 ? "M" : "L"}${(p.x * 100).toFixed(2)},${(y(p.y) * 100).toFixed(2)}`).join(" ");
+  const recorte = `polygon(${pontos.map((p) => `${(p.x * 100).toFixed(2)}% ${(y(p.y) * 100).toFixed(2)}%`).join(", ")}, 100% 100%, 0% 100%)`;
+  const ultimo = pontos[pontos.length - 1];
+
+  return (
+    <div className={`relative ${className}`} aria-hidden>
+      <div className="absolute inset-0" style={{ clipPath: recorte, background: area }} />
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 size-full overflow-visible">
+        <path d={caminho} fill="none" stroke={traco} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+      </svg>
+      <span
+        className={`absolute size-2 rounded-full -translate-x-1/2 -translate-y-1/2 ${variante === "faixa" ? "bg-white" : "ring-2 ring-surface"}`}
+        style={{ left: `${ultimo.x * 100}%`, top: `${y(ultimo.y) * 100}%`, background: variante === "faixa" ? undefined : cor }}
+      />
+    </div>
+  );
+}
 
 /** Ícone da situação — o que faz a cor não ser o único canal. */
 function IconeDoTom({ tom }: { tom: Tom }) {
@@ -96,14 +172,29 @@ export function Painel({
   cor?: string;
   titulo: string;
   href?: string;
-  /** O número principal e o que ele é. */
-  destaque?: { valor: string; legenda: string; tom?: Tom };
+  /**
+   * O número principal e o que ele é. Com `tendencia` (opção A, 06/10), ganha
+   * o selo ao lado e a linha das últimas semanas embaixo; sem histórico, fica
+   * como antes — sem selo, sem linha e sem espaço guardado para eles.
+   */
+  destaque?: { valor: string; legenda: string; tom?: Tom; tendencia?: Tendencia | null };
   children: React.ReactNode;
   rodape?: React.ReactNode;
 }) {
   const corDoSetor = cor ?? "var(--c41-brand)";
+  const selo = destaque?.tendencia?.selo ?? null;
+  const linha = destaque?.tendencia?.linha ?? null;
+  const numeroPrincipal = destaque && (
+    <span
+      className="min-w-0 max-w-full font-display text-[length:var(--fs-metric)] font-bold leading-none tracking-tight tnum truncate c41-cortavel"
+      style={destaque.tom && destaque.tom !== "neutro" ? { color: COR_DO_TOM[destaque.tom] } : undefined}
+    >
+      {destaque.valor}
+    </span>
+  );
   return (
     <section
+      data-compacto={linha ? "true" : undefined}
       className="reveal-in group/painel relative min-w-0 flex flex-col bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-md)] p-5 overflow-hidden"
       // O topo tingido na cor do setor (06/10): 11% dela sobre a superfície,
       // sumindo antes do gráfico — dá identidade sem pintar o dado.
@@ -131,17 +222,26 @@ export function Painel({
         )}
       </header>
 
-      {destaque && (
-        <p className="mt-3 flex items-baseline gap-2 min-w-0">
-          <span
-            className="font-display text-[length:var(--fs-metric)] font-bold leading-none tracking-tight tnum truncate c41-cortavel"
-            style={destaque.tom && destaque.tom !== "neutro" ? { color: COR_DO_TOM[destaque.tom] } : undefined}
-          >
-            {destaque.valor}
-          </span>
-          <span className="text-[length:var(--fs-helper)] text-fg-muted truncate">{destaque.legenda}</span>
-        </p>
-      )}
+      {destaque &&
+        (selo ? (
+          // Com selo, ele vai ao lado do número e a legenda desce uma linha —
+          // os três na mesma linha não cabem num painel de meia tela.
+          <div className="mt-3 min-w-0">
+            <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 min-w-0">
+              {numeroPrincipal}
+              <SeloDaTendencia selo={selo} />
+            </p>
+            <p className="mt-1.5 text-[length:var(--fs-helper)] text-fg-muted truncate">{destaque.legenda}</p>
+          </div>
+        ) : (
+          <p className="mt-3 flex items-baseline gap-2 min-w-0">
+            {numeroPrincipal}
+            <span className="text-[length:var(--fs-helper)] text-fg-muted truncate">{destaque.legenda}</span>
+          </p>
+        ))}
+      {/* Na cor da série (o azul), não na do setor: o vermelho do Fiscal ou o
+          âmbar do BPO numa linha leriam como alerta. */}
+      {linha && <Sparkline pontos={linha} className="mt-3 h-11" />}
 
       <div className="mt-4 flex-1 min-w-0">{children}</div>
       {rodape && <div className="mt-4 pt-3 border-t border-border text-[length:var(--fs-helper)] text-fg-muted">{rodape}</div>}
