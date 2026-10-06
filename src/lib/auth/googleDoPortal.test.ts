@@ -37,8 +37,16 @@ describe("configuração", () => {
     expect(redirectUriDoPortal({})).toBeNull();
   });
 
+  it("sem ligar de propósito, o Google fica fora do login, mesmo com o cliente OAuth da Agenda (06/10)", () => {
+    const daAgenda = { GOOGLE_CLIENT_ID: CLIENT_ID, GOOGLE_CLIENT_SECRET: "s", APP_PUBLIC_URL: "https://useconnect.com.br" };
+    expect(configuracaoDoGoogleNoPortal(daAgenda)).toBeNull();
+    expect(configuracaoDoGoogleNoPortal({ ...daAgenda, PORTAL_GOOGLE_LIGADO: "0" })).toBeNull();
+    expect(configuracaoDoGoogleNoPortal({ ...daAgenda, PORTAL_GOOGLE_LIGADO: "sim" })).toBeNull();
+    expect(configuracaoDoGoogleNoPortal({ ...daAgenda, PORTAL_GOOGLE_LIGADO: " 1 " })).not.toBeNull();
+  });
+
   it("sem client id, segredo ou endereço, o Google fica fora do login", () => {
-    const completo = { GOOGLE_CLIENT_ID: CLIENT_ID, GOOGLE_CLIENT_SECRET: "s", APP_PUBLIC_URL: "https://useconnect.com.br" };
+    const completo = { GOOGLE_CLIENT_ID: CLIENT_ID, GOOGLE_CLIENT_SECRET: "s", APP_PUBLIC_URL: "https://useconnect.com.br", PORTAL_GOOGLE_LIGADO: "1" };
     expect(configuracaoDoGoogleNoPortal(completo)).toEqual({
       clientId: CLIENT_ID,
       clientSecret: "s",
