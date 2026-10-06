@@ -194,7 +194,9 @@ export async function proxy(req: NextRequest) {
   // `/carreiras` sem empresa é público por **igualdade**, não por prefixo: pôr
   // "/carreiras" em PUBLIC_PATHS liberaria qualquer caminho que comece assim.
   // Antes caía no login, e o candidato achava que precisava de conta.
-  if (pathname === "/carreiras" || PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+  // `/sobre` também, pelo mesmo motivo: é a página inicial que o Google confere
+  // na verificação do app, e ela não pode pedir login (06/10/2026).
+  if (pathname === "/carreiras" || pathname === "/sobre" || PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next({ request: { headers } });
   }
 
