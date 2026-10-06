@@ -10,6 +10,7 @@ import { getAuthContext, isFullAccess, isFullWrite, canViewSector } from "@/lib/
 import { codigosDeTelasFixadas } from "@/lib/telasFixadas-data";
 import { telasFixadasVisiveis } from "@/lib/telasFixadas";
 import { getPrisma } from "@/lib/prisma";
+import { contarNaoLidasVisiveis, tiposOcultos } from "@/lib/notificacoes/consultas";
 import { getSectorsWithEnabledModules, getTenantModuleStates } from "@/lib/modules";
 import { getModuleRoute, MODULOS_DO_MENU_GERAL } from "@/lib/module-catalog";
 import { baseDomain, hostSuffix, setoresDoSeletor } from "@/lib/auth/activeSector";
@@ -90,9 +91,17 @@ export default async function AppLayout({
   const prisma = getPrisma();
   // Só o contador do sino: a lista é buscada quando o sino abre (02/10/2026) —
   // vinda daqui, ela envelhecia, porque o layout não re-renderiza ao navegar.
+  // Sem as arquivadas e os tipos ocultos (05/10/2026). Falha aqui não derruba
+  // o app inteiro (deploy antes da migration, por exemplo): o sino fica sem número.
+  const dono = { tenantId, userId: ctx.userId };
   const [unreadCount, me, accessibleTenants] = await Promise.all([
     ctx.userId
-      ? prisma.notification.count({ where: { tenantId, userId: ctx.userId, read: false } })
+      ? tiposOcultos(dono)
+          .then((ocultos) => contarNaoLidasVisiveis(dono, ocultos))
+          .catch((err) => {
+            console.error("[layout] contador do sino", err);
+            return 0;
+          })
       : Promise.resolve(0),
     ctx.userId
       ? prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true, photoUrl: true } })

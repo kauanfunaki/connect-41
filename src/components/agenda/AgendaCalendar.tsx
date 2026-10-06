@@ -6,9 +6,10 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { CreateMeetingDialog } from "./CreateMeetingDialog";
 import { MiniCalendar } from "./MiniCalendar";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
-import { TimeGrid, slotRange, defaultSlotHour } from "./TimeGrid";
+import { TimeGrid } from "./TimeGrid";
 import { MonthGrid } from "./MonthGrid";
 import { saoPauloParts, shiftAgendaDate, agendaTitle, type AgendaView } from "@/lib/agenda";
+import { slotNoDia, slotParaNovaReuniao, type Expediente, type Slot } from "@/lib/agendaExpediente";
 import type { MeetingState } from "@/app/(app)/agenda/actions";
 import type { CalendarDay, CompanyOption, MeetingActions, MeetingRow, UserOption } from "./types";
 import type { SetoresDaAgenda } from "./PrazoItem";
@@ -48,6 +49,8 @@ type Props = {
   setores: SetoresDaAgenda;
   /** Coordenador ou administrador: só eles criam reunião (ver canManageMeetings). */
   podeAgendar: boolean;
+  /** Horário da grade de dia/semana — o da pessoa ou o do escritório. */
+  expediente: Expediente;
 };
 
 export function agendaHref(view: AgendaView, dateKey: string): string {
@@ -74,22 +77,19 @@ export function AgendaCalendar({
   prazos,
   setores,
   podeAgendar,
+  expediente,
 }: Props) {
-  const [dialogSlot, setDialogSlot] = useState<{ start: string; end: string } | null>(null);
+  const [dialogSlot, setDialogSlot] = useState<Slot | null>(null);
 
   const actions: MeetingActions = { editAction, deleteAction, allUsers, companies, currentUserId };
   const todayKey = saoPauloParts(new Date()).dateKey;
 
-  function openDialogFor(day: string, hour: number) {
-    setDialogSlot(slotRange(day, hour));
-  }
-
   // Botão "Nova reunião": cai na próxima hora cheia de hoje quando hoje está à
-  // vista; senão, no primeiro dia exibido (uma reunião criada de dentro de
-  // outubro não deve nascer em setembro).
+  // vista; senão, no primeiro dia exibido. Desde 05/10 a hora é puxada para o
+  // expediente, que pode passar da meia-noite — a regra está em
+  // slotParaNovaReuniao.
   function openDialogForNow() {
-    const visibleToday = days.find((d) => d.isToday);
-    openDialogFor(visibleToday?.dateKey ?? days[0].dateKey, defaultSlotHour());
+    setDialogSlot(slotParaNovaReuniao(expediente, days.map((d) => d.dateKey), new Date()));
   }
 
   return (
@@ -147,7 +147,7 @@ export function AgendaCalendar({
             meetings={meetings}
             actions={actions}
             monthKey={dateKey}
-            onDayClick={podeAgendar ? (day) => openDialogFor(day, defaultSlotHour()) : undefined}
+            onDayClick={podeAgendar ? (day) => setDialogSlot(slotNoDia(expediente, day, new Date())) : undefined}
             prazos={prazos}
             setores={setores}
           />
@@ -156,9 +156,10 @@ export function AgendaCalendar({
             days={days}
             meetings={meetings}
             actions={actions}
-            onSlotClick={podeAgendar ? openDialogFor : undefined}
+            onSlotClick={podeAgendar ? setDialogSlot : undefined}
             prazos={prazos}
             setores={setores}
+            expediente={expediente}
           />
         )}
       </div>

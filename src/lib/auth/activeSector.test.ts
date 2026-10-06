@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  ehHostReservado,
+  hostNovoDoAntigo,
   resolveActiveSector,
   resolveSectorHint,
   sectorHost,
@@ -216,5 +218,33 @@ describe("sectorHost", () => {
 
   it("sem domínio-base não há host a montar", () => {
     expect(sectorHost("bpo", null, "")).toBeNull();
+  });
+});
+
+describe("hostNovoDoAntigo", () => {
+  it("tira o sufixo antigo do endereço neutro e do setor", () => {
+    expect(hostNovoDoAntigo("appteste.useconnect.com.br", DOMINIO, "teste", "")).toBe("app.useconnect.com.br");
+    expect(hostNovoDoAntigo("bpoteste.useconnect.com.br:443", DOMINIO, "teste", "")).toBe("bpo.useconnect.com.br");
+  });
+
+  it("não mexe enquanto o sufixo antigo ainda é o atual, nem sem sufixo antigo", () => {
+    expect(hostNovoDoAntigo("bpoteste.useconnect.com.br", DOMINIO, "teste", "teste")).toBeNull();
+    expect(hostNovoDoAntigo("bpoteste.useconnect.com.br", DOMINIO, "", "")).toBeNull();
+  });
+
+  it("ignora o que não é endereço antigo do domínio", () => {
+    expect(hostNovoDoAntigo("bpo.useconnect.com.br", DOMINIO, "teste", "")).toBeNull();
+    expect(hostNovoDoAntigo("teste.useconnect.com.br", DOMINIO, "teste", "")).toBeNull();
+    expect(hostNovoDoAntigo("bpoteste.outro.com.br", DOMINIO, "teste", "")).toBeNull();
+    expect(hostNovoDoAntigo("a.bpoteste.useconnect.com.br", DOMINIO, "teste", "")).toBeNull();
+    expect(hostNovoDoAntigo(null, DOMINIO, "teste", "")).toBeNull();
+  });
+});
+
+describe("ehHostReservado", () => {
+  it("recusa nomes de endereço do sistema como código de setor", () => {
+    expect(ehHostReservado("app")).toBe(true);
+    expect(ehHostReservado("Portal")).toBe(true);
+    expect(ehHostReservado("bpo")).toBe(false);
   });
 });

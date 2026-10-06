@@ -40,6 +40,8 @@ type Props = {
   credentials: CredentialRow[];
   companies: CompanyOption[];
   canManage: boolean;
+  /** O setor que opera o módulo neste escritório — nem sempre o BPO (05/10/2026). */
+  setorRotulo: string;
   createAction: (prev: BpoCredencialState, form: FormData) => Promise<BpoCredencialState>;
   updateAction: (id: string, prev: BpoCredencialState, form: FormData) => Promise<BpoCredencialState>;
   deleteAction: (id: string) => Promise<void>;
@@ -236,7 +238,7 @@ function PasswordCell({ credentialId, revealAction }: { credentialId: string; re
   );
 }
 
-export function BpoCredentialsList({ credentials, companies, canManage, createAction, updateAction, deleteAction, revealAction }: Props) {
+export function BpoCredentialsList({ credentials, companies, canManage, setorRotulo, createAction, updateAction, deleteAction, revealAction }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const toast = useToast();
@@ -291,7 +293,7 @@ export function BpoCredentialsList({ credentials, companies, canManage, createAc
           <EmptyState
             icon={<KeyRound />}
             title="Nenhuma credencial cadastrada ainda"
-            description={canManage ? "Cadastre a primeira credencial do setor." : "Peça ao coordenador do BPO pra cadastrar a primeira credencial."}
+            description={canManage ? "Cadastre a primeira credencial do setor." : `Peça à coordenação do setor ${setorRotulo} pra cadastrar a primeira credencial.`}
           />
         </Card>
       ) : filteredCredentials.length === 0 ? (

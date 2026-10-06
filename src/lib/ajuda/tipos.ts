@@ -30,6 +30,6 @@ export type ArtigoDeAjuda = {
   secoes: SecaoDoArtigo[];
   /** Regras e avisos curtos: quem vê, o que não dá para desfazer. */
   dicas?: string[];
-  /** Vídeo no YouTube (não listado). Vazio até a equipe gravar e subir. */
-  video?: string;
+  // O vídeo do artigo não mora aqui desde 05/10/2026: os links de todos os
+  // vídeos ficam juntos em `videos.ts`, pela chave do artigo.
 };
