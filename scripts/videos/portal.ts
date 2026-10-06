@@ -146,8 +146,10 @@ export function videosDoPortal(opcoes: { email: string; senha: string; pastaDeAp
         const atalhos = main(r).getByRole("region", { name: "Atalhos" });
         await r.rolarAte(atalhos);
         await r.apontar(atalhos, "Nos Atalhos ficam os caminhos mais usados: pedir algo à equipe, os documentos fiscais e a ajuda.");
-        // O quadro dos avisos só aparece com as chaves VAPID no servidor (ver
-        // scripts/local/README.md) e quando o navegador aceita notificação.
+        // O botão Ativar dos avisos só aparece com as chaves VAPID no servidor
+        // (ver scripts/local/README.md) e com o navegador aceitando notificação
+        // — o Chromium sem janela da gravação nega, e o quadro diz "Bloqueadas
+        // nas configurações do navegador" (06/10/2026). Fica para quando der.
         const avisos = main(r).getByRole("button", { name: "Ativar" });
         if (await avisos.count()) {
           await r.rolarAte(avisos);
