@@ -6,6 +6,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { revokeAllUserSessions } from "@/lib/auth/sessions";
 import { logAudit } from "@/lib/audit";
+import { lerExpediente } from "@/lib/agendaExpediente";
 
 // Conta do próprio usuário. Tudo aqui é escopado a ctx.userId — nunca a um id
 // vindo do formulário — então SECTOR_USER e READONLY também podem usar: não é
@@ -41,6 +42,52 @@ export async function atualizarMeuPerfil(_prev: PerfilState, form: FormData): Pr
   // O nome aparece no cabeçalho (ProfileMenu), montado no layout — sem
   // revalidar a raiz do grupo o menu continuaria com o nome antigo.
   revalidatePath("/", "layout");
+  return { success: true };
+}
+
+export type ExpedienteState = { error: string } | { success: true } | null;
+
+// Horário da grade da Agenda da própria pessoa (05/10/2026). "Usar o do
+// escritório" apaga a linha em vez de copiar o horário atual: assim, quando o
+// administrador muda o do escritório, quem segue o padrão acompanha.
+export async function salvarMeuExpediente(_prev: ExpedienteState, form: FormData): Promise<ExpedienteState> {
+  const ctx = await getAuthContext();
+  if (!ctx.userId || !ctx.tenantId) return { error: "Não autenticado" };
+
+  const prisma = getPrisma();
+  const chave = { userId: ctx.userId, tenantId: ctx.tenantId };
+
+  if (form.get("modo") !== "proprio") {
+    try {
+      await prisma.userAgendaConfig.deleteMany({ where: chave });
+    } catch (err) {
+      console.error("[salvarMeuExpediente]", err);
+      return { error: "Erro ao salvar o horário da Agenda. Tente novamente." };
+    }
+    await logAudit({ ...chave, action: "user.agenda_update", entityType: "User", entityId: ctx.userId, metadata: { modo: "escritorio" } });
+    revalidatePath("/configuracoes");
+    revalidatePath("/agenda");
+    return { success: true };
+  }
+
+  const lido = lerExpediente(form.get("inicio"), form.get("fim"));
+  if (!lido.ok) return { error: lido.erro };
+  const { inicio, fim } = lido.expediente;
+
+  try {
+    await prisma.userAgendaConfig.upsert({
+      where: { userId_tenantId: chave },
+      create: { ...chave, inicioHora: inicio, fimHora: fim },
+      update: { inicioHora: inicio, fimHora: fim },
+    });
+  } catch (err) {
+    console.error("[salvarMeuExpediente]", err);
+    return { error: "Erro ao salvar o horário da Agenda. Tente novamente." };
+  }
+
+  await logAudit({ ...chave, action: "user.agenda_update", entityType: "User", entityId: ctx.userId, metadata: { modo: "proprio", inicio, fim } });
+  revalidatePath("/configuracoes");
+  revalidatePath("/agenda");
   return { success: true };
 }
 

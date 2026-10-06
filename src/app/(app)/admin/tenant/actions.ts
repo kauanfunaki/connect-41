@@ -7,6 +7,7 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
 import { verifySmtpConnection, type SmtpTestConfig } from "@/lib/email/sendMail";
+import { lerExpediente } from "@/lib/agendaExpediente";
 
 export type TenantState = { error: string } | { success: true } | null;
 
@@ -45,6 +46,40 @@ export async function atualizarTenant(
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "tenant.update", entityType: "Tenant", entityId: ctx.tenantId, metadata: { name } });
 
   revalidatePath("/admin/tenant");
+  return { success: true };
+}
+
+export type ExpedienteState = { error: string } | { success: true } | null;
+
+// Horário padrão da grade da Agenda no escritório (05/10/2026). Vale para quem
+// não definiu um próprio em /configuracoes. A validação é a mesma da tela —
+// src/lib/agendaExpediente.ts —, refeita aqui porque o formulário não é
+// garantia de nada.
+export async function salvarExpedienteDoEscritorio(_prev: ExpedienteState, form: FormData): Promise<ExpedienteState> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { error: "Não autenticado" };
+  if (!isFullWrite(ctx.role)) return { error: "Sem permissão para editar o horário da Agenda do escritório." };
+
+  const lido = lerExpediente(form.get("inicio"), form.get("fim"));
+  if (!lido.ok) return { error: lido.erro };
+  const { inicio, fim } = lido.expediente;
+
+  try {
+    const prisma = getPrisma();
+    await prisma.tenantAgendaConfig.upsert({
+      where: { tenantId: ctx.tenantId },
+      create: { tenantId: ctx.tenantId, inicioHora: inicio, fimHora: fim },
+      update: { inicioHora: inicio, fimHora: fim },
+    });
+  } catch (err) {
+    console.error("[salvarExpedienteDoEscritorio]", err);
+    return { error: "Erro ao salvar o horário da Agenda." };
+  }
+
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "tenant.agenda.update", entityType: "Tenant", entityId: ctx.tenantId, metadata: { inicio, fim } });
+
+  revalidatePath("/admin/tenant");
+  revalidatePath("/agenda");
   return { success: true };
 }
 

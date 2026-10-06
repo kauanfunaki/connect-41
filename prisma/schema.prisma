@@ -511,6 +511,8 @@ model Tenant {
   auditLogs                 AuditLog[]
   oauthAccounts             OAuthAccount[]
   meetings                  Meeting[]
+  agendaConfig              TenantAgendaConfig?
+  userAgendaConfigs         UserAgendaConfig[]
   clientDocuments           ClientDocument[]
   smtpConfig                TenantSmtpConfig?
   aiConfig                  TenantAiConfig?
@@ -802,6 +804,7 @@ model User {
   budgetsApproved             Budget[]                   @relation("BudgetApprovedBy")
   meetingsCreated             Meeting[]                  @relation("MeetingCreatedBy")
   meetingAttendances          MeetingAttendee[]
+  agendaConfigs               UserAgendaConfig[]
   clientDocumentsCreated      ClientDocument[]
   recurringObligations        RecurringObligation[]
   admissaoLinksCreated        AdmissaoLink[]
@@ -4802,6 +4805,47 @@ model MeetingAttendee {
 
   @@id([meetingId, userId])
   @@map("meeting_attendees")
+}
+
+// ─── Expediente da Agenda (05/10/2026) ──────────────────────────────────────
+// O horário que a grade de dia/semana da Agenda cobre — era fixo, 7h às 21h.
+// Padrão e validação moram em src/lib/agendaExpediente.ts; aqui só o que foi
+// escolhido. Tabelas próprias, e não colunas em `tenants`/`users`, pela ordem do
+// deploy (ver UserPinnedModule): coluna nova lida antes da migration derrubaria
+// toda leitura de usuário e de tenant; tabela nova quebra só a Agenda.
+
+/// Horário padrão do escritório. Sem linha, vale o padrão da lib (7h–21h).
+model TenantAgendaConfig {
+  tenantId   String   @id
+  /// Hora cheia (0–23) em que a coluna de cada dia começa.
+  inicioHora Int
+  /// Hora cheia (0–23), exclusiva. Menor que o início = passa da meia-noite;
+  /// igual ao início = 24 horas.
+  fimHora    Int
+  updatedAt  DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("tenant_agenda_configs")
+}
+
+/// Horário próprio de uma pessoa. Sem linha, ela usa o do escritório. Por
+/// tenant, como UserPinnedModule: quem atende dois workspaces pode ter um
+/// horário em cada.
+model UserAgendaConfig {
+  id         String   @id @default(uuid())
+  tenantId   String
+  userId     String
+  inicioHora Int
+  fimHora    Int
+  updatedAt  DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@index([tenantId])
+  @@map("user_agenda_configs")
 }
 
 // Repositório de Senhas do BPO — centraliza credenciais que hoje ficam
