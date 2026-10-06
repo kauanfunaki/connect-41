@@ -24,6 +24,7 @@ import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { VideoDoYouTube } from "@/components/ajuda/VideoDoYouTube";
 import { normalizar } from "@/lib/buscaDeTelas";
 import { enderecoDaMiniatura, idDoVideo } from "@/lib/ajuda/youtube";
+import { videoDoPrimeiroPasso } from "@/lib/ajuda/videos";
 
 export type TelaDaAjuda = {
   chave: string;
@@ -65,10 +66,12 @@ type VideoDaCentral = {
 /**
  * Os primeiros passos: o que vale em qualquer tela. Escritos a partir do que o
  * Connect faz hoje (30/09) — quando uma destas telas mudar, o texto muda junto.
+ * O vídeo de cada um vem do arquivo dos links (`lib/ajuda/videos.ts`, 06/10/2026).
  */
 const PRIMEIROS_PASSOS: Passo[] = [
   {
     chave: "meu-dia",
+    video: videoDoPrimeiroPasso("meu-dia") ?? undefined,
     titulo: "Começar o dia pelo Meu dia",
     resumo: "O que é seu para hoje, de todos os setores, numa tela só.",
     icone: <CalendarCheck />,
@@ -81,6 +84,7 @@ const PRIMEIROS_PASSOS: Passo[] = [
   },
   {
     chave: "busca",
+    video: videoDoPrimeiroPasso("busca") ?? undefined,
     titulo: "Achar qualquer coisa com Ctrl+K",
     resumo: "Telas, empresas e pessoas pelo nome, de qualquer lugar.",
     icone: <Command />,
@@ -92,6 +96,7 @@ const PRIMEIROS_PASSOS: Passo[] = [
   },
   {
     chave: "setor",
+    video: videoDoPrimeiroPasso("setor") ?? undefined,
     titulo: "Trabalhar dentro de um setor",
     resumo: "O menu passa a mostrar só as telas do setor escolhido.",
     icone: <LayoutGrid />,
@@ -103,6 +108,7 @@ const PRIMEIROS_PASSOS: Passo[] = [
   },
   {
     chave: "fixar",
+    video: videoDoPrimeiroPasso("fixar") ?? undefined,
     titulo: "Fixar as telas que você mais usa",
     resumo: "Elas ficam no topo da barra lateral, em qualquer setor.",
     icone: <Pin />,
@@ -114,6 +120,7 @@ const PRIMEIROS_PASSOS: Passo[] = [
   },
   {
     chave: "filtros",
+    video: videoDoPrimeiroPasso("filtros") ?? undefined,
     titulo: "Filtrar uma lista",
     resumo: "O botão Filtros e o funil de cada coluna, como no Excel.",
     icone: <Filter />,
@@ -125,6 +132,7 @@ const PRIMEIROS_PASSOS: Passo[] = [
   },
   {
     chave: "transferir",
+    video: videoDoPrimeiroPasso("transferir") ?? undefined,
     titulo: "Passar um assunto para outro setor",
     resumo: "A transferência leva a empresa, o prazo e a prioridade.",
     icone: <Send />,
@@ -136,6 +144,7 @@ const PRIMEIROS_PASSOS: Passo[] = [
   },
   {
     chave: "avisos",
+    video: videoDoPrimeiroPasso("avisos") ?? undefined,
     titulo: "Receber avisos",
     resumo: "O sino do topo e as notificações no celular.",
     icone: <Bell />,
@@ -146,6 +155,7 @@ const PRIMEIROS_PASSOS: Passo[] = [
   },
   {
     chave: "tema",
+    video: videoDoPrimeiroPasso("tema") ?? undefined,
     titulo: "Tema claro, escuro ou do aparelho",
     resumo: "O interruptor do topo, e mais opções em Configurações.",
     icone: <SunMoon />,

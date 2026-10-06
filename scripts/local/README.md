@@ -50,14 +50,22 @@ banco, cria as tabelas pelo schema e carrega:
 - a demonstração do BPO (`scripts/dados-de-demonstracao.ts`): o Grupo Modelo, a
   Transportes Modelo, contas, extrato, pendências, aprovações;
 - o preparo dos vídeos (`preparar-ambiente.ts`): setor Controladoria, senha do
-  cliente do portal, a filial, um comunicado, notas fiscais, e tira a marca
-  `[demo]` dos textos.
+  cliente do portal (que se chama **Rafael Nogueira**, fictício), a filial, um
+  comunicado, notas fiscais, uma conta a pagar e uma a receber a conferir, os
+  módulos que nascem desligados e têm vídeo (DRE, Documentos Fiscais,
+  Certificados…), o SMTP apontado para a caixa de e-mail local (abaixo), e tira
+  a marca `[demo]` dos textos.
 - os modelos de processo do Societário (`scripts/seed-societario.ts`): órgãos, tipos e etapas;
 - os dados fictícios das outras telas (`dados-ficticios.ts`): uma equipe de cinco
   pessoas sem senha (Renata, Bruno, Larissa, Paulo e Marina, uma por setor), seis
   empresas, colaboradores com férias, afastamentos, desligamentos e horas extras,
   processos e licenças do Societário, vagas e candidatos, quadros do Kanban,
-  transferências, solicitações do portal e reuniões na agenda. Tudo inventado.
+  transferências, solicitações do portal e reuniões na agenda. Para os vídeos
+  da equipe (06/10/2026), também: um processo da Transportes Modelo (o Início do
+  portal), as contas que esperam aprovação "lançadas" pela Marina (quem lança
+  não aprova), três leads, quatro competências da avaliação de desempenho, a
+  permissão de ver salário para o administrador e dois processos com a Camila
+  (a Minha área do Societário). Tudo inventado.
 
 Rode antes de cada rodada de gravação: alguns vídeos mudam os dados (aprovam uma
 conta, respondem uma pendência), e só o banco recriado garante o mesmo vídeo.
@@ -85,6 +93,24 @@ node scripts/local/com-banco-local.mjs npx next start -p 3100
 
 Depois de recriar o banco, reinicie o servidor.
 
+### E-mail e avisos no navegador
+
+O SMTP do escritório local aponta para `127.0.0.1:2525`, a caixa de e-mail de
+mentira de `caixa-de-email.ts`: ela aceita tudo e joga fora, e nada sai da
+máquina. O `scripts/videos/gravar.ts` a abre enquanto grava. Fora da gravação,
+com a caixa fechada, o envio só falha — e a tela diz quantos e-mails falharam.
+
+Sem chaves VAPID, o Connect mostra "Indisponível neste ambiente" em
+Configurações → Notificações e esconde o bloco de avisos do Início do portal.
+Para gravar como na produção, gere chaves **de teste** (nunca as da produção) e
+acrescente `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` e
+`VAPID_SUBJECT=mailto:nao-responda@exemplo.invalido` ao `.env.localdev` — ou
+passe as três no terminal, antes do `node scripts/local/com-banco-local.mjs`:
+
+```
+node -e "const k=require('web-push').generateVAPIDKeys();console.log(k)"
+```
+
 ## Perfis de um setor só
 
 A conta do administrador vê tudo, então não serve para conferir se uma tela fecha
@@ -100,4 +126,6 @@ colaboradora fictícia para a ficha da pessoa. Rode depois de recriar o banco.
 
 ## Vídeos
 
-Ver o cabeçalho de `scripts/videos/gravar.ts`.
+Ver o cabeçalho de `scripts/videos/gravar.ts`: grupos `portal` e `equipe`, e
+`RASCUNHO=1` para acertar um roteiro novo a um décimo das pausas. A lista do que
+foi gravado (título, chave da ajuda e duração) sai em `videos/{grupo}/_lista.json`.
