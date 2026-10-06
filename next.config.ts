@@ -6,7 +6,12 @@ import type { NextConfig } from "next";
 // estilos inline na hidratação — apertar isso com nonce é um follow-up separado.
 const csp = [
   "default-src 'self'",
-  "img-src 'self' data: blob:",
+  // i.ytimg.com: miniaturas dos vídeos de passo a passo da ajuda (05/10/2026),
+  // que aparecem antes do play (components/ajuda/VideoDoYouTube.tsx).
+  "img-src 'self' data: blob: https://i.ytimg.com",
+  // O player desses vídeos, só no modo de privacidade do YouTube (sem cookie
+  // até o play). 'self' repete o que o default-src já dava aos frames.
+  "frame-src 'self' https://www.youtube-nocookie.com",
   "style-src 'self' 'unsafe-inline'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   // Service worker de push (public/sw.js) — sem isto cairia no fallback de
