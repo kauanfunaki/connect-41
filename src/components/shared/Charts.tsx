@@ -14,6 +14,8 @@ type BarDatum = {
 };
 
 // Barras horizontais — cards do Kanban por estágio, pendências por prioridade etc.
+// Barra de 18px com cantos arredondados (06/10, opção B): o mesmo volume das
+// barras dos painéis (Graficos.tsx).
 export function HorizontalBarChart({
   data,
   emptyLabel = "Sem dados suficientes ainda.",
@@ -39,14 +41,14 @@ export function HorizontalBarChart({
             <span className="block text-[12px] text-fg-secondary truncate">{d.label}</span>
             {d.sublabel && <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate">{d.sublabel}</span>}
           </span>
-          <div className="flex-1 h-2 rounded-full bg-surface-2 overflow-hidden">
+          <div className="flex-1 h-[18px] rounded-[5px] bg-surface-2 overflow-hidden">
             <div
-              className="h-full rounded-full transition-[width] duration-500"
+              className="h-full rounded-[5px] transition-[width] duration-500 motion-reduce:transition-none"
               style={{ width: `${(d.value / max) * 100}%`, background: d.color ?? "var(--c41-brand)" }}
               title={`${d.label}: ${d.value}`}
             />
           </div>
-          <span className="text-[12px] text-fg-muted tnum w-6 text-right flex-shrink-0">{d.value}</span>
+          <span className="text-[12px] font-medium text-fg tnum w-6 text-right flex-shrink-0">{d.value}</span>
         </div>
       ))}
     </div>
@@ -153,7 +155,7 @@ export function TrendChart({
         <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full h-full overflow-visible">
           <defs>
             <linearGradient id="trend-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--c41-brand)" stopOpacity="0.28" />
+              <stop offset="0%" stopColor="var(--c41-brand)" stopOpacity="0.36" />
               <stop offset="100%" stopColor="var(--c41-brand)" stopOpacity="0" />
             </linearGradient>
           </defs>
@@ -162,7 +164,7 @@ export function TrendChart({
             d={linePath}
             fill="none"
             stroke="var(--c41-brand)"
-            strokeWidth="2"
+            strokeWidth="2.5"
             strokeLinejoin="round"
             strokeLinecap="round"
             vectorEffect="non-scaling-stroke"

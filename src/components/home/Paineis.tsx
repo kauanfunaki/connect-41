@@ -1,32 +1,19 @@
-import { cache } from "react";
 import Link from "next/link";
 import { UserPlus, UserMinus, Stethoscope, HeartPulse } from "lucide-react";
-import { getPrisma } from "@/lib/prisma";
 import type { AuthContext } from "@/lib/auth/context";
-import { scopedVagaWhere } from "@/lib/auth/scope";
-import { saoPauloParts } from "@/lib/agenda";
 import { formatCalendarDate } from "@/lib/format";
 import { moeda } from "@/lib/financeiro/formato";
-import { centavosDeDecimal } from "@/lib/financeiro/contas";
-import { titulosEmAberto } from "@/lib/financeiro/consultas";
-import { resumoDasPendencias } from "@/lib/financeiro/pendencias/consultas";
-import { setorPadraoDasPendencias, soDoSetorPadrao } from "@/lib/financeiro/pendencias/setor";
-import { listarFila, feriadosDoTenant } from "@/lib/societario/fila";
 import { SITUACAO_LABEL } from "@/components/societario/ProcessosFila";
-import { computeFunnelConversion } from "@/lib/recruitmentFunnel";
-import { listarCertificados } from "@/lib/certificados/servidor";
-import { AFASTAMENTO_ENCERRADO } from "@/lib/situacoesDoDP";
-import { atuaisPorDocumento, situacaoDoCertificado } from "@/lib/certificados/certificados";
+import { contarTarefas, totalDaCarteira, AVISO_DAS_FERIAS_DIAS, type FaixaDeVencimento, type Soma } from "@/lib/home/paineis";
+import { tendenciasDaHome } from "@/lib/home/historico";
 import {
-  aPagarPorSemana,
-  carteiraPorFaixa,
-  contarFerias,
-  contarTarefas,
-  faixasDasPendencias,
-  AVISO_DAS_FERIAS_DIAS,
-  type FaixaDeVencimento,
-  type Soma,
-} from "@/lib/home/paineis";
+  dadosDaCarteira,
+  dadosDasPendencias,
+  dadosDoDP,
+  dadosDoRecrutamento,
+  dadosDosCertificados,
+  dadosDosProcessos,
+} from "@/lib/home/dadosDosPaineis";
 import type { AcessoDoPainel } from "@/lib/home/acessoDosPaineis";
 import {
   BarraDeSituacao,
@@ -36,6 +23,7 @@ import {
   Painel,
   Rosca,
   numero,
+  numeroCurto,
   type LinhaDeSituacao,
   type Segmento,
   type Tom,
@@ -44,31 +32,31 @@ import {
 // Os painéis da Home (30/09). Cada um é um server component assíncrono com a
 // própria consulta, montado dentro de um <Suspense> na Home: a página não
 // espera o mais lento para aparecer, e cada painel entra quando o dado chega.
+// As consultas moram em `dadosDosPaineis.ts` (06/10), com `cache()`: a faixa
+// de destaques lê os mesmos números sem consultar de novo.
+//
+// Tendência (06/10, opção A): cada painel passa os números dele para
+// `tendenciasDaHome`, que devolve o selo e a linha do número principal e
+// agenda a foto de hoje — por isso o painel entrega também os números que só
+// a faixa de destaques mostra (o histórico deles nasce aqui).
 
 /** Nome e cor do setor, já resolvidos pela Home. */
 export type SetorDoPainel = { rotulo: string; cor: string };
 
 type Base = { ctx: AuthContext; acesso: AcessoDoPainel; setor: SetorDoPainel };
 
-const MOEDA_CURTA = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-  notation: "compact",
-  maximumFractionDigits: 1,
-});
-
-/** "R$ 12,3 mil" — rótulo de coluna; o valor exato fica na dica. */
-function moedaCurta(centavos: number): string {
-  return MOEDA_CURTA.format(centavos / 100);
+/**
+ * "12,3 mil" — o rótulo em cima da coluna, sem o "R$" (06/10): seis colunas
+ * com "R$ 12,3 mil" não cabem no celular. O título diz que é dinheiro, e o
+ * valor exato fica na dica.
+ */
+function reaisCurtos(centavos: number): string {
+  return numeroCurto(centavos / 100);
 }
 
 function plural(n: number, um: string, varios: string): string {
   return `${numero(n)} ${n === 1 ? um : varios}`;
 }
-
-// Painel de contas e o de semanas leem os mesmos títulos: uma consulta por
-// requisição, não duas.
-const titulosDoTenant = cache((tenantId: string) => titulosEmAberto({ tenantId, companyIds: null }));
 
 // ─── Você ──────────────────────────────────────────────────────────────────
 
@@ -77,13 +65,15 @@ const titulosDoTenant = cache((tenantId: string) => titulosEmAberto({ tenantId, 
  * cartão "Vencidos / hoje" — e, no rodapé, quantas são dele. Era só das
  * atribuídas, e quem coordena (sem tarefa no próprio nome) via um painel vazio.
  */
-export function PainelDeTarefas({
+export async function PainelDeTarefas({
+  ctx,
   itens,
   atribuidas,
   escopo,
   inicioDeHoje,
   fimDeHoje,
 }: {
+  ctx: AuthContext;
   itens: { dueDate: Date | null }[];
   atribuidas: number;
   /** "Seus setores", ou o nome do setor ativo. */
@@ -92,6 +82,7 @@ export function PainelDeTarefas({
   fimDeHoje: Date;
 }) {
   const c = contarTarefas(itens, inicioDeHoje, fimDeHoje);
+  const t = await tendenciasDaHome(ctx, { tarefas_atrasadas: c.atrasada, tarefas_hoje: c.hoje });
   return (
     <Painel
       setor={escopo}
@@ -100,8 +91,13 @@ export function PainelDeTarefas({
       rodape={itens.length > 0 ? <>{plural(atribuidas, "atribuída a você", "atribuídas a você")}</> : undefined}
       destaque={
         c.atrasada > 0
-          ? { valor: numero(c.atrasada), legenda: c.atrasada === 1 ? "atrasada" : "atrasadas", tom: "critico" }
-          : { valor: numero(c.hoje), legenda: "para hoje" }
+          ? {
+              valor: numero(c.atrasada),
+              legenda: c.atrasada === 1 ? "atrasada" : "atrasadas",
+              tom: "critico",
+              tendencia: t.tarefas_atrasadas,
+            }
+          : { valor: numero(c.hoje), legenda: "para hoje", tendencia: t.tarefas_hoje }
       }
     >
       <Rosca
@@ -140,13 +136,14 @@ function segmentosDaCarteira(faixas: Record<FaixaDeVencimento, Soma>, tela: "/pa
 }
 
 export async function PainelDeContas({ ctx, acesso, setor }: Base) {
-  const hojeKey = saoPauloParts(new Date()).dateKey;
-  const titulos = await titulosDoTenant(ctx.tenantId);
+  const { pagar, receber } = await dadosDaCarteira(ctx.tenantId);
   const verPagar = acesso.modulos.has("bpo_contas_pagar");
   const verReceber = acesso.modulos.has("bpo_contas_receber");
-  const pagar = carteiraPorFaixa(titulos, "PAGAR", hojeKey);
-  const receber = carteiraPorFaixa(titulos, "RECEBER", hojeKey);
   const principal = verPagar ? pagar : receber;
+  const t = await tendenciasDaHome(ctx, {
+    ...(verPagar ? { pagar_vencido: pagar.vencida.centavos, pagar_aberto: totalDaCarteira(pagar).centavos } : {}),
+    ...(verReceber ? { receber_vencido: receber.vencida.centavos, receber_aberto: totalDaCarteira(receber).centavos } : {}),
+  });
 
   return (
     <Painel
@@ -158,6 +155,7 @@ export async function PainelDeContas({ ctx, acesso, setor }: Base) {
         valor: moeda(principal.vencida.centavos),
         legenda: verPagar ? "a pagar vencido" : "a receber vencido",
         tom: principal.vencida.n > 0 ? "critico" : undefined,
+        tendencia: verPagar ? t.pagar_vencido : t.receber_vencido,
       }}
     >
       <div className="space-y-4">
@@ -177,10 +175,10 @@ export async function PainelDeContas({ ctx, acesso, setor }: Base) {
 }
 
 export async function PainelDeSemanas({ ctx, setor }: Base) {
-  const hojeKey = saoPauloParts(new Date()).dateKey;
-  const semanas = aPagarPorSemana(await titulosDoTenant(ctx.tenantId), hojeKey);
+  const { semanas } = await dadosDaCarteira(ctx.tenantId);
   const total = semanas.reduce((s, x) => s + x.centavos, 0);
   const dia = (key: string) => formatCalendarDate(new Date(`${key}T12:00:00Z`), { day: "2-digit", month: "2-digit" });
+  const t = await tendenciasDaHome(ctx, { pagar_seis_semanas: total, pagar_esta_semana: semanas[0]?.centavos ?? 0 });
 
   return (
     <Painel
@@ -188,18 +186,19 @@ export async function PainelDeSemanas({ ctx, setor }: Base) {
       cor={setor.cor}
       titulo="A pagar nas próximas semanas"
       href="/pagar"
-      destaque={{ valor: moeda(total), legenda: "em seis semanas" }}
+      destaque={{ valor: moeda(total), legenda: "em seis semanas", tendencia: t.pagar_seis_semanas }}
     >
       <Colunas
         titulo="Por semana, de segunda a domingo"
-        formatar={moedaCurta}
+        formatar={moeda}
+        formatarCurto={reaisCurtos}
         vazio="Nada a pagar nas próximas seis semanas."
         colunas={semanas.map((s, i) => ({
           chave: s.inicioKey,
           rotulo: i === 0 ? "Esta semana" : dia(s.inicioKey),
           valor: s.centavos,
           destaque: i === 0,
-          dica: `${moeda(s.centavos)} · ${plural(s.n, "conta", "contas")}${i === 0 ? " (de hoje em diante)" : ""}`,
+          dica: `${plural(s.n, "conta", "contas")}${i === 0 ? " (de hoje em diante)" : ""}`,
         }))}
       />
     </Painel>
@@ -207,33 +206,15 @@ export async function PainelDeSemanas({ ctx, setor }: Base) {
 }
 
 export async function PainelDePendencias({ ctx, acesso, setor }: Base) {
-  const agora = new Date();
-  const prisma = getPrisma();
   const verPendencias = acesso.modulos.has("bpo_pendencias");
   const verAprovacoes = acesso.modulos.has("bpo_aprovacoes");
-  const [resumo, aprovacoes] = await Promise.all([
-    // O painel é do BPO: só as do setor do módulo (e as sem setor, de antes de 01/10).
-    verPendencias
-      ? setorPadraoDasPendencias(ctx.tenantId).then((padrao) =>
-          resumoDasPendencias({ tenantId: ctx.tenantId, companyIds: null, setores: soDoSetorPadrao(padrao) }, agora)
-        )
-      : null,
-    // A contagem da fila de /aprovacoes (aguardando e reprovadas travam a baixa).
-    verAprovacoes
-      ? prisma.financeEntry.groupBy({
-          by: ["approvalStatus"],
-          where: { tenantId: ctx.tenantId, kind: "PAGAR", status: { not: "CANCELADO" }, approvalStatus: { in: ["AGUARDANDO", "REPROVADO"] } },
-          _count: { _all: true },
-          _sum: { amount: true },
-        })
-      : null,
-  ]);
-
-  const p = resumo ? faixasDasPendencias(resumo) : null;
-  const daAprovacao = (s: "AGUARDANDO" | "REPROVADO") => aprovacoes?.find((a) => a.approvalStatus === s);
-  const aguardando = daAprovacao("AGUARDANDO");
-  const reprovadas = daAprovacao("REPROVADO");
-  const valor = (g: typeof aguardando) => moeda(g?._sum.amount ? centavosDeDecimal(g._sum.amount) : 0);
+  const { pendencias: p, aprovacoes } = await dadosDasPendencias(ctx.tenantId, verPendencias, verAprovacoes);
+  const aguardando = aprovacoes?.aguardando ?? { n: 0, centavos: 0 };
+  const reprovadas = aprovacoes?.reprovadas ?? { n: 0, centavos: 0 };
+  const t = await tendenciasDaHome(ctx, {
+    ...(p ? { pendencias_vencidas: p.vencidas, pendencias_abertas: p.respondidas + p.aguardando } : {}),
+    ...(aprovacoes ? { aprovacoes_aguardando: aguardando.n } : {}),
+  });
 
   return (
     <Painel
@@ -243,8 +224,13 @@ export async function PainelDePendencias({ ctx, acesso, setor }: Base) {
       href={verPendencias ? "/pendencias" : "/aprovacoes"}
       destaque={
         p
-          ? { valor: numero(p.vencidas), legenda: p.vencidas === 1 ? "pendência vencida" : "pendências vencidas", tom: p.vencidas > 0 ? "critico" : undefined }
-          : { valor: numero(aguardando?._count._all ?? 0), legenda: "aguardando aprovação", tom: "atencao" }
+          ? {
+              valor: numero(p.vencidas),
+              legenda: p.vencidas === 1 ? "pendência vencida" : "pendências vencidas",
+              tom: p.vencidas > 0 ? "critico" : undefined,
+              tendencia: t.pendencias_vencidas,
+            }
+          : { valor: numero(aguardando.n), legenda: "aguardando aprovação", tom: "atencao", tendencia: t.aprovacoes_aguardando }
       }
     >
       <div className="space-y-4">
@@ -267,18 +253,18 @@ export async function PainelDePendencias({ ctx, acesso, setor }: Base) {
               {
                 chave: "reprovadas",
                 rotulo: "Reprovadas",
-                valor: reprovadas?._count._all ?? 0,
+                valor: reprovadas.n,
                 tom: "critico",
                 href: "/aprovacoes?situacao=reprovadas",
-                detalhe: valor(reprovadas),
+                detalhe: moeda(reprovadas.centavos),
               },
               {
                 chave: "aguardando",
                 rotulo: "Aguardando",
-                valor: aguardando?._count._all ?? 0,
+                valor: aguardando.n,
                 tom: "atencao",
                 href: "/aprovacoes?situacao=aguardando",
-                detalhe: valor(aguardando),
+                detalhe: moeda(aguardando.centavos),
               },
             ]}
           />
@@ -307,10 +293,8 @@ const FAIXAS_DO_PRAZO = [
 ] as const;
 
 export async function PainelDeProcessos({ ctx, setor }: Base) {
-  const agora = new Date();
-  const feriados = await feriadosDoTenant(ctx.tenantId);
-  const fila = await listarFila(ctx.tenantId, {}, feriados, agora);
-  const estourados = fila.filter((l) => l.prazo.situacao === "estourado").length;
+  const { fila, estourados } = await dadosDosProcessos(ctx.tenantId);
+  const t = await tendenciasDaHome(ctx, { processos_estourados: estourados, processos_abertos: fila.length });
 
   const linhas: LinhaDeSituacao[] = SITUACOES_DA_FILA.map((s) => {
     const daSituacao = fila.filter((l) => l.situacao === s.situacao);
@@ -337,6 +321,7 @@ export async function PainelDeProcessos({ ctx, setor }: Base) {
         valor: numero(estourados),
         legenda: `de ${plural(fila.length, "processo", "processos")} com prazo estourado`,
         tom: estourados > 0 ? "critico" : undefined,
+        tendencia: t.processos_estourados,
       }}
     >
       <LinhasDeSituacao titulo="Processos por situação e prazo" linhas={linhas} vazio="Nenhum processo em aberto." />
@@ -346,21 +331,9 @@ export async function PainelDeProcessos({ ctx, setor }: Base) {
 
 // ─── DP ────────────────────────────────────────────────────────────────────
 
-/** Os mesmos recortes das telas: /ferias, /colaboradores, /admissoes e /afastamentos. */
-const FERIAS_EM_ABERTO = ["PLANEJADA", "SOLICITADA", "EM_ANALISE", "APROVADA", "PROGRAMADA", "EM_GOZO"] as const;
-const EXAMES_PENDENTES = ["SOLICITADO", "AGENDADO", "REALIZADO", "ASO_PENDENTE"] as const;
-
 export async function PainelDoDP({ ctx, setor }: Base) {
-  const prisma = getPrisma();
-  const tenantId = ctx.tenantId;
-  const [ferias, admissoes, rescisoes, exames, afastados] = await Promise.all([
-    prisma.vacation.findMany({ where: { tenantId, status: { in: [...FERIAS_EM_ABERTO] } }, select: { concessivePeriodEnd: true } }),
-    prisma.person.count({ where: { tenantId, type: "COLABORADOR", employmentStatus: "ADMISSAO_EM_ANDAMENTO" } }),
-    prisma.termination.count({ where: { tenantId, status: { notIn: ["FINALIZADO", "CANCELADO"] } } }),
-    prisma.exameAdmissional.count({ where: { tenantId, status: { in: [...EXAMES_PENDENTES] } } }),
-    prisma.absence.count({ where: { tenantId, status: { notIn: [...AFASTAMENTO_ENCERRADO] } } }),
-  ]);
-  const f = contarFerias(ferias, new Date());
+  const { ferias: f, admissoes, rescisoes, exames, afastados } = await dadosDoDP(ctx.tenantId);
+  const t = await tendenciasDaHome(ctx, { ferias_vencidas: f.vencidas, ferias_a_vencer: f.aVencer });
 
   const andamento = [
     { rotulo: "Admissões", detalhe: "em andamento", valor: admissoes, href: "/admissoes", icone: <UserPlus /> },
@@ -379,6 +352,7 @@ export async function PainelDoDP({ ctx, setor }: Base) {
         valor: numero(f.vencidas),
         legenda: f.vencidas === 1 ? "férias vencida" : "férias vencidas",
         tom: f.vencidas > 0 ? "critico" : undefined,
+        tendencia: t.ferias_vencidas,
       }}
     >
       <BarraDeSituacao
@@ -415,15 +389,9 @@ export async function PainelDoDP({ ctx, setor }: Base) {
 // ─── Recrutamento ──────────────────────────────────────────────────────────
 
 export async function PainelDeRecrutamento({ ctx, setor }: Base) {
-  const prisma = getPrisma();
-  // O escopo de /vagas (setor ativo e regra do recrutador); candidatura não
-  // tem setor, então vem pela vaga.
-  const vagasAbertas = { AND: [scopedVagaWhere(ctx), { status: { in: ["ABERTA" as const, "EM_ANDAMENTO" as const] } }] };
-  const [vagas, candidaturas] = await Promise.all([
-    prisma.vaga.count({ where: vagasAbertas }),
-    prisma.candidatura.findMany({ where: { tenantId: ctx.tenantId, vaga: vagasAbertas }, select: { stage: true, status: true } }),
-  ]);
-  const funil = computeFunnelConversion(candidaturas);
+  // O escopo de /vagas (setor ativo e regra do recrutador).
+  const { vagas, funil } = await dadosDoRecrutamento(ctx);
+  const t = await tendenciasDaHome(ctx, { vagas_abertas: vagas });
 
   return (
     <Painel
@@ -431,7 +399,7 @@ export async function PainelDeRecrutamento({ ctx, setor }: Base) {
       cor={setor.cor}
       titulo="Funil das vagas abertas"
       href="/vagas"
-      destaque={{ valor: numero(vagas), legenda: vagas === 1 ? "vaga aberta" : "vagas abertas" }}
+      destaque={{ valor: numero(vagas), legenda: vagas === 1 ? "vaga aberta" : "vagas abertas", tendencia: t.vagas_abertas }}
       rodape={
         funil.total > 0 ? (
           <>
@@ -453,14 +421,8 @@ export async function PainelDeRecrutamento({ ctx, setor }: Base) {
 // ─── Certificados ──────────────────────────────────────────────────────────
 
 export async function PainelDeCertificados({ ctx, setor }: Base) {
-  const hoje = new Date();
-  const certs = await listarCertificados(ctx.tenantId);
-  const atuais = atuaisPorDocumento(certs);
-  const c = { vencido: 0, a_renovar: 0, vigente: 0 };
-  for (const cert of certs) {
-    const s = situacaoDoCertificado(cert, atuais.get(cert.documento), hoje);
-    if (s !== "substituido") c[s] += 1;
-  }
+  const c = await dadosDosCertificados(ctx.tenantId);
+  const t = await tendenciasDaHome(ctx, { certificados_vencidos: c.vencido, certificados_a_renovar: c.a_renovar });
 
   return (
     <Painel
@@ -472,6 +434,7 @@ export async function PainelDeCertificados({ ctx, setor }: Base) {
         valor: numero(c.vencido),
         legenda: c.vencido === 1 ? "vencido" : "vencidos",
         tom: c.vencido > 0 ? "critico" : undefined,
+        tendencia: t.certificados_vencidos,
       }}
     >
       <Rosca
@@ -491,7 +454,7 @@ export async function PainelDeCertificados({ ctx, setor }: Base) {
 /** O lugar do painel enquanto a consulta dele roda. */
 export function PainelCarregando() {
   return (
-    <div className="min-w-0 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 min-h-[260px]" aria-hidden>
+    <div className="min-w-0 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-md)] p-5 min-h-[280px]" aria-hidden>
       <div className="h-2.5 w-20 rounded-full bg-surface-hover animate-pulse" />
       <div className="h-4 w-44 rounded-full bg-surface-hover animate-pulse mt-2.5" />
       <div className="h-7 w-32 rounded-md bg-surface-hover animate-pulse mt-4" />
