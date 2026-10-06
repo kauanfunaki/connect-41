@@ -15,6 +15,8 @@ const ERRORS: Record<string, string> = {
   "preencha-os-campos":    "Preencha e-mail e senha.",
   "muitas-tentativas":     "Muitas tentativas de login. Aguarde alguns minutos e tente novamente.",
   "erro-interno":          "Erro interno. Tente novamente.",
+  // O e-mail tem conta em mais de um escritório e a escolha venceu (06/10/2026).
+  "escolha-expirou":       "A escolha do escritório expirou. Entre de novo.",
 };
 
 export default async function LoginPage({
