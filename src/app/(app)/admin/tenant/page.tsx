@@ -27,7 +27,7 @@ export default async function TenantPage() {
     <PageContainer>
       <PageHeader
         title="Empresa (Tenant)"
-        subtitle="Dados do workspace da 41 Tech no Connect."
+        subtitle="Os dados deste workspace no Connect."
       />
 
       {/* Coluna de formulário (720px), como nas outras telas de cadastro: na

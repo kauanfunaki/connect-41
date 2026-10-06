@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  Archive,
+  ArchiveRestore,
   ArrowLeftRight,
   AtSign,
   Bell,
@@ -27,11 +29,15 @@ import type { IconeDaNotificacao, Tom } from "@/lib/notificacoes/catalogo";
 import type { NotificacaoNaTela, TipoDoChip } from "@/lib/notificacoes/consultas";
 import { tempoRelativo } from "@/lib/notificacoes/tempo";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { AvatarImage } from "@/components/shared/AvatarImage";
 
 // O cartão de uma notificação — o mesmo no sino e na central (02/10/2026):
 // ícone do tipo no tom do catálogo, título curto em negrito com a mensagem
 // embaixo, chip da empresa/pessoa/card, quando, e o ponto de não lida. No
-// hover, marcar lida/não lida e remover.
+// hover, marcar lida/não lida, arquivar e remover.
+//
+// Com autor (05/10/2026), a foto de quem fez entra no lugar do ícone, e o
+// ícone do tipo vira um selo no canto da foto: dá para ver quem e o quê.
 
 const ICONES: Record<IconeDaNotificacao, typeof Bell> = {
   transferencia: ArrowLeftRight,
@@ -50,6 +56,7 @@ const ICONES: Record<IconeDaNotificacao, typeof Bell> = {
   processo: Landmark,
   alerta: CircleAlert,
   sino: Bell,
+  arquivo: Archive,
 };
 
 const TONS: Record<Tom, string> = {
@@ -84,10 +91,29 @@ export function IconeDaNotificacao({ icone, tom, tamanho = 34 }: { icone: IconeD
   );
 }
 
+/** A foto de quem fez, com o ícone do tipo num selo no canto; sem autor, só o ícone. */
+function RostoDaNotificacao({ n }: { n: NotificacaoNaTela }) {
+  if (!n.autor) return <IconeDaNotificacao icone={n.icone} tom={n.tom} />;
+  const Icone = ICONES[n.icone];
+  return (
+    <span className="relative flex-shrink-0 size-[34px]">
+      <AvatarImage src={n.autor.foto} name={n.autor.nome} size={34} bordered={false} />
+      {/* Fundo opaco por baixo: o tom do selo é translúcido, e a foto vazaria. */}
+      <span aria-hidden className="absolute -bottom-1 -right-1 size-[18px] rounded-full bg-surface-elevated ring-2 ring-surface-elevated">
+        <span className={`size-full inline-flex items-center justify-center rounded-full ${TONS[n.tom]}`}>
+          <Icone size={10} />
+        </span>
+      </span>
+    </span>
+  );
+}
+
 type Props = {
   n: NotificacaoNaTela;
   onAbrir: (n: NotificacaoNaTela) => void;
   onAlternarLida: (n: NotificacaoNaTela) => void;
+  /** Arquiva, ou desarquiva quando ela já está arquivada. */
+  onArquivar: (n: NotificacaoNaTela) => void;
   onRemover: (n: NotificacaoNaTela) => void;
   /** Central: a hora vai na linha do tempo, à esquerda — o cartão não repete. */
   semTempo?: boolean;
@@ -95,7 +121,7 @@ type Props = {
   selecao?: { marcada: boolean; onMudar: (marcada: boolean) => void };
 };
 
-export function CartaoDeNotificacao({ n, onAbrir, onAlternarLida, onRemover, semTempo = false, selecao }: Props) {
+export function CartaoDeNotificacao({ n, onAbrir, onAlternarLida, onArquivar, onRemover, semTempo = false, selecao }: Props) {
   const Chip = n.chip ? ICONE_DO_CHIP[n.chip.tipo] : null;
   return (
     <div
@@ -112,7 +138,7 @@ export function CartaoDeNotificacao({ n, onAbrir, onAlternarLida, onRemover, sem
           />
         </span>
       )}
-      <IconeDaNotificacao icone={n.icone} tom={n.tom} />
+      <RostoDaNotificacao n={n} />
       <button
         type="button"
         onClick={() => onAbrir(n)}
@@ -124,6 +150,7 @@ export function CartaoDeNotificacao({ n, onAbrir, onAlternarLida, onRemover, sem
         </span>
         <span className="block text-[13px] text-fg-secondary leading-snug mt-0.5 line-clamp-2">{n.mensagem}</span>
         <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+          {n.autor && <span className="text-[11px] font-medium text-fg-secondary">{n.autor.nome}</span>}
           {n.chip && Chip && (
             <span className="inline-flex max-w-full items-center gap-1 h-5 px-1.5 rounded-md border border-border bg-surface text-[11px] font-medium text-fg-secondary">
               <Chip size={11} className="flex-shrink-0 text-fg-muted" />
@@ -143,6 +170,15 @@ export function CartaoDeNotificacao({ n, onAbrir, onAlternarLida, onRemover, sem
           className="size-7 inline-flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-surface-2"
         >
           {n.lida ? <RotateCcw size={14} /> : <Check size={14} />}
+        </button>
+        <button
+          type="button"
+          onClick={() => onArquivar(n)}
+          title={n.arquivada ? "Desarquivar" : "Arquivar"}
+          aria-label={n.arquivada ? "Desarquivar notificação" : "Arquivar notificação"}
+          className="size-7 inline-flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-surface-2"
+        >
+          {n.arquivada ? <ArchiveRestore size={14} /> : <Archive size={14} />}
         </button>
         <button
           type="button"

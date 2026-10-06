@@ -341,11 +341,12 @@ export async function agirEmLote(threadIds: string[], acao: AcaoEmLote): Promise
   if (destino && destino.id !== ctx.userId && transferidas.length > 0) {
     try {
       const quem = (await prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true } }))?.name ?? "Alguém do time";
+      // Com quem passou, para a foto no sino (05/10/2026).
       await notifyUser(
         destino.id,
         transferidas.length === 1
-          ? { tenantId, type: "WHATSAPP_HANDOFF", message: `WhatsApp: ${quem} passou para você a conversa com ${transferidas[0].nome}`.slice(0, 255), entityId: transferidas[0].id }
-          : { tenantId, type: "WHATSAPP_HANDOFF", message: `WhatsApp: ${quem} passou ${transferidas.length} conversas para você` }
+          ? { tenantId, type: "WHATSAPP_HANDOFF", message: `WhatsApp: ${quem} passou para você a conversa com ${transferidas[0].nome}`.slice(0, 255), entityId: transferidas[0].id, actorUserId: ctx.userId }
+          : { tenantId, type: "WHATSAPP_HANDOFF", message: `WhatsApp: ${quem} passou ${transferidas.length} conversas para você`, actorUserId: ctx.userId }
       );
     } catch (err) {
       console.error("[whatsapp] aviso de transferência", err);

@@ -17,7 +17,7 @@ import { RelatorioAnual } from "@/components/dre/RelatorioAnual";
 import { ImportarDoOmie } from "@/components/dre/ImportarDoOmie";
 import { impostoForaDoResultado } from "@/lib/dre/calculo";
 import { OPCOES_PADRAO, TRANSFERENCIA } from "@/lib/dre/estrutura";
-import { setorDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 
 const MESES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -42,6 +42,8 @@ export default async function DrePage({
 }) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !canActOnSector(ctx, (await setorDoModulo(ctx.tenantId, "bpo_dre")) ?? "bpo")) notFound();
+  // Módulo desligado no escritório, tela fora — como a DRE econômica e as análises (05/10/2026).
+  if (!(await isModuleEnabled(ctx.tenantId, "bpo_dre"))) notFound();
 
   const { empresa, mes, visao, ano } = await searchParams;
   const prisma = getPrisma();

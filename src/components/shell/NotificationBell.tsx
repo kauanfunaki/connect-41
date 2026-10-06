@@ -2,7 +2,7 @@
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, RefreshCw } from "lucide-react";
+import { Bell, EyeOff, RefreshCw } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -10,6 +10,7 @@ import { PainelFlutuante } from "@/components/ui/PainelFlutuante";
 import { CartaoDeNotificacao } from "@/components/notificacoes/CartaoDeNotificacao";
 import { AbasDasNotificacoes } from "@/components/notificacoes/AbasDasNotificacoes";
 import {
+  arquivarNotificacoes,
   contarNaoLidas,
   listarNotificacoes,
   marcarLidas,
@@ -20,7 +21,7 @@ import type { AbaOuTodas } from "@/lib/notificacoes/catalogo";
 import type { NotificacaoNaTela } from "@/lib/notificacoes/consultas";
 
 type Contagens = Record<AbaOuTodas, number>;
-type Dados = { itens: NotificacaoNaTela[]; contagens: Contagens };
+type Dados = { itens: NotificacaoNaTela[]; contagens: Contagens; ocultos: number };
 
 // O sino (redesenho de 02/10/2026, referências do Searcheye): abas por natureza
 // com a contagem de não lidas, cartão com ícone do tipo e chip da entidade,
@@ -30,6 +31,9 @@ type Dados = { itens: NotificacaoNaTela[]; contagens: Contagens };
 // A lista é buscada AO ABRIR. Até aqui ela vinha do layout, que não
 // re-renderiza ao navegar, e envelhecia até recarregar a página. O layout fica
 // só com o contador, que também se atualiza quando a pessoa volta à aba.
+//
+// Segunda leva (05/10/2026): arquivar no hover (sai do sino sem ser apagada) e
+// o aviso de quantos tipos a pessoa ocultou, com o atalho para as preferências.
 
 const POR_ABERTURA = 20;
 
@@ -82,7 +86,7 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
     try {
       const r = await listarNotificacoes({ aba: alvo, limite: POR_ABERTURA });
       if (n !== pedido.current) return;
-      setDados({ itens: r.itens, contagens: r.contagens });
+      setDados({ itens: r.itens, contagens: r.contagens, ocultos: r.ocultos });
       setContagemDoTopo(r.contagens.todas);
     } finally {
       if (n === pedido.current) setCarregando(false);
@@ -112,6 +116,7 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
   async function alternarLida(n: NotificacaoNaTela) {
     setDados((d) =>
       d && {
+        ...d,
         itens: d.itens.map((x) => (x.id === n.id ? { ...x, lida: !n.lida } : x)),
         contagens: ajustar(d.contagens, n, n.lida ? 1 : -1),
       }
@@ -121,10 +126,21 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
     router.refresh();
   }
 
-  async function remover(n: NotificacaoNaTela) {
-    setDados((d) => d && { itens: d.itens.filter((x) => x.id !== n.id), contagens: n.lida ? d.contagens : ajustar(d.contagens, n, -1) });
+  /** Remover e arquivar tiram do sino do mesmo jeito; a não lida sai da contagem. */
+  function tirar(n: NotificacaoNaTela) {
+    setDados((d) => d && { ...d, itens: d.itens.filter((x) => x.id !== n.id), contagens: n.lida ? d.contagens : ajustar(d.contagens, n, -1) });
     if (!n.lida) setContagemDoTopo((c) => Math.max(0, c - 1));
+  }
+
+  async function remover(n: NotificacaoNaTela) {
+    tirar(n);
     await removerNotificacoes([n.id]);
+    router.refresh();
+  }
+
+  async function arquivar(n: NotificacaoNaTela) {
+    tirar(n);
+    await arquivarNotificacoes([n.id]);
     router.refresh();
   }
 
@@ -176,6 +192,17 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
         </div>
         <div className="px-3 pb-2">
           <AbasDasNotificacoes ativa={aba} contagens={dados?.contagens ?? null} onEscolher={trocarAba} />
+          {/* Nada some sem a pessoa saber: o que ela ocultou fica dito, com o atalho de volta. */}
+          {!!dados?.ocultos && (
+            <div className="mt-1.5 flex items-center justify-between gap-2 px-1 text-[11px] text-fg-muted">
+              <span className="inline-flex items-center gap-1">
+                <EyeOff size={12} /> {dados.ocultos} tipo{dados.ocultos === 1 ? "" : "s"} oculto{dados.ocultos === 1 ? "" : "s"}
+              </span>
+              <Button href="/notificacoes?preferencias=abrir" size="xs" variant="ghost" onClick={() => setAberto(false)}>
+                Ajustar
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="scroll-y flex-1 min-h-0 overflow-y-auto border-t border-border px-1.5 py-1.5">
@@ -189,7 +216,13 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
             <ul className={`flex flex-col gap-0.5 transition-opacity ${carregando ? "opacity-60" : ""}`}>
               {dados?.itens.map((n) => (
                 <li key={n.id}>
-                  <CartaoDeNotificacao n={n} onAbrir={(x) => void abrir(x)} onAlternarLida={(x) => void alternarLida(x)} onRemover={(x) => void remover(x)} />
+                  <CartaoDeNotificacao
+                    n={n}
+                    onAbrir={(x) => void abrir(x)}
+                    onAlternarLida={(x) => void alternarLida(x)}
+                    onArquivar={(x) => void arquivar(x)}
+                    onRemover={(x) => void remover(x)}
+                  />
                 </li>
               ))}
             </ul>

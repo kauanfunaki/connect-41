@@ -20,7 +20,7 @@ export function CarregarPlanoPadrao() {
     return (
       <span className="inline-flex items-center gap-2">
         <Button variant="secondary" onClick={() => { setMensagem(null); setConfirmando(true); }}>
-          <Download size={14} /> Carregar o plano padrão da 41
+          <Download size={14} /> Carregar o plano padrão
         </Button>
         {mensagem && <span className={`text-[12px] ${mensagem.ok ? "text-success" : "text-danger"}`}>{mensagem.texto}</span>}
       </span>

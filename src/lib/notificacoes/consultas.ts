@@ -8,7 +8,7 @@ import { getPrisma } from "@/lib/prisma";
 import { linkDaNotificacao } from "@/lib/notificacaoLink";
 import { nomeExibicao } from "@/lib/companyName";
 import { telefoneLegivel } from "@/lib/whatsapp/conversas";
-import { doTipo, filtroDaAba, type Aba, type AbaOuTodas, type IconeDaNotificacao, type Tom } from "./catalogo";
+import { doTipo, filtroDaAba, ocultosValidos, type Aba, type AbaOuTodas, type IconeDaNotificacao, type Tom } from "./catalogo";
 
 export type TipoDoChip = "empresa" | "pessoa" | "card" | "processo" | "solicitacao" | "conversa" | "pendencia";
 
@@ -25,12 +25,17 @@ export type NotificacaoNaTela = {
   /** ISO — a tela formata no fuso de São Paulo. */
   criadaEm: string;
   chip: { rotulo: string; tipo: TipoDoChip } | null;
+  /** Quem causou (05/10/2026): a foto no lugar do ícone. Nulo nos alertas automáticos. */
+  autor: { nome: string; foto: string | null } | null;
+  arquivada: boolean;
 };
 
 export type FiltrosDasNotificacoes = {
   aba: AbaOuTodas;
   status: "todas" | "nao_lidas";
   q: string;
+  /** A caixa das arquivadas (05/10/2026): todas as abas juntas, sem os filtros de aba e de lida. */
+  arquivadas?: boolean;
   cursor?: string | null;
   limite?: number;
 };
@@ -71,25 +76,52 @@ export function lerCursor(c: string | null | undefined): { em: Date; id: string 
   return id && !Number.isNaN(em.getTime()) ? { em, id } : null;
 }
 
-export function ondeDasNotificacoes(dono: Dono, f: Pick<FiltrosDasNotificacoes, "aba" | "status" | "q">): Prisma.NotificationWhereInput {
-  const tipos = filtroDaAba(f.aba);
+/**
+ * O `where` de uma aba. Arquivada fica fora das abas; na caixa das arquivadas
+ * entra tudo o que a pessoa arquivou, de qualquer aba e de tipo oculto também —
+ * foi ela que guardou ali.
+ */
+export function ondeDasNotificacoes(
+  dono: Dono,
+  f: Pick<FiltrosDasNotificacoes, "aba" | "status" | "q" | "arquivadas">,
+  ocultos: string[] = []
+): Prisma.NotificationWhereInput {
   const busca = f.q.trim().slice(0, 100);
+  const base = { tenantId: dono.tenantId, userId: dono.userId, ...(busca ? { message: { contains: busca } } : {}) };
+  if (f.arquivadas) return { ...base, archivedAt: { not: null } };
+  const tipos = filtroDaAba(f.aba, ocultos);
   return {
-    tenantId: dono.tenantId,
-    userId: dono.userId,
+    ...base,
+    archivedAt: null,
     ...(tipos ? { type: tipos } : {}),
     ...(f.status === "nao_lidas" ? { read: false } : {}),
-    ...(busca ? { message: { contains: busca } } : {}),
   };
+}
+
+/** Os tipos que a pessoa desligou nas preferências — só os que ainda valem no catálogo. */
+export async function tiposOcultos(dono: Dono): Promise<string[]> {
+  const linhas = await getPrisma().notificationHiddenType.findMany({
+    where: { tenantId: dono.tenantId, userId: dono.userId },
+    select: { type: true },
+  });
+  return ocultosValidos(linhas.map((l) => l.type));
+}
+
+/** O número do sino: não lidas, fora as arquivadas e as dos tipos ocultos. */
+export async function contarNaoLidasVisiveis(dono: Dono, ocultos: string[]): Promise<number> {
+  return getPrisma().notification.count({
+    where: { tenantId: dono.tenantId, userId: dono.userId, read: false, archivedAt: null, ...(ocultos.length ? { type: { notIn: ocultos } } : {}) },
+  });
 }
 
 export async function consultarNotificacoes(
   dono: Dono,
-  f: FiltrosDasNotificacoes
+  f: FiltrosDasNotificacoes,
+  ocultos: string[] = []
 ): Promise<{ itens: NotificacaoNaTela[]; proximoCursor: string | null }> {
   const limite = Math.min(Math.max(f.limite ?? LIMITE_PADRAO, 1), LIMITE_MAXIMO);
   const cursor = lerCursor(f.cursor);
-  const where = ondeDasNotificacoes(dono, f);
+  const where = ondeDasNotificacoes(dono, f, ocultos);
   const linhas = await getPrisma().notification.findMany({
     where: cursor
       ? { AND: [where, { OR: [{ createdAt: { lt: cursor.em } }, { createdAt: cursor.em, id: { lt: cursor.id } }] }] }
@@ -98,7 +130,7 @@ export async function consultarNotificacoes(
     take: limite + 1,
   });
   const pagina = linhas.slice(0, limite);
-  const chips = await chipsDasNotificacoes(dono.tenantId, pagina);
+  const [chips, autores] = await Promise.all([chipsDasNotificacoes(dono.tenantId, pagina), autoresDasNotificacoes(pagina)]);
   return {
     itens: pagina.map((n) => {
       const t = doTipo(n.type);
@@ -114,26 +146,45 @@ export async function consultarNotificacoes(
         href: linkDaNotificacao(n),
         criadaEm: n.createdAt.toISOString(),
         chip: chips.get(n.id) ?? null,
+        autor: (n.actorUserId && autores.get(n.actorUserId)) || null,
+        arquivada: n.archivedAt !== null,
       };
     }),
     proximoCursor: linhas.length > limite ? montarCursor(pagina[pagina.length - 1]) : null,
   };
 }
 
-/** Não lidas por aba — as contagens das abas do sino e da central. */
-export async function naoLidasPorAba(dono: Dono): Promise<Record<AbaOuTodas, number>> {
+/** Não lidas por aba — as contagens das abas do sino e da central. Arquivada e tipo oculto não contam. */
+export async function naoLidasPorAba(dono: Dono, ocultos: string[] = []): Promise<Record<AbaOuTodas, number>> {
   const grupos = await getPrisma().notification.groupBy({
     by: ["type"],
-    where: { tenantId: dono.tenantId, userId: dono.userId, read: false },
+    where: { tenantId: dono.tenantId, userId: dono.userId, read: false, archivedAt: null },
     _count: { _all: true },
   });
+  const escondidos = new Set(ocultos);
   const r: Record<AbaOuTodas, number> = { todas: 0, para_mim: 0, clientes: 0, alertas: 0 };
   for (const g of grupos) {
+    if (escondidos.has(g.type)) continue;
     const n = g._count._all;
     r.todas += n;
     r[doTipo(g.type).aba] += n;
   }
   return r;
+}
+
+/**
+ * O nome e a foto de quem causou cada notificação, em lote (05/10/2026).
+ *
+ * Pelo id, sem filtrar pelo escritório: quem age pode ser o suporte entrando
+ * em outro escritório, com usuário do escritório de origem. Os ids vêm das
+ * notificações da própria pessoa, gravados pelo servidor — e nome e foto são o
+ * que a equipe já vê de quem age no escritório.
+ */
+async function autoresDasNotificacoes(linhas: { actorUserId: string | null }[]): Promise<Map<string, { nome: string; foto: string | null }>> {
+  const ids = [...new Set(linhas.map((n) => n.actorUserId).filter((x): x is string => !!x))];
+  if (ids.length === 0) return new Map();
+  const usuarios = await getPrisma().user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true, photoUrl: true } });
+  return new Map(usuarios.map((u) => [u.id, { nome: u.name, foto: u.photoUrl }]));
 }
 
 /**

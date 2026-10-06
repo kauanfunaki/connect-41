@@ -59,7 +59,7 @@ export default async function ComunicacaoPage({
       {substituida && (
         // Revisão de 05/10: botão não é link — "Solicitações" era texto azul no meio da frase.
         <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-info/40 bg-info-bg px-4 py-3 text-[13px] text-fg">
-          <p>A conversa saiu do portal: agora o cliente fala com a 41 pelas Solicitações. Esta tela fica como histórico.</p>
+          <p>A conversa saiu do portal: agora o cliente fala com a equipe pelas Solicitações. Esta tela fica como histórico.</p>
           <Button href="/solicitacoes" variant="secondary" size="xs">
             Abrir Solicitações
           </Button>

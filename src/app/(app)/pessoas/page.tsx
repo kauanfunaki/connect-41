@@ -87,7 +87,7 @@ export default async function PessoasPage({
       {/* Header */}
       <PageHeader
         title="Pessoas"
-        subtitle={<>{`${total} funcionário${total !== 1 ? "s" : ""} interno${total !== 1 ? "s" : ""} da 41`}</>}
+        subtitle={<>{`${total} funcionário${total !== 1 ? "s" : ""} interno${total !== 1 ? "s" : ""} do escritório`}</>}
         action={<>{canCreate && (
           <Button
             href="/pessoas/nova?internal=1"
@@ -133,7 +133,7 @@ export default async function PessoasPage({
             description={
               search
                 ? "Tente ajustar a busca."
-                : "São os funcionários da própria 41. O pessoal das empresas clientes fica em Colaboradores de clientes."
+                : "São os funcionários do próprio escritório. O pessoal das empresas clientes fica em Colaboradores de clientes."
             }
             action={
               !search && canCreate ? (

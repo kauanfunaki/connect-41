@@ -83,8 +83,8 @@ export default async function AjudaDoPortalPage() {
                 {temSolicitacoes
                   ? "Abra uma solicitação. A equipe certa recebe na hora e responde por lá."
                   : temConversa
-                    ? "Escreva para a equipe da 41 pela Conversa. Ela é avisada na hora e responde por lá."
-                    : "Fale com o seu contato na 41."}
+                    ? "Escreva para a equipe pela Conversa. Ela é avisada na hora e responde por lá."
+                    : "Fale com o seu contato no escritório."}
               </p>
             </div>
             {temSolicitacoes && (
