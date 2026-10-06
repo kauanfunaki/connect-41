@@ -23,7 +23,9 @@ import { getSectorsWithEnabledModules } from "@/lib/modules";
 import { boardPath } from "@/lib/kanbanPaths";
 import { formatCalendarDate, formatInstantDate, formatInstantTime } from "@/lib/format";
 import { parseHomeWidgets, visibleWidgets, widgetsDisponiveis, type HomeWidgetKey } from "@/lib/homeWidgets";
-import { acessoDosPaineis } from "@/lib/home/acessoDosPaineis";
+import { acessoDosPaineis, type AcessoDoPainel } from "@/lib/home/acessoDosPaineis";
+import { contarTarefas } from "@/lib/home/paineis";
+import { FaixaCarregando, FaixaDeDestaques, type SetorDoDestaque } from "@/components/home/FaixaDeDestaques";
 import {
   PainelCarregando,
   PainelDeCertificados,
@@ -367,6 +369,37 @@ export default async function HomePage() {
   const pendingForMe = vencidosCount + hojeCount + incomingHandoffsRaw.length;
   const nextMeeting = upcomingMeetings[0] && upcomingMeetings[0].startAt <= todayEnd ? upcomingMeetings[0] : null;
 
+  const restrictedOpts = { showRestricted: showWorkspaceOverview, paineisDoSetor: new Set(paineis.keys()) };
+  const disponiveis = widgetsDisponiveis(restrictedOpts);
+  const topWidgets = visibleWidgets("top", selectedWidgets, restrictedOpts);
+  const painelWidgets = visibleWidgets("paineis", selectedWidgets, restrictedOpts);
+  const mainWidgets = visibleWidgets("main", selectedWidgets, restrictedOpts);
+  const sideWidgets = visibleWidgets("side", selectedWidgets, restrictedOpts);
+  // Com uma das colunas vazia o grid de duas colunas jogaria a sobrevivente na
+  // faixa larga (ou estreita) errada — nesse caso a Home vira coluna única.
+  const twoColumns = mainWidgets.length > 0 && sideWidgets.length > 0;
+
+  // Faixa de destaques (06/10): os números saem só dos painéis que estão na
+  // Home desta pessoa — com acesso e não ocultos em "Personalizar". Painel
+  // oculto não é consultado, nem pela faixa.
+  const escopoDasTarefas = ctx.activeSector ? sectorLabel(sectorLabels, ctx.activeSector) : "Seus setores";
+  const paineisNaHome = new Map<HomeWidgetKey, AcessoDoPainel>();
+  const setoresDosDestaques: Partial<Record<HomeWidgetKey, SetorDoDestaque>> = {
+    "painel-tarefas": {
+      rotulo: escopoDasTarefas,
+      cor: ctx.activeSector ? (sectorColors[ctx.activeSector] ?? "var(--c41-brand)") : "var(--c41-brand)",
+    },
+  };
+  for (const chave of painelWidgets) {
+    const acesso = paineis.get(chave);
+    if (!acesso) continue;
+    paineisNaHome.set(chave, acesso);
+    setoresDosDestaques[chave] = { rotulo: sectorLabel(sectorLabels, acesso.setor), cor: sectorColors[acesso.setor] ?? "#586577" };
+  }
+  const tarefasNaHome = painelWidgets.includes("painel-tarefas");
+  const contagemDasTarefas = contarTarefas(openPipelineItemsRaw, todayStart, todayEnd);
+  const comDestaques = topWidgets.includes("destaques");
+
   // Painéis de setor (30/09): cada um com a própria consulta, dentro de um
   // Suspense — a Home aparece sem esperar o mais lento, e o painel entra
   // quando o dado chega. Sem acesso, o painel nem é montado.
@@ -390,11 +423,27 @@ export default async function HomePage() {
   // hoje) continua sendo null como antes — a preferência só decide se ele
   // *pode* aparecer, não força um card vazio.
   const widgetNodes: Record<HomeWidgetKey, React.ReactNode> = {
+    // Espera os painéis que resume — mas pelo `cache()` deles, sem consulta nova.
+    destaques: (
+      <Suspense fallback={<FaixaCarregando quantos={paineisNaHome.size + (tarefasNaHome ? 1 : 0)} />}>
+        <FaixaDeDestaques
+          ctx={ctx}
+          paineis={paineisNaHome}
+          tarefas={
+            tarefasNaHome
+              ? { atrasadas: contagemDasTarefas.atrasada, hoje: contagemDasTarefas.hoje, abertas: openPipelineItemsRaw.length }
+              : undefined
+          }
+          setores={setoresDosDestaques}
+        />
+      </Suspense>
+    ),
+
     "painel-tarefas": (
       <PainelDeTarefas
         itens={openPipelineItemsRaw}
         atribuidas={assignedToMe.length}
-        escopo={ctx.activeSector ? sectorLabel(sectorLabels, ctx.activeSector) : "Seus setores"}
+        escopo={escopoDasTarefas}
         inicioDeHoje={todayStart}
         fimDeHoje={todayEnd}
       />
@@ -651,16 +700,6 @@ export default async function HomePage() {
     ),
   };
 
-  const restrictedOpts = { showRestricted: showWorkspaceOverview, paineisDoSetor: new Set(paineis.keys()) };
-  const disponiveis = widgetsDisponiveis(restrictedOpts);
-  const topWidgets = visibleWidgets("top", selectedWidgets, restrictedOpts);
-  const painelWidgets = visibleWidgets("paineis", selectedWidgets, restrictedOpts);
-  const mainWidgets = visibleWidgets("main", selectedWidgets, restrictedOpts);
-  const sideWidgets = visibleWidgets("side", selectedWidgets, restrictedOpts);
-  // Com uma das colunas vazia o grid de duas colunas jogaria a sobrevivente na
-  // faixa larga (ou estreita) errada — nesse caso a Home vira coluna única.
-  const twoColumns = mainWidgets.length > 0 && sideWidgets.length > 0;
-
   return (
     <PageContainer>
       {/* Header */}
@@ -692,9 +731,14 @@ export default async function HomePage() {
       ))}
 
       {/* Painéis: a grade de gráficos (30/09). Duas colunas até telas bem
-          largas — com a sidebar, três painéis a 1440px apertam as barras. */}
+          largas — com a sidebar, três painéis a 1440px apertam as barras.
+          Com a faixa de destaques em cima (06/10), os gráficos ficam mais
+          baixos: o número que manda já está na faixa. */}
       {painelWidgets.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 min-[1760px]:grid-cols-3 gap-4 mb-4 items-stretch">
+        <div
+          data-compacto={comDestaques ? "true" : undefined}
+          className="group/grade grid grid-cols-1 lg:grid-cols-2 min-[1760px]:grid-cols-3 gap-4 mb-4 items-stretch"
+        >
           {painelWidgets.map((key) => (
             <Fragment key={key}>{widgetNodes[key]}</Fragment>
           ))}

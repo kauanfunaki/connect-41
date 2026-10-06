@@ -25,6 +25,20 @@ describe("parseHomeWidgets", () => {
   });
 });
 
+describe("faixa de destaques (06/10)", () => {
+  it("nasce visível, por último no topo — colada nos painéis — inclusive para quem já personalizou", () => {
+    const opts = { showRestricted: false };
+    expect(visibleWidgets("top", DEFAULT_HOME_WIDGETS, opts)).toEqual(["indicadores", "proxima-reuniao", "destaques"]);
+    const antiga = parseHomeWidgets(serializeHomeWidgets(["proxima-reuniao", "indicadores", "meu-dia"], ["agenda"]));
+    expect(visibleWidgets("top", antiga, opts)).toEqual(["proxima-reuniao", "indicadores", "destaques"]);
+  });
+
+  it("pode ser ocultada como qualquer bloco", () => {
+    const raw = serializeHomeWidgets(["indicadores"], ["destaques"]);
+    expect(visibleWidgets("top", parseHomeWidgets(raw), { showRestricted: false })).not.toContain("destaques");
+  });
+});
+
 describe("painéis de setor", () => {
   it("só aparecem (e só são listados) com acesso", () => {
     const semAcesso = { showRestricted: false };

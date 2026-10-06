@@ -1,5 +1,5 @@
 // As contas dos painéis da Home (30/09). Funções puras: a consulta fica em
-// `paineis-dados.ts`, e o julgamento — em que faixa cai cada coisa — mora aqui,
+// `dadosDosPaineis.ts`, e o julgamento — em que faixa cai cada coisa — mora aqui,
 // testado, com as mesmas regras das telas de onde os números saem.
 
 import { addDaysToKey, mondayOfWeek } from "@/lib/agenda";

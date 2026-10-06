@@ -1,31 +1,18 @@
-import { cache } from "react";
 import Link from "next/link";
 import { UserPlus, UserMinus, Stethoscope, HeartPulse } from "lucide-react";
-import { getPrisma } from "@/lib/prisma";
 import type { AuthContext } from "@/lib/auth/context";
-import { scopedVagaWhere } from "@/lib/auth/scope";
-import { saoPauloParts } from "@/lib/agenda";
 import { formatCalendarDate } from "@/lib/format";
 import { moeda } from "@/lib/financeiro/formato";
-import { centavosDeDecimal } from "@/lib/financeiro/contas";
-import { titulosEmAberto } from "@/lib/financeiro/consultas";
-import { resumoDasPendencias } from "@/lib/financeiro/pendencias/consultas";
-import { setorPadraoDasPendencias, soDoSetorPadrao } from "@/lib/financeiro/pendencias/setor";
-import { listarFila, feriadosDoTenant } from "@/lib/societario/fila";
 import { SITUACAO_LABEL } from "@/components/societario/ProcessosFila";
-import { computeFunnelConversion } from "@/lib/recruitmentFunnel";
-import { listarCertificados } from "@/lib/certificados/servidor";
-import { atuaisPorDocumento, situacaoDoCertificado } from "@/lib/certificados/certificados";
+import { contarTarefas, AVISO_DAS_FERIAS_DIAS, type FaixaDeVencimento, type Soma } from "@/lib/home/paineis";
 import {
-  aPagarPorSemana,
-  carteiraPorFaixa,
-  contarFerias,
-  contarTarefas,
-  faixasDasPendencias,
-  AVISO_DAS_FERIAS_DIAS,
-  type FaixaDeVencimento,
-  type Soma,
-} from "@/lib/home/paineis";
+  dadosDaCarteira,
+  dadosDasPendencias,
+  dadosDoDP,
+  dadosDoRecrutamento,
+  dadosDosCertificados,
+  dadosDosProcessos,
+} from "@/lib/home/dadosDosPaineis";
 import type { AcessoDoPainel } from "@/lib/home/acessoDosPaineis";
 import {
   BarraDeSituacao,
@@ -44,6 +31,8 @@ import {
 // Os painéis da Home (30/09). Cada um é um server component assíncrono com a
 // própria consulta, montado dentro de um <Suspense> na Home: a página não
 // espera o mais lento para aparecer, e cada painel entra quando o dado chega.
+// As consultas moram em `dadosDosPaineis.ts` (06/10), com `cache()`: a faixa
+// de destaques lê os mesmos números sem consultar de novo.
 
 /** Nome e cor do setor, já resolvidos pela Home. */
 export type SetorDoPainel = { rotulo: string; cor: string };
@@ -62,10 +51,6 @@ function reaisCurtos(centavos: number): string {
 function plural(n: number, um: string, varios: string): string {
   return `${numero(n)} ${n === 1 ? um : varios}`;
 }
-
-// Painel de contas e o de semanas leem os mesmos títulos: uma consulta por
-// requisição, não duas.
-const titulosDoTenant = cache((tenantId: string) => titulosEmAberto({ tenantId, companyIds: null }));
 
 // ─── Você ──────────────────────────────────────────────────────────────────
 
@@ -137,12 +122,9 @@ function segmentosDaCarteira(faixas: Record<FaixaDeVencimento, Soma>, tela: "/pa
 }
 
 export async function PainelDeContas({ ctx, acesso, setor }: Base) {
-  const hojeKey = saoPauloParts(new Date()).dateKey;
-  const titulos = await titulosDoTenant(ctx.tenantId);
+  const { pagar, receber } = await dadosDaCarteira(ctx.tenantId);
   const verPagar = acesso.modulos.has("bpo_contas_pagar");
   const verReceber = acesso.modulos.has("bpo_contas_receber");
-  const pagar = carteiraPorFaixa(titulos, "PAGAR", hojeKey);
-  const receber = carteiraPorFaixa(titulos, "RECEBER", hojeKey);
   const principal = verPagar ? pagar : receber;
 
   return (
@@ -174,8 +156,7 @@ export async function PainelDeContas({ ctx, acesso, setor }: Base) {
 }
 
 export async function PainelDeSemanas({ ctx, setor }: Base) {
-  const hojeKey = saoPauloParts(new Date()).dateKey;
-  const semanas = aPagarPorSemana(await titulosDoTenant(ctx.tenantId), hojeKey);
+  const { semanas } = await dadosDaCarteira(ctx.tenantId);
   const total = semanas.reduce((s, x) => s + x.centavos, 0);
   const dia = (key: string) => formatCalendarDate(new Date(`${key}T12:00:00Z`), { day: "2-digit", month: "2-digit" });
 
@@ -205,33 +186,11 @@ export async function PainelDeSemanas({ ctx, setor }: Base) {
 }
 
 export async function PainelDePendencias({ ctx, acesso, setor }: Base) {
-  const agora = new Date();
-  const prisma = getPrisma();
   const verPendencias = acesso.modulos.has("bpo_pendencias");
   const verAprovacoes = acesso.modulos.has("bpo_aprovacoes");
-  const [resumo, aprovacoes] = await Promise.all([
-    // O painel é do BPO: só as do setor do módulo (e as sem setor, de antes de 01/10).
-    verPendencias
-      ? setorPadraoDasPendencias(ctx.tenantId).then((padrao) =>
-          resumoDasPendencias({ tenantId: ctx.tenantId, companyIds: null, setores: soDoSetorPadrao(padrao) }, agora)
-        )
-      : null,
-    // A contagem da fila de /aprovacoes (aguardando e reprovadas travam a baixa).
-    verAprovacoes
-      ? prisma.financeEntry.groupBy({
-          by: ["approvalStatus"],
-          where: { tenantId: ctx.tenantId, kind: "PAGAR", status: { not: "CANCELADO" }, approvalStatus: { in: ["AGUARDANDO", "REPROVADO"] } },
-          _count: { _all: true },
-          _sum: { amount: true },
-        })
-      : null,
-  ]);
-
-  const p = resumo ? faixasDasPendencias(resumo) : null;
-  const daAprovacao = (s: "AGUARDANDO" | "REPROVADO") => aprovacoes?.find((a) => a.approvalStatus === s);
-  const aguardando = daAprovacao("AGUARDANDO");
-  const reprovadas = daAprovacao("REPROVADO");
-  const valor = (g: typeof aguardando) => moeda(g?._sum.amount ? centavosDeDecimal(g._sum.amount) : 0);
+  const { pendencias: p, aprovacoes } = await dadosDasPendencias(ctx.tenantId, verPendencias, verAprovacoes);
+  const aguardando = aprovacoes?.aguardando ?? { n: 0, centavos: 0 };
+  const reprovadas = aprovacoes?.reprovadas ?? { n: 0, centavos: 0 };
 
   return (
     <Painel
@@ -242,7 +201,7 @@ export async function PainelDePendencias({ ctx, acesso, setor }: Base) {
       destaque={
         p
           ? { valor: numero(p.vencidas), legenda: p.vencidas === 1 ? "pendência vencida" : "pendências vencidas", tom: p.vencidas > 0 ? "critico" : undefined }
-          : { valor: numero(aguardando?._count._all ?? 0), legenda: "aguardando aprovação", tom: "atencao" }
+          : { valor: numero(aguardando.n), legenda: "aguardando aprovação", tom: "atencao" }
       }
     >
       <div className="space-y-4">
@@ -265,18 +224,18 @@ export async function PainelDePendencias({ ctx, acesso, setor }: Base) {
               {
                 chave: "reprovadas",
                 rotulo: "Reprovadas",
-                valor: reprovadas?._count._all ?? 0,
+                valor: reprovadas.n,
                 tom: "critico",
                 href: "/aprovacoes?situacao=reprovadas",
-                detalhe: valor(reprovadas),
+                detalhe: moeda(reprovadas.centavos),
               },
               {
                 chave: "aguardando",
                 rotulo: "Aguardando",
-                valor: aguardando?._count._all ?? 0,
+                valor: aguardando.n,
                 tom: "atencao",
                 href: "/aprovacoes?situacao=aguardando",
-                detalhe: valor(aguardando),
+                detalhe: moeda(aguardando.centavos),
               },
             ]}
           />
@@ -305,10 +264,7 @@ const FAIXAS_DO_PRAZO = [
 ] as const;
 
 export async function PainelDeProcessos({ ctx, setor }: Base) {
-  const agora = new Date();
-  const feriados = await feriadosDoTenant(ctx.tenantId);
-  const fila = await listarFila(ctx.tenantId, {}, feriados, agora);
-  const estourados = fila.filter((l) => l.prazo.situacao === "estourado").length;
+  const { fila, estourados } = await dadosDosProcessos(ctx.tenantId);
 
   const linhas: LinhaDeSituacao[] = SITUACOES_DA_FILA.map((s) => {
     const daSituacao = fila.filter((l) => l.situacao === s.situacao);
@@ -344,22 +300,8 @@ export async function PainelDeProcessos({ ctx, setor }: Base) {
 
 // ─── DP ────────────────────────────────────────────────────────────────────
 
-/** Os mesmos recortes das telas: /ferias, /colaboradores, /admissoes e /afastamentos. */
-const FERIAS_EM_ABERTO = ["PLANEJADA", "SOLICITADA", "EM_ANALISE", "APROVADA", "PROGRAMADA", "EM_GOZO"] as const;
-const EXAMES_PENDENTES = ["SOLICITADO", "AGENDADO", "REALIZADO", "ASO_PENDENTE"] as const;
-const AFASTAMENTOS_ATIVOS = ["AFASTADO", "RETORNO_PREVISTO", "EM_ANALISE"] as const;
-
 export async function PainelDoDP({ ctx, setor }: Base) {
-  const prisma = getPrisma();
-  const tenantId = ctx.tenantId;
-  const [ferias, admissoes, rescisoes, exames, afastados] = await Promise.all([
-    prisma.vacation.findMany({ where: { tenantId, status: { in: [...FERIAS_EM_ABERTO] } }, select: { concessivePeriodEnd: true } }),
-    prisma.person.count({ where: { tenantId, type: "COLABORADOR", employmentStatus: "ADMISSAO_EM_ANDAMENTO" } }),
-    prisma.termination.count({ where: { tenantId, status: { notIn: ["FINALIZADO", "CANCELADO"] } } }),
-    prisma.exameAdmissional.count({ where: { tenantId, status: { in: [...EXAMES_PENDENTES] } } }),
-    prisma.absence.count({ where: { tenantId, status: { in: [...AFASTAMENTOS_ATIVOS] } } }),
-  ]);
-  const f = contarFerias(ferias, new Date());
+  const { ferias: f, admissoes, rescisoes, exames, afastados } = await dadosDoDP(ctx.tenantId);
 
   const andamento = [
     { rotulo: "Admissões", detalhe: "em andamento", valor: admissoes, href: "/admissoes", icone: <UserPlus /> },
@@ -414,15 +356,8 @@ export async function PainelDoDP({ ctx, setor }: Base) {
 // ─── Recrutamento ──────────────────────────────────────────────────────────
 
 export async function PainelDeRecrutamento({ ctx, setor }: Base) {
-  const prisma = getPrisma();
-  // O escopo de /vagas (setor ativo e regra do recrutador); candidatura não
-  // tem setor, então vem pela vaga.
-  const vagasAbertas = { AND: [scopedVagaWhere(ctx), { status: { in: ["ABERTA" as const, "EM_ANDAMENTO" as const] } }] };
-  const [vagas, candidaturas] = await Promise.all([
-    prisma.vaga.count({ where: vagasAbertas }),
-    prisma.candidatura.findMany({ where: { tenantId: ctx.tenantId, vaga: vagasAbertas }, select: { stage: true, status: true } }),
-  ]);
-  const funil = computeFunnelConversion(candidaturas);
+  // O escopo de /vagas (setor ativo e regra do recrutador).
+  const { vagas, funil } = await dadosDoRecrutamento(ctx);
 
   return (
     <Painel
@@ -452,14 +387,7 @@ export async function PainelDeRecrutamento({ ctx, setor }: Base) {
 // ─── Certificados ──────────────────────────────────────────────────────────
 
 export async function PainelDeCertificados({ ctx, setor }: Base) {
-  const hoje = new Date();
-  const certs = await listarCertificados(ctx.tenantId);
-  const atuais = atuaisPorDocumento(certs);
-  const c = { vencido: 0, a_renovar: 0, vigente: 0 };
-  for (const cert of certs) {
-    const s = situacaoDoCertificado(cert, atuais.get(cert.documento), hoje);
-    if (s !== "substituido") c[s] += 1;
-  }
+  const c = await dadosDosCertificados(ctx.tenantId);
 
   return (
     <Painel
