@@ -1,18 +1,11 @@
+import { MolduraDeEntrada } from "@/components/entrada/MolduraDeEntrada";
 import { CarrosselDoPortal } from "./CarrosselDoPortal";
 
 // A entrada do portal do cliente (02/10/2026): login, esqueci e nova senha.
 //
-// - No computador, duas metades: o formulário sobre um fundo com a textura da
-//   marca, e o carrossel do que o cliente encontra lá dentro.
-// - No celular, o topo na cor da marca com o logo e o título, e o cartão do
-//   formulário sobreposto a ele.
-//
-// O login da equipe segue no `AuthShell` — herdar este visual é decisão à parte.
-
-const GRADE = {
-  backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
-  backgroundSize: "40px 40px",
-};
+// O desenho — duas metades no computador, topo azul no celular — mora em
+// `entrada/MolduraDeEntrada`, que desde 06/10/2026 também veste a entrada da
+// equipe. Aqui fica o que é do cliente: o rótulo e o carrossel do portal.
 
 export function MolduraDoPortal({
   titulo,
@@ -24,74 +17,8 @@ export function MolduraDoPortal({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-dvh bg-canvas lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.08fr)]">
-      <main className="relative isolate flex flex-col lg:min-h-dvh">
-        {/* Celular: topo na cor da marca. */}
-        <div
-          className="lg:hidden relative overflow-hidden px-6 pt-8 pb-28 text-white"
-          style={{ background: "linear-gradient(165deg, var(--c41-brand-600), var(--c41-brand-900))" }}
-        >
-          <div aria-hidden className="absolute inset-0 opacity-[0.07]" style={GRADE} />
-          <div className="relative">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/logo-horizontal-dark.svg" alt="Connect" className="h-7 w-auto" />
-            <p className="mt-7 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/60">Portal do Cliente</p>
-            <h1 className="mt-1.5 text-[26px] font-semibold tracking-[-0.01em] leading-tight">{titulo}</h1>
-            <p className="mt-2 text-[14px] leading-relaxed text-white/75 max-w-[36ch]">{subtitulo}</p>
-          </div>
-        </div>
-
-        {/* Computador: pontilhado da marca que some para as bordas, e dois brilhos. */}
-        <div aria-hidden className="hidden lg:block absolute inset-0 -z-10 overflow-hidden">
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: "radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--c41-brand-500) 30%, transparent) 1px, transparent 0)",
-              backgroundSize: "22px 22px",
-              maskImage: "radial-gradient(ellipse 75% 70% at 50% 45%, #000 20%, transparent 80%)",
-            }}
-          />
-          <div
-            className="absolute -top-40 -left-32 size-[520px] rounded-full blur-3xl"
-            style={{ background: "color-mix(in srgb, var(--c41-brand-400) 22%, transparent)" }}
-          />
-          <div
-            className="absolute -bottom-48 right-0 size-[460px] rounded-full blur-3xl"
-            style={{ background: "color-mix(in srgb, var(--c41-brand-300) 18%, transparent)" }}
-          />
-        </div>
-
-        <div className="hidden lg:flex absolute top-8 left-10">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo-horizontal-light.svg" alt="Connect" className="block dark:hidden h-8 w-auto" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo-horizontal-dark.svg" alt="Connect" className="hidden dark:block h-8 w-auto" />
-        </div>
-
-        <div className="relative flex-1 flex flex-col items-center justify-start lg:justify-center px-4 lg:px-10 pb-10 lg:py-24 -mt-20 lg:mt-0">
-          <div className="w-full max-w-[400px]">
-            <div className="hidden lg:block mb-7">
-              <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-brand">Portal do Cliente</p>
-              <h1 className="mt-2 text-[30px] font-semibold text-fg tracking-[-0.015em] leading-tight [text-wrap:balance]">{titulo}</h1>
-              <p className="mt-2 text-[14px] leading-relaxed text-fg-secondary">{subtitulo}</p>
-            </div>
-            <div className="[&>*]:shadow-[0_20px_50px_-24px_rgba(18,52,125,0.35)]">{children}</div>
-          </div>
-        </div>
-      </main>
-
-      <aside
-        className="hidden lg:flex relative overflow-hidden items-center justify-center px-12 xl:px-16 py-16"
-        style={{ background: "radial-gradient(120% 90% at 85% 10%, var(--c41-brand-700), var(--c41-brand-900) 60%)" }}
-      >
-        <div aria-hidden className="absolute inset-0 opacity-[0.05]" style={GRADE} />
-        <div
-          aria-hidden
-          className="absolute -bottom-40 -left-40 size-[520px] rounded-full blur-3xl"
-          style={{ background: "color-mix(in srgb, var(--c41-brand-500) 35%, transparent)" }}
-        />
-        <CarrosselDoPortal />
-      </aside>
-    </div>
+    <MolduraDeEntrada rotulo="Portal do Cliente" titulo={titulo} subtitulo={subtitulo} carrossel={<CarrosselDoPortal />}>
+      {children}
+    </MolduraDeEntrada>
   );
 }
