@@ -101,7 +101,7 @@ const PRIMEIROS_PASSOS: Passo[] = [
     resumo: "O menu passa a mostrar só as telas do setor escolhido.",
     icone: <LayoutGrid />,
     passos: [
-      "No seletor do topo da barra lateral, escolha o setor.",
+      "Clique no nome do escritório e do setor, na barra do topo, e escolha o setor na janela “Trocar de setor ou escritório”.",
       "Em \"Todos os setores\", clique no nome do setor em \"Meus setores\" para entrar nele.",
       "Passe o mouse em Cadastros ou num grupo do setor (como Contas) para ver as telas dele ao lado, sem abrir.",
     ],

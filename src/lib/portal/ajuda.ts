@@ -55,9 +55,9 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     resumo: "O primeiro acesso, com uma senha que só você sabe.",
     icone: "entrar",
     passos: [
-      "Quando a 41 libera o seu acesso, chega um e-mail com o botão Redefinir senha. Clique nele.",
+      "Quando o escritório libera o seu acesso, chega um e-mail com o botão Redefinir senha. Clique nele.",
       "Escolha a sua senha, com ao menos 8 caracteres, repita em Confirme a senha e clique em Salvar senha.",
-      "Clique em Entrar no portal, digite o seu e-mail e a senha e clique em Entrar.",
+      "Clique em Entrar no portal, digite o seu e-mail e a senha e clique em Entrar. Marque Lembrar de mim para não precisar entrar de novo por 30 dias neste aparelho.",
       "Se o seu e-mail tem acesso a mais de um cliente, escolha em qual você quer entrar.",
       "O link do e-mail vale por uma hora. Se ele vencer, use Esqueci minha senha na tela de entrada.",
     ],

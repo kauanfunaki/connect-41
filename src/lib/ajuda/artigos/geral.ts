@@ -17,7 +17,8 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
         passos: [
           "Clique em “Início”, no topo da barra lateral. O logo do Connect, acima do menu, também leva ao Início.",
           "No alto ficam os indicadores “Empresas ativas”, “Vencidos / hoje”, “Transferências” e “Pessoas cadastradas”. Clique em um deles para abrir a lista correspondente.",
-          "Logo abaixo ficam os painéis com gráficos, como “Tarefas por prazo”, e os painéis dos setores que você enxerga.",
+          "Logo abaixo, a faixa “Destaques” mostra os três números que mais pedem a sua atenção — em vermelho, o que está vencido ou atrasado. Clique num cartão para abrir a tela de onde ele vem.",
+          "Depois vêm os painéis com gráficos, como “Tarefas por prazo”, e os painéis dos setores que você enxerga.",
           "No bloco “Meu dia”, clique em um item para abrir a tarefa.",
           "Em “Transferências a revisar”, clique em “Revisar” para abrir a transferência que espera o seu setor.",
         ],
@@ -101,7 +102,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como encontrar uma empresa",
         passos: [
-          "Abra “Cadastros” na barra lateral e fique na aba “Empresas”.",
+          "Abra “Cadastros” na barra lateral. A tela tem as abas “Empresas”, “Clientes” e “Pessoas”; fique em “Empresas”.",
           "Digite parte do nome ou do ID no campo “Buscar por nome ou ID…”.",
           "Para trocar o status mostrado, clique em “Filtros” e escolha “Ativo”, “Prospecto”, “Inativo”, “Cancelado” ou “Todos, incluindo inativos”.",
           "Para filtrar por regime ou cidade, clique no funil ao lado do título das colunas “Regime” e “Localização” e marque os valores.",
