@@ -35,6 +35,7 @@ import {
   Painel,
   Rosca,
   numero,
+  numeroCurto,
   type LinhaDeSituacao,
   type Segmento,
   type Tom,
@@ -49,16 +50,13 @@ export type SetorDoPainel = { rotulo: string; cor: string };
 
 type Base = { ctx: AuthContext; acesso: AcessoDoPainel; setor: SetorDoPainel };
 
-const MOEDA_CURTA = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-  notation: "compact",
-  maximumFractionDigits: 1,
-});
-
-/** "R$ 12,3 mil" — rótulo de coluna; o valor exato fica na dica. */
-function moedaCurta(centavos: number): string {
-  return MOEDA_CURTA.format(centavos / 100);
+/**
+ * "12,3 mil" — o rótulo em cima da coluna, sem o "R$" (06/10): seis colunas
+ * com "R$ 12,3 mil" não cabem no celular. O título diz que é dinheiro, e o
+ * valor exato fica na dica.
+ */
+function reaisCurtos(centavos: number): string {
+  return numeroCurto(centavos / 100);
 }
 
 function plural(n: number, um: string, varios: string): string {
@@ -191,14 +189,15 @@ export async function PainelDeSemanas({ ctx, setor }: Base) {
     >
       <Colunas
         titulo="Por semana, de segunda a domingo"
-        formatar={moedaCurta}
+        formatar={moeda}
+        formatarCurto={reaisCurtos}
         vazio="Nada a pagar nas próximas seis semanas."
         colunas={semanas.map((s, i) => ({
           chave: s.inicioKey,
           rotulo: i === 0 ? "Esta semana" : dia(s.inicioKey),
           valor: s.centavos,
           destaque: i === 0,
-          dica: `${moeda(s.centavos)} · ${plural(s.n, "conta", "contas")}${i === 0 ? " (de hoje em diante)" : ""}`,
+          dica: `${plural(s.n, "conta", "contas")}${i === 0 ? " (de hoje em diante)" : ""}`,
         }))}
       />
     </Painel>
@@ -491,7 +490,7 @@ export async function PainelDeCertificados({ ctx, setor }: Base) {
 /** O lugar do painel enquanto a consulta dele roda. */
 export function PainelCarregando() {
   return (
-    <div className="min-w-0 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 min-h-[260px]" aria-hidden>
+    <div className="min-w-0 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-md)] p-5 min-h-[280px]" aria-hidden>
       <div className="h-2.5 w-20 rounded-full bg-surface-hover animate-pulse" />
       <div className="h-4 w-44 rounded-full bg-surface-hover animate-pulse mt-2.5" />
       <div className="h-7 w-32 rounded-md bg-surface-hover animate-pulse mt-4" />

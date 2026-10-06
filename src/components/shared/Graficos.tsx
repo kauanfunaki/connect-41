@@ -8,13 +8,18 @@ import { ArrowUpRight, CircleCheck, OctagonAlert, TriangleAlert } from "lucide-r
 //
 // Regras seguidas (método de dataviz):
 // - cor de situação é reservada e sempre vem com ícone + rótulo na legenda;
-// - 2px de superfície entre segmentos, ponta de dado arredondada em 4px,
-//   base reta; barras finas;
 // - número em texto neutro, nunca na cor da série;
 // - cada gráfico leva uma tabela `sr-only` com os mesmos números.
 // Paleta validada (claro e escuro) com o validador do método: crítico,
 // atenção e "próximo" passam na separação para daltonismo; o cinza neutro é
 // o "sem situação" de propósito.
+//
+// Cor e volume (06/10, opção B escolhida pelo Kauan — achou os gráficos
+// bons, mas apagados): o mesmo conteúdo com mais presença, em todas as telas
+// que usam estes componentes. Topo do cartão tingido na cor do setor, filete
+// de 4px, número principal em Space Grotesk; barras de 18px com 3px de vão e
+// cada segmento arredondado; rosca mais grossa; colunas em degradê com o
+// valor em cima de cada uma; sombra mais funda.
 
 export type Tom = "critico" | "atencao" | "ok" | "proximo" | "neutro";
 
@@ -38,10 +43,16 @@ export type Segmento = {
 };
 
 const NUMERO = new Intl.NumberFormat("pt-BR");
+const NUMERO_CURTO = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 });
 const PCT = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 0 });
 
 export function numero(n: number): string {
   return NUMERO.format(n);
+}
+
+/** "12 mil", "1,2 mi" — o rótulo em cima da coluna; o valor exato fica na dica. */
+export function numeroCurto(n: number): string {
+  return NUMERO_CURTO.format(n);
 }
 
 function dicaDe(s: Segmento, total: number): string {
@@ -84,14 +95,22 @@ export function Painel({
   children: React.ReactNode;
   rodape?: React.ReactNode;
 }) {
+  const corDoSetor = cor ?? "var(--c41-brand)";
   return (
-    <section className="reveal-in group/painel relative min-w-0 flex flex-col bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 overflow-hidden">
+    <section
+      className="reveal-in group/painel relative min-w-0 flex flex-col bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-md)] p-5 overflow-hidden"
+      // O topo tingido na cor do setor (06/10): 11% dela sobre a superfície,
+      // sumindo antes do gráfico — dá identidade sem pintar o dado.
+      style={{
+        backgroundImage: `linear-gradient(to bottom, color-mix(in srgb, ${corDoSetor} 11%, var(--c41-surface)), var(--c41-surface) 128px)`,
+      }}
+    >
       {/* Filete na cor do setor: identifica o painel sem pintar o gráfico. */}
-      <span className="absolute inset-x-0 top-0 h-[3px]" style={{ background: cor ?? "var(--c41-brand)" }} aria-hidden />
+      <span className="absolute inset-x-0 top-0 h-1" style={{ background: corDoSetor }} aria-hidden />
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
-            <span className="size-1.5 rounded-full" style={{ background: cor ?? "var(--c41-brand)" }} aria-hidden />
+            <span className="size-1.5 rounded-full" style={{ background: corDoSetor }} aria-hidden />
             {setor}
           </p>
           <h2 className="font-display text-[length:var(--fs-section)] font-semibold text-fg leading-tight mt-1">{titulo}</h2>
@@ -109,7 +128,7 @@ export function Painel({
       {destaque && (
         <p className="mt-3 flex items-baseline gap-2 min-w-0">
           <span
-            className="text-[28px] font-semibold leading-none tracking-tight truncate c41-cortavel"
+            className="font-display text-[length:var(--fs-metric)] font-bold leading-none tracking-tight tnum truncate c41-cortavel"
             style={destaque.tom && destaque.tom !== "neutro" ? { color: COR_DO_TOM[destaque.tom] } : undefined}
           >
             {destaque.valor}
@@ -126,21 +145,24 @@ export function Painel({
 
 // ─── Barra de situação ─────────────────────────────────────────────────────
 
-/** A barra empilhada em si (sem legenda) — usada sozinha e nas linhas. */
+/**
+ * A barra empilhada em si (sem legenda) — usada sozinha e nas linhas. 18px
+ * de altura, 3px de vão e cada segmento com os cantos arredondados (06/10).
+ */
 function Pilha({ segmentos, largura = 100 }: { segmentos: Segmento[]; largura?: number }) {
   const total = segmentos.reduce((s, x) => s + x.valor, 0);
   const visiveis = segmentos.filter((s) => s.valor > 0);
   return (
-    <div className="group/pilha flex h-6 items-center gap-[2px]" style={{ width: `${largura}%` }}>
+    <div className="group/pilha flex h-[26px] items-center gap-[3px]" style={{ width: `${largura}%` }}>
       {visiveis.map((s) => {
         const barra = (
           <span
-            className="block h-2.5 w-full group-last/seg:rounded-r-[4px] transition-opacity duration-150 group-hover/pilha:opacity-45 group-hover/seg:opacity-100!"
+            className="block h-[18px] w-full rounded-[5px] transition-opacity duration-150 group-hover/pilha:opacity-45 group-hover/seg:opacity-100!"
             style={{ background: COR_DO_TOM[s.tom] }}
           />
         );
         const comum = {
-          className: "group/seg flex h-full items-center min-w-[3px]",
+          className: "group/seg flex h-full items-center min-w-[6px]",
           style: { flexGrow: s.valor, flexBasis: 0 },
           "data-dica": dicaDe(s, total),
           "data-dica-rapida": "",
@@ -282,7 +304,7 @@ export function LinhasDeSituacao({
   return (
     <div className="min-w-0">
       <Legenda segmentos={legenda} comValores={false} />
-      <div className="mt-3 space-y-1">
+      <div className="mt-3 space-y-1.5">
         {linhas.map((l) => {
           const total = l.segmentos.reduce((s, x) => s + x.valor, 0);
           const rotulo = (
@@ -346,10 +368,12 @@ export function Rosca({
   const total = segmentos.reduce((s, x) => s + x.valor, 0);
   if (total === 0) return <p className="text-[length:var(--fs-helper)] text-fg-muted py-1.5">{vazio}</p>;
 
-  const r = 42;
+  // Anel de 16 (era 11, 06/10): mais grosso, e o raio recua para o anel com
+  // hover (18) ainda caber no viewBox de 100.
+  const r = 41;
   const c = 2 * Math.PI * r;
-  // 2px de superfície entre as fatias (em unidades do viewBox de 100).
-  const vao = segmentos.filter((s) => s.valor > 0).length > 1 ? 1.6 : 0;
+  // ~3px de superfície entre as fatias (em unidades do viewBox de 100).
+  const vao = segmentos.filter((s) => s.valor > 0).length > 1 ? 2.2 : 0;
   const fatias: (Segmento & { dash: number; offset: number })[] = [];
   let cursor = 0;
   for (const s of segmentos) {
@@ -363,7 +387,7 @@ export function Rosca({
     <div className="flex items-center gap-5 flex-wrap min-w-0">
       <div className="relative size-[132px] flex-shrink-0">
         <svg viewBox="0 0 100 100" className="size-full -rotate-90" aria-hidden>
-          <circle cx="50" cy="50" r={r} fill="none" stroke="var(--c41-surface-hover)" strokeWidth="11" />
+          <circle cx="50" cy="50" r={r} fill="none" stroke="var(--c41-surface-hover)" strokeWidth="16" />
           {fatias.map((f) => (
             <circle
               key={f.chave}
@@ -372,17 +396,17 @@ export function Rosca({
               r={r}
               fill="none"
               stroke={COR_DO_TOM[f.tom]}
-              strokeWidth="11"
+              strokeWidth="16"
               strokeDasharray={`${f.dash} ${c - f.dash}`}
               strokeDashoffset={f.offset}
-              className="transition-[stroke-width] duration-150 hover:[stroke-width:14]"
+              className="transition-[stroke-width] duration-150 hover:[stroke-width:18]"
               data-dica={dicaDe(f, total)}
               data-dica-rapida=""
             />
           ))}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-[24px] font-semibold text-fg leading-none">{numero(total)}</span>
+          <span className="font-display text-[length:var(--fs-title)] font-bold text-fg leading-none tnum">{numero(total)}</span>
           <span className="text-[length:var(--fs-micro)] text-fg-muted mt-1">{legendaDoTotal}</span>
         </div>
       </div>
@@ -419,18 +443,23 @@ export function Rosca({
 export type Coluna = { chave: string; rotulo: string; valor: number; dica?: string; destaque?: boolean };
 
 /**
- * Colunas de uma série só (ex.: a pagar por semana). Rótulo de valor só na
- * maior e na destacada; o resto fica na dica e na tabela acessível.
+ * Colunas de uma série só (ex.: a pagar por semana), em degradê, com o valor
+ * curto em cima de cada uma ("12 mil", 06/10) — o exato fica na dica e na
+ * tabela acessível.
  */
 export function Colunas({
   titulo,
   colunas,
   formatar = numero,
+  formatarCurto = numeroCurto,
   vazio = "Nada por aqui.",
 }: {
   titulo: string;
   colunas: Coluna[];
+  /** O valor exato, na dica e na tabela acessível. */
   formatar?: (n: number) => string;
+  /** O rótulo em cima da coluna — curto para caber em seis colunas no celular. */
+  formatarCurto?: (n: number) => string;
   vazio?: string;
 }) {
   const maior = Math.max(0, ...colunas.map((c) => c.valor));
@@ -439,10 +468,14 @@ export function Colunas({
   return (
     <div className="min-w-0">
       <p className="text-[12px] font-medium text-fg-secondary mb-2">{titulo}</p>
-      <div className="group/colunas relative flex items-end gap-[2px] h-28 border-b border-border">
+      {/* O `pt-5` guarda o lugar do rótulo da coluna mais alta: a altura da
+          coluna é percentual da área de baixo, e o rótulo sobe para o vão. */}
+      <div className="group/colunas relative flex items-end gap-[3px] h-36 pt-5 border-b border-border">
         {colunas.map((c) => {
           const altura = c.valor > 0 ? Math.max((c.valor / maior) * 100, 3) : 0;
-          const rotular = c.valor === maior || c.destaque;
+          const [topo, base] = c.destaque
+            ? ["var(--c41-grafico-coluna-destaque-topo)", "var(--c41-grafico-coluna-destaque-base)"]
+            : ["var(--c41-grafico-coluna-topo)", "var(--c41-grafico-coluna-base)"];
           return (
             <div
               key={c.chave}
@@ -450,18 +483,26 @@ export function Colunas({
               data-dica={`${c.rotulo}: ${formatar(c.valor)}${c.dica ? `\n${c.dica}` : ""}`}
               data-dica-rapida=""
             >
-              {rotular && c.valor > 0 && (
-                <span className="text-[length:var(--fs-micro)] font-medium text-fg-secondary tnum mb-1 whitespace-nowrap">{formatar(c.valor)}</span>
+              {c.valor > 0 && (
+                <span
+                  className={`shrink-0 text-[length:var(--fs-micro)] tnum mb-1 whitespace-nowrap ${
+                    c.valor === maior || c.destaque ? "font-semibold text-fg" : "font-medium text-fg-secondary"
+                  }`}
+                >
+                  {formatarCurto(c.valor)}
+                </span>
               )}
+              {/* `shrink-0`: sem ele a coluna mais alta encolhia para o rótulo
+                  caber, e deixava de ser proporcional às outras. */}
               <span
-                className="block w-full max-w-6 rounded-t-[4px] transition-opacity duration-150 group-hover/colunas:opacity-45 group-hover/col:opacity-100!"
-                style={{ height: `${altura}%`, background: c.destaque ? "var(--c41-grafico-proximo)" : "var(--c41-brand)" }}
+                className="block shrink-0 w-full max-w-9 rounded-t-[6px] transition-opacity duration-150 group-hover/colunas:opacity-45 group-hover/col:opacity-100!"
+                style={{ height: `${altura}%`, background: `linear-gradient(to bottom, ${topo}, ${base})` }}
               />
             </div>
           );
         })}
       </div>
-      <div className="flex gap-[2px] mt-1.5">
+      <div className="flex gap-[3px] mt-1.5">
         {colunas.map((c) => (
           <span key={c.chave} className="flex-1 min-w-0 text-center text-[length:var(--fs-micro)] text-fg-muted truncate">
             {c.rotulo}
@@ -486,18 +527,21 @@ export function Funil({ titulo, etapas, vazio = "Nada por aqui." }: { titulo: st
   if (maior === 0) return <p className="text-[length:var(--fs-helper)] text-fg-muted py-1.5">{vazio}</p>;
 
   return (
-    <div className="min-w-0 space-y-1">
+    <div className="group/funil min-w-0 space-y-1">
       {etapas.map((e, i) => {
         const anterior = i > 0 ? etapas[i - 1].valor : null;
         const passagem = anterior && anterior > 0 ? PCT.format(e.valor / anterior) : null;
         const conteudo = (
           <>
             <span className="text-[12px] text-fg-secondary truncate">{e.rotulo}</span>
-            <span className="flex h-6 items-center justify-center min-w-0">
+            <span className="flex h-[26px] items-center justify-center min-w-0">
               {e.valor > 0 && (
                 <span
-                  className="block h-4 rounded-[4px] min-w-[3px] bg-brand transition-opacity duration-150 group-hover/funil:opacity-45 group-hover/etapa:opacity-100!"
-                  style={{ width: `${(e.valor / maior) * 100}%` }}
+                  className="block h-[18px] rounded-[5px] min-w-[6px] transition-opacity duration-150 group-hover/funil:opacity-45 group-hover/etapa:opacity-100!"
+                  style={{
+                    width: `${(e.valor / maior) * 100}%`,
+                    background: "linear-gradient(to right, var(--c41-grafico-coluna-base), var(--c41-grafico-coluna-topo), var(--c41-grafico-coluna-base))",
+                  }}
                 />
               )}
             </span>
