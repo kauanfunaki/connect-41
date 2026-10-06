@@ -59,6 +59,9 @@ export function GlobalSearch({
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults>(EMPTY);
+  // O termo a que `results` responde: o Enter só usa resultado do termo que
+  // está no campo, nunca o da busca anterior que ainda não foi trocada.
+  const [termoDosResultados, setTermoDosResultados] = useState("");
   const [open, setOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -109,7 +112,10 @@ export function GlobalSearch({
     const timer = setTimeout(() => {
       fetch(`/api/search?q=${encodeURIComponent(query.trim())}`, { signal: controller.signal })
         .then((r) => r.json())
-        .then((data: SearchResults) => setResults(data))
+        .then((data: SearchResults) => {
+          setResults(data);
+          setTermoDosResultados(query.trim());
+        })
         .catch(() => {});
     }, 220);
     return () => {
@@ -140,6 +146,44 @@ export function GlobalSearch({
     setMobileExpanded(false);
     setQuery("");
     router.push(href);
+  }
+
+  /**
+   * Enter abre o primeiro resultado, na ordem do painel: telas primeiro, depois
+   * empresas, pessoas, candidatos, Kanban, tarefas, vagas e documentos. A ajuda
+   * ("Achar qualquer coisa") promete isso desde 01/10, e o campo não tratava o
+   * Enter — achado na gravação dos vídeos, em 06/10. Esc fecha o painel.
+   */
+  function aoTeclar(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Escape") {
+      setOpen(false);
+      inputRef.current?.blur();
+      return;
+    }
+    if (e.key !== "Enter") return;
+    const termo = query.trim();
+    if (termo.length < 2) return;
+    const tela = telasEncontradas[0];
+    if (tela) {
+      e.preventDefault();
+      go(tela.href);
+      return;
+    }
+    if (termoDosResultados !== termo) return;
+    const r = results;
+    const destino =
+      (r.companies[0] && `/empresas/${r.companies[0].id}`) ||
+      (r.people[0] && `/pessoas/${r.people[0].id}`) ||
+      (r.candidatos[0] && `/candidatos/${r.candidatos[0].id}`) ||
+      (r.pipelines[0] && boardPath(r.pipelines[0])) ||
+      r.tarefas[0]?.href ||
+      (r.vagas[0] && `/vagas/${r.vagas[0].id}`) ||
+      (r.documentos[0] && documentHref(r.documentos[0].entityType, r.documentos[0].entityId)) ||
+      null;
+    if (destino) {
+      e.preventDefault();
+      go(destino);
+    }
   }
 
   function closeMobile() {
@@ -221,6 +265,7 @@ export function GlobalSearch({
               setOpen(true);
             }}
             onFocus={() => setOpen(true)}
+            onKeyDown={aoTeclar}
             placeholder="Buscar…"
             aria-label="Buscar empresas, pessoas, telas…"
             className="w-full min-w-0 h-full bg-transparent text-[13px] text-fg placeholder:text-fg-muted outline-none border-none"
@@ -267,6 +312,7 @@ export function GlobalSearch({
                 setOpen(true);
               }}
               onFocus={() => setOpen(true)}
+              onKeyDown={aoTeclar}
               placeholder="Buscar empresas, pessoas, kanban…"
               className="w-full h-full bg-transparent text-[15px] text-fg placeholder:text-fg-muted outline-none border-none"
             />

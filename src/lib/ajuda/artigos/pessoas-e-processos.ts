@@ -169,7 +169,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Criar uma turma",
         passos: [
-          "Na lista, clique em “Abrir” no treinamento.",
+          "Depois de salvar, a tela do treinamento já abre. Para voltar a ela depois, clique em “Abrir” no treinamento, na lista.",
           "No quadro “Turmas”, informe a “Data” e, se quiser, o “Turno” e o “Instrutor”.",
           "Clique em “Nova Turma”.",
         ],
@@ -177,9 +177,9 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Incluir participantes e registrar o resultado",
         passos: [
-          "Na tabela de turmas, clique em “Abrir” na turma.",
+          "Depois de “Nova Turma”, a turma já abre. Para voltar a ela depois, clique em “Abrir” na tabela de turmas.",
           "Escolha o “Colaborador” e clique em “Adicionar Participante”.",
-          "Para registrar presença ou resultado, escolha a situação do participante, como “Convocado”, “Realizado”, “Ausente” ou “Concluído”.",
+          "Todo participante começa como “Planejado”. Para registrar presença ou resultado, escolha a situação dele, como “Convocado”, “Realizado”, “Ausente” ou “Concluído”.",
           "Clique em “Atualizar”.",
         ],
       },
@@ -204,7 +204,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         passos: [
           "No topo da tela, preencha o “Nome do Ciclo”, o “Início” e, se já souber, o “Fim”.",
           "Clique em “Criar Ciclo”.",
-          "O ciclo aparece na lista como “Aberto”. Clique em “Abrir” para entrar nele.",
+          "O ciclo já abre, com a situação “Aberto”. Para voltar a ele depois, clique em “Abrir” na lista.",
         ],
       },
       {
@@ -254,7 +254,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         titulo: "Vincular candidatos e movê-los pelo funil",
         passos: [
           "Abra a vaga e vá até “Funil de recrutamento”.",
-          "Escolha o “Candidato”, informe a “Origem” (por exemplo, LinkedIn) e clique em “Vincular Candidato”. Se a pessoa ainda não está no banco, clique em “Novo Candidato”.",
+          "Logo abaixo do funil, escolha o “Candidato”, informe a “Origem” (por exemplo, LinkedIn) e clique em “Vincular Candidato”. Se a pessoa ainda não está no banco, clique em “Novo Candidato”.",
           "Arraste o cartão do candidato entre as etapas “Triagem”, “Entrevista”, “Teste”, “Proposta” e “Contratado”, ou escolha a etapa na lista do próprio cartão.",
           "Para tirar alguém do funil, clique no botão “⋯” do cartão e escolha “Reprovar” ou “Desistiu”.",
           "Informe o “Motivo”, se quiser, e confirme. O candidato vai para a faixa de encerrados.",
