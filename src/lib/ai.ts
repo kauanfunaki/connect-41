@@ -81,14 +81,31 @@ function assertCleanAiText(text: string, maxLen: number, fieldLabel: string): st
  */
 type AiCredentials = { provider: AiProvider; apiKey: string; modelDoTenant: string | null };
 
+/**
+ * A chave existe, mas não decifra (05/10/2026) — trocaram a chave mestra do
+ * ambiente, ou o valor gravado se corrompeu. A chamada falha com isto, e não com
+ * o erro cru do `crypto`. Cita "chave de IA" de propósito: é o que faz a
+ * triagem ver que o problema é do escritório, e não do currículo
+ * (`ehBloqueioDoAgente`), e parar o lote sem marcar candidatura nenhuma.
+ */
+export const CHAVE_DE_IA_ILEGIVEL =
+  "A chave de IA deste escritório não pôde ser lida. Cadastre-a de novo em Integrações › Inteligência Artificial.";
+
 async function resolveCredentials(tenantId: string): Promise<AiCredentials | null> {
   const prisma = getPrisma();
   const tenantConfig = await prisma.tenantAiConfig.findUnique({ where: { tenantId } });
 
   if (tenantConfig) {
+    let apiKey: string;
+    try {
+      apiKey = decryptSecret(tenantConfig.apiKeyEnc);
+    } catch (err) {
+      console.error("[ia] chave do escritório não decifra", tenantId, err instanceof Error ? err.message : err);
+      throw new Error(CHAVE_DE_IA_ILEGIVEL);
+    }
     return {
       provider: tenantConfig.provider,
-      apiKey: decryptSecret(tenantConfig.apiKeyEnc),
+      apiKey,
       modelDoTenant: tenantConfig.model || null,
     };
   }
@@ -103,8 +120,15 @@ async function resolveCredentials(tenantId: string): Promise<AiCredentials | nul
   return null;
 }
 
+/**
+ * O escritório configurou IA? Só confere se a configuração existe — sem
+ * decifrar a chave (05/10/2026). Decifrar aqui derrubava a página da vaga
+ * quando a chave não decifrava; agora a tela abre, e quem falha, com
+ * mensagem, é a chamada de verdade (`CHAVE_DE_IA_ILEGIVEL`).
+ */
 export async function isAiConfigured(tenantId: string): Promise<boolean> {
-  return (await resolveCredentials(tenantId)) !== null;
+  const config = await getPrisma().tenantAiConfig.findUnique({ where: { tenantId }, select: { id: true } });
+  return config !== null;
 }
 
 /** O que uma chamada ao provedor devolve: o resultado e o que ele custou. */

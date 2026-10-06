@@ -32,7 +32,7 @@ export async function criarCredencial(
 ): Promise<BpoCredencialState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { error: "Não autenticado" };
-  if (!canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Só o coordenador do BPO pode cadastrar credenciais." };
+  if (!canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Só a coordenação do setor pode cadastrar credenciais." };
 
   const data = credencialData(form);
   const password = (form.get("password") as string)?.trim();
@@ -80,7 +80,7 @@ export async function atualizarCredencial(
 ): Promise<BpoCredencialState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { error: "Não autenticado" };
-  if (!canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Só o coordenador do BPO pode editar credenciais." };
+  if (!canManageSector(ctx, (await setorDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Só a coordenação do setor pode editar credenciais." };
 
   const existing = await getPrisma().bpoCredential.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { id: true } });
   if (!existing) return { error: "Credencial não encontrada." };

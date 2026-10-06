@@ -16,7 +16,8 @@ export function AbasDasNotificacoes({
   contagens,
   onEscolher,
 }: {
-  ativa: AbaOuTodas;
+  /** `null` quando a central está nas arquivadas (05/10/2026): nenhuma aba acesa. */
+  ativa: AbaOuTodas | null;
   /** `null` enquanto carrega: as abas aparecem sem número. */
   contagens: Record<AbaOuTodas, number> | null;
   onEscolher: (aba: AbaOuTodas) => void;

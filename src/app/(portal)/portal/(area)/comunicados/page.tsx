@@ -25,10 +25,10 @@ export default async function PortalComunicadosPage() {
 
   return (
     <PageContainer>
-      <PortalCabecalho titulo="Comunicados" descricao="Avisos da 41 para você: recesso, prazos, orientações." />
+      <PortalCabecalho titulo="Comunicados" descricao="Avisos do escritório para você: recesso, prazos, orientações." />
       {lista.length === 0 ? (
         <Card>
-          <EmptyState icon={<Megaphone />} title="Nenhum comunicado ainda" description="Quando a 41 avisar algo, o comunicado aparece aqui e você recebe um e-mail." />
+          <EmptyState icon={<Megaphone />} title="Nenhum comunicado ainda" description="Quando o escritório avisar algo, o comunicado aparece aqui e você recebe um e-mail." />
         </Card>
       ) : (
         <ul className="flex flex-col gap-2.5">

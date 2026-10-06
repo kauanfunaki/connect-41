@@ -104,6 +104,14 @@ export default async function ConfiguracoesPage() {
           <span className="text-[13px] text-fg">Ver todas as notificações</span>
           <ChevronRight size={16} className="text-fg-muted group-hover:text-fg transition-colors" />
         </Link>
+        {/* 05/10/2026: os tipos que aparecem em cada aba do sino e da central. */}
+        <Link
+          href="/notificacoes?preferencias=abrir"
+          className="group flex items-center justify-between gap-2 bg-surface-hover border border-border rounded-lg px-3.5 py-2.5 hover:border-border-strong transition-colors"
+        >
+          <span className="text-[13px] text-fg">Escolher o que cada aba mostra</span>
+          <ChevronRight size={16} className="text-fg-muted group-hover:text-fg transition-colors" />
+        </Link>
       </Secao>
 
       {isFullWrite(ctx.role) && (

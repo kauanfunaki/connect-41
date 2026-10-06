@@ -20,6 +20,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import type { ContextoDaFerramenta, FerramentaRegistrada } from "@/lib/ia/ferramentas";
 import { statusPrazoPagamento } from "@/lib/rescisaoChecklist";
 import { nomeExibicao } from "@/lib/companyName";
+import { AFASTAMENTO_ENCERRADO } from "@/lib/situacoesDoDP";
 
 export const MODULOS_DO_DP = {
   dp_colaboradores: "/colaboradores",
@@ -154,7 +155,7 @@ export const FERRAMENTAS_DE_DP: Record<string, FerramentaRegistrada> = {
             take: 3,
           },
           absences: {
-            where: { status: { in: ["AFASTADO", "RETORNO_PREVISTO", "EM_ANALISE"] } },
+            where: { status: { notIn: [...AFASTAMENTO_ENCERRADO] } },
             select: { type: true, startDate: true, returnDate: true, reason: true },
             take: 3,
           },
@@ -307,7 +308,7 @@ export const FERRAMENTAS_DE_DP: Record<string, FerramentaRegistrada> = {
       const linhas = await getPrisma().absence.findMany({
         where: {
           tenantId: ctx.tenantId,
-          status: { in: ["AFASTADO", "RETORNO_PREVISTO", "EM_ANALISE"] },
+          status: { notIn: [...AFASTAMENTO_ENCERRADO] },
           ...(empresa ? { person: { currentCompanyId: empresa.id } } : {}),
         },
         orderBy: { returnDate: "asc" },

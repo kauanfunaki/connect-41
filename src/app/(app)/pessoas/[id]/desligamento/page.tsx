@@ -11,6 +11,7 @@ import { AddDesligamentoForm } from "@/components/pessoas/AddDesligamentoForm";
 import { DesligamentoRow } from "@/components/pessoas/DesligamentoRow";
 import { formatInstantDate } from "@/lib/format";
 import { resumirConferencia } from "@/lib/rescisaoChecklist";
+import { podeRegistrarDesligamento } from "@/lib/situacoesDoDP";
 import { criarDesligamento, atualizarDesligamento, excluirDesligamento } from "./actions";
 
 export default async function DesligamentoPage({
@@ -83,7 +84,9 @@ export default async function DesligamentoPage({
           </div>
         )}
 
-        {canEdit && terminations.every((t) => t.status === "CANCELADO") && (
+        {/* Só um desligamento em andamento bloqueia o próximo (05/10/2026) — o
+            finalizado travava a pessoa recontratada para sempre. */}
+        {canEdit && podeRegistrarDesligamento(terminations) && (
           <AddDesligamentoForm action={criarDesligamentoAction} />
         )}
       </div>
