@@ -618,8 +618,12 @@ export async function carregarDadosDeExemplo(
   const parametros: ParametrosPreco = { despesasFixasMes: 18000, variaveisPct: 15, margemAlvoPct: 22, margemPisoPct: 8, descontoMaximoPct: 12 };
   await p.valoraConfig.upsert({ where: { tenantId }, create: { tenantId, ajustes, parametros }, update: { ajustes, parametros } });
   const catalogo = aplicarAjustes(MODELO_41, ajustes);
+  // As ganhas são das empresas do exemplo (05/10): o diagnóstico da carteira só
+  // cruza proposta ganha ligada a uma empresa com as horas dela — antes, eram
+  // clientes inventados à parte, sem empresa, e o diagnóstico saía vazio.
   const PROPOSTAS: {
     cliente: string;
+    em?: Chave;
     regime: "MEI" | "SIMPLES" | "PRESUMIDO" | "REAL";
     setores: string[];
     volumes: Record<string, number>;
@@ -630,13 +634,13 @@ export async function carregarDadosDeExemplo(
     motivo?: string;
     concorrente?: number;
   }[] = [
-    { cliente: "Cafeteria Grão Nobre", regime: "SIMPLES", setores: ["FIS", "DP", "CTB"], volumes: { funcionarios: 6, sociosProLabore: 2, contasBancarias: 2, movimentacoesBancarias: 180 }, status: "GANHA", oferta: 1, dias: 80 },
-    { cliente: "Studio Movimento Pilates", regime: "SIMPLES", setores: ["FIS", "CTB"], volumes: { sociosProLabore: 1, contasBancarias: 1, movimentacoesBancarias: 90 }, marcadores: ["prestaServico"], status: "GANHA", oferta: 0.97, dias: 70 },
-    { cliente: "Auto Peças Rodovia", regime: "PRESUMIDO", setores: ["FIS", "DP", "CTB", "SOC"], volumes: { funcionarios: 18, sociosProLabore: 3, contasBancarias: 3, movimentacoesBancarias: 600, socios: 3 }, marcadores: ["temICMS", "temST"], status: "GANHA", oferta: 1.02, dias: 60 },
+    { cliente: "Pão Dourado", em: "padaria", regime: "SIMPLES", setores: ["FIS", "DP", "CTB"], volumes: { funcionarios: 3, sociosProLabore: 2, contasBancarias: 2, movimentacoesBancarias: 180 }, marcadores: ["temICMS"], status: "GANHA", oferta: 1, dias: 80 },
+    { cliente: "Nuvem Boa", em: "tech", regime: "SIMPLES", setores: ["FIS", "DP", "CTB"], volumes: { funcionarios: 2, sociosProLabore: 1, contasBancarias: 1, movimentacoesBancarias: 90 }, marcadores: ["prestaServico"], status: "GANHA", oferta: 0.97, dias: 70 },
+    { cliente: "Horizonte Sul", em: "construtora", regime: "PRESUMIDO", setores: ["FIS", "DP", "CTB", "SOC"], volumes: { funcionarios: 18, sociosProLabore: 3, contasBancarias: 3, movimentacoesBancarias: 600, socios: 3 }, marcadores: ["temPonto"], status: "GANHA", oferta: 1.02, dias: 60 },
     { cliente: "Transportadora Vale Sul", regime: "REAL", setores: ["FIS", "DP", "CTB"], volumes: { funcionarios: 42, sociosProLabore: 2, contasBancarias: 5, movimentacoesBancarias: 1500, contratosFinanceiros: 4 }, marcadores: ["temICMS"], status: "PERDIDA", oferta: 1.05, dias: 55, motivo: "Fechou com um escritório que já atendia o grupo", concorrente: 0.82 },
-    { cliente: "Clínica Sorriso Pleno", regime: "PRESUMIDO", setores: ["FIS", "DP", "CTB"], volumes: { funcionarios: 9, sociosProLabore: 2, contasBancarias: 2, movimentacoesBancarias: 260 }, marcadores: ["prestaServico", "tomaServicoComRetencao"], status: "GANHA", oferta: 0.95, dias: 45 },
+    { cliente: "Vida Plena", em: "clinica", regime: "PRESUMIDO", setores: ["FIS", "DP", "CTB"], volumes: { funcionarios: 9, sociosProLabore: 2, contasBancarias: 2, movimentacoesBancarias: 260 }, marcadores: ["prestaServico", "tomaServicoComRetencao"], status: "GANHA", oferta: 0.95, dias: 45 },
     { cliente: "Loja Bela Moda", regime: "SIMPLES", setores: ["FIS", "DP"], volumes: { funcionarios: 4, sociosProLabore: 1 }, marcadores: ["temICMS"], status: "PERDIDA", oferta: 1, dias: 40, motivo: "Preço — cliente quis só a folha", concorrente: 0.7 },
-    { cliente: "Marcenaria Pinho Real", regime: "SIMPLES", setores: ["FIS", "DP", "CTB"], volumes: { funcionarios: 11, sociosProLabore: 2, contasBancarias: 2, movimentacoesBancarias: 220, parcelamentos: 1 }, marcadores: ["temICMS", "temIPI"], status: "GANHA", oferta: 1, dias: 33 },
+    { cliente: "Bom Preço", em: "mercado", regime: "SIMPLES", setores: ["FIS", "DP", "CTB"], volumes: { funcionarios: 11, sociosProLabore: 2, contasBancarias: 2, movimentacoesBancarias: 220, parcelamentos: 1 }, marcadores: ["temICMS"], status: "GANHA", oferta: 1, dias: 33 },
     { cliente: "Agência Pixel Norte", regime: "SIMPLES", setores: ["FIS", "CTB"], volumes: { sociosProLabore: 3, contasBancarias: 2, movimentacoesBancarias: 140 }, marcadores: ["prestaServico"], status: "PERDIDA", oferta: 1.08, dias: 25, motivo: "Desistiu de trocar de contador agora", concorrente: undefined },
     { cliente: "Mercearia Dona Lurdes", regime: "SIMPLES", setores: ["FIS", "DP"], volumes: { funcionarios: 2, sociosProLabore: 1 }, marcadores: ["temICMS"], status: "ABERTA", oferta: 1, dias: 12 },
     { cliente: "Construtora Alto Padrão", regime: "REAL", setores: ["FIS", "DP", "CTB", "SOC"], volumes: { funcionarios: 65, sociosProLabore: 4, contasBancarias: 6, movimentacoesBancarias: 2200, contratosFinanceiros: 6, licencas: 5, socios: 4 }, marcadores: ["temPonto", "temVariaveis"], status: "ABERTA", oferta: 0.96, dias: 8 },
@@ -655,6 +659,7 @@ export async function carregarDadosDeExemplo(
       data: {
         tenantId,
         cliente: pr.cliente,
+        companyId: pr.em ? empresa[pr.em] : null,
         perfil,
         resultado: { ...resultado, parametros },
         precoAlvo: resultado.mensal.alvo,
@@ -696,4 +701,46 @@ export async function carregarDadosDeExemplo(
     for (const userId of r.convidados) await p.meetingAttendee.create({ data: { meetingId: m.id, userId } });
   }
   log("Agenda: 4 reuniões (só leitura: editar chama o Google)");
+}
+
+/**
+ * Conserta o Valora de um escritório carregado antes de 05/10/2026: as cinco
+ * propostas ganhas eram de clientes inventados à parte, sem empresa, e o
+ * diagnóstico da carteira saía vazio ("Nada para comparar ainda"). Liga cada
+ * uma à empresa do exemplo que a substituiu no gerador e troca o nome para o
+ * dela. Sem `aplicar`, só diz o que faria. Rodar de novo não faz nada: só
+ * pega proposta ganha ainda sem empresa.
+ */
+export const GANHAS_DE_ANTES: Record<string, { em: Chave; cliente: string }> = {
+  "Cafeteria Grão Nobre": { em: "padaria", cliente: "Pão Dourado" },
+  "Studio Movimento Pilates": { em: "tech", cliente: "Nuvem Boa" },
+  "Auto Peças Rodovia": { em: "construtora", cliente: "Horizonte Sul" },
+  "Clínica Sorriso Pleno": { em: "clinica", cliente: "Vida Plena" },
+  "Marcenaria Pinho Real": { em: "mercado", cliente: "Bom Preço" },
+};
+
+export async function ligarGanhasAsEmpresas(p: Prisma, tenantId: string, aplicar: boolean): Promise<string[]> {
+  const empresas = await p.company.findMany({ where: { tenantId, source: FONTE }, select: { id: true, name: true } });
+  const linhas: string[] = [];
+  for (const [antigo, novo] of Object.entries(GANHAS_DE_ANTES)) {
+    const nome = EMPRESAS.find((e) => e.chave === novo.em)?.nome;
+    const empresa = empresas.find((e) => e.name === nome);
+    const proposta = await p.valoraProposta.findFirst({
+      where: { tenantId, cliente: antigo, status: "GANHA", companyId: null },
+      select: { id: true },
+    });
+    if (!proposta) {
+      linhas.push(`${antigo}: nada a fazer (não existe ou já está ligada)`);
+      continue;
+    }
+    if (!empresa) {
+      linhas.push(`${antigo}: a empresa de exemplo "${nome}" não está neste escritório`);
+      continue;
+    }
+    if (aplicar) {
+      await p.valoraProposta.update({ where: { id: proposta.id }, data: { companyId: empresa.id, cliente: novo.cliente } });
+    }
+    linhas.push(`${antigo} → ${novo.cliente}${aplicar ? "" : " (só mostrando)"}`);
+  }
+  return linhas;
 }

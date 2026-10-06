@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Calculator, HandCoins, Hourglass, Percent, Scale, Settings, Stethoscope, Trophy } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -126,7 +127,14 @@ export default async function ValoraPage() {
           <CartoesNoCelular>
             {linhas.map((p) => (
               <Cartao key={p.id}>
-                <TopoDoCartao nome={p.cliente} valor={brl(p.precoAlvo)} />
+                <TopoDoCartao
+                  nome={
+                    <Link href={`/valora/${p.id}`} className="text-fg hover:text-brand transition-colors">
+                      {p.cliente}
+                    </Link>
+                  }
+                  valor={brl(p.precoAlvo)}
+                />
                 <InfoDoCartao>
                   {p.regime} · {formatInstantDate(p.createdAt)} · {p.createdBy.name}
                 </InfoDoCartao>
@@ -191,9 +199,13 @@ export default async function ValoraPage() {
                 </thead>
                 <tbody>
                   {linhas.map((p) => (
-                    <LinhaFiltravel key={p.id} id={p.id} className="border-b border-border align-top">
+                    // A linha abre a proposta (revisão de 05/10): o que foi decidido
+                    // na simulação, o retorno e as observações.
+                    <LinhaFiltravel key={p.id} id={p.id} href={`/valora/${p.id}`} className="border-b border-border align-top">
                       <td className="px-3">
-                        <span className="font-medium">{p.cliente}</span>
+                        <Link href={`/valora/${p.id}`} className="font-medium text-fg hover:text-brand transition-colors">
+                          {p.cliente}
+                        </Link>
                         {p.motivo && <span className="block text-[11px] text-fg-muted">{p.motivo}</span>}
                       </td>
                       <td className="px-3 text-fg-secondary">{p.regime}</td>

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Badge } from "@/components/ui/Badge";
@@ -316,12 +316,13 @@ export default async function ProcessoDetalhePage({
 
           <span>Aberto em {formatInstantDate(processo.startedAt)}</span>
           <span>{processo.owner?.name ?? "sem responsável"}</span>
-          <Link href={`/processos/empresas/${processo.company.id}`} className="text-brand hover:underline">
-            Visão societária da empresa
-          </Link>
-          <Link href={`/empresas/${processo.company.id}`} className="text-brand hover:underline">
-            Ver empresa
-          </Link>
+          {/* Revisão de 05/10: botão não é link — os dois atalhos eram texto azul. */}
+          <Button href={`/processos/empresas/${processo.company.id}`} variant="secondary" size="xs">
+            Visão societária
+          </Button>
+          <Button href={`/empresas/${processo.company.id}`} variant="secondary" size="xs">
+            Abrir empresa
+          </Button>
           </>
         }
       />

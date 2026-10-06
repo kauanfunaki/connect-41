@@ -107,14 +107,17 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
       </div>
 
       {podeVerCusto && (resumo.minutosSemCusto > 0 || !configurado) && (
-        <p className="rounded-lg border border-border bg-surface-2 px-4 py-3 text-[12px] text-fg-secondary">
-          {!configurado
-            ? "O custo das equipes ainda não foi preenchido no Valora, então as horas aparecem sem custo."
-            : `${h(resumo.minutosSemCusto)} estão em setores sem custo de equipe no Valora (só Fiscal, DP, Societário e Contábil têm) e ficaram fora do custo.`}{" "}
-          <Link href="/valora/parametros" className="text-brand hover:underline">
-            Custos no Valora
-          </Link>
-        </p>
+        // Revisão de 05/10: botão não é link — o "Custos no Valora" era texto azul.
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[12px] text-fg-secondary">
+          <p>
+            {!configurado
+              ? "O custo das equipes ainda não foi preenchido no Valora, então as horas aparecem sem custo."
+              : `${h(resumo.minutosSemCusto)} estão em setores sem custo de equipe no Valora (só Fiscal, DP, Societário e Contábil têm) e ficaram fora do custo.`}
+          </p>
+          <Button href="/valora/parametros" variant="secondary" size="xs">
+            Abrir custos no Valora
+          </Button>
+        </div>
       )}
 
       {linhas.length === 0 ? (

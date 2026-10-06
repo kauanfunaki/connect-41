@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
@@ -78,13 +79,13 @@ export default async function DiagnosticoDaCarteiraPage() {
       />
 
       {!custos.configurado && (
-        <p className="mb-4 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[13px] text-fg-secondary">
-          O custo das equipes ainda não foi preenchido, então o custo real sai zerado.{" "}
-          <Link href="/valora/parametros" className="text-brand hover:underline">
-            Preencher nos parâmetros
-          </Link>
-          .
-        </p>
+        // Revisão de 05/10: botão não é link — o destino era texto azul no fim da frase.
+        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[13px] text-fg-secondary">
+          <p>O custo das equipes ainda não foi preenchido nos parâmetros, então o custo real sai zerado.</p>
+          <Button href="/valora/parametros" variant="secondary" size="xs">
+            Preencher parâmetros
+          </Button>
+        </div>
       )}
 
       {linhas.length === 0 ? (

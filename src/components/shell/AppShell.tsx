@@ -23,7 +23,6 @@ import {
   LayoutGrid,
   CalendarCheck,
   ChevronDown,
-  CircleHelp,
   ClipboardCheck,
   Menu,
   Pin,
@@ -47,6 +46,7 @@ import { ABAS_DA_GESTAO } from "@/components/gestao/AbasDaGestao";
 import { Button } from "@/components/ui/Button";
 import { TrocaDeContexto } from "@/components/shell/TrocaDeContexto";
 import { chaveDoCaminho, type ParDeCaminho } from "@/lib/ajuda/caminho";
+import { BotaoDeAjuda } from "@/components/shell/BotaoDeAjuda";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
 type Sector = { code: string; label: string; color: string };
@@ -172,7 +172,6 @@ export function AppShell({
   const naAjuda = pathname.startsWith("/ajuda");
   const artigoDaTela = naAjuda ? null : chaveDoCaminho(pathname, paresDeAjuda);
   const linkDaAjuda = artigoDaTela ? `/ajuda/${encodeURIComponent(artigoDaTela)}?de=${encodeURIComponent(pathname)}` : "/ajuda";
-  const rotuloDaAjuda = artigoDaTela ? "Ajuda desta tela" : "Ajuda";
   const emConfiguracoes = pathname.startsWith("/admin") || pathname.startsWith("/configuracoes");
   const corDoSetor = activeSector?.color;
   const tenantAtual = accessibleTenants.find((t) => t.id === tenantId);
@@ -435,20 +434,9 @@ export function AppShell({
           <div className="flex items-center gap-2.5 flex-shrink-0">
             <ThemeToggle />
             {/* Ajuda (30/09): o caminho curto para a central /ajuda, ao lado de
-                notificação, configurações e perfil. */}
-            <Link
-              href={linkDaAjuda}
-              aria-label={rotuloDaAjuda}
-              data-dica={rotuloDaAjuda}
-              aria-current={naAjuda ? "page" : undefined}
-              className={`w-[38px] h-[38px] inline-flex items-center justify-center rounded-md border transition-colors ${
-                naAjuda
-                  ? "bg-surface border-border-strong text-fg shadow-sm"
-                  : "bg-surface-hover border-border text-fg-secondary hover:text-fg hover:border-border-strong"
-              }`}
-            >
-              <CircleHelp size={16} />
-            </Link>
+                notificação, configurações e perfil. Desde 05/10 a setinha ao
+                lado do "?" leva à central sem passar pelo artigo da tela. */}
+            <BotaoDeAjuda linkDaTela={artigoDaTela ? linkDaAjuda : null} naAjuda={naAjuda} />
             <NotificationBell unreadCount={unreadCount} />
             {/* Configurações saiu do rodapé da sidebar para o topo, só o ícone,
                 ao lado de notificação e perfil (pedido de 30/09). Admin cai na
@@ -493,9 +481,12 @@ export function AppShell({
           <div className="flex-shrink-0 bg-danger/10 border-b border-danger/20 px-4 py-2 text-[13px] text-danger flex items-center justify-center gap-2 text-center">
             Assinatura pendente — este workspace está em modo somente leitura.{" "}
             {/* Em MANAGED a tela /assinatura dá 404 (é a 41 Tech quem administra),
-                então o link viraria um beco sem saída — vira instrução de contato. */}
+                então o link viraria um beco sem saída — vira instrução de contato.
+                Revisão de 05/10: botão não é link — era texto sublinhado na faixa. */}
             {canSelfRegularizeSubscription ? (
-              <Link href="/assinatura" className="underline font-medium hover:no-underline">Regularizar assinatura</Link>
+              <Button href="/assinatura" variant="secondary" size="xs">
+                Regularizar assinatura
+              </Button>
             ) : (
               <span className="font-medium">Entre em contato com a 41 Tech.</span>
             )}

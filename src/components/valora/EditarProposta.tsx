@@ -5,6 +5,7 @@ import { MessageSquareReply } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { Textarea } from "@/components/ui/Textarea";
 import { Modal } from "@/components/ui/Modal";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
@@ -103,13 +104,16 @@ export function EditarProposta({ proposta }: { proposta: Proposta }) {
               />
             </CampoForm>
           </FieldGrid>
-          <CampoForm label="Motivo" htmlFor={`${id}-motivo`}>
-            <Input
+          {/* Várias linhas desde 05/10: além do motivo, é onde ficam as
+              observações da tratativa, que a página da proposta mostra. */}
+          <CampoForm label="Motivo e observações" htmlFor={`${id}-motivo`}>
+            <Textarea
               id={`${id}-motivo`}
               name="motivo"
+              rows={3}
               maxLength={500}
               defaultValue={proposta.motivo ?? ""}
-              placeholder="Fechou por…, perdeu para…"
+              placeholder="Fechou por…, perdeu para…, combinamos…"
             />
           </CampoForm>
           {erro && <p className="text-[length:var(--fs-helper)] font-medium text-danger">{erro}</p>}

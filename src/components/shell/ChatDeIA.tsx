@@ -549,9 +549,10 @@ export function ChatDeIA({
               <X size={13} />
             </button>
             <p className="pr-5 text-[12px] font-semibold text-fg">Pergunte à {agente.titulo}</p>
-            <button type="button" onClick={() => abrirChat(sugestao)} className="mt-1 text-left text-[13px] text-brand hover:underline">
+            {/* Revisão de 05/10: botão não é link — a sugestão era texto azul. Quebra linha, por isso a altura livre. */}
+            <Button variant="secondary" size="xs" onClick={() => abrirChat(sugestao)} className="mt-1 h-auto py-1.5 text-left whitespace-normal">
               “{sugestao}”
-            </button>
+            </Button>
           </div>
         )}
         {!jaAbriu && <span aria-hidden className="c41-chamar absolute inset-0 rounded-full bg-brand/40" />}
@@ -779,9 +780,9 @@ export function ChatDeIA({
               <div className="mb-2 flex items-start gap-2 rounded-lg bg-warning-bg px-3 py-2 text-[12px] text-fg-secondary">
                 <Pencil size={13} className="mt-0.5 flex-shrink-0 text-warning" />
                 <span className="flex-1">Editando a pergunta — o que veio depois dela será substituído ao enviar.</span>
-                <button type="button" onClick={cancelarEdicao} className="font-medium text-fg hover:underline">
+                <Button variant="ghost" size="xs" onClick={cancelarEdicao}>
                   Cancelar
-                </button>
+                </Button>
               </div>
             )}
             <div className="rounded-2xl border border-border-strong bg-surface focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)] transition-colors">
@@ -963,9 +964,9 @@ function CartoesDeDecisao({
       <div className="flex items-center justify-between gap-2">
         <p className="text-[10px] uppercase tracking-wide text-fg-muted">Sugestões — nada foi feito ainda</p>
         {pendentes.length > 1 && (
-          <button type="button" onClick={onAplicarTodas} disabled={aplicando !== null} className="text-[12px] font-medium text-brand hover:underline disabled:opacity-50">
+          <Button variant="secondary" size="xs" onClick={onAplicarTodas} disabled={aplicando !== null}>
             Aplicar todas
-          </button>
+          </Button>
         )}
       </div>
       {cartoes.map(({ p, i }) => {
