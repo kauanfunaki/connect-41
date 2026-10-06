@@ -82,3 +82,56 @@ export function verifyPortalEscolha(token: string): string[] | null {
     return null;
   }
 }
+
+// ─── Escolha de escritório na entrada da equipe (06/10/2026) ────────────────
+//
+// O mesmo desenho do portal, para a equipe: o cadastro aceita o mesmo e-mail em
+// dois escritórios, e a entrada é uma URL só para todos (decisão de 05/10 — o
+// escritório vem da conta de quem entra). Quando a senha confere em mais de uma
+// conta, este token carrega as contas **já verificadas**, mais o "lembrar de
+// mim" e o destino (`next`) escolhidos no primeiro passo — a escolha não pede a
+// senha de novo nem a guarda.
+//
+// Chave derivada própria, e `kind` próprio: não vale como sessão interna, nem
+// como sessão do portal, nem como escolha do portal (e vice-versa).
+
+export type EquipeEscolhaPayload = {
+  kind: "equipe_escolha";
+  contas: string[];
+  lembrar: boolean;
+  next: string | null;
+};
+
+export type EscolhaDaEquipe = Omit<EquipeEscolhaPayload, "kind">;
+
+function chaveDaEscolhaDaEquipe(): string {
+  return `${env("JWT_ACCESS_SECRET")}:equipe-escolha`;
+}
+
+export function signEquipeEscolha(escolha: EscolhaDaEquipe, ttl: string | number = "5m"): string {
+  const payload: EquipeEscolhaPayload = {
+    kind: "equipe_escolha",
+    contas: escolha.contas,
+    lembrar: escolha.lembrar,
+    next: escolha.next,
+  };
+  return jwt.sign(payload, chaveDaEscolhaDaEquipe(), {
+    algorithm: "HS256",
+    expiresIn: ttl as jwt.SignOptions["expiresIn"],
+  });
+}
+
+/** As contas que a senha liberou (com o "lembrar" e o `next`), ou `null` se o token expirou, foi adulterado ou é de outro tipo. */
+export function verifyEquipeEscolha(token: string): EscolhaDaEquipe | null {
+  try {
+    const payload = jwt.verify(token, chaveDaEscolhaDaEquipe(), { algorithms: ["HS256"] }) as Partial<EquipeEscolhaPayload>;
+    if (payload.kind !== "equipe_escolha" || !Array.isArray(payload.contas)) return null;
+    return {
+      contas: payload.contas.filter((c): c is string => typeof c === "string"),
+      lembrar: payload.lembrar === true,
+      next: typeof payload.next === "string" ? payload.next : null,
+    };
+  } catch {
+    return null;
+  }
+}
