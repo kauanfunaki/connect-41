@@ -6346,3 +6346,32 @@ model CandidatoAcesso {
   @@index([tenantId, email])
   @@map("candidato_acessos")
 }
+
+// ── Fotos diárias dos números da Home (06/10/2026) ──────────────────────────
+// O histórico do selo "▲ 12% em 7 dias" e da linha das últimas semanas (opção
+// A da revisão dos gráficos). O Connect não guardava a foto diária dos
+// números, e não dá para reconstruí-los do passado com segurança (ver
+// src/lib/home/historico.ts).
+// Gravada de forma preguiçosa: quando alguém abre a Home, depois da resposta
+// (`after()`), e só se o número mudou desde a última foto do dia — uma linha
+// por (escritório, escopo, métrica, dia), com o último valor visto naquele dia.
+//
+// `scope` é "" para número do escritório (o mesmo para todo mundo) e o id do
+// usuário — mais ":setor" com setor ativo — para número que depende de quem
+// olha (tarefas, vagas). `metric` é a chave de METRICAS (src/lib/home/metricas.ts).
+// `value` em centavos (dinheiro) ou unidades (contagem).
+//
+// Sem FK de propósito: tabela de leitura da Home, que não pode cair por causa
+// de um tenant removido, e não precisa de nada além da chave.
+model HomeMetricSnapshot {
+  tenantId String
+  scope    String   @default("") @db.VarChar(100)
+  metric   String   @db.VarChar(40)
+  day      DateTime @db.Date
+  value    BigInt
+
+  // A ordem da chave atende a leitura da Home: tenant + escopo ("" e o da
+  // pessoa) + as métricas dela + a janela de dias, numa varredura de faixa.
+  @@id([tenantId, scope, metric, day])
+  @@map("home_metric_snapshots")
+}

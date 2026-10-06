@@ -25,6 +25,7 @@ import { formatCalendarDate, formatInstantDate, formatInstantTime } from "@/lib/
 import { parseHomeWidgets, visibleWidgets, widgetsDisponiveis, type HomeWidgetKey } from "@/lib/homeWidgets";
 import { acessoDosPaineis, type AcessoDoPainel } from "@/lib/home/acessoDosPaineis";
 import { contarTarefas } from "@/lib/home/paineis";
+import { precarregarHistoricoDaHome } from "@/lib/home/historico";
 import { FaixaCarregando, FaixaDeDestaques, type SetorDoDestaque } from "@/components/home/FaixaDeDestaques";
 import {
   PainelCarregando,
@@ -399,6 +400,9 @@ export default async function HomePage() {
   const tarefasNaHome = painelWidgets.includes("painel-tarefas");
   const contagemDasTarefas = contarTarefas(openPipelineItemsRaw, todayStart, todayEnd);
   const comDestaques = topWidgets.includes("destaques");
+  // O histórico dos números (selo e linha, 06/10) começa a ser lido já, em
+  // paralelo às consultas dos painéis — uma leitura só para todos eles.
+  if (painelWidgets.length > 0) precarregarHistoricoDaHome(ctx);
 
   // Painéis de setor (30/09): cada um com a própria consulta, dentro de um
   // Suspense — a Home aparece sem esperar o mais lento, e o painel entra
@@ -439,14 +443,18 @@ export default async function HomePage() {
       </Suspense>
     ),
 
+    // Em Suspense desde 06/10: o painel lê o histórico do número (selo e linha).
     "painel-tarefas": (
-      <PainelDeTarefas
-        itens={openPipelineItemsRaw}
-        atribuidas={assignedToMe.length}
-        escopo={escopoDasTarefas}
-        inicioDeHoje={todayStart}
-        fimDeHoje={todayEnd}
-      />
+      <Suspense fallback={<PainelCarregando />}>
+        <PainelDeTarefas
+          ctx={ctx}
+          itens={openPipelineItemsRaw}
+          atribuidas={assignedToMe.length}
+          escopo={escopoDasTarefas}
+          inicioDeHoje={todayStart}
+          fimDeHoje={todayEnd}
+        />
+      </Suspense>
     ),
     "painel-contas": painelDoSetor("painel-contas", PainelDeContas),
     "painel-semanas": painelDoSetor("painel-semanas", PainelDeSemanas),
