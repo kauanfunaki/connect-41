@@ -7,7 +7,11 @@
 // sobre o que existe no menu dele. O portal é de todos os setores, então o
 // texto fala de "a equipe da 41", nunca de um setor.
 
+import { videoDoPassoDoPortal } from "@/lib/ajuda/videos";
+
 export type IconeDoPasso =
+  | "entrar"
+  | "inicio"
   | "celular"
   | "solicitacao"
   | "comunicado"
@@ -37,11 +41,45 @@ type PassoDoCatalogo = {
   passos: readonly Linha[];
 };
 
-export type PassoDoPortal = { chave: string; titulo: string; resumo: string; icone: IconeDoPasso; passos: string[] };
+export type PassoDoPortal = { chave: string; titulo: string; resumo: string; icone: IconeDoPasso; passos: string[]; video?: string };
 
 const FINANCEIRO = ["bpo_contas_pagar", "bpo_contas_receber", "bpo_fluxo_caixa", "bpo_dre", "bpo_cobranca"] as const;
 
 const CATALOGO: readonly PassoDoCatalogo[] = [
+  // Passo de 05/10/2026: o primeiro vídeo da série é o primeiro acesso, e a
+  // ajuda não tinha o texto dele. O acesso nasce sem senha (`criarAcessoDoPortal`):
+  // o cliente escolhe a dele pelo link do e-mail.
+  {
+    chave: "entrar",
+    titulo: "Entrar no portal",
+    resumo: "O primeiro acesso, com uma senha que só você sabe.",
+    icone: "entrar",
+    passos: [
+      "Quando a 41 libera o seu acesso, chega um e-mail com o botão Redefinir senha. Clique nele.",
+      "Escolha a sua senha, com ao menos 8 caracteres, repita em Confirme a senha e clique em Salvar senha.",
+      "Clique em Entrar no portal, digite o seu e-mail e a senha e clique em Entrar.",
+      "Se o seu e-mail tem acesso a mais de um cliente, escolha em qual você quer entrar.",
+      "O link do e-mail vale por uma hora. Se ele vencer, use Esqueci minha senha na tela de entrada.",
+    ],
+  },
+  {
+    // O Início é a primeira tela desde 05/10 (antes era Documentos fiscais).
+    chave: "inicio",
+    titulo: "Ver o que espera por você",
+    resumo: "O Início mostra o que a equipe precisa de você e o resumo das suas empresas.",
+    icone: "inicio",
+    passos: [
+      "Ao entrar no portal, você chega ao Início. Para voltar a ele, clique em Início no menu ou no logo.",
+      "Em \"O que precisa de você\" aparece o que espera a sua resposta ou aprovação, com o número e um botão que leva direto à tela.",
+      "Quando não há nada esperando, aparece \"Nada esperando por você\".",
+      {
+        texto: "Em Financeiro, veja as contas a pagar vencidas, as que vencem nesta semana e o que está em atraso para receber.",
+        modulos: ["bpo_contas_pagar", "bpo_contas_receber", "bpo_cobranca"],
+      },
+      { texto: "Em Processos em andamento, veja em que pé estão os processos mais recentes das suas empresas.", modulos: ["societario_processos"] },
+      "Nos Atalhos ficam os caminhos mais usados, como os documentos fiscais e esta ajuda.",
+    ],
+  },
   {
     chave: "instalar",
     titulo: "Instalar o portal no celular",
@@ -59,7 +97,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     resumo: "Para saber na hora quando a 41 precisar de você.",
     icone: "sino",
     passos: [
-      "Na tela Documentos fiscais, no quadro \"Notificações no navegador\", clique em Ativar.",
+      "No Início, no quadro \"Notificações no navegador\", no fim da tela, clique em Ativar.",
       "Quando o navegador perguntar, permita as notificações.",
       "No iPhone, os avisos só chegam com o portal instalado na tela de início.",
       "O aviso diz só que há algo novo, nunca o valor ou o conteúdo. O detalhe fica aqui dentro do portal.",
@@ -86,7 +124,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     icone: "comunicado",
     modulos: ["portal_solicitacoes"],
     passos: [
-      "Quando a 41 manda um comunicado, você recebe um e-mail e o aviso aparece no topo do portal.",
+      "Quando a 41 manda um comunicado, você recebe um e-mail e o aviso aparece no Início, em \"O que precisa de você\".",
       "Abra Comunicados. Os que você ainda não leu aparecem destacados, com a etiqueta Novo.",
       "Clique para ler o texto inteiro e baixar os anexos.",
       "Dúvida sobre um comunicado? Abra uma solicitação.",
@@ -100,7 +138,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     // Com o canal do portal ligado, qualquer setor pede (01/10).
     modulos: ["bpo_pendencias", "portal_solicitacoes"],
     passos: [
-      "Abra Pendências. Os pedidos que esperam você aparecem como \"Aguardando cliente\", com o prazo.",
+      "Abra Pendências, ou clique em Responder no Início. Os pedidos que esperam você aparecem como \"Aguardando você\", com o prazo.",
       "Clique no pedido para ver o que a equipe precisa.",
       "Escreva em Mensagem, anexe os arquivos em Anexos e clique em Enviar resposta.",
       "A equipe é avisada na hora. O pedido fica como Respondida até a equipe dar como resolvido.",
@@ -169,8 +207,8 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     resumo: "As notas emitidas e recebidas pelas suas empresas.",
     icone: "documentos",
     passos: [
-      "Abra Documentos fiscais, a primeira tela do portal.",
-      "Escolha o mês em Competência para ver só as notas dele.",
+      "Abra Documentos fiscais no menu, ou clique em \"Ver documentos fiscais\" nos Atalhos do Início.",
+      "Em Filtros, escolha o mês em Competência para ver só as notas dele. Quem tem mais de uma empresa também escolhe a Empresa.",
       "Se faltar alguma nota que você esperava ver, fale com a equipe.",
     ],
   },
@@ -198,6 +236,9 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
   },
 ];
 
+/** Todas as chaves de passo, ligadas ou não — para conferir os vídeos (`ajuda/videos.ts`). */
+export const CHAVES_DOS_PASSOS: readonly string[] = CATALOGO.map((p) => p.chave);
+
 function algumLigado(modulos: ReadonlySet<string>, exigidos: readonly string[] | undefined): boolean {
   return !exigidos || exigidos.some((m) => modulos.has(m));
 }
@@ -215,5 +256,7 @@ export function passosDoPortal(modulos: ReadonlySet<string>, opcoes: { variasEmp
     resumo: p.resumo,
     icone: p.icone,
     passos: p.passos.flatMap((l) => (typeof l === "string" ? [l] : algumLigado(modulos, l.modulos) ? [l.texto] : [])),
+    // O vídeo vem do arquivo dos links (05/10), e só quando já foi colado.
+    video: videoDoPassoDoPortal(p.chave) ?? undefined,
   }));
 }
