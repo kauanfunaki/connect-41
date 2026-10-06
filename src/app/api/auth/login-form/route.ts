@@ -1,59 +1,33 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getPrisma } from "@/lib/prisma";
-import { verifyPassword } from "@/lib/auth/password";
-import { signAccess, signRefresh } from "@/lib/auth/jwt";
-import { getAccessibleTenantIds } from "@/lib/auth/tenantAccess";
+import { signEquipeEscolha } from "@/lib/auth/jwt";
 import { hit, reset, clientIp } from "@/lib/rateLimit";
-import { renderConnectLoadingScreenHTML } from "@/components/shared/ConnectLoadingScreen";
-import crypto from "crypto";
-import { ACCESS_COOKIE, REFRESH_COOKIE, accessCookieOptions, refreshCookieOptions } from "@/lib/auth/cookies";
+import {
+  CAMINHO_DA_ESCOLHA_DA_EQUIPE,
+  COOKIE_DA_ESCOLHA_DA_EQUIPE,
+  MAX_CONTAS_POR_EMAIL,
+  MINUTOS_DA_ESCOLHA_DA_EQUIPE,
+  contasQueConferem,
+  decidirEntrada,
+  opcoesDoCookieDaEscolha,
+  safeNext,
+} from "@/lib/auth/entradaDaEquipe";
+import { abrirSessaoDaEquipe, htmlRedirect, loginErrorRedirect } from "@/lib/auth/sessaoDaEquipe";
 
 export const dynamic = "force-dynamic";
 
-// Só aceita destino relativo interno ("/algo") — nunca "//host" (protocol-relative)
-// nem algo com esquema embutido, senão o "next" vindo da query vira open-redirect.
-function safeNext(value: string | null): string | null {
-  if (!value) return null;
-  if (!value.startsWith("/") || value.startsWith("//")) return null;
-  return value;
-}
-
-// Reanexa o "next" no redirect de erro — senão uma senha errada num deep link
-// perde o destino e o usuário cai na Home mesmo acertando na tentativa seguinte.
-function loginErrorRedirect(error: string, next: string | null): NextResponse {
-  const params = new URLSearchParams({ error });
-  if (next) params.set("next", next);
-  return htmlRedirect(`/login?${params.toString()}`);
-}
-
-function htmlRedirect(to: string): NextResponse {
-  // Responde com HTML que redireciona no browser â€” evita qualquer
-  // problema de URL interna do container (0.0.0.0, host errado, etc.)
-  return new NextResponse(
-    `<!DOCTYPE html><html><head>
-      <meta http-equiv="refresh" content="0;url=${to}">
-      <script>window.location.replace(${JSON.stringify(to)})</script>
-    </head><body></body></html>`,
-    { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } }
-  );
-}
-
-// Só pro caminho de sucesso: mesma técnica de redirect via HTML (evita o
-// problema de URL interna do container), mas com a tela de carregamento do
-// Connect visível por uma janela curta antes do redirect — evita flicker de
-// página em branco sem travar o usuário com atraso artificial longo.
-function htmlSuccessRedirect(to: string, theme: "light" | "dark"): NextResponse {
-  const markup = renderConnectLoadingScreenHTML();
-  return new NextResponse(
-    `<!DOCTYPE html><html data-theme="${theme}"><head>
-      <meta http-equiv="refresh" content="3;url=${to}">
-      <style>html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;}</style>
-      <script>setTimeout(function(){window.location.replace(${JSON.stringify(to)})},3000)</script>
-    </head><body>${markup}</body></html>`,
-    { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } }
-  );
-}
-
+/**
+ * Entrada da equipe (o formulário de `/login`).
+ *
+ * Desde 06/10/2026 a senha é conferida em TODAS as contas ativas com o e-mail,
+ * e não só na primeira que o banco devolvia — o mesmo e-mail pode ter conta em
+ * mais de um escritório (ver `entradaDaEquipe.ts`):
+ *
+ * - nenhuma confere → "E-mail ou senha incorretos.", como sempre;
+ * - uma confere → entra direto, com a mesma sessão de antes;
+ * - mais de uma → vai para a escolha do escritório (`/login/escritorio`), com
+ *   as contas liberadas num token curto, em cookie httpOnly.
+ */
 export async function POST(req: NextRequest) {
   try {
     const form = await req.formData();
@@ -74,56 +48,32 @@ export async function POST(req: NextRequest) {
     }
 
     const prisma = getPrisma();
-    const user = await prisma.user.findFirst({
+    const contas = await prisma.user.findMany({
       where: { email, active: true },
       include: { sectors: true },
+      orderBy: { createdAt: "asc" },
+      take: MAX_CONTAS_POR_EMAIL,
     });
 
-    const valid = user ? await verifyPassword(password, user.passwordHash) : false;
-    if (!user || !valid) {
+    const decisao = decidirEntrada(await contasQueConferem(password, contas));
+    if (decisao.tipo === "recusar") {
       return loginErrorRedirect("credenciais-invalidas", next);
     }
 
     // Login OK — zera o contador do e-mail para não punir quem errou antes de acertar.
     reset(`login-email:${email}`);
 
-    const sectors = user.sectors.map((s: { sectorCode: string }) => s.sectorCode);
-
-    // Access token é SEMPRE curto (15min) e revalidado pelo refresh silencioso
-    // no cliente (SessionKeeper). "Lembrar de mim" estende só o REFRESH token
-    // (30d vs 7d) — que é revogável no banco. Assim, desativar um usuário ou
-    // trocar a senha derruba a sessão em ~15min, mesmo com "lembrar" marcado.
-    const refreshTtl = remember ? "30d" : undefined;
-    const accessMaxAge = 60 * 15;
-    const refreshMaxAge = remember ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 7;
-
-    const accessibleTenants = await getAccessibleTenantIds(user.id, user.role, user.tenantId);
-    const accessToken = signAccess({
-      sub: user.id,
-      tenantId: user.tenantId,
-      role: user.role,
-      sectors,
-      accessibleTenants,
-    });
-
-    const jti = crypto.randomUUID();
-    const rawRefresh = signRefresh({ sub: user.id, jti }, refreshTtl);
-    const tokenHash = crypto.createHash("sha256").update(rawRefresh).digest("hex");
-
-    await prisma.refreshToken.create({
-      data: { id: jti, userId: user.id, tokenHash, expiresAt: new Date(Date.now() + refreshMaxAge * 1000) },
-    });
-
     const theme = req.cookies.get("theme")?.value === "dark" ? "dark" : "light";
 
-    // Cookie setado na mesma resposta que entrega o HTML de redirect.
-    // O browser processa Set-Cookie antes de executar o meta-refresh.
-    const res = htmlSuccessRedirect(next ?? "/home", theme);
-    res.cookies.set(ACCESS_COOKIE, accessToken, accessCookieOptions(accessMaxAge));
-    // `refreshMaxAge` varia aqui por causa do "lembrar-me" (30 dias) — por isso
-    // não usa a constante.
-    res.cookies.set(REFRESH_COOKIE, rawRefresh, refreshCookieOptions(refreshMaxAge));
+    if (decisao.tipo === "entrar") {
+      return abrirSessaoDaEquipe(decisao.conta, { remember, next, theme });
+    }
 
+    // Mais de um escritório: a escolha leva só as contas cuja senha conferiu,
+    // num cookie que o navegador manda apenas para a tela da escolha.
+    const token = signEquipeEscolha({ contas: decisao.contas.map((c) => c.id), lembrar: remember, next });
+    const res = htmlRedirect(CAMINHO_DA_ESCOLHA_DA_EQUIPE);
+    res.cookies.set(COOKIE_DA_ESCOLHA_DA_EQUIPE, token, opcoesDoCookieDaEscolha(MINUTOS_DA_ESCOLHA_DA_EQUIPE * 60));
     return res;
   } catch (err) {
     console.error("[POST /api/auth/login-form]", err);
