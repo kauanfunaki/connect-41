@@ -557,7 +557,8 @@ export async function carregarDadosDeExemplo(
         lastMessageAt: dia(s.resposta ? s.aberta + 1 : s.aberta),
       },
     });
-    await p.serviceRequestMessage.create({ data: { requestId: r.id, body: s.texto, createdAt: dia(s.aberta) } });
+    // O pedido do cliente fica só na `description`, como no portal (06/10/2026):
+    // repetido como mensagem, ele aparecia duas vezes na tela, a segunda como "Equipe".
     if (s.resposta) await p.serviceRequestMessage.create({ data: { requestId: r.id, authorUserId: responsavel, body: s.resposta, createdAt: dia(s.aberta + 1) } });
   }
   log("Solicitações: 4 assuntos, 5 pedidos");

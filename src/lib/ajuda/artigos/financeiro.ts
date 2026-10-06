@@ -394,7 +394,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     titulo: "Conversa com o cliente",
     caminhos: ["/comunicacao"],
     resumo:
-      "Conversa livre com cada empresa cliente, com anexos — para recados que não são pedido com prazo.",
+      "Conversa livre com cada empresa cliente, com anexos — para recados que não são pedido com prazo. Quando o escritório usa as Solicitações do portal, esta tela fica só como histórico e não envia mensagens novas.",
     secoes: [
       {
         titulo: "Abrir uma conversa",
@@ -417,7 +417,6 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     ],
     dicas: [
       "Pedido com prazo é pendência: use “Pendências ao cliente” quando precisar de um documento ou resposta até uma data.",
-      "Quando o escritório usa as Solicitações do portal, esta tela fica só como histórico e não envia mensagens novas.",
     ],
   },
 
