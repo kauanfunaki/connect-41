@@ -1,0 +1,110 @@
+import { cookies } from "next/headers";
+import { ArrowLeft } from "lucide-react";
+import { getPrisma } from "@/lib/prisma";
+import { verifyEquipeEscolha } from "@/lib/auth/jwt";
+import { CAMINHO_DA_ESCOLHA_DA_EQUIPE, COOKIE_DA_ESCOLHA_DA_EQUIPE } from "@/lib/auth/entradaDaEquipe";
+import { MolduraDaEquipe } from "@/components/login/MolduraDaEquipe";
+import { AvatarImage } from "@/components/shared/AvatarImage";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+
+const ERROS: Record<string, string> = {
+  "fora-da-lista": "Escolha um dos escritórios da lista.",
+};
+
+/**
+ * As opções da escolha, relidas do banco a partir do token do cookie — só as
+ * contas que continuam ativas. `null` quando o cookie não existe, venceu ou
+ * foi adulterado.
+ */
+async function opcoesDaEscolha(): Promise<{ id: string; escritorio: string; logoUrl: string | null }[] | null> {
+  const token = (await cookies()).get(COOKIE_DA_ESCOLHA_DA_EQUIPE)?.value;
+  const escolha = token ? verifyEquipeEscolha(token) : null;
+  if (!escolha || escolha.contas.length === 0) return null;
+  const contas = await getPrisma().user.findMany({
+    where: { id: { in: escolha.contas }, active: true },
+    orderBy: { tenant: { name: "asc" } },
+    select: { id: true, tenant: { select: { name: true, logoUrl: true } } },
+  });
+  if (contas.length === 0) return null;
+  return contas.map((c) => ({ id: c.id, escritorio: c.tenant.name, logoUrl: c.tenant.logoUrl }));
+}
+
+/**
+ * A escolha do escritório na entrada da equipe (06/10/2026).
+ *
+ * Chega aqui quem acertou a senha de mais de uma conta com o mesmo e-mail —
+ * uma por escritório. No visual da entrada (`MolduraDaEquipe`), com o nome e a
+ * logo de cada escritório, como na troca de escritório do menu. O envio vai
+ * para `/login/escritorio/entrar`, que só aceita uma das contas do token.
+ */
+export default async function EscolherEscritorioPage({ searchParams }: { searchParams: Promise<{ erro?: string }> }) {
+  const [{ erro }, opcoes] = await Promise.all([searchParams, opcoesDaEscolha()]);
+
+  if (!opcoes) {
+    return (
+      <MolduraDaEquipe titulo="A escolha expirou" subtitulo="Entre de novo para escolher o escritório.">
+        <Card className="p-6">
+          <p className="text-[13px] text-fg-muted text-center leading-relaxed">
+            Por segurança, a escolha do escritório vale por poucos minutos depois da senha.
+          </p>
+          <div className="mt-3 text-center">
+            <Button href="/login" variant="secondary" size="sm">
+              Entrar de novo
+            </Button>
+          </div>
+        </Card>
+      </MolduraDaEquipe>
+    );
+  }
+
+  const mensagem = erro ? (ERROS[erro] ?? null) : null;
+
+  return (
+    <MolduraDaEquipe titulo="Escolha o escritório" subtitulo="Este e-mail tem acesso a mais de um escritório no Connect.">
+      <Card className="p-6">
+        <form method="POST" action={`${CAMINHO_DA_ESCOLHA_DA_EQUIPE}/entrar`} className="space-y-4">
+          {/* O mesmo desenho da escolha de cliente do portal: cada opção é um
+              alvo de ao menos 44px, com o rádio e a logo centrados e a
+              escolhida marcada na borda. */}
+          <fieldset className="space-y-2">
+            <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">
+              Em qual escritório você quer entrar?
+            </legend>
+            {opcoes.map((o, i) => (
+              <label
+                key={o.id}
+                className="flex items-center gap-3 min-h-11 rounded-md border border-border-strong px-3 py-2 cursor-pointer transition-colors hover:bg-surface-hover has-[:checked]:border-brand has-[:checked]:bg-brand/8"
+              >
+                <input
+                  type="radio"
+                  name="conta"
+                  value={o.id}
+                  defaultChecked={i === 0}
+                  className="size-4 flex-shrink-0 accent-[var(--c41-brand)]"
+                />
+                <AvatarImage src={o.logoUrl} name={o.escritorio} size={32} shape="lg" fontSize={12} />
+                <span className="min-w-0 text-[length:var(--fs-body)] text-fg break-words">{o.escritorio}</span>
+              </label>
+            ))}
+          </fieldset>
+
+          {mensagem && (
+            <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{mensagem}</p>
+          )}
+
+          <Button type="submit" size="md" className="w-full mt-1">
+            Entrar
+          </Button>
+
+          <div className="text-center">
+            <Button href="/login" variant="ghost" size="sm">
+              <ArrowLeft size={14} />
+              Usar outro e-mail
+            </Button>
+          </div>
+        </form>
+      </Card>
+    </MolduraDaEquipe>
+  );
+}
