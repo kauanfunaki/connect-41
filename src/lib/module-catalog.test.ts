@@ -92,6 +92,14 @@ describe("catálogo de módulos", () => {
     expect(MODULE_ROUTES.dre_orcamento).toBe("/dre/orcamento");
   });
 
+  // A ficha "Quero ser cliente" do portal entrega aqui (05/10/2026). É o que
+  // faz o Comercial aparecer na sidebar: setor sem módulo ligado não aparece.
+  it("Leads é o módulo do Comercial, em /leads, ligado por padrão", () => {
+    expect(getModuleDef("comercial_leads")).toMatchObject({ sectorCode: "comercial", defaultEnabled: true, label: "Leads", group: "Prospecção" });
+    expect(MODULE_ROUTES.comercial_leads).toBe("/leads");
+    expect(slugDoGrupo("Prospecção")).toBe("prospeccao");
+  });
+
   it("Documentos Fiscais nasce desligado", () => {
     expect(getModuleDef("fiscal_documentos")?.defaultEnabled).toBe(false);
   });

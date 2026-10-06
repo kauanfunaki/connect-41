@@ -262,7 +262,8 @@ export async function encaminharSolicitacao(id: string, setor: string, motivo: s
       setor: destino.code,
       assigneeId,
     },
-    "encaminhada"
+    "encaminhada",
+    userId
   );
 
   await logAudit({

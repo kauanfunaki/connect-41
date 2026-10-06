@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -10,6 +10,7 @@ import {
   Filter,
   LayoutGrid,
   Pin,
+  Play,
   Search,
   Send,
   SunMoon,
@@ -17,8 +18,12 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
+import { VideoDoYouTube } from "@/components/ajuda/VideoDoYouTube";
 import { normalizar } from "@/lib/buscaDeTelas";
+import { enderecoDaMiniatura, idDoVideo } from "@/lib/ajuda/youtube";
 
 export type TelaDaAjuda = {
   chave: string;
@@ -30,11 +35,32 @@ export type TelaDaAjuda = {
   icone?: React.ReactNode;
   /** O passo a passo da tela (`/ajuda/<chave>`), quando existe: o cartão abre ele, e não a tela. */
   artigo?: string;
+  /** O vídeo do passo a passo (link do YouTube, de `lib/ajuda/videos.ts`). */
+  video?: string;
 };
 export type SetorDaAjuda = { code: string; rotulo: string; cor: string; telas: TelaDaAjuda[] };
 
-export type PassoDaAjuda = { chave: string; titulo: string; resumo: string; icone: React.ReactNode; passos: string[] };
+export type PassoDaAjuda = {
+  chave: string;
+  titulo: string;
+  resumo: string;
+  icone: React.ReactNode;
+  passos: string[];
+  /** O vídeo do passo (link do YouTube): toca dentro dele, aberto. */
+  video?: string;
+};
 type Passo = PassoDaAjuda;
+
+/** Um cartão da seção "Vídeos": o vídeo e para onde o "Ver o passo a passo" leva. */
+type VideoDaCentral = {
+  chave: string;
+  titulo: string;
+  link: string;
+  /** O artigo da tela (`/ajuda/<chave>`), no Connect. */
+  artigo?: string;
+  /** O passo desta mesma central, no portal — abre e rola até ele. */
+  passo?: string;
+};
 
 /**
  * Os primeiros passos: o que vale em qualquer tela. Escritos a partir do que o
@@ -178,6 +204,46 @@ export function CentralDeAjuda({
 
   const nada = filtrado.passos.length === 0 && filtrado.gerais.length === 0 && filtrado.setores.length === 0;
 
+  // Os vídeos saem do que está na tela (05/10/2026): a busca filtra os vídeos
+  // junto, e o portal só mostra vídeo de passo que o cliente enxerga. Duas
+  // telas com o mesmo artigo têm o mesmo vídeo — entra uma vez.
+  const videos = useMemo(() => {
+    const vistos = new Set<string>();
+    const lista: VideoDaCentral[] = [];
+    const somar = (v: VideoDaCentral) => {
+      const id = idDoVideo(v.link);
+      if (!id || vistos.has(id)) return;
+      vistos.add(id);
+      lista.push(v);
+    };
+    for (const p of filtrado.passos) if (p.video) somar({ chave: `passo:${p.chave}`, titulo: p.titulo, link: p.video, passo: p.chave });
+    for (const t of [...filtrado.gerais, ...filtrado.setores.flatMap((s) => s.telas)]) {
+      if (t.video) somar({ chave: `tela:${t.chave}`, titulo: t.titulo, link: t.video, artigo: t.artigo });
+    }
+    return lista;
+  }, [filtrado]);
+
+  // O vídeo aberto na janela. O player só existe com ela aberta: fechou, parou.
+  const [assistindo, setAssistindo] = useState<VideoDaCentral | null>(null);
+
+  // Os passos abertos — o vídeo de dentro só existe com o passo aberto, para
+  // não seguir tocando escondido quando a pessoa fecha o passo.
+  const [passosAbertos, setPassosAbertos] = useState<ReadonlySet<string>>(() => new Set());
+
+  // "Ver o passo a passo" no portal: fecha a janela e abre o passo nesta mesma
+  // página. Fica para depois do fechamento porque o Modal devolve o foco ao
+  // cartão do vídeo ao fechar, e isso rolaria a página de volta para ele.
+  const passoParaAbrir = useRef<string | null>(null);
+  useEffect(() => {
+    if (assistindo || !passoParaAbrir.current) return;
+    const el = document.getElementById(`passo-${passoParaAbrir.current}`);
+    passoParaAbrir.current = null;
+    if (!(el instanceof HTMLDetailsElement)) return;
+    el.open = true;
+    el.querySelector("summary")?.focus({ preventScroll: true });
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [assistindo]);
+
   return (
     <div className="space-y-10">
       {/* Busca: a primeira coisa da tela, larga, como a de uma central de ajuda. */}
@@ -207,6 +273,21 @@ export function CentralDeAjuda({
         </p>
       )}
 
+      {/* Os vídeos de passo a passo, logo abaixo da busca: só com ao menos um
+          vídeo, e cada um toca numa janela, sem sair da página (05/10/2026). */}
+      {videos.length > 0 && (
+        <section>
+          <h2 className="font-display text-[length:var(--fs-section)] font-semibold text-fg mb-3">Vídeos</h2>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 items-stretch">
+            {videos.map((v) => (
+              <li key={v.chave}>
+                <CartaoDeVideo video={v} onAssistir={() => setAssistindo(v)} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {filtrado.passos.length > 0 && (
         <section>
           <h2 className="font-display text-[length:var(--fs-section)] font-semibold text-fg mb-3">Primeiros passos</h2>
@@ -214,8 +295,19 @@ export function CentralDeAjuda({
             {filtrado.passos.map((p) => (
               <details
                 key={p.chave}
+                id={`passo-${p.chave}`}
                 open={Boolean(termo)}
-                className="group rounded-lg border border-border bg-surface shadow-[var(--c41-shadow-xs)] open:border-border-strong transition-colors"
+                onToggle={(e) => {
+                  const aberto = e.currentTarget.open;
+                  setPassosAbertos((atual) => {
+                    if (aberto === atual.has(p.chave)) return atual;
+                    const proximo = new Set(atual);
+                    if (aberto) proximo.add(p.chave);
+                    else proximo.delete(p.chave);
+                    return proximo;
+                  });
+                }}
+                className="group scroll-mt-6 rounded-lg border border-border bg-surface shadow-[var(--c41-shadow-xs)] open:border-border-strong transition-colors"
               >
                 <summary className="flex cursor-pointer list-none items-start gap-3 p-4 [&::-webkit-details-marker]:hidden">
                   <span className="inline-flex size-9 flex-shrink-0 items-center justify-center rounded-lg bg-brand-subtle text-brand [&>svg]:size-[17px]">
@@ -227,6 +319,11 @@ export function CentralDeAjuda({
                   </span>
                   <ChevronDown size={16} className="mt-1 flex-shrink-0 text-fg-muted transition-transform group-open:rotate-180" />
                 </summary>
+                {p.video && passosAbertos.has(p.chave) && (
+                  <div className="px-4 pb-3 sm:pl-[3.75rem]">
+                    <VideoDoYouTube link={p.video} titulo={p.titulo} />
+                  </div>
+                )}
                 <ol className="px-4 pb-4 pl-[3.75rem] space-y-1.5 list-decimal marker:text-fg-muted marker:text-[12px]">
                   {p.passos.map((passo) => (
                     <li key={passo} className="text-[13px] text-fg-secondary leading-relaxed pl-1">
@@ -266,7 +363,60 @@ export function CentralDeAjuda({
       ))}
 
       {rodape}
+
+      <Modal open={assistindo !== null} onClose={() => setAssistindo(null)} title={assistindo?.titulo} maxWidth="max-w-3xl">
+        {assistindo && (
+          <div className="flex flex-col gap-4">
+            <VideoDoYouTube key={assistindo.chave} link={assistindo.link} titulo={assistindo.titulo} iniciar />
+            {assistindo.artigo ? (
+              <Button variant="secondary" href={assistindo.artigo} className="self-end">
+                Ver o passo a passo <ArrowRight size={15} />
+              </Button>
+            ) : assistindo.passo ? (
+              <Button
+                variant="secondary"
+                className="self-end"
+                onClick={() => {
+                  passoParaAbrir.current = assistindo.passo ?? null;
+                  setAssistindo(null);
+                }}
+              >
+                Ver o passo a passo <ArrowRight size={15} />
+              </Button>
+            ) : null}
+          </div>
+        )}
+      </Modal>
     </div>
+  );
+}
+
+/** O cartão de um vídeo: miniatura e título. É um botão — abre a janela, não navega. */
+function CartaoDeVideo({ video, onAssistir }: { video: VideoDaCentral; onAssistir: () => void }) {
+  const id = idDoVideo(video.link);
+  if (!id) return null;
+  return (
+    <button
+      type="button"
+      onClick={onAssistir}
+      aria-label={`Assistir ao vídeo: ${video.titulo}`}
+      className="group flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-lg border border-border bg-surface text-left shadow-[var(--c41-shadow-xs)] hover:border-border-strong transition-colors"
+    >
+      <span className="relative block aspect-video w-full bg-black">
+        {/* eslint-disable-next-line @next/next/no-img-element -- miniatura do YouTube (i.ytimg.com), servida direto ao navegador */}
+        <img src={enderecoDaMiniatura(id)} alt="" loading="lazy" decoding="async" className="absolute inset-0 size-full object-cover" />
+        <span aria-hidden className="absolute inset-0 bg-black/20 transition-colors group-hover:bg-black/10" />
+        <span
+          aria-hidden
+          className="absolute left-1/2 top-1/2 inline-flex size-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-brand text-on-brand shadow-[var(--c41-shadow-lg)] transition-transform group-hover:scale-105"
+        >
+          <Play size={18} className="ml-0.5" fill="currentColor" />
+        </span>
+      </span>
+      <span className="flex items-start gap-2 p-3.5">
+        <span className="min-w-0 flex-1 text-[13.5px] font-semibold text-fg leading-snug">{video.titulo}</span>
+      </span>
+    </button>
   );
 }
 
@@ -289,6 +439,11 @@ function ListaDeTelas({ telas, cor }: { telas: TelaDaAjuda[]; cor?: string }) {
                 {t.titulo}
                 {!navegavel && <kbd className="rounded border border-border px-1 text-[10.5px] font-medium text-fg-muted">{t.caminho}</kbd>}
                 {t.artigo && <span className="rounded-full bg-brand/10 px-1.5 py-px text-[10.5px] font-semibold text-brand">Passo a passo</span>}
+                {t.video && (
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-brand/10 px-1.5 py-px text-[10.5px] font-semibold text-brand">
+                    <Play size={9} fill="currentColor" aria-hidden /> Vídeo
+                  </span>
+                )}
               </span>
               <span className="block text-[12.5px] text-fg-muted mt-0.5 leading-snug">{t.descricao}</span>
             </span>

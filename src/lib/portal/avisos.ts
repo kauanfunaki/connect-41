@@ -70,7 +70,7 @@ export function textoDoAviso(aviso: AvisoDoPortal): TextoEmPush {
       };
     case "comunicado":
       // O título de um aviso geral, escrito para muitos clientes — o mesmo do e-mail.
-      return { title: "Novo comunicado da 41", body: aviso.titulo, url: `/portal/comunicados/${aviso.id}` };
+      return { title: "Novo comunicado do escritório", body: aviso.titulo, url: `/portal/comunicados/${aviso.id}` };
   }
 }
 

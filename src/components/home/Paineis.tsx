@@ -15,6 +15,7 @@ import { listarFila, feriadosDoTenant } from "@/lib/societario/fila";
 import { SITUACAO_LABEL } from "@/components/societario/ProcessosFila";
 import { computeFunnelConversion } from "@/lib/recruitmentFunnel";
 import { listarCertificados } from "@/lib/certificados/servidor";
+import { AFASTAMENTO_ENCERRADO } from "@/lib/situacoesDoDP";
 import { atuaisPorDocumento, situacaoDoCertificado } from "@/lib/certificados/certificados";
 import {
   aPagarPorSemana,
@@ -348,7 +349,6 @@ export async function PainelDeProcessos({ ctx, setor }: Base) {
 /** Os mesmos recortes das telas: /ferias, /colaboradores, /admissoes e /afastamentos. */
 const FERIAS_EM_ABERTO = ["PLANEJADA", "SOLICITADA", "EM_ANALISE", "APROVADA", "PROGRAMADA", "EM_GOZO"] as const;
 const EXAMES_PENDENTES = ["SOLICITADO", "AGENDADO", "REALIZADO", "ASO_PENDENTE"] as const;
-const AFASTAMENTOS_ATIVOS = ["AFASTADO", "RETORNO_PREVISTO", "EM_ANALISE"] as const;
 
 export async function PainelDoDP({ ctx, setor }: Base) {
   const prisma = getPrisma();
@@ -358,7 +358,7 @@ export async function PainelDoDP({ ctx, setor }: Base) {
     prisma.person.count({ where: { tenantId, type: "COLABORADOR", employmentStatus: "ADMISSAO_EM_ANDAMENTO" } }),
     prisma.termination.count({ where: { tenantId, status: { notIn: ["FINALIZADO", "CANCELADO"] } } }),
     prisma.exameAdmissional.count({ where: { tenantId, status: { in: [...EXAMES_PENDENTES] } } }),
-    prisma.absence.count({ where: { tenantId, status: { in: [...AFASTAMENTOS_ATIVOS] } } }),
+    prisma.absence.count({ where: { tenantId, status: { notIn: [...AFASTAMENTO_ENCERRADO] } } }),
   ]);
   const f = contarFerias(ferias, new Date());
 

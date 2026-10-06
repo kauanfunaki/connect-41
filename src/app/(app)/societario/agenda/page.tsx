@@ -94,7 +94,8 @@ export default async function AgendaDePrazosPage({
             chave: "visao",
             rotulo: "Agrupar",
             vazioLabel: "Por semana",
-            opcoes: VISOES.filter((v) => v.chave !== "semana").map((v) => ({ value: v.chave, label: `Por ${v.rotulo.toLowerCase()}` })),
+            // O rótulo já diz "Por mês" — o "Por" de novo aqui dava "Por por mês" (05/10/2026).
+            opcoes: VISOES.filter((v) => v.chave !== "semana").map((v) => ({ value: v.chave, label: v.rotulo })),
           },
           {
             chave: "responsavel",

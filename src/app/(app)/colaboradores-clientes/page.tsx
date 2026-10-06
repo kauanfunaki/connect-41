@@ -149,7 +149,7 @@ export default async function ColaboradoresClientesPage({
             description={
               search || companyId
                 ? "Tente ajustar a busca ou os filtros."
-                : "São as pessoas que trabalham nas empresas clientes, não a equipe da 41."
+                : "São as pessoas que trabalham nas empresas clientes, não a equipe do escritório."
             }
             action={
               // Era um <Button> dentro de um <Link> — botão dentro de link.

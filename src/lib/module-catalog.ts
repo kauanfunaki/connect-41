@@ -33,6 +33,7 @@ export type IconeDeModulo =
   | "ClipboardList"
   | "Clock"
   | "FileSpreadsheet"
+  | "Funnel"
   | "GraduationCap"
   | "HandCoins"
   | "IdCard"
@@ -51,6 +52,7 @@ export type IconeDeModulo =
   | "Target"
   | "TrendingUp"
   | "UserRoundCheck"
+  | "UserRoundPlus"
   | "UserSearch"
   | "Users"
   | "Workflow";
@@ -62,6 +64,7 @@ export type GrupoDeModulo =
   | "Jornada"
   | "Contas"
   | "Banco e caixa"
+  | "Prospecção"
   | "Cliente"
   | "Atendimento"
   | "Documentos"
@@ -86,6 +89,8 @@ export const ORDEM_DOS_GRUPOS: readonly GrupoDeModulo[] = [
   "Jornada",
   "Contas",
   "Banco e caixa",
+  // Antes de "Cliente": primeiro quem ainda vai ser cliente (05/10/2026).
+  "Prospecção",
   "Cliente",
   "Atendimento",
   "Documentos",
@@ -105,6 +110,7 @@ export const ICONE_DO_GRUPO: Record<GrupoDeModulo, IconeDeModulo> = {
   Jornada: "Clock",
   Contas: "Receipt",
   "Banco e caixa": "Landmark",
+  Prospecção: "Funnel",
   Cliente: "Users",
   Atendimento: "MessageCircle",
   Documentos: "ReceiptText",
@@ -177,6 +183,19 @@ export const MODULE_CATALOG: ModuleDef[] = [
     defaultEnabled: true,
     icon: "Inbox",
     group: "Atendimento",
+  },
+  {
+    // Primeiro módulo do Comercial (05/10/2026): quem quer ser cliente, vindo
+    // da ficha "Quero ser cliente" do portal. Ligado por padrão — sem lead
+    // chegando, a tela só explica como eles chegam. Converter o lead em empresa
+    // fica para depois.
+    code: "comercial_leads",
+    label: "Leads",
+    sectorCode: "comercial",
+    description: "Quem quer ser cliente do escritório: a ficha do portal, com situação, responsável e observações da equipe",
+    defaultEnabled: true,
+    icon: "UserRoundPlus",
+    group: "Prospecção",
   },
   {
     // Setor Tech até existir um módulo de Financeiro para onde ele vai
@@ -332,7 +351,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
     code: "bpo_dre",
     label: "DRE",
     sectorCode: "bpo",
-    description: "Demonstrativo de resultado de caixa, por empresa e mes - monta do que foi pago e recebido",
+    description: "Demonstrativo de resultado de caixa, por empresa e mês — monta do que foi pago e recebido",
     defaultEnabled: false,
     icon: "FileSpreadsheet",
     group: "Resultado",
@@ -370,9 +389,9 @@ export const MODULE_CATALOG: ModuleDef[] = [
   },
   {
     code: "societario_licencas",
-    label: "Licencas",
+    label: "Licenças",
     sectorCode: "societario",
-    description: "Alvara, sanitaria, ambiental e AVCB - o que fica valendo, e a fila de renovacao",
+    description: "Alvará, sanitária, ambiental e AVCB — o que fica valendo, e a fila de renovação",
     defaultEnabled: false,
     icon: "BadgeCheck",
     group: "Licenças",
@@ -595,6 +614,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   controladoria_conversas: "/conversas",
   portal_solicitacoes:     "/solicitacoes",
   tech_certificados:       "/certificados",
+  comercial_leads:         "/leads",
   recrutamento_vagas:      "/vagas",
   recrutamento_candidatos: "/candidatos",
   recrutamento_testes:     "/testes",

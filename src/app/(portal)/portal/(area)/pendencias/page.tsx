@@ -20,8 +20,11 @@ import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 
 export const dynamic = "force-dynamic";
 
+// "Aguardando você" desde 05/10: o "Responder" do Início chega com a lista
+// já filtrada no que espera o cliente.
 const RECORTES = [
   { chave: "andamento", rotulo: "Em andamento" },
+  { chave: "aguardando", rotulo: "Aguardando você" },
   { chave: "encerradas", rotulo: "Encerradas" },
 ] as const;
 
@@ -75,7 +78,8 @@ export default async function PortalPendenciasPage({
             valor: String(contadores.aguardando),
             tom: contadores.aguardando > 0 ? "text-warning" : "",
             icone: <Hourglass />,
-            href: "/portal/pendencias",
+            detalhe: recorte === "aguardando" ? "mostrando agora" : undefined,
+            href: "/portal/pendencias?recorte=aguardando",
           },
           { rotulo: "Com a equipe", valor: String(contadores.respondidas), icone: <MessagesSquare />, href: "/portal/pendencias" },
           {
@@ -100,7 +104,17 @@ export default async function PortalPendenciasPage({
         filtros={
           <FiltrosDaTela
             naBarra
-            campos={[{ chave: "recorte", rotulo: "Situação", vazioLabel: "Em andamento", opcoes: [{ value: "encerradas", label: "Encerradas" }] }]}
+            campos={[
+              {
+                chave: "recorte",
+                rotulo: "Situação",
+                vazioLabel: "Em andamento",
+                opcoes: [
+                  { value: "aguardando", label: "Aguardando você" },
+                  { value: "encerradas", label: "Encerradas" },
+                ],
+              },
+            ]}
           />
         }
       >

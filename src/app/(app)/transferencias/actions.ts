@@ -135,6 +135,8 @@ export async function criarHandoff(
         message: `Nova transferência de ${sectorLabels[fromSector] ?? fromSector} para "${entity.name}"`,
         entityType,
         entityId,
+        // Quem pediu — a foto no sino (05/10/2026). Vale para os avisos abaixo.
+        actorUserId: ctx.userId,
       })
     )
   );
@@ -154,6 +156,7 @@ export async function criarHandoff(
         message: "Você foi definido como responsável por uma transferência",
         entityType,
         entityId,
+        actorUserId: ctx.userId,
       })
     )
   );
@@ -173,6 +176,7 @@ export async function criarHandoff(
           message: `Você foi mencionado em uma transferência para "${entity.name}"`,
           entityType,
           entityId,
+          actorUserId: ctx.userId,
         })
       )
   );
@@ -239,6 +243,7 @@ export async function atualizarStatusSetor(
       message: `${sectorLabels[sector.sectorCode] ?? sector.sectorCode} finalizou a parte dele na sua transferência`,
       entityType: sector.handoff.entityType,
       entityId: sector.handoff.entityId,
+      actorUserId: ctx.userId,
     });
   }
 
@@ -311,6 +316,7 @@ export async function atribuirResponsavelSetor(
       message: "Você foi definido como responsável por uma transferência",
       entityType: sector.handoff.entityType,
       entityId: sector.handoff.entityId,
+      actorUserId: ctx.userId,
     });
   }
 

@@ -457,8 +457,9 @@ export async function adicionarNota(
   // então tem prioridade quando o usuário é mencionado E interessado.
   if (item) {
     // A notificação leva ao card, e não à empresa ou pessoa ligada a ele: o
-    // comentário está no card, e card solto não levava a lugar nenhum.
-    const notifyEntity = { entityId: itemId };
+    // comentário está no card, e card solto não levava a lugar nenhum. Leva
+    // também quem comentou, para a foto no sino (05/10/2026).
+    const notifyEntity = { entityId: itemId, actorUserId: userId };
     const taskLabel = item.title ?? "tarefa";
     const mentioned = await findMentionedUserIds(tenantId, [content]);
     const mentionedSet = new Set(mentioned);
