@@ -337,6 +337,18 @@ export default async function ProcessoDetalhePage({
           </p>
         )}
         <SituacaoDoProcesso processoId={processo.id} status={processo.status} mudar={mudarSituacaoDoProcesso} />
+        {/* As observações já vinham na consulta e não apareciam em lugar
+            nenhum. É onde a importação do Trello (06/10) põe descrição,
+            checklists e comentários do cartão — fechado, porque é longo, e
+            só aqui: o portal não lê `notes`. */}
+        {processo.notes && (
+          <details className="rounded-md border border-border bg-surface-2 px-3 py-2">
+            <summary className="cursor-pointer text-[13px] font-medium text-fg">
+              Observações internas <span className="font-normal text-fg-muted">· só a equipe vê</span>
+            </summary>
+            <p className="mt-2 whitespace-pre-wrap break-words text-[12px] text-fg-secondary">{processo.notes}</p>
+          </details>
+        )}
       </div>
 
       {/* Uma pilha só, com o mesmo respiro entre todas as seções — eram
