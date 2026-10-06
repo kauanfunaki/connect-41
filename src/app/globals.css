@@ -115,7 +115,7 @@
   --c41-info-bg:         rgba(91,159,227,.14);
   --c41-grafico-proximo: var(--c41-brand-400);
   --c41-grafico-neutro:  #6E6879;
-  /* No escuro um degrau acima: o 700 some no fundo (2,3:1). */
+  /* No escuro um degrau acima: o 700 some no fundo (2,5:1). */
   --c41-grafico-coluna-topo:          var(--c41-brand-400);
   --c41-grafico-coluna-base:          var(--c41-brand-600);
   --c41-grafico-coluna-destaque-topo: var(--c41-brand-200);
@@ -558,6 +558,15 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   /* Cor do setor ativo. O AppShell troca por `activeSector.color`; fora de
      setor (e no portal) é o azul da marca. */
   --c41-setor:     var(--c41-brand);
+  /* Faixa de destaques da Home (06/10, opção C): cartão cheio, letra branca,
+     igual nos dois temas. Azul é o volume; o vinho é o alerta (vencido,
+     atrasado, estourado). Branco sobre o tom mais claro de cada degradê:
+     7,0:1 no azul e 5,8:1 no vinho; o texto de apoio vai a 90% de branco,
+     que ainda passa (5,0:1 no vinho). */
+  --c41-destaque-de:         var(--c41-brand-700);
+  --c41-destaque-ate:        var(--c41-brand-900);
+  --c41-destaque-alerta-de:  #B23A4F;
+  --c41-destaque-alerta-ate: #6E1F31;
 }
 :root[data-theme="dark"] {
   --c41-shadow-xs: 0 1px 2px rgba(0,0,0,.45);

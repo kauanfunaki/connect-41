@@ -60,6 +60,12 @@ function dicaDe(s: Segmento, total: number): string {
   return `${s.rotulo}: ${numero(s.valor)}${parte}${s.detalhe ? `\n${s.detalhe}` : ""}`;
 }
 
+// Gráfico mais baixo (06/10): com a faixa de destaques em cima, a grade dos
+// painéis leva `data-compacto` (grupo `grade`, na Home) e a rosca e as
+// colunas encolhem — o número que manda já está na faixa.
+const COMPACTO_ROSCA = "group-data-[compacto=true]/grade:size-[112px]";
+const COMPACTO_COLUNAS = "group-data-[compacto=true]/grade:h-28";
+
 /** Ícone da situação — o que faz a cor não ser o único canal. */
 function IconeDoTom({ tom }: { tom: Tom }) {
   const cls = "size-3.5 flex-shrink-0";
@@ -385,7 +391,7 @@ export function Rosca({
 
   return (
     <div className="flex items-center gap-5 flex-wrap min-w-0">
-      <div className="relative size-[132px] flex-shrink-0">
+      <div className={`relative size-[132px] flex-shrink-0 ${COMPACTO_ROSCA}`}>
         <svg viewBox="0 0 100 100" className="size-full -rotate-90" aria-hidden>
           <circle cx="50" cy="50" r={r} fill="none" stroke="var(--c41-surface-hover)" strokeWidth="16" />
           {fatias.map((f) => (
@@ -470,7 +476,7 @@ export function Colunas({
       <p className="text-[12px] font-medium text-fg-secondary mb-2">{titulo}</p>
       {/* O `pt-5` guarda o lugar do rótulo da coluna mais alta: a altura da
           coluna é percentual da área de baixo, e o rótulo sobe para o vão. */}
-      <div className="group/colunas relative flex items-end gap-[3px] h-36 pt-5 border-b border-border">
+      <div className={`group/colunas relative flex items-end gap-[3px] h-36 pt-5 border-b border-border ${COMPACTO_COLUNAS}`}>
         {colunas.map((c) => {
           const altura = c.valor > 0 ? Math.max((c.valor / maior) * 100, 3) : 0;
           const [topo, base] = c.destaque
