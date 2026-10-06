@@ -6,6 +6,7 @@
 export type HomeWidgetKey =
   | "indicadores"
   | "proxima-reuniao"
+  | "destaques"
   | "meu-dia"
   | "transferencias"
   | "workspace"
@@ -55,6 +56,15 @@ export const HOME_WIDGETS: HomeWidgetDef[] = [
     key: "proxima-reuniao",
     label: "Próxima reunião",
     description: "Faixa com a próxima reunião do dia e o link de entrada.",
+    slot: "top",
+  },
+  // Por último no topo (06/10): fica colada nos painéis que ela resume — e é
+  // onde um bloco novo entra para quem já personalizou, então todo mundo a vê
+  // no mesmo lugar.
+  {
+    key: "destaques",
+    label: "Destaques",
+    description: "Os três números que mais pedem você agora, dos painéis da sua Home.",
     slot: "top",
   },
   {

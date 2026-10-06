@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, CircleCheck, OctagonAlert, TriangleAlert } from "lucide-react";
+import type { Selo, Tendencia, TomDaTendencia } from "@/lib/home/tendencia";
 
 // Gráficos dos painéis da Home (30/09) — a leitura "Power BI" que o Kauan
 // trouxe do HubStrom, no vocabulário do Perímetro. Server components puros:
@@ -8,13 +9,18 @@ import { ArrowUpRight, CircleCheck, OctagonAlert, TriangleAlert } from "lucide-r
 //
 // Regras seguidas (método de dataviz):
 // - cor de situação é reservada e sempre vem com ícone + rótulo na legenda;
-// - 2px de superfície entre segmentos, ponta de dado arredondada em 4px,
-//   base reta; barras finas;
 // - número em texto neutro, nunca na cor da série;
 // - cada gráfico leva uma tabela `sr-only` com os mesmos números.
 // Paleta validada (claro e escuro) com o validador do método: crítico,
 // atenção e "próximo" passam na separação para daltonismo; o cinza neutro é
 // o "sem situação" de propósito.
+//
+// Cor e volume (06/10, opção B escolhida pelo Kauan — achou os gráficos
+// bons, mas apagados): o mesmo conteúdo com mais presença, em todas as telas
+// que usam estes componentes. Topo do cartão tingido na cor do setor, filete
+// de 4px, número principal em Space Grotesk; barras de 18px com 3px de vão e
+// cada segmento arredondado; rosca mais grossa; colunas em degradê com o
+// valor em cima de cada uma; sombra mais funda.
 
 export type Tom = "critico" | "atencao" | "ok" | "proximo" | "neutro";
 
@@ -38,15 +44,102 @@ export type Segmento = {
 };
 
 const NUMERO = new Intl.NumberFormat("pt-BR");
+const NUMERO_CURTO = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 });
 const PCT = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 0 });
 
 export function numero(n: number): string {
   return NUMERO.format(n);
 }
 
+/** "12 mil", "1,2 mi" — o rótulo em cima da coluna; o valor exato fica na dica. */
+export function numeroCurto(n: number): string {
+  return NUMERO_CURTO.format(n);
+}
+
 function dicaDe(s: Segmento, total: number): string {
   const parte = total > 0 ? ` (${PCT.format(s.valor / total)})` : "";
   return `${s.rotulo}: ${numero(s.valor)}${parte}${s.detalhe ? `\n${s.detalhe}` : ""}`;
+}
+
+// Gráfico mais baixo (06/10): com a faixa de destaques em cima, a grade dos
+// painéis leva `data-compacto` (grupo `grade`, na Home) e a rosca e as
+// colunas encolhem — o número que manda já está na faixa. O mesmo quando o
+// painel ganha a linha da tendência (grupo `painel`): o gráfico de situação
+// fica menor, embaixo dela.
+const COMPACTO_ROSCA = "group-data-[compacto=true]/grade:size-[112px] group-data-[compacto=true]/painel:size-[112px]";
+const COMPACTO_COLUNAS = "group-data-[compacto=true]/grade:h-28 group-data-[compacto=true]/painel:h-28";
+
+// ─── Tendência ─────────────────────────────────────────────────────────────
+
+const COR_DO_SELO: Record<TomDaTendencia, string> = {
+  ruim: "bg-danger-bg text-danger",
+  bom: "bg-success-bg text-success",
+  neutro: "bg-surface-hover text-fg-secondary",
+};
+
+/**
+ * O selo da tendência (06/10, opção A): "▲ 12% em 7 dias", vermelho quando
+ * piorou e verde quando melhorou — o sentido vem da métrica (subir em
+ * "vencidas" é ruim). A seta e o texto dizem o mesmo que a cor.
+ */
+export function SeloDaTendencia({ selo }: { selo: Selo }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 h-6 px-2 rounded-full text-[12px] font-semibold tnum whitespace-nowrap ${COR_DO_SELO[selo.tom]}`}
+      data-dica={selo.descricao}
+    >
+      <span aria-hidden className="text-[10px]">
+        {selo.seta}
+      </span>
+      <span aria-hidden>{selo.texto}</span>
+      <span className="sr-only">{selo.descricao}</span>
+    </span>
+  );
+}
+
+/**
+ * A linha das últimas semanas: área em degradê suave, traço e um ponto no
+ * valor de hoje. Os pontos chegam normalizados (x e y de 0 a 1). O SVG estica
+ * na largura (`preserveAspectRatio="none"`), então a área é um recorte em CSS
+ * e o ponto é um elemento à parte — num SVG esticado o círculo viraria elipse.
+ * Decorativa: o que ela diz está no selo e no número.
+ */
+export function Sparkline({
+  pontos,
+  cor = "var(--c41-brand)",
+  variante = "painel",
+  className = "",
+}: {
+  pontos: readonly { x: number; y: number }[];
+  cor?: string;
+  /** "faixa": branca translúcida, para o cartão cheio da faixa de destaques. */
+  variante?: "painel" | "faixa";
+  className?: string;
+}) {
+  if (pontos.length < 2) return null;
+  // Margem para o traço e o ponto não encostarem na borda.
+  const y = (v: number) => 0.14 + (1 - v) * 0.72;
+  const traco = variante === "faixa" ? "rgb(255 255 255 / .75)" : cor;
+  const area =
+    variante === "faixa"
+      ? "linear-gradient(to bottom, rgb(255 255 255 / .22), rgb(255 255 255 / 0))"
+      : `linear-gradient(to bottom, color-mix(in srgb, ${cor} 24%, transparent), transparent)`;
+  const caminho = pontos.map((p, i) => `${i === 0 ? "M" : "L"}${(p.x * 100).toFixed(2)},${(y(p.y) * 100).toFixed(2)}`).join(" ");
+  const recorte = `polygon(${pontos.map((p) => `${(p.x * 100).toFixed(2)}% ${(y(p.y) * 100).toFixed(2)}%`).join(", ")}, 100% 100%, 0% 100%)`;
+  const ultimo = pontos[pontos.length - 1];
+
+  return (
+    <div className={`relative ${className}`} aria-hidden>
+      <div className="absolute inset-0" style={{ clipPath: recorte, background: area }} />
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 size-full overflow-visible">
+        <path d={caminho} fill="none" stroke={traco} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+      </svg>
+      <span
+        className={`absolute size-2 rounded-full -translate-x-1/2 -translate-y-1/2 ${variante === "faixa" ? "bg-white" : "ring-2 ring-surface"}`}
+        style={{ left: `${ultimo.x * 100}%`, top: `${y(ultimo.y) * 100}%`, background: variante === "faixa" ? undefined : cor }}
+      />
+    </div>
+  );
 }
 
 /** Ícone da situação — o que faz a cor não ser o único canal. */
@@ -79,19 +172,42 @@ export function Painel({
   cor?: string;
   titulo: string;
   href?: string;
-  /** O número principal e o que ele é. */
-  destaque?: { valor: string; legenda: string; tom?: Tom };
+  /**
+   * O número principal e o que ele é. Com `tendencia` (opção A, 06/10), ganha
+   * o selo ao lado e a linha das últimas semanas embaixo; sem histórico, fica
+   * como antes — sem selo, sem linha e sem espaço guardado para eles.
+   */
+  destaque?: { valor: string; legenda: string; tom?: Tom; tendencia?: Tendencia | null };
   children: React.ReactNode;
   rodape?: React.ReactNode;
 }) {
+  const corDoSetor = cor ?? "var(--c41-brand)";
+  const selo = destaque?.tendencia?.selo ?? null;
+  const linha = destaque?.tendencia?.linha ?? null;
+  const numeroPrincipal = destaque && (
+    <span
+      className="min-w-0 max-w-full font-display text-[length:var(--fs-metric)] font-bold leading-none tracking-tight tnum truncate c41-cortavel"
+      style={destaque.tom && destaque.tom !== "neutro" ? { color: COR_DO_TOM[destaque.tom] } : undefined}
+    >
+      {destaque.valor}
+    </span>
+  );
   return (
-    <section className="reveal-in group/painel relative min-w-0 flex flex-col bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 overflow-hidden">
+    <section
+      data-compacto={linha ? "true" : undefined}
+      className="reveal-in group/painel relative min-w-0 flex flex-col bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-md)] p-5 overflow-hidden"
+      // O topo tingido na cor do setor (06/10): 11% dela sobre a superfície,
+      // sumindo antes do gráfico — dá identidade sem pintar o dado.
+      style={{
+        backgroundImage: `linear-gradient(to bottom, color-mix(in srgb, ${corDoSetor} 11%, var(--c41-surface)), var(--c41-surface) 128px)`,
+      }}
+    >
       {/* Filete na cor do setor: identifica o painel sem pintar o gráfico. */}
-      <span className="absolute inset-x-0 top-0 h-[3px]" style={{ background: cor ?? "var(--c41-brand)" }} aria-hidden />
+      <span className="absolute inset-x-0 top-0 h-1" style={{ background: corDoSetor }} aria-hidden />
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
-            <span className="size-1.5 rounded-full" style={{ background: cor ?? "var(--c41-brand)" }} aria-hidden />
+            <span className="size-1.5 rounded-full" style={{ background: corDoSetor }} aria-hidden />
             {setor}
           </p>
           <h2 className="font-display text-[length:var(--fs-section)] font-semibold text-fg leading-tight mt-1">{titulo}</h2>
@@ -106,17 +222,26 @@ export function Painel({
         )}
       </header>
 
-      {destaque && (
-        <p className="mt-3 flex items-baseline gap-2 min-w-0">
-          <span
-            className="text-[28px] font-semibold leading-none tracking-tight truncate c41-cortavel"
-            style={destaque.tom && destaque.tom !== "neutro" ? { color: COR_DO_TOM[destaque.tom] } : undefined}
-          >
-            {destaque.valor}
-          </span>
-          <span className="text-[length:var(--fs-helper)] text-fg-muted truncate">{destaque.legenda}</span>
-        </p>
-      )}
+      {destaque &&
+        (selo ? (
+          // Com selo, ele vai ao lado do número e a legenda desce uma linha —
+          // os três na mesma linha não cabem num painel de meia tela.
+          <div className="mt-3 min-w-0">
+            <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 min-w-0">
+              {numeroPrincipal}
+              <SeloDaTendencia selo={selo} />
+            </p>
+            <p className="mt-1.5 text-[length:var(--fs-helper)] text-fg-muted truncate">{destaque.legenda}</p>
+          </div>
+        ) : (
+          <p className="mt-3 flex items-baseline gap-2 min-w-0">
+            {numeroPrincipal}
+            <span className="text-[length:var(--fs-helper)] text-fg-muted truncate">{destaque.legenda}</span>
+          </p>
+        ))}
+      {/* Na cor da série (o azul), não na do setor: o vermelho do Fiscal ou o
+          âmbar do BPO numa linha leriam como alerta. */}
+      {linha && <Sparkline pontos={linha} className="mt-3 h-11" />}
 
       <div className="mt-4 flex-1 min-w-0">{children}</div>
       {rodape && <div className="mt-4 pt-3 border-t border-border text-[length:var(--fs-helper)] text-fg-muted">{rodape}</div>}
@@ -126,21 +251,24 @@ export function Painel({
 
 // ─── Barra de situação ─────────────────────────────────────────────────────
 
-/** A barra empilhada em si (sem legenda) — usada sozinha e nas linhas. */
+/**
+ * A barra empilhada em si (sem legenda) — usada sozinha e nas linhas. 18px
+ * de altura, 3px de vão e cada segmento com os cantos arredondados (06/10).
+ */
 function Pilha({ segmentos, largura = 100 }: { segmentos: Segmento[]; largura?: number }) {
   const total = segmentos.reduce((s, x) => s + x.valor, 0);
   const visiveis = segmentos.filter((s) => s.valor > 0);
   return (
-    <div className="group/pilha flex h-6 items-center gap-[2px]" style={{ width: `${largura}%` }}>
+    <div className="group/pilha flex h-[26px] items-center gap-[3px]" style={{ width: `${largura}%` }}>
       {visiveis.map((s) => {
         const barra = (
           <span
-            className="block h-2.5 w-full group-last/seg:rounded-r-[4px] transition-opacity duration-150 group-hover/pilha:opacity-45 group-hover/seg:opacity-100!"
+            className="block h-[18px] w-full rounded-[5px] transition-opacity duration-150 group-hover/pilha:opacity-45 group-hover/seg:opacity-100!"
             style={{ background: COR_DO_TOM[s.tom] }}
           />
         );
         const comum = {
-          className: "group/seg flex h-full items-center min-w-[3px]",
+          className: "group/seg flex h-full items-center min-w-[6px]",
           style: { flexGrow: s.valor, flexBasis: 0 },
           "data-dica": dicaDe(s, total),
           "data-dica-rapida": "",
@@ -282,7 +410,7 @@ export function LinhasDeSituacao({
   return (
     <div className="min-w-0">
       <Legenda segmentos={legenda} comValores={false} />
-      <div className="mt-3 space-y-1">
+      <div className="mt-3 space-y-1.5">
         {linhas.map((l) => {
           const total = l.segmentos.reduce((s, x) => s + x.valor, 0);
           const rotulo = (
@@ -346,10 +474,12 @@ export function Rosca({
   const total = segmentos.reduce((s, x) => s + x.valor, 0);
   if (total === 0) return <p className="text-[length:var(--fs-helper)] text-fg-muted py-1.5">{vazio}</p>;
 
-  const r = 42;
+  // Anel de 16 (era 11, 06/10): mais grosso, e o raio recua para o anel com
+  // hover (18) ainda caber no viewBox de 100.
+  const r = 41;
   const c = 2 * Math.PI * r;
-  // 2px de superfície entre as fatias (em unidades do viewBox de 100).
-  const vao = segmentos.filter((s) => s.valor > 0).length > 1 ? 1.6 : 0;
+  // ~3px de superfície entre as fatias (em unidades do viewBox de 100).
+  const vao = segmentos.filter((s) => s.valor > 0).length > 1 ? 2.2 : 0;
   const fatias: (Segmento & { dash: number; offset: number })[] = [];
   let cursor = 0;
   for (const s of segmentos) {
@@ -361,9 +491,9 @@ export function Rosca({
 
   return (
     <div className="flex items-center gap-5 flex-wrap min-w-0">
-      <div className="relative size-[132px] flex-shrink-0">
+      <div className={`relative size-[132px] flex-shrink-0 ${COMPACTO_ROSCA}`}>
         <svg viewBox="0 0 100 100" className="size-full -rotate-90" aria-hidden>
-          <circle cx="50" cy="50" r={r} fill="none" stroke="var(--c41-surface-hover)" strokeWidth="11" />
+          <circle cx="50" cy="50" r={r} fill="none" stroke="var(--c41-surface-hover)" strokeWidth="16" />
           {fatias.map((f) => (
             <circle
               key={f.chave}
@@ -372,17 +502,17 @@ export function Rosca({
               r={r}
               fill="none"
               stroke={COR_DO_TOM[f.tom]}
-              strokeWidth="11"
+              strokeWidth="16"
               strokeDasharray={`${f.dash} ${c - f.dash}`}
               strokeDashoffset={f.offset}
-              className="transition-[stroke-width] duration-150 hover:[stroke-width:14]"
+              className="transition-[stroke-width] duration-150 hover:[stroke-width:18]"
               data-dica={dicaDe(f, total)}
               data-dica-rapida=""
             />
           ))}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-[24px] font-semibold text-fg leading-none">{numero(total)}</span>
+          <span className="font-display text-[length:var(--fs-title)] font-bold text-fg leading-none tnum">{numero(total)}</span>
           <span className="text-[length:var(--fs-micro)] text-fg-muted mt-1">{legendaDoTotal}</span>
         </div>
       </div>
@@ -419,18 +549,23 @@ export function Rosca({
 export type Coluna = { chave: string; rotulo: string; valor: number; dica?: string; destaque?: boolean };
 
 /**
- * Colunas de uma série só (ex.: a pagar por semana). Rótulo de valor só na
- * maior e na destacada; o resto fica na dica e na tabela acessível.
+ * Colunas de uma série só (ex.: a pagar por semana), em degradê, com o valor
+ * curto em cima de cada uma ("12 mil", 06/10) — o exato fica na dica e na
+ * tabela acessível.
  */
 export function Colunas({
   titulo,
   colunas,
   formatar = numero,
+  formatarCurto = numeroCurto,
   vazio = "Nada por aqui.",
 }: {
   titulo: string;
   colunas: Coluna[];
+  /** O valor exato, na dica e na tabela acessível. */
   formatar?: (n: number) => string;
+  /** O rótulo em cima da coluna — curto para caber em seis colunas no celular. */
+  formatarCurto?: (n: number) => string;
   vazio?: string;
 }) {
   const maior = Math.max(0, ...colunas.map((c) => c.valor));
@@ -439,10 +574,14 @@ export function Colunas({
   return (
     <div className="min-w-0">
       <p className="text-[12px] font-medium text-fg-secondary mb-2">{titulo}</p>
-      <div className="group/colunas relative flex items-end gap-[2px] h-28 border-b border-border">
+      {/* O `pt-5` guarda o lugar do rótulo da coluna mais alta: a altura da
+          coluna é percentual da área de baixo, e o rótulo sobe para o vão. */}
+      <div className={`group/colunas relative flex items-end gap-[3px] h-36 pt-5 border-b border-border ${COMPACTO_COLUNAS}`}>
         {colunas.map((c) => {
           const altura = c.valor > 0 ? Math.max((c.valor / maior) * 100, 3) : 0;
-          const rotular = c.valor === maior || c.destaque;
+          const [topo, base] = c.destaque
+            ? ["var(--c41-grafico-coluna-destaque-topo)", "var(--c41-grafico-coluna-destaque-base)"]
+            : ["var(--c41-grafico-coluna-topo)", "var(--c41-grafico-coluna-base)"];
           return (
             <div
               key={c.chave}
@@ -450,18 +589,26 @@ export function Colunas({
               data-dica={`${c.rotulo}: ${formatar(c.valor)}${c.dica ? `\n${c.dica}` : ""}`}
               data-dica-rapida=""
             >
-              {rotular && c.valor > 0 && (
-                <span className="text-[length:var(--fs-micro)] font-medium text-fg-secondary tnum mb-1 whitespace-nowrap">{formatar(c.valor)}</span>
+              {c.valor > 0 && (
+                <span
+                  className={`shrink-0 text-[length:var(--fs-micro)] tnum mb-1 whitespace-nowrap ${
+                    c.valor === maior || c.destaque ? "font-semibold text-fg" : "font-medium text-fg-secondary"
+                  }`}
+                >
+                  {formatarCurto(c.valor)}
+                </span>
               )}
+              {/* `shrink-0`: sem ele a coluna mais alta encolhia para o rótulo
+                  caber, e deixava de ser proporcional às outras. */}
               <span
-                className="block w-full max-w-6 rounded-t-[4px] transition-opacity duration-150 group-hover/colunas:opacity-45 group-hover/col:opacity-100!"
-                style={{ height: `${altura}%`, background: c.destaque ? "var(--c41-grafico-proximo)" : "var(--c41-brand)" }}
+                className="block shrink-0 w-full max-w-9 rounded-t-[6px] transition-opacity duration-150 group-hover/colunas:opacity-45 group-hover/col:opacity-100!"
+                style={{ height: `${altura}%`, background: `linear-gradient(to bottom, ${topo}, ${base})` }}
               />
             </div>
           );
         })}
       </div>
-      <div className="flex gap-[2px] mt-1.5">
+      <div className="flex gap-[3px] mt-1.5">
         {colunas.map((c) => (
           <span key={c.chave} className="flex-1 min-w-0 text-center text-[length:var(--fs-micro)] text-fg-muted truncate">
             {c.rotulo}
@@ -486,18 +633,21 @@ export function Funil({ titulo, etapas, vazio = "Nada por aqui." }: { titulo: st
   if (maior === 0) return <p className="text-[length:var(--fs-helper)] text-fg-muted py-1.5">{vazio}</p>;
 
   return (
-    <div className="min-w-0 space-y-1">
+    <div className="group/funil min-w-0 space-y-1">
       {etapas.map((e, i) => {
         const anterior = i > 0 ? etapas[i - 1].valor : null;
         const passagem = anterior && anterior > 0 ? PCT.format(e.valor / anterior) : null;
         const conteudo = (
           <>
             <span className="text-[12px] text-fg-secondary truncate">{e.rotulo}</span>
-            <span className="flex h-6 items-center justify-center min-w-0">
+            <span className="flex h-[26px] items-center justify-center min-w-0">
               {e.valor > 0 && (
                 <span
-                  className="block h-4 rounded-[4px] min-w-[3px] bg-brand transition-opacity duration-150 group-hover/funil:opacity-45 group-hover/etapa:opacity-100!"
-                  style={{ width: `${(e.valor / maior) * 100}%` }}
+                  className="block h-[18px] rounded-[5px] min-w-[6px] transition-opacity duration-150 group-hover/funil:opacity-45 group-hover/etapa:opacity-100!"
+                  style={{
+                    width: `${(e.valor / maior) * 100}%`,
+                    background: "linear-gradient(to right, var(--c41-grafico-coluna-base), var(--c41-grafico-coluna-topo), var(--c41-grafico-coluna-base))",
+                  }}
                 />
               )}
             </span>
