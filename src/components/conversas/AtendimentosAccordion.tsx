@@ -78,7 +78,7 @@ function Mensagens({ conversationId }: { conversationId: string }) {
         return (
           <div key={m.id} className={`flex ${isOutgoing ? "justify-end" : "justify-start"}`}>
             <div
-              className={`max-w-[80%] rounded-lg px-3 py-2 text-[13px] ${
+              className={`max-w-[80%] rounded-lg px-3 py-2 text-[length:var(--fs-ui)] ${
                 m.isPrivate
                   ? "bg-warning/10 border border-warning/30"
                   : isOutgoing
@@ -86,7 +86,7 @@ function Mensagens({ conversationId }: { conversationId: string }) {
                     : "bg-surface-hover border border-border"
               }`}
             >
-              <div className={`text-[11px] mb-0.5 ${isOutgoing ? "text-on-brand/70" : "text-fg-muted"}`}>
+              <div className={`text-[length:var(--fs-micro)] mb-0.5 ${isOutgoing ? "text-on-brand/70" : "text-fg-muted"}`}>
                 {m.senderLabel ?? (isOutgoing ? "Atendente" : "Contato")}
                 {m.isPrivate ? " · nota interna" : ""}
               </div>
@@ -97,7 +97,7 @@ function Mensagens({ conversationId }: { conversationId: string }) {
                   href={a.url}
                   target="_blank"
                   rel="noreferrer"
-                  className={`mt-1 flex items-center gap-1.5 text-[12px] underline ${isOutgoing ? "text-on-brand" : "text-brand"}`}
+                  className={`mt-1 flex items-center gap-1.5 text-[length:var(--fs-2)] underline ${isOutgoing ? "text-on-brand" : "text-brand"}`}
                 >
                   <Paperclip size={12} /> {a.fileType}
                 </a>
@@ -148,12 +148,12 @@ export function AtendimentosAccordion({ atendimentos, defaultOpenId }: { atendim
             >
               <span className="text-fg-muted flex-shrink-0">{isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</span>
               <span className="text-[length:var(--fs-2)] font-medium text-fg flex-shrink-0 tabular-nums">{a.dateLabel}</span>
-              <span className="text-[12px] text-fg-muted flex-shrink-0">{a.channelLabel}</span>
+              <span className="text-[length:var(--fs-2)] text-fg-muted flex-shrink-0">{a.channelLabel}</span>
               <Selo tom={STATUS_BADGE[a.status] ?? STATUS_BADGE.resolved} className="flex-shrink-0">
                 {a.statusLabel}
               </Selo>
               {a.assigneeLabel && <span className="text-[length:var(--fs-micro)] text-fg-muted flex-shrink-0 hidden sm:inline">{a.assigneeLabel}</span>}
-              <span className="text-[12px] text-fg-muted truncate min-w-0">
+              <span className="text-[length:var(--fs-2)] text-fg-muted truncate min-w-0">
                 {a.messageCount != null ? `${a.messageCount} ${a.messageCount === 1 ? "mensagem" : "mensagens"}` : "—"}
               </span>
             </button>

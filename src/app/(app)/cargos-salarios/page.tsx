@@ -82,13 +82,13 @@ export default async function CargosSalariosPage() {
           </h2>
           <ul className="space-y-2">
             {totalDegraus > 0 && canViewSalary && (
-              <li className="text-[13px] text-fg-secondary">
+              <li className="text-[length:var(--fs-ui)] text-fg-secondary">
                 <strong className="text-fg">{totalDegraus} degrau(s) invertido(s)</strong> — nível mais alto com faixa
                 inicial menor que a do nível anterior na mesma família (detalhado abaixo).
               </li>
             )}
             {divergencias.length > 0 && (
-              <li className="text-[13px] text-fg-secondary">
+              <li className="text-[length:var(--fs-ui)] text-fg-secondary">
                 <strong className="text-fg">{divergencias.length} nome(s) com grafia divergente</strong> — mesmo cargo
                 escrito de formas diferentes:{" "}
                 {divergencias
@@ -99,7 +99,7 @@ export default async function CargosSalariosPage() {
               </li>
             )}
             {semClassificacao > 0 && (
-              <li className="text-[13px] text-fg-secondary">
+              <li className="text-[length:var(--fs-ui)] text-fg-secondary">
                 <strong className="text-fg">{semClassificacao} cargo(s) sem família ou nível</strong> — classifique na
                 ficha do cargo para entrarem na trilha.
               </li>
@@ -128,7 +128,7 @@ export default async function CargosSalariosPage() {
               <section key={g.family}>
                 <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
                   <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">{g.label}</h2>
-                  <span className="text-[12px] text-fg-muted">
+                  <span className="text-[length:var(--fs-2)] text-fg-muted">
                     {g.cargos.length} cargo{g.cargos.length !== 1 ? "s" : ""} · {g.totalPessoas} colaborador
                     {g.totalPessoas !== 1 ? "es" : ""}
                   </span>
@@ -216,7 +216,7 @@ export default async function CargosSalariosPage() {
                               {c.seniority ? (
                                 <SeloDoDP cor="bg-brand/10 text-brand border-brand/25">{SENIORITY_LABEL[c.seniority]}</SeloDoDP>
                               ) : (
-                                <span className="text-[12px] text-fg-muted">—</span>
+                                <span className="text-[length:var(--fs-2)] text-fg-muted">—</span>
                               )}
                             </td>
                             <td className="px-4 py-3 text-fg font-semibold">

@@ -67,7 +67,7 @@ export default async function TreinamentoPage({
 
       {training.description && (
         <Card className="p-5 mb-4">
-          <p className="text-[13px] text-fg whitespace-pre-wrap">{training.description}</p>
+          <p className="text-[length:var(--fs-ui)] text-fg whitespace-pre-wrap">{training.description}</p>
         </Card>
       )}
 
@@ -77,7 +77,7 @@ export default async function TreinamentoPage({
         </h2>
 
         {training.classes.length === 0 ? (
-          <p className="text-[13px] text-fg-muted mb-3">Nenhuma turma criada ainda.</p>
+          <p className="text-[length:var(--fs-ui)] text-fg-muted mb-3">Nenhuma turma criada ainda.</p>
         ) : (
           <>
             {/* No celular, uma linha por turma em vez da tabela de 640px com

@@ -36,11 +36,11 @@ export function DiscBars({ scores, primaryProfile, secondaryProfile, compact = f
       <div className={compact ? "space-y-1.5" : "space-y-2.5"}>
         {DIMENSIONS.map((dim) => (
           <div key={dim} className="flex items-center gap-2">
-            <span className="w-5 text-[11px] font-medium text-fg-muted">{dim}</span>
+            <span className="w-5 text-[length:var(--fs-micro)] font-medium text-fg-muted">{dim}</span>
             <div className="flex-1 h-2 rounded-full bg-surface-2 overflow-hidden">
               <div className={`h-full rounded-full ${DIM_COLOR[dim]}`} style={{ width: `${scores[dim].pct}%` }} />
             </div>
-            <span className="w-9 text-right text-[11px] text-fg-muted tnum">{scores[dim].pct}%</span>
+            <span className="w-9 text-right text-[length:var(--fs-micro)] text-fg-muted tnum">{scores[dim].pct}%</span>
           </div>
         ))}
       </div>

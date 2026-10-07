@@ -59,7 +59,7 @@ export function ItemDaGestao({
         <Link href={item.href} className="text-[length:var(--fs-ui)] font-semibold text-fg hover:text-brand transition-colors break-words">
           {item.titulo}
         </Link>
-        <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-fg-muted">
+        <div className="flex flex-wrap items-center gap-1.5 text-[length:var(--fs-2)] text-fg-muted">
           <span>{ORIGEM[item.origem]}</span>
           <span>· {rotuloDoSetor}</span>
           {!trocavel && <span>· {nomes.length ? nomes.join(", ") : "sem responsável"}</span>}

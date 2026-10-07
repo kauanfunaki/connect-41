@@ -112,18 +112,18 @@ export function ItemConferenciaRow({ item, current, referencia, action, canEdit 
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-[13px] font-medium text-fg">{item.label}</p>
+            <p className="text-[length:var(--fs-ui)] font-medium text-fg">{item.label}</p>
             <Selo cor={STATUS_STYLE[efetivo]}>
               {STATUS_LABEL[efetivo]}
             </Selo>
             {current?.informedValue && (
-              <span className="text-[12px] text-fg-secondary tnum">{reaisDoInformado(current.informedValue)}</span>
+              <span className="text-[length:var(--fs-2)] text-fg-secondary tnum">{reaisDoInformado(current.informedValue)}</span>
             )}
 
             {/* Referência do motor — sempre em tom mudo, pra nunca competir
                 visualmente com o valor que a contabilidade informou. */}
             {referencia?.situacao === "CALCULADO" && referencia.valorLabel && (
-              <span className="text-[12px] text-fg-muted tnum" title={referencia.formula ?? undefined}>
+              <span className="text-[length:var(--fs-2)] text-fg-muted tnum" title={referencia.formula ?? undefined}>
                 ref. {referencia.valorLabel}
               </span>
             )}
@@ -142,10 +142,10 @@ export function ItemConferenciaRow({ item, current, referencia, action, canEdit 
               </Selo>
             )}
           </div>
-          {item.hint && <p className="text-[12px] text-fg-muted mt-0.5">{item.hint}</p>}
-          {current?.note && <p className="text-[12px] text-fg-secondary mt-1 whitespace-pre-wrap">{current.note}</p>}
+          {item.hint && <p className="text-[length:var(--fs-2)] text-fg-muted mt-0.5">{item.hint}</p>}
+          {current?.note && <p className="text-[length:var(--fs-2)] text-fg-secondary mt-1 whitespace-pre-wrap">{current.note}</p>}
           {current?.checkedByName && current.checkedAtLabel && (
-            <p className="text-[11px] text-fg-muted mt-1">
+            <p className="text-[length:var(--fs-micro)] text-fg-muted mt-1">
               Conferido por {current.checkedByName} em {current.checkedAtLabel}
             </p>
           )}
@@ -169,23 +169,23 @@ export function ItemConferenciaRow({ item, current, referencia, action, canEdit 
       {open && canEdit && referencia && (
         <div className="mt-3 rounded-md border border-border bg-surface-2 px-4 py-3">
           <div className="flex items-center justify-between gap-3 flex-wrap mb-1">
-            <p className="text-[12px] font-semibold text-fg">Base do cálculo de referência</p>
-            <span className="text-[11px] text-fg-muted">{CONFIANCA_LABEL[referencia.confianca]}</span>
+            <p className="text-[length:var(--fs-2)] font-semibold text-fg">Base do cálculo de referência</p>
+            <span className="text-[length:var(--fs-micro)] text-fg-muted">{CONFIANCA_LABEL[referencia.confianca]}</span>
           </div>
 
           {referencia.formula ? (
-            <p className="text-[12px] text-fg-secondary tnum">{referencia.formula}</p>
+            <p className="text-[length:var(--fs-2)] text-fg-secondary tnum">{referencia.formula}</p>
           ) : (
-            <p className="text-[12px] text-fg-secondary">{referencia.motivo}</p>
+            <p className="text-[length:var(--fs-2)] text-fg-secondary">{referencia.motivo}</p>
           )}
 
           {referencia.fundamento && (
-            <p className="text-[11px] text-fg-muted mt-1">Fundamento: {referencia.fundamento}</p>
+            <p className="text-[length:var(--fs-micro)] text-fg-muted mt-1">Fundamento: {referencia.fundamento}</p>
           )}
           {referencia.premissas.length > 0 && (
             <ul className="mt-1.5 space-y-0.5">
               {referencia.premissas.map((p, i) => (
-                <li key={i} className="text-[11px] text-fg-muted">
+                <li key={i} className="text-[length:var(--fs-micro)] text-fg-muted">
                   · {p}
                 </li>
               ))}

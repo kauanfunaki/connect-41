@@ -67,7 +67,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
 
   return (
     <PageContainer>
-      <Link href="/leads" className="inline-flex items-center gap-1.5 text-[13px] text-fg-muted hover:text-fg mb-3">
+      <Link href="/leads" className="inline-flex items-center gap-1.5 text-[length:var(--fs-ui)] text-fg-muted hover:text-fg mb-3">
         <ArrowLeft size={14} /> Leads
       </Link>
       <PageHeader

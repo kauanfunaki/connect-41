@@ -93,7 +93,7 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
       <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
         <div>
           <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Triagem de currículos</h2>
-          <p className="text-[12px] text-fg-muted mt-0.5 max-w-[640px]">
+          <p className="text-[length:var(--fs-2)] text-fg-muted mt-0.5 max-w-[640px]">
             A IA confere o currículo contra cada requisito e aponta a evidência; a nota sai da tabela abaixo. Ela
             <strong className="font-medium text-fg-secondary"> só ordena os candidatos — nunca reprova ninguém</strong>. Nome, idade, cidade e
             foto não chegam ao pontuador.
@@ -182,11 +182,11 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
             </p>
           </div>
 
-          {erro && <p className="text-[13px] text-danger">{erro}</p>}
+          {erro && <p className="text-[length:var(--fs-ui)] text-danger">{erro}</p>}
 
           <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
             {requisitos && (
-              <p className="mr-auto text-[12px] text-fg-muted">
+              <p className="mr-auto text-[length:var(--fs-2)] text-fg-muted">
                 Salvar cria a versão {requisitos.versao + 1}. As notas já dadas continuam no histórico, marcadas como de versão anterior.
               </p>
             )}
@@ -205,7 +205,7 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
           {/* Coluna fixa para o tipo: com `flex`, "Obrigatório" e "Desejável"
               têm larguras diferentes e o texto de cada requisito começava num
               ponto. */}
-          <ul className="space-y-1.5 text-[13px] mb-3">
+          <ul className="space-y-1.5 text-[length:var(--fs-ui)] mb-3">
             {requisitos.itens.map((r) => (
               <li key={r.id} className="grid grid-cols-[84px_minmax(0,1fr)_auto] items-baseline gap-x-2">
                 {/* O `Selo`, no lugar da pílula à mão (auditoria DRG-06, 07/10/2026); o raio
@@ -215,11 +215,11 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
                   {r.tipo === "OBRIGATORIO" ? "Obrigatório" : "Desejável"}
                 </Selo>
                 <span className="text-fg">{r.texto}</span>
-                <span className="text-fg-muted text-[11px] tnum">peso {r.peso}</span>
+                <span className="text-fg-muted text-[length:var(--fs-micro)] tnum">peso {r.peso}</span>
               </li>
             ))}
           </ul>
-          <p className="text-[11px] text-fg-muted mb-3">
+          <p className="text-[length:var(--fs-micro)] text-fg-muted mb-3">
             Versão {requisitos.versao} · Compatível ≥ {requisitos.corteCompativel} · Parcial ≥ {requisitos.corteParcial}
           </p>
           {podePontuar &&
@@ -233,23 +233,23 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
                 </Button>
               </div>
             ) : (
-              <p className="text-[12px] text-fg-muted">Configure a IA em Integrações para pontuar.</p>
+              <p className="text-[length:var(--fs-2)] text-fg-muted">Configure a IA em Integrações para pontuar.</p>
             ))}
         </>
       ) : (
-        <p className="text-[13px] text-fg-muted">Sem requisitos cadastrados — peça a quem gerencia a vaga.</p>
+        <p className="text-[length:var(--fs-ui)] text-fg-muted">Sem requisitos cadastrados — peça a quem gerencia a vaga.</p>
       )}
 
       {lote && (
         <div className="mt-3 rounded-md border border-border bg-surface-2 p-3">
-          <p className="text-[12px] font-medium text-fg">
+          <p className="text-[length:var(--fs-2)] font-medium text-fg">
             {lote.rodando ? "Pontuando…" : "Lote concluído"} {lote.feitas}/{lote.total}
           </p>
           <div className="h-1 rounded-full bg-border mt-1.5 overflow-hidden">
             <div className="h-full bg-brand rounded-full transition-all" style={{ width: `${lote.total ? (lote.feitas / lote.total) * 100 : 100}%` }} />
           </div>
           {lote.log.length > 0 && (
-            <ul className="mt-2 max-h-40 overflow-y-auto text-[11px] text-fg-muted space-y-0.5">
+            <ul className="mt-2 max-h-40 overflow-y-auto text-[length:var(--fs-micro)] text-fg-muted space-y-0.5">
               {lote.log.map((l, i) => (
                 <li key={i}>{l}</li>
               ))}

@@ -154,7 +154,7 @@ export function ApplyForm({ slug, vagaId, carimbo }: Props) {
       </Button>
 
       {error && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{error}</p>
+        <p className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{error}</p>
       )}
     </form>
   );

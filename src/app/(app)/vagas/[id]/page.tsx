@@ -220,7 +220,7 @@ export default async function VagaPage({
         {vaga.notes && (
           <div className="mt-3 pt-3 border-t border-border">
             <p className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">Observações</p>
-            <p className="text-[13px] text-fg whitespace-pre-wrap">{vaga.notes}</p>
+            <p className="text-[length:var(--fs-ui)] text-fg whitespace-pre-wrap">{vaga.notes}</p>
           </div>
         )}
         {vaga.isPublic && tenantSlug && (
@@ -230,7 +230,7 @@ export default async function VagaPage({
               href={`${publicBaseUrl}/carreiras/${tenantSlug}/${vaga.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[13px] text-brand hover:underline break-all"
+              className="text-[length:var(--fs-ui)] text-brand hover:underline break-all"
             >
               {publicBaseUrl}/carreiras/{tenantSlug}/{vaga.id}
             </a>

@@ -94,19 +94,19 @@ export function Conversa({ conversa, agora, candidaturas, userId, pessoas }: Pro
               </h2>
               <Selo tom={SITUACAO_TOM[situacao]}>{SITUACAO_LABEL[situacao]}</Selo>
             </div>
-            <p className="text-[12px] text-fg-muted mt-0.5">
+            <p className="text-[length:var(--fs-2)] text-fg-muted mt-0.5">
               {telefoneLegivel(conversa.waPhone)}
               {conversa.vaga && ` · ${conversa.vaga}`}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {conversa.responsavel ? (
-              <span className="text-[12px] text-fg-secondary">
+              <span className="text-[length:var(--fs-2)] text-fg-secondary">
                 {conversa.responsavel.id === userId ? "Com você" : `Com ${conversa.responsavel.nome}`}
               </span>
             ) : (
               conversa.handoffAt &&
-              !conversa.optedOutAt && <span className="text-[12px] text-danger font-medium">Ninguém assumiu</span>
+              !conversa.optedOutAt && <span className="text-[length:var(--fs-2)] text-danger font-medium">Ninguém assumiu</span>
             )}
             {assumir.pode && (
               <Button size="sm" disabled={ocupado} onClick={() => correr(() => assumirConversa(conversa.id))}>
@@ -145,7 +145,7 @@ export function Conversa({ conversa, agora, candidaturas, userId, pessoas }: Pro
         </div>
 
         {conversa.handoffReason && (
-          <p className="flex items-start gap-2 text-[12px] text-warning bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
+          <p className="flex items-start gap-2 text-[length:var(--fs-2)] text-warning bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
             <AlertTriangle size={14} className="mt-0.5 shrink-0" />
             O assistente passou para você: {conversa.handoffReason}
           </p>
@@ -241,7 +241,7 @@ export function Conversa({ conversa, agora, candidaturas, userId, pessoas }: Pro
         )}
 
         {situacao === "encerrada" && ultimoEncerramento && (
-          <p className="text-[12px] text-fg-secondary">
+          <p className="text-[length:var(--fs-2)] text-fg-secondary">
             Atendimento encerrado{ultimoEncerramento.por ? ` por ${ultimoEncerramento.por}` : ""} em{" "}
             {formatInstantDateTime(ultimoEncerramento.em)} · {rotuloDoDesfecho(ultimoEncerramento.desfecho)}. A próxima
             mensagem do candidato abre um novo atendimento com o assistente.
@@ -254,7 +254,7 @@ export function Conversa({ conversa, agora, candidaturas, userId, pessoas }: Pro
             candidato confirma o nome (`src/lib/whatsapp/vinculo.ts`). Fora
             disso, é de gente: aqui. */}
         {conversa.candidaturaId ? (
-          <div className="flex flex-wrap items-center gap-2 text-[12px] text-fg-secondary">
+          <div className="flex flex-wrap items-center gap-2 text-[length:var(--fs-2)] text-fg-secondary">
             <Link2 size={13} />
             Ligada a uma candidatura.
             <Button
@@ -270,12 +270,12 @@ export function Conversa({ conversa, agora, candidaturas, userId, pessoas }: Pro
         ) : (
           <>
           {conversa.vinculoAutomatico === "confirmando" && (
-            <p className="text-[12px] text-fg-muted">
+            <p className="text-[length:var(--fs-2)] text-fg-muted">
               O assistente achou uma inscrição com este telefone e pediu o nome completo para confirmar.
             </p>
           )}
           {conversa.vinculoAutomatico === "nao_confirmou" && (
-            <p className="text-[12px] text-warning">
+            <p className="text-[length:var(--fs-2)] text-warning">
               O vínculo automático não confirmou quem é (ou foi desfeito). Só se liga à mão.
             </p>
           )}
@@ -317,7 +317,7 @@ export function Conversa({ conversa, agora, candidaturas, userId, pessoas }: Pro
             return (
               <div key={m.id} className={minha ? "self-end max-w-[80%]" : "self-start max-w-[80%]"}>
                 <div
-                  className={`rounded-lg px-3 py-2 text-[13px] whitespace-pre-wrap ${
+                  className={`rounded-lg px-3 py-2 text-[length:var(--fs-ui)] whitespace-pre-wrap ${
                     minha
                       ? m.status === "BLOQUEADA"
                         ? "bg-warning-bg border border-warning/30 text-fg"
@@ -329,13 +329,13 @@ export function Conversa({ conversa, agora, candidaturas, userId, pessoas }: Pro
                   {m.anexo && (
                     <a
                       href={`/api/whatsapp/midia/${m.id}`}
-                      className="mt-1 flex items-center gap-1 text-[12px] text-brand hover:underline"
+                      className="mt-1 flex items-center gap-1 text-[length:var(--fs-2)] text-brand hover:underline"
                     >
                       <FileText size={12} /> Baixar {m.anexo.nome}
                     </a>
                   )}
                 </div>
-                <p className="text-[10px] text-fg-muted mt-0.5 flex items-center gap-1">
+                <p className="text-[length:var(--fs-micro)] text-fg-muted mt-0.5 flex items-center gap-1">
                   {minha &&
                     (m.doRobo ? (
                       <>
@@ -357,7 +357,7 @@ export function Conversa({ conversa, agora, candidaturas, userId, pessoas }: Pro
                     caso em que quem olha precisa saber o que o provedor
                     respondeu, e o log do container nem sempre está à mão. */}
                 {m.error && (
-                  <p className={`text-[10px] ${m.status === "FALHOU" ? "text-danger" : "text-fg-muted"}`}>
+                  <p className={`text-[length:var(--fs-micro)] ${m.status === "FALHOU" ? "text-danger" : "text-fg-muted"}`}>
                     motivo: {m.error}
                   </p>
                 )}
@@ -369,7 +369,7 @@ export function Conversa({ conversa, agora, candidaturas, userId, pessoas }: Pro
 
       <Card className="p-4 flex flex-col gap-2">
         {erro && (
-          <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+          <p className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
             {erro}
           </p>
         )}
@@ -383,7 +383,7 @@ export function Conversa({ conversa, agora, candidaturas, userId, pessoas }: Pro
               aria-label="Resposta ao candidato"
             />
             <div className="flex flex-wrap items-center justify-end gap-3">
-              <p className="mr-auto min-w-0 text-[11px] text-fg-muted">
+              <p className="mr-auto min-w-0 text-[length:var(--fs-micro)] text-fg-muted">
                 {situacao === "encerrada"
                   ? "Responder abre um novo atendimento e assume a conversa."
                   : "Responder assume a conversa — o assistente para de responder aqui."}
@@ -397,7 +397,7 @@ export function Conversa({ conversa, agora, candidaturas, userId, pessoas }: Pro
             </div>
           </>
         ) : (
-          <p className="text-[13px] text-fg-secondary">{resposta.motivo}</p>
+          <p className="text-[length:var(--fs-ui)] text-fg-secondary">{resposta.motivo}</p>
         )}
       </Card>
     </div>
@@ -417,7 +417,7 @@ function comMarcasDeEncerramento(conversa: ConversaDetalhada, mensagem: (m: Mens
   const marca = (i: number) => {
     const e = marcas[i]!;
     return (
-      <div key={`fim-${i}`} className="flex items-center gap-2 my-1 text-[11px] text-fg-muted" role="separator">
+      <div key={`fim-${i}`} className="flex items-center gap-2 my-1 text-[length:var(--fs-micro)] text-fg-muted" role="separator">
         <span className="h-px flex-1 bg-border" />
         Atendimento encerrado · {rotuloDoDesfecho(e.desfecho)}
         {e.por ? ` · por ${e.por}` : ""} · {formatInstantDateTime(e.em)}

@@ -55,8 +55,8 @@ export function BeneficioRow({ beneficio, updateAction, removeAction, canManage 
     <div className="py-3 border-b border-border last:border-0">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[13px] text-fg">{beneficio.benefitName}</p>
-          <p className="text-[12px] text-fg-muted">
+          <p className="text-[length:var(--fs-ui)] text-fg">{beneficio.benefitName}</p>
+          <p className="text-[length:var(--fs-2)] text-fg-muted">
             Desde {beneficio.startDateLabel}
             {beneficio.endDateLabel && ` até ${beneficio.endDateLabel}`}
             {beneficio.companyValue && ` · empresa ${brl(Number(beneficio.companyValue))}`}

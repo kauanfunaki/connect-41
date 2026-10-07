@@ -43,7 +43,7 @@ export default async function ConversaPage({ params }: { params: Promise<{ id: s
     <PageContainer>
       <Link
         href="/whatsapp"
-        className="inline-flex items-center gap-1.5 text-[13px] text-fg-muted hover:text-fg transition-colors mb-3"
+        className="inline-flex items-center gap-1.5 text-[length:var(--fs-ui)] text-fg-muted hover:text-fg transition-colors mb-3"
       >
         <ArrowLeft size={14} /> Conversas
       </Link>

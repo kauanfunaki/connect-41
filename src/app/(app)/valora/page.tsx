@@ -213,7 +213,7 @@ export default async function ValoraPage() {
                           <Link href={`/valora/${p.id}`} className="font-semibold text-fg hover:text-brand transition-colors">
                             {p.cliente}
                           </Link>
-                          {p.motivo && <span className="block text-[11px] text-fg-muted">{p.motivo}</span>}
+                          {p.motivo && <span className="block text-[length:var(--fs-micro)] text-fg-muted">{p.motivo}</span>}
                         </td>
                         <td className="px-3 text-fg-secondary">{p.regime}</td>
                         <td className="px-3 tabular-nums">{brl(p.precoAlvo)}</td>
@@ -224,7 +224,7 @@ export default async function ValoraPage() {
                         </td>
                         <td className="px-3 text-fg-secondary whitespace-nowrap">
                           {formatInstantDate(p.createdAt)}
-                          <span className="block text-[11px] text-fg-muted">{p.createdBy.name}</span>
+                          <span className="block text-[length:var(--fs-micro)] text-fg-muted">{p.createdBy.name}</span>
                         </td>
                         <td className="px-3">{acesso.podeSimular && <EditarProposta proposta={p} />}</td>
                       </LinhaFiltravel>

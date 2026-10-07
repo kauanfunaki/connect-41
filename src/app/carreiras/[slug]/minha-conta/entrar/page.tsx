@@ -38,7 +38,7 @@ export default async function EntrarPage({
           ) : (
             // Revisão de 05/10: botão não é link — pedir outro link é ação.
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-              <p className="text-[13px] text-fg">Link incompleto.</p>
+              <p className="text-[length:var(--fs-ui)] text-fg">Link incompleto.</p>
               <Button href={`/carreiras/${slug}/minha-conta`} variant="secondary" size="sm">
                 Pedir novo link
               </Button>

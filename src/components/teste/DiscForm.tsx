@@ -116,7 +116,7 @@ export function DiscForm({ token }: Props) {
     <form onSubmit={handleSubmit} className="space-y-4">
       {hadDraft && (
         <div className="bg-brand/8 border border-brand/25 rounded-lg px-4 py-3 flex items-start justify-between gap-3">
-          <p className="text-[13px] text-fg">
+          <p className="text-[length:var(--fs-ui)] text-fg">
             Recuperamos as respostas que você já tinha marcado neste link. Continue de onde parou.
           </p>
           <Button variant="secondary" size="xs" className="flex-shrink-0" onClick={dismissRestoredNotice}>
@@ -126,18 +126,18 @@ export function DiscForm({ token }: Props) {
       )}
 
       <Card as="section" className="p-5">
-        <p className="text-[13px] text-fg-secondary">
+        <p className="text-[length:var(--fs-ui)] text-fg-secondary">
           Em cada grupo de 4 palavras, marque a que <strong>mais</strong> combina com você e a que{" "}
           <strong>menos</strong> combina. Não existe resposta certa ou errada — responda com a primeira impressão.
         </p>
-        <p className="text-[12px] text-fg-muted mt-2">Suas respostas ficam salvas neste aparelho enquanto você responde.</p>
+        <p className="text-[length:var(--fs-2)] text-fg-muted mt-2">Suas respostas ficam salvas neste aparelho enquanto você responde.</p>
       </Card>
 
       {/* Progresso fixo: o contador vivia no topo e sumia no scroll, então no
           meio dos 24 blocos não dava pra saber quanto faltava. */}
       <div className="sticky top-0 z-10 -mx-4 px-4 py-2.5 bg-canvas/95 backdrop-blur border-b border-border">
         <div className="flex items-center justify-between gap-3 mb-1.5">
-          <span className="text-[12px] font-medium text-fg">
+          <span className="text-[length:var(--fs-2)] font-medium text-fg">
             {answeredCount} de {TOTAL_BLOCKS} respondidos
           </span>
           {!allAnswered && answeredCount > 0 && (
@@ -175,7 +175,7 @@ export function DiscForm({ token }: Props) {
                 complete ? "border-border" : "border-border-strong"
               }`}
             >
-              <legend className="text-[11px] text-fg-muted px-1">
+              <legend className="text-[length:var(--fs-micro)] text-fg-muted px-1">
                 Bloco {i + 1} de {TOTAL_BLOCKS}
                 {complete && <span className="text-success"> · ok</span>}
               </legend>
@@ -185,7 +185,7 @@ export function DiscForm({ token }: Props) {
               <div className="divide-y divide-border">
                 {block.map((w, wi) => (
                   <div key={wi} className="flex items-center justify-between gap-3 py-2 first:pt-1">
-                    <span className="min-w-0 text-[14px] text-fg">{w.word}</span>
+                    <span className="min-w-0 text-[length:var(--fs-label)] text-fg">{w.word}</span>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       <ChoicePill
                         name={`mais-${i}`}
@@ -232,7 +232,7 @@ export function DiscForm({ token }: Props) {
       </Button>
 
       {error && (
-        <p role="alert" className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
           {error}
         </p>
       )}
