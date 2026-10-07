@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, X, Clock3 } from "lucide-react";
+import { Search, X, Clock3, Building2, User, UserSearch, SquareKanban, SquareCheck, Briefcase, FileText } from "lucide-react";
 import { boardPath } from "@/lib/kanbanPaths";
-import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { useTelasRecentes } from "@/components/shell/TelasRecentes";
 import { buscarTelas, type TelaNavegavel } from "@/lib/buscaDeTelas";
@@ -23,6 +23,10 @@ type SearchResults = {
 
 const EMPTY: SearchResults = { companies: [], people: [], candidatos: [], pipelines: [], vagas: [], documentos: [], tarefas: [] };
 
+/** Uma linha do painel: o que as setas percorrem e o Enter abre. */
+type Opcao = { chave: string; href: string; rotulo: string; detalhe?: string; icone: React.ReactNode };
+type Grupo = { rotulo: string; opcoes: Opcao[] };
+
 // Documento não tem página própria — o resultado leva pra ficha de quem é
 // dono dele. Item de Kanban não tem link direto sem saber o pipelineId
 // (custaria uma query extra só pra isso) — cai na listagem geral.
@@ -33,6 +37,45 @@ function documentHref(entityType: DocumentEntityType, entityId: string): string 
     case "VAGA": return `/vagas/${entityId}`;
     case "PIPELINE_ITEM": return "/kanban";
   }
+}
+
+/**
+ * Os grupos do painel, na ordem em que aparecem — e é a mesma ordem do Enter
+ * sem seta: telas primeiro (quem digita "conc" quase sempre quer abrir a
+ * conciliação, não achar um lançamento com "conc" no nome), depois empresas,
+ * pessoas, candidatos, Kanban, tarefas, vagas e documentos.
+ *
+ * Cada tipo com o seu ícone (07/10/2026): as telas tinham, os resultados de
+ * dado não, e a lista misturava os dois sem distinção.
+ */
+function montarGrupos(telas: TelaNavegavel[], r: SearchResults): Grupo[] {
+  const ic = (Icone: typeof Building2) => <Icone size={16} />;
+  return [
+    {
+      rotulo: "Telas",
+      opcoes: telas.map((t) => ({ chave: `tela-${t.code}`, href: t.href, rotulo: t.label, detalhe: t.setor, icone: <ModuleIcon code={t.code} /> })),
+    },
+    { rotulo: "Empresas", opcoes: r.companies.map((c) => ({ chave: `empresa-${c.id}`, href: `/empresas/${c.id}`, rotulo: c.name, icone: ic(Building2) })) },
+    { rotulo: "Pessoas", opcoes: r.people.map((p) => ({ chave: `pessoa-${p.id}`, href: `/pessoas/${p.id}`, rotulo: p.name, icone: ic(User) })) },
+    { rotulo: "Candidatos", opcoes: r.candidatos.map((c) => ({ chave: `candidato-${c.id}`, href: `/candidatos/${c.id}`, rotulo: c.name, icone: ic(UserSearch) })) },
+    { rotulo: "Kanban", opcoes: r.pipelines.map((p) => ({ chave: `kanban-${p.id}`, href: boardPath(p), rotulo: p.name, icone: ic(SquareKanban) })) },
+    { rotulo: "Tarefas", opcoes: r.tarefas.map((t) => ({ chave: `tarefa-${t.id}`, href: t.href, rotulo: t.name, icone: ic(SquareCheck) })) },
+    { rotulo: "Vagas", opcoes: r.vagas.map((v) => ({ chave: `vaga-${v.id}`, href: `/vagas/${v.id}`, rotulo: v.name, icone: ic(Briefcase) })) },
+    {
+      rotulo: "Documentos",
+      opcoes: r.documentos.map((d) => ({ chave: `documento-${d.id}`, href: documentHref(d.entityType, d.entityId), rotulo: d.name, icone: ic(FileText) })),
+    },
+  ].filter((g) => g.opcoes.length > 0);
+}
+
+// A tecla do atalho, igual nos dois lugares — era "Ctrl K" na lateral e
+// "Ctrl+K" no topo, em 10,5 e 11px (07/10/2026).
+function Atalho({ className = "" }: { className?: string }) {
+  return (
+    <kbd className={`items-center flex-shrink-0 px-1.5 py-px rounded-sm border border-border text-micro text-fg-muted font-sans ${className}`.trim()}>
+      Ctrl K
+    </kbd>
+  );
 }
 
 // Abaixo de sm, o input inline não cabe na topbar (some espremido pelos
@@ -50,6 +93,12 @@ function documentHref(entityType: DocumentEntityType, entityId: string): string 
 // por cima da tela; e "topo", a de sempre, para quando a lateral vira gaveta
 // (abaixo de 1024px). O AppShell mostra uma ou outra pelo tamanho da tela, e
 // o Ctrl+K vai para a que está visível.
+//
+// Setas ↑↓ e Enter (07/10/2026): o campo é um combobox, como o
+// `SearchableSelect` — as setas andam pelos resultados de todos os grupos, o
+// Enter abre o marcado (ou, sem marcado, o primeiro) e o leitor de tela ouve
+// qual está marcado (`aria-activedescendant`). O foco fica no campo, então
+// dá para seguir digitando.
 export function GlobalSearch({
   telas = [],
   variante = "topo",
@@ -64,9 +113,14 @@ export function GlobalSearch({
   const [termoDosResultados, setTermoDosResultados] = useState("");
   const [open, setOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState(false);
+  // A linha marcada pelas setas; -1 = nenhuma.
+  const [ativo, setAtivo] = useState(-1);
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const idBase = useId();
+  const idDaLista = `${idBase}-lista`;
+  const idDaOpcao = (i: number) => `${idBase}-opcao-${i}`;
 
   useEffect(() => {
     if (!open) return;
@@ -75,7 +129,7 @@ export function GlobalSearch({
       // garantir foco mesmo em telas maiores (ver atalho abaixo), e sem
       // resetar no clique-fora ele ficava true pra sempre (só o botão X do
       // modo mobile, escondido em telas grandes, resetava), sumindo o hint
-      // "Ctrl+K" de vez (condição abaixo exige !mobileExpanded).
+      // "Ctrl K" de vez (condição abaixo exige !mobileExpanded).
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
         setOpen(false);
         setMobileExpanded(false);
@@ -115,6 +169,8 @@ export function GlobalSearch({
         .then((data: SearchResults) => {
           setResults(data);
           setTermoDosResultados(query.trim());
+          // A lista mudou embaixo da marca: ela recomeça do zero.
+          setAtivo(-1);
         })
         .catch(() => {});
     }, 220);
@@ -124,44 +180,78 @@ export function GlobalSearch({
     };
   }, [query]);
 
+  // A linha marcada fica visível quando a lista rola.
+  useEffect(() => {
+    if (ativo >= 0) document.getElementById(idDaOpcao(ativo))?.scrollIntoView({ block: "nearest" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ativo]);
+
   const recentes = useTelasRecentes();
-  const telasEncontradas = buscarTelas(telas, query.trim());
+  const termo = query.trim();
+  const telasEncontradas = buscarTelas(telas, termo);
   const telasRecentes = recentes
     .map((code) => telas.find((t) => t.code === code))
     .filter((t): t is TelaNavegavel => Boolean(t))
     .slice(0, 5);
 
-  const hasResults =
-    results.companies.length +
-      results.people.length +
-      results.candidatos.length +
-      results.pipelines.length +
-      results.vagas.length +
-      results.documentos.length +
-      results.tarefas.length >
-    0;
+  const buscando = termo.length >= 2;
+  const grupos: Grupo[] = buscando
+    ? montarGrupos(telasEncontradas, results)
+    : telasRecentes.length > 0
+      ? [
+          {
+            rotulo: "Recentes",
+            opcoes: telasRecentes.map((t) => ({
+              chave: `recente-${t.code}`,
+              href: t.href,
+              rotulo: t.label,
+              detalhe: t.setor,
+              icone: <Clock3 size={16} />,
+            })),
+          },
+        ]
+      : [];
+  const opcoes = grupos.flatMap((g) => g.opcoes);
+  // Aberta sem termo, o painel só aparece quando há recentes — painel vazio
+  // embaixo do campo é ruído.
+  const painelAberto = open && (buscando || opcoes.length > 0);
 
   function go(href: string) {
     setOpen(false);
     setMobileExpanded(false);
     setQuery("");
+    setAtivo(-1);
     router.push(href);
   }
 
   /**
-   * Enter abre o primeiro resultado, na ordem do painel: telas primeiro, depois
-   * empresas, pessoas, candidatos, Kanban, tarefas, vagas e documentos. A ajuda
-   * ("Achar qualquer coisa") promete isso desde 01/10, e o campo não tratava o
-   * Enter — achado na gravação dos vídeos, em 06/10. Esc fecha o painel.
+   * Enter abre a linha marcada pelas setas; sem marca, o primeiro resultado, na
+   * ordem do painel. A ajuda ("Achar qualquer coisa") promete isso desde 01/10,
+   * e o campo não tratava o Enter — achado na gravação dos vídeos, em 06/10.
+   * Esc fecha o painel.
    */
   function aoTeclar(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Escape") {
       setOpen(false);
+      setAtivo(-1);
       inputRef.current?.blur();
       return;
     }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      setOpen(true);
+      if (opcoes.length === 0) return;
+      const n = opcoes.length;
+      setAtivo((i) => (e.key === "ArrowDown" ? (i + 1) % n : i <= 0 ? n - 1 : i - 1));
+      return;
+    }
     if (e.key !== "Enter") return;
-    const termo = query.trim();
+    const marcada = painelAberto && ativo >= 0 ? opcoes[ativo] : undefined;
+    if (marcada) {
+      e.preventDefault();
+      go(marcada.href);
+      return;
+    }
     if (termo.length < 2) return;
     const tela = telasEncontradas[0];
     if (tela) {
@@ -170,19 +260,10 @@ export function GlobalSearch({
       return;
     }
     if (termoDosResultados !== termo) return;
-    const r = results;
-    const destino =
-      (r.companies[0] && `/empresas/${r.companies[0].id}`) ||
-      (r.people[0] && `/pessoas/${r.people[0].id}`) ||
-      (r.candidatos[0] && `/candidatos/${r.candidatos[0].id}`) ||
-      (r.pipelines[0] && boardPath(r.pipelines[0])) ||
-      r.tarefas[0]?.href ||
-      (r.vagas[0] && `/vagas/${r.vagas[0].id}`) ||
-      (r.documentos[0] && documentHref(r.documentos[0].entityType, r.documentos[0].entityId)) ||
-      null;
-    if (destino) {
+    const primeiro = montarGrupos([], results)[0]?.opcoes[0];
+    if (primeiro) {
       e.preventDefault();
-      go(destino);
+      go(primeiro.href);
     }
   }
 
@@ -190,107 +271,108 @@ export function GlobalSearch({
     setMobileExpanded(false);
     setOpen(false);
     setQuery("");
+    setAtivo(-1);
   }
+
+  // O que o campo diz ao leitor de tela: é um combobox, que lista controla e
+  // qual linha está marcada.
+  const propsDoCombobox = {
+    role: "combobox" as const,
+    "aria-expanded": painelAberto,
+    "aria-controls": painelAberto && opcoes.length > 0 ? idDaLista : undefined,
+    "aria-autocomplete": "list" as const,
+    "aria-activedescendant": painelAberto && ativo >= 0 ? idDaOpcao(ativo) : undefined,
+  };
 
   const classeDoPainel =
     variante === "lateral"
-      ? "scroll-y absolute left-0 top-[calc(100%+8px)] w-[480px] max-w-[calc(100vw-2rem)] bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] py-2 z-50 max-h-[420px] overflow-y-auto"
-      : "scroll-y absolute left-0 top-[calc(100%+10px)] w-full bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] py-2 z-20 max-h-[360px] overflow-y-auto";
+      ? "scroll-y absolute left-0 top-[calc(100%+8px)] w-[480px] max-w-[calc(100vw-2rem)] bg-surface-elevated border border-border-strong rounded-lg shadow-lg py-2 z-50 max-h-[420px] overflow-y-auto"
+      : "scroll-y absolute left-0 top-[calc(100%+10px)] w-full bg-surface-elevated border border-border-strong rounded-lg shadow-lg py-2 z-20 max-h-[360px] overflow-y-auto";
 
-  const paineis = (
-    <>
-      {/* Aberta sem termo: as últimas telas abertas. Só aparece quando há
-          alguma — painel vazio embaixo do campo é ruído. */}
-      {open && query.trim().length < 2 && telasRecentes.length > 0 && (
-        <div className={classeDoPainel}>
-          <GrupoDeTelas label="Recentes" telas={telasRecentes} icone="relogio" onSelect={go} />
+  let indice = 0;
+  const painel = painelAberto && (
+    <div className={classeDoPainel}>
+      {opcoes.length === 0 ? (
+        <p className="px-3.5 py-3 text-ui text-fg-muted">Nenhum resultado para &quot;{query}&quot;.</p>
+      ) : (
+        <div id={idDaLista} role="listbox" aria-label="Resultados da busca">
+          {grupos.map((g) => {
+            const idDoGrupo = `${idBase}-grupo-${g.rotulo}`;
+            return (
+              <div key={g.rotulo} role="group" aria-labelledby={idDoGrupo} className="py-1 px-1">
+                <p id={idDoGrupo} className="c41-rotulo px-2.5 pb-1">
+                  {g.rotulo}
+                </p>
+                {g.opcoes.map((o) => {
+                  const i = indice++;
+                  const marcada = i === ativo;
+                  return (
+                    <button
+                      key={o.chave}
+                      id={idDaOpcao(i)}
+                      type="button"
+                      role="option"
+                      aria-selected={marcada}
+                      tabIndex={-1}
+                      onClick={() => go(o.href)}
+                      className={`w-full flex items-center gap-2.5 text-left px-2.5 py-2 rounded-md text-dropdown text-fg transition-colors ${
+                        marcada ? "bg-surface-hover" : "hover:bg-surface-hover"
+                      }`}
+                    >
+                      <span className="flex-shrink-0 text-fg-muted [&>svg]:w-4 [&>svg]:h-4">{o.icone}</span>
+                      <span className="truncate">{o.rotulo}</span>
+                      {o.detalhe && <span className="ml-auto flex-shrink-0 text-micro text-fg-muted">{o.detalhe}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
         </div>
       )}
-
-      {open && query.trim().length >= 2 && (
-        <div className={classeDoPainel}>
-          {/* Telas primeiro: quem digita "conc" quase sempre quer abrir a
-              conciliação, não achar um lançamento com "conc" no nome. */}
-          <GrupoDeTelas label="Telas" telas={telasEncontradas} onSelect={go} />
-          {!hasResults && telasEncontradas.length === 0 ? (
-            <p className="px-3.5 py-3 text-[13px] text-fg-muted">Nenhum resultado para &quot;{query}&quot;.</p>
-          ) : (
-            <>
-              <ResultGroup label="Empresas" items={results.companies} onSelect={(id) => go(`/empresas/${id}`)} />
-              <ResultGroup label="Pessoas" items={results.people} onSelect={(id) => go(`/pessoas/${id}`)} />
-              <ResultGroup label="Candidatos" items={results.candidatos} onSelect={(id) => go(`/candidatos/${id}`)} />
-              <ResultGroup
-                label="Kanban"
-                items={results.pipelines}
-                onSelect={(id) => {
-                  const p = results.pipelines.find((x) => x.id === id);
-                  if (p) go(boardPath(p));
-                }}
-              />
-              <ResultGroup
-                label="Tarefas"
-                items={results.tarefas}
-                onSelect={(id) => {
-                  const t = results.tarefas.find((x) => x.id === id);
-                  if (t) go(t.href);
-                }}
-              />
-              <ResultGroup label="Vagas" items={results.vagas} onSelect={(id) => go(`/vagas/${id}`)} />
-              <ResultGroup
-                label="Documentos"
-                items={results.documentos}
-                onSelect={(id) => {
-                  const doc = results.documentos.find((d) => d.id === id);
-                  if (doc) go(documentHref(doc.entityType, doc.entityId));
-                }}
-              />
-            </>
-          )}
-        </div>
-      )}
-    </>
+    </div>
   );
+
+  const aoDigitar = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(e.target.value);
+    setOpen(true);
+    setAtivo(-1);
+  };
 
   if (variante === "lateral") {
     return (
       <div ref={rootRef} className="relative">
         <div className="flex items-center gap-2 h-8 px-2.5 rounded-md border border-border bg-input-bg focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)] transition-colors">
           <Search size={14} className="text-fg-muted flex-shrink-0" />
+          {/* `focus-visible:shadow-none!`: o anel é da moldura (focus-within);
+              o `:focus-visible` global desenhava um segundo aqui dentro — o
+              traço vertical da foto de 06/10. `--fs-search`, o papel que a
+              busca tinha e não usava (era 13px). */}
           <input
             ref={inputRef}
             type="text"
             value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setOpen(true);
-            }}
+            onChange={aoDigitar}
             onFocus={() => setOpen(true)}
             onKeyDown={aoTeclar}
             placeholder="Buscar…"
             aria-label="Buscar empresas, pessoas, telas…"
-            className="w-full min-w-0 h-full bg-transparent text-[13px] text-fg placeholder:text-fg-muted outline-none border-none"
+            {...propsDoCombobox}
+            className="w-full min-w-0 h-full bg-transparent text-search text-fg placeholder:text-fg-muted outline-none border-none focus-visible:shadow-none!"
           />
-          {!open && !query && (
-            <kbd className="inline-flex items-center flex-shrink-0 px-1.5 py-px rounded border border-border text-[10.5px] text-fg-muted font-sans">
-              Ctrl K
-            </kbd>
-          )}
+          {!open && !query && <Atalho className="inline-flex" />}
         </div>
-        {paineis}
+        {painel}
       </div>
     );
   }
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setMobileExpanded(true)}
-        className="sm:hidden flex-shrink-0 text-fg-secondary hover:text-fg transition-colors"
-        aria-label="Buscar"
-      >
+      {/* Alvo de 40px no celular (07/10/2026) — era o ícone, 19px. */}
+      <IconButton size="xl" onClick={() => setMobileExpanded(true)} className="sm:hidden -mr-1" aria-label="Buscar">
         <Search size={19} />
-      </button>
+      </IconButton>
 
       <div
         ref={rootRef}
@@ -303,100 +385,32 @@ export function GlobalSearch({
         <div className="relative w-full">
           <div className="flex items-center gap-2.5 h-[38px] px-3.5 rounded-md border border-border bg-input-bg focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)] transition-colors">
             <Search size={16} className="text-fg-muted flex-shrink-0" />
+            {/* Esta variante é a de tela de toque (abaixo de 1024px): 16px, o
+                `--fs-input`, porque abaixo disso o Safari do iPhone dá zoom ao
+                focar o campo — com 15px, dava. */}
             <input
               ref={inputRef}
               type="text"
               value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setOpen(true);
-              }}
+              onChange={aoDigitar}
               onFocus={() => setOpen(true)}
               onKeyDown={aoTeclar}
               placeholder="Buscar empresas, pessoas, kanban…"
-              className="w-full h-full bg-transparent text-[15px] text-fg placeholder:text-fg-muted outline-none border-none"
+              aria-label="Buscar empresas, pessoas, telas…"
+              {...propsDoCombobox}
+              className="w-full h-full bg-transparent text-input text-fg placeholder:text-fg-muted outline-none border-none focus-visible:shadow-none!"
             />
-            {!mobileExpanded && !open && !query && (
-              <kbd className="hidden sm:inline-flex items-center gap-0.5 flex-shrink-0 px-1.5 py-0.5 rounded-md border border-border text-[11px] text-fg-muted font-sans">
-                Ctrl+K
-              </kbd>
-            )}
+            {!mobileExpanded && !open && !query && <Atalho className="hidden sm:inline-flex" />}
             {mobileExpanded && (
-              <Button
-                variant="linkMuted"
-                className="sm:hidden flex-shrink-0"
-                onClick={closeMobile}
-                aria-label="Fechar busca"
-              >
+              <IconButton size="md" className="sm:hidden -mr-2" onClick={closeMobile} aria-label="Fechar busca">
                 <X size={16} />
-              </Button>
+              </IconButton>
             )}
           </div>
 
-          {paineis}
+          {painel}
         </div>
       </div>
     </>
-  );
-}
-
-/** As telas no painel: ícone do módulo (ou relógio, nas recentes), nome e setor. */
-function GrupoDeTelas({
-  label,
-  telas,
-  icone = "modulo",
-  onSelect,
-}: {
-  label: string;
-  telas: TelaNavegavel[];
-  icone?: "modulo" | "relogio";
-  onSelect: (href: string) => void;
-}) {
-  if (telas.length === 0) return null;
-  return (
-    <div className="py-1 px-1">
-      <p className="px-2.5 pb-1 text-[11px] font-semibold text-fg-muted uppercase tracking-wider">{label}</p>
-      {telas.map((tela) => (
-        <button
-          key={tela.code}
-          type="button"
-          onClick={() => onSelect(tela.href)}
-          className="w-full flex items-center gap-2.5 text-left px-2.5 py-2 rounded-lg text-[14px] text-fg hover:bg-surface-hover transition-colors"
-        >
-          <span className="flex-shrink-0 text-fg-muted [&>svg]:w-4 [&>svg]:h-4">
-            {icone === "relogio" ? <Clock3 size={16} /> : <ModuleIcon code={tela.code} />}
-          </span>
-          <span className="truncate">{tela.label}</span>
-          <span className="ml-auto flex-shrink-0 text-[11px] text-fg-muted">{tela.setor}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function ResultGroup({
-  label,
-  items,
-  onSelect,
-}: {
-  label: string;
-  items: { id: string; name: string }[];
-  onSelect: (id: string) => void;
-}) {
-  if (items.length === 0) return null;
-  return (
-    <div className="py-1 px-1">
-      <p className="px-2.5 pb-1 text-[11px] font-semibold text-fg-muted uppercase tracking-wider">{label}</p>
-      {items.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          onClick={() => onSelect(item.id)}
-          className="w-full text-left px-2.5 py-2 rounded-lg text-[14px] text-fg hover:bg-surface-hover transition-colors truncate"
-        >
-          {item.name}
-        </button>
-      ))}
-    </div>
   );
 }
