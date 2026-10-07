@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Sparkles, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Textarea } from "@/components/ui/Textarea";
 import {
   perguntarAoAssistente,
@@ -56,7 +55,10 @@ export function AssistenteDaVaga({ vagaId }: { vagaId: string }) {
   const propostas = resposta && "propostas" in resposta ? resposta.propostas : [];
 
   return (
-    <Card as="section" className="p-4 flex flex-col gap-3">
+    // Sem moldura própria (auditoria DRG-09, 07/10/2026): mora dentro do
+    // cartão do funil, que é p-5, e o cartão de p-4 dentro dele ficava com a
+    // borda desalinhada da de fora. O fio de cima separa do funil.
+    <section className="flex flex-col gap-3 border-t border-border pt-5">
       <div className="flex items-center gap-2">
         <Sparkles size={16} className="text-brand" />
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Assistente da vaga</h2>
@@ -138,6 +140,6 @@ export function AssistenteDaVaga({ vagaId }: { vagaId: string }) {
           )}
         </div>
       )}
-    </Card>
+    </section>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Sparkles } from "lucide-react";
 import type { AiExtractState } from "@/app/(app)/candidatos/[id]/ai-actions";
@@ -20,7 +21,7 @@ export function AiResumeExtract({ action }: Props) {
   }
 
   return (
-    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
+    <Card className="p-5">
       {/* `flex-wrap`: no celular o texto ficava espremido numa coluna estreita
           ao lado do botão; agora o botão desce para a linha de baixo. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -52,6 +53,6 @@ export function AiResumeExtract({ action }: Props) {
           </p>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { Pencil, UserPlus } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -29,6 +30,7 @@ import { adicionarCandidato, moverEtapaCandidatura, encerrarCandidatura } from "
 import { podeAgirNaVaga, ehCoordenadorDoRecrutamento, SETOR_RECRUTAMENTO } from "@/lib/recrutamento/acessoVagas";
 import { AcessoDosRecrutadores } from "@/components/vagas/AcessoDosRecrutadores";
 import { Selo } from "@/components/ui/Selo";
+import { InfoRow } from "@/components/empresas/InfoRow";
 
 const PRIORITY_LABEL: Record<VagaPrioridade, string> = {
   BAIXA: "Baixa",
@@ -154,15 +156,16 @@ export default async function VagaPage({
       {/* Selo, empresa e ações dentro do próprio `PageHeader` (polimento de
           30/09): eram um cabeçalho montado em volta dele, e o selo ficava
           centrado na margem de baixo do título, e não no título. "Editar" era
-          um link desenhado à mão como botão. */}
+          um link desenhado à mão como botão.
+          07/10/2026 (auditoria DRG-23): o selo saiu do título para o `meta`,
+          criado em 02/10 para "selos e datas embaixo do título" — o mesmo
+          lugar do lead e da proposta do Valora. */}
       <PageHeader
-        title={
-          <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
-            {vaga.title}
-            <Selo cor={VAGA_STATUS_STYLE[vaga.status]}>
-              {VAGA_STATUS_LABEL[vaga.status]}
-            </Selo>
-          </span>
+        title={vaga.title}
+        meta={
+          <Selo cor={VAGA_STATUS_STYLE[vaga.status]}>
+            {VAGA_STATUS_LABEL[vaga.status]}
+          </Selo>
         }
         subtitle={<>{vaga.company.name} · {sectorLabels[vaga.sectorCode] ?? vaga.sectorCode}</>}
         action={
@@ -197,7 +200,7 @@ export default async function VagaPage({
       />
 
       {/* Detalhes */}
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
+      <Card className="p-5 mb-4">
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Detalhes</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-8 gap-y-4">
           <InfoRow label="Cargo" value={vaga.cargo?.name} />
@@ -233,7 +236,7 @@ export default async function VagaPage({
             </a>
           </div>
         )}
-      </div>
+      </Card>
 
       {coordenaRecrutamento && (
         <AcessoDosRecrutadores
@@ -256,7 +259,7 @@ export default async function VagaPage({
       />
 
       {/* Funil de recrutamento */}
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
+      <Card className="p-5 mb-4">
         <div className="flex items-center justify-between gap-3 mb-4">
           <h2 className="min-w-0 text-[length:var(--fs-card-title)] font-semibold text-fg">
             Funil de recrutamento ({vaga.candidaturas.length} candidato{vaga.candidaturas.length !== 1 ? "s" : ""})
@@ -335,16 +338,7 @@ export default async function VagaPage({
             <AssistenteDaVaga vagaId={vaga.id} />
           </div>
         )}
-      </div>
+      </Card>
     </PageContainer>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
-  return (
-    <div className="min-w-0">
-      <p className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">{label}</p>
-      <p className="text-[13px] text-fg">{value ?? "—"}</p>
-    </div>
   );
 }

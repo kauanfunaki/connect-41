@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Card } from "@/components/ui/Card";
 import { ArrowDown } from "lucide-react";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { useTestDraft } from "./useTestDraft";
@@ -111,10 +112,10 @@ export function QuizForm({ token, questions }: Props) {
         </div>
       )}
 
-      <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
+      <Card as="section" className="p-5">
         <p className="text-[13px] text-fg-secondary">Escolha uma alternativa em cada pergunta.</p>
         <p className="text-[12px] text-fg-muted mt-2">Suas respostas ficam salvas neste aparelho enquanto você responde.</p>
-      </section>
+      </Card>
 
       <div className="sticky top-0 z-10 -mx-4 px-4 py-2.5 bg-canvas/95 backdrop-blur border-b border-border">
         <div className="flex items-center justify-between gap-3 mb-1.5">
