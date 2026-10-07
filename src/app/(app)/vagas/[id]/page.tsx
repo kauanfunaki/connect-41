@@ -31,6 +31,7 @@ import { podeAgirNaVaga, ehCoordenadorDoRecrutamento, SETOR_RECRUTAMENTO } from 
 import { AcessoDosRecrutadores } from "@/components/vagas/AcessoDosRecrutadores";
 import { Selo } from "@/components/ui/Selo";
 import { InfoRow } from "@/components/empresas/InfoRow";
+import { Funil } from "@/components/shared/Graficos";
 
 const PRIORITY_LABEL: Record<VagaPrioridade, string> = {
   BAIXA: "Baixa",
@@ -276,18 +277,20 @@ export default async function VagaPage({
           <p className="text-[13px] text-fg-muted">Nenhum candidato vinculado ainda.</p>
         ) : (
           <>
-            {/* Conversão por etapa */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-5">
-              {funnelStats.stages.map((s) => (
-                <div key={s.stage} className="rounded-lg border border-border bg-surface-2 p-2.5">
-                  <p className="text-[length:var(--fs-micro)] text-fg-muted uppercase tracking-wide truncate">{s.label}</p>
-                  <p className="text-[18px] font-semibold text-fg tnum">{s.conversionPct}%</p>
-                  <div className="h-1 rounded-full bg-border mt-1 overflow-hidden">
-                    <div className="h-full bg-brand rounded-full" style={{ width: `${s.conversionPct}%` }} />
-                  </div>
-                  <p className="text-[length:var(--fs-micro)] text-fg-muted mt-1">{s.reached} alcançaram</p>
-                </div>
-              ))}
+            {/* Conversão por etapa: o mesmo Funil do painel da Home (07/10,
+                auditoria dos gráficos). Eram cinco cartões à mão com "% do
+                total", enquanto o painel mostra a passagem da etapa anterior
+                — o mesmo funil com dois desenhos e duas "conversões". Agora as
+                duas leituras estão no gráfico, e a nota diz qual é qual. */}
+            <div className="mb-5 max-w-2xl">
+              <Funil
+                titulo="Candidaturas que chegaram a cada etapa"
+                etapas={funnelStats.stages.map((s) => ({ chave: s.stage, rotulo: s.label, valor: s.reached }))}
+              />
+              <p className="mt-2 text-[length:var(--fs-micro)] text-fg-muted">
+                A barra é a parte do total de candidaturas que chegou a cada etapa; o percentual ao lado é quantas passaram da etapa
+                anterior.
+              </p>
             </div>
 
             {/* Board arrastável */}
