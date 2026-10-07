@@ -557,8 +557,9 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 
 /* ----- Skeleton de loading (tabelas) ----- */
 @keyframes c41-skeleton { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+/* Raio `sm` (6px), o menor degrau da escala; era 4px, fora dela (07/10/2026). */
 .c41-skeleton {
-  height: 14px; border-radius: 4px;
+  height: 14px; border-radius: var(--radius-sm);
   background: linear-gradient(90deg, var(--c41-surface-hover), var(--c41-border), var(--c41-surface-hover));
   background-size: 200% 100%;
   animation: c41-skeleton 1.4s infinite;
