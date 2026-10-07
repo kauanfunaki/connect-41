@@ -2,12 +2,13 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
-import { Sparkles, Mail, Columns3, AlertTriangle, Landmark, Loader, UserRound, PauseCircle } from "lucide-react";
+import { Sparkles, Mail, Columns3, AlertTriangle, Landmark, Loader, UserRound, PauseCircle, Search } from "lucide-react";
+import { Input } from "@/components/ui/Input";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
-import { listarFila, contarPorSituacao, feriadosDoTenant } from "@/lib/societario/fila";
+import { listarFila, contarPorSituacao, feriadosDoTenant, filtrarPelaBusca } from "@/lib/societario/fila";
 import type { SituacaoDoProcesso } from "@/lib/societario/processo";
 import { PRIORIDADES, PRIORIDADE_LABEL, ehPrioridade } from "@/lib/societario/prioridade";
 import { ProcessosFila, SITUACAO_LABEL } from "@/components/societario/ProcessosFila";
@@ -92,16 +93,24 @@ export default async function ProcessosPage({
       ? params.responsavel
       : undefined;
   const prioridadeFiltro = ehPrioridade(params.prioridade) ? params.prioridade : undefined;
-  const filtroAtivo = Boolean(responsavelFiltro || prioridadeFiltro);
+  // A busca é texto livre: só aparada e com teto, para a URL não carregar um
+  // parágrafo colado por engano.
+  const busca = (params.q ?? "").trim().slice(0, 100);
+  const filtroAtivo = Boolean(responsavelFiltro || prioridadeFiltro || busca);
 
   // A fila inteira do filtro vem sempre: os contadores do recorte precisam do
   // total, e uma segunda consulta só para contar discordaria da primeira no
   // instante em que alguém gravasse algo entre as duas.
-  const todas = await listarFila(
-    ctx.tenantId,
-    { responsavelId: responsavelFiltro, prioridade: prioridadeFiltro },
-    feriados,
-    agora
+  // A busca entra antes dos contadores, como os outros filtros: o cartão
+  // "Em exigência" diz quantos da busca estão em exigência.
+  const todas = filtrarPelaBusca(
+    await listarFila(
+      ctx.tenantId,
+      { responsavelId: responsavelFiltro, prioridade: prioridadeFiltro },
+      feriados,
+      agora
+    ),
+    busca
   );
   const contagem = contarPorSituacao(todas);
   const linhas = recorte.situacao ? todas.filter((l) => l.situacao === recorte.situacao) : todas;
@@ -109,12 +118,17 @@ export default async function ProcessosPage({
   const filtrosNaUrl = new URLSearchParams();
   if (responsavelFiltro) filtrosNaUrl.set("responsavel", responsavelFiltro);
   if (prioridadeFiltro) filtrosNaUrl.set("prioridade", prioridadeFiltro);
+  if (busca) filtrosNaUrl.set("q", busca);
   const hrefDoRecorte = (chave: string) => {
     const q = new URLSearchParams(filtrosNaUrl);
     if (chave !== "todos") q.set("situacao", chave);
     const s = q.toString();
     return s ? `/processos?${s}` : "/processos";
   };
+  // O kanban não tem caixa de busca: levar o `q` para lá filtraria o quadro
+  // sem mostrar o porquê. Vão só os filtros que ele também tem.
+  const filtrosDoKanban = new URLSearchParams(filtrosNaUrl);
+  filtrosDoKanban.delete("q");
 
   return (
     <PageContainer>
@@ -138,7 +152,7 @@ export default async function ProcessosPage({
             IA do Societário{propostasDaIa > 0 ? ` · ${propostasDaIa}` : ""}
           </Button>
         )}
-        <Button href={filtrosNaUrl.size > 0 ? `/processos/kanban?${filtrosNaUrl}` : "/processos/kanban"} variant="secondary">
+        <Button href={filtrosDoKanban.size > 0 ? `/processos/kanban?${filtrosDoKanban}` : "/processos/kanban"} variant="secondary">
           <Columns3 size={14} />
           Ver no kanban
         </Button>
@@ -185,6 +199,26 @@ export default async function ProcessosPage({
           e quem manda o link manda a mesma fila. */}
       <CascoDaTabela
         contagem={contarItens(linhas.length, "processo", "processos")}
+        busca={
+          // A busca no desenho de Certificados e do acervo fiscal (07/10/2026):
+          // GET, para o link copiado levar a mesma fila. Os filtros escolhidos
+          // vão junto nos campos escondidos — sem eles, buscar os apagaria.
+          <form method="get" action="/processos" className="max-w-full">
+            {recorte.chave !== "todos" && <input type="hidden" name="situacao" value={recorte.chave} />}
+            {responsavelFiltro && <input type="hidden" name="responsavel" value={responsavelFiltro} />}
+            {prioridadeFiltro && <input type="hidden" name="prioridade" value={prioridadeFiltro} />}
+            <Input
+              compact
+              type="search"
+              name="q"
+              icon={<Search />}
+              defaultValue={busca}
+              placeholder="Buscar por empresa, tipo, título ou responsável…"
+              aria-label="Buscar processo"
+              className="w-80 max-w-full"
+            />
+          </form>
+        }
         filtros={
           <FiltrosDaTela
             naBarra
