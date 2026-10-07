@@ -17,6 +17,21 @@ export const COR_DO_TOM: Record<TomDoSelo, string> = {
   sucesso: "bg-success/10 text-success border-success/25",
 };
 
+/**
+ * O tom do Selo para uma variante do Badge (07/10/2026). As telas têm mapas
+ * situação → variante do Badge (`SITUACAO_VARIANTE` e afins); com isto passam a
+ * `<Selo tom={tomDaVariante(MAPA[s])}>` sem reescrever cada mapa.
+ */
+export function tomDaVariante(variante: "success" | "warning" | "danger" | "info" | "neutral"): TomDoSelo {
+  switch (variante) {
+    case "success": return "sucesso";
+    case "warning": return "atencao";
+    case "danger": return "perigo";
+    case "info": return "marca";
+    case "neutral": return "neutro";
+  }
+}
+
 type Props = {
   children: React.ReactNode;
   tom?: TomDoSelo;
@@ -29,7 +44,7 @@ export function Selo({ children, tom, cor, className = "" }: Props) {
   const cores = tom ? COR_DO_TOM[tom] : (cor ?? COR_DO_TOM.neutro);
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[length:var(--fs-micro)] font-medium leading-4 border whitespace-nowrap ${cores} ${className}`.trim()}
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-micro font-medium leading-4 border whitespace-nowrap ${cores} ${className}`.trim()}
     >
       {children}
     </span>
