@@ -22,11 +22,16 @@ export const ROTULO_DO_STATUS: Record<LeadStatus, string> = {
   DESCARTADO: "Descartado",
 };
 
-export const VARIANTE_DO_STATUS: Record<LeadStatus, "info" | "warning" | "success" | "danger"> = {
-  NOVO: "info",
-  EM_CONTATO: "warning",
-  CONVERTIDO: "success",
-  DESCARTADO: "danger",
+/**
+ * O tom do `Selo` de cada situação. Era a variante do `Badge` (pílula de
+ * categoria) — a situação de uma linha é o `Selo`, como em DP, Vagas e Testes
+ * (auditoria DRG-05, 07/10/2026). "Novo" segue azul: o `info` virou `marca`.
+ */
+export const TOM_DO_STATUS: Record<LeadStatus, "marca" | "atencao" | "sucesso" | "perigo"> = {
+  NOVO: "marca",
+  EM_CONTATO: "atencao",
+  CONVERTIDO: "sucesso",
+  DESCARTADO: "perigo",
 };
 
 /** Observações da equipe sobre o lead — texto livre, mas não um documento. */

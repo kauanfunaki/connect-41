@@ -81,8 +81,8 @@ export default async function AdmissoesPage() {
                   <TopoDoCartao nome={l.nome} />
                   <InfoDoCartao>{[l.empresa, l.cargo].filter(Boolean).join(" · ") || "Sem empresa/cargo definidos"}</InfoDoCartao>
                   <PeDoCartao>
-                    <span className="text-[11.5px] text-fg-muted">{l.exames}</span>
-                    <span className="ml-auto text-[11.5px] text-fg-muted">{l.documentos} de admissão</span>
+                    <span className="text-[length:var(--fs-micro)] text-fg-muted">{l.exames}</span>
+                    <span className="ml-auto text-[length:var(--fs-micro)] text-fg-muted">{l.documentos} de admissão</span>
                   </PeDoCartao>
                 </Cartao>
               </Link>

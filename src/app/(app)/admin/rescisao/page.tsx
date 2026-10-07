@@ -29,11 +29,11 @@ export default async function AdminRescisaoPage() {
       />
 
       <Card className="p-5 mb-4 border-brand/25">
-        <p className="text-[13px] text-fg-secondary">
+        <p className="text-[length:var(--fs-ui)] text-fg-secondary">
           O cálculo é <strong className="text-fg">referência para conferência</strong>, não apuração oficial: ele existe
           pra comparar com o que a contabilidade enviou no TRCT.
         </p>
-        <p className="text-[12px] text-fg-muted mt-2">
+        <p className="text-[length:var(--fs-2)] text-fg-muted mt-2">
           Constantes legais (1/3 constitucional, FGTS 8%, multa 40/20/0%, aviso de 30+3 dias por ano) não são
           configuráveis — vêm da lei e ficam fixas no sistema. Aqui você define só o que varia entre empresas.
         </p>

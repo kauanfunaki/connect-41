@@ -11,9 +11,9 @@ import { maskCpf } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useConfirm } from "@/components/ui/useConfirm";
 import type { OpcaoDoFunil } from "@/lib/filtrosDaListaDeEmpresas";
-import { Selo } from "@/components/ui/Selo";
+import { StatusDot } from "@/components/shared/StatusDot";
 
-const TH = "px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted";
+const TH = "px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted";
 
 type Row = {
   id: string;
@@ -65,16 +65,16 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
     });
   }
 
-  // A pílula de status é a mesma da tabela, e por isso mora num helper: esta
-  // tela é a única que usa pílula em vez do `StatusDot` do resto do app, e
-  // deixar duas cópias dela aqui só espalharia a divergência.
+  // Ativo/inativo de cadastro é o `StatusDot`, como em Colaboradores de
+  // clientes (`PessoasTable`): esta era a única tela com pílula para isso
+  // (auditoria DRG-07, 07/10/2026). Mora num helper porque cartão e tabela
+  // mostram o mesmo.
   function pilulaStatus(c: Row) {
     return (
-      <Selo cor={c.active
-            ? "bg-success/10 text-success border-success/25"
-            : "bg-surface-2 text-fg-muted border-border"}>
-        {c.active ? "Ativo" : "Inativo"}
-      </Selo>
+      <StatusDot
+        color={c.active ? "var(--c41-success)" : "var(--c41-fg-muted)"}
+        label={c.active ? "Ativo" : "Inativo"}
+      />
     );
   }
 
@@ -85,7 +85,7 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
         {c.tags.map((t) => (
           <span
             key={t.id}
-            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium border"
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[length:var(--fs-micro)] font-medium border"
             style={{ background: `${t.color}1A`, color: t.color, borderColor: `${t.color}40` }}
           >
             {t.name}
@@ -123,10 +123,10 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
             />
           )}
           <div className="min-w-0 flex-1">
-            <Link href={`/candidatos/${c.id}`} className="font-medium text-fg break-words">
+            <Link href={`/candidatos/${c.id}`} className="font-semibold text-fg hover:text-brand transition-colors break-words">
               {c.name}
             </Link>
-            {c.email && <p className="text-[11.5px] text-fg-muted break-all">{c.email}</p>}
+            {c.email && <p className="text-[length:var(--fs-micro)] text-fg-muted break-all">{c.email}</p>}
           </div>
           {canCreate && (
             <Button variant="secondary" size="xs" href={`/candidatos/${c.id}/editar`} className="shrink-0">
@@ -135,7 +135,7 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
           )}
         </div>
 
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-fg-muted">
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[length:var(--fs-2)] text-fg-muted">
           {pilulaStatus(c)}
           {cpf !== "—" && <span className="tnum">{cpf}</span>}
           {/* Sem coluna para explicar o número, ele vem com a palavra junto. */}
@@ -150,19 +150,22 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
     );
   }
 
+  // Mora no `CascoDaTabela` da tela (DRG-13, 07/10/2026): no computador o
+  // casco desenha a moldura da barra e da tabela juntas; no celular a barra é
+  // um cartão próprio, e a lista de cartões ganha o seu logo abaixo.
   return (
     <>
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
+      <div>
         {candidatos.length === 0 ? (
-          <EmptyState icon={<UserSearch />} title="Nenhum candidato encontrado." />
+          <EmptyState icon={<UserSearch />} title="Nenhum candidato encontrado" />
         ) : (
           <>
           {/* Abaixo de md, cartões; de md para cima, a tabela. */}
-          <div className="md:hidden">
+          <div className="md:hidden bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
             {canCreate && (
               <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border bg-table-header-bg">
                 <Checkbox checked={allSelected} onChange={toggleAll} aria-label="Selecionar todos" />
-                <span className="text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Selecionar todos</span>
+                <span className="text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Selecionar todos</span>
               </div>
             )}
             {candidatos.map((c) => cartaoCandidato(c))}
@@ -207,7 +210,7 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
                     </td>
                   )}
                   <td className="px-4 py-3">
-                    <Link href={`/candidatos/${c.id}`} className="font-medium text-fg hover:text-brand transition-colors">
+                    <Link href={`/candidatos/${c.id}`} className="font-semibold text-fg hover:text-brand transition-colors">
                       {c.name}
                     </Link>
                   </td>

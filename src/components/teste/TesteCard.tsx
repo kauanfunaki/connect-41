@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import { Check, ClipboardList, Copy, RefreshCw } from "lucide-react";
@@ -96,7 +97,7 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
   }
 
   return (
-    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
+    <Card className="p-5">
       <div className="flex items-center gap-2 mb-1">
         <ClipboardList size={16} className="text-brand" />
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Teste</h2>
@@ -104,7 +105,7 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
 
       {!link && (
         <>
-          <p className="text-[13px] text-fg-muted mb-3">Envie um link para o candidato responder um teste sozinho.</p>
+          <p className="text-[length:var(--fs-ui)] text-fg-muted mb-3">Envie um link para o candidato responder um teste sozinho.</p>
           {/* O tipo e o "Enviar" na mesma linha: eram um em cima do outro,
               com o select numa coluna de 320px e o botão solto embaixo. */}
           {canManage && (
@@ -122,7 +123,7 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
 
       {link?.status === "PENDENTE" && (
         <>
-          <p className="text-[13px] text-fg-muted mb-3">
+          <p className="text-[length:var(--fs-ui)] text-fg-muted mb-3">
             Aguardando resposta do candidato. Link expira em {link.expiresAtLabel}.
           </p>
           <div className="flex items-center gap-2 mb-3">
@@ -134,7 +135,7 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
               {copied ? "Copiado!" : "Copiar"}
             </Button>
           </div>
-          {emailNote && <p className="text-[12px] text-fg-muted mb-3">{emailNote}</p>}
+          {emailNote && <p className="text-[length:var(--fs-2)] text-fg-muted mb-3">{emailNote}</p>}
           {canManage && (
             // Era texto cinza sublinhado (30/09): botão não é link.
             <Button variant="secondary" size="sm" onClick={handleGerar} disabled={pending}>
@@ -147,7 +148,7 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
 
       {link?.status === "RESPONDIDO" && (
         <>
-          <p className="text-[12px] text-fg-muted mb-3">Respondido em {link.submittedAtLabel}.</p>
+          <p className="text-[length:var(--fs-2)] text-fg-muted mb-3">Respondido em {link.submittedAtLabel}.</p>
           {link.type === "DISC" ? (
             <AssessmentResult
               type="DISC"
@@ -169,7 +170,7 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
         </>
       )}
 
-      {error && <p className="text-[13px] text-danger mt-3">{error}</p>}
-    </div>
+      {error && <p className="text-[length:var(--fs-ui)] text-danger mt-3">{error}</p>}
+    </Card>
   );
 }

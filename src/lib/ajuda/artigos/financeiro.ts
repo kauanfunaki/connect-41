@@ -17,7 +17,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Encontrar as contas que você procura",
         passos: [
-          "Use os cartões do topo: “Em aberto”, “Vencido”, “Vence hoje” e “Pago”. Clique em “Em aberto” ou “Vencido” para ver só essas contas.",
+          "Use os cartões do topo: “Em aberto”, “Vencido” e “Vence hoje” — com a “Situação” em “Todas”, aparece também o “Pago”. Clique em “Em aberto” ou “Vencido” para ver só essas contas.",
           "Clique em “Filtros” e escolha a “Situação” (“Vencidas” ou “Todas”), a “Competência” (o mês a que a conta pertence) ou a “Empresa”.",
           "Para refinar a lista, clique no ícone de filtro ao lado do nome da coluna, como “Vencimento”, “Fornecedor” ou “Categoria”.",
           "Contas marcadas com “sem categoria” ainda precisam ser classificadas.",
@@ -71,7 +71,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Encontrar as contas que você procura",
         passos: [
-          "Use os cartões do topo: “Em aberto”, “Vencido”, “Vence hoje” e “Recebido”. Clique em “Em aberto” ou “Vencido” para ver só essas contas.",
+          "Use os cartões do topo: “Em aberto”, “Vencido” e “Vence hoje” — com a “Situação” em “Todas”, aparece também o “Recebido”. Clique em “Em aberto” ou “Vencido” para ver só essas contas.",
           "Clique em “Filtros” e escolha a “Situação” (“Vencidas” ou “Todas”), a “Competência” (o mês a que a conta pertence) ou a “Empresa”.",
           "Para refinar a lista, clique no ícone de filtro ao lado do nome da coluna, como “Vencimento”, “Cliente” ou “Categoria”.",
           "Na aba “Análise — atraso e ranking”, veja as “Faixas de atraso” e os “Maiores clientes em aberto”.",

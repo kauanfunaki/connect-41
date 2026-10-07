@@ -71,7 +71,9 @@ export default async function DiagnosticoDaCarteiraPage() {
             rotulo: "Abaixo da margem mínima",
             valor: String(abaixoDoPiso),
             icone: <TrendingDown />,
-            tom: abaixoDoPiso > 0 ? "text-warning" : undefined,
+            // Crítico, como o selo da margem abaixo do piso na tabela (07/10):
+            // o cartão era âmbar e o selo, vermelho, para a mesma situação.
+            tom: abaixoDoPiso > 0 ? "text-danger" : undefined,
             detalhe: `piso de ${cfg.parametros.margemPisoPct}%`,
           },
           { rotulo: "Sem horas no período", valor: String(semHoras), icone: <CircleDashed />, tom: "text-fg-muted" },

@@ -4,6 +4,7 @@
 import { getPrisma } from "@/lib/prisma";
 import type { AuthContext } from "@/lib/auth/context";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
+import { AVISO_DAS_FERIAS_DIAS, contarFerias } from "@/lib/home/paineis";
 
 export type IndicadorCard = { label: string; value: string; hint?: string };
 
@@ -82,8 +83,10 @@ export async function getIndicadoresRH(ctx: AuthContext): Promise<IndicadorCard[
       )
     : null;
 
-  const feriasVencidas = vacations.filter((v) => v.concessivePeriodEnd && v.concessivePeriodEnd < now).length;
-  const feriasAVencer = vacations.length - feriasVencidas;
+  // A regra do painel do DP na Home (07/10): "a vencer" é quem vence nos
+  // próximos 60 dias. Aqui era todo o resto das não vencidas — o mesmo rótulo
+  // com 4 numa tela e 1 na outra.
+  const ferias = contarFerias(vacations, now);
 
   const turnoverPct = fmtDecimal(headcount > 0 ? (demissoes / headcount) * 100 : 0, 1);
 
@@ -108,11 +111,12 @@ export async function getIndicadoresRH(ctx: AuthContext): Promise<IndicadorCard[
     { label: "Headcount", value: fmtInt(headcount), hint: "Colaboradores ativos" },
     { label: "Admissões (30 dias)", value: fmtInt(admissoes) },
     { label: "Demissões (30 dias)", value: fmtInt(demissoes) },
-    { label: "Turnover", value: `${turnoverPct}%`, hint: "Demissões / Headcount" },
+    // O período no rótulo, como os vizinhos: as demissões são dos últimos 30 dias.
+    { label: "Turnover (30 dias)", value: `${turnoverPct}%`, hint: "Demissões / Headcount" },
     { label: "Absenteísmo (30 dias)", value: `${fmtInt(absencesLast30._sum.lostDays ?? 0)} dias`, hint: "Dias perdidos" },
     { label: "Horas Extras (30 dias)", value: `${fmtDecimal(Number(overtimeLast30._sum.overtimeHours ?? 0), 1)}h` },
-    { label: "Férias Vencidas", value: fmtInt(feriasVencidas) },
-    { label: "Férias a Vencer", value: fmtInt(feriasAVencer) },
+    { label: "Férias Vencidas", value: fmtInt(ferias.vencidas) },
+    { label: `Férias a Vencer (${AVISO_DAS_FERIAS_DIAS} dias)`, value: fmtInt(ferias.aVencer), hint: "Período concessivo acabando" },
     { label: "Vagas Abertas", value: fmtInt(vagasAbertas) },
     { label: "Candidatos por Vaga", value: candidatosPorVaga },
     { label: "Taxa de Aprovação", value: taxaAprovacao === "—" ? "—" : `${taxaAprovacao}%` },

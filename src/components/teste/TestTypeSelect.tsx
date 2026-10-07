@@ -15,7 +15,7 @@ type Props = {
 };
 
 // Dropdown DISC + um item por modelo de múltipla escolha ativo — usado tanto
-// no "+ Novo teste" da lista quanto no card embutido de candidatura/candidato.
+// no "Enviar teste" da lista quanto no card embutido de candidatura/candidato.
 export function TestTypeSelect({ templates, value, onChange, id }: Props) {
   const selectValue = value.type === "DISC" ? "DISC" : value.templateId;
 

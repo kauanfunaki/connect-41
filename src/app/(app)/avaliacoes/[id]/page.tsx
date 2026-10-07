@@ -13,8 +13,10 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { formatCalendarDate, formatInstantDate } from "@/lib/format";
+import { notaDoDP } from "@/components/pessoas/rotulosDoDP";
 import { saoPauloParts } from "@/lib/agenda";
 import { Button } from "@/components/ui/Button";
+import { TabelaNoDesktop, TopoDoCartao, InfoDoCartao } from "@/components/shared/ListaResponsiva";
 
 export default async function CicloPage({
   params,
@@ -48,7 +50,7 @@ export default async function CicloPage({
   const encerrarAction = encerrarCiclo.bind(null, id);
 
   const media = (e: (typeof ciclo.evaluations)[number]) =>
-    e.averageScore != null ? e.averageScore.toString() : "Sem nota";
+    e.averageScore != null ? notaDoDP(e.averageScore) : "Sem nota";
 
   return (
     <PageContainer>
@@ -87,64 +89,88 @@ export default async function CicloPage({
         </h2>
 
         {ciclo.evaluations.length === 0 ? (
-          <p className="text-[13px] text-fg-muted mb-3">Nenhuma avaliação registrada ainda.</p>
+          <p className="text-[length:var(--fs-ui)] text-fg-muted mb-3">Nenhuma avaliação registrada ainda.</p>
         ) : (
-          // Era uma lista de linhas-link (até 30/09); virou tabela com funil.
-          // A tela de avaliar só abre para quem edita — o botão segue a regra.
-          <TabelaFiltravel
-            linhas={ciclo.evaluations.map((e) => ({
-              id: e.id,
-              valores: { media: media(e), data: saoPauloParts(e.evaluationDate).dateKey },
-            }))}
-          >
-            <div className="c41-tabela overflow-x-auto rounded-lg border border-border mb-4">
-              <table className="w-full min-w-[560px] text-[length:var(--fs-ui)]">
-                <thead>
-                  <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
-                    <th className="px-4 py-3">Colaborador</th>
-                    <th className="px-4 py-3">
-                      <FiltroDaColuna rotulo="Média" chave="media" />
-                    </th>
-                    <th className="px-4 py-3">
-                      <FiltroDaColuna rotulo="Avaliado em" chave="data" tipo="data" align="right" />
-                    </th>
-                    {canManage && (
+          <>
+            {/* No celular, uma linha por avaliação em vez da tabela de 560px com
+                rolagem lateral (auditoria DRG-31, 07/10/2026). Já dentro do
+                cartão, então linhas com divisória, sem cartão em cada uma. */}
+            <ul className="md:hidden divide-y divide-border border-y border-border mb-4">
+              {ciclo.evaluations.map((e) => (
+                <li key={e.id} className="py-2.5">
+                  <TopoDoCartao
+                    nome={
+                      canManage ? (
+                        <Link href={`/avaliacoes/${id}/avaliar/${e.person.id}`} className="text-fg hover:text-brand transition-colors">
+                          {e.person.name}
+                        </Link>
+                      ) : (
+                        e.person.name
+                      )
+                    }
+                    valor={media(e)}
+                  />
+                  <InfoDoCartao>Avaliado em {formatInstantDate(e.evaluationDate)}</InfoDoCartao>
+                </li>
+              ))}
+            </ul>
+            {/* Era uma lista de linhas-link (até 30/09); virou tabela com funil.
+                A tela de avaliar só abre para quem edita — o botão segue a regra. */}
+            <TabelaFiltravel
+              linhas={ciclo.evaluations.map((e) => ({
+                id: e.id,
+                valores: { media: media(e), data: saoPauloParts(e.evaluationDate).dateKey },
+              }))}
+            >
+              <TabelaNoDesktop className="c41-tabela rounded-lg border border-border mb-4">
+                <table className="w-full min-w-[560px] text-[length:var(--fs-ui)]">
+                  <thead>
+                    <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                      <th className="px-4 py-3">Colaborador</th>
                       <th className="px-4 py-3">
-                        <span className="sr-only">Abrir</span>
+                        <FiltroDaColuna rotulo="Média" chave="media" />
                       </th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {ciclo.evaluations.map((e) => (
-                    <LinhaFiltravel key={e.id} id={e.id} className="border-b border-border">
-                      <td className="px-4 py-3">
-                        {canManage ? (
-                          <Link
-                            href={`/avaliacoes/${id}/avaliar/${e.person.id}`}
-                            className="font-semibold text-fg hover:text-brand transition-colors"
-                          >
-                            {e.person.name}
-                          </Link>
-                        ) : (
-                          <span className="font-semibold text-fg">{e.person.name}</span>
-                        )}
-                      </td>
-                      <td className={`px-4 py-3 ${e.averageScore != null ? "text-fg-secondary" : "text-fg-muted"}`}>{media(e)}</td>
-                      <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{formatInstantDate(e.evaluationDate)}</td>
+                      <th className="px-4 py-3">
+                        <FiltroDaColuna rotulo="Avaliado em" chave="data" tipo="data" align="right" />
+                      </th>
                       {canManage && (
-                        <td className="px-4 py-3">
-                          <Button href={`/avaliacoes/${id}/avaliar/${e.person.id}`} variant="secondary" size="xs">
-                            Abrir <ArrowRight size={11} />
-                          </Button>
-                        </td>
+                        <th className="px-4 py-3">
+                          <span className="sr-only">Abrir</span>
+                        </th>
                       )}
-                    </LinhaFiltravel>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </TabelaFiltravel>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ciclo.evaluations.map((e) => (
+                      <LinhaFiltravel key={e.id} id={e.id} className="border-b border-border">
+                        <td className="px-4 py-3">
+                          {canManage ? (
+                            <Link
+                              href={`/avaliacoes/${id}/avaliar/${e.person.id}`}
+                              className="font-semibold text-fg hover:text-brand transition-colors"
+                            >
+                              {e.person.name}
+                            </Link>
+                          ) : (
+                            <span className="font-semibold text-fg">{e.person.name}</span>
+                          )}
+                        </td>
+                        <td className={`px-4 py-3 ${e.averageScore != null ? "text-fg-secondary" : "text-fg-muted"}`}>{media(e)}</td>
+                        <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{formatInstantDate(e.evaluationDate)}</td>
+                        {canManage && (
+                          <td className="px-4 py-3">
+                            <Button href={`/avaliacoes/${id}/avaliar/${e.person.id}`} variant="secondary" size="xs">
+                              Abrir <ArrowRight size={11} />
+                            </Button>
+                          </td>
+                        )}
+                      </LinhaFiltravel>
+                    ))}
+                  </tbody>
+                </table>
+              </TabelaNoDesktop>
+            </TabelaFiltravel>
+          </>
         )}
 
         {canManage && ciclo.active && (

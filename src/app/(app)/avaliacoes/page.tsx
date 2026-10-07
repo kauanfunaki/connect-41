@@ -63,7 +63,7 @@ export default async function AvaliacoesPage() {
                   <InfoDoCartao>{periodo(c)}</InfoDoCartao>
                   <PeDoCartao>
                     {selo(c.active)}
-                    <span className="ml-auto text-[11.5px] text-fg-muted">{avaliacoes(c._count.evaluations)}</span>
+                    <span className="ml-auto text-[length:var(--fs-micro)] text-fg-muted">{avaliacoes(c._count.evaluations)}</span>
                   </PeDoCartao>
                 </Cartao>
               </Link>
