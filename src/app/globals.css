@@ -63,6 +63,8 @@
   --c41-brand-solid:       var(--c41-brand-600);
   --c41-brand-solid-hover: var(--c41-brand-700);
   --c41-danger-solid:      var(--c41-danger-light);
+  /* Etapa concluída do Stepper: o verde do escuro com branco dava 2,05:1. */
+  --c41-success-solid:     var(--c41-success-light);
   --c41-success:         var(--c41-success-light);
   --c41-success-bg:      rgba(30,154,99,.10);
   --c41-warning:         var(--c41-warning-light);
@@ -218,6 +220,7 @@
   --color-brand-solid:       var(--c41-brand-solid);
   --color-brand-solid-hover: var(--c41-brand-solid-hover);
   --color-danger-solid:      var(--c41-danger-solid);
+  --color-success-solid:     var(--c41-success-solid);
   --color-brand-50:var(--c41-brand-50);   --color-brand-100:var(--c41-brand-100);
   --color-brand-200:var(--c41-brand-200); --color-brand-300:var(--c41-brand-300);
   --color-brand-400:var(--c41-brand-400); --color-brand-500:var(--c41-brand-500);

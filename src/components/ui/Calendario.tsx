@@ -128,7 +128,7 @@ export function Calendario({ valor, periodo, previa = false, onEscolher, min, ma
         : undefined;
 
     let cor: string;
-    if (ehPonta) cor = "bg-brand text-on-brand font-semibold";
+    if (ehPonta) cor = "bg-brand-solid text-on-brand font-semibold";
     else if (bloqueado) cor = "text-fg-muted opacity-35 cursor-not-allowed";
     else cor = `hover:bg-surface-hover ${feriado ? "text-danger font-medium" : ehFimDeSemana(dia) ? "text-fg-muted" : "text-fg"}`;
 
@@ -324,7 +324,7 @@ function BotaoDaGrade({
       type="button"
       {...rest}
       className={`h-10 rounded-lg text-[13px] capitalize tabular-nums transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-35 disabled:cursor-not-allowed ${
-        ativo ? "bg-brand text-on-brand font-semibold" : "text-fg hover:bg-surface-hover"
+        ativo ? "bg-brand-solid text-on-brand font-semibold" : "text-fg hover:bg-surface-hover"
       } ${atual && !ativo ? "ring-1 ring-inset ring-brand font-semibold" : ""}`}
     >
       {children}

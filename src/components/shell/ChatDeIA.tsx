@@ -69,7 +69,7 @@ function comNegrito(texto: string, chave: string) {
 function BalaoDaPergunta({ texto }: { texto: string }) {
   const p = separarAnexos(texto);
   return (
-    <div className="rounded-2xl rounded-br-md bg-brand text-on-brand px-3.5 py-2.5 text-[13px] flex flex-col gap-2">
+    <div className="rounded-2xl rounded-br-md bg-brand-solid text-on-brand px-3.5 py-2.5 text-[13px] flex flex-col gap-2">
       <p className="whitespace-pre-wrap break-words">{p.texto}</p>
       {p.anexos.length > 0 && (
         <span className="flex flex-wrap justify-end gap-1">
@@ -1039,7 +1039,7 @@ function MotivosDoNao({
             onClick={() => onEscolher(codigo)}
             aria-pressed={escolhido === codigo}
             className={`rounded-full border px-3 py-1 text-[12px] font-medium transition-colors ${
-              escolhido === codigo ? "border-brand bg-brand text-on-brand" : "border-border bg-surface text-fg-secondary hover:text-fg hover:border-border-strong"
+              escolhido === codigo ? "border-brand-solid bg-brand-solid text-on-brand" : "border-border bg-surface text-fg-secondary hover:text-fg hover:border-border-strong"
             }`}
           >
             {rotulo}
