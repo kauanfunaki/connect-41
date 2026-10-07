@@ -11,7 +11,7 @@ import { BackButton } from "@/components/shared/BackButton";
 import { DeleteButton } from "@/components/ui/DeleteButton";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
+import { formatInstantDate, formatInstantDateTime, formatInstantDateTimeComSegundos } from "@/lib/format";
 import { PublishDocumentButton } from "@/components/documentosCliente/PublishDocumentButton";
 import { ResendRecipientButton } from "@/components/documentosCliente/ResendRecipientButton";
 import { SendDocumentForm } from "@/components/documentosCliente/SendDocumentForm";
@@ -137,7 +137,7 @@ export default async function DocumentoClienteDetailPage({
                     </p>
                     {r.firstViewedAt ? (
                       <p className="text-[11px] text-success mt-0.5">
-                        primeira visualização: {formatInstantDateTime(r.firstViewedAt)}
+                        primeira visualização: {formatInstantDateTimeComSegundos(r.firstViewedAt)}
                       </p>
                     ) : (
                       <p className="text-[11px] text-warning mt-0.5">ainda não visualizado</p>
@@ -146,7 +146,7 @@ export default async function DocumentoClienteDetailPage({
                       (r.signedAt ? (
                         <p className="text-[11px] text-success mt-0.5 flex items-center gap-1.5">
                           <PenLine size={11} />
-                          assinado por {r.signerName ?? "—"} em {formatInstantDateTime(r.signedAt)}
+                          assinado por {r.signerName ?? "—"} em {formatInstantDateTimeComSegundos(r.signedAt)}
                         </p>
                       ) : (
                         <p className="text-[11px] text-warning mt-0.5">assinatura pendente</p>
@@ -157,7 +157,7 @@ export default async function DocumentoClienteDetailPage({
                         {r.views.slice(0, 5).map((v) => (
                           <p key={v.id} className="text-[11px] text-fg-muted flex items-center gap-1.5">
                             {v.action === "VIEWED" ? <Eye size={11} /> : v.action === "SIGNED" ? <PenLine size={11} /> : <Download size={11} />}
-                            {formatInstantDateTime(v.viewedAt)} · {v.ipAddress}
+                            {formatInstantDateTimeComSegundos(v.viewedAt)} · {v.ipAddress}
                           </p>
                         ))}
                         {r.views.length > 5 && (

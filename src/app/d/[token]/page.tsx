@@ -3,7 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { hit, clientIp } from "@/lib/rateLimit";
 import { sanitizeDocumentHtml, recordClientDocumentView } from "@/lib/clientDocuments";
 import { SignatureForm } from "@/components/documentosCliente/SignatureForm";
-import { formatInstantDateTime } from "@/lib/format";
+import { formatInstantDateTimeComSegundos } from "@/lib/format";
 import { Download, Link2Off } from "lucide-react";
 
 export const metadata = { title: "Documento" };
@@ -94,7 +94,7 @@ export default async function ClientDocumentViewPage({
             <div className="bg-success/10 border border-success/25 rounded-lg p-4 mt-5">
               <p className="text-[14px] font-semibold text-success">Documento assinado</p>
               <p className="text-[12px] text-fg-muted mt-1">
-                Assinado por {recipient.signerName ?? "—"} em {formatInstantDateTime(recipient.signedAt)}.
+                Assinado por {recipient.signerName ?? "—"} em {formatInstantDateTimeComSegundos(recipient.signedAt)}.
               </p>
             </div>
           ) : (
