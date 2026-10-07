@@ -3,7 +3,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
+import { TOM_DA_VARIANTE } from "@/components/societario/tomDoSelo";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
@@ -264,10 +265,12 @@ export default async function ProcessoDetalhePage({
         }
         meta={
           <>
+          {/* Situação e prioridade em Selo: é a situação da ficha (regra de
+              02/10 no Selo; auditoria de 07/10/2026). */}
           {encerradoSemConclusao ? (
-            <Badge variant="danger">{processo.status === "CANCELADO" ? "Cancelado" : "Indeferido"}</Badge>
+            <Selo tom="perigo">{processo.status === "CANCELADO" ? "Cancelado" : "Indeferido"}</Selo>
           ) : (
-            <Badge variant={SITUACAO_VARIANTE[situacao]}>{SITUACAO_LABEL[situacao]}</Badge>
+            <Selo tom={TOM_DA_VARIANTE[SITUACAO_VARIANTE[situacao]]}>{SITUACAO_LABEL[situacao]}</Selo>
           )}
 
           {prazo.situacao === "sem_previsao" ? (
@@ -296,9 +299,9 @@ export default async function ProcessoDetalhePage({
           )}
 
           {processo.priority !== "NORMAL" && (
-            <Badge variant={PRIORIDADE_VARIANTE[processo.priority]}>
+            <Selo tom={TOM_DA_VARIANTE[PRIORIDADE_VARIANTE[processo.priority]]}>
               Prioridade {PRIORIDADE_LABEL[processo.priority].toLowerCase()}
-            </Badge>
+            </Selo>
           )}
 
           {combinado && processo.dueAt && (
@@ -332,7 +335,7 @@ export default async function ProcessoDetalhePage({
 
       <div className="mb-6 flex flex-col gap-3">
         {processo.statusReason && (
-          <p className="text-[13px] text-fg rounded-md border border-border bg-surface-2 px-3 py-2 break-words">
+          <p className="text-[length:var(--fs-ui)] text-fg rounded-md border border-border bg-surface-2 px-3 py-2 break-words">
             <span className="font-medium">Motivo:</span> {processo.statusReason}
             {processo.statusChangedAt && (
               <span className="text-fg-muted"> · desde {formatInstantDate(processo.statusChangedAt)}</span>
@@ -426,13 +429,13 @@ export default async function ProcessoDetalhePage({
                   <h2 id="conversa-do-processo" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
                     Conversa com o cliente
                   </h2>
-                  <p className="text-[12px] text-fg-muted">
+                  <p className="text-[length:var(--fs-2)] text-fg-muted">
                     O cliente vê tudo o que for escrito aqui no portal, e é avisado por e-mail. Para anotação
                     interna, use as observações do processo.
                   </p>
                 </div>
                 {conversa.limitada && (
-                  <p className="text-[12px] text-fg-muted">Mostrando só as mensagens mais recentes.</p>
+                  <p className="text-[length:var(--fs-2)] text-fg-muted">Mostrando só as mensagens mais recentes.</p>
                 )}
                 {conversa.mensagens.length > 0 && (
                   <ConversaDaPendencia
@@ -469,7 +472,7 @@ export default async function ProcessoDetalhePage({
         )}
       </div>
 
-      <p className="mt-6 text-[11px] text-fg-muted">
+      <p className="mt-6 text-[length:var(--fs-micro)] text-fg-muted">
         Roteiro versão {processo.template.version} — congelado na abertura, para o processo não
         mudar embaixo de quem está tocando ele.
       </p>

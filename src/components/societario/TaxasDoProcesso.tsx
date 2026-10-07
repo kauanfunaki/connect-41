@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/Card";
+import { Selo } from "@/components/ui/Selo";
 import { formatInstantDate } from "@/lib/format";
 import { saoPauloParts } from "@/lib/agenda";
 import type { TaxaNaTela } from "@/lib/societario/licencas-data";
@@ -20,7 +21,7 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
     <Card as="section" className="p-4 flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Taxas</h2>
-        <p className="text-[13px] tabular-nums text-fg">
+        <p className="text-[length:var(--fs-ui)] tabular-nums text-fg">
           <strong>{moeda(custo.totalCentavos)}</strong>
           {aPagar > 0 && <span className="text-warning"> · {moeda(aPagar)} a pagar</span>}
         </p>
@@ -29,7 +30,7 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
       {/* O número que dá causa ao prazo: "trinta dias" sozinho não conta a
           história que "trinta dias e duas guias a mais" conta. */}
       {custo.custoDasVoltasCentavos > 0 && (
-        <p className="text-[12px] text-warning bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
+        <p className="text-[length:var(--fs-2)] text-warning bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
           <strong>{moeda(custo.custoDasVoltasCentavos)}</strong> vieram de reapresentação — guia
           paga de novo porque o processo voltou.
         </p>
@@ -43,14 +44,15 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
             taxa: t.description,
             orgao: t.orgaoNome ?? "",
             vencimento: t.dueDate ? saoPauloParts(t.dueDate).dateKey : "",
-            situacao: t.paidAt ? "Pago" : "Em aberto",
+            // "Paga" (a taxa), como na visão societária — o funil dizia "Pago".
+            situacao: t.paidAt ? "Paga" : "Em aberto",
           },
         }))}
       >
       <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-        <table className="w-full min-w-[560px] text-[13px]">
+        <table className="w-full min-w-[560px] text-[length:var(--fs-ui)]">
           <thead>
-            <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+            <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
               <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Taxa" chave="taxa" /></th>
               <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Órgão" chave="orgao" /></th>
               <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" /></th>
@@ -66,7 +68,7 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
                   {/* Primeira via é o caminho normal; da segunda em diante é
                       volta, e é isso que o rótulo diz. */}
                   {t.attempt !== null && t.attempt >= 2 && (
-                    <span className="block text-[11px] text-warning">{t.attempt}ª apresentação</span>
+                    <span className="block text-[length:var(--fs-micro)] text-warning">{t.attempt}ª apresentação</span>
                   )}
                   {t.envio && (
                     <div className="mt-2">
@@ -79,11 +81,17 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
                   {t.dueDate ? formatInstantDate(t.dueDate) : "—"}
                 </td>
                 <td className="py-2.5 pr-3 tabular-nums">{moeda(t.amountCents)}</td>
-                <td className="py-2.5 text-[12px]">
+                {/* A mesma leitura da visão societária (07/10/2026): Selo "Paga" /
+                    "Em aberto", e o dia do pagamento embaixo. Era texto colorido
+                    em minúscula aqui e Badge lá. */}
+                <td className="py-2.5">
                   {t.paidAt ? (
-                    <span className="text-success">pago em {formatInstantDate(t.paidAt)}</span>
+                    <>
+                      <Selo tom="sucesso">Paga</Selo>
+                      <span className="block mt-1 text-[length:var(--fs-micro)] text-fg-muted">em {formatInstantDate(t.paidAt)}</span>
+                    </>
                   ) : (
-                    <span className="text-warning">em aberto</span>
+                    <Selo tom="atencao">Em aberto</Selo>
                   )}
                 </td>
               </LinhaFiltravel>

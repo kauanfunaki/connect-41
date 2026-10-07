@@ -3,7 +3,8 @@ import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { saoPauloParts } from "@/lib/agenda";
@@ -14,7 +15,7 @@ import { getModuleDef } from "@/lib/module-catalog";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { formatInstantDate } from "@/lib/format";
 import { faixaDoPrazo, textoDoPrazo, lerSituacaoDaExigencia, type SituacaoDaExigencia } from "@/lib/societario/prazos";
-import { listarExigencias } from "@/lib/societario/painel-data";
+import { listarExigencias, type LinhaDeExigencia } from "@/lib/societario/painel-data";
 import { AbasDePrazos } from "@/components/societario/AbasDePrazos";
 import { ResolverExigencia } from "@/components/societario/ResolverExigencia";
 import { resolverExigencia } from "@/app/(app)/processos/actions";
@@ -55,6 +56,34 @@ export default async function ExigenciasPage({
   const agora = new Date();
   const linhas = await listarExigencias(ctx.tenantId, { situacao, responsavelId: responsavelFiltro });
 
+  // As peças que a tabela e os cartões do celular dividem (07/10/2026: a fila
+  // rolava de lado no celular, `min-w-[860px]`, e era a única do escopo, com a
+  // de licenças, sem cartões).
+  const prazoEmFaixa = (e: LinhaDeExigencia) => {
+    const faixa = e.dueAt && !e.resolvedAt ? faixaDoPrazo(e.dueAt, agora) : null;
+    if (!faixa || !e.dueAt) return null;
+    const cor =
+      faixa === "vencido" || faixa === "hoje" ? "text-danger font-medium" : faixa === "semana" ? "text-warning" : "text-fg-muted";
+    return <span className={`block text-[length:var(--fs-micro)] ${cor}`}>{textoDoPrazo(e.dueAt, agora)}</span>;
+  };
+  // Selo, e não Badge: é a situação da linha (regra de 02/10 no Selo).
+  const seloDaSituacao = (e: LinhaDeExigencia) =>
+    e.resolvedAt ? <Selo tom="sucesso">Cumprida</Selo> : <Selo tom="atencao">Aberta</Selo>;
+  // O link da célula principal no desenho da fila de processos: negrito, cor
+  // do texto e azul só no hover — era azul sublinhado, um dos quatro desenhos
+  // do módulo.
+  const linkDoProcesso = (e: LinhaDeExigencia) => (
+    <Link href={`/processos/${e.processoId}`} className="font-semibold text-fg hover:text-brand transition-colors">
+      {e.tipoNome}
+      {e.tituloDoProcesso && ` — ${e.tituloDoProcesso}`}
+    </Link>
+  );
+  // "Apresentação", o termo do roteiro e das taxas — aqui dizia "tentativa".
+  // A apresentação diz se esta é a primeira exigência ou mais uma volta.
+  const apresentacao = (e: LinhaDeExigencia) =>
+    e.tentativa > 1 ? <span className="block text-[length:var(--fs-micro)] text-danger">{e.tentativa}ª apresentação</span> : null;
+  const acao = (e: LinhaDeExigencia) =>
+    podeAgir && !e.resolvedAt && e.processoAberto ? <ResolverExigencia exigenciaId={e.id} resolver={resolverExigencia} /> : null;
 
   return (
     <PageContainer>
@@ -95,6 +124,32 @@ export default async function ExigenciasPage({
             icon={<AlertTriangle />}
           />
         ) : (
+          <>
+          <CartoesNoCelular>
+            {linhas.map((e) => (
+              <Cartao key={e.id}>
+                <TopoDoCartao
+                  nome={
+                    <Link href={`/processos/empresas/${e.empresaId}`} className="font-semibold text-fg hover:text-brand transition-colors">
+                      {e.empresaNome}
+                    </Link>
+                  }
+                  valor={e.dueAt ? formatInstantDate(e.dueAt) : <span className="font-normal text-fg-muted">sem prazo</span>}
+                />
+                {prazoEmFaixa(e) && <div className="text-right">{prazoEmFaixa(e)}</div>}
+                <p className={`mt-1 text-[length:var(--fs-ui)] break-words ${e.resolvedAt ? "text-fg-muted" : "text-fg"}`}>{e.descricao}</p>
+                <InfoDoCartao className="mt-1">
+                  {linkDoProcesso(e)} · {e.orgaoNome}
+                </InfoDoCartao>
+                {apresentacao(e)}
+                <PeDoCartao>
+                  {seloDaSituacao(e)}
+                  <span className="text-[length:var(--fs-micro)] text-fg-muted">{e.responsavelNome ?? "Sem responsável"}</span>
+                  <div className="ml-auto">{acao(e)}</div>
+                </PeDoCartao>
+              </Cartao>
+            ))}
+          </CartoesNoCelular>
           <TabelaFiltravel
             linhas={linhas.map((e) => ({
               id: e.id,
@@ -108,10 +163,10 @@ export default async function ExigenciasPage({
               },
             }))}
           >
-          <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-            <table className="w-full min-w-[860px] text-[13px]">
+          <TabelaNoDesktop padrao>
+            <table className="w-full min-w-[860px] text-[length:var(--fs-ui)]">
               <thead>
-                <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className="py-2 pr-3 font-medium">Exigência</th>
                   <th className="py-2 pr-3 font-medium">
                     <FiltroDaColuna
@@ -132,78 +187,52 @@ export default async function ExigenciasPage({
                 </tr>
               </thead>
               <tbody>
-                {linhas.map((e) => {
-                  const faixa = e.dueAt && !e.resolvedAt ? faixaDoPrazo(e.dueAt, agora) : null;
-                  return (
-                    <LinhaFiltravel key={e.id} id={e.id} className="border-b border-border-soft align-top">
-                      <td className="py-2.5 pr-3 max-w-[320px]">
-                        <span className={e.resolvedAt ? "text-fg-muted" : "text-fg"}>{e.descricao}</span>
-                        <span className="block text-[11px] text-fg-muted">Aberta em {formatInstantDate(e.raisedAt)}</span>
-                      </td>
-                      <td className="py-2.5 pr-3">
-                        <Link href={`/processos/${e.processoId}`} className="text-brand hover:underline">
-                          {e.tipoNome}
-                          {e.tituloDoProcesso && ` — ${e.tituloDoProcesso}`}
-                        </Link>
-                        <Link
-                          href={`/processos/empresas/${e.empresaId}`}
-                          className="block text-[12px] text-fg-muted hover:underline"
-                        >
-                          {e.empresaNome}
-                        </Link>
-                      </td>
-                      <td className="py-2.5 pr-3 whitespace-nowrap">
-                        {e.orgaoNome}
-                        {/* A tentativa diz se esta é a primeira exigência ou mais uma volta. */}
-                        {e.tentativa > 1 && <span className="block text-[11px] text-danger">{e.tentativa}ª tentativa</span>}
-                      </td>
-                      <td className="py-2.5 pr-3 whitespace-nowrap">
-                        {e.dueAt ? (
-                          <>
-                            <span className="tabular-nums">{formatInstantDate(e.dueAt)}</span>
-                            {faixa && (
-                              <span
-                                className={`block text-[11px] ${
-                                  faixa === "vencido" || faixa === "hoje"
-                                    ? "text-danger font-medium"
-                                    : faixa === "semana"
-                                      ? "text-warning"
-                                      : "text-fg-muted"
-                                }`}
-                              >
-                                {textoDoPrazo(e.dueAt, agora)}
-                              </span>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-fg-muted">sem prazo</span>
-                        )}
-                      </td>
-                      <td className="py-2.5 pr-3 whitespace-nowrap">
-                        {e.resolvedAt ? (
-                          <>
-                            <Badge variant="success">Cumprida</Badge>
-                            <span className="block mt-1 text-[11px] text-fg-muted">{formatInstantDate(e.resolvedAt)}</span>
-                          </>
-                        ) : (
-                          <Badge variant="warning">Aberta</Badge>
-                        )}
-                      </td>
-                      <td className="py-2.5 pr-3 whitespace-nowrap text-fg-secondary">
-                        {e.responsavelNome ?? "sem responsável"}
-                      </td>
-                      <td className="py-2.5">
-                        {podeAgir && !e.resolvedAt && e.processoAberto && (
-                          <ResolverExigencia exigenciaId={e.id} resolver={resolverExigencia} />
-                        )}
-                      </td>
-                    </LinhaFiltravel>
-                  );
-                })}
+                {linhas.map((e) => (
+                  <LinhaFiltravel key={e.id} id={e.id} className="border-b border-border-soft align-top">
+                    <td className="py-2.5 pr-3 max-w-[320px]">
+                      <span className={e.resolvedAt ? "text-fg-muted" : "text-fg"}>{e.descricao}</span>
+                      <span className="block text-[length:var(--fs-micro)] text-fg-muted">Aberta em {formatInstantDate(e.raisedAt)}</span>
+                    </td>
+                    <td className="py-2.5 pr-3">
+                      {linkDoProcesso(e)}
+                      <Link
+                        href={`/processos/empresas/${e.empresaId}`}
+                        className="block text-[length:var(--fs-2)] text-fg-muted hover:underline"
+                      >
+                        {e.empresaNome}
+                      </Link>
+                    </td>
+                    <td className="py-2.5 pr-3 whitespace-nowrap">
+                      {e.orgaoNome}
+                      {apresentacao(e)}
+                    </td>
+                    <td className="py-2.5 pr-3 whitespace-nowrap">
+                      {e.dueAt ? (
+                        <>
+                          <span className="tabular-nums">{formatInstantDate(e.dueAt)}</span>
+                          {prazoEmFaixa(e)}
+                        </>
+                      ) : (
+                        <span className="text-fg-muted">sem prazo</span>
+                      )}
+                    </td>
+                    <td className="py-2.5 pr-3 whitespace-nowrap">
+                      {seloDaSituacao(e)}
+                      {e.resolvedAt && (
+                        <span className="block mt-1 text-[length:var(--fs-micro)] text-fg-muted">{formatInstantDate(e.resolvedAt)}</span>
+                      )}
+                    </td>
+                    <td className="py-2.5 pr-3 whitespace-nowrap text-fg-secondary">
+                      {e.responsavelNome ?? <span className="text-fg-muted">Sem responsável</span>}
+                    </td>
+                    <td className="py-2.5">{acao(e)}</td>
+                  </LinhaFiltravel>
+                ))}
               </tbody>
             </table>
-          </div>
+          </TabelaNoDesktop>
           </TabelaFiltravel>
+          </>
         )}
       </CascoDaTabela>
     </PageContainer>
