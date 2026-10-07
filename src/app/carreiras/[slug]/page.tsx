@@ -204,44 +204,44 @@ export default async function CarreirasPage({
             {vagas.map((v) => {
               const local = [v.cidade, v.uf].filter(Boolean).join(" – ");
               return (
-                <Link
-                  key={v.id}
-                  href={`/carreiras/${slug}/${v.id}`}
-                  className="block bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 hover:border-border-strong hover:bg-surface-hover transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h2 className="text-[15px] font-semibold text-fg">{v.title}</h2>
-                      <p className="text-[12px] text-fg-muted mt-0.5">
-                        {v.empresa}
-                        {local && ` · ${local}`}
-                        {v.area && ` · ${v.area}`}
-                      </p>
+                // O `Card` com o link por dentro — era o cartão escrito à mão
+                // no próprio link (auditoria DRG-08, 07/10/2026).
+                <Card key={v.id} className="hover:border-border-strong hover:bg-surface-hover transition-colors">
+                  <Link href={`/carreiras/${slug}/${v.id}`} className="block p-5 rounded-lg">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h2 className="text-[15px] font-semibold text-fg">{v.title}</h2>
+                        <p className="text-[12px] text-fg-muted mt-0.5">
+                          {v.empresa}
+                          {local && ` · ${local}`}
+                          {v.area && ` · ${v.area}`}
+                        </p>
+                      </div>
+                      {/* O selo do app — era uma pílula à mão de 10px (DRG-06). */}
+                      {v.quantity > 1 && (
+                        <Selo tom="marca" className="flex-shrink-0">
+                          {v.quantity} vagas
+                        </Selo>
+                      )}
                     </div>
-                    {/* O selo do app — era uma pílula à mão de 10px (DRG-06). */}
-                    {v.quantity > 1 && (
-                      <Selo tom="marca" className="flex-shrink-0">
-                        {v.quantity} vagas
-                      </Selo>
+                    <div className="mt-2.5">
+                      <EtiquetasDaVaga
+                        workMode={v.workMode}
+                        contractType={v.contractType}
+                        salaryMin={v.salaryMin}
+                        salaryMax={v.salaryMax}
+                        showSalary={v.showSalary}
+                      />
+                    </div>
+                    {v.publicDescription && (
+                      <p className="text-[length:var(--fs-2)] text-fg-muted mt-2 line-clamp-2">{v.publicDescription}</p>
                     )}
-                  </div>
-                  <div className="mt-2.5">
-                    <EtiquetasDaVaga
-                      workMode={v.workMode}
-                      contractType={v.contractType}
-                      salaryMin={v.salaryMin}
-                      salaryMax={v.salaryMax}
-                      showSalary={v.showSalary}
-                    />
-                  </div>
-                  {v.publicDescription && (
-                    <p className="text-[length:var(--fs-2)] text-fg-muted mt-2 line-clamp-2">{v.publicDescription}</p>
-                  )}
-                  <p className="text-[11px] text-fg-muted mt-2">
-                    Publicada em {formatCalendarDate(v.openedAt)}
-                    {v.applicationDeadline && ` · inscrições até ${formatCalendarDate(v.applicationDeadline)}`}
-                  </p>
-                </Link>
+                    <p className="text-[11px] text-fg-muted mt-2">
+                      Publicada em {formatCalendarDate(v.openedAt)}
+                      {v.applicationDeadline && ` · inscrições até ${formatCalendarDate(v.applicationDeadline)}`}
+                    </p>
+                  </Link>
+                </Card>
               );
             })}
             {/* A paginação do app, em botões — era uma cópia local em texto

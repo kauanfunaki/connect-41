@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -58,7 +59,7 @@ export function AcessoDosRecrutadores({ vagaId, restrita, escolhidos, recrutador
         : `Só ${marcados.size === 1 ? "1 recrutador vê" : `${marcados.size} recrutadores veem`} esta vaga.`;
 
   return (
-    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
+    <Card className="p-5 mb-4">
       <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
         <div>
           <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Quem do Recrutamento vê esta vaga</h2>
@@ -100,6 +101,6 @@ export function AcessoDosRecrutadores({ vagaId, restrita, escolhidos, recrutador
           </Button>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

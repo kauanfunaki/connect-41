@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import { Check, ClipboardList, Copy, RefreshCw } from "lucide-react";
@@ -96,7 +97,7 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
   }
 
   return (
-    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
+    <Card className="p-5">
       <div className="flex items-center gap-2 mb-1">
         <ClipboardList size={16} className="text-brand" />
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Teste</h2>
@@ -170,6 +171,6 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
       )}
 
       {error && <p className="text-[13px] text-danger mt-3">{error}</p>}
-    </div>
+    </Card>
   );
 }

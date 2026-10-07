@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Card } from "@/components/ui/Card";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -88,7 +89,7 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
   }
 
   return (
-    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
+    <Card className="p-5 mb-4">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
         <div>
           <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Triagem de currículos</h2>
@@ -256,6 +257,6 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

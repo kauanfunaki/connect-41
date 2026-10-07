@@ -213,7 +213,7 @@ export default async function CandidaturaScorecardPage({
 
       {/* Consolidado */}
       {consolidation.count > 0 && (
-        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
+        <Card className="p-5 mb-4">
           <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">Consolidado ({consolidation.count} parecer{consolidation.count !== 1 ? "es" : ""})</h2>
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-[13px] text-fg">
@@ -229,11 +229,11 @@ export default async function CandidaturaScorecardPage({
               {consolidation.tally.REPROVAR} reprovar
             </Selo>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Pareceres */}
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
+      <Card className="p-5 mb-4">
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">Pareceres</h2>
         {candidatura.scorecards.length === 0 ? (
           <p className="text-[13px] text-fg-muted">Nenhum parecer ainda.</p>
@@ -279,7 +279,7 @@ export default async function CandidaturaScorecardPage({
             })}
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Meu parecer */}
       {canAct && (

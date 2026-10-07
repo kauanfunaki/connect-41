@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Card } from "@/components/ui/Card";
 import { ArrowDown } from "lucide-react";
 import { DISC_BANK, TOTAL_BLOCKS } from "@/lib/discBank";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -124,13 +125,13 @@ export function DiscForm({ token }: Props) {
         </div>
       )}
 
-      <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
+      <Card as="section" className="p-5">
         <p className="text-[13px] text-fg-secondary">
           Em cada grupo de 4 palavras, marque a que <strong>mais</strong> combina com você e a que{" "}
           <strong>menos</strong> combina. Não existe resposta certa ou errada — responda com a primeira impressão.
         </p>
         <p className="text-[12px] text-fg-muted mt-2">Suas respostas ficam salvas neste aparelho enquanto você responde.</p>
-      </section>
+      </Card>
 
       {/* Progresso fixo: o contador vivia no topo e sumia no scroll, então no
           meio dos 24 blocos não dava pra saber quanto faltava. */}
