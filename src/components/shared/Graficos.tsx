@@ -644,16 +644,28 @@ export type Etapa = { chave: string; rotulo: string; valor: number; href?: strin
 /**
  * Funil de etapas (candidaturas por fase): barras centradas, uma cor só, com
  * a passagem de uma etapa para a seguinte em percentual.
+ *
+ * Duas leituras, e as duas ditas (07/10): a barra é a parte do total (a maior
+ * etapa — num funil, a primeira, que todos alcançaram); o percentual escrito
+ * ao lado é a passagem da etapa anterior. A dica e a tabela acessível levam as
+ * duas por extenso.
  */
 export function Funil({ titulo, etapas, vazio = "Nada por aqui." }: { titulo: string; etapas: Etapa[]; vazio?: string }) {
   const maior = Math.max(0, ...etapas.map((e) => e.valor));
   if (maior === 0) return <p className="text-[length:var(--fs-helper)] text-fg-muted py-1.5">{vazio}</p>;
 
+  const leituras = etapas.map((e, i) => {
+    const anterior = i > 0 ? etapas[i - 1].valor : null;
+    return {
+      doTotal: `${PCT.format(e.valor / maior)} do total`,
+      passagem: anterior && anterior > 0 ? PCT.format(e.valor / anterior) : null,
+    };
+  });
+
   return (
     <div className="group/funil min-w-0 space-y-1">
       {etapas.map((e, i) => {
-        const anterior = i > 0 ? etapas[i - 1].valor : null;
-        const passagem = anterior && anterior > 0 ? PCT.format(e.valor / anterior) : null;
+        const { doTotal, passagem } = leituras[i];
         const conteudo = (
           <>
             <span className="text-[12px] text-fg-secondary truncate">{e.rotulo}</span>
@@ -673,7 +685,7 @@ export function Funil({ titulo, etapas, vazio = "Nada por aqui." }: { titulo: st
           </>
         );
         const cls = "group/etapa grid grid-cols-[minmax(0,7.5rem)_minmax(0,1fr)_2.5rem_2.25rem] items-center gap-2 rounded-sm";
-        const dica = `${e.rotulo}: ${numero(e.valor)}${passagem ? `\n${passagem} da etapa anterior` : ""}`;
+        const dica = `${e.rotulo}: ${numero(e.valor)}\n${doTotal}${passagem ? `\n${passagem} da etapa anterior` : ""}`;
         return e.href ? (
           <Link key={e.chave} href={e.href} className={`${cls} hover:bg-surface-hover`} data-dica={dica} data-dica-rapida="">
             {conteudo}
@@ -684,7 +696,13 @@ export function Funil({ titulo, etapas, vazio = "Nada por aqui." }: { titulo: st
           </div>
         );
       })}
-      <TabelaOculta titulo={titulo} linhas={etapas.map((e) => [e.rotulo, numero(e.valor)])} />
+      <TabelaOculta
+        titulo={titulo}
+        linhas={etapas.map((e, i) => {
+          const { doTotal, passagem } = leituras[i];
+          return [e.rotulo, `${numero(e.valor)} (${doTotal}${passagem ? `; ${passagem} da etapa anterior` : ""})`];
+        })}
+      />
     </div>
   );
 }
