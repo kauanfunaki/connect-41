@@ -38,11 +38,14 @@ export default async function ColaboradoresPage() {
 
       {/* Os três atalhos eram cartões montados à mão (até 30/09); agora são
           os cartões de total do resto do app — o número grande, o ícone e o
-          cartão que leva à tela. */}
+          cartão que leva à tela.
+          07/10/2026 (auditoria DRG-19): o de desligamentos dizia "Rescisões" e
+          abria "Desligamentos em Andamento", com a ficha dizendo
+          "Desligamento" — um termo só para a lista. */}
       <FaixaDeTotais
         itens={[
           { rotulo: "Admissões", valor: String(admissoes), icone: <UserPlus />, detalhe: "em andamento", href: "/admissoes" },
-          { rotulo: "Rescisões", valor: String(desligamentos), icone: <UserMinus />, detalhe: "em processo", href: "/desligamentos" },
+          { rotulo: "Desligamentos", valor: String(desligamentos), icone: <UserMinus />, detalhe: "em processo", href: "/desligamentos" },
           { rotulo: "Férias", valor: String(ferias), icone: <Palmtree />, detalhe: "em aberto", href: "/ferias" },
         ]}
       />

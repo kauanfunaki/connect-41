@@ -104,7 +104,7 @@ export function ConversasLista({ conversas, agora, userId, filtrada = false, pes
       {/* A barra do lote: fica no topo enquanto se rola a lista. */}
       <div
         className={`sticky top-2 z-10 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-3 py-2 transition-colors ${
-          selecionadas.length > 0 ? "border-brand/40 bg-surface shadow-sm" : "border-transparent"
+          selecionadas.length > 0 ? "border-brand/40 bg-surface shadow-[var(--c41-shadow-xs)]" : "border-transparent"
         }`}
         role="toolbar"
         aria-label="Ações nas conversas selecionadas"
