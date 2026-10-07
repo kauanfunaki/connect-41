@@ -102,13 +102,20 @@ export function SituacaoDoProcesso({
             size="sm"
             variant={a === "retomar" ? "primary" : "secondary"}
             disabled={pendente}
+            loading={a === "retomar" && pendente}
+            loadingLabel="Retomando…"
             onClick={() => (a === "retomar" ? executar("retomar", "") : (setErro(null), setAcao(a)))}
           >
             {ICONE[a]} {ROTULO_DA_ACAO[a]}
           </Button>
         ))}
       </div>
-      {erro && !acao && <span className="text-[12px] text-danger">{erro}</span>}
+      {/* Na caixa de erro do resto da página (07/10/2026) — era texto solto de 12px. */}
+      {erro && !acao && (
+        <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+          {erro}
+        </p>
+      )}
 
       <Modal open={acao !== null} onClose={() => !pendente && setAcao(null)} title={acao ? AJUDA[acao].titulo : undefined}>
         {acao && (
@@ -119,7 +126,7 @@ export function SituacaoDoProcesso({
               executar(acao, motivo);
             }}
           >
-            <p className="text-[13px] text-fg-secondary">{AJUDA[acao].texto}</p>
+            <p className="text-[length:var(--fs-ui)] text-fg-secondary">{AJUDA[acao].texto}</p>
             <CampoForm label="Motivo" htmlFor="motivo-da-situacao" required>
               <Textarea
                 id="motivo-da-situacao"
@@ -132,14 +139,14 @@ export function SituacaoDoProcesso({
               />
             </CampoForm>
             {erro && (
-              <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{erro}</p>
+              <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{erro}</p>
             )}
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
               <Button type="button" variant="secondary" disabled={pendente} onClick={() => setAcao(null)}>
                 Voltar
               </Button>
-              <Button type="submit" disabled={pendente || motivo.trim().length < 3}>
-                {pendente ? "Salvando…" : "Confirmar"}
+              <Button type="submit" disabled={motivo.trim().length < 3} loading={pendente}>
+                Confirmar
               </Button>
             </div>
           </form>

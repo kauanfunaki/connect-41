@@ -99,7 +99,12 @@ export function HorasDoProcesso({
         )}
       </div>
 
-      {erro && <p className="text-[12px] text-danger">{erro}</p>}
+      {/* Na caixa de erro do resto da página (07/10/2026) — era texto solto de 12px. */}
+      {erro && (
+        <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+          {erro}
+        </p>
+      )}
 
       {abrirLancamento && podeAgir && (
         // Uma linha de campos em grade — horas e minutos estreitos, a data na
@@ -121,7 +126,11 @@ export function HorasDoProcesso({
               <Input id={`nota-${processId}`} name="nota" maxLength={280} placeholder="Opcional" />
             </CampoForm>
           </FieldGrid>
-          {estado && "error" in estado && <p className="text-[12px] text-danger">{estado.error}</p>}
+          {estado && "error" in estado && (
+            <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+              {estado.error}
+            </p>
+          )}
           <FormFooter
             pending={lancando}
             pendingLabel="Lançando…"

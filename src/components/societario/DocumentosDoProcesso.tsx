@@ -91,15 +91,22 @@ export function DocumentosDoProcesso({
             <Input id={`doc-desc-${processId}`} name="descricao" maxLength={200} placeholder="Ex.: Contrato social registrado" />
           </CampoForm>
           <CampoDeAnexos idBase={`doc-${processId}`} />
-          {erro && <p className="text-[12px] text-danger">{erro}</p>}
+          {/* Na caixa de erro do resto da página (07/10/2026) — era texto solto de 12px. */}
+          {erro && (
+            <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+              {erro}
+            </p>
+          )}
           {/* Rodapé no padrão: Cancelar à esquerda do primário, os dois à
               direita — o erro, que ficava espremido na mesma linha, sobe. */}
           <div className="flex flex-wrap items-center justify-end gap-3">
             <Button type="button" size="sm" variant="secondary" disabled={pendente} onClick={() => setAberto(false)}>
               Cancelar
             </Button>
-            <Button type="submit" size="sm" disabled={pendente}>
-              <Upload size={14} /> {pendente ? "Enviando…" : "Guardar documentos"}
+            {/* "Enviar", e não "Guardar" (07/10/2026): o outro lado vê e é
+                avisado — e o resto do app não diz "guardar" em lugar nenhum. */}
+            <Button type="submit" size="sm" loading={pendente} loadingLabel="Enviando…">
+              <Upload size={14} /> Enviar documentos
             </Button>
           </div>
         </form>

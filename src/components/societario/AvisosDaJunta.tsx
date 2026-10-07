@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { Button } from "@/components/ui/Button";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Card } from "@/components/ui/Card";
@@ -33,11 +33,11 @@ type Acoes = {
   descartar: (avisoId: string) => Promise<AvisoState>;
 };
 
-const SUGESTAO: Record<AvisoNaTela["sugestao"], { rotulo: string; variante: "success" | "warning" | "danger" | "info" }> = {
-  DEFERIDO: { rotulo: "Parece deferido", variante: "success" },
-  EXIGENCIA: { rotulo: "Parece exigência", variante: "warning" },
-  CANCELADO: { rotulo: "Parece cancelado", variante: "danger" },
-  REVISAR: { rotulo: "Conferir", variante: "info" },
+const SUGESTAO: Record<AvisoNaTela["sugestao"], { rotulo: string; tom: TomDoSelo }> = {
+  DEFERIDO: { rotulo: "Parece deferido", tom: "sucesso" },
+  EXIGENCIA: { rotulo: "Parece exigência", tom: "atencao" },
+  CANCELADO: { rotulo: "Parece cancelado", tom: "perigo" },
+  REVISAR: { rotulo: "Conferir", tom: "marca" },
 };
 
 /**
@@ -46,29 +46,53 @@ const SUGESTAO: Record<AvisoNaTela["sugestao"], { rotulo: string; variante: "suc
  * O sistema só sugere (28/09): o desfecho vem pré-marcado pela leitura do
  * e-mail, mas quem aplica é a pessoa, lendo o texto do órgão ao lado.
  */
-export function AvisosDaJunta({ avisos, acoes, mostrarProcesso = false }: { avisos: AvisoNaTela[]; acoes: Acoes; mostrarProcesso?: boolean }) {
+export function AvisosDaJunta({
+  avisos,
+  acoes,
+  mostrarProcesso = false,
+  embutido = false,
+}: {
+  avisos: AvisoNaTela[];
+  acoes: Acoes;
+  mostrarProcesso?: boolean;
+  /** Dentro do cartão da seção (detalhe do processo, 07/10/2026): cada aviso
+   *  vira um bloco separado por linha, e não um cartão dentro do cartão. */
+  embutido?: boolean;
+}) {
   if (avisos.length === 0) return null;
   return (
-    <div className="flex flex-col gap-3">
+    <div className={embutido ? "flex flex-col divide-y divide-border" : "flex flex-col gap-3"}>
       {avisos.map((a) => (
-        <CartaoDoAviso key={a.id} aviso={a} acoes={acoes} mostrarProcesso={mostrarProcesso} />
+        <CartaoDoAviso key={a.id} aviso={a} acoes={acoes} mostrarProcesso={mostrarProcesso} embutido={embutido} />
       ))}
     </div>
   );
 }
 
-function CartaoDoAviso({ aviso, acoes, mostrarProcesso }: { aviso: AvisoNaTela; acoes: Acoes; mostrarProcesso: boolean }) {
+function CartaoDoAviso({
+  aviso,
+  acoes,
+  mostrarProcesso,
+  embutido,
+}: {
+  aviso: AvisoNaTela;
+  acoes: Acoes;
+  mostrarProcesso: boolean;
+  embutido: boolean;
+}) {
   const router = useRouter();
   const [desfecho, setDesfecho] = useState<"DEFERIDO" | "EXIGENCIA">(aviso.sugestao === "DEFERIDO" ? "DEFERIDO" : "EXIGENCIA");
   const [descricao, setDescricao] = useState(aviso.detalhe ?? "");
   const [prazo, setPrazo] = useState("");
   const [abrirTexto, setAbrirTexto] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [acaoEmCurso, setAcaoEmCurso] = useState<"aplicar" | "descartar" | null>(null);
   const [pendente, startTransition] = useTransition();
   const sugestao = SUGESTAO[aviso.sugestao];
 
-  function rodar(fn: () => Promise<AvisoState>) {
+  function rodar(acao: "aplicar" | "descartar", fn: () => Promise<AvisoState>) {
     setErro(null);
+    setAcaoEmCurso(acao);
     startTransition(async () => {
       const r = await fn();
       if ("error" in r) setErro(r.error);
@@ -76,10 +100,11 @@ function CartaoDoAviso({ aviso, acoes, mostrarProcesso }: { aviso: AvisoNaTela; 
     });
   }
 
-  return (
-    <Card className="p-4 flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2 text-[12px] text-fg-muted">
-        <Badge variant={sugestao.variante}>{sugestao.rotulo}</Badge>
+  const conteudo = (
+    <>
+      <div className="flex flex-wrap items-center gap-2 text-[length:var(--fs-2)] text-fg-muted">
+        {/* Selo: é a situação do aviso, não uma categoria (regra de 02/10 no Selo). */}
+        <Selo tom={sugestao.tom}>{sugestao.rotulo}</Selo>
         <span>Recebido em {formatInstantDate(aviso.recebidoEm)}</span>
         {aviso.protocolo && <span>· protocolo {aviso.protocolo}</span>}
         {mostrarProcesso &&
@@ -161,7 +186,12 @@ function CartaoDoAviso({ aviso, acoes, mostrarProcesso }: { aviso: AvisoNaTela; 
         </p>
       )}
 
-      {erro && <p className="text-[12px] text-danger">{erro}</p>}
+      {/* Na caixa de erro do resto da página (07/10/2026) — era texto solto de 12px. */}
+      {erro && (
+        <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+          {erro}
+        </p>
+      )}
 
       {/* Descartar tira o aviso da fila: fica separado, à esquerda, e o
           primário ("Aplicar") por último, à direita. */}
@@ -169,7 +199,9 @@ function CartaoDoAviso({ aviso, acoes, mostrarProcesso }: { aviso: AvisoNaTela; 
         <Button
           variant="secondary"
           disabled={pendente}
-          onClick={() => rodar(() => acoes.descartar(aviso.id))}
+          loading={pendente && acaoEmCurso === "descartar"}
+          loadingLabel="Descartando…"
+          onClick={() => rodar("descartar", () => acoes.descartar(aviso.id))}
           className={aviso.aplicavel ? "mr-auto" : undefined}
         >
           Descartar
@@ -178,12 +210,20 @@ function CartaoDoAviso({ aviso, acoes, mostrarProcesso }: { aviso: AvisoNaTela; 
           <Button
             variant="primary"
             disabled={pendente || (desfecho === "EXIGENCIA" && !descricao.trim())}
-            onClick={() => rodar(() => acoes.aplicar(aviso.id, desfecho, descricao, prazo || null))}
+            loading={pendente && acaoEmCurso === "aplicar"}
+            loadingLabel="Aplicando…"
+            onClick={() => rodar("aplicar", () => acoes.aplicar(aviso.id, desfecho, descricao, prazo || null))}
           >
-            {pendente ? "Aplicando…" : "Aplicar no protocolo"}
+            Aplicar no protocolo
           </Button>
         )}
       </div>
-    </Card>
+    </>
+  );
+
+  return embutido ? (
+    <div className="flex flex-col gap-4 py-4 first:pt-0 last:pb-0">{conteudo}</div>
+  ) : (
+    <Card className="p-4 flex flex-col gap-4">{conteudo}</Card>
   );
 }
