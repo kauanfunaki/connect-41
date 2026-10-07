@@ -89,7 +89,8 @@ export function ExameRow({ exame, updateAction, removeAction, canManage }: Props
             </Select>
           </div>
           <div className="w-full sm:w-40">
-            <CampoData name="performedAt" title="Data de realização" aria-label="Data de realização" />
+            {/* Sem rótulo visível, o campo dizia só "Escolher data" (DRG-16). */}
+            <CampoData name="performedAt" title="Data de realização" aria-label="Data de realização" placeholder="Realização" />
           </div>
           <Button
             variant="secondary"

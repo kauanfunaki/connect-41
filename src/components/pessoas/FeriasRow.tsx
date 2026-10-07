@@ -69,11 +69,13 @@ export function FeriasRow({ ferias, updateAction, removeAction, canManage }: Pro
               ))}
             </Select>
           </div>
+          {/* Sem rótulo visível, os dois campos diziam "Escolher data", lado a
+              lado, sem dizer qual era qual (auditoria DRG-16, 07/10/2026). */}
           <div className="w-full sm:w-40">
-            <CampoData name="startDate" title="Data de início" aria-label="Data de início" />
+            <CampoData name="startDate" title="Data de início" aria-label="Data de início" placeholder="Início" />
           </div>
           <div className="w-full sm:w-40">
-            <CampoData name="returnDate" title="Data de retorno" aria-label="Data de retorno" />
+            <CampoData name="returnDate" title="Data de retorno" aria-label="Data de retorno" placeholder="Retorno" />
           </div>
           <Button
             variant="secondary"

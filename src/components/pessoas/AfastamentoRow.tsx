@@ -71,7 +71,8 @@ export function AfastamentoRow({ afastamento, updateAction, removeAction, canMan
             </Select>
           </div>
           <div className="w-full sm:w-40">
-            <CampoData name="returnDate" title="Data de retorno" aria-label="Data de retorno" />
+            {/* Sem rótulo visível, o campo dizia só "Escolher data" (DRG-16). */}
+            <CampoData name="returnDate" title="Data de retorno" aria-label="Data de retorno" placeholder="Retorno" />
           </div>
           <Button
             variant="secondary"
