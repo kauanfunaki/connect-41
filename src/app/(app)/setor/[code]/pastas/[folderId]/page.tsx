@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -58,17 +58,15 @@ export default async function SectorFolderPage({ params }: { params: Promise<{ c
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-1">
-        <Link href={`/setor/${code}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          {sectorLabel(sectorLabels, code)}
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <Link href={`/setor/${code}/espacos/${folder.space.id}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          {folder.space.name}
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">{folder.name}</span>
-      </div>
+      {/* A trilha pelo `Breadcrumb` compartilhado (07/10/2026) — era escrita à mão. */}
+      <Breadcrumb
+        className="mb-1!"
+        items={[
+          { label: sectorLabel(sectorLabels, code), href: `/setor/${code}` },
+          { label: folder.space.name, href: `/setor/${code}/espacos/${folder.space.id}`, truncate: true },
+          { label: folder.name },
+        ]}
+      />
 
       {/* A ação mora no `action` do PageHeader (30/09): o cabeçalho estava
           aninhado numa linha própria, com a margem dele somada à da linha. */}

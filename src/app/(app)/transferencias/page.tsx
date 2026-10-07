@@ -139,45 +139,47 @@ export default async function HandoffsPage({
           {handoffs.map((h) => {
             const aggregate = aggregateHandoffStatus(h.sectors.map((s) => s.status));
             return (
-              <Card
+              // O cartão inteiro é o link (07/10/2026): o Link morava dentro do
+              // `p-4` do Card, a borda acendia no cartão todo e os 16px da margem
+              // não clicavam. Hover no desenho único dos cartões-link.
+              <Link
                 key={h.id}
-                className="p-4 transition-[border-color,box-shadow,transform] duration-150 hover:border-brand/40 hover:shadow-[var(--c41-shadow-md)] hover:-translate-y-px"
+                href={`/transferencias/${h.id}`}
+                className="group flex items-start gap-3 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 transition-[border-color,box-shadow,transform] duration-150 hover:border-brand/40 hover:shadow-[var(--c41-shadow-md)] hover:-translate-y-0.5"
               >
-                <Link href={`/transferencias/${h.id}`} className="group flex items-start gap-3">
-                  <span className="w-9 h-9 rounded-lg bg-surface-hover border border-border flex items-center justify-center text-fg-secondary flex-shrink-0">
-                    <ArrowRightLeft size={16} />
-                  </span>
+                <span className="w-9 h-9 rounded-lg bg-surface-hover border border-border flex items-center justify-center text-fg-secondary flex-shrink-0">
+                  <ArrowRightLeft size={16} />
+                </span>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap mb-2">
-                      <SectorChip label={sectorLabels[h.fromSector] ?? h.fromSector} color={sectorColors[h.fromSector] ?? "#586577"} />
-                      <ArrowRight size={13} className="text-fg-muted flex-shrink-0" />
-                      {h.sectors.map((s) => (
-                        <SectorChip
-                          key={s.sectorCode}
-                          label={sectorLabels[s.sectorCode] ?? s.sectorCode}
-                          color={sectorColors[s.sectorCode] ?? "#586577"}
-                        />
-                      ))}
-                      <Badge variant={HANDOFF_STATUS_BADGE[aggregate]}>{HANDOFF_STATUS_LABEL[aggregate]}</Badge>
-                      <Badge variant={HANDOFF_PRIORITY_BADGE[h.priority]}>{HANDOFF_PRIORITY_LABEL[h.priority]}</Badge>
-                    </div>
-
-                    <p className="text-[length:var(--fs-body)] font-medium text-fg group-hover:text-brand transition-colors">
-                      {entityNames[h.entityId] ?? "(removido)"}
-                    </p>
-
-                    {h.message && (
-                      <p className="text-[length:var(--fs-helper)] text-fg-secondary mt-1">{h.message}</p>
-                    )}
-
-                    <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1.5">
-                      Solicitado por {h.requester.name} em{" "}
-                      {formatInstantDate(h.createdAt, { day: "2-digit", month: "long", year: "numeric" })}
-                    </p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                    <SectorChip label={sectorLabels[h.fromSector] ?? h.fromSector} color={sectorColors[h.fromSector] ?? "#586577"} />
+                    <ArrowRight size={13} className="text-fg-muted flex-shrink-0" />
+                    {h.sectors.map((s) => (
+                      <SectorChip
+                        key={s.sectorCode}
+                        label={sectorLabels[s.sectorCode] ?? s.sectorCode}
+                        color={sectorColors[s.sectorCode] ?? "#586577"}
+                      />
+                    ))}
+                    <Badge variant={HANDOFF_STATUS_BADGE[aggregate]}>{HANDOFF_STATUS_LABEL[aggregate]}</Badge>
+                    <Badge variant={HANDOFF_PRIORITY_BADGE[h.priority]}>{HANDOFF_PRIORITY_LABEL[h.priority]}</Badge>
                   </div>
-                </Link>
-              </Card>
+
+                  <p className="text-[length:var(--fs-card-title)] font-semibold text-fg group-hover:text-brand transition-colors">
+                    {entityNames[h.entityId] ?? "(removido)"}
+                  </p>
+
+                  {h.message && (
+                    <p className="text-[length:var(--fs-helper)] text-fg-secondary mt-1">{h.message}</p>
+                  )}
+
+                  <p className="text-[length:var(--fs-helper)] text-fg-muted mt-1.5">
+                    Solicitado por {h.requester.name} em{" "}
+                    {formatInstantDate(h.createdAt, { day: "2-digit", month: "long", year: "numeric" })}
+                  </p>
+                </div>
+              </Link>
             );
           })}
         </div>
