@@ -5,6 +5,7 @@ import { ArrowDown } from "lucide-react";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { useTestDraft } from "./useTestDraft";
 import { Button } from "@/components/ui/Button";
+import { ConfirmacaoEnviada } from "@/components/publico/ConfirmacaoEnviada";
 
 type Question = { id: string; text: string; options: string[] };
 type Props = { token: string; questions: Question[] };
@@ -90,12 +91,10 @@ export function QuizForm({ token, questions }: Props) {
 
   if (done) {
     return (
-      <div className="bg-success/10 border border-success/25 rounded-lg p-6 text-center">
-        <p className="text-[15px] font-semibold text-success">Teste enviado!</p>
-        <p className="text-[13px] text-fg-muted mt-1">
-          Obrigado por responder. O resultado já está disponível para a equipe de recrutamento.
-        </p>
-      </div>
+      <ConfirmacaoEnviada
+        titulo="Teste enviado!"
+        texto="Obrigado por responder. O resultado já está disponível para a equipe de recrutamento."
+      />
     );
   }
 
