@@ -18,7 +18,7 @@ export default function LoginError({
   }, [error]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
+    <div className="min-h-dvh flex items-center justify-center p-6">
       <div className="max-w-md text-center flex flex-col items-center gap-3">
         <span className="w-10 h-10 rounded-lg bg-danger/10 text-danger flex items-center justify-center">
           <AlertTriangle size={18} />
