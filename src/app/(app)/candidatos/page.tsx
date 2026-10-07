@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { UserSearch } from "lucide-react";
+import { Plus, UserSearch } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { canManageSector } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
@@ -15,6 +14,7 @@ import { lerLista } from "@/lib/filtroNaUrl";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { inativarCandidatosEmMassa } from "./actions";
 import { FiltrosDasColunasNaUrl } from "@/components/shared/FiltroDeColunas";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 
 const PER_PAGE = 20;
 
@@ -127,63 +127,65 @@ export default async function CandidatosPage({
         title="Candidatos"
         subtitle={<>{total} candidato{total !== 1 ? "s" : ""} no banco de talentos</>}
         action={<>{canCreate && (
-          <Button
-            href="/candidatos/nova"
-            variant="primary" className="font-medium"
-          >
-            + Novo Candidato
+          // Ícone no lugar do "+" escrito, sem `font-medium` por cima do
+          // Button — o botão de criar das outras listas (DRG-17, 07/10/2026).
+          <Button href="/candidatos/nova" variant="primary">
+            <Plus size={14} />
+            Novo Candidato
           </Button>
         )}</>}
       />
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <div className="w-full max-w-xs">
-          <DebouncedSearchInput placeholder="Buscar por nome, e-mail ou CPF…" />
-        </div>
 
-        {/* Situação no botão "Filtros" (o padrão é "Ativos", sem parâmetro);
-            a tag é o funil da coluna — eram os dois no painel antigo. */}
-        <FiltrosDaTela
-          campos={[
-            {
-              chave: "status",
-              rotulo: "Situação",
-              vazioLabel: "Ativos",
-              opcoes: STATUS_FILTERS.filter((s) => s.value !== "ativos").map((s) => ({ value: s.value, label: s.label })),
-            },
-          ]}
-        />
-      </div>
+      {/* No casco das irmãs Vagas e Testes (DRG-13, 07/10/2026): a contagem na
+          barra, a busca e o Filtros à direita — eram soltos acima da tabela.
+          Situação no botão "Filtros" (o padrão é "Ativos", sem parâmetro); a
+          tag é o funil da coluna — eram os dois no painel antigo. */}
+      <CascoDaTabela
+        contagem={contarItens(total, "candidato", "candidatos")}
+        busca={<DebouncedSearchInput placeholder="Buscar por nome, e-mail ou CPF…" className="w-72 max-w-full" />}
+        filtros={
+          <FiltrosDaTela
+            naBarra
+            campos={[
+              {
+                chave: "status",
+                rotulo: "Situação",
+                vazioLabel: "Ativos",
+                opcoes: STATUS_FILTERS.filter((s) => s.value !== "ativos").map((s) => ({ value: s.value, label: s.label })),
+              },
+            ]}
+          />
+        }
+      >
+        <FiltrosDasColunasNaUrl colunas={[{ chave: "tag", rotulo: "Tags" }]} />
 
-      <FiltrosDasColunasNaUrl colunas={[{ chave: "tag", rotulo: "Tags" }]} />
-
-      {candidatos.length === 0 ? (
-        <Card>
+        {candidatos.length === 0 ? (
           <EmptyState
             icon={<UserSearch />}
             title={
               searchTerm || tagsEscolhidas.length > 0 || statusFilter !== "ativos"
-                ? "Nenhum candidato encontrado com esses filtros."
-                : "Nenhum candidato cadastrado ainda."
+                ? "Nenhum candidato encontrado com esses filtros"
+                : "Nenhum candidato cadastrado ainda"
             }
           />
-        </Card>
-      ) : (
-        <CandidatosTable
-          candidatos={candidatos.map((c) => ({
-            id: c.id,
-            name: c.name,
-            active: c.active,
-            cpf: c.cpf,
-            email: c.email,
-            candidaturasCount: c._count.candidaturas,
-            createdAtLabel: formatInstantDate(c.createdAt),
-            tags: c.tags.map((t) => ({ id: t.tag.id, name: t.tag.name, color: t.tag.color })),
-          }))}
-          canCreate={canCreate}
-          inativarCandidatosEmMassa={inativarCandidatosEmMassa}
-          opcoesDeTag={opcoesDeTag}
-        />
-      )}
+        ) : (
+          <CandidatosTable
+            candidatos={candidatos.map((c) => ({
+              id: c.id,
+              name: c.name,
+              active: c.active,
+              cpf: c.cpf,
+              email: c.email,
+              candidaturasCount: c._count.candidaturas,
+              createdAtLabel: formatInstantDate(c.createdAt),
+              tags: c.tags.map((t) => ({ id: t.tag.id, name: t.tag.name, color: t.tag.color })),
+            }))}
+            canCreate={canCreate}
+            inativarCandidatosEmMassa={inativarCandidatosEmMassa}
+            opcoesDeTag={opcoesDeTag}
+          />
+        )}
+      </CascoDaTabela>
 
       <Pagination
         page={pageNum}

@@ -27,14 +27,22 @@ type Row = {
   linkedUserName: string | null;
 };
 
+const MOLDURA = "bg-surface border border-border rounded-lg overflow-hidden shadow-[var(--c41-shadow-xs)]";
+
 type Props = {
   people: Row[];
   canCreate: boolean;
   showLinkedUser?: boolean;
   definirAtivoPessoasEmMassa: (ids: string[], ativo: boolean) => Promise<void>;
+  /**
+   * Dentro do `CascoDaTabela` (Colaboradores de clientes, 07/10/2026): no
+   * computador quem desenha a moldura é o casco, junto com a barra; no celular
+   * a barra é um cartão próprio, e a lista de cartões ganha o seu.
+   */
+  noCasco?: boolean;
 };
 
-export function PessoasTable({ people, canCreate, showLinkedUser = false, definirAtivoPessoasEmMassa }: Props) {
+export function PessoasTable({ people, canCreate, showLinkedUser = false, definirAtivoPessoasEmMassa, noCasco = false }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   // Um diálogo só, servindo a ação em massa e a da linha — duas confirmações separadas
   // divergiriam no texto na primeira alteração.
@@ -170,14 +178,14 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, defini
 
   return (
     <>
-      <div className="bg-surface border border-border rounded-lg overflow-hidden shadow-[var(--c41-shadow-xs)]">
+      <div className={noCasco ? "" : MOLDURA}>
         {people.length === 0 ? (
           <EmptyState icon={<Users />} title="Nenhuma pessoa encontrada" />
         ) : (
           <>
           {/* Abaixo de md, cartões; de md para cima, a tabela. As duas
               compartilham a seleção — quem esconde uma delas é o CSS. */}
-          <div className="md:hidden">
+          <div className={`md:hidden ${noCasco ? MOLDURA : ""}`.trim()}>
             {canCreate && (
               <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border bg-table-header-bg">
                 <Checkbox checked={allSelected} onChange={toggleAll} aria-label="Selecionar todas" />
