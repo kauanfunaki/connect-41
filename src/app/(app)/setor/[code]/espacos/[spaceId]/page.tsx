@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { Folder as FolderIcon } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Card } from "@/components/ui/Card";
 import { ListsTable, type ListRow } from "@/components/kanban/ListsTable";
 import { NewFolderButton } from "@/components/kanban/NewFolderButton";
 import { NewListButton } from "@/components/kanban/NewListButton";
@@ -72,13 +74,11 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-2 mb-1">
-        <Link href={`/setor/${code}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          {sectorLabel(sectorLabels, code)}
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">{space.name}</span>
-      </div>
+      {/* A trilha pelo `Breadcrumb` compartilhado (07/10/2026) — era escrita à mão. */}
+      <Breadcrumb
+        className="mb-1!"
+        items={[{ label: sectorLabel(sectorLabels, code), href: `/setor/${code}` }, { label: space.name }]}
+      />
 
       {/* As ações moram no `action` do PageHeader (30/09): o cabeçalho estava
           aninhado numa linha própria, com a margem dele somada à da linha. */}
@@ -98,20 +98,24 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
 
       <div className="mb-6">
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2.5">Pastas</h2>
+        {/* Os dois vazios da tela no mesmo desenho (07/10/2026): "Pastas" era
+            uma frase solta e "Listas", um EmptyState num cartão à mão. */}
         {folders.length === 0 ? (
-          <p className="text-[13px] text-fg-muted">Nenhuma pasta neste espaço ainda.</p>
+          <Card>
+            <EmptyState title="Nenhuma pasta neste espaço ainda" description="Pastas agrupam as listas do espaço." />
+          </Card>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {folders.map((f) => (
               <div key={f.id} className="relative">
                 <Link
                   href={`/setor/${code}/pastas/${f.id}`}
-                  className="flex items-center gap-2.5 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] px-4 py-3 pr-10 hover:border-border-strong hover:-translate-y-0.5 transition-[border-color,transform]"
+                  className="flex items-center gap-2.5 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] px-4 py-3 pr-10 transition-[border-color,box-shadow,transform] duration-150 hover:border-brand/40 hover:shadow-[var(--c41-shadow-md)] hover:-translate-y-0.5"
                 >
                   <FolderIcon size={16} className="text-fg-muted flex-shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-[13px] font-medium text-fg truncate">{f.name}</p>
-                    <p className="text-[11px] text-fg-muted">{f._count.pipelines} {f._count.pipelines === 1 ? "lista" : "listas"}</p>
+                    <p className="text-[length:var(--fs-card-title)] font-semibold text-fg truncate">{f.name}</p>
+                    <p className="text-[length:var(--fs-micro)] text-fg-muted">{f._count.pipelines} {f._count.pipelines === 1 ? "lista" : "listas"}</p>
                   </div>
                 </Link>
                 {canCreate && (
@@ -128,9 +132,9 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
       <div>
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2.5">Listas</h2>
         {looseLists.length === 0 ? (
-          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)]">
+          <Card>
             <EmptyState title="Nenhuma lista solta neste espaço" description="Listas fora de pasta aparecem aqui." />
-          </div>
+          </Card>
         ) : (
           <ListsTable
             lists={looseLists.map(toListRow)}

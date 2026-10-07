@@ -88,13 +88,15 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
               // O menu "…" é irmão do <Link>, não filho: <button> dentro de <a>
               // é inválido e o clique navegaria junto.
               <div key={s.id} style={{ animationDelay: `${Math.min(i, 8) * 35}ms` }} className="reveal-in relative">
-                <div className="h-full flex flex-col bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] hover:border-border-strong transition-colors overflow-hidden">
+                {/* Cartão-link no desenho único (07/10/2026): o mesmo hover e o
+                    mesmo tamanho de título dos cartões do Kanban e das pastas. */}
+                <div className="h-full flex flex-col bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] transition-[border-color,box-shadow,transform] duration-150 hover:border-brand/40 hover:shadow-[var(--c41-shadow-md)] hover:-translate-y-0.5 overflow-hidden">
                   <span className="h-[3px] flex-shrink-0" style={{ background: s.color }} aria-hidden />
                   <Link href={`/setor/${code}/espacos/${s.id}`} className="group block px-4 pt-3.5 pb-3">
-                    <p className="font-display text-[15px] font-semibold text-fg group-hover:text-brand transition-colors pr-8 truncate">
+                    <p className="text-[length:var(--fs-card-title)] font-semibold text-fg group-hover:text-brand transition-colors pr-8 truncate">
                       {s.name}
                     </p>
-                    <p className="mt-1 flex items-center gap-3 text-[12px] text-fg-muted">
+                    <p className="mt-1 flex items-center gap-3 text-[length:var(--fs-2)] text-fg-muted">
                       <span className="inline-flex items-center gap-1">
                         <FolderClosed size={13} /> {s._count.folders} {s._count.folders === 1 ? "pasta" : "pastas"}
                       </span>
@@ -109,7 +111,7 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
                         <li key={p.id}>
                           <Link
                             href={boardPath(p)}
-                            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors"
+                            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[length:var(--fs-ui)] text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors"
                           >
                             <span className="size-1.5 rounded-full flex-shrink-0" style={{ background: p.color ?? s.color }} aria-hidden />
                             <span className="truncate">{p.name}</span>
@@ -120,7 +122,7 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
                         <li>
                           <Link
                             href={`/setor/${code}/espacos/${s.id}`}
-                            className="block rounded-md px-2 py-1.5 text-[12px] text-fg-muted hover:text-brand transition-colors"
+                            className="block rounded-md px-2 py-1.5 text-[length:var(--fs-2)] text-fg-muted hover:text-brand transition-colors"
                           >
                             + {restantes} {restantes === 1 ? "outra lista" : "outras listas"}
                           </Link>

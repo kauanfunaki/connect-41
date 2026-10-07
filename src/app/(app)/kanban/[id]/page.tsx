@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
@@ -152,27 +152,20 @@ export default async function KanbanBoardPage({
 
   return (
     <PageContainer className="h-full flex flex-col">
-      {/* flex-wrap: com setor, espaço, pasta e lista, a trilha estourava a
-          largura no celular. */}
-      <div className="flex flex-wrap items-center gap-2 mb-1 min-w-0">
-        <Link href={`/setor/${pipeline.sectorCode}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          {sectorLabels[pipeline.sectorCode] ?? pipeline.sectorCode}
-        </Link>
-        <span className="text-fg-muted">/</span>
-        <Link href={`/setor/${pipeline.sectorCode}/espacos/${pipeline.space.id}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-          {pipeline.space.name}
-        </Link>
-        {pipeline.folder && (
-          <>
-            <span className="text-fg-muted">/</span>
-            <Link href={`/setor/${pipeline.sectorCode}/pastas/${pipeline.folder.id}`} className="text-[13px] text-fg-muted hover:text-fg transition-colors">
-              {pipeline.folder.name}
-            </Link>
-          </>
-        )}
-        <span className="text-fg-muted">/</span>
-        <span className="text-[13px] text-fg">{pipeline.name}</span>
-      </div>
+      {/* A trilha pelo `Breadcrumb` compartilhado (07/10/2026) — era escrita à
+          mão. Ele já quebra linha: com setor, espaço, pasta e lista, a trilha
+          estourava a largura no celular. */}
+      <Breadcrumb
+        className="mb-1!"
+        items={[
+          { label: sectorLabels[pipeline.sectorCode] ?? pipeline.sectorCode, href: `/setor/${pipeline.sectorCode}` },
+          { label: pipeline.space.name, href: `/setor/${pipeline.sectorCode}/espacos/${pipeline.space.id}`, truncate: true },
+          ...(pipeline.folder
+            ? [{ label: pipeline.folder.name, href: `/setor/${pipeline.sectorCode}/pastas/${pipeline.folder.id}`, truncate: true }]
+            : []),
+          { label: pipeline.name },
+        ]}
+      />
 
       <PageHeader
         title={pipeline.name}
