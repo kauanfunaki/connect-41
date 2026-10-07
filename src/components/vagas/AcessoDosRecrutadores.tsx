@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -58,11 +59,11 @@ export function AcessoDosRecrutadores({ vagaId, restrita, escolhidos, recrutador
         : `Só ${marcados.size === 1 ? "1 recrutador vê" : `${marcados.size} recrutadores veem`} esta vaga.`;
 
   return (
-    <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
+    <Card className="p-5 mb-4">
       <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
         <div>
           <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Quem do Recrutamento vê esta vaga</h2>
-          <p className="text-[12px] text-fg-muted mt-0.5">{resumo}</p>
+          <p className="text-[length:var(--fs-2)] text-fg-muted mt-0.5">{resumo}</p>
         </div>
         <SegmentedControl<Modo>
           label="Quem do Recrutamento vê esta vaga"
@@ -77,7 +78,7 @@ export function AcessoDosRecrutadores({ vagaId, restrita, escolhidos, recrutador
 
       {modo === "escolhidos" &&
         (recrutadores.length === 0 ? (
-          <p className="text-[13px] text-fg-muted">Não há recrutadores ativos no setor.</p>
+          <p className="text-[length:var(--fs-ui)] text-fg-muted">Não há recrutadores ativos no setor.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-1">
             {recrutadores.map((r) => (
@@ -100,6 +101,6 @@ export function AcessoDosRecrutadores({ vagaId, restrita, escolhidos, recrutador
           </Button>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

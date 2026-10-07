@@ -9,8 +9,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { PortalCabecalho } from "./PortalCabecalho";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
-import { contasDoEscopo } from "@/lib/financeiro/consultas";
-import { totalizar, type SituacaoDaConta } from "@/lib/financeiro/contas";
+import { contasDoEscopo, totaisDoEscopo } from "@/lib/financeiro/consultas";
+import type { SituacaoDaConta } from "@/lib/financeiro/contas";
 import { saoPauloParts } from "@/lib/agenda";
 import { formatInstantDate } from "@/lib/format";
 import { moeda } from "@/lib/financeiro/formato";
@@ -32,6 +32,9 @@ const SITUACAO: Record<SituacaoDaConta, { rotulo: string; variante: "danger" | "
  * baixa. As mesmas regras de situação e total da tela interna
  * (`situacaoDaConta`, `totalizar`), para o cliente e a equipe lerem o mesmo
  * "vencido".
+ *
+ * Os totais do topo são somados no banco, sobre todas as contas do escopo
+ * (07/10) — eram a soma da lista, que para nas 500 de vencimento mais recente.
  */
 export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
   const { escopo, modulos } = await contextoFinanceiroDoPortal();
@@ -39,11 +42,10 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
   if (!modulos.has(modulo)) notFound();
 
   const hojeKey = saoPauloParts(new Date()).dateKey;
-  const contas = await contasDoEscopo(escopo, kind, hojeKey);
+  const [contas, totais] = await Promise.all([contasDoEscopo(escopo, kind, hojeKey), totaisDoEscopo(escopo, kind, hojeKey)]);
   // A empresa do cliente só aparece quando o acesso cobre mais de uma — ele
   // sabe quem é; repetir o próprio nome em toda linha só empurrava o resto.
   const variasEmpresas = new Set(contas.map((c) => c.empresaNome)).size > 1;
-  const totais = totalizar(contas);
   const aPagar = kind === "PAGAR";
   // A aprovação é de conta a pagar; o link só existe se a tela de aprovações existir para este cliente.
   const linkDaAprovacao = aPagar && modulos.has("bpo_aprovacoes");
@@ -55,12 +57,20 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
         descricao={aPagar ? "O que suas empresas têm a pagar." : "O que suas empresas têm a receber."}
       />
 
+      {/* O tom de cada cartão é o da tela da equipe (07/10): vencido e o que
+          vence hoje só ganham cor acima de zero; o pago é neutro e diz desde
+          quando soma — sem isso, "Pago R$ 10.483,00" não dizia de quando. */}
       <FaixaDeTotais
         itens={[
           { rotulo: "Em aberto", valor: moeda(totais.emAberto) },
-          { rotulo: "Vencido", valor: moeda(totais.vencido), tom: totais.vencido > 0 ? "text-danger" : "" },
-          { rotulo: "Vence hoje", valor: moeda(totais.venceHoje) },
-          { rotulo: aPagar ? "Pago" : "Recebido", valor: moeda(totais.pago), tom: "text-fg-muted" },
+          { rotulo: "Vencido", valor: moeda(totais.vencido), tom: totais.vencido > 0 ? "text-danger" : undefined },
+          { rotulo: "Vence hoje", valor: moeda(totais.venceHoje), tom: totais.venceHoje > 0 ? "text-warning" : undefined },
+          {
+            rotulo: aPagar ? "Pago" : "Recebido",
+            valor: moeda(totais.pago),
+            tom: "text-fg-muted",
+            detalhe: totais.pagoDesde ? `desde ${formatInstantDate(totais.pagoDesde, { month: "2-digit", year: "numeric" })}` : undefined,
+          },
         ]}
       />
 
@@ -187,7 +197,9 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
         </TabelaFiltravel>
 
         {contas.length >= 500 && (
-          <p className="text-[11px] text-fg-muted mt-3">Mostrando as 500 contas de vencimento mais recente.</p>
+          <p className="text-[11px] text-fg-muted mt-3">
+            Mostrando as 500 contas de vencimento mais recente. Os totais do topo somam todas.
+          </p>
         )}
         </>
       )}

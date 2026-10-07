@@ -1,4 +1,5 @@
 import { Selo } from "@/components/ui/Selo";
+import { num } from "@/lib/valora/formato";
 import type {
   AbsenceStatus,
   AbsenceType,
@@ -160,6 +161,21 @@ export const COR_DO_PARTICIPANTE: Record<TrainingParticipantStatus, string> = {
   CONCLUIDO: "bg-success/10 text-success border-success/25",
   VENCIDO: "bg-danger/10 text-danger border-danger/25",
 };
+
+/**
+ * Horas e notas do DP em pt-BR. O decimal do banco ia cru para a tela ("3.5h",
+ * média "8.25"), na mesma área em que Gestão e Valora mostram "3,5 h"
+ * (auditoria DRG-02, 07/10/2026). Duas casas porque as colunas são
+ * `Decimal(…, 2)`: "1,25 h" não pode virar "1,3 h". Vão para lib/format.ts
+ * quando a base criar o `formatarHoras`/`formatarNumero`.
+ */
+export function horasDoDP(v: { toString(): string } | number): string {
+  return `${num(Number(v.toString()), 2)} h`;
+}
+
+export function notaDoDP(v: { toString(): string } | number): string {
+  return num(Number(v.toString()), 2);
+}
 
 /** O selo de situação nas tabelas de DP — a pílula com a cor de um dos mapas acima. */
 export function SeloDoDP({ cor, children }: { cor: string; children: React.ReactNode }) {

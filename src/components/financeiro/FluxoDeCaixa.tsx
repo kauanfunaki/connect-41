@@ -11,6 +11,16 @@ import { moeda, tomDoValor } from "@/lib/financeiro/formato";
 
 const CABECALHO = "text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border";
 
+/**
+ * O realizado em texto neutro, e só o saldo negativo em vermelho (07/10,
+ * auditoria dos gráficos): entrada e saída são categoria, não situação — a
+ * coluna inteira verde ou vermelha, até "R$ 0,00", gastava a cor que avisa.
+ * O "−" do valor já diz o sinal.
+ */
+function tomDoSaldo(centavos: number): string {
+  return centavos < 0 ? "text-danger" : centavos === 0 ? "text-fg-muted" : "text-fg";
+}
+
 export function TabelaDoRealizado({ meses }: { meses: MesDoFluxo[] }) {
   const maior = Math.max(1, ...meses.flatMap((m) => [m.entradas, m.saidas]));
   return (
@@ -24,13 +34,13 @@ export function TabelaDoRealizado({ meses }: { meses: MesDoFluxo[] }) {
               <span className="font-medium text-fg">{m.rotulo}</span>
               <span className="text-right">
                 <span className="block text-[11px] text-fg-muted">Acumulado</span>
-                <span className={`tabular-nums font-semibold ${tomDoValor(m.saldoAcumulado)}`}>{moeda(m.saldoAcumulado)}</span>
+                <span className={`tabular-nums font-semibold ${tomDoSaldo(m.saldoAcumulado)}`}>{moeda(m.saldoAcumulado)}</span>
               </span>
             </div>
             <dl className="mt-2 grid grid-cols-3 gap-2">
-              <ParNoCartao rotulo="Entradas" valor={moeda(m.entradas)} tom="text-success" />
-              <ParNoCartao rotulo="Saídas" valor={moeda(m.saidas)} tom="text-danger" />
-              <ParNoCartao rotulo="Saldo do mês" valor={moeda(m.saldoDoMes)} tom={tomDoValor(m.saldoDoMes)} />
+              <ParNoCartao rotulo="Entradas" valor={moeda(m.entradas)} />
+              <ParNoCartao rotulo="Saídas" valor={moeda(m.saidas)} />
+              <ParNoCartao rotulo="Saldo do mês" valor={moeda(m.saldoDoMes)} tom={tomDoSaldo(m.saldoDoMes)} />
             </dl>
           </li>
         ))}
@@ -51,10 +61,10 @@ export function TabelaDoRealizado({ meses }: { meses: MesDoFluxo[] }) {
           {meses.map((m) => (
             <tr key={m.competencia} className="border-b border-border-soft">
               <td className="py-2 pl-4 pr-3 font-medium">{m.rotulo}</td>
-              <td className="py-2 pr-3 text-right tabular-nums text-success">{moeda(m.entradas)}</td>
-              <td className="py-2 pr-3 text-right tabular-nums text-danger">{moeda(m.saidas)}</td>
-              <td className={`py-2 pr-3 text-right tabular-nums ${tomDoValor(m.saldoDoMes)}`}>{moeda(m.saldoDoMes)}</td>
-              <td className={`py-2 pr-3 text-right tabular-nums font-medium ${tomDoValor(m.saldoAcumulado)}`}>{moeda(m.saldoAcumulado)}</td>
+              <td className="py-2 pr-3 text-right tabular-nums">{moeda(m.entradas)}</td>
+              <td className="py-2 pr-3 text-right tabular-nums">{moeda(m.saidas)}</td>
+              <td className={`py-2 pr-3 text-right tabular-nums ${tomDoSaldo(m.saldoDoMes)}`}>{moeda(m.saldoDoMes)}</td>
+              <td className={`py-2 pr-3 text-right tabular-nums font-medium ${tomDoSaldo(m.saldoAcumulado)}`}>{moeda(m.saldoAcumulado)}</td>
               <td className="py-2 pr-4 hidden md:table-cell">
                 {/* Duas barras, e não uma de saldo: entrada alta com saída alta é
                     outro mês que entrada baixa com saída baixa, com o mesmo saldo. */}

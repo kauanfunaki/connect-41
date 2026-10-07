@@ -25,7 +25,8 @@ import { getAuthContext, scopedSectors } from "@/lib/auth/context";
 import { getSectorMaps, getActiveSectors } from "@/lib/sectors";
 import { parseTaskWidgets, visibleTaskWidgets, type TaskWidgetKey } from "@/lib/taskWidgets";
 import { itensDaGestao } from "@/lib/gestao/itens";
-import { cargaPorPessoa, recorteDaGestao } from "@/lib/gestao/regras";
+import { cargaPorPessoa, recorteDaGestao, type CargaDaPessoa } from "@/lib/gestao/regras";
+import { LinhasDeSituacao, type LinhaDeSituacao, type Segmento } from "@/components/shared/Graficos";
 import { nomesDasPessoas } from "@/lib/gestao/telas";
 import { andando, paraComecar, pedeAgora, resumirDia } from "@/lib/meuDia";
 import { prazosDoPeriodo } from "@/lib/prazosDaAgenda";
@@ -114,6 +115,29 @@ function Bloco({
       )}
     </section>
   );
+}
+
+/**
+ * A carga de uma pessoa como linha do gráfico de situação (07/10, auditoria
+ * dos gráficos): era uma barrinha de 6px à mão com "2 atrasados · 1 parado" em
+ * texto. Cada item cai numa situação só — a mais urgente, na régua do topo
+ * da tela (`resumirDia`): atrasado, parado, vence em breve, e o resto em dia.
+ */
+function linhaDaCarga(p: CargaDaPessoa, nome: string): LinhaDeSituacao {
+  const n = { atrasado: 0, parado: 0, vencendo: 0, em_dia: 0 };
+  for (const { c } of p.itens) {
+    if (c.prazo?.situacao === "VENCIDO") n.atrasado++;
+    else if (c.coluna === "PARADO") n.parado++;
+    else if (c.prazo?.situacao === "VENCENDO") n.vencendo++;
+    else n.em_dia++;
+  }
+  const segmentos: Segmento[] = [
+    { chave: "atrasado", rotulo: "Atrasados", valor: n.atrasado, tom: "critico" },
+    { chave: "parado", rotulo: "Parados", valor: n.parado, tom: "atencao" },
+    { chave: "vencendo", rotulo: "Vencem em breve", valor: n.vencendo, tom: "proximo" },
+    { chave: "em_dia", rotulo: "Em dia", valor: n.em_dia, tom: "neutro" },
+  ];
+  return { chave: p.userId, rotulo: nome, segmentos };
 }
 
 export default async function MeuDiaPage({ searchParams }: { searchParams: Promise<{ visao?: string }> }) {
@@ -299,26 +323,12 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
               {carga.length === 0 ? (
                 <p className="px-4 py-5 text-[length:var(--fs-body)] text-fg-muted">Ninguém com item em aberto.</p>
               ) : (
-                <ul className="divide-y divide-border">
-                  {carga.slice(0, 10).map((p) => {
-                    const maior = Math.max(1, ...carga.map((x) => x.abertos));
-                    return (
-                      <li key={p.userId} className="px-4 py-2.5">
-                        <div className="flex items-center justify-between gap-3 text-[13px]">
-                          <span className="truncate font-medium text-fg">{nomeDe.get(p.userId) ?? "—"}</span>
-                          <span className="flex-shrink-0 text-fg-muted tnum">{p.abertos} em aberto</span>
-                        </div>
-                        <div className="mt-1.5 flex items-center gap-2">
-                          <span className="h-1.5 flex-1 rounded-full bg-surface-hover overflow-hidden">
-                            <span className="block h-full rounded-full bg-brand" style={{ width: `${(p.abertos / maior) * 100}%` }} />
-                          </span>
-                          {p.vencidos > 0 && <span className="text-[11px] font-medium text-danger tnum">{p.vencidos} atrasado{p.vencidos === 1 ? "" : "s"}</span>}
-                          {p.parados > 0 && <span className="text-[11px] font-medium text-warning tnum">{p.parados} parado{p.parados === 1 ? "" : "s"}</span>}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                <div className="px-4 py-3.5">
+                  <LinhasDeSituacao
+                    titulo="Itens em aberto por pessoa e situação"
+                    linhas={carga.slice(0, 10).map((p) => linhaDaCarga(p, nomeDe.get(p.userId) ?? "—"))}
+                  />
+                </div>
               )}
             </section>
           )}

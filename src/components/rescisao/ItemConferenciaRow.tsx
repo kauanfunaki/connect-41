@@ -12,6 +12,7 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { CornerDownLeft } from "lucide-react";
 import { Selo } from "@/components/ui/Selo";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { brl } from "@/lib/valora/formato";
 
 export type CheckState = {
   status: "PENDENTE" | "CONFERIDO" | "DIVERGENTE" | "NAO_APLICAVEL";
@@ -65,6 +66,16 @@ const STATUS_STYLE: Record<CheckState["status"], string> = {
   NAO_APLICAVEL: "bg-surface-2 text-fg-secondary border-border",
 };
 
+/**
+ * O valor informado chega como o campo o edita ("1234,56"); na linha e na nota
+ * ele aparecia assim, sem milhar, ao lado da referência "R$ 1.234,56"
+ * (auditoria DRG-01, 07/10/2026). Troca por `formatarReais` de lib/format.ts
+ * quando a base o criar.
+ */
+function reaisDoInformado(v: string): string {
+  return brl(Number(v.replace(/\./g, "").replace(",", ".")));
+}
+
 const STATUS_LABEL: Record<CheckState["status"], string> = {
   PENDENTE: "Pendente",
   CONFERIDO: "Conferido",
@@ -91,7 +102,7 @@ export function ItemConferenciaRow({ item, current, referencia, action, canEdit 
 
   const notaSugerida =
     sugereDivergente && referencia?.valorLabel && current?.informedValue
-      ? `Informado R$ ${current.informedValue}; referência ${referencia.valorLabel}${
+      ? `Informado ${reaisDoInformado(current.informedValue)}; referência ${referencia.valorLabel}${
           referencia.deltaLabel ? ` (diferença de ${referencia.deltaLabel})` : ""
         }.`
       : "";
@@ -101,40 +112,40 @@ export function ItemConferenciaRow({ item, current, referencia, action, canEdit 
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-[13px] font-medium text-fg">{item.label}</p>
+            <p className="text-[length:var(--fs-ui)] font-medium text-fg">{item.label}</p>
             <Selo cor={STATUS_STYLE[efetivo]}>
               {STATUS_LABEL[efetivo]}
             </Selo>
             {current?.informedValue && (
-              <span className="text-[12px] text-fg-secondary tnum">R$ {current.informedValue}</span>
+              <span className="text-[length:var(--fs-2)] text-fg-secondary tnum">{reaisDoInformado(current.informedValue)}</span>
             )}
 
             {/* Referência do motor — sempre em tom mudo, pra nunca competir
                 visualmente com o valor que a contabilidade informou. */}
             {referencia?.situacao === "CALCULADO" && referencia.valorLabel && (
-              <span className="text-[12px] text-fg-muted tnum" title={referencia.formula ?? undefined}>
+              <span className="text-[length:var(--fs-2)] text-fg-muted tnum" title={referencia.formula ?? undefined}>
                 ref. {referencia.valorLabel}
               </span>
             )}
             {referencia?.divergente && referencia.deltaLabel && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border bg-danger/10 text-danger border-danger/25 tnum">
+              <Selo tom="perigo" className="tnum">
                 Δ {referencia.deltaLabel}
-              </span>
+              </Selo>
             )}
             {referencia && referencia.situacao !== "CALCULADO" && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border bg-surface-2 text-fg-muted border-border">
+              <Selo tom="neutro">
                 {referencia.situacao === "NAO_DEVIDA"
                   ? "não devida"
                   : referencia.situacao === "DESABILITADA_CONFIG"
                     ? "desabilitada"
                     : "sem referência"}
-              </span>
+              </Selo>
             )}
           </div>
-          {item.hint && <p className="text-[12px] text-fg-muted mt-0.5">{item.hint}</p>}
-          {current?.note && <p className="text-[12px] text-fg-secondary mt-1 whitespace-pre-wrap">{current.note}</p>}
+          {item.hint && <p className="text-[length:var(--fs-2)] text-fg-muted mt-0.5">{item.hint}</p>}
+          {current?.note && <p className="text-[length:var(--fs-2)] text-fg-secondary mt-1 whitespace-pre-wrap">{current.note}</p>}
           {current?.checkedByName && current.checkedAtLabel && (
-            <p className="text-[11px] text-fg-muted mt-1">
+            <p className="text-[length:var(--fs-micro)] text-fg-muted mt-1">
               Conferido por {current.checkedByName} em {current.checkedAtLabel}
             </p>
           )}
@@ -158,36 +169,39 @@ export function ItemConferenciaRow({ item, current, referencia, action, canEdit 
       {open && canEdit && referencia && (
         <div className="mt-3 rounded-md border border-border bg-surface-2 px-4 py-3">
           <div className="flex items-center justify-between gap-3 flex-wrap mb-1">
-            <p className="text-[12px] font-semibold text-fg">Base do cálculo de referência</p>
-            <span className="text-[11px] text-fg-muted">{CONFIANCA_LABEL[referencia.confianca]}</span>
+            <p className="text-[length:var(--fs-2)] font-semibold text-fg">Base do cálculo de referência</p>
+            <span className="text-[length:var(--fs-micro)] text-fg-muted">{CONFIANCA_LABEL[referencia.confianca]}</span>
           </div>
 
           {referencia.formula ? (
-            <p className="text-[12px] text-fg-secondary tnum">{referencia.formula}</p>
+            <p className="text-[length:var(--fs-2)] text-fg-secondary tnum">{referencia.formula}</p>
           ) : (
-            <p className="text-[12px] text-fg-secondary">{referencia.motivo}</p>
+            <p className="text-[length:var(--fs-2)] text-fg-secondary">{referencia.motivo}</p>
           )}
 
           {referencia.fundamento && (
-            <p className="text-[11px] text-fg-muted mt-1">Fundamento: {referencia.fundamento}</p>
+            <p className="text-[length:var(--fs-micro)] text-fg-muted mt-1">Fundamento: {referencia.fundamento}</p>
           )}
           {referencia.premissas.length > 0 && (
             <ul className="mt-1.5 space-y-0.5">
               {referencia.premissas.map((p, i) => (
-                <li key={i} className="text-[11px] text-fg-muted">
+                <li key={i} className="text-[length:var(--fs-micro)] text-fg-muted">
                   · {p}
                 </li>
               ))}
             </ul>
           )}
 
-          {referencia.situacao === "CALCULADO" && referencia.valorLabel && item.hasValue && (
+          {referencia.situacao === "CALCULADO" && referencia.valorLabel && referencia.valor != null && item.hasValue && (
             // Era um link azul (até 30/09): preenche o campo, é ação — botão.
+            // Preenche pelo número, no formato do campo ("1234,56"): o rótulo
+            // vem do Intl, com espaço fixo depois do "R$", e o recorte do texto
+            // deixava de funcionar.
             <Button
               variant="secondary"
               size="xs"
               className="mt-2"
-              onClick={() => setValorInformado(referencia.valorLabel!.replace("R$ ", ""))}
+              onClick={() => setValorInformado(referencia.valor!.toFixed(2).replace(".", ","))}
             >
               <CornerDownLeft size={11} />
               Usar {referencia.valorLabel} como valor informado

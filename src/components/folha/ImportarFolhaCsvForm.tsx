@@ -37,14 +37,14 @@ export function ImportarFolhaCsvForm({ action }: Props) {
   return (
     <div className="border-t border-border pt-4">
       <div className="flex items-center justify-between gap-3 mb-2">
-        <h3 className="text-[13px] font-medium text-fg">Importar via CSV</h3>
+        <h3 className="text-[length:var(--fs-ui)] font-medium text-fg">Importar via CSV</h3>
         {/* Revisão de 05/10: botão não é link — baixar o modelo é ação, não navegação. */}
         <Button variant="secondary" size="xs" href={TEMPLATE_URL} download="modelo-folha.csv">
           <Download size={13} />
           Baixar modelo
         </Button>
       </div>
-      <p className="text-[12px] text-fg-muted mb-3">
+      <p className="text-[length:var(--fs-2)] text-fg-muted mb-3">
         Colunas obrigatórias: <strong>CPF</strong> e <strong>Salário Bruto</strong>. As demais são opcionais.
         O CPF é usado para casar cada linha com um colaborador já cadastrado nesta empresa.
       </p>
@@ -63,21 +63,21 @@ export function ImportarFolhaCsvForm({ action }: Props) {
       </form>
 
       {state && "error" in state && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2 mt-3">
+        <p className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2 mt-3">
           {state.error}
         </p>
       )}
 
       {state && "success" in state && (
         <div className="mt-3 bg-surface-2 border border-border rounded-md px-3 py-2">
-          <p className="text-[13px] text-fg">
+          <p className="text-[length:var(--fs-ui)] text-fg">
             {state.imported} lançamento{state.imported !== 1 ? "s" : ""} importado{state.imported !== 1 ? "s" : ""}
             {state.skipped.length > 0 && `, ${state.skipped.length} ignorado${state.skipped.length !== 1 ? "s" : ""}`}.
           </p>
           {state.skipped.length > 0 && (
             <ul className="mt-2 space-y-1">
               {state.skipped.map((s, idx) => (
-                <li key={idx} className="text-[12px] text-fg-muted">
+                <li key={idx} className="text-[length:var(--fs-2)] text-fg-muted">
                   Linha {s.row}: {s.reason}
                 </li>
               ))}
