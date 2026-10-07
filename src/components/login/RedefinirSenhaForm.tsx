@@ -2,10 +2,11 @@
 
 import { useActionState } from "react";
 import { ArrowLeft } from "lucide-react";
-import { PasswordField } from "./PasswordField";
-import { AuthField, AUTH_INPUT } from "./AuthShell";
 import { LockIcon } from "./icons";
+import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
+import { CampoDeSenha } from "@/components/ui/CampoDeSenha";
+import { CampoForm } from "@/components/ui/CampoForm";
 
 type ActionState = { error: string } | { success: true } | null;
 
@@ -20,8 +21,8 @@ export function RedefinirSenhaForm({ action, token }: Props) {
   if (state && "success" in state) {
     return (
       <div className="text-center py-2 space-y-3">
-        <p className="text-[14px] font-semibold text-fg">Senha redefinida</p>
-        <p className="text-[13px] text-fg-muted leading-relaxed">
+        <p className="text-label font-semibold text-fg">Senha redefinida</p>
+        <p className="text-ui text-fg-muted leading-relaxed">
           Sua senha foi alterada. Todas as sessões ativas foram encerradas por segurança — entre novamente com a nova
           senha.
         </p>
@@ -32,42 +33,41 @@ export function RedefinirSenhaForm({ action, token }: Props) {
     );
   }
 
+  // As duas senhas com o `CampoDeSenha` do sistema (07/10/2026), cada uma com
+  // o seu olho e o cadeado — a de confirmação era uma caixa cega, sem olho. Os
+  // nomes `password` e `confirmPassword` são os que a action lê.
   return (
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="token" value={token} />
 
-      <PasswordField label="Nova senha" autoComplete="new-password" />
-
-      {/* PasswordField usa id/name fixos ("password") — o campo de confirmação
-          precisa dos seus próprios, então não reaproveita o componente aqui.
-          Mas usa a mesma caixa, com o cadeado: sem ele, o texto desta senha
-          começava 24px à esquerda do da senha de cima. */}
-      <AuthField label="Confirmar nova senha" htmlFor="confirmPassword" icon={<LockIcon />}>
-        <input
-          id="confirmPassword"
-          name="confirmPassword"
-          type="password"
+      <CampoForm label="Nova senha" htmlFor="password" required>
+        <CampoDeSenha
+          id="password"
+          name="password"
           autoComplete="new-password"
           required
           minLength={8}
           placeholder="••••••••"
-          className={AUTH_INPUT}
+          icon={<LockIcon />}
         />
-      </AuthField>
+      </CampoForm>
 
-      {state?.error && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
-          {state.error}
-        </p>
-      )}
+      <CampoForm label="Confirmar nova senha" htmlFor="confirmPassword" required>
+        <CampoDeSenha
+          id="confirmPassword"
+          name="confirmPassword"
+          autoComplete="new-password"
+          required
+          minLength={8}
+          placeholder="••••••••"
+          icon={<LockIcon />}
+        />
+      </CampoForm>
 
-      <Button
-        type="submit"
-        size="md"
-        disabled={isPending}
-        className="w-full mt-1"
-      >
-        {isPending ? "Salvando…" : "Redefinir senha"}
+      {state?.error && <Aviso>{state.error}</Aviso>}
+
+      <Button type="submit" size="md" loading={isPending} className="w-full mt-1">
+        Redefinir senha
       </Button>
 
       {/* Revisão de 05/10: botão não é link — era texto azul. */}

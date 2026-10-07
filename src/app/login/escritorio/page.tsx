@@ -7,6 +7,7 @@ import { MolduraDaEquipe } from "@/components/login/MolduraDaEquipe";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Aviso } from "@/components/ui/Aviso";
 
 const ERROS: Record<string, string> = {
   "fora-da-lista": "Escolha um dos escritórios da lista.",
@@ -90,7 +91,7 @@ export default async function EscolherEscritorioPage({ searchParams }: { searchP
           </fieldset>
 
           {mensagem && (
-            <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{mensagem}</p>
+            <Aviso>{mensagem}</Aviso>
           )}
 
           <Button type="submit" size="md" className="w-full mt-1">
