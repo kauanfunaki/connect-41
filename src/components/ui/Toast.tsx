@@ -79,10 +79,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={value}>
       {children}
       <div className="fixed bottom-20 right-4 z-50 flex flex-col gap-2 w-[min(360px,calc(100vw-2rem))]">
-        <div role="alert" className="flex flex-col gap-2 empty:hidden">
+        {/* As duas regiões ficam montadas e visíveis mesmo vazias (sem
+            `hidden`): fora da árvore de acessibilidade, o leitor de tela não
+            anuncia o que entra nelas. Vazias, não ocupam altura. */}
+        <div role="alert" className="flex flex-col gap-2">
           {toasts.filter((t) => t.kind === "error").map(item)}
         </div>
-        <div role="status" className="flex flex-col gap-2 empty:hidden">
+        <div role="status" className="flex flex-col gap-2">
           {toasts.filter((t) => t.kind !== "error").map(item)}
         </div>
       </div>
