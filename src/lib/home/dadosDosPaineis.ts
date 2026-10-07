@@ -6,8 +6,17 @@
 //
 // Os argumentos são primitivos (ou o mesmo `ctx` que a Home repassa), porque
 // é pela identidade deles que o `cache()` reconhece a mesma chamada.
+//
+// Um painel que falha não derruba a Home (07/10, auditoria dos gráficos): a
+// consulta que lança devolve `null`, o painel mostra o aviso no lugar dele e
+// a faixa de destaques segue com os números dos outros. Era o `error.tsx` da
+// rota que trocava a tela inteira por "Não foi possível carregar o resumo" —
+// por causa, por exemplo, da fila do Societário. O mesmo desenho do Início do
+// portal (`BlocosDoInicio`). Como o `null` também passa pelo `cache()`, a
+// faixa e o painel concordam sobre o que faltou, e o erro vai uma vez ao log.
 
 import { cache } from "react";
+import { unstable_rethrow } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import type { AuthContext } from "@/lib/auth/context";
 import { scopedVagaWhere } from "@/lib/auth/scope";
@@ -26,62 +35,80 @@ import type { AcessoDoPainel } from "./acessoDosPaineis";
 import type { NumerosDaHome } from "./destaques";
 import { aPagarPorSemana, carteiraPorFaixa, contarFerias, faixasDasPendencias, type Soma } from "./paineis";
 
+/** A consulta do painel, ou `null` quando ela falha — o erro fica no log do servidor. */
+async function tentar<T>(painel: string, consulta: () => Promise<T>): Promise<T | null> {
+  try {
+    return await consulta();
+  } catch (err) {
+    // `redirect()`/`notFound()` e afins são o Next conduzindo a resposta, não falha.
+    unstable_rethrow(err);
+    console.error(`[home] painel indisponível: ${painel}`, err);
+    return null;
+  }
+}
+
 // ─── BPO ───────────────────────────────────────────────────────────────────
 
 /** Os títulos em aberto do escritório, nas faixas do painel de contas e nas semanas. */
-export const dadosDaCarteira = cache(async (tenantId: string) => {
-  const hojeKey = saoPauloParts(new Date()).dateKey;
-  const titulos = await titulosEmAberto({ tenantId, companyIds: null });
-  return {
-    pagar: carteiraPorFaixa(titulos, "PAGAR", hojeKey),
-    receber: carteiraPorFaixa(titulos, "RECEBER", hojeKey),
-    semanas: aPagarPorSemana(titulos, hojeKey),
-  };
-});
+export const dadosDaCarteira = cache((tenantId: string) =>
+  tentar("contas", async () => {
+    const hojeKey = saoPauloParts(new Date()).dateKey;
+    const titulos = await titulosEmAberto({ tenantId, companyIds: null });
+    return {
+      pagar: carteiraPorFaixa(titulos, "PAGAR", hojeKey),
+      receber: carteiraPorFaixa(titulos, "RECEBER", hojeKey),
+      semanas: aPagarPorSemana(titulos, hojeKey),
+    };
+  })
+);
 
-export const dadosDasPendencias = cache(async (tenantId: string, verPendencias: boolean, verAprovacoes: boolean) => {
-  const agora = new Date();
-  const prisma = getPrisma();
-  const [resumo, aprovacoes] = await Promise.all([
-    // O painel é do BPO: só as do setor do módulo (e as sem setor, de antes de 01/10).
-    verPendencias
-      ? setorPadraoDasPendencias(tenantId).then((padrao) =>
-          resumoDasPendencias({ tenantId, companyIds: null, setores: soDoSetorPadrao(padrao) }, agora)
-        )
-      : null,
-    // A contagem da fila de /aprovacoes (aguardando e reprovadas travam a baixa).
-    verAprovacoes
-      ? prisma.financeEntry.groupBy({
-          by: ["approvalStatus"],
-          where: { tenantId, kind: "PAGAR", status: { not: "CANCELADO" }, approvalStatus: { in: ["AGUARDANDO", "REPROVADO"] } },
-          _count: { _all: true },
-          _sum: { amount: true },
-        })
-      : null,
-  ]);
+export const dadosDasPendencias = cache((tenantId: string, verPendencias: boolean, verAprovacoes: boolean) =>
+  tentar("pendências e aprovações", async () => {
+    const agora = new Date();
+    const prisma = getPrisma();
+    const [resumo, aprovacoes] = await Promise.all([
+      // O painel é do BPO: só as do setor do módulo (e as sem setor, de antes de 01/10).
+      verPendencias
+        ? setorPadraoDasPendencias(tenantId).then((padrao) =>
+            resumoDasPendencias({ tenantId, companyIds: null, setores: soDoSetorPadrao(padrao) }, agora)
+          )
+        : null,
+      // A contagem da fila de /aprovacoes (aguardando e reprovadas travam a baixa).
+      verAprovacoes
+        ? prisma.financeEntry.groupBy({
+            by: ["approvalStatus"],
+            where: { tenantId, kind: "PAGAR", status: { not: "CANCELADO" }, approvalStatus: { in: ["AGUARDANDO", "REPROVADO"] } },
+            _count: { _all: true },
+            _sum: { amount: true },
+          })
+        : null,
+    ]);
 
-  const daAprovacao = (s: "AGUARDANDO" | "REPROVADO"): Soma => {
-    const g = aprovacoes?.find((a) => a.approvalStatus === s);
-    return { n: g?._count._all ?? 0, centavos: g?._sum.amount ? centavosDeDecimal(g._sum.amount) : 0 };
-  };
-  return {
-    pendencias: resumo ? faixasDasPendencias(resumo) : null,
-    aprovacoes: aprovacoes ? { aguardando: daAprovacao("AGUARDANDO"), reprovadas: daAprovacao("REPROVADO") } : null,
-  };
-});
+    const daAprovacao = (s: "AGUARDANDO" | "REPROVADO"): Soma => {
+      const g = aprovacoes?.find((a) => a.approvalStatus === s);
+      return { n: g?._count._all ?? 0, centavos: g?._sum.amount ? centavosDeDecimal(g._sum.amount) : 0 };
+    };
+    return {
+      pendencias: resumo ? faixasDasPendencias(resumo) : null,
+      aprovacoes: aprovacoes ? { aguardando: daAprovacao("AGUARDANDO"), reprovadas: daAprovacao("REPROVADO") } : null,
+    };
+  })
+);
 
 // ─── Societário ────────────────────────────────────────────────────────────
 
-export const dadosDosProcessos = cache(async (tenantId: string) => {
-  const agora = new Date();
-  const feriados = await feriadosDoTenant(tenantId);
-  const fila = await listarFila(tenantId, {}, feriados, agora);
-  return {
-    fila,
-    estourados: fila.filter((l) => l.prazo.situacao === "estourado").length,
-    noLimite: fila.filter((l) => l.prazo.situacao === "no_limite").length,
-  };
-});
+export const dadosDosProcessos = cache((tenantId: string) =>
+  tentar("processos", async () => {
+    const agora = new Date();
+    const feriados = await feriadosDoTenant(tenantId);
+    const fila = await listarFila(tenantId, {}, feriados, agora);
+    return {
+      fila,
+      estourados: fila.filter((l) => l.prazo.situacao === "estourado").length,
+      noLimite: fila.filter((l) => l.prazo.situacao === "no_limite").length,
+    };
+  })
+);
 
 // ─── DP ────────────────────────────────────────────────────────────────────
 
@@ -89,45 +116,51 @@ export const dadosDosProcessos = cache(async (tenantId: string) => {
 const FERIAS_EM_ABERTO = ["PLANEJADA", "SOLICITADA", "EM_ANALISE", "APROVADA", "PROGRAMADA", "EM_GOZO"] as const;
 const EXAMES_PENDENTES = ["SOLICITADO", "AGENDADO", "REALIZADO", "ASO_PENDENTE"] as const;
 
-export const dadosDoDP = cache(async (tenantId: string) => {
-  const prisma = getPrisma();
-  const [ferias, admissoes, rescisoes, exames, afastados] = await Promise.all([
-    prisma.vacation.findMany({ where: { tenantId, status: { in: [...FERIAS_EM_ABERTO] } }, select: { concessivePeriodEnd: true } }),
-    prisma.person.count({ where: { tenantId, type: "COLABORADOR", employmentStatus: "ADMISSAO_EM_ANDAMENTO" } }),
-    prisma.termination.count({ where: { tenantId, status: { notIn: ["FINALIZADO", "CANCELADO"] } } }),
-    prisma.exameAdmissional.count({ where: { tenantId, status: { in: [...EXAMES_PENDENTES] } } }),
-    prisma.absence.count({ where: { tenantId, status: { notIn: [...AFASTAMENTO_ENCERRADO] } } }),
-  ]);
-  return { ferias: contarFerias(ferias, new Date()), admissoes, rescisoes, exames, afastados };
-});
+export const dadosDoDP = cache((tenantId: string) =>
+  tentar("DP", async () => {
+    const prisma = getPrisma();
+    const [ferias, admissoes, rescisoes, exames, afastados] = await Promise.all([
+      prisma.vacation.findMany({ where: { tenantId, status: { in: [...FERIAS_EM_ABERTO] } }, select: { concessivePeriodEnd: true } }),
+      prisma.person.count({ where: { tenantId, type: "COLABORADOR", employmentStatus: "ADMISSAO_EM_ANDAMENTO" } }),
+      prisma.termination.count({ where: { tenantId, status: { notIn: ["FINALIZADO", "CANCELADO"] } } }),
+      prisma.exameAdmissional.count({ where: { tenantId, status: { in: [...EXAMES_PENDENTES] } } }),
+      prisma.absence.count({ where: { tenantId, status: { notIn: [...AFASTAMENTO_ENCERRADO] } } }),
+    ]);
+    return { ferias: contarFerias(ferias, new Date()), admissoes, rescisoes, exames, afastados };
+  })
+);
 
 // ─── Recrutamento ──────────────────────────────────────────────────────────
 
 /** Pelo `ctx` (e não só o tenant): o escopo de /vagas depende do setor ativo e da regra do recrutador. */
-export const dadosDoRecrutamento = cache(async (ctx: AuthContext) => {
-  const prisma = getPrisma();
-  // Candidatura não tem setor, então vem pela vaga.
-  const vagasAbertas = { AND: [scopedVagaWhere(ctx), { status: { in: ["ABERTA" as const, "EM_ANDAMENTO" as const] } }] };
-  const [vagas, candidaturas] = await Promise.all([
-    prisma.vaga.count({ where: vagasAbertas }),
-    prisma.candidatura.findMany({ where: { tenantId: ctx.tenantId, vaga: vagasAbertas }, select: { stage: true, status: true } }),
-  ]);
-  return { vagas, funil: computeFunnelConversion(candidaturas) };
-});
+export const dadosDoRecrutamento = cache((ctx: AuthContext) =>
+  tentar("recrutamento", async () => {
+    const prisma = getPrisma();
+    // Candidatura não tem setor, então vem pela vaga.
+    const vagasAbertas = { AND: [scopedVagaWhere(ctx), { status: { in: ["ABERTA" as const, "EM_ANDAMENTO" as const] } }] };
+    const [vagas, candidaturas] = await Promise.all([
+      prisma.vaga.count({ where: vagasAbertas }),
+      prisma.candidatura.findMany({ where: { tenantId: ctx.tenantId, vaga: vagasAbertas }, select: { stage: true, status: true } }),
+    ]);
+    return { vagas, funil: computeFunnelConversion(candidaturas) };
+  })
+);
 
 // ─── Certificados ──────────────────────────────────────────────────────────
 
-export const dadosDosCertificados = cache(async (tenantId: string) => {
-  const hoje = new Date();
-  const certs = await listarCertificados(tenantId);
-  const atuais = atuaisPorDocumento(certs);
-  const c = { vencido: 0, a_renovar: 0, vigente: 0 };
-  for (const cert of certs) {
-    const s = situacaoDoCertificado(cert, atuais.get(cert.documento), hoje);
-    if (s !== "substituido") c[s] += 1;
-  }
-  return c;
-});
+export const dadosDosCertificados = cache((tenantId: string) =>
+  tentar("certificados", async () => {
+    const hoje = new Date();
+    const certs = await listarCertificados(tenantId);
+    const atuais = atuaisPorDocumento(certs);
+    const c = { vencido: 0, a_renovar: 0, vigente: 0 };
+    for (const cert of certs) {
+      const s = situacaoDoCertificado(cert, atuais.get(cert.documento), hoje);
+      if (s !== "substituido") c[s] += 1;
+    }
+    return c;
+  })
+);
 
 // ─── Faixa de destaques ────────────────────────────────────────────────────
 
@@ -135,7 +168,8 @@ export const dadosDosCertificados = cache(async (tenantId: string) => {
  * Os números dos painéis que estão na Home desta pessoa — e só deles: o
  * painel que ela não alcança (ou ocultou em "Personalizar") não é consultado
  * aqui. Como as funções acima são `cache()`, isto não custa consulta nova: é
- * o mesmo resultado que o painel usa logo abaixo.
+ * o mesmo resultado que o painel usa logo abaixo. Painel cuja consulta falhou
+ * (`null`) fica fora da faixa, como se não estivesse na Home.
  */
 export async function numerosDaHome(
   ctx: AuthContext,
