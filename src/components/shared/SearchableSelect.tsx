@@ -237,7 +237,7 @@ export function SearchableSelect({
     );
   }
 
-  const rotuloDeSecao = "px-3 pt-2 pb-1 text-[11px] font-semibold text-fg-muted uppercase tracking-[0.04em]";
+  const rotuloDeSecao = "px-3 pt-2 pb-1 c41-rotulo";
   const inicioDosRecentes = vazioLabel ? 1 : 0;
   const inicioDaLista = inicioDosRecentes + opcoesRecentes.length;
 
@@ -284,7 +284,7 @@ export function SearchableSelect({
                   escolher("");
                 }
               }}
-              className="p-0.5 rounded text-fg-muted hover:text-fg hover:bg-surface-2"
+              className="p-0.5 rounded-sm text-fg-muted hover:text-fg hover:bg-surface-2"
             >
               <X size={13} />
             </span>

@@ -280,7 +280,7 @@ export function RichTextEditor({
           onDragEnd={onHandleDragEnd}
           onMouseDown={(e) => e.preventDefault()}
           style={{ top: handle.top + 2 }}
-          className={`absolute w-6 h-6 flex items-center justify-center rounded text-fg-muted hover:text-fg hover:bg-surface-hover cursor-grab active:cursor-grabbing ${bare ? "-left-8" : "left-1.5"}`}
+          className={`absolute w-6 h-6 flex items-center justify-center rounded-sm text-fg-muted hover:text-fg hover:bg-surface-hover cursor-grab active:cursor-grabbing ${bare ? "-left-8" : "left-1.5"}`}
           title="Arrastar para reordenar"
           aria-label="Arrastar bloco para reordenar"
         >

@@ -69,7 +69,7 @@ function comNegrito(texto: string, chave: string) {
 function BalaoDaPergunta({ texto }: { texto: string }) {
   const p = separarAnexos(texto);
   return (
-    <div className="rounded-2xl rounded-br-md bg-brand-solid text-on-brand px-3.5 py-2.5 text-[13px] flex flex-col gap-2">
+    <div className="rounded-lg rounded-br-sm bg-brand-solid text-on-brand px-3.5 py-2.5 text-[13px] flex flex-col gap-2">
       <p className="whitespace-pre-wrap break-words">{p.texto}</p>
       {p.anexos.length > 0 && (
         <span className="flex flex-wrap justify-end gap-1">
@@ -539,12 +539,12 @@ export function ChatDeIA({
     return (
       <div className="fixed bottom-4 right-4 z-40" style={corDoOrbe}>
         {mostrarDica && (
-          <div className="c41-surgir absolute bottom-full right-0 mb-3 w-64 rounded-xl border border-border bg-surface-elevated p-3 shadow-[var(--c41-shadow-lg)]">
+          <div className="c41-surgir absolute bottom-full right-0 mb-3 w-64 rounded-lg border border-border bg-surface-elevated p-3 shadow-[var(--c41-shadow-lg)]">
             <button
               type="button"
               onClick={() => setDicaFechada(true)}
               aria-label="Fechar a dica"
-              className="absolute top-2 right-2 p-0.5 rounded text-fg-muted hover:text-fg"
+              className="absolute top-2 right-2 p-0.5 rounded-sm text-fg-muted hover:text-fg"
             >
               <X size={13} />
             </button>
@@ -561,7 +561,7 @@ export function ChatDeIA({
           onClick={() => abrirChat()}
           aria-label={`Abrir o chat — ${agente.titulo}`}
           title={`Perguntar à ${agente.titulo}`}
-          className="c41-borda-girando relative rounded-full p-[2px] shadow-[var(--c41-shadow-lg)] transition-transform hover:-translate-y-0.5 outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+          className="c41-borda-girando relative rounded-full p-[2px] shadow-[var(--c41-shadow-lg)] transition-transform hover:-translate-y-0.5 outline-none"
         >
           <span className="flex items-center gap-2 h-11 pl-1.5 pr-1.5 sm:pr-4 rounded-full bg-surface-elevated">
             <OrbeDaIA tamanho={32} />
@@ -579,7 +579,7 @@ export function ChatDeIA({
       onMouseDown={() => {
         cliqueDentroRef.current = true;
       }}
-      className="fixed z-40 inset-0 sm:inset-auto sm:bottom-4 sm:right-4 sm:w-[420px] sm:h-[min(840px,calc(100vh-2rem))] flex flex-col bg-surface-elevated sm:border sm:border-border sm:rounded-2xl shadow-[0_24px_64px_-16px_rgb(0_0_0/0.35)] overflow-hidden"
+      className="fixed z-40 inset-0 sm:inset-auto sm:bottom-4 sm:right-4 sm:w-[420px] sm:h-[min(840px,calc(100dvh-2rem))] flex flex-col bg-surface-elevated sm:border sm:border-border sm:rounded-lg shadow-[0_24px_64px_-16px_rgb(0_0_0/0.35)] overflow-hidden"
       aria-label="Chat de IA"
     >
       <header className="flex items-center gap-2.5 px-4 py-3">
@@ -702,7 +702,7 @@ export function ChatDeIA({
                 <div key={m.id} className="group flex items-start gap-2.5">
                   <OrbeDaIA tamanho={24} className="mt-0.5" />
                   <div className="min-w-0 flex-1 flex flex-col gap-2">
-                    {m.contexto && <span className="text-[10px] uppercase tracking-wide text-brand">{m.contexto}</span>}
+                    {m.contexto && <span className="c41-rotulo text-brand">{m.contexto}</span>}
                     <div className={`text-[13px] leading-relaxed break-words ${m.falhou ? "rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-danger" : "text-fg"}`}>
                       <TextoDaResposta texto={m.texto} citados={m.citados} />
                     </div>
@@ -785,7 +785,7 @@ export function ChatDeIA({
                 </Button>
               </div>
             )}
-            <div className="rounded-2xl border border-border-strong bg-surface focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)] transition-colors">
+            <div className="rounded-lg border border-border-strong bg-surface focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)] transition-colors">
               {arquivos.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2.5">
                   {arquivos.map((f, i) => (
@@ -797,7 +797,7 @@ export function ChatDeIA({
                         type="button"
                         onClick={() => setArquivos((a) => a.filter((_, j) => j !== i))}
                         aria-label={`Tirar ${f.name}`}
-                        className="p-0.5 rounded text-fg-muted hover:text-fg hover:bg-surface-hover"
+                        className="p-0.5 rounded-sm text-fg-muted hover:text-fg hover:bg-surface-hover"
                       >
                         <X size={12} />
                       </button>
@@ -831,7 +831,7 @@ export function ChatDeIA({
                   type="submit"
                   disabled={enviando || !pergunta.trim()}
                   aria-label="Enviar"
-                  className="mb-0.5 size-8 flex-shrink-0 inline-flex items-center justify-center rounded-full bg-brand text-on-brand hover:bg-brand-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="mb-0.5 size-8 flex-shrink-0 inline-flex items-center justify-center rounded-full bg-brand text-on-brand hover:bg-brand-hover disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed transition-colors"
                 >
                   <ArrowUp size={16} />
                 </button>
@@ -861,7 +861,7 @@ export function ChatDeIA({
                     onClick={() => seletorDeArquivoRef.current?.click()}
                     disabled={enviando}
                     title="PDF, imagem ou planilha — até 3 arquivos e 10 MB"
-                    className="inline-flex items-center gap-1 h-7 px-1.5 rounded-md text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover disabled:opacity-50"
+                    className="inline-flex items-center gap-1 h-7 px-1.5 rounded-md text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover disabled:opacity-[var(--c41-disabled-op)]"
                   >
                     <Paperclip size={13} /> Anexar
                   </button>
@@ -962,7 +962,7 @@ function CartoesDeDecisao({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] uppercase tracking-wide text-fg-muted">Sugestões — nada foi feito ainda</p>
+        <p className="c41-rotulo">Sugestões — nada foi feito ainda</p>
         {pendentes.length > 1 && (
           <Button variant="secondary" size="xs" onClick={onAplicarTodas} disabled={aplicando !== null}>
             Aplicar todas
@@ -973,7 +973,7 @@ function CartoesDeDecisao({
         const rotulos = rotulosDaDecisao(p.ferramenta);
         const ocupado = aplicando === `${m.id}:${i}`;
         return (
-          <div key={i} className={`rounded-xl border px-3 py-2.5 ${p.aplicada ? "border-success/40 bg-success-bg/40" : p.recusada ? "border-border bg-surface-2/40" : "border-border bg-surface"}`}>
+          <div key={i} className={`rounded-lg border px-3 py-2.5 ${p.aplicada ? "border-success/40 bg-success-bg/40" : p.recusada ? "border-border bg-surface-2/40" : "border-border bg-surface"}`}>
             <p className={`text-[13px] ${p.recusada ? "text-fg-muted line-through" : "text-fg"}`}>{descreverProposta(p)}</p>
             <div className="mt-2 flex items-center justify-end gap-2">
               {p.ferramenta === "abrir_transferencia" ? (
@@ -1022,12 +1022,12 @@ function MotivosDoNao({
   onFechar: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface-2 px-3 py-2.5" role="group" aria-label="Por que não ajudou">
+    <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface-2 px-3 py-2.5" role="group" aria-label="Por que não ajudou">
       <div className="flex items-center justify-between gap-2">
         <p className="text-[12px] font-medium text-fg">
           O que não foi bom? <span className="font-normal text-fg-muted">Opcional</span>
         </p>
-        <button type="button" onClick={onFechar} aria-label="Fechar" className="p-0.5 rounded text-fg-muted hover:text-fg hover:bg-surface-hover">
+        <button type="button" onClick={onFechar} aria-label="Fechar" className="p-0.5 rounded-sm text-fg-muted hover:text-fg hover:bg-surface-hover">
           <X size={13} />
         </button>
       </div>
