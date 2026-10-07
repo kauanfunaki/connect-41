@@ -159,7 +159,7 @@ export function FiltrosDaTela({
             {campo && (
               <div className={`flex-1 min-w-0 flex flex-col gap-1.5 ${umSo ? "" : "pl-2"}`}>
                 {umSo && (
-                  <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-fg-muted">{campo.rotulo}</p>
+                  <p className="px-1 c41-rotulo">{campo.rotulo}</p>
                 )}
                 {campo.opcoes.length > COM_BUSCA && (
                   <Input

@@ -129,7 +129,7 @@ export function PainelFlutuante({
           id={id}
           role={role}
           aria-label={ariaLabel}
-          className={`c41-folha relative bg-surface-elevated border-t border-border-strong rounded-t-2xl shadow-[var(--c41-shadow-lg)] p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] ${className}`}
+          className={`c41-folha relative bg-surface-elevated border-t border-border-strong rounded-t-lg shadow-lg p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] ${className}`}
         >
           {children}
         </div>
@@ -147,7 +147,7 @@ export function PainelFlutuante({
       aria-label={ariaLabel}
       onMouseDown={marcar}
       style={{ width: Math.min(largura, typeof window === "undefined" ? largura : window.innerWidth - MARGEM * 2), top: pos?.top ?? -9999, left: pos?.left ?? -9999 }}
-      className={`c41-surgir fixed z-[60] bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] text-left ${className}`}
+      className={`c41-surgir fixed z-[60] bg-surface-elevated border border-border-strong rounded-lg shadow-lg text-left ${className}`}
     >
       {children}
     </div>,

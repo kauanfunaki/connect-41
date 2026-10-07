@@ -194,7 +194,7 @@ export function CampoPeriodo({
             aria-label="Limpar período"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => aplicar({ de: "", ate: "" })}
-            className="mr-1.5 p-0.5 rounded text-fg-muted hover:text-fg hover:bg-surface-hover"
+            className="mr-1.5 p-0.5 rounded-sm text-fg-muted hover:text-fg hover:bg-surface-hover"
           >
             <X size={13} />
           </button>
@@ -203,7 +203,7 @@ export function CampoPeriodo({
 
       <PainelFlutuante ancora={caixaRef} aberto={aberto} onFechar={() => setAberto(false)} largura={300} folhaNoCelular aria-label="Calendário do período" className="p-3">
         <div onMouseDown={(e) => e.preventDefault()}>
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-fg-muted">
+          <p className="mb-1 c41-rotulo">
             {escolhendo === "de" ? "Escolha o início" : "Escolha o fim"}
           </p>
           <Calendario

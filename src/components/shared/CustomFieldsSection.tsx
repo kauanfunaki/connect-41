@@ -20,7 +20,7 @@ export function CustomFieldsSection({ fields }: { fields: CustomFieldInput[] }) 
 
   return (
     <div className="space-y-4">
-      <h3 className="text-[11px] font-semibold text-fg-muted uppercase tracking-wider border-b border-border pb-2">
+      <h3 className="c41-rotulo border-b border-border pb-2">
         Campos Adicionais
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

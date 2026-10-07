@@ -272,7 +272,7 @@ function BotaoDoFunil({ ativo, open, onClick, rotulo }: { ativo: boolean; open: 
       onClick={onClick}
       aria-label={`Filtrar a coluna ${rotulo}`.trim()}
       aria-expanded={open}
-      className={`inline-flex items-center justify-center w-5 h-5 rounded transition-colors ${
+      className={`inline-flex items-center justify-center w-5 h-5 rounded-sm transition-colors ${
         ativo ? "bg-brand-solid text-on-brand" : open ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg hover:bg-surface-hover"
       }`}
     >
@@ -363,7 +363,7 @@ export function FiltroDaColuna({
                       setCampoAtual(c.chave);
                       setVersao((v) => v + 1);
                     }}
-                    className={`flex-1 h-7 rounded text-[12px] font-medium transition-colors ${
+                    className={`flex-1 h-7 rounded-sm text-[12px] font-medium transition-colors ${
                       c.chave === campo.chave ? "bg-brand-subtle text-brand" : "text-fg-secondary hover:bg-surface-hover"
                     }`}
                   >

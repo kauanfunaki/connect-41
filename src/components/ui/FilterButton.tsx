@@ -48,7 +48,7 @@ export function FilterButton({ activeCount = 0, align = "right", width = 260, ch
 export function FilterButtonSection({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-[11px] font-semibold text-fg-muted uppercase tracking-[0.04em] px-1">{label}</p>
+      <p className="c41-rotulo px-1">{label}</p>
       {children}
     </div>
   );

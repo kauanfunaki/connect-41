@@ -154,7 +154,7 @@ function CropperDialog({
             type="button"
             onClick={handleConfirm}
             disabled={isProcessing || !croppedAreaPixels}
-            variant="primary" className="font-medium disabled:opacity-60"
+            variant="primary" className="font-medium disabled:opacity-[var(--c41-disabled-op)]"
           >
             {isProcessing ? "Aplicando…" : "Aplicar"}
          </Button>
