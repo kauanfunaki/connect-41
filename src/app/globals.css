@@ -53,6 +53,16 @@
   --c41-brand-hover:     var(--c41-brand-700);
   --c41-brand-subtle:    rgba(31,94,234,.08);
   --c41-on-brand:        #FFFFFF;
+  /* Preenchimento com texto branco em cima (07/10/2026): botão primário,
+     contador, dia escolhido do calendário. É o próprio azul 41 (brand-600),
+     igual nos dois temas — o `--c41-brand` vira brand-400 no escuro para ler
+     bem como TEXTO sobre fundo escuro, mas branco sobre o brand-400 dava 3,28:1
+     (reprova AA). Aqui: 5,46:1, e 7,0:1 no hover. Não muda a identidade.
+     O mesmo para o vermelho cheio da confirmação destrutiva: o danger escuro
+     com branco dava 3,17:1; o tom claro, fixo, dá 4,99:1. */
+  --c41-brand-solid:       var(--c41-brand-600);
+  --c41-brand-solid-hover: var(--c41-brand-700);
+  --c41-danger-solid:      var(--c41-danger-light);
   --c41-success:         var(--c41-success-light);
   --c41-success-bg:      rgba(30,154,99,.10);
   --c41-warning:         var(--c41-warning-light);
@@ -203,6 +213,11 @@
   --color-brand:        var(--c41-brand);
   --color-brand-hover:  var(--c41-brand-hover);
   --color-brand-subtle: var(--c41-brand-subtle);
+  /* Fundo com texto branco: `bg-brand-solid text-on-brand`. Texto e ícone
+     azuis seguem em `text-brand` (ver --c41-brand-solid). */
+  --color-brand-solid:       var(--c41-brand-solid);
+  --color-brand-solid-hover: var(--c41-brand-solid-hover);
+  --color-danger-solid:      var(--c41-danger-solid);
   --color-brand-50:var(--c41-brand-50);   --color-brand-100:var(--c41-brand-100);
   --color-brand-200:var(--c41-brand-200); --color-brand-300:var(--c41-brand-300);
   --color-brand-400:var(--c41-brand-400); --color-brand-500:var(--c41-brand-500);
@@ -234,6 +249,52 @@
        md 10px — input, botão, controle
        lg 16px — card, modal, painel */
   --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px;
+
+  /* Sombra — os quatro degraus do Connect no lugar dos do Tailwind (07/10/2026).
+     Antes o token custava `shadow-[var(--c41-shadow-xs)]` (197 lugares) e o
+     `shadow-sm` cru, mais curto, saía com a sombra do Tailwind, que não foi
+     calibrada para o escuro. Agora `shadow-xs` é o token — mesmo CSS que a forma
+     longa gera. Como no raio, um nome por valor: shadow-xl/2xl não estão aqui e
+     caem no default do Tailwind, fora desta escala.
+       xs — cartão, casco de tabela, botão
+       sm — controle ligado (o ícone emoldurado aberto)
+       md — cartão-atalho no hover
+       lg — painel flutuante, menu, modal, aviso */
+  --shadow-xs: var(--c41-shadow-xs);
+  --shadow-sm: var(--c41-shadow-sm);
+  --shadow-md: var(--c41-shadow-md);
+  --shadow-lg: var(--c41-shadow-lg);
+
+  /* Tamanho de fonte — os papéis e os primitivos da escala abaixo viram
+     utilitários (07/10/2026): `text-ui` no lugar de `text-[length:var(--fs-ui)]`,
+     `text-fs-2` no lugar de `text-[12px]`. Era o que fazia todo mundo cravar px:
+     o token custava o dobro de caracteres (1.898 `text-[Npx]` contra 704 usos de
+     --fs-*). Só o tamanho, sem altura de linha — o mesmo CSS do `text-[13px]`,
+     então trocar um pelo outro não mexe no layout.
+     Prefira o papel; o primitivo `text-fs-N` é para quando nenhum papel serve
+     (o 12px de texto miúdo, o 16px). Os `text-xs/sm/base…` do Tailwind não são
+     usados no app (0 ocorrências) e não devem ser. */
+  --text-micro:        var(--fs-micro);
+  --text-badge:        var(--fs-badge);
+  --text-kanban-meta:  var(--fs-kanban-meta);
+  --text-ui:           var(--fs-ui);
+  --text-button-sm:    var(--fs-button-sm);
+  --text-helper:       var(--fs-helper);
+  --text-label:        var(--fs-label);
+  --text-dropdown:     var(--fs-dropdown);
+  --text-kanban-title: var(--fs-kanban-title);
+  --text-search:       var(--fs-search);
+  --text-body:         var(--fs-body);
+  --text-card-title:   var(--fs-card-title);
+  --text-dialog-title: var(--fs-dialog-title);
+  --text-input:        var(--fs-input);
+  --text-section:      var(--fs-section);
+  --text-title:        var(--fs-title);
+  --text-metric:       var(--fs-metric);
+  --text-display:      var(--fs-display);
+  --text-fs-1: var(--fs-1); --text-fs-2: var(--fs-2); --text-fs-3: var(--fs-3);
+  --text-fs-4: var(--fs-4); --text-fs-5: var(--fs-5); --text-fs-6: var(--fs-6);
+  --text-fs-7: var(--fs-7); --text-fs-8: var(--fs-8); --text-fs-9: var(--fs-9);
 }
 
 /* ==========================================================================
@@ -251,39 +312,64 @@
 
    Nunca use um valor fora dos primitivos abaixo. Ao migrar um `text-[Npx]`
    cravado, arredonde para o degrau mais próximo:
-     8·9·10·10.5·11·11.5 → 11   |   12·12.5 → 12   |   13·13.5 → 13
+     8·9·9.5·10·10.5·11·11.5 → 11   |   12·12.5 → 12   |   13·13.5 → 13
      14·14.5 → 14   |   15 → 15   |   16·17 → 16   |   18·20 → 18
      22·23·24·26 → 22   |   28·30·32 → 30
+   Conferida em 07/10/2026 contra o levantamento da auditoria (todos os valores
+   cravados no app caem nela). O destino é o utilitário do @theme: o papel
+   quando o contexto o diz (`text-micro`, `text-ui`, `text-label`, `text-body`,
+   `text-section`, `text-title`, `text-display`), senão o primitivo
+   (`text-fs-2` para 12px, `text-fs-6` para 16px).
    ========================================================================== */
 :root {
   /* primitivos — 9 degraus, nada fora disto */
   --fs-1:11px;  --fs-2:12px;  --fs-3:13px;  --fs-4:14px;  --fs-5:15px;
   --fs-6:16px;  --fs-7:18px;  --fs-8:22px;  --fs-9:30px;
 
-  /* papéis */
-  --fs-micro:       var(--fs-1);  /* header de tabela, badge pequeno */
+  /* papéis — cada um com utilitário próprio no @theme (`text-ui`, `text-micro`…).
+     Revisados em 07/10/2026: `--fs-button` saiu (nenhum uso; o Button md é
+     --fs-ui) e os dois títulos de cartão ganharam fronteira escrita. */
+  --fs-micro:       var(--fs-1);  /* cabeçalho de tabela, rótulo em caixa alta, selo */
   --fs-badge:       var(--fs-2);  /* badge/status — era 12.5px */
   --fs-kanban-meta: var(--fs-2);
-  --fs-ui:          var(--fs-3);  /* nível denso: label, meta, linha compacta */
+  --fs-ui:          var(--fs-3);  /* nível denso: meta, linha compacta, botão md, texto de apoio de controle */
   --fs-button-sm:   var(--fs-2);  /* botão compacto (h-7/h-8) — medido em 09/09:
                                      o app usa 12px em 56 dos 59 h-8 e em 9 dos
                                      12 h-7. O h-9 é que fica em 13px. */
-  --fs-helper:      var(--fs-3);  /* helper text */
+  --fs-helper:      var(--fs-3);  /* texto de ajuda embaixo de campo; o mesmo valor
+                                     do --fs-ui, papel diferente (pode divergir) */
   --fs-label:       var(--fs-4);  /* label de formulário/sidebar */
-  --fs-dropdown:    var(--fs-4);
+  --fs-dropdown:    var(--fs-4);  /* item de menu e de painel suspenso */
   --fs-kanban-title:var(--fs-4);
-  --fs-search:      var(--fs-4);  /* busca da topbar — era 15px */
+  --fs-search:      var(--fs-4);  /* busca da lateral (Ctrl K) — era 15px */
   --fs-body:        var(--fs-5);  /* conteúdo de leitura + base do <body> */
-  --fs-button:      var(--fs-5);
-  --fs-card-title:  var(--fs-4);  /* título de cartão — 14px, o que a maioria já usava (02/10);
-                                    conviviam 13, 14, 15 e 18px; o EmptyState, que usava este token em 16px, passou a --fs-6 */
+  --fs-card-title:  var(--fs-4);  /* título DENTRO de um cartão (painel da Home,
+                                    cartão de grade) — 14px, o que a maioria já usava
+                                    (02/10); conviviam 13, 14, 15 e 18px; o EmptyState,
+                                    que usava este token em 16px, passou a --fs-6 */
   --fs-dialog-title: var(--fs-5); /* título de janela (Modal, confirmação, painel lateral) */
   --fs-input:       var(--fs-6);  /* 16px — não baixar: abaixo disso o iOS dá
                                      zoom ao focar o campo */
-  --fs-section:     var(--fs-7);  /* título de seção/card */
+  --fs-section:     var(--fs-7);  /* título de SEÇÃO da página, acima de um bloco
+                                     (não o título dentro do cartão: esse é --fs-card-title) */
   --fs-title:       var(--fs-8);  /* título intermediário (destino dos 22-26px) */
   --fs-metric:      var(--fs-9);  /* valor de métrica */
   --fs-display:     var(--fs-9);  /* título de página */
+}
+
+/* Rótulo em caixa alta (07/10/2026): o mesmo desenho do cabeçalho da tabela
+   padrão — 11px, 600, maiúsculas, .04em, cinza. Era escrito à mão 159 vezes,
+   com 11/11,5/12px e quatro espaçamentos diferentes (menu lateral, seções de
+   formulário, painel do Filtros, troca de contexto). Na camada de componentes
+   de propósito: um utilitário ao lado (`px-2.5`, `pt-4`, outra cor) ganha. */
+@layer components {
+  .c41-rotulo {
+    font-size: var(--fs-micro);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--c41-fg-muted);
+  }
 }
 
 /* ----- Base ----- */
