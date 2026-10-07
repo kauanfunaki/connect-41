@@ -1,6 +1,7 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { X, ArrowLeft } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { useDialog } from "@/components/ui/useDialog";
@@ -19,13 +20,21 @@ type Props = {
 // fora, botão X), mas ocupa a borda direita da tela em vez de centralizar.
 // Usado quando o conteúdo é navegação dentro do próprio painel (lista <->
 // detalhe) em vez de um formulário único — ver Modal.tsx pra esse outro caso.
+//
+// Vai para o <body> por portal, como o Modal desde 02/10 (07/10/2026): dentro
+// de um cartão que sobe no hover ou de qualquer bloco com `transform`, o
+// `fixed` ficava preso ao bloco em vez de à tela. No servidor e na hidratação
+// fica no lugar — `document` não existe lá.
+const semAssinatura = () => () => {};
+
 export function SlideOver({ open, onClose, title, onBack, width = "max-w-md", children }: Props) {
   const panelRef = useDialog(open, onClose);
   const titleId = useId();
+  const noNavegador = useSyncExternalStore(semAssinatura, () => true, () => false);
 
   if (!open) return null;
 
-  return (
+  const painel = (
     <div
       className="c41-esmaecer fixed inset-0 z-50 bg-black/60"
       onClick={(e) => {
@@ -38,19 +47,19 @@ export function SlideOver({ open, onClose, title, onBack, width = "max-w-md", ch
         aria-modal="true"
         tabIndex={-1}
         {...(title ? { "aria-labelledby": titleId } : { "aria-label": "Painel lateral" })}
-        className={`fixed inset-y-0 right-0 w-full ${width} bg-surface-elevated border-l border-border-strong shadow-[var(--c41-shadow-lg)] flex flex-col slide-over-in`}
+        className={`fixed inset-y-0 right-0 w-full ${width} bg-surface-elevated border-l border-border-strong shadow-lg flex flex-col slide-over-in`}
       >
         <div className="flex items-center gap-2 px-5 pt-5 pb-3 border-b border-border flex-shrink-0">
           {onBack ? (
             <button
               type="button"
               onClick={onBack}
-              className="inline-flex items-center gap-1.5 text-[13px] font-medium text-fg-secondary hover:text-fg transition-colors"
+              className="inline-flex items-center gap-1.5 text-ui font-medium text-fg-secondary hover:text-fg transition-colors"
             >
               <ArrowLeft size={15} /> Voltar
             </button>
           ) : (
-            title && <h2 id={titleId} className="text-[length:var(--fs-dialog-title)] font-semibold text-fg">{title}</h2>
+            title && <h2 id={titleId} className="text-dialog-title font-semibold text-fg">{title}</h2>
           )}
           <IconButton onClick={onClose} aria-label="Fechar" className="ml-auto">
             <X size={16} />
@@ -60,4 +69,6 @@ export function SlideOver({ open, onClose, title, onBack, width = "max-w-md", ch
       </div>
     </div>
   );
+
+  return noNavegador ? createPortal(painel, document.body) : painel;
 }
