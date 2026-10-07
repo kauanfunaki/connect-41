@@ -45,7 +45,7 @@ export function ThemeToggle() {
       <span
         aria-hidden
         suppressHydrationWarning
-        className={`absolute top-[4px] left-[4px] size-[28px] rounded-full bg-brand shadow-[var(--c41-shadow-xs)] transition-transform duration-200 ease-out motion-reduce:transition-none ${
+        className={`absolute top-[4px] left-[4px] size-[28px] rounded-full bg-brand-solid shadow-xs transition-transform duration-200 ease-out motion-reduce:transition-none ${
           theme === "dark" ? "translate-x-[30px]" : "translate-x-0"
         }`}
       />

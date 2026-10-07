@@ -28,14 +28,17 @@ const STATUS_LABEL: Record<StepStatus, string> = {
 // prática, a última etapa ficava fora da área visível sem indicação clara de
 // que dava pra rolar. Com wrap, etapas extras descem pra uma segunda linha em
 // vez de vazar/cortar.
+//
+// Lista ordenada com `aria-current="step"`, e não `tablist`/`tab` (07/10/2026):
+// não há `tabpanel` do outro lado, e o leitor de tela anunciava "aba 1 de 6"
+// num assistente — o mesmo erro que o `SegmentedControl` descreve.
 export function Stepper({ steps, onStepClick }: Props) {
   return (
-    <div className="flex items-center justify-center flex-wrap gap-y-3 px-6 py-5 border-b border-border" role="tablist">
+    <ol className="flex items-center justify-center flex-wrap gap-y-3 px-6 py-5 border-b border-border">
       {steps.map((step, i) => (
-        <div key={step.label} className="flex items-center">
+        <li key={step.label} className="flex items-center">
           <button
             type="button"
-            role="tab"
             disabled={step.status === "upcoming"}
             aria-current={step.status === "current" ? "step" : undefined}
             aria-invalid={step.status === "error" ? true : undefined}
@@ -44,11 +47,13 @@ export function Stepper({ steps, onStepClick }: Props) {
             className={`flex items-center gap-2.5 ${step.status === "upcoming" ? "cursor-not-allowed" : "cursor-pointer"}`}
           >
             <span
-              className={`w-[30px] h-[30px] rounded-full flex items-center justify-center text-[13px] font-semibold flex-shrink-0 border-[1.5px] ${
+              // Concluída e atual em tom fixo nos dois temas (07/10/2026): o
+              // verde e o azul do escuro com branco davam 2,05 e 3,28:1.
+              className={`w-[30px] h-[30px] rounded-full flex items-center justify-center text-ui font-semibold flex-shrink-0 border-[1.5px] ${
                 step.status === "done"
-                  ? "bg-success border-success text-white"
+                  ? "bg-success-solid border-success-solid text-white"
                   : step.status === "current"
-                    ? "bg-brand border-brand text-on-brand"
+                    ? "bg-brand-solid border-brand-solid text-on-brand"
                     : step.status === "error"
                       ? "bg-danger-bg border-danger text-danger"
                       : "bg-surface-hover border-border-strong text-fg-muted opacity-50"
@@ -57,7 +62,7 @@ export function Stepper({ steps, onStepClick }: Props) {
               {i + 1}
             </span>
             <span
-              className={`text-[13px] font-semibold whitespace-nowrap ${
+              className={`text-ui font-semibold whitespace-nowrap ${
                 step.status === "current" || step.status === "done"
                   ? "text-fg"
                   : step.status === "error"
@@ -75,8 +80,8 @@ export function Stepper({ steps, onStepClick }: Props) {
               }`}
             />
           )}
-        </div>
+        </li>
       ))}
-    </div>
+    </ol>
   );
 }

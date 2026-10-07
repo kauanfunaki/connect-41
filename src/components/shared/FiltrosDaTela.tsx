@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Check, Search, X } from "lucide-react";
 import { FilterButton } from "@/components/ui/FilterButton";
 import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 export type OpcaoDeFiltro = { value: string; label: string };
 
@@ -185,8 +186,10 @@ export function FiltrosDaTela({
           </div>
           {ativos.length > 0 && (
             <div className="flex justify-end border-t border-border pt-2">
-              <button
-                type="button"
+              {/* O `Button xs ghost` (07/10/2026), e não uma cópia dele em peso médio. */}
+              <Button
+                size="xs"
+                variant="ghost"
                 onClick={() => {
                   close();
                   const q = new URLSearchParams(params.toString());
@@ -196,10 +199,9 @@ export function FiltrosDaTela({
                   const s = q.toString();
                   router.push(s ? `${pathname}?${s}` : pathname);
                 }}
-                className="h-7 px-2.5 rounded-md text-[12px] font-medium text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors"
               >
                 Limpar filtros
-              </button>
+              </Button>
             </div>
           )}
         </div>

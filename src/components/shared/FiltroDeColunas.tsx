@@ -6,6 +6,7 @@ import { ListFilter, Search, X } from "lucide-react";
 import { Popover } from "@/components/ui/Popover";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { Button } from "@/components/ui/Button";
 
 /** O valor de cada coluna filtrável numa linha, pelo nome do campo. Data vai em ISO (AAAA-MM-DD). */
 export type ValoresDaLinha = Record<string, string | null | undefined>;
@@ -272,7 +273,7 @@ function BotaoDoFunil({ ativo, open, onClick, rotulo }: { ativo: boolean; open: 
       aria-label={`Filtrar a coluna ${rotulo}`.trim()}
       aria-expanded={open}
       className={`inline-flex items-center justify-center w-5 h-5 rounded transition-colors ${
-        ativo ? "bg-brand text-on-brand" : open ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg hover:bg-surface-hover"
+        ativo ? "bg-brand-solid text-on-brand" : open ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg hover:bg-surface-hover"
       }`}
     >
       <ListFilter size={11} />
@@ -280,10 +281,6 @@ function BotaoDoFunil({ ativo, open, onClick, rotulo }: { ativo: boolean; open: 
   );
 }
 
-const BOTAO_SECUNDARIO =
-  "h-7 px-2.5 rounded-md text-[12px] font-medium text-fg-secondary hover:bg-surface-hover hover:text-fg disabled:opacity-40 disabled:pointer-events-none transition-colors";
-const BOTAO_PRIMARIO =
-  "h-7 px-3 rounded-md bg-brand text-on-brand text-[12px] font-medium hover:bg-brand-hover disabled:opacity-40 disabled:pointer-events-none transition-colors";
 
 /**
  * O cabeçalho com o funil. Uma coluna pode filtrar por mais de um campo — a de
@@ -384,12 +381,14 @@ export function FiltroDaColuna({
               rotuloDoCampo={campo.rotulo}
             />
             <div className="flex justify-between gap-2 border-t border-border pt-2">
-              <button type="button" disabled={!aceitos} onClick={() => ctx.definir(campo.chave, null)} className={BOTAO_SECUNDARIO}>
+              {/* O `Button xs` (07/10/2026): eram cópias dele em peso médio e
+                  com 40% no desabilitado. */}
+              <Button size="xs" variant="ghost" disabled={!aceitos} onClick={() => ctx.definir(campo.chave, null)}>
                 Limpar esta coluna
-              </button>
-              <button type="button" onClick={close} className={BOTAO_PRIMARIO}>
+              </Button>
+              <Button size="xs" onClick={close}>
                 Pronto
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -460,28 +459,27 @@ export function FiltroDaColunaNaUrl({
           <div className="flex flex-col gap-2 normal-case tracking-normal font-normal">
             <ListaDeValores valores={opcoes} aceitos={rascunho} onMudar={setRascunho} rotuloDoCampo={rotulo} />
             <div className="flex justify-between gap-2 border-t border-border pt-2">
-              <button
-                type="button"
+              <Button
+                size="xs"
+                variant="ghost"
                 disabled={naUrl.length === 0}
                 onClick={() => {
                   close();
                   ir(null);
                 }}
-                className={BOTAO_SECUNDARIO}
               >
                 Limpar esta coluna
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                size="xs"
                 disabled={rascunho !== null && rascunho.size === 0}
                 onClick={() => {
                   close();
                   ir(rascunho ? [...rascunho] : null);
                 }}
-                className={BOTAO_PRIMARIO}
               >
                 Aplicar
-              </button>
+              </Button>
             </div>
           </div>
         )}
