@@ -47,7 +47,7 @@ export default async function ComunicadoPage({ params }: { params: Promise<{ id:
           <ul className="mt-4 flex flex-col gap-1">
             {c.anexos.map((a) => (
               <li key={a.id}>
-                <a href={`/api/comunicados/anexos/${a.id}`} className="inline-flex items-center gap-1.5 text-[12.5px] text-brand hover:underline break-all">
+                <a href={`/api/comunicados/anexos/${a.id}`} className="inline-flex items-center gap-1.5 text-[length:var(--fs-2)] text-brand hover:underline break-all">
                   <Paperclip size={12} className="shrink-0" /> {a.fileName}
                   <span className="text-fg-muted">· {formatarBytes(a.sizeBytes)}</span>
                 </a>

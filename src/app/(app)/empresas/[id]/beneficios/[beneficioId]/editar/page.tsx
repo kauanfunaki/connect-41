@@ -40,7 +40,7 @@ export default async function EditarBeneficioPage({
       />
       <BackButton className="mb-3" />
 
-      <PageHeader title="Editar Benefício" subtitle={company.name} />
+      <PageHeader title="Editar benefício" subtitle={company.name} />
 
       <div className="w-full max-w-[720px]">
         <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-6">

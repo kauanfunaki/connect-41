@@ -41,18 +41,18 @@ export function DocumentosDoProcesso({
   return (
     <div className="flex flex-col gap-3">
       {documentos.length === 0 ? (
-        <p className="text-[13px] text-fg-muted">Nenhum documento neste processo ainda.</p>
+        <p className="text-[length:var(--fs-ui)] text-fg-muted">Nenhum documento neste processo ainda.</p>
       ) : (
         <ul className="flex flex-col">
           {documentos.map((d) => (
             <li key={d.id} className="flex flex-wrap items-start gap-x-3 gap-y-0.5 py-2 border-b border-border-soft last:border-0">
               <FileText size={16} className="mt-0.5 shrink-0 text-fg-muted" aria-hidden />
               <div className="flex-1 min-w-48 flex flex-col gap-0.5">
-                <a href={`${baseDoDownload}/${d.id}`} className="text-[13px] text-brand hover:underline break-all">
+                <a href={`${baseDoDownload}/${d.id}`} className="text-[length:var(--fs-ui)] text-brand hover:underline break-all">
                   {d.fileName}
                 </a>
-                {d.descricao && <span className="text-[12px] text-fg break-words">{d.descricao}</span>}
-                <span className="text-[11px] text-fg-muted">
+                {d.descricao && <span className="text-[length:var(--fs-2)] text-fg break-words">{d.descricao}</span>}
+                <span className="text-[length:var(--fs-micro)] text-fg-muted">
                   {d.lado === ladoDeQuemVe ? d.enviadoPor : `${d.enviadoPor} · ${d.lado === "EQUIPE" ? "equipe" : "cliente"}`} ·{" "}
                   {formatInstantDateTime(d.enviadoEm)} · {formatarBytes(d.sizeBytes)}
                   {d.naConversa && " · na conversa"}
@@ -63,7 +63,7 @@ export function DocumentosDoProcesso({
         </ul>
       )}
 
-      {aviso && <p className="text-[12px] text-warning">{aviso}</p>}
+      {aviso && <p className="text-[length:var(--fs-2)] text-warning">{aviso}</p>}
 
       {aberto ? (
         <form
@@ -91,15 +91,22 @@ export function DocumentosDoProcesso({
             <Input id={`doc-desc-${processId}`} name="descricao" maxLength={200} placeholder="Ex.: Contrato social registrado" />
           </CampoForm>
           <CampoDeAnexos idBase={`doc-${processId}`} />
-          {erro && <p className="text-[12px] text-danger">{erro}</p>}
+          {/* Na caixa de erro do resto da página (07/10/2026) — era texto solto de 12px. */}
+          {erro && (
+            <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+              {erro}
+            </p>
+          )}
           {/* Rodapé no padrão: Cancelar à esquerda do primário, os dois à
               direita — o erro, que ficava espremido na mesma linha, sobe. */}
           <div className="flex flex-wrap items-center justify-end gap-3">
             <Button type="button" size="sm" variant="secondary" disabled={pendente} onClick={() => setAberto(false)}>
               Cancelar
             </Button>
-            <Button type="submit" size="sm" disabled={pendente}>
-              <Upload size={14} /> {pendente ? "Enviando…" : "Guardar documentos"}
+            {/* "Enviar", e não "Guardar" (07/10/2026): o outro lado vê e é
+                avisado — e o resto do app não diz "guardar" em lugar nenhum. */}
+            <Button type="submit" size="sm" loading={pendente} loadingLabel="Enviando…">
+              <Upload size={14} /> Enviar documentos
             </Button>
           </div>
         </form>

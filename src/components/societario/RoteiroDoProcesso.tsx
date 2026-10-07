@@ -7,7 +7,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { CampoData } from "@/components/ui/CampoData";
 import { Textarea } from "@/components/ui/Textarea";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { formatInstantDate } from "@/lib/format";
 import type { ProcessoState } from "@/app/(app)/processos/actions";
@@ -79,6 +79,14 @@ type Acoes = {
   alternarItem: (itemId: string, feito: boolean) => Promise<ProcessoState>;
 };
 
+/** Executa uma ação da etapa; `chave` diz qual botão mostra o "…ando". */
+type Executar = (chave: string, fn: () => Promise<ProcessoState>) => void;
+
+/**
+ * O roteiro do processo, dentro do cartão da seção (07/10/2026): as etapas são
+ * linhas do cartão, e não um cartão de largura total cada — era a única seção
+ * da página com o título solto no fundo e cartões embaixo.
+ */
 export function RoteiroDoProcesso({
   etapas,
   acoes,
@@ -88,17 +96,6 @@ export function RoteiroDoProcesso({
   acoes: Acoes;
   podeEditar: boolean;
 }) {
-  const [erro, setErro] = useState<string | null>(null);
-  const [pendente, startTransition] = useTransition();
-
-  function executar(fn: () => Promise<ProcessoState>) {
-    setErro(null);
-    startTransition(async () => {
-      const r = await fn();
-      if (r?.error) setErro(r.error);
-    });
-  }
-
   // Agrupa por posição: etapas que dividem posição correm em paralelo, e
   // desenhá-las empilhadas como se fossem sequência seria mentir sobre o fluxo.
   const porPosicao = new Map<number, EtapaNaTela[]>();
@@ -110,91 +107,95 @@ export function RoteiroDoProcesso({
   const posicoes = [...porPosicao.keys()].sort((a, b) => a - b);
 
   return (
-    <div className="flex flex-col gap-3">
-      {erro && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
-          {erro}
-        </p>
-      )}
-
+    <ol className="flex flex-col divide-y divide-border">
       {posicoes.map((posicao) => {
         const grupo = porPosicao.get(posicao)!;
         const paralelo = grupo.length > 1;
         return (
-          <div key={posicao} className="flex flex-col gap-2">
+          <li key={posicao} className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
             {paralelo && (
-              <p className="text-[11px] text-fg-muted uppercase tracking-wide">
+              <p className="text-[length:var(--fs-micro)] text-fg-muted uppercase tracking-wide">
                 {grupo[0].grupoParalelo ?? "Em paralelo"} · correm ao mesmo tempo
               </p>
             )}
-            <div className={paralelo ? "grid gap-2 md:grid-cols-3" : "flex flex-col gap-2"}>
+            <div className={paralelo ? "grid gap-2 md:grid-cols-3" : "flex flex-col"}>
               {grupo.map((etapa) => (
-                <EtapaCard
-                  key={etapa.id}
-                  etapa={etapa}
-                  acoes={acoes}
-                  podeEditar={podeEditar}
-                  pendente={pendente}
-                  executar={executar}
-                />
+                <EtapaDoRoteiro key={etapa.id} etapa={etapa} acoes={acoes} podeEditar={podeEditar} emGrade={paralelo} />
               ))}
             </div>
-          </div>
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 }
 
-function EtapaCard({
+function EtapaDoRoteiro({
   etapa,
   acoes,
   podeEditar,
-  pendente,
-  executar,
+  emGrade,
 }: {
   etapa: EtapaNaTela;
   acoes: Acoes;
   podeEditar: boolean;
-  pendente: boolean;
-  executar: (fn: () => Promise<ProcessoState>) => void;
+  /** Etapa paralela, lado a lado com as irmãs: precisa de caixa própria. */
+  emGrade: boolean;
 }) {
   const [numero, setNumero] = useState("");
+  // Erro e espera por etapa (07/10/2026). Eram um estado só para o roteiro
+  // inteiro: o erro aparecia no topo da lista, longe da etapa clicada (a 8ª
+  // fica uns 900px abaixo), e todos os botões de todas as etapas apagavam
+  // juntos, sem dizer qual estava gravando.
+  const [erro, setErro] = useState<string | null>(null);
+  const [acaoEmCurso, setAcaoEmCurso] = useState<string | null>(null);
+  const [pendente, startTransition] = useTransition();
   const Icone = EXECUTOR_ICONE[etapa.executorEsperado];
 
+  const executar: Executar = (chave, fn) => {
+    setErro(null);
+    setAcaoEmCurso(chave);
+    startTransition(async () => {
+      const r = await fn();
+      if (r?.error) setErro(r.error);
+    });
+  };
+  const carregando = (chave: string) => pendente && acaoEmCurso === chave;
+
   const encerrada = etapa.status === "CONCLUIDA" || etapa.status === "DISPENSADA";
+  const aberta = etapa.liberada && !encerrada;
   const protocoloAberto = etapa.protocolos.find((p) => p.desfecho === "PENDENTE");
 
+  // A etapa que pode ser trabalhada agora continua destacada em azul; as
+  // outras são linhas do cartão. Lado a lado (paralelas), cada uma tem caixa.
+  const caixa = emGrade
+    ? `rounded-md border p-3 ${aberta ? "border-brand/40 bg-brand/5" : "border-border"}`
+    : aberta
+      ? "-mx-3 rounded-md bg-brand/5 ring-1 ring-inset ring-brand/30 p-3"
+      : "";
+
   return (
-    <div
-      className={`rounded-lg border p-4 flex flex-col gap-3 ${
-        encerrada
-          ? "border-border bg-surface/60"
-          : etapa.liberada
-            ? "border-brand/40 bg-brand/5"
-            : "border-border bg-surface"
-      }`}
-    >
+    <div className={`flex flex-col gap-3 ${caixa}`.trim()}>
       <div className="flex items-start gap-2">
-        <span className="text-[11px] font-mono text-fg-muted mt-0.5 tabular-nums">{etapa.posicao}</span>
+        <span className="text-[length:var(--fs-micro)] font-mono text-fg-muted mt-0.5 tabular-nums">{etapa.posicao}</span>
         <div className="flex-1 min-w-0 flex flex-col gap-1">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className={`text-[13px] font-semibold ${encerrada ? "text-fg-muted" : ""}`}>
+            <span className={`text-[length:var(--fs-ui)] font-semibold ${encerrada ? "text-fg-muted" : ""}`}>
               {etapa.rotulo}
             </span>
             <span title={EXECUTOR_TITULO[etapa.executorEsperado]} className="inline-flex text-fg-muted">
               <Icone size={14} />
             </span>
-            {etapa.orgaoNome && <span className="text-[11px] text-fg-muted">{etapa.orgaoNome}</span>}
+            {etapa.orgaoNome && <span className="text-[length:var(--fs-micro)] text-fg-muted">{etapa.orgaoNome}</span>}
             {etapa.opcional && !encerrada && (
-              <span className="text-[11px] text-fg-muted">· opcional</span>
+              <span className="text-[length:var(--fs-micro)] text-fg-muted">· opcional</span>
             )}
           </div>
-          {etapa.descricao && <p className="text-[12px] text-fg-muted">{etapa.descricao}</p>}
+          {etapa.descricao && <p className="text-[length:var(--fs-2)] text-fg-muted">{etapa.descricao}</p>}
         </div>
-        {etapa.status === "CONCLUIDA" && <Check size={16} className="text-success shrink-0" />}
+        {etapa.status === "CONCLUIDA" && <Check size={16} className="text-success shrink-0" aria-label="Concluída" />}
         {etapa.status === "DISPENSADA" && (
-          <CircleSlash size={16} className="text-fg-muted shrink-0" />
+          <CircleSlash size={16} className="text-fg-muted shrink-0" aria-label="Não se aplica" />
         )}
       </div>
 
@@ -211,9 +212,9 @@ function EtapaCard({
               id={`item-${item.id}`}
               checked={item.feito}
               disabled={!podeEditar || encerrada || pendente}
-              onChange={(e) => executar(() => acoes.alternarItem(item.id, e.target.checked))}
+              onChange={(e) => executar(`item-${item.id}`, () => acoes.alternarItem(item.id, e.target.checked))}
               label={
-                <span className={`text-[12px] ${item.feito ? "line-through text-fg-muted" : ""}`}>
+                <span className={`text-[length:var(--fs-2)] ${item.feito ? "line-through text-fg-muted" : ""}`}>
                   {item.rotulo}
                   {!item.obrigatorio && <span className="text-fg-muted"> · opcional</span>}
                 </span>
@@ -235,6 +236,7 @@ function EtapaCard({
               acoes={acoes}
               podeEditar={podeEditar}
               pendente={pendente}
+              carregando={carregando}
               executar={executar}
             />
           ))}
@@ -242,8 +244,9 @@ function EtapaCard({
       )}
 
       {/* Barra de ações da etapa: campo compacto (h-8) e botões `sm` (h-8) na
-          mesma linha. Era Input h-8 ao lado de botão h-7, desencontrados. */}
-      {podeEditar && etapa.liberada && !encerrada && (
+          mesma linha. Era Input h-8 ao lado de botão h-7, desencontrados.
+          Enquanto grava, só o botão clicado diz o que está fazendo. */}
+      {podeEditar && aberta && (
         <div className="flex flex-wrap items-center gap-2">
           {etapa.orgaoNome ? (
             !protocoloAberto && (
@@ -260,7 +263,9 @@ function EtapaCard({
                   variant="secondary"
                   size="sm"
                   disabled={pendente}
-                  onClick={() => executar(() => acoes.protocolar(etapa.id, numero))}
+                  loading={carregando("protocolar")}
+                  loadingLabel={etapa.protocolos.length > 0 ? "Reapresentando…" : "Protocolando…"}
+                  onClick={() => executar("protocolar", () => acoes.protocolar(etapa.id, numero))}
                 >
                   <FileStack size={14} />
                   {etapa.protocolos.length > 0 ? "Reapresentar" : "Protocolar"}
@@ -272,7 +277,9 @@ function EtapaCard({
               variant="secondary"
               size="sm"
               disabled={pendente}
-              onClick={() => executar(() => acoes.concluir(etapa.id))}
+              loading={carregando("concluir")}
+              loadingLabel="Concluindo…"
+              onClick={() => executar("concluir", () => acoes.concluir(etapa.id))}
             >
               <Check size={14} /> Concluir
             </Button>
@@ -283,12 +290,20 @@ function EtapaCard({
               variant="ghost"
               size="sm"
               disabled={pendente}
-              onClick={() => executar(() => acoes.dispensar(etapa.id))}
+              loading={carregando("dispensar")}
+              loadingLabel="Dispensando…"
+              onClick={() => executar("dispensar", () => acoes.dispensar(etapa.id))}
             >
               Não se aplica
             </Button>
           )}
         </div>
+      )}
+
+      {erro && (
+        <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+          {erro}
+        </p>
       )}
     </div>
   );
@@ -299,13 +314,15 @@ function Protocolo({
   acoes,
   podeEditar,
   pendente,
+  carregando,
   executar,
 }: {
   protocolo: ProtocoloNaTela;
   acoes: Acoes;
   podeEditar: boolean;
   pendente: boolean;
-  executar: (fn: () => Promise<ProcessoState>) => void;
+  carregando: (chave: string) => boolean;
+  executar: Executar;
 }) {
   const [abrindoExigencia, setAbrindoExigencia] = useState(false);
   const [descricao, setDescricao] = useState("");
@@ -313,15 +330,16 @@ function Protocolo({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-2 flex-wrap text-[12px]">
+      <div className="flex items-center gap-2 flex-wrap text-[length:var(--fs-2)]">
         <span className="text-fg-muted tabular-nums">
           {protocolo.tentativa}ª apresentação
         </span>
-        {protocolo.numero && <span className="font-mono text-[11px]">{protocolo.numero}</span>}
+        {protocolo.numero && <span className="font-mono text-[length:var(--fs-micro)]">{protocolo.numero}</span>}
         <span className="text-fg-muted">{formatInstantDate(protocolo.enviadoEm)}</span>
-        {protocolo.desfecho === "DEFERIDO" && <Badge variant="success">Deferido</Badge>}
-        {protocolo.desfecho === "EXIGENCIA" && <Badge variant="warning">Exigência</Badge>}
-        {protocolo.desfecho === "PENDENTE" && <Badge variant="info">Aguardando</Badge>}
+        {/* Selo, e não Badge: é a situação de uma linha (regra de 02/10 no Selo). */}
+        {protocolo.desfecho === "DEFERIDO" && <Selo tom="sucesso">Deferido</Selo>}
+        {protocolo.desfecho === "EXIGENCIA" && <Selo tom="atencao">Exigência</Selo>}
+        {protocolo.desfecho === "PENDENTE" && <Selo tom="marca">Aguardando</Selo>}
         {protocolo.porRobo && (
           <span title="Apurado pelo observador de protocolo" className="inline-flex text-fg-muted">
             <Bot size={14} />
@@ -333,7 +351,7 @@ function Protocolo({
           mudou" parecem a mesma coisa sem isto, e aí ninguém sabe se pode
           confiar no automático. */}
       {protocolo.desfecho === "PENDENTE" && (
-        <span className="text-[11px] text-fg-muted">
+        <span className="text-[length:var(--fs-micro)] text-fg-muted">
           {protocolo.erroDaVerificacao
             ? `Última verificação falhou: ${protocolo.erroDaVerificacao}`
             : protocolo.verificadoEm
@@ -345,13 +363,13 @@ function Protocolo({
       {protocolo.exigencias.map((ex) => (
         <div
           key={ex.id}
-          className="text-[12px] rounded-md border border-warning/30 bg-warning/8 px-3 py-2 flex flex-col gap-1.5"
+          className="text-[length:var(--fs-2)] rounded-md border border-warning/30 bg-warning/8 px-3 py-2 flex flex-col gap-1.5"
         >
           <span className="flex items-start gap-1.5">
             <AlertTriangle size={14} className="text-warning mt-px shrink-0" />
             <span className={ex.resolvidaEm ? "line-through text-fg-muted" : ""}>{ex.descricao}</span>
           </span>
-          <span className="text-[11px] text-fg-muted">
+          <span className="text-[length:var(--fs-micro)] text-fg-muted">
             {ex.prazoAte ? `Prazo do órgão: ${formatInstantDate(ex.prazoAte)}` : "Sem prazo do órgão"}
             {ex.resolvidaEm && ` · cumprida em ${formatInstantDate(ex.resolvidaEm)}`}
           </span>
@@ -362,7 +380,9 @@ function Protocolo({
               variant="secondary"
               size="sm"
               disabled={pendente}
-              onClick={() => executar(() => acoes.resolverExigencia(ex.id))}
+              loading={carregando(`cumprir-${ex.id}`)}
+              loadingLabel="Marcando…"
+              onClick={() => executar(`cumprir-${ex.id}`, () => acoes.resolverExigencia(ex.id))}
               className="self-start"
             >
               <Check size={14} /> Marcar como cumprida
@@ -379,11 +399,15 @@ function Protocolo({
                 variant="secondary"
                 size="sm"
                 disabled={pendente}
-                onClick={() => executar(() => acoes.deferir(protocolo.id))}
+                loading={carregando(`deferir-${protocolo.id}`)}
+                loadingLabel="Registrando…"
+                onClick={() => executar(`deferir-${protocolo.id}`, () => acoes.deferir(protocolo.id))}
               >
                 Deferido
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => setAbrindoExigencia(true)}>
+              {/* Também espera: abrir o formulário enquanto o "Deferido" grava
+                  deixaria registrar os dois desfechos no mesmo protocolo. */}
+              <Button variant="secondary" size="sm" disabled={pendente} onClick={() => setAbrindoExigencia(true)}>
                 Exigência
               </Button>
             </div>
@@ -402,22 +426,23 @@ function Protocolo({
               <CampoForm label="Prazo do órgão" htmlFor={`prazo-exigencia-${protocolo.id}`} helper="Opcional.">
                 <CampoData
                   id={`prazo-exigencia-${protocolo.id}`}
-                 
                   value={prazo}
                   onChange={(v) => setPrazo(v)}
                   className="sm:w-44"
                 />
               </CampoForm>
               <div className="flex flex-wrap items-center justify-end gap-2">
-                <Button variant="secondary" size="sm" onClick={() => setAbrindoExigencia(false)}>
+                <Button variant="secondary" size="sm" disabled={pendente} onClick={() => setAbrindoExigencia(false)}>
                   Cancelar
                 </Button>
                 <Button
                   variant="primary"
                   size="sm"
                   disabled={pendente}
+                  loading={carregando(`exigir-${protocolo.id}`)}
+                  loadingLabel="Registrando…"
                   onClick={() =>
-                    executar(async () => {
+                    executar(`exigir-${protocolo.id}`, async () => {
                       const r = await acoes.exigir(protocolo.id, descricao, prazo || null);
                       if (!r?.error) {
                         setAbrindoExigencia(false);

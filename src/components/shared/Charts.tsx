@@ -2,6 +2,10 @@
 // estava instalada no projeto). Consomem os tokens do Design System via
 // var(--c41-*) e funcionam em light/dark automaticamente. Tooltip nativo via
 // <title>, sem JS extra.
+//
+// Restam os dois da "Visão do workspace" da Home; gráfico novo vai no
+// `Graficos.tsx`, a família dos painéis. O donut e as mini barras (com a
+// paleta arco-íris crua que a Home já tinha cortado) saíram em 07/10, sem uso.
 
 type BarDatum = {
   /** Identidade da barra. Obrigatório quando dois itens podem repetir o mesmo `label`. */
@@ -51,68 +55,6 @@ export function HorizontalBarChart({
           <span className="text-[12px] font-medium text-fg tnum w-6 text-right flex-shrink-0">{d.value}</span>
         </div>
       ))}
-    </div>
-  );
-}
-
-type DonutDatum = { label: string; value: number; color: string };
-
-// Donut chart — ex: empresas por status.
-export function DonutChart({
-  data,
-  emptyLabel = "Sem dados ainda.",
-}: {
-  data: DonutDatum[];
-  emptyLabel?: string;
-}) {
-  const total = data.reduce((sum, d) => sum + d.value, 0);
-  if (total === 0) {
-    return <p className="text-[13px] text-fg-muted">{emptyLabel}</p>;
-  }
-
-  const radius = 40;
-  const circumference = 2 * Math.PI * radius;
-
-  // Pré-calcula dash/offset de cada fatia num loop simples (não numa closure
-  // mutada dentro do .map() do JSX — eslint-plugin-react-hooks bloqueia
-  // reatribuição de variável capturada por callback usado durante o render).
-  const segments: { label: string; color: string; value: number; dash: number; offset: number }[] = [];
-  let cursor = 0;
-  for (const d of data) {
-    const dash = (d.value / total) * circumference;
-    segments.push({ label: d.label, color: d.color, value: d.value, dash, offset: -cursor });
-    cursor += dash;
-  }
-
-  return (
-    <div className="flex items-center gap-5 flex-wrap">
-      <svg viewBox="0 0 100 100" className="w-28 h-28 flex-shrink-0 -rotate-90">
-        <circle cx="50" cy="50" r={radius} fill="none" stroke="var(--c41-surface-2)" strokeWidth="14" />
-        {segments.map((s) => (
-          <circle
-            key={s.label}
-            cx="50"
-            cy="50"
-            r={radius}
-            fill="none"
-            stroke={s.color}
-            strokeWidth="14"
-            strokeDasharray={`${s.dash} ${circumference - s.dash}`}
-            strokeDashoffset={s.offset}
-          >
-            <title>{`${s.label}: ${s.value}`}</title>
-          </circle>
-        ))}
-      </svg>
-      <div className="space-y-1.5 min-w-0">
-        {data.map((d) => (
-          <div key={d.label} className="flex items-center gap-2 text-[12px]">
-            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: d.color }} />
-            <span className="text-fg-secondary truncate">{d.label}</span>
-            <span className="text-fg-muted tnum ml-auto">{d.value}</span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -183,54 +125,6 @@ export function TrendChart({
         <span>{data[0].label}</span>
         <span>{data[data.length - 1].label}</span>
       </div>
-    </div>
-  );
-}
-
-type MiniBarDatum = { label: string; value: number };
-
-const MINI_BAR_PALETTE = [
-  "var(--c41-brand)",
-  "var(--c41-success)",
-  "var(--c41-warning)",
-  "#8B5CF6",
-  "#06B6D4",
-  "#EC4899",
-];
-
-// Barras verticais compactas — ex: novas empresas por mês. Pensado pra caber
-// ao lado de um donut/legenda pequena, preenchendo espaço em branco em vez de
-// esticar um gráfico já completo.
-export function MiniBarChart({
-  data,
-  emptyLabel = "Sem dados suficientes ainda.",
-}: {
-  data: MiniBarDatum[];
-  emptyLabel?: string;
-}) {
-  const total = data.reduce((sum, d) => sum + d.value, 0);
-  if (data.length === 0 || total === 0) {
-    return <p className="text-[13px] text-fg-muted">{emptyLabel}</p>;
-  }
-
-  const max = Math.max(1, ...data.map((d) => d.value));
-
-  return (
-    <div className="flex items-end gap-2 h-24">
-      {data.map((d, i) => (
-        <div key={d.label} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end min-w-0">
-          <span className="text-[length:var(--fs-micro)] text-fg-muted tnum">{d.value}</span>
-          <div
-            className="w-full rounded-t-[3px] transition-[height] duration-500"
-            style={{
-              height: `${Math.max((d.value / max) * 100, d.value > 0 ? 6 : 0)}%`,
-              background: MINI_BAR_PALETTE[i % MINI_BAR_PALETTE.length],
-            }}
-            title={`${d.label}: ${d.value}`}
-          />
-          <span className="text-[length:var(--fs-micro)] text-fg-muted truncate w-full text-center">{d.label}</span>
-        </div>
-      ))}
     </div>
   );
 }

@@ -93,7 +93,7 @@ export function NovaSolicitacaoForm({
                 />
                 <span className="min-w-0">
                   <span className="block text-[14px] font-semibold text-fg">{a.label}</span>
-                  {a.description && <span className="block mt-0.5 text-[12.5px] text-fg-muted leading-snug">{a.description}</span>}
+                  {a.description && <span className="block mt-0.5 text-[length:var(--fs-2)] text-fg-muted leading-snug">{a.description}</span>}
                   <span className="block mt-1.5 text-[12px] font-medium text-fg-secondary">
                     Resposta em até {a.responseDays} {a.responseDays === 1 ? "dia útil" : "dias úteis"}
                   </span>
@@ -118,7 +118,7 @@ export function NovaSolicitacaoForm({
       </CampoForm>
 
       <div className="flex flex-wrap items-center justify-end gap-3">
-        {erro && <span className="mr-auto text-[12.5px] text-danger">{erro}</span>}
+        {erro && <span className="mr-auto text-[length:var(--fs-2)] text-danger">{erro}</span>}
         <Button type="submit" disabled={pendente}>
           <Send size={14} /> {pendente ? "Enviando…" : "Enviar solicitação"}
         </Button>

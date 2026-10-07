@@ -5,6 +5,7 @@
 
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
+import { normalizar } from "@/lib/buscaDeTelas";
 import {
   etapasLiberadas,
   situacaoDoProcesso,
@@ -235,4 +236,25 @@ export function contarPorSituacao(linhas: LinhaDaFila[]): Record<SituacaoDoProce
   };
   for (const l of linhas) contagem[l.situacao] += 1;
   return contagem;
+}
+
+/**
+ * A busca da fila (07/10/2026): empresa, tipo, título e responsável, sem
+ * acento e sem caixa — quem digita "otica" acha "Ótica Alvorada". Com os 174
+ * processos vindos do Trello, achar um pela empresa era rolar a fila inteira.
+ *
+ * Cada palavra precisa casar em algum dos campos ("alvorada baixa" acha a baixa
+ * da Ótica Alvorada). Roda depois da consulta: a fila inteira do filtro já está
+ * em memória para os contadores (ver /processos), e o teto é de 500 linhas.
+ */
+export function filtrarPelaBusca<T extends Pick<LinhaDaFila, "empresaNome" | "tipoNome" | "titulo" | "responsavelNome">>(
+  linhas: T[],
+  busca: string
+): T[] {
+  const palavras = normalizar(busca).split(/\s+/).filter(Boolean);
+  if (palavras.length === 0) return linhas;
+  return linhas.filter((l) => {
+    const texto = normalizar([l.empresaNome, l.tipoNome, l.titulo ?? "", l.responsavelNome ?? ""].join(" "));
+    return palavras.every((p) => texto.includes(p));
+  });
 }

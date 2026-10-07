@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
 import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -56,7 +57,7 @@ export default async function EscalaPage({
       <BackButton className="mb-3" />
       <PageHeader title="Escala de Trabalho" />
 
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
+      <Card className="p-5">
         {escala.length === 0 ? (
           <p className="text-[13px] text-fg-muted mb-3">Nenhuma escala montada ainda.</p>
         ) : (
@@ -81,7 +82,7 @@ export default async function EscalaPage({
         )}
 
         {canEdit && <AddEscalaForm action={criarEscalaAction} shifts={turnosDisponiveis} />}
-      </div>
+      </Card>
     </PageContainer>
   );
 }

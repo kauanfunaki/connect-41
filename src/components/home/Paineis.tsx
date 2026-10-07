@@ -58,11 +58,24 @@ function plural(n: number, um: string, varios: string): string {
   return `${numero(n)} ${n === 1 ? um : varios}`;
 }
 
+/**
+ * O painel cuja consulta falhou (07/10): o cabeçalho de sempre, para a pessoa
+ * saber o que faltou, e um aviso discreto no lugar do gráfico — o resto da
+ * Home segue. A consulta devolve `null` em vez de lançar (`dadosDosPaineis`).
+ */
+function PainelIndisponivel({ setor, titulo, href }: { setor: SetorDoPainel; titulo: string; href: string }) {
+  return (
+    <Painel setor={setor.rotulo} cor={setor.cor} titulo={titulo} href={href}>
+      <p className="text-[length:var(--fs-helper)] text-fg-muted py-1.5">Não deu para carregar agora. Atualize a página em instantes.</p>
+    </Painel>
+  );
+}
+
 // ─── Você ──────────────────────────────────────────────────────────────────
 
 /**
  * As tarefas abertas nos kanbans que o usuário enxerga — o mesmo conjunto do
- * cartão "Vencidos / hoje" — e, no rodapé, quantas são dele. Era só das
+ * cartão "Atrasadas / hoje" — e, no rodapé, quantas são dele. Era só das
  * atribuídas, e quem coordena (sem tarefa no próprio nome) via um painel vazio.
  */
 export async function PainelDeTarefas({
@@ -136,9 +149,13 @@ function segmentosDaCarteira(faixas: Record<FaixaDeVencimento, Soma>, tela: "/pa
 }
 
 export async function PainelDeContas({ ctx, acesso, setor }: Base) {
-  const { pagar, receber } = await dadosDaCarteira(ctx.tenantId);
+  const carteira = await dadosDaCarteira(ctx.tenantId);
   const verPagar = acesso.modulos.has("bpo_contas_pagar");
   const verReceber = acesso.modulos.has("bpo_contas_receber");
+  const titulo = "Contas a pagar e a receber";
+  const href = verPagar ? "/pagar" : "/receber";
+  if (!carteira) return <PainelIndisponivel setor={setor} titulo={titulo} href={href} />;
+  const { pagar, receber } = carteira;
   const principal = verPagar ? pagar : receber;
   const t = await tendenciasDaHome(ctx, {
     ...(verPagar ? { pagar_vencido: pagar.vencida.centavos, pagar_aberto: totalDaCarteira(pagar).centavos } : {}),
@@ -149,8 +166,8 @@ export async function PainelDeContas({ ctx, acesso, setor }: Base) {
     <Painel
       setor={setor.rotulo}
       cor={setor.cor}
-      titulo="Contas a pagar e a receber"
-      href={verPagar ? "/pagar" : "/receber"}
+      titulo={titulo}
+      href={href}
       destaque={{
         valor: moeda(principal.vencida.centavos),
         legenda: verPagar ? "a pagar vencido" : "a receber vencido",
@@ -175,7 +192,9 @@ export async function PainelDeContas({ ctx, acesso, setor }: Base) {
 }
 
 export async function PainelDeSemanas({ ctx, setor }: Base) {
-  const { semanas } = await dadosDaCarteira(ctx.tenantId);
+  const carteira = await dadosDaCarteira(ctx.tenantId);
+  if (!carteira) return <PainelIndisponivel setor={setor} titulo="A pagar nas próximas semanas" href="/pagar" />;
+  const { semanas } = carteira;
   const total = semanas.reduce((s, x) => s + x.centavos, 0);
   const dia = (key: string) => formatCalendarDate(new Date(`${key}T12:00:00Z`), { day: "2-digit", month: "2-digit" });
   const t = await tendenciasDaHome(ctx, { pagar_seis_semanas: total, pagar_esta_semana: semanas[0]?.centavos ?? 0 });
@@ -208,7 +227,11 @@ export async function PainelDeSemanas({ ctx, setor }: Base) {
 export async function PainelDePendencias({ ctx, acesso, setor }: Base) {
   const verPendencias = acesso.modulos.has("bpo_pendencias");
   const verAprovacoes = acesso.modulos.has("bpo_aprovacoes");
-  const { pendencias: p, aprovacoes } = await dadosDasPendencias(ctx.tenantId, verPendencias, verAprovacoes);
+  const titulo = "Pendências e aprovações";
+  const href = verPendencias ? "/pendencias" : "/aprovacoes";
+  const dados = await dadosDasPendencias(ctx.tenantId, verPendencias, verAprovacoes);
+  if (!dados) return <PainelIndisponivel setor={setor} titulo={titulo} href={href} />;
+  const { pendencias: p, aprovacoes } = dados;
   const aguardando = aprovacoes?.aguardando ?? { n: 0, centavos: 0 };
   const reprovadas = aprovacoes?.reprovadas ?? { n: 0, centavos: 0 };
   const t = await tendenciasDaHome(ctx, {
@@ -220,8 +243,8 @@ export async function PainelDePendencias({ ctx, acesso, setor }: Base) {
     <Painel
       setor={setor.rotulo}
       cor={setor.cor}
-      titulo="Pendências e aprovações"
-      href={verPendencias ? "/pendencias" : "/aprovacoes"}
+      titulo={titulo}
+      href={href}
       destaque={
         p
           ? {
@@ -293,7 +316,9 @@ const FAIXAS_DO_PRAZO = [
 ] as const;
 
 export async function PainelDeProcessos({ ctx, setor }: Base) {
-  const { fila, estourados } = await dadosDosProcessos(ctx.tenantId);
+  const dados = await dadosDosProcessos(ctx.tenantId);
+  if (!dados) return <PainelIndisponivel setor={setor} titulo="Processos em aberto" href="/processos" />;
+  const { fila, estourados } = dados;
   const t = await tendenciasDaHome(ctx, { processos_estourados: estourados, processos_abertos: fila.length });
 
   const linhas: LinhaDeSituacao[] = SITUACOES_DA_FILA.map((s) => {
@@ -332,7 +357,12 @@ export async function PainelDeProcessos({ ctx, setor }: Base) {
 // ─── DP ────────────────────────────────────────────────────────────────────
 
 export async function PainelDoDP({ ctx, setor }: Base) {
-  const { ferias: f, admissoes, rescisoes, exames, afastados } = await dadosDoDP(ctx.tenantId);
+  // O que o painel mostra, como os outros ("Tarefas por prazo"): o setor já
+  // vem no rótulo de cima, e "DP · Departamento Pessoal" só o repetia (07/10).
+  const titulo = "Férias e movimentações";
+  const dados = await dadosDoDP(ctx.tenantId);
+  if (!dados) return <PainelIndisponivel setor={setor} titulo={titulo} href="/colaboradores" />;
+  const { ferias: f, admissoes, rescisoes, exames, afastados } = dados;
   const t = await tendenciasDaHome(ctx, { ferias_vencidas: f.vencidas, ferias_a_vencer: f.aVencer });
 
   const andamento = [
@@ -346,7 +376,7 @@ export async function PainelDoDP({ ctx, setor }: Base) {
     <Painel
       setor={setor.rotulo}
       cor={setor.cor}
-      titulo="Departamento Pessoal"
+      titulo={titulo}
       href="/colaboradores"
       destaque={{
         valor: numero(f.vencidas),
@@ -373,7 +403,7 @@ export async function PainelDoDP({ ctx, setor }: Base) {
             >
               <span className="text-fg-muted [&>svg]:size-4 flex-shrink-0">{a.icone}</span>
               <span className="min-w-0">
-                <span className="block text-[15px] font-semibold text-fg leading-tight">{numero(a.valor)}</span>
+                <span className="block font-display text-[length:var(--fs-body)] font-semibold text-fg leading-tight tnum">{numero(a.valor)}</span>
                 <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate">
                   {a.rotulo} {a.detalhe}
                 </span>
@@ -390,7 +420,9 @@ export async function PainelDoDP({ ctx, setor }: Base) {
 
 export async function PainelDeRecrutamento({ ctx, setor }: Base) {
   // O escopo de /vagas (setor ativo e regra do recrutador).
-  const { vagas, funil } = await dadosDoRecrutamento(ctx);
+  const dados = await dadosDoRecrutamento(ctx);
+  if (!dados) return <PainelIndisponivel setor={setor} titulo="Funil das vagas abertas" href="/vagas" />;
+  const { vagas, funil } = dados;
   const t = await tendenciasDaHome(ctx, { vagas_abertas: vagas });
 
   return (
@@ -422,6 +454,7 @@ export async function PainelDeRecrutamento({ ctx, setor }: Base) {
 
 export async function PainelDeCertificados({ ctx, setor }: Base) {
   const c = await dadosDosCertificados(ctx.tenantId);
+  if (!c) return <PainelIndisponivel setor={setor} titulo="Certificados digitais" href="/certificados" />;
   const t = await tendenciasDaHome(ctx, { certificados_vencidos: c.vencido, certificados_a_renovar: c.a_renovar });
 
   return (
@@ -430,12 +463,18 @@ export async function PainelDeCertificados({ ctx, setor }: Base) {
       cor={setor.cor}
       titulo="Certificados digitais"
       href="/certificados"
-      destaque={{
-        valor: numero(c.vencido),
-        legenda: c.vencido === 1 ? "vencido" : "vencidos",
-        tom: c.vencido > 0 ? "critico" : undefined,
-        tendencia: t.certificados_vencidos,
-      }}
+      // Sem certificado importado, sem número (07/10): "0 vencidos" em
+      // destaque lia como "tudo em dia". O portal faz o mesmo no Início.
+      destaque={
+        c.vencido + c.a_renovar + c.vigente > 0
+          ? {
+              valor: numero(c.vencido),
+              legenda: c.vencido === 1 ? "vencido" : "vencidos",
+              tom: c.vencido > 0 ? "critico" : undefined,
+              tendencia: t.certificados_vencidos,
+            }
+          : undefined
+      }
     >
       <Rosca
         titulo="Certificados em uso por situação"

@@ -33,7 +33,7 @@ export function AiCompanySummary({ action }: Props) {
         </div>
         <Button type="button" onClick={handleClick} disabled={isPending} className="flex-shrink-0">
           <Sparkles size={14} />
-          {isPending ? "Gerando…" : "Gerar Resumo"}
+          {isPending ? "Gerando…" : "Gerar resumo"}
         </Button>
       </div>
 

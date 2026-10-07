@@ -24,7 +24,7 @@ export function ChoicePill({ name, checked, disabled, onSelect, label, ariaLabel
 
   return (
     <label
-      className={`relative inline-flex items-center justify-center h-9 min-w-[68px] px-3 rounded-md border text-[13px] font-medium select-none transition-colors ${
+      className={`relative inline-flex items-center justify-center h-9 min-w-[68px] px-3 rounded-md border text-[length:var(--fs-ui)] font-medium select-none transition-colors ${
         disabled
           ? "border-border text-fg-muted opacity-50 cursor-not-allowed"
           : checked

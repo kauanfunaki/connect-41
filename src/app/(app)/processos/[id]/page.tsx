@@ -3,7 +3,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
+import { TOM_DA_VARIANTE } from "@/components/societario/tomDoSelo";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
@@ -46,6 +47,7 @@ import { aplicarAviso, descartarAviso } from "../avisos-actions";
 import { AvisosDaJunta } from "@/components/societario/AvisosDaJunta";
 import { avisosPendentes } from "@/lib/societario/avisos";
 import { HorasDoProcesso } from "@/components/societario/HorasDoProcesso";
+import { ObservacoesDoProcesso } from "@/components/societario/ObservacoesDoProcesso";
 import { apagarHorasDoProcesso, iniciarCronometroDoProcesso, lancarHorasNoProcesso, pararCronometroDoProcesso } from "../horas-actions";
 
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
@@ -263,10 +265,12 @@ export default async function ProcessoDetalhePage({
         }
         meta={
           <>
+          {/* Situação e prioridade em Selo: é a situação da ficha (regra de
+              02/10 no Selo; auditoria de 07/10/2026). */}
           {encerradoSemConclusao ? (
-            <Badge variant="danger">{processo.status === "CANCELADO" ? "Cancelado" : "Indeferido"}</Badge>
+            <Selo tom="perigo">{processo.status === "CANCELADO" ? "Cancelado" : "Indeferido"}</Selo>
           ) : (
-            <Badge variant={SITUACAO_VARIANTE[situacao]}>{SITUACAO_LABEL[situacao]}</Badge>
+            <Selo tom={TOM_DA_VARIANTE[SITUACAO_VARIANTE[situacao]]}>{SITUACAO_LABEL[situacao]}</Selo>
           )}
 
           {prazo.situacao === "sem_previsao" ? (
@@ -295,9 +299,9 @@ export default async function ProcessoDetalhePage({
           )}
 
           {processo.priority !== "NORMAL" && (
-            <Badge variant={PRIORIDADE_VARIANTE[processo.priority]}>
+            <Selo tom={TOM_DA_VARIANTE[PRIORIDADE_VARIANTE[processo.priority]]}>
               Prioridade {PRIORIDADE_LABEL[processo.priority].toLowerCase()}
-            </Badge>
+            </Selo>
           )}
 
           {combinado && processo.dueAt && (
@@ -315,7 +319,9 @@ export default async function ProcessoDetalhePage({
           )}
 
           <span>Aberto em {formatInstantDate(processo.startedAt)}</span>
-          <span>{processo.owner?.name ?? "sem responsável"}</span>
+          {/* Com rótulo (07/10/2026): o nome solto entre a data e os botões não
+              dizia que era o responsável. */}
+          <span>{processo.owner ? `Responsável: ${processo.owner.name}` : "Sem responsável"}</span>
           {/* Revisão de 05/10: botão não é link — os dois atalhos eram texto azul. */}
           <Button href={`/processos/empresas/${processo.company.id}`} variant="secondary" size="xs">
             Visão societária
@@ -329,7 +335,7 @@ export default async function ProcessoDetalhePage({
 
       <div className="mb-6 flex flex-col gap-3">
         {processo.statusReason && (
-          <p className="text-[13px] text-fg rounded-md border border-border bg-surface-2 px-3 py-2 break-words">
+          <p className="text-[length:var(--fs-ui)] text-fg rounded-md border border-border bg-surface-2 px-3 py-2 break-words">
             <span className="font-medium">Motivo:</span> {processo.statusReason}
             {processo.statusChangedAt && (
               <span className="text-fg-muted"> · desde {formatInstantDate(processo.statusChangedAt)}</span>
@@ -341,35 +347,30 @@ export default async function ProcessoDetalhePage({
             nenhum. É onde a importação do Trello (06/10) põe descrição,
             checklists e comentários do cartão — fechado, porque é longo, e
             só aqui: o portal não lê `notes`. */}
-        {processo.notes && (
-          <details className="rounded-md border border-border bg-surface-2 px-3 py-2">
-            <summary className="cursor-pointer text-[13px] font-medium text-fg">
-              Observações internas <span className="font-normal text-fg-muted">· só a equipe vê</span>
-            </summary>
-            <p className="mt-2 whitespace-pre-wrap break-words text-[12px] text-fg-secondary">{processo.notes}</p>
-          </details>
-        )}
+        {processo.notes && <ObservacoesDoProcesso texto={processo.notes} />}
       </div>
 
       {/* Uma pilha só, com o mesmo respiro entre todas as seções — eram
-          mb-4/mt-4 soltos em cada bloco. O roteiro ganhou título, como as
-          outras seções da página. */}
+          mb-4/mt-4 soltos em cada bloco. Toda seção é um cartão com o título
+          dentro (07/10/2026): Avisos e Roteiro eram as duas com o título
+          solto no fundo, enquanto Taxas, Horas, Conversa e Documentos já
+          eram cartão. */}
       <div className="flex flex-col gap-5">
         {avisos.length > 0 && (
-          <section aria-labelledby="avisos-da-junta" className="flex flex-col gap-3">
+          <Card as="section" aria-labelledby="avisos-da-junta" className="p-4 flex flex-col gap-4">
             <div className="flex flex-col gap-0.5">
               <h2 id="avisos-da-junta" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
                 Avisos da Junta por e-mail
               </h2>
-              <p className="text-[12px] text-fg-muted">
+              <p className="text-[length:var(--fs-2)] text-fg-muted">
                 O sistema leu o e-mail e sugere o desfecho. Confira o texto do órgão antes de aplicar.
               </p>
             </div>
-            <AvisosDaJunta avisos={avisos} acoes={{ aplicar: aplicarAviso, descartar: descartarAviso }} />
-          </section>
+            <AvisosDaJunta avisos={avisos} acoes={{ aplicar: aplicarAviso, descartar: descartarAviso }} embutido />
+          </Card>
         )}
 
-        <section aria-labelledby="roteiro-do-processo" className="flex flex-col gap-3">
+        <Card as="section" aria-labelledby="roteiro-do-processo" className="p-4 flex flex-col gap-3">
           <h2 id="roteiro-do-processo" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
             Roteiro
           </h2>
@@ -386,7 +387,7 @@ export default async function ProcessoDetalhePage({
               alternarItem: alternarItemDoChecklist,
             }}
           />
-        </section>
+        </Card>
 
         <TaxasDoProcesso taxas={taxas} custo={custo} />
 
@@ -428,13 +429,13 @@ export default async function ProcessoDetalhePage({
                   <h2 id="conversa-do-processo" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
                     Conversa com o cliente
                   </h2>
-                  <p className="text-[12px] text-fg-muted">
+                  <p className="text-[length:var(--fs-2)] text-fg-muted">
                     O cliente vê tudo o que for escrito aqui no portal, e é avisado por e-mail. Para anotação
                     interna, use as observações do processo.
                   </p>
                 </div>
                 {conversa.limitada && (
-                  <p className="text-[12px] text-fg-muted">Mostrando só as mensagens mais recentes.</p>
+                  <p className="text-[length:var(--fs-2)] text-fg-muted">Mostrando só as mensagens mais recentes.</p>
                 )}
                 {conversa.mensagens.length > 0 && (
                   <ConversaDaPendencia
@@ -471,7 +472,7 @@ export default async function ProcessoDetalhePage({
         )}
       </div>
 
-      <p className="mt-6 text-[11px] text-fg-muted">
+      <p className="mt-6 text-[length:var(--fs-micro)] text-fg-muted">
         Roteiro versão {processo.template.version} — congelado na abertura, para o processo não
         mudar embaixo de quem está tocando ele.
       </p>

@@ -25,7 +25,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { PersonHeader } from "@/components/pessoas/PersonHeader";
 import { PersonDetailTabs } from "@/components/pessoas/PersonDetailTabs";
 import { AdmissaoCard } from "@/components/pessoas/AdmissaoCard";
-import { SeloDoDP } from "@/components/pessoas/rotulosDoDP";
+import { SeloDoDP, horasDoDP } from "@/components/pessoas/rotulosDoDP";
 import { InfoRow } from "@/components/empresas/InfoRow";
 import { CompanyHistorySection } from "@/components/empresas/CompanyHistorySection";
 import { OperationsLinkList, type OperationLink } from "@/components/shared/OperationsLinkList";
@@ -315,11 +315,11 @@ export default async function PessoaPage({
             <InfoRow label="Jornada" value={person.workShift} />
             <InfoRow
               label="Carga Horária Semanal"
-              value={person.weeklyWorkHours != null ? `${person.weeklyWorkHours.toString()} h` : null}
+              value={person.weeklyWorkHours != null ? horasDoDP(person.weeklyWorkHours) : null}
             />
             <InfoRow
               label="Carga Horária Mensal"
-              value={person.monthlyWorkHours != null ? `${person.monthlyWorkHours.toString()} h` : null}
+              value={person.monthlyWorkHours != null ? horasDoDP(person.monthlyWorkHours) : null}
             />
           </div>
         </Card>

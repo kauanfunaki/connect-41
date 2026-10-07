@@ -1,10 +1,9 @@
 import { notFound } from "next/navigation";
-import { Columns3 } from "lucide-react";
+import { AlertTriangle, CalendarClock, CalendarRange, CheckCircle2, Columns3, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { CheckCircle2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { MetricCard } from "@/components/ui/MetricCard";
+import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -56,12 +55,33 @@ export default async function MinhaAreaPage() {
         }
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <MetricCard label="Vencidos" value={grupos.vencido.length} highlight={grupos.vencido.length > 0} />
-        <MetricCard label="Hoje" value={grupos.hoje.length} highlight={grupos.hoje.length > 0} />
-        <MetricCard label="Próximos 7 dias" value={grupos.semana.length} />
-        <MetricCard label="Processos abertos" value={meusProcessos} href={`/processos?responsavel=${ctx.userId}`} />
-      </div>
+      {/* Os totais no cartão das filas irmãs (Processos, Licenças) — era o
+          MetricCard sem ícone, um dos três desenhos de total do módulo
+          (07/10/2026). */}
+      <FaixaDeTotais
+        className="mb-6"
+        itens={[
+          {
+            rotulo: "Vencidos",
+            valor: String(grupos.vencido.length),
+            icone: <AlertTriangle />,
+            tom: grupos.vencido.length > 0 ? "text-danger" : undefined,
+          },
+          {
+            rotulo: "Hoje",
+            valor: String(grupos.hoje.length),
+            icone: <CalendarClock />,
+            tom: grupos.hoje.length > 0 ? "text-warning" : undefined,
+          },
+          { rotulo: "Próximos 7 dias", valor: String(grupos.semana.length), icone: <CalendarRange /> },
+          {
+            rotulo: "Processos abertos",
+            valor: String(meusProcessos),
+            icone: <FolderOpen />,
+            href: `/processos?responsavel=${ctx.userId}`,
+          },
+        ]}
+      />
 
       {itens.length === 0 ? (
         <EmptyState

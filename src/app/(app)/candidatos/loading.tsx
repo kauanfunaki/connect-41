@@ -15,7 +15,7 @@ export default function LoadingCandidatos() {
         <div className="border-b border-border bg-table-header-bg h-11" />
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="flex items-center gap-6 px-4 py-3 border-b border-border last:border-0">
-            <div className="c41-skeleton w-4 h-4 rounded" />
+            <div className="c41-skeleton w-4 h-4 rounded-sm" />
             <div className="c41-skeleton w-40 h-3.5" />
             <div className="c41-skeleton w-28 h-3.5" />
             <div className="c41-skeleton w-16 h-3.5" />

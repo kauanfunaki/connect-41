@@ -129,7 +129,7 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
             <div>
               <p className="text-[14px] font-semibold text-fg leading-snug">{meeting.title}</p>
               <span
-                className="inline-flex items-center gap-1 mt-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium"
+                className="inline-flex items-center gap-1 mt-1.5 px-1.5 py-0.5 rounded text-[length:var(--fs-micro)] font-medium"
                 style={{ color: accent, background: isGoogle ? "var(--c41-brand-subtle)" : "rgba(124,92,191,0.14)" }}
               >
                 {PROVIDER_LABEL[meeting.provider]}
@@ -168,13 +168,13 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
                       <span
                         key={a.id}
                         title={a.name}
-                        className="w-5 h-5 rounded-full bg-brand-subtle text-brand border border-surface-elevated flex items-center justify-center text-[9px] font-semibold"
+                        className="w-5 h-5 rounded-full bg-brand-subtle text-brand border border-surface-elevated flex items-center justify-center text-[length:var(--fs-micro)] font-semibold"
                       >
                         {initialsFromName(a.name)}
                       </span>
                     ))}
                   </div>
-                  <p className="text-[11.5px] text-fg-muted truncate">
+                  <p className="text-[length:var(--fs-micro)] text-fg-muted truncate">
                     {meeting.attendees.map((a) => a.name).join(", ")}
                   </p>
                 </div>

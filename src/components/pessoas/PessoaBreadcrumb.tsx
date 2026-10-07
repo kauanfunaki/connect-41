@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 
 /**
  * Trilha "Cadastros / Pessoas / Fulano" no topo da ficha e das sub-páginas.
@@ -8,6 +8,9 @@ import Link from "next/link";
  * `/colaboradores-clientes`, no módulo de Recrutamento. Sem isto, o link da
  * trilha levava metade das fichas para uma lista onde elas não aparecem — o
  * tipo de erro que só se descobre clicando.
+ *
+ * Monta só os itens; quem desenha é o `Breadcrumb` compartilhado (07/10/2026),
+ * como nas outras 35 telas — era a trilha escrita à mão.
  */
 export function PessoaBreadcrumb({
   isInternal,
@@ -25,25 +28,15 @@ export function PessoaBreadcrumb({
     ? { href: "/pessoas", raiz: "Cadastros", label: "Pessoas" }
     : { href: "/colaboradores-clientes", raiz: "Recrutamento", label: "Colaboradores de clientes" };
 
-  const link = "text-[13px] text-fg-muted hover:text-fg transition-colors";
-
   return (
-    <div className="flex flex-wrap items-center gap-2 mb-6 min-w-0">
-      <Link href={origem.href} className={link}>{origem.raiz}</Link>
-      <span className="text-fg-muted">/</span>
-      <Link href={origem.href} className={link}>{origem.label}</Link>
-      <span className="text-fg-muted">/</span>
-      {atual ? (
-        <>
-          <Link href={`/pessoas/${personId}`} className={`${link} truncate max-w-[200px]`}>
-            {personName}
-          </Link>
-          <span className="text-fg-muted">/</span>
-          <span className="text-[13px] text-fg">{atual}</span>
-        </>
-      ) : (
-        <span className="text-[13px] text-fg truncate">{personName}</span>
-      )}
-    </div>
+    <Breadcrumb
+      items={[
+        { label: origem.raiz, href: origem.href },
+        { label: origem.label, href: origem.href },
+        ...(atual
+          ? [{ label: personName, href: `/pessoas/${personId}`, truncate: true }, { label: atual }]
+          : [{ label: personName, truncate: true }]),
+      ]}
+    />
   );
 }

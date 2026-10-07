@@ -22,7 +22,7 @@ export default async function NovoKanbanPage() {
   return (
     <PageContainer>
       <Breadcrumb items={[{ label: "Kanban", href: "/kanban" }, { label: "Novo Kanban" }]} />
-      <PageHeader title="Novo Kanban" />
+      <PageHeader title="Novo kanban" />
 
       <Card className="p-6 w-full max-w-[720px]">
         <PipelineForm action={criarPipeline} sectorOptions={sectorOptions} />

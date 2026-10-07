@@ -19,7 +19,7 @@ export function LancarEventoForm({ action, colaboradores }: Props) {
 
   return (
     <form action={formAction} className="border-t border-border pt-4 mb-6 space-y-4">
-      <h3 className="text-[13px] font-medium text-fg">Lançar evento</h3>
+      <h3 className="text-[length:var(--fs-ui)] font-medium text-fg">Lançar evento</h3>
 
       {/* Eram três grades de 4, 5 e 5 colunas empilhadas — as colunas de uma
           linha não caíam sob as da outra, e o colaborador (o campo mais largo)

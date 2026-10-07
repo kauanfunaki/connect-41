@@ -155,16 +155,16 @@ export function EmpresasTable({
                     JÁ é o nome de cima, e repetir é ruído. O ID do Acessórias
                     tem coluna própria desde 05/10. */}
                 {razaoSocialSecundaria(c) && (
-                  <span className="truncate text-[11.5px] font-normal text-fg-muted">{razaoSocialSecundaria(c)}</span>
+                  <span className="truncate text-[length:var(--fs-micro)] font-normal text-fg-muted">{razaoSocialSecundaria(c)}</span>
                 )}
               </span>
             </Link>
             {qtdFiliais > 0 && (
-              <span className="ml-1 shrink-0 text-[11.5px] text-fg-muted tnum whitespace-nowrap">
+              <span className="ml-1 shrink-0 text-[length:var(--fs-micro)] text-fg-muted tnum whitespace-nowrap">
                 {qtdFiliais} {qtdFiliais === 1 ? "filial" : "filiais"}
               </span>
             )}
-            {ehFilial && <span className="ml-1 shrink-0 text-[11.5px] text-fg-muted">filial</span>}
+            {ehFilial && <span className="ml-1 shrink-0 text-[length:var(--fs-micro)] text-fg-muted">filial</span>}
           </div>
         </td>
         {/* O ID do Acessórias em coluna própria (revisão de 05/10): embaixo do
@@ -251,7 +251,7 @@ export function EmpresasTable({
               {/* `break-words` em vez de `truncate`: no cartão há altura de
                   sobra, e cortar o nome era um custo só da tabela. */}
               <span className="font-medium break-words">{nomeExibicao(c)}</span>
-              {secundaria && <span className="text-[11.5px] text-fg-muted break-words">{secundaria}</span>}
+              {secundaria && <span className="text-[length:var(--fs-micro)] text-fg-muted break-words">{secundaria}</span>}
             </span>
           </Link>
         </div>
@@ -390,7 +390,9 @@ export function EmpresasTable({
 
   return (
     <>
-      <div className="bg-surface border border-border rounded-lg overflow-hidden shadow-[var(--c41-shadow-xs)]">
+      {/* `c41-tabela`: dentro do `CascoDaTabela`, no computador, o casco é o
+          cartão e este perde borda, fundo e sombra (globals.css). */}
+      <div className="c41-tabela bg-surface border border-border rounded-lg overflow-hidden shadow-[var(--c41-shadow-xs)]">
         {companies.length === 0 ? (
           <EmptyState icon={<Building2 />} title="Nenhuma empresa encontrada" />
         ) : (
@@ -402,7 +404,7 @@ export function EmpresasTable({
             {canCreate && (
               <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border bg-table-header-bg">
                 <Checkbox checked={allSelected} onChange={toggleAll} aria-label="Selecionar todas" />
-                <span className="text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                <span className="text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                   Selecionar todas
                 </span>
               </div>
@@ -411,10 +413,10 @@ export function EmpresasTable({
               <Fragment key={`cartoes-${bloco.clientGroupId ?? "sem-cliente"}-${i}`}>
                 {bloco.mostrarCabecalho && (
                   <div className="px-3 py-2 border-b border-border bg-surface-2">
-                    <span className="text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                    <span className="text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                       {bloco.label}
                     </span>
-                    <span className="ml-2 text-[11.5px] text-fg-muted tnum">
+                    <span className="ml-2 text-[length:var(--fs-micro)] text-fg-muted tnum">
                       {bloco.empresas.length} empresa{bloco.empresas.length !== 1 ? "s" : ""}
                     </span>
                   </div>
@@ -468,14 +470,14 @@ export function EmpresasTable({
                     data de cadastro não decide nada numa lista operacional). O
                     ID do Acessórias, que tinha descido para a segunda linha do
                     nome, voltou a ter coluna estreita em 05/10. */}
-                <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
-                <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">ID</th>
-                <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">CNPJ</th>
-                <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
-                <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                <th className="text-center px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
+                <th className="text-center px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">ID</th>
+                <th className="text-center px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">CNPJ</th>
+                <th className="text-center px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
+                <th className="text-center px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                   {filtrosDeColuna ? <FiltroDaColunaNaUrl rotulo="Regime" chave="regime" opcoes={filtrosDeColuna.regime} /> : "Regime"}
                 </th>
-                <th className="text-center px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                <th className="text-center px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                   {filtrosDeColuna ? (
                     <FiltroDaColunaNaUrl rotulo="Localização" chave="local" opcoes={filtrosDeColuna.local} align="right" />
                   ) : (
@@ -491,10 +493,10 @@ export function EmpresasTable({
                   {bloco.mostrarCabecalho && (
                     <tr className="border-b border-border bg-surface-2">
                       <td colSpan={colunas - 1} className="px-4 py-2">
-                        <span className="text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                        <span className="text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                           {bloco.label}
                         </span>
-                        <span className="ml-2 text-[11.5px] text-fg-muted tnum">
+                        <span className="ml-2 text-[length:var(--fs-micro)] text-fg-muted tnum">
                           {bloco.empresas.length} empresa{bloco.empresas.length !== 1 ? "s" : ""}
                         </span>
                       </td>

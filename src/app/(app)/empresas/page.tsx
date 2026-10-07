@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Building2 } from "lucide-react";
+import { Building2, Plus } from "lucide-react";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { CadastrosTabsBar } from "@/components/shared/CadastrosTabsBar";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -172,37 +172,23 @@ export default async function EmpresasPage({
       {/* Header */}
       <PageHeader
         title="Empresas"
-        subtitle={
-          <>
-            {total} empresa{total !== 1 ? "s" : ""}
-            {cliente ? " neste cliente" : " cadastrada" + (total !== 1 ? "s" : "")}
-          </>
-        }
+        subtitle="As empresas atendidas, agrupadas por cliente."
         action={<>{canCreate && (
           <Button
             href="/empresas/nova"
             variant="primary"
           >
-            + Nova Empresa
+            <Plus size={14} /> Nova empresa
           </Button>
         )}</>}
       />
-      {/* Filters */}
-      <div className="flex items-center gap-3 mb-4">
-        {/* Search */}
-        <div className="flex-1 max-w-xs">
-          <DebouncedSearchInput placeholder="Buscar por nome ou ID…" />
-        </div>
-
-        <EmpresasFilterButton search={search} page={page} statusFilter={statusFilter} tabs={FILTER_TABS} />
-      </div>
 
       {/* Filtro por cliente vem de um link de /clientes. Sem uma saída visível,
           o usuário buscava outra empresa, não achava, e concluía que ela não
           existe — o filtro continuava ativo na URL, invisível. */}
       {cliente && (
         <div className="flex items-center gap-2 mb-4">
-          <span className="inline-flex items-center gap-2 h-7 pl-3 pr-2 rounded-full bg-brand/10 text-brand text-[12px] font-medium">
+          <span className="inline-flex items-center gap-2 h-7 pl-3 pr-2 rounded-full bg-brand/10 text-brand text-[length:var(--fs-2)] font-medium">
             Cliente: {clienteFiltrado?.name ?? "desconhecido"}
             <Link
               href={buildUrl({ cliente: undefined, page: "1" })}
@@ -212,7 +198,7 @@ export default async function EmpresasPage({
               ×
             </Link>
           </span>
-          <span className="text-[12px] text-fg-muted">
+          <span className="text-[length:var(--fs-2)] text-fg-muted">
             A busca e os filtros só enxergam as empresas deste cliente.
           </span>
         </div>
@@ -221,7 +207,7 @@ export default async function EmpresasPage({
       {/* Esconder sem avisar faria a base parecer menor do que é. */}
       {/* Revisão de 05/10: botão não é link — o "Mostrar todas" era texto azul. */}
       {ocultas > 0 && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[12px] text-fg-muted mb-4">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[length:var(--fs-2)] text-fg-muted mb-4">
           <p>
             {ocultas} empresa{ocultas !== 1 ? "s" : ""} inativa{ocultas !== 1 ? "s" : ""} ou cancelada
             {ocultas !== 1 ? "s" : ""} fora desta lista.
@@ -232,6 +218,15 @@ export default async function EmpresasPage({
         </div>
       )}
 
+      {/* Contagem, busca e filtro na barra do casco (07/10/2026), como as
+          filas irmãs de 05/10: eram a busca e o filtro soltos acima da
+          tabela, a contagem no subtítulo e o vazio num cartão à parte. O
+          painel do Filtros continua o mesmo (modelo aprovado), na barra. */}
+      <CascoDaTabela
+        contagem={contarItens(total, "empresa", "empresas")}
+        busca={<DebouncedSearchInput placeholder="Buscar por nome ou ID…" className="w-72 max-w-full" />}
+        filtros={<EmpresasFilterButton search={search} page={page} statusFilter={statusFilter} tabs={FILTER_TABS} />}
+      >
       {/* Fica acima da tabela e do estado vazio: é por aqui que se desfaz o
           funil quando ele esvazia a lista. */}
       <FiltrosDasColunasNaUrl
@@ -241,24 +236,21 @@ export default async function EmpresasPage({
         ]}
       />
 
-      {/* Table */}
       {companies.length === 0 ? (
-        <Card>
-          <EmptyState
-            icon={<Building2 />}
-            title={search || statusFilter || temFiltroDeColuna ? "Nenhuma empresa encontrada" : "Nenhuma empresa cadastrada ainda"}
-            description={
-              search || statusFilter || temFiltroDeColuna
-                ? "Tente ajustar a busca ou os filtros."
-                : "Comece cadastrando a primeira empresa do tenant."
-            }
-            action={
-              !search && !statusFilter && !temFiltroDeColuna && canCreate ? (
-                <Button href="/empresas/nova">+ Nova Empresa</Button>
-              ) : undefined
-            }
-          />
-        </Card>
+        <EmptyState
+          icon={<Building2 />}
+          title={search || statusFilter || temFiltroDeColuna ? "Nenhuma empresa encontrada" : "Nenhuma empresa cadastrada ainda"}
+          description={
+            search || statusFilter || temFiltroDeColuna
+              ? "Tente ajustar a busca ou os filtros."
+              : "Comece cadastrando a primeira empresa do tenant."
+          }
+          action={
+            !search && !statusFilter && !temFiltroDeColuna && canCreate ? (
+              <Button href="/empresas/nova"><Plus size={14} /> Nova empresa</Button>
+            ) : undefined
+          }
+        />
       ) : (
         <EmpresasTable
           companies={companies.map((c) => ({
@@ -288,6 +280,7 @@ export default async function EmpresasPage({
           filtrosDeColuna={filtrosDeColuna}
         />
       )}
+      </CascoDaTabela>
 
       <Pagination page={pageNum} totalPages={totalPages} buildHref={(n) => buildUrl({ page: String(n) })} />
       </div>
