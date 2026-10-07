@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Plus } from "lucide-react";
 import { Dropdown } from "@/components/ui/Dropdown";
+import { ItemDoMenu } from "@/components/ui/Popover";
 
 type Props = {
   canCreateCompany: boolean;
@@ -22,32 +22,21 @@ export function QuickCreateMenu({ canCreateCompany, canCreatePerson, canCreateTr
       align="right"
       width={200}
       trigger={({ toggle }) => (
-        <Button
-          type="button"
-          onClick={toggle}
-          variant="primary" className="rounded-full font-medium"
-        >
+        // Sem `rounded-full font-medium` (07/10/2026): o Button não resolve
+        // conflito de classe e as duas nunca pegaram — o "Criar" sempre saiu
+        // retangular e semibold, como os outros botões.
+        <Button type="button" onClick={toggle} variant="primary">
           <Plus size={14} />
           Criar
-       </Button>
+        </Button>
       )}
     >
+      {/* O item de menu do sistema (`ItemDoMenu`), e não um sétimo desenho. */}
       <div className="flex flex-col gap-0.5">
-        {canCreateCompany && <MenuLink href="/empresas/nova" label="Nova empresa" />}
-        {canCreatePerson && <MenuLink href="/pessoas/nova" label="Nova pessoa" />}
-        {canCreateTransfer && <MenuLink href="/transferencias/novo" label="Nova transferência" />}
+        {canCreateCompany && <ItemDoMenu href="/empresas/nova">Nova empresa</ItemDoMenu>}
+        {canCreatePerson && <ItemDoMenu href="/pessoas/nova">Nova pessoa</ItemDoMenu>}
+        {canCreateTransfer && <ItemDoMenu href="/transferencias/novo">Nova transferência</ItemDoMenu>}
       </div>
     </Dropdown>
-  );
-}
-
-function MenuLink({ href, label }: { href: string; label: string }) {
-  return (
-    <Link
-      href={href}
-      className="w-full text-left px-2 py-2 rounded-lg text-[length:var(--fs-dropdown)] font-medium text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors"
-    >
-      {label}
-    </Link>
   );
 }

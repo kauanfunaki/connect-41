@@ -58,7 +58,7 @@ export function NavItem({ href, icon, label, exact = false }: NavItemProps) {
   return (
     <Link
       href={href}
-      className={classeDoItem(active, "text-[14px] font-medium")}
+      className={classeDoItem(active, "text-label font-medium")}
     >
       {active && <BarraAtiva />}
       <span className={`flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${active ? "text-brand" : ""}`}>{icon}</span>
@@ -97,12 +97,13 @@ export function GrupoNavItem({
   return (
     <Link
       href={href}
-      className={classeDoItem(active, "text-[14px] font-medium")}
+      className={classeDoItem(active, "text-label font-medium")}
     >
       {active && <BarraAtiva />}
       <span className={`flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${active ? "text-brand" : ""}`}>{icon}</span>
       <span className="truncate">{label}</span>
-      <span className={`ml-auto text-[11px] tabular-nums ${active ? "text-brand/70" : "text-fg-muted/70"}`}>
+      {/* Sem alfa (07/10/2026): o cinza a 70% dava 3,0:1 e os números quase sumiam. */}
+      <span className={`ml-auto text-micro tabular-nums ${active ? "text-brand" : "text-fg-muted"}`}>
         {itens.length}
       </span>
     </Link>
@@ -128,7 +129,7 @@ export function CadastrosNavItem({ icon, label }: CadastrosNavItemProps) {
   return (
     <Link
       href={href}
-      className={classeDoItem(active, "text-[14px] font-medium")}
+      className={classeDoItem(active, "text-label font-medium")}
     >
       {active && <BarraAtiva />}
       <span className={`flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${active ? "text-brand" : ""}`}>{icon}</span>
@@ -151,11 +152,15 @@ type SectorNavItemProps = {
  * `/setor/{code}` dentro do modo geral — pedido do Kauan: listar as telas de
  * todos os setores juntas, para quem tem acesso a todos, poluía demais.
  */
+//
+// Mesmo tamanho e peso dos outros itens da lista (07/10/2026): era 13px regular
+// com ícone de 15px logo abaixo de "Início… Agenda" em 14px médio com 16px, e os
+// setores pareciam menores e mais apagados sem motivo escrito.
 export function SectorNavItem({ label, color, icon, onEntrar }: SectorNavItemProps) {
   return (
-    <button type="button" onClick={onEntrar} className={classeDoItem(false, "w-[calc(100%+0.75rem)] text-[13px]")}>
+    <button type="button" onClick={onEntrar} className={classeDoItem(false, "w-[calc(100%+0.75rem)] text-label font-medium")}>
       <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: color }} />
-      {icon && <span className="flex-shrink-0 [&>svg]:w-[15px] [&>svg]:h-[15px]">{icon}</span>}
+      {icon && <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>}
       {label}
     </button>
   );
