@@ -142,22 +142,23 @@ export const VIDEOS_DOS_PRIMEIROS_PASSOS: Readonly<Record<string, string>> = {
  * só para quem enxerga o passo (o módulo dele ligado).
  */
 export const VIDEOS_DO_PORTAL: Readonly<Record<string, string>> = {
+  // Publicados pelo Kauan em 07/10/2026 (não listados).
   // 01 — Entrar no portal
-  entrar: "",
+  entrar: "https://youtu.be/Ow_kW0_U3iA",
   // 02 — O Início do portal (06/10/2026)
-  inicio: "",
+  inicio: "https://youtu.be/cdKK8OOCuag",
   // 03 — Pedir algo ao escritório
-  solicitacao: "",
+  solicitacao: "https://youtu.be/_1vL5AGY5oQ",
   // 04 — Responder uma pendência
-  pendencia: "",
+  pendencia: "https://youtu.be/5-TPHs3MiF8",
   // 05 — Aprovar pagamentos
-  aprovar: "",
+  aprovar: "https://youtu.be/AX0nsOwU_b4",
   // 06 — Acompanhar o financeiro
-  financeiro: "",
+  financeiro: "https://youtu.be/2wOzvL26KPU",
   // 07 — Ler os comunicados
-  comunicado: "",
+  comunicado: "https://youtu.be/GoEhTIzRVcs",
   // 08 — Esqueci minha senha
-  senha: "",
+  senha: "https://youtu.be/cohqscMdEIQ",
 };
 
 // `hasOwn`: a chave vem de endereço e de catálogo; "constructor" não é vídeo.
