@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MessageSquare, X } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -17,7 +17,7 @@ import {
   resumoDoLote,
   MAX_NO_LOTE,
   SITUACAO_LABEL,
-  SITUACAO_VARIANTE,
+  SITUACAO_TOM,
   type AcaoEmLote,
   type ResultadoDoLote,
 } from "@/lib/whatsapp/conversas";
@@ -201,7 +201,7 @@ export function ConversasLista({ conversas, agora, userId, filtrada = false, pes
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium text-fg">{c.nome ?? telefoneLegivel(c.waPhone)}</span>
-                    <Badge variant={SITUACAO_VARIANTE[situacao]}>{SITUACAO_LABEL[situacao]}</Badge>
+                    <Selo tom={SITUACAO_TOM[situacao]}>{SITUACAO_LABEL[situacao]}</Selo>
                     {c.responsavel ? (
                       <span className="text-[11px] text-fg-secondary">
                         {c.responsavel.id === userId ? "com você" : `com ${c.responsavel.nome}`}
