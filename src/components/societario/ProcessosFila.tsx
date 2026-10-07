@@ -95,7 +95,7 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
     return filtrado ? (
       <EmptyState
         title="Nenhum processo neste filtro"
-        description="Troque o recorte ou limpe os filtros acima para ver os outros."
+        description="Troque a busca ou o recorte, ou limpe os filtros acima, para ver os outros."
         icon={<Clock />}
       />
     ) : (
