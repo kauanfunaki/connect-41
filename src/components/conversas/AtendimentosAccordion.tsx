@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, Paperclip } from "lucide-react";
 import { carregarMensagens, carregarMensagensAntigas, type MensagemAtendimento } from "@/app/(app)/conversas/actions";
 import { Button } from "@/components/ui/Button";
+import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 
 export type AtendimentoResumo = {
   id: string;
@@ -18,11 +19,13 @@ export type AtendimentoResumo = {
 // 4 cores distintas por status — aberta (em andamento), pendente (aguardando
 // alguém), adiada (pausada por escolha do atendente) e resolvida (encerrada)
 // são estados bem diferentes pra fins de auditoria, não deveriam parecer iguais.
-export const STATUS_BADGE: Record<string, string> = {
-  open: "text-success bg-success/8 border-success/20",
-  pending: "text-warning bg-warning/8 border-warning/20",
-  snoozed: "text-brand bg-brand-subtle border-brand/25",
-  resolved: "text-fg-muted bg-surface-hover border-border",
+// Era uma pílula à mão de 10,5px com o mapa de classes; virou o `Selo`, com os
+// mesmos quatro tons (auditoria DRG-06, 07/10/2026).
+export const STATUS_BADGE: Record<string, TomDoSelo> = {
+  open: "sucesso",
+  pending: "atencao",
+  snoozed: "marca",
+  resolved: "neutro",
 };
 
 function Mensagens({ conversationId }: { conversationId: string }) {
@@ -43,7 +46,7 @@ function Mensagens({ conversationId }: { conversationId: string }) {
   }, [conversationId]);
 
   if (messages === null) {
-    return <p className="text-[12.5px] text-fg-muted py-4 text-center">Carregando mensagens…</p>;
+    return <p className="text-[length:var(--fs-2)] text-fg-muted py-4 text-center">Carregando mensagens…</p>;
   }
 
   async function handleLoadOlder() {
@@ -68,7 +71,7 @@ function Mensagens({ conversationId }: { conversationId: string }) {
         </Button>
       )}
 
-      {messages.length === 0 && <p className="text-[12.5px] text-fg-muted py-3 text-center">Nenhuma mensagem neste atendimento.</p>}
+      {messages.length === 0 && <p className="text-[length:var(--fs-2)] text-fg-muted py-3 text-center">Nenhuma mensagem neste atendimento.</p>}
 
       {messages.map((m) => {
         const isOutgoing = m.messageType === "outgoing";
@@ -99,7 +102,7 @@ function Mensagens({ conversationId }: { conversationId: string }) {
                   <Paperclip size={12} /> {a.fileType}
                 </a>
               ))}
-              <div className={`text-[10.5px] mt-1 ${isOutgoing ? "text-on-brand/60" : "text-fg-muted"}`}>{m.createdAtLabel}</div>
+              <div className={`text-[length:var(--fs-micro)] mt-1 ${isOutgoing ? "text-on-brand/60" : "text-fg-muted"}`}>{m.createdAtLabel}</div>
             </div>
           </div>
         );
@@ -125,7 +128,7 @@ export function AtendimentosAccordion({ atendimentos, defaultOpenId }: { atendim
   }
 
   if (atendimentos.length === 0) {
-    return <p className="text-[12.5px] text-fg-muted py-3">Nenhum atendimento registrado.</p>;
+    return <p className="text-[length:var(--fs-2)] text-fg-muted py-3">Nenhum atendimento registrado.</p>;
   }
 
   return (
@@ -134,20 +137,28 @@ export function AtendimentosAccordion({ atendimentos, defaultOpenId }: { atendim
         const isOpen = openIds.has(a.id);
         return (
           <div key={a.id}>
-            <button type="button" onClick={() => toggle(a.id)} className="w-full flex items-center gap-2.5 px-1 py-2.5 text-left hover:bg-surface-hover rounded-md transition-colors">
+            {/* `aria-expanded`/`aria-controls`: o leitor de tela não sabia que o
+                botão abre e fecha as mensagens (auditoria DRG-25, 07/10/2026). */}
+            <button
+              type="button"
+              onClick={() => toggle(a.id)}
+              aria-expanded={isOpen}
+              aria-controls={`atendimento-${a.id}`}
+              className="w-full flex items-center gap-2.5 px-1 py-2.5 text-left hover:bg-surface-hover rounded-md transition-colors"
+            >
               <span className="text-fg-muted flex-shrink-0">{isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</span>
-              <span className="text-[12.5px] font-medium text-fg flex-shrink-0 tabular-nums">{a.dateLabel}</span>
+              <span className="text-[length:var(--fs-2)] font-medium text-fg flex-shrink-0 tabular-nums">{a.dateLabel}</span>
               <span className="text-[12px] text-fg-muted flex-shrink-0">{a.channelLabel}</span>
-              <span className={`text-[10.5px] font-medium border rounded-full px-2 py-0.5 flex-shrink-0 ${STATUS_BADGE[a.status] ?? STATUS_BADGE.resolved}`}>
+              <Selo tom={STATUS_BADGE[a.status] ?? STATUS_BADGE.resolved} className="flex-shrink-0">
                 {a.statusLabel}
-              </span>
-              {a.assigneeLabel && <span className="text-[11.5px] text-fg-muted flex-shrink-0 hidden sm:inline">{a.assigneeLabel}</span>}
+              </Selo>
+              {a.assigneeLabel && <span className="text-[length:var(--fs-micro)] text-fg-muted flex-shrink-0 hidden sm:inline">{a.assigneeLabel}</span>}
               <span className="text-[12px] text-fg-muted truncate min-w-0">
                 {a.messageCount != null ? `${a.messageCount} ${a.messageCount === 1 ? "mensagem" : "mensagens"}` : "—"}
               </span>
             </button>
             {isOpen && (
-              <div className="pl-7 pr-2 pb-3">
+              <div id={`atendimento-${a.id}`} className="pl-7 pr-2 pb-3">
                 <Mensagens conversationId={a.id} />
               </div>
             )}
