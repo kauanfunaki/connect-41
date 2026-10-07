@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { ArrowRight, Briefcase, CheckCircle2, DoorOpen, Loader, XCircle } from "lucide-react";
+import { ArrowRight, Briefcase, CheckCircle2, DoorOpen, Loader, Plus, XCircle } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { VagaStatus } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
@@ -132,11 +132,11 @@ export default async function VagasPage({
         title="Vagas"
         subtitle={<>{total} vaga{total !== 1 ? "s" : ""}</>}
         action={<>{canCreateAny && (
-          <Button
-            href="/vagas/novo"
-            variant="primary" className="font-medium"
-          >
-            + Nova Vaga
+          // Ícone no lugar do "+" escrito, sem `font-medium` por cima do
+          // Button — o botão de criar das outras listas (DRG-17, 07/10/2026).
+          <Button href="/vagas/novo" variant="primary">
+            <Plus size={14} />
+            Nova Vaga
           </Button>
         )}</>}
       />
@@ -188,11 +188,9 @@ export default async function VagasPage({
             description="Ajuste os filtros ou cadastre a primeira vaga do setor."
             action={
               canCreateAny && (
-                <Button
-                  href="/vagas/novo"
-                  variant="primary" className="font-medium"
-                >
-                  + Nova Vaga
+                <Button href="/vagas/novo" variant="primary">
+                  <Plus size={14} />
+                  Nova Vaga
                 </Button>
               )
             }
