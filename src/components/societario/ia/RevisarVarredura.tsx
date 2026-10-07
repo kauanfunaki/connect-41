@@ -82,9 +82,9 @@ export function RevisarVarredura({
               <div className="flex flex-col gap-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant={u.variante}>{u.rotulo}</Badge>
-                  <span className="text-[12px] text-fg-muted">{TIPO[s.tipo]}</span>
+                  <span className="text-[length:var(--fs-2)] text-fg-muted">{TIPO[s.tipo]}</span>
                 </div>
-                <p className="text-[14px] font-medium text-fg">
+                <p className="text-[length:var(--fs-label)] font-medium text-fg">
                   {s.processoId ? (
                     <Link href={`/processos/${s.processoId}`} className="hover:underline">
                       {s.titulo}
@@ -93,9 +93,9 @@ export function RevisarVarredura({
                     s.titulo
                   )}
                 </p>
-                <p className="text-[13px] text-fg-secondary">{s.detalhe}</p>
+                <p className="text-[length:var(--fs-ui)] text-fg-secondary">{s.detalhe}</p>
                 {i.recomendacao && (
-                  <p className="text-[13px] text-fg">
+                  <p className="text-[length:var(--fs-ui)] text-fg">
                     <span className="text-fg-muted">Próximo passo sugerido: </span>
                     {i.recomendacao}
                   </p>
@@ -106,7 +106,7 @@ export function RevisarVarredura({
         })}
       </ul>
 
-      {msg && <p className={`text-[13px] ${msg.tipo === "erro" ? "text-danger" : "text-success"}`}>{msg.texto}</p>}
+      {msg && <p className={`text-[length:var(--fs-ui)] ${msg.tipo === "erro" ? "text-danger" : "text-success"}`}>{msg.texto}</p>}
 
       {/* Mesmo rodapé da revisão de contrato: rejeitar à esquerda, primário à direita. */}
       {podeAplicar && (

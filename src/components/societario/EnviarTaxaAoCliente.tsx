@@ -68,7 +68,7 @@ export function EnviarTaxaAoCliente({ taxaId, descricao, envio }: Props) {
       </Button>
 
       <Modal open={aberto} onClose={fechar} title="Enviar guia ao cliente" maxWidth="max-w-lg">
-        <form onSubmit={enviar} className="flex flex-col gap-4 text-[13px]">
+        <form onSubmit={enviar} className="flex flex-col gap-4 text-[length:var(--fs-ui)]">
           <input type="hidden" name="taxaId" value={taxaId} />
 
           <p className="text-fg-secondary">{descricao}</p>
@@ -101,7 +101,7 @@ export function EnviarTaxaAoCliente({ taxaId, descricao, envio }: Props) {
           {/* Contato sem e-mail e e-mail digitado errado dão no mesmo — a pessoa
               não recebe — e só aparecem aqui. */}
           {envio.descartados.length > 0 && (
-            <div className="text-[12px] text-warning bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
+            <div className="text-[length:var(--fs-2)] text-warning bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
               <p className="font-medium mb-0.5">Ficam de fora</p>
               <ul className="flex flex-col gap-0.5">
                 {envio.descartados.map((x, i) => (
