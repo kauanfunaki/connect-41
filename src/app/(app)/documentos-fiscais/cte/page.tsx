@@ -24,6 +24,13 @@ const SECTOR = "fiscal";
 const MODULE = "fiscal_documentos";
 const POR_PAGINA = 100;
 
+/** O sentido que a API devolve cru ("saida", sem acento) em rótulo de tela (07/10/2026). */
+const SENTIDO_LABEL: Record<"entrada" | "saida" | "indefinido", string> = {
+  entrada: "Entrada",
+  saida: "Saída",
+  indefinido: "Indefinido",
+};
+
 /**
  * CT-e — consulta ao vivo no SPED, sem ingestão.
  *
@@ -209,7 +216,7 @@ export default async function CtePage({
                               transportadora emitiu. `entrada` e `indefinido`
                               chamam atenção porque são a exceção. */}
                           <Badge variant={d.sentido === "saida" ? "info" : "warning"}>
-                            {d.sentido}
+                            {SENTIDO_LABEL[d.sentido] ?? d.sentido}
                           </Badge>
                         </td>
                         <td className="px-3 py-2">

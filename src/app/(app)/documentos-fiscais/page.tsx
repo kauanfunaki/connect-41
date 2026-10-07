@@ -10,8 +10,9 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { listarDocumentos, competenciasDisponiveis, resumoPorDestino } from "@/lib/fiscal/data";
-import { AcervoTable } from "@/components/fiscal/AcervoTable";
-import { AcervoFiltros } from "@/components/fiscal/AcervoFiltros";
+import { AcervoTable, PaginacaoDoAcervo } from "@/components/fiscal/AcervoTable";
+import { BuscaDoAcervo, FiltrosDoAcervo } from "@/components/fiscal/AcervoFiltros";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { alcanceDaEquipe } from "./alcance";
 import type { FiscalDocumentType, FiscalDocumentDestination } from "@/generated/prisma/enums";
 
@@ -79,7 +80,7 @@ export default async function DocumentosFiscaisPage({
       {/* Os dois atalhos eram links pintados à mão para parecer botão; agora são
           o `Button` (conferência de 30/09: botão não é link). */}
       <PageHeader
-        title="Documentos Fiscais"
+        title="Documentos fiscais"
         subtitle={
           <>
             NF-e, NFC-e e NFS-e por empresa e competência. O acervo espelha o que já foi
@@ -122,27 +123,33 @@ export default async function DocumentosFiscaisPage({
             }))}
           />
 
-          <AcervoFiltros empresas={empresas} competencias={competencias} />
-
-          {documentos.length === 0 ? (
-            <Card>
+          {/* Contagem, busca e filtros na barra do casco (07/10/2026), como as
+              filas irmãs de 05/10 — eram uma fileira acima da tabela, a
+              contagem só aparecia no rodapé e o vazio era um cartão à parte. */}
+          <CascoDaTabela
+            contagem={contarItens(total, "documento", "documentos", totalLimitado)}
+            busca={<BuscaDoAcervo />}
+            filtros={<FiltrosDoAcervo empresas={empresas} competencias={competencias} />}
+          >
+            {documentos.length === 0 ? (
               <EmptyState
                 icon={<FileText />}
                 title="Nenhum documento com estes filtros"
                 description="Limpe os filtros ou mude a competência."
               />
-            </Card>
-          ) : (
-            <AcervoTable
-              documentos={documentos}
-              total={total}
-              totalLimitado={totalLimitado}
-              temProxima={temProxima}
-              pagina={pagina}
-              porPagina={porPagina}
-              filtrosDaUrl={params}
-            />
-          )}
+            ) : (
+              <AcervoTable documentos={documentos} />
+            )}
+          </CascoDaTabela>
+
+          <PaginacaoDoAcervo
+            total={total}
+            totalLimitado={totalLimitado}
+            temProxima={temProxima}
+            pagina={pagina}
+            porPagina={porPagina}
+            filtrosDaUrl={params}
+          />
         </>
       )}
     </PageContainer>
