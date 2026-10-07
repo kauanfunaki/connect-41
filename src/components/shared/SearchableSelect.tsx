@@ -220,7 +220,7 @@ export function SearchableSelect({
           data-indice={indice}
           onClick={() => escolher(o.value)}
           onMouseEnter={() => setAtiva(indice)}
-          className={`w-full flex items-center gap-2.5 text-left px-3 py-2 text-[length:var(--fs-body)] ${
+          className={`w-full flex items-center gap-2.5 text-left px-3 py-2 text-body ${
             indice === ativa ? "bg-surface-hover" : ""
           } ${o.recuo ? "pl-8" : ""}`}
         >
@@ -228,7 +228,7 @@ export function SearchableSelect({
           <span className="min-w-0 flex-1">
             <span className={`block truncate ${escolhida ? "text-brand font-medium" : "text-fg"}`}>{o.label}</span>
             {o.descricao && (
-              <span className="block truncate text-[length:var(--fs-micro)] text-fg-muted tabular-nums">{o.descricao}</span>
+              <span className="block truncate text-micro text-fg-muted tabular-nums">{o.descricao}</span>
             )}
           </span>
           {escolhida && <Check size={14} className="flex-shrink-0 text-brand" />}
@@ -252,7 +252,7 @@ export function SearchableSelect({
         // botão; aqui é campo de formulário e segue o `Select` — texto à
         // esquerda, peso normal, a fonte do campo e a seta na ponta.
         className={`w-full flex justify-between! font-normal! px-3! gap-2 bg-input-bg text-left ${
-          compact ? "text-[13px]!" : "text-[length:var(--fs-input)]!"
+          compact ? "text-ui!" : "text-input!"
         } hover:border-border-strong focus:outline-none focus:ring-2 focus:ring-brand/40`}
         id={id}
         onClick={() => (aberto ? setAberto(false) : abrir())}
@@ -320,7 +320,7 @@ export function SearchableSelect({
                   data-indice={0}
                   onClick={() => escolher("")}
                   onMouseEnter={() => setAtiva(0)}
-                  className={`w-full text-left px-3 py-2 text-[length:var(--fs-body)] text-fg-muted ${ativa === 0 ? "bg-surface-hover" : ""}`}
+                  className={`w-full text-left px-3 py-2 text-body text-fg-muted ${ativa === 0 ? "bg-surface-hover" : ""}`}
                 >
                   {vazioLabel}
                 </button>
@@ -339,10 +339,10 @@ export function SearchableSelect({
             )}
             {filtradas.map((o, i) => linha(o, inicioDaLista + i))}
             {filtradas.length === 0 && (
-              <li className="px-3 py-3 text-[length:var(--fs-helper)] text-fg-muted">Nada encontrado para “{query}”.</li>
+              <li className="px-3 py-3 text-helper text-fg-muted">Nada encontrado para “{query}”.</li>
             )}
             {encontradas.length > TETO && (
-              <li className="px-3 py-2 text-[length:var(--fs-helper)] text-fg-muted border-t border-border">
+              <li className="px-3 py-2 text-helper text-fg-muted border-t border-border">
                 Mostrando {TETO} de {encontradas.length}. Digite mais para refinar.
               </li>
             )}

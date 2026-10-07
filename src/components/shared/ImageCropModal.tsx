@@ -104,8 +104,8 @@ function CropperDialog({
         aria-labelledby={titleId}
         className="w-full max-w-sm rounded-lg border border-border bg-surface p-5 shadow-lg"
       >
-        <h2 id={titleId} className="text-[length:var(--fs-dialog-title)] font-semibold text-fg mb-1.5">Ajustar imagem</h2>
-        <p className="text-[13px] text-fg-secondary mb-3">Arraste para posicionar e use o zoom para enquadrar.</p>
+        <h2 id={titleId} className="text-dialog-title font-semibold text-fg mb-1.5">Ajustar imagem</h2>
+        <p className="text-ui text-fg-secondary mb-3">Arraste para posicionar e use o zoom para enquadrar.</p>
 
         <div className="relative w-full h-[280px] bg-canvas rounded-md overflow-hidden">
           <Cropper
@@ -122,7 +122,7 @@ function CropperDialog({
         </div>
 
         <div className="flex items-center gap-3 mt-4">
-          <span className="text-[12px] text-fg-muted">Zoom</span>
+          <span className="text-fs-2 text-fg-muted">Zoom</span>
           {/* eslint-disable-next-line no-restricted-syntax -- controle nativo de range, sem primitivo de Slider no design system ainda */}
           <input
             type="range"
@@ -136,7 +136,7 @@ function CropperDialog({
         </div>
 
         {error && (
-          <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2 mt-3">
+          <p className="text-ui text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2 mt-3">
             {error}
           </p>
         )}

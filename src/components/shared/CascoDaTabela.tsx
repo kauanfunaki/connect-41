@@ -46,7 +46,7 @@ export function CascoDaTabela({
     <div className={`c41-casco ${className}`.trim()}>
       <div className="c41-casco-barra flex flex-wrap items-center gap-x-4 gap-y-2 min-h-[52px] px-4 py-2.5 mb-2 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)]">
         {temResumo && (
-          <p className="flex flex-wrap items-baseline gap-x-2 min-w-0 text-[length:var(--fs-ui)]">
+          <p className="flex flex-wrap items-baseline gap-x-2 min-w-0 text-ui">
             {contagem && <span className="font-semibold text-fg">{contagem}</span>}
             {total && <span className="text-fg-muted tabular-nums">{total}</span>}
           </p>

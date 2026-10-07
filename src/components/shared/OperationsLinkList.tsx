@@ -33,8 +33,8 @@ export function OperationsLinkList({ basePath, links }: Props) {
                 {l.icon}
               </span>
               <div className="min-w-0">
-                <p className="text-[length:var(--fs-body)] font-medium text-fg">{l.label}</p>
-                <p className="text-[length:var(--fs-helper)] text-fg-muted truncate">{l.description}</p>
+                <p className="text-body font-medium text-fg">{l.label}</p>
+                <p className="text-helper text-fg-muted truncate">{l.description}</p>
               </div>
             </div>
             <ChevronRight size={16} className="text-fg-muted flex-shrink-0" />

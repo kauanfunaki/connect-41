@@ -49,7 +49,7 @@ export function Modal({ open, onClose, title, maxWidth = "max-w-md", desfocar = 
         className={`c41-surgir relative w-full ${maxWidth} text-left bg-surface-elevated border border-border-strong rounded-lg shadow-lg max-h-[calc(100dvh-2rem)] overflow-y-auto`}
       >
         <div className="flex items-center justify-between px-5 pt-5 pb-2">
-          {title && <h2 id={titleId} className="text-[length:var(--fs-dialog-title)] font-semibold text-fg">{title}</h2>}
+          {title && <h2 id={titleId} className="text-dialog-title font-semibold text-fg">{title}</h2>}
           <IconButton onClick={onClose} aria-label="Fechar" className="ml-auto">
             <X size={16} />
           </IconButton>

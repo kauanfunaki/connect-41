@@ -23,7 +23,7 @@ type Props = {
 // lado com rótulos de tamanhos diferentes desciam em alturas diferentes.
 export function CampoForm({ label, htmlFor, required = false, helper, error, className = "", acao, children }: Props) {
   const rotulo = (
-    <label htmlFor={htmlFor} className="text-[length:var(--fs-label)] font-medium leading-5 text-fg">
+    <label htmlFor={htmlFor} className="text-label font-medium leading-5 text-fg">
       {label}
       {required && <span className="text-danger"> *</span>}
     </label>
@@ -33,16 +33,16 @@ export function CampoForm({ label, htmlFor, required = false, helper, error, cla
       {acao ? (
         <div className="flex items-center justify-between gap-2 min-h-5">
           {rotulo}
-          <span className="flex-shrink-0 text-[length:var(--fs-helper)]">{acao}</span>
+          <span className="flex-shrink-0 text-helper">{acao}</span>
         </div>
       ) : (
         rotulo
       )}
       {children}
       {error ? (
-        <p className="text-[length:var(--fs-helper)] font-medium text-danger">{error}</p>
+        <p className="text-helper font-medium text-danger">{error}</p>
       ) : helper ? (
-        <p className="text-[length:var(--fs-helper)] text-fg-muted">{helper}</p>
+        <p className="text-helper text-fg-muted">{helper}</p>
       ) : null}
     </div>
   );

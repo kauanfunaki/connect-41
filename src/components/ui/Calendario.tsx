@@ -145,7 +145,7 @@ export function Calendario({ valor, periodo, previa = false, onEscolher, min, ma
           onClick={() => onEscolher(dia)}
           onMouseEnter={() => setPassando(dia)}
           onFocus={() => setFoco(dia)}
-          className={`relative size-9 rounded-full text-[13px] tabular-nums transition-colors outline-none ${cor} ${
+          className={`relative size-9 rounded-full text-ui tabular-nums transition-colors outline-none ${cor} ${
             !doMes && !ehPonta ? "opacity-40" : ""
           } ${ehHoje && !ehPonta ? "ring-1 ring-inset ring-brand font-semibold" : ""}`}
         >
@@ -181,7 +181,7 @@ export function Calendario({ valor, periodo, previa = false, onEscolher, min, ma
                   key={i}
                   role="columnheader"
                   aria-label={DIAS_DA_SEMANA[i]}
-                  className={`h-7 flex items-center justify-center text-[11px] font-semibold uppercase ${i >= 5 ? "text-fg-muted/70" : "text-fg-muted"}`}
+                  className={`h-7 flex items-center justify-center text-micro font-semibold uppercase ${i >= 5 ? "text-fg-muted/70" : "text-fg-muted"}`}
                 >
                   {inicial}
                 </span>
@@ -323,7 +323,7 @@ function BotaoDaGrade({
     <button
       type="button"
       {...rest}
-      className={`h-10 rounded-lg text-[13px] capitalize tabular-nums transition-colors outline-none disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed ${
+      className={`h-10 rounded-lg text-ui capitalize tabular-nums transition-colors outline-none disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed ${
         ativo ? "bg-brand-solid text-on-brand font-semibold" : "text-fg hover:bg-surface-hover"
       } ${atual && !ativo ? "ring-1 ring-inset ring-brand font-semibold" : ""}`}
     >
@@ -357,13 +357,13 @@ function Cabecalho({
           type="button"
           onClick={onTitulo}
           aria-label={`${titulo} — ${rotuloDoTitulo}`}
-          className="inline-flex items-center gap-1 h-8 px-2 -ml-1 rounded-md text-[14px] font-semibold text-fg capitalize hover:bg-surface-hover outline-none"
+          className="inline-flex items-center gap-1 h-8 px-2 -ml-1 rounded-md text-label font-semibold text-fg capitalize hover:bg-surface-hover outline-none"
         >
           {titulo}
           <ChevronDown size={14} className="text-fg-muted" />
         </button>
       ) : (
-        <span className="h-8 px-1 inline-flex items-center text-[14px] font-semibold text-fg tabular-nums">{titulo}</span>
+        <span className="h-8 px-1 inline-flex items-center text-label font-semibold text-fg tabular-nums">{titulo}</span>
       )}
       <div className="flex items-center">
         <button type="button" onClick={onAnterior} aria-label={rotuloAnterior} className={seta}>
@@ -394,7 +394,7 @@ export function AtalhoDoCalendario({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`h-7 px-2.5 rounded-md text-[12px] font-medium transition-colors outline-none disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed ${
+      className={`h-7 px-2.5 rounded-md text-fs-2 font-medium transition-colors outline-none disabled:opacity-[var(--c41-disabled-op)] disabled:cursor-not-allowed ${
         discreto ? "text-fg-muted hover:text-fg hover:bg-surface-hover" : "text-brand hover:bg-brand-subtle"
       }`}
     >

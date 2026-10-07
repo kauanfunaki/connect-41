@@ -143,9 +143,9 @@ export function FiltrosDaTela({
                         ativo ? "bg-brand-subtle" : "hover:bg-surface-hover"
                       }`}
                     >
-                      <span className={`block text-[13px] font-medium ${ativo ? "text-brand" : "text-fg"}`}>{c.rotulo}</span>
+                      <span className={`block text-ui font-medium ${ativo ? "text-brand" : "text-fg"}`}>{c.rotulo}</span>
                       <span
-                        className={`block text-[11px] truncate ${params.get(c.chave) ? "text-fg-secondary" : "text-fg-muted"}`}
+                        className={`block text-micro truncate ${params.get(c.chave) ? "text-fg-secondary" : "text-fg-muted"}`}
                       >
                         {rotuloDoValor(c)}
                       </span>
@@ -185,7 +185,7 @@ export function FiltrosDaTela({
                             close();
                             router.push(hrefCom(campo.chave, o.value));
                           }}
-                          className={`w-full flex items-center justify-between gap-2 text-left px-2.5 py-1.5 rounded-md text-[13px] transition-colors ${
+                          className={`w-full flex items-center justify-between gap-2 text-left px-2.5 py-1.5 rounded-md text-ui transition-colors ${
                             escolhida ? "bg-brand-subtle text-brand font-medium" : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
                           }`}
                         >
@@ -196,7 +196,7 @@ export function FiltrosDaTela({
                     );
                   })}
                   {opcoesVisiveis.length === 0 && (
-                    <li className="px-2.5 py-2 text-[12px] text-fg-muted">Nada encontrado para “{busca}”.</li>
+                    <li className="px-2.5 py-2 text-fs-2 text-fg-muted">Nada encontrado para “{busca}”.</li>
                   )}
                 </ul>
               </div>

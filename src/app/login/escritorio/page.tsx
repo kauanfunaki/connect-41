@@ -46,7 +46,7 @@ export default async function EscolherEscritorioPage({ searchParams }: { searchP
     return (
       <MolduraDaEquipe titulo="A escolha expirou" subtitulo="Entre de novo para escolher o escritório.">
         <Card className="p-6">
-          <p className="text-[13px] text-fg-muted text-center leading-relaxed">
+          <p className="text-ui text-fg-muted text-center leading-relaxed">
             Por segurança, a escolha do escritório vale por poucos minutos depois da senha.
           </p>
           <div className="mt-3 text-center">
@@ -69,7 +69,7 @@ export default async function EscolherEscritorioPage({ searchParams }: { searchP
               alvo de ao menos 44px, com o rádio e a logo centrados e a
               escolhida marcada na borda. */}
           <fieldset className="space-y-2">
-            <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">
+            <legend className="text-label font-medium text-fg mb-1.5">
               Em qual escritório você quer entrar?
             </legend>
             {opcoes.map((o, i) => (
@@ -85,7 +85,7 @@ export default async function EscolherEscritorioPage({ searchParams }: { searchP
                   className="size-4 flex-shrink-0 accent-[var(--c41-brand)]"
                 />
                 <AvatarImage src={o.logoUrl} name={o.escritorio} size={32} shape="lg" fontSize={12} />
-                <span className="min-w-0 text-[length:var(--fs-body)] text-fg break-words">{o.escritorio}</span>
+                <span className="min-w-0 text-body text-fg break-words">{o.escritorio}</span>
               </label>
             ))}
           </fieldset>
