@@ -85,7 +85,7 @@ export function ListsTable({ lists, basePath, deleteAction }: Props) {
                       href={`${basePath}/${l.id}`}
                       className="inline-flex items-center gap-2 max-w-full font-medium text-fg hover:text-brand transition-colors"
                     >
-                      <span className="w-[9px] h-[9px] rounded-full flex-shrink-0" style={{ background: l.color ?? "#586577" }} />
+                      <span className="w-[9px] h-[9px] rounded-full flex-shrink-0" style={{ background: l.color ?? "var(--c41-sector-gestao)" }} />
                       <span className="truncate max-w-[28rem]" title={l.name}>
                         {l.name}
                       </span>

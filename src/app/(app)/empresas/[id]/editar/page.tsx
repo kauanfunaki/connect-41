@@ -45,7 +45,7 @@ export default async function EditarEmpresaPage({
       />
       <BackButton className="mb-3" />
 
-      <PageHeader title="Editar Empresa" />
+      <PageHeader title="Editar empresa" />
 
       <EmpresaForm
           action={atualizarEmpresa}

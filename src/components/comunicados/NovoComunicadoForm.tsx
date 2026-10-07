@@ -127,13 +127,13 @@ export function NovoComunicadoForm({
                 className="mt-1 accent-[var(--c41-brand)]"
               />
               <span className="min-w-0">
-                <span className="block text-[13.5px] font-semibold text-fg">{p.rotulo}</span>
+                <span className="block text-[length:var(--fs-ui)] font-semibold text-fg">{p.rotulo}</span>
                 <span className="block text-[12px] text-fg-muted leading-snug">{p.dica}</span>
               </span>
             </label>
           ))}
         </div>
-        <p className="text-[12.5px] text-fg-secondary tabular-nums">
+        <p className="text-[length:var(--fs-2)] text-fg-secondary tabular-nums">
           {quantos} {quantos === 1 ? "cliente recebe" : "clientes recebem"}
           {publico === "SETOR" && !setor && " — escolha o setor"}
         </p>
@@ -185,7 +185,7 @@ export function NovoComunicadoForm({
       </CampoForm>
 
       <div className="flex flex-wrap items-center justify-end gap-3">
-        {erro && <span className="mr-auto text-[12.5px] text-danger">{erro}</span>}
+        {erro && <span className="mr-auto text-[length:var(--fs-2)] text-danger">{erro}</span>}
         <Button type="submit">
           <Send size={14} /> Enviar comunicado
         </Button>

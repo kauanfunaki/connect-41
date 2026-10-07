@@ -6,6 +6,7 @@ import { StatusDot } from "@/components/shared/StatusDot";
 import { formatCalendarDate } from "@/lib/format";
 import { stripRichText } from "@/lib/richText";
 import { ColunaDoQuadro } from "./ColunaDoQuadro";
+import { AvatarImage } from "@/components/shared/AvatarImage";
 
 type Stage = { id: string; name: string; color: string | null; isTerminal?: boolean };
 type Tag = { id: string; name: string; color: string };
@@ -34,14 +35,9 @@ type Props = {
   basePath?: string;
 };
 
-const FALLBACK_COLOR = "#586577";
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  const first = parts[0]?.[0] ?? "";
-  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
-  return (first + last).toUpperCase();
-}
+// Cor de Gestão pelo token (era o hex cru, repetido em 15 lugares). Só vai
+// para `style` (bolinha e borda do cartão), então a variável CSS serve.
+const FALLBACK_COLOR = "var(--c41-sector-gestao)";
 
 function isOverdue(dueDate: string | null, isTerminal?: boolean): boolean {
   if (!dueDate || isTerminal) return false;
@@ -171,17 +167,15 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
 
                       {item.assignees && item.assignees.length > 0 && (
                         <div className="flex items-center -space-x-1.5 flex-shrink-0">
+                          {/* O `AvatarImage` compartilhado (07/10/2026), com as
+                              iniciais em 11px — eram montadas à mão em 9px. */}
                           {item.assignees.slice(0, 3).map((a) => (
-                            <span
-                              key={a.id}
-                              title={a.name}
-                              className="w-5 h-5 rounded-full bg-surface-hover border border-border text-[9px] font-medium text-fg-secondary flex items-center justify-center"
-                            >
-                              {initials(a.name)}
+                            <span key={a.id} title={a.name} className="rounded-full ring-2 ring-surface">
+                              <AvatarImage src={null} name={a.name} size={20} fontSize={11} />
                             </span>
                           ))}
                           {item.assignees.length > 3 && (
-                            <span className="w-5 h-5 rounded-full bg-surface-hover border border-border text-[9px] font-medium text-fg-muted flex items-center justify-center">
+                            <span className="w-5 h-5 rounded-full bg-surface-hover border border-border text-[length:var(--fs-micro)] font-medium text-fg-muted flex items-center justify-center">
                               +{item.assignees.length - 3}
                             </span>
                           )}

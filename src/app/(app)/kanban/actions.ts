@@ -192,7 +192,7 @@ export async function criarItem(
 }
 
 // Criação rápida — só o título, sem entidade/prazo/prioridade/responsável.
-// Usada pelo botão "+ Adicionar Tarefa" da visão em lista; o resto se
+// Usada pelo botão "Adicionar tarefa" da visão em lista; o resto se
 // configura depois no detalhe da tarefa.
 export async function criarTarefaRapida(pipelineId: string, stageId: string, title: string): Promise<void> {
   const ctx = await getAuthContext();

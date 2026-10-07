@@ -24,7 +24,7 @@ export default async function NovaEmpresaPage() {
 
       <BackButton className="mb-3" />
 
-      <PageHeader title="Nova Empresa" />
+      <PageHeader title="Nova empresa" />
 
       <EmpresaForm
         action={criarEmpresa}

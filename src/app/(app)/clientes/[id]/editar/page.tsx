@@ -32,7 +32,7 @@ export default async function EditarClientePage({
         ]}
       />
       <BackButton className="mb-3" />
-      <PageHeader title="Editar Cliente" />
+      <PageHeader title="Editar cliente" />
       <div className="w-full max-w-[720px]">
         <Card className="p-6">
           <ClienteForm
