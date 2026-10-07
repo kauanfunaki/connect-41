@@ -9,10 +9,10 @@
 
 import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
-import { saoPauloParts } from "@/lib/agenda";
+import { addDaysToKey, saoPauloParts } from "@/lib/agenda";
 import { nomeExibicao } from "@/lib/companyName";
 import { CAMPOS_DA_EMPRESA_NO_SELETOR } from "@/lib/empresas/opcoesDoSeletor";
-import { centavosDeDecimal, situacaoDaConta, type SituacaoDaConta } from "./contas";
+import { centavosDeDecimal, situacaoDaConta, type SituacaoDaConta, type Totais } from "./contas";
 import { seloDeAprovacaoVisivel, type StatusDeAprovacao } from "./aprovacao/regras";
 import { competenciaDoInstante, inicioDaCompetencia, somarMeses } from "./periodo";
 import type { MovimentoRealizado, TituloEmAberto, SomaPorEmpresa, ContagemPorEmpresa } from "./fluxo";
@@ -256,4 +256,49 @@ export async function contasDoEscopo(
       aprovacao: seloDeAprovacaoVisivel(l) ? l.approvalStatus : null,
     };
   });
+}
+
+/** Os totais de `totalizar`, mais o dia da baixa mais antiga — o "desde" do pago. */
+export type TotaisDoEscopo = Totais & { pagoDesde: Date | null };
+
+/**
+ * Os totais das contas de um tipo no escopo, somados no banco (07/10).
+ *
+ * O portal lista as 500 de vencimento mais recente (`contasDoEscopo`), e os
+ * cartões do topo somavam essa lista: num cliente com mais contas que isso, as
+ * vencidas mais antigas eram as primeiras a sair do "Vencido". Aqui são
+ * quatro somas, sem teto e sem trazer linha, com as regras de
+ * `situacaoDaConta`/`totalizar`: cancelada fica fora de tudo; paga é status
+ * PAGO ou com baixa; o resto se divide pelo vencimento contra o começo do dia
+ * de hoje em São Paulo (o mesmo corte de `contasPorJanela`).
+ */
+export async function totaisDoEscopo(e: EscopoFinanceiro, kind: "PAGAR" | "RECEBER", hojeKey: string): Promise<TotaisDoEscopo> {
+  const prisma = getPrisma();
+  const doTipo: Prisma.FinanceEntryWhereInput = { ...whereDoEscopo(e), kind };
+  const emAberto: Prisma.FinanceEntryWhereInput = { ...doTipo, paidAt: null, status: { notIn: ["CANCELADO", "PAGO"] } };
+  const hoje = inicioDeHoje(hojeKey);
+  const amanha = inicioDeHoje(addDaysToKey(hojeKey, 1));
+  const [pagas, vencidas, deHoje, aVencer] = await Promise.all([
+    prisma.financeEntry.aggregate({
+      where: { ...doTipo, status: { not: "CANCELADO" }, OR: [{ status: "PAGO" }, { paidAt: { not: null } }] },
+      _sum: { amount: true },
+      _min: { paidAt: true },
+    }),
+    prisma.financeEntry.aggregate({ where: { ...emAberto, dueDate: { lt: hoje } }, _sum: { amount: true } }),
+    prisma.financeEntry.aggregate({ where: { ...emAberto, dueDate: { gte: hoje, lt: amanha } }, _sum: { amount: true } }),
+    prisma.financeEntry.aggregate({ where: { ...emAberto, dueDate: { gte: amanha } }, _sum: { amount: true } }),
+  ]);
+  const centavos = (soma: { _sum: { amount: { toString(): string } | null } }) =>
+    soma._sum.amount ? centavosDeDecimal(soma._sum.amount) : 0;
+  const vencido = centavos(vencidas);
+  const venceHoje = centavos(deHoje);
+  const aVencerCentavos = centavos(aVencer);
+  return {
+    vencido,
+    venceHoje,
+    aVencer: aVencerCentavos,
+    pago: centavos(pagas),
+    emAberto: vencido + venceHoje + aVencerCentavos,
+    pagoDesde: pagas._min.paidAt,
+  };
 }

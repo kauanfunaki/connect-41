@@ -16,7 +16,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
         titulo: "Como ler o Início",
         passos: [
           "Clique em “Início”, no topo da barra lateral. O logo do Connect, acima do menu, também leva ao Início.",
-          "No alto ficam os indicadores “Empresas ativas”, “Vencidos / hoje”, “Transferências” e “Pessoas cadastradas”. Clique em um deles para abrir a lista correspondente.",
+          "No alto ficam os indicadores “Empresas ativas”, “Atrasadas / hoje”, “Transferências” e “Pessoas cadastradas”. Clique em um deles para abrir a lista correspondente.",
           "Logo abaixo, a faixa “Destaques” mostra os três números que mais pedem a sua atenção — em vermelho, o que está vencido ou atrasado. Clique num cartão para abrir a tela de onde ele vem.",
           "Depois vêm os painéis com gráficos, como “Tarefas por prazo”, e os painéis dos setores que você enxerga.",
           "No bloco “Meu dia”, clique em um item para abrir a tarefa.",
@@ -626,7 +626,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
         titulo: "Como ler os indicadores",
         passos: [
           "Entre no setor e abra “Indicadores de RH” na barra lateral.",
-          "Cada cartão é um número, como “Headcount”, “Turnover”, “Absenteísmo (30 dias)”, “Férias Vencidas”, “Vagas Abertas” e “Custo de Folha (mês atual)”.",
+          "Cada cartão é um número, como “Headcount”, “Turnover (30 dias)”, “Absenteísmo (30 dias)”, “Férias Vencidas”, “Vagas Abertas” e “Custo de Folha (mês atual)”.",
           "Leia a linha abaixo do número: ela diz o que ele conta.",
         ],
       },

@@ -185,9 +185,12 @@ export default async function DrePage({
 
   return (
     <PageContainer>
+      {/* O mês escrito na tela (07/10, auditoria dos gráficos): ficava só
+          dentro do botão Filtros ("Mais recente (…)"), e a tabela inteira
+          aparecia sem dizer de quando. */}
       <PageHeader
         title="DRE"
-        subtitle="Demonstrativo de resultado de caixa — monta do que foi pago e recebido no mês."
+        subtitle={`Demonstrativo de resultado de caixa de ${MESES[escolhido.mes - 1]}/${escolhido.ano} — monta do que foi pago e recebido no mês.`}
       />
 
       <SeletorDeEmpresa empresas={empresas} companyId={companyId} />
