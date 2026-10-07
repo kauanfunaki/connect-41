@@ -626,7 +626,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
         titulo: "Como ler os indicadores",
         passos: [
           "Entre no setor e abra “Indicadores de RH” na barra lateral.",
-          "Cada cartão é um número, como “Headcount”, “Turnover”, “Absenteísmo (30 dias)”, “Férias Vencidas”, “Vagas Abertas” e “Custo de Folha (mês atual)”.",
+          "Cada cartão é um número, como “Headcount”, “Turnover (30 dias)”, “Absenteísmo (30 dias)”, “Férias Vencidas”, “Vagas Abertas” e “Custo de Folha (mês atual)”.",
           "Leia a linha abaixo do número: ela diz o que ele conta.",
         ],
       },
