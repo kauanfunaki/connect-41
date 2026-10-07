@@ -33,7 +33,7 @@ export default async function NovaPessoaPage({
       <PageContainer>
         <BackButton className="mb-3" />
         <PageHeader
-          title="Nova Pessoa"
+          title="Nova pessoa"
           subtitle="Que tipo de cadastro é este? O formulário muda conforme a escolha."
         />
 

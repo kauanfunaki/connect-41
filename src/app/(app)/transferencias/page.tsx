@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { ArrowRightLeft, ArrowRight, Inbox, Loader, CheckCircle2 } from "lucide-react";
+import { ArrowRightLeft, ArrowRight, Inbox, Loader, CheckCircle2, Plus } from "lucide-react";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { getPrisma } from "@/lib/prisma";
@@ -91,7 +91,7 @@ export default async function HandoffsPage({
             href="/transferencias/novo"
             variant="primary"
           >
-            + Nova Transferência
+            <Plus size={14} /> Nova transferência
           </Button>
         )}</>}
       />

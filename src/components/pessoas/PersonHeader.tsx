@@ -138,7 +138,7 @@ export function PersonHeader({
           {canRequestHandoff && (
             <Button href={`/transferencias/novo?entityType=PERSON&entityId=${id}`} variant="secondary" size="sm">
               <ArrowRightLeft size={14} />
-              Solicitar Transferência
+              Solicitar transferência
             </Button>
           )}
           {canEdit && (

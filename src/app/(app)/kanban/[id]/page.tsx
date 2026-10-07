@@ -1,4 +1,5 @@
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
@@ -194,7 +195,7 @@ export default async function KanbanBoardPage({
               href={`/kanban/${id}/novo-item`}
               variant="primary"
             >
-              + Item
+              <Plus size={14} /> Item
             </Button>
           </div>
           )

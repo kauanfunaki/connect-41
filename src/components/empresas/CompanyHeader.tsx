@@ -220,7 +220,7 @@ export function CompanyHeader({
           {canRequestHandoff && (
             <Button href={`/transferencias/novo?entityType=COMPANY&entityId=${id}`} variant="secondary" size="sm">
               <ArrowRightLeft size={14} />
-              Solicitar Transferência
+              Solicitar transferência
             </Button>
           )}
           {canEdit && (

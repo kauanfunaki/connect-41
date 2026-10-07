@@ -124,7 +124,7 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, defini
             <span className="flex flex-col min-w-0">
               <span className="font-medium break-words">{p.name}</span>
               {p.email && (
-                <span className="text-[11.5px] text-fg-muted break-all">{p.email}</span>
+                <span className="text-[length:var(--fs-micro)] text-fg-muted break-all">{p.email}</span>
               )}
             </span>
           </Link>
@@ -183,7 +183,7 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, defini
             {canCreate && (
               <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border bg-table-header-bg">
                 <Checkbox checked={allSelected} onChange={toggleAll} aria-label="Selecionar todas" />
-                <span className="text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                <span className="text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                   Selecionar todas
                 </span>
               </div>
@@ -203,14 +203,14 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, defini
                     <Checkbox checked={allSelected} onChange={toggleAll} />
                   </th>
                 )}
-                <th className="px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
-                <th className="px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
-                <th className="px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">CPF</th>
-                <th className="px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">E-mail</th>
-                <th className="px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                <th className="px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Nome</th>
+                <th className="px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Status</th>
+                <th className="px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">CPF</th>
+                <th className="px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">E-mail</th>
+                <th className="px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                   {showLinkedUser ? "Conta de acesso" : "Empresa"}
                 </th>
-                <th className="px-4 py-3 text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">Criada em</th>
+                <th className="px-4 py-3 text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">Criada em</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>

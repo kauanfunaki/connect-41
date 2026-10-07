@@ -144,7 +144,7 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
                       />
                       <label htmlFor={`task-widget-${def.key}`} className="flex-1 min-w-0 cursor-pointer">
                         <span className="block text-[13px] font-medium text-fg truncate">{def.label}</span>
-                        <span className="block text-[11.5px] text-fg-muted truncate">{def.description}</span>
+                        <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate">{def.description}</span>
                       </label>
                     </div>
                   ))}

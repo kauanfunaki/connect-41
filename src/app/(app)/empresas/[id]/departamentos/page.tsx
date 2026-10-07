@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
-import { Network } from "lucide-react";
+import { Network, Plus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
@@ -57,7 +57,7 @@ export default async function DepartamentosPage({
               href={novoHref}
               variant="primary"
             >
-              + Novo Departamento
+              <Plus size={14} /> Novo departamento
             </Button>
           )
         }
@@ -75,7 +75,7 @@ export default async function DepartamentosPage({
                   href={novoHref}
                   variant="primary"
                 >
-                  + Cadastrar departamento
+                  <Plus size={14} /> Cadastrar departamento
                 </Button>
               )
             }

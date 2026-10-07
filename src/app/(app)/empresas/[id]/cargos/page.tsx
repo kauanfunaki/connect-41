@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
-import { Briefcase } from "lucide-react";
+import { Briefcase, Plus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
@@ -57,7 +57,7 @@ export default async function CargosPage({
               href={novoHref}
               variant="primary"
             >
-              + Novo Cargo
+              <Plus size={14} /> Novo cargo
             </Button>
           )
         }
@@ -75,7 +75,7 @@ export default async function CargosPage({
                   href={novoHref}
                   variant="primary"
                 >
-                  + Cadastrar cargo
+                  <Plus size={14} /> Cadastrar cargo
                 </Button>
               )
             }

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Pencil, Users } from "lucide-react";
+import { Pencil, Users, Plus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite, canManageSector } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
@@ -109,7 +109,7 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
             <div className="flex flex-wrap items-center gap-2">
               <BuscarSociosNaReceita companyId={companyId} previa={previaDaReceita} importar={importarDaReceita} />
               <Button href={novoHref} variant="primary">
-                + Novo Sócio
+                <Plus size={14} /> Novo sócio
               </Button>
             </div>
           )
@@ -131,7 +131,7 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
             action={
               podeEditar && (
                 <Button href={novoHref} variant="primary">
-                  + Cadastrar sócio
+                  <Plus size={14} /> Cadastrar sócio
                 </Button>
               )
             }
@@ -147,10 +147,10 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
                     <p className="text-[13px] text-fg font-medium break-words">{s.name}</p>
                     {s.administrator && <Badge variant="info">Administrador</Badge>}
                     {s.sharePercent !== null && (
-                      <span className="text-[11.5px] text-fg-muted tabular-nums">{Number(s.sharePercent)}%</span>
+                      <span className="text-[length:var(--fs-micro)] text-fg-muted tabular-nums">{Number(s.sharePercent)}%</span>
                     )}
                   </div>
-                  <p className="text-[11.5px] text-fg-muted tabular-nums mt-0.5">
+                  <p className="text-[length:var(--fs-micro)] text-fg-muted tabular-nums mt-0.5">
                     {[
                       s.qualification,
                       documento(s.document, s.documentMasked),
@@ -162,7 +162,7 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
                       .filter(Boolean)
                       .join(" · ")}
                   </p>
-                  <p className="text-[11.5px] text-fg-muted break-words">{endereco(s)}</p>
+                  <p className="text-[length:var(--fs-micro)] text-fg-muted break-words">{endereco(s)}</p>
                 </div>
                 {podeEditar && (
                   <div className="shrink-0">
@@ -190,7 +190,7 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
                   <div key={s.id} className="flex items-start justify-between gap-4 px-4 py-2.5">
                     <div className="min-w-0">
                       <p className="text-[13px] text-fg-secondary break-words">{s.name}</p>
-                      <p className="text-[11.5px] text-fg-muted tabular-nums">
+                      <p className="text-[length:var(--fs-micro)] text-fg-muted tabular-nums">
                         {s.entryDate ? `${formatInstantDate(s.entryDate)} a ` : "até "}
                         {formatInstantDate(s.exitDate!)}
                         {s.qualification ? ` · ${s.qualification}` : ""}
@@ -211,7 +211,7 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
               que ninguém sabe para que serve. */}
           <Card className="p-4">
             <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">O que isto responde na viabilidade</h2>
-            <p className="text-[12.5px] text-fg-secondary">
+            <p className="text-[length:var(--fs-2)] text-fg-secondary">
               <strong>Reside no local?</strong>{" "}
               {resideNoLocal === true ? (
                 <Badge variant="success">Sim</Badge>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { Plus } from "lucide-react";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 import { CampoForm as Field } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
@@ -82,7 +83,7 @@ export function PipelineForm({ action, sectorOptions }: Props) {
           <h3 className="text-[length:var(--fs-label)] font-medium text-fg">Estágios</h3>
           {/* Era link azul (30/09): ação é botão. */}
           <Button variant="secondary" size="xs" type="button" onClick={addStage}>
-            + Adicionar estágio
+            <Plus size={14} /> Adicionar estágio
           </Button>
         </div>
 
@@ -131,7 +132,7 @@ export function PipelineForm({ action, sectorOptions }: Props) {
       <FormFooter
         pending={isPending}
         pendingLabel="Criando…"
-        submitLabel="Criar Kanban"
+        submitLabel="Criar kanban"
         cancelHref="/kanban"
       />
     </form>

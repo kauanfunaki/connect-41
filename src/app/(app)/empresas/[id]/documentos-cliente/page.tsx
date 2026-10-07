@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
-import { FileText } from "lucide-react";
+import { FileText, Plus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
@@ -59,7 +59,7 @@ export default async function DocumentosClientePage({
               href={novoHref}
               variant="primary"
             >
-              + Novo Documento
+              <Plus size={14} /> Novo documento
             </Button>
           )
         }
@@ -77,7 +77,7 @@ export default async function DocumentosClientePage({
                   href={novoHref}
                   variant="primary"
                 >
-                  + Criar documento
+                  <Plus size={14} /> Criar documento
                 </Button>
               )
             }

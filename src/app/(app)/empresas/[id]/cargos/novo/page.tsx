@@ -46,7 +46,7 @@ export default async function NovoCargoPage({
       />
       <BackButton className="mb-3" />
 
-      <PageHeader title="Novo Cargo" subtitle={company.name} />
+      <PageHeader title="Novo cargo" subtitle={company.name} />
 
       <div className="w-full max-w-[720px]">
         <Card className="p-6">

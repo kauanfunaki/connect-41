@@ -87,7 +87,7 @@ export function ExpedienteForm({ action, valor, doEscritorio }: Props) {
                   className="mt-1 accent-[var(--c41-brand)]"
                 />
                 <span className="min-w-0">
-                  <span className="block text-[13.5px] font-semibold text-fg">{o.rotulo}</span>
+                  <span className="block text-[length:var(--fs-ui)] font-semibold text-fg">{o.rotulo}</span>
                   <span className="block text-[12px] text-fg-muted leading-snug">{o.dica}</span>
                 </span>
               </label>
