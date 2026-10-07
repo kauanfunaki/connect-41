@@ -115,7 +115,7 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
   return (
     <>
       {error && (
-        <p role="alert" className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2 mb-3">
+        <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2 mb-3">
           {error}
         </p>
       )}
@@ -147,10 +147,10 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
               }`}
             >
               <div className="flex items-center justify-between mb-2 px-1">
-                <span className={`text-[12px] font-semibold ${isContratado ? "text-success" : "text-fg"}`}>
+                <span className={`text-[length:var(--fs-2)] font-semibold ${isContratado ? "text-success" : "text-fg"}`}>
                   {STAGE_LABEL[stage]}
                 </span>
-                <span className="text-[11px] text-fg-muted tnum">{stageCards.length}</span>
+                <span className="text-[length:var(--fs-micro)] text-fg-muted tnum">{stageCards.length}</span>
               </div>
 
               <div className="space-y-2 min-h-[40px]">
@@ -173,7 +173,7 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
                       </span>
                       <Link
                         href={`/candidatos/${c.personId}`}
-                        className="min-w-0 text-[13px] text-fg hover:text-brand transition-colors truncate"
+                        className="min-w-0 text-[length:var(--fs-ui)] text-fg hover:text-brand transition-colors truncate"
                       >
                         {c.personName}
                       </Link>
@@ -196,8 +196,8 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
                         </span>
                       </p>
                     )}
-                    {c.respostas && <p className="text-[11px] text-fg-secondary mt-1.5 pl-8 tnum">{c.respostas}</p>}
-                    {c.origin && <p className="text-[11px] text-fg-muted mt-1.5 pl-8">via {c.origin}</p>}
+                    {c.respostas && <p className="text-[length:var(--fs-micro)] text-fg-secondary mt-1.5 pl-8 tnum">{c.respostas}</p>}
+                    {c.origin && <p className="text-[length:var(--fs-micro)] text-fg-muted mt-1.5 pl-8">via {c.origin}</p>}
 
                     {/* Alternativa acessível ao arraste: o board era só
                         drag-and-drop de mouse, então quem usa teclado ou leitor
@@ -289,7 +289,7 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, canManage, move
                     </div>
                   </article>
                 ))}
-                {stageCards.length === 0 && <p className="text-[11px] text-fg-muted text-center py-3">—</p>}
+                {stageCards.length === 0 && <p className="text-[length:var(--fs-micro)] text-fg-muted text-center py-3">—</p>}
               </div>
             </section>
           );

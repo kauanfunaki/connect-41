@@ -60,7 +60,7 @@ export default async function AfastamentosPage() {
                   </InfoDoCartao>
                   <PeDoCartao>
                     <SeloDoDP cor={COR_DO_AFASTAMENTO[a.status]}>{SITUACAO_DO_AFASTAMENTO[a.status]}</SeloDoDP>
-                    <span className="ml-auto text-[11.5px] text-fg-muted">{TIPO_DO_AFASTAMENTO[a.type]}</span>
+                    <span className="ml-auto text-[length:var(--fs-micro)] text-fg-muted">{TIPO_DO_AFASTAMENTO[a.type]}</span>
                   </PeDoCartao>
                 </Cartao>
               </Link>

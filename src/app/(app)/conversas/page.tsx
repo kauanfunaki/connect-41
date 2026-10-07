@@ -253,7 +253,7 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
       {id && (
         <div className="bg-surface border border-brand/30 rounded-lg px-4 py-3 mb-4">
           <div className="flex items-center justify-between gap-2 mb-1">
-            <p className="text-[12px] font-medium text-brand">Atendimento aberto</p>
+            <p className="text-[length:var(--fs-2)] font-medium text-brand">Atendimento aberto</p>
             <Button href="/conversas" variant="secondary" size="xs">
               <ArrowLeft size={11} /> Voltar à lista
             </Button>
@@ -261,12 +261,12 @@ async function ListaAtendimentosView({ ctx, params }: { ctx: Ctx; params: Search
           {focusedConversation ? (
             <AtendimentosAccordion atendimentos={[toResumo(focusedConversation)]} defaultOpenId={id} />
           ) : (
-            <p className="text-[13px] text-fg-muted py-2">Atendimento não encontrado ou fora do seu escopo.</p>
+            <p className="text-[length:var(--fs-ui)] text-fg-muted py-2">Atendimento não encontrado ou fora do seu escopo.</p>
           )}
         </div>
       )}
 
-      <p className="text-[12px] text-fg-muted mb-3">
+      <p className="text-[length:var(--fs-2)] text-fg-muted mb-3">
         {totalContacts} contato{totalContacts !== 1 ? "s" : ""}, {totalAtendimentos} atendimento{totalAtendimentos !== 1 ? "s" : ""} nesta página.
       </p>
 

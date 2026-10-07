@@ -59,7 +59,7 @@ export default async function TurmaPage({
         </h2>
 
         {trainingClass.participants.length === 0 ? (
-          <p className="text-[13px] text-fg-muted mb-3">Nenhum participante ainda.</p>
+          <p className="text-[length:var(--fs-ui)] text-fg-muted mb-3">Nenhum participante ainda.</p>
         ) : (
           <div className="mb-3">
             {trainingClass.participants.map((p) => (

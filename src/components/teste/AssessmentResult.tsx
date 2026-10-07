@@ -48,7 +48,7 @@ export function AssessmentResult(props: Props) {
       <div className="h-2 rounded-full bg-surface-2 overflow-hidden">
         <div className="h-full rounded-full bg-brand" style={{ width: `${scores.pct}%` }} />
       </div>
-      {!compact && <p className="text-[12px] text-fg-muted mt-2">{templateName}</p>}
+      {!compact && <p className="text-[length:var(--fs-2)] text-fg-muted mt-2">{templateName}</p>}
       {compact && detailHref && (
         <Button href={detailHref} variant="secondary" size="xs" className="mt-3">
           Ver detalhe completo <ArrowRight size={11} />

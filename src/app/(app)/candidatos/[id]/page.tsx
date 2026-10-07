@@ -154,7 +154,7 @@ export default async function CandidatoPage({
       {/* Tags / Skills — banco de talentos */}
       <Card className="p-5 mb-4">
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">Tags / Habilidades</h2>
-        <p className="text-[12px] text-fg-muted mb-3">
+        <p className="text-[length:var(--fs-2)] text-fg-muted mb-3">
           Torna o candidato pesquisável no banco de talentos, mesmo que não avance nesta vaga.
         </p>
         <TagToggleList
@@ -217,16 +217,16 @@ export default async function CandidatoPage({
         </h2>
 
         {candidaturas.length === 0 ? (
-          <p className="text-[13px] text-fg-muted">Ainda não foi vinculado a nenhuma vaga.</p>
+          <p className="text-[length:var(--fs-ui)] text-fg-muted">Ainda não foi vinculado a nenhuma vaga.</p>
         ) : (
           <div className="divide-y divide-border">
             {candidaturas.map((c) => (
               <div key={c.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2.5">
-                <Link href={`/vagas/${c.vaga.id}`} className="min-w-0 text-[13px] text-brand hover:underline">
+                <Link href={`/vagas/${c.vaga.id}`} className="min-w-0 text-[length:var(--fs-ui)] text-brand hover:underline">
                   {c.vaga.title}
                 </Link>
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="min-w-0 truncate text-[12px] text-fg-muted">{c.vaga.company.name}</span>
+                  <span className="min-w-0 truncate text-[length:var(--fs-2)] text-fg-muted">{c.vaga.company.name}</span>
                   <Selo cor="bg-surface-2 text-fg-secondary border-border" className="flex-shrink-0">
                     {CANDIDATURA_STATUS_LABEL[c.status]}
                   </Selo>

@@ -60,12 +60,12 @@ export function PayrollEntryRow({ entry, updateAction, removeAction, canManage }
       <div className="flex items-center justify-between gap-3">
         <Link
           href={`/pessoas/${entry.personId}`}
-          className="min-w-0 truncate text-[13px] font-medium text-fg hover:text-brand transition-colors"
+          className="min-w-0 truncate text-[length:var(--fs-ui)] font-medium text-fg hover:text-brand transition-colors"
         >
           {entry.personName}
         </Link>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-[12px] text-fg-muted tnum">{brl(Number(entry.grossSalary))}</span>
+          <span className="text-[length:var(--fs-2)] text-fg-muted tnum">{brl(Number(entry.grossSalary))}</span>
           <SeloDoDP cor={STATUS_STYLE[entry.status]}>{STATUS_LABEL[entry.status]}</SeloDoDP>
           {canManage && <MenuDoRegistro titulo="Remover este lançamento?" onRemover={removeAction} />}
         </div>
@@ -96,7 +96,7 @@ export function PayrollEntryRow({ entry, updateAction, removeAction, canManage }
         </form>
       )}
 
-      {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
+      {state?.error && <p className="text-[length:var(--fs-2)] text-danger mt-1">{state.error}</p>}
     </div>
   );
 }

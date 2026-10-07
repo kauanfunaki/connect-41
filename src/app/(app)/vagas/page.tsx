@@ -207,8 +207,8 @@ export default async function VagasPage({
                     </InfoDoCartao>
                     <PeDoCartao>
                       {seloDoStatus(v.status)}
-                      <span className="text-[11.5px] text-fg-muted tabular-nums">{candidatos(v._count.candidaturas)}</span>
-                      <span className="ml-auto text-[11.5px] text-fg-muted tabular-nums">
+                      <span className="text-[length:var(--fs-micro)] text-fg-muted tabular-nums">{candidatos(v._count.candidaturas)}</span>
+                      <span className="ml-auto text-[length:var(--fs-micro)] text-fg-muted tabular-nums">
                         {v.quantity} vaga{v.quantity !== 1 ? "s" : ""}
                       </span>
                     </PeDoCartao>

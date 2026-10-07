@@ -89,7 +89,7 @@ export default async function CicloPage({
         </h2>
 
         {ciclo.evaluations.length === 0 ? (
-          <p className="text-[13px] text-fg-muted mb-3">Nenhuma avaliação registrada ainda.</p>
+          <p className="text-[length:var(--fs-ui)] text-fg-muted mb-3">Nenhuma avaliação registrada ainda.</p>
         ) : (
           <>
             {/* No celular, uma linha por avaliação em vez da tabela de 560px com

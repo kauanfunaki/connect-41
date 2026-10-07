@@ -156,7 +156,7 @@ export function TemplateForm({ action, defaults, cancelHref }: Props) {
         </Button>
       </div>
 
-      {state?.error && <p className="text-[13px] text-danger">{state.error}</p>}
+      {state?.error && <p className="text-[length:var(--fs-ui)] text-danger">{state.error}</p>}
 
       <FormFooter cancelHref={cancelHref} pending={isPending} submitLabel={defaults ? "Atualizar modelo" : "Criar modelo"} />
     </form>

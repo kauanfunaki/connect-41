@@ -25,7 +25,7 @@ export default async function NovaSimulacaoPage() {
         }
       />
       {!configurado && (
-        <p className="mb-4 rounded-md border border-warning/40 bg-warning-bg px-3 py-2 text-[12px] text-warning">
+        <p className="mb-4 rounded-md border border-warning/40 bg-warning-bg px-3 py-2 text-[length:var(--fs-2)] text-warning">
           Os custos dos setores ainda não foram informados em Parâmetros — o preço abaixo cobre só o rateio padrão e não
           serve para proposta.
         </p>

@@ -86,7 +86,7 @@ export function AdmissaoCard({ personId, initialLink, canManage, urlPublica }: P
 
       {!link && (
         <>
-          <p className="text-[13px] text-fg-muted mb-3">
+          <p className="text-[length:var(--fs-ui)] text-fg-muted mb-3">
             Gere um link para o colaborador preencher os próprios dados e enviar os documentos — sem digitação manual.
           </p>
           {canManage && (
@@ -103,7 +103,7 @@ export function AdmissaoCard({ personId, initialLink, canManage, urlPublica }: P
 
       {link?.status === "PENDENTE" && (
         <>
-          <p className="text-[13px] text-fg-muted mb-3">
+          <p className="text-[length:var(--fs-ui)] text-fg-muted mb-3">
             Aguardando o preenchimento pelo colaborador. Link expira em {link.expiresAtLabel}.
           </p>
           <div className="flex items-center gap-2 mb-3">
@@ -114,7 +114,7 @@ export function AdmissaoCard({ personId, initialLink, canManage, urlPublica }: P
               {copied ? "Copiado!" : "Copiar"}
             </Button>
           </div>
-          {emailNote && <p className="text-[12px] text-fg-muted mb-3">{emailNote}</p>}
+          {emailNote && <p className="text-[length:var(--fs-2)] text-fg-muted mb-3">{emailNote}</p>}
           {canManage && (
             // Era texto sublinhado (até 30/09) — é uma ação, e das que desfazem
             // algo (invalida o link enviado): botão, para não passar por prosa.
@@ -128,7 +128,7 @@ export function AdmissaoCard({ personId, initialLink, canManage, urlPublica }: P
 
       {link?.status === "PREENCHIDO" && (
         <>
-          <p className="text-[13px] text-fg-muted mb-3">
+          <p className="text-[length:var(--fs-ui)] text-fg-muted mb-3">
             Dados recebidos em {link.submittedAtLabel}. Confira as informações e os documentos nas abas acima e conclua a admissão (o status passa para Ativo).
           </p>
           {canManage && (
@@ -136,7 +136,7 @@ export function AdmissaoCard({ personId, initialLink, canManage, urlPublica }: P
               type="button"
               onClick={handleConcluir}
               disabled={pending}
-              className="h-9 px-4 rounded-md bg-success text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-60 transition-opacity"
+              className="h-9 px-4 rounded-md bg-success text-white text-[length:var(--fs-ui)] font-medium hover:opacity-90 disabled:opacity-60 transition-opacity"
             >
               {pending ? "Concluindo…" : "Concluir admissão"}
             </button>

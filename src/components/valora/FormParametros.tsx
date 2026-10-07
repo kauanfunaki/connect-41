@@ -70,16 +70,16 @@ export function FormParametros({ catalogo, parametros, podeEditar }: { catalogo:
     >
       <Card className="p-4">
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">Custo de cada setor</h2>
-        <p className="text-[12px] text-fg-muted mb-3">
+        <p className="text-[length:var(--fs-2)] text-fg-muted mb-3">
           Custo mensal da equipe: salários, encargos e benefícios de quem atende cliente. A capacidade e o fator vêm dos
           questionários — o fator encolhe os tempos declarados até a carteira caber nas horas da equipe.
         </p>
         {/* Casco padrão dentro do cartão (30/09). Sem funil: é uma linha por
             setor, para preencher. */}
         <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-          <table className="w-full min-w-[640px] text-[13px]">
+          <table className="w-full min-w-[640px] text-[length:var(--fs-ui)]">
             <thead>
-              <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-wide text-fg-muted">
+              <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                 <th className="px-3">Setor</th>
                 <th className="px-3">Custo mensal da equipe</th>
                 <th className="px-3">Capacidade (h/mês)</th>

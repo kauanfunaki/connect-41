@@ -66,7 +66,7 @@ export function NovoTesteForm({ candidatos, templates }: Props) {
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>
-      {error && <p className="text-[13px] text-danger">{error}</p>}
+      {error && <p className="text-[length:var(--fs-ui)] text-danger">{error}</p>}
     </form>
   );
 }

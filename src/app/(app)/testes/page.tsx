@@ -250,7 +250,7 @@ export default async function TestesPage({
                     <PeDoCartao>
                       {seloDoStatus(l.status)}
                       {resultado(l)}
-                      <span className="ml-auto text-[11.5px] text-fg-muted">enviado em {formatInstantDate(l.createdAt)}</span>
+                      <span className="ml-auto text-[length:var(--fs-micro)] text-fg-muted">enviado em {formatInstantDate(l.createdAt)}</span>
                     </PeDoCartao>
                   </Cartao>
                 </Link>

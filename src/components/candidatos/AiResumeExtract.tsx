@@ -27,7 +27,7 @@ export function AiResumeExtract({ action }: Props) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1 basis-64">
           <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Triagem de Currículo (IA)</h2>
-          <p className="text-[12px] text-fg-muted mt-0.5">
+          <p className="text-[length:var(--fs-2)] text-fg-muted mt-0.5">
             Lê o PDF do currículo, preenche campos vazios da ficha e gera um resumo profissional.
           </p>
         </div>
@@ -38,15 +38,15 @@ export function AiResumeExtract({ action }: Props) {
       </div>
 
       {state && "error" in state && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2 mt-3">
+        <p className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2 mt-3">
           {state.error}
         </p>
       )}
 
       {state && "summary" in state && (
         <div className="mt-3 space-y-2">
-          <p className="text-[13px] text-fg leading-relaxed whitespace-pre-wrap">{state.summary}</p>
-          <p className="text-[12px] text-fg-muted">
+          <p className="text-[length:var(--fs-ui)] text-fg leading-relaxed whitespace-pre-wrap">{state.summary}</p>
+          <p className="text-[length:var(--fs-2)] text-fg-muted">
             {state.filled.length > 0
               ? `Campos preenchidos automaticamente: ${state.filled.join(", ")}.`
               : "Nenhum campo vazio para preencher — a ficha já estava completa."}

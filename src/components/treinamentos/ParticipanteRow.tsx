@@ -36,7 +36,7 @@ export function ParticipanteRow({ participante, updateAction, removeAction, canM
       <div className="flex items-center justify-between gap-3">
         <Link
           href={`/pessoas/${participante.personId}`}
-          className="min-w-0 truncate text-[13px] font-medium text-fg hover:text-brand transition-colors"
+          className="min-w-0 truncate text-[length:var(--fs-ui)] font-medium text-fg hover:text-brand transition-colors"
         >
           {participante.personName}
         </Link>
@@ -72,7 +72,7 @@ export function ParticipanteRow({ participante, updateAction, removeAction, canM
         </form>
       )}
 
-      {state?.error && <p className="text-[12px] text-danger mt-1">{state.error}</p>}
+      {state?.error && <p className="text-[length:var(--fs-2)] text-danger mt-1">{state.error}</p>}
     </div>
   );
 }

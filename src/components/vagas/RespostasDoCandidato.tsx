@@ -51,7 +51,7 @@ export function RespostasDoCandidato({
       <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
         <div>
           <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Respostas do candidato</h2>
-          <p className="text-[12px] text-fg-muted mt-0.5">
+          <p className="text-[length:var(--fs-2)] text-fg-muted mt-0.5">
             Respondidas na inscrição pelo portal, coletadas pelo atendente do WhatsApp ou preenchidas aqui. Não entram na nota da triagem.
           </p>
         </div>
@@ -90,7 +90,7 @@ export function RespostasDoCandidato({
               <Input id="resposta-deslocamento" suffix="min" inputMode="numeric" value={form.deslocamentoMinutos} onChange={(e) => setForm({ ...form, deslocamentoMinutos: e.target.value })} />
             </CampoForm>
           </FieldGrid>
-          {erro && <p className="text-[13px] text-danger">{erro}</p>}
+          {erro && <p className="text-[length:var(--fs-ui)] text-danger">{erro}</p>}
           <FormFooter
             pending={pendente}
             onCancel={() => setEditando(false)}
@@ -102,9 +102,9 @@ export function RespostasDoCandidato({
           {CAMPOS_DE_RESPOSTA.map((c) => (
             <div key={c}>
               <dt className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">{ROTULO_DA_RESPOSTA[c]}</dt>
-              <dd className="text-[13px] text-fg tnum">{mostrar(c, respostas)}</dd>
+              <dd className="text-[length:var(--fs-ui)] text-fg tnum">{mostrar(c, respostas)}</dd>
               {fonte[c] && (
-                <dd className="text-[11px] text-fg-muted">
+                <dd className="text-[length:var(--fs-micro)] text-fg-muted">
                   {fonte[c]!.origem === "WHATSAPP" ? "pelo WhatsApp" : fonte[c]!.origem === "PORTAL" ? "no portal de vagas" : "pelo recrutador"}
                 </dd>
               )}

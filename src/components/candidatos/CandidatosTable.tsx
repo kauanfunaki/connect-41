@@ -135,7 +135,7 @@ export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMas
           )}
         </div>
 
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-fg-muted">
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[length:var(--fs-2)] text-fg-muted">
           {pilulaStatus(c)}
           {cpf !== "—" && <span className="tnum">{cpf}</span>}
           {/* Sem coluna para explicar o número, ele vem com a palavra junto. */}

@@ -164,7 +164,7 @@ export default async function CarreirasPage({
               />
             </div>
             <div className="flex items-center justify-between gap-3">
-              <p className="text-[12px] text-fg-muted tabular-nums">
+              <p className="text-[length:var(--fs-2)] text-fg-muted tabular-nums">
                 {filtradas.length === 1 ? "1 vaga" : `${filtradas.length} vagas`}
                 {filtrando && ` de ${todas.length}`}
               </p>
@@ -210,8 +210,8 @@ export default async function CarreirasPage({
                   <Link href={`/carreiras/${slug}/${v.id}`} className="block p-5 rounded-lg">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h2 className="text-[15px] font-semibold text-fg">{v.title}</h2>
-                        <p className="text-[12px] text-fg-muted mt-0.5">
+                        <h2 className="text-[length:var(--fs-body)] font-semibold text-fg">{v.title}</h2>
+                        <p className="text-[length:var(--fs-2)] text-fg-muted mt-0.5">
                           {v.empresa}
                           {local && ` · ${local}`}
                           {v.area && ` · ${v.area}`}
@@ -236,7 +236,7 @@ export default async function CarreirasPage({
                     {v.publicDescription && (
                       <p className="text-[length:var(--fs-2)] text-fg-muted mt-2 line-clamp-2">{v.publicDescription}</p>
                     )}
-                    <p className="text-[11px] text-fg-muted mt-2">
+                    <p className="text-[length:var(--fs-micro)] text-fg-muted mt-2">
                       Publicada em {formatCalendarDate(v.openedAt)}
                       {v.applicationDeadline && ` · inscrições até ${formatCalendarDate(v.applicationDeadline)}`}
                     </p>
