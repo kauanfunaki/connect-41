@@ -17,6 +17,7 @@ import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { formatCalendarDate } from "@/lib/format";
 import { horasDoDP } from "@/components/pessoas/rotulosDoDP";
+import { TabelaNoDesktop, TopoDoCartao, InfoDoCartao } from "@/components/shared/ListaResponsiva";
 
 export default async function TreinamentoPage({
   params,
@@ -78,72 +79,106 @@ export default async function TreinamentoPage({
         {training.classes.length === 0 ? (
           <p className="text-[13px] text-fg-muted mb-3">Nenhuma turma criada ainda.</p>
         ) : (
-          // Era uma lista de linhas com a data em link azul e o "Excluir" em
-          // texto vermelho (até 30/09). Virou tabela com funil; a exclusão foi
-          // para o "⋯", com o diálogo certo — o de antes falava em "campo".
-          <TabelaFiltravel
-            linhas={training.classes.map((c) => ({
-              id: c.id,
-              valores: {
-                data: c.date.toISOString().slice(0, 10),
-                turno: c.shift ?? "",
-                instrutor: c.instructor ?? "",
-              },
-            }))}
-          >
-            <div className="c41-tabela overflow-x-auto rounded-lg border border-border mb-4">
-              <table className="w-full min-w-[640px] text-[length:var(--fs-ui)]">
-                <thead>
-                  <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
-                    <th className="px-4 py-3">
-                      <FiltroDaColuna rotulo="Data" chave="data" tipo="data" />
-                    </th>
-                    <th className="px-4 py-3">
-                      <FiltroDaColuna rotulo="Turno" chave="turno" />
-                    </th>
-                    <th className="px-4 py-3">
-                      <FiltroDaColuna rotulo="Instrutor" chave="instrutor" align="right" />
-                    </th>
-                    <th className="px-4 py-3">Participantes</th>
-                    <th className="px-4 py-3">
-                      <span className="sr-only">Ações</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {training.classes.map((c) => (
-                    <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border">
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <Link href={`/treinamentos/${id}/turmas/${c.id}`} className="font-semibold text-fg hover:text-brand transition-colors">
-                          {formatCalendarDate(c.date)}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 text-fg-secondary">{c.shift ?? <span className="text-fg-muted">—</span>}</td>
-                      <td className="px-4 py-3 text-fg-secondary">{c.instructor ?? <span className="text-fg-muted">—</span>}</td>
-                      <td className="px-4 py-3 text-fg-muted">
-                        {c._count.participants} participante{c._count.participants !== 1 ? "s" : ""}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
-                          <Button href={`/treinamentos/${id}/turmas/${c.id}`} variant="secondary" size="xs">
-                            Abrir <ArrowRight size={11} />
-                          </Button>
-                          {canManage && (
-                            <MenuDoRegistro
-                              rotulo="Excluir"
-                              titulo={`Excluir a turma de ${formatCalendarDate(c.date)}?`}
-                              descricao="Os participantes da turma saem junto."
-                              onRemover={excluirTurma.bind(null, id, c.id)}
-                            />
-                          )}
-                        </div>
-                      </td>
-                    </LinhaFiltravel>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </TabelaFiltravel>
+          <>
+            {/* No celular, uma linha por turma em vez da tabela de 640px com
+                rolagem lateral (auditoria DRG-31, 07/10/2026). Já dentro do
+                cartão, então linhas com divisória, sem cartão em cada uma. */}
+            <ul className="md:hidden divide-y divide-border border-y border-border mb-4">
+              {training.classes.map((c) => (
+                <li key={c.id} className="py-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <TopoDoCartao
+                        nome={
+                          <Link href={`/treinamentos/${id}/turmas/${c.id}`} className="text-fg hover:text-brand transition-colors">
+                            {formatCalendarDate(c.date)}
+                          </Link>
+                        }
+                        valor={`${c._count.participants} participante${c._count.participants !== 1 ? "s" : ""}`}
+                      />
+                      {(c.shift || c.instructor) && (
+                        <InfoDoCartao>{[c.shift, c.instructor].filter(Boolean).join(" · ")}</InfoDoCartao>
+                      )}
+                    </div>
+                    {canManage && (
+                      <MenuDoRegistro
+                        rotulo="Excluir"
+                        titulo={`Excluir a turma de ${formatCalendarDate(c.date)}?`}
+                        descricao="Os participantes da turma saem junto."
+                        onRemover={excluirTurma.bind(null, id, c.id)}
+                      />
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {/* Era uma lista de linhas com a data em link azul e o "Excluir" em
+                texto vermelho (até 30/09). Virou tabela com funil; a exclusão foi
+                para o "⋯", com o diálogo certo — o de antes falava em "campo". */}
+            <TabelaFiltravel
+              linhas={training.classes.map((c) => ({
+                id: c.id,
+                valores: {
+                  data: c.date.toISOString().slice(0, 10),
+                  turno: c.shift ?? "",
+                  instrutor: c.instructor ?? "",
+                },
+              }))}
+            >
+              <TabelaNoDesktop className="c41-tabela rounded-lg border border-border mb-4">
+                <table className="w-full min-w-[640px] text-[length:var(--fs-ui)]">
+                  <thead>
+                    <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+                      <th className="px-4 py-3">
+                        <FiltroDaColuna rotulo="Data" chave="data" tipo="data" />
+                      </th>
+                      <th className="px-4 py-3">
+                        <FiltroDaColuna rotulo="Turno" chave="turno" />
+                      </th>
+                      <th className="px-4 py-3">
+                        <FiltroDaColuna rotulo="Instrutor" chave="instrutor" align="right" />
+                      </th>
+                      <th className="px-4 py-3">Participantes</th>
+                      <th className="px-4 py-3">
+                        <span className="sr-only">Ações</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {training.classes.map((c) => (
+                      <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border">
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <Link href={`/treinamentos/${id}/turmas/${c.id}`} className="font-semibold text-fg hover:text-brand transition-colors">
+                            {formatCalendarDate(c.date)}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3 text-fg-secondary">{c.shift ?? <span className="text-fg-muted">—</span>}</td>
+                        <td className="px-4 py-3 text-fg-secondary">{c.instructor ?? <span className="text-fg-muted">—</span>}</td>
+                        <td className="px-4 py-3 text-fg-muted">
+                          {c._count.participants} participante{c._count.participants !== 1 ? "s" : ""}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            <Button href={`/treinamentos/${id}/turmas/${c.id}`} variant="secondary" size="xs">
+                              Abrir <ArrowRight size={11} />
+                            </Button>
+                            {canManage && (
+                              <MenuDoRegistro
+                                rotulo="Excluir"
+                                titulo={`Excluir a turma de ${formatCalendarDate(c.date)}?`}
+                                descricao="Os participantes da turma saem junto."
+                                onRemover={excluirTurma.bind(null, id, c.id)}
+                              />
+                            )}
+                          </div>
+                        </td>
+                      </LinhaFiltravel>
+                    ))}
+                  </tbody>
+                </table>
+              </TabelaNoDesktop>
+            </TabelaFiltravel>
+          </>
         )}
 
         {canManage && <AddTurmaForm action={criarTurmaAction} />}

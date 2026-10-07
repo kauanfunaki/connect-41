@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
+import { BellOff } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { CartoesNoCelular, TabelaNoDesktop } from "@/components/shared/ListaResponsiva";
 import { FiltroDeSetor } from "@/components/gestao/FiltroDeSetor";
 import { ItemDaGestao } from "@/components/gestao/ItemDaGestao";
 import { LimitesDoSetor } from "@/components/gestao/LimitesDoSetor";
@@ -45,7 +47,7 @@ export default async function AlertasDaGestaoPage({ searchParams }: { searchPara
         </h2>
         {atencao.length === 0 ? (
           <Card>
-            <EmptyState title="Nenhum alerta" description="Nada passou do limite de parado nem está com prazo vencendo." />
+            <EmptyState icon={<BellOff />} title="Nenhum alerta" description="Nada passou do limite de parado nem está com prazo vencendo." />
           </Card>
         ) : (
           <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">
@@ -75,9 +77,29 @@ export default async function AlertasDaGestaoPage({ searchParams }: { searchPara
             dias; card que ainda não começou só avisa pelo prazo.
           </p>
         </div>
+        {/* No celular, um cartão por setor, com os campos rotulados, em vez da
+            tabela de 520px com rolagem lateral (auditoria DRG-31, 07/10/2026). */}
+        <CartoesNoCelular>
+          {setoresDaTabela.map((s) => {
+            const c = configDe.get(s.value);
+            return (
+              <LimitesDoSetor
+                key={s.value}
+                comoCartao
+                setor={s.value}
+                rotulo={s.label}
+                diasParado={c?.alertStalledDays ?? null}
+                diasAvisoPrazo={c?.alertDueSoonDays ?? null}
+                padrao={LIMITES_PADRAO}
+                podeEditar={isFullWrite(ctx.role) || canManageSector(ctx, s.value)}
+                salvar={salvarLimites}
+              />
+            );
+          })}
+        </CartoesNoCelular>
         {/* Casco padrão (30/09). Sem funil: é uma linha por setor, de ajuste,
             e o setor já se escolhe no "Filtros" acima. */}
-        <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
+        <TabelaNoDesktop padrao>
           <table className="w-full min-w-[520px] text-[length:var(--fs-ui)]">
             <thead>
               <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
@@ -107,7 +129,7 @@ export default async function AlertasDaGestaoPage({ searchParams }: { searchPara
               })}
             </tbody>
           </table>
-        </div>
+        </TabelaNoDesktop>
       </section>
     </div>
   );
