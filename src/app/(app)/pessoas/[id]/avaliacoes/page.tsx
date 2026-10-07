@@ -8,6 +8,7 @@ import { BackButton } from "@/components/shared/BackButton";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { notaDoDP } from "@/components/pessoas/rotulosDoDP";
 
 export default async function AvaliacoesPessoaPage({
   params,
@@ -51,7 +52,7 @@ export default async function AvaliacoesPessoaPage({
         <TabelaFiltravel
           linhas={evaluations.map((e) => ({
             id: e.id,
-            valores: { media: e.averageScore != null ? e.averageScore.toString() : "Sem nota" },
+            valores: { media: e.averageScore != null ? notaDoDP(e.averageScore) : "Sem nota" },
           }))}
         >
           <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
@@ -77,7 +78,7 @@ export default async function AvaliacoesPessoaPage({
                       </Link>
                     </td>
                     <td className={`px-4 py-3 ${e.averageScore != null ? "text-fg-secondary" : "text-fg-muted"}`}>
-                      {e.averageScore != null ? e.averageScore.toString() : "Sem nota"}
+                      {e.averageScore != null ? notaDoDP(e.averageScore) : "Sem nota"}
                     </td>
                     <td className="px-4 py-3 text-fg-muted">
                       <span className="block max-w-[360px] truncate" title={e.developmentPlan ?? undefined}>

@@ -12,6 +12,7 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { CornerDownLeft } from "lucide-react";
 import { Selo } from "@/components/ui/Selo";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { brl } from "@/lib/valora/formato";
 
 export type CheckState = {
   status: "PENDENTE" | "CONFERIDO" | "DIVERGENTE" | "NAO_APLICAVEL";
@@ -65,6 +66,16 @@ const STATUS_STYLE: Record<CheckState["status"], string> = {
   NAO_APLICAVEL: "bg-surface-2 text-fg-secondary border-border",
 };
 
+/**
+ * O valor informado chega como o campo o edita ("1234,56"); na linha e na nota
+ * ele aparecia assim, sem milhar, ao lado da referência "R$ 1.234,56"
+ * (auditoria DRG-01, 07/10/2026). Troca por `formatarReais` de lib/format.ts
+ * quando a base o criar.
+ */
+function reaisDoInformado(v: string): string {
+  return brl(Number(v.replace(/\./g, "").replace(",", ".")));
+}
+
 const STATUS_LABEL: Record<CheckState["status"], string> = {
   PENDENTE: "Pendente",
   CONFERIDO: "Conferido",
@@ -91,7 +102,7 @@ export function ItemConferenciaRow({ item, current, referencia, action, canEdit 
 
   const notaSugerida =
     sugereDivergente && referencia?.valorLabel && current?.informedValue
-      ? `Informado R$ ${current.informedValue}; referência ${referencia.valorLabel}${
+      ? `Informado ${reaisDoInformado(current.informedValue)}; referência ${referencia.valorLabel}${
           referencia.deltaLabel ? ` (diferença de ${referencia.deltaLabel})` : ""
         }.`
       : "";
@@ -106,7 +117,7 @@ export function ItemConferenciaRow({ item, current, referencia, action, canEdit 
               {STATUS_LABEL[efetivo]}
             </Selo>
             {current?.informedValue && (
-              <span className="text-[12px] text-fg-secondary tnum">R$ {current.informedValue}</span>
+              <span className="text-[12px] text-fg-secondary tnum">{reaisDoInformado(current.informedValue)}</span>
             )}
 
             {/* Referência do motor — sempre em tom mudo, pra nunca competir
@@ -181,13 +192,16 @@ export function ItemConferenciaRow({ item, current, referencia, action, canEdit 
             </ul>
           )}
 
-          {referencia.situacao === "CALCULADO" && referencia.valorLabel && item.hasValue && (
+          {referencia.situacao === "CALCULADO" && referencia.valorLabel && referencia.valor != null && item.hasValue && (
             // Era um link azul (até 30/09): preenche o campo, é ação — botão.
+            // Preenche pelo número, no formato do campo ("1234,56"): o rótulo
+            // vem do Intl, com espaço fixo depois do "R$", e o recorte do texto
+            // deixava de funcionar.
             <Button
               variant="secondary"
               size="xs"
               className="mt-2"
-              onClick={() => setValorInformado(referencia.valorLabel!.replace("R$ ", ""))}
+              onClick={() => setValorInformado(referencia.valor!.toFixed(2).replace(".", ","))}
             >
               <CornerDownLeft size={11} />
               Usar {referencia.valorLabel} como valor informado

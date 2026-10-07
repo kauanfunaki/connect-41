@@ -27,10 +27,12 @@ import { calcularReferencia, avaliarDivergencia } from "@/lib/rescisao/referenci
 import type { ReferenciaProps } from "@/components/rescisao/ItemConferenciaRow";
 import { salvarItemConferencia, salvarDadosRescisao } from "./actions";
 import { Selo } from "@/components/ui/Selo";
+import { brl } from "@/lib/valora/formato";
 
-function brl(v: number | null): string | null {
-  if (v == null) return null;
-  return `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+/** `null` fica `null`: sem valor, o rótulo some em vez de virar travessão. Troca
+ *  por `formatarReais` de lib/format.ts quando a base o criar (DRG-01, 07/10). */
+function reais(v: number | null): string | null {
+  return v == null ? null : brl(v);
 }
 
 export default async function ConferenciaRescisaoPage({
@@ -105,14 +107,14 @@ export default async function ConferenciaRescisaoPage({
     return {
       situacao: verba.situacao,
       valor: verba.valor,
-      valorLabel: brl(verba.valor),
+      valorLabel: reais(verba.valor),
       formula: verba.formula,
       fundamento: verba.fundamento,
       motivo: verba.motivo,
       premissas: verba.premissas,
       confianca: verba.confianca,
       delta,
-      deltaLabel: brl(delta),
+      deltaLabel: reais(delta),
       divergente,
     };
   }
