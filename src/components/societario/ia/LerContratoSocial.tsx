@@ -33,8 +33,8 @@ export function LerContratoSocial({
     <form action={formAction} className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 w-full">
       <input type="hidden" name="companyId" value={companyId} />
       <div className="flex flex-col gap-0.5">
-        <p className="text-[14px] font-semibold text-fg">Ler contrato social com a IA</p>
-        <p className="text-[12px] text-fg-muted">
+        <p className="text-[length:var(--fs-card-title)] font-semibold text-fg">Ler contrato social com a IA</p>
+        <p className="text-[length:var(--fs-2)] text-fg-muted">
           Contrato social, alteração ou consolidação, em PDF. A IA lê participação, quotas, capital e quem administra; você revisa antes
           de gravar. O arquivo não fica guardado.
         </p>
@@ -42,7 +42,7 @@ export function LerContratoSocial({
       {/* Só a extensão no `accept`: o campo escreve o que recebe aqui na faixa
           ("PDF, APPLICATION/PDF · até 10 MB"), e confere pela extensão. */}
       <FileDropzoneField name="arquivo" accept=".pdf" maxSizeMb={10} required />
-      {state?.error && <p className="text-[13px] text-danger">{state.error}</p>}
+      {state?.error && <p className="text-[length:var(--fs-ui)] text-danger">{state.error}</p>}
       <FormFooter
         pending={pendente}
         pendingLabel="Lendo o contrato…"
