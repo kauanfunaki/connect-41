@@ -3,11 +3,8 @@
 import Link from "next/link";
 import { BookOpen, ChevronDown, CircleHelp, LifeBuoy } from "lucide-react";
 import { Dropdown } from "@/components/ui/Dropdown";
-
-const BASE =
-  "h-[38px] inline-flex items-center justify-center rounded-md border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40";
-const NORMAL = "bg-surface-hover border-border text-fg-secondary hover:text-fg hover:border-border-strong";
-const ATIVO = "bg-surface border-border-strong text-fg shadow-sm";
+import { IconButton } from "@/components/ui/IconButton";
+import { ItemDoMenu } from "@/components/ui/Popover";
 
 /**
  * O "?" do topo.
@@ -20,16 +17,19 @@ const ATIVO = "bg-surface border-border-strong text-fg shadow-sm";
  */
 export function BotaoDeAjuda({ linkDaTela, naAjuda }: { linkDaTela: string | null; naAjuda: boolean }) {
   if (!linkDaTela) {
+    // O `IconButton framed lg` com `href` (07/10/2026), e não uma cópia dele.
     return (
-      <Link
+      <IconButton
         href="/ajuda"
+        variant="framed"
+        size="lg"
+        active={naAjuda}
         aria-label="Central de ajuda"
         data-dica="Central de ajuda"
         aria-current={naAjuda ? "page" : undefined}
-        className={`${BASE} w-[38px] ${naAjuda ? ATIVO : NORMAL}`}
       >
         <CircleHelp size={16} />
-      </Link>
+      </IconButton>
     );
   }
 
@@ -63,51 +63,20 @@ export function BotaoDeAjuda({ linkDaTela, naAjuda }: { linkDaTela: string | nul
       >
         {({ close }) => (
           <nav aria-label="Ajuda" className="flex flex-col gap-1 -m-1">
-            <ItemDoMenu
-              href={linkDaTela}
-              onClick={close}
-              icone={<BookOpen size={16} />}
-              titulo="Ajuda desta tela"
-              texto="O passo a passo da tela aberta."
-            />
+            <ItemDoMenu href={linkDaTela} onClick={close} icone={<BookOpen size={16} />} descricao="O passo a passo da tela aberta.">
+              Ajuda desta tela
+            </ItemDoMenu>
             <ItemDoMenu
               href="/ajuda"
               onClick={close}
               icone={<LifeBuoy size={16} />}
-              titulo="Central de ajuda"
-              texto="Todas as telas que você usa, com busca e os primeiros passos."
-            />
+              descricao="Todas as telas que você usa, com busca e os primeiros passos."
+            >
+              Central de ajuda
+            </ItemDoMenu>
           </nav>
         )}
       </Dropdown>
     </div>
-  );
-}
-
-function ItemDoMenu({
-  href,
-  onClick,
-  icone,
-  titulo,
-  texto,
-}: {
-  href: string;
-  onClick: () => void;
-  icone: React.ReactNode;
-  titulo: string;
-  texto: string;
-}) {
-  return (
-    <Link
-      href={href}
-      onClick={onClick}
-      className="flex items-start gap-3 rounded-md px-2.5 py-2 hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-    >
-      <span className="mt-0.5 inline-flex size-8 flex-shrink-0 items-center justify-center rounded-md bg-brand-subtle text-brand">{icone}</span>
-      <span className="flex flex-col min-w-0">
-        <span className="text-[13.5px] font-semibold text-fg">{titulo}</span>
-        <span className="text-[12px] leading-snug text-fg-secondary">{texto}</span>
-      </span>
-    </Link>
   );
 }
