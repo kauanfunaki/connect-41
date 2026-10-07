@@ -1,18 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { MeetingItem } from "./MeetingItem";
 import { PrazoItem, type SetoresDaAgenda } from "./PrazoItem";
 import type { PrazoDaAgenda } from "@/lib/prazosDaAgenda";
 import { saoPauloParts, weekdayLabel, dayNumber, isSameMonth } from "@/lib/agenda";
 import type { CalendarDay, MeetingActions, MeetingRow } from "./types";
+import { etiquetasQueCabem } from "./etiquetasNaCelula";
 
 const WEEKDAY_HEADER = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
-// Quantas reuniões cabem numa célula antes do "+N" — acima disso a célula
-// cresceria e quebraria a altura uniforme da grade.
-const MAX_CHIPS = 3;
+/** Cor de reserva do prazo sem setor: a de Gestão, pelo token (era o hex cru). */
+const COR_SEM_SETOR = "var(--c41-sector-gestao)";
 
 type Props = {
   days: CalendarDay[]; // 42 dias (6 semanas), começando numa segunda-feira
@@ -50,6 +50,20 @@ export function MonthGrid({ days, meetings, actions, monthKey, onDayClick, prazo
     return map;
   }, [meetings]);
 
+  // A altura de uma célula (as 6 semanas dividem a grade), medida: quantas
+  // etiquetas cabem depende dela, e não de um teto fixo — ver
+  // `etiquetasQueCabem`. No celular as etiquetas viram bolinhas e a conta não vale.
+  const gradeRef = useRef<HTMLDivElement>(null);
+  const [alturaDaCelula, setAlturaDaCelula] = useState<number | null>(null);
+  useEffect(() => {
+    const grade = gradeRef.current;
+    if (!grade) return;
+    // O observador já avisa uma vez ao começar a observar: é a primeira medida.
+    const observador = new ResizeObserver(() => setAlturaDaCelula(grade.clientHeight / 6));
+    observador.observe(grade);
+    return () => observador.disconnect();
+  }, []);
+
   return (
     // Mesma regra da grade de horas: as 6 semanas dividem a altura disponível
     // em vez de somarem alturas mínimas fixas, senão o mês estoura a viewport e
@@ -64,15 +78,16 @@ export function MonthGrid({ days, meetings, actions, monthKey, onDayClick, prazo
         ))}
       </div>
 
-      <div className="grid grid-cols-7 flex-1 min-h-0 sm:grid-rows-6">
+      <div ref={gradeRef} className="grid grid-cols-7 flex-1 min-h-0 sm:grid-rows-6">
         {days.map((d) => {
           const dayMeetings = meetingsByDay.get(d.dateKey) ?? [];
           const dayPrazos = prazosByDay.get(d.dateKey) ?? [];
           const outside = !isSameMonth(d.dateKey, monthKey);
           // Prazos primeiro (são do dia inteiro), reuniões depois; o teto de
           // etiquetas vale para os dois juntos.
-          const prazosNaCelula = dayPrazos.slice(0, MAX_CHIPS);
-          const reunioesNaCelula = dayMeetings.slice(0, Math.max(MAX_CHIPS - prazosNaCelula.length, 0));
+          const cabem = etiquetasQueCabem(alturaDaCelula, dayPrazos.length + dayMeetings.length);
+          const prazosNaCelula = dayPrazos.slice(0, cabem);
+          const reunioesNaCelula = dayMeetings.slice(0, Math.max(cabem - prazosNaCelula.length, 0));
           const overflow = dayPrazos.length + dayMeetings.length - prazosNaCelula.length - reunioesNaCelula.length;
 
           return (
@@ -86,7 +101,7 @@ export function MonthGrid({ days, meetings, actions, monthKey, onDayClick, prazo
                 <Link
                   href={`/agenda?view=dia&date=${d.dateKey}`}
                   title={`Ver ${weekdayLabel(d.dateKey)}, dia ${dayNumber(d.dateKey)}`}
-                  className={`w-5 h-5 sm:w-6 sm:h-6 inline-flex items-center justify-center rounded-full text-[11px] sm:text-[12px] tnum transition-colors ${
+                  className={`w-5 h-5 sm:w-6 sm:h-6 inline-flex items-center justify-center rounded-full text-[length:var(--fs-micro)] sm:text-[length:var(--fs-2)] tnum transition-colors ${
                     d.isToday
                       ? "bg-brand text-on-brand font-semibold"
                       : outside
@@ -100,7 +115,7 @@ export function MonthGrid({ days, meetings, actions, monthKey, onDayClick, prazo
                   type="button"
                   onClick={() => onDayClick(d.dateKey)}
                   aria-label={`Criar reunião em ${d.dateKey}`}
-                  className="hidden sm:inline-flex w-5 h-5 items-center justify-center rounded text-fg-muted opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-surface-hover transition-opacity text-[14px] leading-none"
+                  className="hidden sm:inline-flex w-5 h-5 items-center justify-center rounded text-fg-muted opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-surface-hover transition-opacity text-[length:var(--fs-label)] leading-none"
                 >
                   +
                 </button>}
@@ -132,7 +147,7 @@ export function MonthGrid({ days, meetings, actions, monthKey, onDayClick, prazo
                   className="sm:hidden flex items-center gap-0.5 flex-wrap px-0.5"
                 >
                   {dayPrazos.slice(0, 3).map((p) => (
-                    <span key={p.chave} className="w-1.5 h-1.5 rounded-[2px]" style={{ background: setores[p.setor]?.cor ?? "#586577" }} />
+                    <span key={p.chave} className="w-1.5 h-1.5 rounded-[2px]" style={{ background: setores[p.setor]?.cor ?? COR_SEM_SETOR }} />
                   ))}
                   {dayMeetings.slice(0, 4).map((m) => (
                     <span
