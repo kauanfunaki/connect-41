@@ -146,7 +146,7 @@ export function RichTextEditor({
       attributes: {
         class: bare
           ? `outline-none ${blockDragHandle ? "pl-9 -ml-9" : ""} ${contentClass ?? ""}`.trim()
-          : `min-h-[160px] ${blockDragHandle ? "pl-9" : "px-3"} py-2 text-[14px] text-fg outline-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h2]:text-[16px] [&_h2]:font-semibold [&_h2]:mt-2 [&_p]:my-1 ${contentClass ?? ""}`.trim(),
+          : `min-h-[160px] ${blockDragHandle ? "pl-9" : "px-3"} py-2 text-label text-fg outline-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h2]:text-fs-6 [&_h2]:font-semibold [&_h2]:mt-2 [&_p]:my-1 ${contentClass ?? ""}`.trim(),
       },
       ...(blockDragHandle
         ? {

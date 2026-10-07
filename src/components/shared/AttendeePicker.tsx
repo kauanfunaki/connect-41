@@ -46,7 +46,7 @@ export function AttendeePicker({ users, name = "attendeeIds", label = "Responsá
 
   return (
     <div>
-      <p className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">{label}</p>
+      <p className="text-label font-medium text-fg mb-1.5">{label}</p>
 
       {selectedUsers.map((u) => (
         <input key={u.id} type="hidden" name={name} value={u.id} />
@@ -57,7 +57,7 @@ export function AttendeePicker({ users, name = "attendeeIds", label = "Responsá
           {selectedUsers.map((u) => (
             <span
               key={u.id}
-              className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full bg-brand/[0.06] border border-brand/30 text-[12px] text-fg"
+              className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full bg-brand/[0.06] border border-brand/30 text-fs-2 text-fg"
             >
               {u.name}
               <button
@@ -81,12 +81,12 @@ export function AttendeePicker({ users, name = "attendeeIds", label = "Responsá
           onBlur={() => setTimeout(() => setOpen(false), 120)}
           placeholder="Buscar responsável…"
           icon={<Search size={14} />}
-          className="h-8 text-[12px]"
+          className="h-8 text-fs-2"
         />
         {open && (
           <div className="absolute z-20 top-[calc(100%+4px)] left-0 right-0 max-h-[176px] overflow-y-auto bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] p-1.5">
             {availableUsers.length === 0 ? (
-              <p className="text-[12px] text-fg-muted px-2 py-1.5">
+              <p className="text-fs-2 text-fg-muted px-2 py-1.5">
                 {normalizedQuery ? "Nenhum responsável encontrado." : "Todos já foram adicionados."}
               </p>
             ) : (
@@ -96,7 +96,7 @@ export function AttendeePicker({ users, name = "attendeeIds", label = "Responsá
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => add(u.id)}
-                  className="w-full text-left px-2 py-1.5 rounded-lg text-[12.5px] text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors"
+                  className="w-full text-left px-2 py-1.5 rounded-lg text-fs-2 text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors"
                 >
                   {u.name}
                 </button>

@@ -17,7 +17,7 @@ type Props = React.SelectHTMLAttributes<HTMLSelectElement> & {
 // O chevron é um elemento JSX sobreposto (não background-image em CSS) — o
 // wrapper recebe o className do caller para larguras (w-auto, w-44 etc.).
 export function Select({ error = false, compact = false, className = "", disabled, children, ...rest }: Props) {
-  const sizeClass = compact ? "h-8 text-[13px]" : "h-9 text-[length:var(--fs-input)]";
+  const sizeClass = compact ? "h-8 text-ui" : "h-9 text-input";
   return (
     <div className={`relative ${className}`.trim()}>
       <select

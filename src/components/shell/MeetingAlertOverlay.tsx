@@ -177,25 +177,25 @@ export function MeetingAlertOverlay() {
             <p className="c41-rotulo text-brand">
               {startsInMin > 0 ? `Reunião em ${startsInMin} min` : "Reunião em andamento"}
             </p>
-            <h2 id={titleId} className="text-[16px] font-display font-semibold text-fg truncate">
+            <h2 id={titleId} className="text-fs-6 font-display font-semibold text-fg truncate">
               {alert.title}
             </h2>
           </div>
         </div>
 
         <div className="space-y-2 mb-5">
-          <p className="flex items-center gap-2 text-[13px] text-fg-secondary">
+          <p className="flex items-center gap-2 text-ui text-fg-secondary">
             <Clock size={14} className="text-fg-muted flex-shrink-0" />
             {alert.startTimeLabel} – {alert.endTimeLabel} · {alert.provider}
           </p>
           {alert.companyName && (
-            <p className="flex items-center gap-2 text-[13px] text-fg-secondary">
+            <p className="flex items-center gap-2 text-ui text-fg-secondary">
               <Building2 size={14} className="text-fg-muted flex-shrink-0" />
               {alert.companyName}
             </p>
           )}
           {(alert.clientName || alert.sectorLabel) && (
-            <p className="flex items-center gap-2 text-[13px] text-fg-secondary">
+            <p className="flex items-center gap-2 text-ui text-fg-secondary">
               <Users size={14} className="text-fg-muted flex-shrink-0" />
               {[alert.clientName, alert.sectorLabel].filter(Boolean).join(" · ")}
             </p>

@@ -186,7 +186,7 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
         className="p-0! flex flex-col max-h-[min(620px,calc(100dvh-80px))] overflow-hidden"
       >
         <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-2">
-          <p className="text-[15px] font-semibold text-fg">Notificações</p>
+          <p className="text-body font-semibold text-fg">Notificações</p>
           <IconButton size="sm" onClick={() => void carregar(aba)} title="Atualizar" aria-label="Atualizar notificações" disabled={carregando}>
             <RefreshCw size={14} className={carregando ? "animate-spin" : ""} />
           </IconButton>
@@ -195,7 +195,7 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
           <AbasDasNotificacoes ativa={aba} contagens={dados?.contagens ?? null} onEscolher={trocarAba} />
           {/* Nada some sem a pessoa saber: o que ela ocultou fica dito, com o atalho de volta. */}
           {!!dados?.ocultos && (
-            <div className="mt-1.5 flex items-center justify-between gap-2 px-1 text-[11px] text-fg-muted">
+            <div className="mt-1.5 flex items-center justify-between gap-2 px-1 text-micro text-fg-muted">
               <span className="inline-flex items-center gap-1">
                 <EyeOff size={12} /> {dados.ocultos} tipo{dados.ocultos === 1 ? "" : "s"} oculto{dados.ocultos === 1 ? "" : "s"}
               </span>

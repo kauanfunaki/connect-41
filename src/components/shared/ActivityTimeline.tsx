@@ -27,7 +27,7 @@ type Props = {
 // atividades do item de Kanban, extraído para reuso na ficha de empresa.
 export function ActivityTimeline({ activities, emptyLabel = "Nenhuma atividade registrada ainda." }: Props) {
   if (activities.length === 0) {
-    return <p className="text-[length:var(--fs-helper)] text-fg-muted">{emptyLabel}</p>;
+    return <p className="text-helper text-fg-muted">{emptyLabel}</p>;
   }
 
   return (
@@ -48,16 +48,16 @@ export function ActivityTimeline({ activities, emptyLabel = "Nenhuma atividade r
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-2">
-                <p className="text-[length:var(--fs-body)] text-fg font-medium leading-snug">
+                <p className="text-body text-fg font-medium leading-snug">
                   {ACTIVITY_LABEL[a.type] ?? a.type}
                   {a.contextLabel && <span className="text-fg-muted font-normal"> · {a.contextLabel}</span>}
                 </p>
-                <span className="font-mono text-[11px] text-fg-muted whitespace-nowrap flex-shrink-0">
+                <span className="font-mono text-micro text-fg-muted whitespace-nowrap flex-shrink-0">
                   {formatInstantDateTime(a.createdAt)}
                 </span>
               </div>
-              <p className="text-[length:var(--fs-helper)] text-fg-muted">{a.userName}</p>
-              {a.content && <p className="text-[length:var(--fs-body)] text-fg-secondary mt-1">{renderRichText(a.content)}</p>}
+              <p className="text-helper text-fg-muted">{a.userName}</p>
+              {a.content && <p className="text-body text-fg-secondary mt-1">{renderRichText(a.content)}</p>}
             </div>
           </div>
         );

@@ -119,7 +119,7 @@ export function TabelaFiltravel({
   return (
     <Ctx.Provider value={contexto}>
       {ativos > 0 && (
-        <div className="c41-faixa-colunas hidden md:flex items-center gap-2 mb-2 text-[12px] text-fg-secondary">
+        <div className="c41-faixa-colunas hidden md:flex items-center gap-2 mb-2 text-fs-2 text-fg-secondary">
           <ListFilter size={13} className="text-brand" />
           <span>
             Filtro nas colunas: <strong className="font-semibold text-fg tabular-nums">{visiveis}</strong> de{" "}
@@ -128,7 +128,7 @@ export function TabelaFiltravel({
           <button
             type="button"
             onClick={() => setFiltros({})}
-            className="inline-flex items-center gap-1 h-6 px-2 rounded-md border border-border-strong text-[11.5px] font-medium text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors"
+            className="inline-flex items-center gap-1 h-6 px-2 rounded-md border border-border-strong text-micro font-medium text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors"
           >
             <X size={11} /> Limpar filtros das colunas
           </button>
@@ -136,7 +136,7 @@ export function TabelaFiltravel({
       )}
       {children}
       {ativos > 0 && visiveis === 0 && (
-        <p className="c41-sem-linhas hidden md:block mt-3 text-center text-[13px] text-fg-muted">Nenhuma linha com os filtros das colunas.</p>
+        <p className="c41-sem-linhas hidden md:block mt-3 text-center text-ui text-fg-muted">Nenhuma linha com os filtros das colunas.</p>
       )}
     </Ctx.Provider>
   );
@@ -243,7 +243,7 @@ function ListaDeValores({
       <ul className="scroll-y max-h-[240px] overflow-y-auto flex flex-col">
         {visiveis.length > 0 && (
           <li>
-            <label className="flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] font-medium text-fg hover:bg-surface-hover cursor-pointer">
+            <label className="flex items-center gap-2 px-2 py-1.5 rounded-md text-ui font-medium text-fg hover:bg-surface-hover cursor-pointer">
               <Checkbox checked={todosVisiveisMarcados} onChange={alternarVisiveis} />
               {q ? `Selecionar os ${visiveis.length} encontrados` : "(Selecionar tudo)"}
             </label>
@@ -251,14 +251,14 @@ function ListaDeValores({
         )}
         {visiveis.map((v) => (
           <li key={v.valor || "__vazio"}>
-            <label className="flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] text-fg-secondary hover:bg-surface-hover hover:text-fg cursor-pointer">
+            <label className="flex items-center gap-2 px-2 py-1.5 rounded-md text-ui text-fg-secondary hover:bg-surface-hover hover:text-fg cursor-pointer">
               <Checkbox checked={marcado(v.valor)} onChange={() => alternar(v.valor)} className="flex-shrink-0" />
               <span className={`flex-1 truncate ${v.valor === VAZIO ? "italic text-fg-muted" : ""}`}>{v.rotulo}</span>
-              {v.n !== undefined && <span className="text-[11px] text-fg-muted tabular-nums">{v.n}</span>}
+              {v.n !== undefined && <span className="text-micro text-fg-muted tabular-nums">{v.n}</span>}
             </label>
           </li>
         ))}
-        {visiveis.length === 0 && <li className="px-2 py-2 text-[12px] text-fg-muted">Nada encontrado.</li>}
+        {visiveis.length === 0 && <li className="px-2 py-2 text-fs-2 text-fg-muted">Nada encontrado.</li>}
       </ul>
     </>
   );
@@ -363,7 +363,7 @@ export function FiltroDaColuna({
                       setCampoAtual(c.chave);
                       setVersao((v) => v + 1);
                     }}
-                    className={`flex-1 h-7 rounded-sm text-[12px] font-medium transition-colors ${
+                    className={`flex-1 h-7 rounded-sm text-fs-2 font-medium transition-colors ${
                       c.chave === campo.chave ? "bg-brand-subtle text-brand" : "text-fg-secondary hover:bg-surface-hover"
                     }`}
                   >
@@ -514,7 +514,7 @@ export function FiltrosDasColunasNaUrl({ colunas }: { colunas: { chave: string; 
   }
 
   return (
-    <div className="c41-faixa-colunas flex flex-wrap items-center gap-2 mb-2 text-[12px] text-fg-secondary">
+    <div className="c41-faixa-colunas flex flex-wrap items-center gap-2 mb-2 text-fs-2 text-fg-secondary">
       <ListFilter size={13} className="text-brand" />
       <span>Filtro nas colunas:</span>
       {ativas.map((c) => (
@@ -523,7 +523,7 @@ export function FiltrosDasColunasNaUrl({ colunas }: { colunas: { chave: string; 
           type="button"
           onClick={() => tirar([c.chave])}
           aria-label={`Tirar o filtro de ${c.rotulo.toLowerCase()}`}
-          className="inline-flex items-center gap-1 h-6 pl-2 pr-1.5 rounded-full border border-brand/30 bg-brand-subtle text-[11.5px] font-medium text-fg hover:border-brand/60 transition-colors"
+          className="inline-flex items-center gap-1 h-6 pl-2 pr-1.5 rounded-full border border-brand/30 bg-brand-subtle text-micro font-medium text-fg hover:border-brand/60 transition-colors"
         >
           {c.rotulo}
           {c.n > 1 && <span className="tabular-nums text-fg-muted">({c.n})</span>}
@@ -533,7 +533,7 @@ export function FiltrosDasColunasNaUrl({ colunas }: { colunas: { chave: string; 
       <button
         type="button"
         onClick={() => tirar(ativas.map((c) => c.chave))}
-        className="inline-flex items-center gap-1 h-6 px-2 rounded-md border border-border-strong text-[11.5px] font-medium text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors"
+        className="inline-flex items-center gap-1 h-6 px-2 rounded-md border border-border-strong text-micro font-medium text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors"
       >
         <X size={11} /> Limpar filtros das colunas
       </button>

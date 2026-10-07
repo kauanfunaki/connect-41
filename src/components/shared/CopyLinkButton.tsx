@@ -41,7 +41,7 @@ export function CopyLinkButton({
       type="button"
       onClick={handleCopy}
       title="Copiar link da reunião" aria-label="Copiar link da reunião"
-      className={`inline-flex items-center gap-1 text-[12px] text-fg-muted hover:text-fg transition-colors ${className}`.trim()}
+      className={`inline-flex items-center gap-1 text-fs-2 text-fg-muted hover:text-fg transition-colors ${className}`.trim()}
     >
       {copied ? <Check size={12} className="text-success" /> : <Copy size={12} />}
       {copied ? "Copiado" : "Copiar link"}

@@ -69,12 +69,12 @@ function comNegrito(texto: string, chave: string) {
 function BalaoDaPergunta({ texto }: { texto: string }) {
   const p = separarAnexos(texto);
   return (
-    <div className="rounded-lg rounded-br-sm bg-brand-solid text-on-brand px-3.5 py-2.5 text-[13px] flex flex-col gap-2">
+    <div className="rounded-lg rounded-br-sm bg-brand-solid text-on-brand px-3.5 py-2.5 text-ui flex flex-col gap-2">
       <p className="whitespace-pre-wrap break-words">{p.texto}</p>
       {p.anexos.length > 0 && (
         <span className="flex flex-wrap justify-end gap-1">
           {p.anexos.map((nome, i) => (
-            <span key={`${nome}-${i}`} className="inline-flex max-w-[200px] items-center gap-1 rounded-md bg-black/15 px-1.5 py-0.5 text-[11px]">
+            <span key={`${nome}-${i}`} className="inline-flex max-w-[200px] items-center gap-1 rounded-md bg-black/15 px-1.5 py-0.5 text-micro">
               <FileText size={11} className="flex-shrink-0" />
               <span className="truncate">{nome}</span>
             </span>
@@ -92,7 +92,7 @@ function CartaoDoCitado({ citado }: { citado: Citado }) {
       <span className="truncate">{citado.nome}</span>
     </>
   );
-  const classe = "inline-flex max-w-full items-center gap-1 align-middle rounded-full border border-border bg-surface pl-0.5 pr-2 py-0.5 text-[12px] font-medium text-fg";
+  const classe = "inline-flex max-w-full items-center gap-1 align-middle rounded-full border border-border bg-surface pl-0.5 pr-2 py-0.5 text-fs-2 font-medium text-fg";
   return citado.href ? (
     <a href={citado.href} className={`${classe} hover:border-brand hover:text-brand`}>
       {conteudo}
@@ -548,7 +548,7 @@ export function ChatDeIA({
             >
               <X size={13} />
             </button>
-            <p className="pr-5 text-[12px] font-semibold text-fg">Pergunte à {agente.titulo}</p>
+            <p className="pr-5 text-fs-2 font-semibold text-fg">Pergunte à {agente.titulo}</p>
             {/* Revisão de 05/10: botão não é link — a sugestão era texto azul. Quebra linha, por isso a altura livre. */}
             <Button variant="secondary" size="xs" onClick={() => abrirChat(sugestao)} className="mt-1 h-auto py-1.5 text-left whitespace-normal">
               “{sugestao}”
@@ -565,7 +565,7 @@ export function ChatDeIA({
         >
           <span className="flex items-center gap-2 h-11 pl-1.5 pr-1.5 sm:pr-4 rounded-full bg-surface-elevated">
             <OrbeDaIA tamanho={32} />
-            <span className="hidden sm:inline text-[14px] font-semibold text-fg whitespace-nowrap">{agente.titulo}</span>
+            <span className="hidden sm:inline text-label font-semibold text-fg whitespace-nowrap">{agente.titulo}</span>
           </span>
         </button>
       </div>
@@ -590,7 +590,7 @@ export function ChatDeIA({
         ) : (
           <OrbeDaIA tamanho={28} />
         )}
-        <p className="flex-1 min-w-0 text-[14px] font-semibold text-fg truncate">{vendoHistorico ? "Conversas" : agente.titulo}</p>
+        <p className="flex-1 min-w-0 text-label font-semibold text-fg truncate">{vendoHistorico ? "Conversas" : agente.titulo}</p>
         <Popover
           align="right"
           width={220}
@@ -632,14 +632,14 @@ export function ChatDeIA({
       {vendoHistorico ? (
         <div className="flex-1 overflow-y-auto px-2 pb-2">
           {conversas.length === 0 ? (
-            <p className="p-3 text-[13px] text-fg-muted">Nenhuma conversa ainda. Elas ficam guardadas por 90 dias.</p>
+            <p className="p-3 text-ui text-fg-muted">Nenhuma conversa ainda. Elas ficam guardadas por 90 dias.</p>
           ) : (
             <ul className="flex flex-col">
               {conversas.map((c) => (
                 <li key={c.id} className="flex items-center gap-1 rounded-lg hover:bg-surface-hover">
                   <button type="button" onClick={() => abrir(c.id)} className="flex-1 min-w-0 text-left px-3 py-2.5">
-                    <span className="block text-[13px] text-fg truncate">{c.titulo}</span>
-                    <span className="block text-[11px] text-fg-muted">
+                    <span className="block text-ui text-fg truncate">{c.titulo}</span>
+                    <span className="block text-micro text-fg-muted">
                       {agentes.find((a) => a.code === c.agentCode)?.titulo ?? "IA"} ·{" "}
                       {formatInstantDateTime(new Date(c.atualizadaEm), { dateStyle: "short", timeStyle: "short" })}
                     </span>
@@ -658,9 +658,9 @@ export function ChatDeIA({
             {mensagens.length === 0 && !enviando && (
               <div className="flex flex-col items-center text-center pt-8 pb-2">
                 <OrbeDaIA tamanho={56} />
-                <p className="mt-4 text-[20px] font-semibold text-fg">{primeiroNome ? `Oi, ${primeiroNome}` : "Oi"}</p>
-                <p className="text-[15px] text-fg-secondary">Como posso ajudar?</p>
-                <p className="mt-3 max-w-[300px] text-[12px] text-fg-muted leading-relaxed">
+                <p className="mt-4 text-section font-semibold text-fg">{primeiroNome ? `Oi, ${primeiroNome}` : "Oi"}</p>
+                <p className="text-body text-fg-secondary">Como posso ajudar?</p>
+                <p className="mt-3 max-w-[300px] text-fs-2 text-fg-muted leading-relaxed">
                   Consulto o Connect com o mesmo acesso que você tem e <strong className="text-fg-secondary">não altero nada sozinha</strong> — sugestão
                   só vale depois do seu “Aplicar”.
                 </p>
@@ -670,7 +670,7 @@ export function ChatDeIA({
                       key={s}
                       type="button"
                       onClick={() => enviar(s)}
-                      className="inline-flex items-center gap-1.5 max-w-full text-left text-[12px] text-fg-secondary border border-border rounded-full px-3 py-1.5 hover:border-brand hover:text-brand transition-colors"
+                      className="inline-flex items-center gap-1.5 max-w-full text-left text-fs-2 text-fg-secondary border border-border rounded-full px-3 py-1.5 hover:border-brand hover:text-brand transition-colors"
                     >
                       <MessageSquareText size={13} className="flex-shrink-0 text-brand" />
                       <span className="truncate">{s}</span>
@@ -685,7 +685,7 @@ export function ChatDeIA({
                 <div key={m.id} className="group self-end max-w-[85%] flex flex-col items-end gap-1">
                   <BalaoDaPergunta texto={m.texto} />
                   <span className="flex items-center gap-1.5">
-                    {m.contexto && <span className="text-[10px] text-fg-muted truncate max-w-[200px]">{m.contexto}</span>}
+                    {m.contexto && <span className="text-micro text-fg-muted truncate max-w-[200px]">{m.contexto}</span>}
                     <AcoesDaMensagem>
                       {!enviando && (
                         <BotaoDeAcao rotulo="Editar" onClick={() => comecarEdicao(m)}>
@@ -703,11 +703,11 @@ export function ChatDeIA({
                   <OrbeDaIA tamanho={24} className="mt-0.5" />
                   <div className="min-w-0 flex-1 flex flex-col gap-2">
                     {m.contexto && <span className="c41-rotulo text-brand">{m.contexto}</span>}
-                    <div className={`text-[13px] leading-relaxed break-words ${m.falhou ? "rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-danger" : "text-fg"}`}>
+                    <div className={`text-ui leading-relaxed break-words ${m.falhou ? "rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-danger" : "text-fg"}`}>
                       <TextoDaResposta texto={m.texto} citados={m.citados} />
                     </div>
                     {m.truncada && (
-                      <p className="flex items-start gap-1.5 text-[11px] text-warning">
+                      <p className="flex items-start gap-1.5 text-micro text-warning">
                         <AlertTriangle size={12} className="mt-0.5 shrink-0" /> A IA parou antes de terminar — a resposta pode estar incompleta.
                       </p>
                     )}
@@ -759,12 +759,12 @@ export function ChatDeIA({
             )}
 
             {passo && (
-              <p className="flex items-center gap-2.5 text-[12px] text-fg-muted">
+              <p className="flex items-center gap-2.5 text-fs-2 text-fg-muted">
                 <OrbeDaIA tamanho={24} />
                 {passo}
               </p>
             )}
-            {erro && <p className="text-[12px] text-danger">{erro}</p>}
+            {erro && <p className="text-fs-2 text-danger">{erro}</p>}
             <div ref={fimRef} />
           </div>
 
@@ -777,7 +777,7 @@ export function ChatDeIA({
             }}
           >
             {editando && (
-              <div className="mb-2 flex items-start gap-2 rounded-lg bg-warning-bg px-3 py-2 text-[12px] text-fg-secondary">
+              <div className="mb-2 flex items-start gap-2 rounded-lg bg-warning-bg px-3 py-2 text-fs-2 text-fg-secondary">
                 <Pencil size={13} className="mt-0.5 flex-shrink-0 text-warning" />
                 <span className="flex-1">Editando a pergunta — o que veio depois dela será substituído ao enviar.</span>
                 <Button variant="ghost" size="xs" onClick={cancelarEdicao}>
@@ -789,7 +789,7 @@ export function ChatDeIA({
               {arquivos.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2.5">
                   {arquivos.map((f, i) => (
-                    <span key={`${f.name}-${i}`} className="inline-flex max-w-[220px] items-center gap-1.5 rounded-lg border border-border bg-surface-2 py-1 pl-2 pr-1 text-[12px] text-fg">
+                    <span key={`${f.name}-${i}`} className="inline-flex max-w-[220px] items-center gap-1.5 rounded-lg border border-border bg-surface-2 py-1 pl-2 pr-1 text-fs-2 text-fg">
                       <FileText size={13} className="flex-shrink-0 text-brand" />
                       <span className="truncate">{f.name}</span>
                       <span className="flex-shrink-0 text-fg-muted tabular-nums">{Math.max(1, Math.round(f.size / 1024))} KB</span>
@@ -803,7 +803,7 @@ export function ChatDeIA({
                       </button>
                     </span>
                   ))}
-                  <span className="text-[11px] text-fg-muted">Vale só para esta pergunta — não fica guardado.</span>
+                  <span className="text-micro text-fg-muted">Vale só para esta pergunta — não fica guardado.</span>
                 </div>
               )}
               <div className="flex items-end gap-2 pl-3.5 pr-2 pt-2.5">
@@ -823,7 +823,7 @@ export function ChatDeIA({
                   rows={1}
                   maxLength={2000}
                   placeholder={`Pergunte à ${agente.titulo}…`}
-                  className="min-h-0! flex-1 border-0! bg-transparent! px-0! py-1! text-[14px]! leading-5 shadow-none! focus:shadow-none! focus-visible:shadow-none! overflow-y-auto"
+                  className="min-h-0! flex-1 border-0! bg-transparent! px-0! py-1! text-label! leading-5 shadow-none! focus:shadow-none! focus-visible:shadow-none! overflow-y-auto"
                   aria-label="Pergunta"
                   disabled={enviando}
                 />
@@ -844,7 +844,7 @@ export function ChatDeIA({
                   onEscolher={(code) => setEscolhido(code)}
                 />
                 <span className="flex items-center gap-2">
-                  <span className="hidden sm:inline text-[11px] text-fg-muted">Enter envia</span>
+                  <span className="hidden sm:inline text-micro text-fg-muted">Enter envia</span>
                   <input
                     ref={seletorDeArquivoRef}
                     type="file"
@@ -861,7 +861,7 @@ export function ChatDeIA({
                     onClick={() => seletorDeArquivoRef.current?.click()}
                     disabled={enviando}
                     title="PDF, imagem ou planilha — até 3 arquivos e 10 MB"
-                    className="inline-flex items-center gap-1 h-7 px-1.5 rounded-md text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover disabled:opacity-[var(--c41-disabled-op)]"
+                    className="inline-flex items-center gap-1 h-7 px-1.5 rounded-md text-fs-2 font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover disabled:opacity-[var(--c41-disabled-op)]"
                   >
                     <Paperclip size={13} /> Anexar
                   </button>
@@ -894,7 +894,7 @@ function SeletorDoAgente({
   if (agentes.length < 2) return <span />;
   if (travado) {
     return (
-      <span className="px-1.5 text-[12px] text-fg-muted" title="A conversa é com este agente. Para falar com outro, comece uma nova.">
+      <span className="px-1.5 text-fs-2 text-fg-muted" title="A conversa é com este agente. Para falar com outro, comece uma nova.">
         {atual.titulo}
       </span>
     );
@@ -908,7 +908,7 @@ function SeletorDoAgente({
           type="button"
           onClick={toggle}
           aria-expanded={open}
-          className="inline-flex items-center gap-1 h-7 px-1.5 rounded-md text-[12px] font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover"
+          className="inline-flex items-center gap-1 h-7 px-1.5 rounded-md text-fs-2 font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover"
         >
           {atual.titulo}
           <ChevronDown size={13} className={`transition-transform ${open ? "rotate-180" : ""}`} />
@@ -974,7 +974,7 @@ function CartoesDeDecisao({
         const ocupado = aplicando === `${m.id}:${i}`;
         return (
           <div key={i} className={`rounded-lg border px-3 py-2.5 ${p.aplicada ? "border-success/40 bg-success-bg/40" : p.recusada ? "border-border bg-surface-2/40" : "border-border bg-surface"}`}>
-            <p className={`text-[13px] ${p.recusada ? "text-fg-muted line-through" : "text-fg"}`}>{descreverProposta(p)}</p>
+            <p className={`text-ui ${p.recusada ? "text-fg-muted line-through" : "text-fg"}`}>{descreverProposta(p)}</p>
             <div className="mt-2 flex items-center justify-end gap-2">
               {p.ferramenta === "abrir_transferencia" ? (
                 // Não aplica daqui: abre o formulário preenchido, e a pessoa
@@ -983,11 +983,11 @@ function CartoesDeDecisao({
                   Revisar e abrir
                 </Button>
               ) : p.aplicada ? (
-                <span className="inline-flex items-center gap-1 text-[12px] font-medium text-success">
+                <span className="inline-flex items-center gap-1 text-fs-2 font-medium text-success">
                   <Check size={13} /> Aplicado
                 </span>
               ) : p.recusada ? (
-                <span className="text-[12px] text-fg-muted">Recusado</span>
+                <span className="text-fs-2 text-fg-muted">Recusado</span>
               ) : (
                 <>
                   <Button size="xs" variant="secondary" disabled={ocupado} onClick={() => onRecusar(i)}>
@@ -1002,7 +1002,7 @@ function CartoesDeDecisao({
           </div>
         );
       })}
-      <p className="text-[11px] text-fg-muted">Precisa de outra opção? É só dizer.</p>
+      <p className="text-micro text-fg-muted">Precisa de outra opção? É só dizer.</p>
     </div>
   );
 }
@@ -1024,7 +1024,7 @@ function MotivosDoNao({
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface-2 px-3 py-2.5" role="group" aria-label="Por que não ajudou">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[12px] font-medium text-fg">
+        <p className="text-fs-2 font-medium text-fg">
           O que não foi bom? <span className="font-normal text-fg-muted">Opcional</span>
         </p>
         <button type="button" onClick={onFechar} aria-label="Fechar" className="p-0.5 rounded-sm text-fg-muted hover:text-fg hover:bg-surface-hover">
@@ -1038,7 +1038,7 @@ function MotivosDoNao({
             type="button"
             onClick={() => onEscolher(codigo)}
             aria-pressed={escolhido === codigo}
-            className={`rounded-full border px-3 py-1 text-[12px] font-medium transition-colors ${
+            className={`rounded-full border px-3 py-1 text-fs-2 font-medium transition-colors ${
               escolhido === codigo ? "border-brand-solid bg-brand-solid text-on-brand" : "border-border bg-surface text-fg-secondary hover:text-fg hover:border-border-strong"
             }`}
           >
@@ -1046,7 +1046,7 @@ function MotivosDoNao({
           </button>
         ))}
       </div>
-      <p className="text-[11px] text-fg-muted">
+      <p className="text-micro text-fg-muted">
         Esta pergunta e a resposta vão para a revisão dos administradores da IA, sem o seu nome e sem o resto da conversa.
       </p>
     </div>
@@ -1062,7 +1062,7 @@ function RespostasRapidas({ opcoes, onEscolher }: { opcoes: string[]; onEscolher
           key={o}
           type="button"
           onClick={() => onEscolher(o)}
-          className="max-w-full truncate rounded-full border border-brand/40 bg-brand-subtle/50 px-3 py-1 text-[12px] font-medium text-brand hover:bg-brand-subtle transition-colors"
+          className="max-w-full truncate rounded-full border border-brand/40 bg-brand-subtle/50 px-3 py-1 text-fs-2 font-medium text-brand hover:bg-brand-subtle transition-colors"
         >
           {o}
         </button>

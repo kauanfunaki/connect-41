@@ -58,7 +58,7 @@ export function ProfileMenu({ name, roleLabel, photoUrl, tenants, currentTenantI
           }`}
         >
           <AvatarImage src={photoUrl} name={name} size={28} bordered={false} />
-          <span className="hidden sm:block min-w-0 flex-1 text-left text-[14px] font-semibold text-fg truncate">{name}</span>
+          <span className="hidden sm:block min-w-0 flex-1 text-left text-label font-semibold text-fg truncate">{name}</span>
           <ChevronDown size={14} className="hidden sm:block flex-shrink-0 text-fg-muted" />
         </button>
       )}
@@ -68,8 +68,8 @@ export function ProfileMenu({ name, roleLabel, photoUrl, tenants, currentTenantI
           <div className="flex items-center gap-3 p-1.5 pb-3 mb-1 border-b border-border">
             <AvatarImage src={photoUrl} name={name} size={38} bordered={false} />
             <div className="min-w-0">
-              <p className="text-[14px] font-semibold text-fg truncate">{name}</p>
-              <p className="text-[12px] text-fg-muted truncate">{roleLabel}</p>
+              <p className="text-label font-semibold text-fg truncate">{name}</p>
+              <p className="text-fs-2 text-fg-muted truncate">{roleLabel}</p>
             </div>
           </div>
 
@@ -85,7 +85,7 @@ export function ProfileMenu({ name, roleLabel, photoUrl, tenants, currentTenantI
                 <ArrowLeftRight size={15} className="flex-shrink-0 text-fg-muted" />
                 <span className="min-w-0">
                   <span className="block">{podeTrocarTenant ? "Trocar setor ou escritório" : "Trocar de setor"}</span>
-                  <span className="flex items-center gap-1.5 text-[11.5px] font-normal text-fg-muted truncate">
+                  <span className="flex items-center gap-1.5 text-micro font-normal text-fg-muted truncate">
                     {podeTrocarTenant && <span className="truncate">{tenants.find((t) => t.id === currentTenantId)?.name}</span>}
                     {podeTrocarTenant && <span aria-hidden>·</span>}
                     {setorAtual && (

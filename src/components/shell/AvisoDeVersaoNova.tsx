@@ -43,7 +43,7 @@ export function AvisoDeVersaoNova({ quem = "O Connect" }: Props) {
       <span className="w-7 h-7 rounded-md bg-brand/10 text-brand flex items-center justify-center flex-shrink-0">
         <RefreshCw size={14} />
       </span>
-      <p className="text-[14px] text-fg">
+      <p className="text-label text-fg">
         <span className="font-semibold">{quem} foi atualizado.</span>{" "}
         <span className="text-fg-muted">Recarregue a página para continuar.</span>
       </p>
@@ -72,8 +72,8 @@ export function ErroDeVersaoAntiga() {
         <span className="w-10 h-10 rounded-lg bg-brand/10 text-brand flex items-center justify-center">
           <RefreshCw size={18} />
         </span>
-        <p className="text-[14px] font-semibold text-fg">O Connect foi atualizado.</p>
-        <p className="text-[13px] text-fg-muted max-w-[360px]">
+        <p className="text-label font-semibold text-fg">O Connect foi atualizado.</p>
+        <p className="text-ui text-fg-muted max-w-[360px]">
           Esta página ainda está na versão anterior. Recarregue para continuar.
         </p>
         <Button type="button" onClick={() => window.location.reload()} variant="primary" className="font-medium mt-1">

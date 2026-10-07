@@ -23,8 +23,8 @@ export default function LoginError({
         <span className="w-10 h-10 rounded-lg bg-danger/10 text-danger flex items-center justify-center">
           <AlertTriangle size={18} />
         </span>
-        <h1 className="text-[18px] font-semibold text-fg">Algo deu errado</h1>
-        <p className="text-[13px] text-fg-muted">
+        <h1 className="text-section font-semibold text-fg">Algo deu errado</h1>
+        <p className="text-ui text-fg-muted">
           Não foi possível carregar esta página. Tente novamente em instantes.
         </p>
         <Button type="button" onClick={reset} className="mt-1">
