@@ -1,5 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Selo } from "@/components/ui/Selo";
 import { DISC_LABEL, type DiscScores, type DiscDimension } from "@/lib/disc";
 
 type Props = {
@@ -27,9 +28,10 @@ export function DiscBars({ scores, primaryProfile, secondaryProfile, compact = f
 
   return (
     <div>
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-brand/10 text-brand border border-brand/25 mb-3">
+      {/* O perfil em destaque: o `Selo`, no lugar da pílula à mão (auditoria DRG-06, 07/10/2026). */}
+      <Selo tom="marca" className="mb-3">
         Perfil {profileCode} — {profileLabel}
-      </span>
+      </Selo>
 
       <div className={compact ? "space-y-1.5" : "space-y-2.5"}>
         {DIMENSIONS.map((dim) => (

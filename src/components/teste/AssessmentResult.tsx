@@ -1,5 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Selo } from "@/components/ui/Selo";
 import { DiscBars } from "./DiscBars";
 import type { DiscScores, DiscDimension } from "@/lib/disc";
 import type { QuizScores } from "@/lib/quiz";
@@ -40,9 +41,10 @@ export function AssessmentResult(props: Props) {
   const { scores, templateName, compact, detailHref } = props;
   return (
     <div>
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-brand/10 text-brand border border-brand/25 mb-3">
+      {/* O resultado em destaque: o `Selo`, no lugar da pílula à mão (auditoria DRG-06, 07/10/2026). */}
+      <Selo tom="marca" className="mb-3">
         {scores.correct} de {scores.total} acertos ({scores.pct}%)
-      </span>
+      </Selo>
       <div className="h-2 rounded-full bg-surface-2 overflow-hidden">
         <div className="h-full rounded-full bg-brand" style={{ width: `${scores.pct}%` }} />
       </div>

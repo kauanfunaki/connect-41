@@ -1,6 +1,7 @@
 import { Banknote, Briefcase, MapPin } from "lucide-react";
 import type { VagaContrato, VagaModalidade } from "@/generated/prisma/enums";
 import { CONTRATO_LABEL, MODALIDADE_LABEL, faixaSalarialLegivel } from "@/lib/carreiras/portal";
+import { Selo } from "@/components/ui/Selo";
 
 type Props = {
   workMode: VagaModalidade | null;
@@ -10,7 +11,10 @@ type Props = {
   showSalary: boolean;
 };
 
-/** Modalidade, contrato e salário da vaga — o que o candidato quer saber antes de abrir. */
+/**
+ * Modalidade, contrato e salário da vaga — o que o candidato quer saber antes de abrir.
+ * Cada etiqueta é o `Selo`, no lugar da pílula à mão (auditoria DRG-06, 07/10/2026).
+ */
 export function EtiquetasDaVaga(v: Props) {
   const salario = faixaSalarialLegivel(v);
   const itens: { icone: React.ReactNode; texto: string; destaque?: boolean }[] = [];
@@ -21,15 +25,15 @@ export function EtiquetasDaVaga(v: Props) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {itens.map((i) => (
-        <span
+        <Selo
           key={i.texto}
-          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border tabular-nums ${
-            i.destaque ? "bg-success/10 text-success border-success/25 font-medium" : "bg-surface-2 text-fg-secondary border-border"
-          }`}
+          tom={i.destaque ? "sucesso" : undefined}
+          cor={i.destaque ? undefined : "bg-surface-2 text-fg-secondary border-border"}
+          className="gap-1 tabular-nums"
         >
           {i.icone}
           {i.texto}
-        </span>
+        </Selo>
       ))}
     </div>
   );

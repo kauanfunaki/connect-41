@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Selo } from "@/components/ui/Selo";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
@@ -206,9 +207,12 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
           <ul className="space-y-1.5 text-[13px] mb-3">
             {requisitos.itens.map((r) => (
               <li key={r.id} className="grid grid-cols-[84px_minmax(0,1fr)_auto] items-baseline gap-x-2">
-                <span className={`justify-self-start text-[11px] font-medium px-1.5 py-0.5 rounded ${r.tipo === "OBRIGATORIO" ? "bg-warning-bg text-warning" : "bg-surface-2 text-fg-muted"}`}>
+                {/* O `Selo`, no lugar da pílula à mão (auditoria DRG-06, 07/10/2026); o raio
+                    menor, na escala (`rounded-sm`), segue distinguindo o tipo do
+                    requisito dos selos de situação (DRG-26). */}
+                <Selo tom={r.tipo === "OBRIGATORIO" ? "atencao" : "neutro"} className="justify-self-start rounded-sm!">
                   {r.tipo === "OBRIGATORIO" ? "Obrigatório" : "Desejável"}
-                </span>
+                </Selo>
                 <span className="text-fg">{r.texto}</span>
                 <span className="text-fg-muted text-[11px] tnum">peso {r.peso}</span>
               </li>
