@@ -15,8 +15,8 @@ type Props = {
 };
 
 // O "+" vem do ícone <Plus>, nunca do texto — o label default carregava um
-// "+ " que somava com o ícone e renderizava "＋ + Novo Espaço".
-export function NewSpaceButton({ action, label = "Novo Espaço" }: Props) {
+// "+ " que somava com o ícone e renderizava "＋ + Novo espaço".
+export function NewSpaceButton({ action, label = "Novo espaço" }: Props) {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(action, null);
   const submitted = useRef(false);

@@ -7,7 +7,7 @@ import { formatInstantDateTime, formatPhone } from "@/lib/format";
 import { saoPauloParts } from "@/lib/agenda";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
@@ -18,7 +18,7 @@ import {
   MODULO_LEADS,
   RECORTES_DOS_LEADS,
   ROTULO_DO_STATUS,
-  VARIANTE_DO_STATUS,
+  TOM_DO_STATUS,
   rotuloDaOrigem,
   statusDoRecorte,
 } from "@/lib/leads/regras";
@@ -141,7 +141,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                 <Cartao key={l.id}>
                   <TopoDoCartao
                     nome={
-                      <Link href={`/leads/${l.id}`} className="font-medium text-fg hover:text-brand transition-colors">
+                      <Link href={`/leads/${l.id}`} className="text-fg hover:text-brand transition-colors">
                         {l.name}
                       </Link>
                     }
@@ -154,11 +154,11 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                     {rotuloDaOrigem(l.source)} · {formatInstantDateTime(l.createdAt, QUANDO)} · {l.assignee?.name ?? "sem responsável"}
                   </InfoDoCartao>
                   <PeDoCartao>
-                    <Badge variant={VARIANTE_DO_STATUS[l.status]}>{ROTULO_DO_STATUS[l.status]}</Badge>
+                    <Selo tom={TOM_DO_STATUS[l.status]}>{ROTULO_DO_STATUS[l.status]}</Selo>
                   </PeDoCartao>
                 </Cartao>
               ))}
-              {limitado && <p className="text-[11px] text-fg-muted mt-1">Mostrando os {LIMITE} mais recentes. Filtre para ver o resto.</p>}
+              {limitado && <p className="text-[length:var(--fs-micro)] text-fg-muted mt-1">Mostrando os {LIMITE} mais recentes. Filtre para ver o resto.</p>}
             </CartoesNoCelular>
 
             <TabelaFiltravel
@@ -175,9 +175,9 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
               }))}
             >
               <TabelaNoDesktop padrao>
-                <table className="w-full min-w-[900px] text-[13px]">
+                <table className="w-full min-w-[900px] text-[length:var(--fs-ui)]">
                   <thead>
-                    <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+                    <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
                       <th className="py-2 pr-3 font-medium">
                         <FiltroDaColuna
                           rotulo="Nome e empresa"
@@ -211,18 +211,19 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                         className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors"
                       >
                         <td className="py-2.5 pr-3">
-                          <Link href={`/leads/${l.id}`} className="font-medium text-fg hover:text-brand transition-colors">
+                          {/* Nome em semibold, como nas listas de DP e Vagas (DRG-35). */}
+                          <Link href={`/leads/${l.id}`} className="font-semibold text-fg hover:text-brand transition-colors">
                             {l.name}
                           </Link>
-                          <span className="block text-[11px] text-fg-muted">{l.companyName ?? "Empresa não informada"}</span>
+                          <span className="block text-[length:var(--fs-micro)] text-fg-muted">{l.companyName ?? "Empresa não informada"}</span>
                         </td>
                         <td className="py-2.5 pr-3 text-fg-secondary">
                           <span className="block break-all">{l.email ?? "—"}</span>
-                          <span className="block text-[11px] text-fg-muted tabular-nums">{l.phone ? formatPhone(l.phone) : "—"}</span>
+                          <span className="block text-[length:var(--fs-micro)] text-fg-muted tabular-nums">{l.phone ? formatPhone(l.phone) : "—"}</span>
                         </td>
                         <td className="py-2.5 pr-3 text-fg-secondary">{rotuloDaOrigem(l.source)}</td>
                         <td className="py-2.5 pr-3">
-                          <Badge variant={VARIANTE_DO_STATUS[l.status]}>{ROTULO_DO_STATUS[l.status]}</Badge>
+                          <Selo tom={TOM_DO_STATUS[l.status]}>{ROTULO_DO_STATUS[l.status]}</Selo>
                         </td>
                         <td className="py-2.5 pr-3 text-fg-secondary">{l.assignee?.name ?? <span className="text-fg-muted">Sem responsável</span>}</td>
                         <td className="py-2.5 tabular-nums whitespace-nowrap text-right text-fg-muted">
@@ -232,7 +233,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                     ))}
                   </tbody>
                 </table>
-                {limitado && <p className="text-[11px] text-fg-muted mt-3">Mostrando os {LIMITE} mais recentes. Filtre para ver o resto.</p>}
+                {limitado && <p className="text-[length:var(--fs-micro)] text-fg-muted mt-3">Mostrando os {LIMITE} mais recentes. Filtre para ver o resto.</p>}
               </TabelaNoDesktop>
             </TabelaFiltravel>
           </>

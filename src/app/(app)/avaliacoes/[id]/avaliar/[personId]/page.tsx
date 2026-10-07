@@ -49,7 +49,7 @@ export default async function AvaliarColaboradorPage({
         <Card>
           <EmptyState
             icon={<Star />}
-            title="Nenhuma competência cadastrada ainda."
+            title="Nenhuma competência cadastrada ainda"
             description="Cadastre em Admin → Competências antes de avaliar."
           />
         </Card>

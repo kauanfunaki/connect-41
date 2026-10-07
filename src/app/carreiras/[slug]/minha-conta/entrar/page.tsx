@@ -4,6 +4,7 @@ import { getPrisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Entrar } from "@/components/carreiras/ContaDoCandidato";
+import { CabecalhoPublico } from "@/components/publico/CabecalhoPublico";
 
 export const dynamic = "force-dynamic";
 
@@ -30,17 +31,14 @@ export default async function EntrarPage({
   return (
     <div className="min-h-screen py-10 px-4">
       <div className="max-w-md mx-auto">
-        <header className="mb-6 text-center">
-          <h1 className="text-[22px] font-semibold text-fg tracking-[-0.01em]">Minhas candidaturas</h1>
-          <p className="text-[13px] text-fg-muted mt-1">{tenant.name}</p>
-        </header>
+        <CabecalhoPublico centralizado titulo="Minhas candidaturas" subtitulo={tenant.name} />
         <Card className="p-5">
           {t ? (
             <Entrar slug={slug} token={t} />
           ) : (
             // Revisão de 05/10: botão não é link — pedir outro link é ação.
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-              <p className="text-[13px] text-fg">Link incompleto.</p>
+              <p className="text-[length:var(--fs-ui)] text-fg">Link incompleto.</p>
               <Button href={`/carreiras/${slug}/minha-conta`} variant="secondary" size="sm">
                 Pedir novo link
               </Button>

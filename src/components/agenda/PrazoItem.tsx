@@ -24,13 +24,14 @@ const ICONE: Record<TipoDePrazo, React.ReactNode> = {
  */
 export function PrazoItem({ prazo, setores }: { prazo: PrazoDaAgenda; setores: SetoresDaAgenda }) {
   const setor = setores[prazo.setor];
-  const cor = setor?.cor ?? "#586577";
+  // Sem setor, a cor de Gestão pelo token (era o hex cru, repetido em 15 lugares).
+  const cor = setor?.cor ?? "var(--c41-sector-gestao)";
   const dica = [prazo.titulo, [prazo.detalhe, setor?.rotulo].filter(Boolean).join(" · ")].filter(Boolean).join("\n");
   return (
     <Link
       href={prazo.href}
       data-dica={dica}
-      className="flex w-full min-w-0 items-center gap-1 h-5 pl-1 pr-1.5 rounded-[4px] border-l-2 text-[11px] leading-none text-fg hover:brightness-95 dark:hover:brightness-125 transition-[filter]"
+      className="flex w-full min-w-0 items-center gap-1 h-5 pl-1 pr-1.5 rounded-[4px] border-l-2 text-[length:var(--fs-micro)] leading-none text-fg hover:brightness-95 dark:hover:brightness-125 transition-[filter]"
       style={{ borderLeftColor: cor, background: `color-mix(in srgb, ${cor} 14%, transparent)` }}
     >
       <span className="flex-shrink-0 [&>svg]:size-[11px]" style={{ color: cor }} aria-hidden>

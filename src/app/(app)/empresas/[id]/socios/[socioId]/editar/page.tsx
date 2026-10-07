@@ -63,7 +63,7 @@ export default async function EditarSocioPage({
       />
       <BackButton className="mb-3" />
 
-      <PageHeader title="Editar Sócio" subtitle={company.name} />
+      <PageHeader title="Editar sócio" subtitle={company.name} />
 
       <div className="w-full max-w-[720px]">
         <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-6">

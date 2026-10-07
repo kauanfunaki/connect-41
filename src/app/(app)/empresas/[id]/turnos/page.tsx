@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { notFound } from "next/navigation";
-import { Clock } from "lucide-react";
+import { Clock, Plus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
@@ -57,7 +57,7 @@ export default async function TurnosPage({
               href={novoHref}
               variant="primary"
             >
-              + Novo Turno
+              <Plus size={14} /> Novo turno
             </Button>
           )
         }
@@ -75,7 +75,7 @@ export default async function TurnosPage({
                   href={novoHref}
                   variant="primary"
                 >
-                  + Cadastrar turno
+                  <Plus size={14} /> Cadastrar turno
                 </Button>
               )
             }

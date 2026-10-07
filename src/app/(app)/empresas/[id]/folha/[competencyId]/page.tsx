@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
@@ -111,7 +112,7 @@ export default async function CompetenciaPage({
         </div>
       )}
 
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
+      <Card className="p-5">
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">Lançamentos</h2>
 
         {competencia.entries.length === 0 ? (
@@ -138,7 +139,7 @@ export default async function CompetenciaPage({
 
         {canManage && <LancarEventoForm action={lancarEventoAction} colaboradores={colaboradores} />}
         {canManage && <ImportarFolhaCsvForm action={importarCsvAction} />}
-      </div>
+      </Card>
     </PageContainer>
   );
 }

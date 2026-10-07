@@ -23,6 +23,9 @@ import type { ProcessoSeletivoStatus } from "@/generated/prisma/enums";
 import type { DiscScores, DiscDimension } from "@/lib/disc";
 import type { QuizScores } from "@/lib/quiz";
 import { Selo } from "@/components/ui/Selo";
+// O par rótulo/valor das fichas: a cópia local daqui tinha o valor em 13px, e
+// a ficha da vaga e a de pessoa em 15px (auditoria DRG-11, 07/10/2026).
+import { InfoRow } from "@/components/empresas/InfoRow";
 
 const CANDIDATURA_STATUS_LABEL: Record<ProcessoSeletivoStatus, string> = {
   EM_ANDAMENTO: "Em andamento",
@@ -151,7 +154,7 @@ export default async function CandidatoPage({
       {/* Tags / Skills — banco de talentos */}
       <Card className="p-5 mb-4">
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-1">Tags / Habilidades</h2>
-        <p className="text-[12px] text-fg-muted mb-3">
+        <p className="text-[length:var(--fs-2)] text-fg-muted mb-3">
           Torna o candidato pesquisável no banco de talentos, mesmo que não avance nesta vaga.
         </p>
         <TagToggleList
@@ -167,7 +170,7 @@ export default async function CandidatoPage({
       </div>
 
       {/* Identificação */}
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
+      <Card className="p-5 mb-4">
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Identificação</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
           <InfoRow label="CPF" value={maskCpf(person.cpf)} mono />
@@ -182,20 +185,20 @@ export default async function CandidatoPage({
           <InfoRow label="RG" value={person.rg} mono />
           <InfoRow label="Escolaridade" value={person.education} />
         </div>
-      </div>
+      </Card>
 
       {/* Contato */}
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
+      <Card className="p-5 mb-4">
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Contato</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
           <InfoRow label="E-mail" value={person.email} />
           <InfoRow label="Telefone" value={formatPhone(person.phone)} />
         </div>
-      </div>
+      </Card>
 
       {/* Endereço */}
       {fullAddress && (
-        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
+        <Card className="p-5 mb-4">
           <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-4">Endereço</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
             <InfoRow label="Logradouro" value={[person.addressStreet, person.addressNumber].filter(Boolean).join(", ")} />
@@ -204,26 +207,26 @@ export default async function CandidatoPage({
             <InfoRow label="Cidade / UF" value={[person.city, person.stateCode].filter(Boolean).join(" — ")} />
             <InfoRow label="CEP" value={formatCep(person.zipCode)} mono />
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Candidaturas */}
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5 mb-4">
+      <Card className="p-5 mb-4">
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">
           Candidaturas {candidaturas.length > 0 && `(${candidaturas.length})`}
         </h2>
 
         {candidaturas.length === 0 ? (
-          <p className="text-[13px] text-fg-muted">Ainda não foi vinculado a nenhuma vaga.</p>
+          <p className="text-[length:var(--fs-ui)] text-fg-muted">Ainda não foi vinculado a nenhuma vaga.</p>
         ) : (
           <div className="divide-y divide-border">
             {candidaturas.map((c) => (
               <div key={c.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2.5">
-                <Link href={`/vagas/${c.vaga.id}`} className="min-w-0 text-[13px] text-brand hover:underline">
+                <Link href={`/vagas/${c.vaga.id}`} className="min-w-0 text-[length:var(--fs-ui)] text-brand hover:underline">
                   {c.vaga.title}
                 </Link>
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="min-w-0 truncate text-[12px] text-fg-muted">{c.vaga.company.name}</span>
+                  <span className="min-w-0 truncate text-[length:var(--fs-2)] text-fg-muted">{c.vaga.company.name}</span>
                   <Selo cor="bg-surface-2 text-fg-secondary border-border" className="flex-shrink-0">
                     {CANDIDATURA_STATUS_LABEL[c.status]}
                   </Selo>
@@ -232,7 +235,7 @@ export default async function CandidatoPage({
             ))}
           </div>
         )}
-      </div>
+      </Card>
 
       {canEdit && (
         <div className="mb-4">
@@ -257,22 +260,5 @@ export default async function CandidatoPage({
         }))}
       />
     </PageContainer>
-  );
-}
-
-function InfoRow({
-  label,
-  value,
-  mono,
-}: {
-  label: string;
-  value: string | null | undefined;
-  mono?: boolean;
-}) {
-  return (
-    <div className="min-w-0">
-      <p className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">{label}</p>
-      <p className={`text-[13px] text-fg break-words ${mono ? "tnum" : ""}`}>{value || "—"}</p>
-    </div>
   );
 }

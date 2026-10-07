@@ -71,7 +71,7 @@ export function HorasDoProcesso({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Horas trabalhadas</h2>
-          <p className="text-[12px] text-fg-muted">
+          <p className="text-[length:var(--fs-2)] text-fg-muted">
             {total > 0 ? `${duracao(total)} neste processo` : "Nenhuma hora lançada ainda."} Entram nas horas de operação da Gestão.
           </p>
         </div>
@@ -83,7 +83,7 @@ export function HorasDoProcesso({
                   Parar {formatarDecorrido(segundos)} · lança {minutosApontados(segundos)} min
                 </Button>
               ) : (
-                <span className="text-[12px] text-fg-muted">
+                <span className="text-[length:var(--fs-2)] text-fg-muted">
                   {cronometro.quem} está com o cronômetro ({formatarDecorrido(segundos)})
                 </span>
               )
@@ -99,7 +99,12 @@ export function HorasDoProcesso({
         )}
       </div>
 
-      {erro && <p className="text-[12px] text-danger">{erro}</p>}
+      {/* Na caixa de erro do resto da página (07/10/2026) — era texto solto de 12px. */}
+      {erro && (
+        <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+          {erro}
+        </p>
+      )}
 
       {abrirLancamento && podeAgir && (
         // Uma linha de campos em grade — horas e minutos estreitos, a data na
@@ -121,7 +126,11 @@ export function HorasDoProcesso({
               <Input id={`nota-${processId}`} name="nota" maxLength={280} placeholder="Opcional" />
             </CampoForm>
           </FieldGrid>
-          {estado && "error" in estado && <p className="text-[12px] text-danger">{estado.error}</p>}
+          {estado && "error" in estado && (
+            <p role="alert" className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+              {estado.error}
+            </p>
+          )}
           <FormFooter
             pending={lancando}
             pendingLabel="Lançando…"
@@ -133,7 +142,7 @@ export function HorasDoProcesso({
       )}
 
       {lancamentos.length > 0 && (
-        <ul className="flex flex-col divide-y divide-border text-[12px]">
+        <ul className="flex flex-col divide-y divide-border text-[length:var(--fs-2)]">
           {lancamentos.map((l) => (
             <li key={l.id} className="flex items-center justify-between gap-2 py-1.5">
               <span className="text-fg-secondary">

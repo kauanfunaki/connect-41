@@ -16,7 +16,7 @@ export default async function NovoClientePage() {
     <PageContainer>
       <Breadcrumb items={[{ label: "Cadastros", href: "/clientes" }, { label: "Clientes", href: "/clientes" }, { label: "Novo Cliente" }]} />
       <BackButton className="mb-3" />
-      <PageHeader title="Novo Cliente" />
+      <PageHeader title="Novo cliente" />
       {/* No cartão de 720px dos outros cadastros curtos (30/09): solto na
           largura da tela, o nome ia de uma borda à outra. */}
       <div className="w-full max-w-[720px]">

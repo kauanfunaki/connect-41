@@ -37,7 +37,7 @@ export default async function NovoBeneficioPage({
       />
       <BackButton className="mb-3" />
 
-      <PageHeader title="Novo Benefício" subtitle={company.name} />
+      <PageHeader title="Novo benefício" subtitle={company.name} />
 
       <div className="w-full max-w-[720px]">
         <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-6">

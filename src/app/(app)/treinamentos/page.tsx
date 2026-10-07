@@ -10,6 +10,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { horasDoDP } from "@/components/pessoas/rotulosDoDP";
 
 export default async function TreinamentosPage() {
   const { ctx, setor } = await abrirTelaDoModulo("dp_treinamentos");
@@ -27,7 +28,7 @@ export default async function TreinamentosPage() {
   const linhas = treinamentos.map((t) => ({
     id: t.id,
     nome: t.name,
-    carga: t.workloadHours ? `${t.workloadHours.toString()}h` : "",
+    carga: t.workloadHours ? horasDoDP(t.workloadHours) : "",
     validade:
       t.validityMonths != null && t.validityMonths > 0
         ? `${t.validityMonths} ${t.validityMonths === 1 ? "mês" : "meses"}`

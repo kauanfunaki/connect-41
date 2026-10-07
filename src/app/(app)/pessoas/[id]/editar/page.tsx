@@ -60,7 +60,7 @@ export default async function EditarPessoaPage({
         atual="Editar"
       />
       <BackButton className="mb-3" />
-      <PageHeader title="Editar Pessoa" />
+      <PageHeader title="Editar pessoa" />
 
         <PessoaForm
           action={atualizarPessoa}

@@ -10,7 +10,9 @@ import type { Selo, Tendencia, TomDaTendencia } from "@/lib/home/tendencia";
 // Regras seguidas (método de dataviz):
 // - cor de situação é reservada e sempre vem com ícone + rótulo na legenda;
 // - número em texto neutro, nunca na cor da série;
-// - cada gráfico leva uma tabela `sr-only` com os mesmos números.
+// - cada gráfico leva uma tabela `sr-only` com os mesmos números;
+// - a dica (só com o mouse) não é o único lugar de um número: o que ela diz
+//   também está escrito na legenda ou na tabela acessível (07/10).
 // Paleta validada (claro e escuro) com o validador do método: crítico,
 // atenção e "próximo" passam na separação para daltonismo; o cinza neutro é
 // o "sem situação" de propósito.
@@ -39,7 +41,10 @@ export type Segmento = {
   tom: Tom;
   /** Leva para a lista já filtrada por esta fatia. */
   href?: string;
-  /** Segunda linha da dica — ex.: o valor em reais da fatia. */
+  /**
+   * O valor que acompanha a contagem — ex.: o total em reais da fatia. Vai na
+   * dica, na legenda (ao lado da contagem) e na tabela acessível.
+   */
   detalhe?: string;
 };
 
@@ -59,6 +64,11 @@ export function numeroCurto(n: number): string {
 function dicaDe(s: Segmento, total: number): string {
   const parte = total > 0 ? ` (${PCT.format(s.valor / total)})` : "";
   return `${s.rotulo}: ${numero(s.valor)}${parte}${s.detalhe ? `\n${s.detalhe}` : ""}`;
+}
+
+/** A contagem e, quando há, o valor que a acompanha — o texto da tabela acessível e do rótulo da fatia. */
+function valorFalado(s: Segmento): string {
+  return s.detalhe ? `${numero(s.valor)} (${s.detalhe})` : numero(s.valor);
 }
 
 // Gráfico mais baixo (06/10): com a faixa de destaques em cima, a grade dos
@@ -274,7 +284,7 @@ function Pilha({ segmentos, largura = 100 }: { segmentos: Segmento[]; largura?: 
           "data-dica-rapida": "",
         };
         return s.href ? (
-          <Link key={s.chave} href={s.href} aria-label={`${s.rotulo}: ${numero(s.valor)}`} {...comum}>
+          <Link key={s.chave} href={s.href} aria-label={`${s.rotulo}: ${valorFalado(s)}`} {...comum}>
             {barra}
           </Link>
         ) : (
@@ -287,6 +297,12 @@ function Pilha({ segmentos, largura = 100 }: { segmentos: Segmento[]; largura?: 
   );
 }
 
+/**
+ * A legenda com os números. O `detalhe` (o R$ da faixa) fica escrito ao lado
+ * da contagem (07/10, auditoria dos gráficos): só na dica, ele não chegava a
+ * quem usa teclado ou toque — a dica abre com o mouse —, nem ao leitor de tela.
+ * Fatia zerada não repete "R$ 0,00".
+ */
 function Legenda({ segmentos, comValores = true }: { segmentos: Segmento[]; comValores?: boolean }) {
   return (
     <ul className="flex flex-wrap gap-x-4 gap-y-1.5">
@@ -296,6 +312,7 @@ function Legenda({ segmentos, comValores = true }: { segmentos: Segmento[]; comV
             <IconeDoTom tom={s.tom} />
             <span className="text-fg-secondary">{s.rotulo}</span>
             {comValores && <span className="text-fg font-medium tnum">{numero(s.valor)}</span>}
+            {comValores && s.detalhe && s.valor > 0 && <span className="text-fg-secondary tnum">· {s.detalhe}</span>}
           </>
         );
         return (
@@ -363,7 +380,7 @@ export function BarraDeSituacao({
           </div>
         </>
       )}
-      <TabelaOculta titulo={titulo ?? "Situação"} linhas={segmentos.map((s) => [s.rotulo, numero(s.valor)])} />
+      <TabelaOculta titulo={titulo ?? "Situação"} linhas={segmentos.map((s) => [s.rotulo, valorFalado(s)])} />
     </div>
   );
 }
@@ -447,7 +464,7 @@ export function LinhasDeSituacao({
       )}
       <TabelaOculta
         titulo={titulo}
-        linhas={linhas.map((l) => [l.rotulo, l.segmentos.map((s) => `${s.rotulo}: ${numero(s.valor)}`).join("; ")])}
+        linhas={linhas.map((l) => [l.rotulo, l.segmentos.map((s) => `${s.rotulo}: ${valorFalado(s)}`).join("; ")])}
       />
     </div>
   );
@@ -539,7 +556,7 @@ export function Rosca({
           );
         })}
       </ul>
-      <TabelaOculta titulo={titulo} linhas={segmentos.map((s) => [s.rotulo, numero(s.valor)])} />
+      <TabelaOculta titulo={titulo} linhas={segmentos.map((s) => [s.rotulo, valorFalado(s)])} />
     </div>
   );
 }
@@ -615,7 +632,7 @@ export function Colunas({
           </span>
         ))}
       </div>
-      <TabelaOculta titulo={titulo} linhas={colunas.map((c) => [c.rotulo, formatar(c.valor)])} />
+      <TabelaOculta titulo={titulo} linhas={colunas.map((c) => [c.rotulo, c.dica ? `${formatar(c.valor)} (${c.dica})` : formatar(c.valor)])} />
     </div>
   );
 }
@@ -627,16 +644,28 @@ export type Etapa = { chave: string; rotulo: string; valor: number; href?: strin
 /**
  * Funil de etapas (candidaturas por fase): barras centradas, uma cor só, com
  * a passagem de uma etapa para a seguinte em percentual.
+ *
+ * Duas leituras, e as duas ditas (07/10): a barra é a parte do total (a maior
+ * etapa — num funil, a primeira, que todos alcançaram); o percentual escrito
+ * ao lado é a passagem da etapa anterior. A dica e a tabela acessível levam as
+ * duas por extenso.
  */
 export function Funil({ titulo, etapas, vazio = "Nada por aqui." }: { titulo: string; etapas: Etapa[]; vazio?: string }) {
   const maior = Math.max(0, ...etapas.map((e) => e.valor));
   if (maior === 0) return <p className="text-[length:var(--fs-helper)] text-fg-muted py-1.5">{vazio}</p>;
 
+  const leituras = etapas.map((e, i) => {
+    const anterior = i > 0 ? etapas[i - 1].valor : null;
+    return {
+      doTotal: `${PCT.format(e.valor / maior)} do total`,
+      passagem: anterior && anterior > 0 ? PCT.format(e.valor / anterior) : null,
+    };
+  });
+
   return (
     <div className="group/funil min-w-0 space-y-1">
       {etapas.map((e, i) => {
-        const anterior = i > 0 ? etapas[i - 1].valor : null;
-        const passagem = anterior && anterior > 0 ? PCT.format(e.valor / anterior) : null;
+        const { doTotal, passagem } = leituras[i];
         const conteudo = (
           <>
             <span className="text-[12px] text-fg-secondary truncate">{e.rotulo}</span>
@@ -656,7 +685,7 @@ export function Funil({ titulo, etapas, vazio = "Nada por aqui." }: { titulo: st
           </>
         );
         const cls = "group/etapa grid grid-cols-[minmax(0,7.5rem)_minmax(0,1fr)_2.5rem_2.25rem] items-center gap-2 rounded-sm";
-        const dica = `${e.rotulo}: ${numero(e.valor)}${passagem ? `\n${passagem} da etapa anterior` : ""}`;
+        const dica = `${e.rotulo}: ${numero(e.valor)}\n${doTotal}${passagem ? `\n${passagem} da etapa anterior` : ""}`;
         return e.href ? (
           <Link key={e.chave} href={e.href} className={`${cls} hover:bg-surface-hover`} data-dica={dica} data-dica-rapida="">
             {conteudo}
@@ -667,7 +696,13 @@ export function Funil({ titulo, etapas, vazio = "Nada por aqui." }: { titulo: st
           </div>
         );
       })}
-      <TabelaOculta titulo={titulo} linhas={etapas.map((e) => [e.rotulo, numero(e.valor)])} />
+      <TabelaOculta
+        titulo={titulo}
+        linhas={etapas.map((e, i) => {
+          const { doTotal, passagem } = leituras[i];
+          return [e.rotulo, `${numero(e.valor)} (${doTotal}${passagem ? `; ${passagem} da etapa anterior` : ""})`];
+        })}
+      />
     </div>
   );
 }

@@ -42,7 +42,7 @@ export function CompanyDetailTabs({
   );
 
   const tabs = [
-    { key: "overview", label: "Visão Geral", icon: <LayoutGrid /> },
+    { key: "overview", label: "Visão geral", icon: <LayoutGrid /> },
     { key: "filiais", label: `Filiais${filiaisCount ? ` (${filiaisCount})` : ""}`, icon: <Network /> },
     { key: "people", label: `Pessoas${peopleCount ? ` (${peopleCount})` : ""}`, icon: <Users /> },
     { key: "operations", label: "RH & Operação", icon: <Briefcase /> },

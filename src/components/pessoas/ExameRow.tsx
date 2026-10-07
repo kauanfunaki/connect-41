@@ -56,13 +56,13 @@ export function ExameRow({ exame, updateAction, removeAction, canManage }: Props
     <div className="py-3 border-b border-border last:border-0">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[13px] text-fg font-medium">{exame.clinicName ?? "Clínica não informada"}</p>
-          <p className="text-[12px] text-fg-muted">
+          <p className="text-[length:var(--fs-ui)] text-fg font-medium">{exame.clinicName ?? "Clínica não informada"}</p>
+          <p className="text-[length:var(--fs-2)] text-fg-muted">
             {exame.scheduledAtLabel && `Agendado: ${exame.scheduledAtLabel}`}
             {exame.performedAtLabel && ` · Realizado: ${exame.performedAtLabel}`}
             {exame.asoDueDateLabel && ` · Prazo ASO: ${exame.asoDueDateLabel}`}
           </p>
-          {exame.notes && <p className="text-[12px] text-fg-muted mt-0.5">{exame.notes}</p>}
+          {exame.notes && <p className="text-[length:var(--fs-2)] text-fg-muted mt-0.5">{exame.notes}</p>}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <SeloDoDP cor={STATUS_STYLE[exame.status]}>{STATUS_LABEL[exame.status]}</SeloDoDP>
@@ -89,7 +89,8 @@ export function ExameRow({ exame, updateAction, removeAction, canManage }: Props
             </Select>
           </div>
           <div className="w-full sm:w-40">
-            <CampoData name="performedAt" title="Data de realização" aria-label="Data de realização" />
+            {/* Sem rótulo visível, o campo dizia só "Escolher data" (DRG-16). */}
+            <CampoData name="performedAt" title="Data de realização" aria-label="Data de realização" placeholder="Realização" />
           </div>
           <Button
             variant="secondary"

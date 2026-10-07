@@ -141,8 +141,8 @@ function FormShell({
 }) {
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: backLabel, href: backHref, truncate: true }, { label: "Solicitar Transferência" }]} />
-      <PageHeader title="Solicitar Transferência" />
+      <Breadcrumb items={[{ label: backLabel, href: backHref, truncate: true }, { label: "Solicitar transferência" }]} />
+      <PageHeader title="Solicitar transferência" />
 
       <Card className="p-6">{children}</Card>
     </PageContainer>

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { MentionTextarea, type MentionUser } from "@/components/transferencias/MentionTextarea";
 import { Input } from "@/components/ui/Input";
+import { AvatarImage } from "@/components/shared/AvatarImage";
 import { renderRichText } from "@/lib/richText";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 import { useConfirm } from "@/components/ui/useConfirm";
@@ -272,7 +273,7 @@ function Composer({
         <input ref={fileInputRef} type="file" accept={ANEXO_ACCEPT} className="hidden" onChange={handleFile} />
         {uploading && uploadNome && (
           <span className="flex items-center gap-2 min-w-0 max-w-[220px]">
-            <span className="truncate text-[11.5px] text-fg-muted" title={uploadNome}>
+            <span className="truncate text-[length:var(--fs-micro)] text-fg-muted" title={uploadNome}>
               {uploadNome}
             </span>
             <span
@@ -288,7 +289,7 @@ function Composer({
                 style={{ width: `${uploadPct}%` }}
               />
             </span>
-            <span className="text-[11.5px] text-fg-muted tnum">{uploadPct}%</span>
+            <span className="text-[length:var(--fs-micro)] text-fg-muted tnum">{uploadPct}%</span>
           </span>
         )}
         <TaskMentionPicker
@@ -319,7 +320,7 @@ function Composer({
       {/* Fora da barra de ações: ali o texto seria espremido entre os botões e
           cortado justamente quando explica por que o anexo não subiu. */}
       {uploadErro && (
-        <p className="text-[11.5px] text-danger px-1" role="alert">
+        <p className="text-[length:var(--fs-micro)] text-danger px-1" role="alert">
           {uploadErro}
         </p>
       )}
@@ -393,9 +394,9 @@ function Comment({
 
   return (
     <div className="flex gap-2.5 pb-3">
-      <span className="w-[18px] h-[18px] rounded-full flex items-center justify-center flex-shrink-0 bg-surface-hover border border-border-strong text-[9px] font-medium text-fg-secondary">
-        {item.userName.split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase()}
-      </span>
+      {/* O `AvatarImage` compartilhado (07/10/2026), com as iniciais em 11px
+          — eram montadas à mão em 8 a 9px, num círculo de 16 a 18px. */}
+      <AvatarImage src={null} name={item.userName} size={24} fontSize={11} />
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <p className="text-[length:var(--fs-helper)] text-fg font-medium">{item.userName}</p>
@@ -437,9 +438,7 @@ function Comment({
           <div className="mt-2 pl-3 border-l-2 border-border space-y-2">
             {item.replies.map((r) => (
               <div key={r.id} className="flex gap-2">
-                <span className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 bg-surface-hover border border-border text-[8px] font-medium text-fg-secondary mt-0.5">
-                  {r.userName.split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase()}
-                </span>
+                <AvatarImage src={null} name={r.userName} size={20} fontSize={11} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-[11px] text-fg font-medium">{r.userName}</p>

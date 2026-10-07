@@ -4,7 +4,7 @@ import { describe, it, expect, vi } from "vitest";
 // é a ordem, que é pura — o mock existe só para o import não subir o driver.
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({}) }));
 
-const { ordenarFila, contarPorSituacao, chaveDoFeriado } = await import("./fila");
+const { ordenarFila, contarPorSituacao, chaveDoFeriado, filtrarPelaBusca } = await import("./fila");
 const { diasUteisEntre } = await import("./processo");
 type LinhaDaFila = Awaited<ReturnType<typeof import("./fila").listarFila>>[number];
 
@@ -125,5 +125,32 @@ describe("chaveDoFeriado", () => {
     // e a segunda entrava como dia útil.
     const feriados = new Set([chaveDoFeriado(gravado("2026-10-12"))]);
     expect(diasUteisEntre("2026-10-09", "2026-10-13", feriados)).toBe(1);
+  });
+});
+
+describe("filtrarPelaBusca", () => {
+  const fila = [
+    linha({ id: "otica", empresaNome: "Ótica Alvorada Ltda", tipoNome: "Baixa" }),
+    linha({ id: "filial", empresaNome: "Mercado Bom Preço", tipoNome: "Alteração contratual", titulo: "Filial de Pinhais" }),
+    linha({ id: "camila", empresaNome: "Padaria Sol", responsavelNome: "Camila Duarte" }),
+  ];
+
+  it("acha sem acento e sem caixa", () => {
+    expect(filtrarPelaBusca(fila, "otica").map((l) => l.id)).toEqual(["otica"]);
+    expect(filtrarPelaBusca(fila, "PREÇO").map((l) => l.id)).toEqual(["filial"]);
+  });
+
+  it("procura também no tipo, no título e no responsável", () => {
+    expect(filtrarPelaBusca(fila, "pinhais").map((l) => l.id)).toEqual(["filial"]);
+    expect(filtrarPelaBusca(fila, "camila").map((l) => l.id)).toEqual(["camila"]);
+  });
+
+  it("cada palavra precisa casar em algum campo", () => {
+    expect(filtrarPelaBusca(fila, "alvorada baixa").map((l) => l.id)).toEqual(["otica"]);
+    expect(filtrarPelaBusca(fila, "alvorada constituicao")).toEqual([]);
+  });
+
+  it("busca vazia devolve a fila inteira", () => {
+    expect(filtrarPelaBusca(fila, "   ")).toHaveLength(3);
   });
 });
