@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { Aviso } from "@/components/ui/Aviso";
 import { useDialog } from "@/components/ui/useDialog";
 import Cropper, { type Area } from "react-easy-crop";
 import { getCroppedImageBlob } from "@/lib/imageCrop";
@@ -135,11 +136,7 @@ function CropperDialog({
           />
         </div>
 
-        {error && (
-          <p className="text-ui text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2 mt-3">
-            {error}
-          </p>
-        )}
+        {error && <Aviso className="mt-3">{error}</Aviso>}
 
         <div className="flex items-center justify-end gap-2 mt-4">
           <Button
