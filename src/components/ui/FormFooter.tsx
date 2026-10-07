@@ -21,6 +21,12 @@ type Props = {
   semDivisoria?: boolean;
   /** `sm` para barra compacta (edição na linha, painel pequeno). */
   size?: "sm" | "md";
+  /**
+   * O botão de envio de uma ação destrutiva — Reprovar, Baixar por perda,
+   * Cancelar lançamento (07/10/2026). Sem isto, esses modais escreviam o
+   * rodapé à mão só para trocar a cor do botão.
+   */
+  submitVariant?: "primary" | "danger" | "dangerSolid";
 };
 
 // Rodapé padrão de formulário: [erro ou nota] … [Cancelar] [Salvar], à
@@ -39,17 +45,18 @@ export function FormFooter({
   submitDisabled = false,
   semDivisoria = false,
   size = "md",
+  submitVariant = "primary",
 }: Props) {
   return (
     <div
       className={`flex flex-wrap items-center justify-end gap-3 ${semDivisoria ? "" : "pt-4 mt-2 border-t border-border"}`.trim()}
     >
       {erro ? (
-        <p className="mr-auto text-[length:var(--fs-helper)] font-medium text-danger" role="alert">
+        <p className="mr-auto text-helper font-medium text-danger" role="alert">
           {erro}
         </p>
       ) : nota ? (
-        <p className="mr-auto text-[length:var(--fs-helper)] text-fg-muted">{nota}</p>
+        <p className="mr-auto text-helper text-fg-muted">{nota}</p>
       ) : null}
       {cancelHref !== undefined ? (
         <Button href={cancelHref} variant="secondary" size={size}>
@@ -60,7 +67,7 @@ export function FormFooter({
           {cancelLabel}
         </Button>
       ) : null}
-      <Button type="submit" size={size} loading={pending} loadingLabel={pendingLabel} disabled={submitDisabled}>
+      <Button type="submit" variant={submitVariant} size={size} loading={pending} loadingLabel={pendingLabel} disabled={submitDisabled}>
         {submitLabel}
       </Button>
     </div>

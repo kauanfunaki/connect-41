@@ -42,9 +42,15 @@ export function TopoDoCartao({ nome, valor }: { nome: ReactNode; valor?: ReactNo
   );
 }
 
-/** Linha secundária do cartão — o que na tabela seria uma coluna estreita. */
+/**
+ * Linha secundária do cartão — o que na tabela seria uma coluna estreita.
+ *
+ * Em `--fs-ui` (13px) desde 07/10/2026: era o `--fs-micro` (11px), o papel do
+ * cabeçalho de tabela, e no celular o vencimento, o nº da nota e a emissão
+ * saíam no menor tamanho do app justamente onde não há tabela para ler.
+ */
 export function InfoDoCartao({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <span className={`block text-[length:var(--fs-micro)] text-fg-muted break-words ${className}`}>{children}</span>;
+  return <span className={`block text-ui text-fg-muted break-words ${className}`}>{children}</span>;
 }
 
 /** A faixa de selos e ações no pé do cartão. */
