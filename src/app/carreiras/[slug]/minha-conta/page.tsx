@@ -5,6 +5,8 @@ import { ArrowLeft, ArrowRight, CalendarClock, ClipboardList, LogOut, Video } fr
 import { getPrisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Selo } from "@/components/ui/Selo";
+import { CabecalhoPublico } from "@/components/publico/CabecalhoPublico";
 import { formatCalendarDate, formatInstantDate, formatInstantDateTime } from "@/lib/format";
 import { cookieDaSessao, dadosDaConta, emailDaSessao } from "@/lib/carreiras/conta";
 import { situacaoParaCandidato, type Tom } from "@/lib/carreiras/situacaoDoCandidato";
@@ -42,29 +44,33 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
 
         {!conta ? (
           <div className="mt-4 max-w-md mx-auto">
-            <header className="mb-6 text-center">
-              <h1 className="text-[22px] font-semibold text-fg tracking-[-0.01em]">Minhas candidaturas</h1>
-              <p className="text-[13px] text-fg-muted mt-1">
-                Acompanhe suas inscrições em {tenant.name}. Enviamos um link de acesso para o e-mail da inscrição — sem senha.
-              </p>
-            </header>
+            <CabecalhoPublico
+              centralizado
+              titulo="Minhas candidaturas"
+              subtitulo={
+                <>
+                  Acompanhe suas inscrições em {tenant.name}. Enviamos um link de acesso para o e-mail da inscrição — sem senha.
+                </>
+              }
+            />
             <Card className="p-5">
               <PedirAcesso slug={slug} />
             </Card>
           </div>
         ) : (
           <>
-            <header className="mt-4 mb-6 flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h1 className="text-[22px] font-semibold text-fg tracking-[-0.01em]">Olá, {conta.nome.split(" ")[0]}</h1>
-                <p className="text-[13px] text-fg-muted mt-1">Suas candidaturas em {tenant.name}.</p>
-              </div>
-              <form action={sair.bind(null, slug)}>
-                <Button type="submit" variant="secondary" size="sm">
-                  <LogOut size={13} /> Sair
-                </Button>
-              </form>
-            </header>
+            <CabecalhoPublico
+              className="mt-4 mb-6"
+              titulo={<>Olá, {conta.nome.split(" ")[0]}</>}
+              subtitulo={<>Suas candidaturas em {tenant.name}.</>}
+              acao={
+                <form action={sair.bind(null, slug)}>
+                  <Button type="submit" variant="secondary" size="sm">
+                    <LogOut size={13} /> Sair
+                  </Button>
+                </form>
+              }
+            />
 
             {conta.testes.length > 0 && (
               <Card className="p-5 mb-4">
@@ -100,9 +106,9 @@ export default async function MinhaContaPage({ params }: { params: Promise<{ slu
                           {empresa} · inscrição em {formatCalendarDate(c.createdAt)}
                         </p>
                       </div>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${COR_DO_TOM[s.tom]}`}>
-                        {s.titulo}
-                      </span>
+                      {/* O selo do app com o mapa da tela — era a pílula à mão
+                          com as mesmas classes (DRG-06, 07/10/2026). */}
+                      <Selo cor={COR_DO_TOM[s.tom]}>{s.titulo}</Selo>
                     </div>
 
                     {s.linhaDoTempo && (

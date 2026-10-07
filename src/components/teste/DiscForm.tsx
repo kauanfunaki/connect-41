@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { ChoicePill } from "./ChoicePill";
 import { useTestDraft } from "./useTestDraft";
 import { Button } from "@/components/ui/Button";
+import { ConfirmacaoEnviada } from "@/components/publico/ConfirmacaoEnviada";
 
 type Props = { token: string };
 
@@ -103,12 +104,10 @@ export function DiscForm({ token }: Props) {
 
   if (done) {
     return (
-      <div className="bg-success/10 border border-success/25 rounded-lg p-6 text-center">
-        <p className="text-[15px] font-semibold text-success">Teste enviado!</p>
-        <p className="text-[13px] text-fg-muted mt-1">
-          Obrigado por responder. O resultado já está disponível para a equipe de recrutamento.
-        </p>
-      </div>
+      <ConfirmacaoEnviada
+        titulo="Teste enviado!"
+        texto="Obrigado por responder. O resultado já está disponível para a equipe de recrutamento."
+      />
     );
   }
 

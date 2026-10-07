@@ -16,10 +16,14 @@ import {
   urlDaLista,
   whereDoPrazo,
 } from "@/lib/carreiras/portal";
-import { Search, UserRound, X } from "lucide-react";
+import { Briefcase, SearchX, Search, UserRound, X } from "lucide-react";
 import { EtiquetasDaVaga } from "@/components/carreiras/EtiquetasDaVaga";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Selo } from "@/components/ui/Selo";
+import { CabecalhoPublico } from "@/components/publico/CabecalhoPublico";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { Pagination } from "@/components/shared/Pagination";
 
@@ -106,24 +110,22 @@ export default async function CarreirasPage({
   return (
     <div className="min-h-screen py-10 px-4">
       <div className="max-w-3xl mx-auto">
-        <header className="mb-8 text-center">
-          {tenant.logoUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={tenant.logoUrl} alt={tenant.name} className="h-12 mx-auto mb-4 object-contain" />
-          )}
-          <h1 className="text-[22px] font-semibold text-fg tracking-[-0.01em]">Trabalhe Conosco</h1>
-          <p className="text-[13px] text-fg-muted mt-1">
-            Vagas abertas — {tenant.name}
-          </p>
+        <CabecalhoPublico
+          centralizado
+          className="mb-8"
+          logo={tenant.logoUrl ? { src: tenant.logoUrl, alt: tenant.name } : null}
+          titulo="Trabalhe Conosco"
+          subtitulo={<>Vagas abertas — {tenant.name}</>}
+        >
           {/* Botão, e não link de texto (30/09): é a porta de entrada da conta
               do candidato. */}
           <Button href={`/carreiras/${slug}/minha-conta`} variant="secondary" size="sm" className="mt-3">
             <UserRound size={13} /> Já se candidatou? Acompanhe suas candidaturas
           </Button>
-        </header>
+        </CabecalhoPublico>
 
         {todas.length > 0 && (
-          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 mb-5 space-y-3">
+          <Card className="p-4 mb-5 space-y-3">
             <div className="flex flex-wrap items-start gap-2">
               {/* A busca por texto fica fora do "Filtros", num GET puro: vira
                   URL, funciona sem JavaScript e pode ser compartilhada como
@@ -172,21 +174,31 @@ export default async function CarreirasPage({
                 </Button>
               )}
             </div>
-          </div>
+          </Card>
         )}
 
+        {/* Os vazios no `EmptyState` do app, dentro de cartão — eram caixas
+            montadas à mão (auditoria DRG-28, 07/10/2026). Mesmo texto. */}
         {todas.length === 0 ? (
-          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-8 text-center">
-            <p className="text-[14px] text-fg">Nenhuma vaga aberta no momento.</p>
-            <p className="text-[12px] text-fg-muted mt-1">Volte em breve — novas oportunidades aparecem aqui.</p>
-          </div>
+          <Card>
+            <EmptyState
+              icon={<Briefcase />}
+              title="Nenhuma vaga aberta no momento."
+              description="Volte em breve — novas oportunidades aparecem aqui."
+            />
+          </Card>
         ) : vagas.length === 0 ? (
-          <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-8 text-center">
-            <p className="text-[14px] text-fg">Nenhuma vaga com esses filtros.</p>
-            <Button href={`/carreiras/${slug}`} variant="secondary" size="sm" className="mt-3">
-              Ver todas as {todas.length} vagas abertas
-            </Button>
-          </div>
+          <Card>
+            <EmptyState
+              icon={<SearchX />}
+              title="Nenhuma vaga com esses filtros."
+              action={
+                <Button href={`/carreiras/${slug}`} variant="secondary" size="sm">
+                  Ver todas as {todas.length} vagas abertas
+                </Button>
+              }
+            />
+          </Card>
         ) : (
           <div className="space-y-3">
             {vagas.map((v) => {
@@ -206,10 +218,11 @@ export default async function CarreirasPage({
                         {v.area && ` · ${v.area}`}
                       </p>
                     </div>
+                    {/* O selo do app — era uma pílula à mão de 10px (DRG-06). */}
                     {v.quantity > 1 && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border bg-brand/10 text-brand border-brand/25 flex-shrink-0">
+                      <Selo tom="marca" className="flex-shrink-0">
                         {v.quantity} vagas
-                      </span>
+                      </Selo>
                     )}
                   </div>
                   <div className="mt-2.5">
@@ -222,7 +235,7 @@ export default async function CarreirasPage({
                     />
                   </div>
                   {v.publicDescription && (
-                    <p className="text-[12.5px] text-fg-muted mt-2 line-clamp-2">{v.publicDescription}</p>
+                    <p className="text-[length:var(--fs-2)] text-fg-muted mt-2 line-clamp-2">{v.publicDescription}</p>
                   )}
                   <p className="text-[11px] text-fg-muted mt-2">
                     Publicada em {formatCalendarDate(v.openedAt)}

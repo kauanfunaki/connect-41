@@ -11,6 +11,7 @@ import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Button } from "@/components/ui/Button";
+import { ConfirmacaoEnviada } from "@/components/publico/ConfirmacaoEnviada";
 
 type Defaults = {
   cpf: string; rg: string; pis: string; ctps: string; ctpsSerie: string; education: string; birthDate: string;
@@ -122,12 +123,10 @@ export function AdmissaoForm({ token, defaults }: Props) {
 
   if (done) {
     return (
-      <div className="bg-success/10 border border-success/25 rounded-lg p-6 text-center">
-        <p className="text-[15px] font-semibold text-success">Admissão enviada!</p>
-        <p className="text-[13px] text-fg-muted mt-1">
-          Recebemos seus dados e documentos. A equipe de RH vai conferir as informações e dar sequência à sua admissão.
-        </p>
-      </div>
+      <ConfirmacaoEnviada
+        titulo="Admissão enviada!"
+        texto="Recebemos seus dados e documentos. A equipe de RH vai conferir as informações e dar sequência à sua admissão."
+      />
     );
   }
 

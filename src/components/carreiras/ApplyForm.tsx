@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/Select";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { UFS } from "@/lib/ufs";
 import { Button } from "@/components/ui/Button";
+import { ConfirmacaoEnviada } from "@/components/publico/ConfirmacaoEnviada";
 import { MAX_MB_DO_CURRICULO } from "@/lib/curriculo";
 
 const DISPONIBILIDADES = ["Imediata", "Em até 15 dias", "Em até 30 dias", "Mais de 30 dias"];
@@ -53,15 +54,14 @@ export function ApplyForm({ slug, vagaId, carimbo }: Props) {
 
   if (done) {
     return (
-      <div className="bg-success/10 border border-success/25 rounded-lg p-6 text-center">
-        <p className="text-[15px] font-semibold text-success">Candidatura enviada!</p>
-        <p className="text-[13px] text-fg-muted mt-1">
-          Recebemos seus dados. Se o seu perfil avançar no processo, a equipe de recrutamento entra em contato pelo e-mail ou telefone informado.
-        </p>
+      <ConfirmacaoEnviada
+        titulo="Candidatura enviada!"
+        texto="Recebemos seus dados. Se o seu perfil avançar no processo, a equipe de recrutamento entra em contato pelo e-mail ou telefone informado."
+      >
         <Button href={`/carreiras/${slug}/minha-conta`} variant="secondary" size="sm" className="mt-3">
           Acompanhar minhas candidaturas
         </Button>
-      </div>
+      </ConfirmacaoEnviada>
     );
   }
 
