@@ -16,8 +16,7 @@ import { direcaoDoLancamento, precisaDeEstorno } from "@/lib/fiscal/documentos";
 import { documentoDaEmpresa } from "@/lib/companyTaxId";
 import type { LinhaDoAcervo } from "@/lib/fiscal/data";
 
-type Props = {
-  documentos: LinhaDoAcervo[];
+type PropsDaPaginacao = {
   total: number;
   /** A contagem parou no teto — ver `TETO_DA_CONTAGEM` em src/lib/fiscal/data.ts. */
   totalLimitado: boolean;
@@ -39,24 +38,11 @@ const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL
  * `groupBy` na base inteira — contar tudo nesta tabela é o que levava 90 s (ver
  * `TETO_DA_CONTAGEM`). Tipo e destino continuam no botão "Filtros", e o
  * destino também nos cartões do topo.
+ *
+ * Dentro do `CascoDaTabela` desde 07/10/2026; a paginação fica fora do casco,
+ * como nas outras listas (`PaginacaoDoAcervo`).
  */
-export function AcervoTable({ documentos, total, totalLimitado, temProxima, pagina, porPagina, filtrosDaUrl }: Props) {
-  // Com a contagem no teto não se sabe qual é a última página — só se existe a
-  // próxima. Com filtro de empresa e competência ela volta a ser exata.
-  const ultimaPagina = totalLimitado ? null : Math.max(1, Math.ceil(total / porPagina));
-
-  // O link carrega os filtros da URL junto. Paginar e perder o filtro é o jeito
-  // mais rápido de a pessoa achar que os dados sumiram.
-  const hrefDaPagina = (p: number) => {
-    const q = new URLSearchParams();
-    for (const [k, v] of Object.entries(filtrosDaUrl)) {
-      if (k !== "pagina" && v) q.set(k, v);
-    }
-    if (p > 1) q.set("pagina", String(p));
-    const s = q.toString();
-    return s ? `/documentos-fiscais?${s}` : "/documentos-fiscais";
-  };
-
+export function AcervoTable({ documentos }: { documentos: LinhaDoAcervo[] }) {
   const linhas = documentos.map((d) => {
     const doc = documentoDaEmpresa(d.company);
     const direcao = direcaoDoLancamento(doc?.digitos ?? null, {
@@ -105,7 +91,7 @@ export function AcervoTable({ documentos, total, totalLimitado, temProxima, pagi
   );
 
   return (
-    <div>
+    <>
       <CartoesNoCelular>
         {linhas.map(({ d, contraparte, direcao, estorno }) => (
           <Cartao key={d.id}>
@@ -181,18 +167,38 @@ export function AcervoTable({ documentos, total, totalLimitado, temProxima, pagi
           </tbody>
         </table>
       </TabelaNoDesktop>
+    </>
+  );
+}
 
-      {/* Contagem no teto: sem a última página, vale o "tem próxima" e o
-          total sai como "mais de N". */}
-      <Pagination
-        page={pagina}
-        totalPages={ultimaPagina ?? undefined}
-        temProxima={temProxima}
-        buildHref={hrefDaPagina}
-        total={total}
-        totalAproximado={totalLimitado}
-        rotulo="documentos"
-      />
-    </div>
+export function PaginacaoDoAcervo({ total, totalLimitado, temProxima, pagina, porPagina, filtrosDaUrl }: PropsDaPaginacao) {
+  // Com a contagem no teto não se sabe qual é a última página — só se existe a
+  // próxima. Com filtro de empresa e competência ela volta a ser exata.
+  const ultimaPagina = totalLimitado ? null : Math.max(1, Math.ceil(total / porPagina));
+
+  // O link carrega os filtros da URL junto. Paginar e perder o filtro é o jeito
+  // mais rápido de a pessoa achar que os dados sumiram.
+  const hrefDaPagina = (p: number) => {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(filtrosDaUrl)) {
+      if (k !== "pagina" && v) q.set(k, v);
+    }
+    if (p > 1) q.set("pagina", String(p));
+    const s = q.toString();
+    return s ? `/documentos-fiscais?${s}` : "/documentos-fiscais";
+  };
+
+  // Contagem no teto: sem a última página, vale o "tem próxima" e o total sai
+  // como "mais de N".
+  return (
+    <Pagination
+      page={pagina}
+      totalPages={ultimaPagina ?? undefined}
+      temProxima={temProxima}
+      buildHref={hrefDaPagina}
+      total={total}
+      totalAproximado={totalLimitado}
+      rotulo="documentos"
+    />
   );
 }

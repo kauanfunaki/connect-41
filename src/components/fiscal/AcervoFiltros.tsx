@@ -9,21 +9,19 @@ import { TIPO_LABEL, DESTINO_LABEL, competenciaLegivel } from "@/lib/fiscal/rotu
 
 type Empresa = { id: string; name: string; displayName: string | null };
 
-type Props = {
-  empresas: Empresa[];
-  competencias: string[];
-};
-
 /**
- * A busca e o botão "Filtros" do acervo.
+ * A busca e o botão "Filtros" do acervo, cada um na sua vaga da barra do
+ * `CascoDaTabela` (07/10/2026) — eram uma fileira própria acima da tabela,
+ * fora do casco, enquanto as filas irmãs de 05/10 já tinham contagem, busca e
+ * filtros na barra.
  *
  * Até 30/09 o painel do FilterButton tinha quatro campos, e a competência era um
  * `<select>` sem busca — com 36 meses na lista, achar um era rolar. Pela regra
  * da conferência, os quatro recortes (empresa, competência, tipo e destino)
  * foram para o `FiltrosDaTela`, que busca em lista longa; a busca por texto
- * continua fora, ao lado dele, porque se digita.
+ * continua ao lado dele, porque se digita.
  */
-export function AcervoFiltros({ empresas, competencias }: Props) {
+export function BuscaDoAcervo() {
   const router = useRouter();
   const params = useSearchParams();
 
@@ -39,57 +37,61 @@ export function AcervoFiltros({ empresas, competencias }: Props) {
   }
 
   return (
-    <div className="flex items-center gap-2 flex-wrap mb-4">
-      <form
-        className="flex-1 min-w-[240px] max-w-[520px]"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const valor = new FormData(e.currentTarget).get("q");
-          buscar(typeof valor === "string" ? valor.trim() : "");
-        }}
-      >
-        {/* `key` no valor da URL: sem isto, voltar no navegador deixaria a
-            busca antiga escrita na caixa, com a lista já sem ela. */}
-        <Input
-          key={params.get("q") ?? ""}
-          name="q"
-          type="search"
-          compact
-          icon={<Search />}
-          defaultValue={params.get("q") ?? ""}
-          placeholder="Número, contraparte ou chave de acesso"
-          aria-label="Buscar documento"
-        />
-      </form>
-
-      <FiltrosDaTela
-        campos={[
-          {
-            chave: "empresa",
-            rotulo: "Empresa",
-            vazioLabel: "Todas",
-            opcoes: empresas.map((e) => ({ value: e.id, label: nomeExibicao(e) })),
-          },
-          {
-            chave: "competencia",
-            rotulo: "Competência",
-            vazioLabel: "Todas",
-            opcoes: competencias.map((c) => ({ value: c, label: competenciaLegivel(c) })),
-          },
-          {
-            chave: "tipo",
-            rotulo: "Tipo",
-            vazioLabel: "Todos",
-            opcoes: Object.entries(TIPO_LABEL).map(([value, label]) => ({ value, label })),
-          },
-          {
-            chave: "destino",
-            rotulo: "Destino",
-            vazioLabel: "Todos",
-            opcoes: Object.entries(DESTINO_LABEL).map(([value, label]) => ({ value, label })),
-          },
-        ]}
+    <form
+      className="max-w-full"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const valor = new FormData(e.currentTarget).get("q");
+        buscar(typeof valor === "string" ? valor.trim() : "");
+      }}
+    >
+      {/* `key` no valor da URL: sem isto, voltar no navegador deixaria a
+          busca antiga escrita na caixa, com a lista já sem ela. */}
+      <Input
+        key={params.get("q") ?? ""}
+        name="q"
+        type="search"
+        compact
+        icon={<Search />}
+        defaultValue={params.get("q") ?? ""}
+        placeholder="Número, contraparte ou chave de acesso"
+        aria-label="Buscar documento"
+        className="w-80 max-w-full"
       />
-    </div>
+    </form>
+  );
+}
+
+export function FiltrosDoAcervo({ empresas, competencias }: { empresas: Empresa[]; competencias: string[] }) {
+  return (
+    <FiltrosDaTela
+      naBarra
+      campos={[
+        {
+          chave: "empresa",
+          rotulo: "Empresa",
+          vazioLabel: "Todas",
+          opcoes: empresas.map((e) => ({ value: e.id, label: nomeExibicao(e) })),
+        },
+        {
+          chave: "competencia",
+          rotulo: "Competência",
+          vazioLabel: "Todas",
+          opcoes: competencias.map((c) => ({ value: c, label: competenciaLegivel(c) })),
+        },
+        {
+          chave: "tipo",
+          rotulo: "Tipo",
+          vazioLabel: "Todos",
+          opcoes: Object.entries(TIPO_LABEL).map(([value, label]) => ({ value, label })),
+        },
+        {
+          chave: "destino",
+          rotulo: "Destino",
+          vazioLabel: "Todos",
+          opcoes: Object.entries(DESTINO_LABEL).map(([value, label]) => ({ value, label })),
+        },
+      ]}
+    />
   );
 }
