@@ -170,7 +170,9 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, defini
 
   return (
     <>
-      <div className="bg-surface border border-border rounded-lg overflow-hidden shadow-[var(--c41-shadow-xs)]">
+      {/* `c41-tabela`: dentro do `CascoDaTabela`, no computador, o casco é o
+          cartão e este perde borda, fundo e sombra (globals.css). */}
+      <div className="c41-tabela bg-surface border border-border rounded-lg overflow-hidden shadow-[var(--c41-shadow-xs)]">
         {people.length === 0 ? (
           <EmptyState icon={<Users />} title="Nenhuma pessoa encontrada" />
         ) : (
