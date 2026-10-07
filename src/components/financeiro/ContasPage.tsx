@@ -172,9 +172,13 @@ export async function ContasPage({
         }
       />
 
-      {/* Quatro números, e o primeiro é o que a pessoa procura: quanto falta.
-          Vencido em destaque porque é o que já custa. Os dois primeiros são
-          atalho para o recorte que eles contam. */}
+      {/* Os números do topo, e o primeiro é o que a pessoa procura: quanto
+          falta. Vencido em destaque porque é o que já custa. Os dois primeiros
+          são atalho para o recorte que eles contam.
+          "Pago"/"Recebido" só no recorte que traz as liquidadas (07/10): os
+          totais são do recorte, então em "Em aberto" (o padrão) e "Vencidas"
+          o cartão saía sempre R$ 0,00 — e verde. Cor neutra, como no portal:
+          é histórico, não pede ação. */}
       <FaixaDeTotais
         itens={[
           {
@@ -196,7 +200,9 @@ export async function ContasPage({
             tom: resultado.totais.venceHoje > 0 ? "text-warning" : undefined,
             icone: <CalendarClock />,
           },
-          { rotulo: aPagar ? "Pago" : "Recebido", valor: moeda(resultado.totais.pago), tom: "text-success", icone: <CheckCircle2 /> },
+          ...(recorte === "todas"
+            ? [{ rotulo: aPagar ? "Pago" : "Recebido", valor: moeda(resultado.totais.pago), tom: "text-fg-muted", icone: <CheckCircle2 /> }]
+            : []),
         ]}
       />
 
