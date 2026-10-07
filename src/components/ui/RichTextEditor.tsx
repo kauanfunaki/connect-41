@@ -265,7 +265,7 @@ export function RichTextEditor({
       {bare && editor && editable && (
         <BubbleMenu
           editor={editor}
-          className="flex items-center gap-1 rounded-md border border-border-strong bg-surface-elevated shadow-[var(--c41-shadow-lg)] px-1 py-1"
+          className="flex items-center gap-1 rounded-md border border-border-strong bg-surface-elevated shadow-lg px-1 py-1"
         >
           <FormatButtons editor={editor} />
         </BubbleMenu>
