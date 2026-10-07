@@ -348,24 +348,26 @@ export default async function ProcessoDetalhePage({
       </div>
 
       {/* Uma pilha só, com o mesmo respiro entre todas as seções — eram
-          mb-4/mt-4 soltos em cada bloco. O roteiro ganhou título, como as
-          outras seções da página. */}
+          mb-4/mt-4 soltos em cada bloco. Toda seção é um cartão com o título
+          dentro (07/10/2026): Avisos e Roteiro eram as duas com o título
+          solto no fundo, enquanto Taxas, Horas, Conversa e Documentos já
+          eram cartão. */}
       <div className="flex flex-col gap-5">
         {avisos.length > 0 && (
-          <section aria-labelledby="avisos-da-junta" className="flex flex-col gap-3">
+          <Card as="section" aria-labelledby="avisos-da-junta" className="p-4 flex flex-col gap-4">
             <div className="flex flex-col gap-0.5">
               <h2 id="avisos-da-junta" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
                 Avisos da Junta por e-mail
               </h2>
-              <p className="text-[12px] text-fg-muted">
+              <p className="text-[length:var(--fs-2)] text-fg-muted">
                 O sistema leu o e-mail e sugere o desfecho. Confira o texto do órgão antes de aplicar.
               </p>
             </div>
-            <AvisosDaJunta avisos={avisos} acoes={{ aplicar: aplicarAviso, descartar: descartarAviso }} />
-          </section>
+            <AvisosDaJunta avisos={avisos} acoes={{ aplicar: aplicarAviso, descartar: descartarAviso }} embutido />
+          </Card>
         )}
 
-        <section aria-labelledby="roteiro-do-processo" className="flex flex-col gap-3">
+        <Card as="section" aria-labelledby="roteiro-do-processo" className="p-4 flex flex-col gap-3">
           <h2 id="roteiro-do-processo" className="text-[length:var(--fs-card-title)] font-semibold text-fg">
             Roteiro
           </h2>
@@ -382,7 +384,7 @@ export default async function ProcessoDetalhePage({
               alternarItem: alternarItemDoChecklist,
             }}
           />
-        </section>
+        </Card>
 
         <TaxasDoProcesso taxas={taxas} custo={custo} />
 
