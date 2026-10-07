@@ -539,7 +539,7 @@ export function ChatDeIA({
     return (
       <div className="fixed bottom-4 right-4 z-40" style={corDoOrbe}>
         {mostrarDica && (
-          <div className="c41-surgir absolute bottom-full right-0 mb-3 w-64 rounded-lg border border-border bg-surface-elevated p-3 shadow-[var(--c41-shadow-lg)]">
+          <div className="c41-surgir absolute bottom-full right-0 mb-3 w-64 rounded-lg border border-border bg-surface-elevated p-3 shadow-lg">
             <button
               type="button"
               onClick={() => setDicaFechada(true)}
@@ -561,7 +561,7 @@ export function ChatDeIA({
           onClick={() => abrirChat()}
           aria-label={`Abrir o chat — ${agente.titulo}`}
           title={`Perguntar à ${agente.titulo}`}
-          className="c41-borda-girando relative rounded-full p-[2px] shadow-[var(--c41-shadow-lg)] transition-transform hover:-translate-y-0.5 outline-none"
+          className="c41-borda-girando relative rounded-full p-[2px] shadow-lg transition-transform hover:-translate-y-0.5 outline-none"
         >
           <span className="flex items-center gap-2 h-11 pl-1.5 pr-1.5 sm:pr-4 rounded-full bg-surface-elevated">
             <OrbeDaIA tamanho={32} />

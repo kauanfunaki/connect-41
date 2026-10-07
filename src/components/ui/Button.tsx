@@ -76,7 +76,7 @@ const VARIANT_CLASS: Record<Variant, string> = {
   // ConfirmDialog escrevia à mão em `bg-danger text-white` — 3,17:1 no escuro.
   // Tom fixo nos dois temas (4,99:1). Se a confirmação vai continuar cheia ou
   // virar contorno é decisão do Kauan; por ora é só a de lá que usa.
-  dangerSolid: "bg-danger-solid text-white hover:bg-danger-solid/90 shadow-[var(--c41-shadow-xs)]",
+  dangerSolid: "bg-danger-solid text-white hover:bg-danger-solid/90 shadow-xs",
   // Simétrica ao danger, de propósito: o par que o app já usava era
   // "border-danger/30 text-danger" e "border-success/30 text-success", e o
   // desenho semântico do app é contorno, não preenchimento.

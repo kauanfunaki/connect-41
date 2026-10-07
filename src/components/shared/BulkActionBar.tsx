@@ -15,7 +15,7 @@ export function BulkActionBar({ count, onClear, children }: Props) {
     // centralizada: presa às duas margens e com `flex-wrap`, o conteúdo quebra
     // em linhas em vez de sair pelos lados da tela — antes, "Excluir" e
     // "Limpar" ficavam fora do viewport e a seleção virava um beco sem saída.
-    <div className="fixed bottom-4 sm:bottom-6 left-3 right-3 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-30 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 bg-surface-elevated border border-brand/30 rounded-lg shadow-[var(--c41-shadow-lg)] px-4 py-3">
+    <div className="fixed bottom-4 sm:bottom-6 left-3 right-3 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-30 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 bg-surface-elevated border border-brand/30 rounded-lg shadow-lg px-4 py-3">
       <span className="text-label font-semibold text-fg whitespace-nowrap">
         {count} selecionado{count !== 1 ? "s" : ""}
       </span>

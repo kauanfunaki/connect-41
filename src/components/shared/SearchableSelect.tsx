@@ -294,7 +294,7 @@ export function SearchableSelect({
       </Button>
 
       {aberto && (
-        <div className="c41-surgir absolute z-30 mt-1 w-full min-w-[280px] rounded-lg border border-border-strong bg-surface-elevated shadow-[var(--c41-shadow-lg)]">
+        <div className="c41-surgir absolute z-30 mt-1 w-full min-w-[280px] rounded-lg border border-border-strong bg-surface-elevated shadow-lg">
           {/* A busca fica fixa no topo; quem rola é a lista. */}
           <div className="p-2 border-b border-border">
             <Input
