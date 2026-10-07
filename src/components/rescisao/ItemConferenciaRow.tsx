@@ -128,18 +128,18 @@ export function ItemConferenciaRow({ item, current, referencia, action, canEdit 
               </span>
             )}
             {referencia?.divergente && referencia.deltaLabel && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border bg-danger/10 text-danger border-danger/25 tnum">
+              <Selo tom="perigo" className="tnum">
                 Δ {referencia.deltaLabel}
-              </span>
+              </Selo>
             )}
             {referencia && referencia.situacao !== "CALCULADO" && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border bg-surface-2 text-fg-muted border-border">
+              <Selo tom="neutro">
                 {referencia.situacao === "NAO_DEVIDA"
                   ? "não devida"
                   : referencia.situacao === "DESABILITADA_CONFIG"
                     ? "desabilitada"
                     : "sem referência"}
-              </span>
+              </Selo>
             )}
           </div>
           {item.hint && <p className="text-[12px] text-fg-muted mt-0.5">{item.hint}</p>}
