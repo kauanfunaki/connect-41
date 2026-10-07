@@ -1,26 +1,25 @@
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { FileQuestion } from "lucide-react";
 
 // 404 dentro do shell autenticado — cobre notFound() disparado por
 // ids/rotas inválidas dentro de (app) (ex: /empresas/xxxxx inexistente).
+//
+// Com o `EmptyState` dentro do `PageContainer` e de um `Card` (07/10/2026), a
+// mesma linguagem do "não há nada aqui" do resto do app.
 export default function AppNotFound() {
   return (
-    <div className="p-6 max-w-[1440px] mx-auto">
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-10 flex flex-col items-center text-center gap-3">
-        <span className="w-10 h-10 rounded-lg bg-surface-hover text-fg-muted flex items-center justify-center">
-          <FileQuestion size={18} />
-        </span>
-        <p className="text-[14px] font-semibold text-fg">Página não encontrada.</p>
-        <p className="text-[13px] text-fg-muted max-w-[360px]">
-          O registro ou a rota que você tentou abrir não existe ou foi removido.
-        </p>
-        <Button
-          href="/home"
-          variant="primary" className="font-medium mt-1"
-        >
-          Voltar ao início
-        </Button>
-      </div>
-    </div>
+    <PageContainer>
+      <Card>
+        <EmptyState
+          icon={<FileQuestion />}
+          title="Página não encontrada."
+          description="O registro ou a rota que você tentou abrir não existe ou foi removido."
+          action={<Button href="/home">Voltar ao início</Button>}
+        />
+      </Card>
+    </PageContainer>
   );
 }

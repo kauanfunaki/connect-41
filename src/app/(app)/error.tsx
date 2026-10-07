@@ -2,6 +2,9 @@
 
 import { useEffect } from "react";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PageContainer } from "@/components/shared/PageContainer";
 import { AlertTriangle } from "lucide-react";
 import { ErroDeVersaoAntiga } from "@/components/shell/AvisoDeVersaoNova";
 import { ehVersaoAntiga } from "@/lib/versaoNova";
@@ -22,24 +25,24 @@ export default function AppError({
 
   if (ehVersaoAntiga(error)) return <ErroDeVersaoAntiga />;
 
+  // A linguagem do vazio (`EmptyState`, tom de erro) dentro do `PageContainer`
+  // e de um `Card` (07/10/2026): era um cartão próprio, com a largura da página
+  // copiada à mão e o `font-medium` no Button, que não pegava.
   return (
-    <div className="p-6 max-w-[1440px] mx-auto">
-      <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-10 flex flex-col items-center text-center gap-3">
-        <span className="w-10 h-10 rounded-lg bg-danger/10 text-danger flex items-center justify-center">
-          <AlertTriangle size={18} />
-        </span>
-        <p className="text-[14px] font-semibold text-fg">Algo deu errado nesta página.</p>
-        <p className="text-[13px] text-fg-muted max-w-[360px]">
-          Tente novamente — se persistir, os outros módulos continuam acessíveis pela barra lateral.
-        </p>
-        <Button
-          type="button"
-          onClick={reset}
-          variant="primary" className="font-medium mt-1"
-        >
-          Tentar novamente
-       </Button>
-      </div>
-    </div>
+    <PageContainer>
+      <Card>
+        <EmptyState
+          tom="erro"
+          icon={<AlertTriangle />}
+          title="Algo deu errado nesta página."
+          description="Tente novamente — se persistir, os outros módulos continuam acessíveis pela barra lateral."
+          action={
+            <Button type="button" onClick={reset}>
+              Tentar novamente
+            </Button>
+          }
+        />
+      </Card>
+    </PageContainer>
   );
 }
