@@ -16,7 +16,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
         titulo: "Como ler o Início",
         passos: [
           "Clique em “Início”, no topo da barra lateral. O logo do Connect, acima do menu, também leva ao Início.",
-          "No alto ficam os indicadores “Empresas ativas”, “Vencidos / hoje”, “Transferências” e “Pessoas cadastradas”. Clique em um deles para abrir a lista correspondente.",
+          "No alto ficam os indicadores “Empresas ativas”, “Atrasadas / hoje”, “Transferências” e “Pessoas cadastradas”. Clique em um deles para abrir a lista correspondente.",
           "Logo abaixo, a faixa “Destaques” mostra os três números que mais pedem a sua atenção — em vermelho, o que está vencido ou atrasado. Clique num cartão para abrir a tela de onde ele vem.",
           "Depois vêm os painéis com gráficos, como “Tarefas por prazo”, e os painéis dos setores que você enxerga.",
           "No bloco “Meu dia”, clique em um item para abrir a tarefa.",
