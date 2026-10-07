@@ -77,8 +77,20 @@ export default async function NovaPessoaPage({
 
   return (
     <PageContainer>
-      {/* Era a trilha copiada à mão (até 30/09). */}
-      <Breadcrumb items={[{ label: "Cadastros", href: "/pessoas" }, { label: "Pessoas", href: "/pessoas" }, { label: "Nova Pessoa" }]} />
+      {/* Era a trilha copiada à mão (até 30/09). Desde 07/10/2026 (auditoria
+          DRG-21) segue o tipo, como o `cancelHref` e a `PessoaBreadcrumb`: o
+          colaborador de cliente mora no Recrutamento, não em Cadastros. */}
+      <Breadcrumb
+        items={
+          kind === "interno"
+            ? [{ label: "Cadastros", href: "/pessoas" }, { label: "Pessoas", href: "/pessoas" }, { label: "Nova Pessoa" }]
+            : [
+                { label: "Recrutamento", href: "/colaboradores-clientes" },
+                { label: "Colaboradores de clientes", href: "/colaboradores-clientes" },
+                { label: "Novo Colaborador" },
+              ]
+        }
+      />
 
       <BackButton className="mb-3" />
       <PageHeader title={kind === "interno" ? "Novo Funcionário Interno" : "Novo Colaborador de Cliente"} />
