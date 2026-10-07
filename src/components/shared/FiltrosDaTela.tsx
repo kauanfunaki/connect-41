@@ -19,6 +19,14 @@ export type CampoDeFiltro = {
    * /pagar é "Em aberto", que é o recorte padrão da tela e não um "todas".
    */
   vazioLabel?: string;
+  /**
+   * Mostra a etiqueta também no valor padrão (07/10/2026): "Mês: Mais recente
+   * (Outubro/2026)", "Período: Últimos 90 dias". Para o filtro que decide o que
+   * a tela inteira mostra — sem isto, o período só aparecia dentro do painel, e
+   * a DRE não dizia de quando era. No padrão a etiqueta sai neutra e sem o "x":
+   * não há o que tirar.
+   */
+  sempreVisivel?: boolean;
 };
 
 /** Acima disto a lista ganha busca — a mesma regra de "muitas competências". */
@@ -84,24 +92,34 @@ export function FiltrosDaTela({
 
   if (campos.length === 0) return null;
 
-  // O que está filtrado fica à vista, com o "x" que tira só aquele.
-  const etiquetas = ativos.map((c) => (
-    <span
-      key={c.chave}
-      className="inline-flex items-center gap-1 h-7 pl-2.5 pr-1 rounded-full border border-brand/30 bg-brand-subtle text-[12px] text-fg"
-    >
-      <span className="text-fg-muted">{c.rotulo}:</span>
-      <span className="font-medium max-w-[220px] truncate">{rotuloDoValor(c)}</span>
-      <button
-        type="button"
-        onClick={() => router.push(hrefCom(c.chave, ""))}
-        aria-label={`Tirar o filtro de ${c.rotulo.toLowerCase()}`}
-        className="inline-flex items-center justify-center w-5 h-5 rounded-full text-fg-muted hover:text-fg hover:bg-surface-hover"
-      >
-        <X size={12} />
-      </button>
-    </span>
-  ));
+  // O que está filtrado fica à vista, com o "x" que tira só aquele. O campo
+  // `sempreVisivel` aparece também no padrão, neutro e sem o "x".
+  const etiquetas = campos
+    .filter((c) => params.get(c.chave) || c.sempreVisivel)
+    .map((c) => {
+      const filtrado = Boolean(params.get(c.chave));
+      return (
+        <span
+          key={c.chave}
+          className={`inline-flex items-center gap-1 h-7 pl-2.5 rounded-full border text-fs-2 text-fg ${
+            filtrado ? "pr-1 border-brand/30 bg-brand-subtle" : "pr-2.5 border-border bg-surface-2"
+          }`}
+        >
+          <span className="text-fg-muted">{c.rotulo}:</span>
+          <span className="font-medium max-w-[220px] truncate">{rotuloDoValor(c)}</span>
+          {filtrado && (
+            <button
+              type="button"
+              onClick={() => router.push(hrefCom(c.chave, ""))}
+              aria-label={`Tirar o filtro de ${c.rotulo.toLowerCase()}`}
+              className="inline-flex items-center justify-center w-5 h-5 rounded-full text-fg-muted hover:text-fg hover:bg-surface-hover"
+            >
+              <X size={12} />
+            </button>
+          )}
+        </span>
+      );
+    });
 
   const botao = (
     <FilterButton activeCount={ativos.length} align={naBarra ? "right" : "left"} width={umSo ? 300 : 460}>
