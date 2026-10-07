@@ -78,9 +78,12 @@ export default async function RelatoriosDoSocietarioPage({
 
   return (
     <PageContainer>
+      {/* O período escrito (07/10, auditoria dos gráficos): no padrão (90
+          dias) o Filtros não mostra chip, e ele só aparecia no rótulo de um
+          dos cartões. */}
       <PageHeader
         title="Relatórios do Societário"
-        subtitle="Processos abertos agora, mais os concluídos no período. Prazo em dias úteis, descontados os feriados do escritório."
+        subtitle={`Processos abertos agora, mais os concluídos nos últimos ${periodo.rotulo}. Prazo em dias úteis, descontados os feriados do escritório.`}
       />
 
       {/* O período no botão "Filtros" — eram pílulas (conferência de 30/09). */}
