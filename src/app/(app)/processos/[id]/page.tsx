@@ -46,6 +46,7 @@ import { aplicarAviso, descartarAviso } from "../avisos-actions";
 import { AvisosDaJunta } from "@/components/societario/AvisosDaJunta";
 import { avisosPendentes } from "@/lib/societario/avisos";
 import { HorasDoProcesso } from "@/components/societario/HorasDoProcesso";
+import { ObservacoesDoProcesso } from "@/components/societario/ObservacoesDoProcesso";
 import { apagarHorasDoProcesso, iniciarCronometroDoProcesso, lancarHorasNoProcesso, pararCronometroDoProcesso } from "../horas-actions";
 
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
@@ -315,7 +316,9 @@ export default async function ProcessoDetalhePage({
           )}
 
           <span>Aberto em {formatInstantDate(processo.startedAt)}</span>
-          <span>{processo.owner?.name ?? "sem responsável"}</span>
+          {/* Com rótulo (07/10/2026): o nome solto entre a data e os botões não
+              dizia que era o responsável. */}
+          <span>{processo.owner ? `Responsável: ${processo.owner.name}` : "Sem responsável"}</span>
           {/* Revisão de 05/10: botão não é link — os dois atalhos eram texto azul. */}
           <Button href={`/processos/empresas/${processo.company.id}`} variant="secondary" size="xs">
             Visão societária
@@ -341,14 +344,7 @@ export default async function ProcessoDetalhePage({
             nenhum. É onde a importação do Trello (06/10) põe descrição,
             checklists e comentários do cartão — fechado, porque é longo, e
             só aqui: o portal não lê `notes`. */}
-        {processo.notes && (
-          <details className="rounded-md border border-border bg-surface-2 px-3 py-2">
-            <summary className="cursor-pointer text-[13px] font-medium text-fg">
-              Observações internas <span className="font-normal text-fg-muted">· só a equipe vê</span>
-            </summary>
-            <p className="mt-2 whitespace-pre-wrap break-words text-[12px] text-fg-secondary">{processo.notes}</p>
-          </details>
-        )}
+        {processo.notes && <ObservacoesDoProcesso texto={processo.notes} />}
       </div>
 
       {/* Uma pilha só, com o mesmo respiro entre todas as seções — eram
