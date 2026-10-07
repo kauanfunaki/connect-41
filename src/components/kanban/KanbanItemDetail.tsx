@@ -288,7 +288,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
         </div>
       )}
 
-      <div className="mb-3">
+      <div className={isModal ? "mb-3 pr-12" : "mb-3"}>
         {item.parentItemId && (
           <Link
             href={`${basePath}/itens/${item.parentItemId}`}
@@ -298,7 +298,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
           </Link>
         )}
         <div className="flex items-start justify-between gap-3">
-          <h1 className="text-[28px] leading-tight font-bold text-fg tracking-[-0.015em] mb-1">
+          <h1 className="text-[length:var(--fs-display)] leading-tight font-bold text-fg tracking-[-0.015em] mb-1">
             {title}
           </h1>
           {canDelete && <DeleteTaskButton entityName={title} deleteAction={deleteAction} />}
