@@ -15,6 +15,7 @@ import { MetricCard } from "@/components/ui/MetricCard";
 import { QuickCreateMenu } from "@/components/shared/QuickCreateMenu";
 import { CustomizeHomeButton } from "@/components/home/CustomizeHomeButton";
 import { HorizontalBarChart, TrendChart } from "@/components/shared/Charts";
+import { numero } from "@/components/shared/Graficos";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite, isFullWrite, isFullAccess } from "@/lib/auth/context";
 import { scopedCompanyWhere, scopedPersonWhere, scopedPipelineWhere, scopedHandoffWhere } from "@/lib/auth/scope";
@@ -87,7 +88,7 @@ type DueBadgeInfo = { label: string; className: string };
 // antiga (query só pegava dueDate >= hoje); aqui é o ponto central da tela.
 function classifyDueDate(dueDate: Date | null, todayStart: Date, todayEnd: Date): DueBadgeInfo | null {
   if (!dueDate) return null;
-  if (dueDate < todayStart) return { label: "Vencido", className: "bg-danger-bg text-danger" };
+  if (dueDate < todayStart) return { label: "Atrasada", className: "bg-danger-bg text-danger" };
   if (dueDate <= todayEnd) return { label: "Hoje", className: "bg-warning-bg text-warning" };
   const tomorrowEnd = new Date(todayEnd);
   tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
@@ -466,28 +467,31 @@ export default async function HomePage() {
 
     indicadores: (
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        {/* Os valores passam por `numero()`: o MetricCard imprime o que recebe,
+            e acima de 999 sairia "1234". "Atrasadas", e não "vencidos" (07/10):
+            é o termo do painel de tarefas e da faixa para o mesmo número. */}
         <MetricCard
           href="/empresas"
           icon={<Building2 size={16} />}
           label="Empresas ativas"
-          value={companyActiveCount}
+          value={numero(companyActiveCount)}
           delay={0}
-          sub={newCompaniesThisMonth > 0 ? `+${newCompaniesThisMonth} este mês` : undefined}
+          sub={newCompaniesThisMonth > 0 ? `+${numero(newCompaniesThisMonth)} este mês` : undefined}
         />
         <MetricCard
           href="/kanban"
           icon={<Clock size={16} />}
-          label="Vencidos / hoje"
-          value={vencidosCount + hojeCount}
+          label="Atrasadas / hoje"
+          value={numero(vencidosCount + hojeCount)}
           delay={40}
           highlight={vencidosCount + hojeCount > 0}
-          sub={vencidosCount > 0 ? `${vencidosCount} vencido${vencidosCount !== 1 ? "s" : ""}` : undefined}
+          sub={vencidosCount > 0 ? `${numero(vencidosCount)} atrasada${vencidosCount !== 1 ? "s" : ""}` : undefined}
         />
         <MetricCard
           href="/transferencias?status=NEW"
           icon={<ArrowRightLeft size={16} />}
           label="Transferências"
-          value={pendingHandoffsCount}
+          value={numero(pendingHandoffsCount)}
           delay={80}
           highlight={pendingHandoffsCount > 0}
           sub={pendingHandoffsCount > 0 ? "em aberto" : undefined}
@@ -496,7 +500,7 @@ export default async function HomePage() {
           href="/pessoas"
           icon={<Users size={16} />}
           label="Pessoas cadastradas"
-          value={personCount}
+          value={numero(personCount)}
           delay={120}
         />
       </div>

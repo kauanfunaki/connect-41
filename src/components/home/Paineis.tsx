@@ -75,7 +75,7 @@ function PainelIndisponivel({ setor, titulo, href }: { setor: SetorDoPainel; tit
 
 /**
  * As tarefas abertas nos kanbans que o usuário enxerga — o mesmo conjunto do
- * cartão "Vencidos / hoje" — e, no rodapé, quantas são dele. Era só das
+ * cartão "Atrasadas / hoje" — e, no rodapé, quantas são dele. Era só das
  * atribuídas, e quem coordena (sem tarefa no próprio nome) via um painel vazio.
  */
 export async function PainelDeTarefas({
@@ -357,7 +357,9 @@ export async function PainelDeProcessos({ ctx, setor }: Base) {
 // ─── DP ────────────────────────────────────────────────────────────────────
 
 export async function PainelDoDP({ ctx, setor }: Base) {
-  const titulo = "Departamento Pessoal";
+  // O que o painel mostra, como os outros ("Tarefas por prazo"): o setor já
+  // vem no rótulo de cima, e "DP · Departamento Pessoal" só o repetia (07/10).
+  const titulo = "Férias e movimentações";
   const dados = await dadosDoDP(ctx.tenantId);
   if (!dados) return <PainelIndisponivel setor={setor} titulo={titulo} href="/colaboradores" />;
   const { ferias: f, admissoes, rescisoes, exames, afastados } = dados;
@@ -401,7 +403,7 @@ export async function PainelDoDP({ ctx, setor }: Base) {
             >
               <span className="text-fg-muted [&>svg]:size-4 flex-shrink-0">{a.icone}</span>
               <span className="min-w-0">
-                <span className="block text-[15px] font-semibold text-fg leading-tight">{numero(a.valor)}</span>
+                <span className="block font-display text-[length:var(--fs-body)] font-semibold text-fg leading-tight tnum">{numero(a.valor)}</span>
                 <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate">
                   {a.rotulo} {a.detalhe}
                 </span>
@@ -461,12 +463,18 @@ export async function PainelDeCertificados({ ctx, setor }: Base) {
       cor={setor.cor}
       titulo="Certificados digitais"
       href="/certificados"
-      destaque={{
-        valor: numero(c.vencido),
-        legenda: c.vencido === 1 ? "vencido" : "vencidos",
-        tom: c.vencido > 0 ? "critico" : undefined,
-        tendencia: t.certificados_vencidos,
-      }}
+      // Sem certificado importado, sem número (07/10): "0 vencidos" em
+      // destaque lia como "tudo em dia". O portal faz o mesmo no Início.
+      destaque={
+        c.vencido + c.a_renovar + c.vigente > 0
+          ? {
+              valor: numero(c.vencido),
+              legenda: c.vencido === 1 ? "vencido" : "vencidos",
+              tom: c.vencido > 0 ? "critico" : undefined,
+              tendencia: t.certificados_vencidos,
+            }
+          : undefined
+      }
     >
       <Rosca
         titulo="Certificados em uso por situação"
