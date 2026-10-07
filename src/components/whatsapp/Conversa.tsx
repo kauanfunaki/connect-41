@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { Bot, User, AlertTriangle, Link2, Unlink, FileText } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { AlinhadoAoCampo, CampoForm } from "@/components/ui/CampoForm";
@@ -20,7 +20,7 @@ import {
   podeTransferir,
   telefoneLegivel,
   SITUACAO_LABEL,
-  SITUACAO_VARIANTE,
+  SITUACAO_TOM,
 } from "@/lib/whatsapp/conversas";
 import {
   responderConversa,
@@ -92,7 +92,7 @@ export function Conversa({ conversa, agora, candidaturas, userId, pessoas }: Pro
               <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">
                 {conversa.nome ?? telefoneLegivel(conversa.waPhone)}
               </h2>
-              <Badge variant={SITUACAO_VARIANTE[situacao]}>{SITUACAO_LABEL[situacao]}</Badge>
+              <Selo tom={SITUACAO_TOM[situacao]}>{SITUACAO_LABEL[situacao]}</Selo>
             </div>
             <p className="text-[12px] text-fg-muted mt-0.5">
               {telefoneLegivel(conversa.waPhone)}

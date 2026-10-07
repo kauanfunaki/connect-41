@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { Reatribuir } from "@/components/gestao/Reatribuir";
 import type { Classificacao, ItemDeTrabalho, Origem } from "@/lib/gestao/regras";
 import type { AcaoDaGestao } from "@/app/(app)/gestao/actions";
@@ -12,18 +12,21 @@ export const ORIGEM: Record<Origem, string> = {
   SOLICITACAO: "Solicitação",
 };
 
-/** Os selos do que pede atenção num item. */
+/**
+ * Os selos do que pede atenção num item. É situação, então é o `Selo` — era o
+ * `Badge`, a pílula de categoria (auditoria DRG-05, 07/10/2026).
+ */
 export function SelosDoItem({ c }: { c: Classificacao }) {
   return (
     <>
       {c.prazo?.situacao === "VENCIDO" && (
-        <Badge variant="danger">
+        <Selo tom="perigo">
           Prazo vencido há {c.prazo.dias} {c.prazo.dias === 1 ? "dia" : "dias"}
-        </Badge>
+        </Selo>
       )}
-      {c.prazo?.situacao === "VENCENDO" && <Badge variant="warning">{c.prazo.dias === 0 ? "Vence hoje" : `Vence em ${c.prazo.dias} ${c.prazo.dias === 1 ? "dia" : "dias"}`}</Badge>}
-      {c.parado !== null && <Badge variant="warning">Parado há {c.parado} dias</Badge>}
-      {c.paradoDeProposito && <Badge variant="info">Esperando</Badge>}
+      {c.prazo?.situacao === "VENCENDO" && <Selo tom="atencao">{c.prazo.dias === 0 ? "Vence hoje" : `Vence em ${c.prazo.dias} ${c.prazo.dias === 1 ? "dia" : "dias"}`}</Selo>}
+      {c.parado !== null && <Selo tom="atencao">Parado há {c.parado} dias</Selo>}
+      {c.paradoDeProposito && <Selo tom="marca">Esperando</Selo>}
     </>
   );
 }
@@ -52,7 +55,8 @@ export function ItemDaGestao({
   return (
     <li className="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
       <div className="min-w-0 flex flex-col gap-1">
-        <Link href={item.href} className="text-[13px] font-medium text-fg hover:underline break-words">
+        {/* O hover e o peso do link de item das outras listas (DRG-35). */}
+        <Link href={item.href} className="text-[length:var(--fs-ui)] font-semibold text-fg hover:text-brand transition-colors break-words">
           {item.titulo}
         </Link>
         <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-fg-muted">
