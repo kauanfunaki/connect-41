@@ -9,6 +9,10 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
+// Reais e percentual em pt-BR: o decimal do banco chegava cru ("R$ 3500.5",
+// "12.5%"). Troca por `formatarReais` de lib/format.ts quando a base o criar
+// (auditoria DRG-01, 07/10/2026).
+import { brl, num } from "@/lib/valora/formato";
 
 export type SalaryChangeItem = {
   id: string;
@@ -56,13 +60,13 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
                 <tr key={h.id} className="border-b border-border">
                   <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{h.effectiveDateLabel}</td>
                   <td className="px-4 py-3 text-fg whitespace-nowrap">
-                    {h.previousSalary ? <span className="text-fg-muted">R$ {h.previousSalary} → </span> : ""}R$ {h.newSalary}
+                    {h.previousSalary ? <span className="text-fg-muted">{brl(Number(h.previousSalary))} → </span> : ""}{brl(Number(h.newSalary))}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     {h.changePercent ? (
                       <span className={Number(h.changePercent) >= 0 ? "text-success" : "text-danger"}>
                         {Number(h.changePercent) >= 0 ? "+" : ""}
-                        {h.changePercent}%
+                        {num(Number(h.changePercent), 2)}%
                       </span>
                     ) : (
                       <span className="text-fg-muted">—</span>

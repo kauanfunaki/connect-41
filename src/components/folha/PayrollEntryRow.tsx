@@ -8,6 +8,9 @@ import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { MenuDoRegistro } from "@/components/pessoas/MenuDoRegistro";
 import { SeloDoDP } from "@/components/pessoas/rotulosDoDP";
+// Reais em pt-BR (era "R$ 3500.5"). Troca por `formatarReais` de lib/format.ts
+// quando a base o criar (auditoria DRG-01, 07/10/2026).
+import { brl } from "@/lib/valora/formato";
 
 const STATUS_LABEL: Record<PayrollStatus, string> = {
   PENDENTE:       "Pendente",
@@ -62,7 +65,7 @@ export function PayrollEntryRow({ entry, updateAction, removeAction, canManage }
           {entry.personName}
         </Link>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-[12px] text-fg-muted tnum">R$ {entry.grossSalary}</span>
+          <span className="text-[12px] text-fg-muted tnum">{brl(Number(entry.grossSalary))}</span>
           <SeloDoDP cor={STATUS_STYLE[entry.status]}>{STATUS_LABEL[entry.status]}</SeloDoDP>
           {canManage && <MenuDoRegistro titulo="Remover este lançamento?" onRemover={removeAction} />}
         </div>

@@ -6,7 +6,7 @@ import type { DayType, OvertimeStatus } from "@/generated/prisma/enums";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { MenuDoRegistro } from "./MenuDoRegistro";
-import { TIPO_DO_DIA, SITUACAO_DA_HORA_EXTRA, COR_DA_HORA_EXTRA, SeloDoDP } from "./rotulosDoDP";
+import { TIPO_DO_DIA, SITUACAO_DA_HORA_EXTRA, COR_DA_HORA_EXTRA, SeloDoDP, horasDoDP } from "./rotulosDoDP";
 
 const STATUS_OPTIONS = Object.keys(SITUACAO_DA_HORA_EXTRA) as OvertimeStatus[];
 
@@ -36,7 +36,7 @@ export function HoraExtraRow({ entry, updateAction, removeAction, canManage }: P
         <div className="min-w-0">
           <p className="text-[13px] text-fg">
             {entry.dateLabel} — {TIPO_DO_DIA[entry.dayType]}
-            {entry.overtimeHours && ` · ${entry.overtimeHours}h extras`}
+            {entry.overtimeHours && ` · ${horasDoDP(entry.overtimeHours)} extras`}
           </p>
           {entry.justification && <p className="text-[12px] text-fg-muted mt-0.5">{entry.justification}</p>}
         </div>

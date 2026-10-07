@@ -9,6 +9,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { SeloDoDP } from "@/components/pessoas/rotulosDoDP";
+import { brl } from "@/lib/valora/formato";
 import {
   agruparPorFamilia,
   detectarDivergenciasNome,
@@ -56,9 +57,6 @@ export default async function CargosSalariosPage() {
   const divergencias = detectarDivergenciasNome(cargos.map((c) => ({ name: c.name, companyName: c.company.name })));
   const totalDegraus = grupos.reduce((sum, g) => sum + g.degrausInvertidos.length, 0);
   const semClassificacao = rows.filter((r) => !r.family || !r.seniority).length;
-
-  const fmt = (v: number | null) =>
-    v == null ? "—" : `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
   const companyIdByCargo = new Map(cargos.map((c) => [c.id, c.company.id]));
 
@@ -191,7 +189,7 @@ export default async function CargosSalariosPage() {
                             <td className="px-4 py-3 text-fg-muted tnum">{c.peopleCount}</td>
                             {canViewSalary && (
                               <td className="px-4 py-3 text-fg-muted tnum whitespace-nowrap">
-                                {fmt(c.salaryRangeMin)} – {fmt(c.salaryRangeMax)}
+                                {brl(c.salaryRangeMin)} – {brl(c.salaryRangeMax)}
                               </td>
                             )}
                           </LinhaFiltravel>

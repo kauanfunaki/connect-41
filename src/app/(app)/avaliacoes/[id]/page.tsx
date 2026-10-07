@@ -13,6 +13,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { formatCalendarDate, formatInstantDate } from "@/lib/format";
+import { notaDoDP } from "@/components/pessoas/rotulosDoDP";
 import { saoPauloParts } from "@/lib/agenda";
 import { Button } from "@/components/ui/Button";
 
@@ -48,7 +49,7 @@ export default async function CicloPage({
   const encerrarAction = encerrarCiclo.bind(null, id);
 
   const media = (e: (typeof ciclo.evaluations)[number]) =>
-    e.averageScore != null ? e.averageScore.toString() : "Sem nota";
+    e.averageScore != null ? notaDoDP(e.averageScore) : "Sem nota";
 
   return (
     <PageContainer>

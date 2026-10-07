@@ -16,6 +16,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { formatCalendarDate } from "@/lib/format";
+import { horasDoDP } from "@/components/pessoas/rotulosDoDP";
 
 export default async function TreinamentoPage({
   params,
@@ -49,7 +50,7 @@ export default async function TreinamentoPage({
           em link com cara de botão (até 30/09); agora é o PageHeader. */}
       <PageHeader
         title={training.name}
-        subtitle={training.workloadHours ? <>{training.workloadHours.toString()}h de carga horária</> : undefined}
+        subtitle={training.workloadHours ? <>{horasDoDP(training.workloadHours)} de carga horária</> : undefined}
         action={
           canManage && (
             <div className="flex items-center gap-2">
