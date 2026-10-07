@@ -8,6 +8,7 @@ import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { SeloDoDP } from "@/components/pessoas/rotulosDoDP";
 import { brl } from "@/lib/valora/formato";
 import {
@@ -111,7 +112,7 @@ export default async function CargosSalariosPage() {
         <Card>
           <EmptyState
             icon={<IdCard />}
-            title="Nenhum cargo cadastrado ainda."
+            title="Nenhum cargo cadastrado ainda"
             description="Cadastre cargos na ficha de cada empresa."
           />
         </Card>
@@ -133,6 +134,42 @@ export default async function CargosSalariosPage() {
                   </span>
                 </div>
 
+                {/* No celular, um cartão por cargo em vez da tabela de 760px com
+                    rolagem lateral (auditoria DRG-31, 07/10/2026). */}
+                <CartoesNoCelular>
+                  {g.cargos.map((c) => (
+                    <Cartao key={c.id}>
+                      <TopoDoCartao
+                        nome={
+                          <Link
+                            href={`/empresas/${companyIdByCargo.get(c.id)}/cargos/${c.id}/editar`}
+                            className="text-fg hover:text-brand transition-colors"
+                          >
+                            {c.name}
+                          </Link>
+                        }
+                        valor={`${c.peopleCount} pessoa${c.peopleCount !== 1 ? "s" : ""}`}
+                      />
+                      <InfoDoCartao>{[c.companyName, c.area].filter(Boolean).join(" · ")}</InfoDoCartao>
+                      {canViewSalary && (
+                        <InfoDoCartao className="tabular-nums">
+                          {brl(c.salaryRangeMin)} – {brl(c.salaryRangeMax)}
+                        </InfoDoCartao>
+                      )}
+                      {(c.seniority || (invertidoIds.has(c.id) && canViewSalary)) && (
+                        <PeDoCartao>
+                          {c.seniority && (
+                            <SeloDoDP cor="bg-brand/10 text-brand border-brand/25">{SENIORITY_LABEL[c.seniority]}</SeloDoDP>
+                          )}
+                          {invertidoIds.has(c.id) && canViewSalary && (
+                            <SeloDoDP cor="bg-warning/10 text-warning border-warning/25">degrau invertido</SeloDoDP>
+                          )}
+                        </PeDoCartao>
+                      )}
+                    </Cartao>
+                  ))}
+                </CartoesNoCelular>
+
                 <TabelaFiltravel
                   linhas={g.cargos.map((c) => ({
                     id: c.id,
@@ -143,8 +180,19 @@ export default async function CargosSalariosPage() {
                     },
                   }))}
                 >
-                  <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-                    <table className="w-full min-w-[760px] text-[length:var(--fs-ui)]">
+                  {/* Largura fixa por coluna, igual em todas as famílias: na
+                      largura automática, Nível, Cargo e Empresa mudavam de
+                      posição de um bloco para o outro (DRG-32, 07/10/2026). */}
+                  <TabelaNoDesktop padrao>
+                    <table className="w-full table-fixed min-w-[760px] text-[length:var(--fs-ui)]">
+                      <colgroup>
+                        <col className="w-[132px]" />
+                        <col />
+                        <col className="w-[200px]" />
+                        <col className="w-[150px]" />
+                        <col className="w-[96px]" />
+                        {canViewSalary && <col className="w-[232px]" />}
+                      </colgroup>
                       <thead>
                         <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                           <th scope="col" className="px-4 py-3">
@@ -171,7 +219,7 @@ export default async function CargosSalariosPage() {
                                 <span className="text-[12px] text-fg-muted">—</span>
                               )}
                             </td>
-                            <td className="px-4 py-3 text-fg font-medium">
+                            <td className="px-4 py-3 text-fg font-semibold">
                               <Link
                                 href={`/empresas/${companyIdByCargo.get(c.id)}/cargos/${c.id}/editar`}
                                 className="hover:text-brand transition-colors"
@@ -196,7 +244,7 @@ export default async function CargosSalariosPage() {
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                  </TabelaNoDesktop>
                 </TabelaFiltravel>
               </section>
             );
