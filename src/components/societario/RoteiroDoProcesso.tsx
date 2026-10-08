@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Check, CircleSlash, FileStack, AlertTriangle, Bot, Plug, User } from "lucide-react";
+import { useId, useState, useTransition } from "react";
+import { Check, ChevronDown, CircleSlash, FileStack, AlertTriangle, Bot, Plug, User } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
@@ -83,10 +83,34 @@ type Acoes = {
 /** Executa uma ação da etapa; `chave` diz qual botão mostra o "…ando". */
 type Executar = (chave: string, fn: () => Promise<ProcessoState>) => void;
 
+const estaEncerrada = (etapa: EtapaNaTela) => etapa.status === "CONCLUIDA" || etapa.status === "DISPENSADA";
+
+/** "3 etapas concluídas", "3 etapas concluídas, 1 não se aplica". */
+function resumoDasEncerradas(etapas: EtapaNaTela[]): string {
+  const concluidas = etapas.filter((e) => e.status === "CONCLUIDA").length;
+  const dispensadas = etapas.length - concluidas;
+  const partes = [
+    concluidas > 0 && `${concluidas} ${concluidas === 1 ? "etapa concluída" : "etapas concluídas"}`,
+    dispensadas > 0 &&
+      (concluidas > 0
+        ? `${dispensadas} não se ${dispensadas === 1 ? "aplica" : "aplicam"}`
+        : `${dispensadas} ${dispensadas === 1 ? "etapa não se aplica" : "etapas não se aplicam"}`),
+  ].filter(Boolean);
+  return partes.join(", ");
+}
+
 /**
  * O roteiro do processo, dentro do cartão da seção (07/10/2026): as etapas são
  * linhas do cartão, e não um cartão de largura total cada — era a única seção
  * da página com o título solto no fundo e cartões embaixo.
+ *
+ * As concluídas do começo viram uma linha só, "3 etapas concluídas · ver", que
+ * abre a lista delas (escolha do Kauan na página de decisões, 08/10/2026 —
+ * 10A). Um processo importado do Trello em "Licenciamento" abria com seis
+ * etapas feitas antes da que se trabalha. Recolhe só o que vem antes da
+ * etapa liberada (a mesma barreira de `etapasLiberadas`): uma concluída depois
+ * dela — paralela que andou antes — fica na lista, para não abrir buraco na
+ * numeração.
  */
 export function RoteiroDoProcesso({
   etapas,
@@ -97,6 +121,9 @@ export function RoteiroDoProcesso({
   acoes: Acoes;
   podeEditar: boolean;
 }) {
+  const [verEncerradas, setVerEncerradas] = useState(false);
+  const idDasEncerradas = useId();
+
   // Agrupa por posição: etapas que dividem posição correm em paralelo, e
   // desenhá-las empilhadas como se fossem sequência seria mentir sobre o fluxo.
   const porPosicao = new Map<number, EtapaNaTela[]>();
@@ -107,26 +134,70 @@ export function RoteiroDoProcesso({
   }
   const posicoes = [...porPosicao.keys()].sort((a, b) => a - b);
 
+  // Processo com tudo encerrado recolhe tudo. Etapa encerrada com exigência
+  // ainda aberta (reapresentada e deferida sem marcar a exigência como
+  // cumprida) também para o recolhimento: o "Marcar como cumprida" dela não
+  // pode ficar escondido.
+  const recolhivel = (e: EtapaNaTela) =>
+    estaEncerrada(e) && !e.protocolos.some((p) => p.exigencias.some((x) => x.resolvidaEm === null));
+  const primeiraVisivel = posicoes.findIndex((p) => !porPosicao.get(p)!.every(recolhivel));
+  const corte = primeiraVisivel === -1 ? posicoes.length : primeiraVisivel;
+  const recolhidas = posicoes.slice(0, corte);
+  const seguintes = posicoes.slice(corte);
+  const etapasRecolhidas = recolhidas.flatMap((p) => porPosicao.get(p)!);
+
+  const linha = (posicao: number) => {
+    const grupo = porPosicao.get(posicao)!;
+    const paralelo = grupo.length > 1;
+    return (
+      <li key={posicao} className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
+        {paralelo && (
+          <p className="text-[length:var(--fs-micro)] text-fg-muted uppercase tracking-wide">
+            {grupo[0].grupoParalelo ?? "Em paralelo"} · correm ao mesmo tempo
+          </p>
+        )}
+        {/* Colunas pela largura do cartão, e não pela da tela (08/10/2026):
+            com o roteiro na coluna da esquerda, as três colunas fixas do `md`
+            davam uns 170px por etapa — menos que o campo do protocolo. */}
+        <div className={paralelo ? "grid gap-2 grid-cols-[repeat(auto-fit,minmax(min(100%,13rem),1fr))]" : "flex flex-col"}>
+          {grupo.map((etapa) => (
+            <EtapaDoRoteiro key={etapa.id} etapa={etapa} acoes={acoes} podeEditar={podeEditar} emGrade={paralelo} />
+          ))}
+        </div>
+      </li>
+    );
+  };
+
   return (
     <ol className="flex flex-col divide-y divide-border">
-      {posicoes.map((posicao) => {
-        const grupo = porPosicao.get(posicao)!;
-        const paralelo = grupo.length > 1;
-        return (
-          <li key={posicao} className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
-            {paralelo && (
-              <p className="text-[length:var(--fs-micro)] text-fg-muted uppercase tracking-wide">
-                {grupo[0].grupoParalelo ?? "Em paralelo"} · correm ao mesmo tempo
-              </p>
-            )}
-            <div className={paralelo ? "grid gap-2 md:grid-cols-3" : "flex flex-col"}>
-              {grupo.map((etapa) => (
-                <EtapaDoRoteiro key={etapa.id} etapa={etapa} acoes={acoes} podeEditar={podeEditar} emGrade={paralelo} />
-              ))}
-            </div>
-          </li>
-        );
-      })}
+      {recolhidas.length > 0 && (
+        <li className="py-3 first:pt-0 last:pb-0">
+          <button
+            type="button"
+            aria-expanded={verEncerradas}
+            aria-controls={idDasEncerradas}
+            onClick={() => setVerEncerradas((v) => !v)}
+            className="-mx-2 flex min-h-8 w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-1.5 text-left text-ui text-fg-secondary transition-colors hover:bg-surface-hover hover:text-fg"
+          >
+            <Check size={16} className="shrink-0 text-success" aria-hidden />
+            <span className="min-w-0 flex-1">
+              <span className="font-semibold text-fg tabular-nums">{resumoDasEncerradas(etapasRecolhidas)}</span>
+              <span aria-hidden> · </span>
+              <span className="text-brand">{verEncerradas ? "ocultar" : "ver"}</span>
+            </span>
+            <ChevronDown
+              size={16}
+              aria-hidden
+              className={`shrink-0 text-fg-muted transition-transform ${verEncerradas ? "rotate-180" : ""}`}
+            />
+          </button>
+          {/* Fica no DOM, escondida: o `aria-controls` aponta para ela. */}
+          <ol id={idDasEncerradas} hidden={!verEncerradas} className="mt-3 flex flex-col divide-y divide-border">
+            {recolhidas.map(linha)}
+          </ol>
+        </li>
+      )}
+      {seguintes.map(linha)}
     </ol>
   );
 }
@@ -163,7 +234,7 @@ function EtapaDoRoteiro({
   };
   const carregando = (chave: string) => pendente && acaoEmCurso === chave;
 
-  const encerrada = etapa.status === "CONCLUIDA" || etapa.status === "DISPENSADA";
+  const encerrada = estaEncerrada(etapa);
   const aberta = etapa.liberada && !encerrada;
   const protocoloAberto = etapa.protocolos.find((p) => p.desfecho === "PENDENTE");
 
@@ -258,7 +329,7 @@ function EtapaDoRoteiro({
                   value={numero}
                   onChange={(e) => setNumero(e.target.value)}
                   placeholder="Nº do protocolo (opcional)"
-                  className="sm:w-56"
+                  className="sm:w-56 max-w-full"
                 />
                 <Button
                   variant="secondary"
