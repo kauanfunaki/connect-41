@@ -14,9 +14,10 @@ import { pedidosAoClienteNoConjunto, setorDaPendencia, setorPadraoDasPendencias 
 import { getSectorMaps } from "@/lib/sectors";
 import { formatInstantDate } from "@/lib/format";
 import { saoPauloParts } from "@/lib/agenda";
-import { CartoesNoCelular, TabelaNoDesktop, Cartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
+import { CartoesNoCelular, TabelaNoDesktop } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { CartaoDeLista } from "@/components/portal/CartaoDeLista";
 
 export const dynamic = "force-dynamic";
 
@@ -70,7 +71,9 @@ export default async function PortalPendenciasPage({
 
       {/* Os números levam ao recorte que contam, e o recorte mora no
           "Filtros" — as abas "Em andamento | Encerradas" eram filtro da mesma
-          lista (regra da conferência de 30/09, que vale também aqui). */}
+          lista (regra da conferência de 30/09, que vale também aqui). "Com a
+          equipe" e "Vencidas" não têm recorte próprio: sem atalho (07/10/2026),
+          porque subiam no hover para levar à mesma lista, sem filtro. */}
       <FaixaDeTotais
         itens={[
           {
@@ -81,13 +84,12 @@ export default async function PortalPendenciasPage({
             detalhe: recorte === "aguardando" ? "mostrando agora" : undefined,
             href: "/portal/pendencias?recorte=aguardando",
           },
-          { rotulo: "Com a equipe", valor: String(contadores.respondidas), icone: <MessagesSquare />, href: "/portal/pendencias" },
+          { rotulo: "Com a equipe", valor: String(contadores.respondidas), icone: <MessagesSquare /> },
           {
             rotulo: "Vencidas",
             valor: String(contadores.vencidas),
             tom: contadores.vencidas > 0 ? "text-danger" : "",
             icone: <AlertTriangle />,
-            href: "/portal/pendencias",
           },
           {
             rotulo: "Encerradas",
@@ -123,30 +125,36 @@ export default async function PortalPendenciasPage({
         ) : (
           <>
           {/* Abaixo de md, cartões: o cliente lê isto no celular, e o que importa
-              é o título e o prazo — não a quarta coluna de uma tabela de 720px. */}
+              é o título e o prazo — não a quarta coluna de uma tabela de 720px.
+              O cartão inteiro abre a pendência (07/10/2026), como as outras
+              listas do portal: era só o título, uma linha de texto. */}
           <CartoesNoCelular>
             {linhas.map((l) => (
-              <Cartao key={l.id}>
-                <Link href={`/portal/pendencias/${l.id}`} className="font-medium text-brand hover:underline break-words">
-                  {l.titulo}
-                </Link>
-                <InfoDoCartao className="mt-0.5">
-                  {ROTULO_DO_TIPO[l.tipo]} · {setorDe(l.setor)} · {l.empresaNome}
-                  {l.anexos > 0 && (
-                    <>
-                      {" · "}
-                      <Paperclip size={10} className="inline" /> {l.anexos}
-                    </>
-                  )}
-                </InfoDoCartao>
-                <InfoDoCartao className="tabular-nums">
-                  {l.prazo ? `prazo ${formatInstantDate(l.prazo)}` : "sem prazo"}
-                </InfoDoCartao>
-                <PeDoCartao>
-                  <SeloDoStatus status={l.status} lado="CLIENTE" />
-                  <SeloDoPrazo situacao={l.situacaoDoPrazo} status={l.status} />
-                </PeDoCartao>
-              </Cartao>
+              <CartaoDeLista
+                key={l.id}
+                href={`/portal/pendencias/${l.id}`}
+                titulo={l.titulo}
+                apoio={
+                  <>
+                    <span>
+                      {ROTULO_DO_TIPO[l.tipo]} · {setorDe(l.setor)} · {l.empresaNome}
+                      {l.anexos > 0 && (
+                        <>
+                          {" · "}
+                          <Paperclip size={12} className="inline" /> {l.anexos}
+                        </>
+                      )}
+                    </span>
+                    <span className="tabular-nums">{l.prazo ? `prazo ${formatInstantDate(l.prazo)}` : "sem prazo"}</span>
+                  </>
+                }
+                selos={
+                  <>
+                    <SeloDoStatus status={l.status} lado="CLIENTE" />
+                    <SeloDoPrazo situacao={l.situacaoDoPrazo} status={l.status} />
+                  </>
+                }
+              />
             ))}
           </CartoesNoCelular>
 
@@ -166,10 +174,10 @@ export default async function PortalPendenciasPage({
             }))}
           >
           <TabelaNoDesktop padrao>
-            <table className="w-full min-w-[720px] text-[13px]">
+            <table className="w-full min-w-[720px] text-ui">
               <thead>
-                <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-                  <th className="py-2 pr-3 font-medium">
+                <tr>
+                  <th className="py-2 pr-3">
                     <FiltroDaColuna
                       rotulo="Pendência"
                       campos={[
@@ -178,13 +186,13 @@ export default async function PortalPendenciasPage({
                       ]}
                     />
                   </th>
-                  <th className="py-2 pr-3 font-medium">
+                  <th className="py-2 pr-3">
                     <FiltroDaColuna rotulo="Empresa" chave="empresa" />
                   </th>
-                  <th className="py-2 pr-3 font-medium">
+                  <th className="py-2 pr-3">
                     <FiltroDaColuna rotulo="Prazo" chave="prazo" tipo="data" />
                   </th>
-                  <th className="py-2 font-medium">
+                  <th className="py-2">
                     <FiltroDaColuna rotulo="Situação" chave="situacao" align="right" />
                   </th>
                 </tr>
@@ -196,7 +204,7 @@ export default async function PortalPendenciasPage({
                       <Link href={`/portal/pendencias/${l.id}`} className="font-medium text-brand hover:underline">
                         {l.titulo}
                       </Link>
-                      <span className="block text-[11px] text-fg-muted">
+                      <span className="block text-micro text-fg-muted">
                         {ROTULO_DO_TIPO[l.tipo]} · {setorDe(l.setor)}
                         {l.anexos > 0 && (
                           <>

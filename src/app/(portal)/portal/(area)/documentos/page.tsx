@@ -7,7 +7,8 @@ import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { PortalDocumentosTable } from "@/components/portal/PortalDocumentosTable";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { PortalDocumentosTable, PaginacaoDosDocumentos } from "@/components/portal/PortalDocumentosTable";
 import { PortalCompetenciaFiltro } from "@/components/portal/PortalCompetenciaFiltro";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 
@@ -55,18 +56,25 @@ export default async function PortalDocumentosPage({
         </Card>
       ) : (
         <>
-          <PortalCompetenciaFiltro competencias={competencias} empresas={empresas} />
-          {documentos.length === 0 ? (
-            <Card>
+          {/* No casco da tabela (07/10/2026), como o acervo da equipe: a
+              contagem e o "Filtros" na barra — o botão ficava sozinho acima da
+              tabela, e a contagem só aparecia no pé —, e a paginação embaixo. */}
+          <CascoDaTabela
+            contagem={contarItens(total, "documento", "documentos", totalLimitado)}
+            filtros={<PortalCompetenciaFiltro competencias={competencias} empresas={empresas} naBarra />}
+          >
+            {documentos.length === 0 ? (
               <EmptyState
                 icon={<FileText />}
                 title={params.competencia ? "Nenhum documento nesta competência" : "Nenhum documento desta empresa"}
                 description={params.competencia ? "Escolha outro mês." : "Escolha outra empresa nos filtros."}
               />
-            </Card>
-          ) : (
-            <PortalDocumentosTable
-              documentos={documentos}
+            ) : (
+              <PortalDocumentosTable documentos={documentos} />
+            )}
+          </CascoDaTabela>
+          {documentos.length > 0 && (
+            <PaginacaoDosDocumentos
               total={total}
               totalLimitado={totalLimitado}
               temProxima={temProxima}
