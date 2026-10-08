@@ -223,7 +223,7 @@ export default async function VagasPage({
                 centralizada, com o funil de setor. A lista é paginada, então o
                 funil filtra no servidor (`FiltroDaColunaNaUrl`). */}
             <TabelaNoDesktop padrao>
-              <table className="w-full table-fixed min-w-[900px] text-[length:var(--fs-ui)]">
+              <table className="w-full table-fixed min-w-[900px]">
                 <colgroup>
                   <col />
                   <col className="w-[160px]" />

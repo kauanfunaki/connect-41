@@ -110,7 +110,7 @@ export default async function AdminAtendentesPage() {
           })}
         >
           <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-            <table className="w-full min-w-[640px] text-[13px]">
+            <table className="w-full min-w-[640px]">
               <thead>
                 <tr className="border-b border-border text-[11px] text-fg-muted uppercase tracking-wide">
                   <th className="px-4 py-3">Pessoa</th>
@@ -170,7 +170,7 @@ export default async function AdminAtendentesPage() {
             })}
           >
             <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-              <table className="w-full min-w-[560px] text-[13px]">
+              <table className="w-full min-w-[560px]">
                 <thead>
                   <tr className="border-b border-border text-[11px] text-fg-muted uppercase tracking-wide">
                     <th className="px-4 py-3">Atendente do Chatwoot</th>

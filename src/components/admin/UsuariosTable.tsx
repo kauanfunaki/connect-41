@@ -254,7 +254,7 @@ export function UsuariosTable({
         }))}
       >
         <div className="c41-tabela scroll-x overflow-x-auto hidden md:block bg-surface border border-border rounded-lg">
-          <table className="w-full min-w-[900px] text-[length:var(--fs-body)]">
+          <table className="w-full min-w-[900px]">
             <thead>
               <tr className="border-b border-border bg-table-header-bg text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
                 <th className="w-10 px-4 py-3">

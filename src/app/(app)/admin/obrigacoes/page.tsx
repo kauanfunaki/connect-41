@@ -145,7 +145,7 @@ export default async function ObrigacoesPage() {
             }))}
           >
             <TabelaNoDesktop padrao>
-              <table className="w-full min-w-[1000px] text-[13px]">
+              <table className="w-full min-w-[1000px]">
                 <thead>
                   <tr className="border-b border-border text-[11px] uppercase tracking-wide text-fg-muted">
                     <th className="px-4 py-3">Obrigação</th>

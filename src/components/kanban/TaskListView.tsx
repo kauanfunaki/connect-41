@@ -878,7 +878,7 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
             ))}
           </div>
 
-          <table className="hidden md:table w-full border-collapse">
+          <table className="hidden md:table w-full border-collapse text-ui">
             {/* O fundo precisa estar em cada <th>, não no <thead>: background em
                 thead/tr não pinta de forma confiável com position:sticky, e as
                 linhas apareciam por trás do cabeçalho ao rolar. A borda inferior

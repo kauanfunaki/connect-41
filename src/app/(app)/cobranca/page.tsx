@@ -297,7 +297,7 @@ function TabelaDaFila({ linhas, hojeKey }: { linhas: LinhaDeCobranca[]; hojeKey:
         }))}
       >
       <TabelaNoDesktop padrao>
-      <table className="w-full min-w-[1080px] text-ui">
+      <table className="w-full min-w-[1080px]">
         <thead>
           <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
             <th className="py-2 pr-3 font-medium">
@@ -359,7 +359,7 @@ function TabelaDaFila({ linhas, hojeKey }: { linhas: LinhaDeCobranca[]; hojeKey:
                 )}
               </td>
               <td className="py-2.5 pr-3 text-fg-secondary">{l.responsavelNome ?? <span className="text-fg-muted">—</span>}</td>
-              <td className="py-2.5 pr-3 text-fs-2">
+              <td className="py-2.5 pr-3">
                 {l.regua.enviar !== null ? (
                   <span className="inline-flex items-center gap-1 text-brand">
                     <Mail size={12} /> passo de {l.regua.enviar} dias
@@ -481,7 +481,7 @@ async function Acordos({
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="overflow-x-auto">
                     <p className="text-micro uppercase tracking-wide text-fg-muted mb-1">Parcelas</p>
-                    <table className="w-full text-fs-2">
+                    <table className="w-full text-ui">
                       <tbody>
                         {a.parcelas.map((p, i) => (
                           <tr key={p.id} className="border-b border-border-soft">
@@ -512,7 +512,7 @@ async function Acordos({
                   </div>
                   <div className="overflow-x-auto">
                     <p className="text-micro uppercase tracking-wide text-fg-muted mb-1">Títulos originais</p>
-                    <table className="w-full text-fs-2">
+                    <table className="w-full text-ui">
                       <tbody>
                         {a.originais.map((o) => (
                           <tr key={o.id} className="border-b border-border-soft">
@@ -632,7 +632,7 @@ async function Regua({ tenantId, empresas, gerencia }: { tenantId: string; empre
             }))}
           >
           <TabelaNoDesktop padrao>
-          <table className="w-full min-w-[880px] text-ui">
+          <table className="w-full min-w-[880px]">
             <thead>
               <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                 <th className="py-2 pr-3 font-medium">

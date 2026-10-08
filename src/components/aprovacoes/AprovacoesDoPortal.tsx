@@ -209,7 +209,7 @@ export function AprovacoesDoPortal({ contas, vazio }: { contas: ContaParaAprovar
               }))}
             >
               <TabelaNoDesktop padrao>
-                <table className="w-full min-w-[820px] text-ui">
+                <table className="w-full min-w-[820px]">
                   <thead>
                     <tr>
                       <th className="py-2 pr-2 w-8"></th>

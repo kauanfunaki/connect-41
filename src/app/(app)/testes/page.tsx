@@ -262,7 +262,7 @@ export default async function TestesPage({
             {/* Era uma lista de linhas-link com tudo numa frase (até 30/09).
                 Virou tabela no padrão do Connect, com o funil de teste. */}
             <TabelaNoDesktop padrao>
-              <table className="w-full table-fixed min-w-[880px] text-[length:var(--fs-ui)]">
+              <table className="w-full table-fixed min-w-[880px]">
                 <colgroup>
                   <col />
                   <col className="w-[180px]" />

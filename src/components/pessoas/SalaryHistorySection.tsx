@@ -73,7 +73,7 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
           {/* Era uma lista de linhas (até 30/09); virou tabela no casco padrão.
               Sem funil: data e valores são únicos por linha — filtro não ajuda. */}
           <TabelaNoDesktop className="c41-tabela rounded-lg border border-border mb-4">
-            <table className="w-full min-w-[640px] text-[length:var(--fs-ui)]">
+            <table className="w-full min-w-[640px]">
               <thead>
                 <tr className="border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
                   <th className="px-4 py-3">Vigência</th>

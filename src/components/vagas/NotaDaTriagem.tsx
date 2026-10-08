@@ -96,7 +96,7 @@ export function NotaDaTriagem({
           {/* Casco padrão dentro do cartão (`.c41-tabela`, polimento de
               30/09): cabeçalho com fundo, respiro nas pontas e centralizada. */}
           <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[620px] text-[length:var(--fs-2)]">
+            <table className="w-full min-w-[620px]">
               <thead>
                 <tr className="text-[length:var(--fs-micro)] uppercase tracking-wide text-fg-muted border-b border-border">
                   <th className="py-2 px-3">Requisito</th>
