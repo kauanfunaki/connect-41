@@ -133,11 +133,14 @@ export default async function OrcamentoPage({
       )}
 
       {!selecionada ? (
-        <EmptyState
-          title={`Nenhuma versão de orçamento em ${ano}`}
-          description="Crie uma versão vazia, copie outra versão com reajuste, ou parta do realizado de um ano anterior."
-          icon={<Target />}
-        />
+        // Em cartão, como o vazio das listas (08/10/2026): solto, flutuava no fundo.
+        <Card>
+          <EmptyState
+            title={`Nenhuma versão de orçamento em ${ano}`}
+            description="Crie uma versão vazia, copie outra versão com reajuste, ou parta do realizado de um ano anterior."
+            icon={<Target />}
+          />
+        </Card>
       ) : (
         <>
           <Card className="p-4 mb-4 flex flex-wrap items-center justify-between gap-3">

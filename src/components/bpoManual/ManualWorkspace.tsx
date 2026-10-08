@@ -472,7 +472,7 @@ export function ManualWorkspace({
   if (documents.length === 0 && !canAct) {
     return (
       <Card>
-        <EmptyState icon={<FileText />} title="Nenhum documento ainda" description={`Peça à coordenação do setor ${setorRotulo} pra criar o primeiro documento do manual.`} />
+        <EmptyState icon={<FileText />} title="Nenhum documento ainda" description={`Peça à coordenação do setor ${setorRotulo} para criar o primeiro documento do manual.`} />
       </Card>
     );
   }
@@ -656,12 +656,19 @@ export function ManualWorkspace({
             updatePageAction={updatePageAction}
           />
         ) : (
-          <div className="h-full flex items-center justify-center text-[13px] text-fg-muted text-center px-6">
-            {documents.length === 0
-              ? canAct
-                ? "Crie um documento pra começar."
-                : "Nenhum documento no manual ainda."
-              : "Selecione ou crie uma página pra começar."}
+          // O vazio do app, com ícone (08/10/2026): era texto solto no meio da folha.
+          <div className="h-full flex items-center justify-center">
+            <EmptyState
+              icon={<FileText />}
+              title={documents.length === 0 ? "Nenhum documento no manual ainda" : "Nenhuma página aberta"}
+              description={
+                documents.length === 0
+                  ? canAct
+                    ? "Crie um documento para começar."
+                    : undefined
+                  : "Selecione ou crie uma página para começar."
+              }
+            />
           </div>
         )}
       </div>

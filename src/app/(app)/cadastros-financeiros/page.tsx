@@ -8,6 +8,8 @@ import { formatCnpj, formatCpf } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Card } from "@/components/ui/Card";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { Badge } from "@/components/ui/Badge";
 import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
@@ -71,12 +73,16 @@ export default async function CadastrosFinanceirosPage({
   const empresas = await empresasDoSeletor(ctx.tenantId);
   const companyId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : empresas[0]?.id;
 
-  const cabecalho = (
+  // A ação da tela vai no cabeçalho, como em pendências e no resto do app
+  // (08/10/2026): o "Novo cadastro" ficava à direita da fileira do filtro.
+  const comAcao = (action?: React.ReactNode) => (
     <PageHeader
       title="Fornecedores e sacados"
       subtitle="As contrapartes, os centros de custo e o plano de contas de cada empresa cliente, e o que a próxima conta herda."
+      action={action}
     />
   );
+  const cabecalho = comAcao();
   if (!companyId) {
     return (
       <PageContainer>
@@ -176,19 +182,22 @@ export default async function CadastrosFinanceirosPage({
 
   return (
     <PageContainer>
-      {cabecalho}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba: aba === "fornecedores" ? undefined : aba }} navegaSozinho />
-        {podeEditar && <NovaContraparte companyId={companyId} categorias={listaDeCategorias} centros={centrosAtivos} />}
-      </div>
+      {comAcao(podeEditar ? <NovaContraparte companyId={companyId} categorias={listaDeCategorias} centros={centrosAtivos} /> : undefined)}
+      <FiltroDePeriodo acao="/cadastros-financeiros" empresas={empresas} empresaId={companyId} extras={{ aba: aba === "fornecedores" ? undefined : aba }} navegaSozinho />
       <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
 
-      <form method="get" action="/cadastros-financeiros" className="mb-4">
-        <input type="hidden" name="empresa" value={companyId} />
-        {aba !== "fornecedores" && <input type="hidden" name="aba" value={aba} />}
-        <Input compact name="q" defaultValue={params.q ?? ""} placeholder="Buscar por nome ou documento…" className="w-72 max-w-full" />
-      </form>
-
+      {/* No casco das listas irmãs, com a contagem e a busca na barra
+          (08/10/2026): a busca ficava solta acima da tabela, sem contagem. */}
+      <CascoDaTabela
+        contagem={contarItens(visiveis.length, "cadastro", "cadastros")}
+        busca={
+          <form method="get" action="/cadastros-financeiros">
+            <input type="hidden" name="empresa" value={companyId} />
+            {aba !== "fornecedores" && <input type="hidden" name="aba" value={aba} />}
+            <Input compact name="q" defaultValue={params.q ?? ""} placeholder="Buscar por nome ou documento…" aria-label="Buscar cadastro" className="w-72 max-w-full" />
+          </form>
+        }
+      >
       {visiveis.length === 0 ? (
         <EmptyState
           title={busca ? "Nada encontrado" : "Nenhum cadastro nesta aba"}
@@ -312,14 +321,15 @@ export default async function CadastrosFinanceirosPage({
           </table>
           </TabelaNoDesktop>
           </TabelaFiltravel>
-          <NotaDeFonte>
-            Inativo continua nas contas antigas e deixa de aparecer no lançamento manual. Cadastro não é apagado: a ficha é
-            o que liga as notas e as contas de um mesmo fornecedor. O e-mail é para onde vai o lembrete da régua de
-            cobrança — sacado sem e-mail fica fora dela. O centro padrão entra na próxima conta quando quem lança não
-            escolhe um centro.
-          </NotaDeFonte>
         </>
       )}
+      </CascoDaTabela>
+      <NotaDeFonte>
+        Inativo continua nas contas antigas e deixa de aparecer no lançamento manual. Cadastro não é apagado: a ficha é
+        o que liga as notas e as contas de um mesmo fornecedor. O e-mail é para onde vai o lembrete da régua de
+        cobrança — sacado sem e-mail fica fora dela. O centro padrão entra na próxima conta quando quem lança não
+        escolhe um centro.
+      </NotaDeFonte>
     </PageContainer>
   );
 }
@@ -335,13 +345,16 @@ async function AbaDeCentros({
   centros: { id: string; name: string; code: string | null; active: boolean }[];
   podeEditar: boolean;
 }) {
+  // No casco, com a contagem na barra e o vazio dentro (08/10/2026).
   if (centros.length === 0) {
     return (
-      <EmptyState
-        title="Nenhum centro de custo nesta empresa"
-        description="Centro de custo é opcional: cadastre unidades, obras ou projetos para ver a DRE econômica por centro."
-        icon={<Layers />}
-      />
+      <CascoDaTabela contagem={contarItens(0, "centro de custo", "centros de custo")}>
+        <EmptyState
+          title="Nenhum centro de custo nesta empresa"
+          description="Centro de custo é opcional: cadastre unidades, obras ou projetos para ver a DRE econômica por centro."
+          icon={<Layers />}
+        />
+      </CascoDaTabela>
     );
   }
 
@@ -365,6 +378,7 @@ async function AbaDeCentros({
 
   return (
     <>
+      <CascoDaTabela contagem={contarItens(centros.length, "centro de custo", "centros de custo")}>
       <CartoesNoCelular>
         {centros.map((c) => (
           <Cartao key={c.id}>
@@ -414,6 +428,7 @@ async function AbaDeCentros({
         </tbody>
       </table>
       </TabelaNoDesktop>
+      </CascoDaTabela>
       <NotaDeFonte>
         Um centro por lançamento, sem rateio. Inativo some dos seletores e da herança, e continua na DRE por centro com o que
         já foi lançado nele. Centro de custo não é apagado. Na importação por CSV, a coluna <code>centro_de_custo</code> casa
@@ -461,11 +476,15 @@ async function AbaDoPlano({ tenantId, companyId, podeEditar }: { tenantId: strin
         {podeEditar && <NovaCategoriaDaEmpresa companyId={companyId} linhas={linhas} grupos={grupos} />}
       </div>
       {categorias.length === 0 ? (
-        <EmptyState
-          title="Plano de contas vazio"
-          description="Carregue o plano padrão em Administração › Plano de contas, ou crie aqui uma categoria só desta empresa."
-          icon={<Layers />}
-        />
+        // Em cartão, como o vazio das outras abas (08/10/2026): solto, ele
+        // flutuava no fundo da tela.
+        <Card>
+          <EmptyState
+            title="Plano de contas vazio"
+            description="Carregue o plano padrão em Administração › Plano de contas, ou crie aqui uma categoria só desta empresa."
+            icon={<Layers />}
+          />
+        </Card>
       ) : (
         (["PAGAR", "RECEBER"] as const).map((kind) => {
           const doLado = categorias.filter((c) => c.kind === kind);
@@ -474,7 +493,17 @@ async function AbaDoPlano({ tenantId, companyId, podeEditar }: { tenantId: strin
             <div key={kind} className="mb-6">
               <h3 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">{kind === "PAGAR" ? "Despesas (a pagar)" : "Receitas (a receber)"}</h3>
               <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-                <table className="w-full min-w-[760px] text-[13px]">
+                {/* Largura fixa e as mesmas colunas nas duas tabelas
+                    (08/10/2026): cada uma calculava a sua, e "Categoria" e
+                    "Lançamentos" ficavam desalinhados entre Despesas e Receitas. */}
+                <table className="w-full table-fixed min-w-[1000px] text-ui">
+                  <colgroup>
+                    <col />
+                    <col className="w-[180px]" />
+                    <col className="w-[260px]" />
+                    <col className="w-[110px]" />
+                    <col className="w-[200px]" />
+                  </colgroup>
                   <thead>
                     <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
                       <th className="py-2 pr-3 font-medium">Categoria</th>
@@ -492,7 +521,7 @@ async function AbaDoPlano({ tenantId, companyId, podeEditar }: { tenantId: strin
                         <tr key={c.id} className={`border-b border-border-soft align-top ${escondida || !c.active ? "opacity-60" : ""}`}>
                           <td className="py-2 pr-3">
                             <span className="font-medium">{c.name}</span>
-                            <span className="ml-2 inline-flex gap-1 align-middle">
+                            <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
                               {propria ? (
                                 <Badge variant="info">{c.omieCode ? "Do Omie" : "Desta empresa"}</Badge>
                               ) : null}
