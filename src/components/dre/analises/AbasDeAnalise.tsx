@@ -16,6 +16,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { NotaDeFonte as NotaDeFonteDoApp } from "@/components/shared/NotaDeFonte";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -65,13 +66,13 @@ type Base = { tenantId: string; companyId: string; mes: string };
 const TH = "py-2 pr-3 font-medium";
 const CABECALHO = "text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border";
 
+/**
+ * A nota de rodapé compartilhada (08/10/2026: nasceu aqui e foi para
+ * `shared`). Nas Análises ela leva o ⓘ, como antes; se todas as telas passam
+ * a levá-lo é decisão do Kauan.
+ */
 function NotaDeFonte({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="flex items-start gap-1.5 text-[11px] text-fg-muted mt-3">
-      <Info size={12} className="mt-0.5 shrink-0" />
-      <span>{children}</span>
-    </p>
-  );
+  return <NotaDeFonteDoApp icone={<Info size={12} />}>{children}</NotaDeFonteDoApp>;
 }
 
 function TabelaComparada({ linhas, rotuloA, rotuloB, destacarAcima }: { linhas: LinhaComparada[]; rotuloA: string; rotuloB: string; destacarAcima?: number }) {

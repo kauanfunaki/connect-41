@@ -24,6 +24,7 @@ import { podeCancelarManual } from "@/lib/financeiro/manual";
 import { moeda } from "@/lib/financeiro/formato";
 import { centrosAtivosDaEmpresa } from "@/lib/financeiro/centroDeCustoServidor";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
 export const dynamic = "force-dynamic";
 
@@ -313,10 +314,10 @@ async function ListaDeManuais({
       </table>
       </TabelaNoDesktop>
       </TabelaFiltravel>
-      <p className="text-[11px] text-fg-muted mt-3">
+      <NotaDeFonte>
         Lançamento não é apagado: cancelar tira dos totais e fica no histórico de auditoria. A baixa de um lançamento
         em aberto é feita em Contas a pagar ou a receber, como a de qualquer conta.
-      </p>
+      </NotaDeFonte>
     </>
   );
 }

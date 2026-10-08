@@ -18,6 +18,7 @@ import {
 } from "@/lib/financeiro/consultas";
 import { fluxoRealizado, projecaoPorJanela, consolidarPorEmpresa } from "@/lib/financeiro/fluxo";
 import { competenciaValida, competenciaDoInstante, competenciasAte, rotuloDaCompetencia } from "@/lib/financeiro/periodo";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
 export const dynamic = "force-dynamic";
 
@@ -95,18 +96,18 @@ async function Fluxo({ escopo, mes, hojeKey }: { escopo: EscopoFinanceiro; mes: 
 
       <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">Realizado — seis meses até {rotuloDaCompetencia(mes)}</h2>
       <TabelaDoRealizado meses={fluxoRealizado(movimentos, competencias)} />
-      <p className="text-[11px] text-fg-muted mt-2 mb-6">
+      <NotaDeFonte className="mb-6">
         Pela data da baixa. O acumulado soma os saldos do período a partir do primeiro mês da tabela — é movimento
         de lançamentos, não o saldo da conta, que está no quadro acima.
-      </p>
+      </NotaDeFonte>
 
       <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">Projeção — títulos em aberto a partir de hoje</h2>
       <CartoesDaProjecao projecao={projecaoPorJanela(titulos, hojeKey)} saldoInicial={saldo.centavos} />
-      <p className="text-[11px] text-fg-muted mt-2">
+      <NotaDeFonte>
         Cada janela acumula de hoje até o fim dela: a receber menos a pagar, pelo vencimento
         {saldo.centavos !== null ? "; o saldo projetado soma o saldo das contas" : ""}. Só o que já está lançado
         {titulos.length >= 5_000 ? " (limitado aos 5.000 títulos mais antigos)" : ""}.
-      </p>
+      </NotaDeFonte>
     </>
   );
 }
@@ -118,10 +119,10 @@ async function PorEmpresa({ tenantId, mes, hojeKey }: { tenantId: string; mes: s
   return (
     <>
       <TabelaDoConsolidado linhas={linhas} nomes={nomes} linkParaContas />
-      <p className="text-[11px] text-fg-muted mt-2">
+      <NotaDeFonte>
         Pago e recebido em {rotuloDaCompetencia(mes)}, pela data da baixa. Vencidas é a posição de hoje. Empresa sem
         movimento no mês e sem conta vencida não aparece.
-      </p>
+      </NotaDeFonte>
     </>
   );
 }

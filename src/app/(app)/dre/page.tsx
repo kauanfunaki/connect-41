@@ -20,6 +20,7 @@ import { impostoForaDoResultado } from "@/lib/dre/calculo";
 import { OPCOES_PADRAO, TRANSFERENCIA } from "@/lib/dre/estrutura";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { competenciaDe } from "@/lib/financeiro/periodo";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
 /**
  * O mês do DRE no formato de competência do app, "Out/26" (08/10/2026). Era
@@ -139,13 +140,13 @@ export default async function DrePage({
         </div>
 
         <RelatorioAnual anual={anual} />
-        <p className="text-[11px] text-fg-muted mt-3">
+        <NotaDeFonte>
           {/* A média divide pelos meses com movimento, como o AVERAGE do Excel:
               dividir por doze em setembro diz que a empresa faturou 25% menos. */}
           A coluna <strong>Média</strong> divide por {anual.mesesComMovimento}{" "}
           {anual.mesesComMovimento === 1 ? "mês com movimento" : "meses com movimento"}, não por doze.
           Os percentuais do ano saem dos valores somados, não da média dos percentuais mensais.
-        </p>
+        </NotaDeFonte>
       </PageContainer>
     );
   }
@@ -256,7 +257,7 @@ export default async function DrePage({
         <ImportarDoOmie companyId={companyId} />
       </div>
 
-      <p className="text-[11px] text-fg-muted mt-3">
+      <NotaDeFonte>
         {lancamentos} {lancamentos === 1 ? "lançamento" : "lançamentos"} pagos ou recebidos em{" "}
         {rotuloDoMes(escolhido)}
         {transferencias !== 0 &&
@@ -268,7 +269,7 @@ export default async function DrePage({
             {" "}· atenção: {moeda(resultado.diferencaDeFechamento)} não fecharam
           </span>
         )}
-      </p>
+      </NotaDeFonte>
     </PageContainer>
   );
 }

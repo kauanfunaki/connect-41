@@ -2,6 +2,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { BarChart3 } from "lucide-react";
 import { faixasDeAtraso, rankingDeContrapartes, type ContaParaAnalise } from "@/lib/financeiro/analise";
 import { moeda, percentual } from "@/lib/financeiro/formato";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
 const CABECALHO = "text-left text-[11px] uppercase tracking-wide text-fg-muted border-b border-border";
 
@@ -85,10 +86,10 @@ export function AnaliseDeContas({ linhas, hojeKey, aPagar }: { linhas: ContaPara
             </tbody>
           </table>
         </div>
-        <p className="text-[11px] text-fg-muted mt-2">
+        <NotaDeFonte>
           Vence hoje conta como a vencer. Cobrança e régua de inadimplência são outra etapa; esta aba só mostra onde está o
           dinheiro parado.
-        </p>
+        </NotaDeFonte>
       </section>
     </div>
   );

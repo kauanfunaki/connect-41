@@ -32,6 +32,7 @@ import { lerFiltroDeCentro, valorDoFiltroDeCentro, SEM_CENTRO } from "@/lib/fina
 import { orcamentosAprovados, orcamentoLigado } from "@/lib/dre/orcamento/dados";
 import { porGrupoOrcado } from "@/lib/dre/orcamento/grade";
 import { mesesDoAcumulado } from "@/lib/dre/orcamento/variacao";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
 export const dynamic = "force-dynamic";
 
@@ -279,11 +280,11 @@ export default async function DreEconomicaPage({
           {comparacao && orcamento ? (
             <>
               <RelatorioOrcadoRealizado mes={comparacao.mes} acumulado={comparacao.acumulado} />
-              <p className="text-[11px] text-fg-muted mt-2">
+              <NotaDeFonte>
                 Orçado da versão aprovada <strong>{orcamento.nome}</strong> de {ano}. Var. R$ é realizado − orçado na convenção
                 da DRE (despesa negativa); verde é melhor que o orçado — receita acima ou despesa abaixo —, vermelho é pior. Sem
                 orçado na linha, a variação % fica em branco.
-              </p>
+              </NotaDeFonte>
               <Button href={`/dre/orcamento?empresa=${companyId}&ano=${ano}`} variant="secondary" size="xs" className="mt-2">
                 Abrir orçamento
               </Button>
@@ -360,12 +361,12 @@ export default async function DreEconomicaPage({
         </Card>
       )}
 
-      <p className="text-[11px] text-fg-muted mt-3">
+      <NotaDeFonte>
         {lancamentos} {lancamentos === 1 ? "lançamento" : "lançamentos"} com competência em {periodo}
         {nomeDoFiltro ? ` (${nomeDoFiltro})` : ""}, cancelados e parcelas de acordo fora.
         {" "}Regime de <strong>competência</strong>: o que foi pago ou recebido está na DRE de caixa. O import do Omie
         não entra aqui — é export de pagamentos, sem competência. A diferença entre os dois regimes está na reconciliação.
-      </p>
+      </NotaDeFonte>
       <div className="flex flex-wrap items-center gap-2 mt-1.5">
         <Button href={`/dre?empresa=${companyId}`} variant="ghost" size="xs">
           Abrir DRE de caixa

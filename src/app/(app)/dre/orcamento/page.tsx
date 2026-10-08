@@ -24,6 +24,7 @@ import { GRUPOS } from "@/lib/dre/estrutura";
 import { gradeDeLinhas, textoDaCelula } from "@/lib/dre/orcamento/grade";
 import { lerAno, versaoAprovada, versaoPadrao } from "@/lib/dre/orcamento/versoes";
 import { MODULO_DE_ORCAMENTO } from "@/lib/dre/orcamento/dados";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
 export const dynamic = "force-dynamic";
 
@@ -186,11 +187,11 @@ export default async function OrcamentoPage({
             grade={textos}
             somenteLeitura={selecionada.status === "APROVADO" || !podeEditar}
           />
-          <p className="text-[11px] text-fg-muted mt-3">
+          <NotaDeFonte>
             Valores positivos: o sinal vem do grupo — receita soma, despesa subtrai, como na DRE. Os subtotais usam a mesma
             estrutura da DRE econômica (a margem parte da receita bruta). Versão aprovada é somente leitura; para mudar,
             a coordenação reabre. Orçamento é da empresa inteira — não há orçado por centro de custo nem por categoria.
-          </p>
+          </NotaDeFonte>
         </>
       )}
     </PageContainer>

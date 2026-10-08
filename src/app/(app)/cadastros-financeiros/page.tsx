@@ -21,6 +21,7 @@ import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { GRUPOS, TRANSFERENCIA } from "@/lib/dre/estrutura";
 import { grupoDeTexto } from "@/lib/dre/mapeamento";
 import { NovaCategoriaDaEmpresa, LinhaDaDre, EsconderDoPadrao, EditarCategoriaDaEmpresa } from "@/components/financeiro/PlanoDaEmpresa";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
 export const dynamic = "force-dynamic";
 
@@ -311,12 +312,12 @@ export default async function CadastrosFinanceirosPage({
           </table>
           </TabelaNoDesktop>
           </TabelaFiltravel>
-          <p className="text-[11px] text-fg-muted mt-3">
+          <NotaDeFonte>
             Inativo continua nas contas antigas e deixa de aparecer no lançamento manual. Cadastro não é apagado: a ficha é
             o que liga as notas e as contas de um mesmo fornecedor. O e-mail é para onde vai o lembrete da régua de
             cobrança — sacado sem e-mail fica fora dela. O centro padrão entra na próxima conta quando quem lança não
             escolhe um centro.
-          </p>
+          </NotaDeFonte>
         </>
       )}
     </PageContainer>
@@ -413,11 +414,11 @@ async function AbaDeCentros({
         </tbody>
       </table>
       </TabelaNoDesktop>
-      <p className="text-[11px] text-fg-muted mt-3">
+      <NotaDeFonte>
         Um centro por lançamento, sem rateio. Inativo some dos seletores e da herança, e continua na DRE por centro com o que
         já foi lançado nele. Centro de custo não é apagado. Na importação por CSV, a coluna <code>centro_de_custo</code> casa
         pelo nome ou pelo código.
-      </p>
+      </NotaDeFonte>
     </>
   );
 }
