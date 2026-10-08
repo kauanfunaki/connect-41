@@ -129,7 +129,7 @@ export function AgentCard({
             <div>
               <p className="text-fs-3 text-fg-muted">{selected.evaluatedAtLabel}</p>
               <div className="flex items-center gap-4 mt-2">
-                <span className="text-[26px] font-semibold text-fg tabular-nums">{selected.score}<span className="text-fs-4 text-fg-muted">/100</span></span>
+                <span className="text-title font-semibold text-fg tabular-nums">{selected.score}<span className="text-fs-4 text-fg-muted">/100</span></span>
                 <span className="text-fs-3 text-fg-muted">Escrita {selected.writingScore}/50 · SLA {selected.slaScore}/50</span>
               </div>
             </div>

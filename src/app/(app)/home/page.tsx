@@ -15,6 +15,7 @@ import { MetricCard } from "@/components/ui/MetricCard";
 import { Button } from "@/components/ui/Button";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { QuickCreateMenu } from "@/components/shared/QuickCreateMenu";
+import { AvatarImage } from "@/components/shared/AvatarImage";
 import { CustomizeHomeButton } from "@/components/home/CustomizeHomeButton";
 import { HorizontalBarChart, TrendChart } from "@/components/shared/Charts";
 import { numero } from "@/components/shared/Graficos";
@@ -673,9 +674,7 @@ export default async function HomePage() {
           <div className="space-y-3">
             {activityGroups.map((g) => (
               <Link key={g.id} href={`${boardPath({ id: g.pipelineId })}/itens/${g.pipelineItemId}`} className="flex items-start gap-2.5 group">
-                <span className="w-6 h-6 rounded-full bg-brand-subtle text-brand text-[10px] font-semibold flex items-center justify-center flex-shrink-0 mt-0.5">
-                  {g.userName.trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join("").toUpperCase()}
-                </span>
+                <AvatarImage src={null} name={g.userName} size={24} bordered={false} fontSize={11} className="mt-0.5" />
                 <div className="min-w-0">
                   <p className="text-body text-fg-secondary leading-snug">
                     <span className="font-medium text-fg group-hover:text-brand transition-colors">{g.userName}</span>{" "}

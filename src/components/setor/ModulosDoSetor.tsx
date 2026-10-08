@@ -80,7 +80,7 @@ export function ModulosDoSetor({
                       </span>
                       <p className="text-fs-4 font-semibold text-fg leading-tight">{m.label}</p>
                     </div>
-                    <p className="text-[12.5px] text-fg-muted mt-2 leading-relaxed">{m.description}</p>
+                    <p className="text-fs-2 text-fg-muted mt-2 leading-relaxed">{m.description}</p>
                   </Link>
                   <div className="absolute top-3 right-3">
                     <BotaoFixarTela code={m.code} fixada={fixada.has(m.code)} />
