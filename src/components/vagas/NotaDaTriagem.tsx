@@ -1,3 +1,4 @@
+import { Accordion } from "@/components/ui/Accordion";
 import { Card } from "@/components/ui/Card";
 import { formatInstantDateTime } from "@/lib/format";
 import {
@@ -125,8 +126,7 @@ export function NotaDaTriagem({
             </table>
           </div>
           {anteriores.length > 0 && (
-            <details className="mt-3">
-              <summary className="text-fs-2 text-fg-muted cursor-pointer">Notas anteriores ({anteriores.length})</summary>
+            <Accordion className="mt-3" classeDoCabecalho="text-fs-2 text-fg-muted" titulo={`Notas anteriores (${anteriores.length})`}>
               <ul className="mt-1.5 space-y-0.5 text-fs-2 text-fg-secondary">
                 {anteriores.map((n) => (
                   <li key={n.id} className="tnum">
@@ -135,7 +135,7 @@ export function NotaDaTriagem({
                   </li>
                 ))}
               </ul>
-            </details>
+            </Accordion>
           )}
         </>
       )}

@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Save } from "lucide-react";
+import { Accordion } from "@/components/ui/Accordion";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -170,8 +171,7 @@ export function Simulador({
         </Card>
 
         <Card className="p-4">
-          <details>
-            <summary className="text-label font-semibold text-fg cursor-pointer">Detalhamento por atividade</summary>
+          <Accordion titulo="Detalhamento por atividade" classeDoCabecalho="w-full text-label font-semibold text-fg">
             {/* Casco padrão dentro do cartão (30/09); a atividade, texto
                 corrido com o código na frente, fica à esquerda. */}
             <div className="c41-tabela overflow-x-auto rounded-lg border border-border mt-3">
@@ -206,7 +206,7 @@ export function Simulador({
             <p className="text-micro text-fg-muted mt-2">
               Minutos já ajustados pela capacidade de cada equipe. A complexidade entra depois, no total do setor.
             </p>
-          </details>
+          </Accordion>
         </Card>
       </div>
 

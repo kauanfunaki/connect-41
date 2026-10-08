@@ -4,6 +4,7 @@ import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/sh
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Card } from "@/components/ui/Card";
+import { Accordion } from "@/components/ui/Accordion";
 import { FormParametros } from "@/components/valora/FormParametros";
 import { acessoAoValora, configDoValora } from "@/lib/valora/servidor";
 import { REGIMES, ROTULO_REGIME } from "@/lib/valora/motor";
@@ -41,10 +42,16 @@ export default async function ParametrosDoValoraPage() {
           const atividades = catalogo.atividades.filter((a) => a.setor === s.codigo);
           const quandoEntra = (a: (typeof atividades)[number]) => (a.condicao ? (campos.get(a.condicao) ?? "Tem funcionários") : "Sempre");
           return (
-            <details key={s.codigo} className="border-t border-border-soft py-2">
-              <summary className="cursor-pointer text-ui font-medium">
-                {s.nome} <span className="text-fg-muted font-normal">· {atividades.length} atividades</span>
-              </summary>
+            <Accordion
+              key={s.codigo}
+              className="border-t border-border-soft py-2"
+              classeDoCabecalho="w-full text-ui font-medium text-fg"
+              titulo={
+                <>
+                  {s.nome} <span className="text-fg-muted font-normal">· {atividades.length} atividades</span>
+                </>
+              }
+            >
               {/* Casco padrão, com funil em frequência e em "quando entra" — as
                   duas colunas de valor repetido (30/09). A atividade fica
                   alinhada à esquerda: é texto corrido com o código na frente. */}
@@ -104,7 +111,7 @@ export default async function ParametrosDoValoraPage() {
                   </table>
                 </div>
               </TabelaFiltravel>
-            </details>
+            </Accordion>
           );
         })}
       </Card>
