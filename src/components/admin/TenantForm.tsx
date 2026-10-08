@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Props = {
   action: (prev: TenantState, form: FormData) => Promise<TenantState>;
@@ -26,14 +27,14 @@ export function TenantForm({ action, isSuperAdmin, defaultValues }: Props) {
   return (
     <form action={formAction} className="space-y-6">
       {state && "error" in state && state.error && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <Aviso>
           {state.error}
-        </p>
+        </Aviso>
       )}
       {state && "success" in state && state.success && (
-        <p className="text-[13px] text-success bg-success/8 border border-success/20 rounded-md px-3 py-2">
+        <Aviso tom="sucesso">
           Dados atualizados.
-        </p>
+        </Aviso>
       )}
 
       {/* CNPJ na largura dele (18 caracteres); o slug fica embaixo, na mesma

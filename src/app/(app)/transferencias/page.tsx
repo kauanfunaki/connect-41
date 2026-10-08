@@ -1,8 +1,7 @@
-import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ArrowRightLeft, ArrowRight, Inbox, Loader, CheckCircle2, Plus } from "lucide-react";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps } from "@/lib/sectors";
@@ -10,9 +9,9 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { scopedHandoffWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { SectorChip } from "@/components/ui/SectorChip";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarNumero } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 import {
   aggregateHandoffStatus,
@@ -101,10 +100,11 @@ export default async function HandoffsPage({
       <FaixaDeTotais
         itens={FILTER_TABS.map((t) => ({
           rotulo: t.label,
-          valor: String(contagem[t.value]),
+          valor: formatarNumero(contagem[t.value], 0),
           icone: t.value === "NEW" ? <Inbox /> : t.value === "IN_PROGRESS" ? <Loader /> : <CheckCircle2 />,
           tom: t.value === "NEW" ? (contagem.NEW > 0 ? "text-warning" : undefined) : t.value === "DONE" ? "text-success" : undefined,
           detalhe: t.value === statusFilter ? "mostrando agora" : undefined,
+          ativo: t.value === statusFilter,
           href: hrefDaSituacao(t.value),
         }))}
       />
@@ -141,12 +141,8 @@ export default async function HandoffsPage({
             return (
               // O cartão inteiro é o link (07/10/2026): o Link morava dentro do
               // `p-4` do Card, a borda acendia no cartão todo e os 16px da margem
-              // não clicavam. Hover no desenho único dos cartões-link.
-              <Link
-                key={h.id}
-                href={`/transferencias/${h.id}`}
-                className="group flex items-start gap-3 bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 transition-[border-color,box-shadow,transform] duration-150 hover:border-brand/40 hover:shadow-[var(--c41-shadow-md)] hover:-translate-y-0.5"
-              >
+              // não clicavam. O `Card` com `href`, no hover dos cartões-link.
+              <Card key={h.id} href={`/transferencias/${h.id}`} className="group flex items-start gap-3 p-4">
                 <span className="w-9 h-9 rounded-lg bg-surface-hover border border-border flex items-center justify-center text-fg-secondary flex-shrink-0">
                   <ArrowRightLeft size={16} />
                 </span>
@@ -162,8 +158,9 @@ export default async function HandoffsPage({
                         color={sectorColors[s.sectorCode] ?? "#586577"}
                       />
                     ))}
-                    <Badge variant={HANDOFF_STATUS_BADGE[aggregate]}>{HANDOFF_STATUS_LABEL[aggregate]}</Badge>
-                    <Badge variant={HANDOFF_PRIORITY_BADGE[h.priority]}>{HANDOFF_PRIORITY_LABEL[h.priority]}</Badge>
+                    {/* Selo, e não Badge: é a situação do cartão (regra de 02/10 no Selo). */}
+                    <Selo tom={tomDaVariante(HANDOFF_STATUS_BADGE[aggregate])}>{HANDOFF_STATUS_LABEL[aggregate]}</Selo>
+                    <Selo tom={tomDaVariante(HANDOFF_PRIORITY_BADGE[h.priority])}>{HANDOFF_PRIORITY_LABEL[h.priority]}</Selo>
                   </div>
 
                   <p className="text-[length:var(--fs-card-title)] font-semibold text-fg group-hover:text-brand transition-colors">
@@ -179,7 +176,7 @@ export default async function HandoffsPage({
                     {formatInstantDate(h.createdAt, { day: "2-digit", month: "long", year: "numeric" })}
                   </p>
                 </div>
-              </Link>
+              </Card>
             );
           })}
         </div>

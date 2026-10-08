@@ -6,6 +6,7 @@ import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import { Button } from "@/components/ui/Button";
 import { CampoForm } from "@/components/ui/CampoForm";
 import type { ImportPayrollCsvState } from "@/app/(app)/empresas/[id]/folha/[competencyId]/actions";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Props = {
   action: (prev: ImportPayrollCsvState, form: FormData) => Promise<ImportPayrollCsvState>;
@@ -63,9 +64,9 @@ export function ImportarFolhaCsvForm({ action }: Props) {
       </form>
 
       {state && "error" in state && (
-        <p className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2 mt-3">
+        <Aviso className="mt-3">
           {state.error}
-        </p>
+        </Aviso>
       )}
 
       {state && "success" in state && (

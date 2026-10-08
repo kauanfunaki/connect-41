@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { FormSection } from "@/components/ui/FormSection";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Aviso } from "@/components/ui/Aviso";
 
 const PRIORITY_OPTIONS: { value: VagaPrioridade; label: string }[] = [
   { value: "BAIXA", label: "Baixa" },
@@ -69,9 +70,9 @@ export function VagaForm({ action, cancelHref, companies, cargos, users, sectorO
       {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
 
       {state?.error && (
-        <p className="text-[length:var(--fs-ui)] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <Aviso>
           {state.error}
-        </p>
+        </Aviso>
       )}
 
       {/* Dois assuntos, duas seções: o que é da vaga (interno) e o que o

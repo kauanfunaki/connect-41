@@ -7,6 +7,7 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { CampoDeSenha } from "@/components/ui/CampoDeSenha";
 import { Button } from "@/components/ui/Button";
 import type { TrocaSenhaState } from "@/app/(app)/configuracoes/actions";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Props = {
   action: (prev: TrocaSenhaState, form: FormData) => Promise<TrocaSenhaState>;
@@ -39,18 +40,18 @@ export function AlterarSenhaForm({ action }: Props) {
 
   if (loggedOut) {
     return (
-      <p className="text-[13px] text-success bg-success/8 border border-success/20 rounded-md px-3 py-2">
+      <Aviso tom="sucesso">
         Senha alterada. Todas as sessões foram encerradas — redirecionando para o login…
-      </p>
+      </Aviso>
     );
   }
 
   return (
     <form action={formAction} className="space-y-4">
       {state && "error" in state && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <Aviso>
           {state.error}
-        </p>
+        </Aviso>
       )}
 
       <p className="text-[length:var(--fs-helper)] text-fg-muted">

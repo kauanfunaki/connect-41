@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { PRAZO_MAXIMO, PRAZO_MINIMO } from "@/lib/solicitacoes/regras";
+import { Aviso } from "@/components/ui/Aviso";
 
 export type AssuntoValores = {
   id?: string;
@@ -35,7 +36,7 @@ export function AssuntoForm({
       {valores?.id && <input type="hidden" name="id" value={valores.id} />}
 
       {state?.error && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{state.error}</p>
+        <Aviso>{state.error}</Aviso>
       )}
 
       <CampoForm label="Assunto" htmlFor="label" required helper="Como o cliente vê na lista. Ex.: Pedir um documento.">

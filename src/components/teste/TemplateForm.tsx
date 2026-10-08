@@ -129,8 +129,9 @@ export function TemplateForm({ action, defaults, cancelHref }: Props) {
                   {q.options.length > 2 && (
                     <Button
                       variant="ghost"
+                      size="icon"
                       onClick={() => removeOption(i, oi)}
-                      className="w-9 px-0! flex-shrink-0 hover:text-danger!"
+                      className="flex-shrink-0 hover:text-danger!"
                       aria-label={`Remover a alternativa ${oi + 1}`}
                     >
                       <X size={15} />

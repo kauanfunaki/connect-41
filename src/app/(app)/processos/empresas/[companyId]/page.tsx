@@ -5,14 +5,13 @@ import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
-import { Selo } from "@/components/ui/Selo";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Card } from "@/components/ui/Card";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
-import { TOM_DA_VARIANTE } from "@/components/societario/tomDoSelo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarNumero, formatarReaisDeCentavos } from "@/lib/format";
 import { feriadosDoTenant } from "@/lib/societario/fila";
 import { visaoDoCliente, type ProcessoDoCliente } from "@/lib/societario/painel-data";
 import { listarLicencas } from "@/lib/societario/licencas-data";
@@ -34,8 +33,6 @@ const SECTOR = getModuleDef(MODULE)!.sectorCode;
 
 export const dynamic = "force-dynamic";
 
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const moeda = (c: number) => MOEDA.format(c / 100);
 /** Dia em ISO (AAAA-MM-DD) para o funil — no fuso de São Paulo, como o `formatInstantDate` mostra. */
 const dia = (d: Date | null) => (d ? saoPauloParts(d).dateKey : "");
 
@@ -59,7 +56,7 @@ function LinhaDeProcesso({ p }: { p: ProcessoDoCliente }) {
         <span className="text-[length:var(--fs-ui)] font-semibold">{p.tipoNome}</span>
         {p.titulo && <span className="text-[length:var(--fs-2)] text-fg-secondary truncate">{p.titulo}</span>}
         {p.prioridade !== "NORMAL" && (
-          <Selo tom={TOM_DA_VARIANTE[PRIORIDADE_VARIANTE[p.prioridade]]}>{PRIORIDADE_LABEL[p.prioridade]}</Selo>
+          <Selo tom={tomDaVariante(PRIORIDADE_VARIANTE[p.prioridade])}>{PRIORIDADE_LABEL[p.prioridade]}</Selo>
         )}
         {p.voltas > 0 && (
           <span className="inline-flex items-center gap-1 text-[length:var(--fs-micro)] text-danger">
@@ -72,9 +69,9 @@ function LinhaDeProcesso({ p }: { p: ProcessoDoCliente }) {
         <PrazoCelula prazo={p.prazo} />
         {/* Selo, e não Badge: é a situação da linha (regra de 02/10 no Selo). */}
         {p.cancelado ? (
-          <Selo tom="perigo">{p.encerradoComo === "INDEFERIDO" ? "Indeferido" : "Cancelado"}</Selo>
+          <Selo tom="neutro">{p.encerradoComo === "INDEFERIDO" ? "Indeferido" : "Cancelado"}</Selo>
         ) : (
-          <Selo tom={TOM_DA_VARIANTE[SITUACAO_VARIANTE[p.situacao]]}>{SITUACAO_LABEL[p.situacao]}</Selo>
+          <Selo tom={tomDaVariante(SITUACAO_VARIANTE[p.situacao])}>{SITUACAO_LABEL[p.situacao]}</Selo>
         )}
         <span className="whitespace-nowrap">{p.responsavelNome ?? "Sem responsável"}</span>
         <span className="whitespace-nowrap tabular-nums">
@@ -106,6 +103,7 @@ export default async function VisaoSocietariaDoClientePage({
 
   const situacoes = licencas.map((l) => situacaoDaLicenca(l, agora));
   const vencendo = situacoes.filter((s) => s === "vencida" || s === "a_renovar").length;
+  const vencidas = situacoes.filter((s) => s === "vencida").length;
   const exigenciasAbertas = visao.exigencias.filter((e) => e.resolvedAt === null).length;
   const aPagar = visao.custo.totalCentavos - visao.custo.pagoCentavos;
 
@@ -130,25 +128,27 @@ export default async function VisaoSocietariaDoClientePage({
       <FaixaDeTotais
         className="mb-6"
         itens={[
-          { rotulo: "Processos abertos", valor: String(visao.abertos.length), icone: <FolderOpen /> },
+          { rotulo: "Processos abertos", valor: formatarNumero(visao.abertos.length, 0), icone: <FolderOpen /> },
           {
             rotulo: "Exigências abertas",
-            valor: String(exigenciasAbertas),
+            valor: formatarNumero(exigenciasAbertas, 0),
             icone: <AlertTriangle />,
             tom: exigenciasAbertas > 0 ? "text-warning" : undefined,
           },
           {
             rotulo: "Licenças vencendo",
-            valor: String(vencendo),
+            valor: formatarNumero(vencendo, 0),
             icone: <CalendarClock />,
-            tom: vencendo > 0 ? "text-warning" : undefined,
+            // Vermelho quando já há vencida, como o selo da fila de Licenças.
+            tom: vencidas > 0 ? "text-danger" : vencendo > 0 ? "text-warning" : undefined,
+            detalhe: vencidas > 0 ? `${vencidas} ${vencidas === 1 ? "vencida" : "vencidas"}` : undefined,
           },
           {
             rotulo: "Taxas a pagar",
-            valor: moeda(aPagar),
+            valor: formatarReaisDeCentavos(aPagar),
             icone: <Receipt />,
             tom: aPagar > 0 ? "text-warning" : undefined,
-            detalhe: `de ${moeda(visao.custo.totalCentavos)}`,
+            detalhe: `de ${formatarReaisDeCentavos(visao.custo.totalCentavos)}`,
           },
         ]}
       />
@@ -208,7 +208,7 @@ export default async function VisaoSocietariaDoClientePage({
                         )}
                       </td>
                       <td className="py-2 pr-3">
-                        <Selo tom={TOM_DA_VARIANTE[SITUACAO_DA_LICENCA_VARIANTE[situacoes[i]]]}>
+                        <Selo tom={tomDaVariante(SITUACAO_DA_LICENCA_VARIANTE[situacoes[i]])}>
                           {SITUACAO_DA_LICENCA_LABEL[situacoes[i]]}
                         </Selo>
                       </td>
@@ -289,15 +289,15 @@ export default async function VisaoSocietariaDoClientePage({
             <h2 className={TITULO}>Taxas</h2>
             {visao.taxas.length > 0 && (
               <p className="text-[length:var(--fs-ui)] tabular-nums">
-                <strong>{moeda(visao.custo.totalCentavos)}</strong>
-                <span className="text-fg-muted"> · {moeda(visao.custo.pagoCentavos)} pagos</span>
-                {aPagar > 0 && <span className="text-warning"> · {moeda(aPagar)} a pagar</span>}
+                <strong>{formatarReaisDeCentavos(visao.custo.totalCentavos)}</strong>
+                <span className="text-fg-muted"> · {formatarReaisDeCentavos(visao.custo.pagoCentavos)} pagos</span>
+                {aPagar > 0 && <span className="text-warning"> · {formatarReaisDeCentavos(aPagar)} a pagar</span>}
               </p>
             )}
           </div>
           {visao.custo.custoDasVoltasCentavos > 0 && (
             <p className="text-[length:var(--fs-2)] text-warning">
-              {moeda(visao.custo.custoDasVoltasCentavos)} vieram de reapresentação.
+              {formatarReaisDeCentavos(visao.custo.custoDasVoltasCentavos)} vieram de reapresentação.
             </p>
           )}
           {visao.taxas.length === 0 ? (
@@ -343,7 +343,7 @@ export default async function VisaoSocietariaDoClientePage({
                           <span className="text-fg-muted">avulsa</span>
                         )}
                       </td>
-                      <td className="py-2 pr-3 tabular-nums">{moeda(t.amountCents)}</td>
+                      <td className="py-2 pr-3 tabular-nums">{formatarReaisDeCentavos(t.amountCents)}</td>
                       <td className="py-2 pr-3 tabular-nums whitespace-nowrap">
                         {t.dueDate ? formatInstantDate(t.dueDate) : "—"}
                       </td>

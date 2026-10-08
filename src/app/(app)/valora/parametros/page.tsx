@@ -1,9 +1,8 @@
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Button } from "@/components/ui/Button";
+import { BackButton } from "@/components/shared/BackButton";
 import { Card } from "@/components/ui/Card";
 import { FormParametros } from "@/components/valora/FormParametros";
 import { acessoAoValora, configDoValora } from "@/lib/valora/servidor";
@@ -23,14 +22,12 @@ export default async function ParametrosDoValoraPage() {
 
   return (
     <PageContainer>
+      {/* O voltar do app (o `BackButton` com destino), e não um botão no lugar
+          das ações — um desenho só para "voltar" (07/10/2026). */}
+      <BackButton href="/valora" rotulo="Propostas" className="mb-3" />
       <PageHeader
         title="Parâmetros do Valora"
         subtitle="Quanto custa cada setor e que margem o preço tem de entregar. Os tempos das atividades vêm dos questionários dos setores."
-        action={
-          <Button href="/valora" variant="secondary" size="sm">
-            <ArrowLeft size={14} /> Voltar às propostas
-          </Button>
-        }
       />
       <FormParametros catalogo={catalogo} parametros={parametros} podeEditar={acesso.podeGerir} />
 

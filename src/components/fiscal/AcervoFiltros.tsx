@@ -5,7 +5,8 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { nomeExibicao } from "@/lib/companyName";
-import { TIPO_LABEL, DESTINO_LABEL, competenciaLegivel } from "@/lib/fiscal/rotulos";
+import { TIPO_LABEL, DESTINO_LABEL } from "@/lib/fiscal/rotulos";
+import { formatarCompetencia } from "@/lib/format";
 
 type Empresa = { id: string; name: string; displayName: string | null };
 
@@ -77,7 +78,7 @@ export function FiltrosDoAcervo({ empresas, competencias }: { empresas: Empresa[
           chave: "competencia",
           rotulo: "Competência",
           vazioLabel: "Todas",
-          opcoes: competencias.map((c) => ({ value: c, label: competenciaLegivel(c) })),
+          opcoes: competencias.map((c) => ({ value: c, label: formatarCompetencia(c) })),
         },
         {
           chave: "tipo",

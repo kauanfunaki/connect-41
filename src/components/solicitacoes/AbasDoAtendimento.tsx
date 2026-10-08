@@ -1,4 +1,4 @@
-import { AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
+import { AbasDeLink } from "@/components/ui/AbasDeLink";
 
 /**
  * O canal com o cliente, na mesma tela do menu Geral (01/10): o que o cliente

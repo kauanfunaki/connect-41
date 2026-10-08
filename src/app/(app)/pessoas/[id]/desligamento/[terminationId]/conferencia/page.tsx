@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { AlertTriangle, CheckCircle2, CircleDashed, MinusCircle, Palmtree, Settings2 } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { canManageSector } from "@/lib/auth/context";
@@ -22,17 +22,17 @@ import {
   resumirConferencia,
   statusPrazoPagamento,
 } from "@/lib/rescisaoChecklist";
-import { formatCalendarDate, formatInstantDate } from "@/lib/format";
+import { formatCalendarDate, formatInstantDate, formatarNumero, formatarReais } from "@/lib/format";
 import { calcularReferencia, avaliarDivergencia } from "@/lib/rescisao/referencia";
 import type { ReferenciaProps } from "@/components/rescisao/ItemConferenciaRow";
 import { salvarItemConferencia, salvarDadosRescisao } from "./actions";
 import { Selo } from "@/components/ui/Selo";
-import { brl } from "@/lib/valora/formato";
+import { Aviso } from "@/components/ui/Aviso";
 
 /** `null` fica `null`: sem valor, o rótulo some em vez de virar travessão. Troca
  *  por `formatarReais` de lib/format.ts quando a base o criar (DRG-01, 07/10). */
 function reais(v: number | null): string | null {
-  return v == null ? null : brl(v);
+  return v == null ? null : formatarReais(v);
 }
 
 export default async function ConferenciaRescisaoPage({
@@ -154,10 +154,10 @@ export default async function ConferenciaRescisaoPage({
           continua com a barra de progresso e a lista de divergências. */}
       <FaixaDeTotais
         itens={[
-          { rotulo: "Conferidos", valor: String(resumo.conferidos), icone: <CheckCircle2 />, tom: resumo.conferidos > 0 ? "text-success" : undefined },
-          { rotulo: "Divergentes", valor: String(resumo.divergentes), icone: <AlertTriangle />, tom: resumo.divergentes > 0 ? "text-danger" : undefined },
-          { rotulo: "Pendentes", valor: String(resumo.pendentes), icone: <CircleDashed />, tom: resumo.pendentes > 0 ? "text-warning" : undefined },
-          { rotulo: "Não se aplica", valor: String(resumo.naoAplicaveis), icone: <MinusCircle />, tom: "text-fg-muted" },
+          { rotulo: "Conferidos", valor: formatarNumero(resumo.conferidos, 0), icone: <CheckCircle2 />, tom: resumo.conferidos > 0 ? "text-success" : undefined },
+          { rotulo: "Divergentes", valor: formatarNumero(resumo.divergentes, 0), icone: <AlertTriangle />, tom: resumo.divergentes > 0 ? "text-danger" : undefined },
+          { rotulo: "Pendentes", valor: formatarNumero(resumo.pendentes, 0), icone: <CircleDashed />, tom: resumo.pendentes > 0 ? "text-warning" : undefined },
+          { rotulo: "Não se aplica", valor: formatarNumero(resumo.naoAplicaveis, 0), icone: <MinusCircle />, tom: "text-fg-muted" },
         ]}
       />
 
@@ -225,11 +225,11 @@ export default async function ConferenciaRescisaoPage({
 
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <Selo tom="sucesso" className="tnum">
-              Proventos: {brl(referencia.calculo.totalProventos)}
+              Proventos: {formatarReais(referencia.calculo.totalProventos)}
             </Selo>
             {referencia.calculo.totalDescontos > 0 && (
               <Selo tom="perigo" className="tnum">
-                Descontos: {brl(referencia.calculo.totalDescontos)}
+                Descontos: {formatarReais(referencia.calculo.totalDescontos)}
               </Selo>
             )}
             <span className="text-[11px] text-fg-muted">
@@ -238,7 +238,7 @@ export default async function ConferenciaRescisaoPage({
           </div>
 
           {referencia.calculo.inputsFaltantes.length > 0 && (
-            <div className="rounded-md border border-warning/25 bg-warning/8 px-3 py-2 mb-3">
+            <Aviso tom="atencao" className="mb-3">
               <p className="text-[12px] font-medium text-fg mb-1">Faltam insumos para calcular tudo:</p>
               <ul className="space-y-0.5">
                 {referencia.calculo.inputsFaltantes.map((i, idx) => (
@@ -247,7 +247,7 @@ export default async function ConferenciaRescisaoPage({
                   </li>
                 ))}
               </ul>
-            </div>
+            </Aviso>
           )}
 
           <div className="flex items-center justify-between gap-3 flex-wrap pt-2 border-t border-border">

@@ -132,11 +132,13 @@ export default async function InicioDoPortalPage({
 
       {/* Só aqui, no Início (era na lista de documentos, a home antiga): o
           cliente entra por aqui, e um botão de ativar aviso repetido em toda
-          tela viraria paisagem. Some sozinho quando o navegador não suporta push. */}
+          tela viraria paisagem. Some sozinho quando o navegador não suporta push.
+          "Neste aparelho", e não "no celular" (07/10/2026): o título do cartão
+          diz "no navegador", e o aviso chega no computador também. */}
       <PushNotificationToggle
         publicKey={getVapidPublicKey()}
         acoes={{ salvar: salvarPushDoPortal, remover: removerPushDoPortal }}
-        descricao="Avisamos no celular quando houver pendência, mensagem ou conta a aprovar. O que é avisado fica só aqui dentro."
+        descricao="Avisamos neste aparelho quando houver pendência, mensagem ou conta a aprovar. O que é avisado fica só aqui dentro."
         semChaves="esconder"
       />
     </PageContainer>

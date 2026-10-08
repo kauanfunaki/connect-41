@@ -1,14 +1,13 @@
 import { Card } from "@/components/ui/Card";
 import { Selo } from "@/components/ui/Selo";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarReaisDeCentavos } from "@/lib/format";
 import { saoPauloParts } from "@/lib/agenda";
 import type { TaxaNaTela } from "@/lib/societario/licencas-data";
 import type { CustoDoProcesso } from "@/lib/societario/licencas";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { EnviarTaxaAoCliente } from "./EnviarTaxaAoCliente";
+import { Aviso } from "@/components/ui/Aviso";
 
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const moeda = (c: number) => MOEDA.format(c / 100);
 
 type Props = { taxas: TaxaNaTela[]; custo: CustoDoProcesso };
 
@@ -22,18 +21,18 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Taxas</h2>
         <p className="text-[length:var(--fs-ui)] tabular-nums text-fg">
-          <strong>{moeda(custo.totalCentavos)}</strong>
-          {aPagar > 0 && <span className="text-warning"> · {moeda(aPagar)} a pagar</span>}
+          <strong>{formatarReaisDeCentavos(custo.totalCentavos)}</strong>
+          {aPagar > 0 && <span className="text-warning"> · {formatarReaisDeCentavos(aPagar)} a pagar</span>}
         </p>
       </div>
 
       {/* O número que dá causa ao prazo: "trinta dias" sozinho não conta a
           história que "trinta dias e duas guias a mais" conta. */}
       {custo.custoDasVoltasCentavos > 0 && (
-        <p className="text-[length:var(--fs-2)] text-warning bg-warning-bg border border-warning/30 rounded-md px-3 py-2">
-          <strong>{moeda(custo.custoDasVoltasCentavos)}</strong> vieram de reapresentação — guia
+        <Aviso tom="atencao">
+          <strong>{formatarReaisDeCentavos(custo.custoDasVoltasCentavos)}</strong> vieram de reapresentação — guia
           paga de novo porque o processo voltou.
-        </p>
+        </Aviso>
       )}
 
       {/* Casco padrão, com funil (02/10/2026) — era uma tabela solta, à esquerda. */}
@@ -80,7 +79,7 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
                 <td className="py-2.5 pr-3 tabular-nums text-fg-secondary whitespace-nowrap">
                   {t.dueDate ? formatInstantDate(t.dueDate) : "—"}
                 </td>
-                <td className="py-2.5 pr-3 tabular-nums">{moeda(t.amountCents)}</td>
+                <td className="py-2.5 pr-3 tabular-nums">{formatarReaisDeCentavos(t.amountCents)}</td>
                 {/* A mesma leitura da visão societária (07/10/2026): Selo "Paga" /
                     "Em aberto", e o dia do pagamento embaixo. Era texto colorido
                     em minúscula aqui e Badge lá. */}

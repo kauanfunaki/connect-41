@@ -6,7 +6,8 @@ import { TabelaDoConsolidado } from "@/components/financeiro/FluxoDeCaixa";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { dadosDoConsolidado, nomesDasEmpresas } from "@/lib/financeiro/consultas";
 import { consolidarPorEmpresa } from "@/lib/financeiro/fluxo";
-import { competenciaValida, competenciaDoInstante, rotuloDaCompetencia } from "@/lib/financeiro/periodo";
+import { competenciaValida, competenciaDoInstante } from "@/lib/financeiro/periodo";
+import { formatarCompetencia } from "@/lib/format";
 import { saoPauloParts } from "@/lib/agenda";
 
 export const dynamic = "force-dynamic";
@@ -30,11 +31,13 @@ export default async function PortalRelatoriosPage({
     <PageContainer>
       <PortalCabecalho
         titulo="Relatório"
-        descricao={`Consolidado por empresa em ${rotuloDaCompetencia(mes)}.`}
+        descricao={`Consolidado por empresa em ${formatarCompetencia(mes)}.`}
       />
       <FiltroDePeriodo acao="/portal/relatorios" mes={mes} />
       <TabelaDoConsolidado linhas={linhas} nomes={nomes} />
-      <p className="text-[11px] text-fg-muted mt-2">
+      {/* Nota em `text-helper` (13px) desde 07/10/2026: era 11px, o tamanho do
+          cabeçalho de tabela, numa explicação que o cliente lê no celular. */}
+      <p className="text-helper text-fg-muted mt-2">
         Pago e recebido pela data da baixa. Vencidas é a posição de hoje.
       </p>
     </PageContainer>

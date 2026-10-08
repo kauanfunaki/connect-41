@@ -22,6 +22,7 @@ import {
   custoPorProcesso,
   totaisDeCusto,
 } from "@/lib/societario/relatorios";
+import { formatarReaisDeCentavos, formatarNumero } from "@/lib/format";
 
 const MODULE = "societario_relatorios";
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
@@ -30,10 +31,7 @@ const SECTOR = getModuleDef(MODULE)!.sectorCode;
 
 export const dynamic = "force-dynamic";
 
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const moeda = (c: number) => MOEDA.format(c / 100);
-const DECIMAL = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
-const numero = (n: number | null) => (n === null ? "—" : DECIMAL.format(n));
+const numero = (n: number | null) => (n === null ? "—" : formatarNumero(n, 1));
 
 const faixaPrevista = (min: number | null, max: number | null) =>
   max === null ? "sem previsão" : min !== null && min !== max ? `${min}–${max}` : String(max);
@@ -79,8 +77,8 @@ export default async function RelatoriosDoSocietarioPage({
   return (
     <PageContainer>
       {/* O período escrito (07/10, auditoria dos gráficos): no padrão (90
-          dias) o Filtros não mostra chip, e ele só aparecia no rótulo de um
-          dos cartões. */}
+          dias) o Filtros não mostrava chip, e ele só aparecia no rótulo de um
+          dos cartões. Agora vai no subtítulo e no chip `sempreVisivel`. */}
       <PageHeader
         title="Relatórios do Societário"
         subtitle={`Processos abertos agora, mais os concluídos nos últimos ${periodo.rotulo}. Prazo em dias úteis, descontados os feriados do escritório.`}
@@ -95,13 +93,22 @@ export default async function RelatoriosDoSocietarioPage({
             rotulo: "Período",
             vazioLabel: `Últimos ${PERIODOS[1].rotulo}`,
             opcoes: PERIODOS.filter((p) => p !== PERIODOS[1]).map((p) => ({ value: p.chave, label: `Últimos ${p.rotulo}` })),
+            // O período à vista também no padrão (G31): sem isto, "90 dias" só
+            // aparecia dentro do botão Filtros.
+            sempreVisivel: true,
           },
         ]}
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <MetricCard label="Abertos agora" value={abertos.length} icon={<FolderOpen size={16} />} />
-        <MetricCard label="Abertos com prazo estourado" value={estouradosAbertos} highlight={estouradosAbertos > 0} icon={<AlertTriangle size={16} />} />
+        {/* Estourado é vermelho, como no painel de Processos da Home (era âmbar). */}
+        <MetricCard
+          label="Abertos com prazo estourado"
+          value={estouradosAbertos}
+          tom={estouradosAbertos > 0 ? "critico" : undefined}
+          icon={<AlertTriangle size={16} />}
+        />
         <MetricCard label={`Concluídos em ${periodo.rotulo}`} value={processos.length - abertos.length} icon={<CheckCircle2 size={16} />} />
         <MetricCard
           label="Processos com volta"
@@ -253,9 +260,9 @@ export default async function RelatoriosDoSocietarioPage({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className={TITULO}>Custo em taxas por processo</h2>
             <p className="text-[13px] tabular-nums">
-              <strong>{moeda(totais.totalCentavos)}</strong>
+              <strong>{formatarReaisDeCentavos(totais.totalCentavos)}</strong>
               {totais.custoDasVoltasCentavos > 0 && (
-                <span className="text-warning"> · {moeda(totais.custoDasVoltasCentavos)} de reapresentação</span>
+                <span className="text-warning"> · {formatarReaisDeCentavos(totais.custoDasVoltasCentavos)} de reapresentação</span>
               )}
             </p>
           </div>
@@ -282,10 +289,10 @@ export default async function RelatoriosDoSocietarioPage({
                         </Link>
                       </td>
                       <td className={TD}>{l.voltas}</td>
-                      <td className={TD}>{moeda(l.totalCentavos)}</td>
-                      <td className={TD}>{moeda(l.pagoCentavos)}</td>
+                      <td className={TD}>{formatarReaisDeCentavos(l.totalCentavos)}</td>
+                      <td className={TD}>{formatarReaisDeCentavos(l.pagoCentavos)}</td>
                       <td className={`${TD} ${l.custoDasVoltasCentavos > 0 ? "text-warning" : ""}`}>
-                        {moeda(l.custoDasVoltasCentavos)}
+                        {formatarReaisDeCentavos(l.custoDasVoltasCentavos)}
                       </td>
                     </tr>
                   ))}

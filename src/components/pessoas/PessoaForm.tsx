@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/Button";
 import { Stepper, type StepStatus } from "@/components/ui/Stepper";
 import { ReviewBlock } from "@/components/ui/ReviewBlock";
 import { formatPhone, formatCep } from "@/lib/format";
+import { Aviso } from "@/components/ui/Aviso";
 
 const STATUS_OPTIONS: { value: PersonEmploymentStatus; label: string }[] = [
   { value: "ADMISSAO_EM_ANDAMENTO", label: "Admissão em andamento" },
@@ -375,9 +376,9 @@ export function PessoaForm({
         <input type="hidden" name="isInternal" value={String(isInternal)} />
 
         {state && "error" in state && (
-          <p className="mb-4 text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-lg px-3 py-2">
+          <Aviso className="mb-4">
             {state.error}
-          </p>
+          </Aviso>
         )}
 
         {/* ── 1. Dados pessoais ─────────────────────────── */}

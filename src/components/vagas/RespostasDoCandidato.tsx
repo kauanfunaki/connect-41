@@ -10,12 +10,12 @@ import { Input } from "@/components/ui/Input";
 import { salvarRespostasDoCandidato } from "@/app/(app)/vagas/[id]/candidaturas/[candidaturaId]/respostas-actions";
 import { CAMPOS_DE_RESPOSTA, ROTULO_DA_RESPOSTA, type CampoDeResposta, type FonteDasRespostas, type Respostas } from "@/lib/recrutamento/respostas";
 import { FormFooter } from "@/components/ui/FormFooter";
-import { brl } from "@/lib/valora/formato";
+import { formatarReais } from "@/lib/format";
 
 function mostrar(campo: CampoDeResposta, r: Respostas): string {
   const v = r[campo];
   if (v === null) return "—";
-  if (campo === "pretensaoSalarial") return brl(v as number);
+  if (campo === "pretensaoSalarial") return formatarReais(v as number);
   if (campo === "deslocamentoMinutos") return `${v} min`;
   return String(v);
 }

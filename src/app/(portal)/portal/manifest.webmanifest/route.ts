@@ -15,6 +15,15 @@ import type { MetadataRoute } from "next";
 // `scope: "/portal"` é o que mantém a janela instalada dentro do portal: link
 // para fora dele abre no navegador, em vez de levar o cliente para uma tela
 // interna dentro do app dele.
+//
+// As cores são as dos tokens da marca (07/10/2026), em hex porque o manifesto
+// é JSON e não lê variável de CSS: `theme_color` (a barra do app instalado) é
+// o azul 41, `--c41-brand-600` (#1F5EEA), e `background_color` (a tela de
+// abertura) é o `--c41-brand-900` (#12347D). Eram #1B4FD8 e #0B1F42, fora da
+// escala. Se o token mudar no redesign, muda aqui também. O APK (Bubblewrap)
+// tem a cor dele em `android/twa-manifest.json`, lida só ao gerar o APK.
+const AZUL_41 = "#1F5EEA"; // --c41-brand-600
+const AZUL_41_ESCURO = "#12347D"; // --c41-brand-900
 
 const MANIFESTO: MetadataRoute.Manifest = {
   id: "/portal",
@@ -24,8 +33,8 @@ const MANIFESTO: MetadataRoute.Manifest = {
   start_url: "/portal",
   scope: "/portal",
   display: "standalone",
-  background_color: "#0B1F42",
-  theme_color: "#1B4FD8",
+  background_color: AZUL_41_ESCURO,
+  theme_color: AZUL_41,
   lang: "pt-BR",
   icons: [
     { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },

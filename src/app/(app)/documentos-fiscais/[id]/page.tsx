@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { InfoRow } from "@/components/empresas/InfoRow";
 import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -22,7 +22,7 @@ import { centrosAtivosDaEmpresa } from "@/lib/financeiro/centroDeCustoServidor";
 import { direcaoDoLancamento, precisaDeEstorno } from "@/lib/fiscal/documentos";
 import { documentoDaEmpresa } from "@/lib/companyTaxId";
 import { nomeExibicao } from "@/lib/companyName";
-import { formatCalendarDate, formatInstantDate, formatCnpj, formatCpf } from "@/lib/format";
+import { formatCalendarDate, formatInstantDate, formatCnpj, formatCpf, formatarReais, formatarCompetencia } from "@/lib/format";
 import {
   TIPO_LABEL,
   ORIGEM_LABEL,
@@ -31,15 +31,14 @@ import {
   DESTINO_LABEL,
   DESTINO_VARIANTE,
   DIRECAO_LABEL,
-  competenciaLegivel,
 } from "@/lib/fiscal/rotulos";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
+import { Aviso } from "@/components/ui/Aviso";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
 // acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
 const SECTOR = "fiscal";
 const MODULE = "fiscal_documentos";
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 /** CNPJ tem 14 dígitos, CPF tem 11 — o próprio dado diz como se formata. */
 function documentoLegivel(valor: string | null): string {
@@ -104,47 +103,35 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
           cabeçalho entre o título e ele. */}
       <PageHeader
         title={`${TIPO_LABEL[doc.type]} nº ${doc.number}${doc.series ? `/${doc.series}` : ""}`}
-        subtitle={`${nomeExibicao(doc.company)} · ${competenciaLegivel(doc.competence)}`}
+        subtitle={`${nomeExibicao(doc.company)} · ${formatarCompetencia(doc.competence)}`}
         action={
           <div className="flex items-center gap-1.5">
-            <Badge variant={SITUACAO_VARIANTE[doc.situation]}>{SITUACAO_LABEL[doc.situation]}</Badge>
-            <Badge variant={DESTINO_VARIANTE[doc.destination]}>{DESTINO_LABEL[doc.destination]}</Badge>
+            <Selo tom={tomDaVariante(SITUACAO_VARIANTE[doc.situation])}>{SITUACAO_LABEL[doc.situation]}</Selo>
+            <Selo tom={tomDaVariante(DESTINO_VARIANTE[doc.destination])}>{DESTINO_LABEL[doc.destination]}</Selo>
           </div>
         }
       />
 
       {doc.removedAtOrigin && (
-        <Card className="p-4 mb-4 border-danger/40 bg-danger-bg">
-          <div className="flex items-start gap-2.5">
-            <AlertTriangle size={16} className="text-danger flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-[length:var(--fs-ui)] font-semibold text-danger">Removido na origem</p>
+        <Aviso icone={<AlertTriangle />} className="mb-4">
+          <p className="font-semibold">Removido na origem</p>
               <p className="text-[length:var(--fs-helper)] text-fg-secondary mt-0.5">
                 O índice do SPED deixou de ter este documento — em geral porque o Portal Nacional
                 passou a mostrá-lo como cancelado ou substituído. Ele saiu da listagem, mas a linha
                 fica aqui: se já tiver virado lançamento, alguém precisa decidir o estorno.
                 {doc.removedAtOriginAt ? ` Detectado em ${formatInstantDate(doc.removedAtOriginAt)}.` : ""}
               </p>
-            </div>
-          </div>
-        </Card>
+        </Aviso>
       )}
 
       {estorno && (
-        <Card className="p-4 mb-4 border-danger/40 bg-danger-bg">
-          <div className="flex items-start gap-2.5">
-            <AlertTriangle size={16} className="text-danger flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-[length:var(--fs-ui)] font-semibold text-danger">
-                Cancelada depois de lançada
-              </p>
+        <Aviso icone={<AlertTriangle />} className="mb-4">
+          <p className="font-semibold">Cancelada depois de lançada</p>
               <p className="text-[length:var(--fs-helper)] text-fg-secondary mt-0.5">
                 O emissor cancelou este documento e ele já tinha virado lançamento. O dinheiro está
                 lançado contra uma nota que não existe mais — o estorno é manual, no financeiro.
               </p>
-            </div>
-          </div>
-        </Card>
+        </Aviso>
       )}
 
       <Card className="p-5 mb-4">
@@ -154,7 +141,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
           <InfoRow label="Emissão" value={formatCalendarDate(doc.issuedAt, { day: "2-digit", month: "long", year: "numeric" })} />
           <InfoRow
             label="Valor total"
-            value={doc.amount === null ? "Não veio do índice" : MOEDA.format(Number(doc.amount))}
+            value={doc.amount === null ? "Não veio do índice" : formatarReais(Number(doc.amount))}
           />
           {/* Só aparece quando há o que subtrair. Sem esta linha, a conta a
               pagar sairia por um número que não está em lugar nenhum da ficha —
@@ -162,10 +149,10 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
           {doc.netAmount !== null && (
             <InfoRow
               label="Líquido a pagar"
-              value={`${MOEDA.format(Number(doc.netAmount))} — retido ${MOEDA.format(Number(doc.retentionsTotal ?? 0))}`}
+              value={`${formatarReais(Number(doc.netAmount))} — retido ${formatarReais(Number(doc.retentionsTotal ?? 0))}`}
             />
           )}
-          <InfoRow label="Competência" value={competenciaLegivel(doc.competence)} />
+          <InfoRow label="Competência" value={formatarCompetencia(doc.competence)} />
           <InfoRow label="Chave de acesso" value={doc.accessKey} mono />
           <InfoRow
             label="Origem"
@@ -225,7 +212,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
                 kind: doc.financeEntry.kind,
                 status: doc.financeEntry.status,
                 dueDateLabel: formatCalendarDate(doc.financeEntry.dueDate),
-                amountLabel: MOEDA.format(Number(doc.financeEntry.amount)),
+                amountLabel: formatarReais(Number(doc.financeEntry.amount)),
                 categoria: doc.financeEntry.category?.name ?? null,
                 contraparte: doc.financeEntry.counterparty.name,
                 centroDeCusto: doc.financeEntry.costCenter?.name ?? null,

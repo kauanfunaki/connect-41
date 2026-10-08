@@ -6,6 +6,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { EmailChipsInput } from "@/components/documentosCliente/EmailChipsInput";
 import { Button } from "@/components/ui/Button";
+import { Aviso } from "@/components/ui/Aviso";
 
 type Props = {
   action: (prev: ClientDocumentState, form: FormData) => Promise<ClientDocumentState>;
@@ -23,10 +24,10 @@ export function SendDocumentForm({ action, documentId, companyId, companyEmail }
       <input type="hidden" name="companyId" value={companyId} />
 
       {state && "error" in state && state.error && (
-        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2">{state.error}</p>
+        <Aviso>{state.error}</Aviso>
       )}
       {state && "success" in state && state.success && (
-        <p className="text-[length:var(--fs-helper)] font-medium text-success bg-success-bg border border-success/30 rounded-md px-3 py-2">Documento enviado.</p>
+        <Aviso tom="sucesso">Documento enviado.</Aviso>
       )}
 
       <Checkbox

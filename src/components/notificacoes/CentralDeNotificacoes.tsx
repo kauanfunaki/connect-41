@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Archive, Bell, EyeOff, Search, SlidersHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { Contador } from "@/components/ui/Contador";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -212,11 +213,7 @@ export function CentralDeNotificacoes({
               >
                 <IconeDaNotificacao icone={ICONE_DA_ABA[a.chave].icone} tom={ICONE_DA_ABA[a.chave].tom} tamanho={26} />
                 <span className="flex-1">{a.rotulo}</span>
-                {n > 0 && (
-                  <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-brand text-on-brand text-[11px] font-semibold tabular-nums inline-flex items-center justify-center">
-                    {n > 99 ? "99+" : n}
-                  </span>
-                )}
+                {n > 0 && <Contador valor={n} tom="cheio" />}
               </button>
             );
           })}

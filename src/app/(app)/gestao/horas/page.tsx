@@ -4,13 +4,13 @@ import { Clock, Download, ListChecks, Timer, Users, Wallet } from "lucide-react"
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao } from "@/components/shared/ListaResponsiva";
 import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDaTela";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna, type LinhaDoFiltro } from "@/components/shared/FiltroDeColunas";
 import { campoDeSetor } from "@/components/gestao/FiltroDeSetor";
 import { saoPauloParts } from "@/lib/agenda";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarNumero, formatarReais, formatarHoras } from "@/lib/format";
 import { contextoDaGestao, recorteComFiltro } from "@/lib/gestao/acesso";
 import { custosDoTenant, horasDoPeriodo, periodoDaUrl } from "@/lib/gestao/horas";
 import { resumirHoras } from "@/lib/gestao/custo";
@@ -18,11 +18,10 @@ import { nomesDasPessoas } from "@/lib/gestao/telas";
 // Reais e horas pelos formatadores que já existiam (Valora), no lugar das
 // cópias locais. Trocam por `formatarReais`/`formatarHoras` de lib/format.ts
 // quando a base os criar (auditoria DRG-01, 07/10/2026).
-import { brl, horas } from "@/lib/valora/formato";
 
 export const dynamic = "force-dynamic";
 
-const h = (min: number) => horas(min / 60);
+const h = (min: number) => formatarHoras(min / 60);
 const CABECALHO = "border-b border-border text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted";
 
 /** O `TabelaFiltravel` quando a tabela traz todas as linhas; senão, a tabela sozinha. */
@@ -104,10 +103,10 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
         itens={[
           { rotulo: `Horas — ${periodo.rotulo.toLowerCase()}`, valor: h(resumo.total.minutos), icone: <Clock /> },
           ...(podeVerCusto
-            ? [{ rotulo: "Custo das horas", valor: resumo.total.custo === null ? "—" : brl(resumo.total.custo), icone: <Wallet /> }]
+            ? [{ rotulo: "Custo das horas", valor: resumo.total.custo === null ? "—" : formatarReais(resumo.total.custo), icone: <Wallet /> }]
             : []),
-          { rotulo: "Pessoas", valor: String(resumo.porPessoa.length), icone: <Users /> },
-          { rotulo: "Apontamentos", valor: String(linhas.length), icone: <ListChecks /> },
+          { rotulo: "Pessoas", valor: formatarNumero(resumo.porPessoa.length, 0), icone: <Users /> },
+          { rotulo: "Apontamentos", valor: formatarNumero(linhas.length, 0), icone: <ListChecks /> },
         ]}
       />
 
@@ -150,7 +149,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
                       <tr key={s.setor} className="border-b border-border">
                         <td className="px-3">{g.rotuloDoSetor(s.setor)}</td>
                         <td className="px-3 tabular-nums">{h(s.minutos)}</td>
-                        {podeVerCusto && <td className="px-3 tabular-nums text-fg-secondary">{s.custo === null ? "sem custo" : brl(s.custo)}</td>}
+                        {podeVerCusto && <td className="px-3 tabular-nums text-fg-secondary">{s.custo === null ? "sem custo" : formatarReais(s.custo)}</td>}
                       </tr>
                     ))}
                   </tbody>
@@ -177,7 +176,7 @@ export default async function HorasDeOperacaoPage({ searchParams }: { searchPara
                           </Link>
                         </td>
                         <td className="px-3 tabular-nums">{h(p.minutos)}</td>
-                        {podeVerCusto && <td className="px-3 tabular-nums text-fg-secondary">{p.custo === null ? "sem custo" : brl(p.custo)}</td>}
+                        {podeVerCusto && <td className="px-3 tabular-nums text-fg-secondary">{p.custo === null ? "sem custo" : formatarReais(p.custo)}</td>}
                       </tr>
                     ))}
                   </tbody>

@@ -9,6 +9,7 @@ import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { SeloDaCobranca, SeloDoAcordo } from "@/components/cobranca/SeloDaCobranca";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { formatInstantDate } from "@/lib/format";
 import { saoPauloParts } from "@/lib/agenda";
@@ -53,13 +54,18 @@ export default async function PortalCobrancaPage() {
         ]}
       />
 
-      <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">Títulos em cobrança</h2>
+      <h2 className="text-card-title font-semibold text-fg mb-2">Títulos em cobrança</h2>
+      {/* No casco da tabela (07/10/2026), como a cobrança da equipe: quantos
+          títulos e quanto somam na barra, e a lista vazia dentro dele. */}
+      <CascoDaTabela
+        className="mb-6"
+        contagem={contarItens(titulos.length, "título", "títulos")}
+        total={titulos.length > 0 ? moeda(vencido) : undefined}
+      >
       {titulos.length === 0 ? (
-        <Card className="mb-6">
-          <EmptyState icon={<Handshake />} title="Nenhum título vencido" description="Quando um cliente das suas empresas atrasar um pagamento, o título aparece aqui." />
-        </Card>
+        <EmptyState icon={<Handshake />} title="Nenhum título vencido" description="Quando um cliente das suas empresas atrasar um pagamento, o título aparece aqui." />
       ) : (
-        <div className="mb-6">
+        <>
           <CartoesNoCelular>
             {titulos.map((t) => (
               <Cartao key={t.id}>
@@ -101,26 +107,26 @@ export default async function PortalCobrancaPage() {
             }))}
           >
           <TabelaNoDesktop padrao>
-          <table className="w-full min-w-[860px] text-[13px]">
+          <table className="w-full min-w-[860px] text-ui">
             <thead>
-              <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
-                <th className="py-2 pr-3 font-medium">
+              <tr>
+                <th className="py-2 pr-3">
                   <FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" />
                 </th>
-                <th className="py-2 pr-3 font-medium">
+                <th className="py-2 pr-3">
                   <FiltroDaColuna rotulo="Cliente" chave="cliente" />
                 </th>
-                <th className="py-2 pr-3 font-medium">
+                <th className="py-2 pr-3">
                   <FiltroDaColuna rotulo="Empresa" chave="empresa" />
                 </th>
-                <th className="py-2 pr-3 font-medium">Valor</th>
-                <th className="py-2 pr-3 font-medium">
+                <th className="py-2 pr-3">Valor</th>
+                <th className="py-2 pr-3">
                   <FiltroDaColuna rotulo="Atraso" chave="atraso" />
                 </th>
-                <th className="py-2 pr-3 font-medium">
+                <th className="py-2 pr-3">
                   <FiltroDaColuna rotulo="Situação" chave="situacao" />
                 </th>
-                <th className="py-2 font-medium">
+                <th className="py-2">
                   <FiltroDaColuna
                     rotulo="Último contato"
                     campos={[
@@ -139,7 +145,7 @@ export default async function PortalCobrancaPage() {
                   <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">{formatInstantDate(t.vencimento)}</td>
                   <td className="py-2.5 pr-3">
                     <span className="font-medium">{t.sacadoNome}</span>
-                    {t.descricao && <span className="block text-[11px] text-fg-muted truncate max-w-[240px]">{t.descricao}</span>}
+                    {t.descricao && <span className="block text-micro text-fg-muted truncate max-w-[240px]">{t.descricao}</span>}
                   </td>
                   <td className="py-2.5 pr-3 text-fg-secondary">{t.empresaNome}</td>
                   <td className="py-2.5 pr-3 tabular-nums font-medium">{moeda(t.valorCentavos)}</td>
@@ -147,7 +153,7 @@ export default async function PortalCobrancaPage() {
                   <td className="py-2.5 pr-3">
                     <SeloDaCobranca situacao={t.situacao} />
                   </td>
-                  <td className="py-2.5 text-[12px] text-fg-secondary">
+                  <td className="py-2.5 text-fs-2 text-fg-secondary">
                     {t.ultimoContato
                       ? `${formatInstantDate(t.ultimoContato.em)} · ${ROTULO_DO_CANAL[t.ultimoContato.canal]} · ${ROTULO_DO_RESULTADO[t.ultimoContato.resultado]}`
                       : "—"}
@@ -158,10 +164,11 @@ export default async function PortalCobrancaPage() {
           </table>
           </TabelaNoDesktop>
           </TabelaFiltravel>
-        </div>
+        </>
       )}
+      </CascoDaTabela>
 
-      <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">Acordos</h2>
+      <h2 className="text-card-title font-semibold text-fg mb-2">Acordos</h2>
       {acordos.length === 0 ? (
         <Card>
           <EmptyState icon={<Handshake />} title="Nenhum acordo" description="Quando uma dívida for renegociada em parcelas, o acordo aparece aqui." />
@@ -171,7 +178,7 @@ export default async function PortalCobrancaPage() {
           {acordos.map((a) => (
             <Card key={a.id} className="p-4">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                <span className="min-w-0 text-[14px] font-semibold text-fg break-words">{a.sacadoNome}</span>
+                <span className="min-w-0 text-card-title font-semibold text-fg break-words">{a.sacadoNome}</span>
                 <SeloDoAcordo status={a.status} />
               </div>
               {/* Ficha em colunas (rótulo em cima, valor embaixo): era uma frase
@@ -187,15 +194,15 @@ export default async function PortalCobrancaPage() {
                   { rotulo: "Recebido", valor: moeda(a.resumo.pagoCentavos) },
                 ].map((f) => (
                   <div key={f.rotulo} className="min-w-0">
-                    <dt className="text-[length:var(--fs-helper)] text-fg-muted">{f.rotulo}</dt>
-                    <dd className="text-[13px] text-fg tabular-nums break-words">{f.valor}</dd>
+                    <dt className="text-helper text-fg-muted">{f.rotulo}</dt>
+                    <dd className="text-ui text-fg tabular-nums break-words">{f.valor}</dd>
                   </div>
                 ))}
               </dl>
               {/* Colunas de largura fixa: número, vencimento e valor caem um
                   embaixo do outro em todas as parcelas (no flex solto, cada
                   linha começava o valor num ponto). No celular o selo desce. */}
-              <ul className="flex flex-col gap-1.5 text-[12px] border-t border-border-soft pt-3">
+              <ul className="flex flex-col gap-1.5 text-fs-2 border-t border-border-soft pt-3">
                 {a.parcelas.map((p, i) => (
                   <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 tabular-nums">
                     <span className="w-10 shrink-0 text-fg-muted">
@@ -206,7 +213,8 @@ export default async function PortalCobrancaPage() {
                     {p.pagoEm ? (
                       <Badge variant="success">Paga em {formatInstantDate(p.pagoEm)}</Badge>
                     ) : p.status === "CANCELADO" ? (
-                      <Badge variant="info">Encerrada</Badge>
+                      // Neutro (07/10/2026): no `info` era o mesmo azul de "A vencer".
+                      <Badge variant="neutral">Encerrada</Badge>
                     ) : (
                       <Badge variant="warning">Em aberto</Badge>
                     )}

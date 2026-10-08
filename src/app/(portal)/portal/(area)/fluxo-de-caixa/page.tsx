@@ -41,12 +41,14 @@ export default async function PortalFluxoDeCaixaPage({
       />
       {empresas.length > 1 && <FiltroDePeriodo acao="/portal/fluxo-de-caixa" empresas={empresas} empresaId={empresaId} permitirTodas />}
 
-      <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">Realizado</h2>
+      <h2 className="text-card-title font-semibold text-fg mb-2">Realizado</h2>
       <TabelaDoRealizado meses={fluxoRealizado(movimentos, competencias)} />
 
-      <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mt-6 mb-2">A vencer a partir de hoje</h2>
+      <h2 className="text-card-title font-semibold text-fg mt-6 mb-2">A vencer a partir de hoje</h2>
       <CartoesDaProjecao projecao={projecaoPorJanela(titulos, saoPauloParts(agora).dateKey)} />
-      <p className="text-[11px] text-fg-muted mt-2">
+      {/* Nota em `text-helper` (13px) desde 07/10/2026: era 11px, o tamanho do
+          cabeçalho de tabela, numa explicação que o cliente lê no celular. */}
+      <p className="text-helper text-fg-muted mt-2">
         A projeção soma só o que já está lançado: a receber menos a pagar, pelo vencimento. Não inclui saldo bancário.
       </p>
     </PageContainer>

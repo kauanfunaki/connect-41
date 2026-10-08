@@ -15,6 +15,7 @@ import { Select } from "@/components/ui/Select";
 
 import { CATEGORY_LABEL, CATEGORY_OPTIONS } from "@/lib/document-categories";
 import { Selo } from "@/components/ui/Selo";
+import { Aviso } from "@/components/ui/Aviso";
 
 export type DocumentItem = {
   id: string;
@@ -313,9 +314,9 @@ export function DocumentsSection({ entityType, entityId, documents, canUpload, c
       )}
 
       {error && (
-        <p className="text-[length:var(--fs-helper)] font-medium text-danger bg-danger-bg border border-danger/30 rounded-md px-3 py-2 mt-3">
+        <Aviso className="mt-3">
           {error}
-        </p>
+        </Aviso>
       )}
     </div>
   );

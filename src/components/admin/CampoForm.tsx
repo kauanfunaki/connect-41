@@ -9,6 +9,7 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { Aviso } from "@/components/ui/Aviso";
 
 const FIELD_TYPE_OPTIONS: { value: CustomFieldType; label: string }[] = [
   { value: "TEXT", label: "Texto curto" },
@@ -47,9 +48,9 @@ export function CampoForm({ action, cancelHref, sectorOptions, defaultValues }: 
       {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
 
       {state?.error && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <Aviso>
           {state.error}
-        </p>
+        </Aviso>
       )}
 
       {!isEdit && (

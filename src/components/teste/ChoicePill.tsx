@@ -19,7 +19,7 @@ type Props = {
 export function ChoicePill({ name, checked, disabled, onSelect, label, ariaLabel, tone = "brand" }: Props) {
   const activeTone =
     tone === "brand"
-      ? "bg-brand text-on-brand border-brand"
+      ? "bg-brand-solid text-on-brand border-brand-solid"
       : "bg-fg-secondary text-surface border-fg-secondary";
 
   return (

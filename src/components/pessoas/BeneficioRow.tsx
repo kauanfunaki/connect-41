@@ -10,7 +10,7 @@ import { MenuDoRegistro } from "./MenuDoRegistro";
 import { SeloDoDP } from "./rotulosDoDP";
 // Reais em pt-BR (era "R$ 350.5"). Troca por `formatarReais` de lib/format.ts
 // quando a base o criar (auditoria DRG-01, 07/10/2026).
-import { brl } from "@/lib/valora/formato";
+import { formatarReais } from "@/lib/format";
 
 const STATUS_LABEL: Record<BenefitStatus, string> = {
   ATIVO:     "Ativo",
@@ -25,7 +25,8 @@ const STATUS_STYLE: Record<BenefitStatus, string> = {
   INATIVO:   "bg-surface-2 text-fg-muted border-border",
   SUSPENSO:  "bg-warning/10 text-warning border-warning/25",
   PENDENTE:  "bg-warning/10 text-warning border-warning/25",
-  CANCELADO: "bg-danger/10 text-danger border-danger/25",
+  // Cancelado saiu de cena: neutro, como o inativo (07/10/2026).
+  CANCELADO: "bg-surface-2 text-fg-muted border-border",
 };
 
 const STATUS_OPTIONS = Object.keys(STATUS_LABEL) as BenefitStatus[];
@@ -59,8 +60,8 @@ export function BeneficioRow({ beneficio, updateAction, removeAction, canManage 
           <p className="text-[length:var(--fs-2)] text-fg-muted">
             Desde {beneficio.startDateLabel}
             {beneficio.endDateLabel && ` até ${beneficio.endDateLabel}`}
-            {beneficio.companyValue && ` · empresa ${brl(Number(beneficio.companyValue))}`}
-            {beneficio.discountValue && ` · desconto ${brl(Number(beneficio.discountValue))}`}
+            {beneficio.companyValue && ` · empresa ${formatarReais(Number(beneficio.companyValue))}`}
+            {beneficio.discountValue && ` · desconto ${formatarReais(Number(beneficio.discountValue))}`}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">

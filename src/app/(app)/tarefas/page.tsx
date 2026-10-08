@@ -16,7 +16,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { ConfigurarTarefasButton } from "@/components/tarefas/ConfigurarTarefasButton";
 import { LinhaDoDia } from "@/components/tarefas/LinhaDoDia";
 import { PrazoItem } from "@/components/agenda/PrazoItem";
@@ -31,7 +31,7 @@ import { nomesDasPessoas } from "@/lib/gestao/telas";
 import { andando, paraComecar, pedeAgora, resumirDia } from "@/lib/meuDia";
 import { prazosDoPeriodo } from "@/lib/prazosDaAgenda";
 import { addDaysToKey, saoPauloParts, weekdayLabel } from "@/lib/agenda";
-import { formatCalendarDate, formatInstantDate, formatInstantTime } from "@/lib/format";
+import { formatCalendarDate, formatInstantDate, formatInstantTime, formatarNumero } from "@/lib/format";
 import { salvarWidgetsSetor, restaurarWidgetsSetor } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -260,29 +260,29 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
         itens={[
           {
             rotulo: "Atrasados",
-            valor: String(resumo.atrasados),
+            valor: formatarNumero(resumo.atrasados, 0),
             icone: <AlarmClock />,
             tom: resumo.atrasados > 0 ? "text-danger" : undefined,
             detalhe: "prazo já passou",
           },
           {
             rotulo: "Vencem em breve",
-            valor: String(resumo.vencendo),
+            valor: formatarNumero(resumo.vencendo, 0),
             icone: <CalendarClock />,
             tom: resumo.vencendo > 0 ? "text-warning" : undefined,
             detalhe: "nos próximos dias",
           },
           {
             rotulo: "Parados",
-            valor: String(resumo.parados),
+            valor: formatarNumero(resumo.parados, 0),
             icone: <PauseCircle />,
             tom: resumo.parados > 0 ? "text-warning" : undefined,
             detalhe: "sem movimento ou esperando",
           },
-          { rotulo: "Em andamento", valor: String(resumo.andamento), icone: <Loader />, detalhe: "alguém está fazendo" },
+          { rotulo: "Em andamento", valor: formatarNumero(resumo.andamento, 0), icone: <Loader />, detalhe: "alguém está fazendo" },
           {
             rotulo: "Feitos na semana",
-            valor: String(resumo.concluidosNaSemana),
+            valor: formatarNumero(resumo.concluidosNaSemana, 0),
             icone: <CheckCircle2 />,
             tom: resumo.concluidosNaSemana > 0 ? "text-success" : undefined,
             detalhe: "últimos 7 dias",

@@ -144,7 +144,7 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
                 </Select>
                 <Button
                   variant="ghost"
-                  className="w-9 px-0!"
+                  size="icon"
                   onClick={() => setLinhas((ls) => ls.filter((_, j) => j !== i))}
                   aria-label={`Remover o requisito ${i + 1}`}
                 >

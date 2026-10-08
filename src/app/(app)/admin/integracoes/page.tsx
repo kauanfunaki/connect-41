@@ -20,6 +20,7 @@ import { ContasOmie } from "@/components/admin/ContasOmie";
 import { listarContasOmie } from "@/lib/integracoes/omie/contas";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { desconectarIntegracao } from "./actions";
+import { Aviso } from "@/components/ui/Aviso";
 
 const ERROR_LABEL: Record<string, string> = {
   "sem-permissao": "Sem permissão para conectar integrações.",
@@ -91,14 +92,14 @@ export default async function IntegracoesPage({
       {/* O retorno do Google/Microsoft cai aqui: o aviso vem logo abaixo do
           título, e não depois da vitrine, onde ficava fora da tela. */}
       {error && (
-        <p className="mb-4 text-[13px] text-danger bg-danger-bg border border-danger/30 rounded-lg px-3 py-2">
+        <Aviso className="mb-4">
           {ERROR_LABEL[error] ?? "Erro ao conectar integração."}
-        </p>
+        </Aviso>
       )}
       {connected && (
-        <p className="mb-4 text-[13px] text-success bg-success-bg border border-success/30 rounded-lg px-3 py-2">
+        <Aviso tom="sucesso" className="mb-4">
           Conta {connected === "google" ? "Google" : "Microsoft"} conectada com sucesso.
-        </p>
+        </Aviso>
       )}
 
       {/* ─── A vitrine ──────────────────────────────────────────────────────
@@ -157,16 +158,12 @@ export default async function IntegracoesPage({
             (google ? (
               <DisconnectButton action={desconectarIntegracao.bind(null, "GOOGLE")} />
             ) : (
-              // <a>, e não o Button com href: a rota de API redireciona para o
-              // Google, e o <Link> do Button tentaria navegar pelo roteador.
-              // As classes são as do Button primário md, para os dois lado a
-              // lado (Conectar e Desconectar) terem o mesmo corpo.
-              <a
-                href="/api/integrations/google/connect"
-                className="h-9 px-4 rounded-md bg-brand text-on-brand text-[length:var(--fs-ui)] font-semibold hover:bg-brand-hover shadow-[var(--c41-shadow-xs),inset_0_1px_0_rgba(255,255,255,.14)] transition-colors inline-flex items-center justify-center flex-shrink-0"
-              >
+              // `nativo`: a rota de API redireciona para o Google, e o <Link>
+              // do Button com href tentaria navegar pelo roteador. Primário md,
+              // o mesmo corpo do Desconectar ao lado.
+              <Button href="/api/integrations/google/connect" nativo className="flex-shrink-0">
                 Conectar
-              </a>
+              </Button>
             ))}
         </Card>
 
@@ -199,12 +196,9 @@ export default async function IntegracoesPage({
             (microsoft ? (
               <DisconnectButton action={desconectarIntegracao.bind(null, "MICROSOFT")} />
             ) : (
-              <a
-                href="/api/integrations/microsoft/connect"
-                className="h-9 px-4 rounded-md bg-brand text-on-brand text-[length:var(--fs-ui)] font-semibold hover:bg-brand-hover shadow-[var(--c41-shadow-xs),inset_0_1px_0_rgba(255,255,255,.14)] transition-colors inline-flex items-center justify-center flex-shrink-0"
-              >
+              <Button href="/api/integrations/microsoft/connect" nativo className="flex-shrink-0">
                 Conectar
-              </a>
+              </Button>
             ))}
         </Card>
       </section>
