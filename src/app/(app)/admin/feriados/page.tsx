@@ -6,7 +6,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { formatCalendarDate } from "@/lib/format";
 import { AcoesDoItem } from "@/components/admin/AcoesDoItem";
-import { AddFeriadoForm } from "@/components/admin/AddFeriadoForm";
+import { NovoFeriado } from "@/components/admin/AddFeriadoForm";
 import { ImportFeriadosButton } from "@/components/admin/ImportFeriadosButton";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -27,20 +27,18 @@ export default async function FeriadosPage() {
       <PageHeader
         title="Feriados"
         subtitle={<>{feriados.length} feriado{feriados.length !== 1 ? "s" : ""} cadastrado{feriados.length !== 1 ? "s" : ""}</>}
+        action={<NovoFeriado action={criarFeriado} />}
       />
 
-      {/* Importar e cadastrar num cartão só, separados por uma divisória: eram
-          duas linhas soltas com alturas e margens próprias, e o texto de ajuda
-          da importação ficava colado no formulário de baixo. */}
+      {/* A importação fica no cartão; o cadastro de um feriado é o "+ Novo
+          feriado" do cabeçalho, numa janela (escolha 5A, 08/10/2026) — o
+          formulário morava aberto aqui, embaixo da importação. */}
       <Card className="p-4 mb-6">
         <ImportFeriadosButton action={importarFeriadosNacionais} />
         <p className="text-helper text-fg-muted mt-1.5">
-          Importa só feriados nacionais (via BrasilAPI). Feriados estaduais e municipais continuam
-          sendo cadastrados manualmente abaixo.
+          Importa só feriados nacionais (via BrasilAPI). Os estaduais e municipais entram um a um,
+          em “Novo feriado”.
         </p>
-        <div className="border-t border-border mt-4 pt-4">
-          <AddFeriadoForm action={criarFeriado} />
-        </div>
       </Card>
 
       {feriados.length === 0 ? (
@@ -48,7 +46,7 @@ export default async function FeriadosPage() {
           <EmptyState
             icon={<CalendarDays />}
             title="Nenhum feriado cadastrado"
-            description="Importe os feriados nacionais acima ou cadastre feriados estaduais/municipais manualmente."
+            description="Importe os feriados nacionais acima, ou cadastre os estaduais e municipais em “Novo feriado”."
           />
         </Card>
       ) : (

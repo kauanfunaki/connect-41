@@ -17,7 +17,7 @@ const CURRENT_YEAR = new Date().getFullYear();
 const YEAR_OPTIONS = [CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1];
 
 // Importa só feriados nacionais (via BrasilAPI, gratuita) — estaduais/municipais
-// continuam cadastrados manualmente pelo formulário ao lado.
+// continuam cadastrados um a um, no "+ Novo feriado" do cabeçalho.
 export function ImportFeriadosButton({ action }: Props) {
   const [year, setYear] = useState(CURRENT_YEAR);
   const [pending, startTransition] = useTransition();
@@ -38,8 +38,8 @@ export function ImportFeriadosButton({ action }: Props) {
     });
   }
 
-  // Com rótulo, como o cadastro manual logo abaixo no mesmo cartão: o ano era
-  // um select sem nome, um pouco acima da linha dos outros campos.
+  // Com rótulo, como os outros campos do Connect: o ano era um select sem
+  // nome, um pouco acima da linha dos outros campos.
   return (
     <FieldGrid columns="sm:grid-cols-[7rem_auto]" className="sm:justify-start">
       <CampoForm label="Ano" htmlFor="ano-dos-feriados">

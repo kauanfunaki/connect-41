@@ -2,7 +2,6 @@
 
 import { useActionState, useTransition } from "react";
 import { Power, PowerOff, Send, UsersRound } from "lucide-react";
-import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/useConfirm";
@@ -11,6 +10,8 @@ import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/sh
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { MenuDeMaisAcoes } from "@/components/admin/AcoesDoItem";
+import { JanelaDeCadastro } from "@/components/admin/JanelaDeCadastro";
+import { FormFooter } from "@/components/ui/FormFooter";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
@@ -30,13 +31,83 @@ type Acesso = {
 
 type Cliente = { id: string; nome: string; empresas: number };
 
+type CriarAcesso = (anterior: EstadoDoAcesso, form: FormData) => Promise<EstadoDoAcesso>;
+
 type Props = {
   acessos: Acesso[];
-  clientes: Cliente[];
-  criarAction: (anterior: EstadoDoAcesso, form: FormData) => Promise<EstadoDoAcesso>;
   enviarLinkAction: (id: string) => Promise<{ error: string } | { ok: true }>;
   alternarAction: (id: string, ativo: boolean) => Promise<void>;
 };
+
+/**
+ * O "+ Novo acesso" do cabeçalho de /admin/portal, que abre o formulário numa
+ * janela (escolha 5A, 08/10/2026). Morava num cartão aberto acima da lista,
+ * com a lista embaixo sob um segundo título ("Acessos").
+ */
+export function NovoAcessoDoPortal({ clientes, criarAction }: { clientes: Cliente[]; criarAction: CriarAcesso }) {
+  return (
+    <JanelaDeCadastro rotulo="Novo acesso" maxWidth="max-w-xl">
+      {(fechar) => <FormularioDoAcesso clientes={clientes} criarAction={criarAction} fechar={fechar} />}
+    </JanelaDeCadastro>
+  );
+}
+
+function FormularioDoAcesso({ clientes, criarAction, fechar }: { clientes: Cliente[]; criarAction: CriarAcesso; fechar: () => void }) {
+  const toast = useToast();
+  // Deu certo: a janela fecha e o retorno vai para o aviso que some sozinho
+  // — quando o e-mail não sai, o aviso diz isso e o que fazer.
+  const [estado, formAction, criando] = useActionState<EstadoDoAcesso, FormData>(async (anterior, form) => {
+    const r = await criarAction(anterior, form);
+    if (r && "ok" in r) {
+      if (r.aviso) toast.show(r.aviso, "info");
+      else toast.success("Acesso criado e link enviado.");
+      fechar();
+    }
+    return r;
+  }, null);
+
+  return (
+    <form action={formAction} className="space-y-4">
+      <p className="text-helper text-fg-muted">
+        A conta nasce <span className="font-medium text-fg">sem senha</span> — nem quem cria sabe
+        qual é. O cliente recebe por e-mail um link para definir a dele.
+      </p>
+      <FieldGrid>
+        <CampoForm label="Nome" htmlFor="nome" required>
+          <Input id="nome" name="nome" required placeholder="Quem vai acessar" />
+        </CampoForm>
+        <CampoForm label="E-mail" htmlFor="email" required>
+          <Input id="email" name="email" type="email" required />
+        </CampoForm>
+        <CampoForm
+          label="Cliente"
+          htmlFor="clientGroupId"
+          helper="Define quais empresas esta conta enxerga. Cliente sem empresa não mostra documento nenhum."
+          required
+          className="sm:col-span-2"
+        >
+          <Select id="clientGroupId" name="clientGroupId" required defaultValue="">
+            <option value="" disabled>
+              Escolha…
+            </option>
+            {clientes.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nome} ({c.empresas} {c.empresas === 1 ? "empresa" : "empresas"})
+              </option>
+            ))}
+          </Select>
+        </CampoForm>
+      </FieldGrid>
+      <FormFooter
+        pending={criando}
+        pendingLabel="Criando…"
+        submitLabel="Criar acesso"
+        onCancel={fechar}
+        erro={estado && "erro" in estado ? estado.erro : undefined}
+      />
+    </form>
+  );
+}
 
 /**
  * Os acessos do portal, na tela da equipe (/admin/portal).
@@ -47,8 +118,7 @@ type Props = {
  * clicado —; e o "Desativar" pede confirmação, porque corta na hora o acesso
  * do cliente. Reativar não pede: não tira nada de ninguém.
  */
-export function PortalAcessosList({ acessos, clientes, criarAction, enviarLinkAction, alternarAction }: Props) {
-  const [estado, formAction, criando] = useActionState<EstadoDoAcesso, FormData>(criarAction, null);
+export function PortalAcessosList({ acessos, enviarLinkAction, alternarAction }: Props) {
   const [pendente, startTransition] = useTransition();
   const toast = useToast();
   const { dialog, requestConfirm } = useConfirm();
@@ -106,69 +176,14 @@ export function PortalAcessosList({ acessos, clientes, criarAction, enviarLinkAc
   }
 
   return (
-    <div className="space-y-6">
-      <Card className="p-5">
-        <h2 className="text-section font-semibold text-fg mb-1">Novo acesso</h2>
-        <p className="text-helper text-fg-muted mb-4">
-          A conta nasce <span className="font-medium text-fg">sem senha</span> — nem quem cria sabe
-          qual é. O cliente recebe por e-mail um link para definir a dele.
-        </p>
-        {/* Os três campos numa grade só (o Cliente ocupa a linha de baixo
-            inteira), e o "Criar acesso" no rodapé à direita, com o retorno da
-            ação ao lado dele — o botão ficava solto à esquerda, embaixo das
-            mensagens. */}
-        <form action={formAction}>
-          <FieldGrid>
-            <CampoForm label="Nome" htmlFor="nome" required>
-              <Input id="nome" name="nome" required placeholder="Quem vai acessar" />
-            </CampoForm>
-            <CampoForm label="E-mail" htmlFor="email" required>
-              <Input id="email" name="email" type="email" required />
-            </CampoForm>
-            <CampoForm
-              label="Cliente"
-              htmlFor="clientGroupId"
-              helper="Define quais empresas esta conta enxerga. Cliente sem empresa não mostra documento nenhum."
-              required
-              className="sm:col-span-2"
-            >
-              <Select id="clientGroupId" name="clientGroupId" required defaultValue="">
-                <option value="" disabled>
-                  Escolha…
-                </option>
-                {clientes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome} ({c.empresas} {c.empresas === 1 ? "empresa" : "empresas"})
-                  </option>
-                ))}
-              </Select>
-            </CampoForm>
-          </FieldGrid>
-
-          <div className="flex flex-wrap items-center justify-end gap-3 pt-4 mt-5 border-t border-border">
-            {estado && "erro" in estado && (
-              <p className="mr-auto min-w-0 text-helper text-danger">{estado.erro}</p>
-            )}
-            {estado && "ok" in estado && (
-              <p className="mr-auto min-w-0 text-helper text-success-fg">
-                {estado.aviso ?? "Acesso criado e link enviado."}
-              </p>
-            )}
-            <Button type="submit" disabled={criando}>
-              {criando ? "Criando…" : "Criar acesso"}
-            </Button>
-          </div>
-        </form>
-      </Card>
-
+    <>
       <div>
-        <h2 className="text-section font-semibold text-fg mb-3">Acessos</h2>
         <CascoDaTabela contagem={contarItens(acessos.length, "acesso", "acessos")}>
         {acessos.length === 0 ? (
           <EmptyState
             icon={<UsersRound />}
             title="Nenhum acesso criado ainda"
-            description="Crie o primeiro no formulário acima: a pessoa recebe por e-mail o link para definir a senha."
+            description="Crie o primeiro em “Novo acesso”: a pessoa recebe por e-mail o link para definir a senha."
           />
         ) : (
           <>
@@ -246,6 +261,6 @@ export function PortalAcessosList({ acessos, clientes, criarAction, enviarLinkAc
         </CascoDaTabela>
       </div>
       {dialog}
-    </div>
+    </>
   );
 }
