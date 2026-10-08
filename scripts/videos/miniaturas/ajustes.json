@@ -1,0 +1,18 @@
+{
+  "equipe/05-conciliacao-bancaria": { "arquivo": "10.png", "esquerda": 240 },
+  "equipe/11-repositorio-de-senhas": { "arquivo": "07.png", "esquerda": 240 },
+  "equipe/18-meu-dia": { "arquivo": "03.png", "esquerda": 240 },
+  "equipe/19-buscar-com-ctrl-k": { "arquivo": "04.png", "esquerda": 0 },
+  "equipe/20-trabalhar-dentro-de-um-setor": { "arquivo": "04.png", "esquerda": 0 },
+  "equipe/22-empresas": { "arquivo": "06.png", "esquerda": 240 },
+  "equipe/26-agenda": { "arquivo": "03.png", "esquerda": 240 },
+  "equipe/27-espacos": { "arquivo": "10.png", "esquerda": 240 },
+  "equipe/29-leads": { "arquivo": "02.png", "esquerda": 240 },
+  "equipe/39-treinamentos": { "arquivo": "10.png", "esquerda": 240 },
+  "equipe/40-avaliacoes-de-desempenho": { "arquivo": "08.png", "esquerda": 240 },
+  "equipe/42-candidatos": { "arquivo": "02.png", "esquerda": 240 },
+  "equipe/44-testes": { "arquivo": "05.png", "esquerda": 240 },
+  "portal/04-responder-uma-pendencia": { "arquivo": "03.png", "esquerda": 240 },
+  "portal/07-ler-os-comunicados": { "arquivo": "05.png", "esquerda": 240 },
+  "portal/08-esqueci-minha-senha": { "arquivo": "03.png", "esquerda": 0 }
+}

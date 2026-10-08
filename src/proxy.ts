@@ -44,6 +44,10 @@ const PUBLIC_PATHS = [
   // essas requisições pro /login (retornando HTML em vez da imagem), quebrando o
   // logo na tela de login e na tela de loading pós-login (contextos sem sessão).
   "/brand/",
+  // Miniaturas dos vídeos da ajuda (08/10/2026): a ajuda do portal também as
+  // mostra, e a sessão do portal não abre caminho interno. Só imagens geradas
+  // das gravações, com dados fictícios.
+  "/miniaturas/",
   // PWA: manifest.webmanifest é referenciado no <head> de toda página, inclusive
   // /login (sem sessão) — o navegador avalia "instalável" ali antes do login, e
   // um redirect pro /login em vez do JSON quebra isso. O service worker
