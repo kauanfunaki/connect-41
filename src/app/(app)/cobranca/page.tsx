@@ -5,7 +5,7 @@ import { getAuthContext, canViewSector, canActOnSector, canManageSector } from "
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { getSectorUsers } from "@/lib/sectorUsers";
-import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
+import { formatInstantDate, formatInstantDateTime, formatarCompetencia } from "@/lib/format";
 import { saoPauloParts } from "@/lib/agenda";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -515,7 +515,7 @@ async function Acordos({
                         {a.originais.map((o) => (
                           <tr key={o.id} className="border-b border-border-soft">
                             <td className="py-1 pr-3 tabular-nums">venc. {formatInstantDate(o.vencimento)}</td>
-                            <td className="py-1 pr-3 tabular-nums">comp. {o.competencia}</td>
+                            <td className="py-1 pr-3 tabular-nums">comp. {formatarCompetencia(o.competencia)}</td>
                             <td className="py-1 pr-3 tabular-nums text-right">{moeda(o.valorCentavos)}</td>
                             <td className="py-1 text-fg-muted truncate max-w-[200px]">
                               <Link href={`/cobranca/${o.id}`} className="hover:underline">

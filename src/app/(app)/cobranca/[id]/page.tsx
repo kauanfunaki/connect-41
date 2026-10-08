@@ -3,7 +3,7 @@ import { getAuthContext, canViewSector, canActOnSector, canManageSector } from "
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { getSectorUsers } from "@/lib/sectorUsers";
-import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
+import { formatInstantDate, formatInstantDateTime, formatarCompetencia } from "@/lib/format";
 import { saoPauloParts } from "@/lib/agenda";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -81,7 +81,7 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
         title={l.sacadoNome}
         subtitle={
           <>
-            {l.empresaNome} · {moeda(l.valorCentavos)} · venceu em {formatInstantDate(l.vencimento)} · competência {t.competencia}
+            {l.empresaNome} · {moeda(l.valorCentavos)} · venceu em {formatInstantDate(l.vencimento)} · competência {formatarCompetencia(t.competencia)}
           </>
         }
         meta={
@@ -107,7 +107,7 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
           </p>
           {t.perda.motivo && <p className="text-[12px] text-fg-secondary mt-1">“{t.perda.motivo}”</p>}
           <p className="text-[11px] text-fg-muted mt-1">
-            A receita continua na competência {t.competencia}; a perda é despesa (outras despesas) na competência da data da perda.
+            A receita continua na competência {formatarCompetencia(t.competencia)}; a perda é despesa (outras despesas) na competência da data da perda.
           </p>
         </Card>
       )}
@@ -163,7 +163,7 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
                 variante="danger"
                 tamanho="sm"
                 titulo="Baixa por perda"
-                descricao={`${l.sacadoNome} · ${moeda(l.valorCentavos)}. O título sai do em aberto e do aging; a receita da competência ${t.competencia} não muda, e a perda entra como despesa neste mês.`}
+                descricao={`${l.sacadoNome} · ${moeda(l.valorCentavos)}. O título sai do em aberto e do aging; a receita da competência ${formatarCompetencia(t.competencia)} não muda, e a perda entra como despesa neste mês.`}
                 confirmar="Baixar por perda"
                 motivoObrigatorio
                 ajuda="Fica registrado no histórico do título."

@@ -9,7 +9,7 @@ import { nomeExibicao } from "@/lib/companyName";
 import { listarContas, competenciasComContas, type TipoDeConta } from "@/lib/financeiro/data";
 import { saoPauloParts } from "@/lib/agenda";
 import { getModuleDef } from "@/lib/module-catalog";
-import { ContasTable, moeda, competenciaNaTela } from "./ContasTable";
+import { ContasTable } from "./ContasTable";
 import { AnaliseDeContas } from "./AnaliseDeContas";
 import { AbasDeLink, FaixaDeTotais } from "./FiltroDePeriodo";
 import { situacoesDeCobranca, MODULO_DE_COBRANCA } from "@/lib/financeiro/cobranca/consultas";
@@ -17,7 +17,7 @@ import { DefinirCentroDasContas } from "./DefinirCentroDasContas";
 import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDaTela";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { Aviso } from "@/components/ui/Aviso";
-import { formatarNumero } from "@/lib/format";
+import { formatarCompetencia, formatarNumero, formatarReaisDeCentavos } from "@/lib/format";
 
 const RECORTES = [
   { chave: "abertas", rotulo: "Em aberto" },
@@ -151,7 +151,7 @@ export async function ContasPage({
       chave: "competencia",
       rotulo: "Competência",
       vazioLabel: "Todas",
-      opcoes: competencias.map((c) => ({ value: c, label: competenciaNaTela(c) })),
+      opcoes: competencias.map((c) => ({ value: c, label: formatarCompetencia(c) })),
     },
     {
       chave: "empresa",
@@ -185,25 +185,25 @@ export async function ContasPage({
         itens={[
           {
             rotulo: "Em aberto",
-            valor: moeda(resultado.totais.emAberto),
+            valor: formatarReaisDeCentavos(resultado.totais.emAberto),
             icone: <Wallet />,
             href: aba === "contas" ? comParam("recorte", undefined) : undefined,
           },
           {
             rotulo: "Vencido",
-            valor: moeda(resultado.totais.vencido),
+            valor: formatarReaisDeCentavos(resultado.totais.vencido),
             tom: resultado.totais.vencido > 0 ? "text-danger" : undefined,
             icone: <AlertTriangle />,
             href: aba === "contas" ? comParam("recorte", "vencidas") : undefined,
           },
           {
             rotulo: "Vence hoje",
-            valor: moeda(resultado.totais.venceHoje),
+            valor: formatarReaisDeCentavos(resultado.totais.venceHoje),
             tom: resultado.totais.venceHoje > 0 ? "text-warning" : undefined,
             icone: <CalendarClock />,
           },
           ...(recorte === "todas"
-            ? [{ rotulo: aPagar ? "Pago" : "Recebido", valor: moeda(resultado.totais.pago), tom: "text-fg-muted", icone: <CheckCircle2 /> }]
+            ? [{ rotulo: aPagar ? "Pago" : "Recebido", valor: formatarReaisDeCentavos(resultado.totais.pago), tom: "text-fg-muted", icone: <CheckCircle2 /> }]
             : []),
         ]}
       />

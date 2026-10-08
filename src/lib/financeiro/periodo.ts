@@ -8,6 +8,7 @@
 // comparação de texto não tem fuso para errar.
 
 import { saoPauloParts } from "@/lib/agenda";
+import { formatarCompetencia } from "@/lib/format";
 
 export const MESES_CURTOS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -57,9 +58,13 @@ export function acumuladoDoAno(comp: string): string[] {
   return competenciasAte(comp, mes);
 }
 
+/**
+ * "2026-10" → "Out/26". É o `formatarCompetencia` de `lib/format`, o formato
+ * único de competência do app desde 07/10/2026 (que nasceu deste); o nome fica
+ * para as telas que já o chamam.
+ */
 export function rotuloDaCompetencia(comp: string): string {
-  const { ano, mes } = partesDaCompetencia(comp);
-  return `${MESES_CURTOS[mes - 1]}/${String(ano).slice(2)}`;
+  return formatarCompetencia(comp);
 }
 
 export function diasNoMes(comp: string): number {

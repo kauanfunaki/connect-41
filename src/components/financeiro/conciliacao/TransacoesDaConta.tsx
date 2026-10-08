@@ -25,6 +25,7 @@ import {
 } from "@/app/(app)/conciliacao/actions";
 import { moeda, tomDoValor } from "@/lib/financeiro/formato";
 import { dataCurta } from "./data";
+import { formatarCompetencia } from "@/lib/format";
 import { FormFooter } from "@/components/ui/FormFooter";
 
 export type LancamentoResumido = {
@@ -392,7 +393,7 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
                           {l.descricao && <span className="text-fg-muted"> · {l.descricao}</span>}
                           <span className="block text-[11px] text-fg-muted">
                             venc. {dataCurta(l.vencimentoKey)}
-                            {l.pagoEmKey && ` · baixa ${dataCurta(l.pagoEmKey)}`} · comp. {l.competencia}
+                            {l.pagoEmKey && ` · baixa ${dataCurta(l.pagoEmKey)}`} · comp. {formatarCompetencia(l.competencia)}
                             {l.centavos === alvo && " · mesmo valor"}
                           </span>
                           {l.bloqueio && (

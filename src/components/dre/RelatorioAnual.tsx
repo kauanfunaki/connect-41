@@ -1,6 +1,6 @@
 import { LINHAS } from "@/lib/dre/estrutura";
 import { linhaAoLongoDoAno, type DreAnual } from "@/lib/dre/anual";
-import { moeda } from "./RelatorioDoDre";
+import { formatarReaisDeCentavos as moeda } from "@/lib/format";
 
 const PCT = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 0 });
 
