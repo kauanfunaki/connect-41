@@ -20,7 +20,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
           "Em “Colaboradores”, clique no cartão “Admissões” para ver quem está com a admissão em andamento.",
           "Confira as colunas “Exames” e “Documentos de admissão”. No filtro da coluna “Exames”, escolha “Exames pendentes” para ver só quem ainda depende da clínica.",
           "Clique em “Abrir” na linha do colaborador para ir à ficha dele.",
-          "Na aba “Visão Geral”, no quadro “Admissão digital”, clique em “Gerar link de admissão” e use “Copiar” para mandar o link ao colaborador preencher os próprios dados.",
+          "Na aba “Visão geral”, no quadro “Admissão digital”, clique em “Gerar link de admissão” e use “Copiar” para mandar o link ao colaborador preencher os próprios dados.",
           "Quando os dados chegarem, confira as informações e os documentos e clique em “Concluir admissão”. A situação do colaborador passa para Ativo.",
         ],
       },
@@ -30,18 +30,18 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
           "Clique no cartão “Férias”. A lista mostra primeiro as férias vencidas e depois as que estão a vencer ou programadas.",
           "Clique em “Abrir” na linha do colaborador para ir à tela de férias da ficha.",
           "Para lançar um novo período, preencha “Início do aquisitivo” e “Fim do aquisitivo” e, se já souber, o concessivo, os “Dias”, “Abono pecuniário” e “Parcelamento”.",
-          "Clique em “Programar Férias”.",
+          "Clique em “Programar férias”.",
           "Para andar com um período já lançado, escolha a nova situação, informe as datas de início e de retorno e clique em “Atualizar”.",
         ],
       },
       {
         titulo: "Registrar e acompanhar um desligamento",
         passos: [
-          "Abra a ficha do colaborador, vá à aba “Dados Trabalhistas” e clique em “Desligamento”.",
-          "Escolha o “Tipo”, preencha o “Motivo” e as “Observações”, se quiser, e clique em “Registrar Desligamento”.",
+          "Abra a ficha do colaborador, vá à aba “Dados trabalhistas” e clique em “Desligamento”.",
+          "Escolha o “Tipo”, preencha o “Motivo” e as “Observações”, se quiser, e clique em “Registrar desligamento”.",
           "A cada mudança no andamento, escolha a nova situação (de “Solicitado” até “Finalizado”) e clique em “Atualizar”.",
           "Clique em “Conferência do TRCT” para conferir a rescisão item a item.",
-          "Para ver todos os desligamentos em andamento, clique no cartão “Rescisões” em “Colaboradores”.",
+          "Para ver todos os desligamentos em andamento, clique no cartão “Desligamentos” em “Colaboradores”.",
         ],
       },
     ],
@@ -63,10 +63,10 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Registrar um afastamento ou atestado",
         passos: [
-          "Abra a ficha do colaborador, vá à aba “Dados Trabalhistas” e clique em “Afastamentos”.",
+          "Abra a ficha do colaborador, vá à aba “Dados trabalhistas” e clique em “Afastamentos”.",
           "Escolha o “Tipo”: “Falta”, “Atestado parcial”, “Atestado integral”, “Licença”, “Afastamento” ou “Retorno”.",
-          "Informe a “Data de Início” e, se souber, o “Retorno previsto” e os “Dias perdidos”.",
-          "Clique em “Registrar Ausência”.",
+          "Informe a “Data de início” e, se souber, o “Retorno previsto” e os “Dias perdidos”.",
+          "Clique em “Registrar ausência”.",
         ],
       },
       {
@@ -82,7 +82,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
     dicas: [
       "A lista mostra só os registros em “Em análise”, “Afastado” e “Retorno previsto”. Um registro novo entra como “Lançado” e só aparece aqui depois que a situação muda.",
       "Registrar uma “Licença” ou um “Afastamento” muda a situação do colaborador para afastado.",
-      "“Motivo”, “Local de Atendimento” e “Profissional/Conselho” são dados médicos: só aparecem para quem tem permissão de ver esse tipo de dado.",
+      "“Motivo”, “Local de atendimento” e “Profissional/Conselho” são dados médicos: só aparecem para quem tem permissão de ver esse tipo de dado.",
     ],
   },
 
@@ -96,10 +96,10 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Lançar horas extras",
         passos: [
-          "Abra a ficha do colaborador, vá à aba “Dados Trabalhistas” e clique em “Horas Extras”.",
-          "Informe a “Data” e o “Tipo de Dia”.",
-          "Preencha “Horas Devidas”, “Horas Trabalhadas”, “Horas Extras” e “Adicional”, conforme o caso, e a “Justificativa”.",
-          "Clique em “Lançar Horas”. O lançamento entra pendente de aprovação e aparece em “Horas Extras”.",
+          "Abra a ficha do colaborador, vá à aba “Dados trabalhistas” e clique em “Horas extras”.",
+          "Informe a “Data” e o “Tipo de dia”.",
+          "Preencha “Horas devidas”, “Horas trabalhadas”, “Horas extras” e “Adicional”, conforme o caso, e a “Justificativa”.",
+          "Clique em “Lançar horas”. O lançamento entra pendente de aprovação e aparece em “Horas Extras”.",
         ],
       },
       {
@@ -129,10 +129,10 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Montar a escala de um colaborador",
         passos: [
-          "Abra a ficha do colaborador, vá à aba “Vínculo” e clique em “Escala de Trabalho”.",
+          "Abra a ficha do colaborador, vá à aba “Vínculo” e clique em “Escala de trabalho”.",
           "Informe a “Data” e escolha o “Turno”.",
           "Marque “Folga” ou “Feriado”, se for o caso, e escreva “Observações” se precisar.",
-          "Clique em “Adicionar à Escala”. Se a data estiver nos próximos 30 dias, ela aparece em “Escalas”.",
+          "Clique em “Adicionar à escala”. Se a data estiver nos próximos 30 dias, ela aparece em “Escalas”.",
         ],
       },
       {
@@ -161,8 +161,8 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Cadastrar um treinamento",
         passos: [
-          "Clique em “Novo Treinamento”.",
-          "Preencha o “Nome do Treinamento” e, se quiser, a “Descrição”, a “Carga Horária” e a “Validade” em meses.",
+          "Clique em “Novo treinamento”.",
+          "Preencha o “Nome do treinamento” e, se quiser, a “Descrição”, a “Carga horária” e a “Validade” em meses.",
           "Clique em “Salvar”.",
         ],
       },
@@ -170,15 +170,15 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         titulo: "Criar uma turma",
         passos: [
           "Depois de salvar, a tela do treinamento já abre. Para voltar a ela depois, clique em “Abrir” no treinamento, na lista.",
-          "No quadro “Turmas”, informe a “Data” e, se quiser, o “Turno” e o “Instrutor”.",
-          "Clique em “Nova Turma”.",
+          "No quadro “Turmas”, em “Nova turma”, informe a “Data” e, se quiser, o “Turno” e o “Instrutor”.",
+          "Clique em “Criar turma”.",
         ],
       },
       {
         titulo: "Incluir participantes e registrar o resultado",
         passos: [
-          "Depois de “Nova Turma”, a turma já abre. Para voltar a ela depois, clique em “Abrir” na tabela de turmas.",
-          "Escolha o “Colaborador” e clique em “Adicionar Participante”.",
+          "Depois de “Criar turma”, a turma já abre. Para voltar a ela depois, clique em “Abrir” na tabela de turmas.",
+          "Em “Novo participante”, escolha o “Colaborador” e clique em “Adicionar participante”.",
           "Todo participante começa como “Planejado”. Para registrar presença ou resultado, escolha a situação dele, como “Convocado”, “Realizado”, “Ausente” ou “Concluído”.",
           "Clique em “Atualizar”.",
         ],
@@ -202,26 +202,27 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Abrir um ciclo de avaliação",
         passos: [
-          "No topo da tela, preencha o “Nome do Ciclo”, o “Início” e, se já souber, o “Fim”.",
-          "Clique em “Criar Ciclo”.",
+          "Clique em “Novo ciclo”.",
+          "Na janela, preencha o “Nome do ciclo”, o “Início” e, se já souber, o “Fim”.",
+          "Clique em “Criar ciclo”.",
           "O ciclo já abre, com a situação “Aberto”. Para voltar a ele depois, clique em “Abrir” na lista.",
         ],
       },
       {
         titulo: "Avaliar um colaborador",
         passos: [
-          "Dentro do ciclo, busque o colaborador no campo “Colaborador”.",
-          "Clique em “Avaliar Colaborador”.",
+          "Dentro do ciclo, em “Nova avaliação”, busque o colaborador no campo “Colaborador”.",
+          "Clique em “Avaliar colaborador”.",
           "Em “Notas por Competência (0-10)”, dê uma nota para cada competência.",
-          "Em “Desenvolvimento”, preencha “Observações”, “Plano de Desenvolvimento” e “Prazo de Melhoria”, se for o caso.",
-          "Clique em “Salvar Avaliação”. A média aparece na tabela do ciclo.",
+          "Em “Desenvolvimento”, preencha “Observações”, “Plano de desenvolvimento” e “Prazo de melhoria”, se for o caso.",
+          "Clique em “Salvar avaliação”. A média aparece na tabela do ciclo.",
         ],
       },
       {
         titulo: "Encerrar o ciclo",
         passos: [
           "Quando todas as avaliações estiverem feitas, abra o ciclo.",
-          "Clique em “Encerrar Ciclo”.",
+          "Clique em “Encerrar ciclo”.",
           "O ciclo passa a aparecer como “Encerrado” na lista.",
         ],
       },
@@ -244,8 +245,8 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Criar uma vaga",
         passos: [
-          "Clique em “Nova Vaga”.",
-          "Em “Dados da vaga”, preencha o “Título da Vaga”, o “Setor” e a “Empresa”; complete “Cargo”, “Quantidade”, “Responsável” e “Prioridade”, se quiser.",
+          "Clique em “Nova vaga”.",
+          "Em “Dados da vaga”, preencha o “Título da vaga”, o “Setor” e a “Empresa”; complete “Cargo”, “Quantidade”, “Responsável” e “Prioridade”, se quiser.",
           "Para divulgar a vaga no portal público, marque “Publicar no portal de vagas” e preencha a “Descrição pública da vaga”, a “Modalidade”, o “Tipo de contrato” e o “Inscrições até”.",
           "Clique em “Salvar”.",
         ],
@@ -254,7 +255,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         titulo: "Vincular candidatos e movê-los pelo funil",
         passos: [
           "Abra a vaga e vá até “Funil de recrutamento”.",
-          "Logo abaixo do funil, escolha o “Candidato”, informe a “Origem” (por exemplo, LinkedIn) e clique em “Vincular Candidato”. Se a pessoa ainda não está no banco, clique em “Novo Candidato”.",
+          "Logo abaixo do funil, em “Nova candidatura”, escolha o “Candidato”, informe a “Origem” (por exemplo, LinkedIn) e clique em “Vincular candidato”. Se a pessoa ainda não está no banco, clique em “Novo candidato”, ao lado do nome do bloco.",
           "Arraste o cartão do candidato entre as etapas “Triagem”, “Entrevista”, “Teste”, “Proposta” e “Contratado”, ou escolha a etapa na lista do próprio cartão.",
           "Para tirar alguém do funil, clique no botão “⋯” do cartão e escolha “Reprovar” ou “Desistiu”.",
           "Informe o “Motivo”, se quiser, e confirme. O candidato vai para a faixa de encerrados.",
@@ -299,7 +300,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Cadastrar um candidato",
         passos: [
-          "Clique em “Novo Candidato”.",
+          "Clique em “Novo candidato”.",
           "Preencha o “Nome” e os demais dados em “Identificação”, “Contato” e “Endereço”.",
           "Clique em “Salvar”.",
         ],
@@ -317,7 +318,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         titulo: "Analisar o currículo e marcar habilidades",
         passos: [
           "Na ficha do candidato, em “Tags / Habilidades”, marque as tags que descrevem a pessoa.",
-          "Em “Triagem de Currículo (IA)”, clique em “Analisar Currículo”. A IA lê o PDF, preenche os campos vazios da ficha e mostra um resumo profissional.",
+          "Em “Triagem de currículo (IA)”, clique em “Analisar currículo”. A IA lê o PDF, preenche os campos vazios da ficha e mostra um resumo profissional.",
           "Em “Teste”, escolha o “Tipo de teste” e clique em “Enviar teste”.",
           "Em “Candidaturas”, clique no nome da vaga para abrir o funil dela.",
         ],
@@ -348,7 +349,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Cadastrar um colaborador de cliente",
         passos: [
-          "Clique em “Novo Colaborador”.",
+          "Clique em “Novo colaborador”.",
           "Preencha os dados de contato e o endereço, clicando em “Avançar →” para passar de um passo ao outro.",
           "Em “Empresa vinculada”, escolha a “Empresa” e, se quiser, o “Cargo” e o “Departamento”.",
           "Complete as informações adicionais e anexe documentos, se tiver.",

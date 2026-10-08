@@ -31,7 +31,7 @@ export default async function EditarTreinamentoPage({
           { label: "Editar" },
         ]}
       />
-      <PageHeader title="Editar Treinamento" />
+      <PageHeader title="Editar treinamento" />
 
       <Card className="p-6">
         <TrainingForm

@@ -31,7 +31,7 @@ export default async function DesligamentosPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Desligamentos em Andamento"
+        title="Desligamentos em andamento"
         subtitle={<>{terminations.length} desligamento{terminations.length !== 1 ? "s" : ""} em processo</>}
       />
 

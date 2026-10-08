@@ -38,7 +38,7 @@ export default async function AfastamentosPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Afastamentos Ativos"
+        title="Afastamentos ativos"
         subtitle={<>{absences.length} afastamento{absences.length !== 1 ? "s" : ""} em aberto</>}
       />
 

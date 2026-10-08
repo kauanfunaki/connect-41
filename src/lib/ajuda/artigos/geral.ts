@@ -626,7 +626,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
         titulo: "Como ler os indicadores",
         passos: [
           "Entre no setor e abra “Indicadores de RH” na barra lateral.",
-          "Cada cartão é um número, como “Headcount”, “Turnover (30 dias)”, “Absenteísmo (30 dias)”, “Férias Vencidas”, “Vagas Abertas” e “Custo de Folha (mês atual)”.",
+          "Cada cartão é um número, como “Headcount”, “Turnover (30 dias)”, “Absenteísmo (30 dias)”, “Férias vencidas”, “Vagas abertas” e “Custo de folha (mês atual)”.",
           "Leia a linha abaixo do número: ela diz o que ele conta.",
         ],
       },
@@ -650,7 +650,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     dicas: [
       "Os números vêm do que é lançado no DP e no Recrutamento: se um dado parece errado, corrija na origem.",
       "O relatório “Distorções salariais” só aparece para quem tem permissão de ver salários.",
-      "O cartão “Férias Vencidas” fica destacado quando há alguma, porque é o número que pede ação.",
+      "O cartão “Férias vencidas” fica destacado quando há alguma, porque é o número que pede ação.",
     ],
   },
 

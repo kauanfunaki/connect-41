@@ -34,7 +34,7 @@ export default async function EditarCandidatoPage({
       <Breadcrumb
         items={[{ label: "Candidatos", href: "/candidatos" }, { label: person.name, href: `/candidatos/${id}`, truncate: true }, { label: "Editar" }]}
       />
-      <PageHeader title="Editar Candidato" />
+      <PageHeader title="Editar candidato" />
 
       <Card className="p-6">
         <CandidatoForm

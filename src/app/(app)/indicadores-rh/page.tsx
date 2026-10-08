@@ -74,18 +74,18 @@ const ICONE_DO_INDICADOR: Record<string, React.ReactNode> = {
   "Demissões (30 dias)": <UserMinus size={15} />,
   "Turnover (30 dias)": <Repeat size={15} />,
   "Absenteísmo (30 dias)": <Stethoscope size={15} />,
-  "Horas Extras (30 dias)": <Clock size={15} />,
-  "Férias Vencidas": <Palmtree size={15} />,
-  [`Férias a Vencer (${AVISO_DAS_FERIAS_DIAS} dias)`]: <CalendarClock size={15} />,
-  "Vagas Abertas": <Briefcase size={15} />,
-  "Candidatos por Vaga": <UsersRound size={15} />,
-  "Taxa de Aprovação": <ThumbsUp size={15} />,
-  "Taxa de Reprovação": <ThumbsDown size={15} />,
-  "Tempo Médio de Contratação": <Timer size={15} />,
-  "Treinamentos Realizados (90 dias)": <GraduationCap size={15} />,
-  "Desempenho Médio": <Star size={15} />,
-  "Custo de Folha (mês atual)": <Wallet size={15} />,
-  "Custo de Benefícios (ativos)": <Gift size={15} />,
+  "Horas extras (30 dias)": <Clock size={15} />,
+  "Férias vencidas": <Palmtree size={15} />,
+  [`Férias a vencer (${AVISO_DAS_FERIAS_DIAS} dias)`]: <CalendarClock size={15} />,
+  "Vagas abertas": <Briefcase size={15} />,
+  "Candidatos por vaga": <UsersRound size={15} />,
+  "Taxa de aprovação": <ThumbsUp size={15} />,
+  "Taxa de reprovação": <ThumbsDown size={15} />,
+  "Tempo médio de contratação": <Timer size={15} />,
+  "Treinamentos realizados (90 dias)": <GraduationCap size={15} />,
+  "Desempenho médio": <Star size={15} />,
+  "Custo de folha (mês atual)": <Wallet size={15} />,
+  "Custo de benefícios (ativos)": <Gift size={15} />,
 };
 
 export default async function IndicadoresRhPage() {
@@ -117,7 +117,7 @@ export default async function IndicadoresRhPage() {
             icon={ICONE_DO_INDICADOR[c.label] ?? <BarChart3 size={15} />}
             // Férias vencida é passivo consumado — o único número que pede
             // atenção. Vermelho, como na Home e em /ferias (era âmbar).
-            tom={c.label === "Férias Vencidas" && c.value !== "0" ? "critico" : undefined}
+            tom={c.label === "Férias vencidas" && c.value !== "0" ? "critico" : undefined}
             delay={i * 20}
           />
         ))}

@@ -25,7 +25,7 @@ export default async function HorasExtrasPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Horas Extras Pendentes"
+        title="Horas extras pendentes"
         subtitle={<>{entries.length} lançamento{entries.length !== 1 ? "s" : ""} aguardando aprovação</>}
       />
 

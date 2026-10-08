@@ -51,7 +51,7 @@ export function ImportarFolhaCsvForm({ action }: Props) {
       </p>
       {/* A área alta de arquivo ia lado a lado com o botão, que caía no pé
           dela (até 30/09). Agora o campo ocupa a linha, na faixa de uma
-          linha, e o botão vai para o rodapé, como no "Lançar Evento". */}
+          linha, e o botão vai para o rodapé, como no "Lançar evento". */}
       <form action={formAction} className="space-y-4">
         <CampoForm label="Arquivo CSV" htmlFor="folha-csv-file" required>
           <FileDropzoneField id="folha-csv-file" name="file" accept=".csv" maxSizeMb={10} required compacto />

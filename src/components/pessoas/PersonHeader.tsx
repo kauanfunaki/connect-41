@@ -9,16 +9,18 @@ import { AvatarImage } from "@/components/shared/AvatarImage";
 import type { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
 import { maskCpf, formatPhone } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
-import { Selo } from "@/components/ui/Selo";
+import { Badge, type VarianteDoBadge } from "@/components/ui/Badge";
 
 const TYPE_LABEL: Record<PersonType, string> = {
   CANDIDATO: "Candidato",
   COLABORADOR: "Colaborador",
 };
 
-const TYPE_STYLE: Record<PersonType, string> = {
-  CANDIDATO: "bg-brand/10 text-brand border-brand/25",
-  COLABORADOR: "bg-success/10 text-success-fg border-success/25",
+// O tipo da pessoa é categoria, então é o `Badge`; o `Selo` fica para situação
+// (escolha 2A do Kauan, 08/10/2026).
+const TYPE_VARIANT: Record<PersonType, VarianteDoBadge> = {
+  CANDIDATO: "info",
+  COLABORADOR: "success",
 };
 
 const STATUS_LABEL: Record<PersonEmploymentStatus, string> = {
@@ -82,9 +84,9 @@ export function PersonHeader({
               <h1 className="text-section font-display font-semibold text-fg tracking-[-0.01em] truncate">
                 {name}
               </h1>
-              <Selo cor={TYPE_STYLE[type]}>
+              <Badge variant={TYPE_VARIANT[type]}>
                 {TYPE_LABEL[type]}
-              </Selo>
+              </Badge>
               {type === "COLABORADOR" && (
                 <StatusDot color="var(--c41-fg-muted)" label={STATUS_LABEL[employmentStatus]} />
               )}

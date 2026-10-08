@@ -62,7 +62,7 @@ export function AcessoDosRecrutadores({ vagaId, restrita, escolhidos, recrutador
     <Card className="p-5 mb-4">
       <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
         <div>
-          <h2 className="text-card-title font-semibold text-fg">Quem do Recrutamento vê esta vaga</h2>
+          <h2 className="text-section font-semibold text-fg">Quem do Recrutamento vê esta vaga</h2>
           <p className="text-fs-2 text-fg-muted mt-0.5">{resumo}</p>
         </div>
         <SegmentedControl<Modo>

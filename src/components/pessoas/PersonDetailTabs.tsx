@@ -38,9 +38,9 @@ export function PersonDetailTabs({
   );
 
   const tabs = [
-    { key: "overview", label: "Visão Geral", icon: <LayoutGrid /> },
+    { key: "overview", label: "Visão geral", icon: <LayoutGrid /> },
     { key: "vinculo", label: "Vínculo", icon: <Building2 /> },
-    { key: "trabalhista", label: "Dados Trabalhistas", icon: <Briefcase /> },
+    { key: "trabalhista", label: "Dados trabalhistas", icon: <Briefcase /> },
     { key: "documents", label: `Documentos${documentsCount ? ` (${documentsCount})` : ""}`, icon: <FileText /> },
     { key: "conversations", label: `Conversas${conversationsCount ? ` (${conversationsCount})` : ""}`, icon: <MessageCircle /> },
     { key: "history", label: "Histórico", icon: <History /> },

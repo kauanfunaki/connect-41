@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Selo } from "@/components/ui/Selo";
+import { Badge } from "@/components/ui/Badge";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
@@ -92,7 +92,7 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
     <Card className="p-5 mb-4">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
         <div>
-          <h2 className="text-card-title font-semibold text-fg">Triagem de currículos</h2>
+          <h2 className="text-section font-semibold text-fg">Triagem de currículos</h2>
           <p className="text-fs-2 text-fg-muted mt-0.5 max-w-[640px]">
             A IA confere o currículo contra cada requisito e aponta a evidência; a nota sai da tabela abaixo. Ela
             <strong className="font-medium text-fg-secondary"> só ordena os candidatos — nunca reprova ninguém</strong>. Nome, idade, cidade e
@@ -207,13 +207,13 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
               ponto. */}
           <ul className="space-y-1.5 text-ui mb-3">
             {requisitos.itens.map((r) => (
-              <li key={r.id} className="grid grid-cols-[84px_minmax(0,1fr)_auto] items-baseline gap-x-2">
-                {/* O `Selo`, no lugar da pílula à mão (auditoria DRG-06, 07/10/2026); o raio
-                    menor, na escala (`rounded-sm`), segue distinguindo o tipo do
-                    requisito dos selos de situação (DRG-26). */}
-                <Selo tom={r.tipo === "OBRIGATORIO" ? "atencao" : "neutro"} className="justify-self-start rounded-sm!">
+              <li key={r.id} className="grid grid-cols-[104px_minmax(0,1fr)_auto] items-baseline gap-x-2">
+                {/* O tipo do requisito é categoria, então é o `Badge` (escolha 2A do
+                    Kauan, 08/10/2026): o `Selo` ficou para situação. A coluna
+                    cresceu de 84 para 104px para caber "Obrigatório" no Badge. */}
+                <Badge variant={r.tipo === "OBRIGATORIO" ? "warning" : "neutral"} className="justify-self-start">
                   {r.tipo === "OBRIGATORIO" ? "Obrigatório" : "Desejável"}
-                </Selo>
+                </Badge>
                 <span className="text-fg">{r.texto}</span>
                 <span className="text-fg-muted text-micro tnum">peso {r.peso}</span>
               </li>

@@ -64,7 +64,7 @@ export default async function AdmissoesPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Admissões em Andamento"
+        title="Admissões em andamento"
         subtitle={<>{people.length} colaborador{people.length !== 1 ? "es" : ""} em processo de admissão</>}
       />
 

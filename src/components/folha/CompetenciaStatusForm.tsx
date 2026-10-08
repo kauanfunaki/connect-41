@@ -46,7 +46,7 @@ export function CompetenciaStatusForm({ action, currentStatus }: Props) {
           type="submit"
           disabled={isPending}
         >
-          {isPending ? "Salvando…" : "Atualizar Status"}
+          {isPending ? "Salvando…" : "Atualizar status"}
         </Button>
       </form>
       {state?.error && <p className="text-helper font-medium text-danger mt-1">{state.error}</p>}

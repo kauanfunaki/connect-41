@@ -110,7 +110,7 @@ export default async function ColaboradoresClientesPage({
           canCreate ? (
             <Button href="/pessoas/nova?tipo=cliente" variant="primary">
               <Plus size={14} />
-              Novo Colaborador
+              Novo colaborador
             </Button>
           ) : undefined
         }
@@ -154,15 +154,7 @@ export default async function ColaboradoresClientesPage({
                 ? "Tente ajustar a busca ou os filtros."
                 : "São as pessoas que trabalham nas empresas clientes, não a equipe do escritório."
             }
-            action={
-              // Era um <Button> dentro de um <Link> — botão dentro de link.
-              !search && !companyId && canCreate ? (
-                <Button href="/pessoas/nova?tipo=cliente">
-                  <Plus size={14} />
-                  Novo Colaborador
-                </Button>
-              ) : undefined
-            }
+            // Sem repetir o botão de criar: ele mora no cabeçalho (5A, 08/10/2026).
           />
         ) : (
           <PessoasTable

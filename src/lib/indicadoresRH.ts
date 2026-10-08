@@ -115,22 +115,22 @@ export async function getIndicadoresRH(ctx: AuthContext): Promise<IndicadorCard[
     // O período no rótulo, como os vizinhos: as demissões são dos últimos 30 dias.
     { label: "Turnover (30 dias)", value: `${turnoverPct}%`, hint: "Demissões / Headcount" },
     { label: "Absenteísmo (30 dias)", value: `${fmtInt(absencesLast30._sum.lostDays ?? 0)} dias`, hint: "Dias perdidos" },
-    { label: "Horas Extras (30 dias)", value: `${fmtDecimal(Number(overtimeLast30._sum.overtimeHours ?? 0), 1)}h` },
-    { label: "Férias Vencidas", value: fmtInt(ferias.vencidas) },
-    { label: `Férias a Vencer (${AVISO_DAS_FERIAS_DIAS} dias)`, value: fmtInt(ferias.aVencer), hint: "Período concessivo acabando" },
-    { label: "Vagas Abertas", value: fmtInt(vagasAbertas) },
-    { label: "Candidatos por Vaga", value: candidatosPorVaga },
-    { label: "Taxa de Aprovação", value: taxaAprovacao === "—" ? "—" : `${taxaAprovacao}%` },
-    { label: "Taxa de Reprovação", value: taxaReprovacao === "—" ? "—" : `${taxaReprovacao}%` },
-    { label: "Tempo Médio de Contratação", value: tempoMedioContratacaoDias != null ? `${fmtInt(tempoMedioContratacaoDias)} dias` : "—" },
-    { label: "Treinamentos Realizados (90 dias)", value: fmtInt(treinamentosRealizados) },
-    { label: "Desempenho Médio", value: evaluationAvg._avg.averageScore != null ? fmtDecimal(Number(evaluationAvg._avg.averageScore), 2) : "—" },
+    { label: "Horas extras (30 dias)", value: `${fmtDecimal(Number(overtimeLast30._sum.overtimeHours ?? 0), 1)}h` },
+    { label: "Férias vencidas", value: fmtInt(ferias.vencidas) },
+    { label: `Férias a vencer (${AVISO_DAS_FERIAS_DIAS} dias)`, value: fmtInt(ferias.aVencer), hint: "Período concessivo acabando" },
+    { label: "Vagas abertas", value: fmtInt(vagasAbertas) },
+    { label: "Candidatos por vaga", value: candidatosPorVaga },
+    { label: "Taxa de aprovação", value: taxaAprovacao === "—" ? "—" : `${taxaAprovacao}%` },
+    { label: "Taxa de reprovação", value: taxaReprovacao === "—" ? "—" : `${taxaReprovacao}%` },
+    { label: "Tempo médio de contratação", value: tempoMedioContratacaoDias != null ? `${fmtInt(tempoMedioContratacaoDias)} dias` : "—" },
+    { label: "Treinamentos realizados (90 dias)", value: fmtInt(treinamentosRealizados) },
+    { label: "Desempenho médio", value: evaluationAvg._avg.averageScore != null ? fmtDecimal(Number(evaluationAvg._avg.averageScore), 2) : "—" },
   ];
 
   if (canViewSalary) {
     cards.push(
-      { label: "Custo de Folha (mês atual)", value: fmtCurrency(custoFolha) },
-      { label: "Custo de Benefícios (ativos)", value: fmtCurrency(custoBeneficios) }
+      { label: "Custo de folha (mês atual)", value: fmtCurrency(custoFolha) },
+      { label: "Custo de benefícios (ativos)", value: fmtCurrency(custoBeneficios) }
     );
   }
 

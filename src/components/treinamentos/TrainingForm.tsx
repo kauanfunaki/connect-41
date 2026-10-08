@@ -36,7 +36,7 @@ export function TrainingForm({ action, cancelHref, defaultValues }: Props) {
         </Aviso>
       )}
 
-      <CampoForm label="Nome do Treinamento" htmlFor="name" required>
+      <CampoForm label="Nome do treinamento" htmlFor="name" required>
         <Input id="name" name="name" type="text" required defaultValue={defaultValues?.name ?? ""} />
       </CampoForm>
 
@@ -47,7 +47,7 @@ export function TrainingForm({ action, cancelHref, defaultValues }: Props) {
       {/* Horas e meses são números curtos: colunas estreitas, e não meia tela
           cada (até 30/09). A unidade saiu do rótulo para o sufixo do campo. */}
       <FieldGrid columns="sm:grid-cols-[180px_180px]">
-        <CampoForm label="Carga Horária" htmlFor="workloadHours">
+        <CampoForm label="Carga horária" htmlFor="workloadHours">
           <Input id="workloadHours" name="workloadHours" type="number" step="0.5" defaultValue={defaultValues?.workloadHours ?? ""} suffix="h" />
         </CampoForm>
         <CampoForm label="Validade" htmlFor="validityMonths">

@@ -43,7 +43,7 @@ export default async function NovaVagaPage() {
   return (
     <PageContainer>
       <Breadcrumb items={[{ label: "Vagas", href: "/vagas" }, { label: "Nova" }]} />
-      <PageHeader title="Nova Vaga" />
+      <PageHeader title="Nova vaga" />
 
       <Card className="p-6">
         <VagaForm
