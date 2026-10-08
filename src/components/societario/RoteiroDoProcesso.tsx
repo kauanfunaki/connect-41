@@ -179,7 +179,7 @@ export function RoteiroDoProcesso({
             onClick={() => setVerEncerradas((v) => !v)}
             className="-mx-2 flex min-h-8 w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-1.5 text-left text-ui text-fg-secondary transition-colors hover:bg-surface-hover hover:text-fg"
           >
-            <Check size={16} className="shrink-0 text-success" aria-hidden />
+            <Check size={16} className="shrink-0 text-success-fg" aria-hidden />
             <span className="min-w-0 flex-1">
               <span className="font-semibold text-fg tabular-nums">{resumoDasEncerradas(etapasRecolhidas)}</span>
               <span aria-hidden> · </span>
@@ -265,7 +265,7 @@ function EtapaDoRoteiro({
           </div>
           {etapa.descricao && <p className="text-[length:var(--fs-2)] text-fg-muted">{etapa.descricao}</p>}
         </div>
-        {etapa.status === "CONCLUIDA" && <Check size={16} className="text-success shrink-0" aria-label="Concluída" />}
+        {etapa.status === "CONCLUIDA" && <Check size={16} className="text-success-fg shrink-0" aria-label="Concluída" />}
         {etapa.status === "DISPENSADA" && (
           <CircleSlash size={16} className="text-fg-muted shrink-0" aria-label="Não se aplica" />
         )}
@@ -438,7 +438,7 @@ function Protocolo({
           className="text-[length:var(--fs-2)] rounded-md border border-warning/30 bg-warning/8 px-3 py-2 flex flex-col gap-1.5"
         >
           <span className="flex items-start gap-1.5">
-            <AlertTriangle size={14} className="text-warning mt-px shrink-0" />
+            <AlertTriangle size={14} className="text-warning-fg mt-px shrink-0" />
             <span className={ex.resolvidaEm ? "line-through text-fg-muted" : ""}>{ex.descricao}</span>
           </span>
           <span className="text-[length:var(--fs-micro)] text-fg-muted">

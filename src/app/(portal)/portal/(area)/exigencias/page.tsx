@@ -61,7 +61,7 @@ export default async function PortalExigenciasPage({
             <li key={e.id}>
               <CartaoDeLista
                 href={`/portal/processos/${e.processoId}`}
-                sobretitulo={<span className={e.resolvidaEm ? undefined : "text-warning"}>{e.orgao}</span>}
+                sobretitulo={<span className={e.resolvidaEm ? undefined : "text-warning-fg"}>{e.orgao}</span>}
                 titulo={e.processoNome}
                 corpo={e.descricao}
                 apoio={

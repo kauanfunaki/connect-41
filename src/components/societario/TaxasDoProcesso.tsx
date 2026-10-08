@@ -23,7 +23,7 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
         <h2 id="taxas-do-processo" className="text-section font-semibold text-fg">Taxas</h2>
         <p className="text-[length:var(--fs-ui)] tabular-nums text-fg">
           <strong>{formatarReaisDeCentavos(custo.totalCentavos)}</strong>
-          {aPagar > 0 && <span className="text-warning"> · {formatarReaisDeCentavos(aPagar)} a pagar</span>}
+          {aPagar > 0 && <span className="text-warning-fg"> · {formatarReaisDeCentavos(aPagar)} a pagar</span>}
         </p>
       </div>
 
@@ -75,7 +75,7 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
                   {/* Primeira via é o caminho normal; da segunda em diante é
                       volta, e é isso que o rótulo diz. */}
                   {t.attempt !== null && t.attempt >= 2 && (
-                    <span className="block text-[length:var(--fs-micro)] text-warning">{t.attempt}ª apresentação</span>
+                    <span className="block text-[length:var(--fs-micro)] text-warning-fg">{t.attempt}ª apresentação</span>
                   )}
                   {t.envio && (
                     <div className="mt-2">
