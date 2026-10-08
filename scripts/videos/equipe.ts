@@ -1207,7 +1207,7 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
           main(r).getByRole("tablist"),
           "As abas trazem o resto: filiais, pessoas, RH & operação, documentos, conversas e histórico."
         );
-        await r.clicar(main(r).getByRole("tab", { name: "RH & operação" }), "Em RH & operação: sócios, cargos, departamentos, benefícios, turnos, folha e documentos para o cliente.");
+        await r.clicar(main(r).getByRole("tab", { name: "RH & operação" }), "Em RH & operação: sócios, cargos, departamentos, benefícios, turnos, folha e os envios ao cliente.");
         await r.page.waitForLoadState("networkidle").catch(() => {});
         await r.pausa(900);
         await r.apontar(
@@ -1351,6 +1351,11 @@ function videosGerais(apoio: string): DefinicaoDeVideo[] {
           "Os cartões abrem cada recorte: novas, minhas, resposta atrasada e aguardando cliente."
         );
         await r.apontar(main(r).getByRole("button", { name: /^Filtros/ }), "Em Filtros: situação, setor, empresa ou só as atrasadas.");
+        // A aba "Envios" (08/10/2026): o antigo "Documentos para cliente" da ficha da empresa.
+        await r.apontar(
+          main(r).getByRole("navigation", { name: "Abas" }).getByRole("link", { name: "Envios" }),
+          "Nas outras abas: os pedidos ao cliente, os comunicados e os envios — documentos que o escritório manda, com prova de leitura e aceite."
+        );
         const primeira = linha(r, "Segunda via de guia");
         await r.apontar(
           primeira.getByRole("cell").nth(3),

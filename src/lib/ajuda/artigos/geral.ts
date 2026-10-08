@@ -115,7 +115,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Clique no nome da empresa na lista.",
           "Em “Visão geral”, veja os dados cadastrais e os “Serviços contratados”. Clique em “Gerar resumo” para um resumo dos últimos 90 dias.",
           "Use as abas “Filiais”, “Pessoas”, “Documentos”, “Conversas” e “Histórico” para o restante das informações.",
-          "Na aba “RH & operação”, entre em “Sócios”, “Cargos”, “Departamentos”, “Benefícios”, “Turnos”, “Folha de pagamento” e “Documentos para cliente”.",
+          "Na aba “RH & operação”, entre em “Sócios”, “Cargos”, “Departamentos”, “Benefícios”, “Turnos” e “Folha de pagamento”. “Envios ao cliente” abre a aba “Envios” de Solicitações, já filtrada nesta empresa.",
           "Para passar um assunto da empresa a outro setor, clique em “Solicitar transferência”.",
         ],
       },
@@ -349,7 +349,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     titulo: "Solicitações",
     caminhos: ["/solicitacoes"],
     resumo:
-      "A fila do que os clientes pedem pelo portal — documento, alteração ou qualquer outro assunto —, com o setor que atende, o responsável e o prazo de resposta prometido ao cliente.",
+      "A fila do que os clientes pedem pelo portal — documento, alteração ou qualquer outro assunto —, com o setor que atende, o responsável e o prazo de resposta prometido ao cliente. Na aba “Envios”, os documentos que o escritório manda a uma empresa, com a prova de leitura e o aceite.",
     secoes: [
       {
         titulo: "Como acompanhar a fila",
@@ -386,9 +386,22 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Para retomar uma solicitação encerrada, clique em “Reabrir”: ela volta para a fila, em andamento.",
         ],
       },
+      {
+        titulo: "Como mandar um documento ao cliente",
+        passos: [
+          "Abra a aba “Envios” e clique em “Novo envio”. Pela ficha da empresa, “RH & operação” → “Envios ao cliente” abre a aba já filtrada nela.",
+          "Escolha a “Empresa”, escreva o “Título” e o “Conteúdo” e, se precisar, anexe o arquivo. Marque “Pedir o aceite eletrônico do cliente” quando ele precisar concordar.",
+          "Clique em “Salvar”. O envio fica como rascunho, e só você e a equipe o veem.",
+          "Clique em “Publicar” e confirme. O documento aparece no portal do cliente, em “Documentos do escritório”, e quem pede aceite entra no “O que precisa de você” do Início dele.",
+          "Para quem não tem portal, use “Enviar por e-mail”: cada endereço recebe um link próprio para o documento.",
+          "Na ficha do envio, “Prova de recebimento” mostra cada abertura e download, com data, hora e IP, e o aceite com o nome de quem aceitou.",
+        ],
+      },
     ],
     dicas: [
       "Cada pessoa vê as solicitações dos seus setores e as que estão com ela. Administradores veem todas.",
+      "Envio publicado não se edita mais: o cliente precisa ver sempre o mesmo conteúdo. Para corrigir, crie outro envio.",
+      "Os cartões da aba “Envios” abrem o que está parado: rascunhos, enviados que ninguém abriu e os que esperam o aceite.",
       "Os assuntos que o cliente escolhe, com o setor que atende e o prazo de resposta em dias úteis, são cadastrados pelo administrador em “Configurações” → “Assuntos das solicitações”.",
       "O motivo do encaminhamento e as notas internas nunca aparecem para o cliente.",
     ],
