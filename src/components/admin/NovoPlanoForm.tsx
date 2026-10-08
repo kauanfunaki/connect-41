@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { JanelaDeCadastro } from "@/components/admin/JanelaDeCadastro";
+import { JanelaDeCadastro } from "@/components/shared/JanelaDeCadastro";
 import { criarPlano, type PlanoState } from "@/app/(app)/admin/planos/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";

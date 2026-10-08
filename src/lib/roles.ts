@@ -3,9 +3,9 @@ import type { UserRole } from "@/generated/prisma/enums";
 export const ROLE_LABELS: Record<UserRole, string> = {
   SUPER_ADMIN: "Super Admin",
   ADMIN: "Administrador",
-  SECTOR_ADMIN: "Gestor de Setor",
+  SECTOR_ADMIN: "Gestor de setor",
   SECTOR_USER: "Colaborador",
-  READONLY: "Somente Leitura",
+  READONLY: "Somente leitura",
 };
 
 export const ROLE_OPTIONS: { value: UserRole; label: string }[] = (

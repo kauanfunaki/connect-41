@@ -10,7 +10,7 @@ import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/sh
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { MenuDeMaisAcoes } from "@/components/admin/AcoesDoItem";
-import { JanelaDeCadastro } from "@/components/admin/JanelaDeCadastro";
+import { JanelaDeCadastro } from "@/components/shared/JanelaDeCadastro";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
