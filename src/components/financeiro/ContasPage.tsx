@@ -16,6 +16,8 @@ import { situacoesDeCobranca, MODULO_DE_COBRANCA } from "@/lib/financeiro/cobran
 import { DefinirCentroDasContas } from "./DefinirCentroDasContas";
 import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDaTela";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { Aviso } from "@/components/ui/Aviso";
+import { formatarNumero } from "@/lib/format";
 
 const RECORTES = [
   { chave: "abertas", rotulo: "Em aberto" },
@@ -219,13 +221,19 @@ export async function ContasPage({
       {aba === "analise" ? (
         <>
           <FiltrosDaTela campos={filtros} className="mb-4" />
+          {resultado.limitada && (
+            <Aviso tom="atencao" className="mb-4">
+              A análise considera as {formatarNumero(resultado.linhas.length, 0)} contas de vencimento mais antigo, de{" "}
+              {formatarNumero(resultado.totalNoRecorte, 0)} em aberto. Filtre por competência ou empresa para ver o resto.
+            </Aviso>
+          )}
           <AnaliseDeContas linhas={resultado.linhas} hojeKey={saoPauloParts(agora).dateKey} aPagar={aPagar} />
         </>
       ) : (
         <>
           {podeDefinirCentro && resultado.linhas.length > 0 && <DefinirCentroDasContas empresas={empresasComCentros} />}
           <CascoDaTabela
-            contagem={contarItens(resultado.linhas.length, "conta", "contas")}
+            contagem={contarItens(resultado.linhas.length, "conta", "contas", resultado.limitada)}
             filtros={<FiltrosDaTela campos={filtros} naBarra />}
           >
             <ContasTable
@@ -239,6 +247,14 @@ export async function ContasPage({
               selecionarCentro={podeDefinirCentro}
               mostrarCentro={podeDefinirCentro}
             />
+            {/* Os totais do topo são do recorte inteiro (somados no banco); só
+                a lista para no teto — e diz que parou (08/10/2026). */}
+            {resultado.limitada && (
+              <p className="text-micro text-fg-muted mt-3">
+                Mostrando {formatarNumero(resultado.linhas.length, 0)} de {formatarNumero(resultado.totalNoRecorte, 0)} contas.
+                Os totais acima somam todas. Filtre por competência ou empresa para ver o resto na lista.
+              </p>
+            )}
           </CascoDaTabela>
         </>
       )}
