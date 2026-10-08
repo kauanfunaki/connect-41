@@ -8,6 +8,7 @@ import {
   ArrowRight,
   BarChart3,
   CalendarClock,
+  HandCoins,
   Info,
   Percent,
   Scissors,
@@ -16,6 +17,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { NotaDeFonte as NotaDeFonteDoApp } from "@/components/shared/NotaDeFonte";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -147,25 +149,29 @@ export async function AbaEconomicoFinanceiro({ tenantId, companyId, mes }: Base)
 
   return (
     <>
+      {/* Os números antes da tabela, como no resto da família da DRE (padrão
+          aceito pelo Kauan em 08/10/2026), e no cartão de número do app — eram
+          dois cartões feitos à mão, embaixo da tabela. */}
+      <FaixaDeTotais
+        itens={[
+          {
+            rotulo: "Atraso médio de recebimento",
+            valor: dias(atrasoReceber),
+            icone: <HandCoins />,
+            detalhe: `em ${pares.RECEBER.length} ${pares.RECEBER.length === 1 ? "título recebido" : "títulos recebidos"} no mês`,
+          },
+          {
+            rotulo: "Atraso médio de pagamento",
+            valor: dias(atrasoPagar),
+            icone: <CalendarClock />,
+            detalhe: `em ${pares.PAGAR.length} ${pares.PAGAR.length === 1 ? "título pago" : "títulos pagos"} no mês`,
+          },
+        ]}
+      />
       <TabelaComparada linhas={linhas} rotuloA="Competência" rotuloB="Caixa" destacarAcima={0.15} />
-      <div className="grid gap-3 sm:grid-cols-2 mt-4">
-        <Card className="p-4">
-          <p className="text-helper text-fg-muted">Atraso médio de recebimento</p>
-          <p className="text-title font-semibold tabular-nums mt-1">{dias(atrasoReceber)}</p>
-          <p className="text-micro text-fg-muted mt-1">
-            Dias entre o vencimento e o recebimento, nos {pares.RECEBER.length} títulos recebidos no mês. Positivo é atraso.
-          </p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-helper text-fg-muted">Atraso médio de pagamento</p>
-          <p className="text-title font-semibold tabular-nums mt-1">{dias(atrasoPagar)}</p>
-          <p className="text-micro text-fg-muted mt-1">
-            Dias entre o vencimento e o pagamento, nos {pares.PAGAR.length} títulos pagos no mês.
-          </p>
-        </Card>
-      </div>
       <NotaDeFonte>
-        Variação de 15% ou mais aparece destacada — em geral é prazo de recebimento ou pagamento, não erro de lançamento.
+        Atraso médio: dias entre o vencimento e a baixa, nos títulos baixados no mês — positivo é atraso. Variação de 15%
+        ou mais aparece destacada — em geral é prazo de recebimento ou pagamento, não erro de lançamento.
         O caixa desta comparação usa só lançamentos do Connect; um mês importado do Omie na DRE de caixa pode mostrar
         outro número lá.
       </NotaDeFonte>
@@ -576,10 +582,10 @@ export async function AbaIndicadores({ tenantId, companyId, mes }: Base) {
             {indicadores
               .filter((i) => i.categoria === cat)
               .map((i) => (
-                // Mesmo padding (p-4) e mesmo tamanho de número dos cartões de
-                // atraso médio da primeira aba — eram p-3.5 e 19px. O número em
-                // 22px (`text-title`, o da FaixaDeTotais) desde 08/10/2026: os
-                // 20px de antes ficavam fora da escala.
+                // Padding p-4 (eram p-3.5) e o número em 22px (`text-title`, o da
+                // FaixaDeTotais) desde 08/10/2026: os 19 e 20px de antes ficavam
+                // fora da escala. Cartão próprio, e não a faixa, porque leva a
+                // fórmula e a leitura de cada indicador.
                 <Card key={i.codigo} className="p-4 flex flex-col gap-1">
                   <p className="text-helper text-fg-muted">{i.rotulo}</p>
                   <p className={`text-title font-semibold tabular-nums ${i.valor === null ? "text-fg-muted" : ""}`}>{valorDoIndicador(i)}</p>
