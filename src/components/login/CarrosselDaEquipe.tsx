@@ -160,7 +160,7 @@ function CenaDoMeuDia() {
 function CenaDosProcessos() {
   const linhas: { tipo: string; empresa: string; selo: React.ReactNode; prazo: string; tom: string }[] = [
     {
-      tipo: "Alteração Contratual",
+      tipo: "Alteração contratual",
       empresa: "Padaria Bom Grão",
       selo: <Selo cor="ambar">Em exigência</Selo>,
       prazo: "8 de 4–7 dias úteis",
@@ -328,7 +328,7 @@ function CenaDaAgenda() {
     {
       dia: "Qua 21",
       prazos: [
-        { titulo: "Alteração Contratual", setor: "societario" },
+        { titulo: "Alteração contratual", setor: "societario" },
         { titulo: "Exame de Bruno Alves", setor: "dp" },
       ],
       reuniao: { hora: "14:30", titulo: "Alinhamento com o cliente", linha: 2 },

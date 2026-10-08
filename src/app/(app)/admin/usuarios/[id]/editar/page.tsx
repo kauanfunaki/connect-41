@@ -36,7 +36,7 @@ export default async function EditarUsuarioPage({
   return (
     <PageContainer>
       <Breadcrumb items={[{ label: "Usuários", href: "/admin/usuarios" }, { label: "Editar" }]} />
-      <PageHeader title="Editar Usuário" />
+      <PageHeader title="Editar usuário" />
 
       <div className="max-w-[720px]">
         <Card className="p-6">

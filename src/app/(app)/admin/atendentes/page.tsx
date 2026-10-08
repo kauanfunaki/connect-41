@@ -78,10 +78,10 @@ export default async function AdminAtendentesPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Atendentes e Vínculos"
+        title="Atendentes e vínculos"
         subtitle={<>Para cada colaborador interno: qual conta de acesso (User) é dele e, se aplicável, qual agente do Chatwoot é
           essa mesma pessoa — usado para mostrar nome/foto reais em{" "}
-          <span className="font-medium text-fg">Avaliação de Atendimentos</span>. Configuração de uma vez só.</>}
+          <span className="font-medium text-fg">Conversas › Avaliação</span>. Configuração de uma vez só.</>}
       />
 
       {people.length === 0 ? (
@@ -115,7 +115,7 @@ export default async function AdminAtendentesPage() {
                 <tr className="border-b border-border text-fs-1 text-fg-muted uppercase tracking-wide">
                   <th className="px-4 py-3">Pessoa</th>
                   <th className="px-4 py-3">
-                    <FiltroDaColuna rotulo="Conta (User)" chave="conta" align={hasChatwoot ? "left" : "right"} />
+                    <FiltroDaColuna rotulo="Conta de acesso" chave="conta" align={hasChatwoot ? "left" : "right"} />
                   </th>
                   {hasChatwoot && (
                     <th className="px-4 py-3">

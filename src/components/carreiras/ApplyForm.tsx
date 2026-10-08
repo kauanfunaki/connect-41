@@ -151,7 +151,7 @@ export function ApplyForm({ slug, vagaId, carimbo }: Props) {
         type="submit"
         disabled={isSubmitting}
       >
-        {isSubmitting ? "Enviando…" : "Enviar Candidatura"}
+        {isSubmitting ? "Enviando…" : "Enviar candidatura"}
       </Button>
 
       {error && (

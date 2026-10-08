@@ -40,7 +40,7 @@ export async function generateMetadata({
   });
   if (!tenant || !tenant.active) return { title: "Vagas abertas" };
 
-  const title = `Trabalhe Conosco — ${tenant.name}`;
+  const title = `Trabalhe conosco — ${tenant.name}`;
   const description = `Confira as vagas abertas na ${tenant.name} e candidate-se online.`;
   const url = publicUrl(`/carreiras/${slug}`);
 
@@ -114,7 +114,7 @@ export default async function CarreirasPage({
           centralizado
           className="mb-8"
           logo={tenant.logoUrl ? { src: tenant.logoUrl, alt: tenant.name } : null}
-          titulo="Trabalhe Conosco"
+          titulo="Trabalhe conosco"
           subtitulo={<>Vagas abertas — {tenant.name}</>}
         >
           {/* Botão, e não link de texto (30/09): é a porta de entrada da conta
