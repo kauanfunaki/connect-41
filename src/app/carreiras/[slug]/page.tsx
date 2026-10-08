@@ -18,7 +18,7 @@ import {
 } from "@/lib/carreiras/portal";
 import { Briefcase, SearchX, Search, UserRound, X } from "lucide-react";
 import { EtiquetasDaVaga } from "@/components/carreiras/EtiquetasDaVaga";
-import { Input } from "@/components/ui/Input";
+import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -133,7 +133,7 @@ export default async function CarreirasPage({
                   buscar apagava a cidade escolhida. */}
               <form method="get" role="search" className="flex flex-1 min-w-[16rem] items-center gap-2">
                 <label htmlFor="q" className="sr-only">Buscar vaga</label>
-                <Input id="q" name="q" type="search" defaultValue={filtros.busca} placeholder="Buscar por cargo, área ou palavra-chave" />
+                <CampoDeBusca id="q" name="q" defaultValue={filtros.busca} placeholder="Buscar por cargo, área ou palavra-chave" />
                 {(["cidade", "area", "modalidade", "contrato"] as const).map((k) =>
                   filtros[k] ? <input key={k} type="hidden" name={k} value={filtros[k]} /> : null
                 )}
