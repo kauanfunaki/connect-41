@@ -19,9 +19,11 @@ type SearchResults = {
   vagas: { id: string; name: string }[];
   documentos: { id: string; name: string; entityType: DocumentEntityType; entityId: string }[];
   tarefas: { id: string; name: string; href: string }[];
+  /** Processos do Societário (07/10/2026). Opcional: a resposta antiga não traz. */
+  processos?: { id: string; name: string; detalhe?: string }[];
 };
 
-const EMPTY: SearchResults = { companies: [], people: [], candidatos: [], pipelines: [], vagas: [], documentos: [], tarefas: [] };
+const EMPTY: SearchResults = { companies: [], people: [], candidatos: [], pipelines: [], vagas: [], documentos: [], tarefas: [], processos: [] };
 
 /** Uma linha do painel: o que as setas percorrem e o Enter abre. */
 type Opcao = { chave: string; href: string; rotulo: string; detalhe?: string; icone: React.ReactNode };
@@ -43,7 +45,8 @@ function documentHref(entityType: DocumentEntityType, entityId: string): string 
  * Os grupos do painel, na ordem em que aparecem — e é a mesma ordem do Enter
  * sem seta: telas primeiro (quem digita "conc" quase sempre quer abrir a
  * conciliação, não achar um lançamento com "conc" no nome), depois empresas,
- * pessoas, candidatos, Kanban, tarefas, vagas e documentos.
+ * os processos do Societário (logo depois da empresa, que é como se procura
+ * um processo), pessoas, candidatos, Kanban, tarefas, vagas e documentos.
  *
  * Cada tipo com o seu ícone (07/10/2026): as telas tinham, os resultados de
  * dado não, e a lista misturava os dois sem distinção.
@@ -56,6 +59,16 @@ function montarGrupos(telas: TelaNavegavel[], r: SearchResults): Grupo[] {
       opcoes: telas.map((t) => ({ chave: `tela-${t.code}`, href: t.href, rotulo: t.label, detalhe: t.setor, icone: <ModuleIcon code={t.code} /> })),
     },
     { rotulo: "Empresas", opcoes: r.companies.map((c) => ({ chave: `empresa-${c.id}`, href: `/empresas/${c.id}`, rotulo: c.name, icone: ic(Building2) })) },
+    {
+      rotulo: "Processos",
+      opcoes: (r.processos ?? []).map((p) => ({
+        chave: `processo-${p.id}`,
+        href: `/processos/${p.id}`,
+        rotulo: p.name,
+        detalhe: p.detalhe,
+        icone: <ModuleIcon code="societario_processos" />,
+      })),
+    },
     { rotulo: "Pessoas", opcoes: r.people.map((p) => ({ chave: `pessoa-${p.id}`, href: `/pessoas/${p.id}`, rotulo: p.name, icone: ic(User) })) },
     { rotulo: "Candidatos", opcoes: r.candidatos.map((c) => ({ chave: `candidato-${c.id}`, href: `/candidatos/${c.id}`, rotulo: c.name, icone: ic(UserSearch) })) },
     { rotulo: "Kanban", opcoes: r.pipelines.map((p) => ({ chave: `kanban-${p.id}`, href: boardPath(p), rotulo: p.name, icone: ic(SquareKanban) })) },
