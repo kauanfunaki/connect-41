@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ArrowRightLeft, ArrowRight, Inbox, Loader, CheckCircle2, Plus } from "lucide-react";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps } from "@/lib/sectors";
@@ -12,7 +12,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { SectorChip } from "@/components/ui/SectorChip";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarNumero } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 import {
   aggregateHandoffStatus,
@@ -101,10 +101,11 @@ export default async function HandoffsPage({
       <FaixaDeTotais
         itens={FILTER_TABS.map((t) => ({
           rotulo: t.label,
-          valor: String(contagem[t.value]),
+          valor: formatarNumero(contagem[t.value], 0),
           icone: t.value === "NEW" ? <Inbox /> : t.value === "IN_PROGRESS" ? <Loader /> : <CheckCircle2 />,
           tom: t.value === "NEW" ? (contagem.NEW > 0 ? "text-warning" : undefined) : t.value === "DONE" ? "text-success" : undefined,
           detalhe: t.value === statusFilter ? "mostrando agora" : undefined,
+          ativo: t.value === statusFilter,
           href: hrefDaSituacao(t.value),
         }))}
       />

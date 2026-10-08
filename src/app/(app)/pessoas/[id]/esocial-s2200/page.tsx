@@ -9,8 +9,8 @@ import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { buildS2200Preview } from "@/lib/esocialS2200";
-import { formatCalendarDate } from "@/lib/format";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { formatCalendarDate, formatarNumero } from "@/lib/format";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CheckCircle2, CircleDashed } from "lucide-react";
 import { Aviso } from "@/components/ui/Aviso";
 
@@ -96,13 +96,13 @@ export default async function EsocialS2200Page({
         itens={[
           {
             rotulo: `Campo${preview.filledCount !== 1 ? "s" : ""} preenchido${preview.filledCount !== 1 ? "s" : ""}`,
-            valor: String(preview.filledCount),
+            valor: formatarNumero(preview.filledCount, 0),
             icone: <CheckCircle2 />,
             tom: "text-success",
           },
           {
             rotulo: `Campo${preview.pendingCount !== 1 ? "s" : ""} pendente${preview.pendingCount !== 1 ? "s" : ""}`,
-            valor: String(preview.pendingCount),
+            valor: formatarNumero(preview.pendingCount, 0),
             icone: <CircleDashed />,
             tom: preview.pendingCount > 0 ? "text-warning" : "text-fg-muted",
           },

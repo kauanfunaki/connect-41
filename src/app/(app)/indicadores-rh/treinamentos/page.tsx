@@ -1,10 +1,10 @@
 import { PageContainer } from "@/components/shared/PageContainer";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { getRelatorioTreinamentos, type TreinamentoRow, type TreinamentoSituacao } from "@/lib/relatoriosRH";
-import { formatCalendarDate } from "@/lib/format";
+import { formatCalendarDate, formatarNumero } from "@/lib/format";
 import { RelatorioHeader } from "@/components/relatorios/RelatorioHeader";
 import { RelatorioTable, RelatorioBadge, TOM_DO_TOTAL, type BadgeTone } from "@/components/relatorios/RelatorioTable";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { AlertTriangle, Clock, CircleDashed, CheckCircle2 } from "lucide-react";
 
 export const metadata = { title: "Relatório de Treinamentos" };
@@ -39,7 +39,7 @@ export default async function RelatorioTreinamentosPage() {
           { rotulo: "A vencer (60 dias)", n: count("A_VENCER"), tone: "warning" as const, icone: <Clock /> },
           { rotulo: "Não realizados", n: count("PENDENTE"), tone: "neutral" as const, icone: <CircleDashed /> },
           { rotulo: "Válidos", n: count("VALIDO"), tone: "success" as const, icone: <CheckCircle2 /> },
-        ].map((i) => ({ rotulo: i.rotulo, valor: String(i.n), icone: i.icone, tom: i.n > 0 ? TOM_DO_TOTAL[i.tone] : undefined }))}
+        ].map((i) => ({ rotulo: i.rotulo, valor: formatarNumero(i.n, 0), icone: i.icone, tom: i.n > 0 ? TOM_DO_TOTAL[i.tone] : undefined }))}
       />
 
       <RelatorioTable<TreinamentoRow>

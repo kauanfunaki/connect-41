@@ -1,5 +1,5 @@
 import { AlertTriangle, CalendarDays } from "lucide-react";
-import { AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
+import { AbasDeLink } from "@/components/ui/AbasDeLink";
 
 // Exigências e Agenda são o mesmo módulo (`societario_prazos`): duas leituras
 // do que tem data para cumprir. As abas deixam isso visível sem ocupar dois

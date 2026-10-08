@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { AlertTriangle, CheckCircle2, CircleDashed, MinusCircle, Palmtree, Settings2 } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { canManageSector } from "@/lib/auth/context";
@@ -22,7 +22,7 @@ import {
   resumirConferencia,
   statusPrazoPagamento,
 } from "@/lib/rescisaoChecklist";
-import { formatCalendarDate, formatInstantDate } from "@/lib/format";
+import { formatCalendarDate, formatInstantDate, formatarNumero } from "@/lib/format";
 import { calcularReferencia, avaliarDivergencia } from "@/lib/rescisao/referencia";
 import type { ReferenciaProps } from "@/components/rescisao/ItemConferenciaRow";
 import { salvarItemConferencia, salvarDadosRescisao } from "./actions";
@@ -155,10 +155,10 @@ export default async function ConferenciaRescisaoPage({
           continua com a barra de progresso e a lista de divergências. */}
       <FaixaDeTotais
         itens={[
-          { rotulo: "Conferidos", valor: String(resumo.conferidos), icone: <CheckCircle2 />, tom: resumo.conferidos > 0 ? "text-success" : undefined },
-          { rotulo: "Divergentes", valor: String(resumo.divergentes), icone: <AlertTriangle />, tom: resumo.divergentes > 0 ? "text-danger" : undefined },
-          { rotulo: "Pendentes", valor: String(resumo.pendentes), icone: <CircleDashed />, tom: resumo.pendentes > 0 ? "text-warning" : undefined },
-          { rotulo: "Não se aplica", valor: String(resumo.naoAplicaveis), icone: <MinusCircle />, tom: "text-fg-muted" },
+          { rotulo: "Conferidos", valor: formatarNumero(resumo.conferidos, 0), icone: <CheckCircle2 />, tom: resumo.conferidos > 0 ? "text-success" : undefined },
+          { rotulo: "Divergentes", valor: formatarNumero(resumo.divergentes, 0), icone: <AlertTriangle />, tom: resumo.divergentes > 0 ? "text-danger" : undefined },
+          { rotulo: "Pendentes", valor: formatarNumero(resumo.pendentes, 0), icone: <CircleDashed />, tom: resumo.pendentes > 0 ? "text-warning" : undefined },
+          { rotulo: "Não se aplica", valor: formatarNumero(resumo.naoAplicaveis, 0), icone: <MinusCircle />, tom: "text-fg-muted" },
         ]}
       />
 

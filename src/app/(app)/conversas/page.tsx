@@ -11,10 +11,11 @@ import { scopedChatwootConversationWhere } from "@/lib/auth/scope";
 import { isChatwootConfigured } from "@/lib/chatwoot/connection";
 import { chaveDoSegmento, indexarVinculosPorNome, normalizarNomeAtendente } from "@/lib/chatwoot/evaluation";
 import { channelLabel, statusLabel } from "@/lib/chatwoot/labels";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarNumero } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Pagination } from "@/components/shared/Pagination";
-import { AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { AbasDeLink } from "@/components/ui/AbasDeLink";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AtendimentosAccordion } from "@/components/conversas/AtendimentosAccordion";
 import { VincularContato } from "@/components/conversas/VincularContato";
@@ -530,8 +531,8 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
                 os cartões de total do resto do Connect. */}
             <FaixaDeTotais
               itens={[
-                { rotulo: "Atendimentos avaliados", valor: String(total), icone: <ClipboardCheck /> },
-                { rotulo: "Nota média", valor: String(Math.round(soma("scoreSum") / total)), icone: <Gauge /> },
+                { rotulo: "Atendimentos avaliados", valor: formatarNumero(total, 0), icone: <ClipboardCheck /> },
+                { rotulo: "Nota média", valor: formatarNumero(Math.round(soma("scoreSum") / total), 0), icone: <Gauge /> },
                 { rotulo: "Escrita média", valor: `${Math.round(soma("writingSum") / total)}/50`, icone: <PenLine /> },
                 { rotulo: "SLA médio", valor: `${Math.round(soma("slaSum") / total)}/50`, icone: <Timer /> },
               ]}

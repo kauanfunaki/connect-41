@@ -2,7 +2,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { BellRing, Clock, LayoutDashboard, Users } from "lucide-react";
-import { AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
+import { AbasDeLink } from "@/components/ui/AbasDeLink";
 
 type Aba = "painel" | "alertas" | "coordenadores" | "horas";
 

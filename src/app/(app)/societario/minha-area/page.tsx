@@ -3,7 +3,7 @@ import { AlertTriangle, CalendarClock, CalendarRange, CheckCircle2, Columns3, Fo
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -13,6 +13,7 @@ import { AVISO_EM_DIAS } from "@/lib/societario/licencas";
 import { agruparPorFaixa, fimDoDia, FAIXAS, FAIXA_LABEL } from "@/lib/societario/prazos";
 import { itensDePrazo } from "@/lib/societario/painel-data";
 import { ListaDePrazos } from "@/components/societario/ListaDePrazos";
+import { formatarNumero } from "@/lib/format";
 
 const MODULE = "societario_minha_area";
 // Derivado do catálogo, não cravado: o módulo pode mudar de setor.
@@ -63,20 +64,20 @@ export default async function MinhaAreaPage() {
         itens={[
           {
             rotulo: "Vencidos",
-            valor: String(grupos.vencido.length),
+            valor: formatarNumero(grupos.vencido.length, 0),
             icone: <AlertTriangle />,
             tom: grupos.vencido.length > 0 ? "text-danger" : undefined,
           },
           {
             rotulo: "Hoje",
-            valor: String(grupos.hoje.length),
+            valor: formatarNumero(grupos.hoje.length, 0),
             icone: <CalendarClock />,
             tom: grupos.hoje.length > 0 ? "text-warning" : undefined,
           },
-          { rotulo: "Próximos 7 dias", valor: String(grupos.semana.length), icone: <CalendarRange /> },
+          { rotulo: "Próximos 7 dias", valor: formatarNumero(grupos.semana.length, 0), icone: <CalendarRange /> },
           {
             rotulo: "Processos abertos",
-            valor: String(meusProcessos),
+            valor: formatarNumero(meusProcessos, 0),
             icone: <FolderOpen />,
             href: `/processos?responsavel=${ctx.userId}`,
           },

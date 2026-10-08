@@ -4,8 +4,9 @@ import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { getRelatorioDistorcoes, type DistorcaoRow } from "@/lib/relatoriosRH";
 import { RelatorioHeader } from "@/components/relatorios/RelatorioHeader";
 import { RelatorioTable, RelatorioBadge } from "@/components/relatorios/RelatorioTable";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { TrendingDown, TrendingUp } from "lucide-react";
+import { formatarNumero } from "@/lib/format";
 
 export const metadata = { title: "Distorções salariais" };
 
@@ -38,8 +39,8 @@ export default async function RelatorioDistorcoesPage() {
           cartões de total. O recorte fino fica no funil da coluna Situação. */}
       <FaixaDeTotais
         itens={[
-          { rotulo: "Abaixo da faixa", valor: String(abaixo), icone: <TrendingDown />, tom: abaixo > 0 ? "text-warning" : undefined },
-          { rotulo: "Acima da faixa", valor: String(acima), icone: <TrendingUp />, tom: acima > 0 ? "text-brand" : undefined },
+          { rotulo: "Abaixo da faixa", valor: formatarNumero(abaixo, 0), icone: <TrendingDown />, tom: abaixo > 0 ? "text-warning" : undefined },
+          { rotulo: "Acima da faixa", valor: formatarNumero(acima, 0), icone: <TrendingUp />, tom: acima > 0 ? "text-brand" : undefined },
         ]}
       />
 

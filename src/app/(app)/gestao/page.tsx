@@ -4,7 +4,7 @@ import { ArrowRight, CheckCircle2, Loader, PauseCircle, PlayCircle, UserX } from
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FiltroDeSetor } from "@/components/gestao/FiltroDeSetor";
 import { ItemDaGestao, SelosDoItem, ORIGEM } from "@/components/gestao/ItemDaGestao";
 import { getPrisma } from "@/lib/prisma";
@@ -14,6 +14,7 @@ import { itensDaGestao } from "@/lib/gestao/itens";
 import { ordemDeAtencao, precisaDeAtencao, podeVerSetor, type Coluna } from "@/lib/gestao/regras";
 import { inicioDoMes, nomesDasPessoas, pessoasPorSetor } from "@/lib/gestao/telas";
 import { reatribuirItem } from "./actions";
+import { formatarNumero } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -72,14 +73,14 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
               const n = porColuna.get(c.key)!.length;
               return {
                 rotulo: c.titulo,
-                valor: String(n),
+                valor: formatarNumero(n, 0),
                 icone: c.icone,
                 tom: c.key === "PARADO" && n > 0 ? "text-warning" : c.key === "CONCLUIDO" ? "text-success" : undefined,
               };
             }),
             {
               rotulo: "Sem responsável",
-              valor: String(semResponsavel),
+              valor: formatarNumero(semResponsavel, 0),
               icone: <UserX />,
               tom: semResponsavel > 0 ? "text-warning" : undefined,
               detalhe: "em aberto",

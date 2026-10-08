@@ -5,7 +5,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -119,6 +119,7 @@ export default async function DocumentosFiscaisPage({
               icone: d === "PENDENTE" ? <Hourglass /> : d === "LANCADO" ? <CheckCircle2 /> : <EyeOff />,
               tom: d === "LANCADO" ? "text-success" : d === "IGNORADO" ? "text-fg-muted" : undefined,
               detalhe: params.destino === d ? "mostrando agora" : undefined,
+              ativo: params.destino === d,
               href: hrefDoDestino(d),
             }))}
           />

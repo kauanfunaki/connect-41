@@ -7,12 +7,13 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
+import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CircleDashed, Clock, Handshake, TrendingDown } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { acessoAoValora, configDoValora } from "@/lib/valora/servidor";
 import { custosDoTenant, horasDoPeriodo, periodoDaUrl } from "@/lib/gestao/horas";
 import { diagnosticarCarteira, type PropostaGanha } from "@/lib/gestao/custo";
+import { formatarNumero } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -65,18 +66,18 @@ export default async function DiagnosticoDaCarteiraPage() {
       {/* Os números do topo no cartão padrão, com ícone (30/09). */}
       <FaixaDeTotais
         itens={[
-          { rotulo: "Clientes com proposta fechada", valor: String(propostas.length), icone: <Handshake /> },
-          { rotulo: "Com horas apontadas", valor: String(linhas.length), icone: <Clock /> },
+          { rotulo: "Clientes com proposta fechada", valor: formatarNumero(propostas.length, 0), icone: <Handshake /> },
+          { rotulo: "Com horas apontadas", valor: formatarNumero(linhas.length, 0), icone: <Clock /> },
           {
             rotulo: "Abaixo da margem mínima",
-            valor: String(abaixoDoPiso),
+            valor: formatarNumero(abaixoDoPiso, 0),
             icone: <TrendingDown />,
             // Crítico, como o selo da margem abaixo do piso na tabela (07/10):
             // o cartão era âmbar e o selo, vermelho, para a mesma situação.
             tom: abaixoDoPiso > 0 ? "text-danger" : undefined,
             detalhe: `piso de ${cfg.parametros.margemPisoPct}%`,
           },
-          { rotulo: "Sem horas no período", valor: String(semHoras), icone: <CircleDashed />, tom: "text-fg-muted" },
+          { rotulo: "Sem horas no período", valor: formatarNumero(semHoras, 0), icone: <CircleDashed />, tom: "text-fg-muted" },
         ]}
       />
 
