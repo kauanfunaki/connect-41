@@ -475,10 +475,10 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     ],
   },
 
-  // ─── Repositório de Senhas ────────────────────────────────────────────────
+  // ─── Repositório de senhas ────────────────────────────────────────────────
   {
     chave: "bpo_senhas",
-    titulo: "Repositório de Senhas",
+    titulo: "Repositório de senhas",
     caminhos: ["/bpo-senhas"],
     resumo:
       "Guarda as credenciais de portais, bancos e sistemas dos clientes num lugar só, com registro de quem consultou cada senha.",
@@ -518,10 +518,10 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     ],
   },
 
-  // ─── Repositório de Manuais ───────────────────────────────────────────────
+  // ─── Repositório de manuais ───────────────────────────────────────────────
   {
     chave: "bpo_manual",
-    titulo: "Repositório de Manuais",
+    titulo: "Repositório de manuais",
     caminhos: ["/bpo-manual"],
     resumo:
       "Instruções internas escritas pela própria equipe, organizadas em documentos e páginas, para ninguém ficar sem saber o que fazer em ausências e férias.",
