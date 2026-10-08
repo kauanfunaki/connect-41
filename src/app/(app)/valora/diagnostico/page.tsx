@@ -13,12 +13,10 @@ import { getPrisma } from "@/lib/prisma";
 import { acessoAoValora, configDoValora } from "@/lib/valora/servidor";
 import { custosDoTenant, horasDoPeriodo, periodoDaUrl } from "@/lib/gestao/horas";
 import { diagnosticarCarteira, type PropostaGanha } from "@/lib/gestao/custo";
-import { formatarNumero } from "@/lib/format";
+import { formatarNumero, formatarReais } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const UMA_CASA = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
 
 // Diagnóstico da carteira (29/09): a "Calculadora de preço" do 41-gestao, que
 // olhava para trás — o custo real das horas apontadas contra o honorário —
@@ -123,21 +121,21 @@ export default async function DiagnosticoDaCarteiraPage() {
                       </Link>
                       {l.temHoraSemCusto && <span className="block text-[11px] text-fg-muted">tem horas em setor sem custo no Valora</span>}
                     </td>
-                    <td className="px-3 tabular-nums">{MOEDA.format(l.honorario)}</td>
-                    <td className="px-3 tabular-nums">{UMA_CASA.format(l.horasMes)} h</td>
-                    <td className="px-3 tabular-nums">{MOEDA.format(l.custoMes)}</td>
+                    <td className="px-3 tabular-nums">{formatarReais(l.honorario)}</td>
+                    <td className="px-3 tabular-nums">{formatarNumero(l.horasMes, 1)} h</td>
+                    <td className="px-3 tabular-nums">{formatarReais(l.custoMes)}</td>
                     <td className="px-3 tabular-nums">
                       {l.margemPct === null ? (
                         "—"
                       ) : l.margemPct < cfg.parametros.margemPisoPct ? (
-                        <Badge variant="danger">{UMA_CASA.format(l.margemPct)}%</Badge>
+                        <Badge variant="danger">{formatarNumero(l.margemPct, 1)}%</Badge>
                       ) : l.margemPct < cfg.parametros.margemAlvoPct ? (
-                        <Badge variant="warning">{UMA_CASA.format(l.margemPct)}%</Badge>
+                        <Badge variant="warning">{formatarNumero(l.margemPct, 1)}%</Badge>
                       ) : (
-                        <Badge variant="success">{UMA_CASA.format(l.margemPct)}%</Badge>
+                        <Badge variant="success">{formatarNumero(l.margemPct, 1)}%</Badge>
                       )}
                     </td>
-                    <td className="px-3 tabular-nums text-fg-secondary">{l.alvo === null ? "—" : MOEDA.format(l.alvo)}</td>
+                    <td className="px-3 tabular-nums text-fg-secondary">{l.alvo === null ? "—" : formatarReais(l.alvo)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -8,7 +8,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { countActiveUsers } from "@/lib/subscriptions";
 import { SUBSCRIPTION_STATUS_LABEL } from "@/lib/subscription-labels";
-import { formatCalendarDate, formatInstantDate } from "@/lib/format";
+import { formatCalendarDate, formatInstantDate, formatarReais } from "@/lib/format";
 
 // Só existe pra tenants SELF_SERVICE (frente 2 do modelo comercial) — em
 // MANAGED é a 41 Tech quem administra a assinatura, o cliente não precisa
@@ -26,7 +26,7 @@ export default async function AssinaturaPage() {
 
   if (!tenant || tenant.managementMode !== "SELF_SERVICE") notFound();
 
-  const fmt = (v: unknown) => (v == null ? "—" : `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`);
+  const fmt = (v: unknown) => (v == null ? "—" : formatarReais(Number(v)));
   const seatLimit = subscription?.seatLimit ?? null;
   const seatsUsedPct = seatLimit ? Math.min(100, Math.round((activeUsers / seatLimit) * 100)) : null;
 

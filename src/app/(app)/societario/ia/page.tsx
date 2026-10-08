@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
-import { formatInstantDate } from "@/lib/format";
+import { formatInstantDate, formatarReaisDeCentavos } from "@/lib/format";
 import { estadoDosAgentes } from "@/lib/ia/data";
 import { agenteDoCatalogo } from "@/lib/ia/catalogo";
 import { propostasDoSetor, qualidadeDoSetor } from "@/lib/ia/propostas";
@@ -35,7 +35,6 @@ const STATUS = {
 
 const CONFIANCA = { ALTA: "alta", MEDIA: "média", BAIXA: "baixa" } as const;
 const pct = (n: number | null) => (n === null ? "—" : `${Math.round(n * 100)}%`);
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const MES = new Intl.DateTimeFormat("pt-BR", { month: "short", timeZone: "UTC" });
 
 export default async function IaDoSocietarioPage() {
@@ -156,7 +155,7 @@ export default async function IaDoSocietarioPage() {
                       </div>
                     ))}
                   </div>
-                  <p className="text-[12px] text-fg-muted">Custo no período: {MOEDA.format(q.custoCentavos / 100)}</p>
+                  <p className="text-[12px] text-fg-muted">Custo no período: {formatarReaisDeCentavos(q.custoCentavos)}</p>
                 </Card>
               );
             })}

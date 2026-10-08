@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Pagination } from "@/components/shared/Pagination";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
-import { formatCalendarDate } from "@/lib/format";
+import { formatCalendarDate, formatarReais, formatarCompetencia } from "@/lib/format";
 import { nomeExibicao } from "@/lib/companyName";
 import {
   TIPO_LABEL,
@@ -10,7 +10,6 @@ import {
   SITUACAO_VARIANTE,
   DESTINO_LABEL,
   DESTINO_VARIANTE,
-  competenciaLegivel,
 } from "@/lib/fiscal/rotulos";
 import { direcaoDoLancamento, precisaDeEstorno } from "@/lib/fiscal/documentos";
 import { documentoDaEmpresa } from "@/lib/companyTaxId";
@@ -27,7 +26,6 @@ type PropsDaPaginacao = {
   filtrosDaUrl: Record<string, string | undefined>;
 };
 
-const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 /**
  * O acervo: tabela no computador, cartões no celular.
@@ -69,7 +67,7 @@ export function AcervoTable({ documentos }: { documentos: LinhaDoAcervo[] }) {
         sem valor
       </span>
     ) : (
-      MOEDA.format(Number(d.amount))
+      formatarReais(Number(d.amount))
     );
 
   // Situação e destino aparecem juntos porque são eixos independentes:
@@ -109,7 +107,7 @@ export function AcervoTable({ documentos }: { documentos: LinhaDoAcervo[] }) {
               {nomeExibicao(d.company)} · {contraparte ?? "—"}
             </InfoDoCartao>
             <InfoDoCartao>
-              {formatCalendarDate(d.issuedAt)} · {competenciaLegivel(d.competence)} · {direcao}
+              {formatCalendarDate(d.issuedAt)} · {formatarCompetencia(d.competence)} · {direcao}
             </InfoDoCartao>
             <PeDoCartao>{selos(d, estorno)}</PeDoCartao>
           </Cartao>
@@ -156,7 +154,7 @@ export function AcervoTable({ documentos }: { documentos: LinhaDoAcervo[] }) {
                 </td>
                 <td className="px-4 py-3 text-fg-secondary tnum whitespace-nowrap">
                   <span className="block">{formatCalendarDate(d.issuedAt)}</span>
-                  <span className="block text-[length:var(--fs-micro)] text-fg-muted">{competenciaLegivel(d.competence)}</span>
+                  <span className="block text-[length:var(--fs-micro)] text-fg-muted">{formatarCompetencia(d.competence)}</span>
                 </td>
                 <td className="px-4 py-3 tnum whitespace-nowrap text-fg">{valor(d)}</td>
                 <td className="px-4 py-3 text-fg-secondary whitespace-nowrap">{direcao}</td>
