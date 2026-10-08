@@ -1634,8 +1634,8 @@ function videosDoSocietario(): DefinicaoDeVideo[] {
         }
         await r.topo();
         await r.apontar(
-          main(r).getByRole("button", { name: "Aguardando cliente" }).first(),
-          "No topo, Aguardando cliente e Suspender pausam o processo; Retomar volta a tocar."
+          main(r).getByRole("button", { name: "Esperar o cliente" }).first(),
+          "No topo, Esperar o cliente e Suspender pausam o processo; Indeferir e Cancelar ficam no menu ⋯. Retomar volta a tocar."
         );
         await r.soltar();
         await r.legenda("Exigência cumprida? Marcar como cumprida, e depois Reapresentar. Cada reapresentação conta uma volta.");
