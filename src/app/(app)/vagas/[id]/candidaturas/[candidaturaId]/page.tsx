@@ -211,10 +211,11 @@ export default async function CandidaturaScorecardPage({
         />
       </div>
 
-      {/* Consolidado */}
+      {/* Consolidado. Títulos de seção da ficha em 18px (`text-section`) —
+          padrão aceito pelo Kauan em 08/10/2026; estavam em 14px. */}
       {consolidation.count > 0 && (
         <Card className="p-5 mb-4">
-          <h2 className="text-card-title font-semibold text-fg mb-3">Consolidado ({consolidation.count} parecer{consolidation.count !== 1 ? "es" : ""})</h2>
+          <h2 className="text-section font-semibold text-fg mb-3">Consolidado ({consolidation.count} parecer{consolidation.count !== 1 ? "es" : ""})</h2>
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-ui text-fg">
               Média: <strong className="tnum">{consolidation.averageScore != null ? formatarNumero(consolidation.averageScore, 1) : "—"}</strong>/5
@@ -234,7 +235,7 @@ export default async function CandidaturaScorecardPage({
 
       {/* Pareceres */}
       <Card className="p-5 mb-4">
-        <h2 className="text-card-title font-semibold text-fg mb-3">Pareceres</h2>
+        <h2 className="text-section font-semibold text-fg mb-3">Pareceres</h2>
         {candidatura.scorecards.length === 0 ? (
           <p className="text-ui text-fg-muted">Nenhum parecer ainda.</p>
         ) : (
@@ -284,7 +285,7 @@ export default async function CandidaturaScorecardPage({
       {/* Meu parecer */}
       {canAct && (
         <Card className="p-5">
-          <h2 className="text-card-title font-semibold text-fg mb-3">{myScorecard ? "Editar meu parecer" : "Adicionar meu parecer"}</h2>
+          <h2 className="text-section font-semibold text-fg mb-3">{myScorecard ? "Editar meu parecer" : "Adicionar meu parecer"}</h2>
           <ScorecardForm
             action={salvarScorecard.bind(null, vagaId, candidaturaId)}
             defaults={

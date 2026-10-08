@@ -200,9 +200,11 @@ export default async function VagaPage({
         }
       />
 
-      {/* Detalhes */}
+      {/* Detalhes. Títulos de seção da ficha em 18px (`text-section`) — padrão
+          aceito pelo Kauan em 08/10/2026 para as fichas; estavam em 14px. O
+          Assistente, cartão dentro do cartão do funil, fica no título de cartão. */}
       <Card className="p-5 mb-4">
-        <h2 className="text-card-title font-semibold text-fg mb-4">Detalhes</h2>
+        <h2 className="text-section font-semibold text-fg mb-4">Detalhes</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-8 gap-y-4">
           <InfoRow label="Cargo" value={vaga.cargo?.name} />
           <InfoRow label="Quantidade" value={String(vaga.quantity)} />
@@ -263,7 +265,7 @@ export default async function VagaPage({
       <Card className="p-5 mb-4">
         {/* O "Novo candidato" saiu daqui para o bloco "Nova candidatura",
             acima do formulário de vincular (5A, 08/10/2026). */}
-        <h2 className="mb-4 text-card-title font-semibold text-fg">
+        <h2 className="mb-4 text-section font-semibold text-fg">
           Funil de recrutamento ({vaga.candidaturas.length} candidato{vaga.candidaturas.length !== 1 ? "s" : ""})
         </h2>
 
