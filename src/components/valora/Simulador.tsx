@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Save } from "lucide-react";
 import { Accordion } from "@/components/ui/Accordion";
 import { Button } from "@/components/ui/Button";
+import { CampoNumero } from "@/components/ui/CampoNumero";
 import { Card } from "@/components/ui/Card";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
@@ -107,11 +108,9 @@ export function Simulador({
           <FieldGrid>
             {volumes.map((c) => (
               <CampoForm key={c.chave} label={c.rotulo} htmlFor={`simulacao-volume-${c.chave}`} helper={c.ajuda}>
-                <Input
+                <CampoNumero
                   id={`simulacao-volume-${c.chave}`}
-                  type="number"
                   min={0}
-                  inputMode="numeric"
                   value={perfil.volumes[c.chave] || ""}
                   placeholder="0"
                   onChange={(e) => muda({ volumes: { ...perfil.volumes, [c.chave]: Math.max(0, Number(e.target.value) || 0) } })}

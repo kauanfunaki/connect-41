@@ -5,6 +5,7 @@ import type { TrainingState } from "@/app/(app)/treinamentos/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoNumero } from "@/components/ui/CampoNumero";
 import { Textarea } from "@/components/ui/Textarea";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Aviso } from "@/components/ui/Aviso";
@@ -51,7 +52,7 @@ export function TrainingForm({ action, cancelHref, defaultValues }: Props) {
           <Input id="workloadHours" name="workloadHours" type="number" step="0.5" defaultValue={defaultValues?.workloadHours ?? ""} suffix="h" />
         </CampoForm>
         <CampoForm label="Validade" htmlFor="validityMonths">
-          <Input id="validityMonths" name="validityMonths" type="number" min={0} defaultValue={defaultValues?.validityMonths ?? ""} suffix="meses" />
+          <CampoNumero id="validityMonths" name="validityMonths" min={0} defaultValue={defaultValues?.validityMonths ?? ""} suffix="meses" />
         </CampoForm>
       </FieldGrid>
 

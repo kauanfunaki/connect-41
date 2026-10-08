@@ -7,6 +7,7 @@ import type { ObligationState } from "@/app/(app)/admin/obrigacoes/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
+import { CampoNumero } from "@/components/ui/CampoNumero";
 import { Select } from "@/components/ui/Select";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
@@ -132,7 +133,7 @@ export function AddObrigacaoForm({
         </CampoForm>
         {frequency === "MONTHLY" && (
           <CampoForm label="Dia do mês" htmlFor="dayOfMonth" required>
-            <Input id="dayOfMonth" name="dayOfMonth" type="number" min={1} max={31} required placeholder="ex: 20" />
+            <CampoNumero id="dayOfMonth" name="dayOfMonth" min={1} max={31} required placeholder="ex: 20" />
           </CampoForm>
         )}
         {(frequency === "WEEKLY" || frequency === "BIWEEKLY") && (

@@ -7,6 +7,7 @@ import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
+import { CampoNumero } from "@/components/ui/CampoNumero";
 import { CampoData } from "@/components/ui/CampoData";
 
 type Props = {
@@ -39,7 +40,7 @@ export function AddFeriasForm({ action }: Props) {
           <CampoData id="concessivePeriodEnd" name="concessivePeriodEnd" />
         </CampoForm>
         <CampoForm label="Dias" htmlFor="days">
-          <Input id="days" name="days" type="number" min={1} max={30} defaultValue={30} />
+          <CampoNumero id="days" name="days" min={1} max={30} defaultValue={30} />
         </CampoForm>
       </FieldGrid>
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
