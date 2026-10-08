@@ -395,6 +395,9 @@ async function Alcadas({
         )}
       </Card>
 
+      {/* No casco da fila ao lado, com a contagem na barra e o vazio dentro
+          (08/10/2026). */}
+      <CascoDaTabela contagem={contarItens(alcadas.length, "alçada", "alçadas")}>
       {alcadas.length === 0 ? (
         <EmptyState icon={<ShieldCheck />} title="Nenhuma alçada cadastrada" description="Sem alçada, as contas não entram em aprovação sozinhas." />
       ) : (
@@ -463,6 +466,7 @@ async function Alcadas({
           </TabelaNoDesktop>
         </>
       )}
+      </CascoDaTabela>
     </>
   );
 }

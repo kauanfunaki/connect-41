@@ -202,11 +202,14 @@ export default async function DreEconomicaPage({
       )}
 
       {lancamentos === 0 && !temCobranca && !comparacao ? (
-        <EmptyState
-          title={`Nenhum lançamento com competência em ${periodo}${nomeDoFiltro ? ` em ${nomeDoFiltro}` : ""}`}
-          description="A DRE econômica soma os lançamentos pela competência. Contas lançadas por nota ou à mão aparecem aqui no mês a que pertencem."
-          icon={<FileText />}
-        />
+        // Em cartão, como o vazio das listas (08/10/2026): solto, flutuava no fundo.
+        <Card>
+          <EmptyState
+            title={`Nenhum lançamento com competência em ${periodo}${nomeDoFiltro ? ` em ${nomeDoFiltro}` : ""}`}
+            description="A DRE econômica soma os lançamentos pela competência. Contas lançadas por nota ou à mão aparecem aqui no mês a que pertencem."
+            icon={<FileText />}
+          />
+        </Card>
       ) : (
         <>
           <FaixaDeTotais

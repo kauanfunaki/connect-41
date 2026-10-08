@@ -158,13 +158,14 @@ export default async function DrePage({
       <PageContainer>
         <PageHeader title="DRE" subtitle="Demonstrativo de resultado, por empresa e mês." />
         <SeletorDeEmpresa empresas={empresas} companyId={companyId} />
-        <div className="mt-4">
+        {/* Em cartão, como o vazio das listas (08/10/2026): solto, flutuava no fundo. */}
+        <Card className="mt-4">
           <EmptyState
             title="Nenhum pagamento ou recebimento nesta empresa"
             description="O DRE é de caixa: ele monta a partir do que foi efetivamente pago e recebido, não do que foi lançado."
             icon={<FileText />}
           />
-        </div>
+        </Card>
         {/* É aqui que quem ainda monta o DRE fora do Connect começa. */}
         <div className="mt-4">
           <ImportarDoOmie companyId={companyId} />

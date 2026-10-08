@@ -182,7 +182,6 @@ export default async function PendenciasPage({
                 </PeDoCartao>
               </Cartao>
             ))}
-            {limitado && <p className="text-[11px] text-fg-muted mt-1">Mostrando as 500 primeiras. Filtre por empresa para ver o resto.</p>}
           </CartoesNoCelular>
 
           <TabelaFiltravel
@@ -255,9 +254,12 @@ export default async function PendenciasPage({
                 ))}
               </tbody>
             </table>
-            {limitado && <p className="text-[11px] text-fg-muted mt-3">Mostrando as 500 primeiras. Filtre por empresa para ver o resto.</p>}
           </TabelaNoDesktop>
           </TabelaFiltravel>
+          {/* Filho direto do casco, como em aprovações (08/10/2026): dentro da
+              tabela, o aviso perdia o recuo e a divisória do pé do cartão. Um só
+              para o cartão do celular e a tabela. */}
+          {limitado && <p className="text-micro text-fg-muted mt-3">Mostrando as 500 primeiras. Filtre por empresa para ver o resto.</p>}
           </>
         )}
       </CascoDaTabela>
