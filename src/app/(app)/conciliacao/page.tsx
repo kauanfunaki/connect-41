@@ -12,6 +12,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
 import { CampoPeriodo } from "@/components/ui/CampoPeriodo";
 import { Button } from "@/components/ui/Button";
 import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
@@ -37,6 +38,7 @@ import {
 import { motivoDoBloqueioDeBaixa } from "@/lib/financeiro/aprovacao/regras";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
 export const dynamic = "force-dynamic";
 
@@ -129,13 +131,16 @@ export default async function ConciliacaoPage({
 
   return (
     <PageContainer>
-      {cabecalho}
-      <FiltroDePeriodo acao="/conciliacao" empresas={empresas} empresaId={companyId} />
+      {/* "Nova conta" é da empresa toda: vai no cabeçalho da tela, como em
+          pendências e no resto do app (08/10/2026) — ficava ao lado do h2. */}
+      <PageHeader
+        title="Conciliação bancária"
+        subtitle="O extrato do banco contra os lançamentos: o que já foi pago, o que falta lançar e se o saldo fecha."
+        action={podeAgir ? <ContaBancariaForm companyId={companyId} /> : undefined}
+      />
+      <FiltroDePeriodo acao="/conciliacao" empresas={empresas} empresaId={companyId} navegaSozinho />
 
-      <div className="flex items-center justify-between gap-3 mb-3">
-        <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Contas bancárias</h2>
-        {podeAgir && <ContaBancariaForm companyId={companyId} />}
-      </div>
+      <h2 className="text-card-title font-semibold text-fg mb-3">Contas bancárias</h2>
 
       {contas.length === 0 ? (
         <Card className="mb-6">
@@ -155,21 +160,21 @@ export default async function ConciliacaoPage({
                   <div className="min-w-0">
                     <Link
                       href={`/conciliacao?empresa=${companyId}&conta=${c.id}`}
-                      className="text-[13px] font-semibold text-fg hover:underline"
+                      className="text-ui font-semibold text-fg hover:underline"
                       aria-current={selecionada ? "true" : undefined}
                     >
                       {c.nickname}
                     </Link>
-                    <span className="block text-[11px] text-fg-muted">
+                    <span className="block text-micro text-fg-muted">
                       Banco {c.bankCode} · {c.agency ? `ag. ${c.agency} · ` : ""}c/{c.type === "POUPANCA" ? "p" : "c"} {c.accountNumber}
                     </span>
                     {c.omieAccountLabel && (
-                      <span className="block text-[11px] text-fg-muted" title="O que o BPO conciliar nesta conta no Omie sai da fila daqui">
+                      <span className="block text-micro text-fg-muted" title="O que o BPO conciliar nesta conta no Omie sai da fila daqui">
                         Ligada ao Omie: {c.omieAccountLabel}
                       </span>
                     )}
                   </div>
-                  {!c.active && <Badge variant="danger">Inativa</Badge>}
+                  {!c.active && <Badge variant={TOM_DA_SITUACAO.INATIVA}>Inativa</Badge>}
                 </div>
                 <BlocoDoSaldo situacao={saldos.get(c.id)!} />
                 {/* mt-auto: os botões ficam no pé do cartão, na mesma altura
@@ -221,7 +226,7 @@ function textoDeCentavos(centavos: number): string {
 
 function BlocoDoSaldo({ situacao }: { situacao: SituacaoDoSaldo }) {
   const linha = (rotulo: string, valor: React.ReactNode, tom = "") => (
-    <div className="flex items-baseline justify-between gap-2 text-[12px]">
+    <div className="flex items-baseline justify-between gap-2 text-fs-2">
       <span className="text-fg-muted">{rotulo}</span>
       <span className={`tabular-nums font-medium ${tom}`}>{valor}</span>
     </div>
@@ -229,7 +234,7 @@ function BlocoDoSaldo({ situacao }: { situacao: SituacaoDoSaldo }) {
 
   switch (situacao.tipo) {
     case "sem_dados":
-      return <p className="text-[12px] text-fg-muted">Sem extrato importado e sem saldo inicial.</p>;
+      return <p className="text-helper text-fg-muted">Sem extrato importado e sem saldo inicial.</p>;
     case "sem_saldo_inicial":
       return (
         <div className="flex flex-col gap-0.5">
@@ -238,21 +243,21 @@ function BlocoDoSaldo({ situacao }: { situacao: SituacaoDoSaldo }) {
             moeda(situacao.bancoCentavos),
             tomDoValor(situacao.bancoCentavos)
           )}
-          <p className="text-[11px] text-fg-muted">Sem saldo inicial cadastrado, não há com que conferir.</p>
+          <p className="text-micro text-fg-muted">Sem saldo inicial cadastrado, não há com que conferir.</p>
         </div>
       );
     case "sem_saldo_do_banco":
       return (
         <div className="flex flex-col gap-0.5">
           {linha("Saldo calculado", moeda(situacao.calculadoCentavos), tomDoValor(situacao.calculadoCentavos))}
-          <p className="text-[11px] text-fg-muted">Nenhum extrato importado trouxe o saldo do banco.</p>
+          <p className="text-micro text-fg-muted">Nenhum extrato importado trouxe o saldo do banco.</p>
         </div>
       );
     case "banco_anterior_ao_inicial":
       return (
         <div className="flex flex-col gap-0.5">
           {linha("Saldo calculado", moeda(situacao.calculadoCentavos), tomDoValor(situacao.calculadoCentavos))}
-          <p className="text-[11px] text-fg-muted">
+          <p className="text-micro text-fg-muted">
             O saldo do banco mais recente ({dataCurta(situacao.bancoDataKey)}) é anterior ao saldo inicial — importe um
             extrato mais novo para conferir.
           </p>
@@ -437,31 +442,31 @@ async function ExtratoDaConta({
 
   return (
     <>
-      <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">Extrato — {conta.nickname}</h2>
+      <h2 className="text-card-title font-semibold text-fg mb-3">Extrato — {conta.nickname}</h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-5">
         {podeAgir && conta.active ? (
           <ImportarOfx bankAccountId={conta.id} />
         ) : (
-          <Card className="p-4 text-[12px] text-fg-muted">
+          <Card className="p-4 text-fs-2 text-fg-muted">
             {conta.active ? "Sem permissão para importar extrato." : "Conta inativa: reative para importar extrato."}
           </Card>
         )}
         <Card className="p-4 flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <History size={16} className="text-brand" />
-            <h3 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Importações recentes</h3>
+            <h3 className="text-card-title font-semibold text-fg">Importações recentes</h3>
           </div>
           {importacoes.length === 0 ? (
-            <p className="text-[12px] text-fg-muted">Nenhum extrato importado nesta conta.</p>
+            <p className="text-helper text-fg-muted">Nenhum extrato importado nesta conta.</p>
           ) : (
-            <ul className="flex flex-col gap-1.5 text-[12px]">
+            <ul className="flex flex-col gap-1.5 text-fs-2">
               {importacoes.map((i) => (
                 <li key={i.id} className="flex flex-col border-b border-border-soft pb-1.5 last:border-0">
                   <span className="text-fg truncate" title={i.fileName}>
                     {i.fileName}
                   </span>
-                  <span className="text-[11px] text-fg-muted">
+                  <span className="text-micro text-fg-muted">
                     {formatInstantDateTime(i.createdAt, { dateStyle: "short", timeStyle: "short" })}
                     {i.importedBy ? ` · ${i.importedBy.name}` : ""} · {i.transactionsNew} novas de {i.transactionsRead}
                     {i.periodStart && i.periodEnd
@@ -499,8 +504,9 @@ async function ExtratoDaConta({
             <input type="hidden" name="conta" value={conta.id} />
             {situacao.chave !== "pendentes" && <input type="hidden" name="situacao" value={situacao.chave} />}
             <CampoPeriodo compact nomeDe="de" nomeAte="ate" defaultDe={de ?? ""} defaultAte={ate ?? ""} className="w-72 max-w-full" />
+            {/* "Aplicar", como os outros filtros por formulário (08/10/2026). */}
             <Button type="submit" variant="secondary" size="sm">
-              Filtrar período
+              Aplicar
             </Button>
             {(de || ate) && (
               <Button
@@ -541,19 +547,19 @@ async function ExtratoDaConta({
               centros={centros.map((c) => ({ id: c.id, nome: c.name }))}
             />
             {limitado && (
-              <p className="text-[11px] text-fg-muted mt-2">
+              <p className="text-micro text-fg-muted mt-2">
                 Mostrando as {LIMITE_DE_TRANSACOES} primeiras. Use o período para ver as demais.
               </p>
             )}
           </>
         )}
       </CascoDaTabela>
-      <p className="text-[11px] text-fg-muted mt-3">
+      <NotaDeFonte>
         A sugestão aparece só quando um lançamento de mesmo valor se destaca pela data e pelo nome — nada é conciliado
         sem confirmação. Conciliar marca os lançamentos como pagos na data do extrato; desfazer devolve o estado anterior.
         Em conta ligada ao Omie, a linha que bate no valor e no dia com uma única baixa já conciliada lá sai da fila
         sozinha, como “Conciliada no Omie”.
-      </p>
+      </NotaDeFonte>
     </>
   );
 }

@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
 import { ManualWorkspace } from "@/components/bpoManual/ManualWorkspace";
 import {
@@ -50,7 +49,8 @@ export default async function BpoManualPage() {
   // árvore de documentos e do canvas. Mesmo padrão do quadro de Kanban.
   return (
     <PageContainer className="h-full flex flex-col">
-      <BackButton className="mb-3 flex-shrink-0" />
+      {/* Sem "Voltar" (08/10/2026): é página principal do setor, aberta pelo
+          menu — a regra de contas a pagar. */}
 
       {/* Subtítulo no próprio PageHeader (30/09) — estava escrito à parte, com
           o cabeçalho aninhado num bloco com margem própria. */}

@@ -1,4 +1,5 @@
-import { Badge } from "@/components/ui/Badge";
+import { Badge, type VarianteDoBadge } from "@/components/ui/Badge";
+import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
 import {
   ROTULO_DO_PRAZO,
   ROTULO_DO_STATUS,
@@ -9,11 +10,13 @@ import {
 
 // ABERTA é `warning` do lado da equipe porque espera alguém de fora; RESPONDIDA
 // é `info` porque a vez é da equipe — é o que a fila precisa destacar.
-const VARIANTE_DO_STATUS: Record<StatusDaPendencia, "success" | "warning" | "danger" | "info"> = {
+// Cancelada no tom neutro do mapa único do BPO (08/10/2026): era `danger`, a
+// cor de "Vencida" — encerrada não pede ação.
+const VARIANTE_DO_STATUS: Record<StatusDaPendencia, VarianteDoBadge> = {
   ABERTA: "warning",
   RESPONDIDA: "info",
   RESOLVIDA: "success",
-  CANCELADA: "danger",
+  CANCELADA: TOM_DA_SITUACAO.CANCELADA,
 };
 
 /** Rótulo do status para quem vê. No portal, "aguardando cliente" é "aguardando você". */

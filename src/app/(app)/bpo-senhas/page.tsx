@@ -2,10 +2,9 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { getAuthContext, canManageSector, canActOnSector } from "@/lib/auth/context";
 import { formatInstantDate } from "@/lib/format";
-import { BpoCredentialsList } from "@/components/bpoSenhas/BpoCredentialsList";
+import { BpoCredentialsList, NewCredentialModal } from "@/components/bpoSenhas/BpoCredentialsList";
 import { criarCredencial, atualizarCredencial, excluirCredencial, revelarCredencial } from "./actions";
 import { setorDoModulo } from "@/lib/modules";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
@@ -40,12 +39,13 @@ export default async function BpoSenhasPage() {
 
   return (
     <PageContainer>
-      <BackButton className="mb-3" />
-
-      {/* Subtítulo no próprio PageHeader (30/09) — estava escrito à parte. */}
+      {/* Sem "Voltar" (08/10/2026): é página principal do setor, aberta pelo
+          menu — a regra de contas a pagar. Subtítulo no próprio PageHeader
+          (30/09), e "Nova credencial" no `action`, como as outras telas. */}
       <PageHeader
         title="Repositório de Senhas"
         subtitle="Credenciais de portais, bancos e sistemas de clientes — centralizadas com auditoria de acesso."
+        action={canManage ? <NewCredentialModal companies={companies} createAction={criarCredencial} /> : undefined}
       />
 
       <BpoCredentialsList
@@ -63,7 +63,6 @@ export default async function BpoSenhasPage() {
         companies={companies}
         canManage={canManage}
         setorRotulo={setorRotulo}
-        createAction={criarCredencial}
         updateAction={atualizarCredencial}
         deleteAction={excluirCredencial}
         revealAction={revelarCredencial}

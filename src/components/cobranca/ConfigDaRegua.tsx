@@ -61,12 +61,18 @@ export function ConfigDaRegua({ ligada, passos, podeEditar }: { ligada: boolean;
         <Input id="regua-passos" name="passos" defaultValue={passos} disabled={!podeEditar} />
       </CampoForm>
       {podeEditar && (
+        // Na linha dos campos, e não no `FormFooter`: o formulário é uma linha
+        // só. O "Salvando…" vem do `loading` do botão (08/10/2026).
         <AlinhadoAoCampo>
-          <Button type="submit" disabled={pendente}>
-            {pendente ? "Salvando…" : "Salvar"}
+          <Button type="submit" loading={pendente}>
+            Salvar
           </Button>
-          {erro && <span className="text-[12px] text-danger">{erro}</span>}
-          {salvo && <span className="text-[12px] text-success">Salvo.</span>}
+          {erro && (
+            <span role="alert" className="text-helper font-medium text-danger">
+              {erro}
+            </span>
+          )}
+          {salvo && <span className="text-helper text-success">Salvo.</span>}
         </AlinhadoAoCampo>
       )}
       {dialog}
@@ -111,10 +117,14 @@ export function EmpresaNaRegua({
       )}
       {/* Ao lado do seletor compacto (32px), o botão é `sm`; sozinho na linha
           da lista, `xs`, como as outras ações de linha. */}
-      <Button size={empresas ? "sm" : "xs"} variant="secondary" disabled={pendente || !escolhida} onClick={() => alternar(escolhida)}>
+      <Button size={empresas ? "sm" : "xs"} variant="secondary" loading={pendente} disabled={!escolhida} onClick={() => alternar(escolhida)}>
         {fora ? "Tirar da régua" : "Devolver à régua"}
       </Button>
-      {erro && <span className="text-[11px] text-danger">{erro}</span>}
+      {erro && (
+        <span role="alert" className="text-micro text-danger">
+          {erro}
+        </span>
+      )}
     </div>
   );
 }

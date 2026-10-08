@@ -70,8 +70,8 @@ export default async function PendenciaPage({ params }: { params: Promise<{ id: 
       {/* O que o cliente recebeu sozinho precisa estar à vista de quem cobra: sem isso,
           a equipe liga para lembrar de algo que o e-mail já lembrou ontem. */}
       {lembretes.length > 0 ? (
-        <Card className="mb-4 p-4 text-[12px]">
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">Lembretes automáticos ao cliente</h2>
+        <Card className="mb-4 p-4 text-fs-2">
+          <h2 className="text-card-title font-semibold text-fg mb-2">Lembretes automáticos ao cliente</h2>
           <ul className="flex flex-col gap-1">
             {lembretes.map((l) => {
               const s = situacaoDoLembrete(l, agora);
@@ -86,7 +86,7 @@ export default async function PendenciaPage({ params }: { params: Promise<{ id: 
       ) : (
         p.status === "ABERTA" &&
         p.prazo && (
-          <p className="mb-4 text-[12px] text-fg-muted">
+          <p className="mb-4 text-helper text-fg-muted">
             Se o prazo passar sem resposta, o cliente recebe lembrete por e-mail com {passosPorExtenso()} dias de atraso.
           </p>
         )
@@ -95,8 +95,8 @@ export default async function PendenciaPage({ params }: { params: Promise<{ id: 
       {p.lancamento && (
         // Rótulo em cima e valor embaixo, como as outras fichas — era
         // "Lançamento vinculado:" corrido na mesma linha do link.
-        <Card className="mb-4 p-4 text-[13px]">
-          <p className="text-[length:var(--fs-helper)] text-fg-muted mb-0.5">Lançamento vinculado</p>
+        <Card className="mb-4 p-4 text-ui">
+          <p className="text-helper text-fg-muted mb-0.5">Lançamento vinculado</p>
           <Link href={p.lancamento.kind === "PAGAR" ? "/pagar?recorte=todas" : "/receber?recorte=todas"} className="text-brand hover:underline">
             {p.lancamento.kind === "PAGAR" ? "a pagar" : "a receber"} · {p.lancamento.contraparteNome} ·{" "}
             {moeda(centavosDeDecimal(p.lancamento.valor))} · vence {formatInstantDate(p.lancamento.vencimento)}
@@ -121,7 +121,7 @@ export default async function PendenciaPage({ params }: { params: Promise<{ id: 
         </Card>
       )}
       {podeAgir && !emAndamento(p.status) && (
-        <p className="mt-5 text-[12px] text-fg-muted">Pendência encerrada. Reabra para continuar a conversa.</p>
+        <p className="mt-5 text-helper text-fg-muted">Pendência encerrada. Reabra para continuar a conversa.</p>
       )}
     </PageContainer>
   );

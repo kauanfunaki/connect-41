@@ -8,8 +8,10 @@ import { SeletorDeEmpresaQueNavega } from "@/components/shared/SeletorDeEmpresaQ
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
 import { Card } from "@/components/ui/Card";
+import { Aviso } from "@/components/ui/Aviso";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { RelatorioDoDre, moeda } from "@/components/dre/RelatorioDoDre";
+import { RelatorioDoDre } from "@/components/dre/RelatorioDoDre";
+import { formatarCompetencia, formatarReaisDeCentavos as moeda } from "@/lib/format";
 import { FilaDeClassificacao, type ItemParaClassificar } from "@/components/dre/FilaDeClassificacao";
 import { dreDoMes, dreDoAnoDaEmpresa, mesesComMovimento } from "@/lib/dre/data";
 import { dreDoAno } from "@/lib/dre/anual";
@@ -18,11 +20,17 @@ import { ImportarDoOmie } from "@/components/dre/ImportarDoOmie";
 import { impostoForaDoResultado } from "@/lib/dre/calculo";
 import { OPCOES_PADRAO, TRANSFERENCIA } from "@/lib/dre/estrutura";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
+import { competenciaDe } from "@/lib/financeiro/periodo";
+import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
-const MESES = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
-];
+/**
+ * O mês do DRE no formato de competência do app, "Out/26" (08/10/2026). Era
+ * "Outubro/2026" só aqui, enquanto a DRE econômica, as análises e o fluxo
+ * diziam "Out/26".
+ */
+function rotuloDoMes(m: { ano: number; mes: number }): string {
+  return formatarCompetencia(competenciaDe(m.ano, m.mes));
+}
 
 type EmpresaNaAba = {
   id: string;
@@ -103,25 +111,24 @@ export default async function DrePage({
         </div>
         <FiltrosDaTela
           className="mb-4"
-          campos={[{ chave: "ano", rotulo: "Ano", vazioLabel: `Mais recente (${anos[0] ?? anoEscolhido})`, opcoes: anos.map((a) => ({ value: String(a), label: String(a) })) }]}
+          campos={[{ chave: "ano", rotulo: "Ano", vazioLabel: `Mais recente (${anos[0] ?? anoEscolhido})`, sempreVisivel: true, opcoes: anos.map((a) => ({ value: String(a), label: String(a) })) }]}
         />
         {/* Os dois avisos que só a visão mensal tinha. Uma categoria que
             some R$ 200 por mês some R$ 2.400 no ano — e doze avisos pequenos
             passam onde um grande não passaria. */}
         {impostoDoAno !== 0 && (
-          <Card className="p-4 mb-4 border-warning/40 bg-warning-bg">
-            <p className="flex items-start gap-2 text-[13px] text-fg">
-              <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warning" />
-              <span>
-                <strong>{moeda(Math.abs(impostoDoAno))}</strong> de impostos sobre a receita saíram
-                do caixa em {anoEscolhido} e <strong>não entram</strong> no resultado abaixo — a
-                margem de contribuição parte da Receita Bruta, como na planilha do BPO.
-                <span className="block text-[12px] text-fg-secondary mt-1">
-                  Reproduzido de propósito. Confirmar com o BPO se é assim mesmo.
-                </span>
+          // O `Aviso` do app (08/10/2026), com o texto em `fg`: o parágrafo é
+          // longo, e o âmbar como cor de texto fica abaixo do contraste AA.
+          <Aviso tom="atencao" icone={<AlertTriangle />} className="mb-4">
+            <span className="text-fg">
+              <strong>{moeda(Math.abs(impostoDoAno))}</strong> de impostos sobre a receita saíram
+              do caixa em {anoEscolhido} e <strong>não entram</strong> no resultado abaixo — a
+              margem de contribuição parte da Receita Bruta, como na planilha do BPO.
+              <span className="block text-fs-2 text-fg-secondary mt-1">
+                Reproduzido de propósito. Confirmar com o BPO se é assim mesmo.
               </span>
-            </p>
-          </Card>
+            </span>
+          </Aviso>
         )}
 
         <div className="mb-4">
@@ -133,13 +140,13 @@ export default async function DrePage({
         </div>
 
         <RelatorioAnual anual={anual} />
-        <p className="text-[11px] text-fg-muted mt-3">
+        <NotaDeFonte>
           {/* A média divide pelos meses com movimento, como o AVERAGE do Excel:
               dividir por doze em setembro diz que a empresa faturou 25% menos. */}
           A coluna <strong>Média</strong> divide por {anual.mesesComMovimento}{" "}
           {anual.mesesComMovimento === 1 ? "mês com movimento" : "meses com movimento"}, não por doze.
           Os percentuais do ano saem dos valores somados, não da média dos percentuais mensais.
-        </p>
+        </NotaDeFonte>
       </PageContainer>
     );
   }
@@ -151,13 +158,14 @@ export default async function DrePage({
       <PageContainer>
         <PageHeader title="DRE" subtitle="Demonstrativo de resultado, por empresa e mês." />
         <SeletorDeEmpresa empresas={empresas} companyId={companyId} />
-        <div className="mt-4">
+        {/* Em cartão, como o vazio das listas (08/10/2026): solto, flutuava no fundo. */}
+        <Card className="mt-4">
           <EmptyState
             title="Nenhum pagamento ou recebimento nesta empresa"
             description="O DRE é de caixa: ele monta a partir do que foi efetivamente pago e recebido, não do que foi lançado."
             icon={<FileText />}
           />
-        </div>
+        </Card>
         {/* É aqui que quem ainda monta o DRE fora do Connect começa. */}
         <div className="mt-4">
           <ImportarDoOmie companyId={companyId} />
@@ -190,7 +198,7 @@ export default async function DrePage({
           aparecia sem dizer de quando. */}
       <PageHeader
         title="DRE"
-        subtitle={`Demonstrativo de resultado de caixa de ${MESES[escolhido.mes - 1]}/${escolhido.ano} — monta do que foi pago e recebido no mês.`}
+        subtitle={`Demonstrativo de resultado de caixa de ${rotuloDoMes(escolhido)} — monta do que foi pago e recebido no mês.`}
       />
 
       <SeletorDeEmpresa empresas={empresas} companyId={companyId} />
@@ -206,8 +214,9 @@ export default async function DrePage({
           {
             chave: "mes",
             rotulo: "Mês",
-            vazioLabel: meses[0] ? `Mais recente (${MESES[meses[0].mes - 1]}/${meses[0].ano})` : "Mais recente",
-            opcoes: meses.map((m) => ({ value: `${m.ano}-${m.mes}`, label: `${MESES[m.mes - 1]}/${m.ano}` })),
+            vazioLabel: meses[0] ? `Mais recente (${rotuloDoMes(meses[0])})` : "Mais recente",
+            sempreVisivel: true,
+            opcoes: meses.map((m) => ({ value: `${m.ano}-${m.mes}`, label: rotuloDoMes(m) })),
           },
         ]}
       />
@@ -215,25 +224,24 @@ export default async function DrePage({
       {/* Existe porque a regra é um chute até o BPO confirmar — e um chute que
           muda o resultado precisa aparecer na tela, não só no código. */}
       {impostoDeFora !== 0 && (
-        <Card className="p-4 mb-4 border-warning/40 bg-warning-bg">
-          <p className="flex items-start gap-2 text-[13px] text-fg">
-            <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warning" />
-            <span>
-              <strong>{moeda(Math.abs(impostoDeFora))}</strong> de impostos sobre a receita saíram do
-              caixa e <strong>não entram</strong> no resultado abaixo — a margem de contribuição parte
-              da Receita Bruta, como na planilha que o BPO usa hoje.
-              <span className="block text-[12px] text-fg-secondary mt-1">
-                Reproduzido de propósito, para o número bater com o que o cliente já recebe.
-                Confirmar com o BPO se é assim mesmo.
-              </span>
+        // O `Aviso` do app (08/10/2026), com o texto em `fg`: o parágrafo é
+        // longo, e o âmbar como cor de texto fica abaixo do contraste AA.
+        <Aviso tom="atencao" icone={<AlertTriangle />} className="mb-4">
+          <span className="text-fg">
+            <strong>{moeda(Math.abs(impostoDeFora))}</strong> de impostos sobre a receita saíram do
+            caixa e <strong>não entram</strong> no resultado abaixo — a margem de contribuição parte
+            da Receita Bruta, como na planilha que o BPO usa hoje.
+            <span className="block text-fs-2 text-fg-secondary mt-1">
+              Reproduzido de propósito, para o número bater com o que o cliente já recebe.
+              Confirmar com o BPO se é assim mesmo.
             </span>
-          </p>
-        </Card>
+          </span>
+        </Aviso>
       )}
 
       {/* De onde saiu o número. Relatório que muda de fonte sem avisar é
           relatório em que ninguém confia duas vezes. */}
-      <p className="text-[11px] text-fg-muted mb-3">
+      <p className="text-micro text-fg-muted mb-3">
         {fonte.tipo === "import"
           ? `Montado do arquivo importado do Omie${fonte.arquivos.length > 0 ? ` (${[...new Set(fonte.arquivos)].join(", ")})` : ""}.`
           : "Montado dos lançamentos pagos e recebidos no Connect."}
@@ -249,9 +257,9 @@ export default async function DrePage({
         <ImportarDoOmie companyId={companyId} />
       </div>
 
-      <p className="text-[11px] text-fg-muted mt-3">
+      <NotaDeFonte>
         {lancamentos} {lancamentos === 1 ? "lançamento" : "lançamentos"} pagos ou recebidos em{" "}
-        {MESES[escolhido.mes - 1]}/{escolhido.ano}
+        {rotuloDoMes(escolhido)}
         {transferencias !== 0 &&
           ` · ${moeda(transferencias)} em transferências entre contas, fora do DRE`}
         {/* Diferente de zero significa que algo entrou e não foi somado em lugar
@@ -261,7 +269,7 @@ export default async function DrePage({
             {" "}· atenção: {moeda(resultado.diferencaDeFechamento)} não fecharam
           </span>
         )}
-      </p>
+      </NotaDeFonte>
     </PageContainer>
   );
 }

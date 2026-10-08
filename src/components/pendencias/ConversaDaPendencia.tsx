@@ -11,7 +11,7 @@ function ListaDeAnexos({ anexos, baseDoDownload }: { anexos: AnexoDaConversa[]; 
         <li key={a.id}>
           <a
             href={`${baseDoDownload}/${a.id}`}
-            className="inline-flex items-center gap-1.5 text-[12px] text-brand hover:underline break-all"
+            className="inline-flex items-center gap-1.5 text-fs-2 text-brand hover:underline break-all"
           >
             <Paperclip size={12} className="shrink-0" /> {a.fileName}
             <span className="text-fg-muted">· {formatarBytes(a.sizeBytes)}</span>
@@ -44,17 +44,20 @@ export function ConversaDaPendencia({
   baseDoDownload: string;
   ladoDeQuemVe: "EQUIPE" | "CLIENTE";
 }) {
+  // Mensagem é bloco de leitura (08/10/2026): `rounded-lg`, como os cartões da
+  // tela (o `rounded-md` é o raio de controle), e o corpo em 15px, o papel de
+  // mensagem e feed na escala — era 13px. Autor e hora seguem em 11px.
   return (
     <ol className="flex flex-col gap-3">
       {abertura && (
-      <li className="rounded-md border border-border bg-surface px-4 py-3">
-        <p className="text-[11px] text-fg-muted">
+      <li className="rounded-lg border border-border bg-surface px-4 py-3">
+        <p className="text-micro text-fg-muted">
           {abertura.por} · abriu em {formatInstantDateTime(abertura.em)}
         </p>
         {abertura.descricao ? (
-          <p className="mt-1.5 text-[13px] whitespace-pre-wrap break-words">{abertura.descricao}</p>
+          <p className="mt-1.5 text-body whitespace-pre-wrap break-words">{abertura.descricao}</p>
         ) : (
-          <p className="mt-1.5 text-[13px] text-fg-muted">Sem descrição.</p>
+          <p className="mt-1.5 text-body text-fg-muted">Sem descrição.</p>
         )}
         <ListaDeAnexos anexos={abertura.anexos} baseDoDownload={baseDoDownload} />
       </li>
@@ -64,15 +67,15 @@ export function ConversaDaPendencia({
         return (
           <li
             key={m.id}
-            className={`rounded-md border px-4 py-3 ${
+            className={`rounded-lg border px-4 py-3 ${
               m.interna ? "border-warning/40 bg-warning-bg ml-6" : minha ? "border-brand/30 bg-brand/5 ml-6" : "border-border bg-surface mr-6"
             }`}
           >
-            <p className="text-[11px] text-fg-muted">
+            <p className="text-micro text-fg-muted">
               {m.autorNome} · {m.interna ? "nota interna, o cliente não vê" : m.lado === "EQUIPE" ? "equipe" : "cliente"} ·{" "}
               {formatInstantDateTime(m.criadaEm)}
             </p>
-            {m.corpo && <p className="mt-1.5 text-[13px] whitespace-pre-wrap break-words">{m.corpo}</p>}
+            {m.corpo && <p className="mt-1.5 text-body whitespace-pre-wrap break-words">{m.corpo}</p>}
             <ListaDeAnexos anexos={m.anexos} baseDoDownload={baseDoDownload} />
           </li>
         );

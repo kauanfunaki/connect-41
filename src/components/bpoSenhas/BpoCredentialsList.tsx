@@ -1,11 +1,12 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
-import { Card } from "@/components/ui/Card";
+import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { Button } from "@/components/ui/Button";
-import { Eye, EyeOff, Copy, Pencil, Trash2, Plus, KeyRound, Search, MoreHorizontal } from "lucide-react";
+import { Eye, EyeOff, Copy, Pencil, Trash2, Plus, KeyRound, Search } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
-import { Popover, ItemDoMenu } from "@/components/ui/Popover";
+import { ItemDoMenu } from "@/components/ui/Popover";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { Modal } from "@/components/ui/Modal";
@@ -90,7 +91,12 @@ function CredentialFormFields({ companies, defaults }: { companies: CompanyOptio
   );
 }
 
-function NewCredentialModal({ companies, createAction }: { companies: CompanyOption[]; createAction: Props["createAction"] }) {
+/**
+ * "Nova credencial", no `action` do PageHeader da tela (08/10/2026) — a ação
+ * da tela inteira fica no cabeçalho, como em pendências e no resto do app; era
+ * um botão à direita da busca.
+ */
+export function NewCredentialModal({ companies, createAction }: { companies: CompanyOption[]; createAction: Props["createAction"] }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(createAction, null);
   const wasPending = useRef(false);
@@ -115,11 +121,12 @@ function NewCredentialModal({ companies, createAction }: { companies: CompanyOpt
       <Modal open={open} onClose={() => setOpen(false)} title="Nova credencial" maxWidth="max-w-md">
         <form action={formAction} className="flex flex-col gap-4">
           <CredentialFormFields companies={companies} />
-          {state?.error && <p className="text-[12px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{state.error}</p>}
           <FormFooter
             pending={isPending}
             submitLabel="Criar"
+            pendingLabel="Criando…"
             onCancel={() => setOpen(false)}
+            erro={state?.error}
           />
         </form>
       </Modal>
@@ -143,10 +150,10 @@ function EditCredentialModal({
     <Modal open onClose={onClose} title={`Editar — ${row.title}`} maxWidth="max-w-md">
       <form action={formAction} className="flex flex-col gap-4">
         <CredentialFormFields companies={companies} defaults={row} />
-        {state?.error && <p className="text-[12px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">{state.error}</p>}
         <FormFooter
           pending={isPending}
           onCancel={onClose}
+          erro={state?.error}
         />
       </form>
     </Modal>
@@ -164,24 +171,8 @@ function AcoesDaCredencial({ onEditar, onExcluir }: { onEditar: () => void; onEx
       <Button variant="secondary" size="xs" onClick={onEditar}>
         <Pencil size={12} /> Editar
       </Button>
-      <Popover
-        align="right"
-        width={180}
-        aria-label="Mais ações da credencial"
-        trigger={({ open, toggle }) => (
-          <button
-            type="button"
-            onClick={toggle}
-            aria-label="Mais ações"
-            aria-expanded={open}
-            className={`h-7 w-7 rounded-md border inline-flex items-center justify-center transition-colors ${
-              open ? "border-brand/40 bg-brand-subtle text-fg" : "border-border-strong text-fg-muted hover:text-fg hover:bg-surface-hover"
-            }`}
-          >
-            <MoreHorizontal size={14} />
-          </button>
-        )}
-      >
+      {/* O gatilho do `MenuDeMaisAcoes` (08/10/2026): estava copiado à mão. */}
+      <MenuDeMaisAcoes rotulo="Mais ações" aria-label="Mais ações da credencial" width={180}>
         {({ close }) => (
           <ItemDoMenu
             icone={<Trash2 />}
@@ -194,7 +185,7 @@ function AcoesDaCredencial({ onEditar, onExcluir }: { onEditar: () => void; onEx
             Excluir
           </ItemDoMenu>
         )}
-      </Popover>
+      </MenuDeMaisAcoes>
     </span>
   );
 }
@@ -238,7 +229,7 @@ function PasswordCell({ credentialId, revealAction }: { credentialId: string; re
   );
 }
 
-export function BpoCredentialsList({ credentials, companies, canManage, setorRotulo, createAction, updateAction, deleteAction, revealAction }: Props) {
+export function BpoCredentialsList({ credentials, companies, canManage, setorRotulo, updateAction, deleteAction, revealAction }: Omit<Props, "createAction">) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const toast = useToast();
@@ -264,42 +255,36 @@ export function BpoCredentialsList({ credentials, companies, canManage, setorRot
     );
   }
 
+  // No casco das listas irmãs do BPO, com a contagem e a busca na barra e o
+  // vazio dentro (08/10/2026). A busca ficava solta acima da tabela, ao lado
+  // do "Nova credencial", que foi para o cabeçalho da tela.
   return (
-    <div className="space-y-4">
-      {/* Barra de ferramentas: busca `compact` e botão `sm`, os dois em 32px —
-          eram o Input e o Button de formulário, de 36px. */}
-      <div className="flex items-center justify-between gap-3">
-        {credentials.length > 0 && (
-          <div className="min-w-0 flex-1 max-w-xs">
-            <Input
-              compact
-              icon={<Search />}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por título, empresa ou usuário…"
-              aria-label="Buscar credenciais"
-            />
-          </div>
-        )}
-        {canManage && (
-          <div className="ml-auto flex-shrink-0">
-            <NewCredentialModal companies={companies} createAction={createAction} />
-          </div>
-        )}
-      </div>
-
+    <>
+      <CascoDaTabela
+        contagem={contarItens(filteredCredentials.length, "credencial", "credenciais")}
+        busca={
+          credentials.length > 0 ? (
+            <div className="w-72 max-w-full">
+              <Input
+                compact
+                icon={<Search />}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por título, empresa ou usuário…"
+                aria-label="Buscar credenciais"
+              />
+            </div>
+          ) : undefined
+        }
+      >
       {credentials.length === 0 ? (
-        <Card>
-          <EmptyState
-            icon={<KeyRound />}
-            title="Nenhuma credencial cadastrada ainda"
-            description={canManage ? "Cadastre a primeira credencial do setor." : `Peça à coordenação do setor ${setorRotulo} pra cadastrar a primeira credencial.`}
-          />
-        </Card>
+        <EmptyState
+          icon={<KeyRound />}
+          title="Nenhuma credencial cadastrada ainda"
+          description={canManage ? "Cadastre a primeira credencial do setor." : `Peça à coordenação do setor ${setorRotulo} para cadastrar a primeira credencial.`}
+        />
       ) : filteredCredentials.length === 0 ? (
-        <Card>
-          <EmptyState icon={<KeyRound />} title="Nenhuma credencial encontrada" description="Tente ajustar a busca." />
-        </Card>
+        <EmptyState icon={<KeyRound />} title="Nenhuma credencial encontrada" description="Tente ajustar a busca." />
       ) : (
       // Tabela no casco padrão, com funil em Empresa e Criada por (30/09) — a
       // lista inteira já está aqui, então o funil filtra no navegador, junto
@@ -314,7 +299,7 @@ export function BpoCredentialsList({ credentials, companies, canManage, setorRot
                 {row.username ? ` · ${row.username}` : ""}
               </InfoDoCartao>
               {row.url && (
-                <a href={row.url} target="_blank" rel="noopener noreferrer" className="block text-[11px] text-brand hover:underline truncate">
+                <a href={row.url} target="_blank" rel="noopener noreferrer" className="block text-micro text-brand hover:underline truncate">
                   {row.url}
                 </a>
               )}
@@ -322,7 +307,7 @@ export function BpoCredentialsList({ credentials, companies, canManage, setorRot
                 <PasswordCell credentialId={row.id} revealAction={revealAction} />
               </div>
               <PeDoCartao>
-                <span className="text-[11.5px] text-fg-muted">
+                <span className="text-micro text-fg-muted">
                   {row.createdByName} · {row.createdAtLabel}
                 </span>
                 {canManage && (
@@ -342,9 +327,9 @@ export function BpoCredentialsList({ credentials, companies, canManage, setorRot
           }))}
         >
           <TabelaNoDesktop padrao>
-            <table className="w-full min-w-[760px] text-[length:var(--fs-body)]">
+            <table className="w-full min-w-[760px] text-body">
               <thead>
-                <tr className="border-b border-border text-[11.5px] font-semibold uppercase tracking-wide text-fg-muted">
+                <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                   <th className="px-4 py-3">Título</th>
                   <th className="px-4 py-3">
                     <FiltroDaColuna rotulo="Empresa" chave="empresa" />
@@ -367,7 +352,7 @@ export function BpoCredentialsList({ credentials, companies, canManage, setorRot
                     <td className="px-4 py-3 font-medium text-fg">
                       {row.title}
                       {row.url && (
-                        <a href={row.url} target="_blank" rel="noopener noreferrer" className="block text-[11px] font-normal text-brand hover:underline truncate max-w-[220px]" title={row.url}>
+                        <a href={row.url} target="_blank" rel="noopener noreferrer" className="block text-micro font-normal text-brand hover:underline truncate max-w-[220px]" title={row.url}>
                           {row.url}
                         </a>
                       )}
@@ -379,7 +364,7 @@ export function BpoCredentialsList({ credentials, companies, canManage, setorRot
                     </td>
                     <td className="px-4 py-3 text-fg-secondary">
                       {row.createdByName}
-                      <span className="block text-[11px] text-fg-muted">{row.createdAtLabel}</span>
+                      <span className="block text-micro text-fg-muted">{row.createdAtLabel}</span>
                     </td>
                     {canManage && (
                       <td className="px-4 py-3">
@@ -394,11 +379,12 @@ export function BpoCredentialsList({ credentials, companies, canManage, setorRot
         </TabelaFiltravel>
       </>
       )}
+      </CascoDaTabela>
 
       {editingRow && (
         <EditCredentialModal row={editingRow} companies={companies} updateAction={updateAction} onClose={() => setEditingId(null)} />
       )}
       {dialog}
-    </div>
+    </>
   );
 }

@@ -8,6 +8,7 @@ import { formatInstantDateTime } from "@/lib/format";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
+import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -58,19 +59,22 @@ export default async function ComunicacaoPage({
 
       {substituida && (
         // Revisão de 05/10: botão não é link — "Solicitações" era texto azul no meio da frase.
-        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border border-info/40 bg-info-bg px-4 py-3 text-[13px] text-fg">
-          <p>A conversa saiu do portal: agora o cliente fala com a equipe pelas Solicitações. Esta tela fica como histórico.</p>
-          <Button href="/solicitacoes" variant="secondary" size="xs">
-            Abrir Solicitações
-          </Button>
-        </div>
+        // O `Aviso` do app (08/10/2026), com o texto em `fg` como estava.
+        <Aviso tom="info" className="mb-4">
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fg">
+            <span>A conversa saiu do portal: agora o cliente fala com a equipe pelas Solicitações. Esta tela fica como histórico.</span>
+            <Button href="/solicitacoes" variant="secondary" size="xs">
+              Abrir Solicitações
+            </Button>
+          </span>
+        </Aviso>
       )}
 
-      <FiltroDePeriodo acao="/comunicacao" empresas={empresas} empresaId={selecionada?.id ?? null} permitirTodas />
+      <FiltroDePeriodo acao="/comunicacao" empresas={empresas} empresaId={selecionada?.id ?? null} permitirTodas navegaSozinho />
 
       {selecionada && conversa ? (
         <>
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">{selecionada.nome}</h2>
+          <h2 className="text-card-title font-semibold text-fg mb-3">{selecionada.nome}</h2>
           {conversa.mensagens.length === 0 ? (
             <Card className="mb-4">
               <EmptyState
@@ -82,7 +86,7 @@ export default async function ComunicacaoPage({
           ) : (
             <>
               {conversa.limitada && (
-                <p className="text-[11px] text-fg-muted mb-2">Mostrando as 300 mensagens mais recentes.</p>
+                <p className="text-micro text-fg-muted mb-2">Mostrando as 300 mensagens mais recentes.</p>
               )}
               <ConversaDaPendencia
                 mensagens={conversa.mensagens}
@@ -123,16 +127,16 @@ export default async function ComunicacaoPage({
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium text-fg">{c.empresaNome}</span>
                 {c.resumo.esperandoEscritorio && <Badge variant="warning">Esperando o escritório</Badge>}
-                <span className="ml-auto text-[11.5px] text-fg-muted tabular-nums">
+                <span className="ml-auto text-micro text-fg-muted tabular-nums">
                   {c.resumo.ultima && formatInstantDateTime(c.resumo.ultima.criadaEm)}
                 </span>
               </div>
               {c.resumo.ultima && (
-                <p className="text-[12.5px] text-fg-muted mt-1 break-words">
+                <p className="text-fs-2 text-fg-muted mt-1 break-words">
                   {c.resumo.ultima.lado === "CLIENTE" ? "Cliente" : "Equipe"}: {previa(c.resumo.ultima.corpo)}
                 </p>
               )}
-              <p className="text-[11.5px] text-fg-muted mt-0.5">
+              <p className="text-micro text-fg-muted mt-0.5">
                 {c.resumo.mensagens} {c.resumo.mensagens === 1 ? "mensagem" : "mensagens"}
                 {c.resumo.anexos > 0 && ` · ${c.resumo.anexos} ${c.resumo.anexos === 1 ? "anexo" : "anexos"}`}
               </p>
