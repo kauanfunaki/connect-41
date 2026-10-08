@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { CampoDeSenha } from "@/components/ui/CampoDeSenha";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Button } from "@/components/ui/Button";
+import { Aviso } from "@/components/ui/Aviso";
 import type { EstadoDoLogin } from "@/app/(portal)/portal/login/actions";
 
 type Escolha = Extract<NonNullable<EstadoDoLogin>, { escolher: unknown }>["escolher"];
@@ -33,6 +34,11 @@ type Props = {
  * "Usar outro e-mail" recomeça do zero trocando a `key` do formulário: navegar
  * para a mesma URL não limpa o estado do `useActionState`, e a pessoa ficava
  * presa na escolha de cliente.
+ *
+ * Erros no `Aviso` (07/10/2026), como o "Esqueci a senha" e a nova senha: os
+ * três formulários da entrada saíam com três desenhos de erro (texto vermelho
+ * solto, caixa vermelha, caixa âmbar), e o "senha incorreta" não era anunciado
+ * pelo leitor de tela. O botão de enviar usa o `loading` do Button, como lá.
  */
 export function PortalLoginForm({ escolhaDoGoogle = null, avisoDoGoogle = null, ...resto }: Props) {
   const router = useRouter();
@@ -91,7 +97,7 @@ function Entrada({
               alvo de ao menos 44px (é tela de celular), com o rádio centrado
               nas duas linhas e a escolhida marcada na borda. */}
           <fieldset className="space-y-2">
-            <legend className="text-[length:var(--fs-label)] font-medium text-fg mb-1.5">
+            <legend className="text-label font-medium text-fg mb-1.5">
               Este e-mail tem acesso a mais de um cliente. Em qual você quer entrar?
             </legend>
             {estado.escolher.opcoes.map((o, i) => (
@@ -107,15 +113,15 @@ function Entrada({
                   className="size-4 flex-shrink-0 accent-[var(--c41-brand)]"
                 />
                 <span className="min-w-0">
-                  <span className="block text-[length:var(--fs-body)] text-fg break-words">{o.cliente}</span>
-                  <span className="block text-[length:var(--fs-helper)] text-fg-muted break-words">{o.escritorio}</span>
+                  <span className="block text-body text-fg break-words">{o.cliente}</span>
+                  <span className="block text-helper text-fg-muted break-words">{o.escritorio}</span>
                 </span>
               </label>
             ))}
           </fieldset>
 
-          <Button type="submit" disabled={pendente} className="w-full justify-center">
-            {pendente ? "Entrando…" : "Entrar"}
+          <Button type="submit" loading={pendente} loadingLabel="Entrando…" className="w-full justify-center">
+            Entrar
           </Button>
 
           {/* Revisão de 05/10: botão não é link — voltar ao passo do e-mail é ação. */}
@@ -132,10 +138,13 @@ function Entrada({
 
   return (
     <Card className="p-6">
+      {/* A volta do Google (sem acesso, cancelado, expirou) chega com a tela:
+          o papel de alerta fica no invólucro, porque o Aviso só o dá ao tom
+          de perigo. */}
       {aviso && (
-        <p role="alert" className="mb-4 rounded-md border border-warning/40 bg-warning-bg px-3 py-2 text-[length:var(--fs-helper)] text-warning">
-          {aviso}
-        </p>
+        <div role="alert" className="mb-4">
+          <Aviso tom="atencao">{aviso}</Aviso>
+        </div>
       )}
 
       <form action={formAction} className="space-y-4">
@@ -157,10 +166,10 @@ function Entrada({
           helper="Fica conectado por 30 dias neste aparelho. Não marque num computador compartilhado."
         />
 
-        {estado && "erro" in estado && <p className="text-[length:var(--fs-helper)] text-danger">{estado.erro}</p>}
+        {estado && "erro" in estado && <Aviso>{estado.erro}</Aviso>}
 
-        <Button type="submit" disabled={pendente} className="w-full justify-center">
-          {pendente ? "Entrando…" : "Entrar"}
+        <Button type="submit" loading={pendente} loadingLabel="Entrando…" className="w-full justify-center">
+          Entrar
         </Button>
       </form>
 
@@ -171,7 +180,7 @@ function Entrada({
           "lembrar" vai na URL da ida. */}
       {googleDisponivel && (
         <>
-          <div className="my-4 flex items-center gap-3 text-[length:var(--fs-helper)] text-fg-muted" aria-hidden="true">
+          <div className="my-4 flex items-center gap-3 text-helper text-fg-muted" aria-hidden="true">
             <span className="h-px flex-1 bg-border" />
             ou
             <span className="h-px flex-1 bg-border" />
@@ -192,7 +201,7 @@ function Entrada({
         </>
       )}
 
-      <p className="mt-4 text-[length:var(--fs-helper)] text-fg-muted text-center">
+      <p className="mt-4 text-helper text-fg-muted text-center">
         <Link href="/portal/esqueci-senha" className="text-brand hover:underline">
           Esqueci minha senha
         </Link>
@@ -212,7 +221,7 @@ function Entrada({
 function NaoPossuiConta() {
   return (
     <div className="mt-5 pt-5 border-t border-border flex flex-col items-center gap-2 text-center">
-      <p className="text-[length:var(--fs-helper)] text-fg-muted">Não possui conta?</p>
+      <p className="text-helper text-fg-muted">Não possui conta?</p>
       <Button href="/portal/quero-ser-cliente" variant="secondary" className="w-full justify-center">
         Quero ser cliente
       </Button>
