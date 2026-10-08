@@ -79,8 +79,8 @@ export default async function RelatoriosDoSocietarioPage({
   return (
     <PageContainer>
       {/* O período escrito (07/10, auditoria dos gráficos): no padrão (90
-          dias) o Filtros não mostra chip, e ele só aparecia no rótulo de um
-          dos cartões. */}
+          dias) o Filtros não mostrava chip, e ele só aparecia no rótulo de um
+          dos cartões. Agora vai no subtítulo e no chip `sempreVisivel`. */}
       <PageHeader
         title="Relatórios do Societário"
         subtitle={`Processos abertos agora, mais os concluídos nos últimos ${periodo.rotulo}. Prazo em dias úteis, descontados os feriados do escritório.`}
@@ -95,6 +95,9 @@ export default async function RelatoriosDoSocietarioPage({
             rotulo: "Período",
             vazioLabel: `Últimos ${PERIODOS[1].rotulo}`,
             opcoes: PERIODOS.filter((p) => p !== PERIODOS[1]).map((p) => ({ value: p.chave, label: `Últimos ${p.rotulo}` })),
+            // O período à vista também no padrão (G31): sem isto, "90 dias" só
+            // aparecia dentro do botão Filtros.
+            sempreVisivel: true,
           },
         ]}
       />
