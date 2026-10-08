@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { HASH_DESCARTAVEL, verifyPassword } from "@/lib/auth/password";
@@ -9,6 +9,7 @@ import { PORTAL_COOKIE } from "@/lib/auth/portal";
 import { cookieDaSessaoDoPortal, querLembrar } from "@/lib/auth/sessaoDoPortal";
 import { CAMINHO_DO_COOKIE_DA_ESCOLHA, COOKIE_DA_ESCOLHA } from "@/lib/auth/googleDoPortal";
 import { MAX_CONTAS_POR_EMAIL } from "@/app/(portal)/usuario";
+import { clientIp, hit, reset } from "@/lib/rateLimit";
 
 export type OpcaoDeCliente = { id: string; escritorio: string; cliente: string };
 
@@ -22,6 +23,7 @@ export type EstadoDoLogin =
   | null;
 
 const ERRO = "E-mail ou senha inválidos.";
+const MUITAS_TENTATIVAS = "Muitas tentativas. Tente de novo em alguns minutos.";
 
 /**
  * Entrada do cliente no portal.
@@ -48,6 +50,15 @@ const ERRO = "E-mail ou senha inválidos.";
  * A caixa decide a duração da sessão: 12 h sem ela, 30 dias com ela (ver
  * `sessaoDoPortal.ts`). A escolha de cliente que vem do Google também termina
  * aqui, no segundo passo.
+ *
+ * ─── Tentativas (08/10/2026) ────────────────────────────────────────────────
+ *
+ * O mesmo limite da entrada da equipe (`/api/auth/login`): 20 por IP e 5 por
+ * e-mail a cada 15 minutos, com chaves próprias do portal para não somar com as
+ * da equipe. Até aqui a senha do cliente podia ser descoberta por tentativa. O
+ * limite vale antes de olhar o banco, então a resposta é a mesma para e-mail
+ * que existe ou não; a senha certa zera o contador do e-mail. O segundo passo
+ * (a escolha do cliente) não entra: ele já vem com a prova assinada.
  */
 export async function entrarNoPortal(_anterior: EstadoDoLogin, form: FormData): Promise<EstadoDoLogin> {
   const lembrar = querLembrar(form.get("lembrar"));
@@ -72,6 +83,11 @@ export async function entrarNoPortal(_anterior: EstadoDoLogin, form: FormData): 
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   const senha = String(form.get("senha") ?? "");
   if (!email || !senha) return { erro: "Informe e-mail e senha." };
+
+  const ip = clientIp({ headers: await headers() });
+  if (!hit(`portal-login-ip:${ip}`, 20).allowed || !hit(`portal-login-email:${email}`, 5).allowed) {
+    return { erro: MUITAS_TENTATIVAS };
+  }
 
   const contas = await getPrisma().portalUser.findMany({
     where: { email, active: true },
@@ -102,6 +118,7 @@ export async function entrarNoPortal(_anterior: EstadoDoLogin, form: FormData): 
   }
 
   if (conferem.length === 0) return { erro: ERRO };
+  reset(`portal-login-email:${email}`);
   if (conferem.length === 1) return iniciarSessao(conferem[0]!, lembrar);
 
   return {
