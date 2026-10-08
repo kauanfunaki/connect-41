@@ -49,7 +49,7 @@ export function RedefinirSenhaPortalForm({ token, action }: Props) {
 
         {estado && "error" in estado && <Aviso>{estado.error}</Aviso>}
 
-        <Button type="submit" loading={pendente} loadingLabel="Salvando…" className="w-full justify-center">
+        <Button type="submit" size="lg" loading={pendente} loadingLabel="Salvando…" className="w-full justify-center">
           Salvar senha
         </Button>
       </form>
