@@ -35,8 +35,13 @@ export default async function PortalComunicadoPage({ params }: { params: Promise
           à mão tinha 20px de alvo. */}
       <BackButton href="/portal/comunicados" rotulo="Comunicados" className="mb-3" />
       <PageHeader title={c.titulo} subtitle={<>{labels[c.setor] ?? c.setor} · {formatInstantDateTime(c.enviadoEm)}</>} />
-      <Card className="p-5">
-        <p className="text-fs-4 text-fg whitespace-pre-wrap break-words leading-relaxed">{c.texto}</p>
+      {/* Texto de leitura (padrão aceito na página de decisões, 08/10/2026): no
+          máximo 72 caracteres por linha e no tamanho de leitura (15px). Na
+          largura toda da tela eram ~170 caracteres por linha, em 14px. O
+          cartão acompanha (`max-w-3xl`), para não sobrar meia tela vazia
+          dentro dele. */}
+      <Card className="p-5 max-w-3xl">
+        <p className="max-w-[72ch] text-body text-fg whitespace-pre-wrap break-words leading-relaxed">{c.texto}</p>
         {c.anexos.length > 0 && (
           <ul className="mt-4 flex flex-col gap-1">
             {c.anexos.map((a) => (
