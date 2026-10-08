@@ -1,6 +1,7 @@
 "use client";
 
 import { ABAS, type AbaOuTodas } from "@/lib/notificacoes/catalogo";
+import { Contador } from "@/components/ui/Contador";
 
 /**
  * As quatro abas por natureza, em trilho com a ativa em pílula (referência do
@@ -40,15 +41,7 @@ export function AbasDasNotificacoes({
             }`}
           >
             {a.rotulo}
-            {n > 0 && (
-              <span
-                className={`min-w-4 h-4 px-1 rounded-full text-[10px] leading-none font-semibold tabular-nums inline-flex items-center justify-center ${
-                  eAtiva ? "bg-brand text-on-brand" : "bg-surface text-fg-secondary border border-border"
-                }`}
-              >
-                {n > 99 ? "99+" : n}
-              </span>
-            )}
+            {n > 0 && <Contador valor={n} tom={eAtiva ? "cheio" : "neutro"} pequeno />}
           </button>
         );
       })}
