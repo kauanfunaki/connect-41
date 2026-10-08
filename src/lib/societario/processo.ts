@@ -163,11 +163,14 @@ export const STATUS_SEM_CONCLUSAO: StatusDoProcesso[] = ["CANCELADO", "INDEFERID
 
 export type AcaoDeSituacao = "aguardar_cliente" | "suspender" | "retomar" | "indeferir" | "cancelar";
 
+// Rótulos com verbo (escolha do Kauan na página de decisões, 08/10/2026 —
+// 11A): "Aguardando cliente" e "Indeferido pelo órgão" descreviam estados, não
+// ações, ao lado de "Suspender" e "Cancelar". A ação gravada não mudou.
 export const ROTULO_DA_ACAO: Record<AcaoDeSituacao, string> = {
-  aguardar_cliente: "Aguardando cliente",
+  aguardar_cliente: "Esperar o cliente",
   suspender: "Suspender",
   retomar: "Retomar",
-  indeferir: "Indeferido pelo órgão",
+  indeferir: "Indeferir",
   cancelar: "Cancelar",
 };
 

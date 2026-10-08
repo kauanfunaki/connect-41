@@ -503,9 +503,9 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Pausar, retomar ou encerrar um processo",
         passos: [
-          "No topo do processo, clique em “Aguardando cliente” ou em “Suspender” para pausá-lo.",
-          "Para encerrar sem conclusão, clique em “Indeferido pelo órgão” ou em “Cancelar”.",
-          "Escreva o “Motivo” e clique em “Confirmar”.",
+          "No topo do processo, clique em “Esperar o cliente” ou em “Suspender” para pausá-lo; escreva o “Motivo” e clique em “Confirmar”.",
+          "Para encerrar sem conclusão, abra o menu ⋯ e escolha “Indeferir” ou “Cancelar”.",
+          "Escreva o “Motivo” e clique em “Indeferir” ou em “Cancelar o processo”.",
           "Para voltar a tocar o processo, clique em “Retomar”.",
         ],
       },

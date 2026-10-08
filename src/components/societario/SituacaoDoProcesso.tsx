@@ -10,7 +10,7 @@ import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { Modal } from "@/components/ui/Modal";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { Textarea } from "@/components/ui/Textarea";
-import type { AcaoDeSituacao, StatusDoProcesso } from "@/lib/societario/processo";
+import { ROTULO_DA_ACAO, type AcaoDeSituacao, type StatusDoProcesso } from "@/lib/societario/processo";
 import type { ProcessoState } from "@/app/(app)/processos/actions";
 import { Aviso } from "@/components/ui/Aviso";
 
@@ -20,19 +20,6 @@ type Pausa = "aguardar_cliente" | "suspender";
 type Encerramento = "indeferir" | "cancelar";
 
 const MIN_MOTIVO = 3;
-
-// Rótulos com verbo (escolha do Kauan na página de decisões, 08/10/2026 —
-// 11A): "Aguardando cliente" e "Indeferido pelo órgão" descreviam estados, não
-// ações, ao lado de "Suspender" e "Cancelar". Moram aqui, e não no
-// `ROTULO_DA_ACAO` de lib/societario/processo.ts, porque esta é a única tela
-// que os mostra. A ação gravada e a server action não mudaram.
-const ROTULO: Record<AcaoDeSituacao, string> = {
-  aguardar_cliente: "Esperar o cliente",
-  suspender: "Suspender",
-  retomar: "Retomar",
-  indeferir: "Indeferir",
-  cancelar: "Cancelar",
-};
 
 const PAUSA: Record<Pausa, { titulo: string; texto: string; exemplo: string }> = {
   aguardar_cliente: {
@@ -169,7 +156,7 @@ export function SituacaoDoProcesso({
               }
             }}
           >
-            {ICONE[a]} {ROTULO[a]}
+            {ICONE[a]} {ROTULO_DA_ACAO[a]}
           </Button>
         ))}
         {noMenu.length > 0 && (
@@ -188,7 +175,7 @@ export function SituacaoDoProcesso({
                       setEncerramento(a);
                     }}
                   >
-                    {ROTULO[a]}
+                    {ROTULO_DA_ACAO[a]}
                   </ItemDoMenu>
                 ))}
               </div>
