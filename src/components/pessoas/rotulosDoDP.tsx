@@ -77,7 +77,9 @@ export const COR_DO_DESLIGAMENTO: Record<TerminationStatus, string> = {
   DOCUMENTACAO_PENDENTE: "bg-warning/10 text-warning border-warning/25",
   ASSINATURA_PENDENTE: "bg-warning/10 text-warning border-warning/25",
   FINALIZADO: "bg-success/10 text-success border-success/25",
-  CANCELADO: "bg-danger/10 text-danger border-danger/25",
+  // Cancelado saiu de cena: neutro, e não vermelho (07/10/2026 — o `neutral`
+  // do Badge que a base criou para "Cancelada", "Inativa", "Encerrada").
+  CANCELADO: "bg-surface-2 text-fg-muted border-border",
 };
 
 export const SITUACAO_DAS_FERIAS: Record<VacationStatus, string> = {
@@ -99,7 +101,7 @@ export const COR_DAS_FERIAS: Record<VacationStatus, string> = {
   PROGRAMADA: "bg-brand/10 text-brand border-brand/25",
   EM_GOZO: "bg-success/10 text-success border-success/25",
   CONCLUIDA: "bg-success/10 text-success border-success/25",
-  CANCELADA: "bg-danger/10 text-danger border-danger/25",
+  CANCELADA: "bg-surface-2 text-fg-muted border-border",
 };
 
 export const TIPO_DO_DIA: Record<DayType, string> = {
@@ -138,7 +140,7 @@ export const COR_DA_ESCALA: Record<ScheduleStatus, string> = {
   PLANEJADA: "bg-surface-2 text-fg-muted border-border",
   CONFIRMADA: "bg-brand/10 text-brand border-brand/25",
   ALTERADA: "bg-warning/10 text-warning border-warning/25",
-  CANCELADA: "bg-danger/10 text-danger border-danger/25",
+  CANCELADA: "bg-surface-2 text-fg-muted border-border",
   REALIZADA: "bg-success/10 text-success border-success/25",
 };
 

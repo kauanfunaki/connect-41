@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Pagination } from "@/components/shared/Pagination";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { formatCalendarDate } from "@/lib/format";
@@ -74,11 +74,12 @@ export function AcervoTable({ documentos }: { documentos: LinhaDoAcervo[] }) {
 
   // Situação e destino aparecem juntos porque são eixos independentes:
   // "cancelada" + "lançado" é o estado que pede estorno, e some se a tela
-  // mostrar só um deles.
+  // mostrar só um deles. Em Selo, e não Badge: é a situação da linha (regra
+  // de 02/10 no Selo; auditoria de 07/10/2026).
   const selos = (d: LinhaDoAcervo, estorno: boolean) => (
     <>
-      {d.situation === "CANCELADA" && <Badge variant={SITUACAO_VARIANTE[d.situation]}>{SITUACAO_LABEL[d.situation]}</Badge>}
-      <Badge variant={DESTINO_VARIANTE[d.destination]}>{DESTINO_LABEL[d.destination]}</Badge>
+      {d.situation === "CANCELADA" && <Selo tom={tomDaVariante(SITUACAO_VARIANTE[d.situation])}>{SITUACAO_LABEL[d.situation]}</Selo>}
+      <Selo tom={tomDaVariante(DESTINO_VARIANTE[d.destination])}>{DESTINO_LABEL[d.destination]}</Selo>
       {estorno && <span className="text-[length:var(--fs-micro)] font-semibold text-danger">estornar</span>}
     </>
   );

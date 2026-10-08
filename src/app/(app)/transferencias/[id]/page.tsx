@@ -10,7 +10,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { Card } from "@/components/ui/Card";
 import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { SectorChip } from "@/components/ui/SectorChip";
 import { AssigneeSelect } from "@/components/transferencias/AssigneeSelect";
 import { SectorStatusSelect } from "@/components/transferencias/SectorStatusSelect";
@@ -102,10 +102,10 @@ export default async function HandoffDetailPage({
                   color={sectorColors[s.sectorCode] ?? "#586577"}
                 />
               ))}
-              <Badge variant={HANDOFF_STATUS_BADGE[aggregate]}>{HANDOFF_STATUS_LABEL[aggregate]}</Badge>
-              <Badge variant={HANDOFF_PRIORITY_BADGE[handoff.priority]}>
+              <Selo tom={tomDaVariante(HANDOFF_STATUS_BADGE[aggregate])}>{HANDOFF_STATUS_LABEL[aggregate]}</Selo>
+              <Selo tom={tomDaVariante(HANDOFF_PRIORITY_BADGE[handoff.priority])}>
                 Prioridade {HANDOFF_PRIORITY_LABEL[handoff.priority].toLowerCase()}
-              </Badge>
+              </Selo>
             </div>
             {entity ? (
               <Link
@@ -170,7 +170,7 @@ export default async function HandoffDetailPage({
                     color={sectorColors[s.sectorCode] ?? "#586577"}
                   />
                   {!canUpdateStatus && (
-                    <Badge variant={HANDOFF_STATUS_BADGE[s.status]}>{HANDOFF_STATUS_LABEL[s.status]}</Badge>
+                    <Selo tom={tomDaVariante(HANDOFF_STATUS_BADGE[s.status])}>{HANDOFF_STATUS_LABEL[s.status]}</Selo>
                   )}
                 </div>
                 {canUpdateStatus && (

@@ -5,10 +5,9 @@ import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
-import { Selo } from "@/components/ui/Selo";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Card } from "@/components/ui/Card";
 import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
-import { TOM_DA_VARIANTE } from "@/components/societario/tomDoSelo";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
@@ -59,7 +58,7 @@ function LinhaDeProcesso({ p }: { p: ProcessoDoCliente }) {
         <span className="text-[length:var(--fs-ui)] font-semibold">{p.tipoNome}</span>
         {p.titulo && <span className="text-[length:var(--fs-2)] text-fg-secondary truncate">{p.titulo}</span>}
         {p.prioridade !== "NORMAL" && (
-          <Selo tom={TOM_DA_VARIANTE[PRIORIDADE_VARIANTE[p.prioridade]]}>{PRIORIDADE_LABEL[p.prioridade]}</Selo>
+          <Selo tom={tomDaVariante(PRIORIDADE_VARIANTE[p.prioridade])}>{PRIORIDADE_LABEL[p.prioridade]}</Selo>
         )}
         {p.voltas > 0 && (
           <span className="inline-flex items-center gap-1 text-[length:var(--fs-micro)] text-danger">
@@ -72,9 +71,9 @@ function LinhaDeProcesso({ p }: { p: ProcessoDoCliente }) {
         <PrazoCelula prazo={p.prazo} />
         {/* Selo, e não Badge: é a situação da linha (regra de 02/10 no Selo). */}
         {p.cancelado ? (
-          <Selo tom="perigo">{p.encerradoComo === "INDEFERIDO" ? "Indeferido" : "Cancelado"}</Selo>
+          <Selo tom="neutro">{p.encerradoComo === "INDEFERIDO" ? "Indeferido" : "Cancelado"}</Selo>
         ) : (
-          <Selo tom={TOM_DA_VARIANTE[SITUACAO_VARIANTE[p.situacao]]}>{SITUACAO_LABEL[p.situacao]}</Selo>
+          <Selo tom={tomDaVariante(SITUACAO_VARIANTE[p.situacao])}>{SITUACAO_LABEL[p.situacao]}</Selo>
         )}
         <span className="whitespace-nowrap">{p.responsavelNome ?? "Sem responsável"}</span>
         <span className="whitespace-nowrap tabular-nums">
@@ -208,7 +207,7 @@ export default async function VisaoSocietariaDoClientePage({
                         )}
                       </td>
                       <td className="py-2 pr-3">
-                        <Selo tom={TOM_DA_VARIANTE[SITUACAO_DA_LICENCA_VARIANTE[situacoes[i]]]}>
+                        <Selo tom={tomDaVariante(SITUACAO_DA_LICENCA_VARIANTE[situacoes[i]])}>
                           {SITUACAO_DA_LICENCA_LABEL[situacoes[i]]}
                         </Selo>
                       </td>

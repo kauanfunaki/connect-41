@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
-import { Selo } from "@/components/ui/Selo";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatInstantDate } from "@/lib/format";
 import {
@@ -16,7 +16,6 @@ import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/sh
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { saoPauloParts } from "@/lib/agenda";
 import type { OrgaoDaLicenca } from "./LicencaForm";
-import { TOM_DA_VARIANTE } from "./tomDoSelo";
 
 type Props = {
   linhas: LinhaDeLicenca[];
@@ -104,7 +103,7 @@ export function LicencasFila({ linhas, hoje, filtrado, orgaos }: Props) {
               </InfoDoCartao>
               {prazo && <InfoDoCartao>{prazo}</InfoDoCartao>}
               <PeDoCartao>
-                <Selo tom={TOM_DA_VARIANTE[SITUACAO_VARIANTE[situacao]]}>{SITUACAO_LABEL[situacao]}</Selo>
+                <Selo tom={tomDaVariante(SITUACAO_VARIANTE[situacao])}>{SITUACAO_LABEL[situacao]}</Selo>
                 <div className="ml-auto">
                   <AcoesDaLicenca orgaos={orgaos} licenca={paraEditar(l)} />
                 </div>
@@ -167,7 +166,7 @@ export function LicencasFila({ linhas, hoje, filtrado, orgaos }: Props) {
                       )}
                     </td>
                     <td className="py-2.5 pr-3">
-                      <Selo tom={TOM_DA_VARIANTE[SITUACAO_VARIANTE[situacao]]}>{SITUACAO_LABEL[situacao]}</Selo>
+                      <Selo tom={tomDaVariante(SITUACAO_VARIANTE[situacao])}>{SITUACAO_LABEL[situacao]}</Selo>
                     </td>
                     <td className="py-2.5">
                       <AcoesDaLicenca orgaos={orgaos} licenca={paraEditar(l)} />

@@ -10,7 +10,7 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { scopedHandoffWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { SectorChip } from "@/components/ui/SectorChip";
 import { formatInstantDate } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -162,8 +162,9 @@ export default async function HandoffsPage({
                         color={sectorColors[s.sectorCode] ?? "#586577"}
                       />
                     ))}
-                    <Badge variant={HANDOFF_STATUS_BADGE[aggregate]}>{HANDOFF_STATUS_LABEL[aggregate]}</Badge>
-                    <Badge variant={HANDOFF_PRIORITY_BADGE[h.priority]}>{HANDOFF_PRIORITY_LABEL[h.priority]}</Badge>
+                    {/* Selo, e não Badge: é a situação do cartão (regra de 02/10 no Selo). */}
+                    <Selo tom={tomDaVariante(HANDOFF_STATUS_BADGE[aggregate])}>{HANDOFF_STATUS_LABEL[aggregate]}</Selo>
+                    <Selo tom={tomDaVariante(HANDOFF_PRIORITY_BADGE[h.priority])}>{HANDOFF_PRIORITY_LABEL[h.priority]}</Selo>
                   </div>
 
                   <p className="text-[length:var(--fs-card-title)] font-semibold text-fg group-hover:text-brand transition-colors">

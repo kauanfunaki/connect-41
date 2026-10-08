@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { InfoRow } from "@/components/empresas/InfoRow";
 import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -108,8 +108,8 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
         subtitle={`${nomeExibicao(doc.company)} · ${competenciaLegivel(doc.competence)}`}
         action={
           <div className="flex items-center gap-1.5">
-            <Badge variant={SITUACAO_VARIANTE[doc.situation]}>{SITUACAO_LABEL[doc.situation]}</Badge>
-            <Badge variant={DESTINO_VARIANTE[doc.destination]}>{DESTINO_LABEL[doc.destination]}</Badge>
+            <Selo tom={tomDaVariante(SITUACAO_VARIANTE[doc.situation])}>{SITUACAO_LABEL[doc.situation]}</Selo>
+            <Selo tom={tomDaVariante(DESTINO_VARIANTE[doc.destination])}>{DESTINO_LABEL[doc.destination]}</Selo>
           </div>
         }
       />

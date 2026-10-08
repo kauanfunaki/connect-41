@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AlertCircle } from "lucide-react";
-import { Selo } from "@/components/ui/Selo";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { ColunaDoQuadro } from "@/components/kanban/ColunaDoQuadro";
 import { formatInstantDate } from "@/lib/format";
 import type { LinhaDaFila } from "@/lib/societario/fila";
@@ -9,7 +9,6 @@ import { PRIORIDADE_LABEL, PRIORIDADE_VARIANTE } from "@/lib/societario/priorida
 import { prazoCombinado } from "@/lib/societario/dados-do-processo";
 import { DIAS_DE_CONCLUIDOS_RECENTES } from "@/lib/societario/prazos";
 import { COR_DO_PRAZO_COMBINADO, PrazoCelula, SITUACAO_LABEL } from "./ProcessosFila";
-import { TOM_DA_VARIANTE } from "./tomDoSelo";
 
 type Props = {
   colunas: { situacao: SituacaoDoProcesso; linhas: LinhaDaFila[] }[];
@@ -55,7 +54,7 @@ export function KanbanDeProcessos({ colunas, agora }: Props) {
                     <span className="text-[length:var(--fs-kanban-title)] font-semibold leading-snug line-clamp-2">{l.empresaNome}</span>
                     {/* Selo, e não Badge: é a situação do cartão (regra de 02/10 no Selo). */}
                     {l.prioridade !== "NORMAL" && (
-                      <Selo tom={TOM_DA_VARIANTE[PRIORIDADE_VARIANTE[l.prioridade]]}>{PRIORIDADE_LABEL[l.prioridade]}</Selo>
+                      <Selo tom={tomDaVariante(PRIORIDADE_VARIANTE[l.prioridade])}>{PRIORIDADE_LABEL[l.prioridade]}</Selo>
                     )}
                   </div>
                   <span className="text-[length:var(--fs-kanban-meta)] text-fg-secondary truncate">

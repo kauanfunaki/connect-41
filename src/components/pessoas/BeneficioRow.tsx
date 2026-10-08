@@ -25,7 +25,8 @@ const STATUS_STYLE: Record<BenefitStatus, string> = {
   INATIVO:   "bg-surface-2 text-fg-muted border-border",
   SUSPENSO:  "bg-warning/10 text-warning border-warning/25",
   PENDENTE:  "bg-warning/10 text-warning border-warning/25",
-  CANCELADO: "bg-danger/10 text-danger border-danger/25",
+  // Cancelado saiu de cena: neutro, como o inativo (07/10/2026).
+  CANCELADO: "bg-surface-2 text-fg-muted border-border",
 };
 
 const STATUS_OPTIONS = Object.keys(STATUS_LABEL) as BenefitStatus[];

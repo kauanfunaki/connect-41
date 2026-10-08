@@ -27,7 +27,8 @@ const STATUS_STYLE: Record<PayrollStatus, string> = {
   CONFERIDO:      "bg-brand/10 text-brand border-brand/25",
   ENVIADO:        "bg-brand/10 text-brand border-brand/25",
   PROCESSADO:     "bg-success/10 text-success border-success/25",
-  CANCELADO:      "bg-danger/10 text-danger border-danger/25",
+  // Cancelado saiu de cena: neutro (07/10/2026).
+  CANCELADO:      "bg-surface-2 text-fg-muted border-border",
 };
 
 const STATUS_OPTIONS = Object.keys(STATUS_LABEL) as PayrollStatus[];

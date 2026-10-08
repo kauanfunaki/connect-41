@@ -28,12 +28,13 @@ const ABAS = [
 ] as const;
 
 // Selo, e não Badge: é a situação da linha (regra de 02/10 no Selo.tsx;
-// auditoria de 07/10/2026). Mesmas cores de antes.
+// auditoria de 07/10/2026). O substituído saiu de cena: neutro, e não o azul
+// (o `neutral` do Badge, da mesma data).
 const TOM: Record<SituacaoDoCertificado, TomDoSelo> = {
   vencido: "perigo",
   a_renovar: "atencao",
   vigente: "sucesso",
-  substituido: "marca",
+  substituido: "neutro",
 };
 
 /**
