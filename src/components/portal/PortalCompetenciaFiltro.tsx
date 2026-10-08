@@ -1,12 +1,14 @@
 "use client";
 
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
-import { competenciaLegivel } from "@/lib/fiscal/rotulos";
+import { formatarCompetencia } from "@/lib/format";
 
 type Props = {
   competencias: string[];
   /** As empresas do cliente; com mais de uma, o filtro ganha o campo Empresa (05/10). */
   empresas?: { id: string; nome: string }[];
+  /** Na barra do `CascoDaTabela` (07/10/2026), como no acervo da equipe. */
+  naBarra?: boolean;
 };
 
 /**
@@ -20,22 +22,26 @@ type Props = {
  * Desde 30/09 no botão "Filtros", com busca — a regra das telas internas:
  * competência nunca num `<select>` comprido nem numa fileira de botões.
  *
- * O respiro de baixo é dele (`mb-4`), como o "Filtros" das outras telas do
- * portal — não da tabela nem do vazio que vêm depois.
+ * Fora do casco, o respiro de baixo é dele (`mb-4`) — não da tabela nem do
+ * vazio que vêm depois. Na barra do casco, a barra cuida do espaço.
+ *
+ * A competência sai no formato único da interface (`formatarCompetencia`,
+ * "Out/26"), o mesmo do Relatório e do Fluxo de caixa — era "out/2026" aqui.
  *
  * A empresa entrou em 05/10, só para quem tem mais de uma: é a escolha que o
  * Início leva adiante no atalho dos documentos.
  */
-export function PortalCompetenciaFiltro({ competencias, empresas = [] }: Props) {
+export function PortalCompetenciaFiltro({ competencias, empresas = [], naBarra = false }: Props) {
   return (
     <FiltrosDaTela
-      className="mb-4"
+      naBarra={naBarra}
+      className={naBarra ? "" : "mb-4"}
       campos={[
         {
           chave: "competencia",
           rotulo: "Competência",
           vazioLabel: "Todas",
-          opcoes: competencias.map((c) => ({ value: c, label: competenciaLegivel(c) })),
+          opcoes: competencias.map((c) => ({ value: c, label: formatarCompetencia(c) })),
         },
         ...(empresas.length > 1
           ? [{ chave: "empresa", rotulo: "Empresa", vazioLabel: "Todas", opcoes: empresas.map((e) => ({ value: e.id, label: e.nome })) }]

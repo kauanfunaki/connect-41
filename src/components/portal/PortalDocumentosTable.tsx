@@ -1,26 +1,13 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { formatCalendarDate } from "@/lib/format";
+import { Pagination } from "@/components/shared/Pagination";
+import { formatCalendarDate, formatarCompetencia } from "@/lib/format";
 import { nomeExibicao } from "@/lib/companyName";
-import { TIPO_LABEL, competenciaLegivel } from "@/lib/fiscal/rotulos";
+import { TIPO_LABEL } from "@/lib/fiscal/rotulos";
 import { direcaoDoLancamento } from "@/lib/fiscal/documentos";
 import { documentoDaEmpresa } from "@/lib/companyTaxId";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao } from "@/components/shared/ListaResponsiva";
 import type { LinhaDoAcervo } from "@/lib/fiscal/data";
 
-type Props = {
-  documentos: LinhaDoAcervo[];
-  total: number;
-  /** A contagem parou no teto — ver `TETO_DA_CONTAGEM` em src/lib/fiscal/data.ts. */
-  totalLimitado: boolean;
-  temProxima: boolean;
-  pagina: number;
-  porPagina: number;
-  filtrosDaUrl: Record<string, string | undefined>;
-};
-
 const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const INTEIRO = new Intl.NumberFormat("pt-BR");
 
 /**
  * A mesma tabela do acervo interno, menos o que é assunto do escritório.
@@ -28,12 +15,12 @@ const INTEIRO = new Intl.NumberFormat("pt-BR");
  * Ficam de fora **situação** e **destino**: o cliente não precisa saber que uma
  * nota está "pendente de decisão" no BPO — é trabalho interno, e mostrar isso
  * geraria pergunta sobre um estado que não é dele. O que ele vê é o documento.
+ *
+ * Dentro do `CascoDaTabela` desde 07/10/2026, como o acervo da equipe: a
+ * contagem e o "Filtros" na barra, e a paginação embaixo, fora do casco
+ * (`PaginacaoDosDocumentos`).
  */
-export function PortalDocumentosTable({ documentos, total, totalLimitado, temProxima, pagina, porPagina, filtrosDaUrl }: Props) {
-  // Com a contagem no teto não se sabe qual é a última página — só se existe a
-  // próxima. Quem tem mais de mil documentos navega pela competência.
-  const ultimaPagina = totalLimitado ? null : Math.max(1, Math.ceil(total / porPagina));
-  const temPaginas = ultimaPagina === null || ultimaPagina > 1;
+export function PortalDocumentosTable({ documentos }: { documentos: LinhaDoAcervo[] }) {
   // A contraparte sai da direção do lançamento, e a direção sai do documento da
   // empresa: calculada uma vez, serve ao cartão e à tabela.
   const linhas = documentos.map((d) => {
@@ -53,7 +40,7 @@ export function PortalDocumentosTable({ documentos, total, totalLimitado, temPro
   const variasEmpresas = new Set(documentos.map((d) => nomeExibicao(d.company))).size > 1;
 
   return (
-    <div>
+    <>
       <CartoesNoCelular>
         {linhas.map(({ d, contraparte }) => (
           <Cartao key={d.id}>
@@ -64,7 +51,7 @@ export function PortalDocumentosTable({ documentos, total, totalLimitado, temPro
             </InfoDoCartao>
             {variasEmpresas && <InfoDoCartao>{nomeExibicao(d.company)}</InfoDoCartao>}
             <InfoDoCartao className="tabular-nums">
-              emitida em {formatCalendarDate(d.issuedAt)} · {competenciaLegivel(d.competence)}
+              emitida em {formatCalendarDate(d.issuedAt)} · {formatarCompetencia(d.competence)}
             </InfoDoCartao>
           </Cartao>
         ))}
@@ -73,7 +60,7 @@ export function PortalDocumentosTable({ documentos, total, totalLimitado, temPro
       {/* Centralizada, como o casco (02/10). Sem funil por coluna: a lista é
           paginada (50 por página), e filtrar só a página na tela enganaria. */}
       <TabelaNoDesktop padrao>
-        <table className="w-full table-fixed min-w-[760px] text-[length:var(--fs-ui)]">
+        <table className="w-full table-fixed min-w-[760px] text-ui">
           <colgroup>
             <col className="w-[88px]" />
             <col className="w-[124px]" />
@@ -82,7 +69,7 @@ export function PortalDocumentosTable({ documentos, total, totalLimitado, temPro
             <col className="w-[132px]" />
           </colgroup>
           <thead>
-            <tr className="text-[length:var(--fs-micro)] font-medium text-fg-muted uppercase tracking-wide">
+            <tr>
               <th className="px-4 py-2.5">Tipo</th>
               <th className="px-4 py-2.5">Número</th>
               <th className="px-4 py-2.5">Fornecedor ou cliente</th>
@@ -103,12 +90,12 @@ export function PortalDocumentosTable({ documentos, total, totalLimitado, temPro
                       {contraparte ?? "—"}
                     </p>
                     {variasEmpresas && (
-                      <p className="text-[length:var(--fs-micro)] text-fg-muted truncate">{nomeExibicao(d.company)}</p>
+                      <p className="text-micro text-fg-muted truncate">{nomeExibicao(d.company)}</p>
                     )}
                   </td>
                   <td className="px-4 py-3 text-fg-secondary tnum whitespace-nowrap">
                     <p>{formatCalendarDate(d.issuedAt)}</p>
-                    <p className="text-[length:var(--fs-micro)] text-fg-muted">{competenciaLegivel(d.competence)}</p>
+                    <p className="text-micro text-fg-muted">{formatarCompetencia(d.competence)}</p>
                   </td>
                   <td className="px-4 py-3 tnum whitespace-nowrap">
                     {d.amount === null ? (
@@ -122,58 +109,51 @@ export function PortalDocumentosTable({ documentos, total, totalLimitado, temPro
           </tbody>
         </table>
       </TabelaNoDesktop>
-
-      {/* O desenho do shared/Pagination (botões `sm` com seta, mesma distância da
-          tabela), que não serve direto aqui porque a última página pode não
-          ser conhecida. Eram links de `py-1.5` feitos à mão, e no celular o
-          texto e os botões disputavam uma linha só. */}
-      {temPaginas && (
-        <nav className="flex flex-wrap items-center justify-between gap-3 mt-4" aria-label="Paginação">
-          <span className="text-[length:var(--fs-ui)] text-fg-muted tnum">
-            {ultimaPagina === null
-              ? `mais de ${INTEIRO.format(total)} documentos · página ${pagina}`
-              : `${total} documento${total === 1 ? "" : "s"} · página ${pagina} de ${ultimaPagina}`}
-          </span>
-          <div className="flex gap-1.5">
-            <Pagina n={pagina - 1} desabilitado={pagina <= 1} filtros={filtrosDaUrl}>
-              <ChevronLeft size={14} /> Anterior
-            </Pagina>
-            <Pagina n={pagina + 1} desabilitado={!temProxima} filtros={filtrosDaUrl}>
-              Próxima <ChevronRight size={14} />
-            </Pagina>
-          </div>
-        </nav>
-      )}
-    </div>
+    </>
   );
 }
 
-function Pagina({
-  n,
-  desabilitado,
-  filtros,
-  children,
-}: {
-  n: number;
-  desabilitado: boolean;
-  filtros: Record<string, string | undefined>;
-  children: React.ReactNode;
-}) {
-  if (desabilitado) {
-    return (
-      <Button variant="secondary" size="sm" disabled>
-        {children}
-      </Button>
-    );
-  }
-  const query = new URLSearchParams({ pagina: String(n) });
-  for (const [k, v] of Object.entries(filtros)) {
-    if (k !== "pagina" && v) query.set(k, v);
-  }
-  // Só a query, como o `href={{ query }}` de antes: a página segue a mesma.
+type PropsDaPaginacao = {
+  total: number;
+  /** A contagem parou no teto — ver `TETO_DA_CONTAGEM` em src/lib/fiscal/data.ts. */
+  totalLimitado: boolean;
+  temProxima: boolean;
+  pagina: number;
+  porPagina: number;
+  filtrosDaUrl: Record<string, string | undefined>;
+};
+
+/**
+ * A paginação dos documentos, no `shared/Pagination` (07/10/2026): ele passou a
+ * aceitar a última página desconhecida (`temProxima`), que era o motivo de o
+ * portal ter uma cópia própria.
+ */
+export function PaginacaoDosDocumentos({ total, totalLimitado, temProxima, pagina, porPagina, filtrosDaUrl }: PropsDaPaginacao) {
+  // Com a contagem no teto não se sabe qual é a última página — só se existe a
+  // próxima. Quem tem mais de mil documentos navega pela competência.
+  const ultimaPagina = totalLimitado ? null : Math.max(1, Math.ceil(total / porPagina));
+
+  // O link leva os filtros da URL junto: paginar e perder a competência faria
+  // a lista parecer outra.
+  const hrefDaPagina = (p: number) => {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(filtrosDaUrl)) {
+      if (k !== "pagina" && v) q.set(k, v);
+    }
+    if (p > 1) q.set("pagina", String(p));
+    const s = q.toString();
+    return s ? `/portal/documentos?${s}` : "/portal/documentos";
+  };
+
   return (
-    <Button href={`?${query.toString()}`} variant="secondary" size="sm">
-      {children}
-    </Button>
+    <Pagination
+      page={pagina}
+      totalPages={ultimaPagina ?? undefined}
+      temProxima={temProxima}
+      buildHref={hrefDaPagina}
+      total={total}
+      totalAproximado={totalLimitado}
+      rotulo="documentos"
+    />
   );
 }
