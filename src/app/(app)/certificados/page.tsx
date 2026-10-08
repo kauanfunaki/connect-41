@@ -88,7 +88,15 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <MetricCard label="Vencidos" value={emUso.filter((c) => c.situacao === "vencido").length} highlight icon={<AlertTriangle size={15} />} href={href("renovar")} />
+        {/* Vermelho, como o painel da Home e o selo da linha — e só quando há
+            vencido: era âmbar até com zero (`highlight` sem condição). */}
+        <MetricCard
+          label="Vencidos"
+          value={emUso.filter((c) => c.situacao === "vencido").length}
+          tom={emUso.some((c) => c.situacao === "vencido") ? "critico" : undefined}
+          icon={<AlertTriangle size={15} />}
+          href={href("renovar")}
+        />
         <MetricCard label="Vencem em 30 dias" value={emUso.filter((c) => c.dias >= 0 && c.dias <= 30).length} icon={<CalendarClock size={15} />} href={href("renovar")} />
         <MetricCard label="Vencem em 60 dias" value={emUso.filter((c) => c.dias >= 0 && c.dias <= 60).length} icon={<CalendarRange size={15} />} href={href("renovar")} />
         <MetricCard label="Sem empresa no Connect" value={emUso.filter((c) => !c.company).length} icon={<Unlink size={15} />} href={href("sem-empresa")} />

@@ -105,6 +105,7 @@ export default async function VisaoSocietariaDoClientePage({
 
   const situacoes = licencas.map((l) => situacaoDaLicenca(l, agora));
   const vencendo = situacoes.filter((s) => s === "vencida" || s === "a_renovar").length;
+  const vencidas = situacoes.filter((s) => s === "vencida").length;
   const exigenciasAbertas = visao.exigencias.filter((e) => e.resolvedAt === null).length;
   const aPagar = visao.custo.totalCentavos - visao.custo.pagoCentavos;
 
@@ -140,7 +141,9 @@ export default async function VisaoSocietariaDoClientePage({
             rotulo: "Licenças vencendo",
             valor: String(vencendo),
             icone: <CalendarClock />,
-            tom: vencendo > 0 ? "text-warning" : undefined,
+            // Vermelho quando já há vencida, como o selo da fila de Licenças.
+            tom: vencidas > 0 ? "text-danger" : vencendo > 0 ? "text-warning" : undefined,
+            detalhe: vencidas > 0 ? `${vencidas} ${vencidas === 1 ? "vencida" : "vencidas"}` : undefined,
           },
           {
             rotulo: "Taxas a pagar",

@@ -115,8 +115,9 @@ export default async function IndicadoresRhPage() {
             value={c.value}
             sub={c.hint}
             icon={ICONE_DO_INDICADOR[c.label] ?? <BarChart3 size={15} />}
-            // Férias vencida é passivo consumado — o único número que pede atenção.
-            highlight={c.label === "Férias Vencidas" && c.value !== "0"}
+            // Férias vencida é passivo consumado — o único número que pede
+            // atenção. Vermelho, como na Home e em /ferias (era âmbar).
+            tom={c.label === "Férias Vencidas" && c.value !== "0" ? "critico" : undefined}
             delay={i * 20}
           />
         ))}
