@@ -37,7 +37,7 @@ type Acoes = {
 const SUGESTAO: Record<AvisoNaTela["sugestao"], { rotulo: string; tom: TomDoSelo }> = {
   DEFERIDO: { rotulo: "Parece deferido", tom: "sucesso" },
   EXIGENCIA: { rotulo: "Parece exigência", tom: "atencao" },
-  CANCELADO: { rotulo: "Parece cancelado", tom: "perigo" },
+  CANCELADO: { rotulo: "Parece cancelado", tom: "neutro" },
   REVISAR: { rotulo: "Conferir", tom: "marca" },
 };
 

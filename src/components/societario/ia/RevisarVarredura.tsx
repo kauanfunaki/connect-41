@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { RejeitarProposta } from "./RejeitarProposta";
@@ -81,7 +81,7 @@ export function RevisarVarredura({
               )}
               <div className="flex flex-col gap-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant={u.variante}>{u.rotulo}</Badge>
+                  <Selo tom={tomDaVariante(u.variante)}>{u.rotulo}</Selo>
                   <span className="text-fs-2 text-fg-muted">{TIPO[s.tipo]}</span>
                 </div>
                 <p className="text-label font-medium text-fg">

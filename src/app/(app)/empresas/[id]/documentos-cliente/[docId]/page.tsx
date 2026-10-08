@@ -11,6 +11,7 @@ import { BackButton } from "@/components/shared/BackButton";
 import { DeleteButton } from "@/components/ui/DeleteButton";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { formatInstantDate, formatInstantDateTime, formatInstantDateTimeComSegundos } from "@/lib/format";
 import { PublishDocumentButton } from "@/components/documentosCliente/PublishDocumentButton";
 import { ResendRecipientButton } from "@/components/documentosCliente/ResendRecipientButton";
@@ -60,19 +61,20 @@ export default async function DocumentoClienteDetailPage({
       {/* O PageHeader estava aninhado dentro de uma linha com os selos, e as
           ações eram "Editar" e "Excluir" em texto (30/09): agora é o cabeçalho
           padrão, com os selos junto do título e as ações em botão. */}
+      {/* A situação (publicado/rascunho) é Selo e vai no `meta`, embaixo do
+          título, como nas outras fichas de registro; "Requer assinatura" é
+          categoria e segue no Badge (escolha 2A, 08/10/2026). */}
       <PageHeader
-        title={
-          <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            {document.title}
-            <span className="inline-flex items-center gap-2">
-              <Badge variant={document.status === "PUBLISHED" ? "success" : "warning"}>
-                {document.status === "PUBLISHED" ? "Publicado" : "Rascunho"}
-              </Badge>
-              {document.requiresSignature && <Badge variant="info">Requer assinatura</Badge>}
-            </span>
-          </span>
+        title={document.title}
+        subtitle={<>Criado por {document.createdBy.name} em {formatInstantDate(document.createdAt)}</>}
+        meta={
+          <>
+            <Selo tom={document.status === "PUBLISHED" ? "sucesso" : "atencao"}>
+              {document.status === "PUBLISHED" ? "Publicado" : "Rascunho"}
+            </Selo>
+            {document.requiresSignature && <Badge variant="info">Requer assinatura</Badge>}
+          </>
         }
-        subtitle={<>criado por {document.createdBy.name} em {formatInstantDate(document.createdAt)}</>}
         action={
           canManage &&
           document.status === "DRAFT" && (

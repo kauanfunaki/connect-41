@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AbasDoAtendimento } from "@/components/solicitacoes/AbasDoAtendimento";
 import { setoresDaFila } from "@/lib/solicitacoes/acesso";
@@ -69,7 +69,7 @@ export default async function ComunicadosPage() {
                   </span>
                 </span>
                 <span className="flex items-center gap-2">
-                  {!c.avisosEnviados && <Badge variant="info">Enviando e-mails…</Badge>}
+                  {!c.avisosEnviados && <Selo tom="marca">Enviando e-mails…</Selo>}
                   <span className="text-ui text-fg-secondary tabular-nums">
                     Lido por {c.leram} de {c.clientes} {c.clientes === 1 ? "cliente" : "clientes"}
                   </span>
