@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Aviso } from "@/components/ui/Aviso";
+import { TituloDeSecao } from "@/components/portal/TituloDeSecao";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { feriadosDoTenant } from "@/lib/societario/fila";
 import { processoDoPortal } from "@/lib/societario/portal-data";
@@ -89,29 +90,29 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
           <p className="text-fs-2 text-fg-muted">{p.previsao}</p>
         </Card>
 
+        {/* Títulos de seção no desenho do Início (`TituloDeSecao`, 08/10/2026):
+            eram 14px, o tamanho de título de cartão. */}
         {abertas.length > 0 && (
-          <section className="flex flex-col gap-2" aria-labelledby="exigencias-abertas">
-            <h2 id="exigencias-abertas" className="text-card-title font-semibold text-fg">
-              O que o órgão pediu
-            </h2>
-            {abertas.map((e) => (
-              <Card key={e.id} className="p-4 flex flex-col gap-1 border-warning/40">
-                <span className="text-fs-2 font-semibold text-warning">{e.orgao}</span>
-                <p className="text-ui text-fg whitespace-pre-line break-words">{e.descricao}</p>
-                <span className="text-fs-2 text-fg-muted">
-                  Pedida em {formatInstantDate(e.abertaEm)}
-                  {e.prazo ? ` · prazo do órgão ${formatInstantDate(e.prazo)}` : ""}
-                </span>
-              </Card>
-            ))}
+          <section aria-labelledby="exigencias-abertas">
+            <TituloDeSecao id="exigencias-abertas">O que o órgão pediu</TituloDeSecao>
+            <div className="flex flex-col gap-2">
+              {abertas.map((e) => (
+                <Card key={e.id} className="p-4 flex flex-col gap-1 border-warning/40">
+                  <span className="text-fs-2 font-semibold text-warning">{e.orgao}</span>
+                  <p className="text-ui text-fg whitespace-pre-line break-words">{e.descricao}</p>
+                  <span className="text-fs-2 text-fg-muted">
+                    Pedida em {formatInstantDate(e.abertaEm)}
+                    {e.prazo ? ` · prazo do órgão ${formatInstantDate(e.prazo)}` : ""}
+                  </span>
+                </Card>
+              ))}
+            </div>
           </section>
         )}
 
         {p.etapas.length > 0 && (
-          <section className="flex flex-col gap-2" aria-labelledby="etapas">
-            <h2 id="etapas" className="text-card-title font-semibold text-fg">
-              Etapas
-            </h2>
+          <section aria-labelledby="etapas">
+            <TituloDeSecao id="etapas">Etapas</TituloDeSecao>
             <Card className="p-2">
               <ol className="flex flex-col">
                 {p.etapas.map((e) => {
@@ -133,10 +134,8 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
         )}
 
         {p.taxas.length > 0 && (
-          <section className="flex flex-col gap-2" aria-labelledby="taxas">
-            <h2 id="taxas" className="text-card-title font-semibold text-fg">
-              Taxas
-            </h2>
+          <section aria-labelledby="taxas">
+            <TituloDeSecao id="taxas">Taxas</TituloDeSecao>
             <Card className="p-2">
               <ul className="flex flex-col">
                 {/* Grade de colunas fixas: o valor ficava logo depois da
@@ -165,10 +164,8 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
         )}
 
         {resolvidas.length > 0 && (
-          <section className="flex flex-col gap-2" aria-labelledby="exigencias-resolvidas">
-            <h2 id="exigencias-resolvidas" className="text-card-title font-semibold text-fg">
-              Exigências resolvidas
-            </h2>
+          <section aria-labelledby="exigencias-resolvidas">
+            <TituloDeSecao id="exigencias-resolvidas">Exigências resolvidas</TituloDeSecao>
             <Card className="p-2">
               <ul className="flex flex-col">
                 {resolvidas.map((e) => (
@@ -186,10 +183,8 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
 
         {conversa && (
           <>
-            <section className="flex flex-col gap-2" aria-labelledby="documentos">
-              <h2 id="documentos" className="text-card-title font-semibold text-fg">
-                Documentos
-              </h2>
+            <section aria-labelledby="documentos">
+              <TituloDeSecao id="documentos">Documentos</TituloDeSecao>
               <Card className="p-4">
                 <DocumentosDoProcesso
                   processId={p.id}
@@ -202,10 +197,8 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
               </Card>
             </section>
 
-            <section className="flex flex-col gap-2" aria-labelledby="conversa">
-              <h2 id="conversa" className="text-card-title font-semibold text-fg">
-                Conversa com a equipe
-              </h2>
+            <section aria-labelledby="conversa">
+              <TituloDeSecao id="conversa">Conversa com a equipe</TituloDeSecao>
               <Card className="p-4 flex flex-col gap-4">
                 {conversa.limitada && (
                   <p className="text-fs-2 text-fg-muted">Mostrando só as mensagens mais recentes.</p>
