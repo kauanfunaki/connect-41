@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { formatInstantDate, formatarReais } from "@/lib/format";
@@ -25,7 +25,7 @@ const STATUS = {
   PENDENTE: { rotulo: "Esperando revisão", variante: "info" },
   APROVADA: { rotulo: "Aprovada", variante: "success" },
   EDITADA: { rotulo: "Aprovada com ajuste", variante: "warning" },
-  REJEITADA: { rotulo: "Rejeitada", variante: "danger" },
+  REJEITADA: { rotulo: "Rejeitada", variante: "neutral" },
 } as const;
 const CONFIANCA = { ALTA: "alta", MEDIA: "média", BAIXA: "baixa" } as const;
 
@@ -43,7 +43,7 @@ export default async function RevisarPropostaPage({ params }: { params: Promise<
 
   const cabecalho = (
     <div className="mb-4 flex flex-wrap items-center gap-2 text-fs-2 text-fg-muted">
-      <Badge variant={s.variante}>{s.rotulo}</Badge>
+      <Selo tom={tomDaVariante(s.variante)}>{s.rotulo}</Selo>
       <span>{agenteDoCatalogo(proposta.agentCode)?.label ?? proposta.agentCode}</span>
       <span>· pedido por {proposta.createdBy?.name ?? "—"} em {formatInstantDate(proposta.createdAt)}</span>
       {proposta.confidence && <span>· confiança declarada pela IA: {CONFIANCA[proposta.confidence]}</span>}

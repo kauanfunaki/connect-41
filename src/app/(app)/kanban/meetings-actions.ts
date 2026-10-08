@@ -39,7 +39,7 @@ export async function agendarReuniao(
 
   const prisma = getPrisma();
   const item = await prisma.pipelineItem.findFirst({ where: { id: pipelineItemId, tenantId: ctx.tenantId } });
-  if (!item) return { error: "Item não encontrado." };
+  if (!item) return { error: "Tarefa não encontrada." };
 
   const accessToken = await getValidAccessToken(ctx.tenantId, ctx.userId, provider);
   if (!accessToken) {

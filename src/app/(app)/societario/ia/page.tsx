@@ -5,7 +5,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
+import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
@@ -26,11 +26,13 @@ const MODULE = "societario_processos";
 
 export const dynamic = "force-dynamic";
 
+// A situação da proposta é Selo (escolha 2A, 08/10/2026); a rejeitada saiu de
+// cena — não pede ação —, então é neutra, como a indeferida do processo.
 const STATUS = {
   PENDENTE: { rotulo: "Esperando revisão", variante: "info" },
   APROVADA: { rotulo: "Aprovada", variante: "success" },
   EDITADA: { rotulo: "Aprovada com ajuste", variante: "warning" },
-  REJEITADA: { rotulo: "Rejeitada", variante: "danger" },
+  REJEITADA: { rotulo: "Rejeitada", variante: "neutral" },
 } as const;
 
 const CONFIANCA = { ALTA: "alta", MEDIA: "média", BAIXA: "baixa" } as const;
@@ -70,10 +72,10 @@ export default async function IaDoSocietarioPage() {
           <p>
             {[!varreduraLigada && nome(AGENTE_VARREDURA), !ligado(AGENTE_CONTRATO) && nome(AGENTE_CONTRATO)].filter(Boolean).join(" e ")}{" "}
             {!varreduraLigada && !ligado(AGENTE_CONTRATO) ? "estão desligadas" : "está desligada"}. Um administrador liga em
-            Administração › Inteligência Artificial. A leitura de contrato social fica na tela de sócios de cada empresa.
+            Administração › Inteligência artificial. A leitura de contrato social fica na tela de sócios de cada empresa.
           </p>
           <Button href="/admin/ia" variant="secondary" size="xs">
-            Abrir Inteligência Artificial
+            Abrir Inteligência artificial
           </Button>
         </div>
       )}
@@ -151,7 +153,7 @@ export default async function IaDoSocietarioPage() {
                     {q.porMes.map((m) => (
                       <div key={m.mes} className="flex-1 flex flex-col items-center gap-1">
                         <div className="w-full rounded-sm bg-brand/70" style={{ height: `${(m.total / maior) * 40}px`, minHeight: m.total ? 3 : 0 }} title={`${m.total}`} />
-                        <span className="text-[10px] text-fg-muted">{MES.format(new Date(`${m.mes}-15T12:00:00Z`))}</span>
+                        <span className="text-micro text-fg-muted">{MES.format(new Date(`${m.mes}-15T12:00:00Z`))}</span>
                       </div>
                     ))}
                   </div>
@@ -178,7 +180,7 @@ export default async function IaDoSocietarioPage() {
                       {p.reviewedBy?.name ?? "—"} · {p.reviewedAt ? formatInstantDate(p.reviewedAt) : ""}
                     </p>
                   </div>
-                  <Badge variant={STATUS[p.status].variante}>{STATUS[p.status].rotulo}</Badge>
+                  <Selo tom={tomDaVariante(STATUS[p.status].variante)}>{STATUS[p.status].rotulo}</Selo>
                 </Link>
               </li>
             ))}

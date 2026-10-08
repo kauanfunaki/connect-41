@@ -3,7 +3,6 @@ import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { BackButton } from "@/components/shared/BackButton";
 import { EmpresaForm } from "@/components/empresas/EmpresaForm";
 import { atualizarEmpresa } from "../../actions";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -43,7 +42,6 @@ export default async function EditarEmpresaPage({
           { label: "Editar" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader title="Editar empresa" />
 

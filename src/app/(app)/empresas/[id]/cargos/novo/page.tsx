@@ -7,7 +7,6 @@ import { Card } from "@/components/ui/Card";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { BackButton } from "@/components/shared/BackButton";
 import { criarCargo } from "../actions";
 
 export default async function NovoCargoPage({
@@ -40,11 +39,11 @@ export default async function NovoCargoPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
           { label: "Cargos", href: `/empresas/${companyId}/cargos` },
           { label: "Novo" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader title="Novo cargo" subtitle={company.name} />
 

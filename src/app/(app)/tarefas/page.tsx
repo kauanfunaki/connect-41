@@ -215,8 +215,8 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
   const quantosPedem = agoraLista.length;
   const dataDeHoje = formatInstantDate(agora, { weekday: "long", day: "numeric", month: "long" });
   const subtitulo = visaoTime
-    ? `${dataDeHoje} · ${quantosPedem ? `${quantosPedem} ${quantosPedem === 1 ? "item pede" : "itens pedem"} o time agora` : "nada pede o time agora"}`
-    : `${dataDeHoje} · ${quantosPedem ? `${quantosPedem} ${quantosPedem === 1 ? "coisa pede" : "coisas pedem"} você agora` : "nada atrasado nem parado"}`;
+    ? `${dataDeHoje} · ${quantosPedem ? `${quantosPedem} ${quantosPedem === 1 ? "tarefa pede" : "tarefas pedem"} o time agora` : "nada pede o time agora"}`
+    : `${dataDeHoje} · ${quantosPedem ? `${quantosPedem} ${quantosPedem === 1 ? "tarefa pede" : "tarefas pedem"} você agora` : "nada atrasado nem parado"}`;
 
   const prazosPorDia = new Map<string, typeof prazos>();
   for (const p of prazos) prazosPorDia.set(p.dia, [...(prazosPorDia.get(p.dia) ?? []), p]);
@@ -321,11 +321,11 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
                 )}
               </header>
               {carga.length === 0 ? (
-                <p className="px-4 py-5 text-body text-fg-muted">Ninguém com item em aberto.</p>
+                <p className="px-4 py-5 text-body text-fg-muted">Ninguém com tarefa em aberto.</p>
               ) : (
                 <div className="px-4 py-3.5">
                   <LinhasDeSituacao
-                    titulo="Itens em aberto por pessoa e situação"
+                    titulo="Tarefas em aberto por pessoa e situação"
                     linhas={carga.slice(0, 10).map((p) => linhaDaCarga(p, nomeDe.get(p.userId) ?? "—"))}
                   />
                 </div>

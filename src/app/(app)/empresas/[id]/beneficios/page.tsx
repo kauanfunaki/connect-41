@@ -11,7 +11,6 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { BackButton } from "@/components/shared/BackButton";
 import { excluirBeneficio } from "./actions";
 
 const TYPE_LABEL: Record<BenefitType, string> = {
@@ -58,11 +57,10 @@ export default async function BeneficiosPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}`, truncate: true },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
           { label: "Benefícios" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader
         title="Benefícios"

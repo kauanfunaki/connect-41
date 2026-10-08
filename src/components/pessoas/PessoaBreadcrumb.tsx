@@ -11,18 +11,25 @@ import { Breadcrumb } from "@/components/shared/Breadcrumb";
  *
  * Monta só os itens; quem desenha é o `Breadcrumb` compartilhado (07/10/2026),
  * como nas outras 35 telas — era a trilha escrita à mão.
+ *
+ * Desde 08/10/2026 a trilha é o caminho de volta (o "Voltar" saiu das telas
+ * com hierarquia fixa): o nome da pessoa abre a ficha na aba de onde a
+ * sub-página é (`aba`), como o `router.back()` do Voltar fazia.
  */
 export function PessoaBreadcrumb({
   isInternal,
   personId,
   personName,
   atual,
+  aba,
 }: {
   isInternal: boolean;
   personId: string;
   personName: string;
   /** Nome da sub-página. Omitir na ficha, que é o último nível. */
   atual?: string;
+  /** A aba da ficha a que a sub-página pertence. */
+  aba?: "vinculo" | "trabalhista";
 }) {
   const origem = isInternal
     ? { href: "/pessoas", raiz: "Cadastros", label: "Pessoas" }
@@ -34,7 +41,7 @@ export function PessoaBreadcrumb({
         { label: origem.raiz, href: origem.href },
         { label: origem.label, href: origem.href },
         ...(atual
-          ? [{ label: personName, href: `/pessoas/${personId}`, truncate: true }, { label: atual }]
+          ? [{ label: personName, href: `/pessoas/${personId}${aba ? `?tab=${aba}` : ""}`, truncate: true }, { label: atual }]
           : [{ label: personName, truncate: true }]),
       ]}
     />

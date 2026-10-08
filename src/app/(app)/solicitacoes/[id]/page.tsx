@@ -1,6 +1,6 @@
 import Link from "next/link";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { getAuthContext } from "@/lib/auth/context";
 import { isModuleEnabled } from "@/lib/modules";
 import { getActiveSectors, getSectorMaps } from "@/lib/sectors";
@@ -35,9 +35,16 @@ export default async function SolicitacaoPage({ params }: { params: Promise<{ id
 
   return (
     <PageContainer>
-      <Link href="/solicitacoes" className="inline-flex items-center gap-1.5 text-fs-3 text-fg-muted hover:text-fg mb-3">
-        <ArrowLeft size={14} /> Solicitações
-      </Link>
+      {/* Trilha no lugar do "← Solicitações" escrito à mão, e a situação no
+          `meta`, embaixo do título — o desenho de registro de trabalho do
+          processo e do lead (padrões aceitos em 08/10/2026). Era no `action`,
+          do outro lado da tela. */}
+      <Breadcrumb
+        items={[
+          { label: "Solicitações", href: "/solicitacoes" },
+          { label: `Nº ${s.numero}` },
+        ]}
+      />
       <PageHeader
         title={`Solicitação nº ${s.numero}`}
         subtitle={
@@ -49,11 +56,11 @@ export default async function SolicitacaoPage({ params }: { params: Promise<{ id
             · {labels[s.setor] ?? s.setor}
           </>
         }
-        action={
-          <div className="flex flex-wrap items-center gap-2">
+        meta={
+          <>
             <SeloDaSolicitacao status={s.status} lado="EQUIPE" />
             <SeloDoPrazoDeResposta situacao={s.situacao} />
-          </div>
+          </>
         }
       />
 

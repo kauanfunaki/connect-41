@@ -5,7 +5,6 @@ import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
 import { InfoRow } from "@/components/empresas/InfoRow";
-import { BackButton } from "@/components/shared/BackButton";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
@@ -63,8 +62,8 @@ export default async function SalarioPage({
         personId={id}
         personName={person.name}
         atual="Salário"
+        aba="trabalhista"
       />
-      <BackButton className="mb-3" />
       <PageHeader title="Dados bancários e salário" />
 
       {/* Mesma grade de rótulo/valor da ficha (30/09): os cinco dados numa

@@ -51,10 +51,16 @@ export default async function NovoItemPage({
         items={[
           { label: "Kanban", href: "/kanban" },
           { label: pipeline.name, href: `/kanban/${id}`, truncate: true },
-          { label: "Novo Item" },
+          { label: "Nova tarefa" },
         ]}
       />
-      <PageHeader title={<>Adicionar {pipeline.entityType === "COMPANY" ? "Empresa" : "Pessoa"} ao Kanban</>} />
+      {/* "Tarefa" é o nome do que o kanban guarda, no quadro, na lista e no
+          Meu dia (padrão aceito em 08/10/2026) — aqui era "Item" no botão e
+          "Adicionar Empresa ao Kanban" no título. */}
+      <PageHeader
+        title="Nova tarefa"
+        subtitle={pipeline.entityType === "COMPANY" ? "Cada tarefa deste kanban é de uma empresa." : "Cada tarefa deste kanban é de uma pessoa."}
+      />
 
       {/* No cartão de 720px dos formulários curtos (30/09): na largura da
           tela, o select da empresa ia de uma borda à outra. */}

@@ -7,10 +7,10 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { DeleteButton } from "@/components/ui/DeleteButton";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { Selo } from "@/components/ui/Selo";
 import { formatInstantDate, formatInstantDateTime, formatInstantDateTimeComSegundos } from "@/lib/format";
 import { PublishDocumentButton } from "@/components/documentosCliente/PublishDocumentButton";
 import { ResendRecipientButton } from "@/components/documentosCliente/ResendRecipientButton";
@@ -51,28 +51,29 @@ export default async function DocumentoClienteDetailPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: "Documentos para Cliente", href: `/empresas/${companyId}/documentos-cliente`, truncate: true },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
+          { label: "Documentos para cliente", href: `/empresas/${companyId}/documentos-cliente`, truncate: true },
           { label: document.title, truncate: true },
         ]}
       />
-      <BackButton className="mb-3" />
 
       {/* O PageHeader estava aninhado dentro de uma linha com os selos, e as
           ações eram "Editar" e "Excluir" em texto (30/09): agora é o cabeçalho
           padrão, com os selos junto do título e as ações em botão. */}
+      {/* A situação (publicado/rascunho) é Selo e vai no `meta`, embaixo do
+          título, como nas outras fichas de registro; "Requer assinatura" é
+          categoria e segue no Badge (escolha 2A, 08/10/2026). */}
       <PageHeader
-        title={
-          <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            {document.title}
-            <span className="inline-flex items-center gap-2">
-              <Badge variant={document.status === "PUBLISHED" ? "success" : "warning"}>
-                {document.status === "PUBLISHED" ? "Publicado" : "Rascunho"}
-              </Badge>
-              {document.requiresSignature && <Badge variant="info">Requer assinatura</Badge>}
-            </span>
-          </span>
+        title={document.title}
+        subtitle={<>Criado por {document.createdBy.name} em {formatInstantDate(document.createdAt)}</>}
+        meta={
+          <>
+            <Selo tom={document.status === "PUBLISHED" ? "sucesso" : "atencao"}>
+              {document.status === "PUBLISHED" ? "Publicado" : "Rascunho"}
+            </Selo>
+            {document.requiresSignature && <Badge variant="info">Requer assinatura</Badge>}
+          </>
         }
-        subtitle={<>criado por {document.createdBy.name} em {formatInstantDate(document.createdAt)}</>}
         action={
           canManage &&
           document.status === "DRAFT" && (
@@ -93,7 +94,7 @@ export default async function DocumentoClienteDetailPage({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-5">
           <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-            <h2 className="text-card-title font-semibold text-fg mb-4">Conteúdo</h2>
+            <h2 className="text-section font-semibold text-fg mb-4">Conteúdo</h2>
             <div
               className="text-fs-4 text-fg leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h2]:text-fs-6 [&_h2]:font-semibold"
               dangerouslySetInnerHTML={{ __html: document.bodyHtml }}
@@ -107,7 +108,7 @@ export default async function DocumentoClienteDetailPage({
 
           {canManage && document.status === "PUBLISHED" && (
             <Card className="p-5">
-              <h2 className="text-card-title font-semibold text-fg mb-4">Enviar por e-mail</h2>
+              <h2 className="text-section font-semibold text-fg mb-4">Enviar por e-mail</h2>
               <SendDocumentForm action={enviarDocumento} documentId={document.id} companyId={companyId} companyEmail={company.email} />
             </Card>
           )}
@@ -115,7 +116,7 @@ export default async function DocumentoClienteDetailPage({
 
         <div className="space-y-5">
           <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-            <h2 className="text-card-title font-semibold text-fg mb-1">Prova de recebimento</h2>
+            <h2 className="text-section font-semibold text-fg mb-1">Prova de recebimento</h2>
             <p className="text-fs-2 text-fg-muted mb-4">
               Cada abertura do link e download do anexo fica registrado com data/hora e IP.
             </p>

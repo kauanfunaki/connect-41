@@ -6,7 +6,6 @@ import { WorkShiftForm } from "@/components/empresas/WorkShiftForm";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { BackButton } from "@/components/shared/BackButton";
 import { criarTurno } from "../actions";
 
 export default async function NovoTurnoPage({
@@ -31,11 +30,11 @@ export default async function NovoTurnoPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
           { label: "Turnos", href: `/empresas/${companyId}/turnos` },
           { label: "Novo" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader title="Novo turno" subtitle={company.name} />
 

@@ -5,7 +5,6 @@ import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { BackButton } from "@/components/shared/BackButton";
 import { ClientDocumentForm } from "@/components/documentosCliente/ClientDocumentForm";
 import { criarDocumento } from "../actions";
 
@@ -31,11 +30,11 @@ export default async function NovoDocumentoClientePage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: "Documentos para Cliente", href: `/empresas/${companyId}/documentos-cliente`, truncate: true },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
+          { label: "Documentos para cliente", href: `/empresas/${companyId}/documentos-cliente`, truncate: true },
           { label: "Novo" },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader title="Novo documento" subtitle="Criado como rascunho — publique e envie quando estiver pronto." />
 

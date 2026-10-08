@@ -71,7 +71,7 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
         <h2 className={TITULO}>Identificação</h2>
         <div className={GRADE}>
           <InfoRow
-            label={company.kind === "PESSOA_FISICA" ? "Nome" : "Razão Social"}
+            label={company.kind === "PESSOA_FISICA" ? "Nome" : "Razão social"}
             value={company.name}
             className="sm:col-span-2"
           />
@@ -122,18 +122,18 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
         (!ehPF &&
           (company.stateRegistration || company.nire || company.cnaePrincipal || company.cnaeSecundarios))) && (
         <Card className="p-5">
-          <h2 className={TITULO}>Dados Fiscais</h2>
+          <h2 className={TITULO}>Dados fiscais</h2>
           {/* Os mesmos campos que o formulário não pede para PF não aparecem
               aqui — senão a ficha de uma pessoa física mostraria quatro linhas
               com "—" logo abaixo da única que ela pode ter. */}
           <div className={GRADE}>
-            {!ehPF && <InfoRow label="Inscrição Estadual" value={company.stateRegistration} mono />}
-            <InfoRow label="Inscrição Municipal" value={company.municipalRegistration} mono />
+            {!ehPF && <InfoRow label="Inscrição estadual" value={company.stateRegistration} mono />}
+            <InfoRow label="Inscrição municipal" value={company.municipalRegistration} mono />
             {!ehPF && (
               <>
                 <InfoRow label="NIRE" value={company.nire} mono />
-                <InfoRow label="CNAE Principal" value={company.cnaePrincipal} mono />
-                <InfoRow label="CNAEs Secundários" value={company.cnaeSecundarios} mono className="sm:col-span-2 lg:col-span-4" />
+                <InfoRow label="CNAE principal" value={company.cnaePrincipal} mono />
+                <InfoRow label="CNAEs secundários" value={company.cnaeSecundarios} mono className="sm:col-span-2 lg:col-span-4" />
               </>
             )}
           </div>
@@ -157,7 +157,7 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
 
       {customFields.length > 0 && (
         <Card className="p-5">
-          <h2 className={TITULO}>Campos Adicionais</h2>
+          <h2 className={TITULO}>Campos adicionais</h2>
           <div className={GRADE}>
             {customFields.map((f) => (
               <InfoRow

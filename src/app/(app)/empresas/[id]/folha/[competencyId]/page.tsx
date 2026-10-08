@@ -14,7 +14,6 @@ import { ImportarFolhaCsvForm } from "@/components/folha/ImportarFolhaCsvForm";
 import { PayrollEntryRow } from "@/components/folha/PayrollEntryRow";
 import { CompetenciaStatusForm } from "@/components/folha/CompetenciaStatusForm";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { BackButton } from "@/components/shared/BackButton";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { detectPayrollAnomalies } from "@/lib/payrollAnomalies";
 
@@ -76,11 +75,11 @@ export default async function CompetenciaPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
+          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
           { label: "Folha", href: `/empresas/${companyId}/folha` },
           { label: `${MONTH_LABEL[competencia.month - 1]}/${competencia.year}` },
         ]}
       />
-      <BackButton className="mb-3" />
 
       <PageHeader
         title={<>{MONTH_LABEL[competencia.month - 1]}/{competencia.year} — {company.name}</>}

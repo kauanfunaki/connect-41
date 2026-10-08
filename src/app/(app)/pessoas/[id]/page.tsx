@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
 import { excluirPessoa } from "../actions";
-import { BackButton } from "@/components/shared/BackButton";
 import { Button } from "@/components/ui/Button";
 import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -261,7 +260,7 @@ export default async function PessoaPage({
             {canEdit && (
               <Button href="/admin/atendentes" variant="secondary" size="sm" className="mt-4">
                 <KeyRound size={14} />
-                Gerenciar vínculo em Admin → Vínculos de Acesso
+                Gerenciar vínculo em Admin → Vínculos de acesso
               </Button>
             )}
           </Card>
@@ -419,7 +418,6 @@ export default async function PessoaPage({
       {/* A lista de origem depende de quem é a pessoa (ver PessoaBreadcrumb);
           era uma cópia à mão da mesma trilha das sub-páginas até 30/09. */}
       <PessoaBreadcrumb isInternal={person.isInternal} personId={id} personName={person.name} />
-      <BackButton className="mb-3" />
 
       <PersonHeader
         id={id}

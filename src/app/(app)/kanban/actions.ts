@@ -150,7 +150,7 @@ export async function criarItem(
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, ...scopedPipelineWhere(ctx) } });
   if (!pipeline) return { error: "Kanban não encontrado ou fora do seu escopo." };
   if (!canManageSector(ctx, pipeline.sectorCode)) {
-    return { error: "Sem permissão para adicionar itens neste setor." };
+    return { error: "Sem permissão para adicionar tarefas neste setor." };
   }
 
   try {
@@ -617,7 +617,7 @@ export async function atualizarPrazoPrioridade(
       where: { id: itemId, tenantId, pipelineId },
       select: { dueDate: true, priority: true },
     });
-    if (!before) return { error: "Item não encontrado." };
+    if (!before) return { error: "Tarefa não encontrada." };
 
     await prisma.pipelineItem.update({
       where: { id: itemId },
@@ -688,7 +688,7 @@ export async function atualizarDescricao(
     // findFirst com tenantId+pipelineId — mesmo fix de atualizarPrazoPrioridade
     // (findUnique só por id deixava sobrescrever descrição de item de outro tenant).
     const before = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId, pipelineId }, select: { description: true } });
-    if (!before) return { error: "Item não encontrado." };
+    if (!before) return { error: "Tarefa não encontrada." };
 
     await prisma.pipelineItem.update({
       where: { id: itemId },
