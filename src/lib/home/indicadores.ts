@@ -14,18 +14,17 @@
 // itens, e o cartão não teria para onde levar) e "transferências a revisar"
 // (o cartão de Transferências já está ao lado).
 //
-// A regra é a do cartão "Resposta atrasada" de /solicitacoes
-// (`listarParaEquipe`, em `lib/solicitacoes/consultas.ts`): em aberto, sem a
-// primeira resposta e com o prazo num dia que já passou. Ela não é exportada
-// de lá; se mudar, mude aqui também — e o ideal é a fila exportar a contagem.
+// A regra e o recorte da equipe são os do cartão "Resposta atrasada" de
+// /solicitacoes, importados de `lib/solicitacoes/consultas.ts` — se a fila
+// mudar a regra, a Home acompanha.
 
 import { unstable_rethrow } from "next/navigation";
 import type { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import type { AuthContext } from "@/lib/auth/context";
 import { isModuleEnabled } from "@/lib/modules";
-import { saoPauloParts } from "@/lib/agenda";
 import { setoresDaFila } from "@/lib/solicitacoes/acesso";
+import { whereDaEquipe, whereDaRespostaAtrasada } from "@/lib/solicitacoes/consultas";
 
 export type EscopoDaContagem = {
   tenantId: string;
@@ -38,17 +37,7 @@ export type EscopoDaContagem = {
 
 /** O `where` de "Resposta atrasada" da fila da equipe, para este escopo. */
 export function whereDasRespostasAtrasadas(e: EscopoDaContagem, agora: Date): Prisma.ServiceRequestWhereInput {
-  // Meia-noite de hoje em São Paulo: prazo (meio-dia UTC do dia) antes disso é de um dia que já passou.
-  const hoje = new Date(`${saoPauloParts(agora).dateKey}T00:00:00-03:00`);
-  const daFila: Prisma.ServiceRequestWhereInput =
-    e.setores === null ? { tenantId: e.tenantId } : { tenantId: e.tenantId, OR: [{ sectorCode: { in: e.setores } }, { assigneeId: e.userId }] };
-  return {
-    AND: [
-      daFila,
-      e.setor ? { sectorCode: e.setor } : {},
-      { status: { in: ["ABERTA", "EM_ANDAMENTO", "AGUARDANDO_CLIENTE"] }, firstResponseAt: null, responseDue: { lt: hoje } },
-    ],
-  };
+  return { AND: [whereDaEquipe(e), e.setor ? { sectorCode: e.setor } : {}, whereDaRespostaAtrasada(agora)] };
 }
 
 /** Para onde o cartão leva: a fila já no recorte "só com resposta atrasada" (e no setor ativo). */
