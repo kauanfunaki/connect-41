@@ -196,44 +196,50 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
         </Card>
       )}
 
-      <h2 className="text-[length:var(--fs-card-title)] font-semibold mb-2">Histórico</h2>
-      {historico.length === 0 ? (
-        <p className="text-[12px] text-fg-muted mb-4">Nenhum contato registrado.</p>
-      ) : (
-        <ol className="flex flex-col gap-2 mb-5">
-          {historico.map((h) =>
-            h.tipo === "contato" ? (
-              <li key={`c-${h.c.id}`} className="rounded-md border border-border px-3 py-2 text-[13px]">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="tabular-nums font-medium">{formatInstantDate(h.c.em)}</span>
-                  <span>{ROTULO_DO_CANAL[h.c.canal]}</span>
-                  <Badge variant={h.c.resultado === "CONTESTOU" ? "warning" : h.c.resultado === "PROMETEU_PAGAR" ? "info" : "info"}>
-                    {ROTULO_DO_RESULTADO[h.c.resultado]}
-                  </Badge>
-                  {h.c.proximaAcao && <span className="text-[12px] text-fg-muted">próxima ação {formatInstantDate(h.c.proximaAcao)}</span>}
-                  <span className="text-[11px] text-fg-muted ml-auto">
-                    {h.c.por ?? "—"} · registrado {formatInstantDateTime(h.c.registradoEm)}
-                  </span>
-                </div>
-                {h.c.notas && <p className="text-[12px] text-fg-secondary mt-1 whitespace-pre-wrap">{h.c.notas}</p>}
-              </li>
-            ) : (
-              <li key={`e-${h.e.id}`} className="px-3 py-1.5 text-[12px] text-fg-secondary">
-                <span className="tabular-nums">{formatInstantDateTime(h.e.em)}</span> · {ROTULO_DO_EVENTO[h.e.tipo] ?? h.e.tipo}
-                {h.e.motivo ? ` — ${h.e.motivo}` : ""}
-                {h.e.por ? <span className="text-fg-muted"> · {h.e.por}</span> : null}
-              </li>
-            )
-          )}
-        </ol>
-      )}
+      {/* Seções em cartão com o título dentro, como "Registrar contato" e o
+          acordo logo acima (08/10/2026): "Histórico" e "Lembretes da régua"
+          eram os únicos títulos soltos no fundo da ficha. O contato registrado
+          é um bloco de leitura: `rounded-lg`, como os cartões, e o corpo da
+          anotação em 15px (o papel de mensagem na escala); data e autor
+          continuam no tamanho de metadado. */}
+      <Card className="p-4 mb-4">
+        <h2 className="text-card-title font-semibold mb-3">Histórico</h2>
+        {historico.length === 0 ? (
+          <p className="text-helper text-fg-muted">Nenhum contato registrado.</p>
+        ) : (
+          <ol className="flex flex-col gap-2">
+            {historico.map((h) =>
+              h.tipo === "contato" ? (
+                <li key={`c-${h.c.id}`} className="rounded-lg border border-border px-3 py-2 text-ui">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="tabular-nums font-medium">{formatInstantDate(h.c.em)}</span>
+                    <span>{ROTULO_DO_CANAL[h.c.canal]}</span>
+                    <Badge variant={h.c.resultado === "CONTESTOU" ? "warning" : "info"}>{ROTULO_DO_RESULTADO[h.c.resultado]}</Badge>
+                    {h.c.proximaAcao && <span className="text-fs-2 text-fg-muted">próxima ação {formatInstantDate(h.c.proximaAcao)}</span>}
+                    <span className="text-micro text-fg-muted ml-auto">
+                      {h.c.por ?? "—"} · registrado {formatInstantDateTime(h.c.registradoEm)}
+                    </span>
+                  </div>
+                  {h.c.notas && <p className="text-body text-fg-secondary mt-1 whitespace-pre-wrap">{h.c.notas}</p>}
+                </li>
+              ) : (
+                <li key={`e-${h.e.id}`} className="px-3 py-1.5 text-fs-2 text-fg-secondary">
+                  <span className="tabular-nums">{formatInstantDateTime(h.e.em)}</span> · {ROTULO_DO_EVENTO[h.e.tipo] ?? h.e.tipo}
+                  {h.e.motivo ? ` — ${h.e.motivo}` : ""}
+                  {h.e.por ? <span className="text-fg-muted"> · {h.e.por}</span> : null}
+                </li>
+              )
+            )}
+          </ol>
+        )}
+      </Card>
 
       {t.envios.length > 0 && (
-        <>
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold mb-2">Lembretes da régua</h2>
+        <Card className="p-4 mb-4">
+          <h2 className="text-card-title font-semibold mb-3">Lembretes da régua</h2>
           {/* Colunas fixas a partir de sm: com itens soltos, o e-mail e o selo
               mudavam de lugar conforme a largura da data de cada linha. */}
-          <ul className="flex flex-col gap-1.5 text-[12px] mb-4">
+          <ul className="flex flex-col gap-1.5 text-fs-2">
             {t.envios.map((e) => (
               <li key={e.step} className="grid grid-cols-1 sm:grid-cols-[9.5rem_7.5rem_minmax(0,1fr)_auto] sm:items-center gap-x-3 gap-y-0.5">
                 <span className="tabular-nums">{formatInstantDateTime(e.sentAt)}</span>
@@ -246,7 +252,7 @@ export default async function TituloEmCobrancaPage({ params }: { params: Promise
               </li>
             ))}
           </ul>
-        </>
+        </Card>
       )}
     </PageContainer>
   );
