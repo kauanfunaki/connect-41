@@ -22,7 +22,7 @@ import { enviarMensagemNoProcessoCliente, adicionarDocumentosNoProcessoCliente }
 export const dynamic = "force-dynamic";
 
 const ICONE_DA_ETAPA = {
-  CONCLUIDA: <CircleCheck size={16} className="text-success shrink-0" aria-hidden />,
+  CONCLUIDA: <CircleCheck size={16} className="text-success-fg shrink-0" aria-hidden />,
   EM_ANDAMENTO: <CircleDot size={16} className="text-info shrink-0" aria-hidden />,
   PENDENTE: <Circle size={16} className="text-fg-muted shrink-0" aria-hidden />,
 } as const;
@@ -98,7 +98,7 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
             <div className="flex flex-col gap-2">
               {abertas.map((e) => (
                 <Card key={e.id} className="p-4 flex flex-col gap-1 border-warning/40">
-                  <span className="text-fs-2 font-semibold text-warning">{e.orgao}</span>
+                  <span className="text-fs-2 font-semibold text-warning-fg">{e.orgao}</span>
                   <p className="text-ui text-fg whitespace-pre-line break-words">{e.descricao}</p>
                   <span className="text-fs-2 text-fg-muted">
                     Pedida em {formatInstantDate(e.abertaEm)}

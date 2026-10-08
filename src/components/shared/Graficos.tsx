@@ -115,7 +115,7 @@ const COMPACTO_COLUNAS = "group-data-[compacto=true]/grade:h-28 group-data-[comp
 
 const COR_DO_SELO: Record<TomDaTendencia, string> = {
   ruim: "bg-danger-bg text-danger",
-  bom: "bg-success-bg text-success",
+  bom: "bg-success-bg text-success-fg",
   neutro: "bg-surface-hover text-fg-secondary",
 };
 

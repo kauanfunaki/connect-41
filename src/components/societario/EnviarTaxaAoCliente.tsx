@@ -139,7 +139,7 @@ export function EnviarTaxaAoCliente({ taxaId, descricao, envio }: Props) {
                 {estado.enviados === 1 ? "contato" : "contatos"}
               </span>
               {estado.recusados.length > 0 && (
-                <span className="text-warning break-all">
+                <span className="text-warning-fg break-all">
                   Recusado pelo servidor de e-mail: {estado.recusados.join(", ")}
                 </span>
               )}

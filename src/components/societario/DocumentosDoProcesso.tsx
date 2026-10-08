@@ -64,7 +64,7 @@ export function DocumentosDoProcesso({
         </ul>
       )}
 
-      {aviso && <p className="text-[length:var(--fs-2)] text-warning">{aviso}</p>}
+      {aviso && <p className="text-[length:var(--fs-2)] text-warning-fg">{aviso}</p>}
 
       {aberto ? (
         <form

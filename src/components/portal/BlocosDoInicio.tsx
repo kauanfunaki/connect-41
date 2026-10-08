@@ -151,7 +151,7 @@ export async function PrecisaDeVoce({
         </div>
       ) : itens.length === 0 ? (
         <div className="flex items-start gap-3 px-4 sm:px-5 pb-5">
-          <span className="inline-flex size-9 flex-shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
+          <span className="inline-flex size-9 flex-shrink-0 items-center justify-center rounded-lg bg-success/10 text-success-fg">
             <CircleCheck size={18} />
           </span>
           <div className="min-w-0">
@@ -170,7 +170,7 @@ export async function PrecisaDeVoce({
               <div className="flex min-w-0 flex-1 basis-60 items-center gap-3">
                 <span
                   className={`inline-flex size-9 flex-shrink-0 items-center justify-center rounded-lg [&>svg]:size-[18px] ${
-                    i.tom === "pedido" ? "bg-warning/10 text-warning" : "bg-brand-subtle text-brand"
+                    i.tom === "pedido" ? "bg-warning/10 text-warning-fg" : "bg-brand-subtle text-brand"
                   }`}
                 >
                   {ICONE_DA_ATENCAO[i.chave]}
@@ -200,11 +200,11 @@ type LinhaDoFinanceiro = { chave: string; rotulo: string; soma: SomaDeContas; hr
 function LinhaDeConta({ l }: { l: LinhaDoFinanceiro }) {
   const tem = l.soma.n > 0;
   const icone = !tem ? (
-    <CircleCheck size={16} className="text-success" aria-hidden />
+    <CircleCheck size={16} className="text-success-fg" aria-hidden />
   ) : l.vencida ? (
     <OctagonAlert size={16} className="text-danger" aria-hidden />
   ) : (
-    <CalendarClock size={16} className="text-warning" aria-hidden />
+    <CalendarClock size={16} className="text-warning-fg" aria-hidden />
   );
   return (
     <li>

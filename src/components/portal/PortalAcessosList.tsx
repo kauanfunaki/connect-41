@@ -150,7 +150,7 @@ export function PortalAcessosList({ acessos, clientes, criarAction, enviarLinkAc
               <p className="mr-auto min-w-0 text-helper text-danger">{estado.erro}</p>
             )}
             {estado && "ok" in estado && (
-              <p className="mr-auto min-w-0 text-helper text-success">
+              <p className="mr-auto min-w-0 text-helper text-success-fg">
                 {estado.aviso ?? "Acesso criado e link enviado."}
               </p>
             )}

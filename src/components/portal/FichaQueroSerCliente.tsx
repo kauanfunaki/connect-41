@@ -35,7 +35,7 @@ export function FichaQueroSerCliente({ carimbo, escritorio, action }: Props) {
   if (enviado) {
     return (
       <Card className="p-6 text-center">
-        <span className="mx-auto mb-4 inline-flex size-12 items-center justify-center rounded-full bg-success/10 text-success">
+        <span className="mx-auto mb-4 inline-flex size-12 items-center justify-center rounded-full bg-success/10 text-success-fg">
           <CheckCircle2 size={24} />
         </span>
         <h2 className="text-fs-6 font-semibold text-fg">Recebemos seus dados</h2>

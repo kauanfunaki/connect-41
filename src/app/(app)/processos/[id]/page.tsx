@@ -309,7 +309,7 @@ export default async function ProcessoDetalhePage({
                 combinado.situacao === "vencido" || combinado.situacao === "hoje"
                   ? "text-danger font-medium"
                   : combinado.situacao === "proximo"
-                    ? "text-warning"
+                    ? "text-warning-fg"
                     : undefined
               }
             >

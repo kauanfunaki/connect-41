@@ -155,7 +155,7 @@ export default async function PortalCobrancaPage() {
                   <td className="py-2.5 pr-3">
                     <SeloDaCobranca situacao={t.situacao} />
                   </td>
-                  <td className="py-2.5 text-fs-2 text-fg-secondary">
+                  <td className="py-2.5 text-fg-secondary">
                     {t.ultimoContato
                       ? `${formatInstantDate(t.ultimoContato.em)} · ${ROTULO_DO_CANAL[t.ultimoContato.canal]} · ${ROTULO_DO_RESULTADO[t.ultimoContato.resultado]}`
                       : "—"}
