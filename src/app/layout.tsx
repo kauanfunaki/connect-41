@@ -37,8 +37,10 @@ export default async function RootLayout({
 }>) {
   const cookieStore = await cookies();
   // "system" renderiza claro e o SCRIPT_DO_TEMA troca antes da pintura — o
-  // servidor não sabe o tema do aparelho. Por isso o suppressHydrationWarning:
-  // o atributo do <html> pode já ter mudado quando o React hidrata.
+  // servidor não sabe o tema do aparelho. O mesmo vale para o portal sem
+  // cookie, que segue o aparelho desde 08/10/2026 (ver lib/theme.ts). Por isso
+  // o suppressHydrationWarning: o atributo do <html> pode já ter mudado quando
+  // o React hidrata.
   const theme = cookieStore.get("theme")?.value === "dark" ? "dark" : "light";
 
   return (
