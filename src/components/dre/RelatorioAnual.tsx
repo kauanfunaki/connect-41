@@ -17,16 +17,16 @@ type Props = { anual: DreAnual };
 export function RelatorioAnual({ anual }: Props) {
   return (
     <div className="overflow-x-auto border border-border rounded-lg bg-surface">
-      <table className="w-full text-[12px] border-collapse">
+      <table className="w-full text-fs-2 border-collapse">
         <thead>
           <tr>
-            <th className="sticky left-0 z-10 bg-surface-2 text-left font-medium text-[11px] uppercase tracking-wide text-fg-muted px-3 py-2 border-b border-border min-w-[16rem]">
+            <th className="sticky left-0 z-10 bg-surface-2 text-left font-medium text-micro uppercase tracking-wide text-fg-muted px-3 py-2 border-b border-border min-w-[16rem]">
               Linha
             </th>
             {anual.colunas.map((c, i) => (
               <th
                 key={i}
-                className={`px-3 py-2 text-right font-medium text-[11px] uppercase tracking-wide border-b border-border whitespace-nowrap ${
+                className={`px-3 py-2 text-right font-medium text-micro uppercase tracking-wide border-b border-border whitespace-nowrap ${
                   c.mes === null ? "bg-surface-2 text-fg" : "bg-surface-2 text-fg-muted"
                 }`}
               >
@@ -52,7 +52,7 @@ export function RelatorioAnual({ anual }: Props) {
                     destaque
                       ? "bg-surface-hover font-semibold text-fg"
                       : ehPct
-                        ? "bg-surface text-[10px] text-fg-muted font-normal"
+                        ? "bg-surface text-micro text-fg-muted font-normal"
                         : "bg-surface font-normal text-fg-secondary"
                   }`}
                 >
@@ -64,7 +64,7 @@ export function RelatorioAnual({ anual }: Props) {
                     return (
                       <td
                         key={i}
-                        className={`px-3 py-0.5 text-right text-[10px] text-fg-muted tabular-nums ${fundo}`}
+                        className={`px-3 py-0.5 text-right text-micro text-fg-muted tabular-nums ${fundo}`}
                       >
                         {v?.fracao === null || v === null ? "—" : PCT.format(v.fracao)}
                       </td>

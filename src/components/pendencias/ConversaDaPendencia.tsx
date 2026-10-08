@@ -11,7 +11,7 @@ function ListaDeAnexos({ anexos, baseDoDownload }: { anexos: AnexoDaConversa[]; 
         <li key={a.id}>
           <a
             href={`${baseDoDownload}/${a.id}`}
-            className="inline-flex items-center gap-1.5 text-[12px] text-brand hover:underline break-all"
+            className="inline-flex items-center gap-1.5 text-fs-2 text-brand hover:underline break-all"
           >
             <Paperclip size={12} className="shrink-0" /> {a.fileName}
             <span className="text-fg-muted">· {formatarBytes(a.sizeBytes)}</span>

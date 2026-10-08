@@ -92,7 +92,7 @@ export function AprovacoesDoPortal({ contas }: { contas: ContaParaAprovar[] }) {
           </Button>
         </div>
       )}
-      {resultado && <p className="text-[12px] text-success mb-3">{resultado}</p>}
+      {resultado && <p className="text-helper text-success mb-3">{resultado}</p>}
 
       {/* Abaixo de md, cartões. Aprovar pagamento é o que o cliente mais faz
           longe do computador, e a tabela de 820px escondia o valor e os botões
@@ -139,7 +139,7 @@ export function AprovacoesDoPortal({ contas }: { contas: ContaParaAprovar[] }) {
                       />
                     </div>
                   ) : (
-                    <span className="text-[11px] text-fg-muted">Outra pessoa aprova</span>
+                    <span className="text-micro text-fg-muted">Outra pessoa aprova</span>
                   )}
                 </div>
               </div>
@@ -163,9 +163,9 @@ export function AprovacoesDoPortal({ contas }: { contas: ContaParaAprovar[] }) {
         }))}
       >
       <TabelaNoDesktop padrao>
-        <table className="w-full min-w-[820px] text-[13px]">
+        <table className="w-full min-w-[820px] text-ui">
           <thead>
-            <tr className="text-[11px] uppercase tracking-wide text-fg-muted border-b border-border">
+            <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
               <th className="py-2 pr-2 w-8"></th>
               <th className="py-2 pr-3 font-medium">
                 <FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" />
@@ -194,7 +194,7 @@ export function AprovacoesDoPortal({ contas }: { contas: ContaParaAprovar[] }) {
                 <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">{formatInstantDate(c.vencimento)}</td>
                 <td className="py-2.5 pr-3">
                   <span className="font-medium">{c.fornecedor}</span>
-                  {c.descricao && <span className="block text-[11px] text-fg-muted truncate max-w-[240px]">{c.descricao}</span>}
+                  {c.descricao && <span className="block text-micro text-fg-muted truncate max-w-[240px]">{c.descricao}</span>}
                 </td>
                 <td className="py-2.5 pr-3 text-fg-secondary">{c.empresa}</td>
                 <td className="py-2.5 pr-3 tabular-nums font-medium">{moeda(c.valorCentavos)}</td>
@@ -222,7 +222,7 @@ export function AprovacoesDoPortal({ contas }: { contas: ContaParaAprovar[] }) {
                       />
                     </div>
                   ) : (
-                    <span className="text-[11px] text-fg-muted">Outra pessoa aprova</span>
+                    <span className="text-micro text-fg-muted">Outra pessoa aprova</span>
                   )}
                 </td>
               </LinhaFiltravel>

@@ -121,10 +121,10 @@ type SaveStatus = "idle" | "saving" | "saved" | "error";
 function SaveIndicator({ status, error }: { status: SaveStatus; error: string | null }) {
   if (status === "idle") return null;
   if (status === "error") {
-    return <span className="text-[12px] text-danger">{error ?? "Erro ao salvar"}</span>;
+    return <span className="text-fs-2 text-danger">{error ?? "Erro ao salvar"}</span>;
   }
   return (
-    <span className="text-[12px] text-fg-muted">
+    <span className="text-fs-2 text-fg-muted">
       {status === "saving" ? "Salvando…" : "Salvo"}
     </span>
   );
@@ -215,7 +215,7 @@ function CoverControls({
         </div>
       ) : null}
 
-      {error && <p className="text-[12px] text-danger px-6 pt-2">{error}</p>}
+      {error && <p className="text-helper text-danger px-6 pt-2">{error}</p>}
 
       {!coverUrl && (
         <div className={`${CANVAS_CLASS} !py-0 !pt-6`}>
@@ -344,7 +344,7 @@ function PageCanvas({
           <h1 className="text-title font-semibold text-fg tracking-[-0.02em] leading-tight">{page.title}</h1>
         )}
 
-        <p className="text-[12px] text-fg-muted mt-2 mb-8">
+        <p className="text-fs-2 text-fg-muted mt-2 mb-8">
           Criado por {page.createdByName} · atualizado em{" "}
           {formatInstantDate(new Date(page.updatedAt), { day: "2-digit", month: "short", year: "numeric" })}
         </p>
@@ -363,7 +363,7 @@ function PageCanvas({
         ) : page.content ? (
           <div className={READING_CLASS} dangerouslySetInnerHTML={{ __html: page.content }} />
         ) : (
-          <p className="text-[15px] text-fg-muted italic">Esta página ainda não tem conteúdo.</p>
+          <p className="text-body text-fg-muted italic">Esta página ainda não tem conteúdo.</p>
         )}
       </article>
     </div>
@@ -541,7 +541,7 @@ export function ManualWorkspace({
                       onChange={(e) => setRenameValue(e.target.value)}
                       onBlur={() => submitRenameDocument(doc.id)}
                       onKeyDown={(e) => e.key === "Enter" && submitRenameDocument(doc.id)}
-                      className="flex-1 min-w-0 !h-7 px-2 text-[13px]"
+                      className="flex-1 min-w-0 !h-7 px-2 text-ui"
                     />
                   ) : (
                     <button
@@ -554,7 +554,7 @@ export function ManualWorkspace({
                           toggleExpanded(doc.id);
                         }
                       }}
-                      className="flex-1 min-w-0 text-left text-[13px] font-medium text-fg truncate py-1"
+                      className="flex-1 min-w-0 text-left text-ui font-medium text-fg truncate py-1"
                       title={canAct ? "Clique para renomear" : doc.title} aria-label={canAct ? "Clique para renomear" : doc.title}
                     >
                       {doc.title}
@@ -582,7 +582,7 @@ export function ManualWorkspace({
                         <button
                           type="button"
                           onClick={() => selectPage(p.id)}
-                          className={`flex-1 min-w-0 flex items-center gap-1.5 text-left px-2 py-1 rounded-md text-[12.5px] transition-colors truncate ${
+                          className={`flex-1 min-w-0 flex items-center gap-1.5 text-left px-2 py-1 rounded-md text-fs-2 transition-colors truncate ${
                             activePageId === p.id ? "bg-brand-subtle text-brand font-medium" : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
                           }`}
                         >
@@ -614,7 +614,7 @@ export function ManualWorkspace({
                             if (e.key === "Escape") closeCreatePage();
                           }}
                           placeholder="Título da página…"
-                          className="w-full !h-7 px-2 text-[12.5px]"
+                          className="w-full !h-7 px-2 text-fs-2"
                         />
                       ) : (
                         <Button
@@ -647,7 +647,7 @@ export function ManualWorkspace({
                   if (e.key === "Escape") closeCreateDocument();
                 }}
                 placeholder="Título do documento…"
-                className="w-full !h-8 px-2 text-[13px]"
+                className="w-full !h-8 px-2 text-ui"
               />
             ) : (
               <Button variant="ghost" size="sm" className="w-full justify-start! px-2!" onClick={() => setCreatingDoc(true)}>

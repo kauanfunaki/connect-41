@@ -191,7 +191,7 @@ export default async function DreEconomicaPage({
 
       {/* Revisão de 05/10: botão não é link — os atalhos desta tela eram texto azul. */}
       {nomeDoFiltro && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[12px] text-fg-secondary mb-3">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fs-2 text-fg-secondary mb-3">
           <p>
             Filtrado pelo centro de custo <strong>{nomeDoFiltro}</strong> — lançamentos, acordos e perdas dele.
             {comOrcamento && " Orçado × realizado só aparece sem filtro de centro, porque o orçamento é da empresa inteira."}
@@ -270,13 +270,13 @@ export default async function DreEconomicaPage({
 
           {temCobranca && (
             <Card className="p-4 mb-4">
-              <p className="text-[13px] text-fg">
+              <p className="text-ui text-fg">
                 Da cobrança neste período:
                 {cobranca.acrescimos !== 0 && <> acréscimos de acordo <strong className="tabular-nums">{moeda(cobranca.acrescimos)}</strong> em outras receitas;</>}
                 {cobranca.descontos !== 0 && <> descontos de acordo <strong className="tabular-nums">{moeda(Math.abs(cobranca.descontos))}</strong> em outras despesas;</>}
                 {cobranca.perdas !== 0 && <> perdas com clientes <strong className="tabular-nums">{moeda(Math.abs(cobranca.perdas))}</strong> em outras despesas.</>}
               </p>
-              <p className="text-[11px] text-fg-muted mt-1">
+              <p className="text-micro text-fg-muted mt-1">
                 Título renegociado ou perdido continua como receita na competência dele; parcela de acordo não é receita, é recebimento.
                 {centros.length > 0 && " A perda segue o centro do título; a diferença de acordo, o centro comum dos títulos renegociados."}
               </p>
@@ -303,7 +303,7 @@ export default async function DreEconomicaPage({
 
       {/* Sem versão aprovada, um aviso discreto em vez de a comparação sumir sem explicação. */}
       {querOrcado && !orcamento && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[12px] text-fg-muted mt-3">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fs-2 text-fg-muted mt-3">
           <p>Sem orçamento aprovado para {ano} — o orçado × realizado aparece aqui quando houver.</p>
           <Button href={`/dre/orcamento?empresa=${companyId}&ano=${ano}`} variant="secondary" size="xs">
             Abrir orçamento
@@ -311,22 +311,22 @@ export default async function DreEconomicaPage({
         </div>
       )}
       {comOrcamento && filtro.tipo === "todos" && visao === "12meses" && (
-        <p className="text-[12px] text-fg-muted mt-3">Orçado × realizado nas visões Mês e Acumulado no ano.</p>
+        <p className="text-helper text-fg-muted mt-3">Orçado × realizado nas visões Mês e Acumulado no ano.</p>
       )}
 
       {quadro && (
         <Card className="p-0 overflow-hidden mt-5">
           <div className="px-4 pt-3 pb-2">
-            <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg">Resultado por centro de custo — {periodo}</h2>
-            <p className="text-[11px] text-fg-muted mt-0.5">
+            <h2 className="text-card-title font-semibold text-fg">Resultado por centro de custo — {periodo}</h2>
+            <p className="text-micro text-fg-muted mt-0.5">
               Um centro por lançamento, sem rateio: as linhas somam a DRE da empresa sem filtro. Despesas somam todos os grupos de
               pagamento; o resultado segue a estrutura da DRE (impostos sobre a receita ficam fora dele).
             </p>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[620px] text-[13px]">
+            <table className="w-full min-w-[620px] text-ui">
               <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wide text-fg-muted border-y border-border">
+                <tr className="text-left text-micro uppercase tracking-wide text-fg-muted border-y border-border">
                   <th className="py-2 pl-4 pr-3 font-medium">Centro de custo</th>
                   <th className="py-2 pr-3 font-medium text-right">Receita bruta</th>
                   <th className="py-2 pr-3 font-medium text-right">Despesas</th>
@@ -346,8 +346,8 @@ export default async function DreEconomicaPage({
                         >
                           {l.nome}
                         </Link>
-                        {l.codigo && <span className="text-[11px] text-fg-muted"> · {l.codigo}</span>}
-                        {!l.ativo && <span className="text-[11px] text-fg-muted"> (inativo)</span>}
+                        {l.codigo && <span className="text-micro text-fg-muted"> · {l.codigo}</span>}
+                        {!l.ativo && <span className="text-micro text-fg-muted"> (inativo)</span>}
                       </td>
                       <td className="py-2 pr-3 text-right tabular-nums">{moeda(l.receitaBruta)}</td>
                       <td className={`py-2 pr-3 text-right tabular-nums ${l.despesas < 0 ? "text-danger" : ""}`}>{moeda(l.despesas)}</td>

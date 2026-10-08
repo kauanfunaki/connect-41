@@ -26,7 +26,7 @@ export function FormAlcada({ companyId, usuarios }: { companyId: string; usuario
   const [pendente, startTransition] = useTransition();
 
   if (usuarios.length === 0) {
-    return <p className="text-[12px] text-fg-muted">Nenhum usuário ativo do portal no grupo desta empresa. Cadastre o acesso do cliente antes.</p>;
+    return <p className="text-helper text-fg-muted">Nenhum usuário ativo do portal no grupo desta empresa. Cadastre o acesso do cliente antes.</p>;
   }
 
   return (

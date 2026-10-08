@@ -42,19 +42,19 @@ export function FilaDeClassificacao({ companyId, itens, excecoes }: Props) {
   return (
     <div className="flex flex-col gap-3">
       {erro && (
-        <p className="text-[13px] text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
+        <p className="text-ui text-danger bg-danger/8 border border-danger/20 rounded-md px-3 py-2">
           {erro}
         </p>
       )}
 
       {itens.length > 0 && (
         <Card className="p-4 border-warning/40 bg-warning-bg">
-          <p className="text-[13px] text-fg">
+          <p className="text-ui text-fg">
             <strong>{moeda(total)}</strong> em{" "}
             {itens.length === 1 ? "1 categoria" : `${itens.length} categorias`} sem grupo no DRE.
             {/* O ponto da tela inteira: na planilha esse dinheiro não aparece em
                 linha nenhuma, porque o SUMIF não encontra o que não está na lista. */}
-            <span className="block text-[12px] text-fg-secondary mt-1">
+            <span className="block text-fs-2 text-fg-secondary mt-1">
               Esse valor não entra em nenhuma linha do relatório até ser classificado.
             </span>
           </p>
@@ -64,8 +64,8 @@ export function FilaDeClassificacao({ companyId, itens, excecoes }: Props) {
       {itens.map((i) => (
         <Card key={i.categoria} className="p-4 flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[13px] font-medium text-fg">{i.categoria}</p>
-            <p className="text-[11px] text-fg-muted">
+            <p className="text-ui font-medium text-fg">{i.categoria}</p>
+            <p className="text-micro text-fg-muted">
               {i.origem === "recebimento" ? "recebido" : "pago"} · {moeda(i.centavos)}
             </p>
           </div>
@@ -104,7 +104,7 @@ export function FilaDeClassificacao({ companyId, itens, excecoes }: Props) {
               </Button>
             </div>
           ) : (
-            <span className="text-[12px] text-fg-muted">
+            <span className="text-fs-2 text-fg-muted">
               lançamento sem categoria — classifique na ficha dele
             </span>
           )}
@@ -113,12 +113,12 @@ export function FilaDeClassificacao({ companyId, itens, excecoes }: Props) {
 
       {excecoes.length > 0 && (
         <Card className="p-4 flex flex-col gap-2">
-          <p className="text-[11px] uppercase tracking-wide text-fg-muted">
+          <p className="text-micro uppercase tracking-wide text-fg-muted">
             Fora do padrão nesta empresa
           </p>
           {excecoes.map((e) => (
             <div key={e.categoryId} className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[13px] text-fg">
+              <span className="text-ui text-fg">
                 {e.nome} <span className="text-fg-muted">→ {rotulo(e.grupo)}</span>
               </span>
               {/* Revisão de 05/10: botão não é link — era texto azul. */}

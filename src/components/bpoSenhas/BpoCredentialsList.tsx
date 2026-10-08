@@ -299,7 +299,7 @@ export function BpoCredentialsList({ credentials, companies, canManage, setorRot
                 {row.username ? ` · ${row.username}` : ""}
               </InfoDoCartao>
               {row.url && (
-                <a href={row.url} target="_blank" rel="noopener noreferrer" className="block text-[11px] text-brand hover:underline truncate">
+                <a href={row.url} target="_blank" rel="noopener noreferrer" className="block text-micro text-brand hover:underline truncate">
                   {row.url}
                 </a>
               )}
@@ -327,7 +327,7 @@ export function BpoCredentialsList({ credentials, companies, canManage, setorRot
           }))}
         >
           <TabelaNoDesktop padrao>
-            <table className="w-full min-w-[760px] text-[length:var(--fs-body)]">
+            <table className="w-full min-w-[760px] text-body">
               <thead>
                 <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
                   <th className="px-4 py-3">Título</th>
@@ -352,7 +352,7 @@ export function BpoCredentialsList({ credentials, companies, canManage, setorRot
                     <td className="px-4 py-3 font-medium text-fg">
                       {row.title}
                       {row.url && (
-                        <a href={row.url} target="_blank" rel="noopener noreferrer" className="block text-[11px] font-normal text-brand hover:underline truncate max-w-[220px]" title={row.url}>
+                        <a href={row.url} target="_blank" rel="noopener noreferrer" className="block text-micro font-normal text-brand hover:underline truncate max-w-[220px]" title={row.url}>
                           {row.url}
                         </a>
                       )}
@@ -364,7 +364,7 @@ export function BpoCredentialsList({ credentials, companies, canManage, setorRot
                     </td>
                     <td className="px-4 py-3 text-fg-secondary">
                       {row.createdByName}
-                      <span className="block text-[11px] text-fg-muted">{row.createdAtLabel}</span>
+                      <span className="block text-micro text-fg-muted">{row.createdAtLabel}</span>
                     </td>
                     {canManage && (
                       <td className="px-4 py-3">

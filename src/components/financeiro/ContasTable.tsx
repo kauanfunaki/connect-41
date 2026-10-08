@@ -107,7 +107,7 @@ export function ContasTable({
           <SeloDaCobranca situacao={cobranca.get(l.id) ?? null} />
         </Link>
       )}
-      {l.parcelaDeAcordo && !cobranca?.get(l.id) && <span className="text-[11px] text-fg-muted whitespace-nowrap">parcela de acordo</span>}
+      {l.parcelaDeAcordo && !cobranca?.get(l.id) && <span className="text-micro text-fg-muted whitespace-nowrap">parcela de acordo</span>}
       {/* Selo só enquanto pesa sobre a conta, ou aprovada ainda em aberto:
           depois de paga ou cancelada, a aprovação é histórico. */}
       {seloDeAprovacaoVisivel(l) && <SeloDaAprovacao status={l.approvalStatus} />}
@@ -184,7 +184,7 @@ export function ContasTable({
                   {mostrarCentro && l.centroDeCustoNome ? ` · ${l.centroDeCustoNome}` : ""}
                 </InfoDoCartao>
                 {!l.categoriaNome && (
-                  <span className="inline-flex items-center gap-1 text-warning text-[11.5px] mt-0.5">
+                  <span className="inline-flex items-center gap-1 text-warning text-micro mt-0.5">
                     <AlertCircle size={12} /> sem categoria
                   </span>
                 )}
@@ -204,7 +204,7 @@ export function ContasTable({
           Centralizada, com funil em cada coluna — conferência de 30/09. */}
       <TabelaFiltravel linhas={valoresDasLinhas}>
       <TabelaNoDesktop padrao>
-        <table className="w-full table-fixed min-w-[1100px] text-[length:var(--fs-ui)]">
+        <table className="w-full table-fixed min-w-[1100px] text-ui">
           <colgroup>
             {selecionarCentro && <col className="w-11" />}
             <col className="w-[116px]" />
@@ -218,7 +218,7 @@ export function ContasTable({
             <col className="w-[256px]" />
           </colgroup>
           <thead>
-            <tr className="border-b border-border bg-table-header-bg text-[length:var(--fs-micro)] font-semibold uppercase tracking-wide text-fg-muted">
+            <tr className="border-b border-border bg-table-header-bg text-micro font-semibold uppercase tracking-wide text-fg-muted">
               {selecionarCentro && (
                 <th className="pl-4 pr-1 py-3">
                   <MarcarTodasAsContas />
@@ -268,7 +268,7 @@ export function ContasTable({
                 <td className="px-4 py-3 whitespace-nowrap tabular-nums">
                   {formatInstantDate(l.vencimento)}
                   {l.pagoEm && (
-                    <span className="block text-[length:var(--fs-micro)] text-fg-muted">pago em {formatInstantDate(l.pagoEm)}</span>
+                    <span className="block text-micro text-fg-muted">pago em {formatInstantDate(l.pagoEm)}</span>
                   )}
                 </td>
                 <td className="px-4 py-3 min-w-0">
@@ -276,11 +276,11 @@ export function ContasTable({
                     {l.contraparteNome}
                   </span>
                   {l.descricao && (
-                    <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate" title={l.descricao}>
+                    <span className="block text-micro text-fg-muted truncate" title={l.descricao}>
                       {l.descricao}
                     </span>
                   )}
-                  <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate" title={l.empresaNome}>
+                  <span className="block text-micro text-fg-muted truncate" title={l.empresaNome}>
                     {l.empresaNome}
                   </span>
                 </td>
@@ -297,7 +297,7 @@ export function ContasTable({
                     </span>
                   )}
                   {mostrarCentro && (
-                    <span className="block text-[length:var(--fs-micro)] text-fg-muted truncate">
+                    <span className="block text-micro text-fg-muted truncate">
                       {l.centroDeCustoNome ?? "sem centro de custo"}
                     </span>
                   )}

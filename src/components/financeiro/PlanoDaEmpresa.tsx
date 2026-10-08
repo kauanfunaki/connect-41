@@ -147,7 +147,7 @@ export function LinhaDaDre({
       >
         <OpcoesDeLinha linhas={linhas} vazio={rotuloDoPadrao ? `Como no padrão (${rotuloDoPadrao})` : "Ainda não classificada"} />
       </Select>
-      {erro && <span className="text-[11px] text-danger">{erro}</span>}
+      {erro && <span className="text-micro text-danger">{erro}</span>}
     </div>
   );
 }
@@ -171,7 +171,7 @@ export function EsconderDoPadrao({ companyId, categoryId, oculta }: { companyId:
       >
         {oculta ? "Usar nesta empresa" : "Não usar nesta empresa"}
       </Button>
-      {erro && <span className="text-[11px] text-danger">{erro}</span>}
+      {erro && <span className="text-micro text-danger">{erro}</span>}
     </span>
   );
 }

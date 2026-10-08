@@ -74,7 +74,7 @@ export default async function ComunicacaoPage({
 
       {selecionada && conversa ? (
         <>
-          <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-3">{selecionada.nome}</h2>
+          <h2 className="text-card-title font-semibold text-fg mb-3">{selecionada.nome}</h2>
           {conversa.mensagens.length === 0 ? (
             <Card className="mb-4">
               <EmptyState
@@ -86,7 +86,7 @@ export default async function ComunicacaoPage({
           ) : (
             <>
               {conversa.limitada && (
-                <p className="text-[11px] text-fg-muted mb-2">Mostrando as 300 mensagens mais recentes.</p>
+                <p className="text-micro text-fg-muted mb-2">Mostrando as 300 mensagens mais recentes.</p>
               )}
               <ConversaDaPendencia
                 mensagens={conversa.mensagens}
@@ -127,16 +127,16 @@ export default async function ComunicacaoPage({
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium text-fg">{c.empresaNome}</span>
                 {c.resumo.esperandoEscritorio && <Badge variant="warning">Esperando o escritório</Badge>}
-                <span className="ml-auto text-[11.5px] text-fg-muted tabular-nums">
+                <span className="ml-auto text-micro text-fg-muted tabular-nums">
                   {c.resumo.ultima && formatInstantDateTime(c.resumo.ultima.criadaEm)}
                 </span>
               </div>
               {c.resumo.ultima && (
-                <p className="text-[12.5px] text-fg-muted mt-1 break-words">
+                <p className="text-fs-2 text-fg-muted mt-1 break-words">
                   {c.resumo.ultima.lado === "CLIENTE" ? "Cliente" : "Equipe"}: {previa(c.resumo.ultima.corpo)}
                 </p>
               )}
-              <p className="text-[11.5px] text-fg-muted mt-0.5">
+              <p className="text-micro text-fg-muted mt-0.5">
                 {c.resumo.mensagens} {c.resumo.mensagens === 1 ? "mensagem" : "mensagens"}
                 {c.resumo.anexos > 0 && ` · ${c.resumo.anexos} ${c.resumo.anexos === 1 ? "anexo" : "anexos"}`}
               </p>

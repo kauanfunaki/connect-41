@@ -94,14 +94,14 @@ async function Fluxo({ escopo, mes, hojeKey }: { escopo: EscopoFinanceiro; mes: 
     <>
       <QuadroDoSaldoBancario saldo={saldo} />
 
-      <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">Realizado — seis meses até {rotuloDaCompetencia(mes)}</h2>
+      <h2 className="text-card-title font-semibold text-fg mb-2">Realizado — seis meses até {rotuloDaCompetencia(mes)}</h2>
       <TabelaDoRealizado meses={fluxoRealizado(movimentos, competencias)} />
       <NotaDeFonte className="mb-6">
         Pela data da baixa. O acumulado soma os saldos do período a partir do primeiro mês da tabela — é movimento
         de lançamentos, não o saldo da conta, que está no quadro acima.
       </NotaDeFonte>
 
-      <h2 className="text-[length:var(--fs-card-title)] font-semibold text-fg mb-2">Projeção — títulos em aberto a partir de hoje</h2>
+      <h2 className="text-card-title font-semibold text-fg mb-2">Projeção — títulos em aberto a partir de hoje</h2>
       <CartoesDaProjecao projecao={projecaoPorJanela(titulos, hojeKey)} saldoInicial={saldo.centavos} />
       <NotaDeFonte>
         Cada janela acumula de hoje até o fim dela: a receber menos a pagar, pelo vencimento

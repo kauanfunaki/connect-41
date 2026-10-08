@@ -70,9 +70,9 @@ export function DecisaoDaEquipe({
           </Button>
         )}
       </div>
-      {typeof decidir === "string" && <span className="text-[11px] text-fg-muted max-w-[260px]">{decidir}</span>}
-      {erro && <span className="text-[11px] text-danger max-w-[260px]">{erro}</span>}
-      {aviso && <span className="text-[11px] text-warning max-w-[260px]">{aviso}</span>}
+      {typeof decidir === "string" && <span className="text-micro text-fg-muted max-w-[260px]">{decidir}</span>}
+      {erro && <span className="text-micro text-danger max-w-[260px]">{erro}</span>}
+      {aviso && <span className="text-micro text-warning max-w-[260px]">{aviso}</span>}
       {dialog}
     </div>
   );

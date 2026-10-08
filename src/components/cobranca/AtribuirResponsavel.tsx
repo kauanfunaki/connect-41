@@ -47,7 +47,7 @@ export function AtribuirResponsavel({
           </option>
         ))}
       </Select>
-      {erro && <span className="text-[11px] text-danger">{erro}</span>}
+      {erro && <span className="text-micro text-danger">{erro}</span>}
     </div>
   );
 }
